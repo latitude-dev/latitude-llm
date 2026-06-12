@@ -14,6 +14,7 @@ function baseSpan(overrides: Partial<Span> & Pick<Span, "spanId" | "operation" |
     projectId: proj,
     sessionId: session,
     userId: ExternalUserId("user"),
+    userEmail: "",
     traceId: trace,
     parentSpanId: "",
     apiKeyId: "",

@@ -56,6 +56,7 @@ import { Route as ApiAuthMcpAuthorizeRouteImport } from './routes/api/auth/mcp/a
 import { Route as ApiAuthProviderStartRouteImport } from './routes/api/auth/$provider/start'
 import { Route as AuthenticatedProjectsProjectSlugSettingsRouteImport } from './routes/_authenticated/projects/$projectSlug/settings'
 import { Route as AuthenticatedProjectsProjectSlugOnboardingRouteImport } from './routes/_authenticated/projects/$projectSlug/onboarding'
+import { Route as AuthenticatedProjectsProjectSlugUsersIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/users/index'
 import { Route as AuthenticatedProjectsProjectSlugToolsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/tools/index'
 import { Route as AuthenticatedProjectsProjectSlugSettingsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/index'
 import { Route as AuthenticatedProjectsProjectSlugMonitorsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/monitors/index'
@@ -75,6 +76,7 @@ import { Route as AuthenticatedProjectsProjectSlugSettingsAccountRouteImport } f
 import { Route as AuthenticatedProjectsProjectSlugMonitorsSearchRouteImport } from './routes/_authenticated/projects/$projectSlug/monitors/search'
 import { Route as AuthenticatedProjectsProjectSlugMonitorsIssuesRouteImport } from './routes/_authenticated/projects/$projectSlug/monitors/issues'
 import { Route as AuthenticatedProjectsProjectSlugDatasetsDatasetIdRouteImport } from './routes/_authenticated/projects/$projectSlug/datasets/$datasetId'
+import { Route as AuthenticatedProjectsProjectSlugUsersUserIdIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/users/$userId/index'
 import { Route as AuthenticatedProjectsProjectSlugToolsToolNameIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/tools/$toolName/index'
 import { Route as AuthenticatedProjectsProjectSlugIssuesIssueIdIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/issues/$issueId/index'
 
@@ -334,6 +336,12 @@ const AuthenticatedProjectsProjectSlugOnboardingRoute =
     path: '/onboarding',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
+const AuthenticatedProjectsProjectSlugUsersIndexRoute =
+  AuthenticatedProjectsProjectSlugUsersIndexRouteImport.update({
+    id: '/users/',
+    path: '/users/',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+  } as any)
 const AuthenticatedProjectsProjectSlugToolsIndexRoute =
   AuthenticatedProjectsProjectSlugToolsIndexRouteImport.update({
     id: '/tools/',
@@ -448,6 +456,12 @@ const AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute =
     path: '/datasets/$datasetId',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
+const AuthenticatedProjectsProjectSlugUsersUserIdIndexRoute =
+  AuthenticatedProjectsProjectSlugUsersUserIdIndexRouteImport.update({
+    id: '/users/$userId/',
+    path: '/users/$userId/',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+  } as any)
 const AuthenticatedProjectsProjectSlugToolsToolNameIndexRoute =
   AuthenticatedProjectsProjectSlugToolsToolNameIndexRouteImport.update({
     id: '/tools/$toolName/',
@@ -527,8 +541,10 @@ export interface FileRoutesByFullPath {
   '/projects/$projectSlug/monitors/': typeof AuthenticatedProjectsProjectSlugMonitorsIndexRoute
   '/projects/$projectSlug/settings/': typeof AuthenticatedProjectsProjectSlugSettingsIndexRoute
   '/projects/$projectSlug/tools/': typeof AuthenticatedProjectsProjectSlugToolsIndexRoute
+  '/projects/$projectSlug/users/': typeof AuthenticatedProjectsProjectSlugUsersIndexRoute
   '/projects/$projectSlug/issues/$issueId/': typeof AuthenticatedProjectsProjectSlugIssuesIssueIdIndexRoute
   '/projects/$projectSlug/tools/$toolName/': typeof AuthenticatedProjectsProjectSlugToolsToolNameIndexRoute
+  '/projects/$projectSlug/users/$userId/': typeof AuthenticatedProjectsProjectSlugUsersUserIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -591,8 +607,10 @@ export interface FileRoutesByTo {
   '/projects/$projectSlug/monitors': typeof AuthenticatedProjectsProjectSlugMonitorsIndexRoute
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsIndexRoute
   '/projects/$projectSlug/tools': typeof AuthenticatedProjectsProjectSlugToolsIndexRoute
+  '/projects/$projectSlug/users': typeof AuthenticatedProjectsProjectSlugUsersIndexRoute
   '/projects/$projectSlug/issues/$issueId': typeof AuthenticatedProjectsProjectSlugIssuesIssueIdIndexRoute
   '/projects/$projectSlug/tools/$toolName': typeof AuthenticatedProjectsProjectSlugToolsToolNameIndexRoute
+  '/projects/$projectSlug/users/$userId': typeof AuthenticatedProjectsProjectSlugUsersUserIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -662,8 +680,10 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectSlug/monitors/': typeof AuthenticatedProjectsProjectSlugMonitorsIndexRoute
   '/_authenticated/projects/$projectSlug/settings/': typeof AuthenticatedProjectsProjectSlugSettingsIndexRoute
   '/_authenticated/projects/$projectSlug/tools/': typeof AuthenticatedProjectsProjectSlugToolsIndexRoute
+  '/_authenticated/projects/$projectSlug/users/': typeof AuthenticatedProjectsProjectSlugUsersIndexRoute
   '/_authenticated/projects/$projectSlug/issues/$issueId/': typeof AuthenticatedProjectsProjectSlugIssuesIssueIdIndexRoute
   '/_authenticated/projects/$projectSlug/tools/$toolName/': typeof AuthenticatedProjectsProjectSlugToolsToolNameIndexRoute
+  '/_authenticated/projects/$projectSlug/users/$userId/': typeof AuthenticatedProjectsProjectSlugUsersUserIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -733,8 +753,10 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/monitors/'
     | '/projects/$projectSlug/settings/'
     | '/projects/$projectSlug/tools/'
+    | '/projects/$projectSlug/users/'
     | '/projects/$projectSlug/issues/$issueId/'
     | '/projects/$projectSlug/tools/$toolName/'
+    | '/projects/$projectSlug/users/$userId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -797,8 +819,10 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/monitors'
     | '/projects/$projectSlug/settings'
     | '/projects/$projectSlug/tools'
+    | '/projects/$projectSlug/users'
     | '/projects/$projectSlug/issues/$issueId'
     | '/projects/$projectSlug/tools/$toolName'
+    | '/projects/$projectSlug/users/$userId'
   id:
     | '__root__'
     | '/backoffice'
@@ -867,8 +891,10 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectSlug/monitors/'
     | '/_authenticated/projects/$projectSlug/settings/'
     | '/_authenticated/projects/$projectSlug/tools/'
+    | '/_authenticated/projects/$projectSlug/users/'
     | '/_authenticated/projects/$projectSlug/issues/$issueId/'
     | '/_authenticated/projects/$projectSlug/tools/$toolName/'
+    | '/_authenticated/projects/$projectSlug/users/$userId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1227,6 +1253,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugOnboardingRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
+    '/_authenticated/projects/$projectSlug/users/': {
+      id: '/_authenticated/projects/$projectSlug/users/'
+      path: '/users'
+      fullPath: '/projects/$projectSlug/users/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugUsersIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
     '/_authenticated/projects/$projectSlug/tools/': {
       id: '/_authenticated/projects/$projectSlug/tools/'
       path: '/tools'
@@ -1360,6 +1393,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
+    '/_authenticated/projects/$projectSlug/users/$userId/': {
+      id: '/_authenticated/projects/$projectSlug/users/$userId/'
+      path: '/users/$userId'
+      fullPath: '/projects/$projectSlug/users/$userId/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugUsersUserIdIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
     '/_authenticated/projects/$projectSlug/tools/$toolName/': {
       id: '/_authenticated/projects/$projectSlug/tools/$toolName/'
       path: '/tools/$toolName'
@@ -1478,8 +1518,10 @@ interface AuthenticatedProjectsProjectSlugRouteChildren {
   AuthenticatedProjectsProjectSlugIssuesIndexRoute: typeof AuthenticatedProjectsProjectSlugIssuesIndexRoute
   AuthenticatedProjectsProjectSlugMonitorsIndexRoute: typeof AuthenticatedProjectsProjectSlugMonitorsIndexRoute
   AuthenticatedProjectsProjectSlugToolsIndexRoute: typeof AuthenticatedProjectsProjectSlugToolsIndexRoute
+  AuthenticatedProjectsProjectSlugUsersIndexRoute: typeof AuthenticatedProjectsProjectSlugUsersIndexRoute
   AuthenticatedProjectsProjectSlugIssuesIssueIdIndexRoute: typeof AuthenticatedProjectsProjectSlugIssuesIssueIdIndexRoute
   AuthenticatedProjectsProjectSlugToolsToolNameIndexRoute: typeof AuthenticatedProjectsProjectSlugToolsToolNameIndexRoute
+  AuthenticatedProjectsProjectSlugUsersUserIdIndexRoute: typeof AuthenticatedProjectsProjectSlugUsersUserIdIndexRoute
 }
 
 const AuthenticatedProjectsProjectSlugRouteChildren: AuthenticatedProjectsProjectSlugRouteChildren =
@@ -1506,10 +1548,14 @@ const AuthenticatedProjectsProjectSlugRouteChildren: AuthenticatedProjectsProjec
       AuthenticatedProjectsProjectSlugMonitorsIndexRoute,
     AuthenticatedProjectsProjectSlugToolsIndexRoute:
       AuthenticatedProjectsProjectSlugToolsIndexRoute,
+    AuthenticatedProjectsProjectSlugUsersIndexRoute:
+      AuthenticatedProjectsProjectSlugUsersIndexRoute,
     AuthenticatedProjectsProjectSlugIssuesIssueIdIndexRoute:
       AuthenticatedProjectsProjectSlugIssuesIssueIdIndexRoute,
     AuthenticatedProjectsProjectSlugToolsToolNameIndexRoute:
       AuthenticatedProjectsProjectSlugToolsToolNameIndexRoute,
+    AuthenticatedProjectsProjectSlugUsersUserIdIndexRoute:
+      AuthenticatedProjectsProjectSlugUsersUserIdIndexRoute,
   }
 
 const AuthenticatedProjectsProjectSlugRouteWithChildren =

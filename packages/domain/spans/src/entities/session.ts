@@ -51,6 +51,7 @@ export const sessionSchema = z.object({
   costTotalMicrocents: z.number(),
 
   userId: externalUserIdSchema,
+  userEmail: z.string(),
   simulationId: z.union([z.literal(""), simulationIdSchema]), // optional simulation CUID link, empty string when absent
   tags: z.array(z.string()).readonly(),
   metadata: z.record(z.string(), z.string()).readonly(),

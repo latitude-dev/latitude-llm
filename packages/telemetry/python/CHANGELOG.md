@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-06-12
+
+### Added
+
+- `user_email` option on `capture()` (`ContextOptions`), emitted as the `user.email` span attribute alongside the existing `user_id` → `user.id`. Both follow the same context-merging rules as `session_id`: last-write-wins, with nested captures overriding the parent.
+
 ## [3.0.1] - 2026-06-10
 
 ### Changed

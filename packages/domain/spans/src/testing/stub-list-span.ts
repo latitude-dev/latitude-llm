@@ -25,6 +25,7 @@ export function stubListSpan(input: {
     projectId: input.projectId,
     sessionId: input.sessionId,
     userId: ExternalUserId("user"),
+    userEmail: "",
     traceId: input.traceId,
     spanId: input.spanId,
     parentSpanId: "",

@@ -54,6 +54,7 @@ export const spanSchema = z.object({
   projectId: projectIdSchema,
   sessionId: sessionIdSchema,
   userId: externalUserIdSchema,
+  userEmail: z.string(),
   traceId: traceIdSchema,
   spanId: spanIdSchema,
   parentSpanId: z.string(),

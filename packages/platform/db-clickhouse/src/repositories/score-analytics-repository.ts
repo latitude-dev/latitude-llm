@@ -23,6 +23,7 @@ import type {
   SessionIssueRollup,
   SessionScoreRollup,
   TraceScoreRollup,
+  UserIssueRollup,
 } from "@domain/scores"
 import { ScoreAnalyticsRepository, SEASONAL_BUCKET_POOLING_HOURS, SEASONAL_HISTORY_WEEKS } from "@domain/scores"
 import {
@@ -1776,6 +1777,63 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                 ),
               ),
               Effect.mapError((error) => toRepositoryError(error, "listIssuesByTraceIds")),
+            )
+        }),
+
+      listIssuesByUser: ({ organizationId, projectId, userId, limit, options }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
+                        issue_id,
+                        count()                               AS occurrences,
+                        uniqExactIf(trace_id, trace_id != '') AS affected_traces,
+                        min(created_at)                       AS first_seen_at,
+                        max(created_at)                       AS last_seen_at
+                      FROM scores
+                      WHERE ${scopeClause(options)}
+                        AND issue_id != ''
+                        AND trace_id IN (
+                          SELECT trace_id
+                          FROM traces
+                          WHERE organization_id = {organizationId:String}
+                            AND project_id = {projectId:String}
+                          GROUP BY organization_id, project_id, trace_id
+                          HAVING argMaxIfMerge(user_id) = {userId:String}
+                        )
+                      GROUP BY issue_id
+                      ORDER BY last_seen_at DESC
+                      LIMIT {limit:UInt32}`,
+                query_params: {
+                  ...scopeParams(organizationId, projectId),
+                  userId: userId as string,
+                  limit: limit ?? 50,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<{
+                issue_id: string
+                occurrences: string
+                affected_traces: string
+                first_seen_at: string
+                last_seen_at: string
+              }>()
+            })
+            .pipe(
+              Effect.map((rows) =>
+                rows.map(
+                  (row): UserIssueRollup => ({
+                    issueId: toIssueId(normalizeCHString(row.issue_id)),
+                    occurrences: Number(row.occurrences),
+                    affectedTraces: Number(row.affected_traces),
+                    firstSeenAt: parseCHDate(row.first_seen_at),
+                    lastSeenAt: parseCHDate(row.last_seen_at),
+                  }),
+                ),
+              ),
+              Effect.mapError((error) => toRepositoryError(error, "listIssuesByUser")),
             )
         }),
       // Lightweight DELETE (row mask); omits deleted rows from subsequent SELECTs without full part rewrite.

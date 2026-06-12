@@ -60,6 +60,7 @@ export const createFakeScoreAnalyticsRepository = (overrides?: Partial<ScoreAnal
       }),
     countTracesByIssue: () => Effect.succeed(0),
     listIssuesByTraceIds: () => Effect.succeed([]),
+    listIssuesByUser: () => Effect.succeed([]),
     delete: (id) =>
       Effect.sync(() => {
         const index = inserted.indexOf(id)

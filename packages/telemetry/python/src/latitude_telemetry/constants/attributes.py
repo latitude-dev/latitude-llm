@@ -9,4 +9,5 @@ class ATTRIBUTES:
     metadata = "latitude.metadata"
     session_id = "session.id"
     user_id = "user.id"
+    user_email = "user.email"
     project = "latitude.project"

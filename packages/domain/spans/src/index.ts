@@ -144,6 +144,23 @@ export type {
   TraceSemanticHighlightMatch,
 } from "./ports/trace-search-repository.ts"
 export { TraceSearchRepository } from "./ports/trace-search-repository.ts"
+export type {
+  ProjectUserSummary,
+  UserActivityBucket,
+  UserActivitySeries,
+  UserAnalyticsRepositoryShape,
+  UserCostRollup,
+  UserListOptions,
+  UserListPage,
+  UserListTimeRange,
+  UserProfile,
+  UserSortField,
+  UsersOverview,
+  UsersOverviewBucket,
+  UserUsageDimension,
+  UserUsageSlice,
+} from "./ports/user-analytics-repository.ts"
+export { isUserSortField, USER_SORT_FIELDS, UserAnalyticsRepository } from "./ports/user-analytics-repository.ts"
 export { deterministicSample } from "./sampling/deterministic-sampler.ts"
 export { extractSamplingKey } from "./sampling/extract-sampling-key.ts"
 export type {

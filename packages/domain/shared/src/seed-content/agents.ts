@@ -21,7 +21,7 @@ import type { ToolConfig } from "./tools.ts"
 import { ORDER_ROUTER_TOOLS, SAFETY_REVIEWER_TOOLS, SUPPORT_AGENT_TOOLS } from "./tools.ts"
 import type { ConversationTopic } from "./topics.ts"
 import { SUPPORT_AGENT_TOPICS } from "./topics.ts"
-import { CUSTOMER_EMAILS, EMPLOYEE_EMAILS } from "./users.ts"
+import { CUSTOMER_USERS, EMPLOYEE_USERS, type SeedUser } from "./users.ts"
 
 export type TracePattern = "simple_chat" | "tool_call" | "rag" | "multi_step" | "complex_agent" | "error"
 
@@ -34,8 +34,8 @@ export type AgentProfile = {
   readonly models: readonly ModelConfig[]
   readonly embeddingModels?: readonly ModelConfig[]
   readonly tools?: readonly ToolConfig[]
-  readonly userIdPool: readonly string[]
-  readonly userIdProbability: number
+  readonly userPool: readonly SeedUser[]
+  readonly userProbability: number
   readonly sessionConfig: {
     readonly enabled: boolean
     readonly alwaysAssign: boolean
@@ -97,8 +97,8 @@ export const AGENT_PROFILES: readonly AgentProfile[] = [
       "You are Acme Assist, the customer support AI for Acme Corporation. Help customers with orders, returns, product information, and technical support. Always refer to Acme's warranty policy, which covers manufacturing defects but explicitly excludes misuse involving roadrunners, cliffs, or violations of the laws of physics. Be friendly and professional. At Acme, satisfaction is guaranteed. (Guarantee does not constitute a legally binding promise.)",
     models: openaiModels,
     tools: SUPPORT_AGENT_TOOLS,
-    userIdPool: CUSTOMER_EMAILS,
-    userIdProbability: 0.6,
+    userPool: CUSTOMER_USERS,
+    userProbability: 0.6,
     sessionConfig: {
       enabled: true,
       alwaysAssign: true,
@@ -141,8 +141,8 @@ export const AGENT_PROFILES: readonly AgentProfile[] = [
     systemPrompt: ORDER_ROUTER_SYSTEM_PROMPT,
     models: [openAiMiniModel],
     tools: ORDER_ROUTER_TOOLS,
-    userIdPool: [],
-    userIdProbability: 0,
+    userPool: [],
+    userProbability: 0,
     sessionConfig: {
       enabled: false,
       alwaysAssign: false,
@@ -169,8 +169,8 @@ export const AGENT_PROFILES: readonly AgentProfile[] = [
     environments: ["production", "staging"],
     systemPrompt: COPYWRITER_SYSTEM_PROMPT,
     models: anthropicModels,
-    userIdPool: EMPLOYEE_EMAILS,
-    userIdProbability: 0.5,
+    userPool: EMPLOYEE_USERS,
+    userProbability: 0.5,
     sessionConfig: {
       enabled: true,
       alwaysAssign: false,
@@ -200,8 +200,8 @@ export const AGENT_PROFILES: readonly AgentProfile[] = [
     models: [...MODELS.filter((m) => m.model === "o3-mini"), ...googleModels],
     embeddingModels: [defaultEmbeddingModel],
     tools: SAFETY_REVIEWER_TOOLS,
-    userIdPool: [],
-    userIdProbability: 0,
+    userPool: [],
+    userProbability: 0,
     sessionConfig: {
       enabled: false,
       alwaysAssign: false,
@@ -231,8 +231,8 @@ export const AGENT_PROFILES: readonly AgentProfile[] = [
     environments: ["production", "canary"],
     systemPrompt: QA_CLASSIFIER_SYSTEM_PROMPT,
     models: [openAiMiniModel, ...deepseekModels],
-    userIdPool: [],
-    userIdProbability: 0,
+    userPool: [],
+    userProbability: 0,
     sessionConfig: {
       enabled: false,
       alwaysAssign: false,
@@ -264,8 +264,8 @@ export const AGENT_PROFILES: readonly AgentProfile[] = [
     systemPrompt: KNOWLEDGE_ASSISTANT_SYSTEM_PROMPT,
     models: [knowledgeAssistantModel],
     embeddingModels: [defaultEmbeddingModel],
-    userIdPool: EMPLOYEE_EMAILS,
-    userIdProbability: 0.7,
+    userPool: EMPLOYEE_USERS,
+    userProbability: 0.7,
     sessionConfig: {
       enabled: true,
       alwaysAssign: false,

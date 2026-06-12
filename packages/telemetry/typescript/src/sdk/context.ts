@@ -21,6 +21,7 @@ type LatitudeContextData = {
   metadata: Record<string, unknown> | undefined
   sessionId: string | undefined
   userId: string | undefined
+  userEmail: string | undefined
   project: string | undefined
 }
 
@@ -56,6 +57,7 @@ export function capture<T>(name: string, fn: () => T | Promise<T>, options: Cont
     metadata: { ...existingData?.metadata, ...options.metadata },
     sessionId: options.sessionId ?? existingData?.sessionId,
     userId: options.userId ?? existingData?.userId,
+    userEmail: options.userEmail ?? existingData?.userEmail,
     project: projectFromOptions ?? existingData?.project,
   }
 

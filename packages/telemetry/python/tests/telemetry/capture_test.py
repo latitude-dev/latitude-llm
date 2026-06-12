@@ -185,6 +185,23 @@ class TestCaptureMerging:
         assert captured_ctx is not None
         assert captured_ctx.user_id == "inner-user"
 
+    def test_user_email_last_write_wins(self):
+        """Test that user_email uses last-write-wins (child overrides parent)."""
+        captured_ctx = None
+
+        def inner_function():
+            nonlocal captured_ctx
+            captured_ctx = get_latitude_context(otel_context.get_current())
+            return "done"
+
+        def outer_function():
+            return capture("inner", inner_function, {"user_email": "inner@example.com"})
+
+        capture("outer", outer_function, {"user_email": "outer@example.com"})
+
+        assert captured_ctx is not None
+        assert captured_ctx.user_email == "inner@example.com"
+
 
 class TestCaptureOptions:
     """Tests for capture option handling."""
@@ -206,6 +223,7 @@ class TestCaptureOptions:
                 "metadata": {"env": "production"},
                 "session_id": "sess-abc",
                 "user_id": "user-xyz",
+                "user_email": "user@example.com",
             },
         )
 
@@ -215,6 +233,7 @@ class TestCaptureOptions:
         assert captured_ctx.metadata == {"env": "production"}
         assert captured_ctx.session_id == "sess-abc"
         assert captured_ctx.user_id == "user-xyz"
+        assert captured_ctx.user_email == "user@example.com"
 
     def test_capture_no_options(self):
         """Test capture with no options (just name and fn)."""
@@ -233,6 +252,7 @@ class TestCaptureOptions:
         assert captured_ctx.metadata == {}
         assert captured_ctx.session_id is None
         assert captured_ctx.user_id is None
+        assert captured_ctx.user_email is None
 
 
 class TestCaptureProjectOption:

@@ -215,6 +215,7 @@ const makeTraceDetail = (traceId: string, content: string): TraceDetail => ({
   costTotalMicrocents: 0,
   sessionId: SessionId("s".repeat(64)),
   userId: ExternalUserId("u".repeat(24)),
+  userEmail: "",
   simulationId: SimulationId(""),
   tags: [],
   metadata: {},

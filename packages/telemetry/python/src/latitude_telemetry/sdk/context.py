@@ -44,6 +44,7 @@ class _LatitudeContextData:
         metadata: dict[str, object] | None = None,
         session_id: str | None = None,
         user_id: str | None = None,
+        user_email: str | None = None,
         project: str | None = None,
     ):
         self.name = name
@@ -51,6 +52,7 @@ class _LatitudeContextData:
         self.metadata = metadata
         self.session_id = session_id
         self.user_id = user_id
+        self.user_email = user_email
         self.project = project
 
 
@@ -74,7 +76,7 @@ def _set_capture_context(name: str, base_context: Context, options: ContextOptio
     # - name: options.name takes precedence over capture name
     # - tags: merge and deduplicate
     # - metadata: shallow merge (child overrides parent for same keys)
-    # - session_id/user_id: last-write-wins (child overrides parent)
+    # - session_id/user_id/user_email: last-write-wins (child overrides parent)
     parent_metadata = (existing_data.metadata if existing_data else None) or {}
     child_metadata = opts.get("metadata") or {}
     merged_metadata: dict[str, object] = {**parent_metadata, **child_metadata}
@@ -89,6 +91,7 @@ def _set_capture_context(name: str, base_context: Context, options: ContextOptio
         metadata=merged_metadata,
         session_id=opts.get("session_id") or (existing_data.session_id if existing_data else None),
         user_id=opts.get("user_id") or (existing_data.user_id if existing_data else None),
+        user_email=opts.get("user_email") or (existing_data.user_email if existing_data else None),
         project=project_from_opts or (existing_data.project if existing_data else None),
     )
 
@@ -212,8 +215,8 @@ def capture(
     As a direct wrapper:
         result = capture("agent-run", lambda: agent.process(input), {"tags": ["prod"]})
 
-    The context includes tags, metadata, session_id, and user_id which are
-    stamped onto all spans via the LatitudeSpanProcessor.on_start() method.
+    The context includes tags, metadata, session_id, user_id, and user_email
+    which are stamped onto all spans via the LatitudeSpanProcessor.on_start() method.
 
     If no active Latitude trace exists, capture() creates a parent span to
     establish trace continuity. Nested Latitude capture() calls reuse the

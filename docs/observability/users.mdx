@@ -1,0 +1,66 @@
+---
+title: Users
+description: Review activity, sessions, and errors by end user.
+---
+
+# Users
+
+The Users page groups telemetry by the end-user identifier you send with each trace. Use it to see who is using your product, when they were last active, and which traces or sessions are associated with them.
+
+## Send user identifiers
+
+Attach a stable user id when you capture a trace. You can also send a user email when it is useful for support workflows.
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```ts
+    import { capture } from "@latitude-data/telemetry"
+
+    await capture(
+      "support-agent-turn",
+      async () => {
+        return agent.run(userMessage)
+      },
+      {
+        userId: user.id,
+        userEmail: user.email,
+      },
+    )
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from latitude_telemetry import capture
+
+    capture(
+        "support-agent-turn",
+        lambda: agent.run(user_message),
+        {
+            "user_id": user.id,
+            "user_email": user.email,
+        },
+    )
+    ```
+  </Tab>
+</Tabs>
+
+## What you can see
+
+The Users page shows one row per user with recent activity and aggregate metrics, including:
+
+- first and last seen timestamps
+- trace and session counts
+- error counts
+- token usage and estimated cost
+
+Open a user to review their related traces and understand what happened during their sessions.
+
+## Filter and search
+
+Use the time range and search controls to focus on a subset of users. Search by user id or email, then open an individual user to inspect their traces.
+
+## Related
+
+- [User tracking](./features/user-tracking): How user ids are attached to traces
+- [Sessions](./sessions): Group traces into conversations
+- [Traces](./traces): Review individual interactions

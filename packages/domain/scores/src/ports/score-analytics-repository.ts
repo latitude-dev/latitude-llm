@@ -1,5 +1,6 @@
 import type {
   ChSqlClient,
+  ExternalUserId,
   FilterSet,
   IssueId,
   OrganizationId,
@@ -288,6 +289,16 @@ export interface SessionIssueRollup {
   readonly traceIds: readonly TraceId[]
 }
 
+/** Per-issue rollup of the scores recorded on one end-user's traces. */
+export interface UserIssueRollup {
+  readonly issueId: IssueId
+  readonly occurrences: number
+  /** Distinct traces of the user that contributed a score to this issue. */
+  readonly affectedTraces: number
+  readonly firstSeenAt: Date
+  readonly lastSeenAt: Date
+}
+
 /** Common options for analytics queries. */
 export interface ScoreAnalyticsOptions {
   readonly excludeSimulations?: boolean
@@ -527,6 +538,20 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly traceIds: readonly TraceId[]
     readonly options?: ScoreAnalyticsOptions
   }): Effect.Effect<readonly SessionIssueRollup[], RepositoryError, ChSqlClient>
+  /**
+   * Per-issue rollup of the scores recorded across one end-user's traces —
+   * `listIssuesByTraceIds` with the trace set resolved inside ClickHouse from
+   * the `traces` MV's finalized `user_id` (scores carry no user column).
+   * Scoping by `trace_id` rather than `session_id` for the same reason as
+   * `listIssuesByTraceIds`. Ordered by `lastSeenAt` desc.
+   */
+  listIssuesByUser(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly userId: ExternalUserId
+    readonly limit?: number
+    readonly options?: ScoreAnalyticsOptions
+  }): Effect.Effect<readonly UserIssueRollup[], RepositoryError, ChSqlClient>
 }
 
 export class ScoreAnalyticsRepository extends Context.Service<

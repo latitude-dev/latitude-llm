@@ -1,5 +1,5 @@
 import { TAU2_SEED_TRAJECTORIES, type Tau2SeedTrajectoryMessage } from "@domain/shared/seed-content/tau2-trajectories"
-import type { SeedScope } from "@domain/shared/seeding"
+import { CUSTOMER_USERS, EMPLOYEE_USERS, type SeedScope, type SeedUser, seedUserAt } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
 import { isSentinelPresent } from "../idempotency.ts"
@@ -76,6 +76,7 @@ function createTau2LlmSpan(opts: {
   tags: readonly string[]
   metadata: Record<string, string>
   toolDefinitions: readonly string[]
+  user: SeedUser | undefined
 }): SpanRow {
   const inputTokens = estimateTau2Tokens(opts.inputMessages)
   const outputTokens = estimateTau2Tokens([opts.outputMessage])
@@ -86,7 +87,8 @@ function createTau2LlmSpan(opts: {
     organization_id: opts.scope.organizationId,
     project_id: opts.scope.projectId,
     session_id: "",
-    user_id: "",
+    user_id: opts.user?.id ?? "",
+    user_email: opts.user?.email ?? "",
     trace_id: opts.traceId,
     span_id: opts.spanId,
     parent_span_id: opts.parentSpanId,
@@ -154,12 +156,14 @@ function createTau2ToolSpan(opts: {
   toolInput: Record<string, unknown>
   toolOutput: string
   error: boolean
+  user: SeedUser | undefined
 }): SpanRow {
   return {
     organization_id: opts.scope.organizationId,
     project_id: opts.scope.projectId,
     session_id: "",
-    user_id: "",
+    user_id: opts.user?.id ?? "",
+    user_email: opts.user?.email ?? "",
     trace_id: opts.traceId,
     span_id: opts.spanId,
     parent_span_id: opts.parentSpanId,
@@ -225,6 +229,7 @@ function createCompatibilityChatSpan(opts: {
   metadata: Record<string, string>
   serviceName?: string
   systemInstruction?: string
+  user?: SeedUser | undefined
 }): SpanRow {
   const start = opts.scope.dateDaysAgo(opts.daysAgo, 10 + opts.index, 0)
   const traceId = opts.scope.traceHex(opts.traceKey, opts.index)
@@ -240,7 +245,8 @@ function createCompatibilityChatSpan(opts: {
     organization_id: opts.scope.organizationId,
     project_id: opts.scope.projectId,
     session_id: "",
-    user_id: "",
+    user_id: opts.user?.id ?? "",
+    user_email: opts.user?.email ?? "",
     trace_id: traceId,
     span_id: spanId,
     parent_span_id: "",
@@ -304,6 +310,7 @@ export function buildCompatibilitySupportSpans(scope: SeedScope): SpanRow[] {
         "I need to authenticate you first, then inspect the delivered order and item status before confirming return eligibility.",
       tags: ["support", "lifecycle", "tau2-retail"],
       metadata: { seed: "tau2-compatibility", story: "retail-return-lifecycle" },
+      user: CUSTOMER_USERS[0],
     },
     {
       traceKey: "lifecycle",
@@ -314,6 +321,7 @@ export function buildCompatibilitySupportSpans(scope: SeedScope): SpanRow[] {
         "Cancelled orders cannot be reinstated automatically. I can help place a new order or transfer you for an out-of-scope exception review.",
       tags: ["support", "lifecycle", "tau2-retail"],
       metadata: { seed: "tau2-compatibility", story: "cancelled-order-policy" },
+      user: CUSTOMER_USERS[1],
     },
     {
       traceKey: "lifecycle",
@@ -324,6 +332,7 @@ export function buildCompatibilitySupportSpans(scope: SeedScope): SpanRow[] {
         "Let's troubleshoot step by step. I will inspect the device state, verify SIM and roaming settings, then run a speed test before calling this resolved.",
       tags: ["support", "lifecycle", "tau2-telecom"],
       metadata: { seed: "tau2-compatibility", story: "telecom-troubleshooting" },
+      user: CUSTOMER_USERS[2],
     },
     {
       traceKey: "lifecycle",
@@ -333,7 +342,10 @@ export function buildCompatibilitySupportSpans(scope: SeedScope): SpanRow[] {
       assistantResponse:
         "I need to verify the account and policy eligibility before discussing credits. I cannot promise a waiver before review.",
       tags: ["support", "lifecycle", "tau2-telecom"],
+      // Same user as the troubleshooting trace so one profile accumulates
+      // multiple issue occurrences.
       metadata: { seed: "tau2-compatibility", story: "telecom-credit-policy" },
+      user: CUSTOMER_USERS[2],
     },
     {
       traceKey: "lifecycle",
@@ -344,6 +356,7 @@ export function buildCompatibilitySupportSpans(scope: SeedScope): SpanRow[] {
         "I need to compare the card fees, rewards, and your subscription benefits against the policy documents before recommending a product.",
       tags: ["support", "lifecycle", "tau2-banking"],
       metadata: { seed: "tau2-compatibility", story: "banking-knowledge-grounding" },
+      user: CUSTOMER_USERS[3],
     },
     {
       traceKey: "annotation-demo",
@@ -354,6 +367,7 @@ export function buildCompatibilitySupportSpans(scope: SeedScope): SpanRow[] {
         "I authenticated the account, checked both delivered orders, and requested returns for the eligible keyboard and mouse to the original payment methods.",
       tags: ["support", "annotation", "tau2-retail"],
       metadata: { seed: "tau2-compatibility", story: "annotation-ui-polish" },
+      user: CUSTOMER_USERS[0],
     },
     {
       traceKey: "code-block-demo",
@@ -371,6 +385,7 @@ export function buildCompatibilitySupportSpans(scope: SeedScope): SpanRow[] {
         "Keep the key in an environment variable — never hard-code it.",
       tags: ["support", "developer", "code-example"],
       metadata: { seed: "tau2-compatibility", story: "code-block-rendering" },
+      user: EMPLOYEE_USERS[0],
       serviceName: "developer-support-agent",
       systemInstruction:
         "You are a developer support AI agent. Help users integrate the Latitude SDK and API, and include short, correct code examples when useful.",
@@ -387,6 +402,10 @@ function buildTau2TrajectorySpans(scope: SeedScope): SpanRow[] {
     const messages: readonly Tau2SeedTrajectoryMessage[] = trajectory.messages
     const traceId = scope.traceHex("tau2-trajectory", trajectoryIndex)
     const rootSpanId = scope.spanHex("tau2-trajectory-root", trajectoryIndex)
+    // Deterministic weighted per-trajectory customer: stable user profiles
+    // across re-seeds (scores point at these traces), with trace counts
+    // following the pool's power-law weights so usage charts look realistic.
+    const user = seedUserAt(CUSTOMER_USERS, trajectoryIndex)
     const serviceName = `tau2-${trajectory.domain}-support-agent`
     const tags = ["support", "tau2-bench", trajectory.domain, trajectory.outcome]
     const metadata = {
@@ -423,7 +442,8 @@ function buildTau2TrajectorySpans(scope: SeedScope): SpanRow[] {
       organization_id: scope.organizationId,
       project_id: scope.projectId,
       session_id: "",
-      user_id: "",
+      user_id: user?.id ?? "",
+      user_email: user?.email ?? "",
       trace_id: traceId,
       span_id: rootSpanId,
       parent_span_id: "",
@@ -503,6 +523,7 @@ function buildTau2TrajectorySpans(scope: SeedScope): SpanRow[] {
             tags,
             metadata,
             toolDefinitions,
+            user,
           }),
         )
         history.push(outputMessage)
@@ -528,6 +549,7 @@ function buildTau2TrajectorySpans(scope: SeedScope): SpanRow[] {
           toolInput: call?.arguments ?? {},
           toolOutput: toolMessage.content,
           error: toolMessage.error,
+          user,
         }),
       )
       history.push(tau2MessageToStoredMessage(toolMessage))
