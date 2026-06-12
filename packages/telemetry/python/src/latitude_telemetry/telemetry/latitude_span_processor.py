@@ -165,6 +165,8 @@ class LatitudeSpanProcessor(SpanProcessor):
                 span.set_attribute(ATTRIBUTES.session_id, latitude_data.session_id)
             if latitude_data.user_id:
                 span.set_attribute(ATTRIBUTES.user_id, latitude_data.user_id)
+            if latitude_data.user_email:
+                span.set_attribute(ATTRIBUTES.user_email, latitude_data.user_email)
             if latitude_data.project:
                 span.set_attribute(ATTRIBUTES.project, latitude_data.project)
 
