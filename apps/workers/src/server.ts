@@ -8,7 +8,7 @@ import { TAXONOMY_GARDENING_CRON_KEY, TAXONOMY_GARDENING_CRON_PATTERN } from "@d
 import { serve } from "@hono/node-server"
 import { serveStatic } from "@hono/node-server/serve-static"
 import { createPollingOutboxConsumer } from "@platform/db-postgres"
-import { parseEnv } from "@platform/env"
+import { parseEnv, parseEnvOptional } from "@platform/env"
 import {
   createBullBoardQueues,
   createBullMqQueueConsumer,
@@ -114,21 +114,22 @@ const bootstrap = async () => {
   const initializeWorkers = async () => {
     const bullMqConfig = Effect.runSync(loadBullMqConfig())
 
-    // Set up bull-board dashboard with read-only Queue instances
-    const { TOPIC_NAMES } = await import("@domain/queue")
-    const bullBoardQueues = createBullBoardQueues(bullMqConfig, TOPIC_NAMES)
+    // The bull-board dashboard is opt-in: mounted only when both credentials are set.
+    const bullBoardUser = Effect.runSync(parseEnvOptional("LAT_BULL_BOARD_USERNAME", "string"))
+    const bullBoardPass = Effect.runSync(parseEnvOptional("LAT_BULL_BOARD_PASSWORD", "string"))
+    if (bullBoardUser && bullBoardPass) {
+      const { TOPIC_NAMES } = await import("@domain/queue")
+      const bullBoardQueues = createBullBoardQueues(bullMqConfig, TOPIC_NAMES)
+      app.use("/bull-board/*", basicAuth({ username: bullBoardUser, password: bullBoardPass }))
 
-    const bullBoardUser = Effect.runSync(parseEnv("LAT_BULL_BOARD_USERNAME", "string"))
-    const bullBoardPass = Effect.runSync(parseEnv("LAT_BULL_BOARD_PASSWORD", "string"))
-    app.use("/bull-board/*", basicAuth({ username: bullBoardUser, password: bullBoardPass }))
-
-    const serverAdapter = new HonoAdapter(serveStatic)
-    serverAdapter.setBasePath("/bull-board")
-    createBullBoard({
-      queues: bullBoardQueues.map((q) => new BullMQAdapter(q, { readOnlyMode: true })),
-      serverAdapter,
-    })
-    app.route("/bull-board", serverAdapter.registerPlugin())
+      const serverAdapter = new HonoAdapter(serveStatic)
+      serverAdapter.setBasePath("/bull-board")
+      createBullBoard({
+        queues: bullBoardQueues.map((q) => new BullMQAdapter(q, { readOnlyMode: true })),
+        serverAdapter,
+      })
+      app.route("/bull-board", serverAdapter.registerPlugin())
+    }
 
     const queuePublisher = await Effect.runPromise(
       createBullMqQueuePublisher({ redis: bullMqConfig }).pipe(withTracing),

@@ -119,6 +119,18 @@ if git rev-parse --verify "refs/tags/${version}" >/dev/null 2>&1; then
   exit 1
 fi
 
+# The Helm chart version tracks the Latitude release; the bump lands in the
+# release commit (with CHANGELOG.md) so the tagged commit ships a matching chart.
+release_semver="${version#v}"
+chart_version=$(git show "${target_sha}:charts/latitude/Chart.yaml" | awk '$1 == "version:" { print $2; exit }')
+chart_app_version=$(git show "${target_sha}:charts/latitude/Chart.yaml" | awk '$1 == "appVersion:" { gsub(/"/, "", $2); print $2; exit }')
+if [ "${chart_version}" != "${release_semver}" ] || [ "${chart_app_version}" != "${release_semver}" ]; then
+  echo "Helm chart version mismatch at origin/development: charts/latitude/Chart.yaml has"
+  echo "version ${chart_version} / appVersion ${chart_app_version}, but the release is ${version}."
+  echo "Set both to ${release_semver} in the release commit, push to origin/development, and re-run."
+  exit 1
+fi
+
 short_sha=$(git rev-parse --short "${target_sha}")
 if [ -n "${latest_tag}" ]; then
   diff_range="${latest_tag}..${target_sha}"

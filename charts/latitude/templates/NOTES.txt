@@ -1,0 +1,28 @@
+Latitude {{ .Chart.AppVersion }} installed as release "{{ .Release.Name }}".
+
+Services:
+  web      {{ .Values.config.webUrl }}
+  api      {{ .Values.config.apiUrl }}
+  ingest   {{ .Values.config.ingestUrl }}
+
+{{- if not .Values.ingress.enabled }}
+
+Ingress is disabled. To reach the web app locally:
+
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "latitude.fullname" . }}-web 3000:3000
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "latitude.fullname" . }}-api 3001:3001
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "latitude.fullname" . }}-ingest 3002:3002
+{{- end }}
+
+Database migrations ran as a post-install/pre-upgrade job; check it with:
+
+  kubectl get jobs -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}
+
+First user: open the web URL and register — the first account creates the
+organization. Magic-link sign-in needs a working email transport (settings in
+config.extraEnv, passwords in secrets.extra).
+
+AI features are optional: without provider keys the core observability stack
+(trace ingest + viewing) works and AI-dependent features degrade per call.
+Add provider keys via secrets.extra and select models with LAT_AI_* via
+config.extraEnv.

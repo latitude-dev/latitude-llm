@@ -1,0 +1,84 @@
+{{- if .Values.redisBullmq.enabled }}
+{{/* BullMQ queue Redis — durable: appendonly persistence, noeviction. */}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "latitude.fullname" . }}-redis-bullmq
+  labels:
+    {{- include "latitude.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis-bullmq
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "latitude.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: redis-bullmq
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "latitude.fullname" . }}-redis-bullmq
+  labels:
+    {{- include "latitude.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis-bullmq
+spec:
+  serviceName: {{ include "latitude.fullname" . }}-redis-bullmq
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "latitude.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: redis-bullmq
+  template:
+    metadata:
+      labels:
+        {{- include "latitude.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: redis-bullmq
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- include "latitude.podSettings" . | nindent 6 }}
+      containers:
+        - name: redis
+          image: {{ .Values.redisBullmq.image }}
+          args: ["--maxmemory-policy", "noeviction", "--appendonly", "yes"]
+          ports:
+            - name: redis
+              containerPort: 6379
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 6
+          {{- with .Values.redisBullmq.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- with .Values.redisBullmq.persistence.storageClass }}
+        storageClassName: {{ . }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.redisBullmq.persistence.size }}
+{{- end }}

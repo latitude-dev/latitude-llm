@@ -217,6 +217,7 @@
         "pages": [
           "deployment/overview",
           "deployment/single-host",
+          "deployment/cluster",
           "deployment/configuration"
         ]
       },

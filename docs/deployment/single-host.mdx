@@ -6,7 +6,7 @@ description: Run a production-grade Latitude instance on a single machine with D
 Single-host runs the **entire Latitude product on one machine**: all five application services, a one-shot migrations job, and bundled infrastructure (Postgres, ClickHouse, Redis, Temporal, SeaweedFS). It uses the published [Docker images](https://hub.docker.com/u/latitudedata) and a single `.env.production`, all defined in [`docker-stack.yml`](https://github.com/latitude-dev/latitude-llm/blob/development/docker-stack.yml).
 
 <Note>
-  For a scalable, highly-available deployment, deploy Latitude to a Kubernetes cluster using our Helm chart instead, _coming soon_.
+  For a scalable, highly-available deployment, deploy Latitude to a Kubernetes cluster using our Helm chart instead — see [Cluster](/deployment/cluster) deployment.
 </Note>
 
 ## Quick start
@@ -71,7 +71,7 @@ Single-host runs the **entire Latitude product on one machine**: all five applic
   </Step>
 </Steps>
 
-## Services
+## What gets deployed
 
 | Container | Image | Purpose |
 | --- | --- | --- |
@@ -86,6 +86,12 @@ Single-host runs the **entire Latitude product on one machine**: all five applic
 | `redis`, `redis-bullmq` | `redis` | Cache + queues |
 | `temporal` | `temporalio/auto-setup` | Workflow engine (Postgres-backed) |
 | `seaweedfs` | `chrislusf/seaweedfs` | S3-compatible object store |
+
+## Secrets
+
+All configuration, secrets included, lives in `.env.production`. Keep `.env.production` out of version control and back it up with your other operational secrets.
+
+See the [secrets reference](/deployment/configuration#secrets) for what each application secret does.
 
 ## AI features
 
@@ -123,6 +129,10 @@ docker compose --env-file .env.production -f docker-stack.yml up -d
 ```
 
 The `migrations` container runs automatically on every `up`, applying any new Postgres and ClickHouse migrations before the application services start.
+
+## Health and observability
+
+Every service exposes an HTTP health endpoint, wired as the container healthchecks in `docker-stack.yml` (`/health`; the web app uses `/api/health`; `workers`/`workflows` listen on internal ports 9090/9091). Check them with `docker compose -f docker-stack.yml ps` — every service should report `healthy`. OpenTelemetry export is available through the `LAT_OBSERVABILITY_*` variables in `.env.production`.
 
 ## TLS and reverse proxy
 

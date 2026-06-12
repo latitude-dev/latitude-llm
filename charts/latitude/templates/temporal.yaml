@@ -1,0 +1,94 @@
+{{- if .Values.temporal.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "latitude.fullname" . }}-temporal
+  labels:
+    {{- include "latitude.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "latitude.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal
+  ports:
+    - name: grpc
+      port: 7233
+      targetPort: grpc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "latitude.fullname" . }}-temporal
+  labels:
+    {{- include "latitude.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "latitude.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: temporal
+  template:
+    metadata:
+      labels:
+        {{- include "latitude.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: temporal
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- include "latitude.podSettings" . | nindent 6 }}
+      containers:
+        - name: temporal
+          image: {{ .Values.temporal.serverImage }}
+          ports:
+            - name: grpc
+              containerPort: 7233
+          env:
+            - name: DB
+              value: postgres12
+            - name: POSTGRES_SEEDS
+              value: {{ include "latitude.temporalDbHost" . | quote }}
+            - name: DB_PORT
+              value: {{ .Values.temporal.database.port | quote }}
+            - name: POSTGRES_USER
+              value: {{ include "latitude.temporalDbUser" . | quote }}
+            - name: POSTGRES_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "latitude.secretName" . }}
+                  key: TEMPORAL_POSTGRES_PASSWORD
+            - name: DBNAME
+              value: temporal
+            - name: VISIBILITY_DBNAME
+              value: temporal_visibility
+            # Permanent once the cluster metadata is initialized.
+            - name: NUM_HISTORY_SHARDS
+              value: {{ .Values.temporal.numHistoryShards | quote }}
+            - name: BIND_ON_IP
+              value: 0.0.0.0
+            - name: TEMPORAL_BROADCAST_ADDRESS
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          readinessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
+          livenessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 10
+          {{- with .Values.temporal.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}

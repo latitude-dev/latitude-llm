@@ -1,0 +1,124 @@
+{{- if .Values.temporal.enabled }}
+{{/*
+Creates the temporal + temporal_visibility databases and
+brings both schemas to the latest version.
+*/}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "latitude.fullname" . }}-temporal-schema
+  labels:
+    {{- include "latitude.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal-schema
+  annotations:
+    helm.sh/hook: post-install,pre-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 6
+  activeDeadlineSeconds: 900
+  template:
+    metadata:
+      labels:
+        {{- include "latitude.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: temporal-schema
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      restartPolicy: OnFailure
+      {{- include "latitude.podSettings" . | nindent 6 }}
+      containers:
+        - name: schema
+          image: {{ .Values.temporal.adminToolsImage }}
+          command:
+            - bash
+            - -ec
+            - |
+              until (echo > /dev/tcp/"$SQL_HOST"/"$SQL_PORT") 2>/dev/null; do
+                echo "waiting for postgres at $SQL_HOST:$SQL_PORT..."
+                sleep 5
+              done
+              schema=/etc/temporal/schema/postgresql/v12
+              for db in temporal temporal_visibility; do
+                temporal-sql-tool --db "$db" create-database || echo "database $db already exists"
+              done
+              temporal-sql-tool --db temporal setup-schema -v 0.0 || echo "temporal schema already initialized"
+              temporal-sql-tool --db temporal update-schema -d "$schema/temporal/versioned"
+              temporal-sql-tool --db temporal_visibility setup-schema -v 0.0 || echo "visibility schema already initialized"
+              temporal-sql-tool --db temporal_visibility update-schema -d "$schema/visibility/versioned"
+          env:
+            - name: SQL_PLUGIN
+              value: postgres12
+            - name: SQL_HOST
+              value: {{ include "latitude.temporalDbHost" . | quote }}
+            - name: SQL_PORT
+              value: {{ .Values.temporal.database.port | quote }}
+            - name: SQL_USER
+              value: {{ include "latitude.temporalDbUser" . | quote }}
+            - name: SQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "latitude.secretName" . }}
+                  key: TEMPORAL_POSTGRES_PASSWORD
+---
+{{/*
+Registers the namespace the app uses once the server is up (the server can
+only start after the schema job above completes).
+*/}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "latitude.fullname" . }}-temporal-namespace
+  labels:
+    {{- include "latitude.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal-namespace
+  annotations:
+    helm.sh/hook: post-install
+    helm.sh/hook-weight: "5"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 6
+  activeDeadlineSeconds: 900
+  template:
+    metadata:
+      labels:
+        {{- include "latitude.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: temporal-namespace
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      restartPolicy: OnFailure
+      {{- include "latitude.podSettings" . | nindent 6 }}
+      containers:
+        - name: namespace
+          image: {{ .Values.temporal.adminToolsImage }}
+          command:
+            - bash
+            - -ec
+            - |
+              for i in $(seq 1 120); do
+                if temporal operator namespace describe --namespace "$TEMPORAL_NAMESPACE" >/dev/null 2>&1; then
+                  echo "namespace $TEMPORAL_NAMESPACE exists"
+                  exit 0
+                fi
+                if temporal operator namespace create --namespace "$TEMPORAL_NAMESPACE" --retention "$NAMESPACE_RETENTION" >/dev/null 2>&1; then
+                  echo "namespace $TEMPORAL_NAMESPACE created"
+                  exit 0
+                fi
+                echo "waiting for temporal server at $TEMPORAL_ADDRESS..."
+                sleep 5
+              done
+              echo "temporal server never became ready"
+              exit 1
+          env:
+            - name: TEMPORAL_ADDRESS
+              value: {{ printf "%s-temporal:7233" (include "latitude.fullname" .) | quote }}
+            - name: TEMPORAL_NAMESPACE
+              value: {{ .Values.temporal.namespace | quote }}
+            - name: NAMESPACE_RETENTION
+              value: {{ .Values.temporal.namespaceRetention | quote }}
+{{- end }}

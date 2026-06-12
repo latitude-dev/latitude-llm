@@ -169,7 +169,7 @@ Two Redis roles — a cache and the BullMQ job queue (same server or separate). 
 | `LAT_BULLMQ_HOST`, `LAT_BULLMQ_PORT` | Queue connection. |
 | `LAT_REDIS_TLS`, `LAT_REDIS_CLUSTER` | Enable TLS / cluster mode for the cache. |
 | `LAT_BULLMQ_PASSWORD`, `LAT_BULLMQ_CLUSTER` | Queue auth / cluster mode. |
-| `LAT_BULL_BOARD_USERNAME`, `LAT_BULL_BOARD_PASSWORD` | Basic-auth for the queue dashboard. |
+| `LAT_BULL_BOARD_USERNAME`, `LAT_BULL_BOARD_PASSWORD` | Basic-auth for the optional queue dashboard, served at `/bull-board` on the workers health port. Only mounted while both are set; leave unset to disable it. |
 
 ### Temporal
 

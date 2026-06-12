@@ -1,0 +1,3 @@
+{{ include "latitude.appDeployment" (dict "root" $ "name" "ingest" "port" 3002 "probePath" "/health") }}
+---
+{{ include "latitude.appService" (dict "root" $ "name" "ingest" "port" 3002) }}
