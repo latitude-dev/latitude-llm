@@ -33,7 +33,11 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/readme/gif-ui.gif?raw=true" alt="Demo of the Latitude UI showing LLM observability, issue tracking, and evals" width="800"/>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/gif-ui-dark.gif?raw=true">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/gif-ui-light.gif?raw=true">
+    <img src="docs/assets/readme/gif-ui-light.gif?raw=true" alt="Demo of the Latitude UI showing LLM observability, issue tracking, and evals" width="800"/>
+  </picture>
 </p>
 
 ## 🌈 Why Latitude?
