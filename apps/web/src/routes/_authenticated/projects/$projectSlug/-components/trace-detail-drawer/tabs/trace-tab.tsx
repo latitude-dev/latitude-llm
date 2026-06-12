@@ -193,7 +193,7 @@ export function TraceTab({
       </div>
 
       {/* ── Tools ── */}
-      <DetailSection icon={<WrenchIcon className="w-4 h-4" />} label="Tools">
+      <DetailSection icon={<WrenchIcon className="w-4 h-4" />} label="Tools" defaultOpen={false}>
         {() =>
           isSpansLoading ? (
             <Skeleton className="h-7 w-48" />

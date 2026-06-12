@@ -174,7 +174,7 @@ export function MetadataTab({
         )}
       </div>
 
-      <DetailSection icon={<WrenchIcon className="h-4 w-4" />} label="Tools">
+      <DetailSection icon={<WrenchIcon className="h-4 w-4" />} label="Tools" defaultOpen={false}>
         {() =>
           isSpansLoading ? (
             <Skeleton className="h-7 w-48" />
