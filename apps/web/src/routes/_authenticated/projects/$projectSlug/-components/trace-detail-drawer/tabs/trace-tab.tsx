@@ -15,6 +15,7 @@ import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, FingerprintIcon, TextI
 import { useMemo } from "react"
 import type { SpanRecord } from "../../../../../../../domains/spans/spans.functions.ts"
 import type { TraceDetailRecord, TraceRecord } from "../../../../../../../domains/traces/traces.functions.ts"
+import { aggregateToolPills, ToolPillList } from "../../tool-pills.tsx"
 import { TraceOutlierBadge, type TraceOutlierMetric } from "../../trace-outlier-badge.tsx"
 import { DurationBar } from "../duration-bar.tsx"
 import { computeDurationBreakdown } from "../duration-composition.ts"
@@ -89,6 +90,7 @@ export function TraceTab({
 
   // Falls back to the record total until spans load, so the duration always renders.
   const durationBreakdown = useMemo(() => computeDurationBreakdown(spans ?? []), [spans])
+  const toolPills = useMemo(() => aggregateToolPills(spans), [spans])
   const fallbackDurationMs = traceRecord ? traceRecord.durationNs / 1_000_000 : 0
   const durationWallClockMs = durationBreakdown.wallClockMs > 0 ? durationBreakdown.wallClockMs : fallbackDurationMs
   const durationBadge = traceRecord ? renderBadge("durationNs", traceRecord.durationNs) : undefined
@@ -189,6 +191,14 @@ export function TraceTab({
           </Text.H6>
         )}
       </div>
+
+      {/* ── Tools ── */}
+      {(isSpansLoading || toolPills.length > 0) && (
+        <div className="flex flex-col gap-1">
+          <Text.H6 color="foregroundMuted">Tools</Text.H6>
+          {isSpansLoading ? <Skeleton className="h-7 w-48" /> : <ToolPillList tools={toolPills} scopeLabel="trace" />}
+        </div>
+      )}
 
       {/* ── Metadata ── */}
       <DetailSection icon={<TextIcon className="w-4 h-4" />} label="Metadata" defaultOpen={false}>

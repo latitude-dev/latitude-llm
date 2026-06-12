@@ -5,6 +5,7 @@ import {
   DetailSection,
   DetailSummary,
   ProviderIcon,
+  Skeleton,
   TagBadgeList,
   Text,
   Tooltip,
@@ -15,6 +16,7 @@ import { useMemo } from "react"
 import type { SessionDetailRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
 import { useSpansBySessionCollection } from "../../../../../../domains/spans/spans.collection.ts"
 import { SessionOutlierBadge, type SessionOutlierMetric } from "../session-outlier-badge.tsx"
+import { aggregateToolPills, ToolPillList } from "../tool-pills.tsx"
 import { DurationBar } from "../trace-detail-drawer/duration-bar.tsx"
 import { computeSessionDurationBreakdown } from "../trace-detail-drawer/duration-composition.ts"
 import { ModelFilterLink } from "../trace-detail-drawer/tabs/spans-tab/model-filter-link.tsx"
@@ -85,6 +87,7 @@ export function MetadataTab({
     startTimeTo: session.endTime,
   })
   const durationBreakdown = useMemo(() => computeSessionDurationBreakdown(spans ?? []), [spans])
+  const toolPills = useMemo(() => aggregateToolPills(spans), [spans])
   const fallbackDurationMs = session.durationNs / 1_000_000
   const durationWallClockMs = durationBreakdown.wallClockMs > 0 ? durationBreakdown.wallClockMs : fallbackDurationMs
   const durationBadge = renderBadge("durationNs", session.durationNs)
@@ -170,6 +173,13 @@ export function MetadataTab({
           </Text.H6>
         )}
       </div>
+
+      {(isSpansLoading || toolPills.length > 0) && (
+        <div className="flex flex-col gap-1">
+          <Text.H6 color="foregroundMuted">Tools</Text.H6>
+          {isSpansLoading ? <Skeleton className="h-7 w-48" /> : <ToolPillList tools={toolPills} scopeLabel="session" />}
+        </div>
+      )}
 
       <DetailSection icon={<TextIcon className="h-4 w-4" />} label="Metadata" defaultOpen={false}>
         {() =>
