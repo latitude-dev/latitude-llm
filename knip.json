@@ -98,7 +98,7 @@
       "project": [],
       "ignoreBinaries": []
     },
-    "examples/sdks/typescript": {
+    "packages/sdk/typescript/examples": {
       "entry": [
         "src/**/*.ts"
       ],
