@@ -2163,6 +2163,9 @@ importers:
       '@domain/datasets':
         specifier: workspace:*
         version: link:../../domain/datasets
+      '@domain/destinations':
+        specifier: workspace:*
+        version: link:../../domain/destinations
       '@domain/evaluations':
         specifier: workspace:*
         version: link:../../domain/evaluations

@@ -37,6 +37,8 @@ export { BillingOverrideRepositoryLive } from "./repositories/billing-override-r
 export { BillingUsageEventRepositoryLive } from "./repositories/billing-usage-event-repository.ts"
 export { BillingUsagePeriodRepositoryLive } from "./repositories/billing-usage-period-repository.ts"
 export { DatasetRepositoryLive } from "./repositories/dataset-repository.ts"
+export { DestinationRepositoryLive } from "./repositories/destination-repository.ts"
+export { DestinationSyncRunRepositoryLive } from "./repositories/destination-sync-run-repository.ts"
 // Repository implementations
 export { EvaluationAlignmentExamplesRepositoryLive } from "./repositories/evaluation-alignment-examples-repository.ts"
 export { EvaluationRepositoryLive } from "./repositories/evaluation-repository.ts"

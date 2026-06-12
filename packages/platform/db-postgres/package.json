@@ -39,6 +39,7 @@
     "@domain/api-keys": "workspace:*",
     "@domain/billing": "workspace:*",
     "@domain/datasets": "workspace:*",
+    "@domain/destinations": "workspace:*",
     "@domain/evaluations": "workspace:*",
     "@domain/events": "workspace:*",
     "@domain/feature-flags": "workspace:*",
