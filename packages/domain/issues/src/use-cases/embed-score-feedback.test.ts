@@ -1,3 +1,4 @@
+import { DEFAULT_EMBEDDING_CONFIG } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import { type Score, ScoreRepository, scoreSchema } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
@@ -5,7 +6,6 @@ import { OrganizationId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { CENTROID_EMBEDDING_DIMENSIONS, CENTROID_EMBEDDING_MODEL } from "../constants.ts"
 import { embedScoreFeedbackUseCase } from "./embed-score-feedback.ts"
 
 const organizationId = "oooooooooooooooooooooooo"
@@ -60,8 +60,7 @@ describe("embedScoreFeedbackUseCase", () => {
     expect(aiCalls.embed).toHaveLength(1)
     expect(aiCalls.embed[0]).toMatchObject({
       text: score.feedback,
-      model: CENTROID_EMBEDDING_MODEL,
-      dimensions: CENTROID_EMBEDDING_DIMENSIONS,
+      model: DEFAULT_EMBEDDING_CONFIG.model,
     })
     expect(result.normalizedEmbedding[0]).toBeCloseTo(0.6)
     expect(result.normalizedEmbedding[1]).toBeCloseTo(0.8)

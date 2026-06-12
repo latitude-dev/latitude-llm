@@ -45,11 +45,10 @@ vi.mock("@domain/flaggers", () => ({
 }))
 
 vi.mock("@platform/ai", () => ({
-  withAi: () => (effect: unknown) => effect,
-}))
-
-vi.mock("@platform/ai-vercel", () => ({
+  AIEmbedLive: {},
   AIGenerateLive: {},
+  AIRerankLive: {},
+  withAi: () => (effect: unknown) => effect,
 }))
 
 vi.mock("@platform/db-clickhouse", () => ({

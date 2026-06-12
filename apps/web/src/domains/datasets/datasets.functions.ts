@@ -34,8 +34,7 @@ import {
   TraceId,
   UnauthorizedError,
 } from "@domain/shared"
-import { withAi } from "@platform/ai"
-import { AIEmbedLive } from "@platform/ai-voyage"
+import { AIEmbedLive, withAi } from "@platform/ai"
 import {
   DatasetRowRepositoryLive,
   ScoreAnalyticsRepositoryLive,

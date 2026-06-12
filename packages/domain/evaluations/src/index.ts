@@ -125,7 +125,7 @@ export {
 } from "./runtime/ai-telemetry.ts"
 export {
   EVALUATION_CONVERSATION_PLACEHOLDER,
-  EVALUATION_SCRIPT_RUNTIME_MODEL,
+  EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL,
   EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
   type EvaluationConversationMessage,
   type EvaluationExecutionResult,

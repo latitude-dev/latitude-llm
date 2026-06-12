@@ -76,6 +76,9 @@ const TEST_EMBEDDING = testEmbedding
 vi.mock("@platform/ai", async () => {
   const { Effect: Eff, Layer: EffLayer } = (await vi.importActual("effect")) as typeof import("effect")
   return {
+    AIEmbedLive: {},
+    AIGenerateLive: {},
+    AIRerankLive: {},
     withAi: () => Eff.provide(EffLayer.succeed(AI, mockAi)),
   }
 })

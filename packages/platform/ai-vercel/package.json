@@ -14,6 +14,9 @@
   "dependencies": {
     "@ai-sdk/amazon-bedrock": "5.0.0-beta.41",
     "@ai-sdk/anthropic": "4.0.0-beta.37",
+    "@ai-sdk/google": "4.0.0-beta.49",
+    "@ai-sdk/openai": "4.0.0-beta.44",
+    "@ai-sdk/openai-compatible": "3.0.0-beta.36",
     "@aws-sdk/credential-providers": "3.1045.0",
     "@domain/ai": "workspace:*",
     "@platform/ai-latitude": "workspace:*",

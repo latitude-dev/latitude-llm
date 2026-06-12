@@ -1,7 +1,7 @@
+import { EMBEDDING_DIMENSIONS } from "@domain/ai"
 import {
   TAXONOMY_CLUSTER_DESCRIPTION_MAX_LENGTH,
   TAXONOMY_CLUSTER_NAME_MAX_LENGTH,
-  TAXONOMY_EMBEDDING_DIMENSIONS,
   type TaxonomyCentroid,
   type TaxonomyClusterState,
 } from "@domain/taxonomy"
@@ -36,7 +36,7 @@ export const taxonomyClusters = latitudeSchema.table(
     name: varchar("name", { length: TAXONOMY_CLUSTER_NAME_MAX_LENGTH }).notNull(),
     description: varchar("description", { length: TAXONOMY_CLUSTER_DESCRIPTION_MAX_LENGTH }).notNull(),
     centroid: jsonb("centroid").$type<TaxonomyCentroid>().notNull(),
-    centroidEmbedding: vector("centroid_embedding", { dimensions: TAXONOMY_EMBEDDING_DIMENSIONS }),
+    centroidEmbedding: vector("centroid_embedding", { dimensions: EMBEDDING_DIMENSIONS }),
     searchDocument: tsvector("search_document")
       .generatedAlwaysAs(
         (): ReturnType<typeof sql> => sql`

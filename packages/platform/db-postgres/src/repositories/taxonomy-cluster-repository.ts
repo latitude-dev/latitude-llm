@@ -1,8 +1,7 @@
+import { EMBEDDING_DIMENSIONS, resolveEmbeddingConfig } from "@domain/ai"
 import { NotFoundError, RepositoryError, SqlClient, type SqlClientShape, TaxonomyClusterId } from "@domain/shared"
 import {
   normalizeTaxonomyCentroid,
-  TAXONOMY_EMBEDDING_DIMENSIONS,
-  TAXONOMY_EMBEDDING_MODEL,
   TAXONOMY_SEARCH_MIN_SCORE,
   TAXONOMY_SEARCH_MIN_VECTOR_SIMILARITY,
   type TaxonomyCluster,
@@ -42,11 +41,11 @@ const validateVector = (
   vector: readonly number[],
   operation: string,
 ): Effect.Effect<readonly number[], RepositoryError> => {
-  if (vector.length !== TAXONOMY_EMBEDDING_DIMENSIONS) {
+  if (vector.length !== EMBEDDING_DIMENSIONS) {
     return Effect.fail(
       new RepositoryError({
         operation,
-        cause: new Error(`Expected ${TAXONOMY_EMBEDDING_DIMENSIONS} dimensions, received ${vector.length}`),
+        cause: new Error(`Expected ${EMBEDDING_DIMENSIONS} dimensions, received ${vector.length}`),
       }),
     )
   }
@@ -67,30 +66,37 @@ const validateVector = (
 const toVectorLiteral = (vector: readonly number[], operation: string) =>
   validateVector(vector, operation).pipe(Effect.map((validated) => sql.raw(`'[${validated.join(",")}]'::vector`)))
 
-const toCentroidEmbedding = (cluster: TaxonomyCluster): Effect.Effect<readonly number[] | null, RepositoryError> => {
-  if (cluster.centroid.mass <= 0) return Effect.succeed(null)
+const toCentroidEmbedding = (cluster: TaxonomyCluster): Effect.Effect<readonly number[] | null, RepositoryError> =>
+  Effect.gen(function* () {
+    if (cluster.centroid.mass <= 0) return null
 
-  if (cluster.centroid.model !== TAXONOMY_EMBEDDING_MODEL) {
-    return Effect.fail(
-      new RepositoryError({
-        operation: "TaxonomyClusterRepository.save",
-        cause: new Error(`Unsupported centroid model ${cluster.centroid.model}`),
-      }),
+    // The embedding model is a one-time deployment choice (different models
+    // produce incompatible vector spaces, and Latitude never re-embeds), so a
+    // centroid stamped with anything but the configured model is a hard error.
+    const embeddingConfig = yield* resolveEmbeddingConfig().pipe(
+      Effect.mapError((error) => new RepositoryError({ operation: "TaxonomyClusterRepository.save", cause: error })),
     )
-  }
+    if (cluster.centroid.model !== embeddingConfig.model) {
+      return yield* Effect.fail(
+        new RepositoryError({
+          operation: "TaxonomyClusterRepository.save",
+          cause: new Error(`Unsupported centroid model ${cluster.centroid.model}`),
+        }),
+      )
+    }
 
-  const vector = normalizeTaxonomyCentroid(cluster.centroid)
-  if (vector.length === 0) {
-    return Effect.fail(
-      new RepositoryError({
-        operation: "TaxonomyClusterRepository.save",
-        cause: new Error("Positive-mass centroid normalized to an empty vector"),
-      }),
-    )
-  }
+    const vector = normalizeTaxonomyCentroid(cluster.centroid)
+    if (vector.length === 0) {
+      return yield* Effect.fail(
+        new RepositoryError({
+          operation: "TaxonomyClusterRepository.save",
+          cause: new Error("Positive-mass centroid normalized to an empty vector"),
+        }),
+      )
+    }
 
-  return validateVector(vector, "TaxonomyClusterRepository.save")
-}
+    return yield* validateVector(vector, "TaxonomyClusterRepository.save")
+  })
 
 const toInsertRow = (
   cluster: TaxonomyCluster,

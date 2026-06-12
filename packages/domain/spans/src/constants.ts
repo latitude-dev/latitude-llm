@@ -102,19 +102,11 @@ export const TRACE_SEARCH_DEFAULT_DAILY_EMBED_BUDGET_TOKENS = 167_000_000
 export const TRACE_SEARCH_DEFAULT_WEEKLY_EMBED_BUDGET_TOKENS = 1_150_000_000
 export const TRACE_SEARCH_DEFAULT_MONTHLY_EMBED_BUDGET_TOKENS = 5_000_000_000
 
-/**
- * Embedding model for trace semantic search (Voyage).
- *
- * `voyage-4-large` at 2048 dims. Chosen over the smaller voyage-3-lite so the
- * raw cosine ranking is precise enough to stand on its own without a
- * cross-encoder rerank step. A larger bi-encoder fits the "search-as-a-
- * filter-column" query shape: single CH query, cursor-paginable, bounded
- * latency, no external rerank round-trip.
- */
-export const TRACE_SEARCH_EMBEDDING_MODEL = "voyage-4-large"
-
-/** Embedding dimensions for the chosen model. */
-export const TRACE_SEARCH_EMBEDDING_DIMENSIONS = 2048
+// The embedding model is resolved at call time via `resolveEmbeddingConfig()`
+// (`@domain/ai`): default `voyage-4-large` at the fixed `EMBEDDING_DIMENSIONS`
+// (2048), overridable with `LAT_AI_EMBEDDING_{PROVIDER,MODEL}`. The default
+// was chosen over smaller models so the raw cosine ranking is precise enough
+// to stand on its own without a cross-encoder rerank step.
 
 /**
  * Minimum semantic-only relevance score for a trace to surface in search

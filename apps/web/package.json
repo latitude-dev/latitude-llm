@@ -49,7 +49,6 @@
     "@intercom/messenger-js-sdk": "0.0.14",
     "@lottiefiles/dotlottie-wc": "0.9.12",
     "@platform/ai": "workspace:*",
-    "@platform/ai-voyage": "workspace:*",
     "@platform/api-key-auth": "workspace:*",
     "@platform/cache-redis": "workspace:*",
     "@platform/changelog-framer": "workspace:*",

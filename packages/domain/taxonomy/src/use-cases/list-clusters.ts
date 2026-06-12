@@ -1,7 +1,6 @@
-import { AI } from "@domain/ai"
+import { AI, resolveEmbeddingConfig } from "@domain/ai"
 import type { OrganizationId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
-import { TAXONOMY_EMBEDDING_DIMENSIONS, TAXONOMY_EMBEDDING_MODEL } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import { isDisplayableTaxonomyName, normalizeTaxonomyEmbedding } from "../helpers.ts"
 import { TaxonomyClusterRepository, type TaxonomyClusterSort } from "../ports/taxonomy-cluster-repository.ts"
@@ -59,10 +58,11 @@ export const listClustersUseCase = (input: ListTaxonomyClustersInput) =>
 
     if (search) {
       const ai = yield* AI
+      const embeddingConfig = yield* resolveEmbeddingConfig()
       const embedding = yield* ai.embed({
         text: search,
-        model: TAXONOMY_EMBEDDING_MODEL,
-        dimensions: TAXONOMY_EMBEDDING_DIMENSIONS,
+        provider: embeddingConfig.provider,
+        model: embeddingConfig.model,
         inputType: "query",
       })
       const candidates = yield* clusters.hybridSearch({

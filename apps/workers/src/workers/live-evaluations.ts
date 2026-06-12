@@ -2,8 +2,7 @@ import { type RunLiveEvaluationResult, runLiveEvaluationUseCase } from "@domain/
 import type { QueueConsumer } from "@domain/queue"
 import type { EvaluationScore } from "@domain/scores"
 import { OrganizationId } from "@domain/shared"
-import { withAi } from "@platform/ai"
-import { AIGenerateLive } from "@platform/ai-vercel"
+import { AIGenerateLive, withAi } from "@platform/ai"
 import {
   RedisBillingSpendReservationLive,
   type RedisClient,

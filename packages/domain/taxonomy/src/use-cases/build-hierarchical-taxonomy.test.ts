@@ -1,3 +1,4 @@
+import { EMBEDDING_DIMENSIONS } from "@domain/ai"
 import {
   ChSqlClient,
   OrganizationId,
@@ -10,7 +11,7 @@ import {
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX, TAXONOMY_EMBEDDING_DIMENSIONS } from "../constants.ts"
+import { TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import type { TaxonomyMomentObservation } from "../entities/observation.ts"
 import { createTaxonomyCentroid, updateTaxonomyCentroid } from "../helpers.ts"
@@ -24,7 +25,7 @@ const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
 
 const vector = (values: Record<number, number>) => {
-  const result = new Array(TAXONOMY_EMBEDDING_DIMENSIONS).fill(0)
+  const result = new Array(EMBEDDING_DIMENSIONS).fill(0)
   for (const [index, value] of Object.entries(values)) result[Number(index)] = value
   return result
 }

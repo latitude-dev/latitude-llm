@@ -46,6 +46,7 @@
  *     and every member is assigned to a leaf — there is no noise pool.
  */
 
+import { resolveEmbeddingConfig } from "@domain/ai"
 import {
   generateId,
   type OrganizationId,
@@ -170,8 +171,10 @@ const buildPersistedCluster = (input: {
    */
   readonly firstObservedAt?: Date | undefined
   readonly createdAt?: Date | undefined
+  /** Model of the embedding space the member embeddings live in. */
+  readonly embeddingModel: string
 }): TaxonomyCluster => {
-  let centroid = createTaxonomyCentroid()
+  let centroid = createTaxonomyCentroid(input.embeddingModel)
   let clusteredAt = input.now
   for (let index = 0; index < input.memberEmbeddings.length; index++) {
     const timestamp = input.memberStartTimes[index] ?? input.now
@@ -284,6 +287,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     yield* Effect.annotateCurrentSpan("taxonomy.runId", input.runId)
     const now = input.now ?? new Date()
     const dimension = input.dimension ?? TaxonomyDimension.Topic
+    const embeddingConfig = yield* resolveEmbeddingConfig()
     const observationsRepo = yield* TaxonomyObservationRepository
     const clustersRepo = yield* TaxonomyClusterRepository
     const since = lookbackStart(now)
@@ -396,6 +400,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
         description: carryName && old ? old.description : "",
         firstObservedAt: old?.firstObservedAt,
         createdAt: old?.createdAt,
+        embeddingModel: embeddingConfig.model,
       })
       bornClusters.push(cluster)
       if (node.depth > maxDepth) maxDepth = node.depth

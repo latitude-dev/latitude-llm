@@ -3,16 +3,17 @@ import {
   AI_GENERATE_TELEMETRY_SPAN_NAMES,
   AI_GENERATE_TELEMETRY_TAGS,
   buildProjectScopedAiMetadata,
+  resolveGenerationConfig,
 } from "@domain/ai"
 import { LATITUDE_TELEMETRY_PROJECT_SLUGS, type OrganizationId, type ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
 import {
   TAXONOMY_CLUSTER_LOCK_TTL_SECONDS,
+  TAXONOMY_DEFAULT_NAMING_MODEL,
   TAXONOMY_FPS_SAMPLE_BUDGET_MAX,
   TAXONOMY_FPS_SAMPLE_BUDGET_MIN,
   TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
-  TAXONOMY_NAMING_MODEL,
   TAXONOMY_NAMING_TIMEOUT_MS,
 } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
@@ -105,9 +106,9 @@ const generateClusterName = (input: GenerateInput) =>
           : input.mode === "interior"
             ? "These are NOT raw conversation samples — they are the names and descriptions of THIS cluster's CHILD topics. Your job is to find a single short umbrella TOPIC that subsumes all of them and is BROADER than every child. The umbrella must not be identical or near-identical to any child."
             : "These are raw conversation samples. Find the dominant topic across them."
+      const modelConfig = yield* resolveGenerationConfig("TAXONOMY_NAMING", TAXONOMY_DEFAULT_NAMING_MODEL)
       const map = yield* ai.generate({
-        provider: TAXONOMY_NAMING_MODEL.provider,
-        model: TAXONOMY_NAMING_MODEL.model,
+        ...modelConfig,
         telemetry: {
           spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.taxonomyProposeThemes,
           project: LATITUDE_TELEMETRY_PROJECT_SLUGS.taxonomy,
@@ -120,12 +121,9 @@ const generateClusterName = (input: GenerateInput) =>
         system: `proposeCandidateThemes: propose concise candidate conversation TOPIC themes for this cluster. ${TOPIC_POLICY} ${modeContext} Return only schema-valid JSON.`,
         prompt: `${parentContext}${forbiddenContext}${retryContext}Samples:\n${sampleLines}`,
         schema: candidateThemesSchema,
-        temperature: 0.2,
-        maxTokens: 800,
       })
       const reduced = yield* ai.generate({
-        provider: TAXONOMY_NAMING_MODEL.provider,
-        model: TAXONOMY_NAMING_MODEL.model,
+        ...modelConfig,
         telemetry: {
           spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.taxonomyNameCluster,
           project: LATITUDE_TELEMETRY_PROJECT_SLUGS.taxonomy,
@@ -138,8 +136,6 @@ const generateClusterName = (input: GenerateInput) =>
         system: `Collapse candidate themes into ONE conversation TOPIC name (2-5 words) and a one-sentence description of what the user is trying to do. ${TOPIC_POLICY} ${modeContext} The name MUST be clearly distinct from any forbidden names provided. Return only schema-valid JSON with BOTH required string keys: name and description.`,
         prompt: `${parentContext}${forbiddenContext}${retryContext}Samples:\n${sampleLines}\n\nCandidates:\n${JSON.stringify(map.object.candidates)}\n\nReturn JSON exactly like {"name":"Short topic label","description":"One sentence describing what these conversations are about."}`,
         schema: finalNameSchema,
-        temperature: 0.2,
-        maxTokens: 1600,
       })
       return reduced.object
     }),

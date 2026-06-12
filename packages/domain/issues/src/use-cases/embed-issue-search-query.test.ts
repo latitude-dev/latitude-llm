@@ -1,7 +1,7 @@
+import { DEFAULT_EMBEDDING_CONFIG } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { CENTROID_EMBEDDING_DIMENSIONS, CENTROID_EMBEDDING_MODEL } from "../constants.ts"
 import { embedIssueSearchQueryUseCase } from "./embed-issue-search-query.ts"
 
 describe("embedIssueSearchQueryUseCase", () => {
@@ -24,8 +24,7 @@ describe("embedIssueSearchQueryUseCase", () => {
     expect(calls.embed).toEqual([
       expect.objectContaining({
         text: "secret leakage",
-        model: CENTROID_EMBEDDING_MODEL,
-        dimensions: CENTROID_EMBEDDING_DIMENSIONS,
+        model: DEFAULT_EMBEDDING_CONFIG.model,
       }),
     ])
     expect(result.query).toBe("secret leakage")

@@ -482,6 +482,13 @@ function createTaskDefinition(
           { name: "LAT_ADMIN_DATABASE_URL", valueFrom: dbAdminSecretArn },
           { name: "LAT_BETTER_AUTH_SECRET", valueFrom: betterAuthArn },
           { name: "LAT_MASTER_ENCRYPTION_KEY", valueFrom: encryptionKeyArn },
+          { name: "LAT_CLICKHOUSE_URL", valueFrom: clickhouseUrlArn },
+          { name: "LAT_CLICKHOUSE_USER", valueFrom: clickhouseUserArn },
+          { name: "LAT_CLICKHOUSE_PASSWORD", valueFrom: clickhousePasswordArn },
+          { name: "LAT_CLICKHOUSE_DB", valueFrom: clickhouseDbArn },
+          // Legacy names kept during the LAT_CLICKHOUSE_* rename so task
+          // definitions work with images from before and after the rename.
+          // Remove once a release with the rename is in production.
           { name: "CLICKHOUSE_URL", valueFrom: clickhouseUrlArn },
           { name: "CLICKHOUSE_USER", valueFrom: clickhouseUserArn },
           { name: "CLICKHOUSE_PASSWORD", valueFrom: clickhousePasswordArn },
@@ -777,6 +784,11 @@ function createMigrationTaskDefinition(
           ],
           secrets: [
             { name: "LAT_ADMIN_DATABASE_URL", valueFrom: dbSecretArn },
+            { name: "LAT_CLICKHOUSE_MIGRATION_URL", valueFrom: clickhouseMigrationUrlArn },
+            { name: "LAT_CLICKHOUSE_USER", valueFrom: clickhouseUserArn },
+            { name: "LAT_CLICKHOUSE_PASSWORD", valueFrom: clickhousePasswordArn },
+            { name: "LAT_CLICKHOUSE_DB", valueFrom: clickhouseDbArn },
+            // Legacy names kept during the LAT_CLICKHOUSE_* rename — see above.
             { name: "CLICKHOUSE_MIGRATION_URL", valueFrom: clickhouseMigrationUrlArn },
             { name: "CLICKHOUSE_USER", valueFrom: clickhouseUserArn },
             { name: "CLICKHOUSE_PASSWORD", valueFrom: clickhousePasswordArn },

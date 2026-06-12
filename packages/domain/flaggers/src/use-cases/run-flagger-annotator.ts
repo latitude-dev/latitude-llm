@@ -5,6 +5,7 @@ import {
   type AICredentialError,
   type AIError,
   buildProjectScopedAiMetadata,
+  resolveGenerationConfig,
 } from "@domain/ai"
 import {
   LATITUDE_TELEMETRY_PROJECT_SLUGS,
@@ -15,7 +16,7 @@ import {
 } from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
-import { FLAGGER_ANNOTATOR_MAX_TOKENS, FLAGGER_ANNOTATOR_MODEL } from "../constants.ts"
+import { FLAGGER_DEFAULT_ANNOTATOR_MODEL } from "../constants.ts"
 import { getFlaggerStrategy } from "../flagger-strategies/index.ts"
 import { reflagSuppressionTags } from "../reflag.ts"
 import { flaggerAnnotatorOutputSchema } from "./flagger-annotator-contracts.ts"
@@ -298,9 +299,9 @@ ${conversationText}
 
 Return structured data with a single "feedback" field per the system instructions.`
 
+  const modelConfig = yield* resolveGenerationConfig("FLAGGER_ANNOTATOR", FLAGGER_DEFAULT_ANNOTATOR_MODEL)
   const result = yield* ai.generate({
-    ...FLAGGER_ANNOTATOR_MODEL,
-    maxTokens: FLAGGER_ANNOTATOR_MAX_TOKENS,
+    ...modelConfig,
     system: systemPrompt,
     prompt,
     schema: flaggerAnnotatorOutputSchema,

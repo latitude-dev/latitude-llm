@@ -5,7 +5,7 @@ import { createFakeScoreRepository } from "@domain/scores/testing"
 import { IssueId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { ISSUE_DETAILS_GENERATION_MODEL, ISSUE_DETAILS_MAX_OCCURRENCES } from "../constants.ts"
+import { ISSUE_DETAILS_DEFAULT_GENERATION_MODEL, ISSUE_DETAILS_MAX_OCCURRENCES } from "../constants.ts"
 import type { Issue } from "../entities/issue.ts"
 import { createIssueCentroid } from "../helpers.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
@@ -109,8 +109,8 @@ describe("generateIssueDetailsUseCase", () => {
       description: "The assistant exposes API tokens or secrets in replies.",
     })
     expect(calls.generate).toHaveLength(1)
-    expect(calls.generate[0]?.provider).toBe(ISSUE_DETAILS_GENERATION_MODEL.provider)
-    expect(calls.generate[0]?.model).toBe(ISSUE_DETAILS_GENERATION_MODEL.model)
+    expect(calls.generate[0]?.provider).toBe(ISSUE_DETAILS_DEFAULT_GENERATION_MODEL.provider)
+    expect(calls.generate[0]?.model).toBe(ISSUE_DETAILS_DEFAULT_GENERATION_MODEL.model)
     expect(calls.generate[0]?.prompt).toContain("The assistant leaked a production API key in the reply.")
   })
 

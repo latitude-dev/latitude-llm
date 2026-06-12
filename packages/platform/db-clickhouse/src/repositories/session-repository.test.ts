@@ -1,11 +1,6 @@
-import { AI, AIError, type AIShape } from "@domain/ai"
+import { AI, AIError, type AIShape, EMBEDDING_DIMENSIONS } from "@domain/ai"
 import { type ChSqlClient, isNotFoundError, OrganizationId, ProjectId, SessionId } from "@domain/shared"
-import {
-  type SessionListPage,
-  SessionRepository,
-  type SessionRepositoryShape,
-  TRACE_SEARCH_EMBEDDING_DIMENSIONS,
-} from "@domain/spans"
+import { type SessionListPage, SessionRepository, type SessionRepositoryShape } from "@domain/spans"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect, Layer } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
@@ -23,7 +18,7 @@ import { SessionRepositoryLive } from "./session-repository.ts"
  */
 const mockAILayer = Layer.succeed(AI, {
   generate: () => Effect.fail(new AIError({ message: "Generate not implemented in mock" })),
-  embed: () => Effect.succeed({ embedding: new Array(TRACE_SEARCH_EMBEDDING_DIMENSIONS).fill(0.1) }),
+  embed: () => Effect.succeed({ embedding: new Array(EMBEDDING_DIMENSIONS).fill(0.1) }),
   rerank: () => Effect.fail(new AIError({ message: "Rerank not implemented in mock" })),
 } as AIShape)
 
@@ -975,7 +970,7 @@ describe("SessionRepository", () => {
   })
 
   describe("search", () => {
-    const DIMS = TRACE_SEARCH_EMBEDDING_DIMENSIONS
+    const DIMS = EMBEDDING_DIMENSIONS
     const alignedEmbedding = new Array(DIMS).fill(0.1) as readonly number[]
     // A partially-aligned vector: [0.1, 0, 0, ...] gives cosine ~ 1/sqrt(DIMS)
     // relative to the all-0.1 query — small but >= the 0.30 floor only

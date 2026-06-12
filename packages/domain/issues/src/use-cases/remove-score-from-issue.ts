@@ -1,8 +1,7 @@
-import { AI } from "@domain/ai"
+import { AI, resolveEmbeddingConfig } from "@domain/ai"
 import type { ScoreSource } from "@domain/scores"
 import { IssueId, type RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
-import { CENTROID_EMBEDDING_DIMENSIONS, CENTROID_EMBEDDING_MODEL } from "../constants.ts"
 import { normalizeEmbedding, updateIssueCentroid } from "../helpers.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
 
@@ -40,11 +39,12 @@ export const removeScoreFromIssueUseCase = (input: RemoveScoreFromIssueInput) =>
     const issueId = input.issueId
     const ai = yield* AI
     const sqlClient = yield* SqlClient
+    const embeddingConfig = yield* resolveEmbeddingConfig()
 
     const embeddingResult = yield* ai.embed({
       text: input.feedback,
-      model: CENTROID_EMBEDDING_MODEL,
-      dimensions: CENTROID_EMBEDDING_DIMENSIONS,
+      provider: embeddingConfig.provider,
+      model: embeddingConfig.model,
       telemetry: {
         spanName: "embed-score-feedback-for-removal",
         tags: ["issues", "embedding", "removal"],

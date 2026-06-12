@@ -1,17 +1,25 @@
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock"
 import { createAnthropic } from "@ai-sdk/anthropic"
+import { createGoogle } from "@ai-sdk/google"
+import { createOpenAI } from "@ai-sdk/openai"
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers"
 import {
   AICredentialError,
   AIError,
   AIGenerate,
   type AIGenerateShape,
+  EMBEDDING_DIMENSIONS,
+  type EmbedInput,
+  type EmbedResult,
   type GenerateInput,
   type GenerateResult,
+  type RerankInput,
+  type RerankResult,
 } from "@domain/ai"
 import { getLatitudeTracer, runWithAiTelemetry } from "@platform/ai-latitude"
 import { parseEnv, parseEnvOptional } from "@platform/env"
-import { generateText, Output } from "ai"
+import { embed, generateText, Output, rerank } from "ai"
 import { Effect, Layer } from "effect"
 
 const latitudeTracer = getLatitudeTracer("vercelai")
@@ -23,6 +31,11 @@ type BedrockGeographyPrefix = "eu" | "us" | "apac"
 
 const DEFAULT_MAX_OUTPUT_TOKENS = 8192
 const MAX_ERROR_TEXT_LENGTH = 4_000
+
+export const SUPPORTED_GENERATION_PROVIDERS = ["amazon-bedrock", "anthropic", "openai", "google", "custom"] as const
+
+/** providerOptions key for the OpenAI-compatible provider (its `name` setting). */
+const CUSTOM_PROVIDER_OPTIONS_KEY = "custom"
 const BEDROCK_MINIMAX_M25_MODEL_ID = "minimax.minimax-m2.5"
 const BEDROCK_MINIMAX_M25_FALLBACK_MODEL = {
   provider: "amazon-bedrock",
@@ -237,6 +250,67 @@ const createAnthropicProvider = (): Effect.Effect<ReturnType<typeof createAnthro
     return createAnthropic({ apiKey })
   })
 
+const createOpenAIProvider = (): Effect.Effect<ReturnType<typeof createOpenAI>, AICredentialError> =>
+  Effect.gen(function* () {
+    const apiKey = yield* parseEnv("LAT_OPENAI_API_KEY", "string").pipe(
+      Effect.mapError(
+        () =>
+          new AICredentialError({
+            provider: "openai",
+            message: "OpenAI is unavailable: set LAT_OPENAI_API_KEY.",
+          }),
+      ),
+    )
+    return createOpenAI({ apiKey })
+  })
+
+const createGoogleProvider = (): Effect.Effect<ReturnType<typeof createGoogle>, AICredentialError> =>
+  Effect.gen(function* () {
+    const apiKey = yield* parseEnv("LAT_GOOGLE_API_KEY", "string").pipe(
+      Effect.mapError(
+        () =>
+          new AICredentialError({
+            provider: "google",
+            message: "Google is unavailable: set LAT_GOOGLE_API_KEY.",
+          }),
+      ),
+    )
+    return createGoogle({ apiKey })
+  })
+
+/**
+ * The `custom` provider is any OpenAI-compatible endpoint (Ollama, vLLM,
+ * LM Studio, gateways): `LAT_CUSTOM_AI_BASE_URL` is required, the API key is
+ * optional because local servers are often unauthenticated.
+ */
+const createCustomProvider = (): Effect.Effect<ReturnType<typeof createOpenAICompatible>, AICredentialError> =>
+  Effect.gen(function* () {
+    const baseURL = yield* parseEnv("LAT_CUSTOM_AI_BASE_URL", "string").pipe(
+      Effect.mapError(
+        () =>
+          new AICredentialError({
+            provider: "custom",
+            message: "The custom AI provider is unavailable: set LAT_CUSTOM_AI_BASE_URL.",
+          }),
+      ),
+    )
+    const apiKey = yield* parseEnvOptional("LAT_CUSTOM_AI_API_KEY", "string").pipe(
+      Effect.mapError(
+        () =>
+          new AICredentialError({
+            provider: "custom",
+            message: "The custom AI provider credentials are invalid: LAT_CUSTOM_AI_API_KEY must be a string.",
+          }),
+      ),
+    )
+
+    return createOpenAICompatible({
+      name: CUSTOM_PROVIDER_OPTIONS_KEY,
+      baseURL,
+      ...(apiKey !== undefined ? { apiKey } : {}),
+    })
+  })
+
 /**
  * Creates a Vercel AI SDK language model for supported providers.
  * Failures are returned on the Effect error channel.
@@ -254,11 +328,20 @@ export const createProviderModel = (
     case "anthropic":
       return createAnthropicProvider().pipe(Effect.map((anthropic) => anthropic(model)))
 
+    case "openai":
+      return createOpenAIProvider().pipe(Effect.map((openai) => openai(model)))
+
+    case "google":
+      return createGoogleProvider().pipe(Effect.map((google) => google(model)))
+
+    case "custom":
+      return createCustomProvider().pipe(Effect.map((custom) => custom(model)))
+
     default:
       return Effect.fail(
         new AICredentialError({
           provider,
-          message: `Unsupported AI provider "${provider}".`,
+          message: `Unsupported AI provider "${provider}". Supported providers: ${SUPPORTED_GENERATION_PROVIDERS.join(", ")}.`,
           statusCode: 400,
         }),
       )
@@ -356,3 +439,163 @@ export const AIGenerateLive = Layer.effect(
     } satisfies AIGenerateShape
   }),
 )
+
+type EmbedCall = Parameters<typeof embed>[0]
+type EmbeddingModel = EmbedCall["model"]
+type EmbedProviderOptions = NonNullable<EmbedCall["providerOptions"]>
+type RerankingModel = Parameters<typeof rerank>[0]["model"]
+
+export const SUPPORTED_EMBEDDING_PROVIDERS = ["voyage", "openai", "google", "custom"] as const
+
+export const SUPPORTED_RERANKING_PROVIDERS = ["voyage", "amazon-bedrock"] as const
+
+const credentialToAIError = Effect.mapError(
+  (error: { readonly message: string }) => new AIError({ message: error.message, cause: error }),
+)
+
+/**
+ * Google task types mirror Voyage's document/query asymmetry; the other
+ * providers have no input-type concept and embed symmetrically.
+ */
+const googleTaskType = (inputType: EmbedInput["inputType"]) =>
+  inputType === "query" ? "RETRIEVAL_QUERY" : "RETRIEVAL_DOCUMENT"
+
+const createEmbeddingCall = (
+  input: EmbedInput,
+): Effect.Effect<{ model: EmbeddingModel; providerOptions: EmbedProviderOptions }, AIError> => {
+  switch (input.provider) {
+    case "openai":
+      return createOpenAIProvider().pipe(
+        credentialToAIError,
+        Effect.map((openai) => ({
+          model: openai.embeddingModel(input.model),
+          providerOptions: { openai: { dimensions: EMBEDDING_DIMENSIONS } },
+        })),
+      )
+
+    case "google":
+      return createGoogleProvider().pipe(
+        credentialToAIError,
+        Effect.map((google) => ({
+          model: google.embeddingModel(input.model),
+          providerOptions: {
+            google: {
+              outputDimensionality: EMBEDDING_DIMENSIONS,
+              taskType: googleTaskType(input.inputType),
+            },
+          },
+        })),
+      )
+
+    case "custom":
+      return createCustomProvider().pipe(
+        credentialToAIError,
+        Effect.map((custom) => ({
+          model: custom.embeddingModel(input.model),
+          providerOptions: { [CUSTOM_PROVIDER_OPTIONS_KEY]: { dimensions: EMBEDDING_DIMENSIONS } },
+        })),
+      )
+
+    default:
+      return Effect.fail(
+        new AIError({
+          message: `Unsupported embedding provider "${input.provider}". Supported providers: ${SUPPORTED_EMBEDDING_PROVIDERS.join(", ")}.`,
+        }),
+      )
+  }
+}
+
+/**
+ * Several providers return unnormalized vectors when truncating to a
+ * non-native dimension (e.g. Google with `outputDimensionality`), while the
+ * centroid/clustering math assumes unit vectors. Normalizing an already-unit
+ * vector is a no-op, so always normalize.
+ */
+const normalizeL2 = (vector: readonly number[]): number[] => {
+  const norm = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0))
+  if (norm === 0 || !Number.isFinite(norm)) {
+    return [...vector]
+  }
+  return vector.map((value) => value / norm)
+}
+
+export const embedWithVercel = (input: EmbedInput): Effect.Effect<EmbedResult, AIError> =>
+  Effect.gen(function* () {
+    const { model, providerOptions } = yield* createEmbeddingCall(input)
+
+    const embedding = yield* Effect.tryPromise({
+      try: () =>
+        runWithAiTelemetry(input.telemetry, async () => {
+          const result = await embed({
+            model,
+            value: input.text,
+            providerOptions,
+          })
+          return result.embedding
+        }),
+      catch: (cause) =>
+        new AIError({
+          message: `Embedding failed (${input.provider}/${input.model}): ${cause instanceof Error ? cause.message : String(cause)}`,
+          cause,
+        }),
+    })
+
+    if (embedding.length !== EMBEDDING_DIMENSIONS) {
+      return yield* Effect.fail(
+        new AIError({
+          message:
+            `Embedding model "${input.model}" (${input.provider}) returned ${embedding.length}-dimensional vectors; ` +
+            `Latitude requires exactly ${EMBEDDING_DIMENSIONS}. Configure a model that supports ${EMBEDDING_DIMENSIONS} output dimensions.`,
+        }),
+      )
+    }
+
+    return { embedding: normalizeL2(embedding) } satisfies EmbedResult
+  })
+
+const createRerankingModel = (input: RerankInput): Effect.Effect<RerankingModel, AIError> => {
+  switch (input.provider) {
+    case "amazon-bedrock":
+      // Rerank model ids (e.g. `cohere.rerank-v3-5:0`) have no cross-region
+      // inference profiles — pass them through without geography rewriting.
+      return createBedrockProvider().pipe(
+        credentialToAIError,
+        Effect.map(({ bedrock }) => bedrock.reranking(input.model)),
+      )
+
+    default:
+      return Effect.fail(
+        new AIError({
+          message: `Unsupported reranking provider "${input.provider}". Supported providers: ${SUPPORTED_RERANKING_PROVIDERS.join(", ")}.`,
+        }),
+      )
+  }
+}
+
+export const rerankWithVercel = (input: RerankInput): Effect.Effect<readonly RerankResult[], AIError> =>
+  Effect.gen(function* () {
+    const model = yield* createRerankingModel(input)
+
+    return yield* Effect.tryPromise({
+      try: () =>
+        runWithAiTelemetry(input.telemetry, async () => {
+          const result = await rerank({
+            model,
+            query: input.query,
+            documents: [...input.documents],
+          })
+
+          return result.ranking.map(
+            (entry): RerankResult => ({
+              index: entry.originalIndex,
+              relevanceScore: entry.score,
+            }),
+          )
+        }),
+      catch: (cause) =>
+        new AIError({
+          message: `Rerank failed (${input.provider}/${input.model}): ${cause instanceof Error ? cause.message : String(cause)}`,
+          cause,
+        }),
+    })
+  })

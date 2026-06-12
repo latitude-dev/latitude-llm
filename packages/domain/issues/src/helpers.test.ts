@@ -1,9 +1,9 @@
+import { EMBEDDING_DIMENSIONS } from "@domain/ai"
 import type { EntrySignalsSnapshot } from "@domain/alerts"
 import type { IssueEscalationSignals } from "@domain/scores"
 import { IssueId } from "@domain/shared"
 import { describe, expect, it } from "vitest"
 import {
-  CENTROID_EMBEDDING_DIMENSIONS,
   CENTROID_HALF_LIFE_SECONDS,
   CENTROID_SOURCE_WEIGHTS,
   ESCALATION_EXIT_DWELL_MS,
@@ -23,7 +23,7 @@ import {
 const halfLifeMilliseconds = CENTROID_HALF_LIFE_SECONDS * 1000
 
 const makeVector = (entries: ReadonlyArray<readonly [number, number]>): number[] => {
-  const vector = new Array<number>(CENTROID_EMBEDDING_DIMENSIONS).fill(0)
+  const vector = new Array<number>(EMBEDDING_DIMENSIONS).fill(0)
 
   for (const [index, value] of entries) {
     vector[index] = value
@@ -67,7 +67,7 @@ describe("issue centroid helpers", () => {
   it("creates empty centroids with the pinned v2 config", () => {
     const centroid = createIssueCentroid()
 
-    expect(centroid.base).toHaveLength(CENTROID_EMBEDDING_DIMENSIONS)
+    expect(centroid.base).toHaveLength(EMBEDDING_DIMENSIONS)
     expect(centroid.base.every((value) => value === 0)).toBe(true)
     expect(centroid.mass).toBe(0)
     expect(centroid.decay).toBe(CENTROID_HALF_LIFE_SECONDS)

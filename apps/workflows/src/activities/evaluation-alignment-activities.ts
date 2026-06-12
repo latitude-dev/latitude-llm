@@ -17,9 +17,7 @@ import {
   persistAlignmentResultUseCase,
 } from "@domain/evaluations"
 import { OrganizationId, ProjectId } from "@domain/shared"
-import { withAi } from "@platform/ai"
-import { AIGenerateLive } from "@platform/ai-vercel"
-import { AIEmbedLive } from "@platform/ai-voyage"
+import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import { RedisBillingSpendReservationLive } from "@platform/cache-redis"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {

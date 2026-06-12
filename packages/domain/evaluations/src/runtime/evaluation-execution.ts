@@ -6,6 +6,7 @@ import {
   formatGenAIMessage,
   type GenerateResult,
   type GenerateTelemetryCapture,
+  resolveGenerationConfig,
 } from "@domain/ai"
 import { estimateCost } from "@domain/models"
 import { Effect } from "effect"
@@ -16,7 +17,7 @@ export type EvaluationScriptSchema<T> = z.ZodType<T>
 
 export const evaluationRuntimeZod = z
 
-export const EVALUATION_SCRIPT_RUNTIME_MODEL = {
+export const EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL = {
   provider: "amazon-bedrock",
   model: "minimax.minimax-m2.5",
   reasoning: "low",
@@ -115,24 +116,25 @@ export const toEvaluationConversationMessages = (
 export const formatEvaluationConversationForPrompt = (conversation: readonly EvaluationConversationMessage[]): string =>
   conversation.map((message) => `[${message.role}] ${message.content}`).join("\n")
 
-export const estimateEvaluationScriptCostMicrocents = (result: {
-  readonly tokens: number
-  readonly tokenUsage?: {
-    readonly input: number
-    readonly output: number
-    readonly reasoning?: number | undefined
-    readonly cacheRead?: number | undefined
-    readonly cacheWrite?: number | undefined
-  }
-}): number => {
+export const estimateEvaluationScriptCostMicrocents = (
+  result: {
+    readonly tokens: number
+    readonly tokenUsage?: {
+      readonly input: number
+      readonly output: number
+      readonly reasoning?: number | undefined
+      readonly cacheRead?: number | undefined
+      readonly cacheWrite?: number | undefined
+    }
+  },
+  costModel: { readonly provider: string; readonly model: string } = EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL,
+): number => {
   const usage = result.tokenUsage ?? {
     input: 0,
     output: result.tokens,
   }
 
-  return Math.round(
-    estimateCost(EVALUATION_SCRIPT_RUNTIME_MODEL.provider, EVALUATION_SCRIPT_RUNTIME_MODEL.model, usage) * 100_000_000,
-  )
+  return Math.round(estimateCost(costModel.provider, costModel.model, usage) * 100_000_000)
 }
 
 export const toEvaluationExecutionResult = (result: EvaluationScriptExecution): EvaluationExecutionResult =>
@@ -160,6 +162,7 @@ export const executeEvaluationScript = async (input: {
     readonly prompt: string
     readonly schema: EvaluationScriptSchema<T>
   }) => Promise<GenerateResult<T>>
+  readonly costModel?: { readonly provider: string; readonly model: string }
 }): Promise<EvaluationScriptExecution> => {
   const promptTemplate = extractPromptFromEvaluationScript(input.script)
   if (promptTemplate === null) {
@@ -174,7 +177,7 @@ export const executeEvaluationScript = async (input: {
     schema: llmJudgeResultSchema,
   })
 
-  const costMicrocents = estimateEvaluationScriptCostMicrocents(result)
+  const costMicrocents = estimateEvaluationScriptCostMicrocents(result, input.costModel)
 
   return {
     result: {
@@ -198,6 +201,7 @@ export const executeEvaluationScriptWithAI = Effect.fn("evaluations.executeEvalu
 
   const ai = yield* AI
   const services = yield* Effect.context<never>()
+  const modelConfig = yield* resolveGenerationConfig("EVALUATION_JUDGE", EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL)
 
   return yield* Effect.tryPromise({
     try: () =>
@@ -205,13 +209,14 @@ export const executeEvaluationScriptWithAI = Effect.fn("evaluations.executeEvalu
         script: input.script,
         conversation: input.conversation,
         issue: input.issue,
+        costModel: modelConfig,
         generateStructuredObject: <T>(llmInput: {
           readonly prompt: string
           readonly schema: EvaluationScriptSchema<T>
         }): Promise<GenerateResult<T>> =>
           Effect.runPromiseWith(services)(
             ai.generate({
-              ...EVALUATION_SCRIPT_RUNTIME_MODEL,
+              ...modelConfig,
               system: EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
               prompt: llmInput.prompt,
               schema: llmInput.schema,

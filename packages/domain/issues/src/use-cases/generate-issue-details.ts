@@ -5,12 +5,17 @@ import {
   type AICredentialError,
   type AIError,
   buildProjectScopedAiMetadata,
+  resolveGenerationConfig,
 } from "@domain/ai"
 import { ScoreRepository, type ScoreSource } from "@domain/scores"
 import { IssueId, LATITUDE_TELEMETRY_PROJECT_SLUGS, ProjectId, type RepositoryError } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
-import { ISSUE_DETAILS_GENERATION_MODEL, ISSUE_DETAILS_MAX_OCCURRENCES, ISSUE_NAME_MAX_LENGTH } from "../constants.ts"
+import {
+  ISSUE_DETAILS_DEFAULT_GENERATION_MODEL,
+  ISSUE_DETAILS_MAX_OCCURRENCES,
+  ISSUE_NAME_MAX_LENGTH,
+} from "../constants.ts"
 import { IssueNotFoundForDetailsGenerationError, MissingIssueOccurrencesForDetailsGenerationError } from "../errors.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
 
@@ -177,8 +182,12 @@ export const generateIssueDetailsUseCase = (input: GenerateIssueDetailsInput) =>
       }
     }
 
+    const modelConfig = yield* resolveGenerationConfig(
+      "ISSUE_DETAILS_GENERATOR",
+      ISSUE_DETAILS_DEFAULT_GENERATION_MODEL,
+    )
     const result = yield* ai.generate({
-      ...ISSUE_DETAILS_GENERATION_MODEL,
+      ...modelConfig,
       telemetry: {
         spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.issueDetails,
         project: LATITUDE_TELEMETRY_PROJECT_SLUGS.issueDiscovery,

@@ -1,3 +1,4 @@
+import { EMBEDDING_DIMENSIONS } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import { OutboxEventWriter } from "@domain/events"
 import { type Score, ScoreRepository } from "@domain/scores"
@@ -13,7 +14,6 @@ import {
 } from "@domain/shared"
 import { Cause, Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { CENTROID_EMBEDDING_DIMENSIONS } from "../constants.ts"
 import type { Issue } from "../entities/issue.ts"
 import { IssueDiscoveryLockUnavailableError } from "../errors.ts"
 import { createIssueCentroid } from "../helpers.ts"
@@ -25,7 +25,7 @@ const organizationId = "oooooooooooooooooooooooo"
 const projectId = "pppppppppppppppppppppppp"
 
 const makeEmbedding = (): number[] =>
-  Array.from({ length: CENTROID_EMBEDDING_DIMENSIONS }, (_, index) => {
+  Array.from({ length: EMBEDDING_DIMENSIONS }, (_, index) => {
     if (index === 0) return 0.6
     if (index === 1) return 0.8
     return 0

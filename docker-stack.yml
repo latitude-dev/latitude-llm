@@ -167,7 +167,7 @@ services:
         condition: any
 
   # --- ClickHouse (OLAP span/telemetry store) -------------------------------
-  # BYO: remove this block and set CLICKHOUSE_URL / CLICKHOUSE_MIGRATION_URL etc.
+  # BYO: remove this block and set LAT_CLICKHOUSE_URL / LAT_CLICKHOUSE_MIGRATION_URL etc.
   clickhouse:
     image: clickhouse/clickhouse-server:26.2
     restart: unless-stopped

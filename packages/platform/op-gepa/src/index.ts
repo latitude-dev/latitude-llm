@@ -2,12 +2,12 @@ export type { GepaProcessOptions } from "./client.ts"
 export { GepaClient, resolveGepaProcessOptions } from "./client.ts"
 export {
   GEPA_BATCH_SIZE,
+  GEPA_DEFAULT_PROPOSER_MODEL,
   GEPA_DEFAULT_REFLECTION_SIZE,
   GEPA_DEFAULT_SEED,
   GEPA_MAX_STAGNATION,
   GEPA_MAX_TIME,
   GEPA_MAX_TOKENS,
-  GEPA_PROPOSER_MODEL,
   GEPA_PYTHON_ENTRY_MODULE,
   GEPA_RPC_METHODS,
 } from "./constants.ts"

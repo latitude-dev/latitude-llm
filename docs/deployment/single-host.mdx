@@ -89,13 +89,15 @@ Single-host runs the **entire Latitude product on one machine**: all five applic
 
 ## AI features
 
-The stack boots and core observability (ingest + trace viewing) works **without API keys**. However, there are AI-dependent features that you must add the relevant keys to your environment file to enable them:
+The stack boots and core observability (ingest + trace viewing) works **without API keys**. AI-dependent features stay disabled until you add credentials for the providers you configure:
 
-| Provider | Key(s) | Feature |
+| Capability | Providers | Feature |
 | --- | --- | --- |
-| Voyage AI | `LAT_VOYAGE_*` | Semantic trace/issue search, search highlights and issue clustering |
-| Anthropic | `LAT_ANTHROPIC_*` | Flaggers, evaluations, conversation intelligence, issue summarization and AI generation |
-| Amazon Bedrock | `LAT_AWS_*` | Same features as Anthropic (alternative provider) |
+| Generation | Amazon Bedrock (default), Anthropic, OpenAI, Google, or any OpenAI-compatible endpoint | Flaggers, evaluations, issue summarization, taxonomy naming, AI generation |
+| Embeddings | Voyage AI (default), OpenAI, Google, or any OpenAI-compatible endpoint | Semantic trace/issue search, search highlights, issue clustering |
+| Reranking | Voyage AI (default) or Amazon Bedrock | Issue-discovery candidate matching |
+
+Every provider and model is selectable per feature through environment variables — see the [AI configuration reference](/deployment/configuration#ai).
 
 ## Scaling
 
@@ -133,7 +135,7 @@ Each infra service in `docker-stack.yml` is a clearly-marked, independently remo
 | Dependency | Repoint | Notes |
 | --- | --- | --- |
 | Postgres | `LAT_DATABASE_*`, `LAT_ADMIN_DATABASE_*` | Needs the `vector` (pgvector) extension and a schema-create admin role |
-| ClickHouse | `CLICKHOUSE_*` | Dedicated `CLICKHOUSE_DB` database |
+| ClickHouse | `LAT_CLICKHOUSE_*` | Dedicated `LAT_CLICKHOUSE_DB` database |
 | Redis (cache) | `LAT_REDIS_*` | Latitude namespaces all keys under `latitude:` |
 | Redis (queue) | `LAT_BULLMQ_*` | Latitude namespaces all keys under `latitude:` |
 | Temporal | `LAT_TEMPORAL_*` | Pointing to Temporal Cloud is recommended |

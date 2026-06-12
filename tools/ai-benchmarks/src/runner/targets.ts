@@ -1,6 +1,10 @@
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { classifyTraceForFlaggerUseCase, FLAGGER_MODEL, type FlaggerStrategy } from "@domain/flaggers"
+import {
+  classifyTraceForFlaggerUseCase,
+  FLAGGER_DEFAULT_CLASSIFIER_MODEL,
+  type FlaggerStrategy,
+} from "@domain/flaggers"
 import { mapJailbreaking } from "../mappers/jailbreak.ts"
 import { mapRefusal } from "../mappers/refusal.ts"
 import type { FixtureRow } from "../types.ts"
@@ -68,7 +72,7 @@ interface FlaggerDef {
 const camelCaseSlug = (slug: string): string => slug.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
 
 // Pricing + provenance for flagger benchmarks come from the same constant
-// the production flagger uses (`FLAGGER_MODEL`). If production
+// the production flagger uses (`FLAGGER_DEFAULT_CLASSIFIER_MODEL`). If production
 // swaps the model, the benchmark reports update automatically — no manual
 // sync of provider / model ids.
 const flaggerTarget = ({ flaggerSlug, mapper, mapperSourcePaths }: FlaggerDef): BenchmarkTarget => ({
@@ -84,8 +88,8 @@ const flaggerTarget = ({ flaggerSlug, mapper, mapperSourcePaths }: FlaggerDef): 
       trace: fixtureRowToTraceDetail(row),
       ...(strategyOverride ? { strategyOverride } : {}),
     }),
-  provider: FLAGGER_MODEL.provider,
-  modelId: FLAGGER_MODEL.model,
+  provider: FLAGGER_DEFAULT_CLASSIFIER_MODEL.provider,
+  modelId: FLAGGER_DEFAULT_CLASSIFIER_MODEL.model,
   optimization: {
     candidateKind: "ts-module",
     strategyFilePath: flaggerStrategyFilePath(flaggerSlug),

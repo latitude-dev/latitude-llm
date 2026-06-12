@@ -1,9 +1,6 @@
-import { AI } from "@domain/ai"
+import { AI, resolveEmbeddingConfig } from "@domain/ai"
 import { Effect } from "effect"
-import {
-  CONVERSATION_INTELLIGENCE_EMBEDDING_DIMENSIONS,
-  CONVERSATION_INTELLIGENCE_EMBEDDING_MODEL,
-} from "./constants.ts"
+import {} from "./constants.ts"
 import type { MomentLabelKind as MomentKind } from "./entities/session-moment-label.ts"
 
 interface MomentLabelAnchorConfig {
@@ -129,10 +126,11 @@ export const MOMENT_LABEL_ANCHORS: readonly MomentLabelAnchorConfig[] = [
 export const embedAnchorText = (text: string) =>
   Effect.gen(function* () {
     const ai = yield* AI
+    const embeddingConfig = yield* resolveEmbeddingConfig()
     const result = yield* ai.embed({
       text,
-      model: CONVERSATION_INTELLIGENCE_EMBEDDING_MODEL,
-      dimensions: CONVERSATION_INTELLIGENCE_EMBEDDING_DIMENSIONS,
+      provider: embeddingConfig.provider,
+      model: embeddingConfig.model,
       inputType: "document",
     })
     return result.embedding

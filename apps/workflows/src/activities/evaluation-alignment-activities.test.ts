@@ -92,6 +92,9 @@ vi.mock("@platform/ai", async () => {
   const { Effect, Layer } = (await vi.importActual("effect")) as typeof import("effect")
 
   return {
+    AIEmbedLive: {},
+    AIGenerateLive: {},
+    AIRerankLive: {},
     withAi: (_layer?: unknown, _redisClient?: unknown) => Effect.provide(Layer.succeed(AI, mockAi)),
   }
 })

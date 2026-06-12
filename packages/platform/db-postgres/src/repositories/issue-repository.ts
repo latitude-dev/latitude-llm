@@ -1,7 +1,6 @@
+import { EMBEDDING_DIMENSIONS, resolveEmbeddingConfig } from "@domain/ai"
 import { EvaluationIssueRepository } from "@domain/evaluations"
 import {
-  CENTROID_EMBEDDING_DIMENSIONS,
-  CENTROID_EMBEDDING_MODEL,
   ISSUE_DISCOVERY_MIN_SIMILARITY,
   ISSUE_DISCOVERY_MIN_VECTOR_SIMILARITY,
   ISSUE_DISCOVERY_SEARCH_CANDIDATES,
@@ -115,11 +114,11 @@ const validateVector = (
   vector: readonly number[],
   operation: string,
 ): Effect.Effect<readonly number[], RepositoryError> => {
-  if (vector.length !== CENTROID_EMBEDDING_DIMENSIONS) {
+  if (vector.length !== EMBEDDING_DIMENSIONS) {
     return Effect.fail(
       new RepositoryError({
         operation,
-        cause: new Error(`Expected ${CENTROID_EMBEDDING_DIMENSIONS} dimensions, received ${vector.length}`),
+        cause: new Error(`Expected ${EMBEDDING_DIMENSIONS} dimensions, received ${vector.length}`),
       }),
     )
   }
@@ -137,32 +136,39 @@ const validateVector = (
   return Effect.succeed(vector)
 }
 
-const toCentroidEmbedding = (issue: Issue): Effect.Effect<readonly number[] | null, RepositoryError> => {
-  if (issue.centroid.mass <= 0) {
-    return Effect.succeed(null)
-  }
+const toCentroidEmbedding = (issue: Issue): Effect.Effect<readonly number[] | null, RepositoryError> =>
+  Effect.gen(function* () {
+    if (issue.centroid.mass <= 0) {
+      return null
+    }
 
-  if (issue.centroid.model !== CENTROID_EMBEDDING_MODEL) {
-    return Effect.fail(
-      new RepositoryError({
-        operation: "IssueRepository.save",
-        cause: new Error(`Unsupported centroid model ${issue.centroid.model}`),
-      }),
+    // The embedding model is a one-time deployment choice (different models
+    // produce incompatible vector spaces, and Latitude never re-embeds), so a
+    // centroid stamped with anything but the configured model is a hard error.
+    const embeddingConfig = yield* resolveEmbeddingConfig().pipe(
+      Effect.mapError((error) => new RepositoryError({ operation: "IssueRepository.save", cause: error })),
     )
-  }
+    if (issue.centroid.model !== embeddingConfig.model) {
+      return yield* Effect.fail(
+        new RepositoryError({
+          operation: "IssueRepository.save",
+          cause: new Error(`Unsupported centroid model ${issue.centroid.model}`),
+        }),
+      )
+    }
 
-  const vector = normalizeIssueCentroid(issue.centroid)
-  if (vector.length === 0) {
-    return Effect.fail(
-      new RepositoryError({
-        operation: "IssueRepository.save",
-        cause: new Error("Positive-mass centroid normalized to an empty vector"),
-      }),
-    )
-  }
+    const vector = normalizeIssueCentroid(issue.centroid)
+    if (vector.length === 0) {
+      return yield* Effect.fail(
+        new RepositoryError({
+          operation: "IssueRepository.save",
+          cause: new Error("Positive-mass centroid normalized to an empty vector"),
+        }),
+      )
+    }
 
-  return validateVector(vector, "IssueRepository.save")
-}
+    return yield* validateVector(vector, "IssueRepository.save")
+  })
 
 const toInsertRow = (issue: Issue, centroidEmbedding: readonly number[] | null): typeof issues.$inferInsert => ({
   id: issue.id,
@@ -371,8 +377,8 @@ const issueRepositoryCoreLive = Layer.effect(
           // Exact cosine scan over the project's other issues — no ANN index by
           // design (see the schema comment on `centroidEmbedding`). Resolved and
           // ignored issues are deliberately included. `save()` only persists
-          // embeddings for CENTROID_EMBEDDING_MODEL, so every non-null row is in
-          // the same embedding space by construction.
+          // embeddings for the configured embedding model, so every non-null
+          // row is in the same embedding space by construction.
           const similarity = sql<number>`(1::double precision - (${issues.centroidEmbedding} <=> ${queryVector}))`
           const rows = yield* sqlClient.query((db, organizationId) =>
             db

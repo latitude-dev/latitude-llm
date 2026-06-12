@@ -6,6 +6,7 @@ import {
   AIError,
   type AIShape,
   buildProjectScopedAiMetadata,
+  resolveGenerationConfig,
 } from "@domain/ai"
 import {
   CacheStore,
@@ -20,12 +21,7 @@ import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { hash } from "@repo/utils"
 import { Effect, Option } from "effect"
 import { z } from "zod"
-import {
-  FLAGGER_INSTRUCTION_EXTRACTOR_MAX_TOKENS,
-  FLAGGER_INSTRUCTION_EXTRACTOR_MODEL,
-  FLAGGER_MAX_TOKENS,
-  FLAGGER_MODEL,
-} from "../constants.ts"
+import { FLAGGER_DEFAULT_CLASSIFIER_MODEL, FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL } from "../constants.ts"
 import { getFlaggerStrategy, hasFlaggerStrategy, isLlmCapableStrategy } from "../flagger-strategies/index.ts"
 import type { FlaggerSlug, FlaggerStrategy } from "../flagger-strategies/types.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
@@ -372,49 +368,52 @@ function getInspectedAgentContext(input: {
         Effect.flatMap((cached) => {
           if (cached) return Effect.succeed(renderExtractionResult(cached))
 
-          return input.ai
-            .generate({
-              ...FLAGGER_INSTRUCTION_EXTRACTOR_MODEL,
-              maxTokens: FLAGGER_INSTRUCTION_EXTRACTOR_MAX_TOKENS,
-              system: INSTRUCTION_EXTRACTOR_SYSTEM_PROMPT,
-              prompt: buildInstructionExtractorPrompt(systemPrompt),
-              schema: instructionExtractorOutputSchema,
-              telemetry: {
-                spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerExtractInstructions,
-                project: LATITUDE_TELEMETRY_PROJECT_SLUGS.flaggers,
-                tags: [
-                  ...AI_GENERATE_TELEMETRY_TAGS.flaggerExtractInstructions,
-                  ...reflagSuppressionTags(input.trace.tags),
-                ],
-                metadata: buildProjectScopedAiMetadata(
-                  { organizationId: input.organizationId, projectId: input.projectId },
-                  { traceId: input.traceId, flaggerSlug: input.flaggerSlug, stage: "instruction-extraction" },
-                ),
-              },
-            })
-            .pipe(
-              Effect.flatMap((result) =>
-                Effect.try({
-                  try: () => instructionExtractorOutputSchema.parse(result.object),
-                  catch: (error) =>
-                    new AIError({
-                      message: "Instruction extractor returned invalid structured output.",
-                      cause: error,
+          return resolveGenerationConfig("FLAGGER_EXTRACTOR", FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL).pipe(
+            Effect.flatMap((modelConfig) =>
+              input.ai
+                .generate({
+                  ...modelConfig,
+                  system: INSTRUCTION_EXTRACTOR_SYSTEM_PROMPT,
+                  prompt: buildInstructionExtractorPrompt(systemPrompt),
+                  schema: instructionExtractorOutputSchema,
+                  telemetry: {
+                    spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerExtractInstructions,
+                    project: LATITUDE_TELEMETRY_PROJECT_SLUGS.flaggers,
+                    tags: [
+                      ...AI_GENERATE_TELEMETRY_TAGS.flaggerExtractInstructions,
+                      ...reflagSuppressionTags(input.trace.tags),
+                    ],
+                    metadata: buildProjectScopedAiMetadata(
+                      { organizationId: input.organizationId, projectId: input.projectId },
+                      { traceId: input.traceId, flaggerSlug: input.flaggerSlug, stage: "instruction-extraction" },
+                    ),
+                  },
+                })
+                .pipe(
+                  Effect.flatMap((result) =>
+                    Effect.try({
+                      try: () => instructionExtractorOutputSchema.parse(result.object),
+                      catch: (error) =>
+                        new AIError({
+                          message: "Instruction extractor returned invalid structured output.",
+                          cause: error,
+                        }),
                     }),
-                }),
-              ),
-              Effect.tap((result) => setCachedExtraction(cacheKey, result)),
-              Effect.map((result) => renderExtractionResult(result)),
-              Effect.catch(() =>
-                Effect.gen(function* () {
-                  yield* Effect.annotateCurrentSpan("flagger.instructionExtractionFallback", true)
-                  return {
-                    available: true,
-                    text: renderFallbackAgentContext(systemPrompt),
-                  } satisfies InspectedAgentContext
-                }),
-              ),
-            )
+                  ),
+                  Effect.tap((result) => setCachedExtraction(cacheKey, result)),
+                  Effect.map((result) => renderExtractionResult(result)),
+                ),
+            ),
+            Effect.catch(() =>
+              Effect.gen(function* () {
+                yield* Effect.annotateCurrentSpan("flagger.instructionExtractionFallback", true)
+                return {
+                  available: true,
+                  text: renderFallbackAgentContext(systemPrompt),
+                } satisfies InspectedAgentContext
+              }),
+            ),
+          )
         }),
       ),
     ),
@@ -627,10 +626,10 @@ export const classifyTraceForFlaggerUseCase = Effect.fn("flaggers.classifyTraceF
   const classificationSystemPrompt = buildClassificationSystemPrompt(strategy, input.trace)
   const classificationPrompt = buildFlaggerPrompt(strategy, input.trace, inspectedAgentContext.text)
 
+  const flaggerModelConfig = yield* resolveGenerationConfig("FLAGGER_CLASSIFIER", FLAGGER_DEFAULT_CLASSIFIER_MODEL)
   const decisions = yield* ai
     .generate({
-      ...FLAGGER_MODEL,
-      maxTokens: FLAGGER_MAX_TOKENS,
+      ...flaggerModelConfig,
       system: classificationSystemPrompt,
       prompt: classificationPrompt,
       schema: providerFlaggerOutputSchema,
@@ -664,8 +663,7 @@ export const classifyTraceForFlaggerUseCase = Effect.fn("flaggers.classifyTraceF
 
   const review = yield* ai
     .generate({
-      ...FLAGGER_MODEL,
-      maxTokens: FLAGGER_MAX_TOKENS,
+      ...flaggerModelConfig,
       system: buildAnnotationReviewerSystemPrompt(strategy),
       prompt: buildAnnotationReviewPrompt(strategy, input.trace, decisions, inspectedAgentContext.text),
       schema: annotationReviewOutputSchema,

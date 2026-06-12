@@ -37,13 +37,68 @@ A working email transport is required for anyone to log in. Local development ca
 
 ## AI
 
-The stack boots and core observability (ingest + trace viewing) works **without API keys**. AI-dependent features stay disabled until you add the relevant provider key:
+The stack boots and core observability (ingest + trace viewing) works **without API keys** — AI-dependent features stay disabled, or fail, until you add the relevant provider key:
 
-| Variable | Provider | Notes |
+Every internal AI capability is configurable through `LAT_AI_*` environment variables. With nothing set, the defaults uses **Amazon Bedrock** for generation and **Voyage AI** for embeddings and reranking.
+
+### Providers
+
+You have to set the credentials for whichever providers you end up using:
+
+| Variable | Provider | Available for |
 | --- | --- | --- |
-| `LAT_VOYAGE_*` | Voyage AI | Embeddings + reranking → semantic trace/issue search, search highlights, issue clustering. Without it, search falls back to lexical. |
-| `LAT_ANTHROPIC_*` | Anthropic | Flaggers, evaluations, conversation intelligence, issue summarization, and AI generation. |
-| `LAT_AWS_*` | Amazon Bedrock | Same features as Anthropic (alternative provider); `_SESSION_TOKEN`, `_BEARER_TOKEN_BEDROCK` also supported. |
+| `LAT_AWS_*` | Amazon Bedrock `amazon-bedrock` | Generation (default), reranking |
+| `LAT_VOYAGE_*` | Voyage AI `voyage` | Embeddings (default), reranking (default) |
+| `LAT_ANTHROPIC_*` | Anthropic `anthropic` | Generation |
+| `LAT_OPENAI_*` | OpenAI `openai`| Generation, embeddings |
+| `LAT_GOOGLE_*` | Google `google` | Generation, embeddings |
+| `LAT_CUSTOM_AI_*` | OpenAI-compatible `custom` | Generation, embeddings |
+
+### Generation
+
+Each feature resolves every setting through a three-tier fallback:
+
+1. Per-feature variable `LAT_AI_<FEATURE>_<SETTING>`
+2. Global variable `LAT_AI_GENERATION_<SETTING>`
+3. Built-in default `minimax.minimax-m2.5`
+
+Available `<SETTING>`:
+- `PROVIDER`
+- `MODEL`
+- `REASONING` (`none`/`default`/`minimal`/`low`/`medium`/`high`/`xhigh`)
+- `TEMPERATURE`
+- `MAX_TOKENS`
+
+<Tip>
+  Always set `PROVIDER` and `MODEL` together — model ids are provider-specific.
+</Tip>
+
+| Feature | What it powers | Built-in default |
+| --- | --- | --- |
+| `ISSUE_DETAILS_GENERATOR` | Issue names/descriptions | `amazon-bedrock` / `minimax.minimax-m2.5` |
+| `FLAGGER_CLASSIFIER` | Trace classification and annotation | `amazon-bedrock` / `anthropic.claude-haiku-4-5` |
+| `FLAGGER_EXTRACTOR` | Instruction extraction | `amazon-bedrock` / `minimax.minimax-m2.5` |
+| `FLAGGER_ANNOTATOR` | Flagger annotation drafting | `amazon-bedrock` / `minimax.minimax-m2.5` |
+| `ANNOTATION_ENRICHER` | Annotation enrichment | `amazon-bedrock` / `minimax.minimax-m2.5` |
+| `EVALUATION_JUDGE` | LLM-as-judge evaluation runs | `amazon-bedrock` / `minimax.minimax-m2.5` |
+| `TAXONOMY_NAMING` | Taxonomy cluster naming | `amazon-bedrock` / `minimax.minimax-m2.5` |
+| `GEPA_PROPOSER` | Evaluation-optimization proposals | `amazon-bedrock` / `anthropic.claude-sonnet-4-6` |
+
+### Embeddings
+
+Embeddings are configured globally through `LAT_AI_EMBEDDING_PROVIDER` and `LAT_AI_EMBEDDING_MODEL`. It defaults to `voyage` / `voyage-4-large`, and powers semantic trace/issue search, search highlights, and issue clustering. Without a working embeddings provider, search falls back to lexical.
+
+<Warning>
+  The embedding model is a **one-time choice — pick it at install time and keep it**.
+</Warning>
+
+Once an embedding model is used on a live deployment, changing it is a difficult task. Different models produce incompatible vector spaces and existing data is never re-embedded, so switching breaks semantic search, issue matching, and clustering.
+
+The model must also **emit 2048-dimensional vectors** — the dimension is fixed by the database schema and is not configurable.
+
+### Reranking
+
+Reranking is configured globally through `LAT_AI_RERANKING_PROVIDER` and `LAT_AI_RERANKING_MODEL`. It defaults to `voyage` / `rerank-2.5`, and refines issue-discovery candidate matching. Reranking is optional — when unavailable, discovery falls back to embedding-order matching.
 
 ## SSO
 
@@ -99,9 +154,10 @@ OLAP store for spans and telemetry, in a dedicated database.
 
 | Variable | Notes |
 | --- | --- |
-| `CLICKHOUSE_URL`, `CLICKHOUSE_USER`, `CLICKHOUSE_PASSWORD`, `CLICKHOUSE_DB` | Connection + dedicated database (also read by the bundled ClickHouse container). |
-| `CLICKHOUSE_MIGRATION_URL` | Native-protocol host and port (e.g. `clickhouse://clickhouse:9000`) for the migration tool (goose); credentials and database are taken from the other `CLICKHOUSE_*` variables. |
-| `CLICKHOUSE_CLUSTER_ENABLED` | Set `true` for a clustered ClickHouse; default `false`. |
+| `LAT_CLICKHOUSE_URL`, `LAT_CLICKHOUSE_USER`, `LAT_CLICKHOUSE_PASSWORD`, `LAT_CLICKHOUSE_DB` | Application connection + dedicated database. |
+| `LAT_CLICKHOUSE_MIGRATION_URL` | Native-protocol host and port (e.g. `clickhouse://clickhouse:9000`) for the migration tool (goose); credentials and database are taken from the other `LAT_CLICKHOUSE_*` variables. |
+| `LAT_CLICKHOUSE_CLUSTER_ENABLED` | Set `true` for a clustered ClickHouse; default `false`. |
+| `CLICKHOUSE_USER`, `CLICKHOUSE_PASSWORD`, `CLICKHOUSE_DB` | Bundled-ClickHouse container credentials. Omit if bringing your own ClickHouse. |
 
 ### Redis
 

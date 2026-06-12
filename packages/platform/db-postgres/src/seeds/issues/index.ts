@@ -1,23 +1,14 @@
-import { createRequire } from "node:module"
-import {
-  CENTROID_EMBEDDING_DIMENSIONS,
-  CENTROID_EMBEDDING_MODEL,
-  createIssueCentroid,
-  type IssueCentroid,
-  updateIssueCentroid,
-} from "@domain/issues"
+import { AIEmbed, type AIError, EMBEDDING_DIMENSIONS, resolveEmbeddingConfig } from "@domain/ai"
+import { createIssueCentroid, type IssueCentroid, updateIssueCentroid } from "@domain/issues"
 import { IssueId, toSlug } from "@domain/shared"
 import { SEED_ISSUE_FIXTURES, SEED_REGRESSED_ISSUE_IDS, type SeedScope } from "@domain/shared/seeding"
-import { parseEnvOptional } from "@platform/env"
+import { AIEmbedLive } from "@platform/ai"
 import { Effect } from "effect"
-import type { VoyageAIClient } from "voyageai"
 import { issues } from "../../schema/issues.ts"
 import { buildIssueLinkedScoreSeedRows } from "../scores/index.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 
-const require = createRequire(import.meta.url)
-
-const EMBEDDING_BATCH_SIZE = 64
+const EMBEDDING_CONCURRENCY = 8
 
 type IssueLinkedScoreSeedRow = ReturnType<typeof buildIssueLinkedScoreSeedRows>[number]
 type EmbeddedIssueLinkedScoreSeedRow = IssueLinkedScoreSeedRow & {
@@ -105,54 +96,35 @@ function minDate(dates: readonly Date[]): Date {
   return dates.reduce((earliest, current) => (current.getTime() < earliest.getTime() ? current : earliest))
 }
 
-async function createVoyageClient(apiKey: string): Promise<VoyageAIClient> {
-  const { VoyageAIClient } = require("voyageai") as {
-    VoyageAIClient: new (config: { apiKey: string }) => VoyageAIClient
-  }
-
-  return new VoyageAIClient({ apiKey })
+interface EmbeddedIssueFeedbacks {
+  readonly provider: string
+  readonly embeddings: Map<string, number[]>
 }
 
-async function embedIssueFeedbacks(
+const embedIssueFeedbacks = (
   rows: readonly IssueLinkedScoreSeedRow[],
-  apiKey: string,
-): Promise<Map<string, number[]>> {
-  const client = await createVoyageClient(apiKey)
-  const embeddings = new Map<string, number[]>()
+): Effect.Effect<EmbeddedIssueFeedbacks, AIError> =>
+  Effect.gen(function* () {
+    const embed = yield* AIEmbed
+    const embeddingConfig = yield* resolveEmbeddingConfig()
+    const embeddings = new Map<string, number[]>()
 
-  for (let offset = 0; offset < rows.length; offset += EMBEDDING_BATCH_SIZE) {
-    const batch = rows.slice(offset, offset + EMBEDDING_BATCH_SIZE)
-    const response = await client.embed({
-      input: batch.map((row) => row.feedback),
-      model: CENTROID_EMBEDDING_MODEL,
-      inputType: "document",
-      truncation: false,
-      outputDimension: CENTROID_EMBEDDING_DIMENSIONS,
-      outputDtype: "float",
-    })
+    yield* Effect.forEach(
+      rows,
+      (row) =>
+        embed
+          .embed({
+            text: row.feedback,
+            provider: embeddingConfig.provider,
+            model: embeddingConfig.model,
+            inputType: "document",
+          })
+          .pipe(Effect.map((result) => embeddings.set(row.id, result.embedding))),
+      { concurrency: EMBEDDING_CONCURRENCY, discard: true },
+    )
 
-    const data = response.data ?? []
-    if (data.length !== batch.length) {
-      throw new Error(`Voyage returned ${data.length} embeddings for ${batch.length} inputs`)
-    }
-
-    for (const [index, item] of data.entries()) {
-      const row = batch[index]
-      if (!row) {
-        throw new Error(`Missing batched score row at index ${offset + index}`)
-      }
-
-      const embedding = item.embedding
-      if (!embedding) {
-        throw new Error(`Voyage did not return an embedding for seeded score ${row.id}`)
-      }
-
-      embeddings.set(row.id, embedding)
-    }
-  }
-
-  return embeddings
-}
+    return { provider: embeddingConfig.provider, embeddings }
+  }).pipe(Effect.provide(AIEmbedLive))
 
 function buildCentroidFromEmbeddings(
   rows: readonly EmbeddedIssueLinkedScoreSeedRow[],
@@ -188,7 +160,7 @@ function buildCentroidFromEmbeddings(
 function buildRandomFallbackCentroid(seedKey: string, clusteredAt: Date): IssueCentroid & { clusteredAt: Date } {
   return {
     ...createIssueCentroid(),
-    base: deterministicUnitVector(seedKey, CENTROID_EMBEDDING_DIMENSIONS),
+    base: deterministicUnitVector(seedKey, EMBEDDING_DIMENSIONS),
     mass: 1,
     clusteredAt,
   }
@@ -290,9 +262,20 @@ const seedIssues: Seeder = {
           }
         }
 
-        const voyageApiKey = Effect.runSync(parseEnvOptional("LAT_VOYAGE_API_KEY", "string"))
-        const embeddingsByScoreId =
-          voyageApiKey === undefined ? null : await embedIssueFeedbacks(issueLinkedScoreSeedRows, voyageApiKey)
+        // Embeds through the configured LAT_AI_EMBEDDING_* provider; when it is
+        // unavailable (no credentials, unreachable) the seeds degrade to
+        // deterministic random centroids instead of failing.
+        const embedded = await Effect.runPromise(
+          embedIssueFeedbacks(issueLinkedScoreSeedRows).pipe(
+            Effect.catchTag("AIError", (error) =>
+              Effect.sync(() => {
+                console.log(`  -> issues: embedding provider unavailable (${error.message})`)
+                return null
+              }),
+            ),
+          ),
+        )
+        const embeddingsByScoreId = embedded?.embeddings ?? null
         const issueRows = SEED_ISSUE_FIXTURES.map((issue, index) => {
           const issueId = fixtureScopedId(index, ctx.scope)
           const issueUuid = fixtureScopedUuid(index, ctx.scope)
@@ -333,7 +316,7 @@ const seedIssues: Seeder = {
         }
 
         console.log(
-          `  -> issues: ${issueRows.length} Acme support issue families (${voyageApiKey ? "Voyage centroid embeddings" : "deterministic random centroid fallback"})`,
+          `  -> issues: ${issueRows.length} Acme support issue families (${embedded ? `${embedded.provider} centroid embeddings` : "deterministic random centroid fallback"})`,
         )
       },
       catch: (error) => new SeedError({ reason: "Failed to seed issues", cause: error }),

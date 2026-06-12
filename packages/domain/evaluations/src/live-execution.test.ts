@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest"
 import type { LiveEvaluationExecutionError } from "./errors.ts"
 import {
   EVALUATION_CONVERSATION_PLACEHOLDER,
-  EVALUATION_SCRIPT_RUNTIME_MODEL,
+  EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL,
   EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
   type EvaluationScriptExecution,
   estimateEvaluationScriptCostMicrocents,
@@ -180,9 +180,9 @@ describe("executeLiveEvaluationUseCase", () => {
       }),
     )
     expect(calls.generate).toHaveLength(1)
-    expect(calls.generate[0]?.provider).toBe(EVALUATION_SCRIPT_RUNTIME_MODEL.provider)
-    expect(calls.generate[0]?.model).toBe(EVALUATION_SCRIPT_RUNTIME_MODEL.model)
-    expect(calls.generate[0]?.reasoning).toBe(EVALUATION_SCRIPT_RUNTIME_MODEL.reasoning)
+    expect(calls.generate[0]?.provider).toBe(EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL.provider)
+    expect(calls.generate[0]?.model).toBe(EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL.model)
+    expect(calls.generate[0]?.reasoning).toBe(EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL.reasoning)
     expect(calls.generate[0]?.system).toBe(EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT)
     expect(calls.generate[0]?.telemetry).toEqual(telemetry)
     expect(calls.generate[0]?.prompt).toContain("[user] Please summarize the deployment checklist.")

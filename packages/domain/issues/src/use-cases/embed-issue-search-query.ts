@@ -1,7 +1,6 @@
-import { AI } from "@domain/ai"
+import { AI, resolveEmbeddingConfig } from "@domain/ai"
 import { Effect } from "effect"
 import { z } from "zod"
-import { CENTROID_EMBEDDING_DIMENSIONS, CENTROID_EMBEDDING_MODEL } from "../constants.ts"
 import { normalizeEmbedding } from "../helpers.ts"
 
 const embedIssueSearchQueryInputSchema = z.object({
@@ -23,11 +22,12 @@ export const embedIssueSearchQueryUseCase = Effect.fn("issues.embedIssueSearchQu
   const parsed = embedIssueSearchQueryInputSchema.parse(input)
   yield* Effect.annotateCurrentSpan("projectId", parsed.projectId)
   const ai = yield* AI
+  const embeddingConfig = yield* resolveEmbeddingConfig()
 
   const result = yield* ai.embed({
     text: parsed.query,
-    model: CENTROID_EMBEDDING_MODEL,
-    dimensions: CENTROID_EMBEDDING_DIMENSIONS,
+    provider: embeddingConfig.provider,
+    model: embeddingConfig.model,
     telemetry: {
       spanName: "embed-issue-search-query",
       tags: ["issues", "embedding", "search"],
