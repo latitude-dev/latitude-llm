@@ -42,4 +42,28 @@ describe("planSearch", () => {
     expect(occurrenceJoinIndex).toBeGreaterThan(messageEmbeddingsIndex)
     expect(roleFilterIndex).toBeGreaterThan(occurrenceJoinIndex)
   })
+
+  it("suppresses boilerplate hashes from shared-message semantic scoring", async () => {
+    process.env.LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS = "true"
+
+    const plan = await Effect.runPromise(planSearch(parseSearchQuery("needle")).pipe(Effect.provide(mockAILayer)))
+    const normalizedSql = plan.subquery.replace(/\s+/g, " ")
+
+    const roleFilterIndex = normalizedSql.indexOf("WHERE o.role IN ('user', 'assistant')")
+    const boilerplateFilterIndex = normalizedSql.indexOf("o.content_hash NOT IN (")
+
+    expect(boilerplateFilterIndex).toBeGreaterThan(roleFilterIndex)
+    expect(normalizedSql).toContain("HAVING uniqExact(trace_id) >= greatest(")
+    expect(plan.params.boilerplateMinTraces).toBeGreaterThan(0)
+    expect(plan.params.boilerplateTraceFraction).toBeGreaterThan(0)
+  })
+
+  it("keeps the legacy chunk plan free of the boilerplate filter", async () => {
+    process.env.LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS = "false"
+
+    const plan = await Effect.runPromise(planSearch(parseSearchQuery("needle")).pipe(Effect.provide(mockAILayer)))
+
+    expect(plan.subquery).not.toContain("content_hash NOT IN")
+    expect(plan.params.boilerplateMinTraces).toBeUndefined()
+  })
 })

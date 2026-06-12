@@ -2,6 +2,8 @@ import { AI, resolveEmbeddingConfig } from "@domain/ai"
 import {
   normalizeLiteralPhrase,
   type ParsedSearchQuery,
+  TRACE_SEARCH_BOILERPLATE_MIN_TRACES,
+  TRACE_SEARCH_BOILERPLATE_TRACE_FRACTION,
   TRACE_SEARCH_MIN_RELEVANCE_SCORE,
   tokenizePhrase,
 } from "@domain/spans"
@@ -183,6 +185,44 @@ function buildLegacySemanticSearchSubquery(
   }
 }
 
+/**
+ * Boilerplate (stop-message) filter shared by the listing subquery and the
+ * highlight query. Shared embeddings are deduplicated by content hash, so a
+ * canned message is ONE vector joined back to nearly every trace — under the
+ * max-pool rollup that single vector would set the score of every trace
+ * containing it ("Hi! How can I help you today?" scores ~0.35 against any
+ * service-flavored prompt and lives in ~99% of demo traces, flooding every
+ * search). A hash whose document frequency reaches
+ * `max(MIN_TRACES, FRACTION × project traces)` is excluded from semantic
+ * scoring; it still participates in lexical search.
+ *
+ * The scalar subquery (total project traces) is evaluated once per query by
+ * ClickHouse. The aggregation scans the project's occurrence rows — the same
+ * table the occurrence-side of the join already scans — so it roughly
+ * doubles that read; revisit with a projection if XL projects make it hot.
+ */
+export const BOILERPLATE_HASH_FILTER = `o.content_hash NOT IN (
+                  SELECT content_hash
+                  FROM trace_message_occurrences
+                  WHERE organization_id = {organizationId:String}
+                    AND project_id = {projectId:String}
+                  GROUP BY content_hash
+                  HAVING uniqExact(trace_id) >= greatest(
+                    {boilerplateMinTraces:UInt32},
+                    (
+                      SELECT uniqExact(trace_id)
+                      FROM trace_message_occurrences
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                    ) * {boilerplateTraceFraction:Float64}
+                  )
+                )`
+
+export const BOILERPLATE_FILTER_PARAMS = {
+  boilerplateMinTraces: TRACE_SEARCH_BOILERPLATE_MIN_TRACES,
+  boilerplateTraceFraction: TRACE_SEARCH_BOILERPLATE_TRACE_FRACTION,
+} as const
+
 function buildSharedMessageSemanticSearchSubquery(
   queryEmbedding: readonly number[],
   semanticMetadata: boolean,
@@ -233,6 +273,7 @@ function buildSharedMessageSemanticSearchSubquery(
                   LIMIT {semanticVectorLimit:UInt32}
                 ) AS e ON o.content_hash = e.content_hash
                 WHERE o.role IN ('user', 'assistant')
+                  AND ${BOILERPLATE_HASH_FILTER}
                 ORDER BY semantic_score DESC
               ) AS semantic_candidates
               GROUP BY trace_id`,
@@ -240,6 +281,7 @@ function buildSharedMessageSemanticSearchSubquery(
       queryEmbedding: [...queryEmbedding],
       embeddingModel,
       semanticVectorLimit: SEMANTIC_VECTOR_LIMIT,
+      ...BOILERPLATE_FILTER_PARAMS,
     },
     clickhouseSettings: SEMANTIC_VECTOR_SEARCH_SETTINGS,
   }

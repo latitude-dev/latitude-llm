@@ -4,6 +4,7 @@ import { ChSqlClient, type ChSqlClientShape, toRepositoryError } from "@domain/s
 import { TraceSearchRepository, type TraceSearchRepositoryShape } from "@domain/spans"
 import { parseEnv } from "@platform/env"
 import { Effect, Layer } from "effect"
+import { BOILERPLATE_FILTER_PARAMS, BOILERPLATE_HASH_FILTER } from "./search-plan.ts"
 
 // ClickHouse DateTime64(9, 'UTC') rejects trailing 'Z'; strip it.
 const toClickhouseDateTime = (date: Date): string => date.toISOString().replace("Z", "")
@@ -207,13 +208,15 @@ export const TraceSearchRepositoryLive = Layer.effect(
                         AND project_id = {projectId:String}
                         AND embedding_model = {embeddingModel:String}
                     ) AS e ON o.content_hash = e.content_hash
-                    WHERE o.role IN ('user', 'assistant')`,
+                    WHERE o.role IN ('user', 'assistant')
+                      AND ${BOILERPLATE_HASH_FILTER}`,
             query_params: {
               organizationId: args.organizationId as string,
               projectId: args.projectId as string,
               traceId: args.traceId,
               embeddingModel: resolveSharedEmbeddingModel(),
               queryEmbedding: [...args.queryEmbedding],
+              ...BOILERPLATE_FILTER_PARAMS,
             },
             format: "JSONEachRow",
           })
