@@ -160,6 +160,135 @@ describe("SpanRepository", () => {
     })
   })
 
+  describe("listByIngestedAtWindow", () => {
+    const WINDOW_END = new Date("2026-01-01T01:00:00.000Z")
+    const startCursor = { ingestedAt: new Date("2026-01-01T00:00:00.000Z"), spanId: SpanId("") }
+
+    const listWindow = (cursor: typeof startCursor, limit: number) =>
+      runCh(
+        repo.listByIngestedAtWindow({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          cursor,
+          windowEnd: WINDOW_END,
+          limit,
+        }),
+      )
+
+    it("picks up a late-arriving span by ingested_at regardless of start_time", async () => {
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            span_id: "1111111111111111",
+            start_time: "2025-11-01 00:00:00.000000000",
+            end_time: "2025-11-01 00:00:01.000000000",
+            ingested_at: "2026-01-01 00:10:00.000",
+          }),
+        ]),
+      )
+
+      const window = await listWindow(startCursor, 10)
+
+      expect(window.spans.map((span) => span.spanId)).toEqual(["1111111111111111"])
+      expect(window.nextCursor).toEqual({
+        ingestedAt: new Date("2026-01-01T00:10:00.000Z"),
+        spanId: "1111111111111111",
+      })
+    })
+
+    it("resumes a same-millisecond batch cut by the limit without losing or repeating spans", async () => {
+      const batchIngestedAt = "2026-01-01 00:10:00.000"
+      const spanIds = [
+        "1111111111111111",
+        "2222222222222222",
+        "3333333333333333",
+        "4444444444444444",
+        "5555555555555555",
+      ]
+      await runCh(
+        insertJsonEachRow(
+          ch.client,
+          "spans",
+          spanIds.map((spanId) => makeSpanRow({ span_id: spanId, ingested_at: batchIngestedAt })),
+        ),
+      )
+
+      const first = await listWindow(startCursor, 2)
+      expect(first.spans.map((span) => span.spanId)).toEqual(["1111111111111111", "2222222222222222"])
+      expect(first.nextCursor).toEqual({
+        ingestedAt: new Date("2026-01-01T00:10:00.000Z"),
+        spanId: "2222222222222222",
+      })
+
+      const delivered: string[] = []
+      let cursor = startCursor
+      for (let page = 0; page < 10; page++) {
+        const window = await listWindow(cursor, 2)
+        if (window.nextCursor === null) {
+          expect(window.spans).toHaveLength(0)
+          break
+        }
+        delivered.push(...window.spans.map((span) => span.spanId as string))
+        cursor = window.nextCursor
+      }
+
+      expect(delivered).toEqual(spanIds)
+    })
+
+    it("dedupes re-inserted span_id rows keeping the newest ingested_at", async () => {
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({ span_id: "1111111111111111", name: "older", ingested_at: "2026-01-01 00:10:00.000" }),
+          makeSpanRow({ span_id: "1111111111111111", name: "newer", ingested_at: "2026-01-01 00:20:00.000" }),
+        ]),
+      )
+
+      const window = await listWindow(startCursor, 10)
+
+      expect(window.spans).toHaveLength(1)
+      expect(window.spans[0]?.name).toBe("newer")
+      expect(window.nextCursor).toEqual({
+        ingestedAt: new Date("2026-01-01T00:20:00.000Z"),
+        spanId: "1111111111111111",
+      })
+    })
+
+    it("includes rows up to windowEnd, excludes rows past it, and scopes by org and project", async () => {
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({ span_id: "1111111111111111", ingested_at: "2026-01-01 00:10:00.000" }),
+          makeSpanRow({ span_id: "2222222222222222", ingested_at: "2026-01-01 01:00:00.000" }),
+          makeSpanRow({ span_id: "3333333333333333", ingested_at: "2026-01-01 01:00:00.001" }),
+          makeSpanRow({
+            span_id: "4444444444444444",
+            project_id: OTHER_PROJECT_ID,
+            ingested_at: "2026-01-01 00:10:00.000",
+          }),
+          makeSpanRow({
+            span_id: "5555555555555555",
+            organization_id: "org_span_repo_other",
+            ingested_at: "2026-01-01 00:10:00.000",
+          }),
+        ]),
+      )
+
+      const window = await listWindow(startCursor, 10)
+
+      expect(window.spans.map((span) => span.spanId)).toEqual(["1111111111111111", "2222222222222222"])
+      expect(window.nextCursor).toEqual({
+        ingestedAt: new Date("2026-01-01T01:00:00.000Z"),
+        spanId: "2222222222222222",
+      })
+
+      const exhausted = await listWindow(
+        { ingestedAt: new Date("2026-01-01T01:00:00.000Z"), spanId: SpanId("2222222222222222") },
+        10,
+      )
+      expect(exhausted.spans).toHaveLength(0)
+      expect(exhausted.nextCursor).toBeNull()
+    })
+  })
+
   describe("findBySpanId", () => {
     it("scopes by project and returns the latest ingested row without FINAL", async () => {
       await runCh(

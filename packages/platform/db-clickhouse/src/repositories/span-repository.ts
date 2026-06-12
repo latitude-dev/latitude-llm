@@ -459,6 +459,62 @@ export const SpanRepositoryLive = Layer.effect(
           )
       })
 
+    const listByIngestedAtWindow: SpanRepositoryShape["listByIngestedAtWindow"] = ({
+      organizationId,
+      projectId,
+      cursor,
+      windowEnd,
+      limit,
+    }) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        return yield* chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT *
+                    FROM (
+                      SELECT *
+                      FROM spans
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND (
+                          ingested_at > {cursorIngestedAt:DateTime64(3, 'UTC')}
+                          OR (
+                            ingested_at = {cursorIngestedAt:DateTime64(3, 'UTC')}
+                            AND span_id > toFixedString({cursorSpanId:String}, 16)
+                          )
+                        )
+                        AND ingested_at <= {windowEnd:DateTime64(3, 'UTC')}
+                      ORDER BY span_id, ingested_at DESC
+                      LIMIT 1 BY span_id
+                    )
+                    ORDER BY ingested_at ASC, span_id ASC
+                    LIMIT {limit:UInt32}`,
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                cursorIngestedAt: toClickhouseDateTime(cursor.ingestedAt),
+                cursorSpanId: cursor.spanId as string,
+                windowEnd: toClickhouseDateTime(windowEnd),
+                limit,
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<SpanDetailRow>()
+          })
+          .pipe(
+            Effect.map((rows) => {
+              const spans = rows.map(toDomainSpanDetail)
+              const last = spans.at(-1)
+              return {
+                spans,
+                nextCursor: last ? { ingestedAt: last.ingestedAt, spanId: last.spanId } : null,
+              }
+            }),
+            Effect.mapError((error) => toRepositoryError(error, "listByIngestedAtWindow")),
+          )
+      })
+
     return {
       // TODO(repositories): rename insert -> save to keep repository write
       // verbs consistent across append-only and upsert-backed stores.
@@ -487,6 +543,8 @@ export const SpanRepositoryLive = Layer.effect(
       listBySessionId,
 
       listByProjectId,
+
+      listByIngestedAtWindow,
 
       findBySpanId: ({ organizationId, projectId, traceId, spanId, startTimeFrom, startTimeTo }) =>
         Effect.gen(function* () {
