@@ -35,7 +35,7 @@ export function SearchInput({
   return (
     <div
       data-active={active ? "" : undefined}
-      className="group/search flex h-full min-w-0 flex-1 items-center bg-transparent pl-1"
+      className="group/search flex h-full min-w-0 flex-1 items-center bg-transparent pl-1.5"
     >
       <Popover open={legendOpen} onOpenChange={setLegendOpen}>
         <PopoverTrigger asChild>
@@ -63,7 +63,7 @@ export function SearchInput({
           }}
         />
       </Popover>
-      <div className="no-scrollbar flex h-full min-w-0 flex-1 items-center gap-1 overflow-x-auto pr-3 pl-1 text-sm">
+      <div className="no-scrollbar flex h-full min-w-0 flex-1 items-center gap-1 overflow-x-auto pr-2 pl-1.5 text-sm">
         {segments.map((segment, index) => {
           const isSemantic = segment.kind === "semantic"
           const label = segment.kind === "literal" ? "Literal" : "Phrase"

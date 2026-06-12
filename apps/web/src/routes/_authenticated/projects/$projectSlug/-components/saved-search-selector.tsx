@@ -130,7 +130,8 @@ export function SavedSearchSelector({
           <button
             type="button"
             aria-label="Saved searches"
-            className="flex h-full min-w-0 cursor-pointer items-center gap-1 self-stretch border-r border-input bg-secondary px-2 text-secondary-foreground transition-colors hover:bg-secondary/80"
+            // pl-3 ≈ pr-2 + the chevron glyph's ~4px empty right inset, so both sides read even.
+            className="flex h-full min-w-0 cursor-pointer items-center gap-1 self-stretch border-r border-input bg-secondary pl-3 pr-2 text-secondary-foreground transition-colors hover:bg-secondary/80"
           >
             {selected ? (
               <span className="min-w-0 max-w-40 truncate text-sm">{selected.name}</span>
