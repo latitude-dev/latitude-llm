@@ -56,18 +56,18 @@ export const sessionTracesQueryOptions = (
           projectId,
           limit: chunk.length,
           sortBy: "startTime",
-          sortDirection: "asc",
+          sortDirection: "desc",
           filters: { traceId: [{ op: "in" as const, value: chunk }] },
         },
       })
       if (page?.traces.length) traces.push(...page.traces)
     }
 
-    // Child traces are shown in chronological order — they form a conversation,
-    // and reading order is what users want. Each chunk is fetched asc, but the
-    // chunks are independent queries, so re-sort the merged set (tiebreak on
-    // traceId for deterministic "Trace N" labels).
-    traces.sort((a, b) => a.startTime.localeCompare(b.startTime) || a.traceId.localeCompare(b.traceId))
+    // Child traces are shown newest-first, matching the sessions table's
+    // last-activity ordering. Each chunk is fetched desc, but the chunks are
+    // independent queries, so re-sort the merged set (tiebreak on traceId for
+    // deterministic "Trace N" labels).
+    traces.sort((a, b) => b.startTime.localeCompare(a.startTime) || b.traceId.localeCompare(a.traceId))
     return traces
   },
   staleTime: 30_000,

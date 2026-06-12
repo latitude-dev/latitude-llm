@@ -30,7 +30,7 @@ describe("sessionTracesQueryOptions queryFn", () => {
         projectId: "p1",
         limit: 1,
         sortBy: "startTime",
-        sortDirection: "asc",
+        sortDirection: "desc",
         filters: { traceId: [{ op: "in", value: ["t1"] }] },
       },
     })
@@ -57,10 +57,10 @@ describe("sessionTracesQueryOptions queryFn", () => {
     expect(result).toEqual([])
   })
 
-  it("merges chunks and sorts by startTime then traceId", async () => {
+  it("merges chunks and sorts by startTime descending then traceId", async () => {
     const ids = Array.from({ length: 101 }, (_, i) => `t${i}`)
-    listTracesByProject.mockResolvedValueOnce({ traces: [trace("t0", "2024-01-02T00:00:00Z")] }).mockResolvedValueOnce({
-      traces: [trace("t100", "2024-01-01T00:00:00Z")],
+    listTracesByProject.mockResolvedValueOnce({ traces: [trace("t0", "2024-01-01T00:00:00Z")] }).mockResolvedValueOnce({
+      traces: [trace("t100", "2024-01-02T00:00:00Z")],
     })
 
     const result = await sessionTracesQueryOptions(undefined, "p1", "s1", ids).queryFn()
