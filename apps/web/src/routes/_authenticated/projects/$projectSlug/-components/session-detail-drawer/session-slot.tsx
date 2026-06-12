@@ -128,9 +128,11 @@ export function SessionSlot({
 
   const traceNumberById = useMemo(() => {
     const map = new Map<string, number>()
+    // `traces` arrives newest-first; "Trace N" stays chronological (1 = oldest)
+    // so labels don't shift as new traces land.
     for (let index = 0; index < traces.length; index++) {
       const trace = traces[index]
-      if (trace) map.set(trace.traceId, index + 1)
+      if (trace) map.set(trace.traceId, traces.length - index)
     }
     return map
   }, [traces])

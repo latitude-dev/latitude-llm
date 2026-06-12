@@ -17,7 +17,7 @@ import { type SelectionState, useSelectableRows } from "../../../../../lib/hooks
  *     anchor→target slice flips check state.
  *   - Trace sub-rows: range selection uses the inner hook's `rowIds`, which
  *     this adapter builds from `expandedTraces` so the order matches the DOM
- *     (chronological asc from `sessionTracesQueryOptions`), not the
+ *     (newest-first from `sessionTracesQueryOptions`), not the
  *     ClickHouse `groupArray` order of `SessionRecord.traceIds`.
  *
  * Cross-depth shift+click (e.g. session-row anchor → trace-row target, or
@@ -36,7 +36,7 @@ export function useSessionSelectionAdapter({
   sessions: readonly SessionRecord[]
   totalTraceCount: number
   /**
-   * Per-session trace lists in **rendered (chronological-asc) order**, fetched
+   * Per-session trace lists in **rendered (newest-first) order**, fetched
    * by `useExpandedSessionTraces`. Used to compute shift+click ranges for
    * expanded trace sub-rows — `SessionRecord.traceIds` is ClickHouse
    * `groupArray` order and doesn't match the DOM, which would slice the
