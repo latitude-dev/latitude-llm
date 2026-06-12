@@ -2,6 +2,36 @@
 
 ## Unreleased
 
+## v0.3.1 - 2026-06-12
+
+### End-user profiles
+
+- Added user profiles across the platform: end-user telemetry attributes (`user.email` is now a first-class span attribute with its own ClickHouse column and trace/session aggregation), a Users project section with unique/new-users stats, an active-users histogram with drag-to-filter, and per-row activity sparklines and cost rollups, plus a user detail page showing profile, activity, affected issues, observed behaviours, model/provider/tool usage, and sessions (ref: #3531).
+- Telemetry SDKs (TypeScript and Python 3.1.0) gained a `userEmail` / `user_email` capture option, and `enduser.id` is now accepted as a user id attribute (ref: #3531).
+
+### Monitors
+
+- Ongoing alert incidents can now be resolved manually: hovering an ongoing incident pill on the monitors dashboard or monitor details reveals a Resolve action, and a new `POST /v1/projects/{projectSlug}/incidents/{incidentId}` endpoint exposes the same flow over HTTP, MCP, and the SDK (ref: #3533).
+- Added bulk actions to the monitors dashboard (resolve last incident, mute, remove) with all/all-except server-side selection, a "Resolve last incident" palette command on monitor details, and fixed the issues archived-tab bulk bar to offer Unignore/Unresolve instead of Ignore/Resolve (ref: #3535).
+
+### SDKs
+
+- TypeScript SDK 6.0.0 is now stable (out of alpha), and a new Fern-generated Python SDK ships as `latitude-sdk` 6.0.0 on PyPI — a clean rewrite of the legacy 5.x line targeting the V2 platform (ref: #3534).
+
+### OSS self-hosting
+
+- Added Tier 3 cluster deployment via a cloud-agnostic Helm chart (ref: #3536).
+
+### Web UI
+
+- Session trace sub-rows now show newest-first, matching the sessions table ordering, while keeping "Trace N" labels chronological (ref: #3537).
+- Moved the saved-search Save/Update button inside the search bar at its right edge (ref: #3540).
+- The sandbox project sidebar now renders the Sandbox toggle, so flipping it off returns to the linked live project (ref: #3528).
+
+### Dependencies
+
+- Bumped hono from 4.12.16 to 4.12.21 (ref: #3484) and refreshed the bundled models.dev data (ref: #3527).
+
 ## v0.3.0 - 2026-06-12
 
 ### Evaluations
