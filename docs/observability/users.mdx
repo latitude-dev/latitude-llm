@@ -7,6 +7,10 @@ description: Review activity, sessions, and errors by end user.
 
 The Users page groups telemetry by the end-user identifier you send with each trace. Use it to see who is using your product, when they were last active, and which traces or sessions are associated with them.
 
+<Frame>
+  <img src="/images/observability/users-overview.png" alt="Users page showing per-user activity, sessions, error rates, and cost" />
+</Frame>
+
 ## Send user identifiers
 
 Attach a stable user id when you capture a trace. You can also send a user email when it is useful for support workflows.
@@ -44,20 +48,33 @@ Attach a stable user id when you capture a trace. You can also send a user email
   </Tab>
 </Tabs>
 
-## What you can see
+## The users dashboard
 
-The Users page shows one row per user with recent activity and aggregate metrics, including:
+The dashboard opens with aggregate metrics for the selected time range — unique users, new users, the share of traces carrying a user id, and traces per user — above an activity histogram. Drag across the histogram to zoom into a narrower period.
 
-- first and last seen timestamps
-- trace and session counts
-- error counts
-- token usage and estimated cost
+Below, the table shows one row per user:
 
-Open a user to review their related traces and understand what happened during their sessions.
+- **Seen at**: last and first activity within the selected period
+- **Trend**: a per-user activity sparkline
+- **Sessions**: distinct sessions in the period
+- **Errors**: the rate and count of sessions with at least one errored trace
+- **Cost**: per-user spend, with a column rollup you can cycle between SUM, AVG, and MED
 
-## Filter and search
+Use the time range, column selector, and search controls to focus on a subset of users. Search matches user ids and emails, and every column with a sort icon is sortable.
 
-Use the time range and search controls to focus on a subset of users. Search by user id or email, then open an individual user to inspect their traces.
+## User detail
+
+Open a user to see their lifetime profile: traces, sessions, errored sessions, cost, tokens, average trace duration, and active days, alongside a 30-day activity chart. The page also surfaces the [issues](../issues/overview) affecting this user and the behaviours they triggered, so you can connect one user's complaints to known problems.
+
+<Frame>
+  <img src="/images/observability/user-detail.png" alt="User detail page with lifetime stats, activity chart, issues, and behaviours" />
+</Frame>
+
+Further down, usage breakdowns show which models, providers, and tools this user's traces relied on, followed by their sessions. Toggle the error view to focus on the sessions that failed.
+
+<Frame>
+  <img src="/images/observability/user-detail-usage.png" alt="User detail page showing model, provider, and tool usage breakdowns above the user's sessions" />
+</Frame>
 
 ## Related
 
