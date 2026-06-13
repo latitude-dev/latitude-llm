@@ -26,7 +26,14 @@ export function formatCount(count: number): string {
     unitIndex++
   }
 
-  const decimal = value < 10 ? 1 : 0
+  let decimal = value < 10 ? 1 : 0
+  // Rounding can bump the value up to the next unit (e.g. 999_999 would render
+  // as "1000K"), so promote to the next unit when that happens.
+  if (Number(value.toFixed(decimal)) >= 1000 && unitIndex < COUNT_UNITS.length - 1) {
+    value /= 1000
+    unitIndex++
+    decimal = value < 10 ? 1 : 0
+  }
   return `${value.toFixed(decimal).replace(/\.0$/, "")}${COUNT_UNITS[unitIndex]}`
 }
 
@@ -65,6 +72,12 @@ export function formatBytes(bytes: number): string {
     unitIndex++
   }
 
+  // Rounding to one decimal can bump the value up to 1024 (e.g. 1048575 bytes
+  // would render as "1024 KB"), so promote to the next unit when that happens.
+  if (Number(value.toFixed(1)) >= 1024 && unitIndex < BYTE_UNITS.length - 1) {
+    value /= 1024
+    unitIndex++
+  }
   return `${value.toFixed(1).replace(/\.0$/, "")} ${BYTE_UNITS[unitIndex]}`
 }
 
