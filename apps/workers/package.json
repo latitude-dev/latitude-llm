@@ -70,7 +70,8 @@
     "@repo/utils": "workspace:*",
     "effect": "catalog:",
     "fflate": "0.8.2",
-    "tsx": "catalog:"
+    "tsx": "catalog:",
+    "voyageai": "catalog:"
   },
   "devDependencies": {
     "@platform/testkit": "workspace:*",
