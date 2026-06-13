@@ -60,7 +60,7 @@ export const SANDBOX_PRELUDE = `;(() => {
     return Object.freeze({ ...node, ...api })
   }
 
-  globalThis.z = Object.freeze({
+  const z = Object.freeze({
     string: () => schemaNode({ kind: "string" }),
     number: () => schemaNode({ kind: "number" }),
     boolean: () => schemaNode({ kind: "boolean" }),
@@ -70,6 +70,12 @@ export const SANDBOX_PRELUDE = `;(() => {
     object: (shape) => schemaNode({ kind: "object", shape: strip(shape) }),
     union: (options) => schemaNode({ kind: "union", options: strip(options) }),
   })
+  globalThis.z = z
+  const zodModule = Object.freeze({ ...z, z })
+  globalThis.require = (moduleName) => {
+    if (moduleName === "zod" || moduleName === "zod/v4") return zodModule
+    throw new TypeError('require() is unavailable in the sandbox for module "' + String(moduleName) + '"')
+  }
 
   if (hostParse) {
     globalThis.parse = (value, schema) => hostParse(value, strip(schema))
