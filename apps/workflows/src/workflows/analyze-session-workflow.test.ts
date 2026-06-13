@@ -6,8 +6,6 @@ const { mockActivities, signalState } = vi.hoisted(() => {
     hashAnalyzeSessionActivity: vi.fn(),
     checkAnalyzeSessionEligibilityActivity: vi.fn(),
     embedAnalyzeSessionTurnsActivity: vi.fn(),
-    segmentAnalyzeSessionActivity: vi.fn(),
-    detectAnalyzeSessionLabelsActivity: vi.fn(),
     persistAnalyzeSessionActivity: vi.fn(),
   }
   const signalState: { handler: ((input: { readonly debounceMs?: number }) => void) | undefined } = {
@@ -43,8 +41,6 @@ const activityOrder = () =>
     mockActivities.hashAnalyzeSessionActivity,
     mockActivities.checkAnalyzeSessionEligibilityActivity,
     mockActivities.embedAnalyzeSessionTurnsActivity,
-    mockActivities.segmentAnalyzeSessionActivity,
-    mockActivities.detectAnalyzeSessionLabelsActivity,
     mockActivities.persistAnalyzeSessionActivity,
   ]
     .filter((mock) => mock.mock.calls.length > 0)
@@ -68,8 +64,6 @@ describe("analyzeSessionWorkflow", () => {
       .mockName("eligibility")
       .mockResolvedValue({ eligible: true, reason: "eligible" })
     mockActivities.embedAnalyzeSessionTurnsActivity.mockName("embed").mockResolvedValue({ turns: [] })
-    mockActivities.segmentAnalyzeSessionActivity.mockName("segment").mockResolvedValue({ segments: [] })
-    mockActivities.detectAnalyzeSessionLabelsActivity.mockName("label").mockResolvedValue({ sampled: true })
     mockActivities.persistAnalyzeSessionActivity
       .mockName("persist")
       .mockResolvedValue({ action: "recorded", status: "analyzed", momentCount: 0 })

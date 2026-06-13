@@ -377,6 +377,20 @@ describe("analyzeSessionUseCase", () => {
     expect(traceSearchBudget.consumedTokens).toHaveLength(0)
   })
 
+  it("records a failed analysis when the embedding budget is exhausted", async () => {
+    const { effect, analyses } = runUseCase({
+      session: makeSession(),
+      budgetAllowed: false,
+    })
+
+    const result = await Effect.runPromise(effect)
+    const analysis = [...analyses.rows.values()][0]
+
+    expect(result).toEqual({ action: "recorded", status: "failed", momentCount: 0 })
+    expect(analysis?.analysisStatus).toBe("failed")
+    expect(analysis?.statusReason).toBe("Conversation intelligence embedding budget exhausted")
+  })
+
   it("embeds and writes only distinct missing message embeddings", async () => {
     const repeatedUser = "Please help with roaming"
     const assistant = "I can help with roaming"
