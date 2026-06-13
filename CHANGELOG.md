@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+## v0.3.2 - 2026-06-13
+
+### Trace search
+
+- Added shared message embeddings for trace search and conversation intelligence, backed by new ClickHouse `message_embeddings` and `trace_message_occurrences` tables with ANN search, occurrence fanout, and a sharded backfill script (ref: #3496).
+- Improved semantic trace-search ranking by excluding high-frequency boilerplate messages, raising the relevance floor, defaulting active searches to relevance sort, and clearing stale sort params when filters are reset (ref: #3496).
+- Fixed Voyage SDK resolution in bundled API, worker, and web images so semantic embeddings load instead of silently falling back to lexical-only search (ref: #3550).
+
+### Conversation intelligence
+
+- Reused the shared embedding store for session analysis, made workflow warm-up best-effort and replay-safe, and anchored moment labels to the rendered conversation so badges land on the correct turns (ref: #3496, 9e24587).
+
+### Evaluations
+
+- Allowed `zod` and `zod/v4` imports inside the QuickJS sandbox while continuing to block other CommonJS requires (ref: 67e6488).
+
+### Web UI
+
+- Polished the traces filter sidebar and refreshed bundled models.dev data (ref: #3548, 06e7440).
+
+### Dependencies
+
+- Bumped esbuild to 0.28.1 and actions/checkout to 6.0.2 (ref: #3547, #3439).
+
 ## v0.3.1 - 2026-06-12
 
 ### End-user profiles
