@@ -576,6 +576,9 @@ importers:
       satori:
         specifier: 0.18.4
         version: 0.18.4
+      voyageai:
+        specifier: 'catalog:'
+        version: 0.2.1
       zod:
         specifier: 'catalog:'
         version: 4.3.6

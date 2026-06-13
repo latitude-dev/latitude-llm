@@ -56,7 +56,8 @@
         "src/domains/feature-flags/feature-flags.collection.ts"
       ],
       "ignoreDependencies": [
-        "@temporalio/client"
+        "@temporalio/client",
+        "voyageai"
       ]
     },
     "infra": {
