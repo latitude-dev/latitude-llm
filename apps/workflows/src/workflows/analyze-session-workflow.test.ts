@@ -6,8 +6,6 @@ const { mockActivities, signalState } = vi.hoisted(() => {
     hashAnalyzeSessionActivity: vi.fn(),
     checkAnalyzeSessionEligibilityActivity: vi.fn(),
     embedAnalyzeSessionTurnsActivity: vi.fn(),
-    segmentAnalyzeSessionActivity: vi.fn(),
-    detectAnalyzeSessionLabelsActivity: vi.fn(),
     persistAnalyzeSessionActivity: vi.fn(),
   }
   const signalState: { handler: ((input: { readonly debounceMs?: number }) => void) | undefined } = {
@@ -43,8 +41,6 @@ const activityOrder = () =>
     mockActivities.hashAnalyzeSessionActivity,
     mockActivities.checkAnalyzeSessionEligibilityActivity,
     mockActivities.embedAnalyzeSessionTurnsActivity,
-    mockActivities.segmentAnalyzeSessionActivity,
-    mockActivities.detectAnalyzeSessionLabelsActivity,
     mockActivities.persistAnalyzeSessionActivity,
   ]
     .filter((mock) => mock.mock.calls.length > 0)
@@ -68,8 +64,6 @@ describe("analyzeSessionWorkflow", () => {
       .mockName("eligibility")
       .mockResolvedValue({ eligible: true, reason: "eligible" })
     mockActivities.embedAnalyzeSessionTurnsActivity.mockName("embed").mockResolvedValue({ turns: [] })
-    mockActivities.segmentAnalyzeSessionActivity.mockName("segment").mockResolvedValue({ segments: [] })
-    mockActivities.detectAnalyzeSessionLabelsActivity.mockName("label").mockResolvedValue({ sampled: true })
     mockActivities.persistAnalyzeSessionActivity
       .mockName("persist")
       .mockResolvedValue({ action: "recorded", status: "analyzed", momentCount: 0 })
@@ -88,7 +82,15 @@ describe("analyzeSessionWorkflow", () => {
       momentCount: 0,
     })
 
-    expect(activityOrder()).toEqual(["load", "hash", "eligibility", "embed", "segment", "label", "persist"])
+    expect(activityOrder()).toEqual(["load", "hash", "eligibility", "embed", "persist"])
+    expect(mockActivities.embedAnalyzeSessionTurnsActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        sessionId: input.sessionId,
+        analysisHash: "h".repeat(64),
+      }),
+    )
   })
 
   it("short-circuits hash-current sessions before expensive activities", async () => {
@@ -145,11 +147,11 @@ describe("analyzeSessionWorkflow", () => {
   })
 
   it("propagates failed activity errors", async () => {
-    mockActivities.detectAnalyzeSessionLabelsActivity.mockRejectedValueOnce(new Error("label detection failed"))
+    mockActivities.embedAnalyzeSessionTurnsActivity.mockRejectedValueOnce(new Error("embedding warm-up failed"))
 
-    await expect(analyzeSessionWorkflow(input)).rejects.toThrow("label detection failed")
+    await expect(analyzeSessionWorkflow(input)).rejects.toThrow("embedding warm-up failed")
 
-    expect(activityOrder()).toEqual(["load", "hash", "eligibility", "embed", "segment", "label"])
+    expect(activityOrder()).toEqual(["load", "hash", "eligibility", "embed"])
     expect(mockActivities.persistAnalyzeSessionActivity).not.toHaveBeenCalled()
   })
 })

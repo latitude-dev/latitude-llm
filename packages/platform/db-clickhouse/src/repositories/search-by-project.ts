@@ -252,6 +252,7 @@ const fetchSearchCandidates = ({
             candidateCap: MAX_SEARCH_CANDIDATES,
             ...plan.params,
           },
+          ...(plan.clickhouseSettings ? { clickhouse_settings: plan.clickhouseSettings } : {}),
           format: "JSONEachRow",
         })
         return result.json<SearchCandidate>()

@@ -27,6 +27,8 @@ export {
   SPAN_ID_LENGTH,
   TRACE_END_DEBOUNCE_MS,
   TRACE_ID_LENGTH,
+  TRACE_SEARCH_BOILERPLATE_MIN_TRACES,
+  TRACE_SEARCH_BOILERPLATE_TRACE_FRACTION,
   TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE,
   TRACE_SEARCH_CHUNK_HEAD_BUDGET_CHARS,
   TRACE_SEARCH_CHUNK_MAX_CHARS,
@@ -95,6 +97,8 @@ export type {
 } from "./ports/message-embedding-repository.ts"
 export { MessageEmbeddingRepository } from "./ports/message-embedding-repository.ts"
 export type {
+  SessionConversationSpine,
+  SessionConversationSpineMessage,
   SessionCountResult,
   SessionDistinctColumn,
   SessionListCursor,
@@ -156,6 +160,7 @@ export {
 export type { TraceSearchBudgetShape } from "./ports/trace-search-budget.ts"
 export { TraceSearchBudget } from "./ports/trace-search-budget.ts"
 export type {
+  TraceMessageOccurrenceRow,
   TraceSearchDocumentRow,
   TraceSearchEmbeddingRow,
   TraceSearchRepositoryShape,
@@ -190,6 +195,7 @@ export type {
 export {
   buildTraceSearchDocument,
   extractTraceSearchEmbeddingMessages,
+  isTraceSearchSemanticMessage,
 } from "./use-cases/build-trace-search-document.ts"
 export type {
   BuildTracesExportInput,

@@ -1,10 +1,15 @@
-import { canonicalizeMessageForEmbedding, extractTraceSearchEmbeddingMessages, hashMessageContent } from "@domain/spans"
+import {
+  canonicalizeMessageForEmbedding,
+  extractTraceSearchEmbeddingMessages,
+  hashMessageContent,
+  isTraceSearchSemanticMessage,
+} from "@domain/spans"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { normalizeMessages } from "./normalization.ts"
 
 describe("message embedding canonicalization", () => {
-  it("produces identical canonical text and hashes for trace search and conversation intelligence messages", async () => {
+  it("produces identical canonical text and hashes for trace-search eligible conversation intelligence messages", async () => {
     const messages = [
       {
         role: "system",
@@ -27,8 +32,8 @@ describe("message embedding canonicalization", () => {
       },
     ]
 
-    const traceMessages = extractTraceSearchEmbeddingMessages(messages).filter((message) => message.role !== "tool")
-    const ciMessages = normalizeMessages(messages).filter((message) => message.role !== "tool")
+    const traceMessages = extractTraceSearchEmbeddingMessages(messages).filter(isTraceSearchSemanticMessage)
+    const ciMessages = normalizeMessages(messages).filter(isTraceSearchSemanticMessage)
 
     expect(
       traceMessages.map((message) => canonicalizeMessageForEmbedding({ role: message.role, text: message.text })),

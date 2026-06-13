@@ -9,12 +9,10 @@ const traceCompletedSignal = defineSignal<[{ readonly debounceMs?: number }]>("t
 
 const {
   checkAnalyzeSessionEligibilityActivity,
-  detectAnalyzeSessionLabelsActivity,
   embedAnalyzeSessionTurnsActivity,
   hashAnalyzeSessionActivity,
   loadAnalyzeSessionActivity,
   persistAnalyzeSessionActivity,
-  segmentAnalyzeSessionActivity,
 } = proxyActivities<typeof activities>({
   startToCloseTimeout: "10 minutes",
   retry: {
@@ -41,14 +39,9 @@ const runAnalyzeSessionPass = async (input: AnalyzeSessionWorkflowInput): Promis
     return persistAnalyzeSessionActivity(input)
   }
 
-  // Warm-up stages pre-fill the Redis embedding cache so the persist
-  // activity's full use-case run hits warm keys. Projection/assignment are
-  // NOT warmed: the persisted projection embeds the moment text, which these
-  // stages cannot reproduce from turn vectors — warming a different vector
-  // is pure waste (verified in review).
-  const embedded = await embedAnalyzeSessionTurnsActivity(hashed)
-  const segmented = await segmentAnalyzeSessionActivity(embedded)
-  await detectAnalyzeSessionLabelsActivity({ ...embedded, ...segmented })
+  // Warm the shared message embedding store so the persist activity's full
+  // use-case run resolves existing vectors and embeds only misses.
+  await embedAnalyzeSessionTurnsActivity({ ...input, ...hashed })
   return persistAnalyzeSessionActivity(input)
 }
 

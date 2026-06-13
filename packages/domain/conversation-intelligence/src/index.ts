@@ -65,6 +65,7 @@ export {
   type AnalyzeSessionInput,
   type AnalyzeSessionResult,
   analyzeSessionUseCase,
+  resolveTurnEmbeddings,
 } from "./use-cases/analyze-session.ts"
 export {
   type ListSessionMomentIntelligenceInput,

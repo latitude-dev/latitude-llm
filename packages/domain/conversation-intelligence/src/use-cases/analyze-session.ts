@@ -1,6 +1,15 @@
-import { AI, resolveEmbeddingConfig } from "@domain/ai"
+import { AI, EMBEDDING_DIMENSIONS, resolveEmbeddingConfig } from "@domain/ai"
 import { OrganizationId, ProjectId, SessionId, TaxonomyClusterId, TraceId } from "@domain/shared"
-import { type SessionDetail, SessionRepository } from "@domain/spans"
+import {
+  canonicalizeMessageForEmbedding,
+  hashMessageContent,
+  MessageEmbeddingRepository,
+  type MessageEmbeddingUpsert,
+  type SessionDetail,
+  SessionRepository,
+  TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE,
+  TraceSearchBudget,
+} from "@domain/spans"
 import {
   assignObservationToClusterUseCase,
   normalizeTaxonomyEmbedding,
@@ -90,34 +99,137 @@ const buildSessionConversationProjectionText = (messages: readonly NormalizedMes
     TAXONOMY_DIRECT_PROJECTION_MAX_LENGTH,
   )
 
-// Tool-role turns (tool results) are excluded from the semantic pipeline:
-// segmentation centroids, label scoring, and topic projections all operate on
-// the user/assistant exchange only.
-const embedTurns = (messages: readonly NormalizedMessage[]) =>
+type EmbeddedMomentLabelAnchor = {
+  readonly config: (typeof MOMENT_LABEL_ANCHORS)[number]
+  readonly positive: readonly number[][]
+  readonly contrast: readonly number[][]
+}
+
+let embeddedMomentLabelAnchorsCache: {
+  readonly key: string
+  readonly value: readonly EmbeddedMomentLabelAnchor[]
+} | null = null
+
+const momentLabelAnchorCacheKey = (embeddingConfig: { readonly provider: string; readonly model: string }) =>
+  JSON.stringify({
+    detectorVersion: CONVERSATION_INTELLIGENCE_DETECTOR_VERSION,
+    embeddingProvider: embeddingConfig.provider,
+    embeddingModel: embeddingConfig.model,
+    embeddingDimensions: EMBEDDING_DIMENSIONS,
+    anchors: MOMENT_LABEL_ANCHORS,
+  })
+
+const resolveEmbeddedMomentLabelAnchors = (): Effect.Effect<readonly EmbeddedMomentLabelAnchor[], unknown, AI> =>
   Effect.gen(function* () {
+    const embeddingConfig = yield* resolveEmbeddingConfig()
+    const key = momentLabelAnchorCacheKey(embeddingConfig)
+    if (embeddedMomentLabelAnchorsCache?.key === key) return embeddedMomentLabelAnchorsCache.value
+
+    const value = yield* Effect.forEach(MOMENT_LABEL_ANCHORS, (config) =>
+      Effect.gen(function* () {
+        const positive = yield* Effect.forEach(config.positiveAnchors, embedAnchorText)
+        const contrast = yield* Effect.forEach(config.contrastAnchors, embedAnchorText)
+        return { config, positive, contrast } satisfies EmbeddedMomentLabelAnchor
+      }),
+    )
+
+    embeddedMomentLabelAnchorsCache = { key, value }
+    return value
+  })
+
+export const clearConversationIntelligenceAnchorEmbeddingCacheForTesting = () => {
+  embeddedMomentLabelAnchorsCache = null
+}
+
+const estimateEmbeddingTokens = (texts: readonly string[]): number =>
+  texts.reduce((sum, text) => sum + Math.ceil(text.length / TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE), 0)
+
+const uniqueMessagesByHash = (
+  hashedMessages: readonly {
+    readonly message: NormalizedMessage
+    readonly canonicalText: string
+    readonly contentHash: string
+  }[],
+) => {
+  const byHash = new Map<string, (typeof hashedMessages)[number]>()
+  for (const message of hashedMessages) {
+    if (!byHash.has(message.contentHash)) byHash.set(message.contentHash, message)
+  }
+  return [...byHash.values()]
+}
+
+export const resolveTurnEmbeddings = (input: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly messages: readonly NormalizedMessage[]
+}): Effect.Effect<readonly SemanticSegmentationTurn[], unknown, AI | MessageEmbeddingRepository | TraceSearchBudget> =>
+  Effect.gen(function* () {
+    const repository = yield* MessageEmbeddingRepository
+    const budget = yield* TraceSearchBudget
     const ai = yield* AI
     const embeddingConfig = yield* resolveEmbeddingConfig()
-    return yield* Effect.forEach(
-      messages.filter((message) => message.role !== "tool"),
-      (message) =>
+    const messages = input.messages.filter((message) => message.role !== "tool")
+    const hashedMessages = yield* Effect.forEach(messages, (message) =>
+      Effect.gen(function* () {
+        const role = message.role
+        const canonicalText = canonicalizeMessageForEmbedding({ role, text: message.text })
+        const contentHash = yield* hashMessageContent({ role, text: message.text })
+        return { message, canonicalText, contentHash }
+      }),
+    )
+    const uniqueMessages = uniqueMessagesByHash(hashedMessages)
+    const existing = yield* repository.findByHashes({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      contentHashes: uniqueMessages.map((message) => message.contentHash),
+    })
+    const embeddingByHash = new Map(
+      existing
+        .filter((row) => row.embeddingModel === embeddingConfig.model)
+        .map((row) => [row.contentHash, row.embedding] as const),
+    )
+
+    const misses = uniqueMessages.filter((message) => !embeddingByHash.has(message.contentHash))
+
+    if (misses.length > 0) {
+      const estimatedTokens = estimateEmbeddingTokens(misses.map((message) => message.canonicalText))
+      const budgetOk = yield* budget
+        .tryConsume(input.organizationId, estimatedTokens)
+        .pipe(Effect.orElseSucceed(() => true))
+      if (!budgetOk) {
+        return yield* Effect.fail(new Error("Conversation intelligence embedding budget exhausted"))
+      }
+
+      const rows = yield* Effect.forEach(misses, (item) =>
         ai
           .embed({
-            text: `${message.role}: ${message.text}`,
+            text: item.canonicalText,
             provider: embeddingConfig.provider,
             model: embeddingConfig.model,
             inputType: "document",
           })
           .pipe(
-            Effect.map(
-              (result): SemanticSegmentationTurn => ({
-                index: message.index,
-                role: message.role,
-                content: message.text,
+            Effect.map((result): MessageEmbeddingUpsert => {
+              embeddingByHash.set(item.contentHash, result.embedding)
+              return {
+                organizationId: input.organizationId,
+                projectId: input.projectId,
+                contentHash: item.contentHash,
                 embedding: result.embedding,
-              }),
-            ),
+                embeddingModel: embeddingConfig.model,
+              }
+            }),
           ),
-    )
+      )
+      yield* repository.upsertMany(rows)
+    }
+
+    return hashedMessages.map(({ message, contentHash }) => ({
+      index: message.index,
+      role: message.role,
+      content: message.text,
+      embedding: [...(embeddingByHash.get(contentHash) ?? [])],
+    }))
   })
 
 const isConversation = (messages: readonly NormalizedMessage[]): boolean => {
@@ -233,13 +345,7 @@ const detectEmbeddingAnchorMoments = (input: {
   readonly segments: ReturnType<typeof segmentSemanticMoments>
 }): Effect.Effect<readonly z.infer<typeof extractionMomentSchema>[], unknown, AI> =>
   Effect.gen(function* () {
-    const embeddedAnchors = yield* Effect.forEach(MOMENT_LABEL_ANCHORS, (config) =>
-      Effect.gen(function* () {
-        const positive = yield* Effect.forEach(config.positiveAnchors, embedAnchorText)
-        const contrast = yield* Effect.forEach(config.contrastAnchors, embedAnchorText)
-        return { config, positive, contrast }
-      }),
-    )
+    const embeddedAnchors = yield* resolveEmbeddedMomentLabelAnchors()
     const messagesByIndex = new Map(input.messages.map((message) => [message.index, message] as const))
     const turnsByIndex = new Map(input.turns.map((turn) => [turn.index, turn] as const))
     const labels: z.infer<typeof extractionMomentSchema>[] = []
@@ -248,7 +354,10 @@ const detectEmbeddingAnchorMoments = (input: {
       for (const { config, positive, contrast } of embeddedAnchors) {
         const sourceTurns = segment.turnIndexes.flatMap((index) => {
           const turn = turnsByIndex.get(index)
-          return turn && config.roles.includes(turn.role) ? [turn] : []
+          const message = messagesByIndex.get(index)
+          return turn && config.roles.includes(turn.role) && message?.isCompactionSummaryCandidate !== true
+            ? [turn]
+            : []
         })
         if (sourceTurns.length === 0) continue
         // Score each turn individually instead of the segment centroid: with
@@ -320,7 +429,14 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
     }
 
     const traceIds = session.traceIds.filter((traceId) => traceId.length === 32).map(TraceId)
-    const rawMessages = sessionConversationMessages(session)
+    const conversationSpine = yield* sessions
+      .findConversationSpineBySessionId({ organizationId, projectId, sessionId })
+      .pipe(
+        Effect.catchTag("NotFoundError", () =>
+          Effect.succeed({ source: "session_detail" as const, messages: sessionConversationMessages(session) }),
+        ),
+      )
+    const rawMessages = conversationSpine.messages
     const normalizedMessages = normalizeMessages(rawMessages)
     const document = documentFromMessages(normalizedMessages)
     const analysisHash = yield* hash(`${CONVERSATION_INTELLIGENCE_DETECTOR_VERSION}\0${session.sessionId}\0${document}`)
@@ -375,7 +491,7 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
       } satisfies AnalyzeSessionResult
     }
 
-    const embeddedTurns = yield* embedTurns(normalizedMessages)
+    const embeddedTurns = yield* resolveTurnEmbeddings({ organizationId, projectId, messages: normalizedMessages })
     const semanticSegments = segmentSemanticMoments({
       turns: embeddedTurns,
     })
@@ -475,28 +591,40 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
       }),
     ).pipe(Effect.map((labels) => labels.filter((label): label is SessionMomentLabel => label !== null)))
 
+    const previousTaxonomyObservations = yield* taxonomyObservations.listBySession({
+      organizationId,
+      projectId,
+      sessionId,
+    })
     const taxonomyObservationRows = yield* Effect.gen(function* () {
       const projectionText = buildSessionConversationProjectionText(normalizedMessages)
       if (projectionText.length === 0) return [] as TaxonomyMomentObservation[]
-      const ai = yield* AI
-      const embeddingConfig = yield* resolveEmbeddingConfig()
-      const projectionEmbedding = yield* ai.embed({
-        text: projectionText,
-        provider: embeddingConfig.provider,
-        model: embeddingConfig.model,
-        inputType: "document",
-      })
-      const projectionVector = normalizeTaxonomyEmbedding(projectionEmbedding.embedding)
-      if (projectionVector.length === 0) return [] as TaxonomyMomentObservation[]
 
+      const embeddingConfig = yield* resolveEmbeddingConfig()
       const dimension = "topic" as const
       const sessionMomentId = (yield* hash(`${sessionId}\0session_topic`)).slice(0, 24)
       const projectionHash = yield* hash(
-        `${analysisHash}\0${sessionId}\0${dimension}\0${TaxonomyProjectionMethod.MomentTextEmbedding}\0${projectionText}`,
+        `${sessionId}\0${dimension}\0${TaxonomyProjectionMethod.MomentTextEmbedding}\0${embeddingConfig.model}\0${projectionText}`,
       )
       const observationId = (yield* hash(
         `${organizationId}\0${projectId}\0${sessionId}\0${dimension}\0${TaxonomyProjectionMethod.MomentTextEmbedding}\0observation`,
       )).slice(0, 24)
+      const previousObservation = previousTaxonomyObservations.find(
+        (observation) => observation.observationId === observationId && observation.projectionHash === projectionHash,
+      )
+      const projectionVector =
+        previousObservation?.embedding ??
+        (yield* Effect.gen(function* () {
+          const ai = yield* AI
+          const projectionEmbedding = yield* ai.embed({
+            text: projectionText,
+            provider: embeddingConfig.provider,
+            model: embeddingConfig.model,
+            inputType: "document",
+          })
+          return normalizeTaxonomyEmbedding(projectionEmbedding.embedding)
+        }))
+      if (projectionVector.length === 0) return [] as TaxonomyMomentObservation[]
       const decision = yield* routeToDeepestClusterUseCase({
         projectId,
         dimension,
@@ -538,10 +666,7 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
     // retry skips the increment for any id that already existed, and a crash
     // between the two at worst loses one increment (gardening self-corrects)
     // instead of double-counting it.
-    const previousObservations =
-      taxonomyObservationRows.length === 0
-        ? []
-        : yield* taxonomyObservations.listBySession({ organizationId, projectId, sessionId })
+    const previousObservations = taxonomyObservationRows.length === 0 ? [] : previousTaxonomyObservations
     const previousObservationById = new Map(
       previousObservations.map((observation) => [observation.observationId, observation] as const),
     )
