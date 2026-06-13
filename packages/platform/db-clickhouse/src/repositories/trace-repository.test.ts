@@ -122,6 +122,53 @@ const ch = setupTestClickHouse()
 const runCh = <A, E>(effect: Effect.Effect<A, E, ChSqlClient | AI>) =>
   Effect.runPromise(effect.pipe(Effect.provide(mockAILayer), Effect.provide(ChSqlClientLive(ch.client, ORG_ID))))
 
+// Shared semantic path (LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS=true,
+// the production default): ranked search reads message vectors from
+// `message_embeddings` joined to `trace_message_occurrences`, not the legacy
+// per-trace `trace_search_embeddings` chunks. Seed both so a fixture's vectors
+// are reachable; one occurrence per (trace, messageIndex) maps to what used to
+// be one chunk, and the per-trace max-pool is preserved across messages.
+const insertSharedSemanticRows = (
+  rows: readonly {
+    readonly traceId: string
+    readonly contentHash: string
+    readonly embedding: readonly number[]
+    readonly startTime: Date
+    readonly messageIndex?: number
+    readonly role?: "user" | "assistant"
+  }[],
+) =>
+  Effect.gen(function* () {
+    yield* insertJsonEachRow(
+      ch.client,
+      "message_embeddings",
+      [...new Map(rows.map((r) => [r.contentHash, r] as const)).values()].map((r) => ({
+        organization_id: ORG_ID,
+        project_id: PROJECT_ID,
+        content_hash: r.contentHash,
+        embedding: [...r.embedding],
+        embedding_model: "voyage-4-large",
+        inserted_at: toClickHouseDateTime(r.startTime),
+      })),
+    )
+    yield* insertJsonEachRow(
+      ch.client,
+      "trace_message_occurrences",
+      rows.map((r) => ({
+        organization_id: ORG_ID,
+        project_id: PROJECT_ID,
+        trace_id: r.traceId,
+        message_index: r.messageIndex ?? 0,
+        content_hash: r.contentHash,
+        session_id: "",
+        start_time: toClickHouseDateTime(r.startTime),
+        role: r.role ?? "user",
+        is_output: 0,
+        indexed_at: toClickHouseDateTime(r.startTime),
+      })),
+    )
+  })
+
 describe("TraceRepository", () => {
   let repo: TraceRepositoryShape
 
@@ -585,40 +632,10 @@ describe("TraceRepository", () => {
       )
 
       await Effect.runPromise(
-        insertJsonEachRow(ch.client, "trace_search_embeddings", [
-          {
-            organization_id: ORG_ID,
-            project_id: PROJECT_ID,
-            trace_id: HYBRID_TRACE,
-            chunk_index: 0,
-            start_time: toClickHouseDateTime(startTime),
-            content_hash: `${"f".repeat(63)}0`,
-            embedding_model: "voyage-4-large",
-            embedding: [...alignedEmbedding],
-            indexed_at: toClickHouseDateTime(startTime),
-          },
-          {
-            organization_id: ORG_ID,
-            project_id: PROJECT_ID,
-            trace_id: SEM_ONLY_TRACE,
-            chunk_index: 0,
-            start_time: toClickHouseDateTime(startTime),
-            content_hash: `${"f".repeat(63)}2`,
-            embedding_model: "voyage-4-large",
-            embedding: [...alignedEmbedding],
-            indexed_at: toClickHouseDateTime(startTime),
-          },
-          {
-            organization_id: ORG_ID,
-            project_id: PROJECT_ID,
-            trace_id: NOISE_TRACE,
-            chunk_index: 0,
-            start_time: toClickHouseDateTime(startTime),
-            content_hash: `${"f".repeat(63)}3`,
-            embedding_model: "voyage-4-large",
-            embedding: [...antiparallelEmbedding],
-            indexed_at: toClickHouseDateTime(startTime),
-          },
+        insertSharedSemanticRows([
+          { traceId: HYBRID_TRACE, contentHash: `${"f".repeat(63)}0`, embedding: alignedEmbedding, startTime },
+          { traceId: SEM_ONLY_TRACE, contentHash: `${"f".repeat(63)}2`, embedding: alignedEmbedding, startTime },
+          { traceId: NOISE_TRACE, contentHash: `${"f".repeat(63)}3`, embedding: antiparallelEmbedding, startTime },
         ]),
       )
     }
@@ -808,26 +825,20 @@ describe("TraceRepository", () => {
         ),
       )
 
-      const buildEmbeddingRow = (
-        traceId: TraceId,
-        chunkIndex: number,
-        embedding: number[],
-      ): Record<string, unknown> => ({
-        organization_id: ORG_ID,
-        project_id: PROJECT_ID,
-        trace_id: traceId,
-        chunk_index: chunkIndex,
-        start_time: toClickHouseDateTime(startTime),
-        content_hash: `${"a".repeat(60)}${traceId.slice(0, 2)}${chunkIndex.toString().padStart(2, "0")}`,
-        embedding_model: "voyage-4-large",
+      // Each former chunk becomes one occurrence message; max() over the
+      // trace's messages reproduces the chunk-rollup behavior.
+      const buildSharedRow = (traceId: TraceId, chunkIndex: number, embedding: number[]) => ({
+        traceId,
+        messageIndex: chunkIndex,
+        contentHash: `${"a".repeat(60)}${traceId.slice(0, 2)}${chunkIndex.toString().padStart(2, "0")}`,
         embedding,
-        indexed_at: toClickHouseDateTime(startTime),
+        startTime,
       })
 
       await Effect.runPromise(
-        insertJsonEachRow(ch.client, "trace_search_embeddings", [
-          ...rollupChunks.map((c) => buildEmbeddingRow(ROLLUP_TRACE, c.chunk_index, c.embedding)),
-          ...flatChunks.map((c) => buildEmbeddingRow(FLAT_TRACE, c.chunk_index, c.embedding)),
+        insertSharedSemanticRows([
+          ...rollupChunks.map((c) => buildSharedRow(ROLLUP_TRACE, c.chunk_index, c.embedding)),
+          ...flatChunks.map((c) => buildSharedRow(FLAT_TRACE, c.chunk_index, c.embedding)),
         ]),
       )
 
@@ -892,22 +903,16 @@ describe("TraceRepository", () => {
       )
 
       await Effect.runPromise(
-        insertJsonEachRow(
-          ch.client,
-          "trace_search_embeddings",
+        insertSharedSemanticRows(
           traces.flatMap((traceId, traceIndex) =>
             [0, 1].map((chunkIndex) => ({
-              organization_id: ORG_ID,
-              project_id: PROJECT_ID,
-              trace_id: traceId,
-              chunk_index: chunkIndex,
-              start_time: toClickHouseDateTime(new Date(startTime.getTime() + traceIndex * 1000)),
-              content_hash: `${"c".repeat(60)}${traceIndex.toString().padStart(2, "0")}${chunkIndex
+              traceId,
+              messageIndex: chunkIndex,
+              contentHash: `${"c".repeat(60)}${traceIndex.toString().padStart(2, "0")}${chunkIndex
                 .toString()
                 .padStart(2, "0")}`,
-              embedding_model: "voyage-4-large",
-              embedding: [...alignedEmbedding],
-              indexed_at: toClickHouseDateTime(startTime),
+              embedding: alignedEmbedding,
+              startTime: new Date(startTime.getTime() + traceIndex * 1000),
             })),
           ),
         ),
@@ -1056,19 +1061,12 @@ describe("TraceRepository", () => {
           ),
         )
         await Effect.runPromise(
-          insertJsonEachRow(
-            ch.client,
-            "trace_search_embeddings",
+          insertSharedSemanticRows(
             fixtures.map((f, i) => ({
-              organization_id: ORG_ID,
-              project_id: PROJECT_ID,
-              trace_id: f.traceId,
-              chunk_index: 0,
-              start_time: toClickHouseDateTime(new Date(baseTime.getTime() + f.offsetMs)),
-              content_hash: `${"f".repeat(63)}${i}`,
-              embedding_model: "voyage-4-large",
-              embedding: [...alignedEmbedding],
-              indexed_at: toClickHouseDateTime(baseTime),
+              traceId: f.traceId,
+              contentHash: `${"f".repeat(63)}${i}`,
+              embedding: alignedEmbedding,
+              startTime: new Date(baseTime.getTime() + f.offsetMs),
             })),
           ),
         )
@@ -1219,17 +1217,12 @@ describe("TraceRepository", () => {
           ]),
         )
         await Effect.runPromise(
-          insertJsonEachRow(ch.client, "trace_search_embeddings", [
+          insertSharedSemanticRows([
             {
-              organization_id: ORG_ID,
-              project_id: PROJECT_ID,
-              trace_id: subFloorTrace,
-              chunk_index: 0,
-              start_time: toClickHouseDateTime(baseTime),
-              content_hash: `${"f".repeat(63)}9`,
-              embedding_model: "voyage-4-large",
-              embedding: [...antiparallelEmbedding],
-              indexed_at: toClickHouseDateTime(baseTime),
+              traceId: subFloorTrace,
+              contentHash: `${"f".repeat(63)}9`,
+              embedding: antiparallelEmbedding,
+              startTime: baseTime,
             },
           ]),
         )

@@ -1143,23 +1143,47 @@ describe("SessionRepository", () => {
         ),
       )
 
+    // Shared semantic path (the production default): vectors live in
+    // `message_embeddings`, reachable per trace via `trace_message_occurrences`.
+    // Each former chunk maps to one occurrence message (chunk_index ->
+    // message_index); the embedding vectors and content hashes are unchanged,
+    // so cosine scores and the per-trace max-pool match the legacy path.
     const insertSearchEmbeddings = (rows: readonly SearchEmbedding[]) =>
       Effect.runPromise(
-        insertJsonEachRow(
-          ch.client,
-          "trace_search_embeddings",
-          rows.map((r) => ({
-            organization_id: ORG_ID as string,
-            project_id: PROJECT_ID as string,
-            trace_id: r.traceId,
-            chunk_index: r.chunkIndex,
-            start_time: toClickHouseDateTime(r.startTime),
-            content_hash: `${"b".repeat(64 - r.contentHashSuffix.length)}${r.contentHashSuffix}`,
-            embedding_model: "voyage-4-large",
-            embedding: [...r.embedding],
-            indexed_at: toClickHouseDateTime(r.startTime),
-          })),
-        ),
+        Effect.gen(function* () {
+          const seedRows = rows.map((r) => ({
+            ...r,
+            contentHash: `${"b".repeat(64 - r.contentHashSuffix.length)}${r.contentHashSuffix}`,
+          }))
+          yield* insertJsonEachRow(
+            ch.client,
+            "message_embeddings",
+            [...new Map(seedRows.map((r) => [r.contentHash, r] as const)).values()].map((r) => ({
+              organization_id: ORG_ID as string,
+              project_id: PROJECT_ID as string,
+              content_hash: r.contentHash,
+              embedding: [...r.embedding],
+              embedding_model: "voyage-4-large",
+              inserted_at: toClickHouseDateTime(r.startTime),
+            })),
+          )
+          yield* insertJsonEachRow(
+            ch.client,
+            "trace_message_occurrences",
+            seedRows.map((r) => ({
+              organization_id: ORG_ID as string,
+              project_id: PROJECT_ID as string,
+              trace_id: r.traceId,
+              message_index: r.chunkIndex,
+              content_hash: r.contentHash,
+              session_id: "",
+              start_time: toClickHouseDateTime(r.startTime),
+              role: "user",
+              is_output: 0,
+              indexed_at: toClickHouseDateTime(r.startTime),
+            })),
+          )
+        }),
       )
 
     // 1) Lexical-only: phrase match across two sessions with two traces each,
