@@ -21,6 +21,7 @@ export {
   SPAN_ID_LENGTH,
   TRACE_END_DEBOUNCE_MS,
   TRACE_ID_LENGTH,
+  TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE,
 } from "./constants.ts"
 export type { Session, SessionDetail } from "./entities/session.ts"
 export { sessionDetailSchema, sessionSchema } from "./entities/session.ts"
@@ -38,6 +39,12 @@ export type { Trace, TraceDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
 export { SpanDecodingError } from "./errors.ts"
 export {
+  canonicalizeMessageForEmbedding,
+  hashMessageContent,
+  type MessageEmbeddingInput,
+  type MessageEmbeddingRole,
+} from "./helpers/message-embedding.ts"
+export {
   isLlmCompletionOperation,
   resolveLastLlmCompletionSpanId,
 } from "./helpers/resolve-last-llm-completion-span.ts"
@@ -51,6 +58,12 @@ export {
   pickTraceHistogramBucketSeconds,
   resolveTraceHistogramRangeIso,
 } from "./helpers.ts"
+export type {
+  MessageEmbedding,
+  MessageEmbeddingRepositoryShape,
+  MessageEmbeddingUpsert,
+} from "./ports/message-embedding-repository.ts"
+export { MessageEmbeddingRepository } from "./ports/message-embedding-repository.ts"
 export type {
   SessionCountResult,
   SessionDistinctColumn,
@@ -108,6 +121,8 @@ export {
   TRACE_HISTOGRAM_METRICS,
   TraceRepository,
 } from "./ports/trace-repository.ts"
+export type { TraceSearchBudgetShape } from "./ports/trace-search-budget.ts"
+export { TraceSearchBudget } from "./ports/trace-search-budget.ts"
 export type { GetSessionCohortSummaryInput } from "./use-cases/get-session-cohort-summary.ts"
 export { getSessionCohortSummaryUseCase } from "./use-cases/get-session-cohort-summary.ts"
 export type { GetTraceCohortSummaryInput } from "./use-cases/get-trace-cohort-summary.ts"

@@ -65,10 +65,12 @@ trace_message_occurrences              -- per-trace message positions, no vector
   role              LowCardinality(String)
   is_output         UInt8              -- message originated in this trace's output
   retention_days    UInt16             -- plan-resolved trace search retention
-  ORDER BY (organization_id, project_id, content_hash, trace_id)
-                                       -- join-direction order; secondary
-                                       -- projection by (org, project, trace_id)
-                                       -- for per-trace reads
+  ORDER BY (organization_id, project_id, trace_id, message_index)
+                                       -- replacement identity; content_hash is
+                                       -- mutable payload for refreshed traces
+  PROJECTION by_content_hash ORDER BY
+           (organization_id, project_id, content_hash, trace_id, message_index)
+                                       -- join-direction order
 ```
 
 Occurrence rows are small; vector rows are large. Full per-trace duplication at the occurrence layer is deliberate and cheap. The vectors are what was expensive.
@@ -80,7 +82,7 @@ trace-end -> trace-search worker (owns trace knowledge)
   for each message of the finished trace (input + output):
     canonicalize -> hash
     batch-lookup message_embeddings; embed misses (budget-gated); write-through
-    insert occurrence rows unconditionally (idempotent: dedup on full key)
+    insert occurrence rows unconditionally (idempotent: latest row wins per trace message position)
 
 analyzeSession workflow (owns no trace knowledge)
   load session conversation (as today) -> normalize -> canonicalize -> hash
@@ -98,7 +100,18 @@ Query embedding -> similarity scan over distinct vectors -> fan out to traces th
 SELECT o.trace_id,
        max(e.score)                      AS semantic_score,
        argMax(o.message_index, e.score)  AS highlight_index
-FROM trace_message_occurrences AS o
+FROM (
+    SELECT organization_id,
+           project_id,
+           trace_id,
+           message_index,
+           argMax(content_hash, indexed_at) AS content_hash,
+           argMax(role, indexed_at)         AS role,
+           argMax(start_time, indexed_at)   AS start_time
+    FROM trace_message_occurrences
+    WHERE organization_id = {org} AND project_id = {project}
+    GROUP BY organization_id, project_id, trace_id, message_index
+) AS o
 INNER JOIN (
     SELECT content_hash,
            1 - cosineDistance(embedding, {queryEmbedding:Array(Float32)}) AS score
@@ -113,9 +126,10 @@ ORDER BY semantic_score DESC
 ```
 
 - Same shape as today's per-trace max pooling; `message_index` replaces the chunk's message range for highlights, at finer granularity.
+- Occurrences are deduped by `(trace_id, message_index)` with `argMax(..., indexed_at)` before the hash join so refreshed trace content cannot keep matching through an older hash while ClickHouse background merges are pending.
 - A matched message hits every trace containing it, matching today's behavior because each trace currently re-embeds its history. The `is_output` flag adds a signal today's design cannot express: rank the originating trace above replays, or collapse session duplicates in results.
 - The 0.30 relevance floor must be re-tuned: score distributions shift with the unit change (whole role-prefixed messages vs 2k chunks).
-- The join needs benchmarking on the largest orgs before cutover (occurrence table is ordered for the join direction; per-trace reads go through a projection).
+- The join needs benchmarking on the largest orgs before cutover (occurrence replacement is ordered by trace position; a content-hash projection supports the join direction).
 
 ### Conversation intelligence path
 
@@ -169,14 +183,14 @@ This is a behavior change: it shifts `firstMessageIndex`/`lastMessageIndex` on p
 
 - [~] Re-analysis of a grown session embeds only new messages; embedding call volume drop is covered by fixture call-count tests; production metrics validation remains a post-deploy check.
 
-### [ ] Phase 3 - Trace search on the store
+### [~] Phase 3 - Trace search on the store
 
-- [ ] **P3-1**: Create `trace_message_occurrences` via `pnpm --filter @platform/db-clickhouse ch:create trace_message_occurrences` (join-direction ordering + per-trace projection).
-- [ ] **P3-2**: Rework the trace-search worker write path: per-message hash -> vector ensure (embed-on-miss, budget-gated) -> unconditional idempotent occurrence inserts. Remove chunk building, head+tail truncation, and per-trace chunk dedup from the semantic path (lexical path untouched).
+- [x] **P3-1**: Create `trace_message_occurrences` via `pnpm --filter @platform/db-clickhouse ch:create trace_message_occurrences` (trace-position replacement key + content-hash projection).
+- [x] **P3-2**: Rework the trace-search worker write path: per-message hash -> vector ensure (embed-on-miss, budget-gated) -> unconditional idempotent occurrence inserts. Remove chunk building, head+tail truncation, and per-trace chunk dedup from the semantic path (lexical path untouched).
 - [ ] **P3-3**: Implement the join-based search query (distinct-vector scan -> occurrence fan-out -> per-trace max pool, `message_index` highlights); re-tune the semantic relevance floor against the eval set used for the 0.30 calibration.
 - [ ] **P3-4**: Benchmark the join on the largest orgs (latency + memory) vs the current single-table scan; add/adjust projections as needed.
 - [ ] **P3-5**: Cut over reads behind a flag; after bake, stop writing `trace_search_embeddings` and let TTL drain it (drop table in a later append-only migration).
-- [ ] **P3-6**: Decide backfill vs expire for existing `trace_search_embeddings` rows (default: no backfill; new traces index into the new model, old traces keep working via the old path until cutover, then age out within the 30-day retention).
+- [x] **P3-6**: Decide backfill vs expire for existing `trace_search_embeddings` rows (decision: no backfill; new traces index into the new model, old traces keep working via the old path until cutover, then age out within the 30-day retention).
 
 **Exit gate**:
 

@@ -1,5 +1,6 @@
-import type { OrganizationId, ProjectId, RepositoryError, TraceId } from "@domain/shared"
+import type { OrganizationId, ProjectId, RepositoryError, SessionId, TraceId } from "@domain/shared"
 import { Context, type Effect } from "effect"
+import type { MessageEmbeddingRole } from "../helpers/message-embedding.ts"
 
 export interface TraceSemanticHighlightMatch {
   readonly chunkIndex: number
@@ -34,15 +35,27 @@ export interface TraceSearchEmbeddingRow {
   readonly lastMessageIndex?: number
 }
 
+export interface TraceMessageOccurrenceRow {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly traceId: TraceId
+  readonly messageIndex: number
+  readonly contentHash: string
+  readonly sessionId: SessionId
+  readonly startTime: Date
+  readonly role: MessageEmbeddingRole
+  readonly isOutput: boolean
+  readonly retentionDays?: number
+}
+
 /**
  * Repository port for trace search indexing operations.
  *
- * Handles upserts to trace_search_documents (lexical) and
- * trace_search_embeddings (semantic) tables. Query-side semantic retrieval
- * runs inline as a subquery inside the main `traces` SQL in
+ * Handles upserts to trace_search_documents (lexical), legacy
+ * trace_search_embeddings rows, and trace_message_occurrences. Query-side
+ * project search runs inline as a subquery inside the main `traces` SQL in
  * `TraceRepositoryLive`, so the port intentionally exposes only write/dedup
- * ops — a standalone `querySemanticCandidates` method would duplicate the
- * cosine-distance SQL that the repository already embeds.
+ * ops plus the single-trace semantic highlight lookup.
  */
 export interface TraceSearchRepositoryShape {
   /**
@@ -56,6 +69,13 @@ export interface TraceSearchRepositoryShape {
    * Uses ReplacingMergeTree semantics - later indexed_at wins.
    */
   upsertEmbedding(row: TraceSearchEmbeddingRow): Effect.Effect<void, RepositoryError>
+
+  /**
+   * Upsert per-trace message occurrence rows for shared message embeddings.
+   * Rows are idempotent under ReplacingMergeTree by trace message position;
+   * later content at the same trace_id + message_index replaces older hashes.
+   */
+  upsertMessageOccurrences(rows: readonly TraceMessageOccurrenceRow[]): Effect.Effect<void, RepositoryError>
 
   /**
    * Check if a chunk row exists for this trace at this chunk_index with the

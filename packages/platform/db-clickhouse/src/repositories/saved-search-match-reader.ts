@@ -21,7 +21,15 @@ const toClickHouseDateTime64 = (value: Date): string => value.toISOString().repl
  */
 const buildInnerQuery = (
   input: SavedSearchMatchWindowInput,
-): Effect.Effect<{ readonly sql: string; readonly params: Record<string, unknown> }, RepositoryError, ChSqlClient> =>
+): Effect.Effect<
+  {
+    readonly sql: string
+    readonly params: Record<string, unknown>
+    readonly clickhouseSettings?: Record<string, string | number | boolean>
+  },
+  RepositoryError,
+  ChSqlClient
+> =>
   Effect.gen(function* () {
     // `gtePercentile` filters carry a percentile, not a threshold. Resolve them
     // to a numeric `gte` against the project's current trace distribution —
@@ -34,10 +42,12 @@ const buildInnerQuery = (
     const parsed = input.target.query ? parseSearchQuery(input.target.query) : undefined
     let searchCondition = ""
     let searchParams: Record<string, unknown> = {}
+    let clickhouseSettings: Record<string, string | number | boolean> | undefined
     if (parsed && isActiveSearch(parsed)) {
       const plan = yield* planSearch(parsed)
       searchCondition = `AND trace_id IN (SELECT trace_id FROM (${plan.subquery}))`
       searchParams = plan.params
+      clickhouseSettings = plan.clickhouseSettings
     }
 
     const having = [
@@ -63,6 +73,7 @@ const buildInnerQuery = (
         ...filterParams,
         ...searchParams,
       },
+      ...(clickhouseSettings ? { clickhouseSettings } : {}),
     }
   })
 
@@ -76,6 +87,7 @@ const make = (): SavedSearchMatchReaderShape => ({
           const result = await client.query({
             query: `SELECT count() AS total FROM (${inner.sql})`,
             query_params: inner.params,
+            ...(inner.clickhouseSettings ? { clickhouse_settings: inner.clickhouseSettings } : {}),
             format: "JSONEachRow",
           })
           return result.json<{ total: string }>()
@@ -96,6 +108,7 @@ const make = (): SavedSearchMatchReaderShape => ({
             // epoch, not NULL, so we'd otherwise report a bogus 1970 first match.
             query: `SELECT toString(min(start_time)) AS first_at, count() AS matches FROM (${inner.sql})`,
             query_params: inner.params,
+            ...(inner.clickhouseSettings ? { clickhouse_settings: inner.clickhouseSettings } : {}),
             format: "JSONEachRow",
           })
           return result.json<{ first_at: string | null; matches: string }>()
@@ -121,6 +134,7 @@ const make = (): SavedSearchMatchReaderShape => ({
             // epoch, not NULL, so we'd otherwise report a bogus 1970 last match.
             query: `SELECT toString(max(start_time)) AS last_at, count() AS matches FROM (${inner.sql})`,
             query_params: inner.params,
+            ...(inner.clickhouseSettings ? { clickhouse_settings: inner.clickhouseSettings } : {}),
             format: "JSONEachRow",
           })
           return result.json<{ last_at: string | null; matches: string }>()
@@ -158,6 +172,7 @@ const make = (): SavedSearchMatchReaderShape => ({
                     FROM (${inner.sql})
                     GROUP BY bucket_index`,
             query_params: { ...inner.params, bucketNs: input.bucketMs * 1_000_000 },
+            ...(inner.clickhouseSettings ? { clickhouse_settings: inner.clickhouseSettings } : {}),
             format: "JSONEachRow",
           })
           return result.json<{ bucket_index: string; matches: string }>()
