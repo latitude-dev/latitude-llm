@@ -233,7 +233,9 @@ export const seedDemoProjectTraceSearchActivity = (input: SeedDemoProjectActivit
               ? existing.filter((row) => row.embeddingModel === embeddingConfig.model).map((row) => row.contentHash)
               : [],
           )
-          const misses = embeddingConfig ? uniqueMessages.filter((message) => !existingHashes.has(message.contentHash)) : []
+          const misses = embeddingConfig
+            ? uniqueMessages.filter((message) => !existingHashes.has(message.contentHash))
+            : []
           if (embeddingConfig && misses.length > 0) {
             const embeddingRows = yield* Effect.forEach(misses, (message) =>
               ai

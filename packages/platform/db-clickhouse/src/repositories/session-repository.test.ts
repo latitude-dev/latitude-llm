@@ -1,11 +1,6 @@
 import { AI, AIError, type AIShape, EMBEDDING_DIMENSIONS } from "@domain/ai"
 import { type ChSqlClient, isNotFoundError, OrganizationId, ProjectId, SessionId } from "@domain/shared"
-import {
-  hashMessageContent,
-  type SessionListPage,
-  SessionRepository,
-  type SessionRepositoryShape,
-} from "@domain/spans"
+import { hashMessageContent, type SessionListPage, SessionRepository, type SessionRepositoryShape } from "@domain/spans"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect, Layer } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"

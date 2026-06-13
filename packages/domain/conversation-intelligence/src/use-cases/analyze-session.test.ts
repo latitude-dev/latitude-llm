@@ -1,4 +1,4 @@
-import { AI, DEFAULT_EMBEDDING_CONFIG, type AIShape, type GenerateResult } from "@domain/ai"
+import { AI, type AIShape, DEFAULT_EMBEDDING_CONFIG, type GenerateResult } from "@domain/ai"
 import {
   ChSqlClient,
   DistributedLockRepository,

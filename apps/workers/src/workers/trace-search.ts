@@ -214,7 +214,9 @@ export const processRefreshTrace = (payload: RefreshTracePayload) =>
 
     const embeddingConfig = yield* resolveEmbeddingConfig().pipe(
       Effect.tapError((error) =>
-        Effect.sync(() => logger.warn("Trace search embedding configuration invalid; skipping semantic vectors", error)),
+        Effect.sync(() =>
+          logger.warn("Trace search embedding configuration invalid; skipping semantic vectors", error),
+        ),
       ),
       Effect.orElseSucceed(() => undefined),
     )
