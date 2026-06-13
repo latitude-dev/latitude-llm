@@ -24,6 +24,10 @@ export interface MessageEmbeddingRepositoryShape {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly contentHashes: readonly string[]
+    // Pushes the `embedding_model` filter into SQL so the read uses the full
+    // (org, project, model, content_hash) primary key instead of scanning every
+    // model for the org+project. Pass it whenever the active model is known.
+    readonly embeddingModel?: string
   }): Effect.Effect<readonly MessageEmbedding[], RepositoryError>
 
   upsertMany(rows: readonly MessageEmbeddingUpsert[]): Effect.Effect<void, RepositoryError>

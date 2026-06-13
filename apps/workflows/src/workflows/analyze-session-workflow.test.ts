@@ -169,12 +169,21 @@ describe("analyzeSessionWorkflow", () => {
     expect(mockActivities.persistAnalyzeSessionActivity).toHaveBeenCalledTimes(2)
   })
 
-  it("propagates failed activity errors", async () => {
+  it("falls through to persist when the embedding warm-up fails", async () => {
     mockActivities.embedAnalyzeSessionTurnsActivity.mockRejectedValueOnce(new Error("embedding warm-up failed"))
 
-    await expect(analyzeSessionWorkflow(input)).rejects.toThrow("embedding warm-up failed")
+    await expect(analyzeSessionWorkflow(input)).resolves.toEqual({
+      action: "recorded",
+      status: "analyzed",
+      momentCount: 0,
+    })
 
-    expect(activityOrder()).toEqual(["load", "hash", "eligibility", "embed"])
-    expect(mockActivities.persistAnalyzeSessionActivity).not.toHaveBeenCalled()
+    expect(activityOrder()).toEqual(["load", "hash", "eligibility", "embed", "persist"])
+  })
+
+  it("propagates persist activity errors", async () => {
+    mockActivities.persistAnalyzeSessionActivity.mockRejectedValueOnce(new Error("persist failed"))
+
+    await expect(analyzeSessionWorkflow(input)).rejects.toThrow("persist failed")
   })
 })

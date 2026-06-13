@@ -12,6 +12,12 @@ CREATE TABLE IF NOT EXISTS message_embeddings ON CLUSTER default
     embedding_model    LowCardinality(String)                CODEC(ZSTD(1)),
     inserted_at        DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4),
     retention_days     UInt16               DEFAULT 90       CODEC(T64, ZSTD(1)),
+    -- WARNING: the 2048 below is the voyage-4-large output dimension and is
+    -- hard-coded into both the CHECK and the HNSW index (ClickHouse requires a
+    -- literal). Overriding LAT_AI_EMBEDDING_MODEL/PROVIDER to a model with a
+    -- different dimension makes EVERY insert fail this CHECK. Changing the model
+    -- therefore requires a new migration that drops/recreates this table at the
+    -- new dimension — it cannot be flipped via env alone.
     CONSTRAINT message_embedding_dimensions CHECK length(embedding) = 2048,
     INDEX idx_message_embedding_hnsw embedding TYPE vector_similarity('hnsw', 'cosineDistance', 2048)
 )

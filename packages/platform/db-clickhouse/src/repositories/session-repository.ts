@@ -1042,21 +1042,15 @@ export const SessionRepositoryLive = Layer.effect(
                 query: `SELECT
                           trace_id,
                           message_index,
-                          content_hash,
-                          start_time,
-                          role,
-                          is_output
+                          argMax(content_hash, indexed_at) AS content_hash,
+                          argMax(start_time, indexed_at)   AS start_time,
+                          argMax(role, indexed_at)         AS role,
+                          argMax(is_output, indexed_at)    AS is_output
                         FROM trace_message_occurrences
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND session_id = {sessionId:String}
-                        GROUP BY
-                          trace_id,
-                          message_index,
-                          content_hash,
-                          start_time,
-                          role,
-                          is_output
+                        GROUP BY organization_id, project_id, trace_id, message_index
                         ORDER BY start_time ASC, trace_id ASC, message_index ASC`,
                 query_params: {
                   organizationId: organizationId as string,

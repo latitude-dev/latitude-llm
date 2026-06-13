@@ -42,8 +42,15 @@ const runAnalyzeSessionPass = async (input: AnalyzeSessionWorkflowInput): Promis
   }
 
   // Warm the shared message embedding store so the persist activity's full
-  // use-case run resolves existing vectors and embeds only misses.
-  const embedded = await embedAnalyzeSessionTurnsActivity({ ...input, ...hashed })
+  // use-case run resolves existing vectors and embeds only misses. Best-effort:
+  // persist re-embeds misses itself, so a warm-up failure must not abort the
+  // pass before persist records analysisStatus (including "failed").
+  let embedded: Awaited<ReturnType<typeof embedAnalyzeSessionTurnsActivity>> = { turns: [] }
+  try {
+    embedded = await embedAnalyzeSessionTurnsActivity({ ...input, ...hashed })
+  } catch {
+    embedded = { turns: [] }
+  }
 
   // Pre-patch executions recorded segment + label warm-up activities between
   // embed and persist. Replay that command sequence for in-flight workflows so

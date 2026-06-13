@@ -150,6 +150,14 @@ This is a behavior change: it shifts `firstMessageIndex`/`lastMessageIndex` on p
 
 **Open question**: should the compaction summary message participate in segmentation/labeling? It is synthetic and may pollute anchor scoring (a summary that says "the user was frustrated" can trip `user_frustration`). Default position: include in the conversation record, exclude from anchor labeling when detectable (first occurrence mid-session with no prior occurrences is the candidate heuristic); needs validation on real compacted sessions.
 
+### Known limitations
+
+Accepted tradeoffs of the shared-vector design, documented so they aren't re-discovered as bugs:
+
+- **ANN window precedes eligibility filtering.** The semantic subquery takes the `SEMANTIC_VECTOR_LIMIT` (1,000) nearest vectors from `message_embeddings` *before* applying `role IN ('user','assistant')` and the boilerplate filter. The vector table is content-hash keyed and role-agnostic (that is the whole point of sharing across CI and trace search), so role cannot be pushed into the ANN scan. System/tool/CI-only vectors and boilerplate can therefore consume part of the window and then be discarded, lowering recall on very broad searches. Boilerplate is deduped to one vector per hash so it costs few slots, and 1,000 is generous for realistic project sizes. Revisit (larger window, or denormalizing role into the vector table at the cost of the sharing premise) only if recall complaints show up at XL projects.
+- **Stale occurrences when a trace shrinks.** `upsertMessageOccurrences` writes indexes `0..N` for the current message set; `trace_message_occurrences` is a `ReplacingMergeTree((trace_id, message_index))`, so if a refreshed trace has *fewer* semantic messages than a prior version, the higher indexes from the old version are not overwritten and stay searchable until TTL. Traces are append-mostly so this is rare, and the session-spine builder re-hashes each occurrence against current trace content and drops mismatches, so reads are protected; only the search-side highlight can transiently point at a vanished index. A delete-by-range on refresh was judged more machinery than the rarity warrants.
+- **Testkit schema drift.** `packages/platform/testkit/src/clickhouse/schema.sql` deliberately omits the `length(embedding) = 2048` CHECK, the HNSW `vector_similarity` index, and the TTL clause — chdb does not meaningfully support them. Unit tests consequently cannot catch dimension/index/TTL regressions; those are exercised only by the real migration against real ClickHouse in CI.
+
 ## Out of scope
 
 - The lexical index and its query path.

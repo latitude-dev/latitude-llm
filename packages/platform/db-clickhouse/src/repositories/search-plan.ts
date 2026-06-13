@@ -58,7 +58,7 @@ const SEMANTIC_VECTOR_SEARCH_SETTINGS = {
 export const MAX_SEARCH_CANDIDATES = 50_000
 
 const useSharedMessageEmbeddingsReads = (): boolean =>
-  Effect.runSync(parseEnv("LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS", "boolean", false))
+  Effect.runSync(parseEnv("LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS", "boolean", true))
 
 function escapeLikePattern(text: string): string {
   return text.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_")

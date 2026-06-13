@@ -245,10 +245,15 @@ function ProjectPage() {
   }, [])
 
   // "Clear all" resets the whole search bar: filters, query, and the selected saved search.
+  // Also drop an explicit sort so a `relevance` sort doesn't linger in the header after
+  // the query is gone — the backend ignores relevance without a search and falls back to
+  // recency, which would otherwise leave the header showing a sort the data doesn't follow.
   const clearAll = () => {
     setRawFilters("")
     setQuery("")
     setSavedSearchSlug("")
+    setSortBy("")
+    setSortDirection("")
   }
 
   const closeTraceDrawer = useCallback(() => {

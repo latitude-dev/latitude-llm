@@ -226,12 +226,9 @@ export const processRefreshTrace = (payload: RefreshTracePayload) =>
       organizationId: OrganizationId(organizationId),
       projectId: ProjectId(projectId),
       contentHashes: uniqueMessages.map((message) => message.contentHash),
+      ...(embeddingConfig ? { embeddingModel: embeddingConfig.model } : {}),
     })
-    const existingHashes = new Set(
-      embeddingConfig
-        ? existing.filter((row) => row.embeddingModel === embeddingConfig.model).map((row) => row.contentHash)
-        : [],
-    )
+    const existingHashes = new Set(embeddingConfig ? existing.map((row) => row.contentHash) : [])
     const misses = embeddingConfig ? uniqueMessages.filter((message) => !existingHashes.has(message.contentHash)) : []
 
     let embeddedCount = 0

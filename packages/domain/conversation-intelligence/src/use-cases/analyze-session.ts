@@ -182,12 +182,9 @@ export const resolveTurnEmbeddings = (input: {
       organizationId: input.organizationId,
       projectId: input.projectId,
       contentHashes: uniqueMessages.map((message) => message.contentHash),
+      embeddingModel: embeddingConfig.model,
     })
-    const embeddingByHash = new Map(
-      existing
-        .filter((row) => row.embeddingModel === embeddingConfig.model)
-        .map((row) => [row.contentHash, row.embedding] as const),
-    )
+    const embeddingByHash = new Map(existing.map((row) => [row.contentHash, row.embedding] as const))
 
     const misses = uniqueMessages.filter((message) => !embeddingByHash.has(message.contentHash))
 

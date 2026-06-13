@@ -47,6 +47,8 @@ export const MessageEmbeddingRepositoryLive = Layer.effect(
       const contentHashes = [...new Set(args.contentHashes)]
       if (contentHashes.length === 0) return Effect.succeed([])
 
+      const modelFilter = args.embeddingModel ? "AND embedding_model = {embeddingModel:String}" : ""
+
       return chSqlClient
         .query(async (client) => {
           const result = await client.query({
@@ -60,12 +62,14 @@ export const MessageEmbeddingRepositoryLive = Layer.effect(
                     FROM message_embeddings
                     WHERE organization_id = {organizationId:String}
                       AND project_id = {projectId:String}
+                      ${modelFilter}
                       AND content_hash IN {contentHashes:Array(String)}
                     ORDER BY content_hash ASC, embedding_model ASC`,
             query_params: {
               organizationId: args.organizationId as string,
               projectId: args.projectId as string,
               contentHashes,
+              ...(args.embeddingModel ? { embeddingModel: args.embeddingModel } : {}),
             },
             format: "JSONEachRow",
           })
@@ -99,10 +103,12 @@ export const MessageEmbeddingRepositoryLive = Layer.effect(
                       FROM message_embeddings
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
+                        AND embedding_model IN {embeddingModels:Array(String)}
                         AND content_hash IN {contentHashes:Array(String)}`,
               query_params: {
                 organizationId: first.organizationId as string,
                 projectId: first.projectId as string,
+                embeddingModels: [...new Set(scopedRows.map((row) => row.embeddingModel))],
                 contentHashes: [...new Set(scopedRows.map((row) => row.contentHash))],
               },
               format: "JSONEachRow",
