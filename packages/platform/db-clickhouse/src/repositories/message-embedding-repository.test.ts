@@ -1,10 +1,6 @@
+import { DEFAULT_EMBEDDING_CONFIG, EMBEDDING_DIMENSIONS } from "@domain/ai"
 import { OrganizationId, ProjectId, SEED_ORG_ID, SEED_PROJECT_ID } from "@domain/shared/seeding"
-import {
-  MessageEmbeddingRepository,
-  type MessageEmbeddingRepositoryShape,
-  TRACE_SEARCH_EMBEDDING_DIMENSIONS,
-  TRACE_SEARCH_EMBEDDING_MODEL,
-} from "@domain/spans"
+import { MessageEmbeddingRepository, type MessageEmbeddingRepositoryShape } from "@domain/spans"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
@@ -16,7 +12,8 @@ const PROJECT_ID = ProjectId(SEED_PROJECT_ID)
 
 const ch = setupTestClickHouse()
 
-const embedding = (value: number) => new Array(TRACE_SEARCH_EMBEDDING_DIMENSIONS).fill(value)
+const EMBEDDING_MODEL = DEFAULT_EMBEDDING_CONFIG.model
+const embedding = (value: number) => new Array(EMBEDDING_DIMENSIONS).fill(value)
 
 describe("MessageEmbeddingRepository", () => {
   let repo: MessageEmbeddingRepositoryShape
@@ -49,7 +46,7 @@ describe("MessageEmbeddingRepository", () => {
           projectId: PROJECT_ID,
           contentHash: contentHashA,
           embedding: embedding(0.1),
-          embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
+          embeddingModel: EMBEDDING_MODEL,
           lastSeenAt,
         },
         {
@@ -57,7 +54,7 @@ describe("MessageEmbeddingRepository", () => {
           projectId: PROJECT_ID,
           contentHash: contentHashB,
           embedding: embedding(0.2),
-          embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
+          embeddingModel: EMBEDDING_MODEL,
           lastSeenAt,
         },
       ]),
@@ -73,7 +70,7 @@ describe("MessageEmbeddingRepository", () => {
 
     expect(rows).toHaveLength(1)
     expect(rows[0]?.contentHash).toBe(contentHashA)
-    expect(rows[0]?.embeddingModel).toBe(TRACE_SEARCH_EMBEDDING_MODEL)
+    expect(rows[0]?.embeddingModel).toBe(EMBEDDING_MODEL)
     expect(rows[0]?.embedding).toEqual(embedding(0.1))
     expect(rows[0]?.lastSeenAt.toISOString()).toBe(lastSeenAt.toISOString())
   })
@@ -90,7 +87,7 @@ describe("MessageEmbeddingRepository", () => {
           projectId: PROJECT_ID,
           contentHash,
           embedding: embedding(0.1),
-          embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
+          embeddingModel: EMBEDDING_MODEL,
           lastSeenAt: older,
         },
         {
@@ -98,7 +95,7 @@ describe("MessageEmbeddingRepository", () => {
           projectId: PROJECT_ID,
           contentHash,
           embedding: embedding(0.3),
-          embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
+          embeddingModel: EMBEDDING_MODEL,
           lastSeenAt: newer,
         },
       ]),
