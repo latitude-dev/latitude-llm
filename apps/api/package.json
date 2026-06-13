@@ -54,6 +54,7 @@
     "effect": "catalog:",
     "hono": "catalog:",
     "tsx": "catalog:",
+    "voyageai": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

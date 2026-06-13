@@ -12,6 +12,9 @@
       ],
       "project": [
         "src/**/*.ts"
+      ],
+      "ignoreDependencies": [
+        "voyageai"
       ]
     },
     "apps/ingest": {
@@ -24,7 +27,8 @@
         "src/**/*.ts"
       ],
       "ignoreDependencies": [
-        "@temporalio/worker"
+        "@temporalio/worker",
+        "voyageai"
       ]
     },
     "apps/workflows": {
