@@ -178,6 +178,27 @@ describe("run: host-controlled globals", () => {
     expect(result.value).toBe(1)
     expect(result.feedback).toContain("validation failed")
   })
+
+  it("supports zod-only CommonJS imports without exposing general require", async () => {
+    const zod = await compileAndRun(`
+      const { z } = require("zod")
+      const parsed = parse({ ok: true }, z.object({ ok: z.boolean() }))
+      return Score(parsed.ok ? 1 : 0)
+    `)
+    expect(zod.value).toBe(1)
+
+    const zodV4 = await compileAndRun(`
+      const zod = require("zod/v4")
+      const parsed = parse({ ok: true }, zod.object({ ok: zod.boolean() }))
+      return Score(parsed.ok ? 1 : 0)
+    `)
+    expect(zodV4.value).toBe(1)
+
+    const script = await compile('require("node:fs"); return Score(0)')
+    const error = await runError({ script, context: { conversation: [] } })
+    expect(error._tag).toBe("ScriptRuntimeError")
+    expect(error.message).toContain('require() is unavailable in the sandbox for module "node:fs"')
+  })
 })
 
 describe("run: llm host calls", () => {
@@ -221,6 +242,25 @@ if (result.passed) {
       { llm: async () => ({ object: { ok: true }, tokens: 10, duration: 500, cost: 3 }) },
     )
     expect(result).toMatchObject({ value: 1, tokens: 20, cost: 6 })
+  })
+
+  it("accepts zod schemas imported through the compatibility require shim", async () => {
+    const calls: HostLlmCall[] = []
+    const result = await compileAndRun(
+      `
+      const { z } = require("zod")
+      const result = await llm("one", { schema: z.object({ ok: z.boolean() }) })
+      return Score(result.ok ? 1 : 0)
+      `,
+      {
+        llm: async (call) => {
+          calls.push(call)
+          return { object: { ok: true }, tokens: 10, duration: 500, cost: 3 }
+        },
+      },
+    )
+    expect(result).toMatchObject({ value: 1, tokens: 10, cost: 3 })
+    expect(calls[0]?.schema).toEqual({ kind: "object", shape: { ok: { kind: "boolean" } } })
   })
 
   it("does not inject llm for pure-capability scripts", async () => {

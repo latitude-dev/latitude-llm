@@ -76,11 +76,11 @@ describe("hostile scripts die by budget", () => {
 })
 
 describe("isolation boundary", () => {
-  it("exposes no ambient I/O, timers, process, or module system", async () => {
+  it("exposes no ambient I/O, timers, process, or network globals", async () => {
     const script = await Effect.runPromise(
       runtime.compile({
         source: `
-          const leaks = ["fetch", "setTimeout", "setInterval", "process", "require", "XMLHttpRequest", "WebSocket"]
+          const leaks = ["fetch", "setTimeout", "setInterval", "process", "XMLHttpRequest", "WebSocket"]
             .filter((name) => typeof globalThis[name] !== "undefined")
           return Score(leaks.length === 0 ? 1 : 0, leaks.join(","))
         `,
