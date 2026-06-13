@@ -839,26 +839,6 @@ export function BehavioursView({
     [onBehaviourPathChange, onMomentRangeChange],
   )
 
-  // The dot chart selection narrows the table to the deepest *drilled*
-  // subtree. A selected leaf at the path tail only drives the behaviour
-  // selection — its siblings stay visible rather than filtering the table
-  // down to a single row. A stale path (e.g. after a segment change drops
-  // the node) falls back to the full tree instead of an empty table.
-  const tableTopics: readonly BehaviourNodeRecord[] = useMemo(() => {
-    let nodes = topics
-    let subtreeRoot: BehaviourNodeRecord | undefined
-    for (const id of behaviourPath) {
-      const node = nodes.find((candidate) => candidate.cluster.id === id)
-      if (!node) return topics
-      if (node.children.length > 0) {
-        subtreeRoot = node
-        nodes = node.children
-      }
-    }
-    return subtreeRoot ? [subtreeRoot] : topics
-  }, [topics, behaviourPath])
-
-  // The visible rows are a depth-first walk that stops at collapsed nodes.
   const rows: readonly BehaviourTableRow[] = useMemo(() => {
     const out: BehaviourTableRow[] = []
     const walk = (nodes: readonly BehaviourNodeRecord[], depth: number) => {
@@ -867,9 +847,9 @@ export function BehavioursView({
         if (node.children.length > 0 && !collapsedKeys.has(node.cluster.id)) walk(node.children, depth + 1)
       }
     }
-    walk(tableTopics, 0)
+    walk(topics, 0)
     return out
-  }, [tableTopics, collapsedKeys])
+  }, [topics, collapsedKeys])
 
   const activeAncestorKeys = useMemo(() => {
     const keys = new Set<string>()

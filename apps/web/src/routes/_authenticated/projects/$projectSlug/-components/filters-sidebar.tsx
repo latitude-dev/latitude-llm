@@ -508,23 +508,6 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
       </div>
 
       <div className="flex flex-col px-4 overflow-y-auto flex-1">
-        {mode === "sessions" && (
-          <CollapsibleSection
-            label="Has LLM activity"
-            defaultOpen={filters.hasLlmActivity !== undefined && !getHasLlmActivityOn(filters)}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <Text.H7 color="foregroundMuted">
-                {getHasLlmActivityOn(filters) ? "Hiding sessions without any LLM call." : "Including orphan fragments."}
-              </Text.H7>
-              <Switch
-                checked={getHasLlmActivityOn(filters)}
-                onCheckedChange={(next) => setHasLlmActivity(next === true)}
-              />
-            </div>
-          </CollapsibleSection>
-        )}
-
         {STATUS_FIELDS.map(({ label, field }) => {
           const selected = getStatusValues(filters, field)
           return (
@@ -595,6 +578,23 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
         <CollapsibleSection label="Metadata" defaultOpen={metadataEntries.length > 0}>
           <MetadataFilter entries={metadataEntries} onChange={handleMetadataChange} />
         </CollapsibleSection>
+
+        {mode === "sessions" && (
+          <CollapsibleSection
+            label="Has LLM activity"
+            defaultOpen={filters.hasLlmActivity !== undefined && !getHasLlmActivityOn(filters)}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <Text.H7 color="foregroundMuted">
+                {getHasLlmActivityOn(filters) ? "Hiding sessions without any LLM call." : "Including orphan fragments."}
+              </Text.H7>
+              <Switch
+                checked={getHasLlmActivityOn(filters)}
+                onCheckedChange={(next) => setHasLlmActivity(next === true)}
+              />
+            </div>
+          </CollapsibleSection>
+        )}
       </div>
     </Layout.Sidebar>
   )

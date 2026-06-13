@@ -443,6 +443,7 @@ function ProjectPage() {
                 >
                   <FilterIcon className="h-4 w-4" />
                   Filters
+                  <kbd className="rounded bg-muted px-1 font-mono text-xs text-muted-foreground">F</kbd>
                   {hasActiveFilters && (
                     <span className="inline-flex items-center justify-center rounded-full bg-primary px-1.5 text-[10px] leading-4 font-medium text-primary-foreground">
                       {Object.keys(filters).length}
