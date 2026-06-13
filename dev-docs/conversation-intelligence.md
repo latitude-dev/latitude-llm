@@ -25,10 +25,13 @@ The taxonomy and signal gates intentionally use fixed constants. This keeps QA t
 The Temporal workflow is split into deterministic orchestration plus cache warm-up activities. `loadAnalyzeSessionActivity`, `hashAnalyzeSessionActivity`, and `checkAnalyzeSessionEligibilityActivity` decide whether work is needed; for ordinary trace-completed runs the workflow then warms the turn-embedding and label-anchor caches before calling `persistAnalyzeSessionActivity`. The persisted state is still produced by the full `analyzeSessionUseCase`, so backfill/manual runs and trace-completed runs share the same write path:
 
 ```
-SessionRepository ──► turn extraction (tool telemetry stripped)
+SessionRepository ──► occurrence-derived session spine
         │
         ▼
-embed turns (voyage-4-large, 2048 dims, Redis-cached by content hash)
+turn extraction (tool telemetry stripped)
+        │
+        ▼
+resolve turn embeddings (shared message_embeddings store, voyage-4-large, 2048 dims)
         │
         ▼
 semantic segmentation ──► semantic moments (full-exchange minimum unit)
@@ -46,9 +49,13 @@ persist: taxonomy observation (CH, first) ──► centroid increments (PG, ret
 
 Sessions that are empty, too short, or not user/agent conversations short-circuit into explicit `skipped_*` statuses before any embedding or model cost. Failures record `analysis_status = 'failed'` with a zeroed hash that can never masquerade as a current analysis.
 
-### Turn extraction
+### Session spine and turn extraction
 
-Messages come from the `SessionRepository` session detail: `systemInstructions`, `lastInputMessages`, and `outputMessages`. Tool-role messages and tool-call telemetry inside assistant messages are **stripped before any embedding** — tool names like `get_customer_by_phone` otherwise dominate moment embeddings and produce false labels. Empty-text messages are dropped; original message indexes are preserved so moments and labels point back into the real message array. When a session has no 32-char trace id, moments reference a stable 32-hex surrogate hashed from the triggering id instead of failing schema validation.
+Messages come from `SessionRepository.findConversationSpineBySessionId`, not from the latest session detail alone. The preferred spine is derived from `trace_message_occurrences`: distinct message content hashes in first-seen order across the session. This makes compacted sessions analyzable as the full historical spine plus the compaction summary plus subsequent turns, instead of only the latest compacted trace payload. If occurrence rows are absent for an old session, the repository falls back to the legacy session-detail reconstruction.
+
+The analyzer reindexes the returned spine contiguously, so `firstMessageIndex` / `lastMessageIndex` on moments and labels are append-stable as the session grows. Compaction summary candidates stay in the conversation record and segmentation input, but anchor-label scoring skips them so a synthetic sentence like "the user was frustrated" does not create a frustration label by itself.
+
+Tool-role messages and tool-call telemetry inside assistant messages are **stripped before any embedding** — tool names like `get_customer_by_phone` otherwise dominate moment embeddings and produce false labels. Empty-text messages are dropped. When a session has no 32-char trace id, moments reference a stable 32-hex surrogate hashed from the triggering id instead of failing schema validation.
 
 ### Semantic segmentation (`semantic-segmentation.ts`)
 
@@ -63,7 +70,7 @@ Turns group into **semantic moments** by cosine continuity against the running m
 
 `MOMENT_KINDS` (constants.ts): `escalation`, `hesitation`, `abandonment`, `user_frustration`, `user_satisfaction`, `resolution`, `policy_refusal`, `clarification_loop`.
 
-Each kind has a set of anchor phrases (`anchors.ts`), embedded once and Redis-cached. A turn fires a kind when its cosine to the kind's best anchor clears that kind's static gate (threshold + margin). Labels attach to the semantic moment containing their message range, falling back to the nearest moment by index distance — never blindly the session's first moment.
+Each kind has a set of anchor phrases (`anchors.ts`), embedded once per process and detector version. A turn fires a kind when its cosine to the kind's best anchor clears that kind's static gate (threshold + margin). Labels attach to the semantic moment containing their message range, falling back to the nearest moment by index distance — never blindly the session's first moment. Turns marked as compaction summary candidates are excluded from this anchor pass only.
 
 Labels are **behavioral signals, not topics**. They feed the Signals columns, the sessions-table moments filter, and per-cluster intelligence rollups; they intentionally do not create taxonomy clusters.
 

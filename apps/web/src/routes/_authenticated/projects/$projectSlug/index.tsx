@@ -43,6 +43,7 @@ import { useTableColumnSettings } from "./-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "./-components/time-filter-dropdown.tsx"
 import { TraceDetailDrawer } from "./-components/trace-detail-drawer.tsx"
 import {
+  DEFAULT_SEARCH_SORTING,
   DEFAULT_TRACE_SORTING,
   getTimeFilterValue,
   parseFilters,
@@ -151,10 +152,17 @@ function ProjectPage() {
 
   useRegisterCommands(paletteCommands)
 
+  // Sort params stay empty in the URL until the user explicitly sorts, so the
+  // effective default can follow the search state: an active search ranks by
+  // relevance, a plain listing by recency. Resolving at render time (instead
+  // of baking the default into the param) is what lets the default flip when
+  // a query is typed or cleared — `useParamState` captures its default at
+  // mount.
   const tabDefaultSorting = activeTab === "sessions" ? DEFAULT_SESSION_SORTING : DEFAULT_TRACE_SORTING
-  const [sortBy, setSortBy] = useParamState("sortBy", tabDefaultSorting.column)
-  const [sortDirection, setSortDirection] = useParamState("sortDirection", tabDefaultSorting.direction, {
-    validate: (v): v is SortDirection => v === "asc" || v === "desc",
+  const defaultSorting = hasSearchQuery ? DEFAULT_SEARCH_SORTING : tabDefaultSorting
+  const [sortBy, setSortBy] = useParamState("sortBy", "")
+  const [sortDirection, setSortDirection] = useParamState("sortDirection", "", {
+    validate: (v): v is SortDirection | "" => v === "asc" || v === "desc" || v === "",
   })
   const [traceDetailTab] = useParamState("detailTab", "trace", {
     validate: (v): v is "trace" | "conversation" | "spans" | "annotations" =>
@@ -191,7 +199,10 @@ function ProjectPage() {
   const hasActiveFilters = Object.keys(filters).length > 0
   const timeFrom = getTimeFilterValue(filters, "gte")
   const timeTo = getTimeFilterValue(filters, "lte")
-  const sorting: InfiniteTableSorting = { column: sortBy, direction: sortDirection }
+  const sorting: InfiniteTableSorting = {
+    column: sortBy || defaultSorting.column,
+    direction: sortDirection || defaultSorting.direction,
+  }
 
   const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)

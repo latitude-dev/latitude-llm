@@ -430,5 +430,88 @@ describe("TraceSearchRepository", () => {
 
       expect(result).toBeNull()
     })
+
+    it("excludes boilerplate hashes shared across most traces from semantic scoring", async () => {
+      process.env.LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS = "true"
+
+      // A vector at ~0.7 cosine similarity to basisVector(0): the unique
+      // message scores below the boilerplate one, so it can only win the
+      // argMax if the boilerplate hash is suppressed.
+      const offAxisVector = (): number[] => {
+        const v = new Array(EMBEDDING_DIMENSIONS).fill(0)
+        v[0] = 0.7
+        v[1] = Math.sqrt(1 - 0.49)
+        return v
+      }
+
+      await Effect.runPromise(
+        messageEmbeddingRepo.upsertMany([
+          {
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            contentHash: "greeting-hash",
+            embedding: basisVector(0),
+            embeddingModel: DEFAULT_EMBEDDING_CONFIG.model,
+          },
+          {
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            contentHash: "unique-message-hash",
+            embedding: offAxisVector(),
+            embeddingModel: DEFAULT_EMBEDDING_CONFIG.model,
+          },
+        ]),
+      )
+
+      // The greeting hash occurs in 60 distinct traces — past the
+      // greatest(TRACE_SEARCH_BOILERPLATE_MIN_TRACES, 20%-of-project)
+      // document-frequency cut. The unique hash occurs once.
+      const targetTraceId = TraceId("0".repeat(32))
+      const boilerplateTraceIds = [
+        targetTraceId,
+        ...Array.from({ length: 59 }, (_, i) => TraceId((i + 1).toString(16).padStart(32, "0"))),
+      ]
+      await Effect.runPromise(
+        repo.upsertMessageOccurrences([
+          ...boilerplateTraceIds.map((traceId, i) => ({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            traceId,
+            messageIndex: 0,
+            contentHash: "greeting-hash",
+            sessionId: SessionId(`session-${i}`),
+            startTime: new Date(),
+            role: "assistant" as const,
+            isOutput: false,
+          })),
+          {
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            traceId: targetTraceId,
+            messageIndex: 3,
+            contentHash: "unique-message-hash",
+            sessionId: SessionId("session-0"),
+            startTime: new Date(),
+            role: "user",
+            isOutput: false,
+          },
+        ]),
+      )
+
+      const result = await Effect.runPromise(
+        repo.findSemanticHighlightForTrace({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: targetTraceId,
+          queryEmbedding: basisVector(0),
+        }),
+      )
+
+      // The greeting (score 1.0) is boilerplate-suppressed; the trace's
+      // unique message (score ~0.7) defines the highlight instead.
+      expect(result).not.toBeNull()
+      expect(result?.firstMessageIndex).toBe(3)
+      expect(result?.relevanceScore).toBeCloseTo(0.7, 3)
+    })
   })
 })
