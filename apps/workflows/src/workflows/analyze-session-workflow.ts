@@ -1,4 +1,4 @@
-import { defineSignal, proxyActivities, setHandler, sleep } from "@temporalio/workflow"
+import { defineSignal, patched, proxyActivities, setHandler, sleep } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
 import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 
@@ -9,10 +9,12 @@ const traceCompletedSignal = defineSignal<[{ readonly debounceMs?: number }]>("t
 
 const {
   checkAnalyzeSessionEligibilityActivity,
+  detectAnalyzeSessionLabelsActivity,
   embedAnalyzeSessionTurnsActivity,
   hashAnalyzeSessionActivity,
   loadAnalyzeSessionActivity,
   persistAnalyzeSessionActivity,
+  segmentAnalyzeSessionActivity,
 } = proxyActivities<typeof activities>({
   startToCloseTimeout: "10 minutes",
   retry: {
@@ -41,7 +43,17 @@ const runAnalyzeSessionPass = async (input: AnalyzeSessionWorkflowInput): Promis
 
   // Warm the shared message embedding store so the persist activity's full
   // use-case run resolves existing vectors and embeds only misses.
-  await embedAnalyzeSessionTurnsActivity({ ...input, ...hashed })
+  const embedded = await embedAnalyzeSessionTurnsActivity({ ...input, ...hashed })
+
+  // Pre-patch executions recorded segment + label warm-up activities between
+  // embed and persist. Replay that command sequence for in-flight workflows so
+  // they stay deterministic across the deploy; new runs go straight to persist.
+  // Remove with `deprecatePatch` once no pre-patch executions remain.
+  if (!patched("analyze-session-drop-segment-label-warmup-v1")) {
+    await segmentAnalyzeSessionActivity(embedded)
+    await detectAnalyzeSessionLabelsActivity(embedded)
+  }
+
   return persistAnalyzeSessionActivity(input)
 }
 

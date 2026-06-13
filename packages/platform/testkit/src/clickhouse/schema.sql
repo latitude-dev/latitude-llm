@@ -416,9 +416,10 @@ CREATE TABLE message_embeddings
     `content_hash` String CODEC(ZSTD(1)),
     `embedding` Array(Float32) CODEC(ZSTD(1)),
     `embedding_model` LowCardinality(String) CODEC(ZSTD(1)),
-    `inserted_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4)
+    `inserted_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4),
+    `retention_days` UInt16 DEFAULT 90 CODEC(T64, ZSTD(1))
 )
-ENGINE = MergeTree
+ENGINE = ReplacingMergeTree
 PARTITION BY (organization_id, project_id, embedding_model)
 PRIMARY KEY (organization_id, project_id, embedding_model, content_hash)
 ORDER BY (organization_id, project_id, embedding_model, content_hash)

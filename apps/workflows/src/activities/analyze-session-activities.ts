@@ -243,6 +243,20 @@ export const embedAnalyzeSessionTurnsActivity = (
     ),
   )
 
+// Deprecated warm-up activities. They no longer warm anything — the persist
+// activity re-runs the full use case — and exist only so executions started
+// before the `analyze-session-drop-segment-label-warmup-v1` workflow patch can
+// replay their recorded embed→segment→label→persist command sequence without a
+// non-determinism error. Remove together with the patch once no pre-patch
+// executions remain.
+export const segmentAnalyzeSessionActivity = async (
+  _input: AnalyzeSessionEmbeddingActivityResult,
+): Promise<{ readonly replayed: true }> => ({ replayed: true })
+
+export const detectAnalyzeSessionLabelsActivity = async (
+  _input: AnalyzeSessionEmbeddingActivityResult,
+): Promise<{ readonly replayed: true }> => ({ replayed: true })
+
 export const persistAnalyzeSessionActivity = (input: AnalyzeSessionActivityInput) => analyzeSessionActivity(input)
 
 export const analyzeSessionActivity = (input: AnalyzeSessionActivityInput) => {

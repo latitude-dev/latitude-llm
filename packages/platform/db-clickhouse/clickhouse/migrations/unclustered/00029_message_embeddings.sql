@@ -11,13 +11,26 @@ CREATE TABLE IF NOT EXISTS message_embeddings
     -- Embedding model identifier (e.g. voyage-4-large).
     embedding_model    LowCardinality(String)                CODEC(ZSTD(1)),
     inserted_at        DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4),
+    retention_days     UInt16               DEFAULT 90       CODEC(T64, ZSTD(1)),
     CONSTRAINT message_embedding_dimensions CHECK length(embedding) = 2048,
     INDEX idx_message_embedding_hnsw embedding TYPE vector_similarity('hnsw', 'cosineDistance', 2048)
 )
-ENGINE = MergeTree
+-- ReplacingMergeTree (no version column — duplicate vectors are byte-identical)
+-- collapses race-loser rows from upsertMany's check-then-insert: ClickHouse has
+-- no unique constraint, so two indexers can both miss and both insert the same
+-- (org, project, model, content_hash). The partition key is a prefix of the
+-- sort key, so all duplicates of a hash land in the same partition and merge
+-- away. Dedup is eventual; reads tolerate transient dupes (worker dedups by
+-- hash in a Map, semantic search GROUPs BY trace_id).
+ENGINE = ReplacingMergeTree
 PARTITION BY (organization_id, project_id, embedding_model)
 PRIMARY KEY (organization_id, project_id, embedding_model, content_hash)
-ORDER BY (organization_id, project_id, embedding_model, content_hash);
+ORDER BY (organization_id, project_id, embedding_model, content_hash)
+-- Same retention as the source spans (retention_days + 30 grace, default 90).
+-- Vectors are immutable, so the TTL anchors on inserted_at rather than a
+-- refreshed last-seen; if a vector expires while still referenced, the next
+-- trace-search/CI pass re-embeds it on miss and write-through recreates it.
+TTL toDateTime(inserted_at) + toIntervalDay(retention_days + 30) DELETE;
 
 -- +goose Down
 

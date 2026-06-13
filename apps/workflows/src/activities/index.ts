@@ -3,10 +3,12 @@ export {
   type AnalyzeSessionActivityResult,
   analyzeSessionActivity,
   checkAnalyzeSessionEligibilityActivity,
+  detectAnalyzeSessionLabelsActivity,
   embedAnalyzeSessionTurnsActivity,
   hashAnalyzeSessionActivity,
   loadAnalyzeSessionActivity,
   persistAnalyzeSessionActivity,
+  segmentAnalyzeSessionActivity,
 } from "./analyze-session-activities.ts"
 export {
   enrichAnnotationForPublication,

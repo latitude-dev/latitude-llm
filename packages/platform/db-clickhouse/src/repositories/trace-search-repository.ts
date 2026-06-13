@@ -207,6 +207,16 @@ export const TraceSearchRepositoryLive = Layer.effect(
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
                         AND embedding_model = {embeddingModel:String}
+                        -- Bound the per-vector cosineDistance scan to this trace's
+                        -- own messages; without it ClickHouse scores every vector
+                        -- in the project to highlight a single trace.
+                        AND content_hash IN (
+                          SELECT content_hash
+                          FROM trace_message_occurrences
+                          WHERE organization_id = {organizationId:String}
+                            AND project_id = {projectId:String}
+                            AND trace_id = {traceId:FixedString(32)}
+                        )
                     ) AS e ON o.content_hash = e.content_hash
                     WHERE o.role IN ('user', 'assistant')
                       AND ${BOILERPLATE_HASH_FILTER}`,

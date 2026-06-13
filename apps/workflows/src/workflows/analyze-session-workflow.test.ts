@@ -1,21 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { mockActivities, signalState } = vi.hoisted(() => {
+const { mockActivities, signalState, patchedState } = vi.hoisted(() => {
   const mockActivities = {
     loadAnalyzeSessionActivity: vi.fn(),
     hashAnalyzeSessionActivity: vi.fn(),
     checkAnalyzeSessionEligibilityActivity: vi.fn(),
     embedAnalyzeSessionTurnsActivity: vi.fn(),
+    segmentAnalyzeSessionActivity: vi.fn(),
+    detectAnalyzeSessionLabelsActivity: vi.fn(),
     persistAnalyzeSessionActivity: vi.fn(),
   }
   const signalState: { handler: ((input: { readonly debounceMs?: number }) => void) | undefined } = {
     handler: undefined,
   }
-  return { mockActivities, signalState }
+  const patchedState = { enabled: true }
+  return { mockActivities, signalState, patchedState }
 })
 
 vi.mock("@temporalio/workflow", () => ({
   defineSignal: vi.fn((name: string) => ({ name })),
+  patched: () => patchedState.enabled,
   proxyActivities: () => mockActivities,
   setHandler: vi.fn((_signal, handler) => {
     signalState.handler = handler
@@ -41,6 +45,8 @@ const activityOrder = () =>
     mockActivities.hashAnalyzeSessionActivity,
     mockActivities.checkAnalyzeSessionEligibilityActivity,
     mockActivities.embedAnalyzeSessionTurnsActivity,
+    mockActivities.segmentAnalyzeSessionActivity,
+    mockActivities.detectAnalyzeSessionLabelsActivity,
     mockActivities.persistAnalyzeSessionActivity,
   ]
     .filter((mock) => mock.mock.calls.length > 0)
@@ -50,6 +56,9 @@ describe("analyzeSessionWorkflow", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     signalState.handler = undefined
+    patchedState.enabled = true
+    mockActivities.segmentAnalyzeSessionActivity.mockName("segment").mockResolvedValue({ replayed: true })
+    mockActivities.detectAnalyzeSessionLabelsActivity.mockName("label").mockResolvedValue({ replayed: true })
     mockActivities.loadAnalyzeSessionActivity.mockName("load").mockResolvedValue({ found: true, rawMessages: [] })
     mockActivities.hashAnalyzeSessionActivity.mockName("hash").mockResolvedValue({
       analysisHash: "h".repeat(64),
@@ -83,6 +92,8 @@ describe("analyzeSessionWorkflow", () => {
     })
 
     expect(activityOrder()).toEqual(["load", "hash", "eligibility", "embed", "persist"])
+    expect(mockActivities.segmentAnalyzeSessionActivity).not.toHaveBeenCalled()
+    expect(mockActivities.detectAnalyzeSessionLabelsActivity).not.toHaveBeenCalled()
     expect(mockActivities.embedAnalyzeSessionTurnsActivity).toHaveBeenCalledWith(
       expect.objectContaining({
         organizationId: input.organizationId,
@@ -91,6 +102,18 @@ describe("analyzeSessionWorkflow", () => {
         analysisHash: "h".repeat(64),
       }),
     )
+  })
+
+  it("replays the legacy segment + label warm-up sequence for pre-patch executions", async () => {
+    patchedState.enabled = false
+
+    await expect(analyzeSessionWorkflow(input)).resolves.toEqual({
+      action: "recorded",
+      status: "analyzed",
+      momentCount: 0,
+    })
+
+    expect(activityOrder()).toEqual(["load", "hash", "eligibility", "embed", "segment", "label", "persist"])
   })
 
   it("short-circuits hash-current sessions before expensive activities", async () => {

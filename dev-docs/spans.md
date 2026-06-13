@@ -104,7 +104,7 @@ Semantic indexing is gated by Redis-backed per-organization token budgets before
 
 ### Shared Message Embeddings
 
-`message_embeddings` is a content-addressed vector store keyed by `(organization_id, project_id, content_hash)`. It stores the `voyage-4-large` 2048-dimensional document embedding and refreshes `last_seen_at` on insert; rows TTL after the longest consumer retention horizon. The table intentionally carries no trace identity.
+`message_embeddings` is a content-addressed vector store keyed by `(organization_id, project_id, content_hash)`. It stores the `voyage-4-large` 2048-dimensional document embedding. Vectors are immutable: `upsertMany` checks-then-inserts so a repeat of the same hash/model is normally a no-op, and the table is a `ReplacingMergeTree` so the duplicate rows two indexers can race in (no unique constraint in ClickHouse) collapse on merge — duplicates are byte-identical, so no version column is needed. Rows TTL on `inserted_at + retention_days + 30` (default 90 days), the same retention the source spans get. A vector that expires while still referenced is re-embedded on the next miss and recreated by write-through, so an early TTL only costs one re-embedding, never a wrong result. The table intentionally carries no trace identity.
 
 `trace_message_occurrences` is the trace-link table keyed for vector-to-trace fan-out. It stores `(trace_id, message_index, content_hash, session_id, start_time, role, is_output, retention_days)` and TTLs with trace-search retention. Full per-trace duplication is cheap here; only vectors are deduped. The trace-end search worker is the only writer because it is the boundary that knows the message positions within a finished trace.
 
