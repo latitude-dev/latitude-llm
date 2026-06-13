@@ -1,17 +1,20 @@
-import { AI, resolveEmbeddingConfig } from "@domain/ai"
 import {
   analyzeSessionUseCase,
   CONVERSATION_INTELLIGENCE_DETECTOR_VERSION,
   CONVERSATION_INTELLIGENCE_MIN_CONTENT_LENGTH,
+  resolveTurnEmbeddings,
   SessionAnalysisRepository,
-  segmentSemanticMoments,
 } from "@domain/conversation-intelligence"
 import { OrganizationId, ProjectId, SessionId } from "@domain/shared"
 import { SessionRepository } from "@domain/spans"
-import type { TaxonomyDimension } from "@domain/taxonomy"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
-import { RedisDistributedLockRepositoryLive } from "@platform/cache-redis"
 import {
+  EmbedBudgetResolverLive,
+  RedisDistributedLockRepositoryLive,
+  TraceSearchBudgetLive,
+} from "@platform/cache-redis"
+import {
+  MessageEmbeddingRepositoryLive,
   SessionAnalysisRepositoryLive,
   SessionMomentLabelRepositoryLive,
   SessionRepositoryLive,
@@ -43,6 +46,7 @@ interface AnalyzeSessionMessage {
   readonly index: number
   readonly role: "user" | "assistant" | "tool" | "system" | "unknown"
   readonly text: string
+  readonly isCompactionSummaryCandidate?: boolean
 }
 
 const sessionConversationMessages = (session: {
@@ -92,27 +96,6 @@ export interface AnalyzeSessionEmbeddingActivityResult {
   }[]
 }
 
-export interface AnalyzeSessionSegmentationActivityResult {
-  readonly segments: readonly {
-    readonly firstTurnIndex: number
-    readonly lastTurnIndex: number
-    readonly turnIndexes: readonly number[]
-    readonly centroidEmbedding: readonly number[]
-    readonly coherenceScore: number
-    readonly boundaryReason: string
-  }[]
-}
-
-export interface AnalyzeSessionProjectionActivityResult {
-  readonly projections: readonly {
-    readonly segmentIndex: number
-    readonly dimension: TaxonomyDimension
-    readonly projectionMethod: string
-    readonly embedding: readonly number[]
-    readonly sourceTurnIndexes: readonly number[]
-  }[]
-}
-
 const roleOf = (message: unknown): AnalyzeSessionMessage["role"] => {
   if (message === null || typeof message !== "object") return "unknown"
   const role = (message as { readonly role?: unknown }).role
@@ -148,7 +131,15 @@ const stripToolTelemetry = (content: string): string =>
 
 const normalizeMessages = (messages: readonly unknown[]): readonly AnalyzeSessionMessage[] =>
   messages
-    .map((message, index) => ({ index, role: roleOf(message), text: stripToolTelemetry(textOf(message)) }))
+    .map((message, index) => ({
+      index,
+      role: roleOf(message),
+      text: stripToolTelemetry(textOf(message)),
+      isCompactionSummaryCandidate:
+        message !== null &&
+        typeof message === "object" &&
+        (message as { readonly isCompactionSummaryCandidate?: unknown }).isCompactionSummaryCandidate === true,
+    }))
     .filter((message) => message.text.length > 0)
 
 const documentFromMessages = (messages: readonly AnalyzeSessionMessage[]): string =>
@@ -163,6 +154,7 @@ const withAnalyzeSessionClickHouse = <A, E, R>(effect: Effect.Effect<A, E, R>, o
         SessionSemanticMomentRepositoryLive,
         SessionMomentLabelRepositoryLive,
         TaxonomyObservationRepositoryLive,
+        MessageEmbeddingRepositoryLive,
       ),
       getClickhouseClient(),
       OrganizationId(organizationId),
@@ -171,6 +163,9 @@ const withAnalyzeSessionClickHouse = <A, E, R>(effect: Effect.Effect<A, E, R>, o
 
 const withAnalyzeSessionAi = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   effect.pipe(withAi(Layer.mergeAll(AIGenerateLive, AIEmbedLive), getRedisClient()))
+
+const withAnalyzeSessionEmbeddingBudget = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+  effect.pipe(Effect.provide(Layer.provide(TraceSearchBudgetLive(getRedisClient()), EmbedBudgetResolverLive)))
 
 export const loadAnalyzeSessionActivity = (input: AnalyzeSessionActivityInput) =>
   Effect.runPromise(
@@ -183,7 +178,14 @@ export const loadAnalyzeSessionActivity = (input: AnalyzeSessionActivityInput) =
         .findBySessionId({ organizationId, projectId, sessionId })
         .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
       if (session === null) return { found: false, rawMessages: [] } satisfies AnalyzeSessionLoadedActivityResult
-      const rawMessages = sessionConversationMessages(session)
+      const conversationSpine = yield* sessions
+        .findConversationSpineBySessionId({ organizationId, projectId, sessionId })
+        .pipe(
+          Effect.catchTag("NotFoundError", () =>
+            Effect.succeed({ source: "session_detail" as const, messages: sessionConversationMessages(session) }),
+          ),
+        )
+      const rawMessages = conversationSpine.messages
       return { found: true, rawMessages } satisfies AnalyzeSessionLoadedActivityResult
     }).pipe((effect) => withAnalyzeSessionClickHouse(effect, input.organizationId), withTracing),
   )
@@ -222,110 +224,38 @@ export const checkAnalyzeSessionEligibilityActivity = async (
   return { eligible: true, reason: "eligible" }
 }
 
-export const embedAnalyzeSessionTurnsActivity = (input: AnalyzeSessionHashActivityResult) =>
-  Effect.runPromise(
-    Effect.gen(function* () {
-      const ai = yield* AI
-      const embeddingConfig = yield* resolveEmbeddingConfig()
-      const turns = yield* Effect.forEach(
-        input.messages.filter((message) => message.role !== "tool"),
-        (message) =>
-          ai
-            .embed({
-              text: `${message.role}: ${message.text}`,
-              provider: embeddingConfig.provider,
-              model: embeddingConfig.model,
-              inputType: "document",
-            })
-            .pipe(
-              Effect.map((result) => ({
-                index: message.index,
-                role: message.role,
-                content: message.text,
-                embedding: result.embedding,
-              })),
-            ),
-      )
-      return { turns } satisfies AnalyzeSessionEmbeddingActivityResult
-    }).pipe(withAnalyzeSessionAi, withTracing),
-  )
-
-export const segmentAnalyzeSessionActivity = async (
-  input: AnalyzeSessionEmbeddingActivityResult,
-): Promise<AnalyzeSessionSegmentationActivityResult> => ({
-  segments: segmentSemanticMoments({ turns: input.turns }).map((segment) => ({
-    firstTurnIndex: segment.firstTurnIndex,
-    lastTurnIndex: segment.lastTurnIndex,
-    turnIndexes: segment.turnIndexes,
-    centroidEmbedding: segment.centroidEmbedding,
-    coherenceScore: segment.coherenceScore,
-    boundaryReason: segment.boundaryReason,
-  })),
-})
-
-const workflowVectorMagnitude = (vector: readonly number[]): number =>
-  Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0))
-
-const workflowCosineSimilarity = (a: readonly number[], b: readonly number[]): number => {
-  if (a.length === 0 || b.length === 0 || a.length !== b.length) return 0
-  const denominator = workflowVectorMagnitude(a) * workflowVectorMagnitude(b)
-  if (denominator === 0) return 0
-  return a.reduce((sum, value, index) => sum + value * (b[index] ?? 0), 0) / denominator
-}
-
-const workflowWeightedMean = (turns: AnalyzeSessionEmbeddingActivityResult["turns"]): readonly number[] => {
-  const first = turns[0]?.embedding
-  if (!first) return []
-  const totals = new Array(first.length).fill(0) as number[]
-  let totalWeight = 0
-  for (const turn of turns) {
-    const weight = Math.max(1, turn.content.trim().length)
-    totalWeight += weight
-    for (let index = 0; index < first.length; index++) totals[index] += (turn.embedding[index] ?? 0) * weight
-  }
-  return totalWeight === 0 ? [] : totals.map((total) => total / totalWeight)
-}
-
-const WORKFLOW_LABEL_ANCHORS = [
-  "the user wants a human agent or manager to take over",
-  "the user is uncertain or confused about what to do next and asks for reassurance or guidance",
-  "the user gives up withdraws the request or abandons the current goal",
-  "the user expresses frustration annoyance or anger about the situation or the assistant's answers",
-  "the user expresses satisfaction gratitude or confirms the help solved their problem",
-  "the user's issue is resolved completed or successfully answered",
-  "the assistant refuses a request because of policy safety or permissions",
-  "the conversation is stuck in repeated clarification questions or missing information",
-] as const
-
-export const detectAnalyzeSessionLabelsActivity = (
-  input: AnalyzeSessionEmbeddingActivityResult & AnalyzeSessionSegmentationActivityResult,
+export const embedAnalyzeSessionTurnsActivity = (
+  input: AnalyzeSessionActivityInput & AnalyzeSessionHashActivityResult,
 ) =>
   Effect.runPromise(
     Effect.gen(function* () {
-      const ai = yield* AI
-      const embeddingConfig = yield* resolveEmbeddingConfig()
-      const anchors = yield* Effect.forEach(WORKFLOW_LABEL_ANCHORS, (text) =>
-        ai
-          .embed({
-            text,
-            provider: embeddingConfig.provider,
-            model: embeddingConfig.model,
-            inputType: "document",
-          })
-          .pipe(Effect.map((result) => result.embedding)),
-      )
-      const turnsByIndex = new Map(input.turns.map((turn) => [turn.index, turn] as const))
-      const momentCount = input.segments.filter((segment) => {
-        const turns = segment.turnIndexes.flatMap((index) => {
-          const turn = turnsByIndex.get(index)
-          return turn ? [turn] : []
-        })
-        const centroid = workflowWeightedMean(turns)
-        return anchors.some((anchor) => workflowCosineSimilarity(centroid, anchor) >= 0.58)
-      }).length
-      return { momentCount }
-    }).pipe(withAnalyzeSessionAi, withTracing),
+      const turns = yield* resolveTurnEmbeddings({
+        organizationId: OrganizationId(input.organizationId),
+        projectId: ProjectId(input.projectId),
+        messages: input.messages,
+      })
+      return { turns } satisfies AnalyzeSessionEmbeddingActivityResult
+    }).pipe(
+      (effect) => withAnalyzeSessionClickHouse(effect, input.organizationId),
+      withAnalyzeSessionAi,
+      withAnalyzeSessionEmbeddingBudget,
+      withTracing,
+    ),
   )
+
+// Deprecated warm-up activities. They no longer warm anything — the persist
+// activity re-runs the full use case — and exist only so executions started
+// before the `analyze-session-drop-segment-label-warmup-v1` workflow patch can
+// replay their recorded embed→segment→label→persist command sequence without a
+// non-determinism error. Remove together with the patch once no pre-patch
+// executions remain.
+export const segmentAnalyzeSessionActivity = async (
+  _input: AnalyzeSessionEmbeddingActivityResult,
+): Promise<{ readonly replayed: true }> => ({ replayed: true })
+
+export const detectAnalyzeSessionLabelsActivity = async (
+  _input: AnalyzeSessionEmbeddingActivityResult,
+): Promise<{ readonly replayed: true }> => ({ replayed: true })
 
 export const persistAnalyzeSessionActivity = (input: AnalyzeSessionActivityInput) => analyzeSessionActivity(input)
 
@@ -340,12 +270,14 @@ export const analyzeSessionActivity = (input: AnalyzeSessionActivityInput) => {
           SessionSemanticMomentRepositoryLive,
           SessionMomentLabelRepositoryLive,
           TaxonomyObservationRepositoryLive,
+          MessageEmbeddingRepositoryLive,
         ),
         getClickhouseClient(),
         OrganizationId(input.organizationId),
       ),
       withPostgres(TaxonomyClusterRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
       Effect.provide(RedisDistributedLockRepositoryLive(getRedisClient())),
+      withAnalyzeSessionEmbeddingBudget,
       withAi(Layer.mergeAll(AIGenerateLive, AIEmbedLive), getRedisClient()),
       Effect.tap((result) =>
         Effect.sync(() =>

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { mockActivities, signalState } = vi.hoisted(() => {
+const { mockActivities, signalState, patchedState } = vi.hoisted(() => {
   const mockActivities = {
     loadAnalyzeSessionActivity: vi.fn(),
     hashAnalyzeSessionActivity: vi.fn(),
@@ -13,11 +13,13 @@ const { mockActivities, signalState } = vi.hoisted(() => {
   const signalState: { handler: ((input: { readonly debounceMs?: number }) => void) | undefined } = {
     handler: undefined,
   }
-  return { mockActivities, signalState }
+  const patchedState = { enabled: true }
+  return { mockActivities, signalState, patchedState }
 })
 
 vi.mock("@temporalio/workflow", () => ({
   defineSignal: vi.fn((name: string) => ({ name })),
+  patched: () => patchedState.enabled,
   proxyActivities: () => mockActivities,
   setHandler: vi.fn((_signal, handler) => {
     signalState.handler = handler
@@ -54,6 +56,9 @@ describe("analyzeSessionWorkflow", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     signalState.handler = undefined
+    patchedState.enabled = true
+    mockActivities.segmentAnalyzeSessionActivity.mockName("segment").mockResolvedValue({ replayed: true })
+    mockActivities.detectAnalyzeSessionLabelsActivity.mockName("label").mockResolvedValue({ replayed: true })
     mockActivities.loadAnalyzeSessionActivity.mockName("load").mockResolvedValue({ found: true, rawMessages: [] })
     mockActivities.hashAnalyzeSessionActivity.mockName("hash").mockResolvedValue({
       analysisHash: "h".repeat(64),
@@ -68,8 +73,6 @@ describe("analyzeSessionWorkflow", () => {
       .mockName("eligibility")
       .mockResolvedValue({ eligible: true, reason: "eligible" })
     mockActivities.embedAnalyzeSessionTurnsActivity.mockName("embed").mockResolvedValue({ turns: [] })
-    mockActivities.segmentAnalyzeSessionActivity.mockName("segment").mockResolvedValue({ segments: [] })
-    mockActivities.detectAnalyzeSessionLabelsActivity.mockName("label").mockResolvedValue({ sampled: true })
     mockActivities.persistAnalyzeSessionActivity
       .mockName("persist")
       .mockResolvedValue({ action: "recorded", status: "analyzed", momentCount: 0 })
@@ -82,6 +85,28 @@ describe("analyzeSessionWorkflow", () => {
   })
 
   it("runs named idempotent analysis activities in order", async () => {
+    await expect(analyzeSessionWorkflow(input)).resolves.toEqual({
+      action: "recorded",
+      status: "analyzed",
+      momentCount: 0,
+    })
+
+    expect(activityOrder()).toEqual(["load", "hash", "eligibility", "embed", "persist"])
+    expect(mockActivities.segmentAnalyzeSessionActivity).not.toHaveBeenCalled()
+    expect(mockActivities.detectAnalyzeSessionLabelsActivity).not.toHaveBeenCalled()
+    expect(mockActivities.embedAnalyzeSessionTurnsActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        sessionId: input.sessionId,
+        analysisHash: "h".repeat(64),
+      }),
+    )
+  })
+
+  it("replays the legacy segment + label warm-up sequence for pre-patch executions", async () => {
+    patchedState.enabled = false
+
     await expect(analyzeSessionWorkflow(input)).resolves.toEqual({
       action: "recorded",
       status: "analyzed",
@@ -144,12 +169,21 @@ describe("analyzeSessionWorkflow", () => {
     expect(mockActivities.persistAnalyzeSessionActivity).toHaveBeenCalledTimes(2)
   })
 
-  it("propagates failed activity errors", async () => {
-    mockActivities.detectAnalyzeSessionLabelsActivity.mockRejectedValueOnce(new Error("label detection failed"))
+  it("falls through to persist when the embedding warm-up fails", async () => {
+    mockActivities.embedAnalyzeSessionTurnsActivity.mockRejectedValueOnce(new Error("embedding warm-up failed"))
 
-    await expect(analyzeSessionWorkflow(input)).rejects.toThrow("label detection failed")
+    await expect(analyzeSessionWorkflow(input)).resolves.toEqual({
+      action: "recorded",
+      status: "analyzed",
+      momentCount: 0,
+    })
 
-    expect(activityOrder()).toEqual(["load", "hash", "eligibility", "embed", "segment", "label"])
-    expect(mockActivities.persistAnalyzeSessionActivity).not.toHaveBeenCalled()
+    expect(activityOrder()).toEqual(["load", "hash", "eligibility", "embed", "persist"])
+  })
+
+  it("propagates persist activity errors", async () => {
+    mockActivities.persistAnalyzeSessionActivity.mockRejectedValueOnce(new Error("persist failed"))
+
+    await expect(analyzeSessionWorkflow(input)).rejects.toThrow("persist failed")
   })
 })

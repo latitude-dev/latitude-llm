@@ -23,6 +23,8 @@ import type {
   CohortBaselineData,
   MetricPercentiles,
   Session,
+  SessionConversationSpine,
+  SessionConversationSpineMessage,
   SessionDetail,
   SessionListPage,
   SessionMetrics,
@@ -32,6 +34,8 @@ import type {
 import {
   emptySessionMetrics,
   emptyTraceDistribution,
+  extractTraceSearchEmbeddingMessages,
+  hashMessageContent,
   parseSearchQuery,
   SessionRepository,
   type SessionRepositoryShape,
@@ -141,6 +145,22 @@ type SessionDetailRow = SessionListRow & {
   last_input_messages: string
   output_messages: string
   system_instructions: string
+}
+
+type TraceConversationPayloadRow = {
+  trace_id: string
+  last_input_messages: string
+  output_messages: string
+  system_instructions: string
+}
+
+type SessionMessageOccurrenceReadRow = {
+  trace_id: string
+  message_index: number
+  content_hash: string
+  start_time: string
+  role: string
+  is_output: number
 }
 
 type SessionMetricsRow = {
@@ -315,6 +335,35 @@ const toDomainSessionDetail = (row: SessionDetailRow): SessionDetail => ({
   lastInputMessages: parseMessages(row.last_input_messages),
   outputMessages: parseMessages(row.output_messages),
 })
+
+const sessionDetailConversationMessages = (session: SessionDetail): readonly GenAIMessage[] => {
+  const systemMessage: GenAIMessage | null =
+    Array.isArray(session.systemInstructions) && session.systemInstructions.length > 0
+      ? { role: "system", parts: session.systemInstructions }
+      : null
+  return systemMessage
+    ? [systemMessage, ...session.lastInputMessages, ...session.outputMessages]
+    : [...session.lastInputMessages, ...session.outputMessages]
+}
+
+const toSpineMessages = (
+  messages: readonly GenAIMessage[],
+  flagsByIndex: ReadonlyMap<number, { readonly isCompactionSummaryCandidate?: boolean }> = new Map(),
+): readonly SessionConversationSpineMessage[] =>
+  extractTraceSearchEmbeddingMessages(messages).map((message) => ({
+    role: message.role,
+    content: message.text,
+    ...flagsByIndex.get(message.index),
+  }))
+
+const toTraceConversationMessages = (row: TraceConversationPayloadRow): readonly GenAIMessage[] => {
+  const systemInstructions = parseSystem(row.system_instructions)
+  const systemMessage: GenAIMessage | null =
+    systemInstructions.length > 0 ? { role: "system", parts: systemInstructions } : null
+  const input = parseMessages(row.last_input_messages)
+  const output = parseMessages(row.output_messages)
+  return systemMessage ? [systemMessage, ...input, ...output] : [...input, ...output]
+}
 
 interface SortColumn {
   readonly expr: string
@@ -944,6 +993,159 @@ export const SessionRepositoryLive = Layer.effect(
                 isNotFoundError(error) ? error : toRepositoryError(error, "findBySessionId"),
               ),
             )
+        }),
+
+      findConversationSpineBySessionId: ({ organizationId, projectId, sessionId }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+
+          const legacySpine = (): Effect.Effect<SessionConversationSpine, NotFoundError | RepositoryError> =>
+            chSqlClient
+              .query(async (client) => {
+                const result = await client.query({
+                  query: `SELECT ${DETAIL_SELECT}
+                      FROM sessions
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND session_id = {sessionId:String}
+                      GROUP BY organization_id, project_id, session_id
+                      LIMIT 1`,
+                  query_params: {
+                    organizationId: organizationId as string,
+                    projectId: projectId as string,
+                    sessionId: sessionId as string,
+                  },
+                  format: "JSONEachRow",
+                })
+                return result.json<SessionDetailRow>()
+              })
+              .pipe(
+                Effect.flatMap((rows) => {
+                  const first = rows[0]
+                  if (!first) {
+                    return Effect.fail(new NotFoundError({ entity: "Session", id: sessionId as string }))
+                  }
+                  const detail = toDomainSessionDetail(first)
+                  return Effect.succeed({
+                    source: "session_detail",
+                    messages: toSpineMessages(sessionDetailConversationMessages(detail)),
+                  } satisfies SessionConversationSpine)
+                }),
+                Effect.mapError((error) =>
+                  isNotFoundError(error) ? error : toRepositoryError(error, "findConversationSpineBySessionId"),
+                ),
+              )
+
+          const occurrenceRows = yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
+                          trace_id,
+                          message_index,
+                          argMax(content_hash, indexed_at) AS content_hash,
+                          argMax(start_time, indexed_at)   AS start_time,
+                          argMax(role, indexed_at)         AS role,
+                          argMax(is_output, indexed_at)    AS is_output
+                        FROM trace_message_occurrences
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND session_id = {sessionId:String}
+                        GROUP BY organization_id, project_id, trace_id, message_index
+                        ORDER BY start_time ASC, trace_id ASC, message_index ASC`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  sessionId: sessionId as string,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<SessionMessageOccurrenceReadRow>()
+            })
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "findConversationSpineBySessionId")))
+
+          if (occurrenceRows.length === 0) return yield* legacySpine()
+
+          const traceIds = [...new Set(occurrenceRows.map((row) => normalizeCHString(row.trace_id)))]
+          const tracePayloadRows = yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
+                          trace_id,
+                          argMaxIfMerge(last_input_messages) AS last_input_messages,
+                          argMaxIfMerge(output_messages) AS output_messages,
+                          argMinIfMerge(system_instructions) AS system_instructions
+                        FROM traces
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND trace_id IN ({traceIds:Array(String)})
+                        GROUP BY organization_id, project_id, trace_id`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  traceIds,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<TraceConversationPayloadRow>()
+            })
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "findConversationSpineBySessionId")))
+
+          const messagesByTrace = new Map(
+            tracePayloadRows.map((row) => {
+              const allMessages = toTraceConversationMessages(row)
+              const messagesByIndex = new Map(extractTraceSearchEmbeddingMessages(allMessages).map((m) => [m.index, m]))
+              return [normalizeCHString(row.trace_id), messagesByIndex] as const
+            }),
+          )
+
+          const firstTraceStart = parseCHDate(occurrenceRows[0]?.start_time ?? "").getTime()
+          const seenHashes = new Set<string>()
+          const traceHadPriorReplay = new Map<string, boolean>()
+          const traceSummaryCandidateMarked = new Set<string>()
+          const messages: SessionConversationSpineMessage[] = []
+
+          for (const row of occurrenceRows) {
+            const traceId = normalizeCHString(row.trace_id)
+            const contentHash = normalizeCHString(row.content_hash)
+            if (seenHashes.has(contentHash)) {
+              traceHadPriorReplay.set(traceId, true)
+              continue
+            }
+
+            const traceMessages = messagesByTrace.get(traceId)
+            const message = traceMessages?.get(Number(row.message_index))
+            if (!message) continue
+
+            const verifiedHash = yield* hashMessageContent({ role: message.role, text: message.text }).pipe(
+              Effect.catch(() => Effect.succeed("")),
+            )
+            if (verifiedHash !== contentHash) continue
+
+            const hasPriorSessionMessages = seenHashes.size > 0
+            const isLaterTrace = parseCHDate(row.start_time).getTime() > firstTraceStart
+            const isOutput = Number(row.is_output) === 1
+            const isCompactionSummaryCandidate =
+              hasPriorSessionMessages &&
+              isLaterTrace &&
+              !isOutput &&
+              !traceHadPriorReplay.get(traceId) &&
+              !traceSummaryCandidateMarked.has(traceId)
+
+            if (isCompactionSummaryCandidate) traceSummaryCandidateMarked.add(traceId)
+            seenHashes.add(contentHash)
+            messages.push({
+              role: message.role,
+              content: message.text,
+              ...(isCompactionSummaryCandidate ? { isCompactionSummaryCandidate: true } : {}),
+            })
+          }
+
+          if (messages.length === 0) return yield* legacySpine()
+
+          return {
+            source: "trace_message_occurrences",
+            messages,
+          } satisfies SessionConversationSpine
         }),
 
       getDistribution: ({ organizationId, projectId, field }) =>

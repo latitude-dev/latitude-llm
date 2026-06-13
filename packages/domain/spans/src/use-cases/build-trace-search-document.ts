@@ -8,6 +8,7 @@ import {
   TRACE_SEARCH_CHUNK_TAIL_BUDGET_CHARS,
   TRACE_SEARCH_DOCUMENT_MAX_LENGTH,
 } from "../constants.ts"
+import type { MessageEmbeddingRole } from "../helpers/message-embedding.ts"
 
 export interface TraceSearchDocumentInput {
   readonly traceId: string
@@ -63,6 +64,15 @@ function formatPartForEmbedding(part: GenAIPart): string {
   return formatCommonPart(part)
 }
 
+function formatPartForMessageEmbedding(part: GenAIPart): string {
+  const record = part as Record<string, unknown>
+  if (part.type === "reasoning") return ""
+  if (typeof record.content === "string") return record.content
+  if (part.type === "tool_call" && typeof part.name === "string") return `[TOOL CALL: ${part.name}]`
+  if (part.type === "tool_call_response") return typeof record.result === "string" ? record.result : "[TOOL RESULT]"
+  return ""
+}
+
 // Lexical includes them — ClickHouse text storage is free, and a user
 // searching for content the model only emitted in reasoning or a tool
 // response should still find the trace.
@@ -82,6 +92,40 @@ function formatMessage(message: GenAIMessage, formatter: (p: GenAIPart) => strin
     .join("\n")
     .trim()
 }
+
+const roleOf = (message: GenAIMessage): MessageEmbeddingRole => {
+  if (message.role === "user" || message.role === "assistant" || message.role === "tool" || message.role === "system") {
+    return message.role
+  }
+  return "unknown"
+}
+
+const stripToolTelemetry = (content: string): string =>
+  content
+    .split("\n")
+    .filter((line) => !line.trim().startsWith("[TOOL CALL:") && line.trim() !== "[TOOL RESULT]")
+    .join("\n")
+    .trim()
+
+export interface TraceSearchEmbeddingMessage {
+  readonly index: number
+  readonly role: MessageEmbeddingRole
+  readonly text: string
+}
+
+export const isTraceSearchSemanticMessage = (message: { readonly role: MessageEmbeddingRole }): boolean =>
+  message.role === "user" || message.role === "assistant"
+
+export const extractTraceSearchEmbeddingMessages = (
+  messages: readonly GenAIMessage[],
+): readonly TraceSearchEmbeddingMessage[] =>
+  messages
+    .map((message, index) => ({
+      index,
+      role: roleOf(message),
+      text: stripToolTelemetry(formatMessage(message, formatPartForMessageEmbedding)),
+    }))
+    .filter((message) => message.text.length > 0)
 
 interface ExtractedTurn {
   readonly text: string

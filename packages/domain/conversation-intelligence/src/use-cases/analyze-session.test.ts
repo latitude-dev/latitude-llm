@@ -1,4 +1,4 @@
-import { AI, type AIShape, type GenerateResult } from "@domain/ai"
+import { AI, type AIShape, DEFAULT_EMBEDDING_CONFIG, type GenerateResult } from "@domain/ai"
 import {
   ChSqlClient,
   DistributedLockRepository,
@@ -13,7 +13,19 @@ import {
   TraceId,
 } from "@domain/shared"
 import { createFakeChSqlClient, createFakeDistributedLockRepository, createFakeSqlClient } from "@domain/shared/testing"
-import { type SessionDetail, SessionRepository } from "@domain/spans"
+import {
+  canonicalizeMessageForEmbedding,
+  hashMessageContent,
+  type MessageEmbedding,
+  MessageEmbeddingRepository,
+  type MessageEmbeddingRepositoryShape,
+  type MessageEmbeddingUpsert,
+  type SessionConversationSpineMessage,
+  type SessionDetail,
+  SessionRepository,
+  TraceSearchBudget,
+  type TraceSearchBudgetShape,
+} from "@domain/spans"
 import { createFakeSessionRepository } from "@domain/spans/testing"
 import {
   TAXONOMY_OBSERVATION_RETENTION_DAYS,
@@ -27,6 +39,7 @@ import {
 } from "@domain/taxonomy"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
+import { normalizeMessages } from "../normalization.ts"
 import { SessionAnalysisRepository } from "../ports/session-analysis-repository.ts"
 import { SessionMomentLabelRepository } from "../ports/session-moment-label-repository.ts"
 import { SessionSemanticMomentRepository } from "../ports/session-semantic-moment-repository.ts"
@@ -35,7 +48,10 @@ import {
   createFakeSessionMomentLabelRepository,
   createFakeSessionSemanticMomentRepository,
 } from "../testing/index.ts"
-import { analyzeSessionUseCase } from "./analyze-session.ts"
+import {
+  analyzeSessionUseCase,
+  clearConversationIntelligenceAnchorEmbeddingCacheForTesting,
+} from "./analyze-session.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
@@ -138,6 +154,53 @@ const createFakeTaxonomyObservationRepository = (seed: readonly TaxonomyMomentOb
   return { repository: repository as TaxonomyObservationRepositoryShape, rows }
 }
 
+const embeddingKey = (row: Pick<MessageEmbedding, "organizationId" | "projectId" | "contentHash" | "embeddingModel">) =>
+  `${row.organizationId}|${row.projectId}|${row.embeddingModel}|${row.contentHash}`
+
+const createFakeMessageEmbeddingRepository = (seed: readonly MessageEmbedding[] = []) => {
+  const rows = new Map(seed.map((row) => [embeddingKey(row), row] as const))
+  const upserts: MessageEmbeddingUpsert[] = []
+  const repository: MessageEmbeddingRepositoryShape = {
+    findByHashes: ({ organizationId, projectId, contentHashes }) =>
+      Effect.sync(() =>
+        contentHashes.flatMap((contentHash) => {
+          const row = rows.get(
+            embeddingKey({
+              organizationId,
+              projectId,
+              contentHash,
+              embeddingModel: DEFAULT_EMBEDDING_CONFIG.model,
+            }),
+          )
+          return row ? [row] : []
+        }),
+      ),
+    upsertMany: (newRows) =>
+      Effect.sync(() => {
+        upserts.push(...newRows)
+        for (const row of newRows) {
+          rows.set(embeddingKey(row), {
+            ...row,
+            insertedAt: row.insertedAt ?? now,
+          })
+        }
+      }),
+  }
+  return { repository, rows, upserts }
+}
+
+const createFakeTraceSearchBudget = (allowed = true) => {
+  const consumedTokens: number[] = []
+  const repository: TraceSearchBudgetShape = {
+    tryConsume: (_organizationId, tokens) =>
+      Effect.sync(() => {
+        consumedTokens.push(tokens)
+        return allowed
+      }),
+  }
+  return { repository, consumedTokens }
+}
+
 const makeCluster = (overrides: Partial<TaxonomyCluster> = {}): TaxonomyCluster => ({
   id: TaxonomyClusterId("c".repeat(24)),
   organizationId,
@@ -168,20 +231,48 @@ const makeSessionWithMessages = (messages: readonly ReturnType<typeof message>[]
     outputMessages: messages.slice(1),
   })
 
+const sessionConversationMessages = (session: SessionDetail): readonly SessionConversationSpineMessage[] => {
+  const systemMessage =
+    Array.isArray(session.systemInstructions) && session.systemInstructions.length > 0
+      ? [{ role: "system", parts: session.systemInstructions }]
+      : []
+  return normalizeMessages([...systemMessage, ...session.lastInputMessages, ...session.outputMessages]).map(
+    (message) => ({
+      role: message.role,
+      content: message.text,
+      ...(message.isCompactionSummaryCandidate ? { isCompactionSummaryCandidate: true } : {}),
+    }),
+  )
+}
+
 const runUseCase = (input: {
   readonly session: SessionDetail
   readonly ai?: AIShape
   readonly seedAnalyses?: readonly import("../entities/session-analysis.ts").SessionAnalysis[]
   readonly seedClusters?: readonly TaxonomyCluster[]
   readonly seedTaxonomyObservations?: readonly TaxonomyMomentObservation[]
+  readonly seedMessageEmbeddings?: readonly MessageEmbedding[]
+  readonly budgetAllowed?: boolean
+  readonly resetAnchorCache?: boolean
+  readonly spineMessages?: readonly SessionConversationSpineMessage[]
 }) => {
+  if (input.resetAnchorCache !== false) clearConversationIntelligenceAnchorEmbeddingCacheForTesting()
   const analyses = createFakeSessionAnalysisRepository(input.seedAnalyses ?? [])
   const semanticMoments = createFakeSessionSemanticMomentRepository()
   const momentLabels = createFakeSessionMomentLabelRepository()
   const taxonomyObservations = createFakeTaxonomyObservationRepository(input.seedTaxonomyObservations)
   const taxonomyClusters = createFakeTaxonomyClusterRepository(input.seedClusters)
   const taxonomyLocks = createFakeDistributedLockRepository()
-  const sessions = createFakeSessionRepository({ findBySessionId: () => Effect.succeed(input.session) })
+  const sessions = createFakeSessionRepository({
+    findBySessionId: () => Effect.succeed(input.session),
+    findConversationSpineBySessionId: () =>
+      Effect.succeed({
+        source: input.spineMessages ? "trace_message_occurrences" : "session_detail",
+        messages: input.spineMessages ?? sessionConversationMessages(input.session),
+      }),
+  })
+  const messageEmbeddings = createFakeMessageEmbeddingRepository(input.seedMessageEmbeddings ?? [])
+  const traceSearchBudget = createFakeTraceSearchBudget(input.budgetAllowed ?? true)
   const ai: AIShape =
     input.ai ??
     ({
@@ -204,13 +295,24 @@ const runUseCase = (input: {
     Effect.provide(Layer.succeed(TaxonomyObservationRepository, taxonomyObservations.repository)),
     Effect.provide(Layer.succeed(TaxonomyClusterRepository, taxonomyClusters.repository)),
     Effect.provide(Layer.succeed(DistributedLockRepository, taxonomyLocks.repository)),
+    Effect.provide(Layer.succeed(MessageEmbeddingRepository, messageEmbeddings.repository)),
+    Effect.provide(Layer.succeed(TraceSearchBudget, traceSearchBudget.repository)),
     Effect.provide(Layer.succeed(AI, ai)),
     Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
     Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
     Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
   )
 
-  return { effect, analyses, semanticMoments, momentLabels, taxonomyObservations, taxonomyClusters }
+  return {
+    effect,
+    analyses,
+    semanticMoments,
+    momentLabels,
+    taxonomyObservations,
+    taxonomyClusters,
+    messageEmbeddings,
+    traceSearchBudget,
+  }
 }
 
 describe("analyzeSessionUseCase", () => {
@@ -261,6 +363,150 @@ describe("analyzeSessionUseCase", () => {
     )
   })
 
+  it("reuses stored message embeddings without embedding turn text again", async () => {
+    const userText = "I need help with my roaming data plan"
+    const assistantText = "I can help troubleshoot roaming data settings"
+    const userHash = await Effect.runPromise(hashMessageContent({ role: "user", text: userText }))
+    const assistantHash = await Effect.runPromise(hashMessageContent({ role: "assistant", text: assistantText }))
+    const canonicalUser = canonicalizeMessageForEmbedding({ role: "user", text: userText })
+    const canonicalAssistant = canonicalizeMessageForEmbedding({ role: "assistant", text: assistantText })
+    const { effect, messageEmbeddings, traceSearchBudget } = runUseCase({
+      session: makeSession(),
+      seedMessageEmbeddings: [
+        {
+          organizationId,
+          projectId,
+          contentHash: userHash,
+          embedding: [1, 0],
+          embeddingModel: DEFAULT_EMBEDDING_CONFIG.model,
+          insertedAt: now,
+        },
+        {
+          organizationId,
+          projectId,
+          contentHash: assistantHash,
+          embedding: [0, 1],
+          embeddingModel: DEFAULT_EMBEDDING_CONFIG.model,
+          insertedAt: now,
+        },
+      ],
+      ai: {
+        generate: <T>() => Effect.die(`generate not used`) as Effect.Effect<GenerateResult<T>, never>,
+        embed: (input) => {
+          if (input.text === canonicalUser || input.text === canonicalAssistant) {
+            return Effect.die("stored message embedding should be reused")
+          }
+          return Effect.succeed({ embedding: [1, 0] })
+        },
+        rerank: () => Effect.die("rerank not used"),
+      },
+    })
+
+    await Effect.runPromise(effect)
+
+    expect(messageEmbeddings.upserts).toHaveLength(0)
+    expect(traceSearchBudget.consumedTokens).toHaveLength(0)
+  })
+
+  it("records a failed analysis when the embedding budget is exhausted", async () => {
+    const { effect, analyses } = runUseCase({
+      session: makeSession(),
+      budgetAllowed: false,
+    })
+
+    const result = await Effect.runPromise(effect)
+    const analysis = [...analyses.rows.values()][0]
+
+    expect(result).toEqual({ action: "recorded", status: "failed", momentCount: 0 })
+    expect(analysis?.analysisStatus).toBe("failed")
+    expect(analysis?.statusReason).toBe("Conversation intelligence embedding budget exhausted")
+  })
+
+  it("embeds and writes only distinct missing message embeddings", async () => {
+    const repeatedUser = "Please help with roaming"
+    const assistant = "I can help with roaming"
+    const canonicalUser = canonicalizeMessageForEmbedding({ role: "user", text: repeatedUser })
+    const canonicalAssistant = canonicalizeMessageForEmbedding({ role: "assistant", text: assistant })
+    const embeddedTexts: string[] = []
+    const { effect, messageEmbeddings, traceSearchBudget } = runUseCase({
+      session: makeSessionWithMessages([
+        message("user", repeatedUser),
+        message("user", repeatedUser),
+        message("assistant", assistant),
+      ]),
+      ai: {
+        generate: <T>() => Effect.die(`generate not used`) as Effect.Effect<GenerateResult<T>, never>,
+        embed: (input) => {
+          embeddedTexts.push(input.text)
+          if (input.text === canonicalUser) return Effect.succeed({ embedding: [1, 0] })
+          if (input.text === canonicalAssistant) return Effect.succeed({ embedding: [0, 1] })
+          return Effect.succeed({ embedding: [1, 0] })
+        },
+        rerank: () => Effect.die("rerank not used"),
+      },
+    })
+
+    await Effect.runPromise(effect)
+
+    expect(embeddedTexts.filter((text) => text === canonicalUser)).toHaveLength(1)
+    expect(embeddedTexts.filter((text) => text === canonicalAssistant)).toHaveLength(1)
+    expect(messageEmbeddings.upserts.map((row) => row.contentHash)).toHaveLength(2)
+    expect(traceSearchBudget.consumedTokens).toHaveLength(1)
+  })
+
+  it("caches label anchor embeddings across analysis runs", async () => {
+    clearConversationIntelligenceAnchorEmbeddingCacheForTesting()
+    let anchorEmbedCalls = 0
+    const ai: AIShape = {
+      generate: <T>() => Effect.die(`generate not used`) as Effect.Effect<GenerateResult<T>, never>,
+      embed: (input) => {
+        if (!input.text.startsWith("user:") && !input.text.startsWith("assistant:")) {
+          anchorEmbedCalls++
+        }
+        return Effect.succeed({ embedding: [1, 0] })
+      },
+      rerank: () => Effect.die("rerank not used"),
+    }
+
+    const first = runUseCase({ session: makeSession(), ai, resetAnchorCache: false })
+    await Effect.runPromise(first.effect)
+    const callsAfterFirstRun = anchorEmbedCalls
+    expect(callsAfterFirstRun).toBeGreaterThan(0)
+
+    const second = runUseCase({ session: makeSession(), ai, resetAnchorCache: false })
+    await Effect.runPromise(second.effect)
+
+    expect(anchorEmbedCalls).toBe(callsAfterFirstRun)
+  })
+
+  it("reuses unchanged taxonomy projection embeddings from the latest observation", async () => {
+    const first = runUseCase({ session: makeSession() })
+    await Effect.runPromise(first.effect)
+    const previous = first.taxonomyObservations.rows[0]
+    expect(previous).toBeDefined()
+
+    const projectionText = String(previous?.projectionMetadata.summary)
+    const second = runUseCase({
+      session: makeSession({ systemInstructions: [{ type: "text", content: "Changed system instruction" }] as never }),
+      seedTaxonomyObservations: previous ? [previous] : [],
+      ai: {
+        generate: <T>() => Effect.die(`generate not used`) as Effect.Effect<GenerateResult<T>, never>,
+        embed: (input) => {
+          if (input.text === projectionText)
+            return Effect.die("unchanged taxonomy projection should reuse prior vector")
+          return Effect.succeed({ embedding: [1, 0] })
+        },
+        rerank: () => Effect.die("rerank not used"),
+      },
+    })
+
+    await Effect.runPromise(second.effect)
+
+    const latestObservation = second.taxonomyObservations.rows.at(-1)
+    expect(latestObservation?.projectionHash).toBe(previous?.projectionHash)
+    expect(latestObservation?.embedding).toEqual(previous?.embedding)
+  })
+
   it("uses the full conversation for taxonomy naming summaries", async () => {
     const { effect, taxonomyObservations } = runUseCase({
       session: makeSessionWithMessages([
@@ -278,6 +524,67 @@ describe("analyzeSessionUseCase", () => {
     expect(topicSummary).toContain("cambiar la chaqueta")
     expect(topicSummary).toContain("Puedo ayudarte")
     expect(topicSummary).toContain("chaqueta polar roja grande")
+  })
+
+  it("uses the occurrence-derived distinct spine for compacted sessions", async () => {
+    const { effect, taxonomyObservations } = runUseCase({
+      session: makeSessionWithMessages([
+        message("user", "Summary: the user asked about an order."),
+        message("assistant", "I can continue from the summary."),
+      ]),
+      spineMessages: [
+        { role: "user", content: "I need to change the delivery address on order A-100." },
+        { role: "assistant", content: "I can help update the delivery address." },
+        {
+          role: "user",
+          content: "Summary: the user had already discussed order A-100 and address changes.",
+          isCompactionSummaryCandidate: true,
+        },
+        { role: "user", content: "Please send it to the Barcelona office instead." },
+        { role: "assistant", content: "The delivery address is now the Barcelona office." },
+      ],
+    })
+
+    await Effect.runPromise(effect)
+
+    const [observation] = taxonomyObservations.rows as TaxonomyMomentObservation[]
+    const topicSummary = String(observation?.projectionMetadata.summary)
+
+    expect(topicSummary).toContain("delivery address on order A-100")
+    expect(topicSummary).toContain("Summary: the user had already discussed order A-100")
+    expect(topicSummary).toContain("Barcelona office")
+  })
+
+  it("excludes compaction summary candidates from anchor label scoring", async () => {
+    const { effect, momentLabels } = runUseCase({
+      session: makeSession(),
+      spineMessages: [
+        { role: "user", content: "Can you check where my package is?" },
+        { role: "assistant", content: "I can check the shipment status." },
+        {
+          role: "user",
+          content: "Summary: the user was frustrated and angry about a previous answer.",
+          isCompactionSummaryCandidate: true,
+        },
+        { role: "user", content: "What is the latest tracking status?" },
+        { role: "assistant", content: "The package is in transit and arrives tomorrow." },
+      ],
+      ai: {
+        generate: <T>() => Effect.die(`generate not used`) as Effect.Effect<GenerateResult<T>, never>,
+        embed: (input) => {
+          const text = input.text.toLowerCase()
+          if (text.includes("frustrated") || text.includes("frustration annoyance or anger")) {
+            return Effect.succeed({ embedding: [1, 0] })
+          }
+          return Effect.succeed({ embedding: [0, 1] })
+        },
+        rerank: () => Effect.die("rerank not used"),
+      },
+    })
+
+    await Effect.runPromise(effect)
+
+    expect(momentLabels.rows.some((label) => label.kind === "user_frustration")).toBe(false)
   })
 
   it("does not truncate long taxonomy projections to the opening verification flow", async () => {
@@ -487,6 +794,8 @@ describe("analyzeSessionUseCase", () => {
     const taxonomyClusters = createFakeTaxonomyClusterRepository()
     const taxonomyLocks = createFakeDistributedLockRepository()
     const sessions = createFakeSessionRepository()
+    const messageEmbeddings = createFakeMessageEmbeddingRepository()
+    const traceSearchBudget = createFakeTraceSearchBudget()
 
     const result = await Effect.runPromise(
       analyzeSessionUseCase({
@@ -503,6 +812,8 @@ describe("analyzeSessionUseCase", () => {
         Effect.provide(Layer.succeed(TaxonomyObservationRepository, taxonomyObservations.repository)),
         Effect.provide(Layer.succeed(TaxonomyClusterRepository, taxonomyClusters.repository)),
         Effect.provide(Layer.succeed(DistributedLockRepository, taxonomyLocks.repository)),
+        Effect.provide(Layer.succeed(MessageEmbeddingRepository, messageEmbeddings.repository)),
+        Effect.provide(Layer.succeed(TraceSearchBudget, traceSearchBudget.repository)),
         Effect.provide(
           Layer.succeed(AI, {
             generate: () => Effect.die("not used"),
