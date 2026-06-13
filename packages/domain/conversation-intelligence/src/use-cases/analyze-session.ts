@@ -351,10 +351,7 @@ const detectEmbeddingAnchorMoments = (input: {
       for (const { config, positive, contrast } of embeddedAnchors) {
         const sourceTurns = segment.turnIndexes.flatMap((index) => {
           const turn = turnsByIndex.get(index)
-          const message = messagesByIndex.get(index)
-          return turn && config.roles.includes(turn.role) && message?.isCompactionSummaryCandidate !== true
-            ? [turn]
-            : []
+          return turn && config.roles.includes(turn.role) ? [turn] : []
         })
         if (sourceTurns.length === 0) continue
         // Score each turn individually instead of the segment centroid: with
@@ -426,14 +423,11 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
     }
 
     const traceIds = session.traceIds.filter((traceId) => traceId.length === 32).map(TraceId)
-    const conversationSpine = yield* sessions
-      .findConversationSpineBySessionId({ organizationId, projectId, sessionId })
-      .pipe(
-        Effect.catchTag("NotFoundError", () =>
-          Effect.succeed({ source: "session_detail" as const, messages: sessionConversationMessages(session) }),
-        ),
-      )
-    const rawMessages = conversationSpine.messages
+    // Analyze the latest trace's conversation — the exact message list the
+    // session drawer renders. Label indices must address the same positions the
+    // UI anchors badges to (`data-message-index`); a consolidated cross-trace
+    // spine renumbers messages and the two diverge.
+    const rawMessages = sessionConversationMessages(session)
     const normalizedMessages = normalizeMessages(rawMessages)
     const document = documentFromMessages(normalizedMessages)
     const analysisHash = yield* hash(`${CONVERSATION_INTELLIGENCE_DETECTOR_VERSION}\0${session.sessionId}\0${document}`)

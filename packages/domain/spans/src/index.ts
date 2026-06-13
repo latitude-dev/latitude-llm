@@ -97,8 +97,6 @@ export type {
 } from "./ports/message-embedding-repository.ts"
 export { MessageEmbeddingRepository } from "./ports/message-embedding-repository.ts"
 export type {
-  SessionConversationSpine,
-  SessionConversationSpineMessage,
   SessionCountResult,
   SessionDistinctColumn,
   SessionListCursor,

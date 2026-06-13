@@ -20,7 +20,6 @@ import {
   MessageEmbeddingRepository,
   type MessageEmbeddingRepositoryShape,
   type MessageEmbeddingUpsert,
-  type SessionConversationSpineMessage,
   type SessionDetail,
   SessionRepository,
   TraceSearchBudget,
@@ -39,7 +38,6 @@ import {
 } from "@domain/taxonomy"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { normalizeMessages } from "../normalization.ts"
 import { SessionAnalysisRepository } from "../ports/session-analysis-repository.ts"
 import { SessionMomentLabelRepository } from "../ports/session-moment-label-repository.ts"
 import { SessionSemanticMomentRepository } from "../ports/session-semantic-moment-repository.ts"
@@ -231,20 +229,6 @@ const makeSessionWithMessages = (messages: readonly ReturnType<typeof message>[]
     outputMessages: messages.slice(1),
   })
 
-const sessionConversationMessages = (session: SessionDetail): readonly SessionConversationSpineMessage[] => {
-  const systemMessage =
-    Array.isArray(session.systemInstructions) && session.systemInstructions.length > 0
-      ? [{ role: "system", parts: session.systemInstructions }]
-      : []
-  return normalizeMessages([...systemMessage, ...session.lastInputMessages, ...session.outputMessages]).map(
-    (message) => ({
-      role: message.role,
-      content: message.text,
-      ...(message.isCompactionSummaryCandidate ? { isCompactionSummaryCandidate: true } : {}),
-    }),
-  )
-}
-
 const runUseCase = (input: {
   readonly session: SessionDetail
   readonly ai?: AIShape
@@ -254,7 +238,6 @@ const runUseCase = (input: {
   readonly seedMessageEmbeddings?: readonly MessageEmbedding[]
   readonly budgetAllowed?: boolean
   readonly resetAnchorCache?: boolean
-  readonly spineMessages?: readonly SessionConversationSpineMessage[]
 }) => {
   if (input.resetAnchorCache !== false) clearConversationIntelligenceAnchorEmbeddingCacheForTesting()
   const analyses = createFakeSessionAnalysisRepository(input.seedAnalyses ?? [])
@@ -265,11 +248,6 @@ const runUseCase = (input: {
   const taxonomyLocks = createFakeDistributedLockRepository()
   const sessions = createFakeSessionRepository({
     findBySessionId: () => Effect.succeed(input.session),
-    findConversationSpineBySessionId: () =>
-      Effect.succeed({
-        source: input.spineMessages ? "trace_message_occurrences" : "session_detail",
-        messages: input.spineMessages ?? sessionConversationMessages(input.session),
-      }),
   })
   const messageEmbeddings = createFakeMessageEmbeddingRepository(input.seedMessageEmbeddings ?? [])
   const traceSearchBudget = createFakeTraceSearchBudget(input.budgetAllowed ?? true)
@@ -526,67 +504,6 @@ describe("analyzeSessionUseCase", () => {
     expect(topicSummary).toContain("chaqueta polar roja grande")
   })
 
-  it("uses the occurrence-derived distinct spine for compacted sessions", async () => {
-    const { effect, taxonomyObservations } = runUseCase({
-      session: makeSessionWithMessages([
-        message("user", "Summary: the user asked about an order."),
-        message("assistant", "I can continue from the summary."),
-      ]),
-      spineMessages: [
-        { role: "user", content: "I need to change the delivery address on order A-100." },
-        { role: "assistant", content: "I can help update the delivery address." },
-        {
-          role: "user",
-          content: "Summary: the user had already discussed order A-100 and address changes.",
-          isCompactionSummaryCandidate: true,
-        },
-        { role: "user", content: "Please send it to the Barcelona office instead." },
-        { role: "assistant", content: "The delivery address is now the Barcelona office." },
-      ],
-    })
-
-    await Effect.runPromise(effect)
-
-    const [observation] = taxonomyObservations.rows as TaxonomyMomentObservation[]
-    const topicSummary = String(observation?.projectionMetadata.summary)
-
-    expect(topicSummary).toContain("delivery address on order A-100")
-    expect(topicSummary).toContain("Summary: the user had already discussed order A-100")
-    expect(topicSummary).toContain("Barcelona office")
-  })
-
-  it("excludes compaction summary candidates from anchor label scoring", async () => {
-    const { effect, momentLabels } = runUseCase({
-      session: makeSession(),
-      spineMessages: [
-        { role: "user", content: "Can you check where my package is?" },
-        { role: "assistant", content: "I can check the shipment status." },
-        {
-          role: "user",
-          content: "Summary: the user was frustrated and angry about a previous answer.",
-          isCompactionSummaryCandidate: true,
-        },
-        { role: "user", content: "What is the latest tracking status?" },
-        { role: "assistant", content: "The package is in transit and arrives tomorrow." },
-      ],
-      ai: {
-        generate: <T>() => Effect.die(`generate not used`) as Effect.Effect<GenerateResult<T>, never>,
-        embed: (input) => {
-          const text = input.text.toLowerCase()
-          if (text.includes("frustrated") || text.includes("frustration annoyance or anger")) {
-            return Effect.succeed({ embedding: [1, 0] })
-          }
-          return Effect.succeed({ embedding: [0, 1] })
-        },
-        rerank: () => Effect.die("rerank not used"),
-      },
-    })
-
-    await Effect.runPromise(effect)
-
-    expect(momentLabels.rows.some((label) => label.kind === "user_frustration")).toBe(false)
-  })
-
   it("does not truncate long taxonomy projections to the opening verification flow", async () => {
     const repeatedVerification =
       "assistant: To continue, I need to verify your identity with email, name, and ZIP.\n\n".repeat(30)
@@ -756,6 +673,56 @@ describe("analyzeSessionUseCase", () => {
     expect(frustration?.actor).toBe("user")
     expect(frustration?.firstMessageIndex).toBe(3)
     expect(frustration?.lastMessageIndex).toBe(3)
+    expect(renderedMessages[frustration?.lastMessageIndex ?? -1]?.role).toBe("user")
+    expect(frustration?.evidence).toBe(frustratedUserMessage)
+  })
+
+  // Tool messages occupy a slot in the rendered conversation (the UI keeps
+  // their `data-message-index`), so a label after one must keep its raw
+  // position. Indexing against a tool-stripped/renumbered list shifted labels
+  // onto the wrong message.
+  it("keeps label indices aligned when tool messages sit between turns", async () => {
+    const frustratedUserMessage = "This is incredibly frustrating, you keep giving me the wrong answer."
+    const toolMessage = { role: "tool", parts: [{ type: "text", content: 'lookup_account => {"status":"ok"}' }] }
+    const renderedMessages = [
+      { role: "system", parts: [{ type: "text", content: "You are a support assistant" }] },
+      message("user", "Can you help me update my billing email?"),
+      message("assistant", "Let me check your account."),
+      toolMessage,
+      message("user", frustratedUserMessage),
+      message("assistant", "I'm sorry, I will correct that now."),
+    ] as const
+    const { effect, momentLabels } = runUseCase({
+      session: makeSession({
+        systemInstructions: [{ type: "text", content: "You are a support assistant" }] as never,
+        inputMessages: [message("user", "Can you help me update my billing email?")],
+        lastInputMessages: [
+          renderedMessages[1],
+          renderedMessages[2],
+          renderedMessages[3],
+          renderedMessages[4],
+        ] as never,
+        outputMessages: [renderedMessages[5]],
+      }),
+      ai: {
+        generate: <T>() => Effect.die(`generate not used`) as Effect.Effect<GenerateResult<T>, never>,
+        embed: (input) => {
+          const text = input.text.toLowerCase()
+          if (text.includes("frustrat") || text.includes("annoyance") || text.includes("anger")) {
+            return Effect.succeed({ embedding: [1, 0] })
+          }
+          return Effect.succeed({ embedding: [-1, 0] })
+        },
+        rerank: () => Effect.die("rerank not used"),
+      },
+    })
+
+    await Effect.runPromise(effect)
+
+    const frustration = momentLabels.rows.find((label) => label.kind === "user_frustration")
+    expect(frustration).toBeDefined()
+    expect(frustration?.firstMessageIndex).toBe(4)
+    expect(frustration?.lastMessageIndex).toBe(4)
     expect(renderedMessages[frustration?.lastMessageIndex ?? -1]?.role).toBe("user")
     expect(frustration?.evidence).toBe(frustratedUserMessage)
   })
