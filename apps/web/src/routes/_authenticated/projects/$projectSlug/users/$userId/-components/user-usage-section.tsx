@@ -7,13 +7,15 @@ function UsageList({
   userId,
   dimension,
   title,
+  errorsOnly,
 }: {
   readonly projectId: string
   readonly userId: string
   readonly dimension: "model" | "provider" | "tool"
   readonly title: string
+  readonly errorsOnly: boolean
 }) {
-  const { data: slices, isLoading } = useUserUsage({ projectId, userId, dimension })
+  const { data: slices, isLoading } = useUserUsage({ projectId, userId, dimension, errorsOnly })
   const maxCount = Math.max(...(slices ?? []).map((slice) => slice.traceCount), 1)
 
   return (
@@ -52,12 +54,20 @@ function UsageList({
   )
 }
 
-export function UserUsageSection({ projectId, userId }: { readonly projectId: string; readonly userId: string }) {
+export function UserUsageSection({
+  projectId,
+  userId,
+  errorsOnly,
+}: {
+  readonly projectId: string
+  readonly userId: string
+  readonly errorsOnly: boolean
+}) {
   return (
     <div className="flex flex-col gap-4 md:flex-row">
-      <UsageList projectId={projectId} userId={userId} dimension="model" title="Models" />
-      <UsageList projectId={projectId} userId={userId} dimension="provider" title="Providers" />
-      <UsageList projectId={projectId} userId={userId} dimension="tool" title="Tools" />
+      <UsageList projectId={projectId} userId={userId} dimension="model" title="Models" errorsOnly={errorsOnly} />
+      <UsageList projectId={projectId} userId={userId} dimension="provider" title="Providers" errorsOnly={errorsOnly} />
+      <UsageList projectId={projectId} userId={userId} dimension="tool" title="Tools" errorsOnly={errorsOnly} />
     </div>
   )
 }

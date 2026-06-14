@@ -154,6 +154,8 @@ export interface UserAnalyticsRepositoryShape {
     readonly userIds: readonly ExternalUserId[]
     readonly timeRange: { readonly from: Date; readonly to: Date }
     readonly bucketSeconds: number
+    /** Count only errored traces (the "error view" toggle). */
+    readonly errorsOnly?: boolean
   }): Effect.Effect<readonly UserActivitySeries[], RepositoryError, ChSqlClient>
 
   getOverviewByProjectId(input: {
@@ -167,6 +169,8 @@ export interface UserAnalyticsRepositoryShape {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly userId: ExternalUserId
+    /** Aggregate only errored traces (the "error view" toggle). */
+    readonly errorsOnly?: boolean
   }): Effect.Effect<UserProfile, NotFoundError | RepositoryError, ChSqlClient>
 
   /** Top values of one usage dimension across the user's traces, by distinct trace count. */
@@ -176,6 +180,8 @@ export interface UserAnalyticsRepositoryShape {
     readonly userId: ExternalUserId
     readonly dimension: UserUsageDimension
     readonly limit?: number
+    /** Restrict to the user's errored traces (the "error view" toggle). */
+    readonly errorsOnly?: boolean
   }): Effect.Effect<readonly UserUsageSlice[], RepositoryError, ChSqlClient>
 }
 

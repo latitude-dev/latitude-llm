@@ -241,6 +241,7 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
       userIds,
       timeRange,
       bucketSeconds,
+      errorsOnly,
     }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -260,6 +261,7 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
                     WHERE user_id IN ({userIds:Array(String)})
                       AND start_time >= {fromTime:DateTime64(9, 'UTC')}
                       AND start_time < {toTime:DateTime64(9, 'UTC')}
+                      ${errorsOnly ? "AND error_count > 0" : ""}
                     GROUP BY user_id, bucket_start
                     ORDER BY user_id ASC, bucket_start ASC`,
               query_params: {
@@ -397,7 +399,12 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
         } satisfies UsersOverview
       })
 
-    const findByUserId: UserAnalyticsRepositoryShape["findByUserId"] = ({ organizationId, projectId, userId }) =>
+    const findByUserId: UserAnalyticsRepositoryShape["findByUserId"] = ({
+      organizationId,
+      projectId,
+      userId,
+      errorsOnly,
+    }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
 
@@ -411,6 +418,7 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
                       uniqExact(toDate(start_time)) AS active_days
                     FROM (${USER_TRACE_ROLLUP})
                     WHERE user_id = {userId:String}
+                      ${errorsOnly ? "AND error_count > 0" : ""}
                     GROUP BY user_id`,
               query_params: {
                 organizationId: organizationId as string,
@@ -452,6 +460,7 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
       userId,
       dimension,
       limit,
+      errorsOnly,
     }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -467,13 +476,15 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
                         SELECT
                           trace_id,
                           argMaxIfMerge(user_id) AS user_id,
-                          groupUniqArrayIfMerge(${column}) AS ${column}
+                          groupUniqArrayIfMerge(${column}) AS ${column},
+                          sum(error_count) AS error_count
                         FROM traces
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                         GROUP BY organization_id, project_id, trace_id
                       )
                       WHERE user_id = {userId:String}
+                        ${errorsOnly ? "AND error_count > 0" : ""}
                     )
                     WHERE value != ''
                     GROUP BY value

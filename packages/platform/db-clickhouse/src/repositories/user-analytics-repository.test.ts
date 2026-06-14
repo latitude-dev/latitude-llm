@@ -342,6 +342,16 @@ describe("UserAnalyticsRepository", () => {
       expect(profile.avgDurationNs).toBeGreaterThan(0)
     })
 
+    it("restricts the profile to errored traces when errorsOnly is set", async () => {
+      const profile = await runCh(
+        repo.findByUserId({ organizationId: ORG_ID, projectId: PROJECT_ID, userId: USER_A, errorsOnly: true }),
+      )
+
+      expect(profile.traceCount).toBe(1)
+      expect(profile.sessionCount).toBe(1)
+      expect(profile.errorSessionCount).toBe(1)
+    })
+
     it("fails with NotFoundError for unknown users", async () => {
       const result = await runCh(
         repo
@@ -380,6 +390,20 @@ describe("UserAnalyticsRepository", () => {
       )
 
       expect(slices).toEqual([{ value: "search", traceCount: 1 }])
+    })
+
+    it("restricts the breakdown to errored traces when errorsOnly is set", async () => {
+      const slices = await runCh(
+        repo.usageBreakdownByUserId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          userId: USER_A,
+          dimension: "model",
+          errorsOnly: true,
+        }),
+      )
+
+      expect(slices).toEqual([{ value: "gpt-4o-mini", traceCount: 1 }])
     })
   })
 })

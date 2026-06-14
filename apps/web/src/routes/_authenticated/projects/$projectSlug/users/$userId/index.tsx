@@ -53,8 +53,16 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/user
   component: UserDetailPage,
 })
 
-function UserActivityChart({ projectId, userId }: { readonly projectId: string; readonly userId: string }) {
-  const { data: activity, isLoading } = useUserActivity({ projectId, userId })
+function UserActivityChart({
+  projectId,
+  userId,
+  errorsOnly,
+}: {
+  readonly projectId: string
+  readonly userId: string
+  readonly errorsOnly: boolean
+}) {
+  const { data: activity, isLoading } = useUserActivity({ projectId, userId, errorsOnly })
 
   const chartData = useMemo(
     () =>
@@ -73,7 +81,9 @@ function UserActivityChart({ projectId, userId }: { readonly projectId: string; 
   if (activity.buckets.every((bucket) => bucket.count === 0)) {
     return (
       <div className="flex min-h-[80px] items-center justify-center">
-        <Text.H6 color="foregroundMuted">No activity in the last 30 days</Text.H6>
+        <Text.H6 color="foregroundMuted">
+          {errorsOnly ? "No errors in the last 30 days" : "No activity in the last 30 days"}
+        </Text.H6>
       </div>
     )
   }
@@ -85,7 +95,9 @@ function UserActivityChart({ projectId, userId }: { readonly projectId: string; 
       showYAxis={false}
       xAxisLabelFontSize={10}
       ariaLabel="User traces over time"
-      formatTooltip={(category, value) => `${category}<br/><b>${formatCount(value)}</b> traces`}
+      formatTooltip={(category, value) =>
+        `${category}<br/><b>${formatCount(value)}</b> ${errorsOnly ? "errored traces" : "traces"}`
+      }
     />
   )
 }
@@ -93,10 +105,10 @@ function UserActivityChart({ projectId, userId }: { readonly projectId: string; 
 function UserDetailPage() {
   const project = useRouteProject()
   const { projectSlug, userId } = Route.useParams()
-  const { data: profile, isLoading: profileLoading } = useUserProfile({ projectId: project.id, userId })
   const [activeSessionId, setActiveSessionId] = useParamState("sessionId", "")
   const [errorsParam, setErrorsParam] = useParamState("errors", "")
   const errorsOnly = errorsParam === "1"
+  const { data: profile, isLoading: profileLoading } = useUserProfile({ projectId: project.id, userId, errorsOnly })
   const [sessionsSorting, setSessionsSorting] = useState(DEFAULT_SESSIONS_SORTING)
 
   const sessionFilters: FilterSet = useMemo(
@@ -207,8 +219,10 @@ function UserDetailPage() {
               <UserStatStrip profile={profile} isLoading={profileLoading} />
 
               <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
-                <Text.H6 color="foregroundMuted">Activity · last 30 days</Text.H6>
-                <UserActivityChart projectId={project.id} userId={userId} />
+                <Text.H6 color="foregroundMuted">
+                  {errorsOnly ? "Errors · last 30 days" : "Activity · last 30 days"}
+                </Text.H6>
+                <UserActivityChart projectId={project.id} userId={userId} errorsOnly={errorsOnly} />
               </div>
 
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
@@ -222,7 +236,7 @@ function UserDetailPage() {
                 </div>
               </div>
 
-              <UserUsageSection projectId={project.id} userId={userId} />
+              <UserUsageSection projectId={project.id} userId={userId} errorsOnly={errorsOnly} />
 
               <div className="flex min-w-0 flex-col gap-3">
                 <div className="flex items-center justify-between gap-2">

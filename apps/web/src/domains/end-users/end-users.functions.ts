@@ -210,6 +210,10 @@ const userInputSchema = z.object({
   userId: z.string().min(1).max(512),
 })
 
+const userProfileInputSchema = userInputSchema.extend({
+  errorsOnly: z.boolean().optional(),
+})
+
 const toUserProfileRecord = (profile: UserProfile) => ({
   userId: profile.userId as string,
   userEmail: profile.userEmail,
@@ -229,7 +233,7 @@ const toUserProfileRecord = (profile: UserProfile) => ({
 export type UserProfileRecord = ReturnType<typeof toUserProfileRecord>
 
 export const getUserProfile = createServerFn({ method: "GET" })
-  .inputValidator(userInputSchema)
+  .inputValidator(userProfileInputSchema)
   .handler(async ({ data }): Promise<UserProfileRecord | null> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
@@ -243,6 +247,7 @@ export const getUserProfile = createServerFn({ method: "GET" })
             organizationId: orgId,
             projectId: ProjectId(data.projectId),
             userId: ExternalUserId(data.userId),
+            ...(data.errorsOnly ? { errorsOnly: true } : {}),
           })
           .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
       }).pipe(withClickHouse(UserAnalyticsRepositoryLive, chClient, orgId), withTracing),
@@ -255,6 +260,7 @@ const userActivityInputSchema = z.object({
   projectId: z.string(),
   userId: z.string().min(1).max(512),
   timeRange: timeRangeSchema.optional(),
+  errorsOnly: z.boolean().optional(),
 })
 
 export interface UserActivityRecord {
@@ -283,6 +289,7 @@ export const getUserActivity = createServerFn({ method: "GET" })
           userIds: [ExternalUserId(data.userId)],
           timeRange: { from, to },
           bucketSeconds,
+          ...(data.errorsOnly ? { errorsOnly: true } : {}),
         })
       }).pipe(withClickHouse(UserAnalyticsRepositoryLive, chClient, orgId), withTracing),
     )
@@ -300,6 +307,7 @@ const userUsageInputSchema = z.object({
   userId: z.string().min(1).max(512),
   dimension: z.enum(["model", "provider", "tool"]),
   limit: z.number().int().min(1).max(50).optional(),
+  errorsOnly: z.boolean().optional(),
 })
 
 export interface UserUsageSliceRecord {
@@ -323,6 +331,7 @@ export const getUserUsage = createServerFn({ method: "GET" })
           userId: ExternalUserId(data.userId),
           dimension: data.dimension,
           ...(data.limit !== undefined ? { limit: data.limit } : {}),
+          ...(data.errorsOnly ? { errorsOnly: true } : {}),
         })
       }).pipe(withClickHouse(UserAnalyticsRepositoryLive, chClient, orgId), withTracing),
     )
