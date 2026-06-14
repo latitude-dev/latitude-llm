@@ -12,7 +12,13 @@ import type {
   SqlClient,
 } from "@domain/shared"
 import { Context, type Effect } from "effect"
-import type { Monitor, MonitorAlert } from "../entities/monitor.ts"
+import type { Monitor, MonitorAlert, MonitorTarget } from "../entities/monitor.ts"
+
+/** An active unified (`event.*`/`metric.*`) alert paired with its owning monitor's target. */
+export interface MetricMonitorAlert {
+  readonly alert: MonitorAlert
+  readonly target: MonitorTarget
+}
 
 /** An (org, project) pair holding at least one active saved-search alert — the sweep's fan-out unit. */
 export interface ProjectWithActiveSavedSearchAlerts {
@@ -170,6 +176,10 @@ export interface MonitorRepositoryShape {
   lockAlertForUpdate(alertId: MonitorAlertId): Effect.Effect<void, RepositoryError, SqlClient>
   /** Active saved-search alerts in a project (live alert + monitor). Org-scoped — the firing orchestrator resolves + evaluates each. */
   listActiveSavedSearchAlerts(projectId: ProjectId): Effect.Effect<readonly MonitorAlert[], RepositoryError, SqlClient>
+  /** Active unified (`event.*`/`metric.*`) alerts in the project, each with its monitor's target. The firing scan's unit for target-on-monitor monitors. */
+  listActiveMetricMonitorAlerts(
+    projectId: ProjectId,
+  ): Effect.Effect<readonly MetricMonitorAlert[], RepositoryError, SqlClient>
   /**
    * For every saved search watched by a live monitor (muted included) in the project: the slug of
    * the earliest-created such monitor, the distinct monitor count, and the severities of every

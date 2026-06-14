@@ -10,8 +10,9 @@ export const alertIncidents = latitudeSchema.table(
     id: cuid("id").primaryKey(),
     organizationId: cuid("organization_id").notNull(),
     projectId: cuid("project_id").notNull(),
-    sourceType: varchar("source_type", { length: 32 }).$type<AlertIncidentSourceType>().notNull(),
-    sourceId: varchar("source_id", { length: 24 }).notNull(),
+    // Null for unified `event.*`/`metric.*` incidents — target lives on the monitor (via monitor_alert_id).
+    sourceType: varchar("source_type", { length: 32 }).$type<AlertIncidentSourceType>(),
+    sourceId: varchar("source_id", { length: 24 }),
     kind: varchar("kind", { length: 64 }).$type<AlertIncidentKind>().notNull(),
     severity: varchar("severity", { length: 16 }).$type<AlertSeverity>().notNull(),
     startedAt: tzTimestamp("started_at").notNull(),

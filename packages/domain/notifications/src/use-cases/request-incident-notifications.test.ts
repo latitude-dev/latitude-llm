@@ -219,7 +219,7 @@ function setup(opts: SetupOpts = {}) {
       ? []
       : [
           {
-            id: IssueId(incident.sourceId),
+            id: IssueId(incident.sourceId ?? cuid("i")),
             organizationId: orgId as string,
             projectId: projectId as string,
             slug: "seeded-issue",

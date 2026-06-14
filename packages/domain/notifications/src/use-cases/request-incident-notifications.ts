@@ -1,4 +1,9 @@
-import { type AlertIncident, AlertIncidentRepository, isIssueEscalationEntrySignals } from "@domain/alerts"
+import {
+  type AlertIncident,
+  AlertIncidentRepository,
+  type AlertIncidentSourceType,
+  isIssueEscalationEntrySignals,
+} from "@domain/alerts"
 import { EvaluationRepository } from "@domain/evaluations"
 import {
   buildHistogramBucketScaffold,
@@ -70,7 +75,10 @@ export interface IncidentNotificationRequest {
 }
 
 export type RequestIncidentNotificationsResult =
-  | { readonly status: "skipped"; readonly reason: "kind-disabled" | "no-recipients" | "monitor-muted" }
+  | {
+      readonly status: "skipped"
+      readonly reason: "kind-disabled" | "no-recipients" | "monitor-muted" | "sourceless-incident"
+    }
   | { readonly status: "ok"; readonly requests: readonly IncidentNotificationRequest[] }
 
 export type RequestIncidentNotificationsError = RepositoryError | NotFoundError
@@ -82,6 +90,16 @@ export type RequestIncidentNotificationsError = RepositoryError | NotFoundError
  * The window is frozen at incident time (the PNG is immutable/cached), UTC-day-aligned the same
  * way the drawer aligns to "now".
  */
+/**
+ * A source-based incident (issue/savedSearch), narrowed so the issue-analytics
+ * snapshots + payload read `sourceId`/`sourceType` without a null check. The
+ * use-case early-returns for sourceless (unified) incidents before any of these run.
+ */
+type SourcedIncident = AlertIncident & { readonly sourceType: AlertIncidentSourceType; readonly sourceId: string }
+
+const isSourcedIncident = (incident: AlertIncident): incident is SourcedIncident =>
+  incident.sourceType !== null && incident.sourceId !== null
+
 const TREND_BUCKET_SECONDS = 12 * 60 * 60
 const TREND_LOOKBACK_DAYS = 14
 
@@ -124,7 +142,7 @@ const resolveKind = (incident: AlertIncident, transition: IncidentTransition): I
  * for `incident.event` (one-shot kinds have nothing to trend at notification time).
  */
 const snapshotTrend = (input: {
-  readonly incident: AlertIncident
+  readonly incident: SourcedIncident
   readonly kind: IncidentNotificationKind
   readonly kShort: number
 }) =>
@@ -190,7 +208,7 @@ const snapshotTrend = (input: {
  * breach "rate climbed to X/hr" copy (the 12h display trend is too coarse to read an hourly rate
  * from). Anchored at incident open. Returns `0` when there's no data in the window.
  */
-const snapshotTriggerRatePerHour = (incident: AlertIncident) =>
+const snapshotTriggerRatePerHour = (incident: SourcedIncident) =>
   Effect.gen(function* () {
     const to = incident.startedAt
     const from = new Date(to.getTime() - RATE_PEAK_WINDOW_MS)
@@ -213,7 +231,7 @@ const snapshotTriggerRatePerHour = (incident: AlertIncident) =>
  * sliced so the email body stays compact. Returns `undefined` when
  * there are no tags so the template can skip the chips block.
  */
-const snapshotTags = (incident: AlertIncident) =>
+const snapshotTags = (incident: SourcedIncident) =>
   Effect.gen(function* () {
     const analytics = yield* ScoreAnalyticsRepository
     const from = new Date(Date.now() - TAGS_LOOKBACK_DAYS * 24 * 60 * 60 * 1000)
@@ -276,7 +294,7 @@ const resolveEvaluationAuthor = (input: { readonly projectId: ProjectId; readonl
  * falls back to the latest evaluation score's `feedback` text.
  * Returns `undefined` when neither exists.
  */
-const snapshotSampleExcerpt = (incident: AlertIncident) =>
+const snapshotSampleExcerpt = (incident: SourcedIncident) =>
   Effect.gen(function* () {
     const scores = yield* ScoreRepository
     const truncate = (text: string): IncidentSampleExcerpt["text"] => text.slice(0, SAMPLE_EXCERPT_MAX_CHARS)
@@ -339,7 +357,7 @@ interface IssueTriageSnapshot {
  * (deleted between the incident and this producer) degrades to `null` so the
  * payload simply omits the fields, like legacy rows.
  */
-const snapshotIssueTriage = (incident: AlertIncident) =>
+const snapshotIssueTriage = (incident: SourcedIncident) =>
   Effect.gen(function* () {
     const issues = yield* IssueRepository
     const issue = yield* issues
@@ -380,7 +398,7 @@ const buildRecovery = (incident: AlertIncident): IncidentRecovery => ({
 })
 
 const buildPayload = (input: {
-  readonly incident: AlertIncident
+  readonly incident: SourcedIncident
   readonly kind: IncidentNotificationKind
   readonly trend: IncidentTrend | null
   readonly triggerRatePerHour: number | null
@@ -469,6 +487,14 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
 
     const incidentRepo = yield* AlertIncidentRepository
     const incident = yield* incidentRepo.findById(AlertIncidentId(input.alertIncidentId))
+
+    // Unified (target-on-monitor) incidents are sourceless; their notification copy is wired
+    // separately. Narrowing to `SourcedIncident` lets the issue-analytics snapshots + payload
+    // read source without a null check.
+    if (!isSourcedIncident(incident)) {
+      yield* Effect.annotateCurrentSpan("skipped", "sourceless-incident")
+      return { status: "skipped", reason: "sourceless-incident" } as const
+    }
 
     // Mute gate: resolve the owning monitor once. A muted monitor short-circuits
     // before the project-level kind gate; the identity also feeds payload attribution.

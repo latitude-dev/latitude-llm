@@ -34,6 +34,7 @@ export { MetricSeriesReader } from "./ports/metric-series-reader.ts"
 export type {
   CascadeSourceDeletionResult,
   ListMonitorsRepositoryInput,
+  MetricMonitorAlert,
   MonitorLastIncident,
   MonitorListPage,
   MonitorRepositoryShape,
@@ -54,6 +55,8 @@ export {
 } from "./use-cases/assert-monitorable-saved-search.ts"
 export type { CascadeSourceDeletionInput } from "./use-cases/cascade-source-deletion.ts"
 export { cascadeSourceDeletionUseCase } from "./use-cases/cascade-source-deletion.ts"
+export type { CheckMetricMonitorsInput, CheckMetricMonitorsResult } from "./use-cases/check-metric-monitors.ts"
+export { checkMetricMonitorsUseCase } from "./use-cases/check-metric-monitors.ts"
 export type {
   CheckSavedSearchMonitorsInput,
   CheckSavedSearchMonitorsResult,
@@ -107,6 +110,12 @@ export type {
 export { buildSystemMonitors, provisionSystemMonitorsUseCase } from "./use-cases/provision-system-monitors.ts"
 export type { ResolveMonitorAlertsForSourceEventInput } from "./use-cases/resolve-monitor-alerts-for-source-event.ts"
 export { resolveMonitorAlertsForSourceEventUseCase } from "./use-cases/resolve-monitor-alerts-for-source-event.ts"
+export type {
+  RunMetricMonitorAlertError,
+  RunMetricMonitorAlertInput,
+  RunMetricMonitorAlertResult,
+} from "./use-cases/run-metric-monitor-alert.ts"
+export { runMetricMonitorAlertUseCase } from "./use-cases/run-metric-monitor-alert.ts"
 export type {
   RunSavedSearchEscalatingAlertError,
   RunSavedSearchEscalatingAlertResult,

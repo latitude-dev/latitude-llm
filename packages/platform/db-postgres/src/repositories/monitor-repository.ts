@@ -598,6 +598,50 @@ export const MonitorRepositoryLive = Layer.effect(
           )
           return rows.map(toMonitorAlert)
         }),
+      listActiveMetricMonitorAlerts: (projectId) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          // A non-null target_stream marks a unified (target-on-monitor) monitor; create
+          // enforces homogeneity, so its live alerts are exactly the event.*/metric.* kinds.
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .select({
+                alert: getTableColumns(monitorAlerts),
+                targetStream: monitors.targetStream,
+                targetFilterSet: monitors.targetFilterSet,
+                targetQuery: monitors.targetQuery,
+                targetSavedSearchId: monitors.targetSavedSearchId,
+                metric: monitors.metric,
+              })
+              .from(monitorAlerts)
+              .innerJoin(monitors, eq(monitors.id, monitorAlerts.monitorId))
+              .where(
+                and(
+                  eq(monitorAlerts.organizationId, sqlClient.organizationId),
+                  eq(monitors.projectId, projectId),
+                  isNotNull(monitors.targetStream),
+                  isNull(monitorAlerts.deletedAt),
+                  isNull(monitors.deletedAt),
+                ),
+              ),
+          )
+          return rows.flatMap((row) =>
+            row.targetStream && row.metric
+              ? [
+                  {
+                    alert: toMonitorAlert(row.alert),
+                    target: {
+                      stream: row.targetStream,
+                      filterSet: row.targetFilterSet ?? null,
+                      query: row.targetQuery ?? null,
+                      savedSearchId: row.targetSavedSearchId ?? null,
+                      metric: row.metric,
+                    },
+                  },
+                ]
+              : [],
+          )
+        }),
       listSavedSearchMonitorSummaries: (projectId) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

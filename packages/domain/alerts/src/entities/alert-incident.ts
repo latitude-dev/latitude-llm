@@ -96,8 +96,10 @@ export const alertIncidentSchema = z.object({
   id: alertIncidentIdSchema,
   organizationId: organizationIdSchema,
   projectId: projectIdSchema,
-  sourceType: alertIncidentSourceTypeSchema,
-  sourceId: cuidSchema, // V1 sources are issues; widen if future sources need other id shapes
+  // Null for UNIFIED incidents (`event.*`/`metric.*`): the watched target lives on the
+  // monitor (recovered via `monitorAlertId`), not a `(sourceType, sourceId)` pair.
+  sourceType: alertIncidentSourceTypeSchema.nullable(),
+  sourceId: cuidSchema.nullable(),
   kind: alertIncidentKindSchema,
   severity: alertSeveritySchema,
   startedAt: z.date(),

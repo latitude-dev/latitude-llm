@@ -649,8 +649,8 @@ const toMonitorIncidentRecord = (
       readonly startedAt: Date
       readonly endedAt: Date | null
       readonly kind: string
-      readonly sourceType: string
-      readonly sourceId: string
+      readonly sourceType: string | null
+      readonly sourceId: string | null
       readonly severity: string
     }
     readonly notified: boolean
@@ -708,7 +708,11 @@ export const listMonitorIncidents = createServerFn({ method: "GET" })
 
       // Resolve source names/slugs for the "Source" column; unresolved ids fall back to the id in the UI.
       const issueIds = [
-        ...new Set(result.items.filter((i) => i.incident.sourceType === "issue").map((i) => i.incident.sourceId)),
+        ...new Set(
+          result.items.flatMap((i) =>
+            i.incident.sourceType === "issue" && i.incident.sourceId !== null ? [i.incident.sourceId] : [],
+          ),
+        ),
       ]
       const issueNameById = new Map<string, string>()
       if (issueIds.length > 0) {
@@ -732,8 +736,9 @@ export const listMonitorIncidents = createServerFn({ method: "GET" })
       return {
         items: result.items.map((item) => {
           const { sourceType, sourceId } = item.incident
-          const saved = sourceType === "savedSearch" ? savedSearchById.get(sourceId) : undefined
-          const sourceName = sourceType === "issue" ? (issueNameById.get(sourceId) ?? null) : (saved?.name ?? null)
+          const saved = sourceType === "savedSearch" && sourceId !== null ? savedSearchById.get(sourceId) : undefined
+          const sourceName =
+            sourceType === "issue" && sourceId !== null ? (issueNameById.get(sourceId) ?? null) : (saved?.name ?? null)
           return toMonitorIncidentRecord(item, sourceName, saved?.slug ?? null)
         }),
         nextCursor: result.nextCursor

@@ -10,7 +10,7 @@ import { IncidentResolveConfirmModal } from "./incident-resolve-confirm-modal.ts
 import { IncidentStatus } from "./incident-status.tsx"
 
 /** Human-readable, lowercased source-type labels for the deleted-source fallback. */
-const SOURCE_TYPE_LABEL: Record<MonitorIncidentRecord["sourceType"], string> = {
+const SOURCE_TYPE_LABEL: Record<"issue" | "savedSearch", string> = {
   issue: "issue",
   savedSearch: "saved search",
 }
@@ -18,9 +18,15 @@ const SOURCE_TYPE_LABEL: Record<MonitorIncidentRecord["sourceType"], string> = {
 /** Shows the resolved source name, or an italic "Deleted <type>" once the source is gone. */
 function SourceCell({ incident }: { readonly incident: MonitorIncidentRecord }) {
   if (!incident.sourceName) {
+    // Unified (target-on-monitor) incidents have no source — the firing PR opens them; the
+    // in-context UI PR renders their target. Until then fall back to a neutral label.
+    const label =
+      incident.sourceType === "issue" || incident.sourceType === "savedSearch"
+        ? SOURCE_TYPE_LABEL[incident.sourceType]
+        : "source"
     return (
       <Text.H6 color="foregroundMuted" noWrap ellipsis className="italic">
-        Deleted {SOURCE_TYPE_LABEL[incident.sourceType]}
+        Deleted {label}
       </Text.H6>
     )
   }
