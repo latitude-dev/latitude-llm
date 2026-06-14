@@ -66,6 +66,14 @@ export { buildMonitorAlert } from "./use-cases/create-monitor-alert.ts"
 export type { DeleteMonitorError, DeleteMonitorInput } from "./use-cases/delete-monitor.ts"
 export { deleteMonitorUseCase } from "./use-cases/delete-monitor.ts"
 export type {
+  EvaluateMetricAlertError,
+  EvaluateMetricAlertInput,
+  EvaluateMetricEscalatingAlertInput,
+  MetricAlertEvaluation,
+  MetricEscalatingEvaluation,
+} from "./use-cases/evaluate-metric-alert.ts"
+export { evaluateMetricAlert, evaluateMetricEscalatingAlert } from "./use-cases/evaluate-metric-alert.ts"
+export type {
   EvaluateSavedSearchAlertError,
   EvaluateSavedSearchAlertInput,
   SavedSearchEscalatingEvaluation,

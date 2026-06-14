@@ -51,23 +51,25 @@ export interface EvaluateSavedSearchAlertInput {
 
 export type EvaluateSavedSearchAlertError = RepositoryError
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000
+// Exported for the unified `evaluate-metric-alert` evaluator, which shares the same
+// seasonal/baseline math (legacy logic here is unchanged — these were already private).
+export const WEEK_MS = 7 * 24 * 60 * 60 * 1000
 
 const durationToMs = (duration: AlertDuration): number =>
   duration.unit === "hours" ? duration.hours * 60 * 60 * 1000 : duration.days * 24 * 60 * 60 * 1000
 
-const mean = (values: readonly number[]): number =>
+export const mean = (values: readonly number[]): number =>
   values.length === 0 ? 0 : values.reduce((sum, value) => sum + value, 0) / values.length
 
 /** Sample (n−1) standard deviation; `0` for fewer than two points. */
-const sampleStddev = (values: readonly number[], avg: number): number => {
+export const sampleStddev = (values: readonly number[], avg: number): number => {
   if (values.length < 2) return 0
   const variance = values.reduce((sum, value) => sum + (value - avg) ** 2, 0) / (values.length - 1)
   return Math.sqrt(variance)
 }
 
 /** `average` = trailing window of length `L`; `period` = the equal-length window just before it (yesterday / last week). */
-const baselineWindow = (baseline: AlertBaseline, now: Date): { from: Date; to: Date; lengthMs: number } => {
+export const baselineWindow = (baseline: AlertBaseline, now: Date): { from: Date; to: Date; lengthMs: number } => {
   const lengthMs = durationToMs(baseline.lookback)
   if (baseline.kind === "average") return { from: new Date(now.getTime() - lengthMs), to: now, lengthMs }
   return { from: new Date(now.getTime() - 2 * lengthMs), to: new Date(now.getTime() - lengthMs), lengthMs }
