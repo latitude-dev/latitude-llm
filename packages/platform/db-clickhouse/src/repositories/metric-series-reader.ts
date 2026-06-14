@@ -14,6 +14,7 @@ import {
 } from "@domain/shared"
 import { parseSearchQuery } from "@domain/spans"
 import { Effect, Layer } from "effect"
+import { buildSpanFilterClauses } from "../registries/span-fields.ts"
 import { isActiveSearch, planSearch } from "./search-plan.ts"
 import { buildTraceFilterClauses, LIST_SELECT, resolvePercentileFilters } from "./trace-repository.ts"
 
@@ -39,6 +40,20 @@ const TRACE_METRIC_COLUMNS: MetricColumns = {
   isError: "error_count > 0",
 }
 
+// Spans are individual rows (one per span): error is the span's own OTEL status,
+// tokens come off the raw input/output columns (no per-trace `tokens_total` rollup).
+// Note: cost/tokens are ~0 on `execute_tool` spans — meaningful only when the
+// filter scopes to LLM spans; tool monitors use count/errorRate/duration.
+const SPAN_METRIC_COLUMNS: MetricColumns = {
+  duration: "duration_ns",
+  cost: "cost_total_microcents",
+  tokens: "tokens_input + tokens_output",
+  isError: "status_code = 2",
+}
+
+const metricColumnsFor = (stream: MetricSeriesWindowInput["target"]["stream"]): MetricColumns =>
+  stream === "spans" ? SPAN_METRIC_COLUMNS : TRACE_METRIC_COLUMNS
+
 /**
  * SQL aggregate applied over the per-entity grouped subquery. `count` makes this
  * reader an exact drop-in for the saved-search match reader it supersedes.
@@ -60,24 +75,48 @@ const metricAggregate = (metric: MonitorMetric, columns: MetricColumns): string 
   }
 }
 
+type InnerQuery = {
+  readonly sql: string
+  readonly params: Record<string, unknown>
+  readonly clickhouseSettings?: Record<string, string | number | boolean>
+}
+
+/**
+ * Per-span subquery for the `spans` stream: one row per span, windowed on the
+ * span's own `start_time` (plain WHERE — no aggregation), filtered by the row-local
+ * span predicate. The outer metric then aggregates these rows. Mirrors how
+ * tool-analytics aggregates `execute_tool` spans (no dedup — same convention).
+ */
+const buildSpanInnerQuery = (input: MetricSeriesWindowInput): InnerQuery => {
+  const { whereClauses, params: filterParams } = buildSpanFilterClauses(input.target.filterSet)
+  const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+  return {
+    sql: `SELECT span_id, start_time, status_code, duration_ns, cost_total_microcents, tokens_input, tokens_output
+          FROM spans
+          WHERE organization_id = {organizationId:String}
+            AND project_id = {projectId:String}
+            AND start_time >= toDateTime64({windowFrom:String}, 9, 'UTC')
+            AND start_time < toDateTime64({windowTo:String}, 9, 'UTC')
+            ${extraWhere}`,
+    params: {
+      organizationId: input.organizationId as string,
+      projectId: input.projectId as string,
+      windowFrom: toClickHouseDateTime64(input.from),
+      windowTo: toClickHouseDateTime64(input.to),
+      ...filterParams,
+    },
+  }
+}
+
 /**
  * The grouped per-trace subquery the metric queries wrap, for the `traces`
  * stream. The window is a `HAVING` on the aggregated `start_time` (same as the
  * trace list/count), combined with the target's filters + semantic query.
- * Lifted from the saved-search match reader; spans/sessions add sibling branches.
+ * Lifted from the saved-search match reader; `spans` is a sibling branch, sessions later.
  */
-const buildInnerQuery = (
-  input: MetricSeriesWindowInput,
-): Effect.Effect<
-  {
-    readonly sql: string
-    readonly params: Record<string, unknown>
-    readonly clickhouseSettings?: Record<string, string | number | boolean>
-  },
-  RepositoryError,
-  ChSqlClient
-> =>
+const buildInnerQuery = (input: MetricSeriesWindowInput): Effect.Effect<InnerQuery, RepositoryError, ChSqlClient> =>
   Effect.gen(function* () {
+    if (input.target.stream === "spans") return buildSpanInnerQuery(input)
     if (input.target.stream !== "traces") {
       return yield* Effect.die(`MetricSeriesReader: stream '${input.target.stream}' not implemented yet`)
     }
@@ -128,7 +167,7 @@ const make = (): MetricSeriesReaderShape => ({
     Effect.gen(function* () {
       const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
       const inner = yield* buildInnerQuery(input)
-      const aggregate = metricAggregate(input.target.metric, TRACE_METRIC_COLUMNS)
+      const aggregate = metricAggregate(input.target.metric, metricColumnsFor(input.target.stream))
       return yield* chSqlClient
         .query(async (client) => {
           const result = await client.query({
@@ -200,7 +239,7 @@ const make = (): MetricSeriesReaderShape => ({
     Effect.gen(function* () {
       const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
       const inner = yield* buildInnerQuery(input)
-      const aggregate = metricAggregate(input.target.metric, TRACE_METRIC_COLUMNS)
+      const aggregate = metricAggregate(input.target.metric, metricColumnsFor(input.target.stream))
       const bucketCount = Math.max(0, Math.floor((input.to.getTime() - input.from.getTime()) / input.bucketMs))
       // Bucket each matching trace by how far its `start_time` sits before `to`,
       // in `bucketNs` (= bucketMs) steps — index 0 is the bucket ending at `to`.
