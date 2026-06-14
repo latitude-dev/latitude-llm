@@ -12,8 +12,8 @@ export {
   SAVED_SEARCH_MONITORS_THROTTLE_MS,
   savedSearchMonitorsCheckDedupeKey,
 } from "./constants.ts"
-export type { Monitor, MonitorAlert } from "./entities/monitor.ts"
-export { monitorAlertSchema, monitorSchema } from "./entities/monitor.ts"
+export type { Monitor, MonitorAlert, MonitorTarget } from "./entities/monitor.ts"
+export { monitorAlertSchema, monitorSchema, monitorTargetSchema } from "./entities/monitor.ts"
 export {
   AlertConditionMismatchError,
   MonitorAlertNotFoundError,

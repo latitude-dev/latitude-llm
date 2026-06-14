@@ -33,6 +33,7 @@ const makeMonitor = (overrides: Partial<Monitor> & { alerts: readonly MonitorAle
   description: "",
   system: overrides.system ?? false,
   alerts: overrides.alerts,
+  target: null,
   mutedAt: null,
   deletedAt: null,
   createdAt: at,

@@ -540,6 +540,7 @@ describe("MonitorRepositoryLive", () => {
             createdAt: now,
           },
         ],
+        target: null,
         mutedAt: null,
         deletedAt: null,
         createdAt: now,
@@ -637,6 +638,7 @@ describe("MonitorRepositoryLive", () => {
             createdAt: now,
           },
         ],
+        target: null,
         mutedAt: null,
         deletedAt: null,
         createdAt: now,
@@ -921,6 +923,7 @@ describe("MonitorRepositoryLive", () => {
           severity: "low" as const,
           createdAt: now,
         })),
+        target: null,
         mutedAt: null,
         deletedAt: null,
         createdAt: now,
@@ -941,6 +944,39 @@ describe("MonitorRepositoryLive", () => {
       expect(result.id).toBe(monitor.id)
       expect(result.system).toBe(false)
       expect(result.alerts).toHaveLength(2)
+    })
+
+    it("round-trips a unified query-time target (stream + filterSet + metric)", async () => {
+      const monitor: Monitor = {
+        ...buildUserMonitor("tool-monitor", 1),
+        target: {
+          stream: "spans",
+          filterSet: { operation: [{ op: "eq", value: "execute_tool" }], toolName: [{ op: "eq", value: "search" }] },
+          query: null,
+          savedSearchId: null,
+          metric: { kind: "errorRate" },
+        },
+      }
+      await exec((r) => r.create(monitor))
+
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* MonitorRepository
+          return yield* repository.findBySlug({ projectId, slug: "tool-monitor" })
+        }).pipe(provideRls(database, organizationId)),
+      )
+      expect(result.target).toEqual(monitor.target)
+    })
+
+    it("reads target as null for a legacy saved-search monitor", async () => {
+      await exec((r) => r.create(buildUserMonitor("legacy", 1)))
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* MonitorRepository
+          return yield* repository.findBySlug({ projectId, slug: "legacy" })
+        }).pipe(provideRls(database, organizationId)),
+      )
+      expect(result.target).toBeNull()
     })
   })
 
