@@ -18,13 +18,13 @@ import { useMonitorsForTarget } from "../../../../../../domains/monitors/monitor
 import { targetAlertDraft } from "./alert-form-helpers.ts"
 import { MonitorCreateModal } from "./monitor-create-modal.tsx"
 
-/** Green dot, pulsing while the monitor is live; muted/static when paused. */
+/** Primary-color dot, pulsing while the monitor is live; muted/static when paused. */
 function ActivityDot({ live }: { readonly live: boolean }) {
   if (!live) return <span className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground/40" />
   return (
     <span className="relative flex h-2 w-2 shrink-0">
-      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
-      <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+      <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
     </span>
   )
 }
