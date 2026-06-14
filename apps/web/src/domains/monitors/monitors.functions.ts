@@ -8,6 +8,7 @@ import {
   getMonitorBySlugUseCase,
   getMonitorIncidentsUseCase,
   type ListMonitorsResult,
+  listMonitorsForTargetUseCase,
   listMonitorsUseCase,
   listSavedSearchMonitorSummariesUseCase,
   type Monitor,
@@ -30,9 +31,11 @@ import {
   alertIncidentKindSchema,
   alertIncidentSourceTypeSchema,
   alertSeveritySchema,
+  filterSetSchema,
   IssueId,
   MonitorAlertId,
   MonitorId,
+  monitorStreamSchema,
   OrganizationId,
   ProjectId,
 } from "@domain/shared"
@@ -190,6 +193,29 @@ export const listMonitors = createServerFn({ method: "GET" })
 
     const refs = await resolveSavedSearchRefs(orgId, ProjectId(data.projectId), result.items)
     return toListMonitorsResultRecord(result, refs)
+  })
+
+const listMonitorsForTargetInputSchema = z.object({
+  projectId: z.string(),
+  stream: monitorStreamSchema,
+  filterSetContains: filterSetSchema,
+})
+
+/** Live unified monitors targeting a specific tool/user — backs the in-context "monitors for this X" card. */
+export const listMonitorsForTarget = createServerFn({ method: "GET" })
+  .inputValidator(listMonitorsForTargetInputSchema)
+  .handler(async ({ data }): Promise<MonitorRecord[]> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const monitors = await Effect.runPromise(
+      listMonitorsForTargetUseCase({
+        projectId: ProjectId(data.projectId),
+        stream: data.stream,
+        filterSetContains: data.filterSetContains,
+      }).pipe(withPostgres(MonitorRepositoryLive, getPostgresClient(), orgId), withTracing),
+    )
+    const refs = await resolveSavedSearchRefs(orgId, ProjectId(data.projectId), monitors)
+    return monitors.map((monitor) => toMonitorRecord(monitor, refs))
   })
 
 export interface SavedSearchMonitorSummaryRecord {

@@ -10,7 +10,7 @@ import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbLink, BreadcrumbSeparator, BreadcrumbText } from "../../../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "../../-route-data.ts"
-import { AddTargetMonitorButton } from "../../monitors/-components/add-target-monitor-button.tsx"
+import { TargetMonitorsCard } from "../../monitors/-components/target-monitors-card.tsx"
 import {
   DEFAULT_TOOLS_RANGE_SECONDS,
   formatPercent,
@@ -199,13 +199,6 @@ function ToolDetailPageContent() {
                   View traces
                 </Link>
               </Button>
-              {notFound ? null : (
-                <AddTargetMonitorButton
-                  projectId={project.id}
-                  projectSlug={projectSlug}
-                  target={toolMonitorTarget(toolName)}
-                />
-              )}
             </>
           }
           description={
@@ -221,6 +214,15 @@ function ToolDetailPageContent() {
           }
         />
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6 pt-2">
+          {notFound ? null : (
+            <TargetMonitorsCard
+              projectId={project.id}
+              projectSlug={projectSlug}
+              stream="spans"
+              filterSetContains={{ toolName: [{ op: "eq", value: toolName }] }}
+              createTarget={toolMonitorTarget(toolName)}
+            />
+          )}
           {/* Usage — headline call metrics, scoped to failures when the
               errors-only switch is on (error rate stays global). */}
           <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">

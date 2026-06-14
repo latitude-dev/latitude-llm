@@ -24,7 +24,7 @@ import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../../-components/breadcrumb-ui.tsx"
 import { SessionDetailDrawer } from "../../-components/session-detail-drawer.tsx"
 import { useRouteProject } from "../../-route-data.ts"
-import { AddTargetMonitorButton } from "../../monitors/-components/add-target-monitor-button.tsx"
+import { TargetMonitorsCard } from "../../monitors/-components/target-monitors-card.tsx"
 import {
   formatAgoLabel,
   formatBucketLabel,
@@ -161,15 +161,6 @@ function UserDetailPage() {
               </div>
             ) : undefined
           }
-          actions={
-            notFound ? undefined : (
-              <AddTargetMonitorButton
-                projectId={project.id}
-                projectSlug={projectSlug}
-                target={userMonitorTarget(userId)}
-              />
-            )
-          }
         />
 
         {notFound ? (
@@ -186,6 +177,14 @@ function UserDetailPage() {
                 <Text.H6 color="foregroundMuted">Activity · last 30 days</Text.H6>
                 <UserActivityChart projectId={project.id} userId={userId} />
               </div>
+
+              <TargetMonitorsCard
+                projectId={project.id}
+                projectSlug={projectSlug}
+                stream="traces"
+                filterSetContains={{ userId: [{ op: "eq", value: userId }] }}
+                createTarget={userMonitorTarget(userId)}
+              />
 
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
                 <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">

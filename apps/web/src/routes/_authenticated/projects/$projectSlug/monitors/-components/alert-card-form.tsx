@@ -110,10 +110,10 @@ const COMPARISON_OPTIONS: { label: string; value: ComparisonMode }[] = [
   { label: "times more than", value: "timesMoreThan" },
 ]
 
-// Unified metric thresholds read "the metric is N or higher" / "N times more than …".
+// Unified metric thresholds read "is N <unit> or higher" / "is N× more than <baseline>".
 const TARGET_COMPARISON_OPTIONS: { label: string; value: ComparisonMode }[] = [
   { label: "or higher", value: "times" },
-  { label: "times more than", value: "timesMoreThan" },
+  { label: "× more than", value: "timesMoreThan" },
 ]
 
 const BASELINE_KIND_OPTIONS: { label: string; value: BaselineKind }[] = [
@@ -123,9 +123,50 @@ const BASELINE_KIND_OPTIONS: { label: string; value: BaselineKind }[] = [
 ]
 
 const LOOKBACK_UNIT_OPTIONS: { label: string; value: LookbackUnit }[] = [
+  { label: "minutes", value: "minutes" },
   { label: "hours", value: "hours" },
   { label: "days", value: "days" },
 ]
+
+// Curated baselines for the unified target form: one dropdown instead of three
+// controls (kind + amount + unit), so the threshold line stays compact.
+interface BaselinePreset {
+  readonly id: string
+  readonly label: string
+  readonly baselineKind: BaselineKind
+  readonly lookbackAmount: number
+  readonly lookbackUnit: LookbackUnit
+}
+const BASELINE_PRESETS: readonly BaselinePreset[] = [
+  { id: "avg-5m", label: "the 5-minute average", baselineKind: "average", lookbackAmount: 5, lookbackUnit: "minutes" },
+  {
+    id: "avg-15m",
+    label: "the 15-minute average",
+    baselineKind: "average",
+    lookbackAmount: 15,
+    lookbackUnit: "minutes",
+  },
+  { id: "avg-1h", label: "the 1-hour average", baselineKind: "average", lookbackAmount: 1, lookbackUnit: "hours" },
+  { id: "avg-24h", label: "the 24-hour average", baselineKind: "average", lookbackAmount: 24, lookbackUnit: "hours" },
+  { id: "avg-7d", label: "the 7-day average", baselineKind: "average", lookbackAmount: 7, lookbackUnit: "days" },
+  { id: "prev-hour", label: "the previous hour", baselineKind: "period", lookbackAmount: 1, lookbackUnit: "hours" },
+  { id: "prev-day", label: "the previous day", baselineKind: "period", lookbackAmount: 1, lookbackUnit: "days" },
+  { id: "prev-week", label: "the previous week", baselineKind: "period", lookbackAmount: 7, lookbackUnit: "days" },
+  { id: "expected", label: "what's expected", baselineKind: "expected", lookbackAmount: 7, lookbackUnit: "days" },
+]
+const DEFAULT_BASELINE_PRESET_ID = "avg-24h"
+
+const baselinePresetIdForDraft = (value: AlertDraft): string => {
+  if (value.baselineKind === "expected") return "expected"
+  return (
+    BASELINE_PRESETS.find(
+      (preset) =>
+        preset.baselineKind === value.baselineKind &&
+        preset.lookbackAmount === value.lookbackAmount &&
+        preset.lookbackUnit === value.lookbackUnit,
+    )?.id ?? DEFAULT_BASELINE_PRESET_ID
+  )
+}
 
 const WINDOW_UNIT_OPTIONS: { label: string; value: WindowUnit }[] = [
   { label: "minutes", value: "minutes" },
@@ -163,12 +204,23 @@ function ThresholdWindowForm({
   const hasLookback = relative && !expected
   // Unified metric thresholds are floats (error rate 0.1, p95 latency…); counts are whole numbers.
   const amountStep = expected ? 1 : relative || targetMode ? 0.1 : 1
-  const amountMin = expected ? SENSITIVITY_MIN : targetMode && !relative ? 0 : 1
-  const comparisonOptions = targetMode ? TARGET_COMPARISON_OPTIONS : COMPARISON_OPTIONS
-  const leadIn = targetMode ? "Alert when the metric is" : "Alert when traces are detected"
+  const amountMin = expected ? SENSITIVITY_MIN : targetMode ? 0 : 1
   // Absolute thresholds carry the metric's display unit; relative ones are unitless multipliers.
   const absoluteUnit =
     targetMode && value.target && !relative ? metricThresholdUnitLabel(value.metric, value.target.stream) : null
+
+  const amountInput = (
+    <Input
+      type="number"
+      min={amountMin}
+      max={expected ? SENSITIVITY_MAX : undefined}
+      step={amountStep}
+      value={value.amount}
+      onChange={(event) => onChange({ amount: Number(event.target.value) })}
+      className="w-20 h-9"
+      {...(disabled ? { disabled: true } : {})}
+    />
+  )
 
   // The amount doubles as the sensitivity in expected mode; snap an out-of-range
   // count/factor onto a valid 1–6 default when switching so the field stays valid.
@@ -179,65 +231,96 @@ function ThresholdWindowForm({
     onChange(needsSensitivityReset ? { baselineKind, amount: DEFAULT_ESCALATION_SENSITIVITY } : { baselineKind })
   }
 
+  // Curated baseline → draft fields; snap to a valid sensitivity when switching to "expected".
+  const onBaselinePresetChange = (id: string) => {
+    const preset = BASELINE_PRESETS.find((option) => option.id === id)
+    if (!preset) return
+    const needsSensitivityReset =
+      preset.baselineKind === "expected" &&
+      (!Number.isInteger(value.amount) || value.amount < SENSITIVITY_MIN || value.amount > SENSITIVITY_MAX)
+    onChange({
+      baselineKind: preset.baselineKind,
+      lookbackAmount: preset.lookbackAmount,
+      lookbackUnit: preset.lookbackUnit,
+      ...(needsSensitivityReset ? { amount: DEFAULT_ESCALATION_SENSITIVITY } : {}),
+    })
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col">
         <Text.H5M>Threshold</Text.H5M>
-        <div className="flex flex-nowrap items-center gap-2 -mt-1">
-          <Text.H5 color="foregroundMuted" noWrap>
-            {leadIn}
-          </Text.H5>
-          <Input
-            type="number"
-            min={amountMin}
-            max={expected ? SENSITIVITY_MAX : undefined}
-            step={amountStep}
-            value={value.amount}
-            onChange={(event) => onChange({ amount: Number(event.target.value) })}
-            className="w-20 h-9"
-            {...(disabled ? { disabled: true } : {})}
-          />
-          {absoluteUnit ? <Text.H5 color="foregroundMuted">{absoluteUnit}</Text.H5> : null}
-          <Select<ComparisonMode>
-            name="comparison"
-            width="auto"
-            options={comparisonOptions}
-            value={value.comparison}
-            onChange={(comparison) => onChange({ comparison })}
-            {...(disabled ? { disabled: true } : {})}
-          />
-          {relative ? (
-            <Select<BaselineKind>
-              name="baselineKind"
+        {targetMode ? (
+          <div className="flex flex-wrap items-center gap-2 -mt-1">
+            <Text.H5 color="foregroundMuted" noWrap>
+              Alert when it's
+            </Text.H5>
+            {amountInput}
+            {absoluteUnit ? <Text.H5 color="foregroundMuted">{absoluteUnit}</Text.H5> : null}
+            <Select<ComparisonMode>
+              name="comparison"
               width="auto"
-              options={BASELINE_KIND_OPTIONS}
-              value={value.baselineKind}
-              onChange={onBaselineKindChange}
+              options={TARGET_COMPARISON_OPTIONS}
+              value={value.comparison}
+              onChange={(comparison) => onChange({ comparison })}
               {...(disabled ? { disabled: true } : {})}
             />
-          ) : null}
-          {hasLookback ? (
-            <Input
-              type="number"
-              min={1}
-              step={1}
-              value={value.lookbackAmount}
-              onChange={(event) => onChange({ lookbackAmount: Number(event.target.value) })}
-              className="w-20 h-9"
-              {...(disabled ? { disabled: true } : {})}
-            />
-          ) : null}
-          {hasLookback ? (
-            <Select<LookbackUnit>
-              name="lookbackUnit"
+            {relative ? (
+              <Select<string>
+                name="baselinePreset"
+                width="auto"
+                options={BASELINE_PRESETS.map((preset) => ({ label: preset.label, value: preset.id }))}
+                value={baselinePresetIdForDraft(value)}
+                onChange={onBaselinePresetChange}
+                {...(disabled ? { disabled: true } : {})}
+              />
+            ) : null}
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2 -mt-1">
+            <Text.H5 color="foregroundMuted">Alert when traces are detected</Text.H5>
+            {amountInput}
+            <Select<ComparisonMode>
+              name="comparison"
               width="auto"
-              options={LOOKBACK_UNIT_OPTIONS}
-              value={value.lookbackUnit}
-              onChange={(lookbackUnit) => onChange({ lookbackUnit })}
+              options={COMPARISON_OPTIONS}
+              value={value.comparison}
+              onChange={(comparison) => onChange({ comparison })}
               {...(disabled ? { disabled: true } : {})}
             />
-          ) : null}
-        </div>
+            {relative ? (
+              <Select<BaselineKind>
+                name="baselineKind"
+                width="auto"
+                options={BASELINE_KIND_OPTIONS}
+                value={value.baselineKind}
+                onChange={onBaselineKindChange}
+                {...(disabled ? { disabled: true } : {})}
+              />
+            ) : null}
+            {hasLookback ? (
+              <Input
+                type="number"
+                min={1}
+                step={1}
+                value={value.lookbackAmount}
+                onChange={(event) => onChange({ lookbackAmount: Number(event.target.value) })}
+                className="w-20 h-9"
+                {...(disabled ? { disabled: true } : {})}
+              />
+            ) : null}
+            {hasLookback ? (
+              <Select<LookbackUnit>
+                name="lookbackUnit"
+                width="auto"
+                options={LOOKBACK_UNIT_OPTIONS}
+                value={value.lookbackUnit}
+                onChange={(lookbackUnit) => onChange({ lookbackUnit })}
+                {...(disabled ? { disabled: true } : {})}
+              />
+            ) : null}
+          </div>
+        )}
         <FieldErrors errors={errors?.threshold} />
         {expected ? (
           <div className="rounded-lg bg-muted/80 px-3 py-2 flex justify-start items-start gap-2 mt-3">

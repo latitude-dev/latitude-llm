@@ -1,7 +1,8 @@
 import { z } from "zod"
 
-/** A positive duration in whole hours or days. */
+/** A positive duration in whole minutes, hours or days. */
 export const alertDurationSchema = z.discriminatedUnion("unit", [
+  z.object({ unit: z.literal("minutes"), minutes: z.number().positive() }),
   z.object({ unit: z.literal("hours"), hours: z.number().positive() }),
   z.object({ unit: z.literal("days"), days: z.number().positive() }),
 ])

@@ -100,6 +100,8 @@ export {
   listMonitorsUseCase,
   MAX_MONITORS_PAGE_SIZE,
 } from "./use-cases/list-monitors.ts"
+export type { ListMonitorsForTargetInput } from "./use-cases/list-monitors-for-target.ts"
+export { listMonitorsForTargetUseCase } from "./use-cases/list-monitors-for-target.ts"
 export { listSavedSearchMonitorSummariesUseCase } from "./use-cases/list-saved-search-monitor-summaries.ts"
 export type { SetMonitorMuteError, SetMonitorMuteInput } from "./use-cases/mute-monitor.ts"
 export { muteMonitorUseCase, unmuteMonitorUseCase } from "./use-cases/mute-monitor.ts"

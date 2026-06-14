@@ -20,6 +20,9 @@ export interface HumanReadableAlertContext {
 export type HumanReadableAlertInput = Pick<MonitorAlert, "kind" | "condition">
 
 const formatDuration = (duration: AlertDuration): string => {
+  if (duration.unit === "minutes") {
+    return duration.minutes === 1 ? "the last minute" : `the last ${duration.minutes} minutes`
+  }
   if (duration.unit === "hours") {
     if (duration.hours === 1) return "the last hour"
     if (duration.hours === 24) return "the last 24 hours"
@@ -31,6 +34,9 @@ const formatDuration = (duration: AlertDuration): string => {
 }
 
 const formatPreviousPeriod = (duration: AlertDuration): string => {
+  if (duration.unit === "minutes") {
+    return duration.minutes === 1 ? "the previous minute" : `the previous ${duration.minutes} minutes`
+  }
   if (duration.unit === "hours") {
     return duration.hours === 1 ? "the previous hour" : `the previous ${duration.hours} hours`
   }

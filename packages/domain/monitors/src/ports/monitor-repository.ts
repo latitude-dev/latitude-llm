@@ -3,8 +3,10 @@ import type {
   AlertIncidentKind,
   AlertIncidentSourceType,
   AlertSeverity,
+  FilterSet,
   MonitorAlertId,
   MonitorId,
+  MonitorStream,
   NotFoundError,
   OrganizationId,
   ProjectId,
@@ -180,6 +182,18 @@ export interface MonitorRepositoryShape {
   listActiveMetricMonitorAlerts(
     projectId: ProjectId,
   ): Effect.Effect<readonly MetricMonitorAlert[], RepositoryError, SqlClient>
+  /**
+   * Live unified monitors in the project whose target is on `stream` and whose
+   * `target_filter_set` contains `filterSetContains` (jsonb `@>`). Powers the
+   * in-context "monitors for this tool/user" lists — pass the tool/user filter
+   * (`{toolName:[{op:"eq",value}]}` / `{userId:[…]}`) to match the specific
+   * target. Newest first.
+   */
+  listMonitorsForTarget(input: {
+    readonly projectId: ProjectId
+    readonly stream: MonitorStream
+    readonly filterSetContains: FilterSet
+  }): Effect.Effect<readonly Monitor[], RepositoryError, SqlClient>
   /**
    * For every saved search watched by a live monitor (muted included) in the project: the slug of
    * the earliest-created such monitor, the distinct monitor count, and the severities of every

@@ -1,5 +1,12 @@
 import type { MonitorTarget } from "@domain/monitors"
-import type { AlertIncidentCondition, AlertIncidentKind, AlertIncidentSourceType, AlertSeverity } from "@domain/shared"
+import type {
+  AlertIncidentCondition,
+  AlertIncidentKind,
+  AlertIncidentSourceType,
+  AlertSeverity,
+  FilterSet,
+  MonitorStream,
+} from "@domain/shared"
 import { type InfiniteTableInfiniteScroll, useToast } from "@repo/ui"
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useMemo, useState } from "react"
@@ -11,6 +18,7 @@ import {
   getMonitorIncidentStats,
   listMonitorIncidents,
   listMonitors,
+  listMonitorsForTarget,
   listSavedSearchMonitorSummaries,
   type MonitorIncidentRecord,
   type MonitorIncidentsCursor,
@@ -103,6 +111,31 @@ export function useMonitors(input: {
     isReloading: isPlaceholderData,
     infiniteScroll,
   }
+}
+
+/** Live unified monitors targeting a specific tool/user, for the in-context "Monitors" card. */
+export function useMonitorsForTarget(input: {
+  readonly projectId: string
+  readonly stream: MonitorStream
+  readonly filterSetContains: FilterSet
+  readonly enabled?: boolean
+}) {
+  const { data, isLoading } = useQuery({
+    queryKey: [
+      "monitors",
+      "for-target",
+      input.projectId,
+      input.stream,
+      JSON.stringify(input.filterSetContains),
+    ] as const,
+    queryFn: () =>
+      listMonitorsForTarget({
+        data: { projectId: input.projectId, stream: input.stream, filterSetContains: input.filterSetContains },
+      }),
+    staleTime: MONITORS_QUERY_STALE_TIME_MS,
+    enabled: (input.enabled ?? true) && input.projectId.length > 0,
+  })
+  return { monitors: data ?? [], isLoading }
 }
 
 /**

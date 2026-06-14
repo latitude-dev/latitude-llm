@@ -33,7 +33,7 @@ export type ComparisonMode = "times" | "timesMoreThan"
 export type WindowUnit = "minutes" | "hours" | "days"
 /** `average`/`period` carry a `lookback`; `expected` is the dynamically-learned baseline (no window). */
 export type BaselineKind = "average" | "period" | "expected"
-export type LookbackUnit = "hours" | "days"
+export type LookbackUnit = "minutes" | "hours" | "days"
 
 /**
  * Flat, UI-only working state for one alert card. Captures every control so
@@ -145,10 +145,17 @@ export const alertFieldErrorsFrom = (
 }
 
 const lookbackToDuration = (amount: number, unit: LookbackUnit): AlertDuration =>
-  unit === "hours" ? { unit: "hours", hours: amount } : { unit: "days", days: amount }
+  unit === "minutes"
+    ? { unit: "minutes", minutes: amount }
+    : unit === "hours"
+      ? { unit: "hours", hours: amount }
+      : { unit: "days", days: amount }
 
-const durationToLookback = (duration: AlertDuration): { amount: number; unit: LookbackUnit } =>
-  duration.unit === "hours" ? { amount: duration.hours, unit: "hours" } : { amount: duration.days, unit: "days" }
+const durationToLookback = (duration: AlertDuration): { amount: number; unit: LookbackUnit } => {
+  if (duration.unit === "minutes") return { amount: duration.minutes, unit: "minutes" }
+  if (duration.unit === "hours") return { amount: duration.hours, unit: "hours" }
+  return { amount: duration.days, unit: "days" }
+}
 
 const windowToMinutes = (amount: number, unit: WindowUnit): number =>
   unit === "minutes" ? amount : unit === "hours" ? amount * 60 : amount * 1440
