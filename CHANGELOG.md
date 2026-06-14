@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## v0.3.3 - 2026-06-14
+
+### Trace search
+
+- Fixed Redis Cluster slotting for per-organization trace-search embedding budget counters so daily, weekly, and monthly windows can be read and incremented together without CROSSSLOT errors (ref: #3553).
+- Allowed Voyage to truncate oversized embedding and reranking inputs instead of rejecting long trace-search and conversation-intelligence messages with 400 errors (ref: #3554).
+
 ## v0.3.2 - 2026-06-13
 
 ### Trace search
