@@ -59,7 +59,7 @@ export function MonitorAlertEditModal({
         condition: draftToCondition(draft),
         severity: draft.severity,
       })
-      toast({ description: "Alert updated." })
+      toast({ description: "Monitor updated." })
       onClose()
     } catch (error) {
       // Surface Zod field errors under the offending control; toast non-field errors.
@@ -80,8 +80,8 @@ export function MonitorAlertEditModal({
       onOpenChange={(next) => {
         if (!next) onClose()
       }}
-      title="Edit alert"
-      description="Alerts define the conditions that should be met for monitors to open incidents"
+      title="Edit monitor"
+      description="Update the conditions this monitor opens incidents on"
       footer={
         <>
           <CloseTrigger />

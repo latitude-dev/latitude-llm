@@ -76,9 +76,9 @@ const formatWindowMinutes = (minutes: number): string => {
 }
 
 const issueSentenceForKind: Record<Extract<AlertIncidentKind, `issue.${string}`>, string> = {
-  "issue.new": "Alerts each time a new issue is detected.",
-  "issue.regressed": "Alerts each time a resolved issue is detected again.",
-  "issue.escalating": "Alerts when an ongoing issue is being detected more than expected.",
+  "issue.new": "Opens an incident each time a new issue is detected.",
+  "issue.regressed": "Opens an incident each time a resolved issue is detected again.",
+  "issue.escalating": "Opens an incident when an ongoing issue is being detected more than expected.",
 }
 
 /** The thing being detected is a trace; the saved search (humanised by the caller) scopes which. */
@@ -127,38 +127,38 @@ export function formatHumanReadableAlert(alert: HumanReadableAlertInput, context
 
   if (alert.kind === "savedSearch.match") {
     return context?.savedSearchName
-      ? `Alerts each time a new trace matching '${context.savedSearchName}' is detected.`
-      : "Alerts each time a new matching trace is detected."
+      ? `Opens an incident each time a new trace matching '${context.savedSearchName}' is detected.`
+      : "Opens an incident each time a new matching trace is detected."
   }
 
   const subject = savedSearchTraceSubject(context)
 
   if (alert.kind === "savedSearch.threshold" && alert.condition?.kind === "savedSearch.threshold") {
-    return `Alerts when ${subject} are ${formatThreshold(alert.condition.threshold)}.`
+    return `Opens an incident when ${subject} are ${formatThreshold(alert.condition.threshold)}.`
   }
 
   if (alert.kind === "savedSearch.escalating" && alert.condition?.kind === "savedSearch.escalating") {
     // "sustained for at least X" keeps the window distinct from the baseline period.
-    return `Alerts when ${subject} are ${formatThreshold(alert.condition.threshold)}, sustained for at least ${formatWindowMinutes(
+    return `Opens an incident when ${subject} are ${formatThreshold(alert.condition.threshold)}, sustained for at least ${formatWindowMinutes(
       alert.condition.window.minutes,
     )}.`
   }
 
   if (alert.kind === "event.matched") {
-    return `Alerts each time a new matching event is detected for ${targetSubject(context)}.`
+    return `Opens an incident each time a new matching event is detected for ${targetSubject(context)}.`
   }
 
   if (alert.kind === "metric.threshold" && alert.condition?.kind === "metric.threshold") {
-    return `Alerts when ${formatMetric(alert.condition.metric)} for ${targetSubject(context)} is ${formatMetricThreshold(alert.condition.threshold, alert.condition.metric)}.`
+    return `Opens an incident when ${formatMetric(alert.condition.metric)} for ${targetSubject(context)} is ${formatMetricThreshold(alert.condition.threshold, alert.condition.metric)}.`
   }
 
   if (alert.kind === "metric.escalating" && alert.condition?.kind === "metric.escalating") {
-    return `Alerts when ${formatMetric(alert.condition.metric)} for ${targetSubject(context)} is ${formatMetricThreshold(
+    return `Opens an incident when ${formatMetric(alert.condition.metric)} for ${targetSubject(context)} is ${formatMetricThreshold(
       alert.condition.threshold,
       alert.condition.metric,
     )}, sustained for at least ${formatWindowMinutes(alert.condition.window.minutes)}.`
   }
 
   // Defensive fallback for a malformed row (condition kind not matching alert kind).
-  return `Alert configured (${alert.kind}).`
+  return `Monitor configured (${alert.kind}).`
 }

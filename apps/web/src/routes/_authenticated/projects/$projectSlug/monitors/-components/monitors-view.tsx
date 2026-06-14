@@ -168,7 +168,7 @@ function ConditionCell({ alerts }: { readonly alerts: MonitorRecord["alerts"] })
         {first.summary}
       </Text.H5>
       {rest.length > 0 ? (
-        <Badge variant="noBorderMuted" className="shrink-0" aria-label={`${rest.length} more alerts`}>
+        <Badge variant="noBorderMuted" className="shrink-0" aria-label={`${rest.length} more conditions`}>
           +{rest.length}
         </Badge>
       ) : null}

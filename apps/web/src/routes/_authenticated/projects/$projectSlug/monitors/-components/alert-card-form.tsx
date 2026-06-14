@@ -31,12 +31,12 @@ const EXPECTED_EXPLANATION =
 
 // Field help copy — written so a non-engineer can predict what each control does.
 const KIND_HELP: Record<UserAlertKind, string> = {
-  "savedSearch.match": "Alerts each time a new matching trace is detected",
-  "savedSearch.threshold": "Alerts once matching traces reach a threshold",
-  "savedSearch.escalating": "Alerts when matching traces stays elevated for a sustained window",
-  "event.matched": "Alerts each time a new matching event is detected",
-  "metric.threshold": "Alerts once the metric crosses a threshold",
-  "metric.escalating": "Alerts when the metric stays elevated for a sustained window",
+  "savedSearch.match": "Opens an incident each time a new matching trace is detected",
+  "savedSearch.threshold": "Opens an incident once matching traces reach a threshold",
+  "savedSearch.escalating": "Opens an incident when matching traces stay elevated for a sustained window",
+  "event.matched": "Opens an incident each time a new matching event is detected",
+  "metric.threshold": "Opens an incident once the metric crosses a threshold",
+  "metric.escalating": "Opens an incident when the metric stays elevated for a sustained window",
 }
 
 // Tab label + icon per kind. Saved-search exposes all three; a unified target
@@ -326,7 +326,7 @@ export function AlertCardForm({
   }))
 
   const removeButton = (
-    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onRemove} aria-label="Remove alert">
+    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onRemove} aria-label="Remove condition">
       <Icon icon={XIcon} size="sm" color="foregroundMuted" />
     </Button>
   )

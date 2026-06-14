@@ -26,7 +26,7 @@ export function SavedSearchSourcePicker({
     <Select<string>
       name="savedSearch"
       label="Saved search"
-      description="The alert will watch for matching traces on this saved search"
+      description="The monitor will watch for matching traces on this saved search"
       options={savedSearches.map((search) => ({ label: search.name, value: search.id }))}
       value={value ?? undefined}
       placeholder="Select a saved search"

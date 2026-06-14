@@ -170,7 +170,7 @@ function MonitorDetailPage() {
                 {canEditAlert ? (
                   <Button variant="outline" size="sm" className="w-auto" onClick={onEditAlert}>
                     <Icon icon={PencilIcon} size="sm" />
-                    Edit alert
+                    Edit monitor
                   </Button>
                 ) : null}
                 <Button variant="outline" size="sm" className="w-auto" onClick={() => setMuteConfirmOpen(true)}>
@@ -221,7 +221,7 @@ function MonitorDetailPage() {
                     </ConfigField>
                   ) : null}
                   {alert ? (
-                    <ConfigField label="Alert">
+                    <ConfigField label="Trigger">
                       <SeverityStatus
                         severity={alert.severity}
                         label={`${ALERT_INCIDENT_KIND_LABEL[alert.kind]} · ${alert.severity}`}
