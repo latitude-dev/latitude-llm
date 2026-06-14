@@ -1,10 +1,11 @@
-import type {
-  AlertBaseline,
-  AlertCountThreshold,
-  AlertDuration,
-  AlertIncidentKind,
-  AlertMetricThreshold,
-  MonitorMetric,
+import {
+  type AlertBaseline,
+  type AlertCountThreshold,
+  type AlertDuration,
+  type AlertIncidentKind,
+  type AlertMetricThreshold,
+  formatMetricValue,
+  type MonitorMetric,
 } from "@domain/shared"
 import type { MonitorAlert } from "./entities/monitor.ts"
 
@@ -78,26 +79,29 @@ const issueSentenceForKind: Record<Extract<AlertIncidentKind, `issue.${string}`>
 const savedSearchTraceSubject = (context?: HumanReadableAlertContext): string =>
   context?.savedSearchName ? `traces matching '${context.savedSearchName}'` : "matching traces"
 
-/** How a unified monitor's metric reads as a noun phrase ("the error rate", "average duration"). */
+/** Field rendered as a user-facing word: duration reads as "latency". */
+const metricFieldNoun = (field: "duration" | "cost" | "tokens"): string => (field === "duration" ? "latency" : field)
+
+/** How a unified monitor's metric reads as a noun phrase ("the error rate", "the p95 latency"). */
 const formatMetric = (metric: MonitorMetric): string => {
   switch (metric.kind) {
     case "count":
-      return "the count"
+      return "the volume"
     case "errorRate":
       return "the error rate"
     case "avg":
-      return `the average ${metric.field}`
+      return `the average ${metricFieldNoun(metric.field)}`
     case "p95":
-      return `the p95 ${metric.field}`
+      return `the p95 ${metricFieldNoun(metric.field)}`
     case "sum":
-      return `the total ${metric.field}`
+      return `the total ${metricFieldNoun(metric.field)}`
   }
 }
 
-/** Threshold phrase for the unified `metric.*` kinds (absolute carries a float `value`, not a count). */
-const formatMetricThreshold = (threshold: AlertMetricThreshold): string => {
+/** Threshold phrase for the unified `metric.*` kinds; absolute carries a stored float `value` rendered with its unit. */
+const formatMetricThreshold = (threshold: AlertMetricThreshold, metric: MonitorMetric): string => {
   if (threshold.mode === "absolute") {
-    return `over ${threshold.value}`
+    return `over ${formatMetricValue(threshold.value, metric)}`
   }
   if (threshold.mode === "multiplier") {
     return `${threshold.factor} times more than ${formatBaseline(threshold.baseline)}`
@@ -139,12 +143,13 @@ export function formatHumanReadableAlert(alert: HumanReadableAlertInput, context
   }
 
   if (alert.kind === "metric.threshold" && alert.condition?.kind === "metric.threshold") {
-    return `Alerts when ${formatMetric(alert.condition.metric)} for ${targetSubject(context)} is ${formatMetricThreshold(alert.condition.threshold)}.`
+    return `Alerts when ${formatMetric(alert.condition.metric)} for ${targetSubject(context)} is ${formatMetricThreshold(alert.condition.threshold, alert.condition.metric)}.`
   }
 
   if (alert.kind === "metric.escalating" && alert.condition?.kind === "metric.escalating") {
     return `Alerts when ${formatMetric(alert.condition.metric)} for ${targetSubject(context)} is ${formatMetricThreshold(
       alert.condition.threshold,
+      alert.condition.metric,
     )}, sustained for at least ${formatWindowMinutes(alert.condition.window.minutes)}.`
   }
 

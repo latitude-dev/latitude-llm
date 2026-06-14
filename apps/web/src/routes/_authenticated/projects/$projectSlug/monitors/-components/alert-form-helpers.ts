@@ -8,6 +8,8 @@ import {
   type AlertMetricThreshold,
   type AlertSeverity,
   type MonitorMetric,
+  metricValueFromStored,
+  metricValueToStored,
   SEVERITY_FOR_KIND,
 } from "@domain/shared"
 import { monitorTargetName } from "../../../../../../domains/monitors/monitor-target.ts"
@@ -89,11 +91,15 @@ export const targetAlertDraft = (target: MonitorTarget, overrides?: Partial<Aler
     ...overrides,
   })
 
-/** The three kinds (match/threshold/escalating order) available for a draft's mode. */
-export const kindsForDraft = (draft: AlertDraft): readonly [UserAlertKind, UserAlertKind, UserAlertKind] =>
+/**
+ * Tabs available for a draft's mode. Saved-search keeps the three-tab set
+ * (match/threshold/escalating); a unified target drops "match" — an incident per
+ * matching tool call / trace is never what you want for a tool or user.
+ */
+export const kindsForDraft = (draft: AlertDraft): readonly UserAlertKind[] =>
   draft.target === null
     ? ["savedSearch.match", "savedSearch.threshold", "savedSearch.escalating"]
-    : ["event.matched", "metric.threshold", "metric.escalating"]
+    : ["metric.threshold", "metric.escalating"]
 
 /** Switch kind within the current mode, resetting threshold/window fields but keeping target/metric/source/severity. */
 export const draftWithKind = (draft: AlertDraft, kind: UserAlertKind): AlertDraft =>
@@ -165,9 +171,9 @@ const draftToCountThreshold = (draft: AlertDraft): AlertCountThreshold => {
   return { mode: "multiplier", factor: draft.amount, baseline: draftBaseline(draft) }
 }
 
-/** Unified metric threshold: absolute is a float `value` (error rate, latency, cost…). */
+/** Unified metric threshold: absolute is a float `value` in the metric's stored unit (ns/microcents/fraction). */
 const draftToMetricThreshold = (draft: AlertDraft): AlertMetricThreshold => {
-  if (draft.comparison === "times") return { mode: "absolute", value: draft.amount }
+  if (draft.comparison === "times") return { mode: "absolute", value: metricValueToStored(draft.amount, draft.metric) }
   if (draft.baselineKind === "expected") return { mode: "expected", sensitivity: draft.amount }
   return { mode: "multiplier", factor: draft.amount, baseline: draftBaseline(draft) }
 }
@@ -228,14 +234,15 @@ const thresholdToDraftFields = (
   }
 }
 
-/** `value` instead of `count` for unified metric thresholds (otherwise identical mode handling). */
+/** `value` (in the metric's display unit) instead of `count` for unified metric thresholds. */
 const metricThresholdToDraftFields = (
   threshold: AlertMetricThreshold,
+  metric: MonitorMetric,
 ): Pick<AlertDraft, "comparison" | "amount" | "baselineKind" | "lookbackAmount" | "lookbackUnit"> => {
   if (threshold.mode === "absolute") {
     return {
       comparison: "times",
-      amount: threshold.value,
+      amount: metricValueFromStored(threshold.value, metric),
       baselineKind: "average",
       lookbackAmount: 7,
       lookbackUnit: "days",
@@ -286,14 +293,14 @@ export const recordToAlertDraft = (alert: MonitorAlertRecord, target?: MonitorTa
     }
   }
   if (condition?.kind === "metric.threshold") {
-    return { ...base, metric: condition.metric, ...metricThresholdToDraftFields(condition.threshold) }
+    return { ...base, metric: condition.metric, ...metricThresholdToDraftFields(condition.threshold, condition.metric) }
   }
   if (condition?.kind === "metric.escalating") {
     const window = minutesToWindow(condition.window.minutes)
     return {
       ...base,
       metric: condition.metric,
-      ...metricThresholdToDraftFields(condition.threshold),
+      ...metricThresholdToDraftFields(condition.threshold, condition.metric),
       windowAmount: window.amount,
       windowUnit: window.unit,
     }

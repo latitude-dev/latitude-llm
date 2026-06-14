@@ -1,5 +1,6 @@
 import { Button, CloseTrigger, Input, Modal, Textarea, useToast } from "@repo/ui"
 import { useState } from "react"
+import { monitorTargetName } from "../../../../../../domains/monitors/monitor-target.ts"
 import { useCreateMonitor } from "../../../../../../domains/monitors/monitors.collection.ts"
 import { extractFieldErrors, toUserMessage } from "../../../../../../lib/errors.ts"
 import { AlertCardForm } from "./alert-card-form.tsx"
@@ -41,6 +42,11 @@ export function MonitorCreateModal({
   const [alert, setAlert] = useState<AlertDraft>(initialAlert ?? emptyAlertDraft())
   const [nameError, setNameError] = useState<string | undefined>(undefined)
   const [alertErrors, setAlertErrors] = useState<AlertFieldErrors>({})
+
+  const targetName = alert.target ? monitorTargetName(alert.target) : null
+  const modalDescription = targetName
+    ? `This monitor watches ${targetName} and opens an incident when its condition is met.`
+    : "Monitors watch your saved searches and open incidents when their alert conditions are met."
 
   const onAlertChange = (next: AlertDraft) => {
     setAlert(next)
@@ -91,7 +97,7 @@ export function MonitorCreateModal({
         if (!next) onClose()
       }}
       title="New monitor"
-      description="Monitors watch your issues and searches and open incidents when their alert conditions are met"
+      description={modalDescription}
       footer={
         <>
           <CloseTrigger />

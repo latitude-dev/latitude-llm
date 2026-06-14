@@ -240,4 +240,50 @@ describe("formatHumanReadableAlert", () => {
       "Alert configured (savedSearch.threshold).",
     )
   })
+
+  it("renders a unified errorRate metric.threshold with the % unit and target name", () => {
+    const alert = makeAlert({
+      kind: "metric.threshold",
+      source: null,
+      condition: {
+        kind: "metric.threshold",
+        metric: { kind: "errorRate" },
+        threshold: { mode: "absolute", value: 0.05 },
+      },
+    })
+    expect(formatHumanReadableAlert(alert, { targetName: "the `search` tool" })).toBe(
+      "Alerts when the error rate for the `search` tool is over 5%.",
+    )
+  })
+
+  it("renders a unified p95-latency metric.escalating with ms units and a window", () => {
+    const alert = makeAlert({
+      kind: "metric.escalating",
+      source: null,
+      condition: {
+        kind: "metric.escalating",
+        metric: { kind: "p95", field: "duration" },
+        threshold: { mode: "absolute", value: 500_000_000 },
+        window: { minutes: 15 },
+      },
+    })
+    expect(formatHumanReadableAlert(alert, { targetName: "all users" })).toBe(
+      "Alerts when the p95 latency for all users is over 500ms, sustained for at least 15 minutes.",
+    )
+  })
+
+  it("renders a unified cost metric.threshold with the $ unit", () => {
+    const alert = makeAlert({
+      kind: "metric.threshold",
+      source: null,
+      condition: {
+        kind: "metric.threshold",
+        metric: { kind: "sum", field: "cost" },
+        threshold: { mode: "absolute", value: 1_000_000_000 },
+      },
+    })
+    expect(formatHumanReadableAlert(alert, { targetName: "the `search` tool" })).toBe(
+      "Alerts when the total cost for the `search` tool is over $10.",
+    )
+  })
 })

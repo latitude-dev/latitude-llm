@@ -1,13 +1,13 @@
-import {
-  type AlertSeverity,
-  DEFAULT_ESCALATION_SENSITIVITY,
-  type MonitorMetric,
-  type MonitorMetricField,
-} from "@domain/shared"
+import { type AlertSeverity, DEFAULT_ESCALATION_SENSITIVITY, type MonitorMetric } from "@domain/shared"
 import { Badge, Button, Icon, Input, Select, type TabOption, Tabs, Text } from "@repo/ui"
 import { EqualApproximately, LineDotRightHorizontal, SparklesIcon, TrendingUp, XIcon } from "lucide-react"
 import { SeveritySelector } from "../../../../../../domains/alerts/severity-selector.tsx"
-import { describeMonitorTarget } from "../../../../../../domains/monitors/monitor-target.ts"
+import {
+  describeMonitorTarget,
+  metricOptionId,
+  metricThresholdUnitLabel,
+  targetMetricOptions,
+} from "../../../../../../domains/monitors/monitor-target.ts"
 import { useSavedSearchesList } from "../../../../../../domains/saved-searches/saved-searches.collection.ts"
 import {
   type AlertDraft,
@@ -39,66 +39,47 @@ const KIND_HELP: Record<UserAlertKind, string> = {
   "metric.escalating": "Alerts when the metric stays elevated for a sustained window",
 }
 
-// The three tabs are kind-neutral (match/threshold/escalating); the concrete kind
-// per position comes from the draft's mode (saved-search vs unified target).
-const TAB_META: readonly { label: string; icon: typeof EqualApproximately }[] = [
-  { label: "Match", icon: EqualApproximately },
-  { label: "Threshold", icon: LineDotRightHorizontal },
-  { label: "Escalating", icon: TrendingUp },
-]
+// Tab label + icon per kind. Saved-search exposes all three; a unified target
+// exposes only threshold/escalating (kindsForDraft drops "match" for targets).
+const TAB_FOR_KIND: Record<UserAlertKind, { label: string; icon: typeof EqualApproximately }> = {
+  "savedSearch.match": { label: "Match", icon: EqualApproximately },
+  "savedSearch.threshold": { label: "Threshold", icon: LineDotRightHorizontal },
+  "savedSearch.escalating": { label: "Escalating", icon: TrendingUp },
+  "event.matched": { label: "Match", icon: EqualApproximately },
+  "metric.threshold": { label: "Threshold", icon: LineDotRightHorizontal },
+  "metric.escalating": { label: "Escalating", icon: TrendingUp },
+}
 
 const isMatchKind = (kind: UserAlertKind): boolean => kind === "savedSearch.match" || kind === "event.matched"
 const isEscalatingKind = (kind: UserAlertKind): boolean =>
   kind === "savedSearch.escalating" || kind === "metric.escalating"
 
-type MetricAggregation = MonitorMetric["kind"]
-const METRIC_AGGREGATION_OPTIONS: { label: string; value: MetricAggregation }[] = [
-  { label: "Count", value: "count" },
-  { label: "Error rate", value: "errorRate" },
-  { label: "Average", value: "avg" },
-  { label: "P95", value: "p95" },
-  { label: "Sum", value: "sum" },
-]
-const METRIC_FIELD_OPTIONS: { label: string; value: MonitorMetricField }[] = [
-  { label: "duration", value: "duration" },
-  { label: "cost", value: "cost" },
-  { label: "tokens", value: "tokens" },
-]
-const aggregationNeedsField = (kind: MetricAggregation): boolean => kind === "avg" || kind === "p95" || kind === "sum"
-
 function MetricSelector({
   value,
+  stream,
   onChange,
   disabled,
 }: {
   readonly value: MonitorMetric
+  readonly stream: NonNullable<AlertDraft["target"]>["stream"]
   readonly onChange: (metric: MonitorMetric) => void
   readonly disabled?: boolean
 }) {
-  const field = "field" in value ? value.field : "duration"
+  const options = targetMetricOptions(stream)
   return (
     <div className="flex flex-col gap-1.5">
       <Text.H5M>Metric</Text.H5M>
-      <div className="flex flex-wrap items-center gap-2">
-        <Select<MetricAggregation>
-          name="metricAggregation"
-          width="auto"
-          options={METRIC_AGGREGATION_OPTIONS}
-          value={value.kind}
-          onChange={(kind) => onChange(aggregationNeedsField(kind) ? { kind, field } : ({ kind } as MonitorMetric))}
-          {...(disabled ? { disabled: true } : {})}
-        />
-        {aggregationNeedsField(value.kind) ? (
-          <Select<MonitorMetricField>
-            name="metricField"
-            width="auto"
-            options={METRIC_FIELD_OPTIONS}
-            value={field}
-            onChange={(nextField) => onChange({ kind: value.kind, field: nextField } as MonitorMetric)}
-            {...(disabled ? { disabled: true } : {})}
-          />
-        ) : null}
-      </div>
+      <Select<string>
+        name="metric"
+        width="auto"
+        options={options.map((option) => ({ label: option.label, value: option.id }))}
+        value={metricOptionId(value)}
+        onChange={(id) => {
+          const next = options.find((option) => option.id === id)
+          if (next) onChange(next.metric)
+        }}
+        {...(disabled ? { disabled: true } : {})}
+      />
     </div>
   )
 }
@@ -185,6 +166,9 @@ function ThresholdWindowForm({
   const amountMin = expected ? SENSITIVITY_MIN : targetMode && !relative ? 0 : 1
   const comparisonOptions = targetMode ? TARGET_COMPARISON_OPTIONS : COMPARISON_OPTIONS
   const leadIn = targetMode ? "Alert when the metric is" : "Alert when traces are detected"
+  // Absolute thresholds carry the metric's display unit; relative ones are unitless multipliers.
+  const absoluteUnit =
+    targetMode && value.target && !relative ? metricThresholdUnitLabel(value.metric, value.target.stream) : null
 
   // The amount doubles as the sensitivity in expected mode; snap an out-of-range
   // count/factor onto a valid 1–6 default when switching so the field stays valid.
@@ -199,8 +183,10 @@ function ThresholdWindowForm({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col">
         <Text.H5M>Threshold</Text.H5M>
-        <div className="flex flex-wrap items-center gap-2 -mt-1">
-          <Text.H5 color="foregroundMuted">{leadIn}</Text.H5>
+        <div className="flex flex-nowrap items-center gap-2 -mt-1">
+          <Text.H5 color="foregroundMuted" noWrap>
+            {leadIn}
+          </Text.H5>
           <Input
             type="number"
             min={amountMin}
@@ -211,6 +197,7 @@ function ThresholdWindowForm({
             className="w-20 h-9"
             {...(disabled ? { disabled: true } : {})}
           />
+          {absoluteUnit ? <Text.H5 color="foregroundMuted">{absoluteUnit}</Text.H5> : null}
           <Select<ComparisonMode>
             name="comparison"
             width="auto"
@@ -328,11 +315,10 @@ export function AlertCardForm({
 
   const set = (patch: Partial<AlertDraft>) => onChange({ ...value, ...patch })
 
-  const kinds = kindsForDraft(value)
-  const kindTabs: readonly TabOption<UserAlertKind>[] = TAB_META.map((meta, index) => ({
-    id: kinds[index],
-    label: meta.label,
-    icon: <Icon icon={meta.icon} size="sm" />,
+  const kindTabs: readonly TabOption<UserAlertKind>[] = kindsForDraft(value).map((kind) => ({
+    id: kind,
+    label: TAB_FOR_KIND[kind].label,
+    icon: <Icon icon={TAB_FOR_KIND[kind].icon} size="sm" />,
   }))
 
   const removeButton = (
@@ -361,9 +347,10 @@ export function AlertCardForm({
 
       {targetMode && value.target ? <TargetChip target={value.target} /> : null}
 
-      {targetMode && !isMatchKind(value.kind) ? (
+      {targetMode && value.target && !isMatchKind(value.kind) ? (
         <MetricSelector
           value={value.metric}
+          stream={value.target.stream}
           onChange={(metric) => set({ metric })}
           {...(disabled || metricReadonly ? { disabled: true } : {})}
         />
