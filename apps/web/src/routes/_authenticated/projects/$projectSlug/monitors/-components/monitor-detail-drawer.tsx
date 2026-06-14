@@ -458,6 +458,7 @@ export function MonitorDetailDrawer({
           projectSlug={projectSlug}
           monitorId={monitor.id}
           alert={alertModal}
+          target={monitor.target}
           onClose={() => setAlertModal(null)}
         />
       ) : null}

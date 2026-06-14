@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { CircleSlashIcon, LayoutGridIcon, LockIcon, SearchIcon, TriangleAlertIcon } from "lucide-react"
 import { useCallback, useMemo } from "react"
 import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
+import { allToolsMonitorTarget } from "../../../../../domains/monitors/monitor-target.ts"
 import { useProjectTools, useToolCallHistogram } from "../../../../../domains/tools/tools.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
@@ -12,6 +13,7 @@ import { ColumnsSelector } from "../-components/columns-selector.tsx"
 import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
+import { AddTargetMonitorButton } from "../monitors/-components/add-target-monitor-button.tsx"
 import {
   DEFAULT_TOOLS_RANGE_SECONDS,
   getToolStatuses,
@@ -202,6 +204,12 @@ function ToolsPageContent() {
               />
               <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             </div>
+            <AddTargetMonitorButton
+              projectId={project.id}
+              projectSlug={project.slug}
+              target={allToolsMonitorTarget()}
+              label="Monitor all tools"
+            />
           </Layout.ActionRowItem>
         </Layout.ActionsRow>
       </Layout.Actions>

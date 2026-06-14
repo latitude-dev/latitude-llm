@@ -1,17 +1,32 @@
+import type { MonitorTarget } from "@domain/monitors"
 import { formatHumanReadableAlert } from "@domain/monitors/helpers"
 import {
   type AlertBaseline,
   type AlertCountThreshold,
   type AlertDuration,
   type AlertIncidentCondition,
+  type AlertMetricThreshold,
   type AlertSeverity,
+  type MonitorMetric,
   SEVERITY_FOR_KIND,
 } from "@domain/shared"
+import { monitorTargetName } from "../../../../../../domains/monitors/monitor-target.ts"
 import type { MonitorAlertDraft } from "../../../../../../domains/monitors/monitors.collection.ts"
 import type { MonitorAlertRecord } from "../../../../../../domains/monitors/monitors.functions.ts"
 
-/** Kinds a user may put on their own monitor (all saved-search-scoped today). */
-export type UserAlertKind = "savedSearch.match" | "savedSearch.threshold" | "savedSearch.escalating"
+/**
+ * Kinds a user may put on their own monitor. The saved-search trio targets a
+ * saved search (source on the alert); the unified trio targets the monitor's
+ * `(stream, filterSet, metric)` (target on the monitor) — same three tabs
+ * (match / threshold / escalating), selected by whether the draft has a target.
+ */
+export type UserAlertKind =
+  | "savedSearch.match"
+  | "savedSearch.threshold"
+  | "savedSearch.escalating"
+  | "event.matched"
+  | "metric.threshold"
+  | "metric.escalating"
 export type ComparisonMode = "times" | "timesMoreThan"
 export type WindowUnit = "minutes" | "hours" | "days"
 /** `average`/`period` carry a `lookback`; `expected` is the dynamically-learned baseline (no window). */
@@ -26,6 +41,10 @@ export type LookbackUnit = "hours" | "days"
 export interface AlertDraft {
   readonly kind: UserAlertKind
   readonly sourceId: string | null
+  /** Unified target ({stream, filterSet, query, metric}); null = saved-search mode. */
+  readonly target: MonitorTarget | null
+  /** The aggregate measured for unified targets; ignored in saved-search mode. */
+  readonly metric: MonitorMetric
   readonly severity: AlertSeverity
   readonly comparison: ComparisonMode
   /** count (absolute) · factor (multiplier) · sensitivity (expected) — see `comparison`/`baselineKind`. */
@@ -41,6 +60,8 @@ export interface AlertDraft {
 export const emptyAlertDraft = (overrides?: Partial<AlertDraft>): AlertDraft => ({
   kind: "savedSearch.match",
   sourceId: null,
+  target: null,
+  metric: { kind: "count" },
   severity: SEVERITY_FOR_KIND["savedSearch.match"],
   comparison: "times",
   amount: 100,
@@ -52,9 +73,37 @@ export const emptyAlertDraft = (overrides?: Partial<AlertDraft>): AlertDraft => 
   ...overrides,
 })
 
-/** Switch kind, resetting threshold/window fields (each kind has a different condition shape) but keeping source/severity. */
+/**
+ * Seed a draft for an in-context (tool/user) monitor: a unified target, the
+ * `metric.threshold` tab pre-selected, and a small default threshold. The metric
+ * selector edits `metric` (mirrored onto the target on submit).
+ */
+export const targetAlertDraft = (target: MonitorTarget, overrides?: Partial<AlertDraft>): AlertDraft =>
+  emptyAlertDraft({
+    kind: "metric.threshold",
+    target,
+    metric: target.metric,
+    severity: SEVERITY_FOR_KIND["metric.threshold"],
+    comparison: "times",
+    amount: 1,
+    ...overrides,
+  })
+
+/** The three kinds (match/threshold/escalating order) available for a draft's mode. */
+export const kindsForDraft = (draft: AlertDraft): readonly [UserAlertKind, UserAlertKind, UserAlertKind] =>
+  draft.target === null
+    ? ["savedSearch.match", "savedSearch.threshold", "savedSearch.escalating"]
+    : ["event.matched", "metric.threshold", "metric.escalating"]
+
+/** Switch kind within the current mode, resetting threshold/window fields but keeping target/metric/source/severity. */
 export const draftWithKind = (draft: AlertDraft, kind: UserAlertKind): AlertDraft =>
-  emptyAlertDraft({ kind, sourceId: draft.sourceId, severity: draft.severity })
+  emptyAlertDraft({
+    kind,
+    sourceId: draft.sourceId,
+    target: draft.target,
+    metric: draft.metric,
+    severity: draft.severity,
+  })
 
 export interface AlertFieldErrors {
   readonly source?: readonly string[]
@@ -104,33 +153,49 @@ const minutesToWindow = (minutes: number): { amount: number; unit: WindowUnit } 
   return { amount: minutes, unit: "minutes" }
 }
 
-const draftToThreshold = (draft: AlertDraft): AlertCountThreshold => {
+const draftBaseline = (draft: AlertDraft): AlertBaseline => ({
+  kind: draft.baselineKind === "expected" ? "average" : draft.baselineKind,
+  lookback: lookbackToDuration(draft.lookbackAmount, draft.lookbackUnit),
+})
+
+/** Saved-search threshold: absolute is an integer count. */
+const draftToCountThreshold = (draft: AlertDraft): AlertCountThreshold => {
   if (draft.comparison === "times") return { mode: "absolute", count: draft.amount }
   if (draft.baselineKind === "expected") return { mode: "expected", sensitivity: draft.amount }
-  const baseline: AlertBaseline = {
-    kind: draft.baselineKind,
-    lookback: lookbackToDuration(draft.lookbackAmount, draft.lookbackUnit),
-  }
-  return { mode: "multiplier", factor: draft.amount, baseline }
+  return { mode: "multiplier", factor: draft.amount, baseline: draftBaseline(draft) }
+}
+
+/** Unified metric threshold: absolute is a float `value` (error rate, latency, cost…). */
+const draftToMetricThreshold = (draft: AlertDraft): AlertMetricThreshold => {
+  if (draft.comparison === "times") return { mode: "absolute", value: draft.amount }
+  if (draft.baselineKind === "expected") return { mode: "expected", sensitivity: draft.amount }
+  return { mode: "multiplier", factor: draft.amount, baseline: draftBaseline(draft) }
 }
 
 export const draftToCondition = (draft: AlertDraft): AlertIncidentCondition | null => {
-  if (draft.kind === "savedSearch.match") return null
-  const threshold = draftToThreshold(draft)
-  if (draft.kind === "savedSearch.threshold") return { kind: "savedSearch.threshold", threshold }
-  return {
-    kind: "savedSearch.escalating",
-    threshold,
-    window: { minutes: windowToMinutes(draft.windowAmount, draft.windowUnit) },
+  const window = { minutes: windowToMinutes(draft.windowAmount, draft.windowUnit) }
+  if (draft.target !== null) {
+    if (draft.kind === "event.matched") return null
+    const threshold = draftToMetricThreshold(draft)
+    if (draft.kind === "metric.threshold") return { kind: "metric.threshold", metric: draft.metric, threshold }
+    return { kind: "metric.escalating", metric: draft.metric, threshold, window }
   }
+  if (draft.kind === "savedSearch.match") return null
+  const threshold = draftToCountThreshold(draft)
+  if (draft.kind === "savedSearch.threshold") return { kind: "savedSearch.threshold", threshold }
+  return { kind: "savedSearch.escalating", threshold, window }
 }
 
 export const draftToAlertDraft = (draft: AlertDraft): MonitorAlertDraft => ({
   kind: draft.kind,
-  source: { type: "savedSearch", id: draft.sourceId },
+  source: draft.target !== null ? null : { type: "savedSearch", id: draft.sourceId },
   condition: draftToCondition(draft),
   severity: draft.severity,
 })
+
+/** The monitor-level target to submit, with the metric selector's choice mirrored onto it (the firing path reads `target.metric`). */
+export const draftToTarget = (draft: AlertDraft): MonitorTarget | undefined =>
+  draft.target !== null ? { ...draft.target, metric: draft.metric } : undefined
 
 const thresholdToDraftFields = (
   threshold: AlertCountThreshold,
@@ -163,11 +228,48 @@ const thresholdToDraftFields = (
   }
 }
 
-/** Hydrate the working draft from a persisted saved-search alert (panel editing). */
-export const recordToAlertDraft = (alert: MonitorAlertRecord): AlertDraft => {
+/** `value` instead of `count` for unified metric thresholds (otherwise identical mode handling). */
+const metricThresholdToDraftFields = (
+  threshold: AlertMetricThreshold,
+): Pick<AlertDraft, "comparison" | "amount" | "baselineKind" | "lookbackAmount" | "lookbackUnit"> => {
+  if (threshold.mode === "absolute") {
+    return {
+      comparison: "times",
+      amount: threshold.value,
+      baselineKind: "average",
+      lookbackAmount: 7,
+      lookbackUnit: "days",
+    }
+  }
+  if (threshold.mode === "multiplier") {
+    const lookback = durationToLookback(threshold.baseline.lookback)
+    return {
+      comparison: "timesMoreThan",
+      amount: threshold.factor,
+      baselineKind: threshold.baseline.kind,
+      lookbackAmount: lookback.amount,
+      lookbackUnit: lookback.unit,
+    }
+  }
+  return {
+    comparison: "timesMoreThan",
+    amount: threshold.sensitivity ?? 3,
+    baselineKind: "expected",
+    lookbackAmount: 7,
+    lookbackUnit: "days",
+  }
+}
+
+/**
+ * Hydrate the working draft from a persisted alert for panel editing. Pass the
+ * monitor's `target` for unified `event.*`/`metric.*` alerts so the form opens in
+ * target mode (metric + read-only target chip); omit it for saved-search alerts.
+ */
+export const recordToAlertDraft = (alert: MonitorAlertRecord, target?: MonitorTarget | null): AlertDraft => {
   const base = emptyAlertDraft({
     kind: alert.kind as UserAlertKind,
     sourceId: alert.source?.id ?? null,
+    ...(target ? { target, metric: target.metric } : {}),
     severity: alert.severity,
   })
   const condition = alert.condition
@@ -183,22 +285,45 @@ export const recordToAlertDraft = (alert: MonitorAlertRecord): AlertDraft => {
       windowUnit: window.unit,
     }
   }
+  if (condition?.kind === "metric.threshold") {
+    return { ...base, metric: condition.metric, ...metricThresholdToDraftFields(condition.threshold) }
+  }
+  if (condition?.kind === "metric.escalating") {
+    const window = minutesToWindow(condition.window.minutes)
+    return {
+      ...base,
+      metric: condition.metric,
+      ...metricThresholdToDraftFields(condition.threshold),
+      windowAmount: window.amount,
+      windowUnit: window.unit,
+    }
+  }
   return base
 }
 
 type FormatAlertArg = Parameters<typeof formatHumanReadableAlert>[0]
 
 /** One-line live preview of the draft, via the shared domain formatter. */
-export const previewAlertSentence = (draft: AlertDraft, savedSearchName?: string): string =>
-  formatHumanReadableAlert(
+export const previewAlertSentence = (draft: AlertDraft, savedSearchName?: string): string => {
+  const targetName = draft.target !== null ? monitorTargetName(draft.target) : undefined
+  const context =
+    draft.target !== null
+      ? targetName
+        ? { targetName }
+        : undefined
+      : savedSearchName
+        ? { savedSearchName }
+        : undefined
+  return formatHumanReadableAlert(
     {
       id: "preview",
       monitorId: "preview",
       kind: draft.kind,
-      source: { type: "savedSearch", id: draft.sourceId },
+      source: draft.target !== null ? null : { type: "savedSearch", id: draft.sourceId },
       condition: draftToCondition(draft),
       severity: draft.severity,
       createdAt: new Date(),
     } as FormatAlertArg,
-    savedSearchName ? { savedSearchName } : undefined,
+    context,
   )
+}

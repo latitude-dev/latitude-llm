@@ -17,12 +17,14 @@ import { createFileRoute, Link, useParams } from "@tanstack/react-router"
 import { ArrowLeftIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useUserActivity, useUserProfile } from "../../../../../../domains/end-users/end-users.collection.ts"
+import { userMonitorTarget } from "../../../../../../domains/monitors/monitor-target.ts"
 import { useSessionsCount, useSessionsInfiniteScroll } from "../../../../../../domains/sessions/sessions.collection.ts"
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../../-components/breadcrumb-ui.tsx"
 import { SessionDetailDrawer } from "../../-components/session-detail-drawer.tsx"
 import { useRouteProject } from "../../-route-data.ts"
+import { AddTargetMonitorButton } from "../../monitors/-components/add-target-monitor-button.tsx"
 import {
   formatAgoLabel,
   formatBucketLabel,
@@ -158,6 +160,15 @@ function UserDetailPage() {
                 </Text.H6>
               </div>
             ) : undefined
+          }
+          actions={
+            notFound ? undefined : (
+              <AddTargetMonitorButton
+                projectId={project.id}
+                projectSlug={projectSlug}
+                target={userMonitorTarget(userId)}
+              />
+            )
           }
         />
 

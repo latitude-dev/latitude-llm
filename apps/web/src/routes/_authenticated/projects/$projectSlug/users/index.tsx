@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { ExternalLinkIcon, SearchIcon, UsersRoundIcon } from "lucide-react"
 import { useMemo } from "react"
 import { useProjectUsers, useUsersOverview } from "../../../../../domains/end-users/end-users.collection.ts"
+import { allUsersMonitorTarget } from "../../../../../domains/monitors/monitor-target.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
@@ -11,6 +12,7 @@ import { ColumnsSelector } from "../-components/columns-selector.tsx"
 import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
+import { AddTargetMonitorButton } from "../monitors/-components/add-target-monitor-button.tsx"
 import { DEFAULT_USERS_RANGE_SECONDS, pickUserTrendBucketSeconds } from "./-components/user-formatters.ts"
 import { UsersAnalyticsPanel } from "./-components/users-analytics-panel.tsx"
 import {
@@ -175,6 +177,12 @@ function UsersPage() {
                 />
                 <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               </div>
+              <AddTargetMonitorButton
+                projectId={project.id}
+                projectSlug={project.slug}
+                target={allUsersMonitorTarget()}
+                label="Monitor all users"
+              />
             </Layout.ActionRowItem>
           </Layout.ActionsRow>
         </Layout.Actions>

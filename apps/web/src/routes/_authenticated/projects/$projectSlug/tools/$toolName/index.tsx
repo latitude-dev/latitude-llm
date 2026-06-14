@@ -4,11 +4,13 @@ import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router"
 import { ArrowLeftIcon, LockIcon, TextAlignStartIcon, WrenchIcon } from "lucide-react"
 import { type ReactNode, useMemo, useState } from "react"
 import { useHasFeatureFlag } from "../../../../../../domains/feature-flags/feature-flags.collection.ts"
+import { toolMonitorTarget } from "../../../../../../domains/monitors/monitor-target.ts"
 import { useToolDetail } from "../../../../../../domains/tools/tools.collection.ts"
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbLink, BreadcrumbSeparator, BreadcrumbText } from "../../../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "../../-route-data.ts"
+import { AddTargetMonitorButton } from "../../monitors/-components/add-target-monitor-button.tsx"
 import {
   DEFAULT_TOOLS_RANGE_SECONDS,
   formatPercent,
@@ -197,6 +199,13 @@ function ToolDetailPageContent() {
                   View traces
                 </Link>
               </Button>
+              {notFound ? null : (
+                <AddTargetMonitorButton
+                  projectId={project.id}
+                  projectSlug={projectSlug}
+                  target={toolMonitorTarget(toolName)}
+                />
+              )}
             </>
           }
           description={

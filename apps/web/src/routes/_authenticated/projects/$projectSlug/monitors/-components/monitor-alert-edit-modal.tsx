@@ -1,3 +1,4 @@
+import type { MonitorTarget } from "@domain/monitors"
 import { Button, CloseTrigger, Modal, useToast } from "@repo/ui"
 import { useState } from "react"
 import { useMonitorAlertActions } from "../../../../../../domains/monitors/monitors.collection.ts"
@@ -13,24 +14,31 @@ import {
   recordToAlertDraft,
 } from "./alert-form-helpers.ts"
 
-/** Edit an existing saved-search alert in place. Alerts are never added or deleted from the app. */
+/**
+ * Edit an existing alert in place. Alerts are never added or deleted from the app.
+ * For unified (tool/user) monitors the `target` opens the form in target mode; the
+ * metric is read-only (it's fixed on the monitor target at creation).
+ */
 export function MonitorAlertEditModal({
   projectId,
   projectSlug,
   monitorId,
   alert,
+  target,
   onClose,
 }: {
   readonly projectId: string
   readonly projectSlug: string
   readonly monitorId: string
   readonly alert: MonitorAlertRecord
+  readonly target?: MonitorTarget | null
   readonly onClose: () => void
 }) {
   const { toast } = useToast()
   const { editAlert } = useMonitorAlertActions(projectId)
-  const [draft, setDraft] = useState<AlertDraft>(() => recordToAlertDraft(alert))
+  const [draft, setDraft] = useState<AlertDraft>(() => recordToAlertDraft(alert, target))
   const [errors, setErrors] = useState<AlertFieldErrors>({})
+  const targetMode = draft.target !== null
 
   const onChange = (next: AlertDraft) => {
     setDraft(next)
@@ -38,7 +46,7 @@ export function MonitorAlertEditModal({
   }
 
   const onSubmit = async () => {
-    if (draft.sourceId === null) {
+    if (!targetMode && draft.sourceId === null) {
       setErrors({ source: ["Select a saved search"] })
       return
     }
@@ -47,7 +55,7 @@ export function MonitorAlertEditModal({
         monitorId,
         alertId: alert.id,
         kind: draft.kind,
-        source: { type: "savedSearch", id: draft.sourceId },
+        ...(targetMode ? {} : { source: { type: "savedSearch" as const, id: draft.sourceId } }),
         condition: draftToCondition(draft),
         severity: draft.severity,
       })
@@ -89,6 +97,7 @@ export function MonitorAlertEditModal({
         projectId={projectId}
         projectSlug={projectSlug}
         errors={errors}
+        metricReadonly
       />
     </Modal>
   )

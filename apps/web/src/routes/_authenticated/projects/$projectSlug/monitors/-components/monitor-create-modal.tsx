@@ -8,6 +8,7 @@ import {
   type AlertFieldErrors,
   alertFieldErrorsFrom,
   draftToAlertDraft,
+  draftToTarget,
   emptyAlertDraft,
   hasAlertFieldErrors,
 } from "./alert-form-helpers.ts"
@@ -52,15 +53,17 @@ export function MonitorCreateModal({
       setNameError("Name is required")
       return
     }
-    if (alert.sourceId === null) {
+    if (alert.target === null && alert.sourceId === null) {
       setAlertErrors({ source: ["Select a saved search"] })
       return
     }
+    const target = draftToTarget(alert)
     try {
       const monitor = await create.mutateAsync({
         name: trimmedName,
         ...(description.trim() ? { description: description.trim() } : {}),
         alerts: [draftToAlertDraft(alert)],
+        ...(target ? { target } : {}),
       })
       toast({ description: "Monitor created." })
       onClose()

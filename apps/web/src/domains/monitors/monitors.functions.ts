@@ -15,6 +15,7 @@ import {
   type MonitorAlertInput,
   type MonitorLastIncident,
   type MonitorSearchResult,
+  monitorTargetSchema,
   muteMonitorUseCase,
   searchMonitorsUseCase,
   unmuteMonitorUseCase,
@@ -86,6 +87,7 @@ const toMonitorRecord = (monitor: Monitor, savedSearchRefs: ReadonlyMap<string, 
   description: monitor.description,
   system: monitor.system,
   alerts: monitor.alerts.map((alert) => toMonitorAlertRecord(alert, savedSearchRefs)),
+  target: monitor.target,
   mutedAt: monitor.mutedAt?.toISOString() ?? null,
   deletedAt: monitor.deletedAt?.toISOString() ?? null,
   createdAt: monitor.createdAt.toISOString(),
@@ -483,17 +485,17 @@ const DESCRIPTION_MAX_LENGTH = 2000
 
 const monitorAlertSourceSchema = z.object({ type: alertIncidentSourceTypeSchema, id: z.string().nullable() })
 
-/** Shared alert-creation fields; `condition`/`severity` default in the use-case. */
+/** Shared alert-creation fields; `condition`/`severity` default in the use-case. `source` is null for unified `event.*`/`metric.*` alerts (target on the monitor). */
 const createAlertFieldsSchema = z.object({
   kind: alertIncidentKindSchema,
-  source: monitorAlertSourceSchema,
+  source: monitorAlertSourceSchema.nullable(),
   condition: alertIncidentConditionSchema.nullish(),
   severity: alertSeveritySchema.optional(),
 })
 
 const toAlertInput = (fields: z.infer<typeof createAlertFieldsSchema>): MonitorAlertInput => ({
   kind: fields.kind,
-  source: { type: fields.source.type, id: fields.source.id },
+  source: fields.source ? { type: fields.source.type, id: fields.source.id } : null,
   condition: fields.condition ?? null,
   ...(fields.severity !== undefined ? { severity: fields.severity } : {}),
 })
@@ -504,6 +506,8 @@ const createMonitorInputSchema = z.object({
   description: z.string().max(DESCRIPTION_MAX_LENGTH).optional(),
   // The app creates a monitor with exactly one alert; alerts are never added afterwards.
   alerts: z.array(createAlertFieldsSchema).length(1),
+  // Present for unified (tool/user/raw-stream) monitors; absent for saved-search monitors.
+  target: monitorTargetSchema.optional(),
 })
 
 export const createMonitor = createServerFn({ method: "POST" })
@@ -519,6 +523,7 @@ export const createMonitor = createServerFn({ method: "POST" })
         name: data.name,
         ...(data.description !== undefined ? { description: data.description } : {}),
         alerts: data.alerts.map(toAlertInput),
+        ...(data.target !== undefined ? { target: data.target } : {}),
       }).pipe(
         // SavedSearchRepository backs the semantic-search monitorability check on the watched search.
         withPostgres(Layer.mergeAll(MonitorRepositoryLive, SavedSearchRepositoryLive), getPostgresClient(), orgId),

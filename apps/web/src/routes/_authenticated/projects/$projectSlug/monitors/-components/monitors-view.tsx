@@ -15,6 +15,7 @@ import {
 import { useNavigate } from "@tanstack/react-router"
 import { BellIcon, BellOffIcon, PencilIcon, Trash2Icon } from "lucide-react"
 import { useState } from "react"
+import { describeMonitorTarget } from "../../../../../../domains/monitors/monitor-target.ts"
 import type { MonitorListRowRecord, MonitorRecord } from "../../../../../../domains/monitors/monitors.collection.ts"
 import {
   ListingLayout as Layout,
@@ -175,6 +176,23 @@ function ConditionCell({ alerts }: { readonly alerts: MonitorRecord["alerts"] })
   )
 }
 
+/** The unified monitor target (tool / user / all-X / raw stream); "—" for legacy saved-search and issue monitors. */
+function TargetCell({ target }: { readonly target: MonitorRecord["target"] }) {
+  const description = describeMonitorTarget(target)
+  if (!description) {
+    return (
+      <Text.H6 color="foregroundMuted" noWrap>
+        —
+      </Text.H6>
+    )
+  }
+  return (
+    <Badge variant="muted" ellipsis className="max-w-full">
+      {description.label}
+    </Badge>
+  )
+}
+
 export function MonitorsView({
   rows,
   isLoading,
@@ -282,6 +300,14 @@ export function MonitorsView({
           } satisfies InfiniteTableColumn<MonitorsTableRow>,
         ]
       : []),
+    {
+      key: "target",
+      header: "Target",
+      width: 160,
+      minWidth: 120,
+      maxWidth: 200,
+      render: (row) => <TargetCell target={row.monitor.target} />,
+    },
     {
       key: "condition",
       header: "Condition",

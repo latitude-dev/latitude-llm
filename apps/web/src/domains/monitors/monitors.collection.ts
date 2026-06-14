@@ -1,3 +1,4 @@
+import type { MonitorTarget } from "@domain/monitors"
 import type { AlertIncidentCondition, AlertIncidentKind, AlertIncidentSourceType, AlertSeverity } from "@domain/shared"
 import { type InfiniteTableInfiniteScroll, useToast } from "@repo/ui"
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -25,10 +26,10 @@ import {
   updateMonitorAlert,
 } from "./monitors.functions.ts"
 
-/** Client-side alert draft mirroring the server `createAlertFieldsSchema`. */
+/** Client-side alert draft mirroring the server `createAlertFieldsSchema`. `source` is null for unified `event.*`/`metric.*` alerts. */
 export interface MonitorAlertDraft {
   readonly kind: AlertIncidentKind
-  readonly source: { readonly type: AlertIncidentSourceType; readonly id: string | null }
+  readonly source: { readonly type: AlertIncidentSourceType; readonly id: string | null } | null
   readonly condition?: AlertIncidentCondition | null
   readonly severity?: AlertSeverity
 }
@@ -314,6 +315,7 @@ export function useCreateMonitor(projectId: string) {
       readonly name: string
       readonly description?: string
       readonly alerts: readonly MonitorAlertDraft[]
+      readonly target?: MonitorTarget
     }) =>
       createMonitor({
         data: {
@@ -321,6 +323,7 @@ export function useCreateMonitor(projectId: string) {
           name: input.name,
           ...(input.description !== undefined ? { description: input.description } : {}),
           alerts: input.alerts.map((alert) => ({ ...alert })),
+          ...(input.target !== undefined ? { target: input.target } : {}),
         },
       }),
     onSuccess: () => invalidateMonitorQueries(queryClient, projectId),
