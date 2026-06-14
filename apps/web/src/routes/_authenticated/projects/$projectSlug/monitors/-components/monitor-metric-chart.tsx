@@ -140,6 +140,7 @@ export function MonitorMetricChart({
           xAxisLabelFontSize={10}
           ariaLabel={`${target ? metricLabel(target) : "Metric"} over time`}
           formatTooltip={formatTooltip}
+          {...(metric ? { formatYAxisLabel: (value: number) => formatMetricValue(value, metric) } : {})}
           {...(overlay ? { overlay } : {})}
           onBucketAxisPointerChange={handleBucketAxisPointerChange}
         />
