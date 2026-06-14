@@ -5,6 +5,7 @@ import {
   type AlertIncidentKind,
   type AlertIncidentSourceType,
   type AlertSeverity,
+  KINDS_WITHOUT_CONDITION,
   type MonitorAlertId,
   type MonitorId,
   type NotFoundError,
@@ -20,11 +21,10 @@ import { MonitorRepository } from "../ports/monitor-repository.ts"
 import { assertMonitorableSavedSearch } from "./assert-monitorable-saved-search.ts"
 
 const USER_CREATABLE = new Set<AlertIncidentKind>(USER_CREATABLE_ALERT_KINDS)
-/** Kinds that carry no `condition` (nothing to configure). Their condition stays `null`. */
-const KINDS_WITHOUT_CONDITION = new Set<AlertIncidentKind>(["issue.new", "issue.regressed", "savedSearch.match"])
+const NO_CONDITION = new Set<AlertIncidentKind>(KINDS_WITHOUT_CONDITION)
 
 const conditionMatchesKind = (condition: AlertIncidentCondition | null, kind: AlertIncidentKind): boolean =>
-  condition === null ? KINDS_WITHOUT_CONDITION.has(kind) : condition.kind === kind
+  condition === null ? NO_CONDITION.has(kind) : condition.kind === kind
 
 export interface UpdateMonitorAlertInput {
   readonly monitorId: MonitorId
