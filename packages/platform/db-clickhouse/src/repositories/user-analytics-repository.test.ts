@@ -319,8 +319,14 @@ describe("UserAnalyticsRepository", () => {
       expect(overview.newUsers).toBe(1) // only user-c's first trace falls in range
       expect(overview.identifiedTraces).toBe(3)
       expect(overview.totalTraces).toBe(4) // + anonymous trace
+      // In range: session-a1 (a2, ok), session-a2 (a3, error), user-c's session, anon d1's session.
+      expect(overview.identifiedSessions).toBe(3) // user-attributed sessions
+      expect(overview.totalSessions).toBe(4) // + the anonymous session
       expect(overview.histogram.length).toBeGreaterThan(0)
       expect(overview.histogram.reduce((sum, bucket) => sum + bucket.traceCount, 0)).toBe(3)
+      // Histogram is user-attributed: 3 identified sessions, one of them errored (session-a2).
+      expect(overview.histogram.reduce((sum, bucket) => sum + bucket.sessionCount, 0)).toBe(3)
+      expect(overview.histogram.reduce((sum, bucket) => sum + bucket.errorSessionCount, 0)).toBe(1)
     })
   })
 

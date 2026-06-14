@@ -313,14 +313,22 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
                 query: `SELECT
                         uniqExactIf(user_id, user_id != '') AS unique_users,
                         countIf(user_id != '')              AS identified_traces,
-                        count()                             AS total_traces
+                        count()                             AS total_traces,
+                        uniqExact(coalesce(nullIf(session_id, ''), toString(trace_id))) AS total_sessions,
+                        uniqExactIf(coalesce(nullIf(session_id, ''), toString(trace_id)), user_id != '') AS identified_sessions
                       FROM (${USER_TRACE_ROLLUP})
                       WHERE start_time >= {fromTime:DateTime64(9, 'UTC')}
                         AND start_time < {toTime:DateTime64(9, 'UTC')}`,
                 query_params: params,
                 format: "JSONEachRow",
               })
-              return result.json<{ unique_users: string; identified_traces: string; total_traces: string }>()
+              return result.json<{
+                unique_users: string
+                identified_traces: string
+                total_traces: string
+                total_sessions: string
+                identified_sessions: string
+              }>()
             }),
             chSqlClient.query(async (client) => {
               const result = await client.query({
@@ -347,7 +355,9 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
                           'UTC'
                         ) AS bucket_start,
                         uniqExact(user_id) AS active_users,
-                        count()            AS trace_count
+                        count()            AS trace_count,
+                        uniqExact(coalesce(nullIf(session_id, ''), toString(trace_id))) AS session_count,
+                        uniqExactIf(coalesce(nullIf(session_id, ''), toString(trace_id)), error_count > 0) AS error_session_count
                       FROM (${USER_TRACE_ROLLUP})
                       WHERE user_id != ''
                         AND start_time >= {fromTime:DateTime64(9, 'UTC')}
@@ -357,7 +367,13 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
                 query_params: { ...params, bucketSeconds: Math.floor(bucketSeconds) },
                 format: "JSONEachRow",
               })
-              return result.json<{ bucket_start: string; active_users: string; trace_count: string }>()
+              return result.json<{
+                bucket_start: string
+                active_users: string
+                trace_count: string
+                session_count: string
+                error_session_count: string
+              }>()
             }),
           ],
           { concurrency: 3 },
@@ -369,10 +385,14 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
           newUsers: Number(newUserRows[0]?.new_users ?? 0),
           identifiedTraces: Number(summary?.identified_traces ?? 0),
           totalTraces: Number(summary?.total_traces ?? 0),
+          identifiedSessions: Number(summary?.identified_sessions ?? 0),
+          totalSessions: Number(summary?.total_sessions ?? 0),
           histogram: histogramRows.map((row) => ({
             bucket: parseCHDate(row.bucket_start).toISOString(),
             activeUsers: Number(row.active_users),
             traceCount: Number(row.trace_count),
+            sessionCount: Number(row.session_count),
+            errorSessionCount: Number(row.error_session_count),
           })),
         } satisfies UsersOverview
       })

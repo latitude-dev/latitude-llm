@@ -101,6 +101,10 @@ export interface UsersOverviewBucket {
   readonly bucket: string
   readonly activeUsers: number
   readonly traceCount: number
+  /** Distinct user-attributed sessions starting in the bucket. */
+  readonly sessionCount: number
+  /** Of `sessionCount`, those with at least one errored trace. */
+  readonly errorSessionCount: number
 }
 
 export interface UsersOverview {
@@ -112,6 +116,10 @@ export interface UsersOverview {
   readonly identifiedTraces: number
   /** All traces in range, identified or not. */
   readonly totalTraces: number
+  /** Distinct sessions in range carrying a non-empty `user_id`. */
+  readonly identifiedSessions: number
+  /** All distinct sessions in range, identified or not. */
+  readonly totalSessions: number
   readonly histogram: readonly UsersOverviewBucket[]
 }
 
