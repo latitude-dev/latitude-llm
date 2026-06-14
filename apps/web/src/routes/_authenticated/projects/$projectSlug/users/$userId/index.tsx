@@ -234,6 +234,7 @@ function UserDetailPage() {
                       to="/projects/$projectSlug"
                       params={{ projectSlug }}
                       search={{
+                        tab: "sessions",
                         filters: JSON.stringify({
                           userId: [{ op: "eq", value: userId }],
                           ...(errorsOnly ? { status: [{ op: "eq", value: "error" }] } : {}),
@@ -242,7 +243,7 @@ function UserDetailPage() {
                       }}
                     >
                       <Icon icon={TextAlignStartIcon} size="sm" />
-                      View traces
+                      View sessions
                     </Link>
                   </Button>
                 </div>

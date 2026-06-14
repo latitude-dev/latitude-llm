@@ -375,6 +375,7 @@ function ToolDetailPageContent() {
                     to="/projects/$projectSlug"
                     params={{ projectSlug }}
                     search={{
+                      tab: "traces",
                       filters: JSON.stringify({
                         tools: [{ op: "in", value: [toolName] }],
                         startTime: [
