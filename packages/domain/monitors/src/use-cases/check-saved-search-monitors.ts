@@ -77,7 +77,7 @@ export const checkSavedSearchMonitorsUseCase = (
                 monitorId: alert.monitorId,
                 alertId: alert.id,
                 kind: alert.kind,
-                sourceId: alert.source.id,
+                sourceId: alert.source?.id ?? null,
                 error: Cause.squash(cause),
               })
             }),
@@ -97,7 +97,7 @@ export const checkSavedSearchMonitorsUseCase = (
       readonly now: Date
     }) {
       return Effect.gen(function* () {
-        const sourceId = args.alert.source.id
+        const sourceId = args.alert.source?.id ?? null
         if (sourceId === null) return
         // Skip a since-deleted search (a check can race the delete cascade).
         const search = yield* savedSearchRepository

@@ -35,7 +35,7 @@ export const runSavedSearchThresholdAlertUseCase = (input: EvaluateSavedSearchAl
     if (alert.kind !== "savedSearch.threshold" || condition?.kind !== "savedSearch.threshold") {
       return yield* Effect.die(`runSavedSearchThresholdAlert: not a savedSearch.threshold alert (${alert.id})`)
     }
-    const sourceId = alert.source.id
+    const sourceId = alert.source?.id ?? null
     if (sourceId === null) return yield* Effect.die(`runSavedSearchThresholdAlert: alert ${alert.id} has no source id`)
 
     const sqlClient = yield* SqlClient

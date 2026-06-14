@@ -67,7 +67,7 @@ export const createMonitorUseCase = (
         const watchedSearchIds = [
           ...new Set(
             alerts.flatMap((alert) =>
-              alert.source.type === "savedSearch" && alert.source.id ? [alert.source.id] : [],
+              alert.source?.type === "savedSearch" && alert.source.id ? [alert.source.id] : [],
             ),
           ),
         ]

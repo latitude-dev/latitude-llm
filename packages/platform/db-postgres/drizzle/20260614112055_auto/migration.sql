@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."monitor_alerts" ALTER COLUMN "source_type" DROP NOT NULL;

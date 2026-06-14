@@ -60,7 +60,7 @@ describe("cascadeSourceDeletionUseCase", () => {
     expect(monitors.find((m) => m.slug === "monitor-m1")?.deletedAt).not.toBeNull()
     const survivor = monitors.find((m) => m.slug === "monitor-m2")
     expect(survivor?.deletedAt).toBeNull()
-    expect(survivor?.alerts.map((a) => a.source.id)).toEqual([searchY])
+    expect(survivor?.alerts.map((a) => a.source?.id ?? null)).toEqual([searchY])
   })
 
   it("is a no-op when nothing watches the source", async () => {
