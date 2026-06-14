@@ -187,7 +187,14 @@ function UsersPage() {
           </Layout.ActionsRow>
         </Layout.Actions>
         <div className="px-6">
-          <UsersAnalyticsPanel overview={overview} isLoading={overviewLoading} />
+          <UsersAnalyticsPanel
+            overview={overview}
+            isLoading={overviewLoading}
+            onRangeSelect={(selected) => {
+              setTimeFrom(selected?.from ?? "")
+              setTimeTo(selected?.to ?? "")
+            }}
+          />
         </div>
         <UsersView
           users={users}

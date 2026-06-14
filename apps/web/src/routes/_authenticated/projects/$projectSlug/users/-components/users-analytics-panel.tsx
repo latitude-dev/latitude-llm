@@ -50,14 +50,32 @@ function formatCoverage(identified: number, total: number): string {
 export function UsersAnalyticsPanel({
   overview,
   isLoading,
+  onRangeSelect,
 }: {
   readonly overview: UsersOverviewRecord | undefined
   readonly isLoading: boolean
+  readonly onRangeSelect?: ((range: { from: string; to: string } | null) => void) | undefined
 }) {
   const [collapsed, setCollapsed] = useState(false)
 
   const bucketSeconds = overview?.bucketSeconds ?? 24 * 60 * 60
+  const bucketWidthMs = bucketSeconds * 1000
   const histogram = overview?.histogram ?? []
+
+  const handleSelect = (range: { startIndex: number; endIndex: number } | null) => {
+    if (!onRangeSelect) return
+    if (!range) {
+      onRangeSelect(null)
+      return
+    }
+    const startBucket = histogram[range.startIndex]
+    const endBucket = histogram[range.endIndex]
+    if (!startBucket || !endBucket) return
+    onRangeSelect({
+      from: new Date(Date.parse(startBucket.bucket)).toISOString(),
+      to: new Date(Date.parse(endBucket.bucket) + bucketWidthMs - 1).toISOString(),
+    })
+  }
 
   const categories = useMemo(
     () => histogram.map((bucket) => formatBucketLabel(bucket.bucket, bucketSeconds)),
@@ -174,6 +192,7 @@ export function UsersAnalyticsPanel({
               height={160}
               xAxisLabelFontSize={10}
               ariaLabel="User sessions over time"
+              {...(onRangeSelect ? { onSelect: handleSelect } : {})}
             />
           </div>
         )}
