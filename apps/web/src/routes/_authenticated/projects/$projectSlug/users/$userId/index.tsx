@@ -6,6 +6,7 @@ import {
   Button,
   CopyableText,
   HistogramSkeleton,
+  Icon,
   Label,
   Skeleton,
   Switch,
@@ -14,7 +15,7 @@ import {
 } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { createFileRoute, Link, useParams } from "@tanstack/react-router"
-import { ArrowLeftIcon } from "lucide-react"
+import { ArrowLeftIcon, TextAlignStartIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useUserActivity, useUserProfile } from "../../../../../../domains/end-users/end-users.collection.ts"
 import { userMonitorTarget } from "../../../../../../domains/monitors/monitor-target.ts"
@@ -24,7 +25,7 @@ import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../../-components/breadcrumb-ui.tsx"
 import { SessionDetailDrawer } from "../../-components/session-detail-drawer.tsx"
 import { useRouteProject } from "../../-route-data.ts"
-import { TargetMonitorsCard } from "../../monitors/-components/target-monitors-card.tsx"
+import { TargetMonitorsMenu } from "../../monitors/-components/target-monitors-menu.tsx"
 import {
   formatAgoLabel,
   formatBucketLabel,
@@ -33,6 +34,7 @@ import {
 } from "../-components/user-formatters.ts"
 import { UserBehavioursSection } from "./-components/user-behaviours-section.tsx"
 import { UserIssuesSection } from "./-components/user-issues-section.tsx"
+import { UserNeighborNav } from "./-components/user-neighbor-nav.tsx"
 import { UserSessionsTable } from "./-components/user-sessions-table.tsx"
 import { UserStatStrip } from "./-components/user-stat-strip.tsx"
 import { UserUsageSection } from "./-components/user-usage-section.tsx"
@@ -161,6 +163,37 @@ function UserDetailPage() {
               </div>
             ) : undefined
           }
+          actions={
+            notFound ? undefined : (
+              <>
+                <UserNeighborNav
+                  projectId={project.id}
+                  projectSlug={projectSlug}
+                  userId={userId}
+                  overlayActive={Boolean(activeSessionId)}
+                />
+                <div className="mx-1 h-5 w-px bg-border" />
+                <Label htmlFor="user-errors-only" className="cursor-pointer">
+                  <Text.H6 color="foregroundMuted" noWrap>
+                    Error view
+                  </Text.H6>
+                </Label>
+                <Switch
+                  id="user-errors-only"
+                  checked={errorsOnly}
+                  onCheckedChange={(checked) => setErrorsParam(checked ? "1" : "")}
+                />
+                <div className="mx-1 h-5 w-px bg-border" />
+                <TargetMonitorsMenu
+                  projectId={project.id}
+                  projectSlug={projectSlug}
+                  stream="traces"
+                  filterSetContains={{ userId: [{ op: "eq", value: userId }] }}
+                  createTarget={userMonitorTarget(userId)}
+                />
+              </>
+            )
+          }
         />
 
         {notFound ? (
@@ -177,14 +210,6 @@ function UserDetailPage() {
                 <Text.H6 color="foregroundMuted">Activity · last 30 days</Text.H6>
                 <UserActivityChart projectId={project.id} userId={userId} />
               </div>
-
-              <TargetMonitorsCard
-                projectId={project.id}
-                projectSlug={projectSlug}
-                stream="traces"
-                filterSetContains={{ userId: [{ op: "eq", value: userId }] }}
-                createTarget={userMonitorTarget(userId)}
-              />
 
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
                 <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
@@ -204,18 +229,22 @@ function UserDetailPage() {
                   <Text.H5M color="foreground">
                     {sessionTotalCount > 0 ? `Sessions (${formatCount(sessionTotalCount)})` : "Sessions"}
                   </Text.H5M>
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="user-errors-only" className="cursor-pointer">
-                      <Text.H6 color="foregroundMuted" noWrap>
-                        Error view
-                      </Text.H6>
-                    </Label>
-                    <Switch
-                      id="user-errors-only"
-                      checked={errorsOnly}
-                      onCheckedChange={(checked) => setErrorsParam(checked ? "1" : "")}
-                    />
-                  </div>
+                  <Button asChild variant="outline" size="sm" className="w-auto">
+                    <Link
+                      to="/projects/$projectSlug"
+                      params={{ projectSlug }}
+                      search={{
+                        filters: JSON.stringify({
+                          userId: [{ op: "eq", value: userId }],
+                          ...(errorsOnly ? { status: [{ op: "eq", value: "error" }] } : {}),
+                        }),
+                        filtersOpen: true,
+                      }}
+                    >
+                      <Icon icon={TextAlignStartIcon} size="sm" />
+                      View traces
+                    </Link>
+                  </Button>
                 </div>
                 <UserSessionsTable
                   sessions={sessions}

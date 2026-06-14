@@ -1,0 +1,121 @@
+import type { MonitorTarget } from "@domain/monitors"
+import {
+  Button,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuRoot,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  Icon,
+  Status,
+  Text,
+} from "@repo/ui"
+import { useNavigate } from "@tanstack/react-router"
+import { BellPlusIcon, ChevronDownIcon } from "lucide-react"
+import { useState } from "react"
+import { useMonitorsForTarget } from "../../../../../../domains/monitors/monitors.collection.ts"
+import { targetAlertDraft } from "./alert-form-helpers.ts"
+import { MonitorCreateModal } from "./monitor-create-modal.tsx"
+
+/** Green dot, pulsing while the monitor is live; muted/static when paused. */
+function ActivityDot({ live }: { readonly live: boolean }) {
+  if (!live) return <span className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground/40" />
+  return (
+    <span className="relative flex h-2 w-2 shrink-0">
+      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
+      <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+    </span>
+  )
+}
+
+/**
+ * Compact in-context monitor control for a section header. With no monitors it's
+ * an "Add monitor" button; once monitors exist it becomes a dropdown whose
+ * trigger surfaces the first live monitor (with a pulsing activity dot) and whose
+ * menu lists every monitor plus "Add monitor" as the last item.
+ */
+export function TargetMonitorsMenu({
+  projectId,
+  projectSlug,
+  stream,
+  filterSetContains,
+  createTarget,
+}: {
+  readonly projectId: string
+  readonly projectSlug: string
+  readonly stream: MonitorTarget["stream"]
+  readonly filterSetContains: NonNullable<MonitorTarget["filterSet"]>
+  readonly createTarget: MonitorTarget
+}) {
+  const navigate = useNavigate()
+  const [createOpen, setCreateOpen] = useState(false)
+  const { monitors } = useMonitorsForTarget({ projectId, stream, filterSetContains })
+
+  const createModal = createOpen ? (
+    <MonitorCreateModal
+      projectId={projectId}
+      projectSlug={projectSlug}
+      initialAlert={targetAlertDraft(createTarget)}
+      onClose={() => setCreateOpen(false)}
+    />
+  ) : null
+
+  if (monitors.length === 0) {
+    return (
+      <>
+        <Button variant="outline" size="sm" className="w-auto" onClick={() => setCreateOpen(true)}>
+          <Icon icon={BellPlusIcon} size="sm" />
+          Add monitor
+        </Button>
+        {createModal}
+      </>
+    )
+  }
+
+  const lead = monitors.find((monitor) => monitor.mutedAt === null) ?? monitors[0]
+
+  return (
+    <>
+      <DropdownMenuRoot modal={false}>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" className="w-auto max-w-56">
+            <ActivityDot live={lead?.mutedAt === null} />
+            <Text.H5 ellipsis noWrap>
+              {lead?.name}
+            </Text.H5>
+            <Icon icon={ChevronDownIcon} size="sm" color="foregroundMuted" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuPortal>
+          <DropdownMenuContent align="end" className="w-64">
+            {monitors.map((monitor) => (
+              <DropdownMenuItem
+                key={monitor.slug}
+                className="cursor-pointer items-center gap-2"
+                onSelect={() =>
+                  void navigate({
+                    to: "/projects/$projectSlug/monitors/$monitorSlug",
+                    params: { projectSlug, monitorSlug: monitor.slug },
+                  })
+                }
+              >
+                <ActivityDot live={monitor.mutedAt === null} />
+                <Text.H5 ellipsis noWrap className="min-w-0 flex-1">
+                  {monitor.name}
+                </Text.H5>
+                {monitor.mutedAt ? <Status variant="neutral" label="Muted" /> : null}
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="cursor-pointer items-center gap-2" onSelect={() => setCreateOpen(true)}>
+              <Icon icon={BellPlusIcon} size="sm" color="foregroundMuted" />
+              <Text.H5>Add monitor</Text.H5>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenuPortal>
+      </DropdownMenuRoot>
+      {createModal}
+    </>
+  )
+}

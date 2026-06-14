@@ -10,7 +10,7 @@ import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbLink, BreadcrumbSeparator, BreadcrumbText } from "../../../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "../../-route-data.ts"
-import { TargetMonitorsCard } from "../../monitors/-components/target-monitors-card.tsx"
+import { TargetMonitorsMenu } from "../../monitors/-components/target-monitors-menu.tsx"
 import {
   DEFAULT_TOOLS_RANGE_SECONDS,
   formatPercent,
@@ -178,27 +178,18 @@ function ToolDetailPageContent() {
                 checked={errorsOnly}
                 onCheckedChange={(checked) => setErrorsParam(checked ? "1" : "")}
               />
-              <div className="mx-1 h-5 w-px bg-border" />
-              {/* w-auto: asChild lands the face's w-full on the Link, stretching it. */}
-              <Button asChild variant="outline" size="sm" className="w-auto">
-                <Link
-                  to="/projects/$projectSlug"
-                  params={{ projectSlug }}
-                  search={{
-                    filters: JSON.stringify({
-                      tools: [{ op: "in", value: [toolName] }],
-                      startTime: [
-                        { op: "gte", value: range.fromIso },
-                        { op: "lte", value: range.toIso },
-                      ],
-                    }),
-                    filtersOpen: true,
-                  }}
-                >
-                  <Icon icon={TextAlignStartIcon} size="sm" />
-                  View traces
-                </Link>
-              </Button>
+              {notFound ? null : (
+                <>
+                  <div className="mx-1 h-5 w-px bg-border" />
+                  <TargetMonitorsMenu
+                    projectId={project.id}
+                    projectSlug={projectSlug}
+                    stream="spans"
+                    filterSetContains={{ toolName: [{ op: "eq", value: toolName }] }}
+                    createTarget={toolMonitorTarget(toolName)}
+                  />
+                </>
+              )}
             </>
           }
           description={
@@ -214,15 +205,6 @@ function ToolDetailPageContent() {
           }
         />
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6 pt-2">
-          {notFound ? null : (
-            <TargetMonitorsCard
-              projectId={project.id}
-              projectSlug={projectSlug}
-              stream="spans"
-              filterSetContains={{ toolName: [{ op: "eq", value: toolName }] }}
-              createTarget={toolMonitorTarget(toolName)}
-            />
-          )}
           {/* Usage — headline call metrics, scoped to failures when the
               errors-only switch is on (error rate stays global). */}
           <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
@@ -387,6 +369,27 @@ function ToolDetailPageContent() {
               range={range}
               errorsOnly={errorsOnly}
               onOverlayActiveChange={setOverlayActive}
+              headerAction={
+                <Button asChild variant="outline" size="sm" className="w-auto">
+                  <Link
+                    to="/projects/$projectSlug"
+                    params={{ projectSlug }}
+                    search={{
+                      filters: JSON.stringify({
+                        tools: [{ op: "in", value: [toolName] }],
+                        startTime: [
+                          { op: "gte", value: range.fromIso },
+                          { op: "lte", value: range.toIso },
+                        ],
+                      }),
+                      filtersOpen: true,
+                    }}
+                  >
+                    <Icon icon={TextAlignStartIcon} size="sm" />
+                    View traces
+                  </Link>
+                </Button>
+              }
             />
           ) : null}
         </div>
