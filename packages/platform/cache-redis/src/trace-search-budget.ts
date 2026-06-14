@@ -11,8 +11,12 @@ const MONTHLY_TTL_SECONDS = 60 * 60 * 24 * 62 // ~2 months
 
 const pad2 = (n: number): string => n.toString().padStart(2, "0")
 
+// The `{orgId}` hash tag is load-bearing on Redis Cluster: it forces all three
+// window keys for an org onto the same slot so the cross-window `mget` and
+// `pipeline` below don't fail with CROSSSLOT. Without it the budget check
+// errors on every call against a clustered Redis (prod) and fails open.
 const buildBudgetKey = (orgId: OrganizationId, window: "daily" | "weekly" | "monthly", suffix: string): string =>
-  `org:${orgId}:trace-search:embed-budget:${window}:${suffix}`
+  `org:{${orgId}}:trace-search:embed-budget:${window}:${suffix}`
 
 const dailyKey = (orgId: OrganizationId, now: Date): string => {
   const yyyy = now.getUTCFullYear()
