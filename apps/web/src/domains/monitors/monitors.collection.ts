@@ -366,6 +366,9 @@ const invalidateMonitorQueries = (queryClient: ReturnType<typeof useQueryClient>
     // Saved-search ↔ monitor summaries back the traces-page chip and selector
     // rows; creating/deleting/muting monitors changes them.
     queryClient.invalidateQueries({ queryKey: ["monitors", "savedSearchSummaries", projectId] }),
+    // The in-context tool/user "Monitors" dropdown + the monitor-page metric chart.
+    queryClient.invalidateQueries({ queryKey: ["monitors", "for-target", projectId] }),
+    queryClient.invalidateQueries({ queryKey: ["monitors", "metric-series", projectId] }),
   ])
 
 /** Broad invalidation for bulk actions — the list/detail queries plus the drawer's incidents and stats. */
