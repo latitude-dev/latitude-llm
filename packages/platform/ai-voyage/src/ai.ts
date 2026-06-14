@@ -64,7 +64,11 @@ export const embedWithVoyage = (input: EmbedInput): Effect.Effect<EmbedResult, A
             input: input.text,
             model: input.model,
             inputType: input.inputType ?? "document",
-            truncation: false,
+            // Must stay true: the shared-embedding design embeds whole messages and
+            // relies on provider truncation for oversized ones. With `false`, Voyage
+            // 400s on any input past its 32k-token window, which both the trace-search
+            // indexer and CI session analysis feed it on long messages.
+            truncation: true,
             outputDimension: EMBEDDING_DIMENSIONS,
             outputDtype: "float",
           })
@@ -96,7 +100,9 @@ export const rerankWithVoyage = (input: RerankInput): Effect.Effect<readonly Rer
             documents: input.documents as string[],
             model: input.model,
             returnDocuments: false,
-            truncation: false,
+            // Truncate oversized documents to the model window rather than 400 the
+            // whole rerank request (same failure mode as embed above).
+            truncation: true,
           })
 
           if (!response.data) {
