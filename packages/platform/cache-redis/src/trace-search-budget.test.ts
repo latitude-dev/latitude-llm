@@ -195,8 +195,10 @@ describe("TraceSearchBudgetLive.tryConsume", () => {
     const orgBKeys = Array.from(redis.store.keys()).filter((k) => k.includes(OTHER_ORG))
     expect(orgAKeys).toHaveLength(3)
     expect(orgBKeys).toHaveLength(3)
-    for (const k of orgAKeys) expect(k.startsWith(`org:${ORG_ID}:`)).toBe(true)
-    for (const k of orgBKeys) expect(k.startsWith(`org:${OTHER_ORG}:`)).toBe(true)
+    // Keys carry a Redis Cluster hash tag around the org id so all three window
+    // keys land on one slot (cross-window mget/pipeline would otherwise CROSSSLOT).
+    for (const k of orgAKeys) expect(k.startsWith(`org:{${ORG_ID}}:`)).toBe(true)
+    for (const k of orgBKeys) expect(k.startsWith(`org:{${OTHER_ORG}}:`)).toBe(true)
     for (const k of [...orgAKeys, ...orgBKeys]) expect(redis.store.get(k)).toBe(900)
   })
 
