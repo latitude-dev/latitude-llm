@@ -299,8 +299,26 @@ describe("UserAnalyticsRepository", () => {
       expect(series).toHaveLength(2)
       const userA = series.find((entry) => entry.userId === USER_A)
       expect(userA?.buckets.reduce((sum, bucket) => sum + bucket.count, 0)).toBe(2)
+      expect(userA?.buckets.reduce((sum, bucket) => sum + bucket.errorCount, 0)).toBe(1)
       const userB = series.find((entry) => entry.userId === USER_B)
       expect(userB?.buckets).toEqual([])
+    })
+
+    it("counts only errored traces when errorsOnly is set", async () => {
+      const series = await runCh(
+        repo.activityByUserIds({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          userIds: [USER_A],
+          timeRange: { from: daysAgo(3), to: NOW },
+          bucketSeconds: 24 * 60 * 60,
+          errorsOnly: true,
+        }),
+      )
+
+      const userA = series.find((entry) => entry.userId === USER_A)
+      expect(userA?.buckets.reduce((sum, bucket) => sum + bucket.count, 0)).toBe(1)
+      expect(userA?.buckets.reduce((sum, bucket) => sum + bucket.errorCount, 0)).toBe(1)
     })
   })
 

@@ -89,7 +89,10 @@ export interface UserListPage {
 /** Bucket key is an ISO-8601 UTC timestamp (`YYYY-MM-DDTHH:MM:SS.000Z`). */
 export interface UserActivityBucket {
   readonly bucket: string
+  /** Distinct user-attributed sessions starting in the bucket. */
   readonly count: number
+  /** Of `count`, sessions with at least one errored trace. */
+  readonly errorCount: number
 }
 
 export interface UserActivitySeries {
@@ -147,14 +150,14 @@ export interface UserAnalyticsRepositoryShape {
     readonly options?: UserListOptions
   }): Effect.Effect<UserListPage, RepositoryError, ChSqlClient>
 
-  /** Per-user trace counts bucketed by `bucketSeconds`, batched for one page of users. */
+  /** Per-user distinct-session counts bucketed by `bucketSeconds`, batched for one page of users. */
   activityByUserIds(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly userIds: readonly ExternalUserId[]
     readonly timeRange: { readonly from: Date; readonly to: Date }
     readonly bucketSeconds: number
-    /** Count only errored traces (the "error view" toggle). */
+    /** Count only errored sessions (the "error view" toggle). */
     readonly errorsOnly?: boolean
   }): Effect.Effect<readonly UserActivitySeries[], RepositoryError, ChSqlClient>
 

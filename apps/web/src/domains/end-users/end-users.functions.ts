@@ -264,7 +264,7 @@ const userActivityInputSchema = z.object({
 })
 
 export interface UserActivityRecord {
-  readonly buckets: readonly { readonly bucket: string; readonly count: number }[]
+  readonly buckets: readonly { readonly bucket: string; readonly count: number; readonly errorCount: number }[]
   readonly bucketSeconds: number
   readonly fromIso: string
   readonly toIso: string
@@ -294,8 +294,14 @@ export const getUserActivity = createServerFn({ method: "GET" })
       }).pipe(withClickHouse(UserAnalyticsRepositoryLive, chClient, orgId), withTracing),
     )
 
+    const byBucket = new Map((series[0]?.buckets ?? []).map((bucket) => [bucket.bucket, bucket] as const))
+
     return {
-      buckets: fillBuckets({ scaffold, buckets: series[0]?.buckets ?? [] }),
+      buckets: scaffold.map((bucket) => ({
+        bucket,
+        count: byBucket.get(bucket)?.count ?? 0,
+        errorCount: byBucket.get(bucket)?.errorCount ?? 0,
+      })),
       bucketSeconds,
       fromIso: from.toISOString(),
       toIso: to.toISOString(),

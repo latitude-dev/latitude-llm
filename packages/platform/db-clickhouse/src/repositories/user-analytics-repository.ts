@@ -256,7 +256,8 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
                         intDiv(toUnixTimestamp(start_time), {bucketSeconds:UInt32}) * {bucketSeconds:UInt32},
                         'UTC'
                       ) AS bucket_start,
-                      count() AS count
+                      uniqExact(coalesce(nullIf(session_id, ''), toString(trace_id))) AS count,
+                      uniqExactIf(coalesce(nullIf(session_id, ''), toString(trace_id)), error_count > 0) AS errored_count
                     FROM (${USER_TRACE_ROLLUP})
                     WHERE user_id IN ({userIds:Array(String)})
                       AND start_time >= {fromTime:DateTime64(9, 'UTC')}
@@ -274,15 +275,19 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
               },
               format: "JSONEachRow",
             })
-            return result.json<{ user_id: string; bucket_start: string; count: string }>()
+            return result.json<{ user_id: string; bucket_start: string; count: string; errored_count: string }>()
           })
           .pipe(Effect.mapError((error) => toRepositoryError(error, "activityByUserIds")))
 
-        const bucketsByUserId = new Map<string, { bucket: string; count: number }[]>()
+        const bucketsByUserId = new Map<string, { bucket: string; count: number; errorCount: number }[]>()
         for (const row of rows) {
           const userId = normalizeCHString(row.user_id)
           const buckets = bucketsByUserId.get(userId) ?? []
-          buckets.push({ bucket: parseCHDate(row.bucket_start).toISOString(), count: Number(row.count) })
+          buckets.push({
+            bucket: parseCHDate(row.bucket_start).toISOString(),
+            count: Number(row.count),
+            errorCount: Number(row.errored_count),
+          })
           bucketsByUserId.set(userId, buckets)
         }
         return userIds.map(

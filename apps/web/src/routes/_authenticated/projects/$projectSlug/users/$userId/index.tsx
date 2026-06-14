@@ -1,9 +1,9 @@
 import type { FilterSet } from "@domain/shared"
-import type { InfiniteTableSorting } from "@repo/ui"
+import type { ChartSeries, InfiniteTableSorting } from "@repo/ui"
 import {
   Avatar,
-  BarChart,
   Button,
+  Chart,
   CopyableText,
   HistogramSkeleton,
   Icon,
@@ -41,6 +41,10 @@ import { UserUsageSection } from "./-components/user-usage-section.tsx"
 
 const DEFAULT_SESSIONS_SORTING: InfiniteTableSorting = { column: "lastActivity", direction: "desc" }
 
+const OK_SESSIONS_COLOR = "hsl(217 91% 60%)"
+const FAILED_SESSIONS_COLOR = "hsl(0 70% 55%)"
+const ERROR_RATE_COLOR = "hsl(35 90% 55%)"
+
 function UserDetailBreadcrumb() {
   const { userId } = useParams({ strict: false })
   return <BreadcrumbText variant="current">{userId ?? "User"}</BreadcrumbText>
@@ -63,22 +67,70 @@ function UserActivityChart({
   readonly errorsOnly: boolean
 }) {
   const { data: activity, isLoading } = useUserActivity({ projectId, userId, errorsOnly })
+  const bucketSeconds = activity?.bucketSeconds ?? 24 * 60 * 60
+  const buckets = activity?.buckets ?? []
 
-  const chartData = useMemo(
+  const categories = useMemo(
+    () => buckets.map((bucket) => formatBucketLabel(bucket.bucket, bucketSeconds)),
+    [buckets, bucketSeconds],
+  )
+
+  const series = useMemo<readonly ChartSeries[]>(
     () =>
-      (activity?.buckets ?? []).map((bucket) => ({
-        category: formatBucketLabel(bucket.bucket, activity?.bucketSeconds ?? 24 * 60 * 60),
-        tooltipCategory: formatBucketTooltipLabel(bucket.bucket, activity?.bucketSeconds ?? 24 * 60 * 60),
-        value: bucket.count,
-      })),
-    [activity],
+      errorsOnly
+        ? [
+            {
+              kind: "bar",
+              name: "Errored sessions",
+              values: buckets.map((bucket) => bucket.count),
+              color: FAILED_SESSIONS_COLOR,
+              axis: "left",
+            },
+          ]
+        : [
+            {
+              kind: "bar",
+              name: "Errored sessions",
+              values: buckets.map((bucket) => bucket.errorCount),
+              color: FAILED_SESSIONS_COLOR,
+              axis: "left",
+              stack: "sessions",
+            },
+            {
+              kind: "bar",
+              name: "Successful sessions",
+              values: buckets.map((bucket) => bucket.count - bucket.errorCount),
+              color: OK_SESSIONS_COLOR,
+              axis: "left",
+              stack: "sessions",
+            },
+            {
+              kind: "line",
+              name: "Error rate %",
+              values: buckets.map((bucket) =>
+                bucket.count > 0 ? Math.round((bucket.errorCount / bucket.count) * 1000) / 10 : 0,
+              ),
+              color: ERROR_RATE_COLOR,
+              axis: "right",
+              smooth: true,
+            },
+          ],
+    [buckets, errorsOnly],
+  )
+
+  const tooltipTitle = useMemo(
+    () => (_category: string, dataIndex: number) => {
+      const bucket = buckets[dataIndex]
+      return bucket ? formatBucketTooltipLabel(bucket.bucket, bucketSeconds) : _category
+    },
+    [buckets, bucketSeconds],
   )
 
   if (isLoading || !activity) {
     return <HistogramSkeleton height={160} />
   }
 
-  if (activity.buckets.every((bucket) => bucket.count === 0)) {
+  if (buckets.every((bucket) => bucket.count === 0)) {
     return (
       <div className="flex min-h-[80px] items-center justify-center">
         <Text.H6 color="foregroundMuted">
@@ -89,15 +141,13 @@ function UserActivityChart({
   }
 
   return (
-    <BarChart
-      data={chartData}
+    <Chart
+      categories={categories}
+      series={series}
       height={160}
-      showYAxis={false}
       xAxisLabelFontSize={10}
-      ariaLabel="User traces over time"
-      formatTooltip={(category, value) =>
-        `${category}<br/><b>${formatCount(value)}</b> ${errorsOnly ? "errored traces" : "traces"}`
-      }
+      tooltipTitle={tooltipTitle}
+      ariaLabel="User sessions over time"
     />
   )
 }
