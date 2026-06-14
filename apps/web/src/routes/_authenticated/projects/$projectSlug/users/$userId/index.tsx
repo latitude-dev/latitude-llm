@@ -192,7 +192,7 @@ function UserDetailPage() {
                   <UserIssuesSection projectId={project.id} projectSlug={projectSlug} userId={userId} />
                 </div>
                 <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
-                  <Text.H6 color="foregroundMuted">Behaviours</Text.H6>
+                  <Text.H6 color="foregroundMuted">Behaviors</Text.H6>
                   <UserBehavioursSection projectId={project.id} projectSlug={projectSlug} userId={userId} />
                 </div>
               </div>

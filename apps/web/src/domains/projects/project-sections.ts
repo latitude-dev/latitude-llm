@@ -45,7 +45,7 @@ const PROJECT_SECTIONS: readonly ProjectSection[] = [
   },
   {
     key: "behaviours",
-    label: "Behaviours",
+    label: "Behaviors",
     icon: TagsIcon,
     path: (slug) => `/projects/${slug}/behaviours`,
     isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/behaviours`),
