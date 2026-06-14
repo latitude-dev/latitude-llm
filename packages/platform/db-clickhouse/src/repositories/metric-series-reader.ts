@@ -21,17 +21,42 @@ import { buildTraceFilterClauses, LIST_SELECT, resolvePercentileFilters } from "
 const toClickHouseDateTime64 = (value: Date): string => value.toISOString().replace("T", " ").replace("Z", "")
 
 /**
- * SQL aggregate applied over the per-entity grouped subquery. `count` (one row
- * per matched entity) is the only metric wired today — it makes this reader an
- * exact drop-in for the saved-search match reader it supersedes. `errorRate`/`avg`/`p95`/`sum`
- * land with the spans/scores streams (per-stream field columns differ).
+ * Per-stream column expressions a metric aggregates over. The inner subquery
+ * exposes these as output columns (for `traces`, the `LIST_SELECT` aliases);
+ * `isError` is a boolean expression, not a column. Spans/sessions add their own.
  */
-const metricAggregate = (metric: MonitorMetric): string => {
+interface MetricColumns {
+  readonly duration: string
+  readonly cost: string
+  readonly tokens: string
+  readonly isError: string
+}
+
+const TRACE_METRIC_COLUMNS: MetricColumns = {
+  duration: "duration_ns",
+  cost: "cost_total_microcents",
+  tokens: "tokens_total",
+  isError: "error_count > 0",
+}
+
+/**
+ * SQL aggregate applied over the per-entity grouped subquery. `count` makes this
+ * reader an exact drop-in for the saved-search match reader it supersedes.
+ * Ratios/averages guard the empty group (`count() = 0`) so a metric over an empty
+ * window/bucket reads `0`, not `nan` — densified empty buckets then stay numeric.
+ */
+const metricAggregate = (metric: MonitorMetric, columns: MetricColumns): string => {
   switch (metric.kind) {
     case "count":
       return "count()"
-    default:
-      throw new Error(`MetricSeriesReader: metric '${metric.kind}' not implemented yet`)
+    case "errorRate":
+      return `if(count() = 0, 0, countIf(${columns.isError}) / count())`
+    case "sum":
+      return `sum(${columns[metric.field]})`
+    case "avg":
+      return `if(count() = 0, 0, avg(${columns[metric.field]}))`
+    case "p95":
+      return `if(count() = 0, 0, quantile(0.95)(${columns[metric.field]}))`
   }
 }
 
@@ -103,7 +128,7 @@ const make = (): MetricSeriesReaderShape => ({
     Effect.gen(function* () {
       const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
       const inner = yield* buildInnerQuery(input)
-      const aggregate = metricAggregate(input.target.metric)
+      const aggregate = metricAggregate(input.target.metric, TRACE_METRIC_COLUMNS)
       return yield* chSqlClient
         .query(async (client) => {
           const result = await client.query({
@@ -175,7 +200,7 @@ const make = (): MetricSeriesReaderShape => ({
     Effect.gen(function* () {
       const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
       const inner = yield* buildInnerQuery(input)
-      const aggregate = metricAggregate(input.target.metric)
+      const aggregate = metricAggregate(input.target.metric, TRACE_METRIC_COLUMNS)
       const bucketCount = Math.max(0, Math.floor((input.to.getTime() - input.from.getTime()) / input.bucketMs))
       // Bucket each matching trace by how far its `start_time` sits before `to`,
       // in `bucketNs` (= bucketMs) steps — index 0 is the bucket ending at `to`.

@@ -79,6 +79,11 @@ const t0930 = new Date("2026-06-01T09:30:00.000Z")
 const t10 = new Date("2026-06-01T10:00:00.000Z")
 const t1030 = new Date("2026-06-01T10:30:00.000Z")
 const t11 = new Date("2026-06-01T11:00:00.000Z")
+// Aggregate-metric fixtures live in their own windows so they can't perturb the
+// count/bucket assertions above regardless of test ordering.
+const t12 = new Date("2026-06-01T12:00:00.000Z")
+const t13 = new Date("2026-06-01T13:00:00.000Z")
+const t14 = new Date("2026-06-01T14:00:00.000Z")
 
 /** A `traces` + `count` target — the saved-search/match shape this reader supersedes. */
 const countTarget = (filterSet: FilterSet = {}, query: string | null = null): MetricSeriesTarget => ({
@@ -86,6 +91,20 @@ const countTarget = (filterSet: FilterSet = {}, query: string | null = null): Me
   filterSet,
   query,
   metric: { kind: "count" },
+})
+
+/** A `traces` target carrying an arbitrary metric (no filter / no query). */
+const metricTarget = (metric: MetricSeriesTarget["metric"]): MetricSeriesTarget => ({
+  stream: "traces",
+  filterSet: {},
+  query: null,
+  metric,
+})
+
+// span() defaults to status_code 0 / 1s; override duration via its arg and status inline.
+const errorSpan = (n: number, startTime: Date, durationMs: number): SpanRow => ({
+  ...span(n, startTime, [TAG], durationMs),
+  status_code: 2,
 })
 
 const ch = setupTestClickHouse()
@@ -224,5 +243,68 @@ describe("MetricSeriesReaderLive (traces / count)", () => {
     )
     // The 'other'-tagged trace at 10:30 is dropped by the tag filter → idx 1 falls to 1.
     expect(counts).toEqual([0, 1, 1])
+  })
+
+  it("computes errorRate / avg / sum over the matched traces", async () => {
+    // [12:00, 13:00): three traces of 2s / 4s / 6s, the 6s one errored.
+    // Ids 41/42/43: padEnd-collision-safe (no n↔10n overlap with the seeded 1–6).
+    await Effect.runPromise(
+      insertJsonEachRow(ch.client, "spans", [
+        span(41, t12, [TAG], 2_000),
+        span(42, t12, [TAG], 4_000),
+        errorSpan(43, t12, 6_000),
+      ]),
+    )
+    const window = { organizationId: ORG_ID, projectId: PROJECT_ID, from: t12, to: t13 }
+
+    const errorRate = await runCh(reader.valueInWindow({ ...window, target: metricTarget({ kind: "errorRate" }) }))
+    expect(errorRate).toBeCloseTo(1 / 3)
+
+    const avg = await runCh(
+      reader.valueInWindow({ ...window, target: metricTarget({ kind: "avg", field: "duration" }) }),
+    )
+    expect(avg).toBe(4_000_000_000) // (2+4+6)/3 s, in ns
+
+    const sum = await runCh(
+      reader.valueInWindow({ ...window, target: metricTarget({ kind: "sum", field: "duration" }) }),
+    )
+    expect(sum).toBe(12_000_000_000) // (2+4+6) s, in ns
+  })
+
+  it("computes p95 over the matched traces", async () => {
+    // Uniform durations ⇒ the quantile is exact regardless of the estimator.
+    await Effect.runPromise(
+      insertJsonEachRow(ch.client, "spans", [
+        span(51, t13, [TAG], 3_000),
+        span(52, t13, [TAG], 3_000),
+        span(53, t13, [TAG], 3_000),
+      ]),
+    )
+    const p95 = await runCh(
+      reader.valueInWindow({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        from: t13,
+        to: t14,
+        target: metricTarget({ kind: "p95", field: "duration" }),
+      }),
+    )
+    expect(p95).toBe(3_000_000_000)
+  })
+
+  it("reads 0 (not nan) for a ratio/aggregate over an empty window", async () => {
+    const empty = {
+      organizationId: ORG_ID,
+      projectId: PROJECT_ID,
+      from: new Date("2026-06-02T00:00:00.000Z"),
+      to: new Date("2026-06-02T01:00:00.000Z"),
+    }
+    expect(await runCh(reader.valueInWindow({ ...empty, target: metricTarget({ kind: "errorRate" }) }))).toBe(0)
+    expect(
+      await runCh(reader.valueInWindow({ ...empty, target: metricTarget({ kind: "avg", field: "duration" }) })),
+    ).toBe(0)
+    expect(
+      await runCh(reader.valueInWindow({ ...empty, target: metricTarget({ kind: "p95", field: "duration" }) })),
+    ).toBe(0)
   })
 })
