@@ -1,17 +1,17 @@
-import { SavedSearchMatchReader, type SavedSearchMatchReaderShape } from "@domain/monitors"
-import { type ChSqlClient, OrganizationId, ProjectId } from "@domain/shared"
+import { MetricSeriesReader, type MetricSeriesReaderShape, type MetricSeriesTarget } from "@domain/monitors"
+import { type ChSqlClient, type FilterSet, OrganizationId, ProjectId } from "@domain/shared"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { ChSqlClientLive } from "../ch-sql-client.ts"
 import type { SpanRow } from "../seeds/spans/span-builders.ts"
 import { insertJsonEachRow } from "../sql.ts"
-import { SavedSearchMatchReaderLive } from "./saved-search-match-reader.ts"
+import { MetricSeriesReaderLive } from "./metric-series-reader.ts"
 
 const ORG_ID = OrganizationId("o".repeat(24))
 // A project of its own so seeded fixtures from other suites can't leak into the counts.
-const PROJECT_ID = ProjectId("savedsearchreader00000000")
-const TAG = "ss-match"
+const PROJECT_ID = ProjectId("metricseriesreader000000")
+const TAG = "ms-count"
 
 const toCh = (value: Date): string => value.toISOString().replace("T", " ").replace("Z", "")
 
@@ -33,8 +33,8 @@ const span = (n: number, startTime: Date, tags: readonly string[] = [TAG], durat
     simulation_id: "",
     start_time: toCh(startTime),
     end_time: toCh(new Date(startTime.getTime() + durationMs)),
-    name: "ss-match-span",
-    service_name: "ss-match-service",
+    name: "ms-count-span",
+    service_name: "ms-count-service",
     kind: 0,
     status_code: 0,
     status_message: "",
@@ -80,18 +80,26 @@ const t10 = new Date("2026-06-01T10:00:00.000Z")
 const t1030 = new Date("2026-06-01T10:30:00.000Z")
 const t11 = new Date("2026-06-01T11:00:00.000Z")
 
+/** A `traces` + `count` target — the saved-search/match shape this reader supersedes. */
+const countTarget = (filterSet: FilterSet = {}, query: string | null = null): MetricSeriesTarget => ({
+  stream: "traces",
+  filterSet,
+  query,
+  metric: { kind: "count" },
+})
+
 const ch = setupTestClickHouse()
 const runCh = <A, E>(effect: Effect.Effect<A, E, ChSqlClient>) =>
   Effect.runPromise(effect.pipe(Effect.provide(ChSqlClientLive(ch.client, ORG_ID))))
 
-describe("SavedSearchMatchReaderLive", () => {
-  let reader: SavedSearchMatchReaderShape
+describe("MetricSeriesReaderLive (traces / count)", () => {
+  let reader: MetricSeriesReaderShape
 
   beforeAll(async () => {
     reader = await Effect.runPromise(
       Effect.gen(function* () {
-        return yield* SavedSearchMatchReader
-      }).pipe(Effect.provide(SavedSearchMatchReaderLive)),
+        return yield* MetricSeriesReader
+      }).pipe(Effect.provide(MetricSeriesReaderLive)),
     )
   })
 
@@ -101,33 +109,33 @@ describe("SavedSearchMatchReaderLive", () => {
     )
   })
 
-  const target = { query: null, filterSet: {} }
+  const target = countTarget()
 
   it("counts only traces whose start_time falls in [from, to)", async () => {
     // [10:00, 11:00) includes t10 + t1030 (and the 'other'-tagged trace at t1030); excludes t11.
     const count = await runCh(
-      reader.countMatches({ organizationId: ORG_ID, projectId: PROJECT_ID, target, from: t10, to: t11 }),
+      reader.valueInWindow({ organizationId: ORG_ID, projectId: PROJECT_ID, target, from: t10, to: t11 }),
     )
     expect(count).toBe(3)
   })
 
   it("excludes the lower bound's predecessor and the upper bound itself", async () => {
     const count = await runCh(
-      reader.countMatches({ organizationId: ORG_ID, projectId: PROJECT_ID, target, from: t1030, to: t11 }),
+      reader.valueInWindow({ organizationId: ORG_ID, projectId: PROJECT_ID, target, from: t1030, to: t11 }),
     )
     expect(count).toBe(2)
   })
 
   it("returns the earliest matching trace start_time", async () => {
     const first = await runCh(
-      reader.firstMatchAt({ organizationId: ORG_ID, projectId: PROJECT_ID, target, from: t10, to: t11 }),
+      reader.firstEventAt({ organizationId: ORG_ID, projectId: PROJECT_ID, target, from: t10, to: t11 }),
     )
     expect(first).toEqual(t10)
   })
 
   it("returns null when no trace matches the window", async () => {
     const first = await runCh(
-      reader.firstMatchAt({
+      reader.firstEventAt({
         organizationId: ORG_ID,
         projectId: PROJECT_ID,
         target,
@@ -141,14 +149,14 @@ describe("SavedSearchMatchReaderLive", () => {
   it("returns the latest matching trace start_time", async () => {
     // [10:00, 11:00) includes t10 + t1030; t11 == the exclusive upper bound is excluded ⇒ latest is t1030.
     const last = await runCh(
-      reader.lastMatchAt({ organizationId: ORG_ID, projectId: PROJECT_ID, target, from: t10, to: t11 }),
+      reader.lastEventAt({ organizationId: ORG_ID, projectId: PROJECT_ID, target, from: t10, to: t11 }),
     )
     expect(last).toEqual(t1030)
   })
 
-  it("returns null from lastMatchAt when no trace matches the window", async () => {
+  it("returns null from lastEventAt when no trace matches the window", async () => {
     const last = await runCh(
-      reader.lastMatchAt({
+      reader.lastEventAt({
         organizationId: ORG_ID,
         projectId: PROJECT_ID,
         target,
@@ -160,9 +168,9 @@ describe("SavedSearchMatchReaderLive", () => {
   })
 
   it("applies the saved search's structured filters", async () => {
-    const tagged = { query: null, filterSet: { tags: [{ op: "in" as const, value: [TAG] }] } }
+    const tagged = countTarget({ tags: [{ op: "in", value: [TAG] }] })
     const count = await runCh(
-      reader.countMatches({ organizationId: ORG_ID, projectId: PROJECT_ID, target: tagged, from: t10, to: t11 }),
+      reader.valueInWindow({ organizationId: ORG_ID, projectId: PROJECT_ID, target: tagged, from: t10, to: t11 }),
     )
     // Drops the 'other'-tagged trace → t10 + t1030 only.
     expect(count).toBe(2)
@@ -177,9 +185,9 @@ describe("SavedSearchMatchReaderLive", () => {
       insertJsonEachRow(ch.client, "spans", [span(5, t1030, [TAG], 100_000), span(6, t1030, [TAG], 100_000)]),
     )
 
-    const slow = { query: null, filterSet: { duration: [{ op: "gtePercentile" as const, value: 90 }] } }
+    const slow = countTarget({ duration: [{ op: "gtePercentile", value: 90 }] })
     const count = await runCh(
-      reader.countMatches({ organizationId: ORG_ID, projectId: PROJECT_ID, target: slow, from: t10, to: t11 }),
+      reader.valueInWindow({ organizationId: ORG_ID, projectId: PROJECT_ID, target: slow, from: t10, to: t11 }),
     )
     expect(count).toBe(2)
   })
@@ -190,7 +198,7 @@ describe("SavedSearchMatchReaderLive", () => {
     //   idx 1 = (10:00, 10:30] → t1030 (+ the 'other'-tagged trace, no filter applied) → 2
     //   idx 2 = (09:30, 10:00] → t10 → 1
     const counts = await runCh(
-      reader.countMatchesPerBucket({
+      reader.seriesPerBucket({
         organizationId: ORG_ID,
         projectId: PROJECT_ID,
         target,
@@ -203,9 +211,9 @@ describe("SavedSearchMatchReaderLive", () => {
   })
 
   it("honours the structured filters per bucket", async () => {
-    const tagged = { query: null, filterSet: { tags: [{ op: "in" as const, value: [TAG] }] } }
+    const tagged = countTarget({ tags: [{ op: "in", value: [TAG] }] })
     const counts = await runCh(
-      reader.countMatchesPerBucket({
+      reader.seriesPerBucket({
         organizationId: ORG_ID,
         projectId: PROJECT_ID,
         target: tagged,

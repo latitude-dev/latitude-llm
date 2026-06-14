@@ -10,7 +10,7 @@ import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
 import { AIEmbedLive, withAi } from "@platform/ai"
 import type { RedisClient } from "@platform/cache-redis"
-import { type ClickHouseClient, SavedSearchMatchReaderLive, withClickHouse } from "@platform/db-clickhouse"
+import { type ClickHouseClient, MetricSeriesReaderLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   AlertIncidentRepositoryLive,
   FeatureFlagRepositoryLive,
@@ -68,7 +68,7 @@ export const createMonitorsWorker = ({
         return yield* checkSavedSearchMonitorsUseCase(payload)
       }).pipe(
         withPostgres(checkRepoLayer, pgClient, OrganizationId(payload.organizationId)),
-        withClickHouse(SavedSearchMatchReaderLive, chClient, OrganizationId(payload.organizationId)),
+        withClickHouse(MetricSeriesReaderLive, chClient, OrganizationId(payload.organizationId)),
         withAi(AIEmbedLive, rdClient),
         Effect.tap((result) =>
           Effect.sync(() =>

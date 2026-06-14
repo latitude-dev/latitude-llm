@@ -2,8 +2,8 @@ import { AlertIncidentRepository } from "@domain/alerts"
 import type { OutboxEventWriter } from "@domain/events"
 import { type ChSqlClient, type RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
+import type { MetricSeriesReader } from "../ports/metric-series-reader.ts"
 import { MonitorRepository } from "../ports/monitor-repository.ts"
-import type { SavedSearchMatchReader } from "../ports/saved-search-match-reader.ts"
 import {
   type EvaluateSavedSearchAlertError,
   type EvaluateSavedSearchAlertInput,
@@ -94,5 +94,5 @@ export const runSavedSearchThresholdAlertUseCase = (input: EvaluateSavedSearchAl
   }).pipe(Effect.withSpan("monitors.runSavedSearchThresholdAlert")) as Effect.Effect<
     RunSavedSearchThresholdAlertResult,
     RunSavedSearchThresholdAlertError,
-    SqlClient | ChSqlClient | SavedSearchMatchReader | AlertIncidentRepository | OutboxEventWriter | MonitorRepository
+    SqlClient | ChSqlClient | MetricSeriesReader | AlertIncidentRepository | OutboxEventWriter | MonitorRepository
   >

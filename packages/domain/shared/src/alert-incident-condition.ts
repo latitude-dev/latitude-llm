@@ -71,6 +71,25 @@ export const alertIncidentIssueEscalatingConditionSchema = z.object({
 })
 export type AlertIncidentIssueEscalatingCondition = z.infer<typeof alertIncidentIssueEscalatingConditionSchema>
 
+/**
+ * What a query-time monitor measures over its target's matched rows. `count`
+ * (the default) is one per matched entity; `errorRate` is `errored / total`;
+ * `avg`/`p95`/`sum` aggregate a numeric field. The membership/threshold cutoff
+ * is the alert condition, not part of the metric.
+ */
+export const MONITOR_METRIC_FIELDS = ["duration", "cost", "tokens"] as const
+export const monitorMetricFieldSchema = z.enum(MONITOR_METRIC_FIELDS)
+export type MonitorMetricField = z.infer<typeof monitorMetricFieldSchema>
+
+export const monitorMetricSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("count") }),
+  z.object({ kind: z.literal("errorRate") }),
+  z.object({ kind: z.literal("avg"), field: monitorMetricFieldSchema }),
+  z.object({ kind: z.literal("p95"), field: monitorMetricFieldSchema }),
+  z.object({ kind: z.literal("sum"), field: monitorMetricFieldSchema }),
+])
+export type MonitorMetric = z.infer<typeof monitorMetricSchema>
+
 /** Per-kind alert config; `null` for kinds with no parameters (`issue.new`, `issue.regressed`, `savedSearch.match`). */
 export const alertIncidentConditionSchema = z.discriminatedUnion("kind", [
   alertIncidentSavedSearchThresholdConditionSchema,

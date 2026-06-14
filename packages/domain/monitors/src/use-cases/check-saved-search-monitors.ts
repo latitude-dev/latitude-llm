@@ -11,8 +11,8 @@ import {
 } from "@domain/shared"
 import { Cause, Effect } from "effect"
 import type { MonitorAlert } from "../entities/monitor.ts"
+import type { MetricSeriesReader } from "../ports/metric-series-reader.ts"
 import { MonitorRepository } from "../ports/monitor-repository.ts"
-import type { SavedSearchMatchReader } from "../ports/saved-search-match-reader.ts"
 import type { EvaluateSavedSearchAlertInput } from "./evaluate-saved-search-alert.ts"
 import { runSavedSearchEscalatingAlertUseCase } from "./run-saved-search-escalating-alert.ts"
 import { runSavedSearchMatchAlertUseCase } from "./run-saved-search-match-alert.ts"
@@ -47,7 +47,7 @@ export const checkSavedSearchMonitorsUseCase = (
   RepositoryError,
   | SqlClient
   | ChSqlClient
-  | SavedSearchMatchReader
+  | MetricSeriesReader
   | AlertIncidentRepository
   | OutboxEventWriter
   | MonitorRepository
@@ -127,7 +127,7 @@ export const checkSavedSearchMonitorsUseCase = (
     RepositoryError,
     | SqlClient
     | ChSqlClient
-    | SavedSearchMatchReader
+    | MetricSeriesReader
     | AlertIncidentRepository
     | OutboxEventWriter
     | MonitorRepository

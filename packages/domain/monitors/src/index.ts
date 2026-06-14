@@ -25,6 +25,13 @@ export {
   type HumanReadableAlertInput,
 } from "./helpers.ts"
 export type {
+  MetricSeriesBucketInput,
+  MetricSeriesReaderShape,
+  MetricSeriesTarget,
+  MetricSeriesWindowInput,
+} from "./ports/metric-series-reader.ts"
+export { MetricSeriesReader } from "./ports/metric-series-reader.ts"
+export type {
   CascadeSourceDeletionResult,
   ListMonitorsRepositoryInput,
   MonitorLastIncident,
@@ -35,13 +42,6 @@ export type {
   SavedSearchMonitorSummary,
 } from "./ports/monitor-repository.ts"
 export { MonitorRepository } from "./ports/monitor-repository.ts"
-export type {
-  SavedSearchMatchBucketInput,
-  SavedSearchMatchReaderShape,
-  SavedSearchMatchTarget,
-  SavedSearchMatchWindowInput,
-} from "./ports/saved-search-match-reader.ts"
-export { SavedSearchMatchReader } from "./ports/saved-search-match-reader.ts"
 export type {
   SystemMonitorAlertDefinition,
   SystemMonitorDefinition,

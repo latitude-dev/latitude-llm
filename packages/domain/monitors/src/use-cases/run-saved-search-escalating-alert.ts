@@ -3,11 +3,12 @@ import type { OutboxEventWriter } from "@domain/events"
 import { type ChSqlClient, type RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { countFailingBuckets, maxFailingBuckets } from "../constants.ts"
-import { SavedSearchMatchReader } from "../ports/saved-search-match-reader.ts"
+import { MetricSeriesReader } from "../ports/metric-series-reader.ts"
 import {
   type EvaluateSavedSearchAlertError,
   type EvaluateSavedSearchAlertInput,
   evaluateSavedSearchEscalatingAlert,
+  toCountTarget,
 } from "./evaluate-saved-search-alert.ts"
 import { closeSavedSearchIncident, openSavedSearchIncident } from "./saved-search-incident-writer.ts"
 
@@ -94,11 +95,11 @@ export const runSavedSearchEscalatingAlertUseCase = (input: EvaluateSavedSearchA
         // detection tick. `[startedAt, now)` is bounded + guaranteed to contain the last match
         // (the current window is empty — that's why we're closing). Falls back to `now` only if
         // the lifetime window is somehow empty.
-        const reader = yield* SavedSearchMatchReader
-        const lastMatch = yield* reader.lastMatchAt({
+        const reader = yield* MetricSeriesReader
+        const lastMatch = yield* reader.lastEventAt({
           organizationId,
           projectId,
-          target: input.target,
+          target: toCountTarget(input.target),
           from: open.startedAt,
           to: now,
         })
@@ -109,5 +110,5 @@ export const runSavedSearchEscalatingAlertUseCase = (input: EvaluateSavedSearchA
   }).pipe(Effect.withSpan("monitors.runSavedSearchEscalatingAlert")) as Effect.Effect<
     RunSavedSearchEscalatingAlertResult,
     RunSavedSearchEscalatingAlertError,
-    SqlClient | ChSqlClient | SavedSearchMatchReader | AlertIncidentRepository | OutboxEventWriter
+    SqlClient | ChSqlClient | MetricSeriesReader | AlertIncidentRepository | OutboxEventWriter
   >
