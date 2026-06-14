@@ -16,6 +16,7 @@ import {
   deleteMonitor,
   getMonitorBySlug,
   getMonitorIncidentStats,
+  getMonitorMetricSeries,
   listMonitorIncidents,
   listMonitors,
   listMonitorsForTarget,
@@ -111,6 +112,41 @@ export function useMonitors(input: {
     isReloading: isPlaceholderData,
     infiniteScroll,
   }
+}
+
+/** The monitor's tracked metric as a per-bucket series over a window, for the monitor page histogram. */
+export function useMonitorMetricSeries(input: {
+  readonly projectId: string
+  readonly monitorSlug: string
+  readonly fromMs: number
+  readonly toMs: number
+  readonly bucketMs: number
+  readonly enabled?: boolean
+}) {
+  const { data, isLoading } = useQuery({
+    queryKey: [
+      "monitors",
+      "metric-series",
+      input.projectId,
+      input.monitorSlug,
+      input.fromMs,
+      input.toMs,
+      input.bucketMs,
+    ] as const,
+    queryFn: () =>
+      getMonitorMetricSeries({
+        data: {
+          projectId: input.projectId,
+          monitorSlug: input.monitorSlug,
+          fromMs: input.fromMs,
+          toMs: input.toMs,
+          bucketMs: input.bucketMs,
+        },
+      }),
+    staleTime: MONITORS_QUERY_STALE_TIME_MS,
+    enabled: (input.enabled ?? true) && input.projectId.length > 0 && input.monitorSlug.length > 0,
+  })
+  return { series: data ?? null, isLoading }
 }
 
 /** Live unified monitors targeting a specific tool/user, for the in-context "Monitors" card. */

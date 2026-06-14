@@ -1,5 +1,5 @@
 import type { MonitorTarget } from "@domain/monitors"
-import type { FilterCondition, MonitorMetric, MonitorStream } from "@domain/shared"
+import type { FilterCondition, FilterSet, MonitorMetric, MonitorStream } from "@domain/shared"
 
 /** The `operation` value tool spans carry; a tool monitor scopes to these `execute_tool` spans. */
 const EXECUTE_TOOL_OPERATION = "execute_tool"
@@ -119,6 +119,25 @@ export const metricThresholdUnitLabel = (metric: MonitorMetric, stream: MonitorS
     case "tokens":
       return "tokens"
   }
+}
+
+/**
+ * Map a monitor target to a trace-page FilterSet (+ query) for the "matching
+ * traces" preview and the "View all traces" deep-link. Traces targets pass their
+ * filter through; span (tool) targets map `toolName` → the trace-level `tools`
+ * field so the traces table can render them.
+ */
+export const targetToTraceFilters = (target: MonitorTarget): { filters: FilterSet; query: string | null } => {
+  if (target.stream === "spans") {
+    const filterSet = target.filterSet ?? {}
+    const tool = firstEqValue(filterSet.toolName)
+    const user = firstEqValue(filterSet.userId)
+    const filters: Record<string, readonly FilterCondition[]> = {}
+    if (tool) filters.tools = [{ op: "in", value: [tool] }]
+    if (user) filters.userId = [{ op: "eq", value: user }]
+    return { filters, query: null }
+  }
+  return { filters: target.filterSet ?? {}, query: target.query }
 }
 
 /** Longer noun phrase for the alert preview sentence ("the `search` tool", "all users"). */

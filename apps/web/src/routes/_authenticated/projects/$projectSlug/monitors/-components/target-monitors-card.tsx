@@ -41,9 +41,8 @@ export function TargetMonitorsCard({
           {monitors.map((monitor) => (
             <Link
               key={monitor.id}
-              to="/projects/$projectSlug/monitors/search"
-              params={{ projectSlug }}
-              search={{ monitorSlug: monitor.slug }}
+              to="/projects/$projectSlug/monitors/$monitorSlug"
+              params={{ projectSlug, monitorSlug: monitor.slug }}
               className="flex min-w-0 items-center justify-between gap-3 py-2 hover:opacity-80"
             >
               <div className="flex min-w-0 flex-col gap-0.5">

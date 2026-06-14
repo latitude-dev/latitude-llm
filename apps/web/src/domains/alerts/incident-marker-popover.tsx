@@ -60,9 +60,13 @@ function IncidentRow({
   readonly projectSlug: string
   readonly onNavigate: () => void
 }) {
-  const isSavedSearch = incident.sourceType === "savedSearch"
-  const primaryLabel = isSavedSearch ? incident.savedSearchName : incident.issueName
-  const navigable = !isSavedSearch || Boolean(incident.monitorSlug)
+  // Issues link to the issue; everything else with a monitor (saved-search AND
+  // unified target-on-monitor incidents) links to that monitor's page.
+  const isIssue = incident.sourceType === "issue"
+  const issueTarget = isIssue && incident.sourceId !== null ? incident.sourceId : null
+  const monitorTarget = !isIssue && incident.monitorSlug !== null ? incident.monitorSlug : null
+  const primaryLabel = isIssue ? incident.issueName : incident.savedSearchName
+  const navigable = issueTarget !== null || monitorTarget !== null
 
   const body = (
     <>
@@ -83,12 +87,12 @@ function IncidentRow({
               {primaryLabel}
             </Text.H6>
           ) : null}
-          {isSavedSearch && incident.conditionSummary ? (
+          {!isIssue && incident.conditionSummary ? (
             <Text.H6 color="foregroundMuted" className="min-w-0 truncate">
               {incident.conditionSummary}
             </Text.H6>
           ) : null}
-          {isSavedSearch && incident.monitorName ? (
+          {!isIssue && incident.monitorName ? (
             <Text.H6 color="foregroundMuted" className="min-w-0 truncate">
               Created by monitor <b>{incident.monitorName}</b>
             </Text.H6>
@@ -102,15 +106,11 @@ function IncidentRow({
     </>
   )
 
-  if (isSavedSearch) {
-    if (!incident.monitorSlug) {
-      return <div className="flex items-start gap-2 px-2 py-1.5">{body}</div>
-    }
+  if (issueTarget !== null) {
     return (
       <Link
-        to="/projects/$projectSlug/monitors"
-        params={{ projectSlug }}
-        search={{ monitorSlug: incident.monitorSlug }}
+        to="/projects/$projectSlug/issues/$issueId"
+        params={{ projectSlug, issueId: issueTarget }}
         onClick={onNavigate}
         className={ROW_CLASS}
       >
@@ -119,16 +119,20 @@ function IncidentRow({
     )
   }
 
-  return (
-    <Link
-      to="/projects/$projectSlug/issues/$issueId"
-      params={{ projectSlug, issueId: incident.sourceId }}
-      onClick={onNavigate}
-      className={ROW_CLASS}
-    >
-      {body}
-    </Link>
-  )
+  if (monitorTarget !== null) {
+    return (
+      <Link
+        to="/projects/$projectSlug/monitors/$monitorSlug"
+        params={{ projectSlug, monitorSlug: monitorTarget }}
+        onClick={onNavigate}
+        className={ROW_CLASS}
+      >
+        {body}
+      </Link>
+    )
+  }
+
+  return <div className="flex items-start gap-2 px-2 py-1.5">{body}</div>
 }
 
 export function IncidentMarkerPopover({

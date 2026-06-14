@@ -11,6 +11,8 @@ import {
   listMonitorsForTargetUseCase,
   listMonitorsUseCase,
   listSavedSearchMonitorSummariesUseCase,
+  MetricSeriesReader,
+  type MetricSeriesTarget,
   type Monitor,
   type MonitorAlert,
   type MonitorAlertInput,
@@ -23,7 +25,7 @@ import {
   updateMonitorAlertUseCase,
   updateMonitorUseCase,
 } from "@domain/monitors"
-import { listSavedSearches } from "@domain/saved-searches"
+import { listSavedSearches, SavedSearchRepository } from "@domain/saved-searches"
 import {
   AlertIncidentId,
   type AlertSeverity,
@@ -38,7 +40,9 @@ import {
   monitorStreamSchema,
   OrganizationId,
   ProjectId,
+  SavedSearchId,
 } from "@domain/shared"
+import { MetricSeriesReaderLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   AlertIncidentRepositoryLive,
   IssueRepositoryLive,
@@ -53,7 +57,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getPostgresClient } from "../../server/clients.ts"
+import { getClickhouseClient, getPostgresClient } from "../../server/clients.ts"
 
 interface SavedSearchRef {
   readonly name: string
@@ -216,6 +220,86 @@ export const listMonitorsForTarget = createServerFn({ method: "GET" })
     )
     const refs = await resolveSavedSearchRefs(orgId, ProjectId(data.projectId), monitors)
     return monitors.map((monitor) => toMonitorRecord(monitor, refs))
+  })
+
+const getMonitorMetricSeriesInputSchema = z.object({
+  projectId: z.string(),
+  monitorSlug: z.string(),
+  fromMs: z.number(),
+  toMs: z.number(),
+  bucketMs: z.number().positive(),
+})
+
+interface MonitorMetricSeriesRecord {
+  /** Bucket start timestamps (ms epoch), oldest-first. */
+  readonly bucketStartsMs: number[]
+  /** Metric value per bucket, oldest-first, aligned to `bucketStartsMs`. */
+  readonly values: number[]
+  readonly bucketMs: number
+}
+
+/** Resolve a monitor's persisted target to the metric reader's `(stream, filterSet, query, metric)`. */
+const resolveMetricTarget = (target: NonNullable<Monitor["target"]>) =>
+  Effect.gen(function* () {
+    if (target.savedSearchId !== null) {
+      const search = yield* (yield* SavedSearchRepository)
+        .findById(SavedSearchId(target.savedSearchId))
+        .pipe(Effect.catchTag("SavedSearchNotFoundError", () => Effect.succeed(null)))
+      if (search === null) return null
+      return {
+        stream: target.stream,
+        filterSet: search.filterSet,
+        query: search.query,
+        metric: target.metric,
+      } satisfies MetricSeriesTarget
+    }
+    return {
+      stream: target.stream,
+      filterSet: target.filterSet ?? {},
+      query: target.query,
+      metric: target.metric,
+    } satisfies MetricSeriesTarget
+  })
+
+/** The monitor's tracked metric as a per-bucket series over `[fromMs, toMs)` — powers the monitor page histogram. */
+export const getMonitorMetricSeries = createServerFn({ method: "GET" })
+  .inputValidator(getMonitorMetricSeriesInputSchema)
+  .handler(async ({ data }): Promise<MonitorMetricSeriesRecord | null> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const projectId = ProjectId(data.projectId)
+    const bucketMs = data.bucketMs
+    const to = new Date(data.toMs)
+    const from = new Date(data.fromMs)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const monitor = yield* getMonitorBySlugUseCase({ projectId, slug: data.monitorSlug }).pipe(
+          Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
+        )
+        if (monitor === null || monitor.target === null) return null
+        const target = yield* resolveMetricTarget(monitor.target)
+        if (target === null) return null
+        const reader = yield* MetricSeriesReader
+        const newestFirst = yield* reader.seriesPerBucket({
+          organizationId: orgId,
+          projectId,
+          target,
+          from,
+          to,
+          bucketMs,
+        })
+        const count = newestFirst.length
+        // Reader returns newest-first aligned to `to`; flip to oldest-first with each bucket's start.
+        const values = [...newestFirst].reverse()
+        const bucketStartsMs = values.map((_, index) => data.toMs - (count - index) * bucketMs)
+        return { bucketStartsMs, values, bucketMs } satisfies MonitorMetricSeriesRecord
+      }).pipe(
+        withPostgres(Layer.mergeAll(MonitorRepositoryLive, SavedSearchRepositoryLive), getPostgresClient(), orgId),
+        withClickHouse(MetricSeriesReaderLive, getClickhouseClient(), orgId),
+        withTracing,
+      ),
+    )
   })
 
 export interface SavedSearchMonitorSummaryRecord {

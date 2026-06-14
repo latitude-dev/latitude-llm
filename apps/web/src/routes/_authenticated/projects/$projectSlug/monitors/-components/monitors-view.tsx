@@ -209,7 +209,7 @@ export function MonitorsView({
   readonly rows: readonly MonitorsTableRow[]
   readonly isLoading: boolean
   readonly infiniteScroll: InfiniteTableInfiniteScroll
-  readonly activeMonitorSlug: string | undefined
+  readonly activeMonitorSlug?: string | undefined
   readonly onActiveMonitorChange: (slug: string | undefined) => void
   readonly projectId: string
   readonly projectSlug: string
