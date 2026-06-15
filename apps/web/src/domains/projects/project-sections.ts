@@ -6,13 +6,14 @@ import {
   Fingerprint,
   Key,
   type LucideIcon,
+  MessagesSquareIcon,
   Package,
   Plug,
   ScanSearch,
   SettingsIcon,
   ShieldAlertIcon,
   TagsIcon,
-  TextAlignStartIcon,
+  TextIcon,
   UserRound,
   Users,
   UsersRoundIcon,
@@ -34,14 +35,18 @@ interface ProjectSection {
 
 const PROJECT_SECTIONS: readonly ProjectSection[] = [
   {
+    key: "sessions",
+    label: "Sessions",
+    icon: MessagesSquareIcon,
+    path: (slug) => `/projects/${slug}`,
+    isActive: (pathname, slug) => pathname === `/projects/${slug}` || pathname === `/projects/${slug}/`,
+  },
+  {
     key: "traces",
     label: "Traces",
-    icon: TextAlignStartIcon,
-    path: (slug) => `/projects/${slug}`,
-    isActive: (pathname, slug) =>
-      pathname === `/projects/${slug}` ||
-      pathname === `/projects/${slug}/` ||
-      pathname.startsWith(`/projects/${slug}/traces`),
+    icon: TextIcon,
+    path: (slug) => `/projects/${slug}/traces`,
+    isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/traces`),
   },
   {
     key: "behaviours",

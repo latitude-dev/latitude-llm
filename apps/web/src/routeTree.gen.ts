@@ -54,6 +54,7 @@ import { Route as CcWrappedIdOgPngRouteImport } from './routes/cc-wrapped/$id.og
 import { Route as ApiNotificationsNidIncidentTrendDotpngRouteImport } from './routes/api/notifications/$nid/incident-trend[.]png'
 import { Route as ApiAuthMcpAuthorizeRouteImport } from './routes/api/auth/mcp/authorize'
 import { Route as ApiAuthProviderStartRouteImport } from './routes/api/auth/$provider/start'
+import { Route as AuthenticatedProjectsProjectSlugTracesRouteImport } from './routes/_authenticated/projects/$projectSlug/traces'
 import { Route as AuthenticatedProjectsProjectSlugSettingsRouteImport } from './routes/_authenticated/projects/$projectSlug/settings'
 import { Route as AuthenticatedProjectsProjectSlugOnboardingRouteImport } from './routes/_authenticated/projects/$projectSlug/onboarding'
 import { Route as AuthenticatedProjectsProjectSlugUsersIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/users/index'
@@ -325,6 +326,12 @@ const ApiAuthProviderStartRoute = ApiAuthProviderStartRouteImport.update({
   path: '/api/auth/$provider/start',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedProjectsProjectSlugTracesRoute =
+  AuthenticatedProjectsProjectSlugTracesRouteImport.update({
+    id: '/traces',
+    path: '/traces',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+  } as any)
 const AuthenticatedProjectsProjectSlugSettingsRoute =
   AuthenticatedProjectsProjectSlugSettingsRouteImport.update({
     id: '/settings',
@@ -521,6 +528,7 @@ export interface FileRoutesByFullPath {
   '/sandbox/$sandboxOrgId/': typeof SandboxSandboxOrgIdIndexRoute
   '/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRouteWithChildren
+  '/projects/$projectSlug/traces': typeof AuthenticatedProjectsProjectSlugTracesRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
   '/api/auth/mcp/authorize': typeof ApiAuthMcpAuthorizeRoute
   '/api/notifications/$nid/incident-trend.png': typeof ApiNotificationsNidIncidentTrendDotpngRoute
@@ -588,6 +596,7 @@ export interface FileRoutesByTo {
   '/backoffice/organizations': typeof BackofficeOrganizationsIndexRoute
   '/sandbox/$sandboxOrgId': typeof SandboxSandboxOrgIdIndexRoute
   '/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
+  '/projects/$projectSlug/traces': typeof AuthenticatedProjectsProjectSlugTracesRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
   '/api/auth/mcp/authorize': typeof ApiAuthMcpAuthorizeRoute
   '/api/notifications/$nid/incident-trend.png': typeof ApiNotificationsNidIncidentTrendDotpngRoute
@@ -662,6 +671,7 @@ export interface FileRoutesById {
   '/sandbox/$sandboxOrgId/': typeof SandboxSandboxOrgIdIndexRoute
   '/_authenticated/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/_authenticated/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRouteWithChildren
+  '/_authenticated/projects/$projectSlug/traces': typeof AuthenticatedProjectsProjectSlugTracesRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
   '/api/auth/mcp/authorize': typeof ApiAuthMcpAuthorizeRoute
   '/api/notifications/$nid/incident-trend.png': typeof ApiNotificationsNidIncidentTrendDotpngRoute
@@ -736,6 +746,7 @@ export interface FileRouteTypes {
     | '/sandbox/$sandboxOrgId/'
     | '/projects/$projectSlug/onboarding'
     | '/projects/$projectSlug/settings'
+    | '/projects/$projectSlug/traces'
     | '/api/auth/$provider/start'
     | '/api/auth/mcp/authorize'
     | '/api/notifications/$nid/incident-trend.png'
@@ -803,6 +814,7 @@ export interface FileRouteTypes {
     | '/backoffice/organizations'
     | '/sandbox/$sandboxOrgId'
     | '/projects/$projectSlug/onboarding'
+    | '/projects/$projectSlug/traces'
     | '/api/auth/$provider/start'
     | '/api/auth/mcp/authorize'
     | '/api/notifications/$nid/incident-trend.png'
@@ -876,6 +888,7 @@ export interface FileRouteTypes {
     | '/sandbox/$sandboxOrgId/'
     | '/_authenticated/projects/$projectSlug/onboarding'
     | '/_authenticated/projects/$projectSlug/settings'
+    | '/_authenticated/projects/$projectSlug/traces'
     | '/api/auth/$provider/start'
     | '/api/auth/mcp/authorize'
     | '/api/notifications/$nid/incident-trend.png'
@@ -1252,6 +1265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthProviderStartRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/projects/$projectSlug/traces': {
+      id: '/_authenticated/projects/$projectSlug/traces'
+      path: '/traces'
+      fullPath: '/projects/$projectSlug/traces'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugTracesRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
     '/_authenticated/projects/$projectSlug/settings': {
       id: '/_authenticated/projects/$projectSlug/settings'
       path: '/settings'
@@ -1529,6 +1549,7 @@ const AuthenticatedProjectsProjectSlugSettingsRouteWithChildren =
 interface AuthenticatedProjectsProjectSlugRouteChildren {
   AuthenticatedProjectsProjectSlugOnboardingRoute: typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   AuthenticatedProjectsProjectSlugSettingsRoute: typeof AuthenticatedProjectsProjectSlugSettingsRouteWithChildren
+  AuthenticatedProjectsProjectSlugTracesRoute: typeof AuthenticatedProjectsProjectSlugTracesRoute
   AuthenticatedProjectsProjectSlugIndexRoute: typeof AuthenticatedProjectsProjectSlugIndexRoute
   AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute: typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
   AuthenticatedProjectsProjectSlugMonitorsIssuesRoute: typeof AuthenticatedProjectsProjectSlugMonitorsIssuesRoute
@@ -1551,6 +1572,8 @@ const AuthenticatedProjectsProjectSlugRouteChildren: AuthenticatedProjectsProjec
       AuthenticatedProjectsProjectSlugOnboardingRoute,
     AuthenticatedProjectsProjectSlugSettingsRoute:
       AuthenticatedProjectsProjectSlugSettingsRouteWithChildren,
+    AuthenticatedProjectsProjectSlugTracesRoute:
+      AuthenticatedProjectsProjectSlugTracesRoute,
     AuthenticatedProjectsProjectSlugIndexRoute:
       AuthenticatedProjectsProjectSlugIndexRoute,
     AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute:

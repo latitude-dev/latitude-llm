@@ -2,6 +2,7 @@ import type { MomentKind } from "@domain/conversation-intelligence"
 import type { FilterSet } from "@domain/shared"
 import { CopyableText, Icon, ProviderIcon, Status, type TabOption, Tabs, Text, Tooltip } from "@repo/ui"
 import { formatCount, relativeTime } from "@repo/utils"
+import { useHotkeys } from "@tanstack/react-hotkeys"
 import { GroupIcon, ListTreeIcon, MessageSquareIcon, MessagesSquareIcon, ShieldAlertIcon } from "lucide-react"
 import { use, useEffect, useMemo, useState } from "react"
 import { useAnnotationsBySession } from "../../../../../../domains/annotations/annotations.collection.ts"
@@ -46,6 +47,7 @@ export function SessionSlot({
   latestTraceId,
   activeTab,
   onActiveTabChange,
+  isActive,
   onOpenTrace,
   onOpenIssue,
   onOpenInConversation,
@@ -61,6 +63,8 @@ export function SessionSlot({
   readonly latestTraceId: string
   readonly activeTab: SessionTabId
   readonly onActiveTabChange: (tab: SessionTabId) => void
+  /** False while a trace/issue slot is shown — suppresses the H/L tab hotkeys so they don't fight the trace slot. */
+  readonly isActive: boolean
   readonly onOpenTrace: (traceId: string, options?: OpenTraceOptions) => void
   readonly onOpenIssue: (issueId: string) => void
   readonly onOpenInConversation: (annotationId: string) => void
@@ -176,6 +180,30 @@ export function SessionSlot({
     }
     return all
   }, [annotationsEnabled, issuesEnabled, annotationCount, issueCount, singleTrace])
+
+  // H/L cycle the session tabs (wrapping), matching the trace drawer. Disabled
+  // while a trace/issue slot is shown so they don't collide with the trace slot.
+  const tabIds = useMemo(() => tabs.map((tab) => tab.id), [tabs])
+  useHotkeys([
+    {
+      hotkey: "L",
+      callback: () => {
+        const idx = tabIds.indexOf(effectiveActiveTab)
+        const next = tabIds[(idx + 1) % tabIds.length]
+        if (next) selectTab(next)
+      },
+      options: { enabled: isActive },
+    },
+    {
+      hotkey: "H",
+      callback: () => {
+        const idx = tabIds.indexOf(effectiveActiveTab)
+        const prev = tabIds[(idx - 1 + tabIds.length) % tabIds.length]
+        if (prev) selectTab(prev)
+      },
+      options: { enabled: isActive },
+    },
+  ])
 
   const title = session.rootSpanName || session.sessionId.slice(0, 12)
   const status = deriveSessionStatus(session.endTime)

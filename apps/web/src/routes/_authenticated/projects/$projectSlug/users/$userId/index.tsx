@@ -298,7 +298,6 @@ function UserDetailPage() {
                       to="/projects/$projectSlug"
                       params={{ projectSlug }}
                       search={{
-                        tab: "sessions",
                         filters: JSON.stringify({
                           userId: [{ op: "eq", value: userId }],
                           ...(errorsOnly ? { status: [{ op: "eq", value: "error" }] } : {}),
