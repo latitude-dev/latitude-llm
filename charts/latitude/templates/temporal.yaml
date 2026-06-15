@@ -65,6 +65,8 @@ spec:
                 done
                 echo "$db schema is ready"
               done
+          resources:
+            {{- include "latitude.initResources" . | nindent 12 }}
       containers:
         - name: temporal
           image: {{ .Values.temporal.serverImage }}

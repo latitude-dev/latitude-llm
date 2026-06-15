@@ -129,6 +129,14 @@ nodeSelector: {}
 tolerations: []
 affinity: {}
 
+# Requests/limits for the short-lived wait-for-deps / wait-for-schema init
+# containers. The default is a tiny request so strict LimitRange.min /
+# ResourceQuota clusters accept them; override the whole block if needed.
+initContainerResources:
+  requests:
+    cpu: 10m
+    memory: 16Mi
+
 # ---------------------------------------------------------------------------
 # Bundled infrastructure — each block independently toggleable (bring-your-own)
 # ---------------------------------------------------------------------------

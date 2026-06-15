@@ -153,6 +153,20 @@ crash-looping into multi-minute restart backoffs. Context: dict with
         done
         echo "$host:$port is up"
       done
+  resources:
+    {{- include "latitude.initResources" .root | nindent 4 }}
+{{- end -}}
+
+{{/* Minimal requests so strict LimitRange.min / ResourceQuota clusters accept the
+short-lived wait init containers. Override via initContainerResources. */}}
+{{- define "latitude.initResources" -}}
+{{- if .Values.initContainerResources -}}
+{{- toYaml .Values.initContainerResources -}}
+{{- else -}}
+requests:
+  cpu: 10m
+  memory: 16Mi
+{{- end -}}
 {{- end -}}
 
 {{/*
