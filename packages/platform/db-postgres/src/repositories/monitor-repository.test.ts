@@ -951,7 +951,10 @@ describe("MonitorRepositoryLive", () => {
         ...buildUserMonitor("tool-monitor", 1),
         target: {
           stream: "spans",
-          filterSet: { operation: [{ op: "eq" as const, value: "execute_tool" }], toolName: [{ op: "eq" as const, value: "search" }] },
+          filterSet: {
+            operation: [{ op: "eq" as const, value: "execute_tool" }],
+            toolName: [{ op: "eq" as const, value: "search" }],
+          },
           query: null,
           savedSearchId: null,
           metric: { kind: "errorRate" },
