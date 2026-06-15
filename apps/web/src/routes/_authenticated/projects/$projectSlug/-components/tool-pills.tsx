@@ -9,23 +9,29 @@ export interface ToolPillStat {
   readonly name: string
   /** execute_tool spans calling this tool; 0 = defined but never called. */
   readonly callCount: number
+  /** execute_tool spans for this tool that ended in error. */
+  readonly errorCount: number
   /** Chat spans whose tool definitions include this tool. */
   readonly definedOnSpans: number
 }
 
 export function aggregateToolPills(spans: readonly SpanRecord[] | undefined): readonly ToolPillStat[] {
   if (!spans?.length) return []
-  const stats = new Map<string, { callCount: number; definedOnSpans: number }>()
+  const stats = new Map<string, { callCount: number; errorCount: number; definedOnSpans: number }>()
   const statsFor = (name: string) => {
     let entry = stats.get(name)
     if (!entry) {
-      entry = { callCount: 0, definedOnSpans: 0 }
+      entry = { callCount: 0, errorCount: 0, definedOnSpans: 0 }
       stats.set(name, entry)
     }
     return entry
   }
   for (const span of spans) {
-    if (span.operation === "execute_tool" && span.toolName) statsFor(span.toolName).callCount++
+    if (span.operation === "execute_tool" && span.toolName) {
+      const entry = statsFor(span.toolName)
+      entry.callCount++
+      if (span.statusCode === "error") entry.errorCount++
+    }
     for (const name of new Set(span.toolNames)) {
       if (name) statsFor(name).definedOnSpans++
     }
@@ -38,11 +44,13 @@ export function aggregateToolPills(spans: readonly SpanRecord[] | undefined): re
 export function ToolPill({
   name,
   muted,
+  failed,
   suffix,
   tooltip,
 }: {
   readonly name: string
   readonly muted?: boolean | undefined
+  readonly failed?: boolean | undefined
   readonly suffix?: string | undefined
   readonly tooltip?: ReactNode
 }) {
@@ -51,14 +59,23 @@ export function ToolPill({
   const linked = toolsEnabled && typeof projectSlug === "string"
 
   const pillClass = cn(
-    "inline-flex h-7 max-w-full items-center gap-1.5 rounded-full border border-border bg-secondary px-2.5 transition-colors",
-    linked ? "cursor-pointer hover:border-primary/30 hover:bg-primary/10" : "cursor-default",
+    "inline-flex h-7 max-w-full items-center gap-1.5 rounded-full border px-2.5 transition-colors",
+    failed ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-border bg-secondary",
+    linked &&
+      (failed
+        ? "cursor-pointer hover:border-destructive/60 hover:bg-destructive/15"
+        : "cursor-pointer hover:border-primary/30 hover:bg-primary/10"),
+    !linked && "cursor-default",
     muted && "opacity-60",
   )
   const content = (
     <>
       <span className={cn("min-w-0 truncate font-mono text-[13px]", muted && "text-muted-foreground")}>{name}</span>
-      {suffix ? <span className="shrink-0 text-xs text-muted-foreground">{suffix}</span> : null}
+      {suffix ? (
+        <span className={cn("shrink-0 text-xs", failed ? "text-destructive/80" : "text-muted-foreground")}>
+          {suffix}
+        </span>
+      ) : null}
     </>
   )
   const trigger = linked ? (
@@ -99,11 +116,19 @@ export function ToolPillList({
           key={tool.name}
           name={tool.name}
           muted={tool.callCount === 0}
+          failed={tool.errorCount > 0}
           suffix={tool.callCount > 0 ? `×${formatCount(tool.callCount)}` : undefined}
           tooltip={
-            tool.callCount > 0
-              ? `${formatCount(tool.callCount)} ${tool.callCount === 1 ? "call" : "calls"} in this ${scopeLabel}`
-              : `Defined on ${formatCount(tool.definedOnSpans)} ${tool.definedOnSpans === 1 ? "span" : "spans"}, never called`
+            tool.callCount > 0 ? (
+              <>
+                {formatCount(tool.callCount)} {tool.callCount === 1 ? "call" : "calls"} in this {scopeLabel}
+                {tool.errorCount > 0 ? (
+                  <span className="text-destructive">{formatCount(tool.errorCount)} failed</span>
+                ) : null}
+              </>
+            ) : (
+              `Defined on ${formatCount(tool.definedOnSpans)} ${tool.definedOnSpans === 1 ? "span" : "spans"}, never called`
+            )
           }
         />
       ))}
