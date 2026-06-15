@@ -20,3 +20,6 @@ export const DESTINATION_EVENT_UUID_NAMESPACE = "c7696d7f-b92d-518a-9525-9c635f6
 
 /** Default per-event ingestion size guard (1 MiB); the deliverer adapter owns the live vendor cap and passes it to the mapper. */
 export const DESTINATION_MAX_EVENT_BYTES_DEFAULT = 1_048_576
+
+/** Event name of the canary delivered by `testDestinationConnection`; named so customers can recognize it in their destination. */
+export const DESTINATION_CONNECTION_TEST_EVENT_NAME = "latitude_connection_test"

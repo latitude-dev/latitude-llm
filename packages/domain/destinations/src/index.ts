@@ -1,5 +1,6 @@
 // Constants
 export {
+  DESTINATION_CONNECTION_TEST_EVENT_NAME,
   DESTINATION_EVENT_UUID_NAMESPACE,
   DESTINATION_IDLE_BACKOFF_MAX_MS,
   DESTINATION_INTERVAL_MS_DEFAULT,
@@ -92,3 +93,8 @@ export { DestinationSyncRunRepository } from "./ports/destination-sync-run-repos
 // Use cases
 export type { CreateDestinationError, CreateDestinationInput } from "./use-cases/create-destination.ts"
 export { createDestinationUseCase } from "./use-cases/create-destination.ts"
+export type {
+  TestDestinationConnectionInput,
+  TestDestinationConnectionResult,
+} from "./use-cases/test-destination-connection.ts"
+export { testDestinationConnectionUseCase } from "./use-cases/test-destination-connection.ts"
