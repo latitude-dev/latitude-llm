@@ -87,8 +87,9 @@ export const createAlertIncidentFromIssueEventUseCase = (input: CreateAlertIncid
             projectId: incident.projectId,
             alertIncidentId: incident.id,
             kind: incident.kind,
-            sourceType: incident.sourceType,
-            sourceId: incident.sourceId,
+            // Always set on the issue path — read from the inputs, not the now-nullable entity field.
+            sourceType: "issue",
+            sourceId: input.issueId,
           },
         })
 

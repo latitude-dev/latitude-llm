@@ -38,7 +38,8 @@ export interface AlertIncidentRecord {
   readonly kind: AlertIncidentKind
   readonly severity: AlertSeverity
   readonly sourceType: AlertIncident["sourceType"]
-  readonly sourceId: string
+  /** `null` for unified (target-on-monitor) incidents — the target lives on the monitor. */
+  readonly sourceId: string | null
   readonly startedAt: string
   readonly endedAt: string | null
   /** Resolved name of the issue tied to the incident; `null` if not found (e.g., deleted). */
@@ -108,7 +109,7 @@ export const listProjectAlertIncidentsInRange = createServerFn({
         })
 
         const issueIds = Array.from(
-          new Set(incidents.filter((i) => i.sourceType === "issue").map((i) => i.sourceId)),
+          new Set(incidents.flatMap((i) => (i.sourceType === "issue" && i.sourceId !== null ? [i.sourceId] : []))),
         ).map(IssueId)
 
         const issues =
@@ -119,7 +120,9 @@ export const listProjectAlertIncidentsInRange = createServerFn({
 
         // Saved-search names are the source label for `savedSearch.*` rows (mirrors the issue name).
         const savedSearchIds = Array.from(
-          new Set(incidents.filter((i) => i.sourceType === "savedSearch").map((i) => i.sourceId)),
+          new Set(
+            incidents.flatMap((i) => (i.sourceType === "savedSearch" && i.sourceId !== null ? [i.sourceId] : [])),
+          ),
         )
         const savedSearchNameById = new Map<string, string>()
         for (const id of savedSearchIds) {
@@ -142,8 +145,10 @@ export const listProjectAlertIncidentsInRange = createServerFn({
         return incidents.map((incident) =>
           toRecord(
             incident,
-            issueById.get(IssueId(incident.sourceId)),
-            savedSearchNameById.get(incident.sourceId),
+            incident.sourceType === "issue" && incident.sourceId !== null
+              ? issueById.get(IssueId(incident.sourceId))
+              : undefined,
+            incident.sourceId !== null ? savedSearchNameById.get(incident.sourceId) : undefined,
             incident.monitorAlertId ? monitorByAlertId.get(incident.monitorAlertId) : undefined,
           ),
         )

@@ -183,6 +183,12 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
           .flatMap((m) => m.alerts)
           .filter((alert) => alert.source?.type === "savedSearch"),
       ),
+    listActiveMetricMonitorAlerts: (projectId) =>
+      Effect.sync(() =>
+        monitors
+          .filter((m) => m.projectId === projectId && isLive(m) && m.target !== null)
+          .flatMap((m) => m.alerts.map((alert) => ({ alert, target: m.target as NonNullable<typeof m.target> }))),
+      ),
     listSavedSearchMonitorSummaries: (projectId) =>
       Effect.sync(() => {
         const summaries = new Map<string, { byMonitor: Map<string, Monitor>; severities: MonitorAlert["severity"][] }>()
@@ -225,12 +231,14 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
           ]
         })
       }),
-    listProjectsWithActiveSavedSearchAlerts: () =>
+    listProjectsWithActiveMonitorAlerts: () =>
       Effect.sync(() => {
         const seen = new Map<string, { organizationId: Monitor["organizationId"]; projectId: Monitor["projectId"] }>()
         for (const monitor of monitors) {
           if (!isLive(monitor)) continue
-          if (!monitor.alerts.some((alert) => alert.source?.type === "savedSearch")) continue
+          const hasSavedSearchAlert = monitor.alerts.some((alert) => alert.source?.type === "savedSearch")
+          const isUnified = monitor.target !== null && monitor.alerts.length > 0
+          if (!hasSavedSearchAlert && !isUnified) continue
           seen.set(`${monitor.organizationId}:${monitor.projectId}`, {
             organizationId: monitor.organizationId,
             projectId: monitor.projectId,
