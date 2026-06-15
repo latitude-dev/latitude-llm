@@ -951,7 +951,10 @@ describe("MonitorRepositoryLive", () => {
         ...buildUserMonitor("tool-monitor", 1),
         target: {
           stream: "spans",
-          filterSet: { operation: [{ op: "eq", value: "execute_tool" }], toolName: [{ op: "eq", value: "search" }] },
+          filterSet: {
+            operation: [{ op: "eq" as const, value: "execute_tool" }],
+            toolName: [{ op: "eq" as const, value: "search" }],
+          },
           query: null,
           savedSearchId: null,
           metric: { kind: "errorRate" },
@@ -1328,6 +1331,69 @@ describe("MonitorRepositoryLive", () => {
         }).pipe(provideRls(database, organizationId)),
       )
       expect(await endedAtOf(openId)).not.toBeNull()
+    })
+  })
+
+  describe("listMonitorsForTarget", () => {
+    const spansTarget = (toolName: string) => ({
+      targetStream: "spans" as const,
+      targetFilterSet: {
+        operation: [{ op: "eq" as const, value: "execute_tool" }],
+        toolName: [{ op: "eq" as const, value: toolName }],
+      },
+      metric: { kind: "count" as const },
+    })
+
+    const listForTool = (toolName: string) =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* MonitorRepository
+          return yield* repository.listMonitorsForTarget({
+            projectId,
+            stream: "spans",
+            filterSetContains: { toolName: [{ op: "eq" as const, value: toolName }] },
+          })
+        }).pipe(provideRls(database, organizationId)),
+      )
+
+    it("matches monitors whose target filter set contains the tool, and excludes others", async () => {
+      await database.db.insert(monitorsTable).values([
+        makeMonitorRow({ id: generateId(), slug: "search-errors", name: "Search errors", ...spansTarget("search") }),
+        makeMonitorRow({ id: generateId(), slug: "fetch-errors", name: "Fetch errors", ...spansTarget("fetch") }),
+        makeMonitorRow({
+          id: generateId(),
+          slug: "all-tools",
+          name: "All tools",
+          targetStream: "spans",
+          targetFilterSet: { operation: [{ op: "eq" as const, value: "execute_tool" }] },
+          metric: { kind: "count" },
+        }),
+      ])
+
+      const result = await listForTool("search")
+      expect(result.map((monitor) => monitor.slug)).toEqual(["search-errors"])
+    })
+
+    it("excludes soft-deleted monitors and a different stream", async () => {
+      await database.db.insert(monitorsTable).values([
+        makeMonitorRow({
+          id: generateId(),
+          slug: "deleted-search",
+          name: "Deleted",
+          ...spansTarget("search"),
+          deletedAt: new Date("2026-05-29T11:00:00.000Z"),
+        }),
+        makeMonitorRow({
+          id: generateId(),
+          slug: "traces-search",
+          name: "Traces",
+          targetStream: "traces",
+          targetFilterSet: { toolName: [{ op: "eq" as const, value: "search" }] },
+          metric: { kind: "count" },
+        }),
+      ])
+
+      expect(await listForTool("search")).toEqual([])
     })
   })
 })

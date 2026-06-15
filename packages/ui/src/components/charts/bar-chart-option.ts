@@ -53,6 +53,7 @@ export function buildBarChartOption(
   enableBrush = false,
   xAxisLabelFontSize = 11,
   overlay?: BarChartOverlay,
+  formatYAxisLabel?: (value: number) => string,
 ): EChartsCoreOption {
   const categoryLabelInterval =
     categories.length <= maxCategoryAxisLabels
@@ -120,7 +121,13 @@ export function buildBarChartOption(
       splitLine: { lineStyle: { color: splitLineColor, type: "dashed", opacity: splitLineOpacity } },
       axisLine: { show: false },
       ...(showYAxis ? {} : { axisTick: { show: false } }),
-      axisLabel: showYAxis ? { color: colors.mutedForeground, fontSize: 11 } : { show: false },
+      axisLabel: showYAxis
+        ? {
+            color: colors.mutedForeground,
+            fontSize: 11,
+            ...(formatYAxisLabel ? { formatter: (value: number) => formatYAxisLabel(value) } : {}),
+          }
+        : { show: false },
     },
     series: buildSeries({
       values,

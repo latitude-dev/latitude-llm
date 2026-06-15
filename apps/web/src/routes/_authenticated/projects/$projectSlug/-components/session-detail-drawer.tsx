@@ -190,6 +190,7 @@ export function SessionDetailDrawer({
               latestTraceId={session.latestTraceId}
               activeTab={activeTab}
               onActiveTabChange={setActiveTab}
+              isActive={!showDetail}
               onOpenTrace={openTrace}
               onOpenIssue={openIssue}
               onOpenInConversation={focusAnnotationInConversation}

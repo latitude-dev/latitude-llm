@@ -59,10 +59,21 @@ interface ChartOptionInput {
    */
   readonly tooltipTitle?: (category: string, dataIndex: number) => string
   readonly xAxisLabelFontSize?: number
+  /** Enable drag-to-select on the X axis (the chart's `onSelect` is wired). */
+  readonly enableBrush?: boolean
 }
 
 export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
-  const { categories, series, colors, primaryAxis, secondaryAxis, tooltipTitle, xAxisLabelFontSize = 11 } = input
+  const {
+    categories,
+    series,
+    colors,
+    primaryAxis,
+    secondaryAxis,
+    tooltipTitle,
+    xAxisLabelFontSize = 11,
+    enableBrush = false,
+  } = input
 
   const hasSecondaryAxis = series.some((s) => s.axis === "right")
   const showLegend = series.length > 1
@@ -150,7 +161,7 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
     }
   })
 
-  return {
+  const option: EChartsCoreOption = {
     backgroundColor: "transparent",
     grid: {
       left: 48,
@@ -215,4 +226,18 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
     yAxis,
     series: echartsSeries,
   }
+
+  if (enableBrush) {
+    option.toolbox = { show: false }
+    option.brush = {
+      brushMode: "single",
+      transformable: false,
+      throttleType: "debounce",
+      throttleDelay: 50,
+      brushStyle: { borderWidth: 0, color: colors.primary, opacity: 0.3 },
+      xAxisIndex: 0,
+    }
+  }
+
+  return option
 }

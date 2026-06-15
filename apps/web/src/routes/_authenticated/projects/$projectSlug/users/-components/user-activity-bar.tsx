@@ -78,7 +78,7 @@ export function UserActivityBar({
                   <TooltipContent side="top" sideOffset={6}>
                     <div className="flex flex-col gap-0.5">
                       <Text.H6>{formatBucketTooltipLabel(bucket.bucket, bucketSeconds)}</Text.H6>
-                      <Text.H6B>{formatCount(bucket.count)} traces</Text.H6B>
+                      <Text.H6B>{formatCount(bucket.count)} sessions</Text.H6B>
                     </div>
                   </TooltipContent>
                 </TooltipRoot>

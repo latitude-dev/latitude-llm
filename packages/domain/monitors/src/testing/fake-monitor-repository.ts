@@ -189,6 +189,22 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
           .filter((m) => m.projectId === projectId && isLive(m) && m.target !== null)
           .flatMap((m) => m.alerts.map((alert) => ({ alert, target: m.target as NonNullable<typeof m.target> }))),
       ),
+    listMonitorsForTarget: ({ projectId, stream, filterSetContains }) =>
+      Effect.sync(() =>
+        monitors
+          .filter((m) => m.projectId === projectId && isLive(m) && m.target?.stream === stream)
+          .filter((m) => {
+            const filterSet = m.target?.filterSet ?? {}
+            return Object.entries(filterSetContains).every(([field, conditions]) =>
+              conditions.every((condition) =>
+                (filterSet[field] ?? []).some(
+                  (existing) => existing.op === condition.op && existing.value === condition.value,
+                ),
+              ),
+            )
+          })
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
+      ),
     listSavedSearchMonitorSummaries: (projectId) =>
       Effect.sync(() => {
         const summaries = new Map<string, { byMonitor: Map<string, Monitor>; severities: MonitorAlert["severity"][] }>()

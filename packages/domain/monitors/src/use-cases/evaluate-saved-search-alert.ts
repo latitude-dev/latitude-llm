@@ -55,8 +55,11 @@ export type EvaluateSavedSearchAlertError = RepositoryError
 // seasonal/baseline math (legacy logic here is unchanged — these were already private).
 export const WEEK_MS = 7 * 24 * 60 * 60 * 1000
 
-const durationToMs = (duration: AlertDuration): number =>
-  duration.unit === "hours" ? duration.hours * 60 * 60 * 1000 : duration.days * 24 * 60 * 60 * 1000
+const durationToMs = (duration: AlertDuration): number => {
+  if (duration.unit === "minutes") return duration.minutes * 60 * 1000
+  if (duration.unit === "hours") return duration.hours * 60 * 60 * 1000
+  return duration.days * 24 * 60 * 60 * 1000
+}
 
 export const mean = (values: readonly number[]): number =>
   values.length === 0 ? 0 : values.reduce((sum, value) => sum + value, 0) / values.length

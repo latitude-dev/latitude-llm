@@ -642,6 +642,43 @@ export const MonitorRepositoryLive = Layer.effect(
               : [],
           )
         }),
+      listMonitorsForTarget: ({ projectId, stream, filterSetContains }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const { organizationId } = sqlClient
+          const monitorRows = yield* sqlClient.query((db) =>
+            db
+              .select()
+              .from(monitors)
+              .where(
+                and(
+                  eq(monitors.organizationId, organizationId),
+                  eq(monitors.projectId, projectId),
+                  eq(monitors.targetStream, stream),
+                  // jsonb containment: the monitor's target filter set includes the given predicate.
+                  sql`${monitors.targetFilterSet} @> ${JSON.stringify(filterSetContains)}::jsonb`,
+                  isNull(monitors.deletedAt),
+                ),
+              )
+              .orderBy(desc(monitors.createdAt), asc(monitors.id)),
+          )
+          if (monitorRows.length === 0) return []
+          const ids = monitorRows.map((row) => row.id)
+          const alertRows = yield* sqlClient.query((db) =>
+            db
+              .select()
+              .from(monitorAlerts)
+              .where(
+                and(
+                  eq(monitorAlerts.organizationId, organizationId),
+                  inArray(monitorAlerts.monitorId, ids),
+                  isNull(monitorAlerts.deletedAt),
+                ),
+              ),
+          )
+          const alertsByMonitorId = groupAlertsByMonitorId(alertRows)
+          return monitorRows.map((row) => toMonitor(row, [...(alertsByMonitorId.get(row.id) ?? [])]))
+        }),
       listSavedSearchMonitorSummaries: (projectId) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

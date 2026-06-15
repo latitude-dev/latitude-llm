@@ -158,15 +158,18 @@ export function useUsersOverview({
 export function useUserProfile({
   projectId,
   userId,
+  errorsOnly = false,
   enabled = true,
 }: {
   readonly projectId: string
   readonly userId: string
+  readonly errorsOnly?: boolean
   readonly enabled?: boolean
 }) {
   return useQuery({
-    queryKey: ["end-user-profile", projectId, userId],
-    queryFn: (): Promise<UserProfileRecord | null> => getUserProfile({ data: { projectId, userId } }),
+    queryKey: ["end-user-profile", projectId, userId, errorsOnly],
+    queryFn: (): Promise<UserProfileRecord | null> =>
+      getUserProfile({ data: { projectId, userId, ...(errorsOnly ? { errorsOnly: true } : {}) } }),
     staleTime: USERS_QUERY_STALE_TIME_MS,
     enabled: enabled && projectId.length > 0 && userId.length > 0,
   })
@@ -176,21 +179,31 @@ export function useUserActivity({
   projectId,
   userId,
   timeRange,
+  errorsOnly = false,
   enabled = true,
 }: {
   readonly projectId: string
   readonly userId: string
   readonly timeRange?: UsersTimeRange
+  readonly errorsOnly?: boolean
   readonly enabled?: boolean
 }) {
   return useQuery({
-    queryKey: ["end-user-activity", projectId, userId, timeRange?.fromIso ?? null, timeRange?.toIso ?? null],
+    queryKey: [
+      "end-user-activity",
+      projectId,
+      userId,
+      timeRange?.fromIso ?? null,
+      timeRange?.toIso ?? null,
+      errorsOnly,
+    ],
     queryFn: (): Promise<UserActivityRecord> =>
       getUserActivity({
         data: {
           projectId,
           userId,
           ...(timeRange?.fromIso || timeRange?.toIso ? { timeRange } : {}),
+          ...(errorsOnly ? { errorsOnly: true } : {}),
         },
       }),
     staleTime: USERS_QUERY_STALE_TIME_MS,
@@ -203,16 +216,19 @@ export function useUserUsage({
   projectId,
   userId,
   dimension,
+  errorsOnly = false,
   enabled = true,
 }: {
   readonly projectId: string
   readonly userId: string
   readonly dimension: "model" | "provider" | "tool"
+  readonly errorsOnly?: boolean
   readonly enabled?: boolean
 }) {
   return useQuery({
-    queryKey: ["end-user-usage", projectId, userId, dimension],
-    queryFn: (): Promise<readonly UserUsageSliceRecord[]> => getUserUsage({ data: { projectId, userId, dimension } }),
+    queryKey: ["end-user-usage", projectId, userId, dimension, errorsOnly],
+    queryFn: (): Promise<readonly UserUsageSliceRecord[]> =>
+      getUserUsage({ data: { projectId, userId, dimension, ...(errorsOnly ? { errorsOnly: true } : {}) } }),
     staleTime: USERS_QUERY_STALE_TIME_MS,
     enabled: enabled && projectId.length > 0 && userId.length > 0,
   })

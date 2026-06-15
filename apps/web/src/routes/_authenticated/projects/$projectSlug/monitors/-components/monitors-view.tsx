@@ -15,6 +15,7 @@ import {
 import { useNavigate } from "@tanstack/react-router"
 import { BellIcon, BellOffIcon, PencilIcon, Trash2Icon } from "lucide-react"
 import { useState } from "react"
+import { describeMonitorTarget } from "../../../../../../domains/monitors/monitor-target.ts"
 import type { MonitorListRowRecord, MonitorRecord } from "../../../../../../domains/monitors/monitors.collection.ts"
 import {
   ListingLayout as Layout,
@@ -167,11 +168,28 @@ function ConditionCell({ alerts }: { readonly alerts: MonitorRecord["alerts"] })
         {first.summary}
       </Text.H5>
       {rest.length > 0 ? (
-        <Badge variant="noBorderMuted" className="shrink-0" aria-label={`${rest.length} more alerts`}>
+        <Badge variant="noBorderMuted" className="shrink-0" aria-label={`${rest.length} more conditions`}>
           +{rest.length}
         </Badge>
       ) : null}
     </div>
+  )
+}
+
+/** The unified monitor target (tool / user / all-X / raw stream); "—" for legacy saved-search and issue monitors. */
+function TargetCell({ target }: { readonly target: MonitorRecord["target"] }) {
+  const description = describeMonitorTarget(target)
+  if (!description) {
+    return (
+      <Text.H6 color="foregroundMuted" noWrap>
+        —
+      </Text.H6>
+    )
+  }
+  return (
+    <Badge variant="muted" ellipsis className="max-w-full">
+      {description.label}
+    </Badge>
   )
 }
 
@@ -191,7 +209,7 @@ export function MonitorsView({
   readonly rows: readonly MonitorsTableRow[]
   readonly isLoading: boolean
   readonly infiniteScroll: InfiniteTableInfiniteScroll
-  readonly activeMonitorSlug: string | undefined
+  readonly activeMonitorSlug?: string | undefined
   readonly onActiveMonitorChange: (slug: string | undefined) => void
   readonly projectId: string
   readonly projectSlug: string
@@ -282,6 +300,14 @@ export function MonitorsView({
           } satisfies InfiniteTableColumn<MonitorsTableRow>,
         ]
       : []),
+    {
+      key: "target",
+      header: "Target",
+      width: 160,
+      minWidth: 120,
+      maxWidth: 200,
+      render: (row) => <TargetCell target={row.monitor.target} />,
+    },
     {
       key: "condition",
       header: "Condition",

@@ -299,8 +299,26 @@ describe("UserAnalyticsRepository", () => {
       expect(series).toHaveLength(2)
       const userA = series.find((entry) => entry.userId === USER_A)
       expect(userA?.buckets.reduce((sum, bucket) => sum + bucket.count, 0)).toBe(2)
+      expect(userA?.buckets.reduce((sum, bucket) => sum + bucket.errorCount, 0)).toBe(1)
       const userB = series.find((entry) => entry.userId === USER_B)
       expect(userB?.buckets).toEqual([])
+    })
+
+    it("counts only errored traces when errorsOnly is set", async () => {
+      const series = await runCh(
+        repo.activityByUserIds({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          userIds: [USER_A],
+          timeRange: { from: daysAgo(3), to: NOW },
+          bucketSeconds: 24 * 60 * 60,
+          errorsOnly: true,
+        }),
+      )
+
+      const userA = series.find((entry) => entry.userId === USER_A)
+      expect(userA?.buckets.reduce((sum, bucket) => sum + bucket.count, 0)).toBe(1)
+      expect(userA?.buckets.reduce((sum, bucket) => sum + bucket.errorCount, 0)).toBe(1)
     })
   })
 
@@ -319,8 +337,14 @@ describe("UserAnalyticsRepository", () => {
       expect(overview.newUsers).toBe(1) // only user-c's first trace falls in range
       expect(overview.identifiedTraces).toBe(3)
       expect(overview.totalTraces).toBe(4) // + anonymous trace
+      // In range: session-a1 (a2, ok), session-a2 (a3, error), user-c's session, anon d1's session.
+      expect(overview.identifiedSessions).toBe(3) // user-attributed sessions
+      expect(overview.totalSessions).toBe(4) // + the anonymous session
       expect(overview.histogram.length).toBeGreaterThan(0)
       expect(overview.histogram.reduce((sum, bucket) => sum + bucket.traceCount, 0)).toBe(3)
+      // Histogram is user-attributed: 3 identified sessions, one of them errored (session-a2).
+      expect(overview.histogram.reduce((sum, bucket) => sum + bucket.sessionCount, 0)).toBe(3)
+      expect(overview.histogram.reduce((sum, bucket) => sum + bucket.errorSessionCount, 0)).toBe(1)
     })
   })
 
@@ -334,6 +358,16 @@ describe("UserAnalyticsRepository", () => {
       expect(profile.errorSessionCount).toBe(1)
       expect(profile.activeDays).toBe(3)
       expect(profile.avgDurationNs).toBeGreaterThan(0)
+    })
+
+    it("restricts the profile to errored traces when errorsOnly is set", async () => {
+      const profile = await runCh(
+        repo.findByUserId({ organizationId: ORG_ID, projectId: PROJECT_ID, userId: USER_A, errorsOnly: true }),
+      )
+
+      expect(profile.traceCount).toBe(1)
+      expect(profile.sessionCount).toBe(1)
+      expect(profile.errorSessionCount).toBe(1)
     })
 
     it("fails with NotFoundError for unknown users", async () => {
@@ -374,6 +408,20 @@ describe("UserAnalyticsRepository", () => {
       )
 
       expect(slices).toEqual([{ value: "search", traceCount: 1 }])
+    })
+
+    it("restricts the breakdown to errored traces when errorsOnly is set", async () => {
+      const slices = await runCh(
+        repo.usageBreakdownByUserId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          userId: USER_A,
+          dimension: "model",
+          errorsOnly: true,
+        }),
+      )
+
+      expect(slices).toEqual([{ value: "gpt-4o-mini", traceCount: 1 }])
     })
   })
 })

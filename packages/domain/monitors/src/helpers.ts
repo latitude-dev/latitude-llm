@@ -1,15 +1,28 @@
-import type { AlertBaseline, AlertCountThreshold, AlertDuration, AlertIncidentKind } from "@domain/shared"
+import {
+  type AlertBaseline,
+  type AlertCountThreshold,
+  type AlertDuration,
+  type AlertIncidentKind,
+  type AlertMetricThreshold,
+  formatMetricValue,
+  type MonitorMetric,
+} from "@domain/shared"
 import type { MonitorAlert } from "./entities/monitor.ts"
 
 export interface HumanReadableAlertContext {
   /** Humanised saved-search name/filter; caller resolves it. Falls back to "matching traces" when absent. */
   readonly savedSearchName?: string
+  /** Humanised target (e.g. "the `search` tool", "all users") for unified `event.*`/`metric.*` alerts. */
+  readonly targetName?: string
 }
 
 /** The slice of an alert the formatter reads. Notification templates pass just these two from the incident payload. */
 export type HumanReadableAlertInput = Pick<MonitorAlert, "kind" | "condition">
 
 const formatDuration = (duration: AlertDuration): string => {
+  if (duration.unit === "minutes") {
+    return duration.minutes === 1 ? "the last minute" : `the last ${duration.minutes} minutes`
+  }
   if (duration.unit === "hours") {
     if (duration.hours === 1) return "the last hour"
     if (duration.hours === 24) return "the last 24 hours"
@@ -21,6 +34,9 @@ const formatDuration = (duration: AlertDuration): string => {
 }
 
 const formatPreviousPeriod = (duration: AlertDuration): string => {
+  if (duration.unit === "minutes") {
+    return duration.minutes === 1 ? "the previous minute" : `the previous ${duration.minutes} minutes`
+  }
   if (duration.unit === "hours") {
     return duration.hours === 1 ? "the previous hour" : `the previous ${duration.hours} hours`
   }
@@ -60,14 +76,48 @@ const formatWindowMinutes = (minutes: number): string => {
 }
 
 const issueSentenceForKind: Record<Extract<AlertIncidentKind, `issue.${string}`>, string> = {
-  "issue.new": "Alerts each time a new issue is detected.",
-  "issue.regressed": "Alerts each time a resolved issue is detected again.",
-  "issue.escalating": "Alerts when an ongoing issue is being detected more than expected.",
+  "issue.new": "Opens an incident each time a new issue is detected.",
+  "issue.regressed": "Opens an incident each time a resolved issue is detected again.",
+  "issue.escalating": "Opens an incident when an ongoing issue is being detected more than expected.",
 }
 
 /** The thing being detected is a trace; the saved search (humanised by the caller) scopes which. */
 const savedSearchTraceSubject = (context?: HumanReadableAlertContext): string =>
   context?.savedSearchName ? `traces matching '${context.savedSearchName}'` : "matching traces"
+
+/** Field rendered as a user-facing word: duration reads as "latency". */
+const metricFieldNoun = (field: "duration" | "cost" | "tokens"): string => (field === "duration" ? "latency" : field)
+
+/** How a unified monitor's metric reads as a noun phrase ("the error rate", "the p95 latency"). */
+const formatMetric = (metric: MonitorMetric): string => {
+  switch (metric.kind) {
+    case "count":
+      return "the volume"
+    case "errorRate":
+      return "the error rate"
+    case "avg":
+      return `the average ${metricFieldNoun(metric.field)}`
+    case "p95":
+      return `the p95 ${metricFieldNoun(metric.field)}`
+    case "sum":
+      return `the total ${metricFieldNoun(metric.field)}`
+  }
+}
+
+/** Threshold phrase for the unified `metric.*` kinds; absolute carries a stored float `value` rendered with its unit. */
+const formatMetricThreshold = (threshold: AlertMetricThreshold, metric: MonitorMetric): string => {
+  if (threshold.mode === "absolute") {
+    return `over ${formatMetricValue(threshold.value, metric)}`
+  }
+  if (threshold.mode === "multiplier") {
+    return `${threshold.factor} times more than ${formatBaseline(threshold.baseline)}`
+  }
+  return threshold.sensitivity === undefined
+    ? "more than expected"
+    : `${threshold.sensitivity} times more than expected`
+}
+
+const targetSubject = (context?: HumanReadableAlertContext): string => context?.targetName ?? "the target"
 
 /** Renders an alert as one complete sentence. Shared by the form preview, panel, and notification templates. */
 export function formatHumanReadableAlert(alert: HumanReadableAlertInput, context?: HumanReadableAlertContext): string {
@@ -77,23 +127,38 @@ export function formatHumanReadableAlert(alert: HumanReadableAlertInput, context
 
   if (alert.kind === "savedSearch.match") {
     return context?.savedSearchName
-      ? `Alerts each time a new trace matching '${context.savedSearchName}' is detected.`
-      : "Alerts each time a new matching trace is detected."
+      ? `Opens an incident each time a new trace matching '${context.savedSearchName}' is detected.`
+      : "Opens an incident each time a new matching trace is detected."
   }
 
   const subject = savedSearchTraceSubject(context)
 
   if (alert.kind === "savedSearch.threshold" && alert.condition?.kind === "savedSearch.threshold") {
-    return `Alerts when ${subject} are ${formatThreshold(alert.condition.threshold)}.`
+    return `Opens an incident when ${subject} are ${formatThreshold(alert.condition.threshold)}.`
   }
 
   if (alert.kind === "savedSearch.escalating" && alert.condition?.kind === "savedSearch.escalating") {
     // "sustained for at least X" keeps the window distinct from the baseline period.
-    return `Alerts when ${subject} are ${formatThreshold(alert.condition.threshold)}, sustained for at least ${formatWindowMinutes(
+    return `Opens an incident when ${subject} are ${formatThreshold(alert.condition.threshold)}, sustained for at least ${formatWindowMinutes(
       alert.condition.window.minutes,
     )}.`
   }
 
+  if (alert.kind === "event.matched") {
+    return `Opens an incident each time a new matching event is detected for ${targetSubject(context)}.`
+  }
+
+  if (alert.kind === "metric.threshold" && alert.condition?.kind === "metric.threshold") {
+    return `Opens an incident when ${formatMetric(alert.condition.metric)} for ${targetSubject(context)} is ${formatMetricThreshold(alert.condition.threshold, alert.condition.metric)}.`
+  }
+
+  if (alert.kind === "metric.escalating" && alert.condition?.kind === "metric.escalating") {
+    return `Opens an incident when ${formatMetric(alert.condition.metric)} for ${targetSubject(context)} is ${formatMetricThreshold(
+      alert.condition.threshold,
+      alert.condition.metric,
+    )}, sustained for at least ${formatWindowMinutes(alert.condition.window.minutes)}.`
+  }
+
   // Defensive fallback for a malformed row (condition kind not matching alert kind).
-  return `Alert configured (${alert.kind}).`
+  return `Monitor configured (${alert.kind}).`
 }
