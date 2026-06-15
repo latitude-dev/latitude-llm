@@ -22,7 +22,7 @@ Latitude currently has two parallel tracking systems with overlapping names and 
 
 The one-line mental model for users and docs:
 
-> Latitude groups your traces into **Signals** — buckets you define deliberately, from the Signals page or while annotating. Any signal — or saved search, tool, or your raw traffic — can be watched with **Monitors**; monitors have **Alerts**, and a fired alert opens an **Incident**, which is what notifies you.
+> Latitude groups your traces into **Signals** — buckets you define deliberately (from the Signals page or while annotating) or that Latitude **discovers** from your traffic and proposes for review. Any signal — or saved search, tool, or your raw traffic — can be watched with **Monitors**; monitors have **Alerts**, and a fired alert opens an **Incident**, which is what notifies you.
 
 Signal membership is **materialized at write time** — each trace is matched once at ingest and the verdict is remembered as an occurrence row. This is the load-bearing decision of the spec and it is forced, not a preference; the full rationale lives at the end ("Why signal membership is materialized at write time").
 
@@ -38,9 +38,9 @@ Signal membership is **materialized at write time** — each trace is matched on
 
   Any matcher composes with any scope: an evaluation that only runs on slow traces, a semantic anchor only checked against traces tagged `foo`. The scope doubles as a cost pre-gate: out-of-scope traces never reach the matchers. Pure filter slices are deliberately *not* signals (decision 4) — that job belongs to saved searches + monitors.
 - Signals carry **triage metadata** — priority and assignees — but **no lifecycle**. You create or delete signals; resolve/ignore semantics live on monitors.
-- Signals are **always created proactively** (decision 2): from the Signals page builder, from a saved search (pre-filling scope and anchors — flow F), or from the annotation flow ("explain the problem, point at 3–4 example traces, get a signal with a generated aligned evaluation"). Today's issues migrate into signals; no pipeline creates them automatically anymore.
+- Signals are created two ways (decision 2): **proactively by users** — from the Signals page builder, from a saved search (pre-filling scope and anchors — flow F), or from the annotation flow ("explain the problem, point at 3–4 example traces, get a signal with a generated aligned evaluation") — and **automatically by discovery**, which proposes signals mined from traffic (`origin = 'discovered'`, surfaced as `proposed` until confirmed — see "Discovery"). Either way a signal is a concrete, materializable definition; today's issues migrate into signals.
 - **Moment labels** (conversation intelligence) are provisioned as default per-project signals with `type = 'semantic'` — their existing anchor sets (`MOMENT_LABEL_ANCHORS`) carry over verbatim, since the semantic config adopts the same shape (multiple positive anchors + contrast anchors + margin; each kind's static gate becomes the signal's `threshold`).
-- Every signal gets a **default monitor** provisioned at creation — the same monitoring issues get today: an occurrences monitor carrying a high-severity `metric.escalating` alert in `expected` mode (the seasonal heuristic, so a firing is a high-signal event rather than noise) plus the `event.regressed` event alert.
+- Every signal gets a **default monitor** — provisioned at creation, or at *confirmation* for discovered signals (a `proposed` signal has no monitor and never notifies) — the same monitoring issues get today: an occurrences monitor carrying a high-severity `metric.escalating` alert in `expected` mode (the seasonal heuristic, so a firing is a high-signal event rather than noise) plus the `event.regressed` event alert.
 
 ### Saved search
 
@@ -77,11 +77,19 @@ Today "is this escalating?" has two unrelated implementations that differ only i
 ### Shared enums (`@domain/shared`)
 
 ```ts
-export const SIGNAL_ORIGINS = ["user", "annotation", "system"] as const
+export const SIGNAL_ORIGINS = ["user", "annotation", "discovered", "system"] as const
 export type SignalOrigin = (typeof SIGNAL_ORIGINS)[number]
 // 'user'       — built from the Signals page or from a saved search
 // 'annotation' — created through the annotation flow
+// 'discovered' — proposed automatically by the discovery pipeline (status 'proposed' until confirmed)
 // 'system'     — provisioned by Latitude (moment labels)
+
+export const SIGNAL_STATUSES = ["proposed", "confirmed"] as const
+export type SignalStatus = (typeof SIGNAL_STATUSES)[number]
+// 'proposed'  — a discovery candidate: definition + validation materialized, but no monitor, no
+//               notifications, and excluded from the active-signal cap until a human (or an
+//               auto-confirm policy) accepts it
+// 'confirmed' — an active signal (the default for 'user' / 'annotation' / 'system' origins)
 
 export const SIGNAL_TYPES = ["semantic", "evaluation", "rule", "script"] as const
 export type SignalType = (typeof SIGNAL_TYPES)[number]
@@ -101,7 +109,8 @@ export const ALERT_KINDS = [
   "metric.escalating", //  ← issue.escalating + savedSearch.escalating (sustained; unified)
 ] as const
 export type AlertKind = (typeof ALERT_KINDS)[number]
-// issue.new is retired with the discovery pipeline (decision 2): nothing is "discovered" anymore.
+// issue.new is retired as an alert kind: discovery (see "Discovery") surfaces proposals through a
+// notification kind, not through a monitor alert/incident — a proposal is not a firing.
 
 // Severities, AlertCountThreshold (absolute | multiplier | expected) and
 // AlertBaseline carry over verbatim from the current model.
@@ -169,6 +178,8 @@ signals
   name                varchar(128)
   description         text
   origin              varchar(32)            -- SignalOrigin
+  status              varchar(16)            -- SignalStatus; 'proposed' gates monitoring/notifications
+                                             --   and the active-signal cap; 'confirmed' is the default
   type                varchar(32)            -- SignalType (the matcher)
   config              jsonb                  -- SignalConfig (matcher parameters)
   scope               jsonb                  -- FilterSet pre-gate; {} = all traces; composes with any type
@@ -181,15 +192,18 @@ signals
   search_embedding    vector(2048) null      -- derived from name + description on save; used with
                                              --   search_document for hybrid existing-signal
                                              --   suggestions while annotating (decision 3)
+  discovery           jsonb null             -- discovered signals only: RCA explanation, sample
+                                             --   trace ids, validation stats, attention sources
   deleted_at          timestamptz null
   created_at, updated_at
 
   unique (project_id, slug) WHERE deleted_at IS NULL
   btree  (organization_id, project_id, created_at) WHERE deleted_at IS NULL
+  btree  (project_id, status) WHERE deleted_at IS NULL   -- proposed-discovery review inbox
   -- no ANN index on search_embedding: project-scoped exact scan, as issues today
 ```
 
-Removed vs `issues`: `uuid` (dormant), `centroid` + `centroid_embedding` (discovery is gone — decision 2/3), `escalated_at` / `resolved_at` / `ignored_at` (→ monitor), `assignee_id` (→ `assignees`), `source` (→ `origin`).
+Removed vs `issues`: `uuid` (dormant), `centroid` + `centroid_embedding` (the centroid mechanism is gone — decision 3; discovery is rebuilt without centroids), `escalated_at` / `resolved_at` / `ignored_at` (→ monitor), `assignee_id` (→ `assignees`), `source` (→ `origin`). Added vs `issues`: `status`, `discovery`.
 
 Semantic anchor embeddings are **not** a table column: anchors are embedded once on save and Redis-cached (org-prefixed key), exactly as moment-label anchors are today. Matching compares in-process at ingest; nothing ever searches anchors via SQL.
 
@@ -284,7 +298,7 @@ Design notes:
 
 ### Navigation
 
-A **Signals** nav item replaces **Issues**: with discovery gone there is no auto-populated inbox to separate from user-built signals — it's one list, and issue URLs (`/projects/$slug/issues/...`) redirect into the corresponding signal pages. The **Monitors** item stays, generalized: the cross-target view of every active monitor in the project, whatever it watches.
+A **Signals** nav item replaces **Issues**. It's one list — user-built, system, and discovered signals together — with a **status filter** that separates `proposed` discoveries (the review inbox) from active signals; issue URLs (`/projects/$slug/issues/...`) redirect into the corresponding signal pages. The **Monitors** item stays, generalized: the cross-target view of every active monitor in the project, whatever it watches.
 
 ```
 Traces
@@ -408,6 +422,76 @@ Today's write-time execution machinery is evaluation-oriented: `EvaluationTrigge
 - the **semantic runner** compares trace content-chunk embeddings (already produced at ingest for trace search and semantic moments) against the Redis-cached anchor embeddings;
 - evaluation-specific options (`sampling`, `turn`, `debounce`) remain runner-level settings, not pipeline concepts.
 
+## Discovery
+
+**Discovery is an automated analyst that proposes signal *definitions* nobody had to think of first.** It is the one pipeline that creates signals without a user — but what it creates is an ordinary signal (a concrete matcher: materializable, countable, editable forward-only), not a fuzzy bucket. Discovery is the *producer*; the signal is the *product*. Everything a discovered failure needs in order to be believed — a prevalence count, a trend, an alert, a regression check after a fix — flows through the materialized signals substrate exactly as a hand-built signal's does. This is why discovery and write-time materialization are complementary, not opposed: the materialization discipline (see "Why signal membership is materialized at write time") is *what lets a discovered hypothesis be quantified at all*. A failure mode the analyst describes in prose becomes a number ("66% of support runs") only by compiling to a matcher and backfilling it.
+
+This **supersedes the old discovery mechanism** — annotation feedback → embedding → per-signal decayed centroid → auto-created issue — which is retired in full (decision 3). That mechanism failed three ways, and each failure is fixed by a stage below:
+
+- **It mapped one annotation to one issue.** Clustering over the thin stream of human verdicts barely clusters, so "discovery" degenerated into "every new annotation is a new issue." → Cohorts now form from *traffic* (stage 2), not from a single verdict.
+- **Machine detection was capped at a handful of flaggers** (laziness, frustration, …). → Characterization is an open-ended LLM analyst (stage 3); flaggers become one attention source among many, not the ceiling on what can be found.
+- **It ignored the signals already in the data** — moments, tool errors, structural shape. → Attention sourcing is multi-modal (stage 1). The flagship case — "every run returned success, so nothing surfaced in error monitoring" — is reachable *only* by the structural and semantic lenses, never by outcome signals.
+
+### Two clocks
+
+Matching and discovery must not share a clock. **Matching** known signals is cheap, per-trace, and write-time — the "One matching pipeline" above. **Discovery** is expensive, batch, and periodic — an analyst sweep over a window of traffic, impact-prioritized, sampled, and budgeted (its own budget; proposals do not consume the per-plan active-signal cap — decision 5). Discovery's expensive LLM work is bounded to *representatives* (stages 3 and 5); it never reads every trace. Quantification (stage 4) scales by compiling a cheap matcher and reusing the backfill path — not by an LLM call per trace.
+
+### Attention sources (stage 1 — cheap, broad, blind to each other)
+
+A multi-modal sweep gathers candidate traces from sources that each miss what the others catch:
+
+- **moments** (conversation intelligence — frustration, correction, …): already-computed interesting points, currently unused for discovery;
+- **outcome anomalies**: tool/exception errors, retries, abandonment, user-correction turns, evaluation failures, low scores;
+- **resource outliers**: cost / latency / token tails;
+- **structural anomalies**: deviation from the project's modal tool-call graph / control flow — the only lens that reaches failures with no error *and* no negative sentiment.
+
+### The discovery loop
+
+```
+periodic discovery sweep (per project; impact-prioritized, sampled, budgeted)
+└─ 1. attention sourcing   multi-modal: moments + outcome anomalies + outliers + structural
+└─ 2. cohort formation     group flagged traces by behavioral similarity (content/behavior
+                             embedding + structural fingerprint), NOT by annotation text —
+                             this is where "at scale" lives and where 1:1 mapping dies
+└─ 3. characterization     LLM analyst reads representatives per cohort → a SPECIFIC,
+                             FALSIFIABLE hypothesis + a draft matcher (semantic | rule |
+                             evaluation | script) + a severity guess
+└─ 4. validation           compile matcher → backfill over a window → real prevalence +
+                             precision vs the read samples; tighten until precise
+                             [reuse backfillSignalOccurrencesUseCase + optimize-evaluation]
+└─ 5. root cause analysis  agentic: affected-vs-unaffected differential, locate the
+                             divergence span, READ the affected spans' system_instructions
+                             + tool_definitions → name the cause (explanation, not a fix)
+└─ 6. dedup + promotion    hybrid-search vs existing signals (search_document +
+                             search_embedding); if novel AND above an impact bar
+                             (volume × severity) → create a PROPOSED signal
+└─ 7. notify / confirm     surface with prevalence + sample traces + RCA;
+                             human confirms (or auto-confirm above a high-precision bar) →
+                             signal goes active, default monitor provisioned, write-time
+                             matching tracks it cheaply forever
+```
+
+The hinge is stage 3→4: the hypothesis must be precise enough to **compile into a matcher**, because a matcher is the only thing the materialized substrate can count. An imprecise "66%" destroys trust faster than silence, so stage 4's validate-against-held-out-samples loop *gates* promotion — discovery never notifies on an unvalidated number.
+
+**Stage 2 is the one net-new primitive; everything else is reuse.** The clustering *machinery* already exists and generalizes directly: the decayed-centroid math (`@domain/shared/centroid.ts`), the divisive spherical-k-means hierarchical clusterer (`@domain/taxonomy` — which already clusters `session_moment_labels` embeddings into `taxonomy_observations.assigned_cluster_id`), and cosine similarity in both stores (pgvector `<=>`; ClickHouse `cosineDistance`, with an HNSW index on `message_embeddings`). What does *not* exist is a **behavioral representation of a trace**. Every embedding today is semantic-text: `trace_search_embeddings` (per-chunk, 2048-d voyage-4-large) and `session_semantic_moments.embedding` (per-moment) — there is no whole-trace embedding and no structural fingerprint. The traces/sessions tables carry only an **unordered set** of distinct tool names (`traces.tools`), not the ordered tool sequence or span-tree shape that "deviates from the modal control flow" requires. So stage 2 has two tiers: **content cohorts** ship on reuse (pool the existing chunk/moment embeddings + the taxonomy clusterer), while **structural cohorts** (the lever for the no-error case) need a new behavioral feature — an ordered tool-call sequence and/or span-tree fingerprint, reconstructable from `spans.parent_span_id` + `execute_tool` spans but not stored today.
+
+RCA (stage 5) reads the **system prompt and tool definitions captured on the affected spans themselves** — `spans.system_instructions`, `spans.tool_definitions`, and the `execute_tool` spans' `tool_input` / `tool_output`. There is no prompt/agent registry in the platform (v2 is monitoring-only — Latitude does not run the agent), and none is needed: the prompt that produced a trace already lives in its telemetry. RCA's output is an **explanation** — "what is going wrong and why," with the divergence span and the prompt/tool context that caused it — not a suggested fix. Latitude does not run, own, or version the prompt, so it does not draft or apply remediation; acting on the diagnosis is the customer's.
+
+### Candidate lifecycle
+
+A discovered signal is an ordinary `signals` row with `origin = 'discovered'` and `status = 'proposed'`. A proposed signal:
+
+- carries its full definition — so its prevalence is already materialized (that *is* stage 4's validation backfill);
+- has **no default monitor** and **never notifies** — promotion to notifications happens only on confirm;
+- does **not** consume the per-plan active-signal cap (decision 5) until confirmed;
+- stores its discovery artifacts (RCA explanation, sample trace ids, validation stats, attention sources) in the `signals.discovery` jsonb column.
+
+On **confirm** (human, or auto above a high-precision bar) the row flips to `status = 'confirmed'`, a default monitor is provisioned (as for any signal), and it becomes indistinguishable from a hand-built signal — including forward-only edits. On **dismiss** it is soft-deleted *and remembered*, so the next sweep suppresses the same cohort instead of re-proposing it. Start human-confirmed (the notification in the mock is high-stakes); graduate specific high-precision cohort types to auto-confirm as trust accrues.
+
+### After confirmation: recurrence is tracked for free
+
+Discovery ends at **detect + diagnose**; it does not author fixes (Latitude does not run or own the prompt). But once a discovered signal is confirmed, the materialized substrate already answers "did it get better?" with no extra machinery: the signal's going-forward occurrences are the prevalence over time, and if the customer addresses the failure on their side, the count falls — while any recurrence fires the default monitor's `event.regressed` alert. The value chain is **detect → diagnose → (customer acts) → measure**, and only the first two steps are new; measurement is the monitor that every signal already gets.
+
 ## Main flows (callstacks)
 
 Names follow existing conventions; `@domain/signals` is the new domain package (evolved from `@domain/issues`). Existing machinery reused unchanged is marked `[reuse]`.
@@ -464,9 +548,9 @@ UI: annotate → "Track this as a signal" → explanation + 3–4 example traces
 frontend polls getSignalAlignmentState (Temporal workflow.describe())           [reuse shape]
 ```
 
-### C. Annotating against existing signals (replaces issue discovery)
+### C. Annotating against existing signals (the human suggestion path)
 
-There is **no automatic discovery pipeline** (decision 2). When a user annotates, the UI *suggests* existing signals; the user links explicitly or creates a new signal.
+Annotation is the *human* path; automatic discovery (flow G) is the machine path. When a user annotates, the UI *suggests* existing signals via hybrid search; the user links explicitly or creates a new signal — annotations never spawn signals on their own.
 
 ```
 UI: user writes annotation feedback
@@ -540,6 +624,34 @@ saved_searches row remains (still a bookmark; plain filter tracking stays
   saved search + monitor — decision 4)
 ```
 
+### G. Automatic discovery (proposes signals from traffic)
+
+The machine counterpart to flow C. Runs on the discovery clock (batch/periodic), not write-time. See "Discovery" for the conceptual loop; this is the callstack.
+
+```
+cron + leading-edge: signals:discover (per project; impact-prioritized, sampled, budgeted)
+└─ runDiscoverySweepUseCase (@domain/signals)
+   ├─ gatherAttentionTraces     moments + outcome anomalies + resource outliers + structural   [reuse]
+   ├─ formCohorts               content cohorts: pool trace_search/moment embeddings → taxonomy
+   │                              clusterer (spherical k-means)                                  [reuse]
+   │                            structural cohorts: ordered tool-seq / span-tree fingerprint     [new]
+   ├─ per cohort:
+   │   ├─ characterizeCohort     LLM analyst → falsifiable hypothesis + draft matcher + severity
+   │   ├─ validateCandidate      compile matcher → backfillSignalOccurrencesUseCase over window
+   │   │                           → prevalence + precision vs samples; tighten loop            [reuse]
+   │   ├─ analyzeRootCause       affected-vs-unaffected differential + read affected spans'
+   │   │                           system_instructions + tool_definitions → explanation (no fix)
+   │   └─ suggestSignalsUseCase  hybrid dedup vs existing signals (search_document + embedding)  [reuse]
+   └─ above impact bar → createSignalUseCase { origin: 'discovered', status: 'proposed' }
+        + persist signals.discovery (RCA explanation, sample trace ids, validation stats)
+        → notifications:request-discovery-notification (a NEW notification kind — a proposal is
+            not an incident; Slack / in-app)                                                     [new]
+user action (signal page / notification):
+  ├─ confirm  → confirmSignalUseCase: status='confirmed' + provisionDefaultMonitorUseCase
+  └─ dismiss  → dismissSignalUseCase: soft-delete + remember cohort to suppress re-proposal
+(recurrence after the customer acts is tracked for free by the default monitor's event.regressed)
+```
+
 ## Why signal membership is materialized at write time
 
 **1. Semantic search answers a different question than filters do.** A filter is a per-row yes/no ("is this trace from the last 7 days?") — each row passes on its own merits, so filters stack for free. Semantic search with a vector index answers "the ~1,000 items *most similar in the entire corpus*". Combine them and the filter can only discard from those 1,000: searching "user frustration" + filtering "last 7 days" returns *whichever of the corpus-wide top-1,000 happen to be recent* — maybe 30 results, maybe 0 — while thousands of genuinely frustrated traces from this week sit at #5,000 in the global ranking and are never returned. Doing it correctly means scoring every trace in the window: a full scan, which is why semantic trace search already times out on large projects.
@@ -558,8 +670,8 @@ Consequences carried through the whole spec:
 Settled during the design discussion (LAT-664 + spec review):
 
 1. **Signal membership is materialized at write time** (see "Why signal membership is materialized at write time" — forced, not a preference).
-2. **No automatic issue discovery.** The clustering/discovery pipeline (similarity search + rerank + locked serialization auto-creating issues from scores) is removed. Signals are always created proactively by users — from the Signals page or from the annotation flow. Annotations are matched to *existing* signals via hybrid search suggestions; they never spawn signals on their own.
-3. **No routing centroid.** With discovery gone, the per-signal decayed centroid machinery is removed. Suggesting existing signals while annotating uses hybrid search over signal names/descriptions (lexical tsvector + one derived embedding).
+2. **Discovery proposes signal definitions; it does not auto-create monitored signals.** The new discovery pipeline (see "Discovery") is an automated analyst: multi-modal attention sourcing → behavioral cohorts → LLM characterization → matcher validation → RCA. It creates signals with `origin = 'discovered'`, `status = 'proposed'` — concrete, materializable definitions, not fuzzy buckets. A proposal has no monitor, never notifies, and is excluded from the active-signal cap until confirmed (by a human, or by an auto-confirm policy above a high-precision bar). Users still create signals directly too (Signals page, saved search, annotation flow). Annotations are matched to *existing* signals via hybrid search; they never spawn signals on their own.
+3. **No centroid mechanism.** The old discovery mechanism — annotation feedback → embedding → per-signal decayed centroid auto-creating issues from scores — is removed entirely. Discovery is rebuilt on LLM characterization + materialized validation (decision 2), and suggesting existing signals while annotating uses hybrid search over signal names/descriptions (lexical tsvector + one derived embedding) — no centroids anywhere.
 4. **No pure filter-type signals.** Plain filter slices are correct and cheap at query time, so they stay **saved searches + monitors**. Signals exist for matchers that *require* write-time evaluation (semantic, evaluation, rule, script). Filters appear on signals only as the **scope** pre-gate.
 5. **Signals per project are capped** to a fixed number per plan (this also bounds occurrence write amplification and ingest matching cost).
 6. **Scores are kept with a narrowed role** — they stop being the membership mechanism and remain the verdict ledger: evaluation pass/fail/error analytics, human-feedback ground truth for alignment, and the public `/scores` API (rationale under the occurrences table).
