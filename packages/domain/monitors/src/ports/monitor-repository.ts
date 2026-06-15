@@ -20,8 +20,8 @@ export interface MetricMonitorAlert {
   readonly target: MonitorTarget
 }
 
-/** An (org, project) pair holding at least one active saved-search alert — the sweep's fan-out unit. */
-export interface ProjectWithActiveSavedSearchAlerts {
+/** An (org, project) pair holding at least one active monitor alert — the sweep's fan-out unit. */
+export interface ProjectWithActiveMonitorAlerts {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
 }
@@ -188,9 +188,9 @@ export interface MonitorRepositoryShape {
   listSavedSearchMonitorSummaries(
     projectId: ProjectId,
   ): Effect.Effect<readonly SavedSearchMonitorSummary[], RepositoryError, SqlClient>
-  /** Distinct `(org, project)` pairs with ≥1 active saved-search alert. **Cross-org** (admin client) — backs the 5-minute sweep's per-project fan-out. */
-  listProjectsWithActiveSavedSearchAlerts(): Effect.Effect<
-    readonly ProjectWithActiveSavedSearchAlerts[],
+  /** Distinct `(org, project)` pairs with ≥1 active monitor alert — saved-search-sourced or unified (target-on-monitor). **Cross-org** (admin client) — backs the 5-minute sweep's per-project fan-out. */
+  listProjectsWithActiveMonitorAlerts(): Effect.Effect<
+    readonly ProjectWithActiveMonitorAlerts[],
     RepositoryError,
     SqlClient
   >

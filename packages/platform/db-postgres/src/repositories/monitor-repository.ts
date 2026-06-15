@@ -729,10 +729,13 @@ export const MonitorRepositoryLive = Layer.effect(
             ]
           })
         }),
-      listProjectsWithActiveSavedSearchAlerts: () =>
+      listProjectsWithActiveMonitorAlerts: () =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          // No org filter — cross-org sweep on the admin client.
+          // No org filter — cross-org sweep on the admin client. Both kinds the
+          // per-project check fires on: saved-search alerts and unified
+          // (target-on-monitor) monitors, so a metric-only project with no
+          // saved-search alert still gets swept and its incidents can close.
           const rows = yield* sqlClient.query((db) =>
             db
               .selectDistinct({ organizationId: monitorAlerts.organizationId, projectId: monitors.projectId })
@@ -740,7 +743,7 @@ export const MonitorRepositoryLive = Layer.effect(
               .innerJoin(monitors, eq(monitors.id, monitorAlerts.monitorId))
               .where(
                 and(
-                  eq(monitorAlerts.sourceType, "savedSearch"),
+                  or(eq(monitorAlerts.sourceType, "savedSearch"), isNotNull(monitors.targetStream)),
                   isNull(monitorAlerts.deletedAt),
                   isNull(monitors.deletedAt),
                 ),

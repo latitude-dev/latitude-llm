@@ -231,12 +231,14 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
           ]
         })
       }),
-    listProjectsWithActiveSavedSearchAlerts: () =>
+    listProjectsWithActiveMonitorAlerts: () =>
       Effect.sync(() => {
         const seen = new Map<string, { organizationId: Monitor["organizationId"]; projectId: Monitor["projectId"] }>()
         for (const monitor of monitors) {
           if (!isLive(monitor)) continue
-          if (!monitor.alerts.some((alert) => alert.source?.type === "savedSearch")) continue
+          const hasSavedSearchAlert = monitor.alerts.some((alert) => alert.source?.type === "savedSearch")
+          const isUnified = monitor.target !== null && monitor.alerts.length > 0
+          if (!hasSavedSearchAlert && !isUnified) continue
           seen.set(`${monitor.organizationId}:${monitor.projectId}`, {
             organizationId: monitor.organizationId,
             projectId: monitor.projectId,

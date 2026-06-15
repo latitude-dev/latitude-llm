@@ -1137,19 +1137,23 @@ describe("MonitorRepositoryLive", () => {
       expect(alerts.map((a: MonitorAlert) => a.id)).toEqual([MonitorAlertId("1".repeat(24))])
     })
 
-    it("listProjectsWithActiveSavedSearchAlerts returns distinct (org, project) pairs across orgs", async () => {
+    it("listProjectsWithActiveMonitorAlerts returns distinct (org, project) pairs across orgs, including metric-only projects", async () => {
       const a = generateId()
       const b = generateId()
       const other = generateId()
       await database.db.insert(monitorsTable).values([
         makeMonitorRow({ id: a, slug: "a", name: "A" }),
         makeMonitorRow({ id: b, slug: "b", name: "B" }), // same org+project as a → de-duped
+        // Unified (target-on-monitor) monitor with no saved-search alert — the
+        // sweep must still fan out to its project so its incidents can close.
         makeMonitorRow({
           id: other,
           slug: "c",
           name: "C",
           organizationId: otherOrganizationId as string,
           projectId: otherProjectId as string,
+          targetStream: "traces",
+          metric: { kind: "count" },
         }),
       ])
       await database.db.insert(monitorAlertsTable).values([
@@ -1159,14 +1163,16 @@ describe("MonitorRepositoryLive", () => {
           id: "3".repeat(24),
           monitorId: other,
           organizationId: otherOrganizationId as string,
-          sourceId: searchX,
+          kind: "event.matched",
+          sourceType: null,
+          sourceId: null,
         }),
       ])
 
       const pairs = await Effect.runPromise(
         Effect.gen(function* () {
           const repository = yield* MonitorRepository
-          return yield* repository.listProjectsWithActiveSavedSearchAlerts()
+          return yield* repository.listProjectsWithActiveMonitorAlerts()
         }).pipe(provideAdmin(database)),
       )
       expect(pairs.map((p) => `${p.organizationId}:${p.projectId}`).sort()).toEqual(

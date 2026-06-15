@@ -39,7 +39,7 @@ export type {
   MonitorListPage,
   MonitorRepositoryShape,
   MonitorSearchResult,
-  ProjectWithActiveSavedSearchAlerts,
+  ProjectWithActiveMonitorAlerts,
   SavedSearchMonitorSummary,
 } from "./ports/monitor-repository.ts"
 export { MonitorRepository } from "./ports/monitor-repository.ts"
