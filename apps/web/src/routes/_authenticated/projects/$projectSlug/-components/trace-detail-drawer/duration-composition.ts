@@ -137,6 +137,25 @@ export function computeDurationBreakdown(spans: readonly SpanRecord[]): {
   return { segments: toSegments(totals), wallClockMs }
 }
 
+export interface TraceDurationBreakdown {
+  readonly segments: DurationSegment[]
+  readonly wallClockMs: number
+}
+
+/** Per-trace composition, keyed by `traceId`, from a flat set of session spans. */
+export function computePerTraceBreakdowns(spans: readonly SpanRecord[]): Map<string, TraceDurationBreakdown> {
+  const byTrace = new Map<string, SpanRecord[]>()
+  for (const span of spans) {
+    const list = byTrace.get(span.traceId)
+    if (list) list.push(span)
+    else byTrace.set(span.traceId, [span])
+  }
+
+  const breakdowns = new Map<string, TraceDurationBreakdown>()
+  for (const [traceId, traceSpans] of byTrace) breakdowns.set(traceId, computeDurationBreakdown(traceSpans))
+  return breakdowns
+}
+
 /**
  * Session-level composition: the breakdown is computed **per trace** and then
  * summed, so the gaps *between* traces (user think-time between turns) are never
@@ -148,17 +167,9 @@ export function computeSessionDurationBreakdown(spans: readonly SpanRecord[]): {
   segments: DurationSegment[]
   wallClockMs: number
 } {
-  const byTrace = new Map<string, SpanRecord[]>()
-  for (const span of spans) {
-    const list = byTrace.get(span.traceId)
-    if (list) list.push(span)
-    else byTrace.set(span.traceId, [span])
-  }
-
   const totals: Record<DurationCategory, number> = { generation: 0, tool: 0, retrieval: 0, other: 0, idle: 0 }
   let wallClockMs = 0
-  for (const traceSpans of byTrace.values()) {
-    const breakdown = computeDurationBreakdown(traceSpans)
+  for (const breakdown of computePerTraceBreakdowns(spans).values()) {
     wallClockMs += breakdown.wallClockMs
     for (const segment of breakdown.segments) totals[segment.category] += segment.ms
   }

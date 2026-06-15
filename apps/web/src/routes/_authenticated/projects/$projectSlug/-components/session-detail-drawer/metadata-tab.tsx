@@ -14,11 +14,13 @@ import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, FingerprintIcon, TextI
 import { useMemo } from "react"
 import type { SessionDetailRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
 import { useSpansBySessionCollection } from "../../../../../../domains/spans/spans.collection.ts"
+import type { TraceRecord } from "../../../../../../domains/traces/traces.functions.ts"
 import { SessionOutlierBadge, type SessionOutlierMetric } from "../session-outlier-badge.tsx"
 import { DurationBar } from "../trace-detail-drawer/duration-bar.tsx"
 import { computeSessionDurationBreakdown } from "../trace-detail-drawer/duration-composition.ts"
 import { ModelFilterLink } from "../trace-detail-drawer/tabs/spans-tab/model-filter-link.tsx"
 import { UsageSummary } from "../trace-detail-drawer/tabs/spans-tab/span-detail/usage-summary.tsx"
+import { TurnTrajectory } from "./turn-trajectory.tsx"
 
 // Sessions only expose percentile filters for duration/TTFT/cost
 // (`PERCENTILE_SESSION_FILTER_FIELDS`), so the tokens badge stays informational
@@ -36,12 +38,18 @@ function JsonBlock({ value }: { readonly value: unknown }) {
 
 export function MetadataTab({
   session,
+  traces,
+  traceNumberById,
+  onOpenTrace,
   filters,
   onFiltersChange,
   spansNavEnabled = false,
   onOpenSpansWithModel,
 }: {
   readonly session: SessionDetailRecord
+  readonly traces: readonly TraceRecord[]
+  readonly traceNumberById: ReadonlyMap<string, number>
+  readonly onOpenTrace: (traceId: string) => void
   readonly filters?: FilterSet | undefined
   readonly onFiltersChange?: ((filters: FilterSet) => void) | undefined
   readonly spansNavEnabled?: boolean
@@ -159,6 +167,15 @@ export function MetadataTab({
         />
         <UsageSummary data={session} costBadges={costBadgesNode} />
       </div>
+
+      <TurnTrajectory
+        traces={traces}
+        spans={spans ?? []}
+        traceNumberById={traceNumberById}
+        totalTraceCount={session.traceCount}
+        projectId={session.projectId}
+        onOpenTrace={onOpenTrace}
+      />
 
       <div className="flex flex-col gap-1">
         <Text.H6 color="foregroundMuted">Tags</Text.H6>

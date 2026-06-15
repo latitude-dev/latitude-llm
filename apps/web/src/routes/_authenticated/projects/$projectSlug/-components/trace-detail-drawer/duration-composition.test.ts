@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import type { SpanRecord } from "../../../../../../domains/spans/spans.functions.ts"
 import {
   computeDurationBreakdown,
+  computePerTraceBreakdowns,
   computeSessionDurationBreakdown,
   type DurationCategory,
 } from "./duration-composition.ts"
@@ -121,5 +122,24 @@ describe("computeSessionDurationBreakdown", () => {
 
   it("returns empty for no spans", () => {
     expect(computeSessionDurationBreakdown([])).toEqual({ segments: [], wallClockMs: 0 })
+  })
+})
+
+describe("computePerTraceBreakdowns", () => {
+  it("returns an empty map for no spans", () => {
+    expect(computePerTraceBreakdowns([]).size).toBe(0)
+  })
+
+  it("groups spans by traceId and matches the per-trace breakdown", () => {
+    const spansA = [
+      span({ spanId: "a1", traceId: "A", operation: "chat", start: 0, end: 1000 }),
+      span({ spanId: "a2", traceId: "A", operation: "execute_tool", start: 1500, end: 2000 }),
+    ]
+    const spansB = [span({ spanId: "b1", traceId: "B", operation: "chat", start: 10000, end: 11000 })]
+    const result = computePerTraceBreakdowns([...spansA, ...spansB])
+
+    expect([...result.keys()].sort()).toEqual(["A", "B"])
+    expect(result.get("A")).toEqual(computeDurationBreakdown(spansA))
+    expect(result.get("B")).toEqual(computeDurationBreakdown(spansB))
   })
 })

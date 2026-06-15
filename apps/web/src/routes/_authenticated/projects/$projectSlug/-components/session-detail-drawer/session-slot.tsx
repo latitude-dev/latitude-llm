@@ -244,6 +244,9 @@ export function SessionSlot({
         {effectiveActiveTab === "session" && (
           <MetadataTab
             session={session}
+            traces={traces}
+            traceNumberById={traceNumberById}
+            onOpenTrace={onOpenTrace}
             spansNavEnabled={Boolean(singleTrace)}
             {...(singleTrace ? { onOpenSpansWithModel: navigateToSpansWithModel } : {})}
             {...(filters ? { filters } : {})}
