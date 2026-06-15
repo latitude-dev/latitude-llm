@@ -96,6 +96,9 @@ export type MonitorMetric = z.infer<typeof monitorMetricSchema>
  * {@link alertCountThresholdSchema}, but `absolute` takes a float `value` (not an
  * int `count`) — error-rate (0.1), p95 latency, cost, etc. aren't whole numbers.
  */
+export const alertMetricThresholdDirectionSchema = z.enum(["above", "below"])
+export type AlertMetricThresholdDirection = z.infer<typeof alertMetricThresholdDirectionSchema>
+
 export const alertMetricThresholdSchema = z.discriminatedUnion("mode", [
   z.object({ mode: z.literal("absolute"), value: z.number().positive() }),
   z.object({ mode: z.literal("multiplier"), factor: z.number().positive(), baseline: alertBaselineSchema }),
@@ -108,6 +111,7 @@ export const alertIncidentMetricThresholdConditionSchema = z.object({
   kind: z.literal("metric.threshold"),
   metric: monitorMetricSchema,
   threshold: alertMetricThresholdSchema,
+  direction: alertMetricThresholdDirectionSchema.optional(),
 })
 export type AlertIncidentMetricThresholdCondition = z.infer<typeof alertIncidentMetricThresholdConditionSchema>
 
@@ -116,6 +120,7 @@ export const alertIncidentMetricEscalatingConditionSchema = z.object({
   kind: z.literal("metric.escalating"),
   metric: monitorMetricSchema,
   threshold: alertMetricThresholdSchema,
+  direction: alertMetricThresholdDirectionSchema.optional(),
   window: z.object({ minutes: z.number().int().min(5) }),
 })
 export type AlertIncidentMetricEscalatingCondition = z.infer<typeof alertIncidentMetricEscalatingConditionSchema>

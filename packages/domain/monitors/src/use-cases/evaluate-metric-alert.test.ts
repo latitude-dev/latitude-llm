@@ -26,13 +26,14 @@ const runThreshold = (
   events: readonly Date[],
   t: MetricSeriesTarget,
   threshold: Parameters<typeof evaluateMetricAlert>[0]["condition"]["threshold"],
+  direction: Parameters<typeof evaluateMetricAlert>[0]["condition"]["direction"] = "above",
 ) =>
   Effect.runPromise(
     evaluateMetricAlert({
       organizationId,
       projectId,
       target: t,
-      condition: { kind: "metric.threshold", metric: t.metric, threshold },
+      condition: { kind: "metric.threshold", metric: t.metric, threshold, direction },
       now,
     }).pipe(
       Effect.provide(createFakeMetricSeriesReader(events).layer),
@@ -52,6 +53,14 @@ describe("evaluateMetricAlert (metric.threshold)", () => {
   it("absolute mode does not fire below the threshold", async () => {
     const events = [minutesAgo(1), minutesAgo(2), minutesAgo(3)]
     const notMet = await runThreshold(events, target({ kind: "count" }), { mode: "absolute", value: 5 })
+    expect(notMet.isMet).toBe(false)
+  })
+
+  it("supports below-threshold metric alerts", async () => {
+    const events = [minutesAgo(1), minutesAgo(2), minutesAgo(3)]
+    const met = await runThreshold(events, target({ kind: "count" }), { mode: "absolute", value: 5 }, "below")
+    const notMet = await runThreshold(events, target({ kind: "count" }), { mode: "absolute", value: 2 }, "below")
+    expect(met.isMet).toBe(true)
     expect(notMet.isMet).toBe(false)
   })
 

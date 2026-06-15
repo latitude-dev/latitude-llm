@@ -105,16 +105,19 @@ const formatMetric = (metric: MonitorMetric): string => {
 }
 
 /** Threshold phrase for the unified `metric.*` kinds; absolute carries a stored float `value` rendered with its unit. */
-const formatMetricThreshold = (threshold: AlertMetricThreshold, metric: MonitorMetric): string => {
+const formatMetricThreshold = (
+  threshold: AlertMetricThreshold,
+  metric: MonitorMetric,
+  direction: "above" | "below" = "above",
+): string => {
   if (threshold.mode === "absolute") {
-    return `over ${formatMetricValue(threshold.value, metric)}`
+    return `${direction === "below" ? "under" : "over"} ${formatMetricValue(threshold.value, metric)}`
   }
   if (threshold.mode === "multiplier") {
-    return `${threshold.factor} times more than ${formatBaseline(threshold.baseline)}`
+    return `${direction === "below" ? "less than" : "more than"} ${threshold.factor} times ${formatBaseline(threshold.baseline)}`
   }
-  return threshold.sensitivity === undefined
-    ? "more than expected"
-    : `${threshold.sensitivity} times more than expected`
+  const comparator = direction === "below" ? "less than expected" : "more than expected"
+  return threshold.sensitivity === undefined ? comparator : `${threshold.sensitivity} times ${comparator}`
 }
 
 const targetSubject = (context?: HumanReadableAlertContext): string => context?.targetName ?? "the target"
@@ -149,13 +152,14 @@ export function formatHumanReadableAlert(alert: HumanReadableAlertInput, context
   }
 
   if (alert.kind === "metric.threshold" && alert.condition?.kind === "metric.threshold") {
-    return `Opens an incident when ${formatMetric(alert.condition.metric)} for ${targetSubject(context)} is ${formatMetricThreshold(alert.condition.threshold, alert.condition.metric)}.`
+    return `Opens an incident when ${formatMetric(alert.condition.metric)} for ${targetSubject(context)} is ${formatMetricThreshold(alert.condition.threshold, alert.condition.metric, alert.condition.direction)}.`
   }
 
   if (alert.kind === "metric.escalating" && alert.condition?.kind === "metric.escalating") {
     return `Opens an incident when ${formatMetric(alert.condition.metric)} for ${targetSubject(context)} is ${formatMetricThreshold(
       alert.condition.threshold,
       alert.condition.metric,
+      alert.condition.direction,
     )}, sustained for at least ${formatWindowMinutes(alert.condition.window.minutes)}.`
   }
 

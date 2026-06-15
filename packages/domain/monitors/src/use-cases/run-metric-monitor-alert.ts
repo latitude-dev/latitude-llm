@@ -9,6 +9,7 @@ import {
   type EvaluateMetricAlertError,
   evaluateMetricAlert,
   evaluateMetricEscalatingAlert,
+  isMetricThresholdMet,
 } from "./evaluate-metric-alert.ts"
 import { closeMetricIncident, openMetricIncident } from "./metric-incident-writer.ts"
 
@@ -26,6 +27,11 @@ export interface RunMetricMonitorAlertResult {
 }
 
 export type RunMetricMonitorAlertError = EvaluateMetricAlertError | RepositoryError
+
+const countNonPassingBuckets = (bucketValues: readonly number[], threshold: number, direction: "above" | "below") => {
+  if (direction === "above") return countFailingBuckets(bucketValues, threshold)
+  return bucketValues.filter((value) => !isMetricThresholdMet(value, threshold, direction)).length
+}
 
 /**
  * State machine for the unified `event.*`/`metric.*` alerts over a monitor's
@@ -104,9 +110,10 @@ export const runMetricMonitorAlertUseCase = (input: RunMetricMonitorAlertInput) 
           const evaluation = yield* evaluateMetricEscalatingAlert({ organizationId, projectId, target, condition, now })
           const open = yield* alertIncidentRepository.findOpenByMonitorAlertId(alert.id)
           const maxFail = maxFailingBuckets(evaluation.bucketValues.length)
+          const direction = condition.direction ?? "above"
 
           if (open === null) {
-            const failing = countFailingBuckets(evaluation.bucketValues, evaluation.perBucketThreshold)
+            const failing = countNonPassingBuckets(evaluation.bucketValues, evaluation.perBucketThreshold, direction)
             if (failing > maxFail) return { transition: "none" } satisfies RunMetricMonitorAlertResult
             const entrySignals: SavedSearchEntrySignals = {
               evaluatedThreshold: evaluation.perBucketThreshold,
@@ -122,7 +129,7 @@ export const runMetricMonitorAlertUseCase = (input: RunMetricMonitorAlertInput) 
           const frozenThreshold = isSavedSearchEntrySignals(open.entrySignals)
             ? open.entrySignals.evaluatedThreshold
             : evaluation.perBucketThreshold
-          if (countFailingBuckets(evaluation.bucketValues, frozenThreshold) <= maxFail) {
+          if (countNonPassingBuckets(evaluation.bucketValues, frozenThreshold, direction) <= maxFail) {
             return { transition: "none" } satisfies RunMetricMonitorAlertResult
           }
           const reader = yield* MetricSeriesReader

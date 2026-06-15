@@ -15,10 +15,13 @@ import {
 import { useNavigate } from "@tanstack/react-router"
 import { BellPlusIcon, ChevronDownIcon } from "lucide-react"
 import { useState } from "react"
+import { describeMonitorTarget } from "../../../../../../domains/monitors/monitor-target.ts"
 import { useMonitorsForTarget } from "../../../../../../domains/monitors/monitors.collection.ts"
 import type { MonitorRecord } from "../../../../../../domains/monitors/monitors.functions.ts"
 import { targetAlertDraft } from "./alert-form-helpers.ts"
 import { MonitorCreateModal } from "./monitor-create-modal.tsx"
+import { ToolMonitorCreateModal } from "./tool-monitor-create-modal.tsx"
+import { UserMonitorCreateModal } from "./user-monitor-create-modal.tsx"
 
 function stableStringify(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`
@@ -79,13 +82,30 @@ export function TargetMonitorsMenu({
       ? fetchedMonitors.filter((monitor) => sameTargetScope(monitor.target, createTarget))
       : fetchedMonitors
 
+  const targetDescription = describeMonitorTarget(createTarget)
   const createModal = createOpen ? (
-    <MonitorCreateModal
-      projectId={projectId}
-      projectSlug={projectSlug}
-      initialAlert={targetAlertDraft(createTarget)}
-      onClose={() => setCreateOpen(false)}
-    />
+    targetDescription?.kind === "tool" || targetDescription?.kind === "allTools" ? (
+      <ToolMonitorCreateModal
+        projectId={projectId}
+        projectSlug={projectSlug}
+        target={createTarget}
+        onClose={() => setCreateOpen(false)}
+      />
+    ) : targetDescription?.kind === "user" || targetDescription?.kind === "allUsers" ? (
+      <UserMonitorCreateModal
+        projectId={projectId}
+        projectSlug={projectSlug}
+        target={createTarget}
+        onClose={() => setCreateOpen(false)}
+      />
+    ) : (
+      <MonitorCreateModal
+        projectId={projectId}
+        projectSlug={projectSlug}
+        initialAlert={targetAlertDraft(createTarget)}
+        onClose={() => setCreateOpen(false)}
+      />
+    )
   ) : null
 
   if (monitors.length === 0) {
