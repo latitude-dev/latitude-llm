@@ -48,6 +48,22 @@ export const createFakeDestinationRepository = (seed: readonly Destination[] = [
         ;(row as { cursorSpanId: string }).cursorSpanId = next.spanId
         return true
       }),
+    updateRunState: ({ id, status, consecutiveFailures, consecutiveEmptyRuns, lastFailureMessage, lastRunAt }) =>
+      Effect.sync(() => {
+        const index = rows.findIndex((r) => r.id === id)
+        if (index < 0) return
+        const row = rows[index]
+        if (!row) return
+        rows[index] = {
+          ...row,
+          status,
+          consecutiveFailures,
+          consecutiveEmptyRuns,
+          lastFailureMessage,
+          lastRunAt,
+          updatedAt: new Date(),
+        }
+      }),
     deleteByProjectId: (projectId: ProjectId) =>
       Effect.sync(() => {
         const deleted = rows.filter((r) => r.projectId === projectId).map((r) => r.id)

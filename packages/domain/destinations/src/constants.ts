@@ -12,6 +12,14 @@ export const DESTINATION_QUARANTINE_FAILURE_THRESHOLD = 5
 /** Idle-backoff ceiling: a destination with only empty runs converges to one probe per hour. */
 export const DESTINATION_IDLE_BACKOFF_MAX_MS = 3_600_000
 
+/**
+ * Window-end safety lag (5 min): the window ends at `now − SAFETY_LAG` so reads
+ * see settled rows. Must cover both ReplacingMergeTree merge settling and
+ * ingest-queue lag — a span that becomes visible behind the watermark is lost
+ * to every destination, silently.
+ */
+export const DESTINATION_SAFETY_LAG_MS = 300_000
+
 export const POSTHOG_US_INGESTION_HOST = "https://us.i.posthog.com"
 export const POSTHOG_EU_INGESTION_HOST = "https://eu.i.posthog.com"
 

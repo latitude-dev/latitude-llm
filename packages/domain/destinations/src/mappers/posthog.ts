@@ -1,9 +1,11 @@
 import type { DestinationId } from "@domain/shared"
 import type { SpanDetail } from "@domain/spans"
+import { Effect } from "effect"
 import { DESTINATION_EVENT_UUID_NAMESPACE, DESTINATION_MAX_EVENT_BYTES_DEFAULT } from "../constants.ts"
-import type { PosthogDestinationConfig } from "../entities/destination.ts"
+import type { Destination, PosthogDestinationConfig } from "../entities/destination.ts"
 import type { DestinationEvent } from "../entities/destination-event.ts"
 import { uuidV5 } from "../helpers.ts"
+import type { DestinationMapper } from "../ports/destination-mapper.ts"
 
 const MICROCENTS_PER_USD = 100_000_000
 const MS_PER_SECOND = 1_000
@@ -209,3 +211,24 @@ export const mapSpansToPosthogEvents = async (
 
   return { events, dropped }
 }
+
+/**
+ * Binds {@link mapSpansToPosthogEvents} to the {@link DestinationMapper} port.
+ * `buildSpanUrl` (app host + routing) and `maxEventBytes` (the adapter's live
+ * vendor cap) are injected at the wiring boundary, keeping the mapper pure.
+ */
+export const createPosthogMapper = (params: {
+  readonly buildSpanUrl: (span: SpanDetail) => string
+  readonly maxEventBytes?: number
+}): DestinationMapper => ({
+  toEvents: (spans, destination: Destination) =>
+    Effect.promise(() =>
+      mapSpansToPosthogEvents({
+        spans,
+        destinationId: destination.id,
+        config: destination.config as PosthogDestinationConfig,
+        buildSpanUrl: params.buildSpanUrl,
+        ...(params.maxEventBytes === undefined ? {} : { maxEventBytes: params.maxEventBytes }),
+      }),
+    ),
+})
