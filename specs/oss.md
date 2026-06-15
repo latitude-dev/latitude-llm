@@ -241,12 +241,14 @@ Scalable, HA deployment via a cloud-agnostic Helm chart on the same images. **`i
 
 Convenience layer on top of Tier 2; pursued only after Tiers 1–3 are solid.
 
-- [ ] **P7-1**: **Railway** template (one-click deploy).
-- [ ] **P7-2**: **Coolify** template.
-- [ ] **P7-3**: **Render** blueprint; **evaluate Vercel** feasibility (likely web-only) and document the verdict.
-- [ ] **P7-4**: A deploy-targets matrix in the docs (what each template provisions, trade-offs).
+**Scope decision (user, 2026-06-15):** ship **only the Railway template** for now; the other one-click targets are deferred, not pursued.
 
-**Exit gate**: at least one one-click template deploys a working Latitude; each shipped template is documented and smoke-tested.
+- [x] **P7-1**: **Railway** template (one-click deploy). **Result:** Railway templates are authored on the Railway dashboard and read **no repo file**, so the repo carries only a **Deploy on Railway** button (`https://railway.com/deploy/latitude`) in the `README.md` self-host section and on the `docs/deployment/overview` page — no dedicated docs page (user decision: keep docs lean). The published template is the Railway-native counterpart of `docker-stack.yml`: all 12 services from the published `latitudedata/*`/infra images, cross-service `LAT_*` wiring via Railway reference variables, volumes, and the Railway-specific Custom Start Commands that replace the bind-mounted init scripts — Postgres RLS-runtime-role creation + `PGDATA` subdir, ClickHouse/SeaweedFS IPv6 binding, SeaweedFS bucket, Redis `protected-mode no`, Temporal `auto-setup` resolving the container IPv6 for `BIND_ON_IP` (so ringpop's broadcastAddress is a valid IP). Secrets in the template use `secret()` generators (passwords/keys) or blank inputs (AI/email keys), defined on the owning service + referenced cross-service (Railway templates have no project-level shared-variable editor). The user built, deployed, and verified the full stack on Railway, then published the template. **Smoke-test passed** end-to-end.
+- [~] **P7-2**: ~~**Coolify** template.~~ Deferred (Railway-only scope).
+- [~] **P7-3**: ~~**Render** blueprint; **evaluate Vercel**.~~ Deferred (Railway-only scope).
+- [~] **P7-4**: ~~A deploy-targets matrix in the docs.~~ Deferred — with a single shipped template the `docs/deployment/overview` tier cards already cover the choice; revisit if more templates land.
+
+**Exit gate**: at least one one-click template deploys a working Latitude; each shipped template is documented and smoke-tested. — **Met**: the Railway template is published, the deploy button is in the README + deployment overview, and the full stack was deployed and verified end-to-end on Railway.
 
 ### Phase 8 — Promote durable knowledge & retire the spec
 
