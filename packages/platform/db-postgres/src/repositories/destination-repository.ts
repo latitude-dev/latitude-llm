@@ -178,6 +178,26 @@ export const DestinationRepositoryLive = Layer.effect(
           return rows.length > 0
         }),
 
+      updateRunState: ({ id, status, consecutiveFailures, consecutiveEmptyRuns, lastFailureMessage, lastRunAt }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .update(destinations)
+                .set({
+                  status,
+                  consecutiveFailures,
+                  consecutiveEmptyRuns,
+                  lastFailureMessage,
+                  lastRunAt,
+                  updatedAt: new Date(),
+                })
+                .where(and(eq(destinations.id, id), eq(destinations.organizationId, organizationId))),
+            )
+            .pipe(Effect.mapError((e) => toRepositoryError(e, "updateDestinationRunState")))
+        }),
+
       deleteByProjectId: (projectId) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

@@ -11,6 +11,7 @@ export {
   DESTINATION_MAX_SPANS_PER_RUN_MAX,
   DESTINATION_MAX_SPANS_PER_RUN_MIN,
   DESTINATION_QUARANTINE_FAILURE_THRESHOLD,
+  DESTINATION_SAFETY_LAG_MS,
   POSTHOG_EU_INGESTION_HOST,
   POSTHOG_US_INGESTION_HOST,
 } from "./constants.ts"
@@ -38,7 +39,10 @@ export {
   posthogDestinationCredentialsSchema,
 } from "./entities/destination.ts"
 export type { DestinationEvent } from "./entities/destination-event.ts"
-export type { DestinationSyncRun, DestinationSyncRunStatus } from "./entities/destination-sync-run.ts"
+export type {
+  DestinationSyncRun,
+  DestinationSyncRunStatus,
+} from "./entities/destination-sync-run.ts"
 export {
   createDestinationSyncRun,
   DESTINATION_SYNC_RUN_STATUSES,
@@ -63,6 +67,7 @@ export type {
   PosthogEventName,
 } from "./mappers/posthog.ts"
 export {
+  createPosthogMapper,
   mapSpansToPosthogEvents,
   POSTHOG_CONTENT_PROPERTIES,
   POSTHOG_EVENT_NAMES,
@@ -79,9 +84,16 @@ export type {
 } from "./ports/destination-deliverer.ts"
 export { DestinationDeliverers } from "./ports/destination-deliverer.ts"
 export type {
+  DestinationMapper,
+  DestinationMapperRegistry,
+  MappedEvents,
+} from "./ports/destination-mapper.ts"
+export { DestinationMappers } from "./ports/destination-mapper.ts"
+export type {
   AdvanceDestinationCursorInput,
   DestinationCursor,
   DestinationRepositoryShape,
+  UpdateDestinationRunStateInput,
 } from "./ports/destination-repository.ts"
 export { DestinationRepository } from "./ports/destination-repository.ts"
 export type {
@@ -91,8 +103,18 @@ export type {
 export { DestinationSyncRunRepository } from "./ports/destination-sync-run-repository.ts"
 
 // Use cases
-export type { CreateDestinationError, CreateDestinationInput } from "./use-cases/create-destination.ts"
+export type {
+  CreateDestinationError,
+  CreateDestinationInput,
+} from "./use-cases/create-destination.ts"
 export { createDestinationUseCase } from "./use-cases/create-destination.ts"
+export type {
+  RunDestinationSyncError,
+  RunDestinationSyncInput,
+  RunDestinationSyncOutcome,
+  RunDestinationSyncResult,
+} from "./use-cases/run-destination-sync.ts"
+export { runDestinationSyncUseCase } from "./use-cases/run-destination-sync.ts"
 export type {
   TestDestinationConnectionInput,
   TestDestinationConnectionResult,

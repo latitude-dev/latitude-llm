@@ -1,6 +1,6 @@
 import type { ConflictError, DestinationId, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
 import { Context, type Effect } from "effect"
-import type { Destination } from "../entities/destination.ts"
+import type { Destination, DestinationStatus } from "../entities/destination.ts"
 
 /** Position in the `(ingested_at, span_id)` compound cursor. `spanId` is `""` before the first advance. */
 export interface DestinationCursor {
@@ -13,6 +13,17 @@ export interface AdvanceDestinationCursorInput {
   /** The cursor the run started from; the write only applies while the row still holds it. */
   readonly expected: DestinationCursor
   readonly next: DestinationCursor
+}
+
+/** Post-run bookkeeping (status, counters, `last_run_at`) — never the cursor. */
+export interface UpdateDestinationRunStateInput {
+  readonly id: DestinationId
+  readonly status: DestinationStatus
+  readonly consecutiveFailures: number
+  readonly consecutiveEmptyRuns: number
+  /** Sanitized: HTTP status + our error taxonomy, never upstream response bodies. */
+  readonly lastFailureMessage: string | null
+  readonly lastRunAt: Date
 }
 
 export interface DestinationRepositoryShape {
@@ -32,6 +43,13 @@ export interface DestinationRepositoryShape {
    * never move the cursor backwards or double-advance it.
    */
   advanceCursor(input: AdvanceDestinationCursorInput): Effect.Effect<boolean, RepositoryError, SqlClient>
+  /**
+   * Persists post-run bookkeeping without touching the cursor columns — the
+   * cursor moves only through the optimistic {@link advanceCursor}. Keeping the
+   * two writes separate is what stops a stale run from dragging the cursor
+   * backwards while it records its failure or idle counters.
+   */
+  updateRunState(input: UpdateDestinationRunStateInput): Effect.Effect<void, RepositoryError, SqlClient>
   deleteByProjectId(projectId: ProjectId): Effect.Effect<readonly DestinationId[], RepositoryError, SqlClient>
 }
 
