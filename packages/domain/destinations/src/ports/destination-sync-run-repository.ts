@@ -15,8 +15,8 @@ export interface DestinationSyncRunRepositoryShape {
   deleteByDestinationIds(ids: readonly DestinationId[]): Effect.Effect<void, RepositoryError, SqlClient>
   /**
    * Prunes runs finished before `cutoff`, returning the pruned count.
-   * Cross-org by design — the sweep drives it through the admin Postgres
-   * client so RLS is bypassed.
+   * Cross-org by design — the nightly `pruneSyncRuns` job drives it through the
+   * admin Postgres client so RLS is bypassed.
    */
   pruneFinishedBefore(cutoff: Date): Effect.Effect<number, RepositoryError, SqlClient>
 }

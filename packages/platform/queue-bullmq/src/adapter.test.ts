@@ -1,6 +1,8 @@
 import { base64urlEncode } from "@repo/utils"
-import { describe, expect, it } from "vitest"
-import { buildBullMqJobOptions } from "./adapter.ts"
+import type { Job } from "bullmq"
+import { Effect } from "effect"
+import { describe, expect, it, vi } from "vitest"
+import { buildBullMqJobOptions, resolveFinalFailureHook } from "./adapter.ts"
 
 const LABEL = "publish(monitors, checkSavedSearchMonitors)"
 
@@ -79,5 +81,54 @@ describe("buildBullMqJobOptions", () => {
     expect(() => buildBullMqJobOptions(LABEL, { throttleMs: 1 })).toThrow(/require a dedupeKey/)
     expect(() => buildBullMqJobOptions(LABEL, { latestThrottleMs: 1 })).toThrow(/require a dedupeKey/)
     expect(() => buildBullMqJobOptions(LABEL, { leadingThrottleMs: 1 })).toThrow(/require a dedupeKey/)
+  })
+})
+
+describe("resolveFinalFailureHook", () => {
+  const hook = vi.fn(() => Effect.void)
+  const handlers = { runSync: hook }
+
+  const job = (overrides: Partial<Job> = {}): Job =>
+    ({
+      id: "j1",
+      name: "runSync",
+      attemptsMade: 3,
+      opts: { attempts: 3 },
+      data: { payload: { destinationId: "d1" } },
+      ...overrides,
+    }) as unknown as Job
+
+  it("resolves the registered hook on the terminal attempt, carrying the payload and attempt counts", () => {
+    const invocation = resolveFinalFailureHook(job(), handlers)
+    expect(invocation).not.toBeNull()
+    expect(invocation?.hook).toBe(hook)
+    expect(invocation?.payload).toEqual({ destinationId: "d1" })
+    expect(invocation?.context).toEqual({ attemptsMade: 3, attemptsConfigured: 3 })
+  })
+
+  it("does not resolve while the job still has retries left (willRetry)", () => {
+    expect(resolveFinalFailureHook(job({ attemptsMade: 1 }), handlers)).toBeNull()
+  })
+
+  it("does not resolve when no handler is registered for the task name", () => {
+    expect(resolveFinalFailureHook(job({ name: "somethingElse" }), handlers)).toBeNull()
+  })
+
+  it("does not resolve when there are no handlers for the queue", () => {
+    expect(resolveFinalFailureHook(job(), undefined)).toBeNull()
+  })
+
+  it("does not resolve when the job is undefined", () => {
+    expect(resolveFinalFailureHook(undefined, handlers)).toBeNull()
+  })
+
+  it("does not resolve when the job payload is missing", () => {
+    expect(resolveFinalFailureHook(job({ data: { payload: undefined } }), handlers)).toBeNull()
+    expect(resolveFinalFailureHook(job({ data: {} as Job["data"] }), handlers)).toBeNull()
+  })
+
+  it("treats a single-attempt job (no retries configured) as terminal", () => {
+    const invocation = resolveFinalFailureHook(job({ attemptsMade: 1, opts: { attempts: 1 } }), handlers)
+    expect(invocation?.context).toEqual({ attemptsMade: 1, attemptsConfigured: 1 })
   })
 })

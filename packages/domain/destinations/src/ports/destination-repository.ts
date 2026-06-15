@@ -39,8 +39,9 @@ export interface DestinationRepositoryShape {
    * Active destinations due for a sync at `now`: idle backoff applied as
    * `last_run_at + intervalMs × 2^consecutive_empty_runs ≤ now` (never-ran rows
    * are always due), sandbox organizations excluded. Cross-org by design —
-   * drive through the admin Postgres client so RLS is bypassed; the sweep
-   * filters flag-off organizations itself.
+   * drive through the admin Postgres client so RLS is bypassed. The
+   * `destinations` flag gates only the settings UI; the sweep does not re-check
+   * it, so no flag filtering happens here or in the sweep.
    */
   listDue(now: Date): Effect.Effect<readonly Destination[], RepositoryError, SqlClient>
   /**

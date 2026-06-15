@@ -9,6 +9,28 @@ export const DESTINATION_MAX_SPANS_PER_RUN_DEFAULT = 50_000
 /** Consecutive terminal run failures before a destination is quarantined. */
 export const DESTINATION_QUARANTINE_FAILURE_THRESHOLD = 5
 
+/** Repeatable sweep: scheduler id (stable, replace-on-reboot) and every-minute cron. */
+export const DESTINATION_SWEEPER_KEY = "destinations:sweep"
+export const DESTINATION_SWEEPER_PATTERN = "* * * * *"
+
+/** Sync-run audit rows are pruned once finished more than 30 days ago. */
+export const DESTINATION_SYNC_RUN_RETENTION_MS = 30 * 24 * 60 * 60 * 1000
+
+/**
+ * Nightly prune of aged-out `destination_sync_runs`. Retention is coarse (30d),
+ * so this runs once a day off-peak rather than on the every-minute sweep.
+ */
+export const DESTINATION_PRUNE_KEY = "destinations:prune"
+export const DESTINATION_PRUNE_PATTERN = "30 3 * * *" // 3:30am UTC every day
+
+/**
+ * BullMQ retry budget for a `runSync` job. Exhausting it on a retryable failure
+ * counts as one terminal failure toward {@link DESTINATION_QUARANTINE_FAILURE_THRESHOLD},
+ * so a decommissioned host quarantines instead of retrying forever.
+ */
+export const DESTINATION_SYNC_MAX_ATTEMPTS = 5
+export const DESTINATION_SYNC_RETRY_BACKOFF_MS = 30_000
+
 /** Idle-backoff ceiling: a destination with only empty runs converges to one probe per hour. */
 export const DESTINATION_IDLE_BACKOFF_MAX_MS = 3_600_000
 

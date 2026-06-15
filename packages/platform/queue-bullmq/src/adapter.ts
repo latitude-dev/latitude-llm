@@ -13,7 +13,7 @@ import { QueueClientError, QueuePublishError, QueuePublisher, QueueSubscribeErro
 import { SpanStatusCode, trace } from "@opentelemetry/api"
 import { recordSpanExceptionForDatadog, serializeError } from "@repo/observability"
 import { base64urlEncode } from "@repo/utils"
-import { Queue, Worker } from "bullmq"
+import { type Job, Queue, Worker } from "bullmq"
 import { Cause, Effect, Layer } from "effect"
 import { createBullMqRedisConnection } from "./connection.ts"
 import { BULLMQ_PREFIX } from "./constants.ts"
@@ -134,7 +134,58 @@ interface BullMqJobData {
   readonly payload: unknown
 }
 
-export type { BullMqFailedJobContext, BullMqWorkerIncident } from "./worker-incidents.ts"
+type AnyFinalFailureHandler = (
+  payload: unknown,
+  error: Error,
+  context: { attemptsMade: number; attemptsConfigured: number },
+) => Effect.Effect<void, unknown>
+
+type AnyFinalFailureHandlers = Record<string, AnyFinalFailureHandler>
+
+interface FinalFailureInvocation {
+  readonly hook: AnyFinalFailureHandler
+  readonly payload: unknown
+  readonly context: { attemptsMade: number; attemptsConfigured: number }
+}
+
+/**
+ * Decide whether a failed job should fire its terminal-failure hook, and with
+ * what arguments. Pure + exported so the gating (only on the terminal attempt,
+ * only when a hook is registered for the task) can be unit-tested without Redis.
+ * Returns `null` when the hook must not run: no job, no registered handlers,
+ * a non-terminal attempt (`willRetry`), no handler for the task name, or a
+ * malformed job with no payload (the hook would only crash dereferencing it,
+ * masking the real "missing payload" failure).
+ */
+export const resolveFinalFailureHook = (
+  job: Job | undefined,
+  handlers: AnyFinalFailureHandlers | undefined,
+): FinalFailureInvocation | null => {
+  if (!job || !handlers) return null
+
+  const context = failedJobContextFromJob(job)
+  if (!context || context.willRetry) return null
+
+  const hook = handlers[job.name]
+  if (!hook) return null
+
+  const payload = (job.data as BullMqJobData)?.payload
+  if (payload === undefined) return null
+
+  return {
+    hook,
+    payload,
+    context: {
+      attemptsMade: context.attemptsMade,
+      attemptsConfigured: context.attemptsConfigured,
+    },
+  }
+}
+
+export type {
+  BullMqFailedJobContext,
+  BullMqWorkerIncident,
+} from "./worker-incidents.ts"
 
 export interface BullMqRedisConfig {
   readonly redis: {
@@ -212,7 +263,10 @@ export const createBullMqQueuePublisher = (
               {
                 name: String(task),
                 data: { payload } satisfies BullMqJobData,
-                opts: { removeOnComplete: { count: 1000 }, removeOnFail: { count: 1000 } },
+                opts: {
+                  removeOnComplete: { count: 1000 },
+                  removeOnFail: { count: 1000 },
+                },
               },
             )
           },
@@ -237,6 +291,7 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
     const services = yield* Effect.context<never>()
     const workers: Map<QueueName, Worker> = new Map()
     const subscriptions = new Map<QueueName, AnyTaskHandlers>()
+    const finalFailureHandlers = new Map<QueueName, AnyFinalFailureHandlers>()
     const concurrencyOverrides = new Map<QueueName, number>()
     let isRunning = false
     const emitIncident = config.onWorkerIncident
@@ -323,7 +378,11 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
             )
 
             worker.on("error", (error) => {
-              logIncident({ kind: "worker_error", queue, error: toError(error) })
+              logIncident({
+                kind: "worker_error",
+                queue,
+                error: toError(error),
+              })
             })
 
             worker.on("failed", (job, error) => {
@@ -332,6 +391,16 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
                 queue,
                 job: failedJobContextFromJob(job),
                 error: toError(error),
+              })
+
+              const invocation = resolveFinalFailureHook(job, finalFailureHandlers.get(queue))
+              if (!invocation) return
+              void Effect.runPromiseExitWith(services)(
+                invocation.hook(invocation.payload, toError(error), invocation.context),
+              ).then((exit) => {
+                if (exit._tag === "Failure") {
+                  console.error(`final-failure hook threw for ${queue}.${job?.name}`, Cause.squash(exit.cause))
+                }
               })
             })
 
@@ -364,13 +433,20 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
         isRunning = false
       })
 
-    const subscribe = <T extends QueueName>(queue: T, handlers: TaskHandlers<T>, options?: SubscribeOptions): void => {
+    const subscribe = <T extends QueueName>(
+      queue: T,
+      handlers: TaskHandlers<T>,
+      options?: SubscribeOptions<T>,
+    ): void => {
       if (isRunning) {
         throw new Error(`Cannot subscribe to queue "${queue}" after consumer has started`)
       }
       subscriptions.set(queue, handlers as unknown as AnyTaskHandlers)
       if (options?.concurrency) {
         concurrencyOverrides.set(queue, options.concurrency)
+      }
+      if (options?.onFinalFailure) {
+        finalFailureHandlers.set(queue, options.onFinalFailure as unknown as AnyFinalFailureHandlers)
       }
     }
 
