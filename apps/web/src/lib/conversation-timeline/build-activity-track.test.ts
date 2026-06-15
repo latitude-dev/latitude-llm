@@ -12,7 +12,7 @@ describe("buildActivityTrack", () => {
     expect(timeline.activity).toEqual([
       { category: "idle", timelineStartMs: 0, timelineEndMs: 500, durationMs: 500 },
       { category: "generation", timelineStartMs: 500, timelineEndMs: 10_000, durationMs: 9_500 },
-      { category: "tool", timelineStartMs: 10_000, timelineEndMs: 14_000, durationMs: 4_000 },
+      { category: "toolOk", timelineStartMs: 10_000, timelineEndMs: 14_000, durationMs: 4_000 },
       { category: "generation", timelineStartMs: 14_000, timelineEndMs: 20_000, durationMs: 6_000 },
       {
         category: "idle",
@@ -61,7 +61,29 @@ describe("buildActivityTrack", () => {
     )
     expect(segments).toEqual([
       { category: "idle", timelineStartMs: 0, timelineEndMs: 2_000, durationMs: 2_000 },
-      { category: "tool", timelineStartMs: 2_000, timelineEndMs: 4_000, durationMs: 2_000 },
+      { category: "toolOk", timelineStartMs: 2_000, timelineEndMs: 4_000, durationMs: 2_000 },
+      { category: "idle", timelineStartMs: 4_000, timelineEndMs: 10_000, durationMs: 6_000 },
+    ])
+  })
+
+  it("paints failed tool calls as their own category", () => {
+    const scale = buildTimelineScale([{ startMs: at(0), endMs: at(10_000) }])
+    const segments = buildActivityTrack(
+      [
+        span({
+          spanId: "tool",
+          traceId: "t1",
+          startMs: at(2_000),
+          endMs: at(4_000),
+          operation: "execute_tool",
+          isError: true,
+        }),
+      ],
+      scale,
+    )
+    expect(segments).toEqual([
+      { category: "idle", timelineStartMs: 0, timelineEndMs: 2_000, durationMs: 2_000 },
+      { category: "toolError", timelineStartMs: 2_000, timelineEndMs: 4_000, durationMs: 2_000 },
       { category: "idle", timelineStartMs: 4_000, timelineEndMs: 10_000, durationMs: 6_000 },
     ])
   })

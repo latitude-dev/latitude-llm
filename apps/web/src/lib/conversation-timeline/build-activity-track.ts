@@ -7,7 +7,7 @@ import { wallToTimeline } from "./timeline-scale.ts"
  * per-category totals, so the scrubber can paint what the agent was doing at
  * each moment.
  */
-export type ActivityCategory = "generation" | "tool" | "retrieval" | "other" | "idle"
+export type ActivityCategory = "generation" | "toolOk" | "toolError" | "retrieval" | "other" | "idle"
 type WorkCategory = Exclude<ActivityCategory, "idle">
 
 export interface ActivitySegment {
@@ -23,17 +23,18 @@ interface ActivitySpanInput {
   readonly startMs: number
   readonly endMs: number
   readonly operation: string
+  readonly isError: boolean
 }
 
-const WORK_PRIORITY: readonly WorkCategory[] = ["generation", "tool", "retrieval", "other"]
+const WORK_PRIORITY: readonly WorkCategory[] = ["generation", "toolError", "toolOk", "retrieval", "other"]
 
-function categoryFor(operation: string): WorkCategory {
+function categoryFor(operation: string, isError: boolean): WorkCategory {
   switch (operation) {
     case "chat":
     case "text_completion":
       return "generation"
     case "execute_tool":
-      return "tool"
+      return isError ? "toolError" : "toolOk"
     case "retrieval":
     case "reranker":
       return "retrieval"
@@ -55,7 +56,7 @@ function sweepWallSlices(spans: readonly ActivitySpanInput[]): WallSlice[] {
 
   const events = leaves
     .flatMap((s) => {
-      const category = categoryFor(s.operation)
+      const category = categoryFor(s.operation, s.isError)
       return [
         { t: s.startMs, category, delta: 1 },
         { t: s.endMs, category, delta: -1 },
@@ -63,7 +64,7 @@ function sweepWallSlices(spans: readonly ActivitySpanInput[]): WallSlice[] {
     })
     .sort((a, b) => a.t - b.t)
 
-  const active: Record<WorkCategory, number> = { generation: 0, tool: 0, retrieval: 0, other: 0 }
+  const active: Record<WorkCategory, number> = { generation: 0, toolOk: 0, toolError: 0, retrieval: 0, other: 0 }
   const dominant = (): ActivityCategory => WORK_PRIORITY.find((c) => active[c] > 0) ?? "idle"
 
   const slices: WallSlice[] = []

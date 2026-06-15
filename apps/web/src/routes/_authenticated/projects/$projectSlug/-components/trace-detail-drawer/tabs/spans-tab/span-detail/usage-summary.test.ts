@@ -148,4 +148,11 @@ describe("buildCostSegments", () => {
   it("returns no segments when both costs are zero", () => {
     expect(buildCostSegments(makeUsage())).toEqual([])
   })
+
+  it("falls back to a single total segment when only the total is known", () => {
+    const data = makeUsage({ costTotalMicrocents: 500 })
+    const segments = buildCostSegments(data)
+    expect(segments.map((s) => s.label)).toEqual(["Cost"])
+    expect(segments.map((s) => s.value)).toEqual([500])
+  })
 })

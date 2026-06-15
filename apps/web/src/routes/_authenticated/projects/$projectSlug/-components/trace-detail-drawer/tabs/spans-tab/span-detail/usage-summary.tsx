@@ -17,16 +17,17 @@ export interface UsageData {
 }
 
 const TOKEN_COLORS = {
-  cacheRead: "#d8b4fe",
-  cacheCreate: "#a855f7",
-  prompt: "#3b82f6",
-  reasoning: "#16a34a",
-  completion: "#4ade80",
+  cacheRead: "hsl(var(--viz-gold-faint))",
+  cacheCreate: "hsl(var(--viz-gold-soft))",
+  prompt: "hsl(var(--viz-gold))",
+  reasoning: "hsl(var(--viz-blue-soft))",
+  completion: "hsl(var(--viz-blue))",
 } as const
 
 const COST_COLORS = {
-  input: "#3b82f6",
-  output: "#4ade80",
+  input: "hsl(var(--viz-gold))",
+  output: "hsl(var(--viz-blue))",
+  total: "hsl(var(--viz-gray))",
 } as const
 
 export function hasAnyUsage(data: UsageData): boolean {
@@ -66,6 +67,11 @@ export function buildCostSegments(data: UsageData): SegmentBarItem[] {
   const segments: SegmentBarItem[] = []
   if (input > 0) segments.push({ label: "Input", value: input, color: COST_COLORS.input })
   if (output > 0) segments.push({ label: "Output", value: output, color: COST_COLORS.output })
+
+  // Cost reported only as a total (no input/output split) still fills the bar.
+  if (segments.length === 0 && data.costTotalMicrocents > 0) {
+    segments.push({ label: "Cost", value: data.costTotalMicrocents, color: COST_COLORS.total })
+  }
   return segments
 }
 
