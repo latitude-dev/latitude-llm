@@ -1,6 +1,5 @@
 // Constants
 export {
-  DESTINATION_CONNECTION_TEST_EVENT_NAME,
   DESTINATION_EVENT_UUID_NAMESPACE,
   DESTINATION_IDLE_BACKOFF_MAX_MS,
   DESTINATION_INTERVAL_MS_DEFAULT,
@@ -22,6 +21,8 @@ export {
   POSTHOG_EU_INGESTION_HOST,
   POSTHOG_US_INGESTION_HOST,
 } from "./constants.ts"
+// Helpers
+export { previewCredentials } from "./credentials-preview.ts"
 // Entities
 export type {
   Destination,
@@ -64,7 +65,6 @@ export {
   RetryableDeliveryError,
   SandboxOrganizationDestinationError,
 } from "./errors.ts"
-// Helpers
 export { uuidV5 } from "./helpers.ts"
 
 // Mappers
@@ -104,6 +104,7 @@ export type {
 } from "./ports/destination-repository.ts"
 export { DestinationRepository } from "./ports/destination-repository.ts"
 export type {
+  DestinationSyncRunCursor,
   DestinationSyncRunRepositoryShape,
   ListSyncRunsByDestinationIdInput,
 } from "./ports/destination-sync-run-repository.ts"

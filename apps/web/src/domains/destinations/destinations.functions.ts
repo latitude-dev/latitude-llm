@@ -10,16 +10,25 @@ import {
   createDestinationUseCase,
   type Destination,
   type DestinationConfig,
+  type DestinationDelivererRegistry,
+  DestinationDeliverers,
   DestinationRepository,
   type DestinationStatus,
+  type DestinationSyncRun,
+  DestinationSyncRunRepository,
+  type DestinationSyncRunStatus,
   deleteDestinationUseCase,
   destinationConfigSchema,
   destinationCredentialsSchema,
   pauseDestinationUseCase,
+  previewCredentials,
   resumeDestinationUseCase,
+  type TestDestinationConnectionResult,
+  testDestinationConnectionUseCase,
   updateDestinationUseCase,
 } from "@domain/destinations"
-import { DestinationId, ForbiddenError, ProjectId } from "@domain/shared"
+import { DestinationId, DestinationSyncRunId, ProjectId } from "@domain/shared"
+import { createPosthogDeliverer } from "@platform/data-destinations"
 import {
   DestinationRepositoryLive,
   DestinationSyncRunRepositoryLive,
@@ -41,6 +50,8 @@ export interface DestinationRecord {
   readonly kind: Destination["kind"]
   readonly name: string
   readonly config: DestinationConfig
+  /** Masked fragment of the stored credentials (prefix + last 4) — never the full secret. */
+  readonly credentialsPreview: string
   readonly status: DestinationStatus
   readonly consecutiveFailures: number
   readonly lastFailureMessage: string | null
@@ -56,6 +67,7 @@ const toRecord = (destination: Destination): DestinationRecord => ({
   kind: destination.kind,
   name: destination.name,
   config: destination.config,
+  credentialsPreview: previewCredentials(destination.credentials),
   status: destination.status,
   consecutiveFailures: destination.consecutiveFailures,
   lastFailureMessage: destination.lastFailureMessage,
@@ -199,10 +211,27 @@ export const deleteDestination = createServerFn({ method: "POST" })
     return { deleted: true } as const
   })
 
-/** Outcome of a pre-save connection probe. `ok=false` carries a sanitized reason. */
+/**
+ * Outcome of a pre-save connection probe. `ok=false` carries a sanitized
+ * reason and whether retrying could succeed (transport/5xx/429) vs the
+ * config/key needing a fix (401). The adapter probes an endpoint that
+ * authenticates the key (no telemetry sent); a pass proves the key maps to a
+ * real project, not that it's the project the user intended.
+ */
 export interface DestinationConnectionTestResult {
   readonly ok: boolean
-  readonly message: string | null
+  readonly retryable: boolean
+  readonly reason: string | null
+  readonly upstreamStatus: number | null
+}
+
+const toConnectionTestResult = (result: TestDestinationConnectionResult): DestinationConnectionTestResult =>
+  result.status === "ok"
+    ? { ok: true, retryable: false, reason: null, upstreamStatus: null }
+    : { ok: false, retryable: result.retryable, reason: result.reason, upstreamStatus: result.upstreamStatus ?? null }
+
+const destinationDeliverers: DestinationDelivererRegistry = {
+  posthog: createPosthogDeliverer(),
 }
 
 const testDestinationConnectionSchema = z.object({
@@ -212,9 +241,139 @@ const testDestinationConnectionSchema = z.object({
 
 export const testDestinationConnection = createServerFn({ method: "POST" })
   .inputValidator(testDestinationConnectionSchema)
-  .handler(async (): Promise<DestinationConnectionTestResult> => {
+  .handler(async ({ data }): Promise<DestinationConnectionTestResult> => {
     await requireSession()
 
-    // TODO(LAT-674): passthrough to `testDestinationConnectionUseCase` (P2-1) once merged — no canary logic here.
-    throw new ForbiddenError({ message: "Destination connection testing is not available yet" })
+    const result = await Effect.runPromise(
+      testDestinationConnectionUseCase({
+        config: data.config,
+        credentials: data.credentials,
+      }).pipe(Effect.provideService(DestinationDeliverers, destinationDeliverers), withTracing),
+    )
+
+    return toConnectionTestResult(result)
+  })
+
+const testExistingDestinationConnectionSchema = z.object({
+  destinationId: z.string(),
+  config: destinationConfigSchema,
+})
+
+/**
+ * Probe an already-saved destination with its stored (write-only) credentials,
+ * so the edit form can verify the connection without re-entering the secret.
+ * The edited `config` from the form is used; the key comes from storage.
+ */
+export const testExistingDestinationConnection = createServerFn({ method: "POST" })
+  .inputValidator(testExistingDestinationConnectionSchema)
+  .handler(async ({ data }): Promise<DestinationConnectionTestResult> => {
+    const { organizationId } = await requireSession()
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* DestinationRepository
+        const destination = yield* repo.findById(DestinationId(data.destinationId))
+        return yield* testDestinationConnectionUseCase({
+          config: data.config,
+          credentials: destination.credentials,
+        }).pipe(Effect.provideService(DestinationDeliverers, destinationDeliverers))
+      }).pipe(withPostgres(DestinationRepositoryLive, getPostgresClient(), organizationId), withTracing),
+    )
+
+    return toConnectionTestResult(result)
+  })
+
+/** Wire projection of one {@link DestinationSyncRun}. Powers the card summary and the run-history list. */
+export interface DestinationSyncRunRecord {
+  readonly id: string
+  readonly status: DestinationSyncRunStatus
+  readonly spansRead: number
+  readonly eventsSent: number
+  readonly eventsDropped: number
+  readonly error: string | null
+  readonly windowStart: string
+  readonly windowEnd: string
+  readonly startedAt: string
+  readonly finishedAt: string
+}
+
+const toSyncRunRecord = (run: DestinationSyncRun): DestinationSyncRunRecord => ({
+  id: run.id,
+  status: run.status,
+  spansRead: run.spansRead,
+  eventsSent: run.eventsSent,
+  eventsDropped: run.eventsDropped,
+  error: run.error,
+  windowStart: run.windowStart.toISOString(),
+  windowEnd: run.windowEnd.toISOString(),
+  startedAt: run.startedAt.toISOString(),
+  finishedAt: run.finishedAt.toISOString(),
+})
+
+export const getLatestDestinationSyncRun = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ destinationId: z.string() }))
+  .handler(async ({ data }): Promise<DestinationSyncRunRecord | null> => {
+    const { organizationId } = await requireSession()
+
+    const runs = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* DestinationSyncRunRepository
+        return yield* repo.listByDestinationId({
+          destinationId: DestinationId(data.destinationId),
+          limit: 1,
+        })
+      }).pipe(withPostgres(DestinationSyncRunRepositoryLive, getPostgresClient(), organizationId), withTracing),
+    )
+
+    const run = runs[0]
+    return run ? toSyncRunRecord(run) : null
+  })
+
+interface DestinationSyncRunPage {
+  readonly runs: readonly DestinationSyncRunRecord[]
+  readonly nextCursor: {
+    readonly startedAt: string
+    readonly id: string
+  } | null
+}
+
+const DESTINATION_SYNC_RUNS_PAGE_SIZE = 25
+
+const listDestinationSyncRunsSchema = z.object({
+  destinationId: z.string(),
+  before: z.object({ startedAt: z.string(), id: z.string() }).optional(),
+})
+
+export const listDestinationSyncRuns = createServerFn({ method: "GET" })
+  .inputValidator(listDestinationSyncRunsSchema)
+  .handler(async ({ data }): Promise<DestinationSyncRunPage> => {
+    const { organizationId } = await requireSession()
+
+    // Over-fetch by one to detect whether an older page exists without a count query.
+    const runs = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* DestinationSyncRunRepository
+        return yield* repo.listByDestinationId({
+          destinationId: DestinationId(data.destinationId),
+          limit: DESTINATION_SYNC_RUNS_PAGE_SIZE + 1,
+          ...(data.before
+            ? {
+                before: {
+                  startedAt: new Date(data.before.startedAt),
+                  id: DestinationSyncRunId(data.before.id),
+                },
+              }
+            : {}),
+        })
+      }).pipe(withPostgres(DestinationSyncRunRepositoryLive, getPostgresClient(), organizationId), withTracing),
+    )
+
+    const hasMore = runs.length > DESTINATION_SYNC_RUNS_PAGE_SIZE
+    const page = hasMore ? runs.slice(0, DESTINATION_SYNC_RUNS_PAGE_SIZE) : runs
+    const last = page[page.length - 1]
+
+    return {
+      runs: page.map(toSyncRunRecord),
+      nextCursor: hasMore && last ? { startedAt: last.startedAt.toISOString(), id: last.id } : null,
+    }
   })

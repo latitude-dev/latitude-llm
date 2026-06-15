@@ -11,6 +11,7 @@ import {
   Plug,
   ScanSearch,
   SettingsIcon,
+  Share2,
   ShieldAlertIcon,
   TagsIcon,
   TextIcon,
@@ -22,7 +23,7 @@ import {
 import { useMemo } from "react"
 import { useHasFeatureFlag } from "../feature-flags/feature-flags.collection.ts"
 
-type SectionFlag = "behaviours" | "monitors" | "tools"
+type SectionFlag = "behaviours" | "monitors" | "tools" | "destinations"
 
 interface ProjectSection {
   readonly key: string
@@ -175,6 +176,13 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
         path: (slug) => `/projects/${slug}/settings/integrations`,
       },
       {
+        key: "data-destinations",
+        label: "Data destinations",
+        icon: Share2,
+        path: (slug) => `/projects/${slug}/settings/data-destinations`,
+        flag: "destinations",
+      },
+      {
         key: "sso",
         label: "Single sign-on",
         icon: Fingerprint,
@@ -200,7 +208,8 @@ function useSectionFlags(): Record<SectionFlag, boolean> {
   const behaviours = useHasFeatureFlag("behaviours")
   const monitors = useHasFeatureFlag("monitors")
   const tools = useHasFeatureFlag("tools")
-  return useMemo(() => ({ behaviours, monitors, tools }), [behaviours, monitors, tools])
+  const destinations = useHasFeatureFlag("destinations")
+  return useMemo(() => ({ behaviours, monitors, tools, destinations }), [behaviours, monitors, tools, destinations])
 }
 
 /** Project sections visible to the current org, in sidebar/palette order. */

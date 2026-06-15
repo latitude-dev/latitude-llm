@@ -10,13 +10,22 @@ export const createFakeDestinationSyncRunRepository = (seed: readonly Destinatio
       Effect.sync(() => {
         rows.push(run)
       }),
-    listByDestinationId: ({ destinationId, limit }) =>
-      Effect.sync(() =>
-        rows
+    listByDestinationId: ({ destinationId, limit, before }) =>
+      Effect.sync(() => {
+        // Mirror the adapter's keyset: (started_at DESC, id DESC), strictly
+        // after `before` when set.
+        const ordered = rows
           .filter((r) => r.destinationId === destinationId)
-          .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())
-          .slice(0, limit),
-      ),
+          .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime() || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0))
+        const afterCursor = before
+          ? ordered.filter(
+              (r) =>
+                r.startedAt.getTime() < before.startedAt.getTime() ||
+                (r.startedAt.getTime() === before.startedAt.getTime() && r.id < before.id),
+            )
+          : ordered
+        return afterCursor.slice(0, limit)
+      }),
     deleteByDestinationIds: (ids) =>
       Effect.sync(() => {
         const set = new Set(ids)

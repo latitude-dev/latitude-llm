@@ -1,5 +1,7 @@
 export const POSTHOG_BATCH_PATH = "/batch/"
 
+export const POSTHOG_FLAGS_PATH = "/flags/?v=2"
+
 export const POSTHOG_BATCH_MAX_EVENTS = 500
 
 /** PostHog's documented `/batch/` request-body limit (20 MB). */

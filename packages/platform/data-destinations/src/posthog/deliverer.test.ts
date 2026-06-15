@@ -333,3 +333,60 @@ describe("createPosthogDeliverer", () => {
     expect(requests).toHaveLength(2)
   })
 })
+
+const testConnection = (deliverer: DestinationDeliverer, config: DestinationConfig = posthogConfig()) =>
+  Effect.runPromise(deliverer.testConnection(config, credentials))
+
+const testConnectionFlip = (deliverer: DestinationDeliverer, config: DestinationConfig = posthogConfig()) =>
+  Effect.runPromise(deliverer.testConnection(config, credentials).pipe(Effect.flip))
+
+describe("createPosthogDeliverer.testConnection", () => {
+  it("validates the key via a /flags/ POST without sending any event", async () => {
+    const { fetchFn, requests } = fakeFetch(200)
+    const deliverer = createPosthogDeliverer({ fetchFn })
+
+    await testConnection(deliverer)
+
+    expect(requests).toHaveLength(1)
+    expect(requests[0]?.url).toBe("https://us.i.posthog.com/flags/?v=2")
+    expect(requests[0]?.init.method).toBe("POST")
+    expect(requests[0]?.init.redirect).toBe("manual")
+    const body = JSON.parse(requests[0]?.init.body as string)
+    expect(body.api_key).toBe("phc_test_key")
+    expect(body.distinct_id).toBe("latitude-connection-test")
+    expect(body.batch).toBeUndefined()
+  })
+
+  it.each([401, 403])("maps %d to a non-retryable invalid_api_key error", async (status) => {
+    const { fetchFn } = fakeFetch(status)
+    const deliverer = createPosthogDeliverer({ fetchFn })
+
+    const error = await testConnectionFlip(deliverer)
+
+    expect(error._tag).toBe("NonRetryableDeliveryError")
+    expect(error.reason).toBe("invalid_api_key")
+    expect(error.upstreamStatus).toBe(status)
+  })
+
+  it("maps a transport failure to a retryable error", async () => {
+    const { fetchFn } = fakeFetch(new Error("ECONNREFUSED"))
+    const deliverer = createPosthogDeliverer({ fetchFn })
+
+    const error = await testConnectionFlip(deliverer)
+
+    expect(error._tag).toBe("RetryableDeliveryError")
+    expect(error.reason).toBe("transport_error")
+  })
+
+  it("rejects a custom host that resolves to a private IP without calling fetch", async () => {
+    const { fetchFn, requests } = fakeFetch(200)
+    const { lookupHost } = fakeLookup(["10.1.2.3"])
+    const deliverer = createPosthogDeliverer({ fetchFn, lookupHost })
+
+    const error = await testConnectionFlip(deliverer, posthogConfig("https://posthog.internal.example"))
+
+    expect(error._tag).toBe("NonRetryableDeliveryError")
+    expect(error.reason).toBe("host_resolved_to_non_public_ip")
+    expect(requests).toHaveLength(0)
+  })
+})

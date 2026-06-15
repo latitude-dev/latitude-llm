@@ -48,13 +48,9 @@
       "entry": [
         "src/router.tsx",
         "src/start.ts",
-        "src/routes/**/*.tsx",
-        "src/domains/destinations/destinations.functions.ts"
+        "src/routes/**/*.tsx"
       ],
       "project": ["src/**/*.ts", "src/**/*.tsx"],
-      "ignore": [
-        "src/domains/feature-flags/feature-flags.collection.ts"
-      ],
       "ignoreDependencies": [
         "@temporalio/client",
         "voyageai"
@@ -71,8 +67,7 @@
       "project": [
         "src/**/*.ts",
         "src/**/*.tsx"
-      ],
-      "ignoreDependencies": []
+      ]
     },
     "packages/domain/*": {
       "project": [
@@ -100,8 +95,7 @@
     },
     "packages/sdk/typescript": {
       "entry": [],
-      "project": [],
-      "ignoreBinaries": []
+      "project": []
     },
     "packages/sdk/typescript/examples": {
       "entry": [
@@ -109,9 +103,7 @@
       ],
       "project": [
         "src/**/*.ts"
-      ],
-      "ignoreBinaries": ["tsx"],
-      "ignoreDependencies": ["tsx"]
+      ]
     },
     "packages/ui": {
       "project": [
