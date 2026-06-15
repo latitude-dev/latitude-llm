@@ -40,6 +40,33 @@ spec:
       {{- end }}
     spec:
       {{- include "latitude.podSettings" . | nindent 6 }}
+      {{/* The server needs the schema, not just the database port — wait until
+           the schema job has stamped both stores so it starts exactly once. */}}
+      initContainers:
+        - name: wait-for-schema
+          image: {{ .Values.postgres.image }}
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "latitude.secretName" . }}
+                  key: TEMPORAL_POSTGRES_PASSWORD
+          command:
+            - bash
+            - -c
+            - |
+              host="{{ include "latitude.temporalDbHost" . }}"
+              port="{{ .Values.temporal.database.port }}"
+              user="{{ include "latitude.temporalDbUser" . }}"
+              for db in temporal temporal_visibility; do
+                until [ -n "$(psql -h "$host" -p "$port" -U "$user" -d "$db" -tAc 'SELECT 1 FROM schema_version LIMIT 1' 2>/dev/null)" ]; do
+                  echo "waiting for the $db schema..."
+                  sleep 5
+                done
+                echo "$db schema is ready"
+              done
+          resources:
+            {{- include "latitude.initResources" . | nindent 12 }}
       containers:
         - name: temporal
           image: {{ .Values.temporal.serverImage }}

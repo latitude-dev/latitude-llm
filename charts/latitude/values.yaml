@@ -129,6 +129,16 @@ nodeSelector: {}
 tolerations: []
 affinity: {}
 
+# Requests/limits for the short-lived wait-for-deps / wait-for-schema init
+# containers (a bash TCP-poll and a psql poll — they need very little). The
+# default request is sized to clear strict LimitRange.min / ResourceQuota
+# clusters and stays at/below the app containers' own requests, so it doesn't
+# raise the pod's effective request; override the whole block if needed.
+initContainerResources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
 # ---------------------------------------------------------------------------
 # Bundled infrastructure — each block independently toggleable (bring-your-own)
 # ---------------------------------------------------------------------------
