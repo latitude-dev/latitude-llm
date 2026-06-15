@@ -6,11 +6,11 @@ import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testi
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import type { Monitor, MonitorAlert } from "../entities/monitor.ts"
+import { MetricSeriesReader } from "../ports/metric-series-reader.ts"
 import { MonitorRepository } from "../ports/monitor-repository.ts"
-import { SavedSearchMatchReader } from "../ports/saved-search-match-reader.ts"
 import { createFakeAlertIncidentStore } from "../testing/fake-alert-incident-store.ts"
+import { createFakeMetricSeriesReader } from "../testing/fake-metric-series-reader.ts"
 import { createFakeMonitorRepository } from "../testing/fake-monitor-repository.ts"
-import { createFakeSavedSearchMatchReader } from "../testing/fake-saved-search-match-reader.ts"
 import { checkSavedSearchMonitorsUseCase } from "./check-saved-search-monitors.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
@@ -69,9 +69,9 @@ const run = (params: {
 
   const defectQueries = new Set(params.defectQueries ?? [])
   const readerLayer = Layer.effect(
-    SavedSearchMatchReader,
+    MetricSeriesReader,
     Effect.gen(function* () {
-      const real = yield* SavedSearchMatchReader
+      const real = yield* MetricSeriesReader
       const guard =
         <I extends { readonly target: { readonly query: string | null } }, A, E, R>(
           call: (input: I) => Effect.Effect<A, E, R>,
@@ -83,13 +83,13 @@ const run = (params: {
               })
             : call(input)
       return {
-        countMatches: guard(real.countMatches),
-        firstMatchAt: guard(real.firstMatchAt),
-        lastMatchAt: guard(real.lastMatchAt),
-        countMatchesPerBucket: guard(real.countMatchesPerBucket),
+        valueInWindow: guard(real.valueInWindow),
+        firstEventAt: guard(real.firstEventAt),
+        lastEventAt: guard(real.lastEventAt),
+        seriesPerBucket: guard(real.seriesPerBucket),
       }
     }),
-  ).pipe(Layer.provide(createFakeSavedSearchMatchReader(params.matches).layer))
+  ).pipe(Layer.provide(createFakeMetricSeriesReader(params.matches).layer))
 
   return Effect.runPromise(
     checkSavedSearchMonitorsUseCase({ organizationId, projectId }).pipe(

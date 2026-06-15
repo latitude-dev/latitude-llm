@@ -467,7 +467,7 @@ function collectPercentileRequests(filters: FilterSet | undefined): {
 }
 
 /**
- * Exported for `SavedSearchMatchReader`, so monitored saved searches resolve
+ * Exported for `MetricSeriesReader`, so monitored saved searches resolve
  * percentile filters exactly like the traces page that defined them.
  */
 export const resolvePercentileFilters = (

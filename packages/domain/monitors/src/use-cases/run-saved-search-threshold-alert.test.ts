@@ -7,8 +7,8 @@ import { describe, expect, it } from "vitest"
 import type { MonitorAlert } from "../entities/monitor.ts"
 import { MonitorRepository } from "../ports/monitor-repository.ts"
 import { createFakeAlertIncidentStore } from "../testing/fake-alert-incident-store.ts"
+import { createFakeMetricSeriesReader } from "../testing/fake-metric-series-reader.ts"
 import { createFakeMonitorRepository } from "../testing/fake-monitor-repository.ts"
-import { createFakeSavedSearchMatchReader } from "../testing/fake-saved-search-match-reader.ts"
 import { runSavedSearchThresholdAlertUseCase } from "./run-saved-search-threshold-alert.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
@@ -62,7 +62,7 @@ const run = (params: {
       target: { query: null, filterSet: {} },
       now,
     }).pipe(
-      Effect.provide(createFakeSavedSearchMatchReader(params.matches).layer),
+      Effect.provide(createFakeMetricSeriesReader(params.matches).layer),
       Effect.provide(store.layer),
       Effect.provideService(MonitorRepository, monitorRepo),
       Effect.provideService(OutboxEventWriter, { write: (event) => Effect.sync(() => void events.push(event)) }),

@@ -8,6 +8,7 @@ import type {
   AlertBaseline,
   AlertDuration,
   ChSqlClient,
+  FilterSet,
   OrganizationId,
   ProjectId,
   RepositoryError,
@@ -15,7 +16,18 @@ import type {
 import { Effect } from "effect"
 import { pickEscalatingBucketMs, SAVED_SEARCH_CURRENT_WINDOW_MS } from "../constants.ts"
 import type { MonitorAlert } from "../entities/monitor.ts"
-import { SavedSearchMatchReader, type SavedSearchMatchTarget } from "../ports/saved-search-match-reader.ts"
+import { MetricSeriesReader, type MetricSeriesTarget } from "../ports/metric-series-reader.ts"
+
+/** Saved searches resolve to a `traces` stream + their predicate, counting matched traces. */
+export const toCountTarget = (target: {
+  readonly query: string | null
+  readonly filterSet: FilterSet
+}): MetricSeriesTarget => ({
+  stream: "traces",
+  filterSet: target.filterSet,
+  query: target.query,
+  metric: { kind: "count" },
+})
 
 /** Verdict + the numbers the state machines snapshot onto the incident. */
 export interface SavedSearchEvaluation {
@@ -33,7 +45,7 @@ export interface EvaluateSavedSearchAlertInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly alert: MonitorAlert
-  readonly target: SavedSearchMatchTarget
+  readonly target: { readonly query: string | null; readonly filterSet: FilterSet }
   readonly now: Date
 }
 
@@ -61,21 +73,22 @@ const baselineWindow = (baseline: AlertBaseline, now: Date): { from: Date; to: D
   return { from: new Date(now.getTime() - 2 * lengthMs), to: new Date(now.getTime() - lengthMs), lengthMs }
 }
 
-/** Evaluate one saved-search alert at `now`. Pure modulo the `SavedSearchMatchReader` IO; window + threshold vary by kind/mode (see branches). */
+/** Evaluate one saved-search alert at `now`. Pure modulo the `MetricSeriesReader` IO; window + threshold vary by kind/mode (see branches). */
 export const evaluateSavedSearchAlert = (
   input: EvaluateSavedSearchAlertInput,
-): Effect.Effect<SavedSearchEvaluation, EvaluateSavedSearchAlertError, SavedSearchMatchReader | ChSqlClient> =>
+): Effect.Effect<SavedSearchEvaluation, EvaluateSavedSearchAlertError, MetricSeriesReader | ChSqlClient> =>
   Effect.gen(function* () {
-    const reader = yield* SavedSearchMatchReader
-    const { organizationId, projectId, alert, target, now } = input
-    const countIn = (from: Date, to: Date) => reader.countMatches({ organizationId, projectId, target, from, to })
+    const reader = yield* MetricSeriesReader
+    const { organizationId, projectId, alert, now } = input
+    const target = toCountTarget(input.target)
+    const countIn = (from: Date, to: Date) => reader.valueInWindow({ organizationId, projectId, target, from, to })
 
     // Any match in the trailing window fires; the queue throttle is the rate limiter.
     if (alert.kind === "savedSearch.match") {
       const from = new Date(now.getTime() - SAVED_SEARCH_CURRENT_WINDOW_MS)
       const count = yield* countIn(from, now)
       const firstMatchInWindow =
-        count > 0 ? yield* reader.firstMatchAt({ organizationId, projectId, target, from, to: now }) : null
+        count > 0 ? yield* reader.firstEventAt({ organizationId, projectId, target, from, to: now }) : null
       return { isMet: count > 0, count, threshold: 1, firstMatchInWindow } satisfies SavedSearchEvaluation
     }
 
@@ -127,7 +140,7 @@ export const evaluateSavedSearchAlert = (
     }
 
     const firstMatchInWindow =
-      count > 0 ? yield* reader.firstMatchAt({ organizationId, projectId, target, from, to: now }) : null
+      count > 0 ? yield* reader.firstEventAt({ organizationId, projectId, target, from, to: now }) : null
 
     return {
       isMet,
@@ -164,25 +177,22 @@ export interface SavedSearchEscalatingEvaluation {
  */
 export const evaluateSavedSearchEscalatingAlert = (
   input: EvaluateSavedSearchAlertInput,
-): Effect.Effect<
-  SavedSearchEscalatingEvaluation,
-  EvaluateSavedSearchAlertError,
-  SavedSearchMatchReader | ChSqlClient
-> =>
+): Effect.Effect<SavedSearchEscalatingEvaluation, EvaluateSavedSearchAlertError, MetricSeriesReader | ChSqlClient> =>
   Effect.gen(function* () {
-    const reader = yield* SavedSearchMatchReader
-    const { organizationId, projectId, alert, target, now } = input
+    const reader = yield* MetricSeriesReader
+    const { organizationId, projectId, alert, now } = input
+    const target = toCountTarget(input.target)
     const condition = alert.condition
     if (alert.kind !== "savedSearch.escalating" || condition?.kind !== "savedSearch.escalating") {
       // The orchestrator only routes escalating alerts here — a wiring bug, not runtime state.
       return yield* Effect.die(`evaluateSavedSearchEscalatingAlert: not a savedSearch.escalating alert (${alert.id})`)
     }
-    const countIn = (from: Date, to: Date) => reader.countMatches({ organizationId, projectId, target, from, to })
+    const countIn = (from: Date, to: Date) => reader.valueInWindow({ organizationId, projectId, target, from, to })
 
     const windowMs = condition.window.minutes * 60 * 1000
     const bucketMs = pickEscalatingBucketMs(windowMs)
     const from = new Date(now.getTime() - windowMs)
-    const bucketCounts = yield* reader.countMatchesPerBucket({
+    const bucketCounts = yield* reader.seriesPerBucket({
       organizationId,
       projectId,
       target,
@@ -220,7 +230,7 @@ export const evaluateSavedSearchEscalatingAlert = (
     // One first-match query for the `startedAt` backtrace, only when the window has activity.
     const total = bucketCounts.reduce((sum, count) => sum + count, 0)
     const firstMatchInWindow =
-      total > 0 ? yield* reader.firstMatchAt({ organizationId, projectId, target, from, to: now }) : null
+      total > 0 ? yield* reader.firstEventAt({ organizationId, projectId, target, from, to: now }) : null
 
     return {
       bucketCounts,

@@ -5,7 +5,7 @@ import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import type { MonitorAlert } from "../entities/monitor.ts"
 import { createFakeAlertIncidentStore } from "../testing/fake-alert-incident-store.ts"
-import { createFakeSavedSearchMatchReader } from "../testing/fake-saved-search-match-reader.ts"
+import { createFakeMetricSeriesReader } from "../testing/fake-metric-series-reader.ts"
 import { runSavedSearchMatchAlertUseCase } from "./run-saved-search-match-alert.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
@@ -35,7 +35,7 @@ const run = (matches: readonly Date[]) => {
       target: { query: null, filterSet: {} },
       now,
     }).pipe(
-      Effect.provide(createFakeSavedSearchMatchReader(matches).layer),
+      Effect.provide(createFakeMetricSeriesReader(matches).layer),
       Effect.provide(store.layer),
       Effect.provideService(OutboxEventWriter, { write: (event) => Effect.sync(() => void events.push(event)) }),
       Effect.provideService(SqlClient, createFakeSqlClient({ organizationId })),
