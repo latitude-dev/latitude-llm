@@ -1,4 +1,4 @@
-import type { ConflictError, DestinationId, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
+import type { ConflictError, DestinationId, NotFoundError, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { Destination, DestinationStatus } from "../entities/destination.ts"
 
@@ -29,6 +29,12 @@ export interface UpdateDestinationRunStateInput {
 export interface DestinationRepositoryShape {
   /** Insert-or-update by id; fails with `ConflictError` when another destination holds the `(project_id, kind)` unique key. */
   save(destination: Destination): Effect.Effect<void, ConflictError | RepositoryError, SqlClient>
+  /** Loads a destination by id within the caller's organization; fails with `NotFoundError` when absent. */
+  findById(id: DestinationId): Effect.Effect<Destination, NotFoundError | RepositoryError, SqlClient>
+  /** Destinations configured for a project within the caller's organization, newest first. */
+  listByProjectId(projectId: ProjectId): Effect.Effect<readonly Destination[], RepositoryError, SqlClient>
+  /** Hard-deletes a destination by id within the caller's organization; cursor history goes with the row. */
+  delete(id: DestinationId): Effect.Effect<void, RepositoryError, SqlClient>
   /**
    * Active destinations due for a sync at `now`: idle backoff applied as
    * `last_run_at + intervalMs × 2^consecutive_empty_runs ≤ now` (never-ran rows

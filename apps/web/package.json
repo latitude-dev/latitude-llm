@@ -24,6 +24,7 @@
     "@domain/changelog": "workspace:*",
     "@domain/conversation-intelligence": "workspace:*",
     "@domain/datasets": "workspace:*",
+    "@domain/destinations": "workspace:*",
     "@domain/evaluations": "workspace:*",
     "@domain/events": "workspace:*",
     "@domain/exports": "workspace:*",

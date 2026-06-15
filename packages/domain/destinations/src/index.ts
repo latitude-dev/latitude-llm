@@ -109,10 +109,25 @@ export type {
 } from "./use-cases/create-destination.ts"
 export { createDestinationUseCase } from "./use-cases/create-destination.ts"
 export type {
+  DeleteDestinationError,
+  DeleteDestinationInput,
+} from "./use-cases/delete-destination.ts"
+export { deleteDestinationUseCase } from "./use-cases/delete-destination.ts"
+export type {
   DeleteProjectDestinationsError,
   DeleteProjectDestinationsInput,
 } from "./use-cases/delete-project-destinations.ts"
 export { deleteProjectDestinationsUseCase } from "./use-cases/delete-project-destinations.ts"
+export type {
+  PauseDestinationError,
+  PauseDestinationInput,
+} from "./use-cases/pause-destination.ts"
+export { pauseDestinationUseCase } from "./use-cases/pause-destination.ts"
+export type {
+  ResumeDestinationError,
+  ResumeDestinationInput,
+} from "./use-cases/resume-destination.ts"
+export { resumeDestinationUseCase } from "./use-cases/resume-destination.ts"
 export type {
   RunDestinationSyncError,
   RunDestinationSyncInput,
@@ -125,3 +140,8 @@ export type {
   TestDestinationConnectionResult,
 } from "./use-cases/test-destination-connection.ts"
 export { testDestinationConnectionUseCase } from "./use-cases/test-destination-connection.ts"
+export type {
+  UpdateDestinationError,
+  UpdateDestinationInput,
+} from "./use-cases/update-destination.ts"
+export { updateDestinationUseCase } from "./use-cases/update-destination.ts"

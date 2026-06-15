@@ -8,12 +8,13 @@ import {
   ConflictError,
   DestinationId,
   findPostgresUniqueViolationConstraint,
+  NotFoundError,
   type RepositoryError,
   SqlClient,
   type SqlClientShape,
   toRepositoryError,
 } from "@domain/shared"
-import { and, eq, isNull, or, sql } from "drizzle-orm"
+import { and, desc, eq, isNull, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { decryptField, encryptField, getEncryptionKey } from "../encryption-key.ts"
@@ -126,6 +127,52 @@ export const DestinationRepositoryLive = Layer.effect(
                 }),
             )
             .pipe(Effect.catchTag("RepositoryError", (error) => mapProjectKindConflict(error, destination)))
+        }),
+
+      findById: (id: DestinationId) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const rows = yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select()
+                .from(destinations)
+                .where(and(eq(destinations.id, id), eq(destinations.organizationId, organizationId)))
+                .limit(1),
+            )
+            .pipe(Effect.mapError((e) => toRepositoryError(e, "findDestinationById")))
+
+          const row = rows[0]
+          if (!row) return yield* Effect.fail(new NotFoundError({ entity: "Destination", id }))
+          return yield* toDomainDestination(row, encryptionKey)
+        }),
+
+      listByProjectId: (projectId) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const rows = yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select()
+                .from(destinations)
+                .where(and(eq(destinations.projectId, projectId), eq(destinations.organizationId, organizationId)))
+                .orderBy(desc(destinations.createdAt)),
+            )
+            .pipe(Effect.mapError((e) => toRepositoryError(e, "listDestinationsByProjectId")))
+
+          return yield* Effect.forEach(rows, (row) => toDomainDestination(row, encryptionKey))
+        }),
+
+      delete: (id: DestinationId) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .delete(destinations)
+                .where(and(eq(destinations.id, id), eq(destinations.organizationId, organizationId))),
+            )
+            .pipe(Effect.mapError((e) => toRepositoryError(e, "deleteDestination")))
         }),
 
       listDue: (now: Date) =>

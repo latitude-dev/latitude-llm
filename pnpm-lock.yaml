@@ -402,6 +402,9 @@ importers:
       '@domain/datasets':
         specifier: workspace:*
         version: link:../../packages/domain/datasets
+      '@domain/destinations':
+        specifier: workspace:*
+        version: link:../../packages/domain/destinations
       '@domain/evaluations':
         specifier: workspace:*
         version: link:../../packages/domain/evaluations
