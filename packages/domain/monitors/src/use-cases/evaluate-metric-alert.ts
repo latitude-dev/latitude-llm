@@ -108,13 +108,21 @@ export const evaluateMetricAlert = (
       )
       thresholdValue = seasonalThreshold(historical, threshold, direction)
     }
-    const isMet = isMetricThresholdMet(value, thresholdValue, direction)
+    let isMet = isMetricThresholdMet(value, thresholdValue, direction)
 
     // Only the firing branch backtracks `startedAt`; gate on `isMet`, not the metric
     // value (an intensive metric like avg/errorRate can be 0 with real activity).
     const firstEventInWindow = isMet
       ? yield* reader.firstEventAt({ organizationId, projectId, target, from, to: now })
       : null
+
+    // An absolute `below` threshold has no baseline of "normal", so an empty window (no
+    // events) is missing data, not a usage drop — don't fire. Multiplier/expected `below`
+    // are exempt: their baseline (recent/seasonal) plus the `threshold > 0` guard already
+    // suppress the truly-no-traffic case while still catching a busy target going silent.
+    if (isMet && direction === "below" && threshold.mode === "absolute" && firstEventInWindow === null) {
+      isMet = false
+    }
 
     return {
       isMet,

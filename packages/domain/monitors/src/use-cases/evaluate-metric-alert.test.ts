@@ -66,6 +66,12 @@ describe("evaluateMetricAlert (metric.threshold)", () => {
     expect(notMet.isMet).toBe(false)
   })
 
+  it("does not fire an absolute below-threshold alert on an empty window (no data is not a drop)", async () => {
+    const evaluation = await runThreshold([], target({ kind: "count" }), { mode: "absolute", value: 5 }, "below")
+    expect(evaluation.value).toBe(0)
+    expect(evaluation.isMet).toBe(false)
+  })
+
   it("does not fire an above-threshold multiplier alert when current and baseline are both zero", async () => {
     const evaluation = await runThreshold([], target({ kind: "count" }), {
       mode: "multiplier",

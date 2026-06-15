@@ -115,6 +115,16 @@ export const runMetricMonitorAlertUseCase = (input: RunMetricMonitorAlertInput) 
           if (open === null) {
             const failing = countNonPassingBuckets(evaluation.bucketValues, evaluation.perBucketThreshold, direction)
             if (failing > maxFail) return { transition: "none" } satisfies RunMetricMonitorAlertResult
+            // An absolute `below` gate has no baseline of "normal", so a window with no
+            // events is missing data, not a sustained drop — don't open. Multiplier/expected
+            // are exempt (baseline + `threshold > 0` guard handle the no-traffic case).
+            if (
+              direction === "below" &&
+              condition.threshold.mode === "absolute" &&
+              evaluation.firstEventInWindow === null
+            ) {
+              return { transition: "none" } satisfies RunMetricMonitorAlertResult
+            }
             const entrySignals: SavedSearchEntrySignals = {
               evaluatedThreshold: evaluation.perBucketThreshold,
               ...(evaluation.baselineValue !== undefined ? { baselineCount: evaluation.baselineValue } : {}),
