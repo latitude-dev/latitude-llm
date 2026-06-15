@@ -97,6 +97,10 @@ export const runMetricMonitorAlertUseCase = (input: RunMetricMonitorAlertInput) 
           if (condition?.kind !== "metric.escalating") {
             return yield* Effect.die(`runMetricMonitorAlert: not a metric.escalating alert (${alert.id})`)
           }
+          const monitorRepository = yield* MonitorRepository
+          // Serialise concurrent ticks for this alert before the read-then-insert
+          // so two sweeps can't both see no open incident and double-open.
+          yield* monitorRepository.lockAlertForUpdate(alert.id)
           const evaluation = yield* evaluateMetricEscalatingAlert({ organizationId, projectId, target, condition, now })
           const open = yield* alertIncidentRepository.findOpenByMonitorAlertId(alert.id)
           const maxFail = maxFailingBuckets(evaluation.bucketValues.length)
