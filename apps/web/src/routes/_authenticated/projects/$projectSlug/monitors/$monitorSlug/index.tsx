@@ -1,8 +1,23 @@
 import { ALERT_INCIDENT_KIND_LABEL } from "@domain/shared"
-import { Button, CopyableText, Icon, LatitudeLogo, Select, Skeleton, Status, Text, Tooltip, useToast } from "@repo/ui"
+import {
+  Button,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuRoot,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  Icon,
+  LatitudeLogo,
+  Select,
+  Skeleton,
+  Status,
+  Text,
+  Tooltip,
+} from "@repo/ui"
 import { formatCount } from "@repo/utils"
-import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router"
-import { ArrowLeftIcon, BellIcon, BellOffIcon, LinkIcon, PencilIcon } from "lucide-react"
+import { createFileRoute, getRouteApi, Link, useNavigate } from "@tanstack/react-router"
+import { ArrowLeftIcon, BellIcon, BellOffIcon, MenuIcon, PencilIcon, Trash2Icon } from "lucide-react"
 import { type ReactNode, useMemo, useState } from "react"
 import { SeverityStatus } from "../../../../../../domains/alerts/severity-selector.tsx"
 import { describeMonitorTarget } from "../../../../../../domains/monitors/monitor-target.ts"
@@ -13,6 +28,7 @@ import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbLink, BreadcrumbSeparator, BreadcrumbText } from "../../../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "../../-route-data.ts"
 import { MonitorAlertEditModal } from "../-components/monitor-alert-edit-modal.tsx"
+import { MonitorDeleteConfirmModal } from "../-components/monitor-delete-confirm-modal.tsx"
 import { MonitorIncidentsTable } from "../-components/monitor-incidents-table.tsx"
 import { MonitorMatchingTraces } from "../-components/monitor-matching-traces.tsx"
 import { MonitorMetricChart } from "../-components/monitor-metric-chart.tsx"
@@ -67,7 +83,7 @@ function SystemTag() {
 
 function ConfigField({ label, children }: { readonly label: string; readonly children: ReactNode }) {
   return (
-    <div className="flex min-w-[140px] flex-col gap-1">
+    <div className="flex min-w-[140px] flex-col items-start gap-1">
       <Text.H6 color="foregroundMuted">{label}</Text.H6>
       {children}
     </div>
@@ -77,7 +93,7 @@ function ConfigField({ label, children }: { readonly label: string; readonly chi
 function MonitorDetailPage() {
   const { projectSlug, monitorSlug } = Route.useParams()
   const project = useRouteProject()
-  const { toast } = useToast()
+  const navigate = useNavigate()
   const [rangeRaw, setRangeRaw] = useParamState("monitorRange", "24h")
   const range = isRangeKey(rangeRaw) ? rangeRaw : "24h"
 
@@ -89,6 +105,7 @@ function MonitorDetailPage() {
   })
 
   const [muteConfirmOpen, setMuteConfirmOpen] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [alertModal, setAlertModal] = useState<MonitorAlertRecord | null>(null)
   const [sensitivityAlert, setSensitivityAlert] = useState<MonitorAlertRecord | null>(null)
 
@@ -121,6 +138,7 @@ function MonitorDetailPage() {
   const muted = monitor?.mutedAt != null
   const description = describeMonitorTarget(target)
   const canEditAlert = monitor ? !monitor.system || alert?.kind === "issue.escalating" : false
+  const canDeleteMonitor = monitor ? !monitor.system : false
   const onEditAlert = () => {
     if (!alert) return
     if (alert.kind === "issue.escalating") setSensitivityAlert(alert)
@@ -166,39 +184,40 @@ function MonitorDetailPage() {
                   options={RANGE_OPTIONS}
                   value={range}
                   onChange={setRangeRaw}
+                  size="small"
                 />
-                {canEditAlert ? (
-                  <Button variant="outline" size="sm" className="w-auto" onClick={onEditAlert}>
-                    <Icon icon={PencilIcon} size="sm" />
-                    Edit monitor
-                  </Button>
-                ) : null}
                 <Button variant="outline" size="sm" className="w-auto" onClick={() => setMuteConfirmOpen(true)}>
                   <Icon icon={muted ? BellIcon : BellOffIcon} size="sm" />
                   {muted ? "Unmute" : "Mute"}
                 </Button>
-                <Tooltip
-                  asChild
-                  side="bottom"
-                  trigger={
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      aria-label="Copy monitor link"
-                      onClick={() => {
-                        void navigator.clipboard.writeText(
-                          `${globalThis.location.origin}/projects/${projectSlug}/monitors/${monitorSlug}`,
-                        )
-                        toast({ description: "Monitor link copied to clipboard." })
-                      }}
-                    >
-                      <Icon icon={LinkIcon} size="sm" color="foregroundMuted" />
-                    </Button>
-                  }
-                >
-                  Copy monitor link
-                </Tooltip>
+                {canEditAlert || canDeleteMonitor ? (
+                  <DropdownMenuRoot modal={false}>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-7 w-7 p-0" aria-label="Monitor actions">
+                        <Icon icon={MenuIcon} size="sm" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuPortal>
+                      <DropdownMenuContent align="end" className="w-48">
+                        {canEditAlert ? (
+                          <DropdownMenuItem className="cursor-pointer items-center gap-2" onSelect={onEditAlert}>
+                            <Icon icon={PencilIcon} size="sm" color="foregroundMuted" />
+                            <Text.H5>Edit monitor</Text.H5>
+                          </DropdownMenuItem>
+                        ) : null}
+                        {canEditAlert ? <DropdownMenuSeparator /> : null}
+                        <DropdownMenuItem
+                          className="cursor-pointer items-center gap-2"
+                          disabled={!canDeleteMonitor}
+                          onSelect={() => setDeleteConfirmOpen(true)}
+                        >
+                          <Icon icon={Trash2Icon} size="sm" color="destructive" />
+                          <Text.H5 color="destructive">Remove monitor</Text.H5>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenuPortal>
+                  </DropdownMenuRoot>
+                ) : null}
               </>
             ) : undefined
           }
@@ -231,9 +250,6 @@ function MonitorDetailPage() {
                   <ConfigField label="Incidents">
                     <Text.H5 color="foreground">{incidentStats ? formatCount(incidentStats.total) : "—"}</Text.H5>
                   </ConfigField>
-                  <ConfigField label="Slug">
-                    <CopyableText value={monitor.slug} size="sm" ellipsis tooltip="Copy monitor slug" />
-                  </ConfigField>
                 </div>
                 {monitor.description ? <Text.H6 color="foregroundMuted">{monitor.description}</Text.H6> : null}
               </div>
@@ -249,7 +265,7 @@ function MonitorDetailPage() {
                 />
               ) : null}
 
-              <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
+              <div className="flex min-w-0 flex-col gap-3">
                 <Text.H6 color="foregroundMuted">Incidents</Text.H6>
                 <MonitorIncidentsTable projectId={project.id} projectSlug={projectSlug} monitorId={monitor.id} />
               </div>
@@ -260,33 +276,42 @@ function MonitorDetailPage() {
             </>
           )}
         </div>
+
+        <MonitorMuteConfirmModal
+          projectId={project.id}
+          monitor={muteConfirmOpen && monitor ? monitor : null}
+          onOpenChange={(next) => setMuteConfirmOpen(next !== null)}
+        />
+
+        <MonitorDeleteConfirmModal
+          projectId={project.id}
+          monitor={deleteConfirmOpen && monitor ? monitor : null}
+          onOpenChange={(next) => setDeleteConfirmOpen(next !== null)}
+          onDeleted={() => {
+            void navigate({ to: "/projects/$projectSlug/monitors/search", params: { projectSlug } })
+          }}
+        />
+
+        {alertModal && monitor ? (
+          <MonitorAlertEditModal
+            projectId={project.id}
+            projectSlug={projectSlug}
+            monitorId={monitor.id}
+            alert={alertModal}
+            target={monitor.target}
+            onClose={() => setAlertModal(null)}
+          />
+        ) : null}
+
+        {sensitivityAlert && monitor ? (
+          <MonitorSensitivityEditModal
+            projectId={project.id}
+            monitorId={monitor.id}
+            alert={sensitivityAlert}
+            onClose={() => setSensitivityAlert(null)}
+          />
+        ) : null}
       </Layout.Content>
-
-      <MonitorMuteConfirmModal
-        projectId={project.id}
-        monitor={muteConfirmOpen && monitor ? monitor : null}
-        onOpenChange={(next) => setMuteConfirmOpen(next !== null)}
-      />
-
-      {alertModal && monitor ? (
-        <MonitorAlertEditModal
-          projectId={project.id}
-          projectSlug={projectSlug}
-          monitorId={monitor.id}
-          alert={alertModal}
-          target={monitor.target}
-          onClose={() => setAlertModal(null)}
-        />
-      ) : null}
-
-      {sensitivityAlert && monitor ? (
-        <MonitorSensitivityEditModal
-          projectId={project.id}
-          monitorId={monitor.id}
-          alert={sensitivityAlert}
-          onClose={() => setSensitivityAlert(null)}
-        />
-      ) : null}
     </Layout>
   )
 }

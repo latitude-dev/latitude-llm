@@ -110,10 +110,9 @@ const COMPARISON_OPTIONS: { label: string; value: ComparisonMode }[] = [
   { label: "times more than", value: "timesMoreThan" },
 ]
 
-// Unified metric thresholds read "is N <unit> or higher" / "is N× more than <baseline>".
 const TARGET_COMPARISON_OPTIONS: { label: string; value: ComparisonMode }[] = [
   { label: "or higher", value: "times" },
-  { label: "× more than", value: "timesMoreThan" },
+  { label: "times more than", value: "timesMoreThan" },
 ]
 
 const BASELINE_KIND_OPTIONS: { label: string; value: BaselineKind }[] = [

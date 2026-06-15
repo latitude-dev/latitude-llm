@@ -1,4 +1,5 @@
 import type { MonitorTarget } from "@domain/monitors"
+import type { FilterSet } from "@domain/shared"
 import {
   Button,
   DropdownMenuContent,
@@ -15,10 +16,34 @@ import { useNavigate } from "@tanstack/react-router"
 import { BellPlusIcon, ChevronDownIcon } from "lucide-react"
 import { useState } from "react"
 import { useMonitorsForTarget } from "../../../../../../domains/monitors/monitors.collection.ts"
+import type { MonitorRecord } from "../../../../../../domains/monitors/monitors.functions.ts"
 import { targetAlertDraft } from "./alert-form-helpers.ts"
 import { MonitorCreateModal } from "./monitor-create-modal.tsx"
 
-/** Primary-color dot, pulsing while the monitor is live; muted/static when paused. */
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>
+    return `{${Object.keys(record)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`)
+      .join(",")}}`
+  }
+  return JSON.stringify(value) ?? "undefined"
+}
+
+const normalizeFilterSet = (filterSet: MonitorTarget["filterSet"]): FilterSet => filterSet ?? {}
+
+function sameTargetScope(a: MonitorRecord["target"], b: MonitorTarget): boolean {
+  if (!a) return false
+  return (
+    a.stream === b.stream &&
+    stableStringify(normalizeFilterSet(a.filterSet)) === stableStringify(normalizeFilterSet(b.filterSet)) &&
+    (a.query ?? null) === (b.query ?? null) &&
+    (a.savedSearchId ?? null) === (b.savedSearchId ?? null)
+  )
+}
+
 function ActivityDot({ live }: { readonly live: boolean }) {
   if (!live) return <span className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground/40" />
   return (
@@ -29,28 +54,30 @@ function ActivityDot({ live }: { readonly live: boolean }) {
   )
 }
 
-/**
- * Compact in-context monitor control for a section header. With no monitors it's
- * an "Add monitor" button; once monitors exist it becomes a dropdown whose
- * trigger surfaces the first live monitor (with a pulsing activity dot) and whose
- * menu lists every monitor plus "Add monitor" as the last item.
- */
 export function TargetMonitorsMenu({
   projectId,
   projectSlug,
   stream,
   filterSetContains,
   createTarget,
+  label = "Add monitor",
+  matchMode = "contains",
 }: {
   readonly projectId: string
   readonly projectSlug: string
   readonly stream: MonitorTarget["stream"]
   readonly filterSetContains: NonNullable<MonitorTarget["filterSet"]>
   readonly createTarget: MonitorTarget
+  readonly label?: string
+  readonly matchMode?: "contains" | "exact"
 }) {
   const navigate = useNavigate()
   const [createOpen, setCreateOpen] = useState(false)
-  const { monitors } = useMonitorsForTarget({ projectId, stream, filterSetContains })
+  const { monitors: fetchedMonitors } = useMonitorsForTarget({ projectId, stream, filterSetContains })
+  const monitors =
+    matchMode === "exact"
+      ? fetchedMonitors.filter((monitor) => sameTargetScope(monitor.target, createTarget))
+      : fetchedMonitors
 
   const createModal = createOpen ? (
     <MonitorCreateModal
@@ -66,7 +93,7 @@ export function TargetMonitorsMenu({
       <>
         <Button variant="outline" size="sm" className="w-auto" onClick={() => setCreateOpen(true)}>
           <Icon icon={BellPlusIcon} size="sm" />
-          Add monitor
+          {label}
         </Button>
         {createModal}
       </>

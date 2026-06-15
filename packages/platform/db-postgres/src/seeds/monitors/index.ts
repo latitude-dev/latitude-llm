@@ -124,7 +124,7 @@ const USER_MONITORS: readonly UserMonitorSeed[] = [
           },
         },
         severity: "high",
-        incidents: 180,
+        incidents: 3,
         ongoing: 0,
       },
     ],
@@ -151,8 +151,8 @@ const USER_MONITORS: readonly UserMonitorSeed[] = [
           window: { minutes: 60 },
         },
         severity: "high",
-        incidents: 16,
-        ongoing: 3,
+        incidents: 3,
+        ongoing: 1,
       },
     ],
   },
@@ -174,8 +174,8 @@ const USER_MONITORS: readonly UserMonitorSeed[] = [
           window: { minutes: 120 },
         },
         severity: "high",
-        incidents: 18,
-        ongoing: 2,
+        incidents: 3,
+        ongoing: 1,
       },
     ],
   },
@@ -193,7 +193,7 @@ const USER_MONITORS: readonly UserMonitorSeed[] = [
         savedSearchKey: "refund-requests",
         condition: { kind: "savedSearch.threshold", threshold: { mode: "absolute", count: 100 } },
         severity: "medium",
-        incidents: 14,
+        incidents: 2,
         ongoing: 0,
       },
     ],
@@ -212,7 +212,7 @@ const USER_MONITORS: readonly UserMonitorSeed[] = [
         savedSearchKey: "negative-feedback",
         condition: null,
         severity: "low",
-        incidents: 22,
+        incidents: 3,
         ongoing: 0,
       },
     ],
@@ -231,7 +231,7 @@ const USER_MONITORS: readonly UserMonitorSeed[] = [
         savedSearchKey: "checkout-flow",
         condition: null,
         severity: "low",
-        incidents: 9,
+        incidents: 1,
         ongoing: 0,
       },
       {
@@ -240,7 +240,7 @@ const USER_MONITORS: readonly UserMonitorSeed[] = [
         savedSearchKey: "checkout-flow",
         condition: { kind: "savedSearch.threshold", threshold: { mode: "expected", sensitivity: 4 } },
         severity: "medium",
-        incidents: 11,
+        incidents: 1,
         ongoing: 0,
       },
       {
@@ -253,8 +253,8 @@ const USER_MONITORS: readonly UserMonitorSeed[] = [
           window: { minutes: 5 },
         },
         severity: "high",
-        incidents: 8,
-        ongoing: 2,
+        incidents: 2,
+        ongoing: 1,
       },
     ],
   },
@@ -273,7 +273,7 @@ const USER_MONITORS: readonly UserMonitorSeed[] = [
         savedSearchKey: "high-latency",
         condition: { kind: "savedSearch.threshold", threshold: { mode: "absolute", count: 50 } },
         severity: "medium",
-        incidents: 20,
+        incidents: 2,
         ongoing: 0,
         baseDaysAgo: 10,
       },
@@ -302,7 +302,7 @@ const USER_MONITORS: readonly UserMonitorSeed[] = [
 
 /** Descending, mostly-distinct started-at for incident `i` so the keyset `(started_at DESC, id DESC)` paginates cleanly. */
 const historicalStartedAt = (scope: SeedScope, i: number, baseDaysAgo = 1): Date =>
-  scope.dateDaysAgo(baseDaysAgo + Math.floor(i / 12), (i % 12) * 2, (i * 13) % 60)
+  scope.dateDaysAgo(baseDaysAgo + i * 4, 9 + ((i * 5) % 10), (i * 13) % 60)
 
 interface GeneratedIncidents {
   readonly incidentRows: (typeof alertIncidents.$inferInsert)[]
