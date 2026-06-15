@@ -17,6 +17,7 @@ import {
   draftWithKind,
   kindsForDraft,
   type LookbackUnit,
+  type MetricDirection,
   previewAlertSentence,
   type UserAlertKind,
   type WindowUnit,
@@ -110,9 +111,9 @@ const COMPARISON_OPTIONS: { label: string; value: ComparisonMode }[] = [
   { label: "times more than", value: "timesMoreThan" },
 ]
 
-const TARGET_COMPARISON_OPTIONS: { label: string; value: ComparisonMode }[] = [
-  { label: "or higher", value: "times" },
-  { label: "times more than", value: "timesMoreThan" },
+const TARGET_DIRECTION_OPTIONS: { label: string; value: MetricDirection }[] = [
+  { label: "above", value: "above" },
+  { label: "below", value: "below" },
 ]
 
 const BASELINE_KIND_OPTIONS: { label: string; value: BaselineKind }[] = [
@@ -181,7 +182,12 @@ function ThresholdWindowForm({
     />
   )
 
-  const comparisonOptions = targetMode ? TARGET_COMPARISON_OPTIONS : COMPARISON_OPTIONS
+  const comparisonOptions = targetMode
+    ? [
+        { label: "absolute", value: "times" as const },
+        { label: value.direction === "below" ? "times less than" : "times more than", value: "timesMoreThan" as const },
+      ]
+    : COMPARISON_OPTIONS
   const leadIn = targetMode ? "Alert when the metric is" : "Alert when traces are detected"
 
   // The amount doubles as the sensitivity in expected mode; snap an out-of-range
@@ -199,6 +205,16 @@ function ThresholdWindowForm({
         <Text.H5M>Threshold</Text.H5M>
         <div className="flex flex-wrap items-center gap-2 -mt-1">
           <Text.H5 color="foregroundMuted">{leadIn}</Text.H5>
+          {targetMode ? (
+            <Select<MetricDirection>
+              name="direction"
+              width="auto"
+              options={TARGET_DIRECTION_OPTIONS}
+              value={value.direction}
+              onChange={(direction) => onChange({ direction })}
+              {...(disabled ? { disabled: true } : {})}
+            />
+          ) : null}
           {amountInput}
           {absoluteUnit ? <Text.H5 color="foregroundMuted">{absoluteUnit}</Text.H5> : null}
           <Select<ComparisonMode>

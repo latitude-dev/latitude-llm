@@ -6,6 +6,7 @@ import {
   type AlertDuration,
   type AlertIncidentCondition,
   type AlertMetricThreshold,
+  type AlertMetricThresholdDirection,
   type AlertSeverity,
   type MonitorMetric,
   metricValueFromStored,
@@ -31,6 +32,7 @@ export type UserAlertKind =
   | "metric.escalating"
 export type ComparisonMode = "times" | "timesMoreThan"
 export type WindowUnit = "minutes" | "hours" | "days"
+export type MetricDirection = AlertMetricThresholdDirection
 /** `average`/`period` carry a `lookback`; `expected` is the dynamically-learned baseline (no window). */
 export type BaselineKind = "average" | "period" | "expected"
 export type LookbackUnit = "minutes" | "hours" | "days"
@@ -48,6 +50,7 @@ export interface AlertDraft {
   /** The aggregate measured for unified targets; ignored in saved-search mode. */
   readonly metric: MonitorMetric
   readonly severity: AlertSeverity
+  readonly direction: MetricDirection
   readonly comparison: ComparisonMode
   /** count (absolute) · factor (multiplier) · sensitivity (expected) — see `comparison`/`baselineKind`. */
   readonly amount: number
@@ -65,6 +68,7 @@ export const emptyAlertDraft = (overrides?: Partial<AlertDraft>): AlertDraft => 
   target: null,
   metric: { kind: "count" },
   severity: SEVERITY_FOR_KIND["savedSearch.match"],
+  direction: "above",
   comparison: "times",
   amount: 100,
   baselineKind: "average",
@@ -109,6 +113,7 @@ export const draftWithKind = (draft: AlertDraft, kind: UserAlertKind): AlertDraf
     target: draft.target,
     metric: draft.metric,
     severity: draft.severity,
+    direction: draft.direction,
   })
 
 export interface AlertFieldErrors {
@@ -190,8 +195,10 @@ export const draftToCondition = (draft: AlertDraft): AlertIncidentCondition | nu
   if (draft.target !== null) {
     if (draft.kind === "event.matched") return null
     const threshold = draftToMetricThreshold(draft)
-    if (draft.kind === "metric.threshold") return { kind: "metric.threshold", metric: draft.metric, threshold }
-    return { kind: "metric.escalating", metric: draft.metric, threshold, window }
+    if (draft.kind === "metric.threshold") {
+      return { kind: "metric.threshold", metric: draft.metric, threshold, direction: draft.direction }
+    }
+    return { kind: "metric.escalating", metric: draft.metric, threshold, direction: draft.direction, window }
   }
   if (draft.kind === "savedSearch.match") return null
   const threshold = draftToCountThreshold(draft)
@@ -300,13 +307,19 @@ export const recordToAlertDraft = (alert: MonitorAlertRecord, target?: MonitorTa
     }
   }
   if (condition?.kind === "metric.threshold") {
-    return { ...base, metric: condition.metric, ...metricThresholdToDraftFields(condition.threshold, condition.metric) }
+    return {
+      ...base,
+      metric: condition.metric,
+      direction: condition.direction ?? "above",
+      ...metricThresholdToDraftFields(condition.threshold, condition.metric),
+    }
   }
   if (condition?.kind === "metric.escalating") {
     const window = minutesToWindow(condition.window.minutes)
     return {
       ...base,
       metric: condition.metric,
+      direction: condition.direction ?? "above",
       ...metricThresholdToDraftFields(condition.threshold, condition.metric),
       windowAmount: window.amount,
       windowUnit: window.unit,

@@ -10,6 +10,8 @@ const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
 const now = new Date("2026-06-01T12:00:00.000Z")
 const minutesAgo = (m: number) => new Date(now.getTime() - m * 60 * 1000)
+const weeksAgoMinutesAgo = (weeks: number, minutes: number) =>
+  new Date(now.getTime() - weeks * 7 * 24 * 60 * 60 * 1000 - minutes * 60 * 1000)
 
 // The fake reader counts seeded event times per window/bucket regardless of metric
 // kind — so it exercises the threshold/window math; per-metric aggregation is the
@@ -26,13 +28,14 @@ const runThreshold = (
   events: readonly Date[],
   t: MetricSeriesTarget,
   threshold: Parameters<typeof evaluateMetricAlert>[0]["condition"]["threshold"],
+  direction: Parameters<typeof evaluateMetricAlert>[0]["condition"]["direction"] = "above",
 ) =>
   Effect.runPromise(
     evaluateMetricAlert({
       organizationId,
       projectId,
       target: t,
-      condition: { kind: "metric.threshold", metric: t.metric, threshold },
+      condition: { kind: "metric.threshold", metric: t.metric, threshold, direction },
       now,
     }).pipe(
       Effect.provide(createFakeMetricSeriesReader(events).layer),
@@ -53,6 +56,66 @@ describe("evaluateMetricAlert (metric.threshold)", () => {
     const events = [minutesAgo(1), minutesAgo(2), minutesAgo(3)]
     const notMet = await runThreshold(events, target({ kind: "count" }), { mode: "absolute", value: 5 })
     expect(notMet.isMet).toBe(false)
+  })
+
+  it("supports below-threshold metric alerts", async () => {
+    const events = [minutesAgo(1), minutesAgo(2), minutesAgo(3)]
+    const met = await runThreshold(events, target({ kind: "count" }), { mode: "absolute", value: 5 }, "below")
+    const notMet = await runThreshold(events, target({ kind: "count" }), { mode: "absolute", value: 2 }, "below")
+    expect(met.isMet).toBe(true)
+    expect(notMet.isMet).toBe(false)
+  })
+
+  it("does not fire an absolute below-threshold alert on an empty window (no data is not a drop)", async () => {
+    const evaluation = await runThreshold([], target({ kind: "count" }), { mode: "absolute", value: 5 }, "below")
+    expect(evaluation.value).toBe(0)
+    expect(evaluation.isMet).toBe(false)
+  })
+
+  it("does not fire an above-threshold multiplier alert when current and baseline are both zero", async () => {
+    const evaluation = await runThreshold([], target({ kind: "count" }), {
+      mode: "multiplier",
+      factor: 1,
+      baseline: { kind: "average", lookback: { unit: "hours", hours: 1 } },
+    })
+    expect(evaluation.value).toBe(0)
+    expect(evaluation.threshold).toBe(0)
+    expect(evaluation.isMet).toBe(false)
+  })
+
+  it("supports below-threshold multiplier alerts", async () => {
+    const baselineEvents = [6, 10, 15, 20, 25, 30, 35, 40, 45, 50].map((m) => minutesAgo(m))
+    const evaluation = await runThreshold(
+      baselineEvents,
+      target({ kind: "count" }),
+      {
+        mode: "multiplier",
+        factor: 1,
+        baseline: { kind: "average", lookback: { unit: "hours", hours: 1 } },
+      },
+      "below",
+    )
+    expect(evaluation.value).toBe(0)
+    expect(evaluation.threshold).toBeCloseTo(10 / 12)
+    expect(evaluation.isMet).toBe(true)
+  })
+
+  it("supports below-expected alerts", async () => {
+    const historical = Array.from({ length: 4 }, (_unused, index) =>
+      Array.from({ length: 100 }, () => weeksAgoMinutesAgo(index + 1, 1)),
+    ).flat()
+    const evaluation = await runThreshold(
+      historical,
+      target({ kind: "count" }),
+      {
+        mode: "expected",
+        sensitivity: 3,
+      },
+      "below",
+    )
+    expect(evaluation.value).toBe(0)
+    expect(evaluation.threshold).toBeGreaterThan(0)
+    expect(evaluation.isMet).toBe(true)
   })
 
   it("multiplier normalizes the baseline for accumulating metrics but not intensive ones", async () => {
@@ -83,13 +146,14 @@ describe("evaluateMetricEscalatingAlert (metric.escalating)", () => {
     events: readonly Date[],
     t: MetricSeriesTarget,
     threshold: Parameters<typeof evaluateMetricEscalatingAlert>[0]["condition"]["threshold"],
+    direction: Parameters<typeof evaluateMetricEscalatingAlert>[0]["condition"]["direction"] = "above",
   ) =>
     Effect.runPromise(
       evaluateMetricEscalatingAlert({
         organizationId,
         projectId,
         target: t,
-        condition: { kind: "metric.escalating", metric: t.metric, threshold, window: { minutes: 10 } },
+        condition: { kind: "metric.escalating", metric: t.metric, threshold, direction, window: { minutes: 10 } },
         now,
       }).pipe(
         Effect.provide(createFakeMetricSeriesReader(events).layer),
@@ -112,5 +176,13 @@ describe("evaluateMetricEscalatingAlert (metric.escalating)", () => {
       value: 3,
     })
     expect(evalResult.perBucketThreshold).toBe(3)
+  })
+
+  it("computes a below-expected per-bucket threshold", async () => {
+    const historical = Array.from({ length: 4 }, (_unused, index) =>
+      Array.from({ length: 100 }, () => weeksAgoMinutesAgo(index + 1, 1)),
+    ).flat()
+    const evalResult = await run(historical, target({ kind: "count" }), { mode: "expected", sensitivity: 3 }, "below")
+    expect(evalResult.perBucketThreshold).toBeGreaterThan(0)
   })
 })
