@@ -72,8 +72,12 @@ export const updateMonitorAlertUseCase = (
         const sourceIdChanged = input.source !== undefined && input.source.id !== (alert.source?.id ?? null)
 
         // Legacy kinds require their fixed source type; unified kinds carry no source (target on the monitor).
-        const expectedSourceType = ALERT_INCIDENT_KIND_SOURCE_TYPE[nextKind] ?? null
-        if ((nextSource?.type ?? null) !== expectedSourceType) {
+        const expectedSourceType = ALERT_INCIDENT_KIND_SOURCE_TYPE[nextKind]
+        if (expectedSourceType === undefined) {
+          if (nextSource !== null) {
+            return yield* new ValidationError({ field: "source", message: `Alerts of kind "${nextKind}" take no source` })
+          }
+        } else if ((nextSource?.type ?? null) !== expectedSourceType) {
           return yield* new ValidationError({
             field: "source",
             message: `Source type must be "${expectedSourceType}" for ${nextKind}`,
@@ -95,7 +99,6 @@ export const updateMonitorAlertUseCase = (
             return yield* new SystemMonitorForbiddenError({ monitorId: input.monitorId, operation: "restructured" })
           }
         } else if (kindChanged && !USER_CREATABLE.has(nextKind)) {
-          // Only saved-search kinds are user-owned; `issue.*` are system-only.
           return yield* new ValidationError({ field: "kind", message: `Alerts of kind "${nextKind}" cannot be set` })
         }
 
