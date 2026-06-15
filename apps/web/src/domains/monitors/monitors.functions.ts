@@ -57,12 +57,12 @@ interface SavedSearchRef {
 }
 
 const toMonitorAlertRecord = (alert: MonitorAlert, savedSearchRefs: ReadonlyMap<string, SavedSearchRef>) => {
-  const ref = alert.source.id ? savedSearchRefs.get(alert.source.id) : undefined
+  const ref = alert.source?.id ? savedSearchRefs.get(alert.source.id) : undefined
   return {
     id: alert.id,
     monitorId: alert.monitorId,
     kind: alert.kind,
-    source: { type: alert.source.type, id: alert.source.id },
+    source: alert.source ? { type: alert.source.type, id: alert.source.id } : null,
     condition: alert.condition,
     severity: alert.severity,
     // Rendered server-side so the panel/list don't pull `@domain/monitors` into
@@ -106,7 +106,7 @@ const resolveSavedSearchRefs = async (
   monitors: readonly Monitor[],
 ): Promise<ReadonlyMap<string, SavedSearchRef>> => {
   const referencesSavedSearch = monitors.some((monitor) =>
-    monitor.alerts.some((alert) => alert.source.type === "savedSearch" && alert.source.id !== null),
+    monitor.alerts.some((alert) => alert.source?.type === "savedSearch" && alert.source.id !== null),
   )
   if (!referencesSavedSearch) return new Map()
   const page = await Effect.runPromise(

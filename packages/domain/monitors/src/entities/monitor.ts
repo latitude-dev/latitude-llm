@@ -32,18 +32,22 @@ export type MonitorTarget = z.infer<typeof monitorTargetSchema>
 
 /**
  * A `(kind, source, condition, severity)` firing rule owned by a monitor.
- * `source.id = null` means "all entities of `source.type`". `condition` is
- * `null` for kinds with no parameters (`issue.new`, `issue.regressed`,
- * `savedSearch.match`); otherwise the kind-specific `AlertIncidentCondition`.
+ * `source.id = null` means "all entities of `source.type`". `source` itself is
+ * `null` for UNIFIED kinds (`event.*`/`metric.*`) — they watch the monitor's
+ * `target`, not a `(sourceType, sourceId)`. `condition` is `null` for kinds with
+ * no parameters (`issue.new`, `issue.regressed`, `savedSearch.match`,
+ * `event.matched`); otherwise the kind-specific `AlertIncidentCondition`.
  */
 export const monitorAlertSchema = z.object({
   id: monitorAlertIdSchema,
   monitorId: monitorIdSchema,
   kind: alertIncidentKindSchema,
-  source: z.object({
-    type: alertIncidentSourceTypeSchema,
-    id: cuidSchema.nullable(),
-  }),
+  source: z
+    .object({
+      type: alertIncidentSourceTypeSchema,
+      id: cuidSchema.nullable(),
+    })
+    .nullable(),
   condition: alertIncidentConditionSchema.nullable(),
   severity: alertSeveritySchema,
   createdAt: z.date(),

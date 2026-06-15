@@ -10,7 +10,8 @@ export const monitorAlerts = latitudeSchema.table(
     organizationId: cuid("organization_id").notNull(),
     monitorId: cuid("monitor_id", { default: false }).notNull(),
     kind: varchar("kind", { length: 64 }).$type<AlertIncidentKind>().notNull(),
-    sourceType: varchar("source_type", { length: 32 }).$type<AlertIncidentSourceType>().notNull(),
+    // Null for unified `event.*`/`metric.*` alerts — they watch the monitor's `target`, not a source.
+    sourceType: varchar("source_type", { length: 32 }).$type<AlertIncidentSourceType>(),
     sourceId: varchar("source_id", { length: 24 }), // null = "all of source_type"
     condition: jsonb("condition").$type<AlertIncidentCondition>(), // null for kinds with no params
     severity: varchar("severity", { length: 16 }).$type<AlertSeverity>().notNull(),

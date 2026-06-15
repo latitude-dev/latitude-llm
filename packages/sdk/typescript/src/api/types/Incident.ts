@@ -43,6 +43,9 @@ export namespace Incident {
         SavedSearchMatch: "savedSearch.match",
         SavedSearchThreshold: "savedSearch.threshold",
         SavedSearchEscalating: "savedSearch.escalating",
+        EventMatched: "event.matched",
+        MetricThreshold: "metric.threshold",
+        MetricEscalating: "metric.escalating",
     } as const;
     export type Kind = (typeof Kind)[keyof typeof Kind];
     /** Severity bucket assigned to the incident: `low`, `medium`, or `high`. */

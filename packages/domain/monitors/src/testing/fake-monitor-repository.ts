@@ -155,7 +155,7 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
           ...monitor,
           alerts: monitor.alerts.map((alert) =>
             alert.id === alertId
-              ? { ...alert, kind, source: { ...alert.source, id: sourceId }, condition, severity }
+              ? { ...alert, kind, source: alert.source ? { ...alert.source, id: sourceId } : null, condition, severity }
               : alert,
           ),
         })
@@ -169,6 +169,7 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
           .filter(
             (alert) =>
               alert.kind === kind &&
+              alert.source != null &&
               alert.source.type === sourceType &&
               (alert.source.id === null || alert.source.id === sourceId),
           ),
@@ -180,7 +181,7 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
         monitors
           .filter((m) => m.projectId === projectId && isLive(m))
           .flatMap((m) => m.alerts)
-          .filter((alert) => alert.source.type === "savedSearch"),
+          .filter((alert) => alert.source?.type === "savedSearch"),
       ),
     listSavedSearchMonitorSummaries: (projectId) =>
       Effect.sync(() => {
@@ -188,14 +189,15 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
         for (const monitor of monitors) {
           if (monitor.projectId !== projectId || !isLive(monitor)) continue
           for (const alert of monitor.alerts) {
-            if (alert.source.type !== "savedSearch" || !alert.source.id) continue
-            const entry = summaries.get(alert.source.id) ?? {
+            const savedSearchId = alert.source?.type === "savedSearch" ? alert.source.id : null
+            if (!savedSearchId) continue
+            const entry = summaries.get(savedSearchId) ?? {
               byMonitor: new Map<string, Monitor>(),
               severities: [],
             }
             entry.byMonitor.set(monitor.id, monitor)
             entry.severities.push(alert.severity)
-            summaries.set(alert.source.id, entry)
+            summaries.set(savedSearchId, entry)
           }
         }
         return [...summaries.entries()].flatMap(([savedSearchId, entry]) => {
@@ -216,7 +218,7 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
                 name: m.name,
                 muted: m.mutedAt !== null,
                 severities: m.alerts
-                  .filter((alert) => alert.source.type === "savedSearch" && alert.source.id === savedSearchId)
+                  .filter((alert) => alert.source?.type === "savedSearch" && alert.source.id === savedSearchId)
                   .map((alert) => alert.severity),
               })),
             },
@@ -228,7 +230,7 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
         const seen = new Map<string, { organizationId: Monitor["organizationId"]; projectId: Monitor["projectId"] }>()
         for (const monitor of monitors) {
           if (!isLive(monitor)) continue
-          if (!monitor.alerts.some((alert) => alert.source.type === "savedSearch")) continue
+          if (!monitor.alerts.some((alert) => alert.source?.type === "savedSearch")) continue
           seen.set(`${monitor.organizationId}:${monitor.projectId}`, {
             organizationId: monitor.organizationId,
             projectId: monitor.projectId,
@@ -244,7 +246,7 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
         for (const monitor of monitors) {
           if (!isLive(monitor)) continue
           const remaining = monitor.alerts.filter(
-            (alert) => !(alert.source.type === sourceType && alert.source.id === sourceId),
+            (alert) => !(alert.source?.type === sourceType && alert.source.id === sourceId),
           )
           if (remaining.length === monitor.alerts.length) continue
           deletedAlertCount += monitor.alerts.length - remaining.length

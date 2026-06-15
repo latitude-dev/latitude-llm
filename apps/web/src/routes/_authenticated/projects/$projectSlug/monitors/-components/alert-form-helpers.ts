@@ -167,7 +167,7 @@ const thresholdToDraftFields = (
 export const recordToAlertDraft = (alert: MonitorAlertRecord): AlertDraft => {
   const base = emptyAlertDraft({
     kind: alert.kind as UserAlertKind,
-    sourceId: alert.source.id,
+    sourceId: alert.source?.id ?? null,
     severity: alert.severity,
   })
   const condition = alert.condition

@@ -978,6 +978,34 @@ describe("MonitorRepositoryLive", () => {
       )
       expect(result.target).toBeNull()
     })
+
+    it("round-trips a unified-kind alert with a null source (target on the monitor)", async () => {
+      const base = buildUserMonitor("unified-alert", 1)
+      const monitor: Monitor = {
+        ...base,
+        target: { stream: "spans", filterSet: {}, query: null, savedSearchId: null, metric: { kind: "count" } },
+        alerts: base.alerts.map((a) => ({
+          ...a,
+          kind: "metric.threshold" as const,
+          source: null,
+          condition: {
+            kind: "metric.threshold" as const,
+            metric: { kind: "count" as const },
+            threshold: { mode: "absolute" as const, value: 5 },
+          },
+        })),
+      }
+      await exec((r) => r.create(monitor))
+
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* MonitorRepository
+          return yield* repository.findBySlug({ projectId, slug: "unified-alert" })
+        }).pipe(provideRls(database, organizationId)),
+      )
+      expect(result.alerts[0]?.source).toBeNull()
+      expect(result.alerts[0]?.kind).toBe("metric.threshold")
+    })
   })
 
   describe("listActiveAlertsForSourceEvent", () => {

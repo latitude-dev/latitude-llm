@@ -26,7 +26,7 @@ export const runSavedSearchMatchAlertUseCase = (input: EvaluateSavedSearchAlertI
     if (alert.kind !== "savedSearch.match") {
       return yield* Effect.die(`runSavedSearchMatchAlert: not a savedSearch.match alert (${alert.id})`)
     }
-    const sourceId = alert.source.id
+    const sourceId = alert.source?.id ?? null
     if (sourceId === null) return yield* Effect.die(`runSavedSearchMatchAlert: alert ${alert.id} has no source id`)
 
     const sqlClient = yield* SqlClient

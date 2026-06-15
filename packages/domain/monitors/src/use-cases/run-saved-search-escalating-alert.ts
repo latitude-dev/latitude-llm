@@ -41,7 +41,7 @@ export const runSavedSearchEscalatingAlertUseCase = (input: EvaluateSavedSearchA
     if (alert.kind !== "savedSearch.escalating" || condition?.kind !== "savedSearch.escalating") {
       return yield* Effect.die(`runSavedSearchEscalatingAlert: not a savedSearch.escalating alert (${alert.id})`)
     }
-    const sourceId = alert.source.id
+    const sourceId = alert.source?.id ?? null
     if (sourceId === null) return yield* Effect.die(`runSavedSearchEscalatingAlert: alert ${alert.id} has no source id`)
 
     const sqlClient = yield* SqlClient
