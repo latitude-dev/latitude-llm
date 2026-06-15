@@ -40,6 +40,20 @@ const TAU2_TOOL_DESCRIPTIONS: Record<string, string> = {
   insert_sim_card: "Ask the user to insert the SIM card",
   get_sim_card_status: "Inspect SIM card state",
   run_speed_test: "Run a mobile data speed test",
+  apply_discount_code: "Apply a promotional discount code to an order",
+  escalate_to_supervisor: "Escalate the case to a support supervisor",
+  schedule_technician_visit: "Schedule an on-site technician visit",
+  send_goodwill_credit: "Apply a goodwill credit to the customer's bill",
+  request_special_assistance: "Request wheelchair or special assistance for a passenger",
+  add_travel_insurance: "Add travel insurance to a reservation",
+}
+
+// Advertised on every tau2 chat span for the domain but never called by any
+// trajectory — seeds "defined but never used" tools for the tools analytics UI.
+const TAU2_UNUSED_TOOLS_BY_DOMAIN: Record<string, readonly string[]> = {
+  retail: ["apply_discount_code", "escalate_to_supervisor"],
+  telecom: ["schedule_technician_visit", "send_goodwill_credit"],
+  airline: ["request_special_assistance", "add_travel_insurance"],
 }
 
 function tau2MessageToStoredMessage(message: Tau2SeedTrajectoryMessage): Tau2Message {
@@ -422,11 +436,12 @@ function buildTau2TrajectorySpans(scope: SeedScope): SpanRow[] {
       expectedActions: trajectory.expectedActions.join(","),
     }
     const toolDefinitions = Array.from(
-      new Set(
-        messages.flatMap((message) =>
+      new Set([
+        ...messages.flatMap((message) =>
           message.role === "assistant" ? (message.toolCalls ?? []).map((call) => call.name) : [],
         ),
-      ),
+        ...(TAU2_UNUSED_TOOLS_BY_DOMAIN[trajectory.domain] ?? []),
+      ]),
     )
 
     const start = scope.dateDaysAgo(
