@@ -14,3 +14,9 @@ export const DESTINATION_IDLE_BACKOFF_MAX_MS = 3_600_000
 
 export const POSTHOG_US_INGESTION_HOST = "https://us.i.posthog.com"
 export const POSTHOG_EU_INGESTION_HOST = "https://eu.i.posthog.com"
+
+/** NEVER CHANGE THIS VALUE. UUIDv5 namespace for destination event identities — UUIDv5(RFC 4122 DNS namespace, "destinations.latitude.so"). Event UUIDs are the dedup identity at destinations: changing it re-identifies every already-delivered event, so retries and window re-runs would duplicate data in customers' systems. */
+export const DESTINATION_EVENT_UUID_NAMESPACE = "c7696d7f-b92d-518a-9525-9c635f6367ce"
+
+/** Default per-event ingestion size guard (1 MiB); the deliverer adapter owns the live vendor cap and passes it to the mapper. */
+export const DESTINATION_MAX_EVENT_BYTES_DEFAULT = 1_048_576

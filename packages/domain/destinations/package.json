@@ -18,6 +18,7 @@
   "dependencies": {
     "@domain/organizations": "workspace:*",
     "@domain/shared": "workspace:*",
+    "@domain/spans": "workspace:*",
     "effect": "catalog:",
     "zod": "catalog:"
   },
