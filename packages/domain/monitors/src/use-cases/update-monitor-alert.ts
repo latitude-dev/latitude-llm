@@ -75,7 +75,10 @@ export const updateMonitorAlertUseCase = (
         const expectedSourceType = ALERT_INCIDENT_KIND_SOURCE_TYPE[nextKind]
         if (expectedSourceType === undefined) {
           if (nextSource !== null) {
-            return yield* new ValidationError({ field: "source", message: `Alerts of kind "${nextKind}" take no source` })
+            return yield* new ValidationError({
+              field: "source",
+              message: `Alerts of kind "${nextKind}" take no source`,
+            })
           }
         } else if ((nextSource?.type ?? null) !== expectedSourceType) {
           return yield* new ValidationError({

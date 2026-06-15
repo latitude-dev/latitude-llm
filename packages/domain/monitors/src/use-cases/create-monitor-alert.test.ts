@@ -80,7 +80,11 @@ describe("buildMonitorAlert", () => {
       buildMonitorAlert(
         {
           kind: "metric.threshold",
-          condition: { kind: "metric.threshold", metric: { kind: "errorRate" }, threshold: { mode: "absolute", value: 0.1 } },
+          condition: {
+            kind: "metric.threshold",
+            metric: { kind: "errorRate" },
+            threshold: { mode: "absolute", value: 0.1 },
+          },
         },
         monitorId,
         at,
