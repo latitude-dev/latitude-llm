@@ -84,6 +84,9 @@ const t11 = new Date("2026-06-01T11:00:00.000Z")
 const t12 = new Date("2026-06-01T12:00:00.000Z")
 const t13 = new Date("2026-06-01T13:00:00.000Z")
 const t14 = new Date("2026-06-01T14:00:00.000Z")
+const t15 = new Date("2026-06-01T15:00:00.000Z")
+const t16 = new Date("2026-06-01T16:00:00.000Z")
+const t17 = new Date("2026-06-01T17:00:00.000Z")
 
 /** A `traces` + `count` target — the saved-search/match shape this reader supersedes. */
 const countTarget = (filterSet: FilterSet = {}, query: string | null = null): MetricSeriesTarget => ({
@@ -101,10 +104,31 @@ const metricTarget = (metric: MetricSeriesTarget["metric"]): MetricSeriesTarget 
   metric,
 })
 
+/** A `spans` target carrying a metric + row-local filter (the tool-monitor shape). */
+const spanTarget = (metric: MetricSeriesTarget["metric"], filterSet: FilterSet): MetricSeriesTarget => ({
+  stream: "spans",
+  filterSet,
+  query: null,
+  metric,
+})
+
 // span() defaults to status_code 0 / 1s; override duration via its arg and status inline.
 const errorSpan = (n: number, startTime: Date, durationMs: number): SpanRow => ({
   ...span(n, startTime, [TAG], durationMs),
   status_code: 2,
+})
+
+// An `execute_tool` span for one named tool (the spans-stream fixture shape).
+const toolSpan = (
+  n: number,
+  startTime: Date,
+  toolName: string,
+  opts: { durationMs?: number; statusCode?: number } = {},
+): SpanRow => ({
+  ...span(n, startTime, [TAG], opts.durationMs ?? 1_000),
+  operation: "execute_tool",
+  tool_name: toolName,
+  status_code: opts.statusCode ?? 0,
 })
 
 const ch = setupTestClickHouse()
@@ -306,5 +330,105 @@ describe("MetricSeriesReaderLive (traces / count)", () => {
     expect(
       await runCh(reader.valueInWindow({ ...empty, target: metricTarget({ kind: "p95", field: "duration" }) })),
     ).toBe(0)
+  })
+
+  // ── spans stream (per tool-call) ────────────────────────────────────────────
+  const EXECUTE_TOOL = { operation: [{ op: "eq" as const, value: "execute_tool" }] }
+
+  it("counts execute_tool spans, scoped by tool name", async () => {
+    // [15:00, 16:00): three `search` calls + one `fetch` call.
+    await Effect.runPromise(
+      insertJsonEachRow(ch.client, "spans", [
+        toolSpan(61, t15, "search", { durationMs: 2_000 }),
+        toolSpan(62, t15, "search", { durationMs: 4_000 }),
+        toolSpan(63, t15, "search", { durationMs: 6_000, statusCode: 2 }),
+        toolSpan(64, t15, "fetch", { durationMs: 1_000 }),
+      ]),
+    )
+    const window = { organizationId: ORG_ID, projectId: PROJECT_ID, from: t15, to: t16 }
+
+    const allTools = await runCh(
+      reader.valueInWindow({ ...window, target: spanTarget({ kind: "count" }, EXECUTE_TOOL) }),
+    )
+    expect(allTools).toBe(4)
+
+    const searchOnly = await runCh(
+      reader.valueInWindow({
+        ...window,
+        target: spanTarget({ kind: "count" }, { ...EXECUTE_TOOL, toolName: [{ op: "eq", value: "search" }] }),
+      }),
+    )
+    expect(searchOnly).toBe(3)
+  })
+
+  it("computes errorRate / avg / sum per tool call", async () => {
+    await Effect.runPromise(
+      insertJsonEachRow(ch.client, "spans", [
+        toolSpan(61, t15, "search", { durationMs: 2_000 }),
+        toolSpan(62, t15, "search", { durationMs: 4_000 }),
+        toolSpan(63, t15, "search", { durationMs: 6_000, statusCode: 2 }),
+      ]),
+    )
+    const window = { organizationId: ORG_ID, projectId: PROJECT_ID, from: t15, to: t16 }
+    const filter = { ...EXECUTE_TOOL, toolName: [{ op: "eq" as const, value: "search" }] }
+
+    expect(
+      await runCh(reader.valueInWindow({ ...window, target: spanTarget({ kind: "errorRate" }, filter) })),
+    ).toBeCloseTo(1 / 3)
+    expect(
+      await runCh(reader.valueInWindow({ ...window, target: spanTarget({ kind: "avg", field: "duration" }, filter) })),
+    ).toBe(4_000_000_000)
+    expect(
+      await runCh(reader.valueInWindow({ ...window, target: spanTarget({ kind: "sum", field: "duration" }, filter) })),
+    ).toBe(12_000_000_000)
+  })
+
+  it("computes p95 per tool call (uniform ⇒ exact)", async () => {
+    await Effect.runPromise(
+      insertJsonEachRow(ch.client, "spans", [
+        toolSpan(71, t16, "search", { durationMs: 3_000 }),
+        toolSpan(72, t16, "search", { durationMs: 3_000 }),
+        toolSpan(73, t16, "search", { durationMs: 3_000 }),
+      ]),
+    )
+    const p95 = await runCh(
+      reader.valueInWindow({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        from: t16,
+        to: t17,
+        target: spanTarget(
+          { kind: "p95", field: "duration" },
+          {
+            ...EXECUTE_TOOL,
+            toolName: [{ op: "eq", value: "search" }],
+          },
+        ),
+      }),
+    )
+    expect(p95).toBe(3_000_000_000)
+  })
+
+  it("buckets tool calls newest-first over the spans stream", async () => {
+    await Effect.runPromise(
+      insertJsonEachRow(ch.client, "spans", [
+        toolSpan(61, new Date(t15.getTime() + 15 * 60 * 1000), "search"),
+        toolSpan(62, new Date(t15.getTime() + 45 * 60 * 1000), "search"),
+      ]),
+    )
+    // [15:00, 16:00) into 2×30-min buckets aligned to 16:00 (newest-first):
+    //   idx 0 = (15:30, 16:00) → the 15:45 call → 1
+    //   idx 1 = (15:00, 15:30] → the 15:15 call → 1
+    const counts = await runCh(
+      reader.seriesPerBucket({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        from: t15,
+        to: t16,
+        bucketMs: 30 * 60 * 1000,
+        target: spanTarget({ kind: "count" }, { ...EXECUTE_TOOL, toolName: [{ op: "eq", value: "search" }] }),
+      }),
+    )
+    expect(counts).toEqual([1, 1])
   })
 })
