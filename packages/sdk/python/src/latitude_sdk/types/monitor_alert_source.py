@@ -9,7 +9,7 @@ from .monitor_alert_source_type import MonitorAlertSourceType
 
 class MonitorAlertSource(UniversalBaseModel):
     """
-    The entity this alert watches.
+    The entity this alert watches, or `null` for unified alerts whose target lives on the monitor.
     """
 
     type: MonitorAlertSourceType = pydantic.Field()
