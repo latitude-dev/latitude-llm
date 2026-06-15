@@ -1,6 +1,7 @@
-import { Badge, Button, CopyButton, Input, Modal, Switch, TabSelector, Text, Textarea, useToast } from "@repo/ui"
+import { Badge, Button, CopyButton, Icon, Input, Modal, Switch, TabSelector, Text, Textarea, useToast } from "@repo/ui"
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute } from "@tanstack/react-router"
+import { ShieldCheck } from "lucide-react"
 import { useState } from "react"
 import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { useMembersCollection } from "../../../../../domains/members/members.collection.ts"
@@ -24,6 +25,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/sett
 
 const PAGE_TITLE = "Single sign-on"
 const PAGE_DESCRIPTION = "Let your team sign in to Latitude through your identity provider (SAML or OIDC)."
+const ENTERPRISE_SSO_SALES_URL = "mailto:hello@latitude.so?subject=Latitude%20Enterprise%20SSO"
 
 function SsoSettingsPage() {
   const ssoEnabled = useHasFeatureFlag("sso")
@@ -31,11 +33,7 @@ function SsoSettingsPage() {
   if (!ssoEnabled) {
     return (
       <SettingsPage title={PAGE_TITLE} description={PAGE_DESCRIPTION}>
-        <div className="rounded-lg border border-border bg-muted/30 p-6">
-          <Text.H5 color="foregroundMuted">
-            Enterprise SSO isn't enabled for your organization yet. Reach out to support to turn it on.
-          </Text.H5>
-        </div>
+        <SsoUpsellCard />
       </SettingsPage>
     )
   }
@@ -46,6 +44,28 @@ function SsoSettingsPage() {
         <SsoProviderSection />
       </div>
     </SettingsPage>
+  )
+}
+
+function SsoUpsellCard() {
+  return (
+    <div className="flex w-full flex-col gap-6 @[800px]:w-2/3">
+      <div className="flex flex-row flex-wrap items-center justify-between gap-4 rounded-lg border border-primary/20 bg-primary/5 p-6">
+        <div className="flex min-w-0 flex-row items-start gap-4">
+          <Icon icon={ShieldCheck} size="md" color="primary" className="shrink-0 pt-0.5" />
+          <div className="flex min-w-0 flex-col gap-1">
+            <Text.H4 weight="bold">SAML Single Sign-On</Text.H4>
+            <Text.H5 color="primary">
+              Upgrade to the Enterprise plan to let users from your trusted domains sign in with your organization's
+              Identity Provider.
+            </Text.H5>
+          </div>
+        </div>
+        <Button asChild>
+          <a href={ENTERPRISE_SSO_SALES_URL}>Talk to sales</a>
+        </Button>
+      </div>
+    </div>
   )
 }
 

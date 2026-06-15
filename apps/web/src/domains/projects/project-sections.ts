@@ -21,7 +21,7 @@ import {
 import { useMemo } from "react"
 import { useHasFeatureFlag } from "../feature-flags/feature-flags.collection.ts"
 
-type SectionFlag = "behaviours" | "monitors" | "sso" | "tools"
+type SectionFlag = "behaviours" | "monitors" | "tools"
 
 interface ProjectSection {
   readonly key: string
@@ -174,7 +174,6 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
         label: "Single sign-on",
         icon: Fingerprint,
         path: (slug) => `/projects/${slug}/settings/sso`,
-        flag: "sso",
       },
     ],
   },
@@ -195,9 +194,8 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
 function useSectionFlags(): Record<SectionFlag, boolean> {
   const behaviours = useHasFeatureFlag("behaviours")
   const monitors = useHasFeatureFlag("monitors")
-  const sso = useHasFeatureFlag("sso")
   const tools = useHasFeatureFlag("tools")
-  return useMemo(() => ({ behaviours, monitors, sso, tools }), [behaviours, monitors, sso, tools])
+  return useMemo(() => ({ behaviours, monitors, tools }), [behaviours, monitors, tools])
 }
 
 /** Project sections visible to the current org, in sidebar/palette order. */
