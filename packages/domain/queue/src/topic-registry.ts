@@ -562,6 +562,18 @@ const _registry = {
   sandboxes: payloads<{
     archiveIdle: Record<string, never>
   }>(),
+
+  destinations: payloads<{
+    /**
+     * Cascade cleanup. Fired by the domain-events worker on `ProjectDeleted`.
+     * The consumer deletes the project's destinations and their sync runs so
+     * the sweep stops exporting the deleted project's residual ClickHouse data.
+     */
+    "delete-by-project": {
+      readonly organizationId: string
+      readonly projectId: string
+    }
+  }>(),
 }
 
 export type TopicRegistry = typeof _registry
