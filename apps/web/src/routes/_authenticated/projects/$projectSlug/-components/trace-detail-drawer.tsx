@@ -35,6 +35,7 @@ import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { isGlobalAnnotation } from "./annotations/hooks/use-annotation-navigation.ts"
 import { useConversationAnnotationFocus } from "./annotations/hooks/use-conversation-annotation-focus.ts"
 import { TraceAnnotationsList } from "./annotations/trace-annotations-list.tsx"
+import { useTraceTimeline } from "./conversation-timeline/use-trace-timeline.ts"
 import { ConversationTab } from "./trace-detail-drawer/tabs/conversation-tab.tsx"
 import { useSpanFilters } from "./trace-detail-drawer/tabs/spans-tab/use-span-filters.ts"
 import { SpansTab } from "./trace-detail-drawer/tabs/spans-tab.tsx"
@@ -290,6 +291,15 @@ export function TraceDetailBody({
     [onActiveTabChange],
   )
 
+  const timeline = useTraceTimeline({
+    projectId,
+    traceId,
+    traceRecord,
+    traceDetail,
+    spans,
+    annotationsEnabled,
+  })
+
   const { scrollContainerRef, textSelectionPopoverControlsRef, scrollToAnnotation } = useConversationAnnotationFocus({
     projectId,
     traceId,
@@ -417,6 +427,7 @@ export function TraceDetailBody({
             annotationsEnabled={annotationsEnabled}
             scrollContainerRef={scrollContainerRef}
             textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
+            timeline={timeline}
             {...(searchQuery ? { searchQuery } : {})}
           />
         )}

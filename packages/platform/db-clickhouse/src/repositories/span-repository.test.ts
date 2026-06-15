@@ -1,4 +1,4 @@
-import { type ChSqlClient, OrganizationId, ProjectId, SpanId, TraceId } from "@domain/shared"
+import { type ChSqlClient, OrganizationId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
 import { SpanRepository, type SpanRepositoryShape } from "@domain/spans"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
@@ -286,6 +286,108 @@ describe("SpanRepository", () => {
       )
       expect(exhausted.spans).toHaveLength(0)
       expect(exhausted.nextCursor).toBeNull()
+    })
+  })
+
+  describe("findMessagesForSession", () => {
+    const SESSION_ID = SessionId("session-replay")
+    const TRACE_A = TraceId("cccccccccccccccccccccccccccccccc")
+    const TRACE_B = TraceId("dddddddddddddddddddddddddddddddd")
+    const ORPHAN_TRACE = TraceId("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
+
+    const insertSessionFixture = () =>
+      runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            session_id: SESSION_ID,
+            trace_id: TRACE_A,
+            span_id: "aaaa111111111111",
+            operation: "chat",
+            output_messages: '[{"role":"assistant","parts":[{"type":"text","content":"older"}]}]',
+            start_time: "2026-03-01 00:00:00.000000000",
+            end_time: "2026-03-01 00:00:01.000000000",
+            ingested_at: "2026-03-01 00:00:00.000",
+          }),
+          makeSpanRow({
+            session_id: SESSION_ID,
+            trace_id: TRACE_A,
+            span_id: "aaaa111111111111",
+            operation: "chat",
+            output_messages: '[{"role":"assistant","parts":[{"type":"text","content":"newer"}]}]',
+            start_time: "2026-03-01 00:00:00.000000000",
+            end_time: "2026-03-01 00:00:01.000000000",
+            ingested_at: "2026-03-01 00:00:01.000",
+          }),
+          makeSpanRow({
+            session_id: SESSION_ID,
+            trace_id: TRACE_A,
+            span_id: "aaaa222222222222",
+            operation: "",
+            start_time: "2026-03-01 00:00:01.000000000",
+            end_time: "2026-03-01 00:00:02.000000000",
+            ingested_at: "2026-03-01 00:00:01.000",
+          }),
+          makeSpanRow({
+            session_id: SESSION_ID,
+            trace_id: TRACE_B,
+            span_id: "bbbb111111111111",
+            operation: "execute_tool",
+            tool_call_id: "call_1",
+            start_time: "2026-03-01 00:01:00.000000000",
+            end_time: "2026-03-01 00:01:01.000000000",
+            ingested_at: "2026-03-01 00:01:00.000",
+          }),
+          makeSpanRow({
+            session_id: "session-other",
+            trace_id: TraceId("ffffffffffffffffffffffffffffffff"),
+            span_id: "ffff111111111111",
+            operation: "chat",
+            start_time: "2026-03-01 00:02:00.000000000",
+            end_time: "2026-03-01 00:02:01.000000000",
+            ingested_at: "2026-03-01 00:02:00.000",
+          }),
+          makeSpanRow({
+            session_id: "",
+            trace_id: ORPHAN_TRACE,
+            span_id: "ee11111111111111",
+            operation: "chat",
+            start_time: "2026-03-01 00:03:00.000000000",
+            end_time: "2026-03-01 00:03:01.000000000",
+            ingested_at: "2026-03-01 00:03:00.000",
+          }),
+        ]),
+      )
+
+    it("returns deduped LLM/tool spans across all traces in the session, ordered by start time", async () => {
+      await insertSessionFixture()
+      const spans = await runCh(
+        repo.findMessagesForSession({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          sessionId: SESSION_ID,
+          startTimeFrom: new Date("2026-03-01T00:00:00.000Z"),
+          startTimeTo: new Date("2026-03-01T00:10:00.000Z"),
+        }),
+      )
+
+      expect(spans.map((span) => span.spanId)).toEqual(["aaaa111111111111", "bbbb111111111111"])
+      expect(spans[0]?.outputMessages[0]?.parts?.[0]).toMatchObject({ content: "newer" })
+      expect(spans[1]?.toolCallId).toBe("call_1")
+    })
+
+    it("matches orphan single-trace sessions keyed by trace id", async () => {
+      await insertSessionFixture()
+      const spans = await runCh(
+        repo.findMessagesForSession({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          sessionId: SessionId(ORPHAN_TRACE as string),
+          startTimeFrom: new Date("2026-03-01T00:00:00.000Z"),
+          startTimeTo: new Date("2026-03-01T00:10:00.000Z"),
+        }),
+      )
+
+      expect(spans.map((span) => span.spanId)).toEqual(["ee11111111111111"])
     })
   })
 

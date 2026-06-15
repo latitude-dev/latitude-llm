@@ -118,6 +118,7 @@ export function Conversation({
   nextLabel,
   messageActions,
   toolCallActions,
+  failedToolCallIds,
   onTextSelect,
   onSelectionDismiss,
   clearSelectionRef,
@@ -147,6 +148,8 @@ export function Conversation({
   readonly messageActions?: ReadonlyMap<number, () => void>
   /** Map of toolCallId → action, renders a navigate button inside each ToolCallBlock. */
   readonly toolCallActions?: ToolCallActions
+  /** Tool calls whose execution span errored — renders them as failed even if the part claims success. */
+  readonly failedToolCallIds?: ReadonlySet<string> | undefined
   /** Called when the user selects text within a message part. Emits the canonical anchor and popover position. */
   readonly onTextSelect?:
     | ((anchor: TextSelectionAnchor, position: { x: number; y: number }, passed: boolean | null) => void)
@@ -312,6 +315,7 @@ export function Conversation({
                     toolResults={message.role === "assistant" ? resultMap : undefined}
                     {...(onNavigate ? { onNavigate } : {})}
                     {...(toolCallActions ? { toolCallActions } : {})}
+                    {...(failedToolCallIds ? { failedToolCallIds } : {})}
                   />
                   {annotationSlot && <div className="mt-3">{annotationSlot}</div>}
                 </div>

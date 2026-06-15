@@ -125,7 +125,7 @@ The analyzer is a retried Temporal activity, so every write is either idempotent
 
 ## Read paths
 
-- **Session drawer** (`listSessionMomentIntelligenceUseCase`): moments + labels + observations for one session, defaulting to the latest analysis generation; the conversation tab anchors moment pills to message ranges.
+- **Session drawer** (`listSessionMomentIntelligenceUseCase`): moments + labels + observations for one session, defaulting to the latest analysis generation; the conversation tab anchors moment pills to message ranges, and the conversation timeline places the same labels as event markers (see [`./conversation-timeline.md`](./conversation-timeline.md)).
 - **Sessions table filters** (`session-repository.ts`): `moments` (any-of label kinds) and `topics` (any-of subtree cluster ids) compile to `session_id IN (subquery)` with the argMax pin. When the view has a time window, its **lower bound** propagates into the subqueries for partition pruning — the always-safe direction, since analyses index after sessions start; an upper bound is not safe.
 - **Cluster intelligence rollups** (`taxonomy-cluster-intelligence-repository.ts`): per-cluster signal distributions and rates over source sessions, observation side pinned to current generations.
 

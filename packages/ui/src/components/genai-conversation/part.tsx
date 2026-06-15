@@ -62,12 +62,14 @@ function SearchHitDecoration({ hasHit, children }: { readonly hasHit: boolean; r
 export function Part({
   part,
   toolResult,
+  toolCallFailed = false,
   onNavigateToSpan,
   messageIndex,
   partIndex,
 }: {
   readonly part: GenAIPart
   readonly toolResult?: ToolCallResult | undefined
+  readonly toolCallFailed?: boolean
   readonly onNavigateToSpan?: () => void
   readonly messageIndex?: number | undefined
   readonly partIndex?: number | undefined
@@ -172,6 +174,7 @@ export function Part({
             key={isFirstMatchPart ? "first-match" : "default"}
             call={p}
             defaultOpen={isFirstMatchPart}
+            failed={toolCallFailed}
             {...(toolResult ? { result: toolResult } : {})}
             {...(onNavigateToSpan ? { onNavigateToSpan } : {})}
           />

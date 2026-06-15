@@ -12,12 +12,21 @@ import {
 } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { DownloadIcon } from "lucide-react"
-import { type ReactNode, type RefObject, useCallback, useMemo, useRef } from "react"
+import { type ReactNode, type RefObject, useCallback, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
 import { useAuthSession } from "../../../../../../../domains/sessions/session.collection.ts"
 import { useConversationSpanMaps } from "../../../../../../../domains/spans/spans.collection.ts"
 import { useTraceSearchHighlights } from "../../../../../../../domains/traces/traces.collection.ts"
 import type { TraceDetailRecord } from "../../../../../../../domains/traces/traces.functions.ts"
+import type {
+  ConversationTimeline,
+  TimelineMarker,
+} from "../../../../../../../lib/conversation-timeline/build-conversation-timeline.ts"
+import {
+  messageIndexAtTime,
+  visibleRangeToBand,
+} from "../../../../../../../lib/conversation-timeline/message-windows.ts"
+import { wallToTimeline } from "../../../../../../../lib/conversation-timeline/timeline-scale.ts"
 import { AnnotationPopover } from "../../annotations/annotation-popover.tsx"
 import {
   type TextSelectionPopoverControls,
@@ -25,6 +34,9 @@ import {
 } from "../../annotations/hooks/use-annotation-popover.ts"
 import { useTraceAnnotationsData } from "../../annotations/hooks/use-trace-annotations-data.ts"
 import { MessageAnnotationTrigger } from "../../annotations/message-annotation-trigger.tsx"
+import { findNearestMessageAnchor, flashElement } from "../../conversation-timeline/flash-highlight.ts"
+import { TimelineBar } from "../../conversation-timeline/timeline-bar.tsx"
+import { useViewportBand } from "../../conversation-timeline/use-viewport-band.ts"
 import { useScrollToFirstHighlight } from "./use-scroll-to-first-highlight.ts"
 
 function toSearchHighlightRanges(result: TraceSearchHighlightsResult | undefined): readonly HighlightRange[] {
@@ -81,6 +93,7 @@ function ConversationContent({
   onPopoverClose,
   searchQuery,
   messageTrailingSlot,
+  timeline,
 }: {
   readonly traceDetail: TraceDetailRecord
   readonly navigateToSpan?: ((spanId: string) => void) | undefined
@@ -94,6 +107,8 @@ function ConversationContent({
   readonly searchQuery?: string | undefined
   /** Renders a slot below each message (e.g. semantic moment labels). Receives the original messageIndex and role. */
   readonly messageTrailingSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
+  /** Timeline for the minimap bar: null while loading, undefined when the feature is off. */
+  readonly timeline?: ConversationTimeline | null | undefined
 }) {
   const internalScrollRef = useRef<HTMLDivElement>(null)
   const scrollRef = scrollContainerRef ?? internalScrollRef
@@ -105,6 +120,17 @@ function ConversationContent({
     projectId,
     traceId: traceDetail.traceId,
   })
+
+  const band = useViewportBand({ scrollRef, timeline: timeline ?? null, isActive })
+
+  const [hoveredMessageIndex, setHoveredMessageIndex] = useState<number | null>(null)
+  const hoverSlice = useMemo(
+    () =>
+      timeline && hoveredMessageIndex !== null
+        ? visibleRangeToBand(timeline, hoveredMessageIndex, hoveredMessageIndex)
+        : null,
+    [timeline, hoveredMessageIndex],
+  )
 
   useHotkeys([
     {
@@ -146,6 +172,88 @@ function ConversationContent({
     getSpanIdForMessage,
     annotationsEnabled,
   })
+
+  const dismissSelectionUi = useCallback(() => {
+    closeAnnotationPopover()
+    clearSelectionRef.current?.()
+  }, [closeAnnotationPopover])
+
+  const scrollToMessageAnchor = useCallback(
+    (messageIndex: number) => {
+      const container = scrollRef.current
+      if (!container) return
+      const el = findNearestMessageAnchor(container, messageIndex)
+      if (!el) return
+      el.scrollIntoView({ block: "center", behavior: "smooth" })
+      flashElement(el)
+    },
+    [scrollRef],
+  )
+
+  const handleTrackClick = useCallback(
+    (timelineMs: number) => {
+      if (!timeline) return
+      dismissSelectionUi()
+      const index = messageIndexAtTime(timeline, timelineMs)
+      if (index !== null) scrollToMessageAnchor(index)
+    },
+    [timeline, dismissSelectionUi, scrollToMessageAnchor],
+  )
+
+  const handleMarkerClick = useCallback(
+    (marker: TimelineMarker) => {
+      const container = scrollRef.current
+      if (!container || !timeline) return
+      dismissSelectionUi()
+      switch (marker.kind) {
+        case "annotation": {
+          // Text-anchored annotations open in context; the instant scroll keeps
+          // the popover position measured against the settled layout.
+          const el = annotationsEnabled
+            ? container.querySelector<HTMLElement>(`[data-annotation-id="${marker.annotationId}"]`)
+            : null
+          if (el) {
+            el.scrollIntoView({ block: "center" })
+            const rect = el.getBoundingClientRect()
+            onAnnotationClick(marker.annotationId, { x: rect.left + rect.width / 2, y: rect.bottom })
+            return
+          }
+          scrollToMessageAnchor(marker.messageIndex ?? timeline.messages.length - 1)
+          return
+        }
+        case "moment":
+          scrollToMessageAnchor(marker.messageIndex)
+          return
+        case "toolCall": {
+          const el = marker.toolCallId
+            ? container.querySelector<HTMLElement>(`[data-tool-call-id="${marker.toolCallId}"]`)
+            : null
+          if (el) {
+            el.scrollIntoView({ block: "center", behavior: "smooth" })
+            flashElement(el)
+            return
+          }
+          handleTrackClick(wallToTimeline(timeline.scale, marker.atMs))
+          return
+        }
+        case "trace": {
+          const index =
+            marker.firstMessageIndex ?? messageIndexAtTime(timeline, wallToTimeline(timeline.scale, marker.atMs))
+          scrollToMessageAnchor(index ?? 0)
+          return
+        }
+      }
+    },
+    [
+      scrollRef,
+      timeline,
+      dismissSelectionUi,
+      annotationsEnabled,
+      onAnnotationClick,
+      scrollToMessageAnchor,
+      handleTrackClick,
+    ],
+  )
 
   const effectiveSearchQuery = searchQuery ?? ""
   const { data: searchHighlightsData } = useTraceSearchHighlights({
@@ -199,9 +307,25 @@ function ConversationContent({
         )
       : undefined
 
+  // A "successful" result part from a failed execution span should always
+  // render as failed.
+  const failedToolCallIds = timeline && timeline.failedToolCallIds.size > 0 ? timeline.failedToolCallIds : undefined
+
+  const showBar = timeline != null && timeline.scale.totalTimelineMs > 0 && timeline.messages.length > 0
+
   return (
     <div className="relative flex-1 min-h-0 flex flex-col">
-      <div ref={scrollRef} className="flex min-w-0 flex-col py-8 px-4 overflow-y-auto overflow-x-hidden flex-1">
+      <div
+        ref={scrollRef}
+        className="flex min-w-0 flex-col py-8 px-4 overflow-y-auto overflow-x-hidden flex-1"
+        onPointerMove={(e) => {
+          const anchor = e.target instanceof HTMLElement ? e.target.closest("[data-message-index]") : null
+          const raw = anchor?.getAttribute("data-message-index")
+          const index = raw == null ? Number.NaN : Number.parseInt(raw, 10)
+          setHoveredMessageIndex(Number.isNaN(index) ? null : index)
+        }}
+        onPointerLeave={() => setHoveredMessageIndex(null)}
+      >
         <Conversation
           messages={traceDetail.allMessages}
           enableNavigator
@@ -211,11 +335,9 @@ function ConversationContent({
           clearSelectionRef={clearSelectionRef}
           highlightRanges={mergedHighlightRanges}
           firstMatchHint={firstMatchHint}
+          {...(failedToolCallIds ? { failedToolCallIds } : {})}
           {...(annotationsEnabled
             ? {
-                onTextSelect: handleTextSelect,
-                onSelectionDismiss: closeAnnotationPopover,
-                onAnnotationClick,
                 messageAnnotationSlot: (messageIndex: number, role: string) => {
                   const data = messageLevelAnnotations.get(messageIndex)
                   return (
@@ -232,6 +354,9 @@ function ConversationContent({
                     />
                   )
                 },
+                onTextSelect: handleTextSelect,
+                onSelectionDismiss: closeAnnotationPopover,
+                onAnnotationClick,
               }
             : {})}
           {...(messageActions ? { messageActions } : {})}
@@ -277,6 +402,20 @@ function ConversationContent({
           }
         />
       </div>
+      {timeline === null && (
+        <div className="border-t border-border bg-background px-4 py-3">
+          <Skeleton className="h-10 w-full" />
+        </div>
+      )}
+      {showBar && timeline && (
+        <TimelineBar
+          timeline={timeline}
+          band={band}
+          hoverSlice={hoverSlice}
+          onTrackClick={handleTrackClick}
+          onMarkerClick={handleMarkerClick}
+        />
+      )}
     </div>
   )
 }
@@ -293,6 +432,7 @@ export function ConversationTab({
   onPopoverClose,
   searchQuery,
   messageTrailingSlot,
+  timeline,
 }: {
   readonly traceDetail: TraceDetailRecord | null | undefined
   readonly isDetailLoading: boolean
@@ -310,6 +450,8 @@ export function ConversationTab({
   readonly searchQuery?: string | undefined
   /** Renders a slot below each message (e.g. semantic moment labels). Receives the original messageIndex and role. */
   readonly messageTrailingSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
+  /** Timeline for the minimap bar: null while loading, undefined when the feature is off. */
+  readonly timeline?: ConversationTimeline | null | undefined
 }) {
   if (isDetailLoading) {
     return (
@@ -341,6 +483,7 @@ export function ConversationTab({
       onPopoverClose={onPopoverClose}
       searchQuery={searchQuery}
       messageTrailingSlot={messageTrailingSlot}
+      timeline={timeline}
     />
   )
 }

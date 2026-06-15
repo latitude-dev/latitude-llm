@@ -33,7 +33,7 @@ export interface DurationSegment {
 // work categories use warm tones (orange/amber) deliberately distinct from the
 // blue/purple of the token & cost bars, so the two never get confused. Other is
 // neutral slate; idle stays a hatched gray.
-const DURATION_COLORS: Readonly<Record<DurationCategory, string>> = {
+export const DURATION_COLORS: Readonly<Record<DurationCategory, string>> = {
   generation: "#4ade80",
   tool: "#f97316",
   retrieval: "#f59e0b",

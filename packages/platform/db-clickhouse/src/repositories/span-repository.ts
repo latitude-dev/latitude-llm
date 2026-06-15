@@ -634,6 +634,43 @@ export const SpanRepositoryLive = Layer.effect(
             )
         }),
 
+      findMessagesForSession: ({ organizationId, projectId, sessionId, startTimeFrom, startTimeTo }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT span_id, operation, tool_call_id, input_messages, output_messages
+                      FROM (
+                        SELECT span_id, operation, tool_call_id, input_messages, output_messages, start_time
+                        FROM spans
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND start_time >= {startTimeFrom:DateTime64(9, 'UTC')}
+                          AND start_time <= {startTimeTo:DateTime64(9, 'UTC')}
+                          AND coalesce(nullIf(session_id, ''), toString(trace_id)) = {sessionId:String}
+                          AND operation IN ('chat', 'text_completion', 'execute_tool')
+                        ORDER BY span_id, ingested_at DESC
+                        LIMIT 1 BY span_id
+                      )
+                      ORDER BY start_time ASC`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  startTimeFrom: toClickhouseDateTime(startTimeFrom),
+                  startTimeTo: toClickhouseDateTime(startTimeTo),
+                  sessionId: sessionId as string,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<SpanMessagesRow>()
+            })
+            .pipe(
+              Effect.map((rows) => rows.map(toDomainSpanMessages)),
+              Effect.mapError((error) => toRepositoryError(error, "findMessagesForSession")),
+            )
+        }),
+
       findLatestOutputTraceId: ({ organizationId, projectId, traceIds }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>

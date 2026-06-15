@@ -117,11 +117,13 @@ function PartsRenderer({
   parts,
   toolResults,
   toolCallActions,
+  failedToolCallIds,
   messageIndex,
 }: {
   readonly parts: readonly PartType[]
   readonly toolResults?: ReadonlyMap<string, ToolCallResult> | undefined
   readonly toolCallActions?: ToolCallActions
+  readonly failedToolCallIds?: ReadonlySet<string> | undefined
   readonly messageIndex?: number | undefined
 }) {
   return (
@@ -132,6 +134,7 @@ function PartsRenderer({
         const partId = part.type === "tool_call" ? ((part as { id?: string }).id ?? "") : ""
         const result = toolResults?.get(partId)
         const onNavigateToSpan = toolCallActions?.get(partId)
+        const toolCallFailed = partId.length > 0 && failedToolCallIds?.has(partId) === true
         const isSelectableTextPart = part.type === "text" || part.type === "reasoning"
         return (
           <div
@@ -144,6 +147,7 @@ function PartsRenderer({
               part={part}
               messageIndex={messageIndex}
               partIndex={partIndex}
+              toolCallFailed={toolCallFailed}
               {...(result ? { toolResult: result } : {})}
               {...(onNavigateToSpan ? { onNavigateToSpan } : {})}
             />
@@ -187,12 +191,14 @@ function AssistantMessage({
   messageIndex,
   toolResults,
   toolCallActions,
+  failedToolCallIds,
   onNavigate,
 }: {
   readonly message: GenAIMessage
   readonly messageIndex?: number | undefined
   readonly toolResults?: ReadonlyMap<string, ToolCallResult> | undefined
   readonly toolCallActions?: ToolCallActions
+  readonly failedToolCallIds?: ReadonlySet<string> | undefined
   readonly onNavigate?: () => void
 }) {
   const [collapsed, setCollapsed] = useState(false)
@@ -212,6 +218,7 @@ function AssistantMessage({
           messageIndex={messageIndex}
           {...(toolResults ? { toolResults } : {})}
           {...(toolCallActions ? { toolCallActions } : {})}
+          {...(failedToolCallIds ? { failedToolCallIds } : {})}
         />
       )}
     </div>
@@ -276,6 +283,7 @@ export function Message({
   alignment = "right",
   toolResults,
   toolCallActions,
+  failedToolCallIds,
   onNavigate,
 }: {
   readonly message: GenAIMessage
@@ -283,6 +291,7 @@ export function Message({
   readonly alignment?: "left" | "right"
   readonly toolResults?: ReadonlyMap<string, ToolCallResult> | undefined
   readonly toolCallActions?: ToolCallActions
+  readonly failedToolCallIds?: ReadonlySet<string> | undefined
   readonly onNavigate?: () => void
 }) {
   switch (message.role) {
@@ -295,6 +304,7 @@ export function Message({
           messageIndex={messageIndex}
           {...(toolResults ? { toolResults } : {})}
           {...(toolCallActions ? { toolCallActions } : {})}
+          {...(failedToolCallIds ? { failedToolCallIds } : {})}
           {...(onNavigate ? { onNavigate } : {})}
         />
       )

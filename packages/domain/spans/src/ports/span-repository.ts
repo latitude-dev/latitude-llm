@@ -95,6 +95,19 @@ export interface SpanRepositoryShape {
   }): Effect.Effect<readonly SpanMessagesData[], RepositoryError, ChSqlClient>
 
   /**
+   * Same projection as findMessagesForTrace but across every trace in a
+   * session (membership mirrors `sessions_mv`, see listBySessionId) — used to
+   * attribute a session-wide conversation to spans from any of its traces.
+   */
+  findMessagesForSession(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly sessionId: SessionId
+    readonly startTimeFrom: Date
+    readonly startTimeTo: Date
+  }): Effect.Effect<readonly SpanMessagesData[], RepositoryError, ChSqlClient>
+
+  /**
    * The trace of the latest output-producing span across a set of traces —
    * `argMaxIf(trace_id, end_time, output_messages != '')`. Matches the session
    * materialization's "current state" output (same span-level argMax by
