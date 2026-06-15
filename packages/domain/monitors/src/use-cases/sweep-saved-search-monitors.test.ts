@@ -29,6 +29,7 @@ const monitor = (id: string, projectId: ProjectId, alerts: readonly MonitorAlert
   description: "",
   system: false,
   alerts,
+  target: null,
   mutedAt: null,
   deletedAt: null,
   createdAt: new Date("2026-06-01T00:00:00.000Z"),

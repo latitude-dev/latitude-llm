@@ -92,6 +92,9 @@ export const createMonitorUseCase = (
           description: input.description?.trim() ?? "",
           system: false,
           alerts,
+          // Saved-search monitors carry the target on the alert source; unified
+          // target-on-monitor creation lands with the in-context tool/user UI.
+          target: null,
           mutedAt: null,
           deletedAt: null,
           createdAt: now,

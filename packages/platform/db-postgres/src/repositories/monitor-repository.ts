@@ -58,6 +58,17 @@ const toMonitor = (row: typeof monitors.$inferSelect, alerts: readonly MonitorAl
     description: row.description,
     system: row.system,
     alerts,
+    target: row.targetStream
+      ? {
+          stream: row.targetStream,
+          filterSet: row.targetFilterSet ?? null,
+          query: row.targetQuery ?? null,
+          savedSearchId: row.targetSavedSearchId ?? null,
+          // Written together with target_stream; a null here is corruption — let
+          // monitorSchema.parse surface it loudly rather than fabricate a metric.
+          metric: row.metric ?? undefined,
+        }
+      : null,
     mutedAt: row.mutedAt,
     deletedAt: row.deletedAt,
     createdAt: row.createdAt,
@@ -72,6 +83,11 @@ const toMonitorRow = (monitor: Monitor): typeof monitors.$inferInsert => ({
   name: monitor.name,
   description: monitor.description,
   system: monitor.system,
+  targetStream: monitor.target?.stream ?? null,
+  targetFilterSet: monitor.target?.filterSet ?? null,
+  targetQuery: monitor.target?.query ?? null,
+  targetSavedSearchId: monitor.target?.savedSearchId ?? null,
+  metric: monitor.target?.metric ?? null,
   mutedAt: monitor.mutedAt,
   deletedAt: monitor.deletedAt,
   createdAt: monitor.createdAt,

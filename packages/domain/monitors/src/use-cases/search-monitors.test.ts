@@ -20,6 +20,7 @@ const makeMonitor = (id: string, projectId: ProjectId, name: string, overrides: 
   description: "",
   system: false,
   alerts: [],
+  target: null,
   mutedAt: null,
   deletedAt: null,
   createdAt: new Date("2026-01-01T00:00:00.000Z"),

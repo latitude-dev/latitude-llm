@@ -31,6 +31,7 @@ const monitor = (id: string, alerts: readonly MonitorAlert[]): Monitor => ({
   description: "",
   system: false,
   alerts: alerts.map((a) => ({ ...a, monitorId: id.padEnd(24, "0").slice(0, 24) as MonitorAlert["monitorId"] })),
+  target: null,
   mutedAt: null,
   deletedAt: null,
   createdAt: new Date("2026-06-01T00:00:00.000Z"),

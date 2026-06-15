@@ -1,5 +1,6 @@
+import type { FilterSet, MonitorMetric, MonitorStream } from "@domain/shared"
 import { sql } from "drizzle-orm"
-import { boolean, index, text, uniqueIndex, varchar } from "drizzle-orm/pg-core"
+import { boolean, index, jsonb, text, uniqueIndex, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
 export const monitors = latitudeSchema.table(
@@ -12,6 +13,14 @@ export const monitors = latitudeSchema.table(
     name: varchar("name", { length: 128 }).notNull(),
     description: text("description").default("").notNull(),
     system: boolean("system").default(false).notNull(),
+    // Unified query-time target (the `event.*`/`metric.*` model). All `target_*` + `metric`
+    // are null together for legacy source-based alerts and system issue monitors. `target_stream`
+    // null ⇒ no target. `target_saved_search_id` set ⇒ predicate resolved live from that search.
+    targetStream: varchar("target_stream", { length: 32 }).$type<MonitorStream>(),
+    targetFilterSet: jsonb("target_filter_set").$type<FilterSet>(),
+    targetQuery: text("target_query"),
+    targetSavedSearchId: cuid("target_saved_search_id", { default: false }),
+    metric: jsonb("metric").$type<MonitorMetric>(),
     mutedAt: tzTimestamp("muted_at"),
     deletedAt: tzTimestamp("deleted_at"),
     ...timestamps(),
