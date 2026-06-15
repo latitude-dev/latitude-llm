@@ -951,7 +951,7 @@ describe("MonitorRepositoryLive", () => {
         ...buildUserMonitor("tool-monitor", 1),
         target: {
           stream: "spans",
-          filterSet: { operation: [{ op: "eq", value: "execute_tool" }], toolName: [{ op: "eq", value: "search" }] },
+          filterSet: { operation: [{ op: "eq" as const, value: "execute_tool" }], toolName: [{ op: "eq" as const, value: "search" }] },
           query: null,
           savedSearchId: null,
           metric: { kind: "errorRate" },
@@ -1335,8 +1335,8 @@ describe("MonitorRepositoryLive", () => {
     const spansTarget = (toolName: string) => ({
       targetStream: "spans" as const,
       targetFilterSet: {
-        operation: [{ op: "eq", value: "execute_tool" }],
-        toolName: [{ op: "eq", value: toolName }],
+        operation: [{ op: "eq" as const, value: "execute_tool" }],
+        toolName: [{ op: "eq" as const, value: toolName }],
       },
       metric: { kind: "count" as const },
     })
@@ -1348,7 +1348,7 @@ describe("MonitorRepositoryLive", () => {
           return yield* repository.listMonitorsForTarget({
             projectId,
             stream: "spans",
-            filterSetContains: { toolName: [{ op: "eq", value: toolName }] },
+            filterSetContains: { toolName: [{ op: "eq" as const, value: toolName }] },
           })
         }).pipe(provideRls(database, organizationId)),
       )
@@ -1362,7 +1362,7 @@ describe("MonitorRepositoryLive", () => {
           slug: "all-tools",
           name: "All tools",
           targetStream: "spans",
-          targetFilterSet: { operation: [{ op: "eq", value: "execute_tool" }] },
+          targetFilterSet: { operation: [{ op: "eq" as const, value: "execute_tool" }] },
           metric: { kind: "count" },
         }),
       ])
@@ -1385,7 +1385,7 @@ describe("MonitorRepositoryLive", () => {
           slug: "traces-search",
           name: "Traces",
           targetStream: "traces",
-          targetFilterSet: { toolName: [{ op: "eq", value: "search" }] },
+          targetFilterSet: { toolName: [{ op: "eq" as const, value: "search" }] },
           metric: { kind: "count" },
         }),
       ])
