@@ -1,4 +1,4 @@
-import { ConflictError, type ProjectId } from "@domain/shared"
+import { ConflictError, type DestinationId, NotFoundError, type ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import { DESTINATION_IDLE_BACKOFF_MAX_MS } from "../constants.ts"
 import type { Destination } from "../entities/destination.ts"
@@ -30,6 +30,21 @@ export const createFakeDestinationRepository = (seed: readonly Destination[] = [
         if (index >= 0) rows[index] = { ...destination, updatedAt: new Date() }
         else rows.push(destination)
         return Effect.void
+      }),
+    findById: (id: DestinationId) =>
+      Effect.suspend(() => {
+        const row = rows.find((r) => r.id === id)
+        if (!row) return Effect.fail(new NotFoundError({ entity: "Destination", id }))
+        return Effect.succeed(row)
+      }),
+    listByProjectId: (projectId: ProjectId) =>
+      Effect.sync(() =>
+        rows.filter((r) => r.projectId === projectId).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
+      ),
+    delete: (id: DestinationId) =>
+      Effect.sync(() => {
+        const index = rows.findIndex((r) => r.id === id)
+        if (index >= 0) rows.splice(index, 1)
       }),
     listDue: (now: Date) =>
       Effect.sync(() =>

@@ -49,7 +49,7 @@
         "src/router.tsx",
         "src/start.ts",
         "src/routes/**/*.tsx",
-        "src/domains/sandbox/sandbox-lifecycle.functions.ts"
+        "src/domains/destinations/destinations.functions.ts"
       ],
       "project": ["src/**/*.ts", "src/**/*.tsx"],
       "ignore": [
