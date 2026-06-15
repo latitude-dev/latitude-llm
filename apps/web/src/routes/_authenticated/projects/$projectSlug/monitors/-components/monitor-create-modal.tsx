@@ -1,5 +1,5 @@
 import { Button, CloseTrigger, Input, Modal, Textarea, useToast } from "@repo/ui"
-import { type ReactNode, useState } from "react"
+import { useState } from "react"
 import { monitorTargetName } from "../../../../../../domains/monitors/monitor-target.ts"
 import { useCreateMonitor } from "../../../../../../domains/monitors/monitors.collection.ts"
 import { extractFieldErrors, toUserMessage } from "../../../../../../lib/errors.ts"
@@ -28,14 +28,12 @@ export function MonitorCreateModal({
   initialAlert,
   onClose,
   onCreated,
-  bodyPrefix,
 }: {
   readonly projectId: string
   readonly projectSlug: string
   readonly initialAlert?: AlertDraft
   readonly onClose: () => void
   readonly onCreated?: (slug: string) => void
-  readonly bodyPrefix?: ReactNode
 }) {
   const { toast } = useToast()
   const create = useCreateMonitor(projectId)
@@ -110,7 +108,6 @@ export function MonitorCreateModal({
       }
     >
       <div className="flex flex-col gap-4">
-        {bodyPrefix}
         <Input
           required
           autoFocus

@@ -49,8 +49,7 @@ export interface MetricAlertEvaluation {
   readonly baselineValue?: number
 }
 
-const sigmaEffective = (observed: number, expected: number): number =>
-  Math.max(observed, Math.sqrt(Math.max(0, expected)), 1.0)
+const sigmaEffective = (stddev: number, mean: number): number => Math.max(stddev, Math.sqrt(Math.max(0, mean)), 1.0)
 
 const seasonalThreshold = (
   historical: readonly number[],
@@ -66,7 +65,7 @@ const seasonalThreshold = (
 }
 
 export const isMetricThresholdMet = (value: number, threshold: number, direction: AlertMetricThresholdDirection) =>
-  direction === "below" ? threshold > 0 && value <= threshold : value >= threshold
+  direction === "below" ? threshold > 0 && value <= threshold : threshold > 0 ? value >= threshold : value > 0
 
 /**
  * Evaluate one `metric.threshold` alert at `now` over the monitor's target

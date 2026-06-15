@@ -14,6 +14,7 @@ import {
   hasAlertFieldErrors,
   targetAlertDraft,
 } from "./alert-form-helpers.ts"
+import { type MonitorCreateMode, MonitorModeSwitch } from "./monitor-mode-switch.tsx"
 
 interface ToolMonitorPreset {
   readonly id: string
@@ -33,32 +34,6 @@ const presetDraft = (target: MonitorTarget, overrides: Partial<AlertDraft>): Ale
     windowUnit: "minutes",
     ...overrides,
   })
-
-function ModeSwitch({
-  mode,
-  onModeChange,
-}: {
-  readonly mode: "recommended" | "advanced"
-  readonly onModeChange: (mode: "recommended" | "advanced") => void
-}) {
-  return (
-    <div className="flex rounded-lg bg-muted p-1">
-      {(["recommended", "advanced"] as const).map((option) => (
-        <button
-          key={option}
-          type="button"
-          onClick={() => onModeChange(option)}
-          className={cn("flex-1 cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium transition-colors", {
-            "bg-background text-foreground shadow-sm": mode === option,
-            "text-muted-foreground hover:text-foreground": mode !== option,
-          })}
-        >
-          {option === "recommended" ? "Recommended" : "Advanced"}
-        </button>
-      ))}
-    </div>
-  )
-}
 
 const toolMonitorPresets = (target: MonitorTarget): readonly ToolMonitorPreset[] => {
   const allTools = describeMonitorTarget(target)?.kind === "allTools"
@@ -165,7 +140,7 @@ export function ToolMonitorCreateModal({
   const create = useCreateMonitor(projectId)
   const { toast } = useToast()
   const presets = toolMonitorPresets(target)
-  const [mode, setMode] = useState<"recommended" | "advanced">("recommended")
+  const [mode, setMode] = useState<MonitorCreateMode>("recommended")
   const [selectedPresetId, setSelectedPresetId] = useState(presets[0]?.id ?? "")
   const [advancedValue, setAdvancedValue] = useState<AdvancedMonitorCreateValue>({
     name: "",
@@ -176,7 +151,7 @@ export function ToolMonitorCreateModal({
   })
   const targetName = monitorTargetName(target) ?? "this tool"
 
-  const modeSwitch = <ModeSwitch mode={mode} onModeChange={setMode} />
+  const modeSwitch = <MonitorModeSwitch mode={mode} onModeChange={setMode} />
 
   const createPreset = async () => {
     const preset = presets.find((entry) => entry.id === selectedPresetId)

@@ -114,7 +114,7 @@ const formatMetricThreshold = (
     return `${direction === "below" ? "under" : "over"} ${formatMetricValue(threshold.value, metric)}`
   }
   if (threshold.mode === "multiplier") {
-    return `${direction === "below" ? "less than" : "more than"} ${threshold.factor} times ${formatBaseline(threshold.baseline)}`
+    return `${threshold.factor} times ${direction === "below" ? "less than" : "more than"} ${formatBaseline(threshold.baseline)}`
   }
   const comparator = direction === "below" ? "less than expected" : "more than expected"
   return threshold.sensitivity === undefined ? comparator : `${threshold.sensitivity} times ${comparator}`
