@@ -932,7 +932,7 @@ export function BehavioursView({
     },
     {
       key: "signals",
-      header: "Signals",
+      header: "Moments",
       width: 240,
       render: (row) => {
         const signals = row.node.intelligence.signals.filter((signal) => signal.rate > 0)
