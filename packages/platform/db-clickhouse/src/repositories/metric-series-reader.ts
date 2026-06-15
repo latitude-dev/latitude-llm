@@ -56,7 +56,7 @@ const metricAggregate = (metric: MonitorMetric, columns: MetricColumns): string 
     case "avg":
       return `if(count() = 0, 0, avg(${columns[metric.field]}))`
     case "p95":
-      return `if(count() = 0, 0, quantile(0.95)(${columns[metric.field]}))`
+      return `if(count() = 0, 0, quantileTDigest(0.95)(${columns[metric.field]}))`
   }
 }
 
