@@ -78,13 +78,28 @@ export const ALERT_INCIDENT_KIND_LABEL: Record<AlertIncidentKind, string> = {
 
 /**
  * Kinds users may put on their own monitors; `issue.*` are system-only. Create/update enforce this.
- * Still the LEGACY saved-search kinds — the unified `event.matched` / `metric.*` kinds become
- * user-creatable once target-on-monitor creation lands (they take a monitor target, not a source).
+ * Legacy `savedSearch.*` take a saved-search source; unified `event.*`/`metric.*` take a monitor
+ * target instead (no source) — `buildMonitorAlert`/`createMonitor` enforce the source-vs-target split.
  */
 export const USER_CREATABLE_ALERT_KINDS = [
   "savedSearch.match",
   "savedSearch.threshold",
   "savedSearch.escalating",
+  "event.matched",
+  "metric.threshold",
+  "metric.escalating",
+] as const satisfies readonly AlertIncidentKind[]
+
+/**
+ * Kinds whose alert carries no `condition` (it stays `null`): the discrete-event
+ * kinds. Single source of truth — create/update alert validation both key off this
+ * (previously duplicated and drifted). Every other kind requires its matching condition.
+ */
+export const KINDS_WITHOUT_CONDITION = [
+  "issue.new",
+  "issue.regressed",
+  "savedSearch.match",
+  "event.matched",
 ] as const satisfies readonly AlertIncidentKind[]
 
 export const ALERT_SEVERITIES = ["low", "medium", "high"] as const
