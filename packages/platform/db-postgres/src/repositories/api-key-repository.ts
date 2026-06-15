@@ -9,40 +9,15 @@ import {
   type SqlClientShape,
   toRepositoryError,
 } from "@domain/shared"
-import { parseEnv } from "@platform/env"
-import { type CryptoError, decrypt, encrypt, hash } from "@repo/utils"
 import { and, eq, inArray, isNull } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
+import { decryptField, encryptField, getEncryptionKey } from "../encryption-key.ts"
 import { apiKeys } from "../schema/api-keys.ts"
-
-let encryptionKeyCache: Buffer | undefined
-
-const VALID_HEX_32_BYTE_KEY = /^[0-9a-f]{64}$/i
-
-// Enforce strict 32-byte key material while allowing any secret format.
-export const resolveApiKeyEncryptionKey = (rawSecret: string): Effect.Effect<Buffer, CryptoError> => {
-  const secret = rawSecret.trim()
-
-  if (VALID_HEX_32_BYTE_KEY.test(secret)) {
-    return Effect.succeed(Buffer.from(secret, "hex"))
-  }
-
-  return hash(secret).pipe(Effect.map((hashed) => Buffer.from(hashed, "hex")))
-}
-
-const getEncryptionKey = () =>
-  Effect.gen(function* () {
-    if (encryptionKeyCache) return encryptionKeyCache
-    const encryptionKeySecret = yield* parseEnv("LAT_MASTER_ENCRYPTION_KEY", "string")
-    const key = yield* resolveApiKeyEncryptionKey(encryptionKeySecret)
-    encryptionKeyCache = key
-    return key
-  })
 
 const toDomainApiKey = (row: typeof apiKeys.$inferSelect, encryptionKey: Buffer) =>
   Effect.gen(function* () {
-    const token = yield* decrypt(row.token, encryptionKey).pipe(Effect.mapError((e) => toRepositoryError(e, "decrypt")))
+    const token = yield* decryptField(row.token, encryptionKey, "decrypt")
     const apiKey: ApiKey = {
       id: ApiKeyId(row.id),
       organizationId: OrganizationId(row.organizationId),
@@ -59,9 +34,7 @@ const toDomainApiKey = (row: typeof apiKeys.$inferSelect, encryptionKey: Buffer)
 
 const toInsertRow = (apiKey: ApiKey, encryptionKey: Buffer) =>
   Effect.gen(function* () {
-    const token = yield* encrypt(apiKey.token, encryptionKey).pipe(
-      Effect.mapError((e) => toRepositoryError(e, "encrypt")),
-    )
+    const token = yield* encryptField(apiKey.token, encryptionKey, "encrypt")
     return {
       id: apiKey.id,
       organizationId: apiKey.organizationId,
