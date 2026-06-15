@@ -43,6 +43,7 @@ import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
 import { createBillingWorker } from "./workers/billing.ts"
 import { createBillingOverageWorker } from "./workers/billing-overage.ts"
+import { createDestinationsWorker } from "./workers/destinations.ts"
 import { createDeterministicFlaggersWorker } from "./workers/deterministic-flaggers.ts"
 import { createAlertIncidentsWorker } from "./workers/domain-events/alert-incidents.ts"
 import { createInvitationEmailWorker } from "./workers/domain-events/invitation-email.ts"
@@ -186,6 +187,7 @@ const bootstrap = async () => {
     createNotificationsWorker(ctx)
     createNotificationEmailerWorker(ctx)
     createNotificationSlackWorker(ctx)
+    createDestinationsWorker({ consumer: ctx.consumer })
     createApiKeysWorker(ctx)
     createBillingWorker({ consumer: ctx.consumer, postgresClient: ctx.postgresClient })
     createBillingOverageWorker({ consumer: ctx.consumer, workflowStarter: ctx.workflowStarter })

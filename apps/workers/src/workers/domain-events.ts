@@ -391,17 +391,33 @@ export const createDomainEventsWorker = ({
     EvaluationDetectorDegraded: () => Effect.void,
     AnnotationQueueItemCompleted: () => Effect.void,
     ProjectDeleted: (event) =>
-      pub.publish(
-        "notifications",
-        "delete-by-project",
-        {
-          organizationId: event.payload.organizationId,
-          projectId: event.payload.projectId,
-        },
-        {
-          dedupeKey: `notifications:delete-by-project:${event.payload.projectId}`,
-        },
-      ),
+      Effect.all(
+        [
+          pub.publish(
+            "notifications",
+            "delete-by-project",
+            {
+              organizationId: event.payload.organizationId,
+              projectId: event.payload.projectId,
+            },
+            {
+              dedupeKey: `notifications:delete-by-project:${event.payload.projectId}`,
+            },
+          ),
+          pub.publish(
+            "destinations",
+            "delete-by-project",
+            {
+              organizationId: event.payload.organizationId,
+              projectId: event.payload.projectId,
+            },
+            {
+              dedupeKey: `destinations:delete-by-project:${event.payload.projectId}`,
+            },
+          ),
+        ],
+        { concurrency: "unbounded" },
+      ).pipe(Effect.asVoid),
     FlaggerToggled: () => Effect.void,
     SavedSearchCreated: () => Effect.void,
     // Impersonation events are audit-only — their value is being

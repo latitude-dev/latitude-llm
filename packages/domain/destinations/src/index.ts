@@ -109,6 +109,11 @@ export type {
 } from "./use-cases/create-destination.ts"
 export { createDestinationUseCase } from "./use-cases/create-destination.ts"
 export type {
+  DeleteProjectDestinationsError,
+  DeleteProjectDestinationsInput,
+} from "./use-cases/delete-project-destinations.ts"
+export { deleteProjectDestinationsUseCase } from "./use-cases/delete-project-destinations.ts"
+export type {
   RunDestinationSyncError,
   RunDestinationSyncInput,
   RunDestinationSyncOutcome,
