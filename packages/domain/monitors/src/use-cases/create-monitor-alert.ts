@@ -16,7 +16,10 @@ import type { MonitorAlert } from "../entities/monitor.ts"
 import { AlertConditionMismatchError } from "../errors.ts"
 
 const USER_CREATABLE = new Set<AlertIncidentKind>(USER_CREATABLE_ALERT_KINDS)
-/** Kinds that carry no `condition`; their condition stays `null`. */
+/**
+ * Kinds that carry no `condition`; their condition stays `null`.
+ * TODO(target-on-monitor): add `event.matched` here when unified kinds become user-creatable.
+ */
 const KINDS_WITHOUT_CONDITION = new Set<AlertIncidentKind>(["issue.new", "issue.regressed", "savedSearch.match"])
 
 const conditionMatchesKind = (condition: AlertIncidentCondition | null, kind: AlertIncidentKind): boolean =>

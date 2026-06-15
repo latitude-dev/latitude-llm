@@ -90,10 +90,44 @@ export const monitorMetricSchema = z.discriminatedUnion("kind", [
 ])
 export type MonitorMetric = z.infer<typeof monitorMetricSchema>
 
-/** Per-kind alert config; `null` for kinds with no parameters (`issue.new`, `issue.regressed`, `savedSearch.match`). */
+/**
+ * Threshold for the UNIFIED `metric.*` kinds. Same modes as the legacy
+ * {@link alertCountThresholdSchema}, but `absolute` takes a float `value` (not an
+ * int `count`) — error-rate (0.1), p95 latency, cost, etc. aren't whole numbers.
+ */
+export const alertMetricThresholdSchema = z.discriminatedUnion("mode", [
+  z.object({ mode: z.literal("absolute"), value: z.number().positive() }),
+  z.object({ mode: z.literal("multiplier"), factor: z.number().positive(), baseline: alertBaselineSchema }),
+  z.object({ mode: z.literal("expected"), sensitivity: escalationSensitivitySchema.optional() }),
+])
+export type AlertMetricThreshold = z.infer<typeof alertMetricThresholdSchema>
+
+/** UNIFIED point alert: the monitor's metric crosses a threshold. (Target lives on the monitor.) */
+export const alertIncidentMetricThresholdConditionSchema = z.object({
+  kind: z.literal("metric.threshold"),
+  metric: monitorMetricSchema,
+  threshold: alertMetricThresholdSchema,
+})
+export type AlertIncidentMetricThresholdCondition = z.infer<typeof alertIncidentMetricThresholdConditionSchema>
+
+/** UNIFIED sustained alert: the metric stays over threshold across `window` (see saved-search escalating semantics). */
+export const alertIncidentMetricEscalatingConditionSchema = z.object({
+  kind: z.literal("metric.escalating"),
+  metric: monitorMetricSchema,
+  threshold: alertMetricThresholdSchema,
+  window: z.object({ minutes: z.number().int().min(5) }),
+})
+export type AlertIncidentMetricEscalatingCondition = z.infer<typeof alertIncidentMetricEscalatingConditionSchema>
+
+/**
+ * Per-kind alert config; `null` for kinds with no parameters (`issue.new`,
+ * `issue.regressed`, `savedSearch.match`, `event.matched`).
+ */
 export const alertIncidentConditionSchema = z.discriminatedUnion("kind", [
   alertIncidentSavedSearchThresholdConditionSchema,
   alertIncidentSavedSearchEscalatingConditionSchema,
   alertIncidentIssueEscalatingConditionSchema,
+  alertIncidentMetricThresholdConditionSchema,
+  alertIncidentMetricEscalatingConditionSchema,
 ])
 export type AlertIncidentCondition = z.infer<typeof alertIncidentConditionSchema>
