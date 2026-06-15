@@ -21,7 +21,7 @@ import {
 import { useMemo } from "react"
 import { useHasFeatureFlag } from "../feature-flags/feature-flags.collection.ts"
 
-type SectionFlag = "behaviours" | "monitors" | "tools"
+type SectionFlag = "behaviours" | "monitors"
 
 interface ProjectSection {
   readonly key: string
@@ -64,7 +64,6 @@ const PROJECT_SECTIONS: readonly ProjectSection[] = [
     icon: WrenchIcon,
     path: (slug) => `/projects/${slug}/tools`,
     isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/tools`),
-    flag: "tools",
   },
   {
     key: "issues",
@@ -194,8 +193,7 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
 function useSectionFlags(): Record<SectionFlag, boolean> {
   const behaviours = useHasFeatureFlag("behaviours")
   const monitors = useHasFeatureFlag("monitors")
-  const tools = useHasFeatureFlag("tools")
-  return useMemo(() => ({ behaviours, monitors, tools }), [behaviours, monitors, tools])
+  return useMemo(() => ({ behaviours, monitors }), [behaviours, monitors])
 }
 
 /** Project sections visible to the current org, in sidebar/palette order. */

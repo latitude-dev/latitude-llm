@@ -23,5 +23,8 @@ export * from "./savedSearches/client/requests/index.js";
 export * as savedSearches from "./savedSearches/index.js";
 export * from "./savedSearches/types/index.js";
 export * as scores from "./scores/index.js";
+export * from "./tools/client/requests/index.js";
+export * as tools from "./tools/index.js";
+export * from "./tools/types/index.js";
 export * from "./traces/client/requests/index.js";
 export * as traces from "./traces/index.js";

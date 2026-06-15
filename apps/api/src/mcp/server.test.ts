@@ -1,6 +1,7 @@
 import { generateApiKeyToken } from "@domain/api-keys"
 import { generateId } from "@domain/shared"
 import { apiKeys } from "@platform/db-postgres/schema/api-keys"
+import { projects } from "@platform/db-postgres/schema/projects"
 import { createApiKeyAuthHeaders, type InMemoryPostgres } from "@platform/testkit"
 import { encrypt, hash } from "@repo/utils"
 import { Effect } from "effect"
@@ -40,6 +41,13 @@ const insertApiKey = async (database: InMemoryPostgres, organizationId: string, 
     name: "test-key",
   })
   return { id }
+}
+
+const insertProject = async (database: InMemoryPostgres, organizationId: string) => {
+  const id = generateId()
+  const slug = `proj-${id.slice(0, 8)}`
+  await database.db.insert(projects).values({ id, organizationId, name: "MCP Project", slug })
+  return { id, slug }
 }
 
 const PROTOCOL_VERSION = "2025-03-26"
@@ -118,6 +126,41 @@ describe("/v1/mcp", () => {
     const payload = (await readSseJsonRpc(res)) as { result?: { tools?: ReadonlyArray<{ name: string }> } }
     const toolNames = payload.result?.tools?.map((t) => t.name) ?? []
     expect(toolNames).toEqual(expect.arrayContaining(["createApiKey", "listApiKeys", "revokeApiKey"]))
+  })
+
+  it<ApiTestContext>("tools/list includes the tool-analytics tools", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const res = await sendMcpRequest(app, tenant.apiKeyToken, { jsonrpc: "2.0", id: 20, method: "tools/list" })
+    expect(res.status).toBe(200)
+    const payload = (await readSseJsonRpc(res)) as { result?: { tools?: ReadonlyArray<{ name: string }> } }
+    const toolNames = payload.result?.tools?.map((t) => t.name) ?? []
+    expect(toolNames).toEqual(expect.arrayContaining(["listTools", "getTool", "getToolCallHistogram", "listToolCalls"]))
+  })
+
+  it<ApiTestContext>("tools/call dispatches listTools with a path param through the inner request", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const project = await insertProject(database, tenant.organizationId)
+
+    const res = await sendMcpRequest(app, tenant.apiKeyToken, {
+      jsonrpc: "2.0",
+      id: 21,
+      method: "tools/call",
+      params: { name: "listTools", arguments: { projectSlug: project.slug } },
+    })
+    expect(res.status).toBe(200)
+    const payload = (await readSseJsonRpc(res)) as {
+      result?: { content?: ReadonlyArray<{ type: string; text: string }>; isError?: boolean }
+    }
+    expect(payload.result?.isError).toBeFalsy()
+    const parsed = JSON.parse(payload.result?.content?.[0]?.text ?? "") as {
+      totals: { traces: number }
+      tools: unknown[]
+    }
+    expect(parsed.tools).toEqual([])
+    expect(parsed.totals.traces).toBe(0)
   })
 
   it<ApiTestContext>("tools/call dispatches into the HTTP route via the middleware chain", async ({

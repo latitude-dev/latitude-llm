@@ -4195,6 +4195,1235 @@
       }
     },
     {
+      "name": "listTools",
+      "title": "List project tools with usage metrics",
+      "description": "Returns every tool in the project over the range — the union of defined and called tools — with per-tool usage metrics, offered counts, a call trend, and project-wide totals. The range defaults to the trailing 7 days.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "fromIso": {
+            "description": "Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "toIso": {
+            "description": "Upper bound (inclusive) of the time range. Defaults to now.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "trendBucketSeconds": {
+            "type": "integer",
+            "minimum": 3600,
+            "maximum": 7776000,
+            "description": "Bucket width in seconds. Derived from the range (~30 buckets) when omitted."
+          }
+        },
+        "required": [
+          "projectSlug"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "totals": {
+            "type": "object",
+            "properties": {
+              "traces": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Total traces in the range."
+              },
+              "sessions": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Total sessions in the range."
+              },
+              "tracesWithToolCalls": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Traces with at least one tool call (any tool)."
+              },
+              "sessionsWithToolCalls": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Sessions with at least one tool call (any tool)."
+              }
+            },
+            "required": [
+              "traces",
+              "sessions",
+              "tracesWithToolCalls",
+              "sessionsWithToolCalls"
+            ],
+            "additionalProperties": false,
+            "description": "Project-wide denominators for the range."
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Tool name."
+                },
+                "metrics": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "calls": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Number of times the tool was called in the range."
+                        },
+                        "errors": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Number of calls that ended in an error."
+                        },
+                        "errorRate": {
+                          "type": "number",
+                          "description": "Fraction of calls that errored, 0..1."
+                        },
+                        "avgDurationNs": {
+                          "type": "number",
+                          "description": "Mean call duration, in nanoseconds."
+                        },
+                        "p50DurationNs": {
+                          "type": "number",
+                          "description": "Median (p50) call duration, in nanoseconds."
+                        },
+                        "p95DurationNs": {
+                          "type": "number",
+                          "description": "95th-percentile call duration, in nanoseconds."
+                        },
+                        "p99DurationNs": {
+                          "type": "number",
+                          "description": "99th-percentile call duration, in nanoseconds."
+                        },
+                        "tracesUsed": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Distinct traces with at least one call of this tool."
+                        },
+                        "sessionsUsed": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Distinct sessions with at least one call of this tool."
+                        },
+                        "traceUsageRate": {
+                          "type": "number",
+                          "description": "`tracesUsed` divided by total traces in the range, 0..1."
+                        },
+                        "sessionUsageRate": {
+                          "type": "number",
+                          "description": "`sessionsUsed` divided by total sessions in the range, 0..1."
+                        },
+                        "firstSeen": {
+                          "type": "string",
+                          "description": "ISO-8601 timestamp of the first call in the range."
+                        },
+                        "lastUsed": {
+                          "type": "string",
+                          "description": "ISO-8601 timestamp of the most recent call in the range."
+                        }
+                      },
+                      "required": [
+                        "calls",
+                        "errors",
+                        "errorRate",
+                        "avgDurationNs",
+                        "p50DurationNs",
+                        "p95DurationNs",
+                        "p99DurationNs",
+                        "tracesUsed",
+                        "sessionsUsed",
+                        "traceUsageRate",
+                        "sessionUsageRate",
+                        "firstSeen",
+                        "lastUsed"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Call-side usage metrics. `null` when the tool was defined but never called in the range."
+                },
+                "offeredCount": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "LLM turns that offered this tool. 0 means no definition was seen."
+                },
+                "offeredTraces": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Distinct traces that offered this tool."
+                },
+                "lastOffered": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp the tool was last offered. `null` when never offered."
+                },
+                "selectionRate": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Calls per offer (`calls / offeredCount`). Can exceed 1. `null` when never offered."
+                },
+                "trend": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "bucketStart": {
+                        "type": "string",
+                        "description": "ISO-8601 UTC timestamp of the bucket's start."
+                      },
+                      "calls": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Number of calls in this bucket."
+                      },
+                      "errors": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Number of errored calls in this bucket."
+                      },
+                      "p50DurationNs": {
+                        "type": "number",
+                        "description": "Median call duration in this bucket, in nanoseconds."
+                      }
+                    },
+                    "required": [
+                      "bucketStart",
+                      "calls",
+                      "errors",
+                      "p50DurationNs"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "description": "Per-bucket call counts across the range."
+                }
+              },
+              "required": [
+                "name",
+                "metrics",
+                "offeredCount",
+                "offeredTraces",
+                "lastOffered",
+                "selectionRate",
+                "trend"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Every tool in the range — the union of defined and called tools."
+          }
+        },
+        "required": [
+          "totals",
+          "tools"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "getToolCallHistogram",
+      "title": "Get tool call histogram",
+      "description": "Returns per-bucket call counts over the range. Omit `toolName` to aggregate across every tool in the project; pass it to scope the histogram to a single tool.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "fromIso": {
+            "description": "Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "toIso": {
+            "description": "Upper bound (inclusive) of the time range. Defaults to now.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "toolName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Tool name. URL-encode names containing special characters."
+          },
+          "bucketSeconds": {
+            "type": "integer",
+            "minimum": 3600,
+            "maximum": 7776000,
+            "description": "Bucket width in seconds. Derived from the range (~30 buckets) when omitted."
+          },
+          "errorsOnly": {
+            "description": "When `true`, scope every aggregate to failed calls only.",
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ]
+          }
+        },
+        "required": [
+          "projectSlug"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "bucketStart": {
+                  "type": "string",
+                  "description": "ISO-8601 UTC timestamp of the bucket's start."
+                },
+                "calls": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Number of calls in this bucket."
+                },
+                "errors": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Number of errored calls in this bucket."
+                },
+                "p50DurationNs": {
+                  "type": "number",
+                  "description": "Median call duration in this bucket, in nanoseconds."
+                }
+              },
+              "required": [
+                "bucketStart",
+                "calls",
+                "errors",
+                "p50DurationNs"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Call buckets across the range, oldest first."
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "getToolParameters",
+      "title": "Get tool parameter stats",
+      "description": "Returns the most common top-level input keys and their most common values for the tool, computed over a sample of the most recent calls in the range.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "toolName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Tool name. URL-encode names containing special characters."
+          },
+          "fromIso": {
+            "description": "Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "toIso": {
+            "description": "Upper bound (inclusive) of the time range. Defaults to now.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "topKeys": {
+            "description": "Maximum number of keys to return.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "topValuesPerKey": {
+            "description": "Maximum number of values to return per key.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
+          },
+          "errorsOnly": {
+            "description": "When `true`, scope every aggregate to failed calls only.",
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ]
+          }
+        },
+        "required": [
+          "projectSlug",
+          "toolName"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "stats": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "description": "A top-level key in the tool's input."
+                },
+                "occurrences": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Sampled calls whose input contains this key."
+                },
+                "topValues": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "A value seen for the key (truncated)."
+                      },
+                      "count": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Number of sampled calls with this value."
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "count"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "description": "Most common values for this key."
+                }
+              },
+              "required": [
+                "key",
+                "occurrences",
+                "topValues"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Top input keys and their most common values."
+          },
+          "sampleSize": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Number of recent calls the stats were computed over."
+          }
+        },
+        "required": [
+          "stats",
+          "sampleSize"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "getToolContext",
+      "title": "Get tool context breakdown",
+      "description": "Returns where the tool is used, broken down by a dimension: `model` and `provider` attribute the tool's traces via their chat spans; `tag` reads tags on the tool-call spans themselves.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "toolName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Tool name. URL-encode names containing special characters."
+          },
+          "fromIso": {
+            "description": "Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "toIso": {
+            "description": "Upper bound (inclusive) of the time range. Defaults to now.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "dimension": {
+            "type": "string",
+            "enum": [
+              "model",
+              "provider",
+              "tag"
+            ],
+            "description": "Dimension to break the usage down by."
+          },
+          "errorsOnly": {
+            "description": "When `true`, scope every aggregate to failed calls only.",
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ]
+          }
+        },
+        "required": [
+          "projectSlug",
+          "toolName",
+          "dimension"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "The dimension value (a model, provider, or tag)."
+                },
+                "traces": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Distinct traces for this value."
+                },
+                "occurrences": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Underlying spans or calls behind this value."
+                }
+              },
+              "required": [
+                "value",
+                "traces",
+                "occurrences"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Breakdown rows, most significant first."
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "getToolCoOccurrence",
+      "title": "Get co-occurring tools",
+      "description": "Returns other tools called in the same traces as this one, ranked by shared trace count.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "toolName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Tool name. URL-encode names containing special characters."
+          },
+          "fromIso": {
+            "description": "Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "toIso": {
+            "description": "Upper bound (inclusive) of the time range. Defaults to now.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "limit": {
+            "description": "Maximum number of tools to return.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "errorsOnly": {
+            "description": "When `true`, scope every aggregate to failed calls only.",
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ]
+          }
+        },
+        "required": [
+          "projectSlug",
+          "toolName"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "otherTool": {
+                  "type": "string",
+                  "description": "Another tool called in the same traces."
+                },
+                "sharedTraces": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Traces where both tools were called."
+                }
+              },
+              "required": [
+                "otherTool",
+                "sharedTraces"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Co-occurring tools, by shared trace count."
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "getToolErrors",
+      "title": "Get tool error breakdown",
+      "description": "Returns the most common error outputs of the tool's failed calls, grouped into clusters by a normalized form so variable fragments don't split one error into many buckets.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "toolName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Tool name. URL-encode names containing special characters."
+          },
+          "fromIso": {
+            "description": "Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "toIso": {
+            "description": "Upper bound (inclusive) of the time range. Defaults to now.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "limit": {
+            "description": "Maximum number of clusters to return.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          }
+        },
+        "required": [
+          "projectSlug",
+          "toolName"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "description": "Normalized error cluster key. Empty when the calls carried no error output."
+                },
+                "sample": {
+                  "type": "string",
+                  "description": "A verbatim error output from the cluster (truncated)."
+                },
+                "errorType": {
+                  "type": "string",
+                  "description": "An error type seen in the cluster."
+                },
+                "calls": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Number of failed calls in the cluster."
+                }
+              },
+              "required": [
+                "key",
+                "sample",
+                "errorType",
+                "calls"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Error clusters, most frequent first."
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "listToolCalls",
+      "title": "List recent tool calls",
+      "description": "Returns a cursor-paginated page of the tool's most recent calls, newest first, with payloads truncated to a bounded preview. Use a span point-lookup for full payloads.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "toolName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Tool name. URL-encode names containing special characters."
+          },
+          "fromIso": {
+            "description": "Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "toIso": {
+            "description": "Upper bound (inclusive) of the time range. Defaults to now.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "limit": {
+            "default": 50,
+            "description": "Page size. Defaults to 50; max 50.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "errorsOnly": {
+            "description": "When `true`, scope every aggregate to failed calls only.",
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ]
+          },
+          "cursor": {
+            "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "projectSlug",
+          "toolName",
+          "limit"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "spanId": {
+                  "type": "string",
+                  "description": "16-character span identifier of the tool call."
+                },
+                "traceId": {
+                  "type": "string",
+                  "description": "Trace this call belongs to."
+                },
+                "sessionId": {
+                  "type": "string",
+                  "description": "Session this call belongs to."
+                },
+                "startTime": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp the call started."
+                },
+                "durationNs": {
+                  "type": "number",
+                  "description": "Call duration, in nanoseconds."
+                },
+                "statusCode": {
+                  "type": "string",
+                  "enum": [
+                    "unset",
+                    "ok",
+                    "error"
+                  ],
+                  "description": "Span status of the call."
+                },
+                "statusMessage": {
+                  "type": "string",
+                  "description": "Status message, when present."
+                },
+                "errorType": {
+                  "type": "string",
+                  "description": "Error type, when the call failed."
+                },
+                "toolCallId": {
+                  "type": "string",
+                  "description": "Provider tool-call id linking the call to its request."
+                },
+                "toolInput": {
+                  "type": "string",
+                  "description": "Truncated preview of the call arguments."
+                },
+                "toolOutput": {
+                  "type": "string",
+                  "description": "Truncated preview of the call result."
+                },
+                "toolInputTruncated": {
+                  "type": "boolean",
+                  "description": "`true` when `toolInput` was truncated."
+                },
+                "toolOutputTruncated": {
+                  "type": "boolean",
+                  "description": "`true` when `toolOutput` was truncated."
+                }
+              },
+              "required": [
+                "spanId",
+                "traceId",
+                "sessionId",
+                "startTime",
+                "durationNs",
+                "statusCode",
+                "statusMessage",
+                "errorType",
+                "toolCallId",
+                "toolInput",
+                "toolOutput",
+                "toolInputTruncated",
+                "toolOutputTruncated"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Page of items, in the requested sort order."
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque cursor for fetching the next page. `null` when there are no more pages. Pass it back in `cursor` to continue."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "`true` when there is at least one more page after this one."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "getTool",
+      "title": "Get tool detail",
+      "description": "Returns the latest definition seen for the tool plus its global usage metrics. Pass `errorsOnly=true` to also include failed-calls-only metrics for failure analysis.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "toolName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Tool name. URL-encode names containing special characters."
+          },
+          "fromIso": {
+            "description": "Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "toIso": {
+            "description": "Upper bound (inclusive) of the time range. Defaults to now.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "errorsOnly": {
+            "description": "When `true`, scope every aggregate to failed calls only.",
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ]
+          }
+        },
+        "required": [
+          "projectSlug",
+          "toolName"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "definition": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "definition": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "Tool name from the definition."
+                          },
+                          "description": {
+                            "type": "string",
+                            "description": "Tool description from the definition."
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "description"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Parsed name and description. `null` when the stored definition could not be parsed."
+                  },
+                  "definitionJson": {
+                    "type": "string",
+                    "description": "Raw tool definition JSON, verbatim, including its `parameters`."
+                  },
+                  "offeredCount": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "LLM turns that offered this tool in the range."
+                  },
+                  "offeredTraces": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Distinct traces that offered this tool."
+                  },
+                  "lastOffered": {
+                    "type": "string",
+                    "description": "ISO-8601 timestamp the tool was last offered."
+                  }
+                },
+                "required": [
+                  "definition",
+                  "definitionJson",
+                  "offeredCount",
+                  "offeredTraces",
+                  "lastOffered"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Latest definition seen for the tool. `null` when never offered in the range."
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "calls": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Number of times the tool was called in the range."
+                  },
+                  "errors": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Number of calls that ended in an error."
+                  },
+                  "errorRate": {
+                    "type": "number",
+                    "description": "Fraction of calls that errored, 0..1."
+                  },
+                  "avgDurationNs": {
+                    "type": "number",
+                    "description": "Mean call duration, in nanoseconds."
+                  },
+                  "p50DurationNs": {
+                    "type": "number",
+                    "description": "Median (p50) call duration, in nanoseconds."
+                  },
+                  "p95DurationNs": {
+                    "type": "number",
+                    "description": "95th-percentile call duration, in nanoseconds."
+                  },
+                  "p99DurationNs": {
+                    "type": "number",
+                    "description": "99th-percentile call duration, in nanoseconds."
+                  },
+                  "tracesUsed": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Distinct traces with at least one call of this tool."
+                  },
+                  "sessionsUsed": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Distinct sessions with at least one call of this tool."
+                  },
+                  "traceUsageRate": {
+                    "type": "number",
+                    "description": "`tracesUsed` divided by total traces in the range, 0..1."
+                  },
+                  "sessionUsageRate": {
+                    "type": "number",
+                    "description": "`sessionsUsed` divided by total sessions in the range, 0..1."
+                  },
+                  "firstSeen": {
+                    "type": "string",
+                    "description": "ISO-8601 timestamp of the first call in the range."
+                  },
+                  "lastUsed": {
+                    "type": "string",
+                    "description": "ISO-8601 timestamp of the most recent call in the range."
+                  }
+                },
+                "required": [
+                  "calls",
+                  "errors",
+                  "errorRate",
+                  "avgDurationNs",
+                  "p50DurationNs",
+                  "p95DurationNs",
+                  "p99DurationNs",
+                  "tracesUsed",
+                  "sessionsUsed",
+                  "traceUsageRate",
+                  "sessionUsageRate",
+                  "firstSeen",
+                  "lastUsed"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Global (all-calls) usage metrics. `null` when the tool has no calls in the range."
+          },
+          "errorsUsage": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "calls": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Number of times the tool was called in the range."
+                  },
+                  "errors": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Number of calls that ended in an error."
+                  },
+                  "errorRate": {
+                    "type": "number",
+                    "description": "Fraction of calls that errored, 0..1."
+                  },
+                  "avgDurationNs": {
+                    "type": "number",
+                    "description": "Mean call duration, in nanoseconds."
+                  },
+                  "p50DurationNs": {
+                    "type": "number",
+                    "description": "Median (p50) call duration, in nanoseconds."
+                  },
+                  "p95DurationNs": {
+                    "type": "number",
+                    "description": "95th-percentile call duration, in nanoseconds."
+                  },
+                  "p99DurationNs": {
+                    "type": "number",
+                    "description": "99th-percentile call duration, in nanoseconds."
+                  },
+                  "tracesUsed": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Distinct traces with at least one call of this tool."
+                  },
+                  "sessionsUsed": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Distinct sessions with at least one call of this tool."
+                  },
+                  "traceUsageRate": {
+                    "type": "number",
+                    "description": "`tracesUsed` divided by total traces in the range, 0..1."
+                  },
+                  "sessionUsageRate": {
+                    "type": "number",
+                    "description": "`sessionsUsed` divided by total sessions in the range, 0..1."
+                  },
+                  "firstSeen": {
+                    "type": "string",
+                    "description": "ISO-8601 timestamp of the first call in the range."
+                  },
+                  "lastUsed": {
+                    "type": "string",
+                    "description": "ISO-8601 timestamp of the most recent call in the range."
+                  }
+                },
+                "required": [
+                  "calls",
+                  "errors",
+                  "errorRate",
+                  "avgDurationNs",
+                  "p50DurationNs",
+                  "p95DurationNs",
+                  "p99DurationNs",
+                  "tracesUsed",
+                  "sessionsUsed",
+                  "traceUsageRate",
+                  "sessionUsageRate",
+                  "firstSeen",
+                  "lastUsed"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Failed-calls-only usage metrics. Non-null only when `errorsOnly=true` is requested."
+          }
+        },
+        "required": [
+          "definition",
+          "usage",
+          "errorsUsage"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
       "name": "listSavedSearches",
       "title": "List saved searches",
       "description": "Returns every saved search in the project. The response uses the standard paginated shape; the saved-search list currently fits in a single page (`nextCursor` is always `null`).",
