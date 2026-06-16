@@ -205,7 +205,7 @@ CREATE TABLE sessions
 )
 ENGINE = AggregatingMergeTree
 PARTITION BY toYYYYMM(min_start_time)
-PRIMARY KEY (organization_id, project_id)
+PRIMARY KEY (organization_id, project_id, session_id)
 ORDER BY (organization_id, project_id, session_id)
 SETTINGS index_granularity = 8192;
 

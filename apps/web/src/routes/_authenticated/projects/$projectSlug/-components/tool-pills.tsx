@@ -2,7 +2,6 @@ import { cn, Tooltip } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { Link, useParams } from "@tanstack/react-router"
 import type { ReactNode } from "react"
-import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import type { SpanRecord } from "../../../../../domains/spans/spans.functions.ts"
 
 export interface ToolPillStat {
@@ -55,8 +54,7 @@ export function ToolPill({
   readonly tooltip?: ReactNode
 }) {
   const { projectSlug } = useParams({ strict: false })
-  const toolsEnabled = useHasFeatureFlag("tools")
-  const linked = toolsEnabled && typeof projectSlug === "string"
+  const linked = typeof projectSlug === "string"
 
   const pillClass = cn(
     "inline-flex h-7 max-w-full items-center gap-1.5 rounded-full border px-2.5 transition-colors",
