@@ -64,7 +64,7 @@ export const createOrganization = createServerFn({ method: "POST" })
         actorUserId: userId,
         name: data.name,
         slug,
-        defaultProjectName: "My project",
+        defaultProjectName: `${data.name.trim()}'s project`,
       }).pipe(
         withPostgres(
           Layer.mergeAll(ApiKeyRepositoryLive, ProjectRepositoryLive, OutboxEventWriterLive),

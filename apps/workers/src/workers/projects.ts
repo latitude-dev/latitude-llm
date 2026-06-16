@@ -5,7 +5,7 @@ import { OrganizationId, ProjectId } from "@domain/shared"
 import { OutboxEventWriterLive, type PostgresClient, ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Data, Effect, Layer } from "effect"
-import { getPostgresClient } from "../clients.ts"
+import { getPostgresClient, getWorkflowStarter } from "../clients.ts"
 import { provisionFlaggers, provisionSystemMonitors } from "../services/provisioning.ts"
 
 const logger = createLogger("projects")
@@ -51,6 +51,29 @@ export const createProjectsWorker = ({ consumer, postgresClient }: ProjectsDeps)
           flaggersProvisioned: results.length,
           results: results.map((r) => r.slug),
           systemMonitorsProvisioned: monitors.length,
+        })
+      }).pipe(withTracing),
+
+    seedDemo: (payload) =>
+      Effect.gen(function* () {
+        const workflowStarter = yield* Effect.promise(() => getWorkflowStarter())
+        yield* workflowStarter
+          .start(
+            "seedDemoProjectWorkflow",
+            {
+              organizationId: payload.organizationId,
+              projectId: payload.projectId,
+              queueAssigneeUserIds: payload.queueAssigneeUserIds,
+              apiKeyId: payload.apiKeyId,
+              timelineAnchorIso: payload.timelineAnchorIso,
+            },
+            { workflowId: `projects:seed-demo:${payload.projectId}` },
+          )
+          .pipe(Effect.catchTag("WorkflowAlreadyStartedError", () => Effect.void))
+
+        logger.info("Demo project seed workflow started", {
+          organizationId: payload.organizationId,
+          projectId: payload.projectId,
         })
       }).pipe(withTracing),
 
