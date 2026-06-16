@@ -679,9 +679,6 @@ importers:
       '@domain/exports':
         specifier: workspace:*
         version: link:../../packages/domain/exports
-      '@domain/feature-flags':
-        specifier: workspace:*
-        version: link:../../packages/domain/feature-flags
       '@domain/flaggers':
         specifier: workspace:*
         version: link:../../packages/domain/flaggers
@@ -1203,9 +1200,6 @@ importers:
 
   packages/domain/email:
     dependencies:
-      '@domain/feature-flags':
-        specifier: workspace:*
-        version: link:../feature-flags
       '@domain/issues':
         specifier: workspace:*
         version: link:../issues

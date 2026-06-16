@@ -2,7 +2,6 @@ import { useToast } from "@repo/ui"
 import { useRouter } from "@tanstack/react-router"
 import { useState } from "react"
 import { SandboxToggle } from "../../../components/sandbox-toggle.tsx"
-import { useHasFeatureFlag } from "../../../domains/feature-flags/feature-flags.collection.ts"
 import { enterSandboxProject } from "../../../domains/sandbox/sandbox-lifecycle.functions.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
 
@@ -21,11 +20,7 @@ import { toUserMessage } from "../../../lib/errors.ts"
 export function SandboxSwitcher({ collapsed, projectId }: { readonly collapsed: boolean; readonly projectId: string }) {
   const router = useRouter()
   const { toast } = useToast()
-  const sandboxEnabled = useHasFeatureFlag("sandbox")
   const [isEntering, setIsEntering] = useState(false)
-
-  // Test Mode is gated: no switcher unless the org has the `sandbox` flag.
-  if (!sandboxEnabled) return null
 
   const enterSandbox = async () => {
     if (isEntering) return

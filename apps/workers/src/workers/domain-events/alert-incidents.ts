@@ -4,13 +4,11 @@ import {
   createAlertIncidentFromIssueEventUseCase,
   type EntrySignalsSnapshot,
 } from "@domain/alerts"
-import { hasFeatureFlagUseCase } from "@domain/feature-flags"
 import { resolveMonitorAlertsForSourceEventUseCase } from "@domain/monitors"
 import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import {
   AlertIncidentRepositoryLive,
-  FeatureFlagRepositoryLive,
   MonitorRepositoryLive,
   OutboxEventWriterLive,
   withPostgres,
@@ -25,12 +23,7 @@ interface AlertIncidentsDeps {
   consumer: QueueConsumer
 }
 
-const repoLayer = Layer.mergeAll(
-  AlertIncidentRepositoryLive,
-  FeatureFlagRepositoryLive,
-  MonitorRepositoryLive,
-  OutboxEventWriterLive,
-)
+const repoLayer = Layer.mergeAll(AlertIncidentRepositoryLive, MonitorRepositoryLive, OutboxEventWriterLive)
 
 const createIncidentFor = (
   kind: AlertIncidentKind,
@@ -45,16 +38,13 @@ const createIncidentFor = (
   const pgClient = getPostgresClient()
 
   return Effect.gen(function* () {
-    const monitorsEnabled = yield* hasFeatureFlagUseCase({ identifier: "monitors" })
-    const alerts = monitorsEnabled
-      ? yield* resolveMonitorAlertsForSourceEventUseCase({
-          projectId: ProjectId(payload.projectId),
-          kind,
-          sourceId: payload.issueId,
-        })
-      : []
+    const alerts = yield* resolveMonitorAlertsForSourceEventUseCase({
+      projectId: ProjectId(payload.projectId),
+      kind,
+      sourceId: payload.issueId,
+    })
 
-    // One incident per matching alert. No match (flag off, or a project predating
+    // One incident per matching alert. No match (for example, a project predating
     // system monitors) falls back to a single legacy incident, preserving old behaviour.
     const targets =
       alerts.length > 0

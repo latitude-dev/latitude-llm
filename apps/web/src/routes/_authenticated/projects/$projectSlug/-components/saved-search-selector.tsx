@@ -37,7 +37,6 @@ import {
 } from "lucide-react"
 import { useMemo, useState } from "react"
 import { SeverityDots } from "../../../../../domains/alerts/severity-selector.tsx"
-import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { useSavedSearchMonitorSummaries } from "../../../../../domains/monitors/monitors.collection.ts"
 import {
   useDeleteSavedSearch,
@@ -80,10 +79,6 @@ export function SavedSearchSelector({
   const [rowToRename, setRowToRename] = useState<SavedSearchRecord | null>(null)
   const [createMonitorFor, setCreateMonitorFor] = useState<SavedSearchRecord | null>(null)
 
-  // Monitors are flag-gated; with the flag off we hide the per-row monitor affordance entirely
-  // (the monitors page would just show its "not available" splash) and skip the lookup.
-  const monitorsEnabled = useHasFeatureFlag("monitors")
-
   const { data: savedSearches } = useSavedSearchesList(projectId)
 
   const selected = useMemo(
@@ -95,7 +90,7 @@ export function SavedSearchSelector({
   // per-row "View/Create monitor" action and drives the monitored-state chip next to the trigger,
   // so it's needed while the dropdown is open OR a search is loaded.
   const monitorSummaries = useSavedSearchMonitorSummaries(projectId, {
-    enabled: monitorsEnabled && (open || selected !== null),
+    enabled: open || selected !== null,
   })
 
   const filtered = useMemo(() => {
@@ -208,46 +203,44 @@ export function SavedSearchSelector({
                         ) : null}
                       </span>
                     </button>
-                    {monitorsEnabled ? (
-                      !hasMonitor && searchHasSemanticPart(record.query) ? (
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="opacity-0 focus-visible:opacity-100 group-hover/row:opacity-100 data-[state=open]:opacity-100"
-                              aria-label={`Why ${record.name} can't be monitored`}
-                            >
-                              <Icon icon={BellPlusIcon} size="sm" color="foregroundMuted" />
-                            </Button>
-                          </PopoverTrigger>
-                          <SemanticMonitorPopoverContent />
-                        </Popover>
-                      ) : (
-                        <Tooltip
-                          asChild
-                          trigger={
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100"
-                              aria-label={
-                                hasMonitor ? `View monitor for ${record.name}` : `Create monitor for ${record.name}`
-                              }
-                              onClick={() => goToMonitor(record)}
-                            >
-                              <Icon
-                                icon={hasMonitor ? (allMuted ? BellOffIcon : BellIcon) : BellPlusIcon}
-                                size="sm"
-                                color="foregroundMuted"
-                              />
-                            </Button>
-                          }
-                        >
-                          {hasMonitor ? (allMuted ? "View monitor (muted)" : "View monitor") : "Create monitor"}
-                        </Tooltip>
-                      )
-                    ) : null}
+                    {!hasMonitor && searchHasSemanticPart(record.query) ? (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="opacity-0 focus-visible:opacity-100 group-hover/row:opacity-100 data-[state=open]:opacity-100"
+                            aria-label={`Why ${record.name} can't be monitored`}
+                          >
+                            <Icon icon={BellPlusIcon} size="sm" color="foregroundMuted" />
+                          </Button>
+                        </PopoverTrigger>
+                        <SemanticMonitorPopoverContent />
+                      </Popover>
+                    ) : (
+                      <Tooltip
+                        asChild
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100"
+                            aria-label={
+                              hasMonitor ? `View monitor for ${record.name}` : `Create monitor for ${record.name}`
+                            }
+                            onClick={() => goToMonitor(record)}
+                          >
+                            <Icon
+                              icon={hasMonitor ? (allMuted ? BellOffIcon : BellIcon) : BellPlusIcon}
+                              size="sm"
+                              color="foregroundMuted"
+                            />
+                          </Button>
+                        }
+                      >
+                        {hasMonitor ? (allMuted ? "View monitor (muted)" : "View monitor") : "Create monitor"}
+                      </Tooltip>
+                    )}
                     <Tooltip
                       asChild
                       trigger={
@@ -302,7 +295,7 @@ export function SavedSearchSelector({
           </div>
         </PopoverContent>
       </Popover>
-      {monitorsEnabled && selected ? (
+      {selected ? (
         selectedSummary ? (
           <DropdownMenuRoot modal={false}>
             <TooltipProvider>

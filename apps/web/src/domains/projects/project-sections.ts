@@ -23,15 +23,12 @@ import {
 import { useMemo } from "react"
 import { useHasFeatureFlag } from "../feature-flags/feature-flags.collection.ts"
 
-type SectionFlag = "behaviours" | "monitors" | "destinations"
-
 interface ProjectSection {
   readonly key: string
   readonly label: string
   readonly icon: LucideIcon
   readonly path: (projectSlug: string) => string
   readonly isActive: (pathname: string, projectSlug: string) => boolean
-  readonly flag?: SectionFlag
 }
 
 const PROJECT_SECTIONS: readonly ProjectSection[] = [
@@ -55,7 +52,6 @@ const PROJECT_SECTIONS: readonly ProjectSection[] = [
     icon: TagsIcon,
     path: (slug) => `/projects/${slug}/behaviours`,
     isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/behaviours`),
-    flag: "behaviours",
   },
   {
     key: "users",
@@ -84,7 +80,6 @@ const PROJECT_SECTIONS: readonly ProjectSection[] = [
     icon: BellRingIcon,
     path: (slug) => `/projects/${slug}/monitors`,
     isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/monitors`),
-    flag: "monitors",
   },
   {
     key: "datasets",
@@ -104,12 +99,14 @@ export const PROJECT_SETTINGS_SECTION: ProjectSection = {
   isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/settings`),
 }
 
+type SettingsFlag = "destinations"
+
 interface ProjectSettingsItem {
   readonly key: string
   readonly label: string
   readonly icon: LucideIcon
   readonly path: (projectSlug: string) => string
-  readonly flag?: SectionFlag
+  readonly flag?: SettingsFlag
 }
 
 interface ProjectSettingsGroup {
@@ -202,29 +199,21 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
   },
 ]
 
-/** Resolves every feature flag referenced by the section tables in one place. */
-function useSectionFlags(): Record<SectionFlag, boolean> {
-  const behaviours = useHasFeatureFlag("behaviours")
-  const monitors = useHasFeatureFlag("monitors")
-  const destinations = useHasFeatureFlag("destinations")
-  return useMemo(() => ({ behaviours, monitors, destinations }), [behaviours, monitors, destinations])
-}
-
 /** Project sections visible to the current org, in sidebar/palette order. */
 export function useVisibleProjectSections(): readonly ProjectSection[] {
-  const flags = useSectionFlags()
-  return useMemo(() => PROJECT_SECTIONS.filter((section) => !section.flag || flags[section.flag]), [flags])
+  return PROJECT_SECTIONS
 }
 
 /** Settings groups with flag-gated items removed (empty groups are dropped). */
 export function useVisibleProjectSettingsGroups(): readonly ProjectSettingsGroup[] {
-  const flags = useSectionFlags()
+  const destinations = useHasFeatureFlag("destinations")
+
   return useMemo(
     () =>
       PROJECT_SETTINGS_GROUPS.map((group) => ({
         ...group,
-        items: group.items.filter((item) => !item.flag || flags[item.flag]),
+        items: group.items.filter((item) => !item.flag || destinations),
       })).filter((group) => group.items.length > 0),
-    [flags],
+    [destinations],
   )
 }

@@ -143,12 +143,10 @@ in the Projects group, which renders before the Actions group, so it already out
   lists (`useDatasetsList` / `useSavedSearchesList`, each fetched only while searching via an
   `enabled` option), filtered client-side by `commandMatches`. Selecting navigates to the
   dataset, or applies the saved search on the Search page (`?savedSearch=<slug>`).
-- **Monitors** (`commands/use-monitor-search-commands.ts`): the project's monitors
-  (`useMonitors`, fetched only while searching), filtered client-side. **Gated behind the
-  `monitors` feature flag** — when the flag is off, monitors are neither fetched nor listed,
-  mirroring the flag-gated Monitors page/sidebar entry. Selecting opens the monitor drawer
-  (`?monitorSlug=<slug>`); muted/system monitors are labelled in their subtitle. Monitor
-  *mutations* (mute/unmute, create) are backend-pending, so no monitor actions are wired yet.
+- **Monitors** (`commands/use-monitor-search-commands.ts`): org-wide monitor search
+  (`useMonitorsSearch`, fetched only while searching), filtered by the query server-side with the
+  current project preferred in ordering. Selecting opens the monitor detail route; muted/system
+  monitors are labelled in their subtitle.
 - **Traces fallback** (same hook): always-present "Search traces for "<query>"" → opens the
   Search page with `?q=<query>`.
 
@@ -182,8 +180,7 @@ Project sections and settings pages are defined once in
 **settings sub-nav**, and the **palette navigation** all consume it via
 `useVisibleProjectSections` / `useVisibleProjectSettingsGroups`.
 
-To add a section/settings page: add an entry with `{ key, label, icon, path(slug), flag? }`
-(use `flag` for feature-gating, e.g. `"monitors"` / `"slack"`). It then appears in the
+To add a section/settings page: add an entry with `{ key, label, icon, path(slug) }`. It then appears in the
 sidebar, the settings sub-nav, **and** the palette automatically — no palette-specific change.
 Do **not** hardcode a new nav command in the palette; that would duplicate the source of truth.
 
