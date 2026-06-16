@@ -48,7 +48,7 @@ export const startTracing = async ({
     ),
   ]
 
-  const isLatitudeTelemetryEnabled = false
+  const isLatitudeTelemetryEnabled = true
 
   if (isLatitudeTelemetryEnabled && apiKey !== "") {
     const latitudeIngestTracesUrl = `${latitudeIngestBase.replace(/\/$/, "")}/v1/traces`
