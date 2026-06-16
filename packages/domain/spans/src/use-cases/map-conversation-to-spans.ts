@@ -1,3 +1,4 @@
+import { stableStringify } from "@repo/utils"
 import type { GenAIMessage } from "rosetta-ai"
 import type { SpanMessagesData } from "../ports/span-repository.ts"
 
@@ -37,6 +38,24 @@ function scoreContextMatch(spanInputs: readonly GenAIMessage[], preceding: reado
   return matches / Math.max(spanInputs.length, 1)
 }
 
+/** Canonical form of tool arguments (object or JSON string) so call and execute spans compare equal. */
+function canonicalizeToolArgs(value: unknown): string {
+  if (value === undefined || value === null) return ""
+  let parsed: unknown = value
+  if (typeof value === "string") {
+    try {
+      parsed = JSON.parse(value)
+    } catch {
+      return value.replace(/\s+/g, "")
+    }
+  }
+  try {
+    return stableStringify(parsed)
+  } catch {
+    return String(value)
+  }
+}
+
 export function buildConversationSpanMaps(
   allMessages: readonly GenAIMessage[],
   spans: readonly SpanMessagesData[],
@@ -46,6 +65,31 @@ export function buildConversationSpanMaps(
   for (const span of spans) {
     if (span.toolCallId) {
       toolCallSpanMap[span.toolCallId] = span.spanId as string
+    }
+  }
+
+  // Cross-span fallback: OpenInference (e.g. google-adk) never carries the execute_tool span's
+  // call id onto the conversation messages, so a tool_call whose id doesn't resolve above is
+  // linked to its execute span by name+args+order — otherwise the tool result can't navigate.
+  const executeSpans = spans
+    .filter((span) => span.operation === "execute_tool" && span.toolName)
+    .map((span) => ({ spanId: span.spanId as string, name: span.toolName, args: canonicalizeToolArgs(span.toolInput) }))
+  if (executeSpans.length > 0) {
+    const consumed = new Set<number>()
+    for (const msg of allMessages) {
+      if (msg.role !== "assistant") continue
+      for (const part of msg.parts ?? []) {
+        if (part.type !== "tool_call") continue
+        const tc = part as { id?: string; name?: string; arguments?: unknown }
+        if (!tc.id || !tc.name || toolCallSpanMap[tc.id]) continue
+        const args = canonicalizeToolArgs(tc.arguments)
+        let idx = executeSpans.findIndex((s, k) => !consumed.has(k) && s.name === tc.name && s.args === args)
+        if (idx === -1) idx = executeSpans.findIndex((s, k) => !consumed.has(k) && s.name === tc.name)
+        const match = idx >= 0 ? executeSpans[idx] : undefined
+        if (!match) continue
+        consumed.add(idx)
+        toolCallSpanMap[tc.id] = match.spanId
+      }
     }
   }
 

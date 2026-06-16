@@ -18,9 +18,27 @@ function makeSpan(
     spanId: SpanId(spanId),
     operation: "llm",
     toolCallId,
+    toolName: "",
+    toolInput: "",
     inputMessages: inputs,
     outputMessages: [output],
   }
+}
+
+function makeExecuteToolSpan(spanId: string, toolName: string, toolInput: string, toolCallId = ""): SpanMessagesData {
+  return {
+    spanId: SpanId(spanId),
+    operation: "execute_tool",
+    toolCallId,
+    toolName,
+    toolInput,
+    inputMessages: [],
+    outputMessages: [],
+  }
+}
+
+function toolCallMsg(id: string, name: string, args: Record<string, unknown>): GenAIMessage {
+  return { role: "assistant", parts: [{ type: "tool_call", id, name, arguments: args }] } as unknown as GenAIMessage
 }
 
 describe("buildConversationSpanMaps", () => {
@@ -126,6 +144,42 @@ describe("buildConversationSpanMaps", () => {
       const spanB = makeSpan("span-b", textMsg("assistant", "b"), [], "call-2")
       const { toolCallSpanMap } = buildConversationSpanMaps([], [spanA, spanB])
       expect(toolCallSpanMap).toEqual({ "call-1": "span-a", "call-2": "span-b" })
+    })
+  })
+
+  describe("cross-span fallback (id-less instrumentors)", () => {
+    it("links a conversation tool_call to its execute span by name+args when the ids differ", () => {
+      // OpenInference google-adk: tool span carries adk-… id, conversation tool_call has a synthetic id.
+      const execSpan = makeExecuteToolSpan("span-exec", "get_weather", '{"city": "Barcelona"}', "adk-123")
+      const messages: GenAIMessage[] = [toolCallMsg("call_2_0", "get_weather", { city: "Barcelona" })]
+
+      const { toolCallSpanMap } = buildConversationSpanMaps(messages, [execSpan])
+
+      expect(toolCallSpanMap["adk-123"]).toBe("span-exec")
+      expect(toolCallSpanMap.call_2_0).toBe("span-exec")
+    })
+
+    it("disambiguates same-named tool calls by arguments", () => {
+      const execBcn = makeExecuteToolSpan("span-bcn", "get_weather", '{"city": "Barcelona"}', "adk-1")
+      const execMad = makeExecuteToolSpan("span-mad", "get_weather", '{"city": "Madrid"}', "adk-2")
+      const messages: GenAIMessage[] = [
+        toolCallMsg("call_a", "get_weather", { city: "Madrid" }),
+        toolCallMsg("call_b", "get_weather", { city: "Barcelona" }),
+      ]
+
+      const { toolCallSpanMap } = buildConversationSpanMaps(messages, [execBcn, execMad])
+
+      expect(toolCallSpanMap.call_a).toBe("span-mad")
+      expect(toolCallSpanMap.call_b).toBe("span-bcn")
+    })
+
+    it("does not override a tool_call whose id already resolves to a span", () => {
+      const execSpan = makeExecuteToolSpan("span-exec", "get_weather", '{"city": "Barcelona"}', "real-id")
+      const messages: GenAIMessage[] = [toolCallMsg("real-id", "get_weather", { city: "Barcelona" })]
+
+      const { toolCallSpanMap } = buildConversationSpanMaps(messages, [execSpan])
+
+      expect(toolCallSpanMap).toEqual({ "real-id": "span-exec" })
     })
   })
 })

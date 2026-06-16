@@ -627,3 +627,67 @@ describe("TravelPlanner trace — OpenInference (Arize Phoenix)", () => {
     })
   })
 })
+
+describe("OpenInference google-adk — tool call ↔ tool result pairing", () => {
+  // Mirrors the real ADK final call_llm span: assistant tool_call and tool result both omit ids.
+  function buildAdkFinalLlmSpan(): OtlpSpan {
+    return {
+      traceId: "11111111111111111111111111111111",
+      spanId: "1111111111111111",
+      name: "call_llm",
+      kind: 1,
+      startTimeUnixNano: "1710590400000000000",
+      endTimeUnixNano: "1710590401000000000",
+      attributes: [
+        str("openinference.span.kind", "LLM"),
+        str("llm.model_name", "gemini-2.5-flash"),
+        str("llm.input_messages.1.message.role", "user"),
+        str("llm.input_messages.1.message.contents.0.message_content.type", "text"),
+        str("llm.input_messages.1.message.contents.0.message_content.text", "What's the weather in Barcelona?"),
+        str("llm.input_messages.2.message.role", "model"),
+        str("llm.input_messages.2.message.tool_calls.0.tool_call.function.name", "get_weather"),
+        str("llm.input_messages.2.message.tool_calls.0.tool_call.function.arguments", '{"city": "Barcelona"}'),
+        str("llm.input_messages.3.message.role", "tool"),
+        str("llm.input_messages.3.message.name", "get_weather"),
+        str("llm.input_messages.3.message.content", '{"status": "success", "report": "sunny"}'),
+        str("llm.output_messages.0.message.role", "model"),
+        str("llm.output_messages.0.message.contents.0.message_content.type", "text"),
+        str("llm.output_messages.0.message.contents.0.message_content.text", "It's sunny in Barcelona."),
+      ],
+      status: { code: 1 },
+    }
+  }
+
+  const request: OtlpExportTraceServiceRequest = {
+    resourceSpans: [
+      {
+        resource: { attributes: [str("service.name", "adk")] },
+        scopeSpans: [
+          {
+            scope: { name: "openinference.instrumentation.google_adk", version: "0.1.15" },
+            spans: [buildAdkFinalLlmSpan()],
+          },
+        ],
+      },
+    ],
+  }
+
+  it("assigns the assistant tool_call and its tool result the same non-empty id", () => {
+    const span = transformOtlpToSpans(request, CONTEXT).spans[0]
+    if (!span) throw new Error("span not produced")
+
+    const assistant = span.inputMessages.find((m) => m.role === "assistant")
+    const tool = span.inputMessages.find((m) => m.role === "tool")
+    const toolCall = (assistant as { parts: { type: string; id?: string }[] }).parts.find((p) => p.type === "tool_call")
+    const toolResult = (tool as { parts: { type: string; id?: string | null }[] }).parts.find(
+      (p) => p.type === "tool_call_response",
+    )
+
+    const callId = (toolCall as { id?: string } | undefined)?.id
+    const resultId = (toolResult as { id?: string | null } | undefined)?.id
+
+    expect(callId).toBeTruthy()
+    expect(resultId).toBeTruthy()
+    expect(resultId).toBe(callId)
+  })
+})

@@ -19,6 +19,7 @@ export {
   parseCHDate,
   safeParseJson,
   safeStringifyJson,
+  stableStringify,
 } from "./format.ts"
 export * from "./http-errors.ts"
 export {

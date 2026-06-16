@@ -275,6 +275,7 @@ export function ConversationTab({
   searchQuery,
   focusMomentKind,
   focusMomentId,
+  navigateToSpan,
 }: {
   readonly projectId: string
   readonly session: SessionDetailRecord
@@ -285,6 +286,8 @@ export function ConversationTab({
   readonly focusMomentKind?: MomentKind | undefined
   /** Scrolls to this semantic moment when no label kind is focused. */
   readonly focusMomentId?: string | undefined
+  /** Navigates to a span in the session's single-trace Spans tab; enables the conversation's span-link affordances. */
+  readonly navigateToSpan?: ((spanId: string) => void) | undefined
 }) {
   const sessionId = session.sessionId
   // Annotations are an LLM-feedback feature — off under a sandbox scope.
@@ -385,6 +388,7 @@ export function ConversationTab({
       scrollContainerRef={scrollContainerRef}
       textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
       timeline={timeline}
+      {...(navigateToSpan ? { navigateToSpan } : {})}
       {...(labelsByMessageIndex.size > 0 ? { messageTrailingSlot } : {})}
       {...(searchQuery ? { searchQuery } : {})}
     />

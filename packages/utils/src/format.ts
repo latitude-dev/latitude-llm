@@ -1,3 +1,5 @@
+import stringify from "fast-json-stable-stringify"
+
 const COUNT_UNITS = ["", "K", "M", "B", "T"]
 
 const countFractionFormatter = new Intl.NumberFormat("en-US", {
@@ -207,4 +209,9 @@ export function safeStringifyJson(value: unknown, fallback = ""): string {
   } catch {
     return String(value)
   }
+}
+
+/** Deterministic JSON serialization with sorted keys, so equal values stringify equal regardless of key order. */
+export function stableStringify(value: unknown): string {
+  return stringify(value)
 }
