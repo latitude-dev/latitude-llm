@@ -229,8 +229,8 @@ describe("domain-events dispatcher", () => {
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published).toHaveLength(1)
-    expect(published[0]).toMatchObject({
+    const seedDemoPublish = published.find((p) => p.queue === "projects" && p.task === "seedDemo")
+    expect(seedDemoPublish).toMatchObject({
       queue: "projects",
       task: "seedDemo",
       payload,
@@ -240,6 +240,7 @@ describe("domain-events dispatcher", () => {
         backoff: { type: "exponential", delayMs: 1_000 },
       },
     })
+    expect(published.some((p) => p.queue === "posthog-analytics")).toBe(true)
   })
 
   it("fails on unhandled events", async () => {
