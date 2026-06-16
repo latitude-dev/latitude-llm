@@ -71,7 +71,7 @@ export function useAnnotationsByTrace({
       listAnnotationsByTrace({
         data: { projectId, traceId, limit, offset, draftMode: effectiveDraftMode },
       }),
-    enabled,
+    enabled: enabled && projectId.length > 0 && traceId.length > 0,
   })
 }
 
