@@ -20,7 +20,9 @@ const monitorAlertFields = {
   kind: z
     .enum(ALERT_INCIDENT_KINDS)
     .describe("What the alert fires on. The `savedSearch.*` kinds watch a saved search; `issue.*` are system-only."),
-  source: MonitorAlertSourceSchema.describe("The entity this alert watches."),
+  source: MonitorAlertSourceSchema.nullable().describe(
+    "The entity this alert watches, or `null` for unified alerts whose target lives on the monitor.",
+  ),
   condition: AlertConditionSchema.nullable().describe(
     "Kind-specific configuration, or `null` for kinds with no parameters.",
   ),
@@ -62,7 +64,7 @@ export const toMonitorAlertResponse = (alert: MonitorAlert) => ({
   id: alert.id as string,
   monitorId: alert.monitorId as string,
   kind: alert.kind,
-  source: { type: alert.source.type, id: alert.source.id },
+  source: alert.source ? { type: alert.source.type, id: alert.source.id } : null,
   condition: alert.condition,
   severity: alert.severity,
   createdAt: alert.createdAt.toISOString(),

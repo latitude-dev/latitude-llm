@@ -4,27 +4,50 @@ import {
   alertIncidentSourceTypeSchema,
   alertSeveritySchema,
   cuidSchema,
+  filterSetSchema,
   monitorAlertIdSchema,
   monitorIdSchema,
+  monitorMetricSchema,
+  monitorStreamSchema,
   organizationIdSchema,
   projectIdSchema,
 } from "@domain/shared"
 import { z } from "zod"
 
 /**
+ * What a query-time monitor watches: a stream + predicate + the metric to measure
+ * (the unified `event.*`/`metric.*` model). `savedSearchId` set ⇒ the predicate
+ * resolves live from that saved search (inline `filterSet`/`query` left null);
+ * otherwise the inline `filterSet`/`query` apply. A monitor's `target` is `null`
+ * for legacy source-based alerts (target on the alert) and system issue monitors.
+ */
+export const monitorTargetSchema = z.object({
+  stream: monitorStreamSchema,
+  filterSet: filterSetSchema.nullable(),
+  query: z.string().nullable(),
+  savedSearchId: cuidSchema.nullable(),
+  metric: monitorMetricSchema,
+})
+export type MonitorTarget = z.infer<typeof monitorTargetSchema>
+
+/**
  * A `(kind, source, condition, severity)` firing rule owned by a monitor.
- * `source.id = null` means "all entities of `source.type`". `condition` is
- * `null` for kinds with no parameters (`issue.new`, `issue.regressed`,
- * `savedSearch.match`); otherwise the kind-specific `AlertIncidentCondition`.
+ * `source.id = null` means "all entities of `source.type`". `source` itself is
+ * `null` for UNIFIED kinds (`event.*`/`metric.*`) — they watch the monitor's
+ * `target`, not a `(sourceType, sourceId)`. `condition` is `null` for kinds with
+ * no parameters (`issue.new`, `issue.regressed`, `savedSearch.match`,
+ * `event.matched`); otherwise the kind-specific `AlertIncidentCondition`.
  */
 export const monitorAlertSchema = z.object({
   id: monitorAlertIdSchema,
   monitorId: monitorIdSchema,
   kind: alertIncidentKindSchema,
-  source: z.object({
-    type: alertIncidentSourceTypeSchema,
-    id: cuidSchema.nullable(),
-  }),
+  source: z
+    .object({
+      type: alertIncidentSourceTypeSchema,
+      id: cuidSchema.nullable(),
+    })
+    .nullable(),
   condition: alertIncidentConditionSchema.nullable(),
   severity: alertSeveritySchema,
   createdAt: z.date(),
@@ -52,6 +75,8 @@ export const monitorSchema = z.object({
   description: z.string(),
   system: z.boolean(),
   alerts: z.array(monitorAlertSchema).readonly(),
+  /** The unified query-time target; `null` for legacy source-based + system issue monitors. */
+  target: monitorTargetSchema.nullable(),
   mutedAt: z.date().nullable(),
   deletedAt: z.date().nullable(),
   createdAt: z.date(),

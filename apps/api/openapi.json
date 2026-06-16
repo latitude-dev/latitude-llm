@@ -4362,7 +4362,10 @@
               "issue.escalating",
               "savedSearch.match",
               "savedSearch.threshold",
-              "savedSearch.escalating"
+              "savedSearch.escalating",
+              "event.matched",
+              "metric.threshold",
+              "metric.escalating"
             ],
             "description": "Reason the incident opened. `issue.new` fires when a new issue is discovered; `issue.regressed` when a resolved issue is detected again; `issue.escalating` when an ongoing issue is being detected more than expected. The `savedSearch.*` kinds are raised by monitors watching a search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when matching traces are detected above a configured threshold, and `savedSearch.escalating` when they stay above the threshold for a sustained window."
           },
@@ -6034,7 +6037,10 @@
               "issue.escalating",
               "savedSearch.match",
               "savedSearch.threshold",
-              "savedSearch.escalating"
+              "savedSearch.escalating",
+              "event.matched",
+              "metric.threshold",
+              "metric.escalating"
             ],
             "description": "What the alert fires on. The `savedSearch.*` kinds watch a saved search; `issue.*` are system-only."
           },
@@ -6076,7 +6082,10 @@
         ]
       },
       "MonitorAlertSource": {
-        "type": "object",
+        "type": [
+          "object",
+          "null"
+        ],
         "properties": {
           "type": {
             "type": "string",
@@ -6100,7 +6109,7 @@
           "type",
           "id"
         ],
-        "description": "The entity this alert watches."
+        "description": "The entity this alert watches, or `null` for unified alerts whose target lives on the monitor."
       },
       "CreateMonitorBody": {
         "type": "object",
@@ -6493,7 +6502,10 @@
               "issue.escalating",
               "savedSearch.match",
               "savedSearch.threshold",
-              "savedSearch.escalating"
+              "savedSearch.escalating",
+              "event.matched",
+              "metric.threshold",
+              "metric.escalating"
             ],
             "description": "Reason the incident opened. `issue.new` fires when a new issue is discovered; `issue.regressed` when a resolved issue is detected again; `issue.escalating` when an ongoing issue is being detected more than expected. The `savedSearch.*` kinds are raised by monitors watching a search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when matching traces are detected above a configured threshold, and `savedSearch.escalating` when they stay above the threshold for a sustained window."
           },
@@ -10524,7 +10536,10 @@
                   "issue.escalating",
                   "savedSearch.match",
                   "savedSearch.threshold",
-                  "savedSearch.escalating"
+                  "savedSearch.escalating",
+                  "event.matched",
+                  "metric.threshold",
+                  "metric.escalating"
                 ]
               },
               "description": "Restrict to incidents whose kind matches any value in this list."

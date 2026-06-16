@@ -8327,7 +8327,10 @@
                 "issue.escalating",
                 "savedSearch.match",
                 "savedSearch.threshold",
-                "savedSearch.escalating"
+                "savedSearch.escalating",
+                "event.matched",
+                "metric.threshold",
+                "metric.escalating"
               ]
             }
           },
@@ -8398,7 +8401,10 @@
                     "issue.escalating",
                     "savedSearch.match",
                     "savedSearch.threshold",
-                    "savedSearch.escalating"
+                    "savedSearch.escalating",
+                    "event.matched",
+                    "metric.threshold",
+                    "metric.escalating"
                   ],
                   "description": "Reason the incident opened. `issue.new` fires when a new issue is discovered; `issue.regressed` when a resolved issue is detected again; `issue.escalating` when an ongoing issue is being detected more than expected. The `savedSearch.*` kinds are raised by monitors watching a search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when matching traces are detected above a configured threshold, and `savedSearch.escalating` when they stay above the threshold for a sustained window."
                 },
@@ -8879,7 +8885,10 @@
               "issue.escalating",
               "savedSearch.match",
               "savedSearch.threshold",
-              "savedSearch.escalating"
+              "savedSearch.escalating",
+              "event.matched",
+              "metric.threshold",
+              "metric.escalating"
             ],
             "description": "Reason the incident opened. `issue.new` fires when a new issue is discovered; `issue.regressed` when a resolved issue is detected again; `issue.escalating` when an ongoing issue is being detected more than expected. The `savedSearch.*` kinds are raised by monitors watching a search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when matching traces are detected above a configured threshold, and `savedSearch.escalating` when they stay above the threshold for a sustained window."
           },
@@ -11905,41 +11914,51 @@
                           "issue.escalating",
                           "savedSearch.match",
                           "savedSearch.threshold",
-                          "savedSearch.escalating"
+                          "savedSearch.escalating",
+                          "event.matched",
+                          "metric.threshold",
+                          "metric.escalating"
                         ],
                         "description": "What the alert fires on. The `savedSearch.*` kinds watch a saved search; `issue.*` are system-only."
                       },
                       "source": {
-                        "type": "object",
-                        "properties": {
-                          "type": {
-                            "type": "string",
-                            "enum": [
-                              "issue",
-                              "savedSearch"
-                            ],
-                            "description": "Entity the alert watches: `savedSearch` or `issue`."
-                          },
-                          "id": {
-                            "anyOf": [
-                              {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
                                 "type": "string",
-                                "minLength": 24,
-                                "maxLength": 24
+                                "enum": [
+                                  "issue",
+                                  "savedSearch"
+                                ],
+                                "description": "Entity the alert watches: `savedSearch` or `issue`."
                               },
-                              {
-                                "type": "null"
+                              "id": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "minLength": 24,
+                                    "maxLength": 24
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Id of the watched entity, or `null` to watch all entities of its `type`."
                               }
+                            },
+                            "required": [
+                              "type",
+                              "id"
                             ],
-                            "description": "Id of the watched entity, or `null` to watch all entities of its `type`."
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
                           }
-                        },
-                        "required": [
-                          "type",
-                          "id"
                         ],
-                        "additionalProperties": false,
-                        "description": "The entity this alert watches."
+                        "description": "The entity this alert watches, or `null` for unified alerts whose target lives on the monitor."
                       },
                       "condition": {
                         "anyOf": [
@@ -12876,41 +12895,51 @@
                     "issue.escalating",
                     "savedSearch.match",
                     "savedSearch.threshold",
-                    "savedSearch.escalating"
+                    "savedSearch.escalating",
+                    "event.matched",
+                    "metric.threshold",
+                    "metric.escalating"
                   ],
                   "description": "What the alert fires on. The `savedSearch.*` kinds watch a saved search; `issue.*` are system-only."
                 },
                 "source": {
-                  "type": "object",
-                  "properties": {
-                    "type": {
-                      "type": "string",
-                      "enum": [
-                        "issue",
-                        "savedSearch"
-                      ],
-                      "description": "Entity the alert watches: `savedSearch` or `issue`."
-                    },
-                    "id": {
-                      "anyOf": [
-                        {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
                           "type": "string",
-                          "minLength": 24,
-                          "maxLength": 24
+                          "enum": [
+                            "issue",
+                            "savedSearch"
+                          ],
+                          "description": "Entity the alert watches: `savedSearch` or `issue`."
                         },
-                        {
-                          "type": "null"
+                        "id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 24,
+                              "maxLength": 24
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Id of the watched entity, or `null` to watch all entities of its `type`."
                         }
+                      },
+                      "required": [
+                        "type",
+                        "id"
                       ],
-                      "description": "Id of the watched entity, or `null` to watch all entities of its `type`."
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
                     }
-                  },
-                  "required": [
-                    "type",
-                    "id"
                   ],
-                  "additionalProperties": false,
-                  "description": "The entity this alert watches."
+                  "description": "The entity this alert watches, or `null` for unified alerts whose target lives on the monitor."
                 },
                 "condition": {
                   "anyOf": [
@@ -13414,41 +13443,51 @@
                     "issue.escalating",
                     "savedSearch.match",
                     "savedSearch.threshold",
-                    "savedSearch.escalating"
+                    "savedSearch.escalating",
+                    "event.matched",
+                    "metric.threshold",
+                    "metric.escalating"
                   ],
                   "description": "What the alert fires on. The `savedSearch.*` kinds watch a saved search; `issue.*` are system-only."
                 },
                 "source": {
-                  "type": "object",
-                  "properties": {
-                    "type": {
-                      "type": "string",
-                      "enum": [
-                        "issue",
-                        "savedSearch"
-                      ],
-                      "description": "Entity the alert watches: `savedSearch` or `issue`."
-                    },
-                    "id": {
-                      "anyOf": [
-                        {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
                           "type": "string",
-                          "minLength": 24,
-                          "maxLength": 24
+                          "enum": [
+                            "issue",
+                            "savedSearch"
+                          ],
+                          "description": "Entity the alert watches: `savedSearch` or `issue`."
                         },
-                        {
-                          "type": "null"
+                        "id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 24,
+                              "maxLength": 24
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Id of the watched entity, or `null` to watch all entities of its `type`."
                         }
+                      },
+                      "required": [
+                        "type",
+                        "id"
                       ],
-                      "description": "Id of the watched entity, or `null` to watch all entities of its `type`."
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
                     }
-                  },
-                  "required": [
-                    "type",
-                    "id"
                   ],
-                  "additionalProperties": false,
-                  "description": "The entity this alert watches."
+                  "description": "The entity this alert watches, or `null` for unified alerts whose target lives on the monitor."
                 },
                 "condition": {
                   "anyOf": [
@@ -13963,41 +14002,51 @@
                     "issue.escalating",
                     "savedSearch.match",
                     "savedSearch.threshold",
-                    "savedSearch.escalating"
+                    "savedSearch.escalating",
+                    "event.matched",
+                    "metric.threshold",
+                    "metric.escalating"
                   ],
                   "description": "What the alert fires on. The `savedSearch.*` kinds watch a saved search; `issue.*` are system-only."
                 },
                 "source": {
-                  "type": "object",
-                  "properties": {
-                    "type": {
-                      "type": "string",
-                      "enum": [
-                        "issue",
-                        "savedSearch"
-                      ],
-                      "description": "Entity the alert watches: `savedSearch` or `issue`."
-                    },
-                    "id": {
-                      "anyOf": [
-                        {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
                           "type": "string",
-                          "minLength": 24,
-                          "maxLength": 24
+                          "enum": [
+                            "issue",
+                            "savedSearch"
+                          ],
+                          "description": "Entity the alert watches: `savedSearch` or `issue`."
                         },
-                        {
-                          "type": "null"
+                        "id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 24,
+                              "maxLength": 24
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Id of the watched entity, or `null` to watch all entities of its `type`."
                         }
+                      },
+                      "required": [
+                        "type",
+                        "id"
                       ],
-                      "description": "Id of the watched entity, or `null` to watch all entities of its `type`."
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
                     }
-                  },
-                  "required": [
-                    "type",
-                    "id"
                   ],
-                  "additionalProperties": false,
-                  "description": "The entity this alert watches."
+                  "description": "The entity this alert watches, or `null` for unified alerts whose target lives on the monitor."
                 },
                 "condition": {
                   "anyOf": [
@@ -14491,41 +14540,51 @@
                     "issue.escalating",
                     "savedSearch.match",
                     "savedSearch.threshold",
-                    "savedSearch.escalating"
+                    "savedSearch.escalating",
+                    "event.matched",
+                    "metric.threshold",
+                    "metric.escalating"
                   ],
                   "description": "What the alert fires on. The `savedSearch.*` kinds watch a saved search; `issue.*` are system-only."
                 },
                 "source": {
-                  "type": "object",
-                  "properties": {
-                    "type": {
-                      "type": "string",
-                      "enum": [
-                        "issue",
-                        "savedSearch"
-                      ],
-                      "description": "Entity the alert watches: `savedSearch` or `issue`."
-                    },
-                    "id": {
-                      "anyOf": [
-                        {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
                           "type": "string",
-                          "minLength": 24,
-                          "maxLength": 24
+                          "enum": [
+                            "issue",
+                            "savedSearch"
+                          ],
+                          "description": "Entity the alert watches: `savedSearch` or `issue`."
                         },
-                        {
-                          "type": "null"
+                        "id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 24,
+                              "maxLength": 24
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Id of the watched entity, or `null` to watch all entities of its `type`."
                         }
+                      },
+                      "required": [
+                        "type",
+                        "id"
                       ],
-                      "description": "Id of the watched entity, or `null` to watch all entities of its `type`."
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
                     }
-                  },
-                  "required": [
-                    "type",
-                    "id"
                   ],
-                  "additionalProperties": false,
-                  "description": "The entity this alert watches."
+                  "description": "The entity this alert watches, or `null` for unified alerts whose target lives on the monitor."
                 },
                 "condition": {
                   "anyOf": [
@@ -14954,41 +15013,51 @@
               "issue.escalating",
               "savedSearch.match",
               "savedSearch.threshold",
-              "savedSearch.escalating"
+              "savedSearch.escalating",
+              "event.matched",
+              "metric.threshold",
+              "metric.escalating"
             ],
             "description": "What the alert fires on. The `savedSearch.*` kinds watch a saved search; `issue.*` are system-only."
           },
           "source": {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string",
-                "enum": [
-                  "issue",
-                  "savedSearch"
-                ],
-                "description": "Entity the alert watches: `savedSearch` or `issue`."
-              },
-              "id": {
-                "anyOf": [
-                  {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
                     "type": "string",
-                    "minLength": 24,
-                    "maxLength": 24
+                    "enum": [
+                      "issue",
+                      "savedSearch"
+                    ],
+                    "description": "Entity the alert watches: `savedSearch` or `issue`."
                   },
-                  {
-                    "type": "null"
+                  "id": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 24,
+                        "maxLength": 24
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Id of the watched entity, or `null` to watch all entities of its `type`."
                   }
+                },
+                "required": [
+                  "type",
+                  "id"
                 ],
-                "description": "Id of the watched entity, or `null` to watch all entities of its `type`."
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
               }
-            },
-            "required": [
-              "type",
-              "id"
             ],
-            "additionalProperties": false,
-            "description": "The entity this alert watches."
+            "description": "The entity this alert watches, or `null` for unified alerts whose target lives on the monitor."
           },
           "condition": {
             "anyOf": [
@@ -15832,41 +15901,51 @@
                     "issue.escalating",
                     "savedSearch.match",
                     "savedSearch.threshold",
-                    "savedSearch.escalating"
+                    "savedSearch.escalating",
+                    "event.matched",
+                    "metric.threshold",
+                    "metric.escalating"
                   ],
                   "description": "What the alert fires on. The `savedSearch.*` kinds watch a saved search; `issue.*` are system-only."
                 },
                 "source": {
-                  "type": "object",
-                  "properties": {
-                    "type": {
-                      "type": "string",
-                      "enum": [
-                        "issue",
-                        "savedSearch"
-                      ],
-                      "description": "Entity the alert watches: `savedSearch` or `issue`."
-                    },
-                    "id": {
-                      "anyOf": [
-                        {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
                           "type": "string",
-                          "minLength": 24,
-                          "maxLength": 24
+                          "enum": [
+                            "issue",
+                            "savedSearch"
+                          ],
+                          "description": "Entity the alert watches: `savedSearch` or `issue`."
                         },
-                        {
-                          "type": "null"
+                        "id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 24,
+                              "maxLength": 24
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Id of the watched entity, or `null` to watch all entities of its `type`."
                         }
+                      },
+                      "required": [
+                        "type",
+                        "id"
                       ],
-                      "description": "Id of the watched entity, or `null` to watch all entities of its `type`."
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
                     }
-                  },
-                  "required": [
-                    "type",
-                    "id"
                   ],
-                  "additionalProperties": false,
-                  "description": "The entity this alert watches."
+                  "description": "The entity this alert watches, or `null` for unified alerts whose target lives on the monitor."
                 },
                 "condition": {
                   "anyOf": [
@@ -16368,7 +16447,10 @@
                     "issue.escalating",
                     "savedSearch.match",
                     "savedSearch.threshold",
-                    "savedSearch.escalating"
+                    "savedSearch.escalating",
+                    "event.matched",
+                    "metric.threshold",
+                    "metric.escalating"
                   ],
                   "description": "Reason the incident opened. `issue.new` fires when a new issue is discovered; `issue.regressed` when a resolved issue is detected again; `issue.escalating` when an ongoing issue is being detected more than expected. The `savedSearch.*` kinds are raised by monitors watching a search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when matching traces are detected above a configured threshold, and `savedSearch.escalating` when they stay above the threshold for a sustained window."
                 },
@@ -16888,41 +16970,51 @@
                     "issue.escalating",
                     "savedSearch.match",
                     "savedSearch.threshold",
-                    "savedSearch.escalating"
+                    "savedSearch.escalating",
+                    "event.matched",
+                    "metric.threshold",
+                    "metric.escalating"
                   ],
                   "description": "What the alert fires on. The `savedSearch.*` kinds watch a saved search; `issue.*` are system-only."
                 },
                 "source": {
-                  "type": "object",
-                  "properties": {
-                    "type": {
-                      "type": "string",
-                      "enum": [
-                        "issue",
-                        "savedSearch"
-                      ],
-                      "description": "Entity the alert watches: `savedSearch` or `issue`."
-                    },
-                    "id": {
-                      "anyOf": [
-                        {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
                           "type": "string",
-                          "minLength": 24,
-                          "maxLength": 24
+                          "enum": [
+                            "issue",
+                            "savedSearch"
+                          ],
+                          "description": "Entity the alert watches: `savedSearch` or `issue`."
                         },
-                        {
-                          "type": "null"
+                        "id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 24,
+                              "maxLength": 24
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Id of the watched entity, or `null` to watch all entities of its `type`."
                         }
+                      },
+                      "required": [
+                        "type",
+                        "id"
                       ],
-                      "description": "Id of the watched entity, or `null` to watch all entities of its `type`."
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
                     }
-                  },
-                  "required": [
-                    "type",
-                    "id"
                   ],
-                  "additionalProperties": false,
-                  "description": "The entity this alert watches."
+                  "description": "The entity this alert watches, or `null` for unified alerts whose target lives on the monitor."
                 },
                 "condition": {
                   "anyOf": [
@@ -17426,41 +17518,51 @@
                     "issue.escalating",
                     "savedSearch.match",
                     "savedSearch.threshold",
-                    "savedSearch.escalating"
+                    "savedSearch.escalating",
+                    "event.matched",
+                    "metric.threshold",
+                    "metric.escalating"
                   ],
                   "description": "What the alert fires on. The `savedSearch.*` kinds watch a saved search; `issue.*` are system-only."
                 },
                 "source": {
-                  "type": "object",
-                  "properties": {
-                    "type": {
-                      "type": "string",
-                      "enum": [
-                        "issue",
-                        "savedSearch"
-                      ],
-                      "description": "Entity the alert watches: `savedSearch` or `issue`."
-                    },
-                    "id": {
-                      "anyOf": [
-                        {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
                           "type": "string",
-                          "minLength": 24,
-                          "maxLength": 24
+                          "enum": [
+                            "issue",
+                            "savedSearch"
+                          ],
+                          "description": "Entity the alert watches: `savedSearch` or `issue`."
                         },
-                        {
-                          "type": "null"
+                        "id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 24,
+                              "maxLength": 24
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Id of the watched entity, or `null` to watch all entities of its `type`."
                         }
+                      },
+                      "required": [
+                        "type",
+                        "id"
                       ],
-                      "description": "Id of the watched entity, or `null` to watch all entities of its `type`."
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
                     }
-                  },
-                  "required": [
-                    "type",
-                    "id"
                   ],
-                  "additionalProperties": false,
-                  "description": "The entity this alert watches."
+                  "description": "The entity this alert watches, or `null` for unified alerts whose target lives on the monitor."
                 },
                 "condition": {
                   "anyOf": [

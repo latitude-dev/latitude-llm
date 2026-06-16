@@ -34,21 +34,26 @@ export const resolveAlertIncidentUseCase = (input: ResolveAlertIncidentInput) =>
         // double-click stays a no-op and a bad id still surfaces NotFoundError.
         if (closed === null) return yield* alertIncidentRepository.findById(input.id)
 
-        yield* outboxEventWriter.write({
-          eventName: "IncidentClosed",
-          aggregateType: "alert_incident",
-          aggregateId: closed.id,
-          organizationId: closed.organizationId,
-          payload: {
+        // Source-based incidents (issue/savedSearch) drive the existing notification payload.
+        // Unified `event.*`/`metric.*` incidents are sourceless — their close notification is
+        // wired with the firing path; the source-based event is skipped for them.
+        if (closed.sourceType !== null && closed.sourceId !== null) {
+          yield* outboxEventWriter.write({
+            eventName: "IncidentClosed",
+            aggregateType: "alert_incident",
+            aggregateId: closed.id,
             organizationId: closed.organizationId,
-            projectId: closed.projectId,
-            alertIncidentId: closed.id,
-            kind: closed.kind,
-            sourceType: closed.sourceType,
-            sourceId: closed.sourceId,
-            reason: "resolved",
-          },
-        })
+            payload: {
+              organizationId: closed.organizationId,
+              projectId: closed.projectId,
+              alertIncidentId: closed.id,
+              kind: closed.kind,
+              sourceType: closed.sourceType,
+              sourceId: closed.sourceId,
+              reason: "resolved",
+            },
+          })
+        }
 
         return closed
       }),

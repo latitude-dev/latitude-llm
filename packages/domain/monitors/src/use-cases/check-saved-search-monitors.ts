@@ -11,8 +11,8 @@ import {
 } from "@domain/shared"
 import { Cause, Effect } from "effect"
 import type { MonitorAlert } from "../entities/monitor.ts"
+import type { MetricSeriesReader } from "../ports/metric-series-reader.ts"
 import { MonitorRepository } from "../ports/monitor-repository.ts"
-import type { SavedSearchMatchReader } from "../ports/saved-search-match-reader.ts"
 import type { EvaluateSavedSearchAlertInput } from "./evaluate-saved-search-alert.ts"
 import { runSavedSearchEscalatingAlertUseCase } from "./run-saved-search-escalating-alert.ts"
 import { runSavedSearchMatchAlertUseCase } from "./run-saved-search-match-alert.ts"
@@ -47,7 +47,7 @@ export const checkSavedSearchMonitorsUseCase = (
   RepositoryError,
   | SqlClient
   | ChSqlClient
-  | SavedSearchMatchReader
+  | MetricSeriesReader
   | AlertIncidentRepository
   | OutboxEventWriter
   | MonitorRepository
@@ -77,7 +77,7 @@ export const checkSavedSearchMonitorsUseCase = (
                 monitorId: alert.monitorId,
                 alertId: alert.id,
                 kind: alert.kind,
-                sourceId: alert.source.id,
+                sourceId: alert.source?.id ?? null,
                 error: Cause.squash(cause),
               })
             }),
@@ -97,7 +97,7 @@ export const checkSavedSearchMonitorsUseCase = (
       readonly now: Date
     }) {
       return Effect.gen(function* () {
-        const sourceId = args.alert.source.id
+        const sourceId = args.alert.source?.id ?? null
         if (sourceId === null) return
         // Skip a since-deleted search (a check can race the delete cascade).
         const search = yield* savedSearchRepository
@@ -127,7 +127,7 @@ export const checkSavedSearchMonitorsUseCase = (
     RepositoryError,
     | SqlClient
     | ChSqlClient
-    | SavedSearchMatchReader
+    | MetricSeriesReader
     | AlertIncidentRepository
     | OutboxEventWriter
     | MonitorRepository

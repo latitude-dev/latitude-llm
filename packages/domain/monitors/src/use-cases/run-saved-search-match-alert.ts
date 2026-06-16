@@ -2,7 +2,7 @@ import type { AlertIncidentRepository } from "@domain/alerts"
 import type { OutboxEventWriter } from "@domain/events"
 import { type ChSqlClient, type RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
-import type { SavedSearchMatchReader } from "../ports/saved-search-match-reader.ts"
+import type { MetricSeriesReader } from "../ports/metric-series-reader.ts"
 import {
   type EvaluateSavedSearchAlertError,
   type EvaluateSavedSearchAlertInput,
@@ -26,7 +26,7 @@ export const runSavedSearchMatchAlertUseCase = (input: EvaluateSavedSearchAlertI
     if (alert.kind !== "savedSearch.match") {
       return yield* Effect.die(`runSavedSearchMatchAlert: not a savedSearch.match alert (${alert.id})`)
     }
-    const sourceId = alert.source.id
+    const sourceId = alert.source?.id ?? null
     if (sourceId === null) return yield* Effect.die(`runSavedSearchMatchAlert: alert ${alert.id} has no source id`)
 
     const sqlClient = yield* SqlClient
@@ -52,5 +52,5 @@ export const runSavedSearchMatchAlertUseCase = (input: EvaluateSavedSearchAlertI
   }).pipe(Effect.withSpan("monitors.runSavedSearchMatchAlert")) as Effect.Effect<
     RunSavedSearchMatchAlertResult,
     RunSavedSearchMatchAlertError,
-    SqlClient | ChSqlClient | SavedSearchMatchReader | AlertIncidentRepository | OutboxEventWriter
+    SqlClient | ChSqlClient | MetricSeriesReader | AlertIncidentRepository | OutboxEventWriter
   >

@@ -10,6 +10,7 @@ import {
   Tooltip,
 } from "@repo/ui"
 import { formatCount, formatDuration, formatPrice, relativeTime } from "@repo/utils"
+import { useHotkeys } from "@tanstack/react-hotkeys"
 import { useQueries } from "@tanstack/react-query"
 import { ChevronsDownUpIcon, ChevronsUpDownIcon } from "lucide-react"
 import { use, useCallback, useMemo, useState } from "react"
@@ -19,6 +20,7 @@ import type { SessionRecord } from "../../../../../domains/sessions/sessions.fun
 import { TraceScopeContext } from "../../../../../domains/traces/trace-scope.tsx"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
+import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import type { SelectionState } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { FiltersSidebar } from "./filters-sidebar.tsx"
 import { sessionTracesQueryOptions } from "./session-detail-drawer/use-session-traces.ts"
@@ -572,6 +574,39 @@ export function SessionsView({
     },
     [matchingTraceIdSet],
   )
+
+  // J/K navigate sessions, except when a spans tree is showing (it takes over
+  // J/K, mirroring traces-view): the open trace's spans tab (`traceTab`), or a
+  // single-trace session's own spans tab (`sessionTab`) when no trace is open.
+  const [activeTraceTab] = useParamState("traceTab", "trace")
+  const [activeSessionTab] = useParamState("sessionTab", "session")
+  const spansTreeActive = activeTraceId
+    ? activeTraceTab === "spans"
+    : Boolean(activeSessionId) && activeSessionTab === "spans"
+  const jkEnabled = !spansTreeActive
+  useHotkeys([
+    {
+      hotkey: "J",
+      callback: () => {
+        const idx = activeSessionId ? sessions.findIndex((session) => session.sessionId === activeSessionId) : -1
+        const next = sessions[idx + 1]
+        if (next) onOpenSession(next.sessionId)
+        else if (sessions.length > 0 && !activeSessionId) onOpenSession(sessions[0]!.sessionId)
+      },
+      options: { enabled: jkEnabled },
+    },
+    {
+      hotkey: "K",
+      callback: () => {
+        const idx = activeSessionId
+          ? sessions.findIndex((session) => session.sessionId === activeSessionId)
+          : sessions.length
+        const prev = sessions[idx - 1]
+        if (prev) onOpenSession(prev.sessionId)
+      },
+      options: { enabled: jkEnabled },
+    },
+  ])
 
   const getExpandedRows = (row: SessionTableRow): ExpandedRows<SessionTableRow> => {
     if (row.kind !== "session") return { data: [] }

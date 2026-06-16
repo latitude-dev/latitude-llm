@@ -39,6 +39,11 @@ const ALERT_KIND_TO_SUBTITLE: Record<AlertIncidentKind, string> = {
     "We notified everyone watching this project — traces matching the search were detected above the configured threshold.",
   "savedSearch.escalating":
     "We notified everyone watching this project — traces matching the search stayed above the threshold for the configured window.",
+  "event.matched": "We notified everyone watching this project — a new matching event was detected.",
+  "metric.threshold":
+    "We notified everyone watching this project — a monitored metric crossed its configured threshold.",
+  "metric.escalating":
+    "We notified everyone watching this project — a monitored metric stayed over its threshold for the configured window.",
 }
 
 interface IncidentEventEmailProps {

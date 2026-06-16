@@ -1,5 +1,13 @@
 import { cn, Text } from "@repo/ui"
-import { type MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from "react"
+import {
+  type FocusEvent as ReactFocusEvent,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import type { ActivityCategory } from "../../../../../../lib/conversation-timeline/build-activity-track.ts"
 import type {
   ConversationTimeline,
@@ -30,7 +38,7 @@ const ZERO_WIDTH_SLICE_PCT = 0.0001
 
 export interface MarkerHover {
   readonly markers: readonly TimelineMarker[]
-  readonly leftPct: number
+  readonly anchorRect: DOMRect
 }
 
 const ACTIVITY_LABELS: Readonly<Record<ActivityCategory, string>> = {
@@ -52,13 +60,18 @@ function EventMarker({
   readonly onClick: () => void
   readonly onHover: (hover: MarkerHover | null) => void
 }) {
+  const hoverFor = (event: ReactPointerEvent<HTMLButtonElement> | ReactFocusEvent<HTMLButtonElement>): MarkerHover => ({
+    markers: [marker],
+    anchorRect: event.currentTarget.getBoundingClientRect(),
+  })
+
   return (
     <button
       type="button"
       onClick={onClick}
-      onPointerEnter={() => onHover({ markers: [marker], leftPct })}
+      onPointerEnter={(event) => onHover(hoverFor(event))}
       onPointerLeave={() => onHover(null)}
-      onFocus={() => onHover({ markers: [marker], leftPct })}
+      onFocus={(event) => onHover(hoverFor(event))}
       onBlur={() => onHover(null)}
       aria-label={markerAriaLabel(marker)}
       className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded p-0.5 transition-transform hover:scale-125"
@@ -78,15 +91,18 @@ function MarkerClusterChip({
   readonly onClick: () => void
   readonly onHover: (hover: MarkerHover | null) => void
 }) {
-  const hover: MarkerHover = { markers: cluster.markers, leftPct: cluster.leftPct }
   const first = cluster.markers[0]
+  const hoverFor = (event: ReactPointerEvent<HTMLButtonElement> | ReactFocusEvent<HTMLButtonElement>): MarkerHover => ({
+    markers: cluster.markers,
+    anchorRect: event.currentTarget.getBoundingClientRect(),
+  })
   return (
     <button
       type="button"
       onClick={onClick}
-      onPointerEnter={() => onHover(hover)}
+      onPointerEnter={(event) => onHover(hoverFor(event))}
       onPointerLeave={() => onHover(null)}
-      onFocus={() => onHover(hover)}
+      onFocus={(event) => onHover(hoverFor(event))}
       onBlur={() => onHover(null)}
       aria-label={`${cluster.markers.length} events`}
       className="absolute top-1/2 flex h-4 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center gap-0.5 rounded-full border border-border bg-background px-1 font-medium text-[10px] text-foreground transition-transform hover:scale-110"

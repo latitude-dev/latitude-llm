@@ -15,11 +15,7 @@ import { useCallback, useMemo, useState } from "react"
 import { useRegisterCommands } from "../../../../../../components/command-palette/command-palette-provider.tsx"
 import type { PaletteCommand } from "../../../../../../components/command-palette/types.ts"
 import { useHasFeatureFlag } from "../../../../../../domains/feature-flags/feature-flags.collection.ts"
-import {
-  invalidateAllMonitorQueries,
-  useMonitor,
-  useMonitors,
-} from "../../../../../../domains/monitors/monitors.collection.ts"
+import { invalidateAllMonitorQueries, useMonitors } from "../../../../../../domains/monitors/monitors.collection.ts"
 import {
   bulkDeleteMonitors,
   bulkMuteMonitors,
@@ -37,7 +33,6 @@ import {
 import { BreadcrumbText } from "../../../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "../../-route-data.ts"
 import { MonitorCreateModal } from "./monitor-create-modal.tsx"
-import { MonitorDetailDrawer, MonitorDetailDrawerSkeleton } from "./monitor-detail-drawer.tsx"
 import { MonitorsEmptyState } from "./monitors-empty-state.tsx"
 import { DEFAULT_MONITORS_SORTING, type MonitorsTableSorting, MonitorsView, sortMonitorRows } from "./monitors-view.tsx"
 
@@ -121,7 +116,15 @@ function MonitorsTabs({ system, projectSlug }: { readonly system: boolean; reado
 function MonitorsPageContent({ system }: { readonly system: boolean }) {
   const project = useRouteProject()
   const queryClient = useQueryClient()
-  const [monitorSlug, setMonitorSlug] = useParamState("monitorSlug", "")
+  const navigate = useNavigate()
+  const openMonitor = useCallback(
+    (slug: string) =>
+      void navigate({
+        to: "/projects/$projectSlug/monitors/$monitorSlug",
+        params: { projectSlug: project.slug, monitorSlug: slug },
+      }),
+    [navigate, project.slug],
+  )
   const [searchQuery, setSearchQuery] = useParamState("monitorsSearch", "")
   const [searchInput, setSearchInput] = useValueWithDefault(searchQuery)
   const [createOpen, setCreateOpen] = useState(false)
@@ -175,7 +178,6 @@ function MonitorsPageContent({ system }: { readonly system: boolean }) {
   })
 
   const sortedRows = useMemo(() => sortMonitorRows(rows, sorting), [rows, sorting])
-  const monitors = useMemo(() => sortedRows.map((row) => row.monitor), [sortedRows])
 
   const monitorIds = useMemo(() => sortedRows.map((row) => row.monitor.id), [sortedRows])
   const selection = useSelectableRows({
@@ -188,19 +190,6 @@ function MonitorsPageContent({ system }: { readonly system: boolean }) {
   const selectionHasOngoingIncident = sortedRows.some(
     (row) => row.lastIncident?.endedAtIso === null && selection.isSelected(row.monitor.id),
   )
-
-  const listedMonitor = monitorSlug ? monitors.find((monitor) => monitor.slug === monitorSlug) : undefined
-  // Each tab lists only its own kind; deep links to the other kind (command
-  // palette, notifications) still open the drawer through a point lookup by slug.
-  const { data: fetchedMonitor, isLoading: isFetchingActiveMonitor } = useMonitor({
-    projectId: project.id,
-    slug: monitorSlug,
-    enabled: Boolean(monitorSlug) && !listedMonitor && !isLoading,
-  })
-  const activeMonitor = listedMonitor ?? fetchedMonitor ?? undefined
-  const activeIndex = activeMonitor ? monitors.findIndex((monitor) => monitor.slug === activeMonitor.slug) : -1
-  const prevMonitor = activeIndex > 0 ? monitors[activeIndex - 1] : undefined
-  const nextMonitor = activeIndex >= 0 ? monitors[activeIndex + 1] : undefined
 
   const bulkActionData = useCallback(() => {
     const bulkSelection = selection.bulkSelection
@@ -257,7 +246,6 @@ function MonitorsPageContent({ system }: { readonly system: boolean }) {
   const handleBulkDelete = useCallback(async () => {
     const data = bulkActionData()
     if (!data) return
-    const activeWasSelected = activeMonitor ? selection.isSelected(activeMonitor.id) : false
     setBulkActionLoading(true)
     try {
       const { deletedCount, skippedSystemCount } = await bulkDeleteMonitors({ data })
@@ -270,7 +258,6 @@ function MonitorsPageContent({ system }: { readonly system: boolean }) {
             : []),
         ].join(" "),
       })
-      if (activeWasSelected) setMonitorSlug("")
       selection.clearSelections()
       setBulkDeleteModalOpen(false)
     } catch (error) {
@@ -278,7 +265,7 @@ function MonitorsPageContent({ system }: { readonly system: boolean }) {
     } finally {
       setBulkActionLoading(false)
     }
-  }, [activeMonitor, bulkActionData, project.id, queryClient, selection, setMonitorSlug])
+  }, [bulkActionData, project.id, queryClient, selection])
 
   const hasMonitors = totalCount > 0
   const hasActiveFilters = Boolean(searchQuery)
@@ -290,7 +277,7 @@ function MonitorsPageContent({ system }: { readonly system: boolean }) {
       projectId={project.id}
       projectSlug={project.slug}
       onClose={() => setCreateOpen(false)}
-      onCreated={(slug) => setMonitorSlug(slug)}
+      onCreated={openMonitor}
     />
   ) : null
 
@@ -374,8 +361,7 @@ function MonitorsPageContent({ system }: { readonly system: boolean }) {
           rows={sortedRows}
           isLoading={isLoading || isReloading}
           infiniteScroll={infiniteScroll}
-          activeMonitorSlug={monitorSlug || undefined}
-          onActiveMonitorChange={(slug) => setMonitorSlug(slug ?? "")}
+          onActiveMonitorChange={(slug) => slug && openMonitor(slug)}
           projectId={project.id}
           projectSlug={project.slug}
           showWatching={!system}
@@ -450,26 +436,6 @@ function MonitorsPageContent({ system }: { readonly system: boolean }) {
           }
         />
       </Layout.Content>
-      {activeMonitor ? (
-        <Layout.Aside>
-          <MonitorDetailDrawer
-            key={activeMonitor.slug}
-            projectId={project.id}
-            projectSlug={project.slug}
-            monitor={activeMonitor}
-            onClose={() => setMonitorSlug("")}
-            {...(nextMonitor ? { onNext: () => setMonitorSlug(nextMonitor.slug) } : {})}
-            {...(prevMonitor ? { onPrev: () => setMonitorSlug(prevMonitor.slug) } : {})}
-            canNavigateNext={nextMonitor !== undefined}
-            canNavigatePrev={prevMonitor !== undefined}
-          />
-        </Layout.Aside>
-      ) : monitorSlug && (isLoading || isFetchingActiveMonitor) ? (
-        // Deep link / refresh: skeleton until the list (or the by-slug fallback) resolves.
-        <Layout.Aside>
-          <MonitorDetailDrawerSkeleton onClose={() => setMonitorSlug("")} />
-        </Layout.Aside>
-      ) : null}
     </Layout>
   )
 }

@@ -64,14 +64,18 @@ export const sweepEscalatingIssuesUseCase = (deps: SweepEscalatingIssuesDeps) =>
 
     yield* Effect.forEach(
       incidents,
-      (incident) =>
-        deps
+      (incident) => {
+        // `issue.escalating` incidents are always issue-sourced; the guard satisfies the
+        // now-nullable incident source type (unified incidents never carry this kind).
+        if (incident.sourceId === null) return Effect.void
+        return deps
           .publish({
             organizationId: incident.organizationId,
             projectId: incident.projectId,
             issueId: incident.sourceId,
           })
-          .pipe(Effect.catch(() => Ref.update(failedRef, (n) => n + 1))),
+          .pipe(Effect.catch(() => Ref.update(failedRef, (n) => n + 1)))
+      },
       { concurrency: PUBLISH_CONCURRENCY, discard: true },
     )
 

@@ -562,6 +562,42 @@ const _registry = {
   sandboxes: payloads<{
     archiveIdle: Record<string, never>
   }>(),
+
+  destinations: payloads<{
+    /**
+     * Fired every minute by a repeatable schedule. Selects active destinations
+     * due for a sync (idle backoff applied, sandbox orgs excluded) and fans out
+     * one `runSync` per due destination.
+     */
+    sweep: Record<string, never>
+    /**
+     * Fired nightly by a repeatable schedule. Deletes `destination_sync_runs`
+     * audit rows finished more than the retention window ago. Separate from the
+     * every-minute sweep because retention is coarse (30d).
+     */
+    pruneSyncRuns: Record<string, never>
+    /**
+     * One sync run for a single destination. The handler re-loads the
+     * destination, reads its spans window from ClickHouse, maps and delivers
+     * it, then advances the compound cursor. Published with
+     * `dedupeKey: destinations:runSync:${destinationId}` so at most one run per
+     * destination is queued; retryable delivery failures drive BullMQ backoff.
+     */
+    runSync: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly destinationId: string
+    }
+    /**
+     * Cascade cleanup. Fired by the domain-events worker on `ProjectDeleted`.
+     * The consumer deletes the project's destinations and their sync runs so
+     * the sweep stops exporting the deleted project's residual ClickHouse data.
+     */
+    "delete-by-project": {
+      readonly organizationId: string
+      readonly projectId: string
+    }
+  }>(),
 }
 
 export type TopicRegistry = typeof _registry

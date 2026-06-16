@@ -1,6 +1,6 @@
-import type { ConflictError, DestinationId, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
+import type { ConflictError, DestinationId, NotFoundError, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
 import { Context, type Effect } from "effect"
-import type { Destination } from "../entities/destination.ts"
+import type { Destination, DestinationStatus } from "../entities/destination.ts"
 
 /** Position in the `(ingested_at, span_id)` compound cursor. `spanId` is `""` before the first advance. */
 export interface DestinationCursor {
@@ -15,15 +15,33 @@ export interface AdvanceDestinationCursorInput {
   readonly next: DestinationCursor
 }
 
+/** Post-run bookkeeping (status, counters, `last_run_at`) — never the cursor. */
+export interface UpdateDestinationRunStateInput {
+  readonly id: DestinationId
+  readonly status: DestinationStatus
+  readonly consecutiveFailures: number
+  readonly consecutiveEmptyRuns: number
+  /** Sanitized: HTTP status + our error taxonomy, never upstream response bodies. */
+  readonly lastFailureMessage: string | null
+  readonly lastRunAt: Date
+}
+
 export interface DestinationRepositoryShape {
   /** Insert-or-update by id; fails with `ConflictError` when another destination holds the `(project_id, kind)` unique key. */
   save(destination: Destination): Effect.Effect<void, ConflictError | RepositoryError, SqlClient>
+  /** Loads a destination by id within the caller's organization; fails with `NotFoundError` when absent. */
+  findById(id: DestinationId): Effect.Effect<Destination, NotFoundError | RepositoryError, SqlClient>
+  /** Destinations configured for a project within the caller's organization, newest first. */
+  listByProjectId(projectId: ProjectId): Effect.Effect<readonly Destination[], RepositoryError, SqlClient>
+  /** Hard-deletes a destination by id within the caller's organization; cursor history goes with the row. */
+  delete(id: DestinationId): Effect.Effect<void, RepositoryError, SqlClient>
   /**
    * Active destinations due for a sync at `now`: idle backoff applied as
    * `last_run_at + intervalMs × 2^consecutive_empty_runs ≤ now` (never-ran rows
    * are always due), sandbox organizations excluded. Cross-org by design —
-   * drive through the admin Postgres client so RLS is bypassed; the sweep
-   * filters flag-off organizations itself.
+   * drive through the admin Postgres client so RLS is bypassed. The
+   * `destinations` flag gates only the settings UI; the sweep does not re-check
+   * it, so no flag filtering happens here or in the sweep.
    */
   listDue(now: Date): Effect.Effect<readonly Destination[], RepositoryError, SqlClient>
   /**
@@ -32,6 +50,13 @@ export interface DestinationRepositoryShape {
    * never move the cursor backwards or double-advance it.
    */
   advanceCursor(input: AdvanceDestinationCursorInput): Effect.Effect<boolean, RepositoryError, SqlClient>
+  /**
+   * Persists post-run bookkeeping without touching the cursor columns — the
+   * cursor moves only through the optimistic {@link advanceCursor}. Keeping the
+   * two writes separate is what stops a stale run from dragging the cursor
+   * backwards while it records its failure or idle counters.
+   */
+  updateRunState(input: UpdateDestinationRunStateInput): Effect.Effect<void, RepositoryError, SqlClient>
   deleteByProjectId(projectId: ProjectId): Effect.Effect<readonly DestinationId[], RepositoryError, SqlClient>
 }
 

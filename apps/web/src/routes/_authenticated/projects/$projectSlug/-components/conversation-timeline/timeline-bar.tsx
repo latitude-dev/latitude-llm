@@ -26,7 +26,7 @@ export function TimelineBar({
 
   return (
     <div className="relative flex flex-col gap-1 border-t border-border bg-background px-4 py-3">
-      {markerHover && <TimelineEventHoverCard markers={markerHover.markers} leftPct={markerHover.leftPct} />}
+      {markerHover && <TimelineEventHoverCard markers={markerHover.markers} anchorRect={markerHover.anchorRect} />}
       <TimelineTrack
         timeline={timeline}
         band={band}

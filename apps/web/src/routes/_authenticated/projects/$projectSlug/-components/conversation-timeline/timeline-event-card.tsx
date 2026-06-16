@@ -1,10 +1,13 @@
 import { cn, LatitudeLogo, Text } from "@repo/ui"
 import { MessageSquareIcon, TagsIcon, ThumbsDownIcon, ThumbsUpIcon, UserIcon, WrenchIcon } from "lucide-react"
 import type { ReactNode } from "react"
+import { createPortal } from "react-dom"
 import type { TimelineMarker } from "../../../../../../lib/conversation-timeline/build-conversation-timeline.ts"
 import { formatDuration } from "../trace-detail-drawer/tabs/spans-tab/span-tree/tree-utils.ts"
 
 const CARD_MAX_EVENTS = 2
+const CARD_WIDTH_PX = 240
+const VIEWPORT_PADDING_PX = 8
 
 const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)
 
@@ -194,29 +197,37 @@ export function TimelineEventCardContent({ marker }: { readonly marker: Timeline
   )
 }
 
-/** Positions a card above the whole timeline bar at the marker's position. */
-function TimelineBarCard({ leftPct, children }: { readonly leftPct: number; readonly children: ReactNode }) {
-  return (
+function TimelineBarCard({ anchorRect, children }: { readonly anchorRect: DOMRect; readonly children: ReactNode }) {
+  if (typeof document === "undefined") return null
+
+  const halfWidth = CARD_WIDTH_PX / 2
+  const minLeft = VIEWPORT_PADDING_PX + halfWidth
+  const maxLeft = window.innerWidth - VIEWPORT_PADDING_PX - halfWidth
+  const left = Math.min(maxLeft, Math.max(minLeft, anchorRect.left + anchorRect.width / 2))
+  const top = anchorRect.top - VIEWPORT_PADDING_PX
+
+  return createPortal(
     <div
-      className="pointer-events-none absolute bottom-[calc(100%+0.5rem)] z-10 -translate-x-1/2"
-      style={{ left: `${Math.min(80, Math.max(20, leftPct))}%` }}
+      className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-full"
+      style={{ left: `${left}px`, top: `${top}px` }}
     >
       {children}
-    </div>
+    </div>,
+    document.body,
   )
 }
 
 export function TimelineEventHoverCard({
   markers,
-  leftPct,
+  anchorRect,
 }: {
   readonly markers: readonly TimelineMarker[]
-  readonly leftPct: number
+  readonly anchorRect: DOMRect
 }) {
   const visibleMarkers = markers.slice(0, CARD_MAX_EVENTS)
   const hiddenCount = markers.length - visibleMarkers.length
   return (
-    <TimelineBarCard leftPct={leftPct}>
+    <TimelineBarCard anchorRect={anchorRect}>
       <div className="flex flex-col overflow-hidden rounded-lg border border-border bg-popover shadow-md">
         <div className="flex flex-col divide-y divide-border">
           {visibleMarkers.map((marker, index) => (

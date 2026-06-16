@@ -109,9 +109,8 @@ export function SavedSearchSelector({
     const existingSlug = monitorSummaries[record.id]?.monitorSlug
     if (existingSlug) {
       void navigate({
-        to: "/projects/$projectSlug/monitors/search",
-        params: { projectSlug },
-        search: { monitorSlug: existingSlug },
+        to: "/projects/$projectSlug/monitors/$monitorSlug",
+        params: { projectSlug, monitorSlug: existingSlug },
       })
     } else {
       // Create in place on the current page; redirect to the new monitor's details on success.
@@ -339,9 +338,8 @@ export function SavedSearchSelector({
                     className="cursor-pointer items-center gap-2"
                     onSelect={() =>
                       void navigate({
-                        to: "/projects/$projectSlug/monitors/search",
-                        params: { projectSlug },
-                        search: { monitorSlug: monitor.slug },
+                        to: "/projects/$projectSlug/monitors/$monitorSlug",
+                        params: { projectSlug, monitorSlug: monitor.slug },
                       })
                     }
                   >

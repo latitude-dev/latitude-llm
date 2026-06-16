@@ -28,7 +28,7 @@ export const sweepSavedSearchMonitorsUseCase = (deps: {
 }): Effect.Effect<SweepSavedSearchMonitorsResult, RepositoryError, SqlClient | MonitorRepository> =>
   Effect.gen(function* () {
     const monitorRepository = yield* MonitorRepository
-    const projects = yield* monitorRepository.listProjectsWithActiveSavedSearchAlerts()
+    const projects = yield* monitorRepository.listProjectsWithActiveMonitorAlerts()
 
     const failedRef = yield* Ref.make(0)
     yield* Effect.forEach(

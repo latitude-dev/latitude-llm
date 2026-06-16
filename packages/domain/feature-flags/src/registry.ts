@@ -38,6 +38,12 @@ export const FEATURE_FLAGS = {
     name: "Test Mode sandbox",
     description: "Enables the Live ⇄ Sandbox switcher and the sandbox namespace for isolated development traces.",
   },
+  destinations: {
+    emoji: "📤",
+    name: "Data destinations",
+    description:
+      "Outbound sync of project telemetry into customer-owned systems (v1: PostHog). Gates the destinations settings UI and the sync sweep's destination selection.",
+  },
   "evaluation-sandbox-runtime": {
     emoji: "🧰",
     name: "Sandboxed evaluation runtime",

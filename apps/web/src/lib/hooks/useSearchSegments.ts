@@ -1,4 +1,3 @@
-import { useMountEffect } from "@repo/ui"
 import { useRef, useState } from "react"
 
 type SearchSegmentKind = "semantic" | "literal" | "token"
@@ -126,11 +125,6 @@ export function useSearchSegments(initialValue: string, onSubmit: (value: string
       if (cursor !== undefined) input?.setSelectionRange(cursor, cursor)
     }, 0)
   }
-
-  useMountEffect(() => {
-    const first = segments[0]
-    if (first) focusSegment(first.id)
-  })
 
   const submit = (nextSegments = segments) => {
     const serialized = serializeSearchSegments(nextSegments).trim()

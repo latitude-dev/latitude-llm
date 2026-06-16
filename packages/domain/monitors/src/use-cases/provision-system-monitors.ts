@@ -43,6 +43,8 @@ const buildSystemMonitor = (
       severity: SEVERITY_FOR_KIND[alert.kind],
       createdAt: now,
     })),
+    // System issue monitors are event-driven (target lives on the alert source), not query-time.
+    target: null,
     mutedAt: null,
     deletedAt: null,
     createdAt: now,

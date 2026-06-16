@@ -57,7 +57,7 @@ export function useLiveSavedSearchName(target: {
   return data.find((s) => s.id === target.savedSearchId)?.name ?? null
 }
 
-/** `/projects/<slug>/monitors?monitorSlug=<slug>` deep link for saved-search incidents. Undefined without a slug or while the project loads. */
+/** `/projects/<slug>/monitors/<monitorSlug>` deep link for saved-search incidents. Undefined without a slug or while the project loads. */
 export function useMonitorUrl(target: {
   readonly projectId: string | null | undefined
   readonly monitorSlug: string | undefined
@@ -67,5 +67,5 @@ export function useMonitorUrl(target: {
     [target.projectId ?? null],
   )
   if (!project || !target.monitorSlug) return undefined
-  return `/projects/${project.slug}/monitors?monitorSlug=${encodeURIComponent(target.monitorSlug)}`
+  return `/projects/${project.slug}/monitors/${encodeURIComponent(target.monitorSlug)}`
 }

@@ -40,6 +40,7 @@ const monitor = (id: string, alerts: readonly MonitorAlert[], overrides: Partial
   description: "",
   system: overrides.system ?? true,
   alerts,
+  target: null,
   mutedAt: null,
   deletedAt: overrides.deletedAt ?? null,
   createdAt: at,

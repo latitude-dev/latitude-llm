@@ -33,6 +33,7 @@ const makeMonitor = (overrides: Partial<Monitor> & { alerts: readonly MonitorAle
   description: "",
   system: overrides.system ?? false,
   alerts: overrides.alerts,
+  target: null,
   mutedAt: null,
   deletedAt: null,
   createdAt: at,
@@ -116,7 +117,7 @@ describe("updateMonitorAlertUseCase", () => {
       }),
       repo,
     )
-    expect(result.alerts[0]?.source.id).toBe("t".repeat(24))
+    expect(result.alerts[0]?.source?.id).toBe("t".repeat(24))
     expect(result.alerts[0]?.severity).toBe("high")
     expect(monitors[0]?.alerts[0]).toMatchObject({ source: { id: "t".repeat(24) }, severity: "high" })
   })
@@ -239,7 +240,7 @@ describe("updateMonitorAlertUseCase", () => {
     )
     expect(error._tag).toBe("ValidationError")
     expect((error as { field: string }).field).toBe("source")
-    expect(monitors[0]?.alerts[0]?.source.id).toBe("s".repeat(24))
+    expect(monitors[0]?.alerts[0]?.source?.id).toBe("s".repeat(24))
   })
 
   it("still edits in place an alert already watching a semantic search (source unchanged)", async () => {

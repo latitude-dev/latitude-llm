@@ -1,6 +1,7 @@
 import { hasFeatureFlagUseCase } from "@domain/feature-flags"
 import {
   cascadeSourceDeletionUseCase,
+  checkMetricMonitorsUseCase,
   checkSavedSearchMonitorsUseCase,
   SAVED_SEARCH_MONITORS_THROTTLE_MS,
   savedSearchMonitorsCheckDedupeKey,
@@ -10,7 +11,7 @@ import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
 import { AIEmbedLive, withAi } from "@platform/ai"
 import type { RedisClient } from "@platform/cache-redis"
-import { type ClickHouseClient, SavedSearchMatchReaderLive, withClickHouse } from "@platform/db-clickhouse"
+import { type ClickHouseClient, MetricSeriesReaderLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   AlertIncidentRepositoryLive,
   FeatureFlagRepositoryLive,
@@ -65,10 +66,27 @@ export const createMonitorsWorker = ({
       Effect.gen(function* () {
         const enabled = yield* hasFeatureFlagUseCase({ identifier: "monitors" })
         if (!enabled) return { evaluated: 0, failed: 0 }
-        return yield* checkSavedSearchMonitorsUseCase(payload)
+        // Both monitor families ride the same trigger/throttle: saved-search-sourced and
+        // unified target-on-monitor (tool/user/raw-stream). Isolate them so a list-query
+        // failure in one family can't starve the other on this tick.
+        const savedSearch = yield* checkSavedSearchMonitorsUseCase(payload).pipe(
+          Effect.catch((error) =>
+            Effect.logError(`Saved-search check failed for ${payload.projectId}`, error).pipe(
+              Effect.as({ evaluated: 0, failed: 1 }),
+            ),
+          ),
+        )
+        const metric = yield* checkMetricMonitorsUseCase(payload).pipe(
+          Effect.catch((error) =>
+            Effect.logError(`Metric monitors check failed for ${payload.projectId}`, error).pipe(
+              Effect.as({ evaluated: 0, failed: 1 }),
+            ),
+          ),
+        )
+        return { evaluated: savedSearch.evaluated + metric.evaluated, failed: savedSearch.failed + metric.failed }
       }).pipe(
         withPostgres(checkRepoLayer, pgClient, OrganizationId(payload.organizationId)),
-        withClickHouse(SavedSearchMatchReaderLive, chClient, OrganizationId(payload.organizationId)),
+        withClickHouse(MetricSeriesReaderLive, chClient, OrganizationId(payload.organizationId)),
         withAi(AIEmbedLive, rdClient),
         Effect.tap((result) =>
           Effect.sync(() =>

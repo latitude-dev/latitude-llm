@@ -300,6 +300,28 @@ export function TraceDetailBody({
     annotationsEnabled,
   })
 
+  // H/L cycle the trace tabs (J/K are reserved for prev/next trace and, on the
+  // spans tab, the span tree). Wraps around, matching the tablist arrow keys.
+  const tabIds = useMemo(() => tabsWithCounts.map((tab) => tab.id), [tabsWithCounts])
+  useHotkeys([
+    {
+      hotkey: "L",
+      callback: () => {
+        const idx = tabIds.indexOf(activeTab)
+        const next = tabIds[(idx + 1) % tabIds.length]
+        if (next) handleSetActiveTab(next)
+      },
+    },
+    {
+      hotkey: "H",
+      callback: () => {
+        const idx = tabIds.indexOf(activeTab)
+        const prev = tabIds[(idx - 1 + tabIds.length) % tabIds.length]
+        if (prev) handleSetActiveTab(prev)
+      },
+    },
+  ])
+
   const { scrollContainerRef, textSelectionPopoverControlsRef, scrollToAnnotation } = useConversationAnnotationFocus({
     projectId,
     traceId,
@@ -492,19 +514,6 @@ function TraceDetailDrawerShell({
     readonly closeLabel?: ReactNode
     readonly drawerStoreKey?: string
   }) {
-  useHotkeys([
-    {
-      hotkey: "Alt+ArrowDown",
-      callback: () => onNextTrace?.(),
-      options: { enabled: canNavigateNext && !!onNextTrace },
-    },
-    {
-      hotkey: "Alt+ArrowUp",
-      callback: () => onPrevTrace?.(),
-      options: { enabled: canNavigatePrev && !!onPrevTrace },
-    },
-  ])
-
   return (
     <DetailDrawer
       storeKey={drawerStoreKey}
@@ -534,7 +543,7 @@ function TraceDetailDrawerShell({
               </Button>
             }
           >
-            Next trace <HotkeyBadge hotkey="Alt+ArrowDown" /> <HotkeyBadge hotkey="J" />
+            Next trace <HotkeyBadge hotkey="J" />
           </Tooltip>
           <Tooltip
             asChild
@@ -552,7 +561,7 @@ function TraceDetailDrawerShell({
               </Button>
             }
           >
-            Previous trace <HotkeyBadge hotkey="Alt+ArrowUp" /> <HotkeyBadge hotkey="K" />
+            Previous trace <HotkeyBadge hotkey="K" />
           </Tooltip>
         </>
       }

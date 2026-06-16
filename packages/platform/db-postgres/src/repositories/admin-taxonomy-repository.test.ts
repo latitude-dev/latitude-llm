@@ -24,6 +24,9 @@ const CATEGORY = makeId("cat-tax-checkout")
 const SUBCATEGORY = makeId("clu-tax-card")
 const UNCATEGORIZED = makeId("clu-tax-uncat")
 const OTHER_SUBCATEGORY = makeId("clu-tax-other")
+const DEPRECATED_CLUSTER = makeId("clu-tax-deprecated")
+const EMPTY_CLUSTER = makeId("clu-tax-empty")
+const PENDING_CLUSTER = makeId("clu-tax-pending")
 
 const centroid = {
   base: [],
@@ -124,10 +127,62 @@ describe("AdminTaxonomyRepositoryLive.getProjectTaxonomy", () => {
         createdAt: baseTime,
         updatedAt: baseTime,
       },
+      {
+        id: DEPRECATED_CLUSTER,
+        organizationId: ORG,
+        projectId: PROJECT,
+        parentClusterId: CATEGORY,
+        depth: 1,
+        path: `${CATEGORY}/`,
+        name: "Deprecated cluster",
+        description: "Should not be returned.",
+        centroid,
+        observationCount: 99,
+        state: "deprecated",
+        firstObservedAt: baseTime,
+        lastObservedAt: baseTime,
+        clusteredAt: baseTime,
+        createdAt: baseTime,
+        updatedAt: baseTime,
+      },
+      {
+        id: EMPTY_CLUSTER,
+        organizationId: ORG,
+        projectId: PROJECT,
+        parentClusterId: CATEGORY,
+        depth: 1,
+        path: `${CATEGORY}/`,
+        name: "Empty cluster",
+        description: "Should not be returned.",
+        centroid,
+        observationCount: 0,
+        firstObservedAt: baseTime,
+        lastObservedAt: baseTime,
+        clusteredAt: baseTime,
+        createdAt: baseTime,
+        updatedAt: baseTime,
+      },
+      {
+        id: PENDING_CLUSTER,
+        organizationId: ORG,
+        projectId: PROJECT,
+        parentClusterId: CATEGORY,
+        depth: 1,
+        path: `${CATEGORY}/`,
+        name: "Pending",
+        description: "Should not be returned.",
+        centroid,
+        observationCount: 99,
+        firstObservedAt: baseTime,
+        lastObservedAt: baseTime,
+        clusteredAt: baseTime,
+        createdAt: baseTime,
+        updatedAt: baseTime,
+      },
     ])
   })
 
-  it("returns categories with assigned and uncategorized subcategories for the project", async () => {
+  it("returns only taxonomy clusters visible to users", async () => {
     const result = await runWithLive(
       Effect.gen(function* () {
         const repo = yield* AdminTaxonomyRepository
@@ -139,7 +194,7 @@ describe("AdminTaxonomyRepositoryLive.getProjectTaxonomy", () => {
     expect(result.categories[0]?.id).toBe(CATEGORY)
     expect(result.categories[0]?.observationCount).toBe(10)
     expect(result.categories[0]?.subcategories.map((subcategory) => subcategory.id)).toEqual([SUBCATEGORY])
-    expect(result.uncategorized.map((subcategory) => subcategory.id)).toEqual([UNCATEGORIZED])
+    expect(result.uncategorized).toEqual([])
   })
 
   it("fails with NotFoundError for a non-existent project id", async () => {

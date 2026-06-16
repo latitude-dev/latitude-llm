@@ -27,7 +27,7 @@ export function UserBehavioursSection({
   if (!behaviours || behaviours.length === 0) {
     return (
       <div className="flex min-h-16 items-center">
-        <Text.H6 color="foregroundMuted">No behaviours have been observed for this user yet.</Text.H6>
+        <Text.H6 color="foregroundMuted">No behaviors have been observed for this user yet.</Text.H6>
       </div>
     )
   }
@@ -40,7 +40,7 @@ export function UserBehavioursSection({
           to="/projects/$projectSlug/behaviours"
           params={{ projectSlug }}
           search={{ behaviourPath: behaviour.clusterId }}
-          aria-label={`Open behaviour ${behaviour.name}`}
+          aria-label={`Open behavior ${behaviour.name}`}
           className="-mx-2 flex items-center gap-3 rounded-md px-2 py-2.5 transition-colors hover:bg-background"
         >
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">

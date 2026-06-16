@@ -26,6 +26,10 @@ describe("formatBytes", () => {
   it("handles negative values", () => {
     expect(formatBytes(-1536)).toBe("-1.5 KB")
   })
+
+  it("promotes to the next unit when rounding reaches 1024", () => {
+    expect(formatBytes(1024 * 1024 - 1)).toBe("1 MB")
+  })
 })
 
 describe("formatCount", () => {
@@ -55,6 +59,11 @@ describe("formatCount", () => {
 
   it("formats billions", () => {
     expect(formatCount(1000000000)).toBe("1B")
+  })
+
+  it("promotes to the next unit when rounding reaches 1000", () => {
+    expect(formatCount(999999)).toBe("1M")
+    expect(formatCount(999500)).toBe("1M")
   })
 
   it("handles negative numbers", () => {

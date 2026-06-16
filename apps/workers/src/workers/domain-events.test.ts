@@ -423,7 +423,7 @@ describe("domain-events dispatcher", () => {
     expect(published).toEqual([])
   })
 
-  it("routes ProjectDeleted to notifications:delete-by-project for cascade cleanup", async () => {
+  it("routes ProjectDeleted to notifications and destinations delete-by-project for cascade cleanup", async () => {
     const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("ProjectDeleted", {
@@ -437,6 +437,10 @@ describe("domain-events dispatcher", () => {
     const notif = published.find((p) => p.queue === "notifications" && p.task === "delete-by-project")
     expect(notif?.payload).toEqual({ organizationId: "org-1", projectId: "proj-x" })
     expect(notif?.options?.dedupeKey).toBe("notifications:delete-by-project:proj-x")
+
+    const dest = published.find((p) => p.queue === "destinations" && p.task === "delete-by-project")
+    expect(dest?.payload).toEqual({ organizationId: "org-1", projectId: "proj-x" })
+    expect(dest?.options?.dedupeKey).toBe("destinations:delete-by-project:proj-x")
   })
 
   it("fans out whitelisted events to posthog-analytics:track in addition to the primary handler", async () => {

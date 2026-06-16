@@ -6,13 +6,15 @@ import {
   Fingerprint,
   Key,
   type LucideIcon,
+  MessagesSquareIcon,
   Package,
   Plug,
   ScanSearch,
   SettingsIcon,
+  Share2,
   ShieldAlertIcon,
   TagsIcon,
-  TextAlignStartIcon,
+  TextIcon,
   UserRound,
   Users,
   UsersRoundIcon,
@@ -21,7 +23,7 @@ import {
 import { useMemo } from "react"
 import { useHasFeatureFlag } from "../feature-flags/feature-flags.collection.ts"
 
-type SectionFlag = "behaviours" | "monitors"
+type SectionFlag = "behaviours" | "monitors" | "destinations"
 
 interface ProjectSection {
   readonly key: string
@@ -34,18 +36,22 @@ interface ProjectSection {
 
 const PROJECT_SECTIONS: readonly ProjectSection[] = [
   {
+    key: "sessions",
+    label: "Sessions",
+    icon: MessagesSquareIcon,
+    path: (slug) => `/projects/${slug}`,
+    isActive: (pathname, slug) => pathname === `/projects/${slug}` || pathname === `/projects/${slug}/`,
+  },
+  {
     key: "traces",
     label: "Traces",
-    icon: TextAlignStartIcon,
-    path: (slug) => `/projects/${slug}`,
-    isActive: (pathname, slug) =>
-      pathname === `/projects/${slug}` ||
-      pathname === `/projects/${slug}/` ||
-      pathname.startsWith(`/projects/${slug}/traces`),
+    icon: TextIcon,
+    path: (slug) => `/projects/${slug}/traces`,
+    isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/traces`),
   },
   {
     key: "behaviours",
-    label: "Behaviours",
+    label: "Behaviors",
     icon: TagsIcon,
     path: (slug) => `/projects/${slug}/behaviours`,
     isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/behaviours`),
@@ -169,6 +175,13 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
         path: (slug) => `/projects/${slug}/settings/integrations`,
       },
       {
+        key: "data-destinations",
+        label: "Data destinations",
+        icon: Share2,
+        path: (slug) => `/projects/${slug}/settings/data-destinations`,
+        flag: "destinations",
+      },
+      {
         key: "sso",
         label: "Single sign-on",
         icon: Fingerprint,
@@ -193,7 +206,8 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
 function useSectionFlags(): Record<SectionFlag, boolean> {
   const behaviours = useHasFeatureFlag("behaviours")
   const monitors = useHasFeatureFlag("monitors")
-  return useMemo(() => ({ behaviours, monitors }), [behaviours, monitors])
+  const destinations = useHasFeatureFlag("destinations")
+  return useMemo(() => ({ behaviours, monitors, destinations }), [behaviours, monitors, destinations])
 }
 
 /** Project sections visible to the current org, in sidebar/palette order. */

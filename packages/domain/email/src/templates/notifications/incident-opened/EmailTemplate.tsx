@@ -171,7 +171,7 @@ IncidentOpenedEmail.PreviewProps = {
   monitor: {
     name: "Issue escalating",
     url: "https://console.latitude.so/projects/sample-project/monitors?monitorSlug=issue-escalating",
-    conditionSummary: "Alerts when an ongoing issue is being detected more than expected.",
+    conditionSummary: "Opens an incident when an ongoing issue is being detected more than expected.",
   },
   webAppUrl: "http://localhost:3000",
 } satisfies IncidentOpenedEmailProps

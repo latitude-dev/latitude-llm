@@ -9,7 +9,7 @@ export interface MonitorAlert {
     monitorId: string;
     /** What the alert fires on. The `savedSearch.*` kinds watch a saved search; `issue.*` are system-only. */
     kind: MonitorAlert.Kind;
-    source: LatitudeApi.MonitorAlertSource;
+    source?: LatitudeApi.MonitorAlertSource | undefined;
     condition?: LatitudeApi.AlertCondition | undefined;
     /** Severity of incidents this alert opens: `low`, `medium`, or `high`. */
     severity: MonitorAlert.Severity;
@@ -26,6 +26,9 @@ export namespace MonitorAlert {
         SavedSearchMatch: "savedSearch.match",
         SavedSearchThreshold: "savedSearch.threshold",
         SavedSearchEscalating: "savedSearch.escalating",
+        EventMatched: "event.matched",
+        MetricThreshold: "metric.threshold",
+        MetricEscalating: "metric.escalating",
     } as const;
     export type Kind = (typeof Kind)[keyof typeof Kind];
     /** Severity of incidents this alert opens: `low`, `medium`, or `high`. */

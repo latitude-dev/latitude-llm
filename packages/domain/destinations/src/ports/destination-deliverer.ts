@@ -32,6 +32,7 @@ export interface DestinationDeliverer {
     credentials: DestinationCredentials,
     context: DeliveryContext,
   ): Effect.Effect<DeliveryResult, DeliveryError>
+  testConnection(config: DestinationConfig, credentials: DestinationCredentials): Effect.Effect<void, DeliveryError>
 }
 
 /** Exhaustive per-kind adapter registry, TS-enforced like the Slack notification renderer registry. */
