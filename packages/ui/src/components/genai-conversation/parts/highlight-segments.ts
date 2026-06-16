@@ -103,7 +103,7 @@ export function highlightAttributes(activeHighlight: HighlightRange | null): Hig
   const isClickable = isAnnotation && !!activeHighlight.id
   const isSearchMatch = activeHighlight.type === "search-literal" || activeHighlight.type === "search-token"
   const className = cn({
-    "cursor-pointer hit-area-inline-y-2": isClickable,
+    "cursor-pointer": isClickable,
     "bg-yellow-100 border-b-2 border-yellow-300 dark:bg-yellow-400/20 dark:border-yellow-400/50":
       activeHighlight.type === "selection",
     "bg-red-100 dark:bg-red-400/30": isAnnotation && activeHighlight.passed === false,

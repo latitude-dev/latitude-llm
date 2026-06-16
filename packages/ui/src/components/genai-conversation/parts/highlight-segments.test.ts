@@ -141,7 +141,7 @@ describe("highlightAttributes", () => {
     }
     const attrs = highlightAttributes(h)
     expect(attrs.className).toContain("cursor-pointer")
-    expect(attrs.className).toContain("hit-area-inline-y-2")
+    expect(attrs.className).not.toContain("hit-area-inline-y")
     expect(attrs["data-annotation-id"]).toBe("ann-1")
   })
 

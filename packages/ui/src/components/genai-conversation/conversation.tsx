@@ -108,6 +108,25 @@ function normalizeMessage(message: GenAIMessage): GenAIMessage {
   return message
 }
 
+function hasSelectionInContainer(container: HTMLElement | null): boolean {
+  const selection = window.getSelection()
+  if (!container || !selection || selection.isCollapsed || selection.rangeCount === 0) return false
+  if (!selection.toString().trim()) return false
+
+  for (let i = 0; i < selection.rangeCount; i++) {
+    const range = selection.getRangeAt(i)
+    if (
+      container.contains(range.startContainer) ||
+      container.contains(range.endContainer) ||
+      container.contains(range.commonAncestorContainer)
+    ) {
+      return true
+    }
+  }
+
+  return false
+}
+
 export function Conversation({
   messages,
   enableNavigator = false,
@@ -179,7 +198,7 @@ export function Conversation({
 
   const handleContainerClick = useCallback(
     (e: React.MouseEvent) => {
-      if (!onAnnotationClick) return
+      if (!onAnnotationClick || hasSelectionInContainer(containerRef.current)) return
       const target = (e.target as HTMLElement).closest<HTMLElement>("[data-annotation-id]")
       if (!target) return
 
