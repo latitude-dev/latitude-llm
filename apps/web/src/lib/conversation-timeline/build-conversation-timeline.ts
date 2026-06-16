@@ -336,6 +336,25 @@ export function buildConversationTimeline(input: BuildConversationTimelineInput)
     prevEventMs = Math.max(prevEventMs, scheduleCompletionMs(schedule))
   }
 
+  for (const trace of traces) {
+    if (turnFirstMessageIndex.has(trace.traceId)) continue
+    const traceStartMs = clamp(trace.startMs)
+    const traceEndMs = clamp(trace.endMs)
+    const index = input.messages.findIndex((message, i) => {
+      if (message.role !== "user") return false
+      const schedule = schedules[i]
+      if (!schedule) return false
+      const atMs = scheduleStartMs(schedule)
+      return atMs >= traceStartMs && atMs <= traceEndMs
+    })
+    if (index < 0) continue
+    const message = input.messages[index]
+    if (!message) continue
+    turnFirstMessageIndex.set(trace.traceId, index)
+    const excerpt = messageTextExcerpt(message)
+    if (excerpt) turnUserExcerpts.set(trace.traceId, excerpt)
+  }
+
   const markers: TimelineMarker[] = []
   for (const [index, trace] of traces.entries()) {
     markers.push({
