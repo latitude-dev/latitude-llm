@@ -5,6 +5,7 @@ import {
   TAXONOMY_GARDENING_SWEEP_SPREAD_MS,
   TAXONOMY_GARDENING_THROTTLE_MS,
   TAXONOMY_NOISE_LOOKBACK_DAYS,
+  type TaxonomyObservationCounts,
   TaxonomyObservationRepository,
   taxonomyGardenProjectDedupeKey,
 } from "@domain/taxonomy"
@@ -45,9 +46,20 @@ interface TaxonomyRuntimeDeps {
   readonly workflowStarter?: WorkflowStarterShape
 }
 
+interface ActiveProjectRow {
+  readonly organization_id: string
+  readonly project_id: string
+}
+
+interface ObservationCountsInput {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly since: Date
+}
+
 interface TaxonomySweepDeps {
-  readonly clickhouseClient: ClickHouseClient
-  readonly adminPostgresClient: PostgresClient
+  readonly listActiveProjects: () => Effect.Effect<readonly ActiveProjectRow[], unknown>
+  readonly readObservationCounts: (input: ObservationCountsInput) => Effect.Effect<TaxonomyObservationCounts, unknown>
   readonly publisher: QueuePublisherShape
   readonly workflowStarter?: WorkflowStarterShape
 }
@@ -70,20 +82,25 @@ const deterministicProjectDelayMs = (input: {
 const listActiveProjects = (adminPostgresClient: PostgresClient) =>
   Effect.tryPromise({
     try: async () => {
-      const result = await adminPostgresClient.pool.query<{
-        readonly organization_id: string
-        readonly project_id: string
-      }>(`SELECT organization_id, id AS project_id FROM latitude.projects WHERE deleted_at IS NULL`)
+      const result = await adminPostgresClient.pool.query<ActiveProjectRow>(
+        `SELECT organization_id, id AS project_id FROM latitude.projects WHERE deleted_at IS NULL`,
+      )
       return result.rows
     },
     catch: (cause) => cause,
   })
 
+const readObservationCounts = (clickhouseClient: ClickHouseClient, input: ObservationCountsInput) =>
+  Effect.gen(function* () {
+    const repo = yield* TaxonomyObservationRepository
+    return yield* repo.getCounts(input)
+  }).pipe(withClickHouse(TaxonomyObservationRepositoryLive, clickhouseClient, input.organizationId))
+
 export const runGardenSweepJob = (payload: GardenSweepPayload, deps: TaxonomySweepDeps) =>
   Effect.gen(function* () {
     const triggeredAt = new Date(payload.triggeredAt)
     const since = lookbackStart(Number.isNaN(triggeredAt.getTime()) ? new Date() : triggeredAt)
-    const projects = yield* listActiveProjects(deps.adminPostgresClient)
+    const projects = yield* deps.listActiveProjects()
     let attempted = 0
     let published = 0
     let failed = 0
@@ -93,10 +110,7 @@ export const runGardenSweepJob = (payload: GardenSweepPayload, deps: TaxonomySwe
       const organizationId = OrganizationId(project.organization_id)
       const projectId = ProjectId(project.project_id)
       yield* Effect.gen(function* () {
-        const counts = yield* Effect.gen(function* () {
-          const repo = yield* TaxonomyObservationRepository
-          return yield* repo.getCounts({ organizationId, projectId, since })
-        }).pipe(withClickHouse(TaxonomyObservationRepositoryLive, deps.clickhouseClient, organizationId))
+        const counts = yield* deps.readObservationCounts({ organizationId, projectId, since })
         if (counts.total < TAXONOMY_GARDENING_MIN_OBSERVATIONS) return
 
         if (deps.workflowStarter) {
@@ -207,8 +221,8 @@ export const createTaxonomyWorker = ({
       }),
     gardenSweep: (payload) =>
       runGardenSweepJob(payload as GardenSweepPayload, {
-        clickhouseClient,
-        adminPostgresClient,
+        listActiveProjects: () => listActiveProjects(adminPostgresClient),
+        readObservationCounts: (input) => readObservationCounts(clickhouseClient, input),
         publisher,
         workflowStarter,
       }),
