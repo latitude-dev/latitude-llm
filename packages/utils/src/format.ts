@@ -6,6 +6,35 @@ const countFractionFormatter = new Intl.NumberFormat("en-US", {
   useGrouping: false,
 })
 
+const roundTo = (value: number, decimals: number): number => {
+  const factor = 10 ** decimals
+  return Math.round(value * factor) / factor
+}
+
+/**
+ * Rounding to the displayed precision can bump a value up to the next unit
+ * (e.g. `999_999` rendering as `"1000K"`), so promote to the next unit and
+ * divide by `threshold` when the rounded value reaches it.
+ */
+function promoteIfRounded({
+  value,
+  unitIndex,
+  maxUnitIndex,
+  threshold,
+  decimals,
+}: {
+  value: number
+  unitIndex: number
+  maxUnitIndex: number
+  threshold: number
+  decimals: number
+}): { value: number; unitIndex: number } {
+  if (roundTo(value, decimals) >= threshold && unitIndex < maxUnitIndex) {
+    return { value: value / threshold, unitIndex: unitIndex + 1 }
+  }
+  return { value, unitIndex }
+}
+
 /**
  * Format a large number into a compact human-readable string.
  *
@@ -27,13 +56,14 @@ export function formatCount(count: number): string {
   }
 
   let decimal = value < 10 ? 1 : 0
-  // Rounding can bump the value up to the next unit (e.g. 999_999 would render
-  // as "1000K"), so promote to the next unit when that happens.
-  if (Number(value.toFixed(decimal)) >= 1000 && unitIndex < COUNT_UNITS.length - 1) {
-    value /= 1000
-    unitIndex++
-    decimal = value < 10 ? 1 : 0
-  }
+  ;({ value, unitIndex } = promoteIfRounded({
+    value,
+    unitIndex,
+    maxUnitIndex: COUNT_UNITS.length - 1,
+    threshold: 1000,
+    decimals: decimal,
+  }))
+  decimal = value < 10 ? 1 : 0
   return `${value.toFixed(decimal).replace(/\.0$/, "")}${COUNT_UNITS[unitIndex]}`
 }
 
@@ -72,12 +102,13 @@ export function formatBytes(bytes: number): string {
     unitIndex++
   }
 
-  // Rounding to one decimal can bump the value up to 1024 (e.g. 1048575 bytes
-  // would render as "1024 KB"), so promote to the next unit when that happens.
-  if (Number(value.toFixed(1)) >= 1024 && unitIndex < BYTE_UNITS.length - 1) {
-    value /= 1024
-    unitIndex++
-  }
+  ;({ value, unitIndex } = promoteIfRounded({
+    value,
+    unitIndex,
+    maxUnitIndex: BYTE_UNITS.length - 1,
+    threshold: 1024,
+    decimals: 1,
+  }))
   return `${value.toFixed(1).replace(/\.0$/, "")} ${BYTE_UNITS[unitIndex]}`
 }
 
