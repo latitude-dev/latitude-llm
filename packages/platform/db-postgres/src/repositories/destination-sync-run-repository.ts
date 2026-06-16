@@ -1,6 +1,6 @@
 import { type DestinationSyncRun, DestinationSyncRunRepository, destinationSyncRunSchema } from "@domain/destinations"
 import { SqlClient, type SqlClientShape, toRepositoryError } from "@domain/shared"
-import { and, desc, eq, inArray, lt } from "drizzle-orm"
+import { and, desc, eq, inArray, lt, or } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { destinationSyncRuns } from "../schema/destination-sync-runs.ts"
@@ -54,9 +54,18 @@ export const DestinationSyncRunRepositoryLive = Layer.effect(
             .pipe(Effect.mapError((e) => toRepositoryError(e, "insertDestinationSyncRun")))
         }),
 
-      listByDestinationId: ({ destinationId, limit }) =>
+      listByDestinationId: ({ destinationId, limit, before }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          // Keyset on (started_at, id): the tie-breaker on id keeps the order
+          // total when runs share a started_at, so a page boundary never skips
+          // or repeats a sibling. ORDER BY and the cursor predicate must match.
+          const keyset = before
+            ? or(
+                lt(destinationSyncRuns.startedAt, before.startedAt),
+                and(eq(destinationSyncRuns.startedAt, before.startedAt), lt(destinationSyncRuns.id, before.id)),
+              )
+            : undefined
           const rows = yield* sqlClient
             .query((db, organizationId) =>
               db
@@ -66,9 +75,10 @@ export const DestinationSyncRunRepositoryLive = Layer.effect(
                   and(
                     eq(destinationSyncRuns.organizationId, organizationId),
                     eq(destinationSyncRuns.destinationId, destinationId),
+                    ...(keyset ? [keyset] : []),
                   ),
                 )
-                .orderBy(desc(destinationSyncRuns.startedAt))
+                .orderBy(desc(destinationSyncRuns.startedAt), desc(destinationSyncRuns.id))
                 .limit(limit),
             )
             .pipe(Effect.mapError((e) => toRepositoryError(e, "listDestinationSyncRunsByDestinationId")))

@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { DESTINATION_CONNECTION_TEST_EVENT_NAME, POSTHOG_US_INGESTION_HOST } from "../constants.ts"
+import { POSTHOG_US_INGESTION_HOST } from "../constants.ts"
 import type { DestinationConfig, DestinationCredentials } from "../entities/destination.ts"
 import { NonRetryableDeliveryError, RetryableDeliveryError } from "../errors.ts"
 import { DestinationDeliverers } from "../ports/destination-deliverer.ts"
@@ -25,15 +25,14 @@ function setup() {
 }
 
 describe("testDestinationConnectionUseCase", () => {
-  it("returns ok and delivers a single canary event on success", async () => {
+  it("returns ok when the probe is accepted, without sending any telemetry", async () => {
     const { fake, run } = setup()
 
     const result = await run()
 
     expect(result).toEqual({ status: "ok" })
-    expect(fake.deliveries).toHaveLength(1)
-    expect(fake.deliveries[0]?.events).toHaveLength(1)
-    expect(fake.deliveries[0]?.events[0]?.name).toBe(DESTINATION_CONNECTION_TEST_EVENT_NAME)
+    expect(fake.connectionTests).toBe(1)
+    expect(fake.deliveries).toHaveLength(0)
   })
 
   it("reports a non-retryable failure for an invalid key (401)", async () => {

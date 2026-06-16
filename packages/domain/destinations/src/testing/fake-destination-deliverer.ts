@@ -9,11 +9,13 @@ export interface RecordedDelivery {
 }
 
 /**
- * Records every delivery; `failWith` makes the next `deliver` calls fail until
- * cleared, so engine tests can drive retryable/non-retryable branches.
+ * Records every delivery and connection probe; `failWith` makes the next
+ * `deliver` / `testConnection` calls fail until cleared, so engine tests can
+ * drive retryable/non-retryable branches.
  */
 export const createFakeDestinationDeliverer = () => {
   const deliveries: RecordedDelivery[] = []
+  let connectionTests = 0
   let failure: DeliveryError | null = null
 
   const deliverer: DestinationDeliverer = {
@@ -23,11 +25,20 @@ export const createFakeDestinationDeliverer = () => {
         deliveries.push({ events, context })
         return Effect.succeed({ delivered: events.length, dropped: 0 })
       }),
+    testConnection: (_config, _credentials) =>
+      Effect.suspend(() => {
+        if (failure) return Effect.fail(failure)
+        connectionTests += 1
+        return Effect.succeed(undefined)
+      }),
   }
 
   return {
     deliverer,
     deliveries,
+    get connectionTests() {
+      return connectionTests
+    },
     failWith: (error: DeliveryError | null) => {
       failure = error
     },

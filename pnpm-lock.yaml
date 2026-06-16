@@ -489,6 +489,9 @@ importers:
       '@platform/changelog-framer':
         specifier: workspace:*
         version: link:../../packages/platform/changelog-framer
+      '@platform/data-destinations':
+        specifier: workspace:*
+        version: link:../../packages/platform/data-destinations
       '@platform/db-clickhouse':
         specifier: workspace:*
         version: link:../../packages/platform/db-clickhouse

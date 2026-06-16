@@ -193,13 +193,13 @@ describe("runDestinationSyncUseCase", () => {
 
     expect(res.outcome).toBe("empty")
     expect(res.cursorAdvanced).toBe(true)
+    expect(res.syncRunId).toBeNull()
     expect(deliveries).toHaveLength(0)
     expect(destinationRows[0]?.cursorIngestedAt).toEqual(WINDOW_END)
     expect(destinationRows[0]?.cursorSpanId).toBe("")
     expect(destinationRows[0]?.consecutiveEmptyRuns).toBe(3)
     expect(destinationRows[0]?.lastRunAt).toEqual(NOW)
-    expect(syncRunRows[0]?.status).toBe("succeeded")
-    expect(syncRunRows[0]?.spansRead).toBe(0)
+    expect(syncRunRows).toHaveLength(0)
   })
 
   it("delivers a window, advances the compound cursor, and resets idle backoff", async () => {

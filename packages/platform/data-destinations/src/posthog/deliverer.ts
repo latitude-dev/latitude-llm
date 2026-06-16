@@ -18,11 +18,15 @@ import {
   POSTHOG_BATCH_MAX_EVENTS,
   POSTHOG_BATCH_PATH,
   POSTHOG_EVENT_MAX_BYTES,
+  POSTHOG_FLAGS_PATH,
   POSTHOG_HISTORICAL_MIGRATION_MIN_WINDOW_AGE_MS,
 } from "./constants.ts"
 import { defaultHostLookup, type HostLookup, isPublicUnicastIp } from "./host-guard.ts"
 
 const KIND = "posthog" as const
+
+/** Distinct id for the connection probe's `/flags/` call; no event is captured, so it never reaches the customer's project. */
+const CONNECTION_TEST_DISTINCT_ID = "latitude-connection-test"
 
 const PRESET_ORIGINS: ReadonlySet<string> = new Set([
   new URL(POSTHOG_US_INGESTION_HOST).origin,
@@ -96,7 +100,7 @@ const buildBody = (params: {
 const isHistoricalWindow = (window: DeliveryWindow): boolean =>
   Date.now() - window.end.getTime() > POSTHOG_HISTORICAL_MIGRATION_MIN_WINDOW_AGE_MS
 
-const batchUrl = (host: string): Effect.Effect<URL, NonRetryableDeliveryError> =>
+const resolveUrl = (host: string, path: string): Effect.Effect<URL, NonRetryableDeliveryError> =>
   Effect.suspend(() => {
     let base: URL
     try {
@@ -107,8 +111,10 @@ const batchUrl = (host: string): Effect.Effect<URL, NonRetryableDeliveryError> =
     if (base.protocol !== "https:") {
       return Effect.fail(new NonRetryableDeliveryError({ kind: KIND, reason: "host_not_https" }))
     }
-    return Effect.succeed(new URL(base.pathname.replace(/\/$/, "") + POSTHOG_BATCH_PATH, base.origin))
+    return Effect.succeed(new URL(base.pathname.replace(/\/$/, "") + path, base.origin))
   })
+
+const batchUrl = (host: string) => resolveUrl(host, POSTHOG_BATCH_PATH)
 
 /**
  * Re-resolves the custom host before every POST to narrow the DNS-rebinding window. `fetch` does its own
@@ -198,6 +204,20 @@ export const createPosthogDeliverer = (options: PosthogDelivererOptions = {}): D
           delivered += chunk.length
         }
         return { delivered, dropped }
+      }),
+
+    testConnection: (config, credentials): Effect.Effect<void, DeliveryError> =>
+      Effect.gen(function* () {
+        if (config.kind !== KIND || credentials.kind !== KIND) {
+          return yield* new NonRetryableDeliveryError({ kind: KIND, reason: "destination_kind_mismatch" })
+        }
+        const url = yield* resolveUrl(config.host, POSTHOG_FLAGS_PATH)
+        yield* assertPublicHost(url, lookupHost)
+        yield* postChunk({
+          url,
+          body: JSON.stringify({ api_key: credentials.apiKey, distinct_id: CONNECTION_TEST_DISTINCT_ID }),
+          fetchFn,
+        })
       }),
   }
 }

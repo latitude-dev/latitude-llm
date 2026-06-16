@@ -19,7 +19,6 @@ import { DestinationSyncRunRepository } from "../ports/destination-sync-run-repo
 
 export interface RunDestinationSyncInput {
   readonly destination: Destination
-  /** Injected for determinism; the worker passes wall-clock time. */
   readonly now: Date
 }
 
@@ -36,11 +35,6 @@ export interface RunDestinationSyncResult {
   readonly syncRunId: DestinationSyncRunId | null
 }
 
-/**
- * Retryable delivery failures propagate so the worker throws and BullMQ retries
- * with the cursor untouched; exhausted-retry accounting lives in the worker's
- * final-failure hook. Everything else is handled in-band.
- */
 export type RunDestinationSyncError = RetryableDeliveryError | RepositoryError
 
 type Requirements =
@@ -60,7 +54,10 @@ const isForward = (next: DestinationCursor, current: DestinationCursor): boolean
   (next.ingestedAt.getTime() === current.ingestedAt.getTime() && next.spanId > current.spanId)
 
 const result = (
-  params: Partial<RunDestinationSyncResult> & { outcome: RunDestinationSyncOutcome; destinationId: DestinationId },
+  params: Partial<RunDestinationSyncResult> & {
+    outcome: RunDestinationSyncOutcome
+    destinationId: DestinationId
+  },
 ): RunDestinationSyncResult => ({
   spansRead: 0,
   eventsSent: 0,
@@ -106,13 +103,19 @@ export const runDestinationSyncUseCase = (input: RunDestinationSyncInput) =>
     const window = yield* spans.listByIngestedAtWindow({
       organizationId: destination.organizationId,
       projectId: destination.projectId,
-      cursor: { ingestedAt: startCursor.ingestedAt, spanId: SpanId(startCursor.spanId) },
+      cursor: {
+        ingestedAt: startCursor.ingestedAt,
+        spanId: SpanId(startCursor.spanId),
+      },
       windowEnd,
       limit: destination.config.maxSpansPerRun,
     })
 
     if (window.spans.length === 0) {
-      const emptyTarget: DestinationCursor = { ingestedAt: windowEnd, spanId: "" }
+      const emptyTarget: DestinationCursor = {
+        ingestedAt: windowEnd,
+        spanId: "",
+      }
       const advances = isForward(emptyTarget, startCursor)
       if (advances) {
         const claimed = yield* destinations.advanceCursor({
@@ -132,22 +135,11 @@ export const runDestinationSyncUseCase = (input: RunDestinationSyncInput) =>
         lastRunAt: now,
       })
 
-      const run = createDestinationSyncRun({
-        organizationId: destination.organizationId,
+      return result({
+        outcome: "empty",
         destinationId: destination.id,
-        windowStart: startCursor.ingestedAt,
-        windowEnd: advances ? windowEnd : startCursor.ingestedAt,
-        status: "succeeded",
-        spansRead: 0,
-        eventsSent: 0,
-        eventsDropped: 0,
-        error: null,
-        startedAt,
-        finishedAt: now,
+        cursorAdvanced: advances,
       })
-      yield* insertRun(run)
-
-      return result({ outcome: "empty", destinationId: destination.id, cursorAdvanced: advances, syncRunId: run.id })
     }
 
     // Non-empty: the read is strictly after the cursor, so `nextCursor` is always present and forward.
@@ -162,7 +154,9 @@ export const runDestinationSyncUseCase = (input: RunDestinationSyncInput) =>
 
     const deliverers = yield* DestinationDeliverers
     const delivery = yield* deliverers[destination.kind]
-      .deliver(mapped.events, destination.config, destination.credentials, { window: deliveryWindow })
+      .deliver(mapped.events, destination.config, destination.credentials, {
+        window: deliveryWindow,
+      })
       .pipe(Effect.result)
 
     if (delivery._tag === "Failure") {
@@ -213,7 +207,12 @@ export const runDestinationSyncUseCase = (input: RunDestinationSyncInput) =>
       expected: startCursor,
       next: next ? { ingestedAt: next.ingestedAt, spanId: next.spanId } : { ingestedAt: windowEnd, spanId: "" },
     })
-    if (!claimed) return result({ outcome: "stale", destinationId: destination.id, spansRead: window.spans.length })
+    if (!claimed)
+      return result({
+        outcome: "stale",
+        destinationId: destination.id,
+        spansRead: window.spans.length,
+      })
 
     yield* destinations.updateRunState({
       id: destination.id,

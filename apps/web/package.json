@@ -53,6 +53,7 @@
     "@platform/api-key-auth": "workspace:*",
     "@platform/cache-redis": "workspace:*",
     "@platform/changelog-framer": "workspace:*",
+    "@platform/data-destinations": "workspace:*",
     "@platform/db-clickhouse": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "@platform/env": "workspace:*",
