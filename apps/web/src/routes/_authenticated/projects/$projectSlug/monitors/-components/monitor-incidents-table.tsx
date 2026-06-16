@@ -6,6 +6,7 @@ import {
   type MonitorIncidentRecord,
   useMonitorIncidents,
 } from "../../../../../../domains/monitors/monitors.collection.ts"
+import { listingLayoutIntrinsicScroll } from "../../../../../../layouts/ListingLayout/index.tsx"
 import { IncidentResolveConfirmModal } from "./incident-resolve-confirm-modal.tsx"
 import { IncidentStatus } from "./incident-status.tsx"
 
@@ -93,18 +94,15 @@ const incidentColumns = (onResolve?: (incidentId: string) => void): InfiniteTabl
 
 const INCIDENT_DEFAULT_SORTING = { column: "status", direction: "desc" } as const
 
-const INCIDENT_TABLE_CLASS = "max-h-[min(28rem,50vh)]"
-
 export function MonitorIncidentsTableSkeleton() {
   return (
     <InfiniteTable<MonitorIncidentRecord>
+      {...listingLayoutIntrinsicScroll.infiniteTable}
       data={[]}
       isLoading
       columns={incidentColumns()}
       getRowKey={(incident) => incident.id}
       defaultSorting={INCIDENT_DEFAULT_SORTING}
-      scrollAreaLayout="intrinsic"
-      className={INCIDENT_TABLE_CLASS}
     />
   )
 }
@@ -153,6 +151,7 @@ export function MonitorIncidentsTable({
   return (
     <>
       <InfiniteTable
+        {...listingLayoutIntrinsicScroll.infiniteTable}
         data={incidents}
         isLoading={isLoading}
         columns={incidentColumns(setResolveTarget)}
@@ -161,8 +160,6 @@ export function MonitorIncidentsTable({
         renderRowLink={renderRowLink}
         defaultSorting={INCIDENT_DEFAULT_SORTING}
         blankSlate="No incidents yet."
-        scrollAreaLayout="intrinsic"
-        className={INCIDENT_TABLE_CLASS}
       />
       <IncidentResolveConfirmModal projectId={projectId} incidentId={resolveTarget} onOpenChange={setResolveTarget} />
     </>
