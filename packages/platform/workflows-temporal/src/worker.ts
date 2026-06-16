@@ -70,6 +70,7 @@ export async function runTemporalWorker(input: RunTemporalWorkerInput) {
     namespace: config.namespace,
     taskQueue: config.taskQueue,
     workflowsPath,
+    maxConcurrentActivityTaskExecutions: config.maxConcurrentActivityTaskExecutions,
   })
 
   const useCloud = config.apiKey !== undefined && config.apiKey.length > 0
@@ -85,6 +86,9 @@ export async function runTemporalWorker(input: RunTemporalWorkerInput) {
     taskQueue: config.taskQueue,
     workflowsPath,
     activities,
+    ...(config.maxConcurrentActivityTaskExecutions === undefined
+      ? {}
+      : { maxConcurrentActivityTaskExecutions: config.maxConcurrentActivityTaskExecutions }),
     interceptors: {
       activity: [datadogActivityInterceptor],
     },

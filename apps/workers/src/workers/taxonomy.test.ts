@@ -6,6 +6,8 @@ import {
   buildHierarchicalTaxonomyUseCase,
   emitLineageUseCase,
   nameClusterUseCase,
+  TAXONOMY_GARDENING_MIN_OBSERVATIONS,
+  TAXONOMY_GARDENING_SWEEP_SPREAD_MS,
   TaxonomyClusterRepository,
   TaxonomyLineageRepository,
   type TaxonomyMomentObservation,
@@ -94,6 +96,15 @@ const PROJECT_ID_2 = ProjectId("q".repeat(24))
 const PROJECT_ID_E2E = ProjectId("r".repeat(24))
 const START_TIME = new Date("2026-05-24T12:00:00.000Z")
 
+const activeProjectRow = (projectId = PROJECT_ID) => ({ organization_id: ORGANIZATION_ID, project_id: projectId })
+
+const enoughObservationCounts = () =>
+  Effect.succeed({
+    total: TAXONOMY_GARDENING_MIN_OBSERVATIONS,
+    assigned: 0,
+    noise: TAXONOMY_GARDENING_MIN_OBSERVATIONS,
+  })
+
 const createFakeRedisClient = () => {
   const values = new Map<string, string>()
   return {
@@ -178,25 +189,16 @@ const gardenOnce = (runId: ReturnType<typeof TaxonomyRunId>) =>
 
 describe("taxonomy gardening worker", () => {
   it("sweeps projects with enough observations and publishes throttled gardenProject jobs", async () => {
-    await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* TaxonomyObservationRepository
-        for (let index = 100; index < 115; index++) {
-          yield* repo.upsert(makeObservation(index))
-        }
-      }).pipe(withClickHouse(TaxonomyObservationRepositoryLive, ch.client as ClickHouseClient, ORGANIZATION_ID)),
-    )
     const queue = createFakeQueuePublisher()
-    const adminPostgresClient = {
-      pool: {
-        query: async () => ({ rows: [{ organization_id: ORGANIZATION_ID, project_id: PROJECT_ID }] }),
-      },
-    }
 
     await Effect.runPromise(
       runGardenSweepJob(
         { triggeredAt: START_TIME.toISOString() },
-        { clickhouseClient: ch.client, adminPostgresClient: adminPostgresClient as never, publisher: queue.publisher },
+        {
+          listActiveProjects: () => Effect.succeed([activeProjectRow()]),
+          readObservationCounts: enoughObservationCounts,
+          publisher: queue.publisher,
+        },
       ),
     )
 
@@ -209,15 +211,55 @@ describe("taxonomy gardening worker", () => {
     expect(queue.published[0]?.options?.dedupeKey).toContain(`org:${ORGANIZATION_ID}:`)
   })
 
-  it("continues the garden sweep when one project publish fails", async () => {
+  it("spreads cron workflow starts across the sweep window", async () => {
+    const queue = createFakeQueuePublisher()
+    const started: Array<{
+      readonly workflow: string
+      readonly input: unknown
+      readonly workflowId: string
+      readonly startDelayMs?: number
+    }> = []
+    const workflowStarter = {
+      start: (
+        workflow: string,
+        input: unknown,
+        options: { readonly workflowId: string; readonly startDelayMs?: number },
+      ) => {
+        started.push({
+          workflow,
+          input,
+          workflowId: options.workflowId,
+          ...(options.startDelayMs === undefined ? {} : { startDelayMs: options.startDelayMs }),
+        })
+        return Effect.void
+      },
+      signalWithStart: () => Effect.void,
+    }
+
     await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* TaxonomyObservationRepository
-        for (let index = 200; index < 215; index++) {
-          yield* repo.upsert({ ...makeObservation(index), projectId: PROJECT_ID_2 })
-        }
-      }).pipe(withClickHouse(TaxonomyObservationRepositoryLive, ch.client as ClickHouseClient, ORGANIZATION_ID)),
+      runGardenSweepJob(
+        { triggeredAt: START_TIME.toISOString() },
+        {
+          listActiveProjects: () => Effect.succeed([activeProjectRow(PROJECT_ID_2)]),
+          readObservationCounts: enoughObservationCounts,
+          publisher: queue.publisher,
+          workflowStarter: workflowStarter as never,
+        },
+      ),
     )
+
+    expect(started).toHaveLength(1)
+    expect(started[0]).toMatchObject({
+      workflow: "gardenTaxonomyWorkflow",
+      input: { organizationId: ORGANIZATION_ID, projectId: PROJECT_ID_2, dimension: "topic", trigger: "cron" },
+      workflowId: `org:${ORGANIZATION_ID}:taxonomy:gardenProject:${PROJECT_ID_2}`,
+    })
+    expect(started[0]?.startDelayMs).toEqual(expect.any(Number))
+    expect(started[0]?.startDelayMs).toBeGreaterThanOrEqual(0)
+    expect(started[0]?.startDelayMs).toBeLessThan(TAXONOMY_GARDENING_SWEEP_SPREAD_MS)
+  })
+
+  it("continues the garden sweep when one project publish fails", async () => {
     const queue = createFakeQueuePublisher()
     const publisher = {
       ...queue.publisher,
@@ -226,21 +268,15 @@ describe("taxonomy gardening worker", () => {
         return queue.publisher.publish(queueName, task, payload, options)
       },
     } as typeof queue.publisher
-    const adminPostgresClient = {
-      pool: {
-        query: async () => ({
-          rows: [
-            { organization_id: ORGANIZATION_ID, project_id: PROJECT_ID },
-            { organization_id: ORGANIZATION_ID, project_id: PROJECT_ID_2 },
-          ],
-        }),
-      },
-    }
 
     await Effect.runPromise(
       runGardenSweepJob(
         { triggeredAt: START_TIME.toISOString() },
-        { clickhouseClient: ch.client, adminPostgresClient: adminPostgresClient as never, publisher },
+        {
+          listActiveProjects: () => Effect.succeed([activeProjectRow(), activeProjectRow(PROJECT_ID_2)]),
+          readObservationCounts: enoughObservationCounts,
+          publisher,
+        },
       ),
     )
 

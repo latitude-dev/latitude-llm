@@ -178,6 +178,41 @@ describe("createWorkflowStarter", () => {
     )
   })
 
+  it("passes startDelayMs through to Temporal startDelay", async () => {
+    const start = vi.fn(async () => ({ firstExecutionRunId: "run-abc" }))
+    const client = {
+      workflow: {
+        start,
+      },
+    } as unknown as Client
+
+    const starter = createWorkflowStarter(client, {
+      address: "127.0.0.1:7233",
+      namespace: "default",
+      taskQueue: "workflows",
+    })
+
+    await expect(
+      Effect.runPromise(
+        starter.start(
+          "issueDiscoveryWorkflow",
+          {
+            organizationId: "org-1",
+            projectId: "proj-1",
+            scoreId: "score-1",
+          },
+          { workflowId: "issue-discovery:org-1:proj-1:score-1", startDelayMs: 12_000 },
+        ),
+      ),
+    ).resolves.toBeUndefined()
+    expect(start).toHaveBeenCalledWith(
+      "issueDiscoveryWorkflow",
+      expect.objectContaining({
+        startDelay: 12_000,
+      }),
+    )
+  })
+
   it("resolves when the start call opens a fresh execution", async () => {
     const start = vi.fn(async () => ({ firstExecutionRunId: "run-abc" }))
     const client = {

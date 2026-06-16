@@ -32,6 +32,7 @@ config:
   apiUrl: ""
   ingestUrl: ""
   temporalTaskQueue: latitude-workflows
+  temporalMaxConcurrentActivityTasks: ""
   # Extra non-secret environment for every app service and the migrations job —
   # email transport settings (LAT_SMTP_*/LAT_MAILGUN_*/LAT_SENDGRID_*), the
   # LAT_AI_* model selection, OAuth, integrations, etc. Standard EnvVar entries

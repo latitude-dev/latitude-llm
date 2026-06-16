@@ -179,6 +179,7 @@ Workflow engine for durable background processes.
 | --- | --- |
 | `LAT_TEMPORAL_ADDRESS`, `LAT_TEMPORAL_NAMESPACE`, `LAT_TEMPORAL_TASK_QUEUE` | Connection, namespace, and task queue. |
 | `LAT_TEMPORAL_API_KEY` | Only for Temporal Cloud. |
+| `LAT_TEMPORAL_MAX_CONCURRENT_ACTIVITY_TASKS` | Optional per-worker cap for concurrently executing Temporal activities. Lower this when CPU-heavy activities share one task queue. |
 
 ### Object storage
 
