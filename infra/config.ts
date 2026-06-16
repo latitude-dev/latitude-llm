@@ -123,7 +123,7 @@ export const stagingConfig: EnvironmentConfig = {
       {
         name: "api",
         cpu: 256,
-        memory: 512,
+        memory: 1024,
         port: 8080,
         healthCheckPath: "/health",
         desiredCount: 1,
@@ -225,7 +225,7 @@ export const productionConfig: EnvironmentConfig = {
       {
         name: "api",
         cpu: 256,
-        memory: 512,
+        memory: 1024,
         port: 8080,
         healthCheckPath: "/health",
         desiredCount: 1,
