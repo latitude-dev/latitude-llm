@@ -77,6 +77,7 @@ const stubSpanDetail = (overrides: Partial<SpanDetail> = {}): SpanDetail => ({
   toolDefinitions: [],
   toolCallId: "",
   toolName: "",
+  toolNames: [],
   toolInput: "",
   toolOutput: "",
   ...overrides,
