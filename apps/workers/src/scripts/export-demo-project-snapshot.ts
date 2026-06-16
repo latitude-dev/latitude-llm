@@ -12,6 +12,7 @@ const DEFAULT_PROJECT_ID = "yvl1e78evmwfs2mosyjb08rc"
 const DEFAULT_OUTPUT_DIR = "../../apps/workflows/src/seed-snapshots/demo-project-derived-v1"
 const DEFAULT_SOURCE_TIMELINE_ANCHOR_ISO = "2026-06-16T12:00:00.000Z"
 
+// Keep in sync with apps/workflows/src/activities/demo-project-snapshot.ts.
 const clickHouseTables = [
   "trace_search_documents",
   "message_embeddings",

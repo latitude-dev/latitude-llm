@@ -11,6 +11,7 @@ const sourceSnapshotDir = fileURLToPath(new URL("../seed-snapshots/demo-project-
 const bundledSnapshotDir = fileURLToPath(new URL("./seed-snapshots/demo-project-derived-v1/", import.meta.url))
 const snapshotDir = existsSync(sourceSnapshotDir) ? sourceSnapshotDir : bundledSnapshotDir
 
+// Keep in sync with apps/workers/src/scripts/export-demo-project-snapshot.ts.
 const clickHouseTables = [
   "trace_search_documents",
   "message_embeddings",
@@ -29,6 +30,7 @@ type DemoProjectSnapshotManifest = {
   readonly sourceTimelineAnchorIso: string
   readonly sourceOrganizationId: string
   readonly sourceProjectId: string
+  readonly exportedAt: string
 }
 
 const timestampColumnsByTable: Record<ClickHouseTable, readonly string[]> = {
@@ -155,7 +157,7 @@ const importClickHouseTable = async (
   for await (const row of readSnapshotRows(`clickhouse/${table}.jsonl.gz`)) {
     batch.push(mapClickHouseRow(table, row, input))
     if (batch.length >= 1000) {
-      await insertClickHouseRows(client, table, batch.splice(0, batch.length))
+      await insertClickHouseRows(client, table, batch.splice(0))
     }
   }
   await insertClickHouseRows(client, table, batch)
