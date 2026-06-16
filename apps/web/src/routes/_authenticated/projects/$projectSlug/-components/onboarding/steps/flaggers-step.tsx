@@ -91,8 +91,8 @@ export function Left({
                     }
                   >
                     <span>
-                      This is the project you'll connect your own telemetry to. A separate sample project is being
-                      prepared so you can explore Latitude with data right away.
+                      This is the project you'll connect your own telemetry to. Latitude is also preparing a separate
+                      sample project when demo data is available.
                     </span>
                   </Tooltip>
                 </span>

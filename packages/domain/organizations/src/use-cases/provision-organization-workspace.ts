@@ -87,7 +87,23 @@ export const provisionOrganizationWorkspaceUseCase = Effect.fn("organizations.pr
           slug: sampleProjectSlug,
           settings: { isSample: true },
         })
+        // Skip createProjectUseCase so sample data seeding is the only side effect for this project.
         yield* projectRepo.save(sampleProject)
+
+        yield* outboxEventWriter
+          .write({
+            eventName: "OrganizationCreated",
+            aggregateType: "organization",
+            aggregateId: input.organizationId,
+            organizationId: input.organizationId,
+            payload: {
+              organizationId: input.organizationId,
+              actorUserId: input.actorUserId,
+              name: input.name,
+              slug: input.slug,
+            },
+          })
+          .pipe(Effect.mapError((error) => toRepositoryError(error, "write")))
 
         yield* outboxEventWriter
           .write({
@@ -101,21 +117,6 @@ export const provisionOrganizationWorkspaceUseCase = Effect.fn("organizations.pr
               queueAssigneeUserIds: [input.actorUserId],
               apiKeyId: defaultApiKey.id,
               timelineAnchorIso: new Date().toISOString(),
-            },
-          })
-          .pipe(Effect.mapError((error) => toRepositoryError(error, "write")))
-
-        yield* outboxEventWriter
-          .write({
-            eventName: "OrganizationCreated",
-            aggregateType: "organization",
-            aggregateId: input.organizationId,
-            organizationId: input.organizationId,
-            payload: {
-              organizationId: input.organizationId,
-              actorUserId: input.actorUserId,
-              name: input.name,
-              slug: input.slug,
             },
           })
           .pipe(Effect.mapError((error) => toRepositoryError(error, "write")))

@@ -5,6 +5,7 @@ describe("PostHog whitelist", () => {
   it("includes lifecycle and adoption events", () => {
     expect(POSTHOG_TRACKED_EVENTS.has("OrganizationCreated")).toBe(true)
     expect(POSTHOG_TRACKED_EVENTS.has("ProjectCreated")).toBe(true)
+    expect(POSTHOG_TRACKED_EVENTS.has("SampleProjectCreated")).toBe(true)
     expect(POSTHOG_TRACKED_EVENTS.has("UserSignedUp")).toBe(true)
     expect(POSTHOG_TRACKED_EVENTS.has("MemberJoined")).toBe(true)
     expect(POSTHOG_TRACKED_EVENTS.has("MemberInvited")).toBe(true)

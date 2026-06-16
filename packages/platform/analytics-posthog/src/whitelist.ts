@@ -10,6 +10,7 @@ export type TrackedEventName = keyof EventPayloads & string
 export const POSTHOG_TRACKED_EVENTS = new Set<TrackedEventName>([
   "OrganizationCreated",
   "ProjectCreated",
+  "SampleProjectCreated",
   "UserSignedUp",
   "UserOnboardingCompleted", // Not sent to Posthog, but used to enrich person properties
   "MemberJoined",

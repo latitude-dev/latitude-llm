@@ -89,14 +89,6 @@ describe("provisionOrganizationWorkspaceUseCase", () => {
       },
     })
     expect(writtenEvents[2]).toMatchObject({
-      eventName: "SampleProjectCreated",
-      organizationId: ORG_ID,
-      payload: {
-        organizationId: ORG_ID,
-        queueAssigneeUserIds: ["user-1"],
-      },
-    })
-    expect(writtenEvents[3]).toMatchObject({
       eventName: "OrganizationCreated",
       aggregateId: ORG_ID,
       organizationId: ORG_ID,
@@ -105,6 +97,14 @@ describe("provisionOrganizationWorkspaceUseCase", () => {
         actorUserId: "user-1",
         name: "Acme",
         slug: "acme",
+      },
+    })
+    expect(writtenEvents[3]).toMatchObject({
+      eventName: "SampleProjectCreated",
+      organizationId: ORG_ID,
+      payload: {
+        organizationId: ORG_ID,
+        queueAssigneeUserIds: ["user-1"],
       },
     })
     const apiKeys = [...savedApiKeys.values()]
