@@ -307,4 +307,88 @@ describe("DestinationRepositoryLive", () => {
       expect(remaining.map((r) => r.id).sort()).toEqual([otherProject.id, otherOrg.id].sort())
     })
   })
+
+  describe("findById", () => {
+    it("decrypts credentials and scopes the lookup to the RLS org", async () => {
+      await seedOrganizations()
+      const destination = makeDestination()
+      await save(destination)
+
+      const found = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* DestinationRepository
+          return yield* repo.findById(destination.id)
+        }),
+      )
+
+      expect(found.id).toBe(destination.id)
+      expect(found.credentials).toEqual({ kind: "posthog", apiKey: "phc_super_secret_key" })
+
+      // Same row, looked up from another org's context — NotFoundError.
+      const exit = await Effect.runPromiseExit(
+        Effect.gen(function* () {
+          const repo = yield* DestinationRepository
+          return yield* repo.findById(destination.id)
+        }).pipe(withPostgres(DestinationRepositoryLive, pg.adminPostgresClient, ORG_B)),
+      )
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) {
+        const failReason = exit.cause.reasons.find(Cause.isFailReason)
+        expect((failReason?.error as { _tag?: string })._tag).toBe("NotFoundError")
+      }
+    })
+  })
+
+  describe("listByProjectId", () => {
+    it("returns the project's destinations, scoped to the RLS org", async () => {
+      await seedOrganizations()
+      const target = makeDestination()
+      const otherProject = makeDestination({ projectId: PROJECT_B })
+      const otherOrg = makeDestination({ organizationId: ORG_B, projectId: PROJECT_C })
+
+      await save(target)
+      await save(otherProject)
+      await save(otherOrg, ORG_B)
+
+      const onProjectA = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* DestinationRepository
+          return yield* repo.listByProjectId(PROJECT_A)
+        }),
+      )
+      expect(onProjectA.map((d) => d.id)).toEqual([target.id])
+      expect(onProjectA[0]?.credentials).toEqual({ kind: "posthog", apiKey: "phc_super_secret_key" })
+
+      // PROJECT_C belongs to ORG_B — listed from ORG_A's context, RLS returns nothing.
+      const crossOrg = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* DestinationRepository
+          return yield* repo.listByProjectId(PROJECT_C)
+        }),
+      )
+      expect(crossOrg).toEqual([])
+    })
+  })
+
+  describe("delete", () => {
+    it("hard-deletes by id within the RLS org and is a no-op cross-org", async () => {
+      await seedOrganizations()
+      const target = makeDestination()
+      const otherOrg = makeDestination({ organizationId: ORG_B, projectId: PROJECT_C })
+      await save(target)
+      await save(otherOrg, ORG_B)
+
+      await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* DestinationRepository
+          // ORG_B's row deleted from ORG_A's context — org-scoped no-op.
+          yield* repo.delete(otherOrg.id)
+          yield* repo.delete(target.id)
+        }),
+      )
+
+      const remaining = await pg.db.select({ id: destinations.id }).from(destinations)
+      expect(remaining.map((r) => r.id)).toEqual([otherOrg.id])
+    })
+  })
 })

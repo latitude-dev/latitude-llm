@@ -20,6 +20,7 @@ const makeMonitor = (overrides: Partial<Monitor> = {}): Monitor => ({
   description: "",
   system: overrides.system ?? false,
   alerts: [],
+  target: null,
   mutedAt: null,
   deletedAt: null,
   createdAt: at,

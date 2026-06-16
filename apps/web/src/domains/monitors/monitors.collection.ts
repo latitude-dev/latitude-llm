@@ -1,4 +1,12 @@
-import type { AlertIncidentCondition, AlertIncidentKind, AlertIncidentSourceType, AlertSeverity } from "@domain/shared"
+import type { MonitorTarget } from "@domain/monitors"
+import type {
+  AlertIncidentCondition,
+  AlertIncidentKind,
+  AlertIncidentSourceType,
+  AlertSeverity,
+  FilterSet,
+  MonitorStream,
+} from "@domain/shared"
 import { type InfiniteTableInfiniteScroll, useToast } from "@repo/ui"
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useMemo, useState } from "react"
@@ -8,8 +16,10 @@ import {
   deleteMonitor,
   getMonitorBySlug,
   getMonitorIncidentStats,
+  getMonitorMetricSeries,
   listMonitorIncidents,
   listMonitors,
+  listMonitorsForTarget,
   listSavedSearchMonitorSummaries,
   type MonitorIncidentRecord,
   type MonitorIncidentsCursor,
@@ -25,10 +35,10 @@ import {
   updateMonitorAlert,
 } from "./monitors.functions.ts"
 
-/** Client-side alert draft mirroring the server `createAlertFieldsSchema`. */
+/** Client-side alert draft mirroring the server `createAlertFieldsSchema`. `source` is null for unified `event.*`/`metric.*` alerts. */
 export interface MonitorAlertDraft {
   readonly kind: AlertIncidentKind
-  readonly source: { readonly type: AlertIncidentSourceType; readonly id: string | null }
+  readonly source: { readonly type: AlertIncidentSourceType; readonly id: string | null } | null
   readonly condition?: AlertIncidentCondition | null
   readonly severity?: AlertSeverity
 }
@@ -102,6 +112,66 @@ export function useMonitors(input: {
     isReloading: isPlaceholderData,
     infiniteScroll,
   }
+}
+
+/** The monitor's tracked metric as a per-bucket series over a window, for the monitor page histogram. */
+export function useMonitorMetricSeries(input: {
+  readonly projectId: string
+  readonly monitorSlug: string
+  readonly fromMs: number
+  readonly toMs: number
+  readonly bucketMs: number
+  readonly enabled?: boolean
+}) {
+  const { data, isLoading } = useQuery({
+    queryKey: [
+      "monitors",
+      "metric-series",
+      input.projectId,
+      input.monitorSlug,
+      input.fromMs,
+      input.toMs,
+      input.bucketMs,
+    ] as const,
+    queryFn: () =>
+      getMonitorMetricSeries({
+        data: {
+          projectId: input.projectId,
+          monitorSlug: input.monitorSlug,
+          fromMs: input.fromMs,
+          toMs: input.toMs,
+          bucketMs: input.bucketMs,
+        },
+      }),
+    staleTime: MONITORS_QUERY_STALE_TIME_MS,
+    enabled: (input.enabled ?? true) && input.projectId.length > 0 && input.monitorSlug.length > 0,
+  })
+  return { series: data ?? null, isLoading }
+}
+
+/** Live unified monitors targeting a specific tool/user, for the in-context "Monitors" card. */
+export function useMonitorsForTarget(input: {
+  readonly projectId: string
+  readonly stream: MonitorStream
+  readonly filterSetContains: FilterSet
+  readonly enabled?: boolean
+}) {
+  const { data, isLoading } = useQuery({
+    queryKey: [
+      "monitors",
+      "for-target",
+      input.projectId,
+      input.stream,
+      JSON.stringify(input.filterSetContains),
+    ] as const,
+    queryFn: () =>
+      listMonitorsForTarget({
+        data: { projectId: input.projectId, stream: input.stream, filterSetContains: input.filterSetContains },
+      }),
+    staleTime: MONITORS_QUERY_STALE_TIME_MS,
+    enabled: (input.enabled ?? true) && input.projectId.length > 0,
+  })
+  return { monitors: data ?? [], isLoading }
 }
 
 /**
@@ -296,6 +366,9 @@ const invalidateMonitorQueries = (queryClient: ReturnType<typeof useQueryClient>
     // Saved-search ↔ monitor summaries back the traces-page chip and selector
     // rows; creating/deleting/muting monitors changes them.
     queryClient.invalidateQueries({ queryKey: ["monitors", "savedSearchSummaries", projectId] }),
+    // The in-context tool/user "Monitors" dropdown + the monitor-page metric chart.
+    queryClient.invalidateQueries({ queryKey: ["monitors", "for-target", projectId] }),
+    queryClient.invalidateQueries({ queryKey: ["monitors", "metric-series", projectId] }),
   ])
 
 /** Broad invalidation for bulk actions — the list/detail queries plus the drawer's incidents and stats. */
@@ -314,6 +387,7 @@ export function useCreateMonitor(projectId: string) {
       readonly name: string
       readonly description?: string
       readonly alerts: readonly MonitorAlertDraft[]
+      readonly target?: MonitorTarget
     }) =>
       createMonitor({
         data: {
@@ -321,6 +395,7 @@ export function useCreateMonitor(projectId: string) {
           name: input.name,
           ...(input.description !== undefined ? { description: input.description } : {}),
           alerts: input.alerts.map((alert) => ({ ...alert })),
+          ...(input.target !== undefined ? { target: input.target } : {}),
         },
       }),
     onSuccess: () => invalidateMonitorQueries(queryClient, projectId),

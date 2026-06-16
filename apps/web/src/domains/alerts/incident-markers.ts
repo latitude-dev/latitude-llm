@@ -18,6 +18,10 @@ const KIND_TOP_SYMBOL: Record<AlertIncidentKind, TopSymbol> = {
   "savedSearch.match": { shape: "triangle", size: 9 },
   "savedSearch.threshold": { shape: "diamond", size: 10 },
   "savedSearch.escalating": { shape: "rect", size: 7 },
+  // Unified query-time kinds — same glyphs as the saved-search analogues they supersede.
+  "event.matched": { shape: "triangle", size: 9 },
+  "metric.threshold": { shape: "diamond", size: 10 },
+  "metric.escalating": { shape: "rect", size: 7 },
 }
 
 export const SEVERITY_LABELS: Record<AlertSeverity, string> = {

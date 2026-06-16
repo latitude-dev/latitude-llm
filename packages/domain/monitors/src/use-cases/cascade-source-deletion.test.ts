@@ -31,6 +31,7 @@ const monitor = (id: string, alerts: readonly MonitorAlert[]): Monitor => ({
   description: "",
   system: false,
   alerts: alerts.map((a) => ({ ...a, monitorId: id.padEnd(24, "0").slice(0, 24) as MonitorAlert["monitorId"] })),
+  target: null,
   mutedAt: null,
   deletedAt: null,
   createdAt: new Date("2026-06-01T00:00:00.000Z"),
@@ -59,7 +60,7 @@ describe("cascadeSourceDeletionUseCase", () => {
     expect(monitors.find((m) => m.slug === "monitor-m1")?.deletedAt).not.toBeNull()
     const survivor = monitors.find((m) => m.slug === "monitor-m2")
     expect(survivor?.deletedAt).toBeNull()
-    expect(survivor?.alerts.map((a) => a.source.id)).toEqual([searchY])
+    expect(survivor?.alerts.map((a) => a.source?.id ?? null)).toEqual([searchY])
   })
 
   it("is a no-op when nothing watches the source", async () => {

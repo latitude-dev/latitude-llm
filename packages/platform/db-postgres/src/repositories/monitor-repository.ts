@@ -42,7 +42,7 @@ const toMonitorAlert = (row: typeof monitorAlerts.$inferSelect): MonitorAlert =>
   id: row.id as MonitorAlert["id"],
   monitorId: row.monitorId as MonitorAlert["monitorId"],
   kind: row.kind,
-  source: { type: row.sourceType, id: row.sourceId ?? null },
+  source: row.sourceType ? { type: row.sourceType, id: row.sourceId ?? null } : null,
   condition: row.condition ?? null,
   severity: row.severity,
   createdAt: row.createdAt,
@@ -58,6 +58,17 @@ const toMonitor = (row: typeof monitors.$inferSelect, alerts: readonly MonitorAl
     description: row.description,
     system: row.system,
     alerts,
+    target: row.targetStream
+      ? {
+          stream: row.targetStream,
+          filterSet: row.targetFilterSet ?? null,
+          query: row.targetQuery ?? null,
+          savedSearchId: row.targetSavedSearchId ?? null,
+          // Written together with target_stream; a null here is corruption — let
+          // monitorSchema.parse surface it loudly rather than fabricate a metric.
+          metric: row.metric ?? undefined,
+        }
+      : null,
     mutedAt: row.mutedAt,
     deletedAt: row.deletedAt,
     createdAt: row.createdAt,
@@ -72,6 +83,11 @@ const toMonitorRow = (monitor: Monitor): typeof monitors.$inferInsert => ({
   name: monitor.name,
   description: monitor.description,
   system: monitor.system,
+  targetStream: monitor.target?.stream ?? null,
+  targetFilterSet: monitor.target?.filterSet ?? null,
+  targetQuery: monitor.target?.query ?? null,
+  targetSavedSearchId: monitor.target?.savedSearchId ?? null,
+  metric: monitor.target?.metric ?? null,
   mutedAt: monitor.mutedAt,
   deletedAt: monitor.deletedAt,
   createdAt: monitor.createdAt,
@@ -86,8 +102,8 @@ const toMonitorAlertRow = (
   organizationId,
   monitorId: alert.monitorId,
   kind: alert.kind,
-  sourceType: alert.source.type,
-  sourceId: alert.source.id,
+  sourceType: alert.source?.type ?? null,
+  sourceId: alert.source?.id ?? null,
   condition: alert.condition,
   severity: alert.severity,
   createdAt: alert.createdAt,
@@ -582,6 +598,87 @@ export const MonitorRepositoryLive = Layer.effect(
           )
           return rows.map(toMonitorAlert)
         }),
+      listActiveMetricMonitorAlerts: (projectId) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          // A non-null target_stream marks a unified (target-on-monitor) monitor; create
+          // enforces homogeneity, so its live alerts are exactly the event.*/metric.* kinds.
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .select({
+                alert: getTableColumns(monitorAlerts),
+                targetStream: monitors.targetStream,
+                targetFilterSet: monitors.targetFilterSet,
+                targetQuery: monitors.targetQuery,
+                targetSavedSearchId: monitors.targetSavedSearchId,
+                metric: monitors.metric,
+              })
+              .from(monitorAlerts)
+              .innerJoin(monitors, eq(monitors.id, monitorAlerts.monitorId))
+              .where(
+                and(
+                  eq(monitorAlerts.organizationId, sqlClient.organizationId),
+                  eq(monitors.projectId, projectId),
+                  isNotNull(monitors.targetStream),
+                  isNull(monitorAlerts.deletedAt),
+                  isNull(monitors.deletedAt),
+                ),
+              ),
+          )
+          return rows.flatMap((row) =>
+            row.targetStream && row.metric
+              ? [
+                  {
+                    alert: toMonitorAlert(row.alert),
+                    target: {
+                      stream: row.targetStream,
+                      filterSet: row.targetFilterSet ?? null,
+                      query: row.targetQuery ?? null,
+                      savedSearchId: row.targetSavedSearchId ?? null,
+                      metric: row.metric,
+                    },
+                  },
+                ]
+              : [],
+          )
+        }),
+      listMonitorsForTarget: ({ projectId, stream, filterSetContains }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const { organizationId } = sqlClient
+          const monitorRows = yield* sqlClient.query((db) =>
+            db
+              .select()
+              .from(monitors)
+              .where(
+                and(
+                  eq(monitors.organizationId, organizationId),
+                  eq(monitors.projectId, projectId),
+                  eq(monitors.targetStream, stream),
+                  // jsonb containment: the monitor's target filter set includes the given predicate.
+                  sql`${monitors.targetFilterSet} @> ${JSON.stringify(filterSetContains)}::jsonb`,
+                  isNull(monitors.deletedAt),
+                ),
+              )
+              .orderBy(desc(monitors.createdAt), asc(monitors.id)),
+          )
+          if (monitorRows.length === 0) return []
+          const ids = monitorRows.map((row) => row.id)
+          const alertRows = yield* sqlClient.query((db) =>
+            db
+              .select()
+              .from(monitorAlerts)
+              .where(
+                and(
+                  eq(monitorAlerts.organizationId, organizationId),
+                  inArray(monitorAlerts.monitorId, ids),
+                  isNull(monitorAlerts.deletedAt),
+                ),
+              ),
+          )
+          const alertsByMonitorId = groupAlertsByMonitorId(alertRows)
+          return monitorRows.map((row) => toMonitor(row, [...(alertsByMonitorId.get(row.id) ?? [])]))
+        }),
       listSavedSearchMonitorSummaries: (projectId) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
@@ -669,10 +766,13 @@ export const MonitorRepositoryLive = Layer.effect(
             ]
           })
         }),
-      listProjectsWithActiveSavedSearchAlerts: () =>
+      listProjectsWithActiveMonitorAlerts: () =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          // No org filter — cross-org sweep on the admin client.
+          // No org filter — cross-org sweep on the admin client. Both kinds the
+          // per-project check fires on: saved-search alerts and unified
+          // (target-on-monitor) monitors, so a metric-only project with no
+          // saved-search alert still gets swept and its incidents can close.
           const rows = yield* sqlClient.query((db) =>
             db
               .selectDistinct({ organizationId: monitorAlerts.organizationId, projectId: monitors.projectId })
@@ -680,7 +780,7 @@ export const MonitorRepositoryLive = Layer.effect(
               .innerJoin(monitors, eq(monitors.id, monitorAlerts.monitorId))
               .where(
                 and(
-                  eq(monitorAlerts.sourceType, "savedSearch"),
+                  or(eq(monitorAlerts.sourceType, "savedSearch"), isNotNull(monitors.targetStream)),
                   isNull(monitorAlerts.deletedAt),
                   isNull(monitors.deletedAt),
                 ),

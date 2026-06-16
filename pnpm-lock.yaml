@@ -402,6 +402,9 @@ importers:
       '@domain/datasets':
         specifier: workspace:*
         version: link:../../packages/domain/datasets
+      '@domain/destinations':
+        specifier: workspace:*
+        version: link:../../packages/domain/destinations
       '@domain/evaluations':
         specifier: workspace:*
         version: link:../../packages/domain/evaluations
@@ -486,6 +489,9 @@ importers:
       '@platform/changelog-framer':
         specifier: workspace:*
         version: link:../../packages/platform/changelog-framer
+      '@platform/data-destinations':
+        specifier: workspace:*
+        version: link:../../packages/platform/data-destinations
       '@platform/db-clickhouse':
         specifier: workspace:*
         version: link:../../packages/platform/db-clickhouse
@@ -658,6 +664,9 @@ importers:
       '@domain/datasets':
         specifier: workspace:*
         version: link:../../packages/domain/datasets
+      '@domain/destinations':
+        specifier: workspace:*
+        version: link:../../packages/domain/destinations
       '@domain/email':
         specifier: workspace:*
         version: link:../../packages/domain/email
@@ -733,6 +742,9 @@ importers:
       '@platform/cache-redis':
         specifier: workspace:*
         version: link:../../packages/platform/cache-redis
+      '@platform/data-destinations':
+        specifier: workspace:*
+        version: link:../../packages/platform/data-destinations
       '@platform/db-clickhouse':
         specifier: workspace:*
         version: link:../../packages/platform/db-clickhouse
@@ -1169,9 +1181,15 @@ importers:
       '@domain/organizations':
         specifier: workspace:*
         version: link:../organizations
+      '@domain/queue':
+        specifier: workspace:*
+        version: link:../queue
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
+      '@domain/spans':
+        specifier: workspace:*
+        version: link:../spans
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
@@ -2069,6 +2087,22 @@ importers:
       framer-api:
         specifier: ^0.1.1
         version: 0.1.9
+
+  packages/platform/data-destinations:
+    dependencies:
+      '@domain/destinations':
+        specifier: workspace:*
+        version: link:../../domain/destinations
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.57
+    devDependencies:
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../../domain/shared
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@25.9.3)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))
 
   packages/platform/db-clickhouse:
     dependencies:

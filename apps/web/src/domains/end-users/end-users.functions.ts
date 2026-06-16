@@ -164,10 +164,14 @@ const toUsersOverviewRecord = (overview: UsersOverview, input: { from: Date; to:
   newUsers: overview.newUsers,
   identifiedTraces: overview.identifiedTraces,
   totalTraces: overview.totalTraces,
+  identifiedSessions: overview.identifiedSessions,
+  totalSessions: overview.totalSessions,
   histogram: overview.histogram.map((bucket) => ({
     bucket: bucket.bucket,
     activeUsers: bucket.activeUsers,
     traceCount: bucket.traceCount,
+    sessionCount: bucket.sessionCount,
+    errorSessionCount: bucket.errorSessionCount,
   })),
   bucketSeconds: input.bucketSeconds,
   fromIso: input.from.toISOString(),
@@ -206,6 +210,10 @@ const userInputSchema = z.object({
   userId: z.string().min(1).max(512),
 })
 
+const userProfileInputSchema = userInputSchema.extend({
+  errorsOnly: z.boolean().optional(),
+})
+
 const toUserProfileRecord = (profile: UserProfile) => ({
   userId: profile.userId as string,
   userEmail: profile.userEmail,
@@ -225,7 +233,7 @@ const toUserProfileRecord = (profile: UserProfile) => ({
 export type UserProfileRecord = ReturnType<typeof toUserProfileRecord>
 
 export const getUserProfile = createServerFn({ method: "GET" })
-  .inputValidator(userInputSchema)
+  .inputValidator(userProfileInputSchema)
   .handler(async ({ data }): Promise<UserProfileRecord | null> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
@@ -239,6 +247,7 @@ export const getUserProfile = createServerFn({ method: "GET" })
             organizationId: orgId,
             projectId: ProjectId(data.projectId),
             userId: ExternalUserId(data.userId),
+            ...(data.errorsOnly ? { errorsOnly: true } : {}),
           })
           .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
       }).pipe(withClickHouse(UserAnalyticsRepositoryLive, chClient, orgId), withTracing),
@@ -251,10 +260,11 @@ const userActivityInputSchema = z.object({
   projectId: z.string(),
   userId: z.string().min(1).max(512),
   timeRange: timeRangeSchema.optional(),
+  errorsOnly: z.boolean().optional(),
 })
 
 export interface UserActivityRecord {
-  readonly buckets: readonly { readonly bucket: string; readonly count: number }[]
+  readonly buckets: readonly { readonly bucket: string; readonly count: number; readonly errorCount: number }[]
   readonly bucketSeconds: number
   readonly fromIso: string
   readonly toIso: string
@@ -279,12 +289,19 @@ export const getUserActivity = createServerFn({ method: "GET" })
           userIds: [ExternalUserId(data.userId)],
           timeRange: { from, to },
           bucketSeconds,
+          ...(data.errorsOnly ? { errorsOnly: true } : {}),
         })
       }).pipe(withClickHouse(UserAnalyticsRepositoryLive, chClient, orgId), withTracing),
     )
 
+    const byBucket = new Map((series[0]?.buckets ?? []).map((bucket) => [bucket.bucket, bucket] as const))
+
     return {
-      buckets: fillBuckets({ scaffold, buckets: series[0]?.buckets ?? [] }),
+      buckets: scaffold.map((bucket) => ({
+        bucket,
+        count: byBucket.get(bucket)?.count ?? 0,
+        errorCount: byBucket.get(bucket)?.errorCount ?? 0,
+      })),
       bucketSeconds,
       fromIso: from.toISOString(),
       toIso: to.toISOString(),
@@ -296,6 +313,7 @@ const userUsageInputSchema = z.object({
   userId: z.string().min(1).max(512),
   dimension: z.enum(["model", "provider", "tool"]),
   limit: z.number().int().min(1).max(50).optional(),
+  errorsOnly: z.boolean().optional(),
 })
 
 export interface UserUsageSliceRecord {
@@ -319,6 +337,7 @@ export const getUserUsage = createServerFn({ method: "GET" })
           userId: ExternalUserId(data.userId),
           dimension: data.dimension,
           ...(data.limit !== undefined ? { limit: data.limit } : {}),
+          ...(data.errorsOnly ? { errorsOnly: true } : {}),
         })
       }).pipe(withClickHouse(UserAnalyticsRepositoryLive, chClient, orgId), withTracing),
     )

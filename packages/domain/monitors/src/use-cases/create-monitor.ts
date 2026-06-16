@@ -10,7 +10,7 @@ import {
   ValidationError,
 } from "@domain/shared"
 import { Effect } from "effect"
-import type { Monitor } from "../entities/monitor.ts"
+import type { Monitor, MonitorTarget } from "../entities/monitor.ts"
 import type { AlertConditionMismatchError } from "../errors.ts"
 import { MonitorRepository } from "../ports/monitor-repository.ts"
 import { assertMonitorableSavedSearch } from "./assert-monitorable-saved-search.ts"
@@ -25,6 +25,12 @@ export interface CreateMonitorInput {
   readonly description?: string
   /** At least one; each must be a user-creatable kind (see `buildMonitorAlert`). */
   readonly alerts: readonly MonitorAlertInput[]
+  /**
+   * The unified query-time target for `event.*`/`metric.*` alerts (tool/user/raw-stream
+   * monitors). Required when the alerts are unified kinds; omitted for legacy saved-search
+   * monitors (which carry their target on the alert source).
+   */
+  readonly target?: MonitorTarget
 }
 
 export type CreateMonitorError =
@@ -63,11 +69,29 @@ export const createMonitorUseCase = (
           buildMonitorAlert(alertInput, monitorId, now),
         )
 
+        // Source-vs-target split. A monitor is homogeneous: all unified (sourceless,
+        // target on the monitor) or all legacy (saved-search source, no target). Reject
+        // a mix outright, then require/forbid the target accordingly.
+        const sourcelessCount = alerts.filter((alert) => alert.source === null).length
+        if (sourcelessCount > 0 && sourcelessCount !== alerts.length) {
+          return yield* new ValidationError({
+            field: "alerts",
+            message: "A monitor cannot mix unified and saved-search alerts",
+          })
+        }
+        const unified = sourcelessCount > 0
+        if (unified && input.target == null) {
+          return yield* new ValidationError({ field: "target", message: "Unified alerts require a monitor target" })
+        }
+        if (!unified && input.target != null) {
+          return yield* new ValidationError({ field: "target", message: "A target is only valid for unified alerts" })
+        }
+
         // A search with a semantic part has no exact match rule to count against.
         const watchedSearchIds = [
           ...new Set(
             alerts.flatMap((alert) =>
-              alert.source.type === "savedSearch" && alert.source.id ? [alert.source.id] : [],
+              alert.source?.type === "savedSearch" && alert.source.id ? [alert.source.id] : [],
             ),
           ),
         ]
@@ -92,6 +116,7 @@ export const createMonitorUseCase = (
           description: input.description?.trim() ?? "",
           system: false,
           alerts,
+          target: input.target ?? null,
           mutedAt: null,
           deletedAt: null,
           createdAt: now,

@@ -4,11 +4,13 @@ import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router"
 import { ArrowLeftIcon, LockIcon, TextAlignStartIcon, WrenchIcon } from "lucide-react"
 import { type ReactNode, useMemo, useState } from "react"
 import { useHasFeatureFlag } from "../../../../../../domains/feature-flags/feature-flags.collection.ts"
+import { toolMonitorTarget } from "../../../../../../domains/monitors/monitor-target.ts"
 import { useToolDetail } from "../../../../../../domains/tools/tools.collection.ts"
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbLink, BreadcrumbSeparator, BreadcrumbText } from "../../../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "../../-route-data.ts"
+import { TargetMonitorsMenu } from "../../monitors/-components/target-monitors-menu.tsx"
 import {
   DEFAULT_TOOLS_RANGE_SECONDS,
   formatPercent,
@@ -203,6 +205,18 @@ function ToolDetailPageContent() {
                   View traces
                 </Link>
               </Button>
+              {notFound ? null : (
+                <>
+                  <div className="mx-1 h-5 w-px bg-border" />
+                  <TargetMonitorsMenu
+                    projectId={project.id}
+                    projectSlug={projectSlug}
+                    stream="spans"
+                    filterSetContains={{ toolName: [{ op: "eq", value: toolName }] }}
+                    createTarget={toolMonitorTarget(toolName)}
+                  />
+                </>
+              )}
             </>
           }
           description={
@@ -382,6 +396,27 @@ function ToolDetailPageContent() {
               range={range}
               errorsOnly={errorsOnly}
               onOverlayActiveChange={setOverlayActive}
+              headerAction={
+                <Button asChild variant="outline" size="sm" className="w-auto">
+                  <Link
+                    to="/projects/$projectSlug/traces"
+                    params={{ projectSlug }}
+                    search={{
+                      filters: JSON.stringify({
+                        tools: [{ op: "in", value: [toolName] }],
+                        startTime: [
+                          { op: "gte", value: range.fromIso },
+                          { op: "lte", value: range.toIso },
+                        ],
+                      }),
+                      filtersOpen: true,
+                    }}
+                  >
+                    <Icon icon={TextAlignStartIcon} size="sm" />
+                    View traces
+                  </Link>
+                </Button>
+              }
             />
           ) : definedButNeverCalled ? (
             <ToolDefiningTraces

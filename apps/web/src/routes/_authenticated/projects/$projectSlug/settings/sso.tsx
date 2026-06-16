@@ -54,7 +54,9 @@ function SsoUpsellCard() {
         <div className="flex min-w-0 flex-row items-start gap-4">
           <Icon icon={ShieldCheck} size="md" color="primary" className="shrink-0 pt-0.5" />
           <div className="flex min-w-0 flex-col gap-1">
-            <Text.H4 weight="bold">SAML Single Sign-On</Text.H4>
+            <Text.H4 weight="bold" color="primary">
+              SAML Single Sign-On
+            </Text.H4>
             <Text.H5 color="primary">
               Upgrade to the Enterprise plan to let users from your trusted domains sign in with your organization's
               Identity Provider.

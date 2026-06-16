@@ -317,7 +317,7 @@ export function BehaviourDetailDrawer({
             <div className="flex flex-col gap-2">
               <Text.H2>{cluster.name}</Text.H2>
               <Text.H5 color="foregroundMuted">
-                {cluster.description || "This behaviour has not been named in detail yet."}
+                {cluster.description || "This behavior has not been named in detail yet."}
               </Text.H5>
               <Text.H6 color="foregroundMuted">
                 First seen {formatDate(cluster.firstObservedAt)} · Last seen{" "}
@@ -384,7 +384,7 @@ export function BehaviourDetailDrawer({
                     {momentRange
                       ? selectedMomentRangeLabel(momentRange)
                       : sessionFilter === "all"
-                        ? "All sessions for this behaviour"
+                        ? "All sessions for this behavior"
                         : `Sessions matching ${sessionFilter.replaceAll("_", " ")}`}
                   </Text.H6>
                   {behaviourSessionsLoading ? (
@@ -735,7 +735,7 @@ function BehaviourSessionsHistogram({
             height={140}
             showYAxis={false}
             xAxisLabelFontSize={10}
-            ariaLabel="Behaviour sessions over time"
+            ariaLabel="Behavior sessions over time"
             formatTooltip={(category, value) => formatSessionHistogramTooltip(category, value)}
           />
         </div>
@@ -912,7 +912,7 @@ export function BehavioursView({
   const columns: InfiniteTableColumn<BehaviourTableRow>[] = [
     {
       key: "behaviour",
-      header: "Behaviour",
+      header: "Behavior",
       width: 420,
       minWidth: 300,
       render: (row) => (
@@ -932,7 +932,7 @@ export function BehavioursView({
     },
     {
       key: "signals",
-      header: "Signals",
+      header: "Moments",
       width: 240,
       render: (row) => {
         const signals = row.node.intelligence.signals.filter((signal) => signal.rate > 0)
@@ -1048,7 +1048,7 @@ export function BehavioursView({
                   onMomentRangeChange(undefined)
                 }}
                 {...(activeBehaviourId ? { activeRowKey: activeBehaviourId, activeRowAutoScroll: true } : {})}
-                blankSlate="No behaviours match the current filters"
+                blankSlate="No behaviors match the current filters"
               />
             </>
           )}

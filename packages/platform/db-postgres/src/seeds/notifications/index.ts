@@ -72,7 +72,12 @@ const seedIncidentNotifications: Seeder = {
           .from(alertIncidents)
           .where(eq(alertIncidents.organizationId, ctx.scope.organizationId))
         const orgIncidents: IncidentRow[] = orgIncidentsRaw
-          .filter((r) => isAlertIncidentKind(r.kind))
+          // Source-based incidents only — this seed renders issue notifications (unified
+          // incidents are sourceless and notify via the firing path).
+          .filter(
+            (r): r is (typeof orgIncidentsRaw)[number] & { sourceId: string } =>
+              isAlertIncidentKind(r.kind) && r.sourceId !== null,
+          )
           .map((r) => ({
             id: r.id,
             organizationId: r.organizationId,

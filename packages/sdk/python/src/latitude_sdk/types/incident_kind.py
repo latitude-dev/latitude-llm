@@ -10,6 +10,9 @@ IncidentKind = typing.Union[
         "savedSearch.match",
         "savedSearch.threshold",
         "savedSearch.escalating",
+        "event.matched",
+        "metric.threshold",
+        "metric.escalating",
     ],
     typing.Any,
 ]

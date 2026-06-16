@@ -53,8 +53,9 @@ export const openSavedSearchIncident = (input: OpenSavedSearchIncidentInput) =>
         projectId: incident.projectId,
         alertIncidentId: incident.id,
         kind: incident.kind,
-        sourceType: incident.sourceType,
-        sourceId: incident.sourceId,
+        // Saved-search incidents always carry a source — use the known values.
+        sourceType: "savedSearch",
+        sourceId: input.sourceId,
       },
     })
 
@@ -68,19 +69,23 @@ export const closeSavedSearchIncident = (incident: AlertIncident, endedAt: Date)
     const outboxEventWriter = yield* OutboxEventWriter
 
     yield* alertIncidentRepository.setEndedAt({ id: incident.id, endedAt })
-    yield* outboxEventWriter.write({
-      eventName: "IncidentClosed",
-      aggregateType: "alert_incident",
-      aggregateId: incident.id,
-      organizationId: incident.organizationId,
-      payload: {
+    // Saved-search incidents are always sourced; the guard satisfies the (now-nullable)
+    // entity type and mirrors resolve-alert-incident — sourceless incidents notify elsewhere.
+    if (incident.sourceType !== null && incident.sourceId !== null) {
+      yield* outboxEventWriter.write({
+        eventName: "IncidentClosed",
+        aggregateType: "alert_incident",
+        aggregateId: incident.id,
         organizationId: incident.organizationId,
-        projectId: incident.projectId,
-        alertIncidentId: incident.id,
-        kind: incident.kind,
-        sourceType: incident.sourceType,
-        sourceId: incident.sourceId,
-        reason: "threshold",
-      },
-    })
+        payload: {
+          organizationId: incident.organizationId,
+          projectId: incident.projectId,
+          alertIncidentId: incident.id,
+          kind: incident.kind,
+          sourceType: incident.sourceType,
+          sourceId: incident.sourceId,
+          reason: "threshold",
+        },
+      })
+    }
   })

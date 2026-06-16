@@ -7,6 +7,9 @@ export const IncidentsListRequestKindsItem = {
     SavedSearchMatch: "savedSearch.match",
     SavedSearchThreshold: "savedSearch.threshold",
     SavedSearchEscalating: "savedSearch.escalating",
+    EventMatched: "event.matched",
+    MetricThreshold: "metric.threshold",
+    MetricEscalating: "metric.escalating",
 } as const;
 export type IncidentsListRequestKindsItem =
     (typeof IncidentsListRequestKindsItem)[keyof typeof IncidentsListRequestKindsItem];

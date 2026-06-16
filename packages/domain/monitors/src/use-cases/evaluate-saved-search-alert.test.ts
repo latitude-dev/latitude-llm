@@ -3,7 +3,7 @@ import { createFakeChSqlClient } from "@domain/shared/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import type { MonitorAlert } from "../entities/monitor.ts"
-import { createFakeSavedSearchMatchReader } from "../testing/fake-saved-search-match-reader.ts"
+import { createFakeMetricSeriesReader } from "../testing/fake-metric-series-reader.ts"
 import { evaluateSavedSearchAlert, evaluateSavedSearchEscalatingAlert } from "./evaluate-saved-search-alert.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
@@ -31,7 +31,7 @@ const evaluate = (input: { alert: MonitorAlert; matches: readonly Date[] }) =>
       target: { query: null, filterSet: {} },
       now,
     }).pipe(
-      Effect.provide(createFakeSavedSearchMatchReader(input.matches).layer),
+      Effect.provide(createFakeMetricSeriesReader(input.matches).layer),
       Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId })),
     ),
   )
@@ -144,7 +144,7 @@ describe("evaluateSavedSearchAlert", () => {
           target: { query: null, filterSet: {} },
           now,
         }).pipe(
-          Effect.provide(createFakeSavedSearchMatchReader(input.matches).layer),
+          Effect.provide(createFakeMetricSeriesReader(input.matches).layer),
           Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId })),
         ),
       )

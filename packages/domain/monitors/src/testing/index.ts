@@ -1,3 +1,3 @@
 export { createFakeAlertIncidentStore } from "./fake-alert-incident-store.ts"
+export { createFakeMetricSeriesReader } from "./fake-metric-series-reader.ts"
 export { createFakeMonitorRepository } from "./fake-monitor-repository.ts"
-export { createFakeSavedSearchMatchReader } from "./fake-saved-search-match-reader.ts"

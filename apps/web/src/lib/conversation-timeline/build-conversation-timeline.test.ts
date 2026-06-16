@@ -143,6 +143,21 @@ describe("buildConversationTimeline edge cases", () => {
     expect(atMsOf(2)).toBeLessThan(at(150_000))
   })
 
+  it("uses the first user message for trace markers when span mapping is unavailable", () => {
+    const timeline = buildConversationTimeline({
+      ...FIXTURE,
+      messages: [message("system", text("s")), message("user", text("u")), message("assistant", text("a"))],
+      spans: [],
+      messageSpanMap: {},
+      toolCallSpanMap: {},
+      traces: [{ traceId: "t1", startMs: at(0), endMs: at(100_000), label: "Trace 1" }],
+      annotations: [],
+      moments: [],
+    })
+    const marker = timeline.markers.find((m) => m.kind === "trace")
+    expect(marker).toMatchObject({ firstMessageIndex: 1, userExcerpt: "u" })
+  })
+
   it("collapses streaming spans with ttft past span end to instant at span end", () => {
     const timeline = buildConversationTimeline({
       ...FIXTURE,

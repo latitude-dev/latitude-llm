@@ -3,8 +3,10 @@ import type {
   AlertIncidentKind,
   AlertIncidentSourceType,
   AlertSeverity,
+  FilterSet,
   MonitorAlertId,
   MonitorId,
+  MonitorStream,
   NotFoundError,
   OrganizationId,
   ProjectId,
@@ -12,10 +14,16 @@ import type {
   SqlClient,
 } from "@domain/shared"
 import { Context, type Effect } from "effect"
-import type { Monitor, MonitorAlert } from "../entities/monitor.ts"
+import type { Monitor, MonitorAlert, MonitorTarget } from "../entities/monitor.ts"
 
-/** An (org, project) pair holding at least one active saved-search alert — the sweep's fan-out unit. */
-export interface ProjectWithActiveSavedSearchAlerts {
+/** An active unified (`event.*`/`metric.*`) alert paired with its owning monitor's target. */
+export interface MetricMonitorAlert {
+  readonly alert: MonitorAlert
+  readonly target: MonitorTarget
+}
+
+/** An (org, project) pair holding at least one active monitor alert — the sweep's fan-out unit. */
+export interface ProjectWithActiveMonitorAlerts {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
 }
@@ -170,6 +178,22 @@ export interface MonitorRepositoryShape {
   lockAlertForUpdate(alertId: MonitorAlertId): Effect.Effect<void, RepositoryError, SqlClient>
   /** Active saved-search alerts in a project (live alert + monitor). Org-scoped — the firing orchestrator resolves + evaluates each. */
   listActiveSavedSearchAlerts(projectId: ProjectId): Effect.Effect<readonly MonitorAlert[], RepositoryError, SqlClient>
+  /** Active unified (`event.*`/`metric.*`) alerts in the project, each with its monitor's target. The firing scan's unit for target-on-monitor monitors. */
+  listActiveMetricMonitorAlerts(
+    projectId: ProjectId,
+  ): Effect.Effect<readonly MetricMonitorAlert[], RepositoryError, SqlClient>
+  /**
+   * Live unified monitors in the project whose target is on `stream` and whose
+   * `target_filter_set` contains `filterSetContains` (jsonb `@>`). Powers the
+   * in-context "monitors for this tool/user" lists — pass the tool/user filter
+   * (`{toolName:[{op:"eq",value}]}` / `{userId:[…]}`) to match the specific
+   * target. Newest first.
+   */
+  listMonitorsForTarget(input: {
+    readonly projectId: ProjectId
+    readonly stream: MonitorStream
+    readonly filterSetContains: FilterSet
+  }): Effect.Effect<readonly Monitor[], RepositoryError, SqlClient>
   /**
    * For every saved search watched by a live monitor (muted included) in the project: the slug of
    * the earliest-created such monitor, the distinct monitor count, and the severities of every
@@ -178,9 +202,9 @@ export interface MonitorRepositoryShape {
   listSavedSearchMonitorSummaries(
     projectId: ProjectId,
   ): Effect.Effect<readonly SavedSearchMonitorSummary[], RepositoryError, SqlClient>
-  /** Distinct `(org, project)` pairs with ≥1 active saved-search alert. **Cross-org** (admin client) — backs the 5-minute sweep's per-project fan-out. */
-  listProjectsWithActiveSavedSearchAlerts(): Effect.Effect<
-    readonly ProjectWithActiveSavedSearchAlerts[],
+  /** Distinct `(org, project)` pairs with ≥1 active monitor alert — saved-search-sourced or unified (target-on-monitor). **Cross-org** (admin client) — backs the 5-minute sweep's per-project fan-out. */
+  listProjectsWithActiveMonitorAlerts(): Effect.Effect<
+    readonly ProjectWithActiveMonitorAlerts[],
     RepositoryError,
     SqlClient
   >

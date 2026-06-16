@@ -5,6 +5,7 @@ import {
   type AlertIncidentKind,
   type AlertIncidentSourceType,
   type AlertSeverity,
+  KINDS_WITHOUT_CONDITION,
   type MonitorAlertId,
   type MonitorId,
   type NotFoundError,
@@ -20,11 +21,10 @@ import { MonitorRepository } from "../ports/monitor-repository.ts"
 import { assertMonitorableSavedSearch } from "./assert-monitorable-saved-search.ts"
 
 const USER_CREATABLE = new Set<AlertIncidentKind>(USER_CREATABLE_ALERT_KINDS)
-/** Kinds that carry no `condition` (nothing to configure). Their condition stays `null`. */
-const KINDS_WITHOUT_CONDITION = new Set<AlertIncidentKind>(["issue.new", "issue.regressed", "savedSearch.match"])
+const NO_CONDITION = new Set<AlertIncidentKind>(KINDS_WITHOUT_CONDITION)
 
 const conditionMatchesKind = (condition: AlertIncidentCondition | null, kind: AlertIncidentKind): boolean =>
-  condition === null ? KINDS_WITHOUT_CONDITION.has(kind) : condition.kind === kind
+  condition === null ? NO_CONDITION.has(kind) : condition.kind === kind
 
 export interface UpdateMonitorAlertInput {
   readonly monitorId: MonitorId
@@ -69,12 +69,21 @@ export const updateMonitorAlertUseCase = (
         const nextCondition = input.condition !== undefined ? input.condition : alert.condition
         const nextSeverity = input.severity ?? alert.severity
         const kindChanged = input.kind !== undefined && input.kind !== alert.kind
-        const sourceIdChanged = input.source !== undefined && input.source.id !== alert.source.id
+        const sourceIdChanged = input.source !== undefined && input.source.id !== (alert.source?.id ?? null)
 
-        if (nextSource.type !== ALERT_INCIDENT_KIND_SOURCE_TYPE[nextKind]) {
+        // Legacy kinds require their fixed source type; unified kinds carry no source (target on the monitor).
+        const expectedSourceType = ALERT_INCIDENT_KIND_SOURCE_TYPE[nextKind]
+        if (expectedSourceType === undefined) {
+          if (nextSource !== null) {
+            return yield* new ValidationError({
+              field: "source",
+              message: `Alerts of kind "${nextKind}" take no source`,
+            })
+          }
+        } else if ((nextSource?.type ?? null) !== expectedSourceType) {
           return yield* new ValidationError({
             field: "source",
-            message: `Source type must be "${ALERT_INCIDENT_KIND_SOURCE_TYPE[nextKind]}" for ${nextKind}`,
+            message: `Source type must be "${expectedSourceType}" for ${nextKind}`,
           })
         }
         if (!conditionMatchesKind(nextCondition, nextKind)) {
@@ -86,26 +95,25 @@ export const updateMonitorAlertUseCase = (
         if (monitor.system) {
           const sourceChanged =
             input.source !== undefined &&
-            (input.source.type !== alert.source.type || input.source.id !== alert.source.id)
+            (input.source.type !== (alert.source?.type ?? null) || input.source.id !== (alert.source?.id ?? null))
           const severityChanged = input.severity !== undefined && input.severity !== alert.severity
           const conditionOnNonConfigurable = input.condition !== undefined && alert.condition === null
           if (kindChanged || sourceChanged || severityChanged || conditionOnNonConfigurable) {
             return yield* new SystemMonitorForbiddenError({ monitorId: input.monitorId, operation: "restructured" })
           }
         } else if (kindChanged && !USER_CREATABLE.has(nextKind)) {
-          // Only saved-search kinds are user-owned; `issue.*` are system-only.
           return yield* new ValidationError({ field: "kind", message: `Alerts of kind "${nextKind}" cannot be set` })
         }
 
         // Re-pointing at a search with a semantic part would leave the monitor without an exact match rule.
-        if (sourceIdChanged && nextSource.type === "savedSearch" && nextSource.id) {
+        if (sourceIdChanged && nextSource?.type === "savedSearch" && nextSource.id) {
           yield* assertMonitorableSavedSearch(nextSource.id)
         }
 
         yield* repository.updateAlert({
           alertId: input.alertId,
           kind: nextKind,
-          sourceId: nextSource.id,
+          sourceId: nextSource?.id ?? null,
           condition: nextCondition,
           severity: nextSeverity,
         })

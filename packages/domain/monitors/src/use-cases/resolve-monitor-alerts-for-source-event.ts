@@ -21,10 +21,14 @@ export const resolveMonitorAlertsForSourceEventUseCase = (
 ): Effect.Effect<readonly MonitorAlert[], RepositoryError, SqlClient | MonitorRepository> =>
   Effect.gen(function* () {
     const repository = yield* MonitorRepository
+    const sourceType = ALERT_INCIDENT_KIND_SOURCE_TYPE[input.kind]
+    // Unified `event.*`/`metric.*` kinds carry their target on the monitor, not a
+    // `(sourceType, sourceId)` — they're never resolved via the source-event path.
+    if (sourceType === undefined) return []
     return yield* repository.listActiveAlertsForSourceEvent({
       projectId: input.projectId,
       kind: input.kind,
-      sourceType: ALERT_INCIDENT_KIND_SOURCE_TYPE[input.kind],
+      sourceType,
       sourceId: input.sourceId,
     })
   })

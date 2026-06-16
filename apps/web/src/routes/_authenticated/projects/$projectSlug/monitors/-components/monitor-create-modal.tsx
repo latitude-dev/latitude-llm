@@ -1,5 +1,6 @@
 import { Button, CloseTrigger, Input, Modal, Textarea, useToast } from "@repo/ui"
 import { useState } from "react"
+import { monitorTargetName } from "../../../../../../domains/monitors/monitor-target.ts"
 import { useCreateMonitor } from "../../../../../../domains/monitors/monitors.collection.ts"
 import { extractFieldErrors, toUserMessage } from "../../../../../../lib/errors.ts"
 import { AlertCardForm } from "./alert-card-form.tsx"
@@ -8,6 +9,7 @@ import {
   type AlertFieldErrors,
   alertFieldErrorsFrom,
   draftToAlertDraft,
+  draftToTarget,
   emptyAlertDraft,
   hasAlertFieldErrors,
 } from "./alert-form-helpers.ts"
@@ -41,6 +43,11 @@ export function MonitorCreateModal({
   const [nameError, setNameError] = useState<string | undefined>(undefined)
   const [alertErrors, setAlertErrors] = useState<AlertFieldErrors>({})
 
+  const targetName = alert.target ? monitorTargetName(alert.target) : null
+  const modalDescription = targetName
+    ? `This monitor watches ${targetName} and opens an incident when its condition is met.`
+    : "Monitors watch your saved searches and open incidents when their conditions are met."
+
   const onAlertChange = (next: AlertDraft) => {
     setAlert(next)
     setAlertErrors({})
@@ -52,15 +59,17 @@ export function MonitorCreateModal({
       setNameError("Name is required")
       return
     }
-    if (alert.sourceId === null) {
+    if (alert.target === null && alert.sourceId === null) {
       setAlertErrors({ source: ["Select a saved search"] })
       return
     }
+    const target = draftToTarget(alert)
     try {
       const monitor = await create.mutateAsync({
         name: trimmedName,
         ...(description.trim() ? { description: description.trim() } : {}),
         alerts: [draftToAlertDraft(alert)],
+        ...(target ? { target } : {}),
       })
       toast({ description: "Monitor created." })
       onClose()
@@ -88,7 +97,7 @@ export function MonitorCreateModal({
         if (!next) onClose()
       }}
       title="New monitor"
-      description="Monitors watch your issues and searches and open incidents when their alert conditions are met"
+      description={modalDescription}
       footer={
         <>
           <CloseTrigger />

@@ -164,4 +164,93 @@ describe("createMonitorUseCase", () => {
     expect(error._tag).toBe("SavedSearchNotFoundError")
     expect(monitors).toHaveLength(0)
   })
+
+  const toolTarget = {
+    stream: "spans" as const,
+    filterSet: { operation: [{ op: "eq" as const, value: "execute_tool" }] },
+    query: null,
+    savedSearchId: null,
+    metric: { kind: "errorRate" as const },
+  }
+
+  it("creates a unified target-on-monitor with a sourceless alert", async () => {
+    const { repo, monitors } = createFakeMonitorRepository()
+    const monitor = await run(
+      createMonitorUseCase({
+        organizationId,
+        projectId,
+        name: "Tool errors",
+        target: toolTarget,
+        alerts: [
+          {
+            kind: "metric.threshold",
+            condition: {
+              kind: "metric.threshold",
+              metric: { kind: "errorRate" },
+              threshold: { mode: "absolute", value: 0.1 },
+            },
+          },
+        ],
+      }),
+      repo,
+    )
+    expect(monitor.target).toEqual(toolTarget)
+    expect(monitor.alerts[0]?.source).toBeNull()
+    expect(monitor.alerts[0]?.kind).toBe("metric.threshold")
+    expect(monitors).toHaveLength(1)
+  })
+
+  it("rejects a unified alert without a target", async () => {
+    const { repo, monitors } = createFakeMonitorRepository()
+    const error = await runError(
+      createMonitorUseCase({
+        organizationId,
+        projectId,
+        name: "No target",
+        alerts: [{ kind: "event.matched" }],
+      }),
+      repo,
+    )
+    expect(error._tag).toBe("ValidationError")
+    expect((error as { field: string }).field).toBe("target")
+    expect(monitors).toHaveLength(0)
+  })
+
+  it("rejects mixing a saved-search alert and a unified alert on one monitor", async () => {
+    const { repo, monitors } = createFakeMonitorRepository()
+    const error = await runError(
+      createMonitorUseCase({
+        organizationId,
+        projectId,
+        name: "Mixed kinds",
+        target: toolTarget,
+        alerts: [
+          matchAlert,
+          {
+            kind: "metric.threshold",
+            condition: {
+              kind: "metric.threshold",
+              metric: { kind: "errorRate" },
+              threshold: { mode: "absolute", value: 0.1 },
+            },
+          },
+        ],
+      }),
+      repo,
+    )
+    expect(error._tag).toBe("ValidationError")
+    expect((error as { field: string }).field).toBe("alerts")
+    expect(monitors).toHaveLength(0)
+  })
+
+  it("rejects a legacy saved-search alert paired with a target", async () => {
+    const { repo, monitors } = createFakeMonitorRepository()
+    const error = await runError(
+      createMonitorUseCase({ organizationId, projectId, name: "Mixed", target: toolTarget, alerts: [matchAlert] }),
+      repo,
+    )
+    expect(error._tag).toBe("ValidationError")
+    expect((error as { field: string }).field).toBe("target")
+    expect(monitors).toHaveLength(0)
+  })
 })

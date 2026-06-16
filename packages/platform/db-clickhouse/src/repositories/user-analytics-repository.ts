@@ -241,6 +241,7 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
       userIds,
       timeRange,
       bucketSeconds,
+      errorsOnly,
     }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -255,11 +256,13 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
                         intDiv(toUnixTimestamp(start_time), {bucketSeconds:UInt32}) * {bucketSeconds:UInt32},
                         'UTC'
                       ) AS bucket_start,
-                      count() AS count
+                      uniqExact(coalesce(nullIf(session_id, ''), toString(trace_id))) AS count,
+                      uniqExactIf(coalesce(nullIf(session_id, ''), toString(trace_id)), error_count > 0) AS errored_count
                     FROM (${USER_TRACE_ROLLUP})
                     WHERE user_id IN ({userIds:Array(String)})
                       AND start_time >= {fromTime:DateTime64(9, 'UTC')}
                       AND start_time < {toTime:DateTime64(9, 'UTC')}
+                      ${errorsOnly ? "AND error_count > 0" : ""}
                     GROUP BY user_id, bucket_start
                     ORDER BY user_id ASC, bucket_start ASC`,
               query_params: {
@@ -272,15 +275,19 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
               },
               format: "JSONEachRow",
             })
-            return result.json<{ user_id: string; bucket_start: string; count: string }>()
+            return result.json<{ user_id: string; bucket_start: string; count: string; errored_count: string }>()
           })
           .pipe(Effect.mapError((error) => toRepositoryError(error, "activityByUserIds")))
 
-        const bucketsByUserId = new Map<string, { bucket: string; count: number }[]>()
+        const bucketsByUserId = new Map<string, { bucket: string; count: number; errorCount: number }[]>()
         for (const row of rows) {
           const userId = normalizeCHString(row.user_id)
           const buckets = bucketsByUserId.get(userId) ?? []
-          buckets.push({ bucket: parseCHDate(row.bucket_start).toISOString(), count: Number(row.count) })
+          buckets.push({
+            bucket: parseCHDate(row.bucket_start).toISOString(),
+            count: Number(row.count),
+            errorCount: Number(row.errored_count),
+          })
           bucketsByUserId.set(userId, buckets)
         }
         return userIds.map(
@@ -313,14 +320,22 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
                 query: `SELECT
                         uniqExactIf(user_id, user_id != '') AS unique_users,
                         countIf(user_id != '')              AS identified_traces,
-                        count()                             AS total_traces
+                        count()                             AS total_traces,
+                        uniqExact(coalesce(nullIf(session_id, ''), toString(trace_id))) AS total_sessions,
+                        uniqExactIf(coalesce(nullIf(session_id, ''), toString(trace_id)), user_id != '') AS identified_sessions
                       FROM (${USER_TRACE_ROLLUP})
                       WHERE start_time >= {fromTime:DateTime64(9, 'UTC')}
                         AND start_time < {toTime:DateTime64(9, 'UTC')}`,
                 query_params: params,
                 format: "JSONEachRow",
               })
-              return result.json<{ unique_users: string; identified_traces: string; total_traces: string }>()
+              return result.json<{
+                unique_users: string
+                identified_traces: string
+                total_traces: string
+                total_sessions: string
+                identified_sessions: string
+              }>()
             }),
             chSqlClient.query(async (client) => {
               const result = await client.query({
@@ -347,7 +362,9 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
                           'UTC'
                         ) AS bucket_start,
                         uniqExact(user_id) AS active_users,
-                        count()            AS trace_count
+                        count()            AS trace_count,
+                        uniqExact(coalesce(nullIf(session_id, ''), toString(trace_id))) AS session_count,
+                        uniqExactIf(coalesce(nullIf(session_id, ''), toString(trace_id)), error_count > 0) AS error_session_count
                       FROM (${USER_TRACE_ROLLUP})
                       WHERE user_id != ''
                         AND start_time >= {fromTime:DateTime64(9, 'UTC')}
@@ -357,7 +374,13 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
                 query_params: { ...params, bucketSeconds: Math.floor(bucketSeconds) },
                 format: "JSONEachRow",
               })
-              return result.json<{ bucket_start: string; active_users: string; trace_count: string }>()
+              return result.json<{
+                bucket_start: string
+                active_users: string
+                trace_count: string
+                session_count: string
+                error_session_count: string
+              }>()
             }),
           ],
           { concurrency: 3 },
@@ -369,15 +392,24 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
           newUsers: Number(newUserRows[0]?.new_users ?? 0),
           identifiedTraces: Number(summary?.identified_traces ?? 0),
           totalTraces: Number(summary?.total_traces ?? 0),
+          identifiedSessions: Number(summary?.identified_sessions ?? 0),
+          totalSessions: Number(summary?.total_sessions ?? 0),
           histogram: histogramRows.map((row) => ({
             bucket: parseCHDate(row.bucket_start).toISOString(),
             activeUsers: Number(row.active_users),
             traceCount: Number(row.trace_count),
+            sessionCount: Number(row.session_count),
+            errorSessionCount: Number(row.error_session_count),
           })),
         } satisfies UsersOverview
       })
 
-    const findByUserId: UserAnalyticsRepositoryShape["findByUserId"] = ({ organizationId, projectId, userId }) =>
+    const findByUserId: UserAnalyticsRepositoryShape["findByUserId"] = ({
+      organizationId,
+      projectId,
+      userId,
+      errorsOnly,
+    }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
 
@@ -391,6 +423,7 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
                       uniqExact(toDate(start_time)) AS active_days
                     FROM (${USER_TRACE_ROLLUP})
                     WHERE user_id = {userId:String}
+                      ${errorsOnly ? "AND error_count > 0" : ""}
                     GROUP BY user_id`,
               query_params: {
                 organizationId: organizationId as string,
@@ -432,6 +465,7 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
       userId,
       dimension,
       limit,
+      errorsOnly,
     }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -447,13 +481,15 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
                         SELECT
                           trace_id,
                           argMaxIfMerge(user_id) AS user_id,
-                          groupUniqArrayIfMerge(${column}) AS ${column}
+                          groupUniqArrayIfMerge(${column}) AS ${column},
+                          sum(error_count) AS error_count
                         FROM traces
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                         GROUP BY organization_id, project_id, trace_id
                       )
                       WHERE user_id = {userId:String}
+                        ${errorsOnly ? "AND error_count > 0" : ""}
                     )
                     WHERE value != ''
                     GROUP BY value

@@ -28,7 +28,7 @@ class MonitorAlert(UniversalBaseModel):
     What the alert fires on. The `savedSearch.*` kinds watch a saved search; `issue.*` are system-only.
     """
 
-    source: MonitorAlertSource
+    source: typing.Optional[MonitorAlertSource] = None
     condition: typing.Optional[AlertCondition] = None
     severity: MonitorAlertSeverity = pydantic.Field()
     """

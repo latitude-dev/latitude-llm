@@ -53,7 +53,7 @@ function BehavioursBreadcrumb() {
   return (
     <span className="flex min-w-0 items-center gap-2">
       <TagsIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-      <BreadcrumbText variant="current">Behaviours</BreadcrumbText>
+      <BreadcrumbText variant="current">Behaviors</BreadcrumbText>
     </span>
   )
 }
@@ -151,9 +151,9 @@ function BehavioursPageContent() {
         <Layout.Content>
           <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
             <TagsIcon className="h-8 w-8 text-muted-foreground" />
-            <Text.H3>No behaviours yet</Text.H3>
+            <Text.H3>No behaviors yet</Text.H3>
             <Text.H5 color="foregroundMuted">
-              Live taxonomy behaviours will appear here after sessions have been clustered.
+              Live taxonomy behaviors will appear here after sessions have been clustered.
             </Text.H5>
           </div>
         </Layout.Content>
@@ -216,7 +216,7 @@ function FeatureFlagOffSplash() {
           <Icon icon={LockIcon} size="lg" color="foregroundMuted" />
         </div>
         <div className="flex flex-col items-center gap-2">
-          <Text.H3 centered>Behaviours aren't available yet</Text.H3>
+          <Text.H3 centered>Behaviors aren't available yet</Text.H3>
           <Text.H5 color="foregroundMuted" centered>
             This feature is rolling out gradually. Reach out to support if you'd like early access for your
             organization.

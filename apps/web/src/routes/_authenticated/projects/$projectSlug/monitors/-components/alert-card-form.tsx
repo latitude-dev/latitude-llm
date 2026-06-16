@@ -1,7 +1,13 @@
-import { type AlertSeverity, DEFAULT_ESCALATION_SENSITIVITY } from "@domain/shared"
-import { Button, Icon, Input, Select, type TabOption, Tabs, Text } from "@repo/ui"
+import { type AlertSeverity, DEFAULT_ESCALATION_SENSITIVITY, type MonitorMetric } from "@domain/shared"
+import { Badge, Button, Icon, Input, Select, type TabOption, Tabs, Text } from "@repo/ui"
 import { EqualApproximately, LineDotRightHorizontal, SparklesIcon, TrendingUp, XIcon } from "lucide-react"
 import { SeveritySelector } from "../../../../../../domains/alerts/severity-selector.tsx"
+import {
+  describeMonitorTarget,
+  metricOptionId,
+  metricThresholdUnitLabel,
+  targetMetricOptions,
+} from "../../../../../../domains/monitors/monitor-target.ts"
 import { useSavedSearchesList } from "../../../../../../domains/saved-searches/saved-searches.collection.ts"
 import {
   type AlertDraft,
@@ -9,7 +15,9 @@ import {
   type BaselineKind,
   type ComparisonMode,
   draftWithKind,
+  kindsForDraft,
   type LookbackUnit,
+  type MetricDirection,
   previewAlertSentence,
   type UserAlertKind,
   type WindowUnit,
@@ -24,16 +32,70 @@ const EXPECTED_EXPLANATION =
 
 // Field help copy — written so a non-engineer can predict what each control does.
 const KIND_HELP: Record<UserAlertKind, string> = {
-  "savedSearch.match": "Alerts each time a new matching trace is detected",
-  "savedSearch.threshold": "Alerts once matching traces reach a threshold",
-  "savedSearch.escalating": "Alerts when matching traces stays elevated for a sustained window",
+  "savedSearch.match": "Opens an incident each time a new matching trace is detected",
+  "savedSearch.threshold": "Opens an incident once matching traces reach a threshold",
+  "savedSearch.escalating": "Opens an incident when matching traces stay elevated for a sustained window",
+  "event.matched": "Opens an incident each time a new matching event is detected",
+  "metric.threshold": "Opens an incident once the metric crosses a threshold",
+  "metric.escalating": "Opens an incident when the metric stays elevated for a sustained window",
 }
 
-const KIND_TABS: readonly TabOption<UserAlertKind>[] = [
-  { id: "savedSearch.match", label: "Match", icon: <Icon icon={EqualApproximately} size="sm" /> },
-  { id: "savedSearch.threshold", label: "Threshold", icon: <Icon icon={LineDotRightHorizontal} size="sm" /> },
-  { id: "savedSearch.escalating", label: "Escalating", icon: <Icon icon={TrendingUp} size="sm" /> },
-]
+// Tab label + icon per kind. Saved-search exposes all three; a unified target
+// exposes only threshold/escalating (kindsForDraft drops "match" for targets).
+const TAB_FOR_KIND: Record<UserAlertKind, { label: string; icon: typeof EqualApproximately }> = {
+  "savedSearch.match": { label: "Match", icon: EqualApproximately },
+  "savedSearch.threshold": { label: "Threshold", icon: LineDotRightHorizontal },
+  "savedSearch.escalating": { label: "Escalating", icon: TrendingUp },
+  "event.matched": { label: "Match", icon: EqualApproximately },
+  "metric.threshold": { label: "Threshold", icon: LineDotRightHorizontal },
+  "metric.escalating": { label: "Escalating", icon: TrendingUp },
+}
+
+const isMatchKind = (kind: UserAlertKind): boolean => kind === "savedSearch.match" || kind === "event.matched"
+const isEscalatingKind = (kind: UserAlertKind): boolean =>
+  kind === "savedSearch.escalating" || kind === "metric.escalating"
+
+function MetricSelector({
+  value,
+  stream,
+  onChange,
+  disabled,
+}: {
+  readonly value: MonitorMetric
+  readonly stream: NonNullable<AlertDraft["target"]>["stream"]
+  readonly onChange: (metric: MonitorMetric) => void
+  readonly disabled?: boolean
+}) {
+  const options = targetMetricOptions(stream)
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Text.H5M>Metric</Text.H5M>
+      <Select<string>
+        name="metric"
+        width="auto"
+        options={options.map((option) => ({ label: option.label, value: option.id }))}
+        value={metricOptionId(value)}
+        onChange={(id) => {
+          const next = options.find((option) => option.id === id)
+          if (next) onChange(next.metric)
+        }}
+        {...(disabled ? { disabled: true } : {})}
+      />
+    </div>
+  )
+}
+
+function TargetChip({ target }: { readonly target: NonNullable<AlertDraft["target"]> }) {
+  const description = describeMonitorTarget(target)
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Text.H5M>Target</Text.H5M>
+      <div>
+        <Badge variant="muted">{description?.label ?? target.stream}</Badge>
+      </div>
+    </div>
+  )
+}
 
 // Severity is a triage label: it sets the priority shown on the incidents this
 // alert opens (incident lists, chart markers, notifications) — it doesn't
@@ -49,6 +111,11 @@ const COMPARISON_OPTIONS: { label: string; value: ComparisonMode }[] = [
   { label: "times more than", value: "timesMoreThan" },
 ]
 
+const TARGET_DIRECTION_OPTIONS: { label: string; value: MetricDirection }[] = [
+  { label: "above", value: "above" },
+  { label: "below", value: "below" },
+]
+
 const BASELINE_KIND_OPTIONS: { label: string; value: BaselineKind }[] = [
   { label: "the average of the last", value: "average" },
   { label: "the previous", value: "period" },
@@ -56,6 +123,7 @@ const BASELINE_KIND_OPTIONS: { label: string; value: BaselineKind }[] = [
 ]
 
 const LOOKBACK_UNIT_OPTIONS: { label: string; value: LookbackUnit }[] = [
+  { label: "minutes", value: "minutes" },
   { label: "hours", value: "hours" },
   { label: "days", value: "days" },
 ]
@@ -90,9 +158,37 @@ function ThresholdWindowForm({
   readonly disabled?: boolean
   readonly errors?: AlertFieldErrors | undefined
 }) {
+  const targetMode = value.target !== null
   const relative = value.comparison === "timesMoreThan"
   const expected = relative && value.baselineKind === "expected"
   const hasLookback = relative && !expected
+  // Unified metric thresholds are floats (error rate 0.1, p95 latency…); counts are whole numbers.
+  const amountStep = expected ? 1 : relative || targetMode ? 0.1 : 1
+  const amountMin = expected ? SENSITIVITY_MIN : targetMode ? 0 : 1
+  // Absolute thresholds carry the metric's display unit; relative ones are unitless multipliers.
+  const absoluteUnit =
+    targetMode && value.target && !relative ? metricThresholdUnitLabel(value.metric, value.target.stream) : null
+
+  const amountInput = (
+    <Input
+      type="number"
+      min={amountMin}
+      max={expected ? SENSITIVITY_MAX : undefined}
+      step={amountStep}
+      value={value.amount}
+      onChange={(event) => onChange({ amount: Number(event.target.value) })}
+      className="w-20 h-9"
+      {...(disabled ? { disabled: true } : {})}
+    />
+  )
+
+  const comparisonOptions = targetMode
+    ? [
+        { label: "absolute", value: "times" as const },
+        { label: value.direction === "below" ? "times less than" : "times more than", value: "timesMoreThan" as const },
+      ]
+    : COMPARISON_OPTIONS
+  const leadIn = targetMode ? "Alert when the metric is" : "Alert when traces are detected"
 
   // The amount doubles as the sensitivity in expected mode; snap an out-of-range
   // count/factor onto a valid 1–6 default when switching so the field stays valid.
@@ -108,21 +204,23 @@ function ThresholdWindowForm({
       <div className="flex flex-col">
         <Text.H5M>Threshold</Text.H5M>
         <div className="flex flex-wrap items-center gap-2 -mt-1">
-          <Text.H5 color="foregroundMuted">Alert when traces are detected</Text.H5>
-          <Input
-            type="number"
-            min={expected ? SENSITIVITY_MIN : 1}
-            max={expected ? SENSITIVITY_MAX : undefined}
-            step={relative && !expected ? 0.1 : 1}
-            value={value.amount}
-            onChange={(event) => onChange({ amount: Number(event.target.value) })}
-            className="w-20 h-9"
-            {...(disabled ? { disabled: true } : {})}
-          />
+          <Text.H5 color="foregroundMuted">{leadIn}</Text.H5>
+          {targetMode ? (
+            <Select<MetricDirection>
+              name="direction"
+              width="auto"
+              options={TARGET_DIRECTION_OPTIONS}
+              value={value.direction}
+              onChange={(direction) => onChange({ direction })}
+              {...(disabled ? { disabled: true } : {})}
+            />
+          ) : null}
+          {amountInput}
+          {absoluteUnit ? <Text.H5 color="foregroundMuted">{absoluteUnit}</Text.H5> : null}
           <Select<ComparisonMode>
             name="comparison"
             width="auto"
-            options={COMPARISON_OPTIONS}
+            options={comparisonOptions}
             value={value.comparison}
             onChange={(comparison) => onChange({ comparison })}
             {...(disabled ? { disabled: true } : {})}
@@ -168,7 +266,7 @@ function ThresholdWindowForm({
         ) : null}
       </div>
 
-      {value.kind === "savedSearch.escalating" ? (
+      {isEscalatingKind(value.kind) ? (
         <div className="flex flex-col">
           <Text.H5M>Window</Text.H5M>
           <div className="flex flex-wrap items-center gap-2 -mt-1">
@@ -197,7 +295,12 @@ function ThresholdWindowForm({
   )
 }
 
-/** Controlled editor for a single saved-search alert; switching the kind resets the threshold/window fields. */
+/**
+ * Controlled editor for a single alert. Saved-search mode shows the saved-search
+ * picker; unified (tool/user/raw-stream) mode — when the draft has a `target` —
+ * shows a read-only target chip and a metric selector. Switching the tab resets
+ * the threshold/window fields.
+ */
 export function AlertCardForm({
   value,
   onChange,
@@ -208,6 +311,7 @@ export function AlertCardForm({
   errors,
   showSourcePicker = true,
   sourceName,
+  metricReadonly = false,
 }: {
   readonly value: AlertDraft
   readonly onChange: (next: AlertDraft) => void
@@ -220,15 +324,24 @@ export function AlertCardForm({
   readonly showSourcePicker?: boolean
   /** Preview-sentence name override for sources that don't exist yet (paired with `showSourcePicker: false`). */
   readonly sourceName?: string
+  /** Lock the metric (set at creation; the firing path reads it off the monitor target). Used when editing an existing unified monitor. */
+  readonly metricReadonly?: boolean
 }) {
-  const { data: savedSearches } = useSavedSearchesList(projectId, { enabled: showSourcePicker })
+  const targetMode = value.target !== null
+  const { data: savedSearches } = useSavedSearchesList(projectId, { enabled: showSourcePicker && !targetMode })
   const savedSearchName =
     sourceName ?? (value.sourceId ? savedSearches.find((search) => search.id === value.sourceId)?.name : undefined)
 
   const set = (patch: Partial<AlertDraft>) => onChange({ ...value, ...patch })
 
+  const kindTabs: readonly TabOption<UserAlertKind>[] = kindsForDraft(value).map((kind) => ({
+    id: kind,
+    label: TAB_FOR_KIND[kind].label,
+    icon: <Icon icon={TAB_FOR_KIND[kind].icon} size="sm" />,
+  }))
+
   const removeButton = (
-    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onRemove} aria-label="Remove alert">
+    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onRemove} aria-label="Remove condition">
       <Icon icon={XIcon} size="sm" color="foregroundMuted" />
     </Button>
   )
@@ -240,7 +353,7 @@ export function AlertCardForm({
           <Tabs<UserAlertKind>
             variant="secondary"
             size="sm"
-            options={KIND_TABS}
+            options={kindTabs}
             active={value.kind}
             onSelect={(kind) => {
               if (!disabled) onChange(draftWithKind(value, kind))
@@ -251,7 +364,18 @@ export function AlertCardForm({
         <Text.H6 color="foregroundMuted">{KIND_HELP[value.kind]}</Text.H6>
       </div>
 
-      {showSourcePicker ? (
+      {targetMode && value.target ? <TargetChip target={value.target} /> : null}
+
+      {targetMode && value.target && !isMatchKind(value.kind) ? (
+        <MetricSelector
+          value={value.metric}
+          stream={value.target.stream}
+          onChange={(metric) => set({ metric })}
+          {...(disabled || metricReadonly ? { disabled: true } : {})}
+        />
+      ) : null}
+
+      {!targetMode && showSourcePicker ? (
         <SavedSearchSourcePicker
           projectId={projectId}
           projectSlug={projectSlug}
@@ -262,7 +386,7 @@ export function AlertCardForm({
         />
       ) : null}
 
-      {value.kind !== "savedSearch.match" ? (
+      {!isMatchKind(value.kind) ? (
         <ThresholdWindowForm value={value} onChange={set} errors={errors} {...(disabled ? { disabled: true } : {})} />
       ) : null}
 

@@ -540,6 +540,7 @@ describe("MonitorRepositoryLive", () => {
             createdAt: now,
           },
         ],
+        target: null,
         mutedAt: null,
         deletedAt: null,
         createdAt: now,
@@ -637,6 +638,7 @@ describe("MonitorRepositoryLive", () => {
             createdAt: now,
           },
         ],
+        target: null,
         mutedAt: null,
         deletedAt: null,
         createdAt: now,
@@ -921,6 +923,7 @@ describe("MonitorRepositoryLive", () => {
           severity: "low" as const,
           createdAt: now,
         })),
+        target: null,
         mutedAt: null,
         deletedAt: null,
         createdAt: now,
@@ -941,6 +944,70 @@ describe("MonitorRepositoryLive", () => {
       expect(result.id).toBe(monitor.id)
       expect(result.system).toBe(false)
       expect(result.alerts).toHaveLength(2)
+    })
+
+    it("round-trips a unified query-time target (stream + filterSet + metric)", async () => {
+      const monitor: Monitor = {
+        ...buildUserMonitor("tool-monitor", 1),
+        target: {
+          stream: "spans",
+          filterSet: {
+            operation: [{ op: "eq" as const, value: "execute_tool" }],
+            toolName: [{ op: "eq" as const, value: "search" }],
+          },
+          query: null,
+          savedSearchId: null,
+          metric: { kind: "errorRate" },
+        },
+      }
+      await exec((r) => r.create(monitor))
+
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* MonitorRepository
+          return yield* repository.findBySlug({ projectId, slug: "tool-monitor" })
+        }).pipe(provideRls(database, organizationId)),
+      )
+      expect(result.target).toEqual(monitor.target)
+    })
+
+    it("reads target as null for a legacy saved-search monitor", async () => {
+      await exec((r) => r.create(buildUserMonitor("legacy", 1)))
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* MonitorRepository
+          return yield* repository.findBySlug({ projectId, slug: "legacy" })
+        }).pipe(provideRls(database, organizationId)),
+      )
+      expect(result.target).toBeNull()
+    })
+
+    it("round-trips a unified-kind alert with a null source (target on the monitor)", async () => {
+      const base = buildUserMonitor("unified-alert", 1)
+      const monitor: Monitor = {
+        ...base,
+        target: { stream: "spans", filterSet: {}, query: null, savedSearchId: null, metric: { kind: "count" } },
+        alerts: base.alerts.map((a) => ({
+          ...a,
+          kind: "metric.threshold" as const,
+          source: null,
+          condition: {
+            kind: "metric.threshold" as const,
+            metric: { kind: "count" as const },
+            threshold: { mode: "absolute" as const, value: 5 },
+          },
+        })),
+      }
+      await exec((r) => r.create(monitor))
+
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* MonitorRepository
+          return yield* repository.findBySlug({ projectId, slug: "unified-alert" })
+        }).pipe(provideRls(database, organizationId)),
+      )
+      expect(result.alerts[0]?.source).toBeNull()
+      expect(result.alerts[0]?.kind).toBe("metric.threshold")
     })
   })
 
@@ -1073,19 +1140,23 @@ describe("MonitorRepositoryLive", () => {
       expect(alerts.map((a: MonitorAlert) => a.id)).toEqual([MonitorAlertId("1".repeat(24))])
     })
 
-    it("listProjectsWithActiveSavedSearchAlerts returns distinct (org, project) pairs across orgs", async () => {
+    it("listProjectsWithActiveMonitorAlerts returns distinct (org, project) pairs across orgs, including metric-only projects", async () => {
       const a = generateId()
       const b = generateId()
       const other = generateId()
       await database.db.insert(monitorsTable).values([
         makeMonitorRow({ id: a, slug: "a", name: "A" }),
         makeMonitorRow({ id: b, slug: "b", name: "B" }), // same org+project as a → de-duped
+        // Unified (target-on-monitor) monitor with no saved-search alert — the
+        // sweep must still fan out to its project so its incidents can close.
         makeMonitorRow({
           id: other,
           slug: "c",
           name: "C",
           organizationId: otherOrganizationId as string,
           projectId: otherProjectId as string,
+          targetStream: "traces",
+          metric: { kind: "count" },
         }),
       ])
       await database.db.insert(monitorAlertsTable).values([
@@ -1095,14 +1166,16 @@ describe("MonitorRepositoryLive", () => {
           id: "3".repeat(24),
           monitorId: other,
           organizationId: otherOrganizationId as string,
-          sourceId: searchX,
+          kind: "event.matched",
+          sourceType: null,
+          sourceId: null,
         }),
       ])
 
       const pairs = await Effect.runPromise(
         Effect.gen(function* () {
           const repository = yield* MonitorRepository
-          return yield* repository.listProjectsWithActiveSavedSearchAlerts()
+          return yield* repository.listProjectsWithActiveMonitorAlerts()
         }).pipe(provideAdmin(database)),
       )
       expect(pairs.map((p) => `${p.organizationId}:${p.projectId}`).sort()).toEqual(
@@ -1258,6 +1331,69 @@ describe("MonitorRepositoryLive", () => {
         }).pipe(provideRls(database, organizationId)),
       )
       expect(await endedAtOf(openId)).not.toBeNull()
+    })
+  })
+
+  describe("listMonitorsForTarget", () => {
+    const spansTarget = (toolName: string) => ({
+      targetStream: "spans" as const,
+      targetFilterSet: {
+        operation: [{ op: "eq" as const, value: "execute_tool" }],
+        toolName: [{ op: "eq" as const, value: toolName }],
+      },
+      metric: { kind: "count" as const },
+    })
+
+    const listForTool = (toolName: string) =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* MonitorRepository
+          return yield* repository.listMonitorsForTarget({
+            projectId,
+            stream: "spans",
+            filterSetContains: { toolName: [{ op: "eq" as const, value: toolName }] },
+          })
+        }).pipe(provideRls(database, organizationId)),
+      )
+
+    it("matches monitors whose target filter set contains the tool, and excludes others", async () => {
+      await database.db.insert(monitorsTable).values([
+        makeMonitorRow({ id: generateId(), slug: "search-errors", name: "Search errors", ...spansTarget("search") }),
+        makeMonitorRow({ id: generateId(), slug: "fetch-errors", name: "Fetch errors", ...spansTarget("fetch") }),
+        makeMonitorRow({
+          id: generateId(),
+          slug: "all-tools",
+          name: "All tools",
+          targetStream: "spans",
+          targetFilterSet: { operation: [{ op: "eq" as const, value: "execute_tool" }] },
+          metric: { kind: "count" },
+        }),
+      ])
+
+      const result = await listForTool("search")
+      expect(result.map((monitor) => monitor.slug)).toEqual(["search-errors"])
+    })
+
+    it("excludes soft-deleted monitors and a different stream", async () => {
+      await database.db.insert(monitorsTable).values([
+        makeMonitorRow({
+          id: generateId(),
+          slug: "deleted-search",
+          name: "Deleted",
+          ...spansTarget("search"),
+          deletedAt: new Date("2026-05-29T11:00:00.000Z"),
+        }),
+        makeMonitorRow({
+          id: generateId(),
+          slug: "traces-search",
+          name: "Traces",
+          targetStream: "traces",
+          targetFilterSet: { toolName: [{ op: "eq" as const, value: "search" }] },
+          metric: { kind: "count" },
+        }),
+      ])
+
+      expect(await listForTool("search")).toEqual([])
     })
   })
 })

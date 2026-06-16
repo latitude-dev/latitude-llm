@@ -1,6 +1,6 @@
 import { CopyableText, InfiniteTable, type InfiniteTableColumn, Sheet, Status, Text } from "@repo/ui"
 import { formatDuration, relativeTime } from "@repo/utils"
-import { useState } from "react"
+import { type ReactNode, useState } from "react"
 import { type ToolsTimeRange, useRecentToolCalls } from "../../../../../../../domains/tools/tools.collection.ts"
 import type { RecentToolCallRecord } from "../../../../../../../domains/tools/tools.functions.ts"
 import { TraceDetailDrawer } from "../../../-components/trace-detail-drawer.tsx"
@@ -13,12 +13,14 @@ export function ToolRecentCalls({
   range,
   errorsOnly,
   onOverlayActiveChange,
+  headerAction,
 }: {
   readonly projectId: string
   readonly toolName: string
   readonly range: ToolsTimeRange
   readonly errorsOnly: boolean
   readonly onOverlayActiveChange?: (active: boolean) => void
+  readonly headerAction?: ReactNode
 }) {
   const [openCall, setOpenCall] = useState<{ traceId: string; spanId: string } | null>(null)
   const { data: calls, isLoading, infiniteScroll } = useRecentToolCalls({ projectId, toolName, range, errorsOnly })
@@ -107,8 +109,9 @@ export function ToolRecentCalls({
   return (
     // Plain background: the table rows are themselves bg-secondary.
     <div className="flex min-w-0 flex-col gap-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <Text.H5M color="foreground">{errorsOnly ? "Recent failed calls" : "Recent calls"}</Text.H5M>
+        {headerAction}
       </div>
       <InfiniteTable
         data={calls}

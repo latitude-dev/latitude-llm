@@ -1,6 +1,12 @@
 import { createBullBoard } from "@bull-board/api"
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter"
 import { HonoAdapter } from "@bull-board/hono"
+import {
+  DESTINATION_PRUNE_KEY,
+  DESTINATION_PRUNE_PATTERN,
+  DESTINATION_SWEEPER_KEY,
+  DESTINATION_SWEEPER_PATTERN,
+} from "@domain/destinations"
 import { ESCALATION_SWEEPER_KEY, ESCALATION_SWEEPER_PATTERN } from "@domain/issues"
 import { SAVED_SEARCH_MONITORS_SWEEPER_KEY, SAVED_SEARCH_MONITORS_SWEEPER_PATTERN } from "@domain/monitors"
 import { SANDBOX_IDLE_SWEEPER_KEY, SANDBOX_IDLE_SWEEPER_PATTERN } from "@domain/sandboxes"
@@ -43,6 +49,7 @@ import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
 import { createBillingWorker } from "./workers/billing.ts"
 import { createBillingOverageWorker } from "./workers/billing-overage.ts"
+import { createDestinationsWorker } from "./workers/destinations.ts"
 import { createDeterministicFlaggersWorker } from "./workers/deterministic-flaggers.ts"
 import { createAlertIncidentsWorker } from "./workers/domain-events/alert-incidents.ts"
 import { createInvitationEmailWorker } from "./workers/domain-events/invitation-email.ts"
@@ -186,6 +193,13 @@ const bootstrap = async () => {
     createNotificationsWorker(ctx)
     createNotificationEmailerWorker(ctx)
     createNotificationSlackWorker(ctx)
+    createDestinationsWorker({
+      consumer: ctx.consumer,
+      publisher: ctx.publisher,
+      postgresClient: ctx.postgresClient,
+      adminPostgresClient: getAdminPostgresClient(),
+      clickhouseClient: ctx.clickhouseClient,
+    })
     createApiKeysWorker(ctx)
     createBillingWorker({ consumer: ctx.consumer, postgresClient: ctx.postgresClient })
     createBillingOverageWorker({ consumer: ctx.consumer, workflowStarter: ctx.workflowStarter })
@@ -300,6 +314,33 @@ const bootstrap = async () => {
           "archiveIdle",
           {},
           { key: SANDBOX_IDLE_SWEEPER_KEY, pattern: SANDBOX_IDLE_SWEEPER_PATTERN, tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
+
+    // Every-minute destinations sweep. Selects active destinations due for a
+    // sync (idle backoff applied, sandbox orgs excluded) and fans out one
+    // `runSync` per destination.
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "destinations",
+          "sweep",
+          {},
+          { key: DESTINATION_SWEEPER_KEY, pattern: DESTINATION_SWEEPER_PATTERN, tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
+
+    // Nightly prune of aged-out `destination_sync_runs` audit rows (30d
+    // retention). Separate from the every-minute sweep — retention is coarse.
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "destinations",
+          "pruneSyncRuns",
+          {},
+          { key: DESTINATION_PRUNE_KEY, pattern: DESTINATION_PRUNE_PATTERN, tz: "UTC" },
         )
         .pipe(withTracing),
     )

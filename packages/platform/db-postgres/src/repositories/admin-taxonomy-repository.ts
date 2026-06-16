@@ -5,6 +5,7 @@ import {
   type AdminTaxonomySubcategory,
 } from "@domain/admin"
 import { NotFoundError, type ProjectId, SqlClient, type SqlClientShape } from "@domain/shared"
+import { isDisplayableTaxonomyName } from "@domain/taxonomy"
 import { and, asc, desc, eq, isNull } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
@@ -40,9 +41,6 @@ export const AdminTaxonomyRepositoryLive = Layer.effect(
             return yield* Effect.fail(new NotFoundError({ entity: "Project", id: projectId }))
           }
 
-          // The unified cluster tree replaced flat categories: depth-0 roots
-          // are the top-level groups and every descendant rolls up to its
-          // root (first path segment).
           const clusterRows = yield* sqlClient.query((db) =>
             db
               .select({
@@ -69,17 +67,22 @@ export const AdminTaxonomyRepositoryLive = Layer.effect(
               .orderBy(desc(taxonomyClusters.observationCount), asc(taxonomyClusters.name)),
           )
 
-          const rootRows = clusterRows.filter((row) => row.parentClusterId === null && row.state !== "merged")
+          const visibleRows = clusterRows.filter(
+            (row) => row.state === "active" && isDisplayableTaxonomyName(row.name) && row.observationCount > 0,
+          )
+          const rootRows = clusterRows.filter(
+            (row) => row.parentClusterId === null && row.state === "active" && isDisplayableTaxonomyName(row.name),
+          )
           const rootIds = new Set(rootRows.map((row) => row.id))
           const subcategoriesByRoot = new Map<string, AdminTaxonomySubcategory[]>()
-          const uncategorized: AdminTaxonomySubcategory[] = []
 
-          for (const row of clusterRows) {
+          for (const row of visibleRows) {
             if (row.parentClusterId === null) continue
             const rootId = row.path.split("/")[0] ?? ""
+            if (!rootIds.has(rootId)) continue
             const subcategory: AdminTaxonomySubcategory = {
               id: row.id,
-              categoryId: rootIds.has(rootId) ? rootId : null,
+              categoryId: rootId,
               name: row.name,
               description: row.description,
               observationCount: row.observationCount,
@@ -89,34 +92,33 @@ export const AdminTaxonomyRepositoryLive = Layer.effect(
               createdAt: row.createdAt,
               updatedAt: row.updatedAt,
             }
-            if (subcategory.categoryId === null) {
-              uncategorized.push(subcategory)
-              continue
-            }
-            const existing = subcategoriesByRoot.get(subcategory.categoryId) ?? []
+            const existing = subcategoriesByRoot.get(rootId) ?? []
             existing.push(subcategory)
-            subcategoriesByRoot.set(subcategory.categoryId, existing)
+            subcategoriesByRoot.set(rootId, existing)
           }
 
-          const categories: AdminTaxonomyCategory[] = rootRows.map((row) => {
+          const categories: AdminTaxonomyCategory[] = rootRows.flatMap((row) => {
             const subcategories = subcategoriesByRoot.get(row.id) ?? []
-            return {
-              id: row.id,
-              name: row.name,
-              description: row.description,
-              clusterCount: subcategories.length,
-              observationCount:
-                row.observationCount +
-                subcategories.reduce((sum, subcategory) => sum + subcategory.observationCount, 0),
-              state: row.state === "active" ? "active" : "deprecated",
-              clusteredAt: row.clusteredAt,
-              createdAt: row.createdAt,
-              updatedAt: row.updatedAt,
-              subcategories,
-            }
+            const observationCount =
+              row.observationCount + subcategories.reduce((sum, subcategory) => sum + subcategory.observationCount, 0)
+            if (observationCount === 0) return []
+            return [
+              {
+                id: row.id,
+                name: row.name,
+                description: row.description,
+                clusterCount: subcategories.length,
+                observationCount,
+                state: "active",
+                clusteredAt: row.clusteredAt,
+                createdAt: row.createdAt,
+                updatedAt: row.updatedAt,
+                subcategories,
+              },
+            ]
           })
 
-          return { categories, uncategorized } satisfies AdminProjectTaxonomy
+          return { categories, uncategorized: [] } satisfies AdminProjectTaxonomy
         }),
     }
   }),
