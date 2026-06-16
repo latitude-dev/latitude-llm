@@ -10,8 +10,15 @@ export {
   DESTINATION_MAX_SPANS_PER_RUN_DEFAULT,
   DESTINATION_MAX_SPANS_PER_RUN_MAX,
   DESTINATION_MAX_SPANS_PER_RUN_MIN,
+  DESTINATION_PRUNE_KEY,
+  DESTINATION_PRUNE_PATTERN,
   DESTINATION_QUARANTINE_FAILURE_THRESHOLD,
   DESTINATION_SAFETY_LAG_MS,
+  DESTINATION_SWEEPER_KEY,
+  DESTINATION_SWEEPER_PATTERN,
+  DESTINATION_SYNC_MAX_ATTEMPTS,
+  DESTINATION_SYNC_RETRY_BACKOFF_MS,
+  DESTINATION_SYNC_RUN_RETENTION_MS,
   POSTHOG_EU_INGESTION_HOST,
   POSTHOG_US_INGESTION_HOST,
 } from "./constants.ts"
@@ -123,6 +130,13 @@ export type {
   PauseDestinationInput,
 } from "./use-cases/pause-destination.ts"
 export { pauseDestinationUseCase } from "./use-cases/pause-destination.ts"
+export type { PruneDestinationSyncRunsResult } from "./use-cases/prune-destination-sync-runs.ts"
+export { pruneDestinationSyncRunsUseCase } from "./use-cases/prune-destination-sync-runs.ts"
+export type {
+  RecordDestinationSyncFailureInput,
+  RecordDestinationSyncFailureResult,
+} from "./use-cases/record-destination-sync-failure.ts"
+export { recordDestinationSyncFailureUseCase } from "./use-cases/record-destination-sync-failure.ts"
 export type {
   ResumeDestinationError,
   ResumeDestinationInput,
@@ -135,6 +149,11 @@ export type {
   RunDestinationSyncResult,
 } from "./use-cases/run-destination-sync.ts"
 export { runDestinationSyncUseCase } from "./use-cases/run-destination-sync.ts"
+export type {
+  SweepDestinationsPublish,
+  SweepDestinationsResult,
+} from "./use-cases/sweep-destinations.ts"
+export { sweepDestinationsUseCase } from "./use-cases/sweep-destinations.ts"
 export type {
   TestDestinationConnectionInput,
   TestDestinationConnectionResult,

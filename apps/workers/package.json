@@ -55,6 +55,7 @@
     "@platform/ai": "workspace:*",
     "@platform/analytics-posthog": "workspace:*",
     "@platform/cache-redis": "workspace:*",
+    "@platform/data-destinations": "workspace:*",
     "@platform/db-clickhouse": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "@platform/email-transport": "workspace:*",

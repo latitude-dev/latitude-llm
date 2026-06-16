@@ -739,6 +739,9 @@ importers:
       '@platform/cache-redis':
         specifier: workspace:*
         version: link:../../packages/platform/cache-redis
+      '@platform/data-destinations':
+        specifier: workspace:*
+        version: link:../../packages/platform/data-destinations
       '@platform/db-clickhouse':
         specifier: workspace:*
         version: link:../../packages/platform/db-clickhouse
@@ -1175,6 +1178,9 @@ importers:
       '@domain/organizations':
         specifier: workspace:*
         version: link:../organizations
+      '@domain/queue':
+        specifier: workspace:*
+        version: link:../queue
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared

@@ -1,41 +1,221 @@
-import { deleteProjectDestinationsUseCase } from "@domain/destinations"
-import type { QueueConsumer } from "@domain/queue"
-import { OrganizationId, ProjectId } from "@domain/shared"
-import { DestinationRepositoryLive, DestinationSyncRunRepositoryLive, withPostgres } from "@platform/db-postgres"
+import {
+  createPosthogMapper,
+  DESTINATION_SYNC_MAX_ATTEMPTS,
+  DESTINATION_SYNC_RETRY_BACKOFF_MS,
+  type DestinationDelivererRegistry,
+  DestinationDeliverers,
+  type DestinationMapperRegistry,
+  DestinationMappers,
+  DestinationRepository,
+  deleteProjectDestinationsUseCase,
+  pruneDestinationSyncRunsUseCase,
+  recordDestinationSyncFailureUseCase,
+  runDestinationSyncUseCase,
+  sweepDestinationsUseCase,
+} from "@domain/destinations"
+import { ProjectRepository } from "@domain/projects"
+import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
+import { DestinationId, OrganizationId, ProjectId } from "@domain/shared"
+import type { SpanDetail } from "@domain/spans"
+import { createPosthogDeliverer, POSTHOG_EVENT_MAX_BYTES } from "@platform/data-destinations"
+import { type ClickHouseClient, SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import {
+  DestinationRepositoryLive,
+  DestinationSyncRunRepositoryLive,
+  type PostgresClient,
+  ProjectRepositoryLive,
+  withPostgres,
+} from "@platform/db-postgres"
+import { parseEnv } from "@platform/env"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { getPostgresClient } from "../clients.ts"
+import { getAdminPostgresClient, getClickhouseClient, getPostgresClient } from "../clients.ts"
 
 const logger = createLogger("destinations")
 
 interface DestinationsDeps {
   consumer: QueueConsumer
+  publisher: QueuePublisherShape
+  postgresClient?: PostgresClient
+  /** Admin client — the cross-org sweep reads/prunes destination rows regardless of org (RLS bypass). */
+  adminPostgresClient?: PostgresClient
+  clickhouseClient?: ClickHouseClient
 }
 
 const deleteByProjectLayer = Layer.mergeAll(DestinationRepositoryLive, DestinationSyncRunRepositoryLive)
+const runSyncLayer = Layer.mergeAll(DestinationRepositoryLive, DestinationSyncRunRepositoryLive, ProjectRepositoryLive)
 
-export const createDestinationsWorker = ({ consumer }: DestinationsDeps) => {
-  const pgClient = getPostgresClient()
+const resolveWebUrl = () =>
+  Effect.runSync(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000")).replace(/\/$/, "")
 
-  consumer.subscribe("destinations", {
-    "delete-by-project": (payload) =>
-      deleteProjectDestinationsUseCase({
-        organizationId: OrganizationId(payload.organizationId),
-        projectId: ProjectId(payload.projectId),
-      }).pipe(
-        Effect.tap((result) =>
-          Effect.sync(() =>
-            logger.info(`destinations.delete-by-project projectId=${payload.projectId} deleted=${result.deleted}`),
+/** Best-effort cross-link back into Latitude; the project slug is the run's anchor (falls back to project id). */
+const spanUrlBuilder =
+  (webUrl: string, projectSlug: string) =>
+  (span: SpanDetail): string =>
+    `${webUrl}/projects/${projectSlug}?traceId=${encodeURIComponent(span.traceId)}&spanId=${encodeURIComponent(span.spanId)}`
+
+/** Sanitized to status + our taxonomy; delivery errors never carry upstream response bodies. */
+const finalFailureMessage = (error: Error): string => {
+  const e = error as { reason?: unknown; upstreamStatus?: unknown }
+  if (typeof e.reason === "string") {
+    return typeof e.upstreamStatus === "number" ? `[${e.upstreamStatus}] ${e.reason}` : e.reason
+  }
+  return "delivery retries exhausted"
+}
+
+export const createDestinationsWorker = ({
+  consumer,
+  publisher,
+  postgresClient,
+  adminPostgresClient,
+  clickhouseClient,
+}: DestinationsDeps) => {
+  const pgClient = postgresClient ?? getPostgresClient()
+  const adminPgClient = adminPostgresClient ?? getAdminPostgresClient()
+  const chClient = clickhouseClient ?? getClickhouseClient()
+  const webUrl = resolveWebUrl()
+
+  // Kind-stable, built once; the mapper is built per-run because its span-URL
+  // builder depends on the run's project slug.
+  const delivererRegistry: DestinationDelivererRegistry = { posthog: createPosthogDeliverer() }
+
+  consumer.subscribe(
+    "destinations",
+    {
+      sweep: () =>
+        sweepDestinationsUseCase({
+          now: new Date(),
+          publish: ({ destination }) =>
+            publisher.publish(
+              "destinations",
+              "runSync",
+              {
+                organizationId: destination.organizationId,
+                projectId: destination.projectId,
+                destinationId: destination.id,
+              },
+              {
+                dedupeKey: `destinations:runSync:${destination.id}`,
+                attempts: DESTINATION_SYNC_MAX_ATTEMPTS,
+                backoff: { type: "exponential", delayMs: DESTINATION_SYNC_RETRY_BACKOFF_MS },
+              },
+            ),
+        }).pipe(
+          withPostgres(DestinationRepositoryLive, adminPgClient),
+          Effect.tap((result) =>
+            Effect.sync(() =>
+              logger.info(`destinations.sweep due=${result.due} published=${result.published} failed=${result.failed}`),
+            ),
           ),
+          Effect.tapError((error) => Effect.sync(() => logger.error("destinations.sweep failed", error))),
+          withTracing,
+          Effect.asVoid,
         ),
-        Effect.tapError((error) =>
-          Effect.sync(() =>
-            logger.error(`destinations.delete-by-project failed projectId=${payload.projectId}`, error),
+
+      pruneSyncRuns: () =>
+        pruneDestinationSyncRunsUseCase({ now: new Date() }).pipe(
+          withPostgres(DestinationSyncRunRepositoryLive, adminPgClient),
+          Effect.tap((result) => Effect.sync(() => logger.info(`destinations.pruneSyncRuns pruned=${result.pruned}`))),
+          Effect.tapError((error) => Effect.sync(() => logger.error("destinations.pruneSyncRuns failed", error))),
+          withTracing,
+          Effect.asVoid,
+        ),
+
+      runSync: (payload) => {
+        const organizationId = OrganizationId(payload.organizationId)
+        return Effect.gen(function* () {
+          const destinations = yield* DestinationRepository
+          const destination = yield* destinations
+            .findById(DestinationId(payload.destinationId))
+            .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+          if (!destination) {
+            logger.info(`destinations.runSync skipped (deleted) destinationId=${payload.destinationId}`)
+            return
+          }
+
+          const projects = yield* ProjectRepository
+          const projectSlug = yield* projects.findById(ProjectId(payload.projectId)).pipe(
+            Effect.map((project) => project.slug),
+            Effect.orElseSucceed(() => destination.projectId as string),
+          )
+
+          const mapperRegistry: DestinationMapperRegistry = {
+            posthog: createPosthogMapper({
+              buildSpanUrl: spanUrlBuilder(webUrl, projectSlug),
+              maxEventBytes: POSTHOG_EVENT_MAX_BYTES,
+            }),
+          }
+
+          const result = yield* runDestinationSyncUseCase({ destination, now: new Date() }).pipe(
+            withClickHouse(SpanRepositoryLive, chClient, organizationId),
+            Effect.provide(Layer.succeed(DestinationDeliverers, delivererRegistry)),
+            Effect.provide(Layer.succeed(DestinationMappers, mapperRegistry)),
+          )
+
+          logger.info(
+            `destinations.runSync destinationId=${destination.id} outcome=${result.outcome} spansRead=${result.spansRead} eventsSent=${result.eventsSent} eventsDropped=${result.eventsDropped} quarantined=${result.quarantined}`,
+          )
+        }).pipe(
+          withPostgres(runSyncLayer, pgClient, organizationId),
+          // Retryable delivery failures propagate so BullMQ retries with the cursor
+          // untouched; the onFinalFailure hook does the quarantine accounting once
+          // retries are exhausted.
+          Effect.tapError((error) =>
+            Effect.sync(() => logger.warn(`destinations.runSync error destinationId=${payload.destinationId}`, error)),
           ),
+          withTracing,
+          Effect.asVoid,
+        )
+      },
+
+      "delete-by-project": (payload) =>
+        deleteProjectDestinationsUseCase({
+          organizationId: OrganizationId(payload.organizationId),
+          projectId: ProjectId(payload.projectId),
+        }).pipe(
+          Effect.tap((result) =>
+            Effect.sync(() =>
+              logger.info(`destinations.delete-by-project projectId=${payload.projectId} deleted=${result.deleted}`),
+            ),
+          ),
+          Effect.tapError((error) =>
+            Effect.sync(() =>
+              logger.error(`destinations.delete-by-project failed projectId=${payload.projectId}`, error),
+            ),
+          ),
+          withPostgres(deleteByProjectLayer, pgClient, OrganizationId(payload.organizationId)),
+          Effect.asVoid,
+          withTracing,
         ),
-        withPostgres(deleteByProjectLayer, pgClient, OrganizationId(payload.organizationId)),
-        Effect.asVoid,
-        withTracing,
-      ),
-  })
+    },
+    {
+      onFinalFailure: {
+        runSync: (payload, error) =>
+          recordDestinationSyncFailureUseCase({
+            destinationId: DestinationId(payload.destinationId),
+            now: new Date(),
+            message: finalFailureMessage(error),
+          }).pipe(
+            withPostgres(DestinationRepositoryLive, pgClient, OrganizationId(payload.organizationId)),
+            Effect.tap((result) =>
+              Effect.sync(() =>
+                logger.warn(
+                  `destinations.runSync exhausted retries destinationId=${payload.destinationId} outcome=${result.outcome} consecutiveFailures=${result.consecutiveFailures}`,
+                ),
+              ),
+            ),
+            Effect.tapError((failure) =>
+              Effect.sync(() =>
+                logger.error(
+                  `destinations.runSync failure accounting errored destinationId=${payload.destinationId}`,
+                  failure,
+                ),
+              ),
+            ),
+            withTracing,
+            Effect.asVoid,
+          ),
+      },
+    },
+  )
 }

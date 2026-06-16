@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@domain/organizations": "workspace:*",
+    "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
     "effect": "catalog:",
