@@ -279,8 +279,10 @@ function DangerZoneSection({
 
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
-          <Text.H5 weight="semibold">Delete project</Text.H5>
-          <Text.H6 color="foregroundMuted">
+          <Text.H5 weight="semibold" color="destructive">
+            Delete project
+          </Text.H5>
+          <Text.H6 color="destructive">
             Permanently delete this project and all of its data. This action cannot be undone.
           </Text.H6>
         </div>
@@ -341,8 +343,10 @@ function ChangeSlugForm({ projectId, currentSlug }: { projectId: string; current
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <Text.H5 weight="semibold">Project slug</Text.H5>
-        <Text.H6 color="foregroundMuted">
+        <Text.H5 weight="semibold" color="destructive">
+          Project slug
+        </Text.H5>
+        <Text.H6 color="destructive">
           The slug is part of your telemetry destination. Changing it breaks ingestion until you point your
           instrumentation at the new slug.
         </Text.H6>
