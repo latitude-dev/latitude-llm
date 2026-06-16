@@ -1,18 +1,14 @@
 import { ConflictError, type DestinationId, NotFoundError, type ProjectId } from "@domain/shared"
 import { Effect } from "effect"
-import { DESTINATION_IDLE_BACKOFF_MAX_MS } from "../constants.ts"
 import type { Destination } from "../entities/destination.ts"
-import type { DestinationCursor, DestinationRepositoryShape } from "../ports/destination-repository.ts"
-
-const sameCursor = (row: Destination, expected: DestinationCursor) =>
-  row.cursorIngestedAt.getTime() === expected.ingestedAt.getTime() && row.cursorSpanId === expected.spanId
+import type { DestinationRepositoryShape } from "../ports/destination-repository.ts"
 
 /**
  * Minimal in-memory DestinationRepository for unit tests. Mirrors the real
  * repo's contract: `save` fails with `ConflictError` when another row holds
- * `(projectId, kind)`, `advanceCursor` is a CAS that rejects stale writes, and
- * `listDue` applies the idle-backoff formula (sandbox exclusion is a SQL join
- * in the real repo — seed only non-sandbox rows here).
+ * `(projectId, kind)`, and `updateQuarantineState` writes destination-level
+ * failure/quarantine bookkeeping. Per-source cursor state lives in
+ * {@link createFakeDestinationSourceCursorRepository}.
  */
 export const createFakeDestinationRepository = (seed: readonly Destination[] = []) => {
   const rows: Destination[] = [...seed]
@@ -46,38 +42,13 @@ export const createFakeDestinationRepository = (seed: readonly Destination[] = [
         const index = rows.findIndex((r) => r.id === id)
         if (index >= 0) rows.splice(index, 1)
       }),
-    listDue: (now: Date) =>
-      Effect.sync(() =>
-        rows.filter((r) => {
-          if (r.status !== "active") return false
-          if (r.lastRunAt === null) return true
-          const backoffMs = Math.min(r.config.intervalMs * 2 ** r.consecutiveEmptyRuns, DESTINATION_IDLE_BACKOFF_MAX_MS)
-          return r.lastRunAt.getTime() + backoffMs <= now.getTime()
-        }),
-      ),
-    advanceCursor: ({ id, expected, next }) =>
-      Effect.sync(() => {
-        const row = rows.find((r) => r.id === id)
-        if (!row || !sameCursor(row, expected)) return false
-        ;(row as { cursorIngestedAt: Date }).cursorIngestedAt = next.ingestedAt
-        ;(row as { cursorSpanId: string }).cursorSpanId = next.spanId
-        return true
-      }),
-    updateRunState: ({ id, status, consecutiveFailures, consecutiveEmptyRuns, lastFailureMessage, lastRunAt }) =>
+    updateQuarantineState: ({ id, status, consecutiveFailures, lastFailureMessage }) =>
       Effect.sync(() => {
         const index = rows.findIndex((r) => r.id === id)
         if (index < 0) return
         const row = rows[index]
         if (!row) return
-        rows[index] = {
-          ...row,
-          status,
-          consecutiveFailures,
-          consecutiveEmptyRuns,
-          lastFailureMessage,
-          lastRunAt,
-          updatedAt: new Date(),
-        }
+        rows[index] = { ...row, status, consecutiveFailures, lastFailureMessage, updatedAt: new Date() }
       }),
     deleteByProjectId: (projectId: ProjectId) =>
       Effect.sync(() => {

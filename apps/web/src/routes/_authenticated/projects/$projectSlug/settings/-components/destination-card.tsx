@@ -27,11 +27,11 @@ function LastRunSummary({ destination }: { destination: DestinationRecord }) {
     refetchOnWindowFocus: false,
   })
 
-  if (!destination.lastRunAt && !run) {
+  if (!run) {
     return <Text.H6 color="foregroundMuted">Not synced yet · waiting for the next run</Text.H6>
   }
 
-  const syncedAt = run?.finishedAt ?? destination.lastRunAt
+  const syncedAt = run.finishedAt
   const events = run ? `${eventCountFormatter.format(run.eventsSent)} events` : null
 
   return (

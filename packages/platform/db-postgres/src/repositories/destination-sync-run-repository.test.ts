@@ -24,6 +24,7 @@ const makeRun = (overrides: Partial<Omit<DestinationSyncRun, "createdAt" | "upda
   return createDestinationSyncRun({
     organizationId: ORG_A,
     destinationId: DESTINATION_A,
+    source: "spans",
     windowStart: new Date(startedAt.getTime() - 300_000),
     windowEnd: startedAt,
     status: "succeeded",

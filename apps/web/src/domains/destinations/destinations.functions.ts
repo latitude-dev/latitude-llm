@@ -31,6 +31,7 @@ import { DestinationId, DestinationSyncRunId, ProjectId } from "@domain/shared"
 import { createPosthogDeliverer } from "@platform/data-destinations"
 import {
   DestinationRepositoryLive,
+  DestinationSourceCursorRepositoryLive,
   DestinationSyncRunRepositoryLive,
   OrganizationRepositoryLive,
   withPostgres,
@@ -55,7 +56,6 @@ export interface DestinationRecord {
   readonly status: DestinationStatus
   readonly consecutiveFailures: number
   readonly lastFailureMessage: string | null
-  readonly lastRunAt: string | null
   readonly createdAt: string
   readonly updatedAt: string
 }
@@ -71,7 +71,6 @@ const toRecord = (destination: Destination): DestinationRecord => ({
   status: destination.status,
   consecutiveFailures: destination.consecutiveFailures,
   lastFailureMessage: destination.lastFailureMessage,
-  lastRunAt: destination.lastRunAt?.toISOString() ?? null,
   createdAt: destination.createdAt.toISOString(),
   updatedAt: destination.updatedAt.toISOString(),
 })
@@ -113,7 +112,7 @@ export const createDestination = createServerFn({ method: "POST" })
         createdByUserId: userId,
       }).pipe(
         withPostgres(
-          Layer.mergeAll(OrganizationRepositoryLive, DestinationRepositoryLive),
+          Layer.mergeAll(OrganizationRepositoryLive, DestinationRepositoryLive, DestinationSourceCursorRepositoryLive),
           getPostgresClient(),
           organizationId,
         ),
@@ -200,7 +199,11 @@ export const deleteDestination = createServerFn({ method: "POST" })
         destinationId: DestinationId(data.destinationId),
       }).pipe(
         withPostgres(
-          Layer.mergeAll(DestinationRepositoryLive, DestinationSyncRunRepositoryLive),
+          Layer.mergeAll(
+            DestinationRepositoryLive,
+            DestinationSourceCursorRepositoryLive,
+            DestinationSyncRunRepositoryLive,
+          ),
           getPostgresClient(),
           organizationId,
         ),

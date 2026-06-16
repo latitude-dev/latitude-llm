@@ -26,7 +26,6 @@ const SANDBOX_ORG = OrganizationId("c".repeat(24))
 const PROJECT_A = ProjectId("p".repeat(24))
 const PROJECT_B = ProjectId("q".repeat(24))
 const PROJECT_C = ProjectId("r".repeat(24))
-const PROJECT_D = ProjectId("s".repeat(24))
 const CREATOR = UserId("u".repeat(24))
 
 const FIVE_MINUTES_MS = 300_000
@@ -93,16 +92,16 @@ describe("DestinationRepositoryLive", () => {
       expect(rawRow?.credentials).not.toBe(JSON.stringify(destination.credentials))
       expect(rawRow?.credentials).toContain(":") // iv:authTag:ciphertext format
 
-      const [fetched] = await runWithLive(
+      const fetched = await runWithLive(
         Effect.gen(function* () {
           const repo = yield* DestinationRepository
-          return yield* repo.listDue(new Date())
+          return yield* repo.findById(destination.id)
         }),
       )
 
-      expect(fetched?.credentials).toEqual({ kind: "posthog", apiKey: "phc_super_secret_key" })
-      expect(fetched?.config).toEqual(destination.config)
-      expect(fetched?.id).toBe(destination.id)
+      expect(fetched.credentials).toEqual({ kind: "posthog", apiKey: "phc_super_secret_key" })
+      expect(fetched.config).toEqual(destination.config)
+      expect(fetched.id).toBe(destination.id)
     })
 
     it("maps the (project_id, kind) unique violation to ConflictError", async () => {
@@ -129,22 +128,17 @@ describe("DestinationRepositoryLive", () => {
       const destination = makeDestination()
       await save(destination)
 
-      const lastRunAt = new Date("2026-06-12T10:00:00.000Z")
       await save({
         ...destination,
         status: "quarantined",
         consecutiveFailures: 5,
         lastFailureMessage: "posthog: HTTP 401 (non-retryable)",
-        lastRunAt,
-        consecutiveEmptyRuns: 3,
       })
 
       const [quarantined] = await pg.db.select().from(destinations)
       expect(quarantined?.status).toBe("quarantined")
       expect(quarantined?.consecutiveFailures).toBe(5)
       expect(quarantined?.lastFailureMessage).toBe("posthog: HTTP 401 (non-retryable)")
-      expect(quarantined?.lastRunAt).toEqual(lastRunAt)
-      expect(quarantined?.consecutiveEmptyRuns).toBe(3)
 
       await save({ ...destination, status: "active", consecutiveFailures: 0, lastFailureMessage: null })
 
@@ -156,126 +150,69 @@ describe("DestinationRepositoryLive", () => {
     })
   })
 
-  describe("advanceCursor", () => {
-    it("claims the write when the row still holds the expected cursor", async () => {
+  describe("updateQuarantineState", () => {
+    it("persists destination-level failure bookkeeping within the RLS org", async () => {
       await seedOrganizations()
       const destination = makeDestination()
       await save(destination)
 
-      const next = { ingestedAt: new Date("2026-06-12T11:00:00.000Z"), spanId: "00f067aa0ba902b7" }
-      const won = await runWithLive(
+      await runWithLive(
         Effect.gen(function* () {
           const repo = yield* DestinationRepository
-          return yield* repo.advanceCursor({
+          yield* repo.updateQuarantineState({
             id: destination.id,
-            expected: { ingestedAt: destination.cursorIngestedAt, spanId: destination.cursorSpanId },
-            next,
+            status: "quarantined",
+            consecutiveFailures: 5,
+            lastFailureMessage: "[401] invalid_api_key",
           })
         }),
       )
 
-      expect(won).toBe(true)
       const [row] = await pg.db.select().from(destinations)
-      expect(row?.cursorIngestedAt).toEqual(next.ingestedAt)
-      expect(row?.cursorSpanId).toBe(next.spanId)
-    })
+      expect(row?.status).toBe("quarantined")
+      expect(row?.consecutiveFailures).toBe(5)
+      expect(row?.lastFailureMessage).toBe("[401] invalid_api_key")
 
-    it("rejects a stale expected pair and leaves the cursor untouched", async () => {
-      await seedOrganizations()
-      const destination = makeDestination()
-      await save(destination)
-
-      const initial = { ingestedAt: destination.cursorIngestedAt, spanId: destination.cursorSpanId }
-      const first = { ingestedAt: new Date("2026-06-12T11:00:00.000Z"), spanId: "00f067aa0ba902b7" }
-      const second = { ingestedAt: new Date("2026-06-12T11:05:00.000Z"), spanId: "00f067aa0ba902b8" }
-
-      const results = await runWithLive(
+      // A successful run resets the counter and reactivates.
+      await runWithLive(
         Effect.gen(function* () {
           const repo = yield* DestinationRepository
-          const winner = yield* repo.advanceCursor({ id: destination.id, expected: initial, next: first })
-          // A concurrent run that started from the same initial cursor loses.
-          const stale = yield* repo.advanceCursor({ id: destination.id, expected: initial, next: second })
-          // A run that read the advanced cursor wins again.
-          const fresh = yield* repo.advanceCursor({ id: destination.id, expected: first, next: second })
-          return { winner, stale, fresh }
+          yield* repo.updateQuarantineState({
+            id: destination.id,
+            status: "active",
+            consecutiveFailures: 0,
+            lastFailureMessage: null,
+          })
         }),
       )
 
-      expect(results).toEqual({ winner: true, stale: false, fresh: true })
-      const [row] = await pg.db.select().from(destinations)
-      expect(row?.cursorIngestedAt).toEqual(second.ingestedAt)
-      expect(row?.cursorSpanId).toBe(second.spanId)
+      const [reset] = await pg.db.select().from(destinations)
+      expect(reset?.status).toBe("active")
+      expect(reset?.consecutiveFailures).toBe(0)
+      expect(reset?.lastFailureMessage).toBeNull()
     })
-  })
 
-  describe("listDue", () => {
-    const listDue = (now: Date) =>
-      runWithLive(
+    it("is an org-scoped no-op for a destination in another org", async () => {
+      await seedOrganizations()
+      const otherOrg = makeDestination({ organizationId: ORG_B, projectId: PROJECT_C })
+      await save(otherOrg, ORG_B)
+
+      // ORG_A's context updating ORG_B's row — RLS scopes it to nothing.
+      await runWithLive(
         Effect.gen(function* () {
           const repo = yield* DestinationRepository
-          return yield* repo.listDue(now)
+          yield* repo.updateQuarantineState({
+            id: otherOrg.id,
+            status: "quarantined",
+            consecutiveFailures: 5,
+            lastFailureMessage: "should not apply",
+          })
         }),
       )
 
-    it("selects never-ran and interval-elapsed destinations across orgs, skipping non-active ones", async () => {
-      await seedOrganizations()
-      const now = new Date("2026-06-12T12:00:00.000Z")
-      const minutesAgo = (m: number) => new Date(now.getTime() - m * 60_000)
-
-      const neverRan = makeDestination()
-      const elapsed = { ...makeDestination({ organizationId: ORG_B, projectId: PROJECT_B }), lastRunAt: minutesAgo(6) }
-      const recent = { ...makeDestination({ projectId: PROJECT_C }), lastRunAt: minutesAgo(1) }
-      const paused: Destination = {
-        ...makeDestination({ organizationId: ORG_B, projectId: PROJECT_D }),
-        status: "paused",
-      }
-
-      await save(neverRan)
-      await save(elapsed, ORG_B)
-      await save(recent)
-      await save(paused, ORG_B)
-
-      const due = await listDue(now)
-      expect(due.map((d) => d.id).sort()).toEqual([neverRan.id, elapsed.id].sort())
-    })
-
-    it("applies idle backoff with the one-hour ceiling", async () => {
-      await seedOrganizations()
-      const now = new Date("2026-06-12T12:00:00.000Z")
-      const minutesAgo = (m: number) => new Date(now.getTime() - m * 60_000)
-
-      // 5min × 2^2 = 20min effective interval.
-      const backedOffNotDue = { ...makeDestination(), lastRunAt: minutesAgo(10), consecutiveEmptyRuns: 2 }
-      const backedOffDue = {
-        ...makeDestination({ projectId: PROJECT_B }),
-        lastRunAt: minutesAgo(21),
-        consecutiveEmptyRuns: 2,
-      }
-      // 5min × 2^10 would be ~85h; the ceiling clamps it to 60min.
-      const cappedDue = {
-        ...makeDestination({ organizationId: ORG_B, projectId: PROJECT_C }),
-        lastRunAt: minutesAgo(61),
-        consecutiveEmptyRuns: 10,
-      }
-
-      await save(backedOffNotDue)
-      await save(backedOffDue)
-      await save(cappedDue, ORG_B)
-
-      const due = await listDue(now)
-      expect(due.map((d) => d.id).sort()).toEqual([backedOffDue.id, cappedDue.id].sort())
-    })
-
-    it("excludes destinations belonging to sandbox organizations", async () => {
-      await seedOrganizations()
-      const sandboxDestination = makeDestination({ organizationId: SANDBOX_ORG, projectId: PROJECT_B })
-      const regularDestination = makeDestination()
-
-      await save(sandboxDestination, SANDBOX_ORG)
-      await save(regularDestination)
-
-      const due = await listDue(new Date())
-      expect(due.map((d) => d.id)).toEqual([regularDestination.id])
+      const [row] = await pg.db.select().from(destinations)
+      expect(row?.status).toBe("active")
+      expect(row?.consecutiveFailures).toBe(0)
     })
   })
 

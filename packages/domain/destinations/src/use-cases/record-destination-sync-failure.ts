@@ -1,10 +1,13 @@
 import type { DestinationId, RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { DESTINATION_QUARANTINE_FAILURE_THRESHOLD } from "../constants.ts"
+import type { DestinationSource } from "../entities/destination-source.ts"
 import { DestinationRepository } from "../ports/destination-repository.ts"
+import { DestinationSourceCursorRepository } from "../ports/destination-source-cursor-repository.ts"
 
 export interface RecordDestinationSyncFailureInput {
   readonly destinationId: DestinationId
+  readonly source: DestinationSource
   /** Injected for determinism; the worker passes wall-clock time. */
   readonly now: Date
   /** Sanitized failure message: HTTP status + our taxonomy, never upstream response bodies. */
@@ -19,15 +22,21 @@ export interface RecordDestinationSyncFailureResult {
 /**
  * Terminal-failure accounting for a `runSync` job that exhausted its BullMQ
  * retries. Mirrors the non-retryable branch of {@link runDestinationSyncUseCase}:
- * one terminal failure of any kind increments `consecutive_failures` and
- * quarantines at the threshold, so a chronically unreachable host stops being
- * scheduled instead of retrying forever. The cursor is never touched. A
- * destination that is no longer active (paused, already quarantined, or deleted
- * mid-retry) is left untouched.
+ * one terminal failure of any kind increments the destination's
+ * `consecutive_failures` and quarantines at the threshold, so a chronically
+ * unreachable host stops being scheduled instead of retrying forever. The
+ * cursor position is never touched, but the source's `last_run_at` is bumped so
+ * the sweep doesn't immediately re-enqueue the just-failed pair. A destination
+ * that is no longer active (paused, already quarantined, or deleted mid-retry)
+ * is left untouched.
  */
 export const recordDestinationSyncFailureUseCase = (
   input: RecordDestinationSyncFailureInput,
-): Effect.Effect<RecordDestinationSyncFailureResult, RepositoryError, SqlClient | DestinationRepository> =>
+): Effect.Effect<
+  RecordDestinationSyncFailureResult,
+  RepositoryError,
+  SqlClient | DestinationRepository | DestinationSourceCursorRepository
+> =>
   Effect.gen(function* () {
     const destinations = yield* DestinationRepository
     const destination = yield* destinations
@@ -41,14 +50,26 @@ export const recordDestinationSyncFailureUseCase = (
     const consecutiveFailures = destination.consecutiveFailures + 1
     const quarantined = consecutiveFailures >= DESTINATION_QUARANTINE_FAILURE_THRESHOLD
 
-    yield* destinations.updateRunState({
+    yield* destinations.updateQuarantineState({
       id: destination.id,
       status: quarantined ? "quarantined" : "active",
       consecutiveFailures,
-      consecutiveEmptyRuns: destination.consecutiveEmptyRuns,
       lastFailureMessage: input.message,
-      lastRunAt: input.now,
     })
+
+    const cursors = yield* DestinationSourceCursorRepository
+    const cursor = yield* cursors.findByDestinationAndSource({
+      destinationId: destination.id,
+      source: input.source,
+    })
+    if (cursor) {
+      yield* cursors.updateRunState({
+        destinationId: destination.id,
+        source: input.source,
+        consecutiveEmptyRuns: cursor.consecutiveEmptyRuns,
+        lastRunAt: input.now,
+      })
+    }
 
     return { outcome: quarantined ? "quarantined" : "recorded", consecutiveFailures } as const
   }).pipe(Effect.withSpan("destinations.recordSyncFailure"))

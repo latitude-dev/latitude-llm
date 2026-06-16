@@ -1,6 +1,6 @@
 import { Button, Icon } from "@repo/ui"
 import { useQuery } from "@tanstack/react-query"
-import { DatabaseIcon, Plus } from "lucide-react"
+import { Plus, Share2Icon } from "lucide-react"
 import { useState } from "react"
 import { BlankSlate } from "../../../../../../components/blank-slate.tsx"
 import { listDestinations } from "../../../../../../domains/destinations/destinations.functions.ts"
@@ -33,10 +33,14 @@ export function DestinationsSection({
     <div className="flex flex-1 flex-col gap-4">
       {isLoading ? null : destinations.length === 0 ? (
         <BlankSlate
-          icon={DatabaseIcon}
+          icon={Share2Icon}
           title="No destinations yet"
           description="Connect a destination to stream new spans, traces, and sessions into a customer-owned system."
-          action={{ label: "Add destination", icon: Plus, onClick: () => setCreating(true) }}
+          action={{
+            label: "Add destination",
+            icon: Plus,
+            onClick: () => setCreating(true),
+          }}
         />
       ) : (
         <>

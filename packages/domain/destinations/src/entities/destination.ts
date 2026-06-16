@@ -96,11 +96,6 @@ export const destinationSchema = z
     consecutiveFailures: z.number().int().min(0),
     /** Sanitized: HTTP status + our error taxonomy, never upstream response bodies. */
     lastFailureMessage: z.string().nullable(),
-    cursorIngestedAt: z.date(),
-    /** Compound-cursor tie-breaker within a millisecond; `""` before the first advance. */
-    cursorSpanId: z.string(),
-    lastRunAt: z.date().nullable(),
-    consecutiveEmptyRuns: z.number().int().min(0),
     createdByUserId: userIdSchema,
     createdAt: z.date(),
     updatedAt: z.date(),
@@ -133,10 +128,6 @@ export const createDestination = (params: {
     status: "active",
     consecutiveFailures: 0,
     lastFailureMessage: null,
-    cursorIngestedAt: now,
-    cursorSpanId: "",
-    lastRunAt: null,
-    consecutiveEmptyRuns: 0,
     createdByUserId: params.createdByUserId,
     createdAt: now,
     updatedAt: now,

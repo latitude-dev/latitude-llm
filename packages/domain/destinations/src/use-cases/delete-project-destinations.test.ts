@@ -3,11 +3,14 @@ import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { POSTHOG_US_INGESTION_HOST } from "../constants.ts"
-import { createDestination } from "../entities/destination.ts"
+import { createDestination, type Destination } from "../entities/destination.ts"
+import { createDestinationSourceCursor } from "../entities/destination-source-cursor.ts"
 import { createDestinationSyncRun, type DestinationSyncRun } from "../entities/destination-sync-run.ts"
 import { DestinationRepository } from "../ports/destination-repository.ts"
+import { DestinationSourceCursorRepository } from "../ports/destination-source-cursor-repository.ts"
 import { DestinationSyncRunRepository } from "../ports/destination-sync-run-repository.ts"
 import { createFakeDestinationRepository } from "../testing/fake-destination-repository.ts"
+import { createFakeDestinationSourceCursorRepository } from "../testing/fake-destination-source-cursor-repository.ts"
 import { createFakeDestinationSyncRunRepository } from "../testing/fake-destination-sync-run-repository.ts"
 import { deleteProjectDestinationsUseCase } from "./delete-project-destinations.ts"
 
@@ -39,6 +42,7 @@ const syncRun = (destinationId: string): DestinationSyncRun =>
   createDestinationSyncRun({
     organizationId: orgId,
     destinationId: destinationId as DestinationId,
+    source: "spans",
     windowStart: new Date("2026-06-01T00:00:00Z"),
     windowEnd: new Date("2026-06-01T00:05:00Z"),
     status: "succeeded",
@@ -50,6 +54,14 @@ const syncRun = (destinationId: string): DestinationSyncRun =>
     finishedAt: new Date("2026-06-01T00:05:01Z"),
   })
 
+const cursor = (destination: Destination) =>
+  createDestinationSourceCursor({
+    organizationId: orgId,
+    destinationId: destination.id,
+    source: "spans",
+    watermark: new Date("2026-06-01T00:00:00Z"),
+  })
+
 function setup() {
   const target = destination(cuid("dtarget"), targetProjectId)
   const other = destination(cuid("dother"), otherProjectId)
@@ -59,19 +71,24 @@ function setup() {
     syncRun(target.id),
     syncRun(other.id),
   ])
+  const { repo: cursorRepo, rows: cursorRows } = createFakeDestinationSourceCursorRepository(
+    [cursor(target), cursor(other)],
+    destinationRows,
+  )
 
   const layer = Layer.mergeAll(
     Layer.succeed(DestinationRepository, destinationRepo),
     Layer.succeed(DestinationSyncRunRepository, syncRunRepo),
+    Layer.succeed(DestinationSourceCursorRepository, cursorRepo),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: orgId })),
   )
 
-  return { target, other, destinationRows, syncRunRows, layer }
+  return { target, other, destinationRows, syncRunRows, cursorRows, layer }
 }
 
 describe("deleteProjectDestinationsUseCase", () => {
-  it("removes the project's destinations and their sync runs, leaving other projects untouched", async () => {
-    const { other, destinationRows, syncRunRows, layer } = setup()
+  it("removes the project's destinations and their sync runs and cursors, leaving other projects untouched", async () => {
+    const { other, destinationRows, syncRunRows, cursorRows, layer } = setup()
 
     const result = await Effect.runPromise(
       deleteProjectDestinationsUseCase({ organizationId: orgId, projectId: targetProjectId }).pipe(
@@ -82,6 +99,7 @@ describe("deleteProjectDestinationsUseCase", () => {
     expect(result.deleted).toBe(1)
     expect(destinationRows.map((r) => r.id)).toEqual([other.id])
     expect(syncRunRows.map((r) => r.destinationId)).toEqual([other.id])
+    expect(cursorRows.map((r) => r.destinationId)).toEqual([other.id])
   })
 
   it("stops the deleted project's destination from being selected by the sweep", async () => {
@@ -90,12 +108,12 @@ describe("deleteProjectDestinationsUseCase", () => {
     const due = await Effect.runPromise(
       Effect.gen(function* () {
         yield* deleteProjectDestinationsUseCase({ organizationId: orgId, projectId: targetProjectId })
-        const repo = yield* DestinationRepository
-        return yield* repo.listDue(new Date())
+        const cursors = yield* DestinationSourceCursorRepository
+        return yield* cursors.listDue(new Date())
       }).pipe(Effect.provide(layer)),
     )
 
-    expect(due.map((d) => d.projectId)).toEqual([otherProjectId])
+    expect(due.map((d) => d.destination.projectId)).toEqual([otherProjectId])
   })
 
   it("is a no-op when the project has no destinations", async () => {

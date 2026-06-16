@@ -8,6 +8,7 @@ import {
 } from "@domain/shared"
 import { Effect } from "effect"
 import { DestinationRepository } from "../ports/destination-repository.ts"
+import { DestinationSourceCursorRepository } from "../ports/destination-source-cursor-repository.ts"
 import { DestinationSyncRunRepository } from "../ports/destination-sync-run-repository.ts"
 
 export interface DeleteDestinationInput {
@@ -32,15 +33,17 @@ export const deleteDestinationUseCase = (input: DeleteDestinationInput) =>
     }
 
     const syncRuns = yield* DestinationSyncRunRepository
+    const cursors = yield* DestinationSourceCursorRepository
     const sqlClient = yield* SqlClient
     yield* sqlClient.transaction(
       Effect.gen(function* () {
         yield* syncRuns.deleteByDestinationIds([input.destinationId])
+        yield* cursors.deleteByDestinationId(input.destinationId)
         yield* destinations.delete(input.destinationId)
       }),
     )
   }).pipe(Effect.withSpan("destinations.deleteDestination")) as Effect.Effect<
     void,
     DeleteDestinationError,
-    SqlClient | DestinationRepository | DestinationSyncRunRepository
+    SqlClient | DestinationRepository | DestinationSourceCursorRepository | DestinationSyncRunRepository
   >

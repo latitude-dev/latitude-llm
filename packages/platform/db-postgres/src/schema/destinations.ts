@@ -1,6 +1,6 @@
 import type { DestinationConfig, DestinationKind, DestinationStatus } from "@domain/destinations"
 import { index, integer, jsonb, text, uniqueIndex, varchar } from "drizzle-orm/pg-core"
-import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
+import { cuid, latitudeSchema, organizationRLSPolicy, timestamps } from "../schemaHelpers.ts"
 
 /**
  * Outbound data destinations (spec: `specs/data-destinations.md`). One row per
@@ -12,10 +12,11 @@ import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } 
  * - `credentials` is the whole kind-discriminated secret object, AES-256-GCM
  *   encrypted at the repository boundary (same scheme and key as
  *   {@link slackIntegrationDetails}); plaintext never lands in this column.
- * - `(cursor_ingested_at, cursor_span_id)` is the compound sync watermark;
- *   advances only via the repository's optimistic CAS update.
- * - `last_run_at` + `consecutive_empty_runs` drive sweep due-selection with
- *   idle backoff; `consecutive_failures` drives quarantine.
+ * - `consecutive_failures` + `last_failure_message` drive quarantine —
+ *   destination-level because credentials/host are shared across sources.
+ *
+ * Per-source sync state (watermark cursor, `last_run_at`, idle-backoff counter)
+ * lives in {@link destinationSourceCursors}, one row per `(destination, source)`.
  *
  * No FKs on `project_id` / `created_by_user_id`, per the platform rule — the
  * `ProjectDeleted` consumer owns the cascade.
@@ -33,10 +34,6 @@ export const destinations = latitudeSchema.table(
     status: varchar("status", { length: 16 }).notNull().$type<DestinationStatus>(),
     consecutiveFailures: integer("consecutive_failures").notNull().default(0),
     lastFailureMessage: text("last_failure_message"),
-    cursorIngestedAt: tzTimestamp("cursor_ingested_at").notNull(),
-    cursorSpanId: varchar("cursor_span_id", { length: 16 }).notNull().default(""),
-    lastRunAt: tzTimestamp("last_run_at"),
-    consecutiveEmptyRuns: integer("consecutive_empty_runs").notNull().default(0),
     createdByUserId: cuid("created_by_user_id", { default: false }).notNull(),
     ...timestamps(),
   },
@@ -44,6 +41,5 @@ export const destinations = latitudeSchema.table(
     organizationRLSPolicy("destinations"),
     uniqueIndex("destinations_project_id_kind_idx").on(t.projectId, t.kind),
     index("destinations_organization_id_idx").on(t.organizationId),
-    index("destinations_status_last_run_at_idx").on(t.status, t.lastRunAt),
   ],
 )

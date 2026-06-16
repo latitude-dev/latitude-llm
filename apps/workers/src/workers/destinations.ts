@@ -6,11 +6,12 @@ import {
   DestinationDeliverers,
   type DestinationMapperRegistry,
   DestinationMappers,
-  DestinationRepository,
+  type DestinationSource,
   deleteProjectDestinationsUseCase,
   pruneDestinationSyncRunsUseCase,
   recordDestinationSyncFailureUseCase,
   runDestinationSyncUseCase,
+  SpansSourceReadersLive,
   sweepDestinationsUseCase,
 } from "@domain/destinations"
 import { ProjectRepository } from "@domain/projects"
@@ -21,12 +22,13 @@ import { createPosthogDeliverer, POSTHOG_EVENT_MAX_BYTES } from "@platform/data-
 import { type ClickHouseClient, SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   DestinationRepositoryLive,
+  DestinationSourceCursorRepositoryLive,
   DestinationSyncRunRepositoryLive,
   type PostgresClient,
   ProjectRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
-import { parseEnv } from "@platform/env"
+import { parseEnv, parseEnvOptional } from "@platform/env"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getAdminPostgresClient, getClickhouseClient, getPostgresClient } from "../clients.ts"
@@ -37,16 +39,40 @@ interface DestinationsDeps {
   consumer: QueueConsumer
   publisher: QueuePublisherShape
   postgresClient?: PostgresClient
-  /** Admin client — the cross-org sweep reads/prunes destination rows regardless of org (RLS bypass). */
   adminPostgresClient?: PostgresClient
   clickhouseClient?: ClickHouseClient
 }
 
-const deleteByProjectLayer = Layer.mergeAll(DestinationRepositoryLive, DestinationSyncRunRepositoryLive)
-const runSyncLayer = Layer.mergeAll(DestinationRepositoryLive, DestinationSyncRunRepositoryLive, ProjectRepositoryLive)
+const deleteByProjectLayer = Layer.mergeAll(
+  DestinationRepositoryLive,
+  DestinationSourceCursorRepositoryLive,
+  DestinationSyncRunRepositoryLive,
+)
+const runSyncLayer = Layer.mergeAll(
+  DestinationRepositoryLive,
+  DestinationSourceCursorRepositoryLive,
+  DestinationSyncRunRepositoryLive,
+  ProjectRepositoryLive,
+)
+const recordFailureLayer = Layer.mergeAll(DestinationRepositoryLive, DestinationSourceCursorRepositoryLive)
+
+/** v1 source-reader registry: the domain spans binding backed by the ClickHouse SpanRepository. */
+const sourceReadersLive = SpansSourceReadersLive.pipe(Layer.provide(SpanRepositoryLive))
 
 const resolveWebUrl = () =>
   Effect.runSync(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000")).replace(/\/$/, "")
+
+/**
+ * Dev/QA-only override of the window-end safety lag (ms). Ignored in production —
+ * there the 5-minute default is load-bearing for the at-least-once guarantee
+ * (it must cover ingest-queue + merge settling). Locally a small value (e.g. 30s)
+ * makes freshly-seeded spans eligible in ~1 min instead of ~6.
+ */
+const resolveDevSafetyLagMs = (): number | undefined => {
+  const isProduction = Effect.runSync(parseEnv("NODE_ENV", "string", "development")) === "production"
+  if (isProduction) return undefined
+  return Effect.runSync(parseEnvOptional("LAT_DEV_DESTINATIONS_SAFETY_LAG_MS", "number"))
+}
 
 /** Best-effort cross-link back into Latitude; the project slug is the run's anchor (falls back to project id). */
 const spanUrlBuilder =
@@ -74,10 +100,13 @@ export const createDestinationsWorker = ({
   const adminPgClient = adminPostgresClient ?? getAdminPostgresClient()
   const chClient = clickhouseClient ?? getClickhouseClient()
   const webUrl = resolveWebUrl()
+  const devSafetyLagMs = resolveDevSafetyLagMs()
 
   // Kind-stable, built once; the mapper is built per-run because its span-URL
   // builder depends on the run's project slug.
-  const delivererRegistry: DestinationDelivererRegistry = { posthog: createPosthogDeliverer() }
+  const delivererRegistry: DestinationDelivererRegistry = {
+    posthog: createPosthogDeliverer(),
+  }
 
   consumer.subscribe(
     "destinations",
@@ -85,7 +114,7 @@ export const createDestinationsWorker = ({
       sweep: () =>
         sweepDestinationsUseCase({
           now: new Date(),
-          publish: ({ destination }) =>
+          publish: ({ destination, source }) =>
             publisher.publish(
               "destinations",
               "runSync",
@@ -93,15 +122,24 @@ export const createDestinationsWorker = ({
                 organizationId: destination.organizationId,
                 projectId: destination.projectId,
                 destinationId: destination.id,
+                source,
               },
               {
-                dedupeKey: `destinations:runSync:${destination.id}`,
+                // TTL-windowed dedupe (not a bare dedupeKey): a bare key maps to a
+                // BullMQ jobId that `removeOnComplete` retains, which would shadow every
+                // later publish and make the destination sync exactly once. Leading-edge
+                // throttle fires immediately and suppresses re-publishes for one interval.
+                dedupeKey: `destinations:runSync:${destination.id}:${source}`,
+                leadingThrottleMs: destination.config.intervalMs,
                 attempts: DESTINATION_SYNC_MAX_ATTEMPTS,
-                backoff: { type: "exponential", delayMs: DESTINATION_SYNC_RETRY_BACKOFF_MS },
+                backoff: {
+                  type: "exponential",
+                  delayMs: DESTINATION_SYNC_RETRY_BACKOFF_MS,
+                },
               },
             ),
         }).pipe(
-          withPostgres(DestinationRepositoryLive, adminPgClient),
+          withPostgres(DestinationSourceCursorRepositoryLive, adminPgClient),
           Effect.tap((result) =>
             Effect.sync(() =>
               logger.info(`destinations.sweep due=${result.due} published=${result.published} failed=${result.failed}`),
@@ -123,20 +161,16 @@ export const createDestinationsWorker = ({
 
       runSync: (payload) => {
         const organizationId = OrganizationId(payload.organizationId)
+        const source = payload.source as DestinationSource
+        const destinationId = DestinationId(payload.destinationId)
         return Effect.gen(function* () {
-          const destinations = yield* DestinationRepository
-          const destination = yield* destinations
-            .findById(DestinationId(payload.destinationId))
-            .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-          if (!destination) {
-            logger.info(`destinations.runSync skipped (deleted) destinationId=${payload.destinationId}`)
-            return
-          }
-
+          // Only the project slug (for the cross-link URL) is resolved here; the
+          // use case owns loading the destination + source cursor and skipping a
+          // deleted/paused/cursor-less pair.
           const projects = yield* ProjectRepository
           const projectSlug = yield* projects.findById(ProjectId(payload.projectId)).pipe(
             Effect.map((project) => project.slug),
-            Effect.orElseSucceed(() => destination.projectId as string),
+            Effect.orElseSucceed(() => payload.projectId),
           )
 
           const mapperRegistry: DestinationMapperRegistry = {
@@ -146,14 +180,19 @@ export const createDestinationsWorker = ({
             }),
           }
 
-          const result = yield* runDestinationSyncUseCase({ destination, now: new Date() }).pipe(
-            withClickHouse(SpanRepositoryLive, chClient, organizationId),
+          const result = yield* runDestinationSyncUseCase({
+            destinationId,
+            source,
+            now: new Date(),
+            ...(devSafetyLagMs === undefined ? {} : { safetyLagMs: devSafetyLagMs }),
+          }).pipe(
+            withClickHouse(sourceReadersLive, chClient, organizationId),
             Effect.provide(Layer.succeed(DestinationDeliverers, delivererRegistry)),
             Effect.provide(Layer.succeed(DestinationMappers, mapperRegistry)),
           )
 
           logger.info(
-            `destinations.runSync destinationId=${destination.id} outcome=${result.outcome} spansRead=${result.spansRead} eventsSent=${result.eventsSent} eventsDropped=${result.eventsDropped} quarantined=${result.quarantined}`,
+            `destinations.runSync destinationId=${destinationId} source=${source} outcome=${result.outcome} spansRead=${result.spansRead} eventsSent=${result.eventsSent} eventsDropped=${result.eventsDropped} quarantined=${result.quarantined}`,
           )
         }).pipe(
           withPostgres(runSyncLayer, pgClient, organizationId),
@@ -193,10 +232,11 @@ export const createDestinationsWorker = ({
         runSync: (payload, error) =>
           recordDestinationSyncFailureUseCase({
             destinationId: DestinationId(payload.destinationId),
+            source: payload.source as DestinationSource,
             now: new Date(),
             message: finalFailureMessage(error),
           }).pipe(
-            withPostgres(DestinationRepositoryLive, pgClient, OrganizationId(payload.organizationId)),
+            withPostgres(recordFailureLayer, pgClient, OrganizationId(payload.organizationId)),
             Effect.tap((result) =>
               Effect.sync(() =>
                 logger.warn(

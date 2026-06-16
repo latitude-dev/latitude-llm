@@ -6,6 +6,7 @@ import {
   organizationIdSchema,
 } from "@domain/shared"
 import { z } from "zod"
+import { destinationSourceSchema } from "./destination-source.ts"
 
 export const DESTINATION_SYNC_RUN_STATUSES = ["succeeded", "failed"] as const
 export const destinationSyncRunStatusSchema = z.enum(DESTINATION_SYNC_RUN_STATUSES)
@@ -15,6 +16,8 @@ export const destinationSyncRunSchema = z.object({
   id: destinationSyncRunIdSchema,
   organizationId: organizationIdSchema,
   destinationId: destinationIdSchema,
+  /** Which source this run synced — one row per `(destination, source, run)`. */
+  source: destinationSourceSchema,
   windowStart: z.date(),
   windowEnd: z.date(),
   status: destinationSyncRunStatusSchema,

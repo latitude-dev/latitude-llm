@@ -47,6 +47,13 @@ export {
   posthogDestinationCredentialsSchema,
 } from "./entities/destination.ts"
 export type { DestinationEvent } from "./entities/destination-event.ts"
+export type { DestinationSource } from "./entities/destination-source.ts"
+export { DESTINATION_SOURCES, destinationSourceSchema } from "./entities/destination-source.ts"
+export type { DestinationSourceCursor } from "./entities/destination-source-cursor.ts"
+export {
+  createDestinationSourceCursor,
+  destinationSourceCursorSchema,
+} from "./entities/destination-source-cursor.ts"
 export type {
   DestinationSyncRun,
   DestinationSyncRunStatus,
@@ -97,18 +104,32 @@ export type {
 } from "./ports/destination-mapper.ts"
 export { DestinationMappers } from "./ports/destination-mapper.ts"
 export type {
-  AdvanceDestinationCursorInput,
-  DestinationCursor,
   DestinationRepositoryShape,
-  UpdateDestinationRunStateInput,
+  UpdateDestinationQuarantineStateInput,
 } from "./ports/destination-repository.ts"
 export { DestinationRepository } from "./ports/destination-repository.ts"
+export type {
+  AdvanceSourceCursorInput,
+  DestinationSourceCursorRepositoryShape,
+  DueDestinationSource,
+  UpdateSourceRunStateInput,
+} from "./ports/destination-source-cursor-repository.ts"
+export { DestinationSourceCursorRepository } from "./ports/destination-source-cursor-repository.ts"
+export type {
+  DestinationSourceReader,
+  DestinationSourceReaderRegistry,
+  SourceCursor,
+  SourceWindow,
+} from "./ports/destination-source-reader.ts"
+export { DestinationSourceReaders } from "./ports/destination-source-reader.ts"
 export type {
   DestinationSyncRunCursor,
   DestinationSyncRunRepositoryShape,
   ListSyncRunsByDestinationIdInput,
 } from "./ports/destination-sync-run-repository.ts"
 export { DestinationSyncRunRepository } from "./ports/destination-sync-run-repository.ts"
+// Sources (v1 spans binding)
+export { createSpansSourceReader, SpansSourceReadersLive } from "./sources/spans-source-reader.ts"
 
 // Use cases
 export type {

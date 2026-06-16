@@ -79,7 +79,7 @@ describe("destinationConfigSchema", () => {
 })
 
 describe("createDestination", () => {
-  it("creates an active destination with the cursor initialized to creation time", () => {
+  it("creates an active destination with no failure state", () => {
     const createdAt = new Date("2026-06-12T10:00:00Z")
     const destination = createDestination({
       organizationId: OrganizationId(cuid("o")),
@@ -94,10 +94,8 @@ describe("createDestination", () => {
     expect(destination.kind).toBe("posthog")
     expect(destination.status).toBe("active")
     expect(destination.consecutiveFailures).toBe(0)
-    expect(destination.consecutiveEmptyRuns).toBe(0)
-    expect(destination.lastRunAt).toBeNull()
-    expect(destination.cursorIngestedAt).toEqual(createdAt)
-    expect(destination.cursorSpanId).toBe("")
+    expect(destination.lastFailureMessage).toBeNull()
+    expect(destination.createdAt).toEqual(createdAt)
   })
 
   it("rejects empty credentials", () => {

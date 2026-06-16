@@ -1,4 +1,4 @@
-import type { DestinationSyncRunStatus } from "@domain/destinations"
+import type { DestinationSource, DestinationSyncRunStatus } from "@domain/destinations"
 import { index, integer, text, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
@@ -15,6 +15,7 @@ export const destinationSyncRuns = latitudeSchema.table(
     id: cuid("id").primaryKey(),
     organizationId: cuid("organization_id").notNull(),
     destinationId: cuid("destination_id", { default: false }).notNull(),
+    source: varchar("source", { length: 32 }).notNull().$type<DestinationSource>(),
     windowStart: tzTimestamp("window_start").notNull(),
     windowEnd: tzTimestamp("window_end").notNull(),
     status: varchar("status", { length: 16 }).notNull().$type<DestinationSyncRunStatus>(),
