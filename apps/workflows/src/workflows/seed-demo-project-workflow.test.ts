@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const { callOrder, mockActivities, childExecutions, patchedState } = vi.hoisted(() => {
   const callOrder: string[] = []
-  const patchedState = { enabled: true }
+  const patchedState = { derivedDataEnabled: true, snapshotEnabled: true }
   const childExecutions: Array<{ readonly args: unknown[]; readonly workflowId: string }> = []
   const mockActivities = {
     seedDemoProjectPostgresActivity: vi.fn(async () => {
@@ -14,12 +14,19 @@ const { callOrder, mockActivities, childExecutions, patchedState } = vi.hoisted(
     seedDemoProjectTraceSearchActivity: vi.fn(async () => {
       callOrder.push("trace-search")
     }),
+    seedDemoProjectDerivedSnapshotActivity: vi.fn(async () => {
+      callOrder.push("derived-snapshot")
+    }),
   }
   return { callOrder, mockActivities, childExecutions, patchedState }
 })
 
 vi.mock("@temporalio/workflow", () => ({
-  patched: () => patchedState.enabled,
+  patched: (patchId: string) => {
+    if (patchId === "seed-demo-project-derived-search-taxonomy-v1") return patchedState.derivedDataEnabled
+    if (patchId === "seed-demo-project-derived-snapshot-v1") return patchedState.snapshotEnabled
+    return true
+  },
   proxyActivities: () => mockActivities,
   executeChild: async (_workflow: unknown, options: { args: unknown[]; workflowId: string }) => {
     callOrder.push("taxonomy")
@@ -46,14 +53,15 @@ describe("seedDemoProjectWorkflow", () => {
   beforeEach(() => {
     callOrder.length = 0
     childExecutions.length = 0
-    patchedState.enabled = true
+    patchedState.derivedDataEnabled = true
+    patchedState.snapshotEnabled = true
     vi.clearAllMocks()
   })
 
-  it("runs Postgres → ClickHouse → trace search → taxonomy in dependency order", async () => {
+  it("runs Postgres → ClickHouse → derived snapshot in dependency order", async () => {
     const result = await seedDemoProjectWorkflow(baseInput)
 
-    expect(callOrder).toEqual(["postgres", "clickhouse", "trace-search", "taxonomy"])
+    expect(callOrder).toEqual(["postgres", "clickhouse", "derived-snapshot"])
     expect(result).toEqual({ action: "seeded", projectId: "proj-demo" })
   })
 
@@ -62,6 +70,18 @@ describe("seedDemoProjectWorkflow", () => {
 
     expect(mockActivities.seedDemoProjectPostgresActivity).toHaveBeenCalledWith(baseInput)
     expect(mockActivities.seedDemoProjectClickHouseActivity).toHaveBeenCalledWith(baseInput)
+    expect(mockActivities.seedDemoProjectDerivedSnapshotActivity).toHaveBeenCalledWith(baseInput)
+    expect(mockActivities.seedDemoProjectTraceSearchActivity).not.toHaveBeenCalled()
+    expect(childExecutions).toEqual([])
+  })
+
+  it("keeps replay compatibility for workflows started before snapshot seeding", async () => {
+    patchedState.snapshotEnabled = false
+
+    const result = await seedDemoProjectWorkflow(baseInput)
+
+    expect(callOrder).toEqual(["postgres", "clickhouse", "trace-search", "taxonomy"])
+    expect(mockActivities.seedDemoProjectDerivedSnapshotActivity).not.toHaveBeenCalled()
     expect(mockActivities.seedDemoProjectTraceSearchActivity).toHaveBeenCalledWith(baseInput)
     expect(childExecutions).toEqual([
       {
@@ -69,14 +89,17 @@ describe("seedDemoProjectWorkflow", () => {
         workflowId: "org:org-1:taxonomy:garden:proj-demo:seed",
       },
     ])
+    expect(result).toEqual({ action: "seeded", projectId: "proj-demo" })
   })
 
-  it("keeps replay compatibility for workflows started before derived data seeding", async () => {
-    patchedState.enabled = false
+  it("keeps replay compatibility for workflows started before derived-data seeding", async () => {
+    patchedState.derivedDataEnabled = false
+    patchedState.snapshotEnabled = false
 
     const result = await seedDemoProjectWorkflow(baseInput)
 
     expect(callOrder).toEqual(["postgres", "clickhouse"])
+    expect(mockActivities.seedDemoProjectDerivedSnapshotActivity).not.toHaveBeenCalled()
     expect(mockActivities.seedDemoProjectTraceSearchActivity).not.toHaveBeenCalled()
     expect(childExecutions).toEqual([])
     expect(result).toEqual({ action: "seeded", projectId: "proj-demo" })
@@ -89,6 +112,7 @@ describe("seedDemoProjectWorkflow", () => {
 
     await expect(seedDemoProjectWorkflow(baseInput)).rejects.toThrow("postgres seed failed")
     expect(mockActivities.seedDemoProjectClickHouseActivity).not.toHaveBeenCalled()
+    expect(mockActivities.seedDemoProjectDerivedSnapshotActivity).not.toHaveBeenCalled()
     expect(mockActivities.seedDemoProjectTraceSearchActivity).not.toHaveBeenCalled()
     expect(childExecutions).toEqual([])
   })
@@ -99,6 +123,7 @@ describe("seedDemoProjectWorkflow", () => {
     })
 
     await expect(seedDemoProjectWorkflow(baseInput)).rejects.toThrow("clickhouse seed failed")
+    expect(mockActivities.seedDemoProjectDerivedSnapshotActivity).not.toHaveBeenCalled()
     expect(mockActivities.seedDemoProjectTraceSearchActivity).not.toHaveBeenCalled()
     expect(childExecutions).toEqual([])
   })

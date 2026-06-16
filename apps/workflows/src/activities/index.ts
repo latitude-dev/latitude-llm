@@ -44,6 +44,7 @@ export { buildOptimizationDedupeKey, scheduleEvaluationOptimization } from "./sc
 export {
   type SeedDemoProjectActivityInput,
   seedDemoProjectClickHouseActivity,
+  seedDemoProjectDerivedSnapshotActivity,
   seedDemoProjectPostgresActivity,
   seedDemoProjectTraceSearchActivity,
 } from "./seed-demo-project-activities.ts"

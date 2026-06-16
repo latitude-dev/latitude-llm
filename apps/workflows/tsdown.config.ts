@@ -1,3 +1,5 @@
+import { cpSync, existsSync } from "node:fs"
+import { resolve } from "node:path"
 import { defineConfig } from "tsdown"
 
 export default defineConfig({
@@ -14,6 +16,13 @@ export default defineConfig({
   shims: true,
   clean: true,
   plugins: [
+    {
+      name: "copy-seed-snapshots",
+      closeBundle() {
+        const source = resolve("src/seed-snapshots")
+        if (existsSync(source)) cpSync(source, resolve("dist/seed-snapshots"), { recursive: true })
+      },
+    },
     {
       name: "reject-test-imports",
       resolveId(source, importer) {

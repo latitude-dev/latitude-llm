@@ -12,6 +12,7 @@
     "trace-search:backfill:dist": "node --enable-source-maps dist/scripts/backfill-trace-search.cjs",
     "conversation-intelligence:backfill": "tsx src/scripts/backfill-conversation-intelligence.ts",
     "conversation-intelligence-taxonomy:backfill": "tsx src/scripts/backfill-conversation-intelligence.ts --reset --reset-taxonomy --garden-after --rebase-observations-to-now --manual-reprocess",
+    "demo-project-snapshot:export": "tsx src/scripts/export-demo-project-snapshot.ts",
     "test-emails:incidents": "tsx src/scripts/send-test-incident-emails.ts",
     "test-slack:notifications": "tsx src/scripts/send-test-slack-notifications.ts",
     "typecheck": "tsgo -p tsconfig.json --noEmit",
