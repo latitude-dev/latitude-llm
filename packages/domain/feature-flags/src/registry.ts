@@ -38,12 +38,6 @@ export const FEATURE_FLAGS = {
     name: "Test Mode sandbox",
     description: "Enables the Live ⇄ Sandbox switcher and the sandbox namespace for isolated development traces.",
   },
-  tools: {
-    emoji: "🔧",
-    name: "Tools dashboard",
-    description:
-      "Project-level analytics for LLM tools: every defined and called tool with usage, failure and latency metrics.",
-  },
   destinations: {
     emoji: "📤",
     name: "Data destinations",
@@ -55,6 +49,12 @@ export const FEATURE_FLAGS = {
     name: "Sandboxed evaluation runtime",
     description:
       "Executes evaluation scripts in the QuickJS sandbox runtime (full script execution) instead of the template-extraction MVP bridge.",
+  },
+  tools: {
+    emoji: "🔧",
+    name: "Tools dashboard",
+    description:
+      "Project-level analytics for LLM tools: every defined and called tool with usage, failure and latency metrics.",
   },
 } as const satisfies Record<
   string,
