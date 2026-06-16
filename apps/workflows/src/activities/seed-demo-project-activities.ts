@@ -25,6 +25,7 @@ import { seedDemoProjectPostgres } from "@platform/db-postgres/seeding"
 import { Context as ActivityContext } from "@temporalio/activity"
 import { Effect, Layer } from "effect"
 import { getAdminPostgresClient, getClickhouseClient, getRedisClient } from "../clients.ts"
+import { importDemoProjectDerivedSnapshot } from "./demo-project-snapshot.ts"
 
 /**
  * Plain-data input that the workflow hands every activity. Workflow code
@@ -81,6 +82,13 @@ export const seedDemoProjectPostgresActivity = (input: SeedDemoProjectActivityIn
  */
 export const seedDemoProjectClickHouseActivity = (input: SeedDemoProjectActivityInput): Promise<void> =>
   seedDemoProjectClickHouse({ client: getClickhouseClient(), scope: buildScope(input) })
+
+export const seedDemoProjectDerivedSnapshotActivity = (input: SeedDemoProjectActivityInput): Promise<void> =>
+  importDemoProjectDerivedSnapshot({
+    postgresClient: getAdminPostgresClient(),
+    clickhouseClient: getClickhouseClient(),
+    scope: buildScope(input),
+  })
 
 type DemoTraceRow = {
   readonly trace_id: string

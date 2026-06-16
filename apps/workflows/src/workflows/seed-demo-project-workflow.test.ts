@@ -14,12 +14,15 @@ const { callOrder, mockActivities, childExecutions, patchedState } = vi.hoisted(
     seedDemoProjectTraceSearchActivity: vi.fn(async () => {
       callOrder.push("trace-search")
     }),
+    seedDemoProjectDerivedSnapshotActivity: vi.fn(async () => {
+      callOrder.push("derived-snapshot")
+    }),
   }
   return { callOrder, mockActivities, childExecutions, patchedState }
 })
 
 vi.mock("@temporalio/workflow", () => ({
-  patched: () => patchedState.enabled,
+  patched: (patchId: string) => (patchId === "seed-demo-project-derived-snapshot-v1" ? patchedState.enabled : true),
   proxyActivities: () => mockActivities,
   executeChild: async (_workflow: unknown, options: { args: unknown[]; workflowId: string }) => {
     callOrder.push("taxonomy")
@@ -50,10 +53,10 @@ describe("seedDemoProjectWorkflow", () => {
     vi.clearAllMocks()
   })
 
-  it("runs Postgres → ClickHouse → trace search → taxonomy in dependency order", async () => {
+  it("runs Postgres → ClickHouse → derived snapshot in dependency order", async () => {
     const result = await seedDemoProjectWorkflow(baseInput)
 
-    expect(callOrder).toEqual(["postgres", "clickhouse", "trace-search", "taxonomy"])
+    expect(callOrder).toEqual(["postgres", "clickhouse", "derived-snapshot"])
     expect(result).toEqual({ action: "seeded", projectId: "proj-demo" })
   })
 
@@ -62,6 +65,18 @@ describe("seedDemoProjectWorkflow", () => {
 
     expect(mockActivities.seedDemoProjectPostgresActivity).toHaveBeenCalledWith(baseInput)
     expect(mockActivities.seedDemoProjectClickHouseActivity).toHaveBeenCalledWith(baseInput)
+    expect(mockActivities.seedDemoProjectDerivedSnapshotActivity).toHaveBeenCalledWith(baseInput)
+    expect(mockActivities.seedDemoProjectTraceSearchActivity).not.toHaveBeenCalled()
+    expect(childExecutions).toEqual([])
+  })
+
+  it("keeps replay compatibility for workflows started before snapshot seeding", async () => {
+    patchedState.enabled = false
+
+    const result = await seedDemoProjectWorkflow(baseInput)
+
+    expect(callOrder).toEqual(["postgres", "clickhouse", "trace-search", "taxonomy"])
+    expect(mockActivities.seedDemoProjectDerivedSnapshotActivity).not.toHaveBeenCalled()
     expect(mockActivities.seedDemoProjectTraceSearchActivity).toHaveBeenCalledWith(baseInput)
     expect(childExecutions).toEqual([
       {
@@ -69,16 +84,6 @@ describe("seedDemoProjectWorkflow", () => {
         workflowId: "org:org-1:taxonomy:garden:proj-demo:seed",
       },
     ])
-  })
-
-  it("keeps replay compatibility for workflows started before derived data seeding", async () => {
-    patchedState.enabled = false
-
-    const result = await seedDemoProjectWorkflow(baseInput)
-
-    expect(callOrder).toEqual(["postgres", "clickhouse"])
-    expect(mockActivities.seedDemoProjectTraceSearchActivity).not.toHaveBeenCalled()
-    expect(childExecutions).toEqual([])
     expect(result).toEqual({ action: "seeded", projectId: "proj-demo" })
   })
 
@@ -89,6 +94,7 @@ describe("seedDemoProjectWorkflow", () => {
 
     await expect(seedDemoProjectWorkflow(baseInput)).rejects.toThrow("postgres seed failed")
     expect(mockActivities.seedDemoProjectClickHouseActivity).not.toHaveBeenCalled()
+    expect(mockActivities.seedDemoProjectDerivedSnapshotActivity).not.toHaveBeenCalled()
     expect(mockActivities.seedDemoProjectTraceSearchActivity).not.toHaveBeenCalled()
     expect(childExecutions).toEqual([])
   })
@@ -99,6 +105,7 @@ describe("seedDemoProjectWorkflow", () => {
     })
 
     await expect(seedDemoProjectWorkflow(baseInput)).rejects.toThrow("clickhouse seed failed")
+    expect(mockActivities.seedDemoProjectDerivedSnapshotActivity).not.toHaveBeenCalled()
     expect(mockActivities.seedDemoProjectTraceSearchActivity).not.toHaveBeenCalled()
     expect(childExecutions).toEqual([])
   })

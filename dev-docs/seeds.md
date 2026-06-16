@@ -97,6 +97,12 @@ ClickHouse is split into two responsibilities:
 
 Use ClickHouse when a workflow needs real trace/span content, analytics joins, simulation trace tabs, or dataset row browsing.
 
+### Derived demo snapshot
+
+Runtime demo-project creation does not recompute expensive derived data. `seedDemoProjectWorkflow` still runs the shared Postgres and ClickHouse base seeders for the target organization/project, then imports the compressed derived snapshot under `apps/workflows/src/seed-snapshots/demo-project-derived-v1/`. The snapshot contains trace-search documents, semantic message embeddings, conversation-intelligence analyses/moments/labels, taxonomy observations, taxonomy clusters, taxonomy lineage, and the completed taxonomy run from the canonical Acme `default-project` corpus.
+
+The importer rewrites `organization_id` and `project_id`, shifts timestamps relative to the workflow's `timelineAnchorIso`, and deterministically remaps globally unique taxonomy run/cluster/lineage IDs through the target `SeedScope`. Trace IDs, session IDs, message content hashes, and embedding vectors are copied as data because the base deterministic ClickHouse seed recreates the same trace corpus for every demo project. Regenerate the snapshot with `pnpm --filter @app/workers demo-project-snapshot:export` only after intentionally changing the canonical demo corpus or the derived search/conversation/taxonomy schemas.
+
 ## Default Seed Graph
 
 ### Foundations
