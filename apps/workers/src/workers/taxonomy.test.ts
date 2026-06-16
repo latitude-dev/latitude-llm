@@ -6,6 +6,7 @@ import {
   buildHierarchicalTaxonomyUseCase,
   emitLineageUseCase,
   nameClusterUseCase,
+  TAXONOMY_GARDENING_SWEEP_SPREAD_MS,
   TaxonomyClusterRepository,
   TaxonomyLineageRepository,
   type TaxonomyMomentObservation,
@@ -207,6 +208,67 @@ describe("taxonomy gardening worker", () => {
       payload: { organizationId: ORGANIZATION_ID, projectId: PROJECT_ID, reason: "cron" },
     })
     expect(queue.published[0]?.options?.dedupeKey).toContain(`org:${ORGANIZATION_ID}:`)
+  })
+
+  it("spreads cron workflow starts across the sweep window", async () => {
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* TaxonomyObservationRepository
+        for (let index = 400; index < 415; index++) {
+          yield* repo.upsert(makeObservation(index, PROJECT_ID_2))
+        }
+      }).pipe(withClickHouse(TaxonomyObservationRepositoryLive, ch.client as ClickHouseClient, ORGANIZATION_ID)),
+    )
+    const queue = createFakeQueuePublisher()
+    const started: Array<{
+      readonly workflow: string
+      readonly input: unknown
+      readonly workflowId: string
+      readonly startDelayMs?: number
+    }> = []
+    const workflowStarter = {
+      start: (
+        workflow: string,
+        input: unknown,
+        options: { readonly workflowId: string; readonly startDelayMs?: number },
+      ) => {
+        started.push({
+          workflow,
+          input,
+          workflowId: options.workflowId,
+          ...(options.startDelayMs === undefined ? {} : { startDelayMs: options.startDelayMs }),
+        })
+        return Effect.void
+      },
+      signalWithStart: () => Effect.void,
+    }
+    const adminPostgresClient = {
+      pool: {
+        query: async () => ({ rows: [{ organization_id: ORGANIZATION_ID, project_id: PROJECT_ID_2 }] }),
+      },
+    }
+
+    await Effect.runPromise(
+      runGardenSweepJob(
+        { triggeredAt: START_TIME.toISOString() },
+        {
+          clickhouseClient: ch.client,
+          adminPostgresClient: adminPostgresClient as never,
+          publisher: queue.publisher,
+          workflowStarter: workflowStarter as never,
+        },
+      ),
+    )
+
+    expect(started).toHaveLength(1)
+    expect(started[0]).toMatchObject({
+      workflow: "gardenTaxonomyWorkflow",
+      input: { organizationId: ORGANIZATION_ID, projectId: PROJECT_ID_2, dimension: "topic", trigger: "cron" },
+      workflowId: `org:${ORGANIZATION_ID}:taxonomy:gardenProject:${PROJECT_ID_2}`,
+    })
+    expect(started[0]?.startDelayMs).toEqual(expect.any(Number))
+    expect(started[0]?.startDelayMs).toBeGreaterThanOrEqual(0)
+    expect(started[0]?.startDelayMs).toBeLessThan(TAXONOMY_GARDENING_SWEEP_SPREAD_MS)
   })
 
   it("continues the garden sweep when one project publish fails", async () => {

@@ -37,7 +37,7 @@ export interface WorkflowStarterShape {
   readonly start: <W extends WorkflowName>(
     workflow: W,
     input: WorkflowInput<W>,
-    options: { readonly workflowId: string },
+    options: { readonly workflowId: string; readonly startDelayMs?: number },
   ) => Effect.Effect<void, WorkflowAlreadyStartedError>
   readonly signalWithStart: <W extends WorkflowName>(
     workflow: W,

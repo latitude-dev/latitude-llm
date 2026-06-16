@@ -87,6 +87,7 @@ export const TAXONOMY_ASSIGN_TEMPERATURE = 0.08
 
 export const TAXONOMY_GARDENING_CRON_KEY = "taxonomy:garden-sweep"
 export const TAXONOMY_GARDENING_CRON_PATTERN = "0 */6 * * *"
+export const TAXONOMY_GARDENING_SWEEP_SPREAD_MS = 5 * 60 * 60_000
 export const TAXONOMY_GARDENING_THROTTLE_MS = 60 * 60_000
 /**
  * Cold-start gate. Lowered from the spec's original `50` after the

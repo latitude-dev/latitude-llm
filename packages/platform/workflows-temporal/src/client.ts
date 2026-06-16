@@ -236,11 +236,13 @@ export function createWorkflowStarter(client: Client, config: TemporalConfig): W
             args: [input],
             workflowIdReusePolicy: "ALLOW_DUPLICATE",
             workflowIdConflictPolicy: "FAIL",
+            ...(options.startDelayMs === undefined ? {} : { startDelay: options.startDelayMs }),
           })
           logger.info("started workflow", {
             workflow,
             workflowId: options.workflowId,
             runId: handle.firstExecutionRunId,
+            startDelayMs: options.startDelayMs,
           })
           return { kind: "started" as const }
         } catch (error) {

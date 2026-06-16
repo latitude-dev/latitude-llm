@@ -519,6 +519,7 @@ function createTaskDefinition(
           web: temporalEnvVars,
           workflows: [
             { name: "LAT_WORKFLOWS_HEALTH_PORT", value: "8080" },
+            { name: "LAT_TEMPORAL_MAX_CONCURRENT_ACTIVITY_TASKS", value: "4" },
             { name: "NODE_OPTIONS", value: `--max-old-space-size=${nodeMaxOldSpaceMb}` },
             ...temporalEnvVars,
           ],

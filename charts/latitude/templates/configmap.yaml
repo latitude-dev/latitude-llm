@@ -81,6 +81,9 @@ data:
   LAT_TEMPORAL_NAMESPACE: {{ required "Set temporal.external.namespace when temporal.enabled=false" .Values.temporal.external.namespace | quote }}
   {{- end }}
   LAT_TEMPORAL_TASK_QUEUE: {{ .Values.config.temporalTaskQueue | quote }}
+  {{- with .Values.config.temporalMaxConcurrentActivityTasks }}
+  LAT_TEMPORAL_MAX_CONCURRENT_ACTIVITY_TASKS: {{ . | quote }}
+  {{- end }}
 
   # --- Object storage (shared by every service) --------------------------------
   LAT_STORAGE_DRIVER: s3

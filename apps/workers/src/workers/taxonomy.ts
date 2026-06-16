@@ -2,6 +2,7 @@ import type { QueueConsumer, QueuePublisherShape, WorkflowStarterShape } from "@
 import { OrganizationId, ProjectId } from "@domain/shared"
 import {
   TAXONOMY_GARDENING_MIN_OBSERVATIONS,
+  TAXONOMY_GARDENING_SWEEP_SPREAD_MS,
   TAXONOMY_GARDENING_THROTTLE_MS,
   TAXONOMY_NOISE_LOOKBACK_DAYS,
   TaxonomyObservationRepository,
@@ -54,6 +55,18 @@ interface TaxonomySweepDeps {
 const lookbackStart = (triggeredAt: Date): Date =>
   new Date(triggeredAt.getTime() - TAXONOMY_NOISE_LOOKBACK_DAYS * 24 * 60 * 60_000)
 
+const deterministicProjectDelayMs = (input: {
+  readonly organizationId: string
+  readonly projectId: string
+}): number => {
+  const source = `${input.organizationId}:${input.projectId}`
+  let hash = 0x811c9dc5
+  for (let index = 0; index < source.length; index++) {
+    hash = Math.imul(hash ^ source.charCodeAt(index), 0x01000193) >>> 0
+  }
+  return hash % TAXONOMY_GARDENING_SWEEP_SPREAD_MS
+}
+
 const listActiveProjects = (adminPostgresClient: PostgresClient) =>
   Effect.tryPromise({
     try: async () => {
@@ -87,11 +100,20 @@ export const runGardenSweepJob = (payload: GardenSweepPayload, deps: TaxonomySwe
         if (counts.total < TAXONOMY_GARDENING_MIN_OBSERVATIONS) return
 
         if (deps.workflowStarter) {
-          yield* deps.workflowStarter.start(
-            "gardenTaxonomyWorkflow",
-            { organizationId, projectId, dimension: "topic", trigger: "cron" },
-            { workflowId: taxonomyGardenProjectDedupeKey({ organizationId, projectId }) },
-          )
+          const started = yield* deps.workflowStarter
+            .start(
+              "gardenTaxonomyWorkflow",
+              { organizationId, projectId, dimension: "topic", trigger: "cron" },
+              {
+                workflowId: taxonomyGardenProjectDedupeKey({ organizationId, projectId }),
+                startDelayMs: deterministicProjectDelayMs({ organizationId, projectId }),
+              },
+            )
+            .pipe(
+              Effect.as(true),
+              Effect.catchTag("WorkflowAlreadyStartedError", () => Effect.succeed(false)),
+            )
+          if (!started) return
         } else {
           yield* deps.publisher.publish(
             "taxonomy",
