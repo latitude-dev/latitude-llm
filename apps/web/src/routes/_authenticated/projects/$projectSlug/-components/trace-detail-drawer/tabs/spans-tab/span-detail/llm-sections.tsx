@@ -2,7 +2,7 @@ import { Conversation, DetailSection, Text } from "@repo/ui"
 import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, WrenchIcon } from "lucide-react"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import type { SpanDetailRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
-import { JsonBlock } from "./helpers.tsx"
+import { ToolDefinitionPills } from "./tool-definition-pills.tsx"
 
 export function LlmSections({ span }: { readonly span: SpanDetailRecord }) {
   const system = span.systemInstructions as unknown as GenAISystem
@@ -43,7 +43,7 @@ export function LlmSections({ span }: { readonly span: SpanDetailRecord }) {
 
       <DetailSection icon={<WrenchIcon className="w-4 h-4" />} label="Available Tools">
         {span.toolDefinitions.length ? (
-          <JsonBlock value={span.toolDefinitions} />
+          <ToolDefinitionPills definitions={span.toolDefinitions} />
         ) : (
           <Text.H6 color="foregroundMuted">No tool definitions</Text.H6>
         )}

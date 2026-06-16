@@ -2366,5 +2366,26 @@ describe("SessionRepository", () => {
       )
       expect(values).toEqual(["sessioned_tool", "sessionless_tool"])
     })
+
+    it("lists defined tools for the definedTools multiselect, including sessionless chat spans", async () => {
+      const startTime = new Date(Date.UTC(2026, 0, 10, 10, 0, 0))
+      const definedNoSession: SpanRow = {
+        ...makeSpanRow({ traceId: "f".repeat(32), spanId: "f1".padEnd(16, "0"), startTime }),
+        operation: "chat",
+        tool_definitions: '[{"name":"defined_only_tool","description":"d","parameters":{}}]',
+      }
+      const calledWithSession: SpanRow = {
+        ...makeSpanRow({ traceId: "e".repeat(32), spanId: "e1".padEnd(16, "0"), startTime, sessionId: "sess-1" }),
+        operation: "execute_tool",
+        tool_name: "called_only_tool",
+        tool_call_id: "call_2",
+      }
+      await insertSpans([definedNoSession, calledWithSession])
+
+      const values = await runCh(
+        repo.distinctFilterValues({ organizationId: ORG_ID, projectId: PROJECT_ID, column: "definedTools" }),
+      )
+      expect(values).toEqual(["defined_only_tool"])
+    })
   })
 })

@@ -22,6 +22,8 @@ function makeSpan(partial: Partial<SpanRecord> & Pick<SpanRecord, "spanId">): Sp
     operation: "chat",
     provider: "anthropic",
     model: "",
+    toolName: "",
+    toolNames: [],
     tokensInput: 0,
     tokensOutput: 0,
     costTotalMicrocents: 0,

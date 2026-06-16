@@ -250,9 +250,9 @@ describe("TraceRepository", () => {
         tool_name: "lookup_order",
         tool_call_id: "call_1",
       }
-      // A chat span defining a tool that is never called — must NOT appear
-      // in the multiselect options: the traces tools filter means "at least
-      // one call", and the rollup only carries called tools.
+      // A chat span defining a tool that is never called — listed under the
+      // definedTools filter, but NOT under tools: that filter means "at
+      // least one call", and its rollup only carries called tools.
       const chatSpanWithDefs: SpanRow = {
         ...makeSpanRow({
           traceId: TRACE_ID,
@@ -302,6 +302,41 @@ describe("TraceRepository", () => {
         }),
       )
       expect(values).toEqual(["lookup_order"])
+    })
+
+    it("matches traces that defined the tool, even without calls", async () => {
+      const matches = await runCh(
+        repo.matchesFiltersByTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TRACE_ID,
+          filters: { definedTools: [{ op: "in", value: ["defined_only_tool"] }] },
+        }),
+      )
+      expect(matches).toBe(true)
+    })
+
+    it("does not match definedTools for tools that were only called", async () => {
+      const matches = await runCh(
+        repo.matchesFiltersByTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TRACE_ID,
+          filters: { definedTools: [{ op: "in", value: ["lookup_order"] }] },
+        }),
+      )
+      expect(matches).toBe(false)
+    })
+
+    it("lists only defined tools for the definedTools multiselect", async () => {
+      const values = await runCh(
+        repo.distinctFilterValues({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          column: "definedTools",
+        }),
+      )
+      expect(values).toEqual(["defined_only_tool"])
     })
   })
 

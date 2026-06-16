@@ -78,6 +78,8 @@ export const spanSchema = z.object({
   provider: z.string(),
   model: z.string(),
   responseModel: z.string(),
+  toolName: z.string(),
+  toolNames: z.array(z.string()).readonly(),
   tokensInput: z.number(),
   tokensOutput: z.number(),
   tokensCacheRead: z.number(),
@@ -118,7 +120,6 @@ export const spanDetailSchema = spanSchema.extend({
   systemInstructions: genAISystemSchema,
   toolDefinitions: z.array(toolDefinitionSchema).readonly(),
   toolCallId: z.string(),
-  toolName: z.string(),
   toolInput: z.string(),
   toolOutput: z.string(),
 })

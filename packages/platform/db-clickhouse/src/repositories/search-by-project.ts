@@ -295,6 +295,8 @@ const TRACE_ROLLUP_BODY = `
     groupUniqArrayIfMerge(t.models)                AS models,
     groupUniqArrayIfMerge(t.providers)             AS providers,
     groupUniqArrayIfMerge(t.service_names)         AS service_names,
+    groupUniqArrayIfMerge(t.tools)                 AS tools,
+    groupUniqArrayArray(t.defined_tools)           AS defined_tools,
     argMinIfMerge(t.root_span_name)                AS root_span_name,
     sum(t.cost_total_microcents)                   AS cost_total_microcents,
     sum(t.span_count)                              AS span_count,

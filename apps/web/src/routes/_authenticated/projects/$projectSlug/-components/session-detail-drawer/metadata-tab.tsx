@@ -5,16 +5,18 @@ import {
   DetailSection,
   DetailSummary,
   ProviderIcon,
+  Skeleton,
   TagBadgeList,
   Text,
   Tooltip,
 } from "@repo/ui"
 import { formatCount, formatDuration, relativeTime } from "@repo/utils"
-import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, FingerprintIcon, TextIcon } from "lucide-react"
+import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, FingerprintIcon, TextIcon, WrenchIcon } from "lucide-react"
 import { useMemo } from "react"
 import type { SessionDetailRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
 import { useSpansBySessionCollection } from "../../../../../../domains/spans/spans.collection.ts"
 import { SessionOutlierBadge, type SessionOutlierMetric } from "../session-outlier-badge.tsx"
+import { aggregateToolPills, ToolPillList } from "../tool-pills.tsx"
 import { DurationBar } from "../trace-detail-drawer/duration-bar.tsx"
 import { computeSessionDurationBreakdown } from "../trace-detail-drawer/duration-composition.ts"
 import { ModelFilterLink } from "../trace-detail-drawer/tabs/spans-tab/model-filter-link.tsx"
@@ -85,6 +87,7 @@ export function MetadataTab({
     startTimeTo: session.endTime,
   })
   const durationBreakdown = useMemo(() => computeSessionDurationBreakdown(spans ?? []), [spans])
+  const toolPills = useMemo(() => aggregateToolPills(spans), [spans])
   const fallbackDurationMs = session.durationNs / 1_000_000
   const durationWallClockMs = durationBreakdown.wallClockMs > 0 ? durationBreakdown.wallClockMs : fallbackDurationMs
   const durationBadge = renderBadge("durationNs", session.durationNs)
@@ -170,6 +173,20 @@ export function MetadataTab({
           </Text.H6>
         )}
       </div>
+
+      <DetailSection icon={<WrenchIcon className="h-4 w-4" />} label="Tools" defaultOpen={false}>
+        {() =>
+          isSpansLoading ? (
+            <Skeleton className="h-7 w-48" />
+          ) : toolPills.length > 0 ? (
+            <ToolPillList tools={toolPills} scopeLabel="session" />
+          ) : (
+            <Text.H6 color="foregroundMuted" italic>
+              No tools
+            </Text.H6>
+          )
+        }
+      </DetailSection>
 
       <DetailSection icon={<TextIcon className="h-4 w-4" />} label="Metadata" defaultOpen={false}>
         {() =>

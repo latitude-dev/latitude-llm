@@ -87,7 +87,7 @@ export interface SessionRepositoryShape {
   }): Effect.Effect<TraceDistribution, RepositoryError, ChSqlClient>
 }
 
-export type SessionDistinctColumn = "tags" | "models" | "providers" | "serviceNames" | "tools"
+export type SessionDistinctColumn = "tags" | "models" | "providers" | "serviceNames" | "tools" | "definedTools"
 
 export interface SessionListCursor {
   readonly sortValue: string

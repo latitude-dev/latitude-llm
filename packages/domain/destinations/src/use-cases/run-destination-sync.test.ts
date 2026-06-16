@@ -122,6 +122,7 @@ const stubSpan = (spanId: string, ingestedAt: Date): SpanDetail => ({
   toolDefinitions: [],
   toolCallId: "",
   toolName: "",
+  toolNames: [],
   toolOutput: "",
   toolInput: "",
 })

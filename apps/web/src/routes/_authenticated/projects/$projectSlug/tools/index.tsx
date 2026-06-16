@@ -19,6 +19,7 @@ import {
   pickToolTrendBucketSeconds,
 } from "./-components/tool-formatters.ts"
 import { ToolsAnalyticsPanel } from "./-components/tools-analytics-panel.tsx"
+import { ToolsDiscoveryBanner } from "./-components/tools-discovery-banner.tsx"
 import { ToolsEmptyState } from "./-components/tools-empty-state.tsx"
 import {
   DEFAULT_TOOLS_SORTING,
@@ -34,12 +35,13 @@ const SORT_COLUMNS = [
   "calls",
   "tracesPct",
   "selectionRate",
+  "offered",
   "errorRate",
   "duration",
   "lastCalled",
 ] as const satisfies readonly ToolsTableSorting["column"][]
 const SORT_DIRECTIONS = ["asc", "desc"] as const satisfies readonly ToolsTableSorting["direction"][]
-const SORT_PARAM_PATTERN = /^(calls|tracesPct|selectionRate|errorRate|duration|lastCalled):(asc|desc)$/
+const SORT_PARAM_PATTERN = /^(calls|tracesPct|selectionRate|offered|errorRate|duration|lastCalled):(asc|desc)$/
 
 type ToolsStatusTab = "all" | "unused" | "failing"
 
@@ -140,6 +142,7 @@ function ToolsPageContent() {
 
   const hasAnyTools = (analytics?.tools.length ?? 0) > 0
   const showEmptyState = !isLoading && !hasAnyTools && !searchQuery && statusTab === "all"
+  const hasOnlyDefinedTools = !isLoading && hasAnyTools && (analytics?.totals.tracesWithToolCalls ?? 0) === 0
 
   return (
     <Layout>
@@ -163,8 +166,18 @@ function ToolsPageContent() {
               size="sm"
               options={[
                 { id: "all", label: "All", icon: <LayoutGridIcon className="w-4 h-4" /> },
-                { id: "unused", label: "Unused", icon: <CircleSlashIcon className="w-4 h-4" /> },
-                { id: "failing", label: "Failing", icon: <TriangleAlertIcon className="w-4 h-4" /> },
+                {
+                  id: "unused",
+                  label: "Unused",
+                  icon: <CircleSlashIcon className="w-4 h-4" />,
+                  tooltip: "Tools offered to the model in this window but never called.",
+                },
+                {
+                  id: "failing",
+                  label: "Failing",
+                  icon: <TriangleAlertIcon className="w-4 h-4" />,
+                  tooltip: "Tools with an error rate of 5% or more in this window.",
+                },
               ]}
               active={statusTab}
               onSelect={(value) => setStatusTab(value)}
@@ -200,6 +213,11 @@ function ToolsPageContent() {
         <ToolsEmptyState isLoading={isLoading} />
       ) : (
         <>
+          {hasOnlyDefinedTools ? (
+            <div className="px-6 pb-2">
+              <ToolsDiscoveryBanner projectId={project.id} />
+            </div>
+          ) : null}
           <div className="px-6">
             <ToolsAnalyticsPanel
               analytics={analytics}

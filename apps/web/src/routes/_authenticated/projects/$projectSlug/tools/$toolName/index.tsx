@@ -18,6 +18,7 @@ import {
 } from "../-components/tool-formatters.ts"
 import { ToolActivityRow } from "./-components/tool-activity-row.tsx"
 import { ToolContextPanel } from "./-components/tool-context-panel.tsx"
+import { ToolDefiningTraces } from "./-components/tool-defining-traces.tsx"
 import { ToolDescription } from "./-components/tool-description.tsx"
 import { ToolNeighborNav } from "./-components/tool-neighbor-nav.tsx"
 import { ToolParametersExplorer } from "./-components/tool-parameters-explorer.tsx"
@@ -109,6 +110,7 @@ function ToolDetailPageContent() {
   const errorsUsage = detail?.errorsUsage ?? null
   const definition = detail?.definition ?? null
   const notFound = !isLoading && detail !== undefined && usage === null && definition === null
+  const definedButNeverCalled = !isLoading && detail !== undefined && usage === null && definition !== null
 
   return (
     <Layout>
@@ -154,6 +156,31 @@ function ToolDetailPageContent() {
                 checked={errorsOnly}
                 onCheckedChange={(checked) => setErrorsParam(checked ? "1" : "")}
               />
+              <div className="mx-1 h-5 w-px bg-border" />
+              {/* w-auto: asChild lands the face's w-full on the Link, stretching it. */}
+              <Button asChild variant="outline" size="sm" className="w-auto">
+                <Link
+                  to="/projects/$projectSlug"
+                  params={{ projectSlug }}
+                  search={{
+                    filters: JSON.stringify({
+                      // Never-called tools have no calls to match — link to the
+                      // traces whose chat spans defined the tool instead.
+                      ...(definedButNeverCalled
+                        ? { definedTools: [{ op: "in", value: [toolName] }] }
+                        : { tools: [{ op: "in", value: [toolName] }] }),
+                      startTime: [
+                        { op: "gte", value: range.fromIso },
+                        { op: "lte", value: range.toIso },
+                      ],
+                    }),
+                    filtersOpen: true,
+                  }}
+                >
+                  <Icon icon={TextAlignStartIcon} size="sm" />
+                  View traces
+                </Link>
+              </Button>
               {notFound ? null : (
                 <>
                   <div className="mx-1 h-5 w-px bg-border" />
@@ -366,6 +393,13 @@ function ToolDetailPageContent() {
                   </Link>
                 </Button>
               }
+            />
+          ) : definedButNeverCalled ? (
+            <ToolDefiningTraces
+              projectId={project.id}
+              toolName={toolName}
+              range={range}
+              onOverlayActiveChange={setOverlayActive}
             />
           ) : null}
         </div>

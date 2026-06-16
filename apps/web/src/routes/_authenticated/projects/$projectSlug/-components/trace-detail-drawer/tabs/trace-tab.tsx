@@ -11,10 +11,11 @@ import {
   Tooltip,
 } from "@repo/ui"
 import { formatCount, formatDuration, relativeTime } from "@repo/utils"
-import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, FingerprintIcon, TextIcon } from "lucide-react"
+import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, FingerprintIcon, TextIcon, WrenchIcon } from "lucide-react"
 import { useMemo } from "react"
 import type { SpanRecord } from "../../../../../../../domains/spans/spans.functions.ts"
 import type { TraceDetailRecord, TraceRecord } from "../../../../../../../domains/traces/traces.functions.ts"
+import { aggregateToolPills, ToolPillList } from "../../tool-pills.tsx"
 import { TraceOutlierBadge, type TraceOutlierMetric } from "../../trace-outlier-badge.tsx"
 import { DurationBar } from "../duration-bar.tsx"
 import { computeDurationBreakdown } from "../duration-composition.ts"
@@ -89,6 +90,7 @@ export function TraceTab({
 
   // Falls back to the record total until spans load, so the duration always renders.
   const durationBreakdown = useMemo(() => computeDurationBreakdown(spans ?? []), [spans])
+  const toolPills = useMemo(() => aggregateToolPills(spans), [spans])
   const fallbackDurationMs = traceRecord ? traceRecord.durationNs / 1_000_000 : 0
   const durationWallClockMs = durationBreakdown.wallClockMs > 0 ? durationBreakdown.wallClockMs : fallbackDurationMs
   const durationBadge = traceRecord ? renderBadge("durationNs", traceRecord.durationNs) : undefined
@@ -189,6 +191,21 @@ export function TraceTab({
           </Text.H6>
         )}
       </div>
+
+      {/* ── Tools ── */}
+      <DetailSection icon={<WrenchIcon className="w-4 h-4" />} label="Tools" defaultOpen={false}>
+        {() =>
+          isSpansLoading ? (
+            <Skeleton className="h-7 w-48" />
+          ) : toolPills.length > 0 ? (
+            <ToolPillList tools={toolPills} scopeLabel="trace" />
+          ) : (
+            <Text.H6 color="foregroundMuted" italic>
+              No tools
+            </Text.H6>
+          )
+        }
+      </DetailSection>
 
       {/* ── Metadata ── */}
       <DetailSection icon={<TextIcon className="w-4 h-4" />} label="Metadata" defaultOpen={false}>

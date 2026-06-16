@@ -14,6 +14,7 @@ export const SESSION_FIELD_REGISTRY: ChFieldRegistry = {
   providers: { column: "providers", chType: "String", isArray: true, arrayContains: true },
   serviceNames: { column: "service_names", chType: "String", isArray: true, arrayContains: true },
   tools: { column: "tools", chType: "String", isArray: true, arrayContains: true },
+  definedTools: { column: "defined_tools", chType: "String", isArray: true, arrayContains: true },
   cost: { column: "cost_total_microcents", chType: "UInt64" },
   duration: { column: "duration_ns", chType: "Int64" },
   ttft: { column: "time_to_first_token_ns", chType: "Int64" },

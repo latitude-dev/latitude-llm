@@ -115,6 +115,8 @@ export type {
 } from "./ports/span-repository.ts"
 export { SpanRepository } from "./ports/span-repository.ts"
 export type {
+  RecentDefiningSpan,
+  RecentDefiningSpanPage,
   RecentToolCall,
   RecentToolCallPage,
   ToolAnalyticsRepositoryShape,
