@@ -369,6 +369,7 @@ export function ProjectExplorer({ projectSlug, mode }: { readonly projectSlug: s
   // project is genuinely unconnected — distinct from a connected project whose
   // traces aged out, or an empty filtered result.
   const isConnected = currentProject.firstTraceAt != null
+  const onboardingCompleted = currentProject.settings.onboardingCompleted === true
   const orgHasConnectedProjects = allProjects.some((p) => p.id !== currentProject.id && p.firstTraceAt != null)
 
   if (isTracesCountLoading && !hasActiveFilters && !hasSearchQuery) {
@@ -380,7 +381,7 @@ export function ProjectExplorer({ projectSlug, mode }: { readonly projectSlug: s
   }
 
   // Never connected + nothing to show → onboarding-style connect experience.
-  if (!isConnected && hasNoTraces) {
+  if (!isConnected && hasNoTraces && !onboardingCompleted) {
     return (
       <Layout>
         <TracesEmptyOnboarding
@@ -393,8 +394,8 @@ export function ProjectExplorer({ projectSlug, mode }: { readonly projectSlug: s
     )
   }
 
-  // Connected before, but currently empty (e.g. retention) → minimal placeholder.
-  if (isConnected && hasNoTraces) {
+  // Connected before, or onboarding was completed by exploring the sample project → minimal placeholder.
+  if ((isConnected || onboardingCompleted) && hasNoTraces) {
     return (
       <Layout>
         <TracesEmptyState />

@@ -1,5 +1,5 @@
-import { Button, cn, Icon, Text } from "@repo/ui"
-import { Check } from "lucide-react"
+import { Button, cn, Icon, Input, Text, Tooltip } from "@repo/ui"
+import { Check, Info } from "lucide-react"
 import { useMemo } from "react"
 import {
   FLAGGER_ONBOARDING_ORDER,
@@ -21,6 +21,8 @@ export function Left({
   enabledFlaggerSlugs,
   toggleFlaggerSelection,
   applyFlaggerPreset,
+  projectName,
+  onProjectNameChange,
   isSavingFlaggers,
   onBack,
   onContinue,
@@ -31,6 +33,8 @@ export function Left({
   readonly enabledFlaggerSlugs: ReadonlySet<string>
   readonly toggleFlaggerSelection: (slug: string) => void
   readonly applyFlaggerPreset: (enabledSlugs: ReadonlyArray<FlaggerPresetSlug>) => void
+  readonly projectName: string
+  readonly onProjectNameChange: (name: string) => void
   readonly isSavingFlaggers: boolean
   readonly onBack: () => void
   readonly onContinue: () => void
@@ -63,13 +67,43 @@ export function Left({
               Latitude inspects all incoming traces and creates issues when they detect common failure patterns. Choose
               the patterns you want to monitor.
             </Text.H4>
-            <Text.H5 color="foregroundMuted">
-              You can fine-tune sampling rates per flagger later in Project settings.
-            </Text.H5>
           </div>
         </div>
 
         <div className="flex flex-col gap-6">
+          <div className="flex w-full max-w-md flex-col gap-2">
+            <Input
+              type="text"
+              label={
+                <span className="flex flex-row items-center gap-2">
+                  Project name
+                  <Tooltip
+                    asChild
+                    side="top"
+                    trigger={
+                      <button
+                        type="button"
+                        className="inline-flex text-muted-foreground"
+                        aria-label="Project name info"
+                      >
+                        <Icon icon={Info} size="sm" />
+                      </button>
+                    }
+                  >
+                    <span>
+                      This is the project you'll connect your own telemetry to. Latitude is also preparing a separate
+                      sample project when demo data is available.
+                    </span>
+                  </Tooltip>
+                </span>
+              }
+              value={projectName}
+              onChange={(event) => onProjectNameChange(event.target.value)}
+              placeholder="My project"
+              aria-label="Project name"
+            />
+          </div>
+
           <div className="flex flex-row flex-wrap gap-2">
             {FLAGGER_USE_CASE_PRESETS.map((preset) => {
               const isActive = activePresetId === preset.id

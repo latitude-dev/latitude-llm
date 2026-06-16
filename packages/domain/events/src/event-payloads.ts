@@ -471,4 +471,11 @@ export interface EventPayloads {
     readonly projectId: string
     readonly projectName: string
   }
+  SampleProjectCreated: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly queueAssigneeUserIds: readonly string[]
+    readonly apiKeyId: string
+    readonly timelineAnchorIso: string
+  }
 }

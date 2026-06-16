@@ -68,7 +68,7 @@ describe("provisionOrganizationWorkspaceUseCase", () => {
     )
 
     expect(transactionCalls).toBe(1)
-    expect(writtenEvents).toHaveLength(3)
+    expect(writtenEvents).toHaveLength(4)
     expect(writtenEvents[0]).toMatchObject({
       eventName: "ApiKeyCreated",
       organizationId: ORG_ID,
@@ -99,13 +99,28 @@ describe("provisionOrganizationWorkspaceUseCase", () => {
         slug: "acme",
       },
     })
+    expect(writtenEvents[3]).toMatchObject({
+      eventName: "SampleProjectCreated",
+      organizationId: ORG_ID,
+      payload: {
+        organizationId: ORG_ID,
+        queueAssigneeUserIds: ["user-1"],
+      },
+    })
     const apiKeys = [...savedApiKeys.values()]
     expect(apiKeys).toHaveLength(1)
     expect(apiKeys[0]?.name).toBe(DEFAULT_API_KEY_NAME)
     expect(apiKeys[0]?.token.startsWith(SANDBOX_API_KEY_TOKEN_PREFIX)).toBe(false)
-    expect(savedProjects).toHaveLength(1)
+    expect(savedProjects).toHaveLength(2)
     expect(savedProjects[0]).toMatchObject({ name: "My project", slug: "my-project", organizationId: ORG_ID })
+    expect(savedProjects[1]).toMatchObject({
+      name: "Sample project",
+      slug: "sample-project",
+      organizationId: ORG_ID,
+      settings: { isSample: true },
+    })
     expect(result.defaultApiKey).toMatchObject({ name: DEFAULT_API_KEY_NAME })
     expect(result.defaultProject).toMatchObject({ name: "My project", slug: "my-project" })
+    expect(result.sampleProject).toMatchObject({ name: "Sample project", slug: "sample-project" })
   })
 })

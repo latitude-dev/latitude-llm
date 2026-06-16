@@ -75,6 +75,8 @@ export const projectSettingsSchema = z.object({
   notifications: notificationsSettingSchema.optional(),
   escalation: escalationSettingSchema.optional(),
   onboardingType: z.enum(["prod-traces", "code-agents"]).optional(),
+  onboardingCompleted: z.boolean().optional(),
+  isSample: z.boolean().optional(),
   sampling: samplingSettingSchema.optional(),
 })
 

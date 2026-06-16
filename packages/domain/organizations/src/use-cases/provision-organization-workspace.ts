@@ -1,8 +1,15 @@
 import { DEFAULT_API_KEY_NAME, type GenerateApiKeyError, generateApiKeyUseCase } from "@domain/api-keys"
 import { OutboxEventWriter } from "@domain/events"
-import { type CreateProjectError, createProjectUseCase } from "@domain/projects"
+import {
+  type CreateProjectError,
+  createProject,
+  createProjectUseCase,
+  InvalidProjectNameError,
+  ProjectRepository,
+} from "@domain/projects"
 import {
   type ConcurrentSqlTransactionError,
+  generateSlug,
   type OrganizationId,
   type RepositoryError,
   SqlClient,
@@ -18,6 +25,8 @@ export interface ProvisionOrganizationWorkspaceInput {
   readonly defaultProjectName: string
 }
 
+const DEFAULT_SAMPLE_PROJECT_NAME = "Sample project"
+
 export interface ProvisionOrganizationWorkspaceResult {
   readonly defaultApiKey: {
     readonly id: string
@@ -25,6 +34,11 @@ export interface ProvisionOrganizationWorkspaceResult {
     readonly token: string
   }
   readonly defaultProject: {
+    readonly id: string
+    readonly name: string
+    readonly slug: string
+  }
+  readonly sampleProject: {
     readonly id: string
     readonly name: string
     readonly slug: string
@@ -58,6 +72,24 @@ export const provisionOrganizationWorkspaceUseCase = Effect.fn("organizations.pr
           actorUserId: input.actorUserId,
         })
 
+        const projectRepo = yield* ProjectRepository
+        const sampleProjectSlug = yield* generateSlug({
+          name: DEFAULT_SAMPLE_PROJECT_NAME,
+          count: (slug) => projectRepo.countBySlug(slug),
+        }).pipe(
+          Effect.catchTag("InvalidSlugInputError", (error) =>
+            Effect.fail(new InvalidProjectNameError({ field: DEFAULT_SAMPLE_PROJECT_NAME, message: error.reason })),
+          ),
+        )
+        const sampleProject = createProject({
+          organizationId: input.organizationId,
+          name: DEFAULT_SAMPLE_PROJECT_NAME,
+          slug: sampleProjectSlug,
+          settings: { isSample: true },
+        })
+        // Skip createProjectUseCase so sample data seeding is the only side effect for this project.
+        yield* projectRepo.save(sampleProject)
+
         yield* outboxEventWriter
           .write({
             eventName: "OrganizationCreated",
@@ -73,6 +105,22 @@ export const provisionOrganizationWorkspaceUseCase = Effect.fn("organizations.pr
           })
           .pipe(Effect.mapError((error) => toRepositoryError(error, "write")))
 
+        yield* outboxEventWriter
+          .write({
+            eventName: "SampleProjectCreated",
+            aggregateType: "project",
+            aggregateId: sampleProject.id,
+            organizationId: input.organizationId,
+            payload: {
+              organizationId: input.organizationId,
+              projectId: sampleProject.id,
+              queueAssigneeUserIds: [input.actorUserId],
+              apiKeyId: defaultApiKey.id,
+              timelineAnchorIso: new Date().toISOString(),
+            },
+          })
+          .pipe(Effect.mapError((error) => toRepositoryError(error, "write")))
+
         return {
           defaultApiKey: {
             id: defaultApiKey.id,
@@ -83,6 +131,11 @@ export const provisionOrganizationWorkspaceUseCase = Effect.fn("organizations.pr
             id: defaultProject.id,
             name: defaultProject.name,
             slug: defaultProject.slug,
+          },
+          sampleProject: {
+            id: sampleProject.id,
+            name: sampleProject.name,
+            slug: sampleProject.slug,
           },
         }
       }),

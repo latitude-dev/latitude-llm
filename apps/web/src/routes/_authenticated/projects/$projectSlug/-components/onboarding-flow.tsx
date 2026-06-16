@@ -9,8 +9,11 @@ import {
   listAvailableFlaggers,
 } from "../../../../../domains/flaggers/flaggers.functions.ts"
 import type { FlaggerPresetSlug } from "../../../../../domains/flaggers/presets.ts"
+import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
+import { completeProjectOnboarding, updateProject } from "../../../../../domains/projects/projects.functions.ts"
 import { countTracesByProject } from "../../../../../domains/traces/traces.functions.ts"
 import { submitOnboarding } from "../../../../../domains/users/user.functions.ts"
+import { getQueryClient } from "../../../../../lib/data/query-client.tsx"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { createFormSubmitHandler } from "../../../../../lib/form-server-action.ts"
 import { CarouselSlide, CarouselTrack } from "./onboarding/carousel-track.tsx"
@@ -40,6 +43,8 @@ export type OnboardingForm = ReturnType<typeof _onboardingFormTypeHelper>
 export function OnboardingFlow({
   projectId,
   projectSlug,
+  projectName: initialProjectName,
+  persistedProjectName,
   onboardingType,
   slackEnvConfigured,
   initialStep,
@@ -49,6 +54,8 @@ export function OnboardingFlow({
 }: {
   readonly projectId: string
   readonly projectSlug: string
+  readonly projectName: string
+  readonly persistedProjectName: string
   readonly onboardingType: "code-agents" | "prod-traces" | undefined
   readonly slackEnvConfigured: boolean
   readonly initialStep?: OnboardingStep
@@ -109,8 +116,11 @@ export function OnboardingFlow({
   })
 
   const [stackChoice, setStackChoice] = useState<StackChoice | null>(null)
+  const [projectName, setProjectName] = useState(initialProjectName)
   const [selectedFlaggerSlugs, setSelectedFlaggerSlugs] = useState<ReadonlySet<string> | null>(null)
   const [isSavingFlaggers, setIsSavingFlaggers] = useState(false)
+  const { data: allProjects = [] } = useProjectsCollection()
+  const sampleProject = allProjects.find((project) => project.id !== projectId && project.settings.isSample === true)
 
   const form = useForm({
     defaultValues: {
@@ -173,8 +183,18 @@ export function OnboardingFlow({
   }
 
   const handleConfigureFlaggers = async () => {
+    const trimmedProjectName = projectName.trim()
+    if (!trimmedProjectName) {
+      toast({ variant: "destructive", description: "Project name is required" })
+      return
+    }
+
     setIsSavingFlaggers(true)
     try {
+      if (trimmedProjectName !== persistedProjectName) {
+        await updateProject({ data: { id: projectId, name: trimmedProjectName } })
+        await getQueryClient().invalidateQueries({ queryKey: ["projects"] })
+      }
       await configureProjectFlaggersForOnboarding({
         data: {
           projectId,
@@ -240,8 +260,15 @@ export function OnboardingFlow({
     }
   })
 
-  const handleSkipToTraces = () => {
-    void onOpenProjectTraces(projectId)
+  const handleOpenSampleProject = async () => {
+    if (!sampleProject) return
+    try {
+      await completeProjectOnboarding({ data: { projectId } })
+      await getQueryClient().invalidateQueries({ queryKey: ["projects"] })
+      await navigate({ to: "/projects/$projectSlug", params: { projectSlug: sampleProject.slug } })
+    } catch (error) {
+      toast({ variant: "destructive", description: toUserMessage(error) })
+    }
   }
 
   const telemetryBackStep: OnboardingStep = slackStepEnabled ? "slack" : "flaggers"
@@ -282,6 +309,8 @@ export function OnboardingFlow({
             enabledFlaggerSlugs={enabledFlaggerSlugs}
             toggleFlaggerSelection={toggleFlaggerSelection}
             applyFlaggerPreset={applyFlaggerPreset}
+            projectName={projectName}
+            onProjectNameChange={setProjectName}
             isSavingFlaggers={isSavingFlaggers}
             onBack={() => goToStep("stack")}
             onContinue={() => void handleConfigureFlaggers()}
@@ -297,8 +326,9 @@ export function OnboardingFlow({
             stackChoice={stackChoice}
             traceReceived={traceReceived}
             projectSlug={projectSlug}
+            sampleProjectSlug={sampleProject?.slug}
             onBack={() => goToStep(telemetryBackStep)}
-            onSkip={handleSkipToTraces}
+            onOpenSampleProject={() => void handleOpenSampleProject()}
           />
         )}
       </div>

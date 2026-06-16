@@ -74,6 +74,8 @@ export function createProjectMutation(name: string) {
       notifications: undefined,
       escalation: undefined,
       onboardingType: undefined,
+      onboardingCompleted: undefined,
+      isSample: undefined,
       sampling: undefined,
     },
     firstTraceAt: null,

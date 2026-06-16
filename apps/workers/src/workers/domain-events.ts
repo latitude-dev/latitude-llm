@@ -305,6 +305,13 @@ export const createDomainEventsWorker = ({
     // applied automatically below because both events are on the whitelist.
     OrganizationCreated: () => Effect.void,
 
+    SampleProjectCreated: (event) =>
+      pub.publish("projects", "seedDemo", event.payload, {
+        dedupeKey: `projects:seed-demo:${event.payload.projectId}`,
+        attempts: 10,
+        backoff: { type: "exponential", delayMs: 1_000 },
+      }),
+
     ProjectCreated: (event) =>
       pub.publish("projects", "provision", event.payload, {
         dedupeKey: `projects:provision:${event.payload.projectId}`,

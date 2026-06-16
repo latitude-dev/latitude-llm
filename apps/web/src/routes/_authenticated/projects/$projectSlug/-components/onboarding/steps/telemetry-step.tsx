@@ -10,14 +10,16 @@ export function Left({
   stackChoice,
   traceReceived,
   projectSlug,
+  sampleProjectSlug,
   onBack,
-  onSkip,
+  onOpenSampleProject,
 }: {
   readonly stackChoice: StackChoice | null
   readonly traceReceived: boolean
   readonly projectSlug: string
+  readonly sampleProjectSlug: string | undefined
   readonly onBack: () => void
-  readonly onSkip: () => void
+  readonly onOpenSampleProject: () => void
 }) {
   const isProductionAgent = stackChoice === "production-agent"
   const heading = isProductionAgent
@@ -56,9 +58,11 @@ export function Left({
           <Button variant="outline" onClick={onBack}>
             Back
           </Button>
-          <Button variant="ghost" onClick={onSkip}>
-            Skip for now
-          </Button>
+          {sampleProjectSlug ? (
+            <Button variant="ghost" onClick={onOpenSampleProject}>
+              Explore sample project
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>

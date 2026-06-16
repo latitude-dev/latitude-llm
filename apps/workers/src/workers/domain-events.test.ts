@@ -215,6 +215,34 @@ describe("domain-events dispatcher", () => {
     expect(published.some((p) => p.queue === "posthog-analytics")).toBe(true)
   })
 
+  it("routes SampleProjectCreated to the demo seed project task", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const payload = {
+      organizationId: "org-1",
+      projectId: "sample-1",
+      queueAssigneeUserIds: ["user-1"],
+      apiKeyId: "key-1",
+      timelineAnchorIso: "2026-06-16T00:00:00.000Z",
+    }
+    const envelope = makeEnvelope("SampleProjectCreated", payload, "org-1")
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    const seedDemoPublish = published.find((p) => p.queue === "projects" && p.task === "seedDemo")
+    expect(seedDemoPublish).toMatchObject({
+      queue: "projects",
+      task: "seedDemo",
+      payload,
+      options: {
+        dedupeKey: "projects:seed-demo:sample-1",
+        attempts: 10,
+        backoff: { type: "exponential", delayMs: 1_000 },
+      },
+    })
+    expect(published.some((p) => p.queue === "posthog-analytics")).toBe(true)
+  })
+
   it("fails on unhandled events", async () => {
     const { consumer } = setupDispatcher()
 
