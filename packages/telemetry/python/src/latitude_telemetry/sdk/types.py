@@ -23,6 +23,7 @@ InstrumentationName = Literal[
     "aleph_alpha",
     "crewai",
     "dspy",
+    "google_adk",
     "google_generativeai",
     "groq",
     "haystack",

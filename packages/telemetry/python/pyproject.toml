@@ -1,6 +1,6 @@
 [project]
 name = "latitude-telemetry"
-version = "3.1.0"
+version = "3.2.0"
 description = "Latitude Telemetry for Python"
 authors = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
 maintainers = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
@@ -15,13 +15,14 @@ dependencies = [
     "opentelemetry-sdk==1.38.0",
     "opentelemetry-exporter-otlp-proto-http==1.38.0",
     "opentelemetry-semantic-conventions-ai==0.4.13",
-    "openinference-semantic-conventions==0.1.25",
+    "openinference-semantic-conventions==0.1.30",
     "opentelemetry-instrumentation-alephalpha==0.50.1",
     "opentelemetry-instrumentation-anthropic==0.50.1",
     "opentelemetry-instrumentation-bedrock==0.50.1",
     "opentelemetry-instrumentation-cohere==0.50.1",
     "opentelemetry-instrumentation-crewai==0.50.1",
     "openinference-instrumentation-dspy==0.1.33",
+    "openinference-instrumentation-google-adk==0.1.15",
     "opentelemetry-instrumentation-google-generativeai==0.50.1",
     "opentelemetry-instrumentation-groq==0.50.1",
     "opentelemetry-instrumentation-haystack==0.50.1",

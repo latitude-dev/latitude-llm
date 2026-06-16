@@ -102,6 +102,7 @@
             "pages": [
               "telemetry/frameworks/vercel-ai-sdk",
               "telemetry/frameworks/openai-agents",
+              "telemetry/frameworks/google-adk",
               "telemetry/frameworks/langchain",
               "telemetry/frameworks/llamaindex",
               "telemetry/frameworks/mastra",

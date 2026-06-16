@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-06-16
+
+### Added
+
+- **Google ADK (Agent Development Kit) auto-instrumentation** — new `"google_adk"` instrumentation key wires `openinference-instrumentation-google-adk` (Arize OpenInference) into the SDK. Spans cover agent runs, model generations, and tool calls. Pass `instrumentations={"google_adk": google.adk}` to `Latitude(...)` and install the `google-adk` package in your project.
+
+### Changed
+
+- Bumped `openinference-semantic-conventions` `0.1.25` → `0.1.30` (required by the Google ADK instrumentor), which transitively bumps the shared `openinference-instrumentation` `0.1.43` → `0.1.53` used by the dspy, litellm, and openai-agents instrumentations.
+
 ## [3.1.0] - 2026-06-12
 
 ### Added

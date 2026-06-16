@@ -83,6 +83,7 @@ uv add llama-index llama-index-llms-openai
 uv add haystack-ai
 uv add dspy-ai
 uv add crewai
+uv add google-adk
 ```
 
 4. Run an example:
@@ -99,6 +100,7 @@ uv run python examples/test_openai.py
 | ------------ | ---------------------- | ---------------------------------------- |
 | OpenAI       | `test_openai.py`        | `openai`                                 |
 | OpenAI Agents | `test_openai_agents.py` | `openai-agents`                          |
+| Google ADK    | `test_google_adk.py`   | `google-adk`                             |
 | Anthropic    | `test_anthropic.py`    | `anthropic`                              |
 | Groq         | `test_groq.py`         | `groq`                                   |
 | Mistral      | `test_mistral.py`      | `mistralai`                              |

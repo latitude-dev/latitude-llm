@@ -1,0 +1,132 @@
+---
+title: Google ADK
+description: Connect your Google Agent Development Kit (ADK) application to Latitude for observability.
+---
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses the **Google Agent Development Kit (ADK)** (`google-adk` for Python).
+
+Latitude includes dedicated instrumentation for Google ADK, so agent runs, model generations, and tool calls appear as traces.
+
+<Check>
+  You'll keep calling Google ADK exactly as you do today. Telemetry observes
+  agent runs, model calls, and tool calls as they happen.
+</Check>
+
+<Note>
+  Google ADK instrumentation is available in the **Python** SDK only.
+</Note>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A project that uses **Google ADK** (`google-adk`)
+- A **Gemini API key** (set as `GOOGLE_API_KEY`)
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    <CodeGroup>
+      ```bash pip
+      pip install latitude-telemetry google-adk
+      ```
+
+      ```bash uv
+      uv add latitude-telemetry google-adk
+      ```
+
+      ```bash poetry
+      poetry add latitude-telemetry google-adk
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Initialize and use">
+    ```python
+    import asyncio
+
+    import google.adk
+    from google.adk.agents import Agent
+    from google.adk.runners import InMemoryRunner
+    from google.genai import types
+
+    from latitude_telemetry import Latitude, capture
+
+    latitude = Latitude(
+        api_key="your-api-key",
+        project="your-project-slug",
+        instrumentations={"google_adk": google.adk},
+    )
+
+
+    def get_weather(city: str) -> dict:
+        """Returns the current weather for a city."""
+        return {"status": "success", "report": f"The weather in {city} is sunny."}
+
+
+    agent = Agent(
+        name="weather_agent",
+        model="gemini-2.5-flash",
+        description="Agent that answers weather questions using tools.",
+        instruction="Answer weather questions using get_weather.",
+        tools=[get_weather],
+    )
+
+
+    async def weather_agent_run():
+        runner = InMemoryRunner(agent=agent, app_name="weather_app")
+        await runner.session_service.create_session(
+            app_name="weather_app",
+            user_id="user_123",
+            session_id="session_abc",
+        )
+
+        async for event in runner.run_async(
+            user_id="user_123",
+            session_id="session_abc",
+            new_message=types.Content(
+                role="user",
+                parts=[types.Part(text="What's the weather in Barcelona?")],
+            ),
+        ):
+            if event.is_final_response() and event.content and event.content.parts:
+                return event.content.parts[0].text
+
+
+    capture("weather-agent-run", lambda: asyncio.run(weather_agent_run()))
+
+    latitude.shutdown()
+    ```
+  </Step>
+
+</Steps>
+
+---
+
+## What you get
+
+Each agent run shows up as a trace with nested spans:
+
+- **Agent spans** — agent name, instructions, and configured tools
+- **Generation spans** — model, input/output messages, and token usage
+- **Tool spans** — tool calls with input arguments and output
+
+Wrap a request or job with `capture()` to attach a `user_id`, `session_id`, `tags`, or `metadata` to every span produced inside.
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each agent run shows the full hierarchy of agent → generation → tool calls
+3. Token usage and latency are aggregated at every level
