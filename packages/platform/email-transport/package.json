@@ -15,7 +15,7 @@
     "@domain/email": "workspace:*",
     "@platform/env": "workspace:*",
     "effect": "catalog:",
-    "nodemailer": "8.0.6"
+    "nodemailer": "8.0.9"
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*",
