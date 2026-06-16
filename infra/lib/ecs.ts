@@ -331,7 +331,7 @@ function createTaskDefinition(
 
   // Resource allocation for Datadog Agent sidecar container
   const DATADOG_AGENT_CPU = 256
-  const DATADOG_AGENT_MEMORY = 512
+  const DATADOG_AGENT_MEMORY = 256
 
   const protocol = "https"
   const webUrl = `${protocol}://${config.domains.web}`
