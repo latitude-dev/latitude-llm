@@ -2,7 +2,6 @@ import { Button, CodeBlock, DetailSection, DetailSummary, Icon, Text } from "@re
 import { Link, useParams } from "@tanstack/react-router"
 import { ArrowDownRightIcon, ArrowUpRightIcon, WrenchIcon } from "lucide-react"
 import { useMemo } from "react"
-import { useHasFeatureFlag } from "../../../../../../../../../domains/feature-flags/feature-flags.collection.ts"
 import type { SpanDetailRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
 import { JsonBlock } from "./helpers.tsx"
 
@@ -26,8 +25,7 @@ export function ToolExecutionSection({ span }: { readonly span: SpanDetailRecord
   const parsedOutput = useMemo(() => tryParseJson(span.toolOutput), [span.toolOutput])
   const toolName = span.toolName || span.name
   const { projectSlug } = useParams({ strict: false })
-  const toolsEnabled = useHasFeatureFlag("tools")
-  const showToolLink = toolsEnabled && Boolean(span.toolName) && typeof projectSlug === "string"
+  const showToolLink = Boolean(span.toolName) && typeof projectSlug === "string"
 
   return (
     <>

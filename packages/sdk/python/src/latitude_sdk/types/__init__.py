@@ -146,10 +146,13 @@ if typing.TYPE_CHECKING:
     from .paginated_monitors import PaginatedMonitors
     from .paginated_projects import PaginatedProjects
     from .paginated_saved_searches import PaginatedSavedSearches
+    from .paginated_tool_calls import PaginatedToolCalls
     from .paginated_trace_annotations import PaginatedTraceAnnotations
     from .paginated_traces import PaginatedTraces
     from .project import Project
     from .project_settings import ProjectSettings
+    from .recent_tool_call import RecentToolCall
+    from .recent_tool_call_status_code import RecentToolCallStatusCode
     from .saved_search import SavedSearch
     from .score_response import ScoreResponse, ScoreResponse_Custom, ScoreResponse_Evaluation
     from .span import Span
@@ -158,7 +161,25 @@ if typing.TYPE_CHECKING:
     from .span_detail_status_code import SpanDetailStatusCode
     from .span_kind import SpanKind
     from .span_status_code import SpanStatusCode
+    from .tool_call_histogram_bucket import ToolCallHistogramBucket
+    from .tool_co_occurrence_response import ToolCoOccurrenceResponse
+    from .tool_co_occurrence_row import ToolCoOccurrenceRow
+    from .tool_context_breakdown_response import ToolContextBreakdownResponse
+    from .tool_context_breakdown_row import ToolContextBreakdownRow
     from .tool_definition import ToolDefinition
+    from .tool_definition_detail import ToolDefinitionDetail
+    from .tool_definition_detail_definition import ToolDefinitionDetailDefinition
+    from .tool_detail_response import ToolDetailResponse
+    from .tool_error_breakdown_response import ToolErrorBreakdownResponse
+    from .tool_error_breakdown_row import ToolErrorBreakdownRow
+    from .tool_histogram_response import ToolHistogramResponse
+    from .tool_parameter_stat import ToolParameterStat
+    from .tool_parameter_stats_response import ToolParameterStatsResponse
+    from .tool_parameter_value_stat import ToolParameterValueStat
+    from .tool_summary import ToolSummary
+    from .tool_usage_metrics import ToolUsageMetrics
+    from .tools_analytics_response import ToolsAnalyticsResponse
+    from .tools_analytics_totals import ToolsAnalyticsTotals
     from .trace import Trace
     from .trace_analytics_bucket import TraceAnalyticsBucket
     from .trace_analytics_cost import TraceAnalyticsCost
@@ -317,10 +338,13 @@ _dynamic_imports: typing.Dict[str, str] = {
     "PaginatedMonitors": ".paginated_monitors",
     "PaginatedProjects": ".paginated_projects",
     "PaginatedSavedSearches": ".paginated_saved_searches",
+    "PaginatedToolCalls": ".paginated_tool_calls",
     "PaginatedTraceAnnotations": ".paginated_trace_annotations",
     "PaginatedTraces": ".paginated_traces",
     "Project": ".project",
     "ProjectSettings": ".project_settings",
+    "RecentToolCall": ".recent_tool_call",
+    "RecentToolCallStatusCode": ".recent_tool_call_status_code",
     "SavedSearch": ".saved_search",
     "ScoreResponse": ".score_response",
     "ScoreResponse_Custom": ".score_response",
@@ -331,7 +355,25 @@ _dynamic_imports: typing.Dict[str, str] = {
     "SpanDetailStatusCode": ".span_detail_status_code",
     "SpanKind": ".span_kind",
     "SpanStatusCode": ".span_status_code",
+    "ToolCallHistogramBucket": ".tool_call_histogram_bucket",
+    "ToolCoOccurrenceResponse": ".tool_co_occurrence_response",
+    "ToolCoOccurrenceRow": ".tool_co_occurrence_row",
+    "ToolContextBreakdownResponse": ".tool_context_breakdown_response",
+    "ToolContextBreakdownRow": ".tool_context_breakdown_row",
     "ToolDefinition": ".tool_definition",
+    "ToolDefinitionDetail": ".tool_definition_detail",
+    "ToolDefinitionDetailDefinition": ".tool_definition_detail_definition",
+    "ToolDetailResponse": ".tool_detail_response",
+    "ToolErrorBreakdownResponse": ".tool_error_breakdown_response",
+    "ToolErrorBreakdownRow": ".tool_error_breakdown_row",
+    "ToolHistogramResponse": ".tool_histogram_response",
+    "ToolParameterStat": ".tool_parameter_stat",
+    "ToolParameterStatsResponse": ".tool_parameter_stats_response",
+    "ToolParameterValueStat": ".tool_parameter_value_stat",
+    "ToolSummary": ".tool_summary",
+    "ToolUsageMetrics": ".tool_usage_metrics",
+    "ToolsAnalyticsResponse": ".tools_analytics_response",
+    "ToolsAnalyticsTotals": ".tools_analytics_totals",
     "Trace": ".trace",
     "TraceAnalyticsBucket": ".trace_analytics_bucket",
     "TraceAnalyticsCost": ".trace_analytics_cost",
@@ -518,10 +560,13 @@ __all__ = [
     "PaginatedMonitors",
     "PaginatedProjects",
     "PaginatedSavedSearches",
+    "PaginatedToolCalls",
     "PaginatedTraceAnnotations",
     "PaginatedTraces",
     "Project",
     "ProjectSettings",
+    "RecentToolCall",
+    "RecentToolCallStatusCode",
     "SavedSearch",
     "ScoreResponse",
     "ScoreResponse_Custom",
@@ -532,7 +577,25 @@ __all__ = [
     "SpanDetailStatusCode",
     "SpanKind",
     "SpanStatusCode",
+    "ToolCallHistogramBucket",
+    "ToolCoOccurrenceResponse",
+    "ToolCoOccurrenceRow",
+    "ToolContextBreakdownResponse",
+    "ToolContextBreakdownRow",
     "ToolDefinition",
+    "ToolDefinitionDetail",
+    "ToolDefinitionDetailDefinition",
+    "ToolDetailResponse",
+    "ToolErrorBreakdownResponse",
+    "ToolErrorBreakdownRow",
+    "ToolHistogramResponse",
+    "ToolParameterStat",
+    "ToolParameterStatsResponse",
+    "ToolParameterValueStat",
+    "ToolSummary",
+    "ToolUsageMetrics",
+    "ToolsAnalyticsResponse",
+    "ToolsAnalyticsTotals",
     "Trace",
     "TraceAnalyticsBucket",
     "TraceAnalyticsCost",

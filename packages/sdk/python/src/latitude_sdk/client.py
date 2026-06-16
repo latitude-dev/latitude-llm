@@ -21,6 +21,7 @@ if typing.TYPE_CHECKING:
     from .projects.client import AsyncProjectsClient, ProjectsClient
     from .saved_searches.client import AsyncSavedSearchesClient, SavedSearchesClient
     from .scores.client import AsyncScoresClient, ScoresClient
+    from .tools.client import AsyncToolsClient, ToolsClient
     from .traces.client import AsyncTracesClient, TracesClient
 
 
@@ -93,6 +94,7 @@ class LatitudeApiClient:
         self._scores: typing.Optional[ScoresClient] = None
         self._annotations: typing.Optional[AnnotationsClient] = None
         self._traces: typing.Optional[TracesClient] = None
+        self._tools: typing.Optional[ToolsClient] = None
         self._saved_searches: typing.Optional[SavedSearchesClient] = None
         self._issues: typing.Optional[IssuesClient] = None
         self._incidents: typing.Optional[IncidentsClient] = None
@@ -134,6 +136,14 @@ class LatitudeApiClient:
 
             self._traces = TracesClient(client_wrapper=self._client_wrapper)
         return self._traces
+
+    @property
+    def tools(self):
+        if self._tools is None:
+            from .tools.client import ToolsClient  # noqa: E402
+
+            self._tools = ToolsClient(client_wrapper=self._client_wrapper)
+        return self._tools
 
     @property
     def saved_searches(self):
@@ -277,6 +287,7 @@ class AsyncLatitudeApiClient:
         self._scores: typing.Optional[AsyncScoresClient] = None
         self._annotations: typing.Optional[AsyncAnnotationsClient] = None
         self._traces: typing.Optional[AsyncTracesClient] = None
+        self._tools: typing.Optional[AsyncToolsClient] = None
         self._saved_searches: typing.Optional[AsyncSavedSearchesClient] = None
         self._issues: typing.Optional[AsyncIssuesClient] = None
         self._incidents: typing.Optional[AsyncIncidentsClient] = None
@@ -318,6 +329,14 @@ class AsyncLatitudeApiClient:
 
             self._traces = AsyncTracesClient(client_wrapper=self._client_wrapper)
         return self._traces
+
+    @property
+    def tools(self):
+        if self._tools is None:
+            from .tools.client import AsyncToolsClient  # noqa: E402
+
+            self._tools = AsyncToolsClient(client_wrapper=self._client_wrapper)
+        return self._tools
 
     @property
     def saved_searches(self):

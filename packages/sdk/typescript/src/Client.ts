@@ -12,6 +12,7 @@ import { OauthKeysClient } from "./api/resources/oauthKeys/client/Client.js";
 import { ProjectsClient } from "./api/resources/projects/client/Client.js";
 import { SavedSearchesClient } from "./api/resources/savedSearches/client/Client.js";
 import { ScoresClient } from "./api/resources/scores/client/Client.js";
+import { ToolsClient } from "./api/resources/tools/client/Client.js";
 import { TracesClient } from "./api/resources/traces/client/Client.js";
 import type { BaseClientOptions, BaseRequestOptions } from "./BaseClient.js";
 import { type NormalizedClientOptionsWithAuth, normalizeClientOptionsWithAuth } from "./BaseClient.js";
@@ -29,6 +30,7 @@ export class LatitudeApiClient {
     protected _scores: ScoresClient | undefined;
     protected _annotations: AnnotationsClient | undefined;
     protected _traces: TracesClient | undefined;
+    protected _tools: ToolsClient | undefined;
     protected _savedSearches: SavedSearchesClient | undefined;
     protected _issues: IssuesClient | undefined;
     protected _incidents: IncidentsClient | undefined;
@@ -57,6 +59,10 @@ export class LatitudeApiClient {
 
     public get traces(): TracesClient {
         return (this._traces ??= new TracesClient(this._options));
+    }
+
+    public get tools(): ToolsClient {
+        return (this._tools ??= new ToolsClient(this._options));
     }
 
     public get savedSearches(): SavedSearchesClient {

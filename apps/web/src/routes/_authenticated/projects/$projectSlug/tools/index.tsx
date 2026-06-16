@@ -1,8 +1,7 @@
-import { Icon, Input, Tabs, Text, useValueWithDefault } from "@repo/ui"
+import { Input, Tabs, useValueWithDefault } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
-import { CircleSlashIcon, LayoutGridIcon, LockIcon, SearchIcon, TriangleAlertIcon } from "lucide-react"
+import { CircleSlashIcon, LayoutGridIcon, SearchIcon, TriangleAlertIcon } from "lucide-react"
 import { useCallback, useMemo } from "react"
-import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { allToolsMonitorTarget } from "../../../../../domains/monitors/monitor-target.ts"
 import { useProjectTools, useToolCallHistogram } from "../../../../../domains/tools/tools.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
@@ -67,24 +66,8 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/tool
   staticData: {
     breadcrumb: ToolsBreadcrumb,
   },
-  component: ToolsPage,
+  component: ToolsPageContent,
 })
-
-function ToolsPage() {
-  const toolsEnabled = useHasFeatureFlag("tools")
-
-  if (!toolsEnabled) {
-    return (
-      <Layout>
-        <Layout.Content>
-          <FeatureFlagOffSplash />
-        </Layout.Content>
-      </Layout>
-    )
-  }
-
-  return <ToolsPageContent />
-}
 
 function ToolsPageContent() {
   const project = useRouteProject()
@@ -240,24 +223,5 @@ function ToolsPageContent() {
         </>
       )}
     </Layout>
-  )
-}
-
-function FeatureFlagOffSplash() {
-  return (
-    <div className="h-full w-full flex items-center justify-center p-8">
-      <div className="max-w-lg flex flex-col items-center gap-6 text-center">
-        <div className="h-14 w-14 rounded-xl bg-muted flex items-center justify-center">
-          <Icon icon={LockIcon} size="lg" color="foregroundMuted" />
-        </div>
-        <div className="flex flex-col items-center gap-2">
-          <Text.H3 centered>Tools aren't available yet</Text.H3>
-          <Text.H5 color="foregroundMuted" centered>
-            This feature is rolling out gradually. Reach out to support if you'd like early access for your
-            organization.
-          </Text.H5>
-        </div>
-      </div>
-    </div>
   )
 }
