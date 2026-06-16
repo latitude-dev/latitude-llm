@@ -223,55 +223,61 @@ function MonitorDetailPage() {
           }
         />
 
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6 pt-2">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {isLoading || !monitor ? (
-            <Skeleton className="h-48 w-full" />
+            <div className="p-6 pt-2">
+              <Skeleton className="h-48 w-full" />
+            </div>
           ) : (
             <>
-              <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
-                <Text.H6 color="foregroundMuted">Configuration</Text.H6>
-                <div className="flex flex-row flex-wrap content-start items-start gap-x-8 gap-y-4">
-                  <ConfigField label="Status">
-                    {muted ? <Status variant="neutral" label="Muted" /> : <Status variant="success" label="Live" />}
-                  </ConfigField>
-                  {description ? (
-                    <ConfigField label="Target">
-                      <Text.H5 color="foreground">{description.label}</Text.H5>
+              <div className="flex shrink-0 flex-col gap-4 p-6 pt-2">
+                <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
+                  <Text.H6 color="foregroundMuted">Configuration</Text.H6>
+                  <div className="flex flex-row flex-wrap content-start items-start gap-x-8 gap-y-4">
+                    <ConfigField label="Status">
+                      {muted ? <Status variant="neutral" label="Muted" /> : <Status variant="success" label="Live" />}
                     </ConfigField>
-                  ) : null}
-                  {alert ? (
-                    <ConfigField label="Trigger">
-                      <SeverityStatus
-                        severity={alert.severity}
-                        label={`${ALERT_INCIDENT_KIND_LABEL[alert.kind]} · ${alert.severity}`}
-                      />
+                    {description ? (
+                      <ConfigField label="Target">
+                        <Text.H5 color="foreground">{description.label}</Text.H5>
+                      </ConfigField>
+                    ) : null}
+                    {alert ? (
+                      <ConfigField label="Trigger">
+                        <SeverityStatus
+                          severity={alert.severity}
+                          label={`${ALERT_INCIDENT_KIND_LABEL[alert.kind]} · ${alert.severity}`}
+                        />
+                      </ConfigField>
+                    ) : null}
+                    <ConfigField label="Incidents">
+                      <Text.H5 color="foreground">{incidentStats ? formatCount(incidentStats.total) : "—"}</Text.H5>
                     </ConfigField>
-                  ) : null}
-                  <ConfigField label="Incidents">
-                    <Text.H5 color="foreground">{incidentStats ? formatCount(incidentStats.total) : "—"}</Text.H5>
-                  </ConfigField>
+                  </div>
+                  {monitor.description ? <Text.H6 color="foregroundMuted">{monitor.description}</Text.H6> : null}
                 </div>
-                {monitor.description ? <Text.H6 color="foregroundMuted">{monitor.description}</Text.H6> : null}
+
+                {target ? (
+                  <MonitorMetricChart
+                    projectId={project.id}
+                    projectSlug={projectSlug}
+                    monitor={monitor}
+                    fromMs={window.fromMs}
+                    toMs={window.toMs}
+                    bucketMs={window.bucketMs}
+                  />
+                ) : null}
               </div>
 
-              {target ? (
-                <MonitorMetricChart
-                  projectId={project.id}
-                  projectSlug={projectSlug}
-                  monitor={monitor}
-                  fromMs={window.fromMs}
-                  toMs={window.toMs}
-                  bucketMs={window.bucketMs}
-                />
-              ) : null}
-
-              <div className="flex min-w-0 flex-col gap-3">
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 px-6 pb-6">
                 <Text.H6 color="foregroundMuted">Incidents</Text.H6>
                 <MonitorIncidentsTable projectId={project.id} projectSlug={projectSlug} monitorId={monitor.id} />
               </div>
 
               {target ? (
-                <MonitorMatchingTraces projectSlug={projectSlug} projectId={project.id} target={target} />
+                <div className="shrink-0 px-6 pb-6">
+                  <MonitorMatchingTraces projectSlug={projectSlug} projectId={project.id} target={target} />
+                </div>
               ) : null}
             </>
           )}
