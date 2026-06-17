@@ -1,4 +1,3 @@
-import { hasFeatureFlagUseCase } from "@domain/feature-flags"
 import {
   cascadeSourceDeletionUseCase,
   checkMetricMonitorsUseCase,
@@ -14,7 +13,6 @@ import type { RedisClient } from "@platform/cache-redis"
 import { type ClickHouseClient, MetricSeriesReaderLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   AlertIncidentRepositoryLive,
-  FeatureFlagRepositoryLive,
   MonitorRepositoryLive,
   OutboxEventWriterLive,
   type PostgresClient,
@@ -37,14 +35,11 @@ interface MonitorsDeps {
   redisClient?: RedisClient
 }
 
-// Feature flag + saved-search resolution + incident writes all live on Postgres;
-// the firing scan reads counts from ClickHouse (provided per-handler below).
 const checkRepoLayer = Layer.mergeAll(
   MonitorRepositoryLive,
   AlertIncidentRepositoryLive,
   OutboxEventWriterLive,
   SavedSearchRepositoryLive,
-  FeatureFlagRepositoryLive,
 )
 
 export const createMonitorsWorker = ({
@@ -61,11 +56,8 @@ export const createMonitorsWorker = ({
   const rdClient = redisClient ?? getRedisClient()
 
   consumer.subscribe("monitors", {
-    // Firing only runs for flag-on orgs (belt-and-suspenders — flag-off orgs can't create these monitors).
     checkSavedSearchMonitors: (payload) =>
       Effect.gen(function* () {
-        const enabled = yield* hasFeatureFlagUseCase({ identifier: "monitors" })
-        if (!enabled) return { evaluated: 0, failed: 0 }
         // Both monitor families ride the same trigger/throttle: saved-search-sourced and
         // unified target-on-monitor (tool/user/raw-stream). Isolate them so a list-query
         // failure in one family can't starve the other on this tick.

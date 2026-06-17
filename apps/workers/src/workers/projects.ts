@@ -34,9 +34,7 @@ export const createProjectsWorker = ({ consumer, postgresClient }: ProjectsDeps)
           }),
         )
 
-        // System monitors are provisioned for every project regardless of the
-        // `monitors` flag: the rows are inert until firing/UI gates open, and
-        // provisioning up-front makes the eventual flag flip seamless.
+        // System monitors are provisioned for every project so issue incidents can resolve their monitor-backed alert configuration immediately.
         const monitors = yield* Effect.promise(() =>
           provisionSystemMonitors({
             organizationId: payload.organizationId,

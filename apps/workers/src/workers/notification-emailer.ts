@@ -1,6 +1,5 @@
 import type { RenderedEmail } from "@domain/email"
 import { NOTIFICATION_EMAIL_RENDERERS, type NotificationEmailRenderContext, sendEmail } from "@domain/email"
-import type { FeatureFlagRepository } from "@domain/feature-flags"
 import type { IssueRepository } from "@domain/issues"
 import {
   type NotificationEmailRenderer,
@@ -14,7 +13,6 @@ import { NotificationId, OrganizationId, type SqlClient } from "@domain/shared"
 import type { WrappedReportRepository } from "@domain/spans"
 import type { UserRepository } from "@domain/users"
 import {
-  FeatureFlagRepositoryLive,
   IssueRepositoryLive,
   NotificationRepositoryLive,
   OrganizationRepositoryLive,
@@ -60,7 +58,6 @@ const rendererLayer = Layer.mergeAll(
   SavedSearchRepositoryLive,
   UserRepositoryLive,
   WrappedReportRepositoryLive,
-  FeatureFlagRepositoryLive,
 )
 
 const resolveWebAppUrl = (): string => {
@@ -94,12 +91,7 @@ export const createNotificationEmailerWorker = ({ consumer }: NotificationEmaile
   // `Effect.suspend` for TS's call-signature narrowing, so widen the
   // dispatch result to the layer's superset and let `Effect.provide`
   // strip everything except `SqlClient` (the boundary contract).
-  type RendererSupersetR =
-    | IssueRepository
-    | UserRepository
-    | WrappedReportRepository
-    | FeatureFlagRepository
-    | SqlClient
+  type RendererSupersetR = IssueRepository | UserRepository | WrappedReportRepository | SqlClient
   const renderEmailAdapter: NotificationEmailRenderer = ({
     notificationId,
     notificationCreatedAt,

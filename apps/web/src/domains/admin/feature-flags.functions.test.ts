@@ -7,7 +7,7 @@ import {
 
 describe("adminFeatureFlagIdentifierInputSchema", () => {
   it("accepts a known feature flag identifier", () => {
-    expect(adminFeatureFlagIdentifierInputSchema.safeParse({ identifier: "monitors" }).success).toBe(true)
+    expect(adminFeatureFlagIdentifierInputSchema.safeParse({ identifier: "sso" }).success).toBe(true)
   })
 
   it("rejects unknown identifiers", () => {
@@ -34,7 +34,7 @@ describe("adminOrganizationFeatureFlagMutationInputSchema", () => {
     expect(
       adminOrganizationFeatureFlagMutationInputSchema.safeParse({
         organizationId: "org-123",
-        identifier: "monitors",
+        identifier: "sso",
       }).success,
     ).toBe(true)
   })
@@ -50,6 +50,6 @@ describe("adminOrganizationFeatureFlagMutationInputSchema", () => {
 
   it("rejects missing fields", () => {
     expect(adminOrganizationFeatureFlagMutationInputSchema.safeParse({ organizationId: "org-123" }).success).toBe(false)
-    expect(adminOrganizationFeatureFlagMutationInputSchema.safeParse({ identifier: "monitors" }).success).toBe(false)
+    expect(adminOrganizationFeatureFlagMutationInputSchema.safeParse({ identifier: "sso" }).success).toBe(false)
   })
 })
