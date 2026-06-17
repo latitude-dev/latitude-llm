@@ -6,7 +6,7 @@ Monitors live in `@domain/monitors`. The shared enums (`AlertIncidentKind`, sour
 
 Related docs:
 
-- [issues.md](./issues.md) — issue lifecycle events feed the `issue.*` alert kinds; the seasonal escalation detector is shared.
+- [signals.md](./signals.md) — issue lifecycle events feed the `issue.*` alert kinds; the seasonal escalation detector is shared.
 - [reliability.md](./reliability.md) — the cross-domain reliability loop that produces the scores and issues monitors watch.
 - [notifications.md](./notifications.md) — incidents drive notifications; monitors set `monitor_alert_id` on the incident and (optionally) mute it, but own nothing else in that pipeline.
 
@@ -430,5 +430,5 @@ Tests follow the repository's layered Vitest approach (see the testing skill). T
 
 - Design spec: `specs/monitors.md` (decisions, trade-offs, rollout history).
 - [notifications.md](./notifications.md) — the incident → notification pipeline monitors feed into.
-- [issues.md](./issues.md) and [reliability.md](./reliability.md) — the issue lifecycle and seasonal detector behind the `issue.*` kinds.
+- [signals.md](./signals.md) and [reliability.md](./reliability.md) — the issue lifecycle and seasonal detector behind the `issue.*` kinds.
 - Skills: `.agents/skills/async-jobs-and-events/SKILL.md` (queues/throttles), `.agents/skills/database-postgres/SKILL.md` (no-FK + RLS), `.agents/skills/database-clickhouse/SKILL.md` (the match reader queries).
