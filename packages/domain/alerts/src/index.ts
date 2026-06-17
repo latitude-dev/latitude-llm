@@ -17,8 +17,8 @@ export {
   alertSeveritySchema,
   entrySignalsSnapshotSchema,
   incidentEntrySignalsSchema,
-  isSignalEscalationEntrySignals,
   isSavedSearchEntrySignals,
+  isSignalEscalationEntrySignals,
   SEVERITY_FOR_KIND,
   savedSearchEntrySignalsSchema,
 } from "./entities/alert-incident.ts"

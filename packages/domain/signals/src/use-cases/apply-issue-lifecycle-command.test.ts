@@ -5,7 +5,7 @@ import {
   emptyEvaluationAlignment,
 } from "@domain/evaluations"
 import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
-import { EvaluationId, SignalId, OrganizationId, SettingsReader, SqlClient } from "@domain/shared"
+import { EvaluationId, OrganizationId, SettingsReader, SignalId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -95,7 +95,13 @@ const createFakeEvaluationRepository = (seed: readonly Evaluation[] = []) => {
           limit: evaluations.size,
           offset: 0,
         })),
-      listBySignalIds: ({ projectId, signalIds }: { readonly projectId: string; readonly signalIds: readonly string[] }) =>
+      listBySignalIds: ({
+        projectId,
+        signalIds,
+      }: {
+        readonly projectId: string
+        readonly signalIds: readonly string[]
+      }) =>
         Effect.sync(() => ({
           items: [...evaluations.values()].filter(
             (evaluation) => evaluation.projectId === projectId && signalIds.includes(evaluation.signalId),
@@ -124,7 +130,11 @@ const createFakeEvaluationRepository = (seed: readonly Evaluation[] = []) => {
           softDeleteBySignalIdCalls.push({ projectId, signalId })
 
           for (const evaluation of evaluations.values()) {
-            if (evaluation.projectId === projectId && evaluation.signalId === signalId && evaluation.deletedAt === null) {
+            if (
+              evaluation.projectId === projectId &&
+              evaluation.signalId === signalId &&
+              evaluation.deletedAt === null
+            ) {
               evaluations.set(EvaluationId(evaluation.id), {
                 ...evaluation,
                 deletedAt: new Date("2026-04-20T00:00:00.000Z"),

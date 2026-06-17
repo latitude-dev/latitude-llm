@@ -1,5 +1,5 @@
-import type { DimensionPattern } from "@domain/signals"
 import type { SignalDimension } from "@domain/scores"
+import type { DimensionPattern } from "@domain/signals"
 import { ProviderIcon, Skeleton, Status, TagBadge, Text, Tooltip } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { WrenchIcon } from "lucide-react"

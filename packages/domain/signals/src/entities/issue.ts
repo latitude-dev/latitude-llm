@@ -1,5 +1,5 @@
 import { scoreSourceSchema } from "@domain/scores"
-import { cuidSchema, signalIdSchema, SLUG_MAX_LENGTH } from "@domain/shared"
+import { cuidSchema, SLUG_MAX_LENGTH, signalIdSchema } from "@domain/shared"
 import { z } from "zod"
 import { SIGNAL_NAME_MAX_LENGTH, SIGNAL_PRIORITIES, SIGNAL_SOURCES, SIGNAL_STATES } from "../constants.ts"
 

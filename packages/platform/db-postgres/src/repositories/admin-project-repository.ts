@@ -6,10 +6,10 @@ import {
   type ProjectSignalStateSnapshot,
 } from "@domain/admin"
 import {
-  SignalId,
   NotFoundError,
   type ProjectId,
   type ProjectSettings,
+  SignalId,
   SqlClient,
   type SqlClientShape,
 } from "@domain/shared"
@@ -18,8 +18,8 @@ import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { organizations } from "../schema/better-auth.ts"
 import { evaluations } from "../schema/evaluations.ts"
-import { signals } from "../schema/signals.ts"
 import { projects } from "../schema/projects.ts"
+import { signals } from "../schema/signals.ts"
 
 /**
  * Live layer for the backoffice project-detail port.

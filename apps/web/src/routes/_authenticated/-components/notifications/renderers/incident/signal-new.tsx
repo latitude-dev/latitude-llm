@@ -1,9 +1,9 @@
 import { ShieldAlertIcon } from "lucide-react"
 import { BaseNotification } from "../../base-notification.tsx"
-import { useSignalUrl, useLiveSignalSummary } from "./-incident-helpers.ts"
+import { useLiveSignalSummary, useSignalUrl } from "./-incident-helpers.ts"
 import type { IncidentRendererProps } from "./index.tsx"
-import { SignalSummaryCard } from "./signal-summary-card.tsx"
 import { MonitorAttribution } from "./monitor-attribution.tsx"
+import { SignalSummaryCard } from "./signal-summary-card.tsx"
 
 export function SignalNewNotification({ notification, payload }: IncidentRendererProps<"event">) {
   const seenAt = notification.seenAt ? new Date(notification.seenAt) : undefined

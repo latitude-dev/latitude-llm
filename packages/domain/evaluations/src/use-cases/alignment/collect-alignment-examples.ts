@@ -1,5 +1,5 @@
 import { formatGenAIConversation } from "@domain/ai"
-import { BadRequestError, SignalId, OrganizationId, ProjectId } from "@domain/shared"
+import { BadRequestError, OrganizationId, ProjectId, SignalId } from "@domain/shared"
 import { TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import type { CollectedEvaluationAlignmentExamples, HydratedEvaluationAlignmentExample } from "../../alignment/types.ts"

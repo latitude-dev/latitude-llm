@@ -1,4 +1,3 @@
-import { deriveSignalLifecycleStates, SignalRepository } from "@domain/signals"
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import {
   type FilterSet,
@@ -11,6 +10,7 @@ import {
   TaxonomyClusterId,
   TraceId,
 } from "@domain/shared"
+import { deriveSignalLifecycleStates, SignalRepository } from "@domain/signals"
 import type {
   CohortSummary,
   Session,

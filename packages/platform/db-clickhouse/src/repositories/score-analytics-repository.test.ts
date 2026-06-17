@@ -1,6 +1,6 @@
 import type { ScoreAnalyticsOptions, ScoreAnalyticsRepositoryShape } from "@domain/scores"
 import { ScoreAnalyticsRepository } from "@domain/scores"
-import { type ChSqlClient, SignalId, OrganizationId, ProjectId, type ScoreId, SessionId, TraceId } from "@domain/shared"
+import { type ChSqlClient, OrganizationId, ProjectId, type ScoreId, SessionId, SignalId, TraceId } from "@domain/shared"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"

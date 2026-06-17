@@ -5,9 +5,9 @@ import {
   type EvaluationRepositoryShape,
   emptyEvaluationAlignment,
 } from "@domain/evaluations"
-import { type SignalOccurrenceAggregate, type SignalWindowMetric, ScoreAnalyticsRepository } from "@domain/scores"
+import { ScoreAnalyticsRepository, type SignalOccurrenceAggregate, type SignalWindowMetric } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
-import { ChSqlClient, EvaluationId, SignalId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { ChSqlClient, EvaluationId, OrganizationId, ProjectId, SignalId, SqlClient } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
@@ -1187,7 +1187,9 @@ describe("listSignalsUseCase", () => {
     const unsetSignal = makeSignal({ id: SignalId("c".repeat(24)), priority: null })
     const mediumSignal = makeSignal({ id: SignalId("d".repeat(24)), priority: "medium" })
     const highSignal = makeSignal({ id: SignalId("e".repeat(24)), priority: "high" })
-    const mixedPrioritySeed = [lowSignal, urgentSignal, unsetSignal, mediumSignal, highSignal].map((issue) => ({ issue }))
+    const mixedPrioritySeed = [lowSignal, urgentSignal, unsetSignal, mediumSignal, highSignal].map((issue) => ({
+      issue,
+    }))
 
     it("groups by priority urgent → high → medium → low → none regardless of the selected sort", async () => {
       const result = await runTriageList({ seeded: mixedPrioritySeed })

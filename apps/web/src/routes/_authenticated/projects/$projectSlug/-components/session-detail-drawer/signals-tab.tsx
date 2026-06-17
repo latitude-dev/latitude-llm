@@ -1,8 +1,8 @@
 import { InfiniteTable, type InfiniteTableColumn, type InfiniteTableSorting, Text } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { useMemo, useState } from "react"
-import { SignalLifecycleStatuses } from "../../../../../../components/signals/signal-lifecycle-statuses.tsx"
 import { getPrimaryLifecycleState } from "../../../../../../components/signals/lifecycle-formatters.ts"
+import { SignalLifecycleStatuses } from "../../../../../../components/signals/signal-lifecycle-statuses.tsx"
 import { useSessionSignals } from "../../../../../../domains/sessions/sessions.collection.ts"
 import type { SessionSignalRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
 

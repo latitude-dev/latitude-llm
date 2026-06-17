@@ -1,8 +1,8 @@
 import { Skeleton, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
-import { SignalLifecycleStatuses } from "../../../../../../../components/signals/signal-lifecycle-statuses.tsx"
 import { getPrimaryLifecycleState } from "../../../../../../../components/signals/lifecycle-formatters.ts"
+import { SignalLifecycleStatuses } from "../../../../../../../components/signals/signal-lifecycle-statuses.tsx"
 import { useUserSignals } from "../../../../../../../domains/end-users/end-users.collection.ts"
 import { formatAgoLabel } from "../../-components/user-formatters.ts"
 

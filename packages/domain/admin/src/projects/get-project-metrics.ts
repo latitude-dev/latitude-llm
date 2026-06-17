@@ -1,9 +1,9 @@
-import { type SignalId, type NotFoundError, OrganizationId, type ProjectId, type RepositoryError } from "@domain/shared"
+import { type NotFoundError, OrganizationId, type ProjectId, type RepositoryError, type SignalId } from "@domain/shared"
 import { Effect } from "effect"
 import type {
-  ProjectSignalLifecyclePoint,
   ProjectMetrics,
   ProjectMetricsActivityPoint,
+  ProjectSignalLifecyclePoint,
   ProjectTopSignal,
 } from "./project-metrics.ts"
 import {

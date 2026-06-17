@@ -13,13 +13,13 @@ export {
   adminProjectSettingsSchema,
 } from "./project-details.ts"
 export {
-  type ProjectSignalLifecyclePoint,
   type ProjectMetrics,
   type ProjectMetricsActivityPoint,
+  type ProjectSignalLifecyclePoint,
   type ProjectTopSignal,
-  projectSignalLifecyclePointSchema,
   projectMetricsActivityPointSchema,
   projectMetricsSchema,
+  projectSignalLifecyclePointSchema,
   projectTopSignalSchema,
 } from "./project-metrics.ts"
 export {

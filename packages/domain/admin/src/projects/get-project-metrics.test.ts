@@ -1,4 +1,4 @@
-import type { SignalId, OrganizationId, ProjectId } from "@domain/shared"
+import type { OrganizationId, ProjectId, SignalId } from "@domain/shared"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { composeSignalLifecycleTimeline, getProjectMetricsUseCase } from "./get-project-metrics.ts"
@@ -158,7 +158,9 @@ describe("getProjectMetricsUseCase", () => {
     const result = await Effect.runPromise(
       getProjectMetricsUseCase({ projectId: PROJECT_ID, now: NOW, windowDays: 5 }).pipe(
         Effect.provide(projectRepo({})),
-        Effect.provide(metricsRepo({ topSignals: [{ signalId: signalId("orphan"), occurrences: 1, lastSeenAt: NOW }] })),
+        Effect.provide(
+          metricsRepo({ topSignals: [{ signalId: signalId("orphan"), occurrences: 1, lastSeenAt: NOW }] }),
+        ),
       ),
     )
 

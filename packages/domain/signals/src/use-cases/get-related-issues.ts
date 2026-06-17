@@ -1,10 +1,10 @@
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import {
   type ChSqlClient,
-  SignalId,
   type OrganizationId,
   type ProjectId,
   type RepositoryError,
+  SignalId,
   type SqlClient,
 } from "@domain/shared"
 import { Effect } from "effect"

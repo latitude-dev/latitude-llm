@@ -1,4 +1,4 @@
-import { SignalId, ScoreId } from "@domain/shared"
+import { ScoreId, SignalId } from "@domain/shared"
 import {
   classifyTau2SeedTrajectory,
   TAU2_SEED_SIGNAL_FAMILIES,

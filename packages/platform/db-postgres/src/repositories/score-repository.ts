@@ -1,11 +1,11 @@
 import type { Score, ScoreListOptions, ScoreSource, TraceAnnotationCounts } from "@domain/scores"
-import { SIGNAL_FLAGGER_SLUG_SAMPLE_LIMIT, ScoreRepository, scoreSchema } from "@domain/scores"
+import { ScoreRepository, SIGNAL_FLAGGER_SLUG_SAMPLE_LIMIT, scoreSchema } from "@domain/scores"
 import {
-  type SignalId,
   NotFoundError,
   type ProjectId,
   type ScoreId,
   type SessionId,
+  type SignalId,
   type SpanId,
   SqlClient,
   type SqlClientShape,

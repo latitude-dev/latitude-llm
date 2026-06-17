@@ -78,7 +78,10 @@ describe("seed timeline helpers", () => {
     expect(combinationSignal?.resolvedDaysAgo).not.toBeNull()
 
     const combinationResolvedDaysAgo = combinationSignal?.resolvedDaysAgo ?? 0
-    const combinationCounts = countSignalOccurrencesByDay(SEED_COMBINATION_SIGNAL_ID, SEED_ADDITIONAL_SIGNAL_OCCURRENCES)
+    const combinationCounts = countSignalOccurrencesByDay(
+      SEED_COMBINATION_SIGNAL_ID,
+      SEED_ADDITIONAL_SIGNAL_OCCURRENCES,
+    )
 
     expect(
       [...combinationCounts.keys()].some(
@@ -109,7 +112,10 @@ describe("seed timeline helpers", () => {
     expect(installationSignal?.resolvedDaysAgo).not.toBeNull()
 
     const installationResolvedDaysAgo = installationSignal?.resolvedDaysAgo ?? 0
-    const installationCounts = countSignalOccurrencesByDay(SEED_INSTALLATION_SIGNAL_ID, SEED_ADDITIONAL_SIGNAL_OCCURRENCES)
+    const installationCounts = countSignalOccurrencesByDay(
+      SEED_INSTALLATION_SIGNAL_ID,
+      SEED_ADDITIONAL_SIGNAL_OCCURRENCES,
+    )
 
     expect(
       [...installationCounts.keys()].some(

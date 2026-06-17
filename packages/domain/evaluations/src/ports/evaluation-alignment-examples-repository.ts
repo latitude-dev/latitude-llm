@@ -1,8 +1,8 @@
 import {
-  type SignalId,
   type ProjectId,
   type RepositoryError,
   SessionId,
+  type SignalId,
   type SqlClient,
   scoreIdSchema,
   TraceId,

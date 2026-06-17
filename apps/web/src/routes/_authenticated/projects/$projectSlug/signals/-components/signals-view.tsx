@@ -16,9 +16,9 @@ import {
   SIGNAL_PRIORITY_META,
   type SignalPriorityGroupId,
 } from "../../../../../../components/signals/signal-priority-meta.tsx"
-import type { SignalRecord, SignalsListResultRecord } from "../../../../../../domains/signals/signals.functions.ts"
 import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
 import type { MemberRecord } from "../../../../../../domains/members/members.functions.ts"
+import type { SignalRecord, SignalsListResultRecord } from "../../../../../../domains/signals/signals.functions.ts"
 import {
   ListingLayout as Layout,
   listingLayoutIntrinsicScroll,

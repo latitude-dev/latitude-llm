@@ -10,10 +10,10 @@ import {
 import { Text } from "@repo/ui"
 import type { NotificationRecord } from "../../../../../../domains/notifications/notifications.functions.ts"
 import { BaseNotification } from "../../base-notification.tsx"
+import { SavedSearchIncidentNotification } from "./saved-search.tsx"
 import { SignalEscalatingNotification } from "./signal-escalating.tsx"
 import { SignalNewNotification } from "./signal-new.tsx"
 import { SignalRegressedNotification } from "./signal-regressed.tsx"
-import { SavedSearchIncidentNotification } from "./saved-search.tsx"
 
 /**
  * Notification kinds map to lifecycle events:

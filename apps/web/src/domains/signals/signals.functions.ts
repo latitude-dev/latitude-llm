@@ -1,6 +1,13 @@
 import { EvaluationRepository } from "@domain/evaluations"
 import { exportSelectionSchema } from "@domain/exports"
 import {
+  ScoreAnalyticsRepository,
+  ScoreRepository,
+  type SignalDimension,
+  type SignalEscalationThresholdBucket,
+} from "@domain/scores"
+import { OrganizationId, ProjectId, resolveSettings, SettingsReader, SignalId } from "@domain/shared"
+import {
   type ApplySignalLifecycleCommandResult,
   applySignalLifecycleCommandUseCase,
   buildHistogramBucketScaffold,
@@ -11,41 +18,34 @@ import {
   fillBuckets,
   getEscalationOccurrenceThreshold,
   getRelatedSignalsUseCase,
+  type ListSignalsResult,
+  listSignalsUseCase,
+  listSignalTracesUseCase,
+  type OrgSignalSearchItem,
+  rankDimensionValues,
   type Signal,
   type SignalListItem,
   SignalRepository,
+  searchOrgSignalsUseCase,
   signalAssigneeFilterSchema,
   signalLifecycleCommandSchema,
   signalPrioritySchema,
   signalsLifecycleGroupSchema,
   signalsSortDirectionSchema,
   signalsSortFieldSchema,
-  type ListSignalsResult,
-  listSignalsUseCase,
-  listSignalTracesUseCase,
-  type OrgSignalSearchItem,
-  rankDimensionValues,
-  searchOrgSignalsUseCase,
   TAG_AGGREGATION_FALLBACK_DAYS,
   updateSignalTriageUseCase,
 } from "@domain/signals"
-import {
-  type SignalDimension,
-  type SignalEscalationThresholdBucket,
-  ScoreAnalyticsRepository,
-  ScoreRepository,
-} from "@domain/scores"
-import { SignalId, OrganizationId, ProjectId, resolveSettings, SettingsReader } from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { AIEmbedLive, withAi } from "@platform/ai"
 import { ScoreAnalyticsRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   EvaluationRepositoryLive,
-  SignalRepositoryLive,
   MembershipRepositoryLive,
   OutboxEventWriterLive,
   ScoreRepositoryLive,
   SettingsReaderLive,
+  SignalRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"

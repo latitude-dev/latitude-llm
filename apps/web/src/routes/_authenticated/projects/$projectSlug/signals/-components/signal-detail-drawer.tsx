@@ -19,7 +19,7 @@ import {
 } from "../../-components/project-traces-table.tsx"
 import { TraceDetailDrawer } from "../../-components/trace-detail-drawer.tsx"
 import { SignalDrawerEvaluations } from "./signal-drawer-evaluations.tsx"
-import { formatSignalAgeAgoLabel, formatSeenAgeParts } from "./signal-formatters.ts"
+import { formatSeenAgeParts, formatSignalAgeAgoLabel } from "./signal-formatters.ts"
 import { SignalLifecycleStatuses } from "./signal-lifecycle-statuses.tsx"
 import { SignalTrendBar } from "./signal-trend-bar.tsx"
 

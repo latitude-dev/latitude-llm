@@ -1,6 +1,13 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import type {
   DimensionConditionalRate,
+  Score,
+  ScoreAggregate,
+  ScoreAnalyticsOptions,
+  ScoreAnalyticsTimeRange,
+  ScoreTrendBucket,
+  SessionScoreRollup,
+  SessionSignalRollup,
   SignalCoOccurrenceAggregate,
   SignalDimension,
   SignalDimensionComparison,
@@ -15,13 +22,6 @@ import type {
   SignalTraceSummary,
   SignalTrendSeries,
   SignalWindowMetric,
-  Score,
-  ScoreAggregate,
-  ScoreAnalyticsOptions,
-  ScoreAnalyticsTimeRange,
-  ScoreTrendBucket,
-  SessionSignalRollup,
-  SessionScoreRollup,
   TraceScoreRollup,
   UserSignalRollup,
 } from "@domain/scores"
@@ -33,9 +33,9 @@ import {
   type OrganizationId,
   type ProjectId,
   type ScoreId,
-  SignalId as toSignalId,
   toRepositoryError,
   SessionId as toSessionId,
+  SignalId as toSignalId,
   TraceId as toTraceId,
 } from "@domain/shared"
 import { normalizeCHString, parseCHDate } from "@repo/utils"

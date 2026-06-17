@@ -11,9 +11,9 @@ export type {
   IncidentSampleExcerpt,
   IncidentTrend,
   IncidentTrendMarker,
-  SignalAssignedPayload,
   Notification,
   NotificationKind,
+  SignalAssignedPayload,
   WrappedReportPayload,
 } from "./entities/notification.ts"
 export {
@@ -28,12 +28,12 @@ export {
   incidentTagsSchema,
   incidentTrendPointSchema,
   incidentTrendSchema,
-  signalAssignedPayloadSchema,
   NOTIFICATION_KIND_META,
   NOTIFICATION_KINDS,
   notificationKindSchema,
   notificationSchema,
   payloadSchemaFor,
+  signalAssignedPayloadSchema,
   wrappedReportPayloadSchema,
 } from "./entities/notification.ts"
 export { shouldSendEmail } from "./entities/notification-preferences.ts"
@@ -97,10 +97,10 @@ export type {
 } from "./use-cases/request-incident-notifications.ts"
 export { requestIncidentNotificationsUseCase } from "./use-cases/request-incident-notifications.ts"
 export type {
-  SignalAssignedNotificationRequest,
   RequestSignalAssignedNotificationsError,
   RequestSignalAssignedNotificationsInput,
   RequestSignalAssignedNotificationsResult,
+  SignalAssignedNotificationRequest,
 } from "./use-cases/request-issue-assigned-notifications.ts"
 export { requestSignalAssignedNotificationsUseCase } from "./use-cases/request-issue-assigned-notifications.ts"
 export type {

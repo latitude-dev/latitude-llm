@@ -8,7 +8,7 @@ import {
   resolveGenerationConfig,
 } from "@domain/ai"
 import { ScoreRepository, type ScoreSource } from "@domain/scores"
-import { SignalId, LATITUDE_TELEMETRY_PROJECT_SLUGS, ProjectId, type RepositoryError } from "@domain/shared"
+import { LATITUDE_TELEMETRY_PROJECT_SLUGS, ProjectId, type RepositoryError, SignalId } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
 import {
@@ -16,7 +16,10 @@ import {
   SIGNAL_DETAILS_MAX_OCCURRENCES,
   SIGNAL_NAME_MAX_LENGTH,
 } from "../constants.ts"
-import { SignalNotFoundForDetailsGenerationError, MissingSignalOccurrencesForDetailsGenerationError } from "../errors.ts"
+import {
+  MissingSignalOccurrencesForDetailsGenerationError,
+  SignalNotFoundForDetailsGenerationError,
+} from "../errors.ts"
 import { SignalRepository } from "../ports/issue-repository.ts"
 
 const collapseWhitespace = (text: string) => text.replace(/\s+/g, " ").trim()

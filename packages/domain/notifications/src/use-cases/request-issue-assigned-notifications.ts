@@ -1,14 +1,14 @@
-import { SignalRepository } from "@domain/signals"
 import {
   generateId,
-  type SignalId,
   NotificationId,
   type OrganizationId,
   type ProjectId,
   type RepositoryError,
+  type SignalId,
   type SqlClient,
   UserId,
 } from "@domain/shared"
+import { SignalRepository } from "@domain/signals"
 import { Effect } from "effect"
 import type { SignalAssignedPayload } from "../entities/notification.ts"
 import { buildIdempotencyKey } from "../helpers/idempotency-key.ts"

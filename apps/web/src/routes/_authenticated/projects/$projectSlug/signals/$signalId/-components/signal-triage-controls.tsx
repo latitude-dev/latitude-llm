@@ -1,9 +1,9 @@
 import { Icon, Select, type SelectOption, Text, useToast } from "@repo/ui"
+import { MemberSelector } from "../../../../../../../components/member-selector.tsx"
 import {
   SIGNAL_PRIORITY_META,
   type SignalPriorityGroupId,
 } from "../../../../../../../components/signals/signal-priority-meta.tsx"
-import { MemberSelector } from "../../../../../../../components/member-selector.tsx"
 import { useSignalDetail, useUpdateSignalTriage } from "../../../../../../../domains/signals/signals.collection.ts"
 import type { UpdateSignalTriageRecord } from "../../../../../../../domains/signals/signals.functions.ts"
 import { toUserMessage } from "../../../../../../../lib/errors.ts"

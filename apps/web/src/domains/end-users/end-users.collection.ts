@@ -7,8 +7,8 @@ import type {
   ProjectUsersPageRecord,
   UserActivityRecord,
   UserBehaviourRecord,
-  UserSignalRecord,
   UserProfileRecord,
+  UserSignalRecord,
   UsersOverviewRecord,
   UserUsageSliceRecord,
 } from "./end-users.functions.ts"

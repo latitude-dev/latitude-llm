@@ -1,7 +1,7 @@
-import type { SignalRepository } from "@domain/signals"
 import type { NOTIFICATION_KIND_META, NotificationKind, RenderNotificationEmailError } from "@domain/notifications"
 import type { SavedSearchRepository } from "@domain/saved-searches"
 import type { SqlClient } from "@domain/shared"
+import type { SignalRepository } from "@domain/signals"
 import type { WrappedReportRepository } from "@domain/spans"
 import type { UserRepository } from "@domain/users"
 import type { Effect } from "effect"

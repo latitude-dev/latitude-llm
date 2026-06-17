@@ -1,10 +1,10 @@
 import type {
-  SignalId,
   NotFoundError,
   ProjectId,
   RepositoryError,
   ScoreId,
   SessionId,
+  SignalId,
   SpanId,
   SqlClient,
   TraceId,

@@ -25,13 +25,13 @@ import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@
 import {
   CacheError,
   ExternalUserId,
-  SignalId,
   NotFoundError,
   OrganizationId,
   ProjectId,
   RepositoryError,
   SessionId,
   SettingsReader,
+  SignalId,
   SimulationId,
   SpanId,
   SqlClient,
@@ -277,7 +277,8 @@ function createUseCaseLayer(input: {
     input.scoreWriteLayer ?? createScoreWriteLayer({ scoreRepository: input.scoreRepository }),
     Layer.succeed(
       EvaluationSignalRepository,
-      input.signalRepository ?? createSignalRepository(() => Effect.die("Signal should not be loaded in this scenario")),
+      input.signalRepository ??
+        createSignalRepository(() => Effect.die("Signal should not be loaded in this scenario")),
     ),
     input.aiLayer ?? createFakeAI().layer,
     input.billingLayer ?? createBillingLayer(),

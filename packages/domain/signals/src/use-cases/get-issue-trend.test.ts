@@ -1,7 +1,7 @@
 import type { SignalOccurrenceBucket } from "@domain/scores"
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
-import { ChSqlClient, SignalId, OrganizationId, ProjectId } from "@domain/shared"
+import { ChSqlClient, OrganizationId, ProjectId, SignalId } from "@domain/shared"
 import { createFakeChSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"

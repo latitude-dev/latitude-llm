@@ -1,11 +1,3 @@
-import {
-  checkSignalEscalationUseCase,
-  type DiscoverSignalResult,
-  discoverSignalUseCase,
-  refreshSignalDetailsUseCase,
-  removeScoreFromSignalUseCase,
-  sweepEscalatingSignalsUseCase,
-} from "@domain/signals"
 import { resolveMonitorAlertsForSourceEventUseCase } from "@domain/monitors"
 import {
   type QueueConsumer,
@@ -16,6 +8,14 @@ import {
 } from "@domain/queue"
 import type { ScoreSource } from "@domain/scores"
 import { OrganizationId, ProjectId } from "@domain/shared"
+import {
+  checkSignalEscalationUseCase,
+  type DiscoverSignalResult,
+  discoverSignalUseCase,
+  refreshSignalDetailsUseCase,
+  removeScoreFromSignalUseCase,
+  sweepEscalatingSignalsUseCase,
+} from "@domain/signals"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import type { RedisClient } from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
@@ -23,12 +23,12 @@ import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-click
 import {
   AlertIncidentRepositoryLive,
   EvaluationRepositoryLive,
-  SignalRepositoryLive,
   MonitorRepositoryLive,
   OutboxEventWriterLive,
   type PostgresClient,
   ScoreRepositoryLive,
   SettingsReaderLive,
+  SignalRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
@@ -163,7 +163,9 @@ export const createSignalsWorker = async ({
           ),
         ),
         Effect.tapError((error) =>
-          Effect.sync(() => logger.error(`Escalation check failed for ${payload.projectId}/${payload.signalId}`, error)),
+          Effect.sync(() =>
+            logger.error(`Escalation check failed for ${payload.projectId}/${payload.signalId}`, error),
+          ),
         ),
         withTracing,
         Effect.asVoid,

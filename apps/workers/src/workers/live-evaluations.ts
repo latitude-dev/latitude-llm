@@ -20,11 +20,11 @@ import {
   BillingUsagePeriodRepositoryLive,
   EvaluationRepositoryLive,
   FeatureFlagRepositoryLive,
-  SignalRepositoryLive,
   OutboxEventWriterLive,
   type PostgresClient,
   ScoreRepositoryLive,
   SettingsReaderLive,
+  SignalRepositoryLive,
   StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"

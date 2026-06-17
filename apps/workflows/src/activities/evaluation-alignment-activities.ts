@@ -26,9 +26,9 @@ import {
   BillingUsagePeriodRepositoryLive,
   EvaluationAlignmentExamplesRepositoryLive,
   EvaluationRepositoryLive,
-  SignalRepositoryLive,
   OutboxEventWriterLive,
   SettingsReaderLive,
+  SignalRepositoryLive,
   StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"

@@ -6,16 +6,16 @@ import {
   type UpdateAlertIncidentExitDwellInput,
 } from "@domain/alerts"
 import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
-import { type SignalEscalationSignals, ScoreAnalyticsRepository } from "@domain/scores"
+import { ScoreAnalyticsRepository, type SignalEscalationSignals } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
 import {
   AlertIncidentId,
   ChSqlClient,
-  SignalId,
   OrganizationId,
   ProjectId as ProjectIdValue,
   type ProjectSettings,
   SettingsReader,
+  SignalId,
   SqlClient,
   type SqlClientShape,
 } from "@domain/shared"

@@ -2,18 +2,18 @@ import {
   deriveSignalAlignmentState,
   type Evaluation,
   EvaluationRepository,
-  type SignalAlignmentState,
   isActiveEvaluation,
+  type SignalAlignmentState,
 } from "@domain/evaluations"
 import type { WorkflowQuerier } from "@domain/queue"
-import { type SignalOccurrenceBucket, ScoreAnalyticsRepository } from "@domain/scores"
+import { ScoreAnalyticsRepository, type SignalOccurrenceBucket } from "@domain/scores"
 import type {
   ChSqlClient,
-  SignalId,
   NotFoundError,
   OrganizationId,
   ProjectId,
   RepositoryError,
+  SignalId,
   SqlClient,
 } from "@domain/shared"
 import { TraceRepository } from "@domain/spans"

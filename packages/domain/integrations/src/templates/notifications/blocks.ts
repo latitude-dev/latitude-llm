@@ -1,6 +1,6 @@
-import type { SignalPriority } from "@domain/signals"
 import { formatHumanReadableAlert } from "@domain/monitors"
 import { type AlertIncidentCondition, type AlertIncidentKind, SEVERITY_COLOR } from "@domain/shared"
+import type { SignalPriority } from "@domain/signals"
 import type { ActionsBlock, HeaderBlock, KnownBlock, SectionBlock } from "@slack/web-api"
 
 export const header = (text: string): HeaderBlock => ({

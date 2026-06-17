@@ -62,7 +62,9 @@ export class PassedScoreNotEligibleForDiscoveryError extends Data.TaggedError(
   readonly httpMessage = "Passed scores are not eligible for issue discovery"
 }
 
-export class SignalNotFoundForDetailsGenerationError extends Data.TaggedError("SignalNotFoundForDetailsGenerationError")<{
+export class SignalNotFoundForDetailsGenerationError extends Data.TaggedError(
+  "SignalNotFoundForDetailsGenerationError",
+)<{
   readonly signalId: string
 }> {
   readonly httpStatus = 404

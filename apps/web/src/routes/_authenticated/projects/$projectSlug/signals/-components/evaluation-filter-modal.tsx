@@ -76,7 +76,9 @@ export function EvaluationFilterModal({
   readonly onClose: () => void
 }) {
   if (evaluation === null) return null
-  return <EvaluationFilterModalForm evaluation={evaluation} projectId={projectId} signalId={signalId} onClose={onClose} />
+  return (
+    <EvaluationFilterModalForm evaluation={evaluation} projectId={projectId} signalId={signalId} onClose={onClose} />
+  )
 }
 
 function EvaluationFilterModalForm({

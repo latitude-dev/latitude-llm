@@ -1,5 +1,5 @@
-import { type SignalOccurrenceBucket, ScoreAnalyticsRepository } from "@domain/scores"
-import type { ChSqlClient, SignalId, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
+import { ScoreAnalyticsRepository, type SignalOccurrenceBucket } from "@domain/scores"
+import type { ChSqlClient, OrganizationId, ProjectId, RepositoryError, SignalId } from "@domain/shared"
 import { Effect } from "effect"
 
 const TWELVE_HOURS_SECONDS = 12 * 60 * 60

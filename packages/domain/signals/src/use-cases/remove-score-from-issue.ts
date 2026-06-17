@@ -1,6 +1,6 @@
 import { AI, resolveEmbeddingConfig } from "@domain/ai"
 import type { ScoreSource } from "@domain/scores"
-import { SignalId, type RepositoryError, SqlClient } from "@domain/shared"
+import { type RepositoryError, SignalId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { normalizeEmbedding, updateSignalCentroid } from "../helpers.ts"
 import { SignalRepository } from "../ports/issue-repository.ts"

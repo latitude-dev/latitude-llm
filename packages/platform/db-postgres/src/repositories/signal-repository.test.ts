@@ -1,17 +1,17 @@
+import { NotFoundError, OrganizationId, ProjectId, SignalId, SqlClient, toSlug } from "@domain/shared"
 import {
   createSignalCentroid,
+  MIN_OCCURRENCES_FOR_VISIBILITY,
   type Signal,
   SignalRepository,
   signalSchema,
-  MIN_OCCURRENCES_FOR_VISIBILITY,
 } from "@domain/signals"
-import { SignalId, NotFoundError, OrganizationId, ProjectId, SqlClient, toSlug } from "@domain/shared"
 import { Effect } from "effect"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { alertIncidents as alertIncidentsTable } from "../schema/alert-incidents.ts"
-import { signals as signalsTable } from "../schema/signals.ts"
 import { projects as projectsTable } from "../schema/projects.ts"
 import { scores as scoresTable } from "../schema/scores.ts"
+import { signals as signalsTable } from "../schema/signals.ts"
 import { closeInMemoryPostgres, createInMemoryPostgres, type InMemoryPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
 import { SignalRepositoryLive } from "./signal-repository.ts"

@@ -14,11 +14,11 @@ import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@
 import {
   ChSqlClient,
   EvaluationId,
-  SignalId,
   NotFoundError,
   OrganizationId,
   ProjectId,
   ScoreId,
+  SignalId,
   SqlClient,
 } from "@domain/shared"
 import { createFakeChSqlClient } from "@domain/shared/testing"

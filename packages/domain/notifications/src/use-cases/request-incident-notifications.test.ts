@@ -5,22 +5,19 @@ import {
   alertIncidentSchema,
 } from "@domain/alerts"
 import { type Evaluation, EvaluationRepository } from "@domain/evaluations"
-import { createSignalCentroid, type Signal, type SignalPriority, SignalRepository } from "@domain/signals"
-import { createFakeSignalRepository } from "@domain/signals/testing"
 import { type Membership, MembershipRepository, type MembershipRole, type MemberWithUser } from "@domain/organizations"
 import type { AnnotationScore, EvaluationScore } from "@domain/scores"
 import {
+  ScoreAnalyticsRepository,
+  ScoreRepository,
   type SignalEscalationThresholdSeries,
   type SignalOccurrenceBucket,
   type SignalTagsAggregate,
-  ScoreAnalyticsRepository,
-  ScoreRepository,
 } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
 import {
   AlertIncidentId,
   ChSqlClient,
-  SignalId,
   MonitorAlertId,
   NotFoundError,
   OrganizationId,
@@ -28,10 +25,13 @@ import {
   ProjectId as ProjectIdConst,
   type ProjectSettings,
   SettingsReader,
+  SignalId,
   SqlClient,
   UserId,
 } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
+import { createSignalCentroid, type Signal, type SignalPriority, SignalRepository } from "@domain/signals"
+import { createFakeSignalRepository } from "@domain/signals/testing"
 import { type User, UserRepository } from "@domain/users"
 import { createFakeUserRepository } from "@domain/users/testing"
 import { Effect, Layer } from "effect"

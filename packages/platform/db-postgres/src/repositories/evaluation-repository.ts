@@ -2,9 +2,9 @@ import type { Evaluation, EvaluationAlignment, EvaluationListOptions, Evaluation
 import { EvaluationRepository, evaluationSchema } from "@domain/evaluations"
 import {
   type EvaluationId,
-  type SignalId,
   NotFoundError,
   type ProjectId,
+  type SignalId,
   SqlClient,
   type SqlClientShape,
 } from "@domain/shared"
@@ -197,8 +197,10 @@ export const EvaluationRepositoryLive = Layer.effect(
 
         return list({
           baseWhere:
-            and(eq(evaluations.projectId, projectId), inArray(evaluations.signalId, signalIds as unknown as string[])) ??
-            eq(evaluations.projectId, projectId),
+            and(
+              eq(evaluations.projectId, projectId),
+              inArray(evaluations.signalId, signalIds as unknown as string[]),
+            ) ?? eq(evaluations.projectId, projectId),
           options,
         })
       },

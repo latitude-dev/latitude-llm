@@ -4,13 +4,13 @@ import {
   BadRequestError,
   type ConcurrentSqlTransactionError,
   cuidSchema,
-  signalIdSchema,
   type NotFoundError,
   ProjectId,
   type RepositoryError,
   resolveSettings,
   type SettingsReader,
   SqlClient,
+  signalIdSchema,
 } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"

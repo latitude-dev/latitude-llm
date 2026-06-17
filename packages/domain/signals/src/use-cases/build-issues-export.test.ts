@@ -1,7 +1,7 @@
 import { type EvaluationListPage, EvaluationRepository, type EvaluationRepositoryShape } from "@domain/evaluations"
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
-import { ChSqlClient, SignalId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { ChSqlClient, OrganizationId, ProjectId, SignalId, SqlClient } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
@@ -73,7 +73,11 @@ describe("buildSignalsExportUseCase", () => {
       name: "Second archived issue",
       ignoredAt: new Date("2026-04-05T00:00:00.000Z"),
     })
-    const { repository: signalRepository } = createFakeSignalRepository([activeSignal, archivedSignal, secondArchivedSignal])
+    const { repository: signalRepository } = createFakeSignalRepository([
+      activeSignal,
+      archivedSignal,
+      secondArchivedSignal,
+    ])
     const timeRangeCalls: Array<{ from?: Date; to?: Date } | undefined> = []
     const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
       listSignalWindowMetrics: (input) =>

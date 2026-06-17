@@ -2,11 +2,11 @@ import { buildSignalsExportFilename, type ExportSelection } from "@domain/export
 import type { OrganizationId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import {
+  listSignalsUseCase,
   type SignalAssigneeFilter,
   type SignalsLifecycleGroup,
   type SignalsSortDirection,
   type SignalsSortField,
-  listSignalsUseCase,
 } from "./list-issues.ts"
 
 const ISSUES_EXPORT_BATCH_SIZE = 100

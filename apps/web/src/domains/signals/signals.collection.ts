@@ -4,6 +4,8 @@ import { keepPreviousData, useInfiniteQuery, useMutation, useQuery } from "@tans
 import { useMemo } from "react"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import type {
+  OrgSignalSearchRecord,
+  RelatedSignalRecord,
   SignalDetailRecord,
   SignalDimensionsRecord,
   SignalImpactRecord,
@@ -13,18 +15,16 @@ import type {
   SignalsListResultRecord,
   SignalTracePageRecord,
   SignalTraceRecord,
-  OrgSignalSearchRecord,
-  RelatedSignalRecord,
   UpdateSignalTriageRecord,
 } from "./signals.functions.ts"
 import {
   countSignalTraces,
+  getRelatedSignals,
   getSignal,
   getSignalDetail,
   getSignalDimensions,
   getSignalImpact,
   getSignalOccurrences,
-  getRelatedSignals,
   listSignals,
   listSignalTraces,
   searchOrgSignals,
@@ -109,7 +109,8 @@ const getSignalDimensionsQueryKey = (projectId: string, signalId: string, dimens
 const getSignalOccurrencesQueryKey = (projectId: string, signalId: string) =>
   ["issue-occurrences", projectId, signalId] as const
 
-const getRelatedSignalsQueryKey = (projectId: string, signalId: string) => ["related-issues", projectId, signalId] as const
+const getRelatedSignalsQueryKey = (projectId: string, signalId: string) =>
+  ["related-issues", projectId, signalId] as const
 
 const getSignalTracesQueryKey = (projectId: string, signalId: string) => ["issue-traces", projectId, signalId] as const
 

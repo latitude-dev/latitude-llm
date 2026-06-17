@@ -5,11 +5,11 @@ import {
   DatasetId,
   DatasetVersionId,
   EvaluationId,
-  SignalId,
   MembershipId,
   OrganizationId,
   ProjectId,
   ScoreId,
+  SignalId,
   SimulationId,
   UserId,
 } from "./id.ts"
@@ -117,7 +117,9 @@ function fixedSeedUuid(index: number): string {
 export const SEED_EXTRA_SIGNAL_IDS: readonly SignalId[] = Array.from({ length: 128 }, (_, i) =>
   SignalId(fixedSeedEntityId("xi", i)),
 )
-export const SEED_EXTRA_SIGNAL_UUIDS: readonly string[] = Array.from({ length: 128 }, (_, i) => fixedSeedUuid(0x500 + i))
+export const SEED_EXTRA_SIGNAL_UUIDS: readonly string[] = Array.from({ length: 128 }, (_, i) =>
+  fixedSeedUuid(0x500 + i),
+)
 
 /** Signal 1 active monitor. */
 export const SEED_EVALUATION_ID = EvaluationId("y0zr3gtsous6knd2qwdj1dit")

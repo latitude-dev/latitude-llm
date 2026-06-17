@@ -2,12 +2,12 @@ import type {
   ChSqlClient,
   ExternalUserId,
   FilterSet,
-  SignalId,
   OrganizationId,
   ProjectId,
   RepositoryError,
   ScoreId,
   SessionId,
+  SignalId,
   TraceId,
 } from "@domain/shared"
 import { Context, type Effect } from "effect"

@@ -1,4 +1,4 @@
-import { type SignalOccurrenceBucket, ScoreAnalyticsRepository, type ScoreAnalyticsTimeRange } from "@domain/scores"
+import { ScoreAnalyticsRepository, type ScoreAnalyticsTimeRange, type SignalOccurrenceBucket } from "@domain/scores"
 import type { ChSqlClient, OrganizationId, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { SignalState } from "../entities/issue.ts"

@@ -1,6 +1,6 @@
+import { cuidSchema } from "@domain/shared"
 import type { GetSignalTrendResult, SignalDetails, SignalListItem } from "@domain/signals"
 import { SIGNAL_SOURCES, SIGNAL_STATES } from "@domain/signals"
-import { cuidSchema } from "@domain/shared"
 import { z } from "@hono/zod-openapi"
 import { Paginated } from "../pagination.ts"
 import { EvaluationSchema, toEvaluationResponse } from "./evaluation.ts"

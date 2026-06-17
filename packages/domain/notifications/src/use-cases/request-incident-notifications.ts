@@ -5,20 +5,12 @@ import {
   isSignalEscalationEntrySignals,
 } from "@domain/alerts"
 import { EvaluationRepository } from "@domain/evaluations"
-import {
-  buildHistogramBucketScaffold,
-  DEFAULT_ESCALATION_SENSITIVITY_K,
-  fillBuckets,
-  type SignalPriority,
-  SignalRepository,
-} from "@domain/signals"
 import type { MembershipRepository } from "@domain/organizations"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import {
   AlertIncidentId,
   type ChSqlClient,
   generateId,
-  SignalId,
   isIncidentNotificationEnabled,
   type NotFoundError,
   NotificationId,
@@ -26,9 +18,17 @@ import {
   type ProjectId,
   type RepositoryError,
   SettingsReader,
+  SignalId,
   type SqlClient,
   UserId,
 } from "@domain/shared"
+import {
+  buildHistogramBucketScaffold,
+  DEFAULT_ESCALATION_SENSITIVITY_K,
+  fillBuckets,
+  type SignalPriority,
+  SignalRepository,
+} from "@domain/signals"
 import { UserRepository } from "@domain/users"
 import { Effect } from "effect"
 import type {

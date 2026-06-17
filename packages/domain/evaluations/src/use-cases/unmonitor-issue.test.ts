@@ -1,4 +1,4 @@
-import { SignalId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { OrganizationId, ProjectId, SignalId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"

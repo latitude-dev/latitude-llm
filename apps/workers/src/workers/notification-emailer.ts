@@ -1,6 +1,5 @@
 import type { RenderedEmail } from "@domain/email"
 import { NOTIFICATION_EMAIL_RENDERERS, type NotificationEmailRenderContext, sendEmail } from "@domain/email"
-import type { SignalRepository } from "@domain/signals"
 import {
   type NotificationEmailRenderer,
   type NotificationEmailSender,
@@ -10,14 +9,15 @@ import {
 } from "@domain/notifications"
 import type { QueueConsumer } from "@domain/queue"
 import { NotificationId, OrganizationId, type SqlClient } from "@domain/shared"
+import type { SignalRepository } from "@domain/signals"
 import type { WrappedReportRepository } from "@domain/spans"
 import type { UserRepository } from "@domain/users"
 import {
-  SignalRepositoryLive,
   NotificationRepositoryLive,
   OrganizationRepositoryLive,
   ProjectRepositoryLive,
   SavedSearchRepositoryLive,
+  SignalRepositoryLive,
   UserRepositoryLive,
   WrappedReportRepositoryLive,
   withPostgres,

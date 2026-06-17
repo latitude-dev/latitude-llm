@@ -1,5 +1,5 @@
-import { SignalRepository } from "@domain/signals"
 import { SignalId, UserId } from "@domain/shared"
+import { SignalRepository } from "@domain/signals"
 import { UserRepository } from "@domain/users"
 import { Effect } from "effect"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers

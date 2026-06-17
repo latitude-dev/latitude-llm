@@ -5,16 +5,16 @@ import {
   AlertIncidentRepository,
   type AlertSeverity,
 } from "@domain/alerts"
-import { SignalRepository, type SignalWithLifecycle } from "@domain/signals"
 import { formatHumanReadableAlert } from "@domain/monitors"
 import { type IncidentMonitorInfo, IncidentMonitorReader } from "@domain/notifications"
 import { SavedSearchRepository } from "@domain/saved-searches"
-import { SignalId, OrganizationId, ProjectId, SavedSearchId } from "@domain/shared"
+import { OrganizationId, ProjectId, SavedSearchId, SignalId } from "@domain/shared"
+import { SignalRepository, type SignalWithLifecycle } from "@domain/signals"
 import {
   AlertIncidentRepositoryLive,
   IncidentMonitorReaderLive,
-  SignalRepositoryLive,
   SavedSearchRepositoryLive,
+  SignalRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"

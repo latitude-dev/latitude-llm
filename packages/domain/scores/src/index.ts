@@ -1,11 +1,11 @@
 export {
   ANNOTATION_SCORE_PARTIAL_SOURCE_IDS,
-  SIGNAL_FLAGGER_SLUG_SAMPLE_LIMIT,
   SCORE_PUBLICATION_DEBOUNCE,
   SCORE_SOURCE_ID_MAX_LENGTH,
   SCORE_SOURCES,
   SEASONAL_BUCKET_POOLING_HOURS,
   SEASONAL_HISTORY_WEEKS,
+  SIGNAL_FLAGGER_SLUG_SAMPLE_LIMIT,
 } from "./constants.ts"
 export {
   ANNOTATION_ANCHOR_TEXT_FORMATS,
@@ -42,6 +42,14 @@ export { ScoreDraftClosedError, ScoreDraftUpdateConflictError } from "./errors.t
 export { isImmutableScore } from "./helpers.ts"
 export {
   type DimensionConditionalRate,
+  type ScoreAggregate,
+  type ScoreAnalyticsOptions,
+  ScoreAnalyticsRepository,
+  type ScoreAnalyticsRepositoryShape,
+  type ScoreAnalyticsTimeRange,
+  type ScoreTrendBucket,
+  type SessionScoreRollup,
+  type SessionSignalRollup,
   type SignalCoOccurrence,
   type SignalCoOccurrenceAggregate,
   type SignalDimension,
@@ -58,14 +66,6 @@ export {
   type SignalTraceSummary,
   type SignalTrendSeries,
   type SignalWindowMetric,
-  type ScoreAggregate,
-  type ScoreAnalyticsOptions,
-  ScoreAnalyticsRepository,
-  type ScoreAnalyticsRepositoryShape,
-  type ScoreAnalyticsTimeRange,
-  type ScoreTrendBucket,
-  type SessionSignalRollup,
-  type SessionScoreRollup,
   type TraceScoreRollup,
   type UserSignalRollup,
 } from "./ports/score-analytics-repository.ts"

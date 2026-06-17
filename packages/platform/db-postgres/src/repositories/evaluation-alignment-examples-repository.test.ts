@@ -4,7 +4,7 @@ import {
   type EvaluationAlignmentPositivePriority,
 } from "@domain/evaluations"
 import type { ScoreMetadata } from "@domain/scores"
-import { SignalId, OrganizationId, ProjectId, TraceId } from "@domain/shared"
+import { OrganizationId, ProjectId, SignalId, TraceId } from "@domain/shared"
 import { Effect } from "effect"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { scores as scoresTable } from "../schema/scores.ts"

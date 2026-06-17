@@ -1,4 +1,3 @@
-import { SignalRepository } from "@domain/signals"
 import { type Organization, OrganizationRepository } from "@domain/organizations"
 import { SavedSearchRepository } from "@domain/saved-searches"
 import {
@@ -9,6 +8,7 @@ import {
   SqlClient,
   type SqlClientShape,
 } from "@domain/shared"
+import { SignalRepository } from "@domain/signals"
 import { UserRepository } from "@domain/users"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"

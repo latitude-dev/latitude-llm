@@ -2,10 +2,10 @@ import { Icon } from "@repo/ui"
 import { TrendingDownIcon, TrendingUpIcon } from "lucide-react"
 import { SignalTrendBar } from "../../../../projects/$projectSlug/signals/-components/signal-trend-bar.tsx"
 import { BaseNotification } from "../../base-notification.tsx"
-import { useSignalUrl, useLiveSignalSummary } from "./-incident-helpers.ts"
+import { useLiveSignalSummary, useSignalUrl } from "./-incident-helpers.ts"
 import type { IncidentRendererProps } from "./index.tsx"
-import { SignalSummaryCard } from "./signal-summary-card.tsx"
 import { MonitorAttribution } from "./monitor-attribution.tsx"
+import { SignalSummaryCard } from "./signal-summary-card.tsx"
 
 type EscalatingTrend = IncidentRendererProps<"opened" | "closed">["payload"]["trend"]
 

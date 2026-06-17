@@ -5,16 +5,16 @@ import {
   emptyEvaluationAlignment,
   evaluationSchema,
 } from "@domain/evaluations"
-import { createSignalCentroid } from "@domain/signals"
 import type { WorkflowStarterShape } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { evaluationScoreSchema } from "@domain/scores"
 import type { FilterSet } from "@domain/shared"
+import { createSignalCentroid } from "@domain/signals"
 import type { RedisClient } from "@platform/cache-redis"
 import { annotationQueueItems, annotationQueues } from "@platform/db-postgres/schema/annotation-queues"
 import { evaluations } from "@platform/db-postgres/schema/evaluations"
-import { signals } from "@platform/db-postgres/schema/signals"
 import { scores } from "@platform/db-postgres/schema/scores"
+import { signals } from "@platform/db-postgres/schema/signals"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect } from "effect"
 import { describe, expect, it, vi } from "vitest"

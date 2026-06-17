@@ -7,9 +7,9 @@ import {
   DESTINATION_SWEEPER_KEY,
   DESTINATION_SWEEPER_PATTERN,
 } from "@domain/destinations"
-import { ESCALATION_SWEEPER_KEY, ESCALATION_SWEEPER_PATTERN } from "@domain/signals"
 import { SAVED_SEARCH_MONITORS_SWEEPER_KEY, SAVED_SEARCH_MONITORS_SWEEPER_PATTERN } from "@domain/monitors"
 import { SANDBOX_IDLE_SWEEPER_KEY, SANDBOX_IDLE_SWEEPER_PATTERN } from "@domain/sandboxes"
+import { ESCALATION_SWEEPER_KEY, ESCALATION_SWEEPER_PATTERN } from "@domain/signals"
 import { TAXONOMY_GARDENING_CRON_KEY, TAXONOMY_GARDENING_CRON_PATTERN } from "@domain/taxonomy"
 import { serve } from "@hono/node-server"
 import { serveStatic } from "@hono/node-server/serve-static"

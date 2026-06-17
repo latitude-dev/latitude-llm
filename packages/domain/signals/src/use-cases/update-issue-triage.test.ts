@@ -1,7 +1,7 @@
 import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
 import { MembershipRepository } from "@domain/organizations"
 import { createFakeMembershipRepository } from "@domain/organizations/testing"
-import { SignalId, OrganizationId, SqlClient } from "@domain/shared"
+import { OrganizationId, SignalId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"

@@ -1,6 +1,6 @@
 import { EMBEDDING_DIMENSIONS } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
-import { SignalId, OrganizationId, SqlClient } from "@domain/shared"
+import { OrganizationId, SignalId, SqlClient } from "@domain/shared"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import type { Signal } from "../entities/issue.ts"

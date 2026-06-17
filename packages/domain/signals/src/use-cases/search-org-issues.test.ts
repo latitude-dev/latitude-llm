@@ -1,14 +1,14 @@
-import { SignalId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { OrganizationId, ProjectId, SignalId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import type { Signal } from "../entities/issue.ts"
 import { createSignalCentroid } from "../helpers.ts"
 import {
+  type OrgSignalSearchHit,
   SignalRepository,
   type SignalRepositoryShape,
   type SignalWithLifecycle,
-  type OrgSignalSearchHit,
 } from "../ports/issue-repository.ts"
 import { createFakeSignalRepository } from "../testing/fake-issue-repository.ts"
 import { searchOrgSignalsUseCase } from "./search-org-issues.ts"

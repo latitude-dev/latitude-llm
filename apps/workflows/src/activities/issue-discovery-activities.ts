@@ -1,3 +1,5 @@
+import { type SyncScoreAnalyticsInput, syncScoreAnalyticsUseCase } from "@domain/scores"
+import { OrganizationId } from "@domain/shared"
 import {
   type AssignOrCreateSignalInput,
   type AssignScoreToSignalInput,
@@ -9,15 +11,13 @@ import {
   createSignalFromScoreUseCase,
   type EmbedScoreFeedbackInput,
   embedScoreFeedbackUseCase,
-  SignalDiscoveryLockUnavailableError,
   isEligibilityError,
+  SignalDiscoveryLockUnavailableError,
 } from "@domain/signals"
-import { type SyncScoreAnalyticsInput, syncScoreAnalyticsUseCase } from "@domain/scores"
-import { OrganizationId } from "@domain/shared"
 import { AIEmbedLive, AIGenerateLive, AIRerankLive, withAi } from "@platform/ai"
 import { RedisDistributedLockRepositoryLive } from "@platform/cache-redis"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
-import { SignalRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { OutboxEventWriterLive, ScoreRepositoryLive, SignalRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"

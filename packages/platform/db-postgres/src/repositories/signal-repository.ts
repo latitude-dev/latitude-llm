@@ -1,6 +1,17 @@
 import { EMBEDDING_DIMENSIONS, resolveEmbeddingConfig } from "@domain/ai"
 import { EvaluationSignalRepository } from "@domain/evaluations"
 import {
+  NotFoundError,
+  type ProjectId,
+  RepositoryError,
+  SignalId,
+  SqlClient,
+  type SqlClientShape,
+} from "@domain/shared"
+import {
+  MIN_OCCURRENCES_FOR_VISIBILITY,
+  normalizeSignalCentroid,
+  type OrgSignalSearchHit,
   SIGNAL_DISCOVERY_MIN_SIMILARITY,
   SIGNAL_DISCOVERY_MIN_VECTOR_SIMILARITY,
   SIGNAL_DISCOVERY_SEARCH_CANDIDATES,
@@ -10,18 +21,14 @@ import {
   SignalRepository,
   type SignalWithLifecycle,
   signalSchema,
-  MIN_OCCURRENCES_FOR_VISIBILITY,
-  normalizeSignalCentroid,
-  type OrgSignalSearchHit,
 } from "@domain/signals"
-import { SignalId, NotFoundError, type ProjectId, RepositoryError, SqlClient, type SqlClientShape } from "@domain/shared"
 import { and, asc, desc, eq, getTableColumns, ilike, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { alertIncidents } from "../schema/alert-incidents.ts"
-import { signals } from "../schema/signals.ts"
 import { projects } from "../schema/projects.ts"
 import { scores } from "../schema/scores.ts"
+import { signals } from "../schema/signals.ts"
 import { preferProjectFirst } from "./org-search.ts"
 
 // Lifecycle flags derived from `alert_incidents` are joined onto every
@@ -279,7 +286,13 @@ const signalRepositoryCoreLive = Layer.effect(
             )
         }),
 
-      findByIds: ({ projectId, signalIds }: { readonly projectId: ProjectId; readonly signalIds: readonly SignalId[] }) =>
+      findByIds: ({
+        projectId,
+        signalIds,
+      }: {
+        readonly projectId: ProjectId
+        readonly signalIds: readonly SignalId[]
+      }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           return yield* sqlClient
@@ -362,7 +375,11 @@ const signalRepositoryCoreLive = Layer.effect(
               .select({ centroidEmbedding: signals.centroidEmbedding })
               .from(signals)
               .where(
-                and(eq(signals.organizationId, organizationId), eq(signals.projectId, projectId), eq(signals.id, signalId)),
+                and(
+                  eq(signals.organizationId, organizationId),
+                  eq(signals.projectId, projectId),
+                  eq(signals.id, signalId),
+                ),
               )
               .limit(1),
           )
@@ -561,7 +578,11 @@ const signalRepositoryCoreLive = Layer.effect(
               .select({ id: signals.id })
               .from(signals)
               .where(
-                and(eq(signals.organizationId, organizationId), eq(signals.projectId, projectId), eq(signals.slug, slug)),
+                and(
+                  eq(signals.organizationId, organizationId),
+                  eq(signals.projectId, projectId),
+                  eq(signals.slug, slug),
+                ),
               )
               .limit(1),
           )

@@ -1,5 +1,5 @@
 import { hashOptimizationCandidateText } from "@domain/optimizations"
-import { EvaluationId, SignalId, NotFoundError, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { EvaluationId, NotFoundError, OrganizationId, ProjectId, SignalId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"

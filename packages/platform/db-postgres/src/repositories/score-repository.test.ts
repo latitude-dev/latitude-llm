@@ -9,12 +9,12 @@ import {
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
 import {
   ChSqlClient,
-  SignalId,
   NotFoundError,
   OrganizationId,
   ProjectId,
   ScoreId,
   SessionId,
+  SignalId,
   TraceId,
 } from "@domain/shared"
 import { createFakeChSqlClient } from "@domain/shared/testing"

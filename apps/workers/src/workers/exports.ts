@@ -1,7 +1,6 @@
 import { buildDatasetExportUseCase } from "@domain/datasets"
 import { type EmailSender, exportReadyTemplate, type RenderedEmail, sendEmail } from "@domain/email"
 import type { ExportPayload } from "@domain/exports"
-import { buildSignalsExportUseCase, embedSignalSearchQueryUseCase } from "@domain/signals"
 import type { QueueConsumer } from "@domain/queue"
 import {
   DatasetId,
@@ -13,6 +12,7 @@ import {
   putInDisk,
   type StorageDiskPort,
 } from "@domain/shared"
+import { buildSignalsExportUseCase, embedSignalSearchQueryUseCase } from "@domain/signals"
 import { buildTracesExportUseCase } from "@domain/spans"
 import { AIEmbedLive, withAi } from "@platform/ai"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
@@ -25,8 +25,8 @@ import {
 import {
   DatasetRepositoryLive,
   EvaluationRepositoryLive,
-  SignalRepositoryLive,
   type PostgresClient,
+  SignalRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { createEmailTransportSender } from "@platform/email-transport"

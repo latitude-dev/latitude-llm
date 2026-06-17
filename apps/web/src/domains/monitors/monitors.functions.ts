@@ -1,6 +1,5 @@
 import { AlertIncidentRepository, resolveAlertIncidentUseCase } from "@domain/alerts"
 import { exportSelectionSchema } from "@domain/exports"
-import { SignalRepository } from "@domain/signals"
 import {
   createMonitorUseCase,
   deleteMonitorUseCase,
@@ -34,22 +33,23 @@ import {
   alertIncidentSourceTypeSchema,
   alertSeveritySchema,
   filterSetSchema,
-  SignalId,
   MonitorAlertId,
   MonitorId,
   monitorStreamSchema,
   OrganizationId,
   ProjectId,
   SavedSearchId,
+  SignalId,
 } from "@domain/shared"
+import { SignalRepository } from "@domain/signals"
 import { MetricSeriesReaderLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   AlertIncidentRepositoryLive,
-  SignalRepositoryLive,
   MonitorRepositoryLive,
   NotificationRepositoryLive,
   OutboxEventWriterLive,
   SavedSearchRepositoryLive,
+  SignalRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"

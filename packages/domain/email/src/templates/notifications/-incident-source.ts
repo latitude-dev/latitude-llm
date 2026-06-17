@@ -1,6 +1,6 @@
-import { SignalRepository } from "@domain/signals"
 import { SavedSearchRepository } from "@domain/saved-searches"
-import { SignalId, SavedSearchId, UserId } from "@domain/shared"
+import { SavedSearchId, SignalId, UserId } from "@domain/shared"
+import { SignalRepository } from "@domain/signals"
 import { UserRepository } from "@domain/users"
 import { Effect } from "effect"
 

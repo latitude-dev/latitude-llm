@@ -133,7 +133,9 @@ export const createFakeSignalRepository = (
         () =>
           [...issues.values()].filter(
             (issue) =>
-              issue.projectId === projectId && issue.slug === slug && (!excludeSignalId || issue.id !== excludeSignalId),
+              issue.projectId === projectId &&
+              issue.slug === slug &&
+              (!excludeSignalId || issue.id !== excludeSignalId),
           ).length,
       ),
 

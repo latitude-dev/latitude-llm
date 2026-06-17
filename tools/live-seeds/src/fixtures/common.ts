@@ -1,9 +1,9 @@
 import {
-  SIGNAL_1_NEGATIVE_TRACES,
-  SIGNAL_2_POSITIVE_TRACES,
   KNOWLEDGE_ASSISTANT_SYSTEM_PROMPT,
   ORDER_ROUTER_SYSTEM_PROMPT,
   QA_CLASSIFIER_SYSTEM_PROMPT,
+  SIGNAL_1_NEGATIVE_TRACES,
+  SIGNAL_2_POSITIVE_TRACES,
 } from "@domain/shared/seeding"
 import type { SeedChatSpanDefinition, SeedMessage, SeedSpanDefinition, SeedSystemPart } from "../otlp.ts"
 import type { SeededRng } from "../random.ts"

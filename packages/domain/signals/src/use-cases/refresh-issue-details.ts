@@ -1,7 +1,7 @@
 import { ALIGNMENT_METRIC_RECOMPUTE_THROTTLE_MS, EvaluationRepository, isActiveEvaluation } from "@domain/evaluations"
 import type { QueuePublishError } from "@domain/queue"
 import { QueuePublisher } from "@domain/queue"
-import { generateSlug, SignalId, ProjectId, type RepositoryError, SqlClient } from "@domain/shared"
+import { generateSlug, ProjectId, type RepositoryError, SignalId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { SignalRepository } from "../ports/issue-repository.ts"
 import { type GenerateSignalDetailsError, generateSignalDetailsUseCase } from "./generate-issue-details.ts"
@@ -78,7 +78,9 @@ export const refreshSignalDetailsUseCase = (input: RefreshSignalDetailsInput) =>
       signalId: input.signalId,
     }).pipe(
       Effect.map((details) => ({ action: "ready", details }) as const),
-      Effect.catchTag("SignalNotFoundForDetailsGenerationError", () => Effect.succeed({ action: "not-found" } as const)),
+      Effect.catchTag("SignalNotFoundForDetailsGenerationError", () =>
+        Effect.succeed({ action: "not-found" } as const),
+      ),
     )
 
     if (generatedDetailsResult.action === "not-found") {

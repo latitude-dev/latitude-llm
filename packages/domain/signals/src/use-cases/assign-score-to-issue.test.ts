@@ -4,9 +4,9 @@ import { type AnnotationScore, ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
 import {
   DistributedLockRepository,
-  SignalId,
   OrganizationId,
   ScoreId,
+  SignalId,
   SqlClient,
   type SqlClientShape,
 } from "@domain/shared"

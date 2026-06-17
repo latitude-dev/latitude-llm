@@ -1,6 +1,6 @@
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
-import { ChSqlClient, SignalId, OrganizationId, ProjectId, TraceId } from "@domain/shared"
+import { ChSqlClient, OrganizationId, ProjectId, SignalId, TraceId } from "@domain/shared"
 import { createFakeChSqlClient } from "@domain/shared/testing"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
@@ -172,7 +172,9 @@ describe("listSignalTracesUseCase", () => {
     })
 
     await Effect.runPromise(
-      listSignalTracesUseCase({ organizationId, projectId, signalId, limit: 10, offset: 30 }).pipe(Effect.provide(layer)),
+      listSignalTracesUseCase({ organizationId, projectId, signalId, limit: 10, offset: 30 }).pipe(
+        Effect.provide(layer),
+      ),
     )
 
     expect(listTracesCalls).toEqual([{ limit: 10, offset: 30 }])

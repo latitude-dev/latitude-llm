@@ -4,10 +4,10 @@ import {
   BadRequestError,
   type EvaluationId,
   generateId,
-  type SignalId,
   type OrganizationId,
   type ProjectId,
   type RepositoryError,
+  type SignalId,
   type UserId,
 } from "@domain/shared"
 import { Effect } from "effect"

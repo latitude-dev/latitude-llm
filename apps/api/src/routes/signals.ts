@@ -1,30 +1,30 @@
 import { monitorSignalUseCase, unmonitorSignalUseCase } from "@domain/evaluations"
+import { MembershipRepository } from "@domain/organizations"
+import { ProjectRepository } from "@domain/projects"
+import { WorkflowQuerier, WorkflowStarter } from "@domain/queue"
+import { BadRequestError, cuidSchema, OrganizationId, ProjectId, SignalId, UserId } from "@domain/shared"
 import {
   applySignalLifecycleCommandUseCase,
   embedSignalSearchQueryUseCase,
   getSignalAnalyticsUseCase,
   getSignalDetailsUseCase,
   getSignalTrendUseCase,
-  type SignalLifecycleCommand,
-  SignalRepository,
   listSignalsUseCase,
   listSignalTracesUseCase,
+  type SignalLifecycleCommand,
+  SignalRepository,
 } from "@domain/signals"
-import { MembershipRepository } from "@domain/organizations"
-import { ProjectRepository } from "@domain/projects"
-import { WorkflowQuerier, WorkflowStarter } from "@domain/queue"
-import { BadRequestError, cuidSchema, SignalId, OrganizationId, ProjectId, UserId } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import { AIEmbedLive, withAi } from "@platform/ai"
 import { ScoreAnalyticsRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   EvaluationRepositoryLive,
-  SignalRepositoryLive,
   MembershipRepositoryLive,
   OutboxEventWriterLive,
   ProjectRepositoryLive,
   ScoreRepositoryLive,
   SettingsReaderLive,
+  SignalRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
@@ -32,9 +32,9 @@ import { Effect, Layer } from "effect"
 import { defineApiEndpoint } from "../mcp/index.ts"
 import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
 import {
+  PaginatedSignalsSchema,
   SignalDetailSchema,
   SignalHistogramSchema,
-  PaginatedSignalsSchema,
   toSignalDetailResponse,
   toSignalHistogramResponse,
   toSignalResponse,

@@ -1,24 +1,24 @@
 import { type Evaluation, EvaluationRepository } from "@domain/evaluations"
 import {
+  ScoreAnalyticsRepository,
+  type ScoreAnalyticsTimeRange,
   type SignalOccurrenceAggregate,
   type SignalOccurrenceBucket,
   type SignalTagsTimeRange,
   type SignalTrendSeries,
   type SignalWindowMetric,
-  ScoreAnalyticsRepository,
-  type ScoreAnalyticsTimeRange,
 } from "@domain/scores"
 import {
   type ChSqlClient,
   cuidSchema,
   type FilterCondition,
   type FilterSet,
-  type SignalId,
-  signalIdSchema,
   OrganizationId,
   ProjectId,
   type RepositoryError,
+  type SignalId,
   type SqlClient,
+  signalIdSchema,
 } from "@domain/shared"
 import { pickTraceHistogramBucketSeconds, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
@@ -452,7 +452,8 @@ const toCandidate = (input: {
 
 const toAnalyticsCounts = (candidates: readonly AnalyticsCandidate[]): SignalListAnalyticsCounts => ({
   newSignals: candidates.filter((candidate) => candidate.lifecycleStates.includes(SignalState.New)).length,
-  escalatingSignals: candidates.filter((candidate) => candidate.lifecycleStates.includes(SignalState.Escalating)).length,
+  escalatingSignals: candidates.filter((candidate) => candidate.lifecycleStates.includes(SignalState.Escalating))
+    .length,
   ongoingSignals: candidates.filter((candidate) => candidate.lifecycleStates.includes(SignalState.Ongoing)).length,
   regressedSignals: candidates.filter((candidate) => candidate.lifecycleStates.includes(SignalState.Regressed)).length,
   resolvedSignals: candidates.filter((candidate) => candidate.lifecycleStates.includes(SignalState.Resolved)).length,
@@ -571,7 +572,9 @@ export const listSignalsUseCase = (
 
     const windowMetricsBySignalId = new Map(windowMetrics.map((metric) => [metric.signalId, metric] as const))
     const baseCandidateIds = parsed.search
-      ? searchCandidates.map((candidate) => candidate.signalId).filter((signalId) => windowMetricsBySignalId.has(signalId))
+      ? searchCandidates
+          .map((candidate) => candidate.signalId)
+          .filter((signalId) => windowMetricsBySignalId.has(signalId))
       : windowMetrics.map((metric) => metric.signalId)
     // When the caller passed an explicit `signalIds` filter, include those
     // issues in the candidate set even if they had no activity in the

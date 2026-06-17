@@ -1,6 +1,6 @@
 import { DEFAULT_EMBEDDING_CONFIG, EMBEDDING_DIMENSIONS } from "@domain/ai"
 import type { EntrySignalsSnapshot } from "@domain/alerts"
-import type { SignalEscalationSignals, ScoreSource } from "@domain/scores"
+import type { ScoreSource, SignalEscalationSignals } from "@domain/scores"
 import {
   createCentroid,
   normalizeCentroid,
@@ -16,11 +16,16 @@ import {
   ESCALATION_MAX_DURATION_MS,
   ESCALATION_MIN_OCCURRENCES_THRESHOLD,
   ESCALATION_THRESHOLD_FACTOR,
-  SIGNAL_STATES,
   MIN_SEASONAL_SAMPLES,
   NEW_SIGNAL_AGE_DAYS,
+  SIGNAL_STATES,
 } from "./constants.ts"
-import { type Signal, type SignalCentroid, SignalState, type SignalState as SignalStateValue } from "./entities/issue.ts"
+import {
+  type Signal,
+  type SignalCentroid,
+  SignalState,
+  type SignalState as SignalStateValue,
+} from "./entities/issue.ts"
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
 

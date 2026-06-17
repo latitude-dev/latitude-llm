@@ -6,9 +6,9 @@ import { createFakeScoreRepository } from "@domain/scores/testing"
 import {
   DistributedLockRepository,
   DistributedLockUnavailableError,
-  SignalId,
   OrganizationId,
   ScoreId,
+  SignalId,
   SqlClient,
   type SqlClientShape,
 } from "@domain/shared"

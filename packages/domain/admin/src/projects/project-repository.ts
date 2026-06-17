@@ -1,4 +1,4 @@
-import type { SignalId, NotFoundError, ProjectId, RepositoryError } from "@domain/shared"
+import type { NotFoundError, ProjectId, RepositoryError, SignalId } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { AdminProjectDetails } from "./project-details.ts"
 

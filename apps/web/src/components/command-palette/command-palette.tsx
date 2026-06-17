@@ -15,11 +15,11 @@ import { ChevronLeftIcon, Loader2Icon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useCommandPalette, useCommandPaletteState } from "./command-palette-provider.tsx"
 import { useGlobalCommands } from "./commands/use-global-commands.tsx"
-import { useSignalSearchCommands } from "./commands/use-signal-search-commands.ts"
 import { useMonitorSearchCommands } from "./commands/use-monitor-search-commands.ts"
 import { useNavigationCommands } from "./commands/use-navigation-commands.ts"
 import { useProjectCommands } from "./commands/use-project-commands.tsx"
 import { useProjectSearchCommands } from "./commands/use-project-search-commands.tsx"
+import { useSignalSearchCommands } from "./commands/use-signal-search-commands.ts"
 import { COMMAND_SECTION_LABELS, COMMAND_SECTION_ORDER, type PaletteCommand, type ParentCommand } from "./types.ts"
 
 /**

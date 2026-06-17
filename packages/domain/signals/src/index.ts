@@ -14,6 +14,9 @@ export {
   ESCALATION_SWEEPER_KEY,
   ESCALATION_SWEEPER_PATTERN,
   ESCALATION_THRESHOLD_FACTOR,
+  MIN_OCCURRENCES_FOR_VISIBILITY,
+  MIN_SEASONAL_SAMPLES,
+  NEW_SIGNAL_AGE_DAYS,
   SIGNAL_DETAILS_DEFAULT_GENERATION_MODEL,
   SIGNAL_DETAILS_MAX_OCCURRENCES,
   SIGNAL_DIMENSION_MIN_RATE_ELEVATION,
@@ -39,9 +42,6 @@ export {
   SIGNAL_STATES,
   SIGNAL_UPDATE_LOCK_KEY,
   SIGNAL_UPDATE_LOCK_TTL_SECONDS,
-  MIN_OCCURRENCES_FOR_VISIBILITY,
-  MIN_SEASONAL_SAMPLES,
-  NEW_SIGNAL_AGE_DAYS,
 } from "./constants.ts"
 export { type DimensionPattern, rankDimensionValues } from "./dimension-patterns.ts"
 export {
@@ -60,18 +60,18 @@ export {
   type CheckEligibilityError,
   DraftScoreNotEligibleForDiscoveryError,
   ErroredScoreNotEligibleForDiscoveryError,
-  SignalDiscoveryLockUnavailableError,
-  SignalNotFoundForAssignmentError,
-  SignalNotFoundForDetailsGenerationError,
-  SignalNotFoundForEscalationCheckError,
   isEligibilityError,
-  MissingSignalOccurrencesForDetailsGenerationError,
   MissingScoreFeedbackForDiscoveryError,
+  MissingSignalOccurrencesForDetailsGenerationError,
   PassedScoreNotEligibleForDiscoveryError,
   ScoreAlreadyOwnedBySignalError,
   ScoreDiscoveryOrganizationMismatchError,
   ScoreDiscoveryProjectMismatchError,
   ScoreNotFoundForDiscoveryError,
+  SignalDiscoveryLockUnavailableError,
+  SignalNotFoundForAssignmentError,
+  SignalNotFoundForDetailsGenerationError,
+  SignalNotFoundForEscalationCheckError,
 } from "./errors.ts"
 export {
   createSignalCentroid,
@@ -94,6 +94,8 @@ export {
 export { buildHistogramBucketScaffold, fillBuckets } from "./histogram-buckets.ts"
 export { type SignalDiscoveryLockInput, signalDiscoveryLockKey, withSignalDiscoveryLock } from "./locks.ts"
 export {
+  type ListSignalsRepositoryInput,
+  type OrgSignalSearchHit,
   type SignalCentroidNeighbor,
   type SignalLifecycleFlags,
   type SignalListPage,
@@ -101,8 +103,6 @@ export {
   type SignalRepositoryShape,
   type SignalSearchCandidate,
   type SignalWithLifecycle,
-  type ListSignalsRepositoryInput,
-  type OrgSignalSearchHit,
 } from "./ports/issue-repository.ts"
 export {
   type CoOccurrenceScoreInput,
@@ -211,6 +211,10 @@ export {
   listSignalTracesUseCase,
 } from "./use-cases/list-issue-traces.ts"
 export {
+  type ListSignalsError,
+  type ListSignalsInput,
+  type ListSignalsResult,
+  listSignalsUseCase,
   type SignalAssigneeFilter,
   type SignalListAnalytics,
   type SignalListAnalyticsCounts,
@@ -225,10 +229,6 @@ export {
   signalsSortDirectionSchema,
   signalsSortFieldSchema,
   signalsTimeRangeSchema,
-  type ListSignalsError,
-  type ListSignalsInput,
-  type ListSignalsResult,
-  listSignalsUseCase,
   TAG_AGGREGATION_FALLBACK_DAYS,
   UNASSIGNED_FILTER,
 } from "./use-cases/list-issues.ts"

@@ -1,11 +1,11 @@
 import {
   ChSqlClient,
   ExternalUserId,
-  SignalId,
   OrganizationId,
   ProjectId,
   ScoreId,
   SessionId,
+  SignalId,
   SimulationId,
   SpanId,
   SqlClient,

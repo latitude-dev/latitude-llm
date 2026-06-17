@@ -1,5 +1,5 @@
 import { hashOptimizationCandidateText } from "@domain/optimizations"
-import { EvaluationId, SignalId, ProjectId } from "@domain/shared"
+import { EvaluationId, ProjectId, SignalId } from "@domain/shared"
 import { Effect } from "effect"
 import type { LoadedEvaluationAlignmentState } from "../../alignment/types.ts"
 import { isArchivedEvaluation, isDeletedEvaluation } from "../../helpers.ts"

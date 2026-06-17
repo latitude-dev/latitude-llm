@@ -1,5 +1,5 @@
-import { buildHistogramBucketScaffold, fillBuckets, listUserSignalsUseCase } from "@domain/signals"
 import { ExternalUserId, OrganizationId, ProjectId } from "@domain/shared"
+import { buildHistogramBucketScaffold, fillBuckets, listUserSignalsUseCase } from "@domain/signals"
 import type { ProjectUserSummary, UserProfile, UsersOverview, UserUsageSlice } from "@domain/spans"
 import { USER_SORT_FIELDS, UserAnalyticsRepository } from "@domain/spans"
 import { listUserBehavioursUseCase, type UserBehaviourItem } from "@domain/taxonomy"

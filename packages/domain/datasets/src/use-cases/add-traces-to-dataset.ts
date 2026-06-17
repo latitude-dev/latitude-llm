@@ -1,5 +1,5 @@
 import { ScoreAnalyticsRepository } from "@domain/scores"
-import type { DatasetId, FilterSet, SignalId, OrganizationId, ProjectId, TraceId } from "@domain/shared"
+import type { DatasetId, FilterSet, OrganizationId, ProjectId, SignalId, TraceId } from "@domain/shared"
 import { ChSqlClient } from "@domain/shared"
 import type { TraceDetail, TraceListCursor } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"

@@ -1,8 +1,8 @@
 import { BILLING_OVERAGE_SYNC_THROTTLE_MS } from "@domain/billing"
 import type { EventEnvelope } from "@domain/events"
-import { ESCALATION_CHECK_THROTTLE_MS, SIGNAL_REFRESH_THROTTLE_MS } from "@domain/signals"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
+import { ESCALATION_CHECK_THROTTLE_MS, SIGNAL_REFRESH_THROTTLE_MS } from "@domain/signals"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 
 import { hash } from "@repo/utils"

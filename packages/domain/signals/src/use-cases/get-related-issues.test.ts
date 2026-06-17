@@ -1,11 +1,11 @@
 import {
-  type SignalCoOccurrenceAggregate,
-  type SignalOccurrenceAggregate,
   ScoreAnalyticsRepository,
   type ScoreAnalyticsTimeRange,
+  type SignalCoOccurrenceAggregate,
+  type SignalOccurrenceAggregate,
 } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
-import { ChSqlClient, SignalId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { ChSqlClient, OrganizationId, ProjectId, SignalId, SqlClient } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -116,7 +116,9 @@ describe("getRelatedSignalsUseCase", () => {
     })
 
     const related = await Effect.runPromise(
-      getRelatedSignalsUseCase({ organizationId, projectId, signalId: sourceSignalId, now }).pipe(Effect.provide(layer)),
+      getRelatedSignalsUseCase({ organizationId, projectId, signalId: sourceSignalId, now }).pipe(
+        Effect.provide(layer),
+      ),
     )
 
     // resolvedTwin (0.83) > coOccurring (0.70) > twin (0.5).
@@ -153,7 +155,9 @@ describe("getRelatedSignalsUseCase", () => {
     })
 
     await Effect.runPromise(
-      getRelatedSignalsUseCase({ organizationId, projectId, signalId: sourceSignalId, now }).pipe(Effect.provide(layer)),
+      getRelatedSignalsUseCase({ organizationId, projectId, signalId: sourceSignalId, now }).pipe(
+        Effect.provide(layer),
+      ),
     )
 
     expect(captured?.to).toEqual(now)
@@ -174,7 +178,9 @@ describe("getRelatedSignalsUseCase", () => {
     })
 
     const related = await Effect.runPromise(
-      getRelatedSignalsUseCase({ organizationId, projectId, signalId: sourceSignalId, now }).pipe(Effect.provide(layer)),
+      getRelatedSignalsUseCase({ organizationId, projectId, signalId: sourceSignalId, now }).pipe(
+        Effect.provide(layer),
+      ),
     )
 
     expect(related).toEqual([])

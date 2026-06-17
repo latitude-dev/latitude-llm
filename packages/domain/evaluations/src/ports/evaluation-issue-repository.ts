@@ -1,4 +1,4 @@
-import type { SignalId, NotFoundError, RepositoryError, SqlClient } from "@domain/shared"
+import type { NotFoundError, RepositoryError, SignalId, SqlClient } from "@domain/shared"
 import { Context, type Effect } from "effect"
 
 // Tiny read-only view of the issues domain so evaluations can depend on the

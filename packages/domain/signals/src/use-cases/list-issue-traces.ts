@@ -1,5 +1,5 @@
 import { ScoreAnalyticsRepository } from "@domain/scores"
-import type { ChSqlClient, SignalId, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
+import type { ChSqlClient, OrganizationId, ProjectId, RepositoryError, SignalId } from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 

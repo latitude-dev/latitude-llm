@@ -1,4 +1,4 @@
-import type { SignalId, NotFoundError, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
+import type { NotFoundError, ProjectId, RepositoryError, SignalId, SqlClient } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { Signal } from "../entities/issue.ts"
 

@@ -7,7 +7,7 @@ import {
   SIGNAL_DISCOVERY_PROJECT_LOCK_KEY,
   SIGNAL_DISCOVERY_PROJECT_LOCK_TTL_SECONDS,
 } from "../constants.ts"
-import { type CheckEligibilityError, type SignalDiscoveryLockUnavailableError, isEligibilityError } from "../errors.ts"
+import { type CheckEligibilityError, isEligibilityError, type SignalDiscoveryLockUnavailableError } from "../errors.ts"
 import { withSignalDiscoveryLock } from "../locks.ts"
 import { SignalRepository } from "../ports/issue-repository.ts"
 import type { AssignScoreToSignalError, AssignScoreToSignalResult } from "./assign-score-to-issue.ts"

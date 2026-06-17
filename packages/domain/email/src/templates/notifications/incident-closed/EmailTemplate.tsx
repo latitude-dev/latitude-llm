@@ -1,6 +1,6 @@
-import type { SignalPriority } from "@domain/signals"
 import type { IncidentRecovery } from "@domain/notifications"
 import { ALERT_INCIDENT_KIND_SOURCE_TYPE, type AlertIncidentKind, type AlertSeverity } from "@domain/shared"
+import type { SignalPriority } from "@domain/signals"
 import { Section } from "@react-email/components"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
@@ -15,13 +15,13 @@ import {
   formatScope,
   humanizeDurationMs,
   IncidentTrendChartImage,
-  SignalIdFooter,
-  SignalTimestamp,
   MonitorAttribution,
   type MonitorAttributionInfo,
   PriorityBadge,
   SectionHeader,
   SeverityBadge,
+  SignalIdFooter,
+  SignalTimestamp,
 } from "../-incident-components.tsx"
 
 interface IncidentClosedEmailProps {

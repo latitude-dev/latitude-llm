@@ -16,10 +16,10 @@ import type { QueueConsumer } from "@domain/queue"
 import { NotificationId, OrganizationId, ProjectId, SlackIntegrationId } from "@domain/shared"
 import { type RedisClient, RedisSlackRefreshLockRepositoryLive } from "@platform/cache-redis"
 import {
-  SignalRepositoryLive,
   OrganizationRepositoryLive,
   ProjectRepositoryLive,
   SavedSearchRepositoryLive,
+  SignalRepositoryLive,
   SlackDeliveryRepositoryLive,
   SlackIntegrationRepositoryLive,
   UserRepositoryLive,

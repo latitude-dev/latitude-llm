@@ -1,4 +1,3 @@
-import type { SignalPriority } from "@domain/signals"
 import { formatHumanReadableAlert } from "@domain/monitors"
 import type { IncidentSampleAuthor, IncidentSampleExcerpt } from "@domain/notifications"
 import {
@@ -7,6 +6,7 @@ import {
   type AlertSeverity,
   SEVERITY_BADGE_COLOR,
 } from "@domain/shared"
+import type { SignalPriority } from "@domain/signals"
 import { Img, Link, Section, Text } from "@react-email/components"
 import type { CSSProperties, ReactNode } from "react"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers

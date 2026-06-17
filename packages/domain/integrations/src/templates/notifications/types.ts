@@ -1,7 +1,7 @@
-import type { SignalRepository } from "@domain/signals"
 import type { NOTIFICATION_KIND_META, NotificationKind } from "@domain/notifications"
 import type { SavedSearchRepository } from "@domain/saved-searches"
 import type { NotificationId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import type { SignalRepository } from "@domain/signals"
 import type { UserRepository } from "@domain/users"
 import type { KnownBlock } from "@slack/web-api"
 import { Data, type Effect } from "effect"

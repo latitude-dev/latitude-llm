@@ -9,18 +9,18 @@ import {
   requestWrappedReportNotificationsUseCase,
 } from "@domain/notifications"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
-import { SignalId, NOTIFICATION_GROUP_META, OrganizationId, ProjectId, type SqlClient } from "@domain/shared"
+import { NOTIFICATION_GROUP_META, OrganizationId, ProjectId, SignalId, type SqlClient } from "@domain/shared"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   AlertIncidentRepositoryLive,
   EvaluationRepositoryLive,
   IncidentMonitorReaderLive,
-  SignalRepositoryLive,
   MembershipRepositoryLive,
   NotificationRepositoryLive,
   ProjectRepositoryLive,
   ScoreRepositoryLive,
   SettingsReaderLive,
+  SignalRepositoryLive,
   SlackIntegrationRepositoryLive,
   UserRepositoryLive,
   withPostgres,

@@ -10,9 +10,9 @@ import { emailDesignTokens } from "../../../tokens/design-system.ts"
 import {
   EmailMetadataTable,
   formatScope,
+  SectionHeader,
   SignalIdFooter,
   SignalTimestamp,
-  SectionHeader,
 } from "../-incident-components.tsx"
 
 interface SignalAssignedEmailProps {

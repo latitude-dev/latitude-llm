@@ -1,5 +1,5 @@
 import { WorkflowQuerier, type WorkflowQuerierShape } from "@domain/queue"
-import { EvaluationId, SignalId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { EvaluationId, OrganizationId, ProjectId, SignalId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -107,7 +107,9 @@ describe("deriveSignalAlignmentState", () => {
     const state = await Effect.runPromise(
       deriveSignalAlignmentState({ signalId, activeEvaluations: [evaluation] }).pipe(
         Effect.provide(
-          provideWorkflowQuerier(new Set([`evaluations:generate:${signalId}`, `evaluations:optimize:${evaluation.id}`])),
+          provideWorkflowQuerier(
+            new Set([`evaluations:generate:${signalId}`, `evaluations:optimize:${evaluation.id}`]),
+          ),
         ),
       ),
     )

@@ -1,6 +1,6 @@
-import { type SignalOccurrenceBucket, type SignalWindowMetric, ScoreAnalyticsRepository } from "@domain/scores"
+import { ScoreAnalyticsRepository, type SignalOccurrenceBucket, type SignalWindowMetric } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
-import { ChSqlClient, SignalId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { ChSqlClient, OrganizationId, ProjectId, SignalId, SqlClient } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"

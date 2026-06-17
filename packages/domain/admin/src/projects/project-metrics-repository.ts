@@ -1,4 +1,4 @@
-import type { SignalId, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
+import type { OrganizationId, ProjectId, RepositoryError, SignalId } from "@domain/shared"
 import { Context, type Effect } from "effect"
 
 /**

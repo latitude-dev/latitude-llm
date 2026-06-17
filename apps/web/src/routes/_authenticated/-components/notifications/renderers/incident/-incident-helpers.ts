@@ -1,11 +1,11 @@
 import { eq } from "@tanstack/react-db"
 import { useQuery } from "@tanstack/react-query"
+import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
+import { useSavedSearchesList } from "../../../../../../domains/saved-searches/saved-searches.collection.ts"
 import {
   getSignalLifecycleSummary,
   type SignalLifecycleSummaryRecord,
 } from "../../../../../../domains/signals/signals.functions.ts"
-import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
-import { useSavedSearchesList } from "../../../../../../domains/saved-searches/saved-searches.collection.ts"
 
 interface IncidentTarget {
   readonly projectId: string | null | undefined
@@ -22,7 +22,8 @@ export function useLiveSignalSummary(target: IncidentTarget): SignalLifecycleSum
   const enabled = Boolean(target.projectId)
   const { data } = useQuery({
     queryKey: ["notifications", "issue-summary", target.projectId, target.sourceId],
-    queryFn: () => getSignalLifecycleSummary({ data: { projectId: target.projectId ?? "", signalId: target.sourceId } }),
+    queryFn: () =>
+      getSignalLifecycleSummary({ data: { projectId: target.projectId ?? "", signalId: target.sourceId } }),
     enabled,
     staleTime: 30_000,
   })

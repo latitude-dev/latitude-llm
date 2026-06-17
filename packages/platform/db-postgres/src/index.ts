@@ -47,7 +47,6 @@ export { FeatureFlagRepositoryLive } from "./repositories/feature-flag-repositor
 export { FlaggerRepositoryLive } from "./repositories/flagger-repository.ts"
 export { IncidentMonitorReaderLive } from "./repositories/incident-monitor-reader.ts"
 export { InvitationRepositoryLive } from "./repositories/invitation-repository.ts"
-export { SignalRepositoryLive } from "./repositories/signal-repository.ts"
 export { MembershipRepositoryLive } from "./repositories/membership-repository.ts"
 export { MonitorRepositoryLive } from "./repositories/monitor-repository.ts"
 export { NotificationRepositoryLive } from "./repositories/notification-repository.ts"
@@ -58,6 +57,7 @@ export { SandboxRepositoryLive } from "./repositories/sandbox-repository.ts"
 export { SavedSearchRepositoryLive } from "./repositories/saved-search-repository.ts"
 export { ScoreRepositoryLive } from "./repositories/score-repository.ts"
 export { SettingsReaderLive } from "./repositories/settings-reader-repository.ts"
+export { SignalRepositoryLive } from "./repositories/signal-repository.ts"
 export { SlackDeliveryRepositoryLive } from "./repositories/slack-delivery-repository.ts"
 export {
   findActiveSlackIntegrationByTeamIdAcrossOrgs,

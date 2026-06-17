@@ -14,10 +14,10 @@ import { ScoreRepository, scoreSchema } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
 import {
   EvaluationId,
-  SignalId,
   NotFoundError,
   OrganizationId,
   ProjectId,
+  SignalId,
   SqlClient,
   type SqlClientShape,
 } from "@domain/shared"

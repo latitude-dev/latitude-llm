@@ -1,4 +1,3 @@
-import type { SignalPriority } from "@domain/signals"
 import type { IncidentSampleExcerpt } from "@domain/notifications"
 import {
   ALERT_INCIDENT_KIND_LABEL,
@@ -6,6 +5,7 @@ import {
   type AlertIncidentKind,
   type AlertSeverity,
 } from "@domain/shared"
+import type { SignalPriority } from "@domain/signals"
 import { Section } from "@react-email/components"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
@@ -18,14 +18,14 @@ import { emailDesignTokens } from "../../../tokens/design-system.ts"
 import {
   EmailMetadataTable,
   formatScope,
-  SignalIdFooter,
-  SignalTimestamp,
   MonitorAttribution,
   type MonitorAttributionInfo,
   PriorityBadge,
   SampleExcerptCard,
   SectionHeader,
   SeverityBadge,
+  SignalIdFooter,
+  SignalTimestamp,
   TagsChips,
 } from "../-incident-components.tsx"
 

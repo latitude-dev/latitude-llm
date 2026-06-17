@@ -1,7 +1,7 @@
 import { EvaluationRepository } from "@domain/evaluations"
 import { WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
 import { type Score, ScoreRepository, syncScoreAnalyticsUseCase } from "@domain/scores"
-import { SignalId, type RepositoryError, ScoreId } from "@domain/shared"
+import { type RepositoryError, ScoreId, SignalId } from "@domain/shared"
 import { Effect } from "effect"
 import type { CheckEligibilityError } from "../errors.ts"
 import { ScoreAlreadyOwnedBySignalError } from "../errors.ts"

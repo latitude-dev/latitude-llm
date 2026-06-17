@@ -1,4 +1,3 @@
-import { signalPrioritySchema } from "@domain/signals"
 import {
   alertIncidentConditionSchema,
   alertIncidentKindSchema,
@@ -11,6 +10,7 @@ import {
   ProjectId,
   userIdSchema,
 } from "@domain/shared"
+import { signalPrioritySchema } from "@domain/signals"
 import { z } from "zod"
 
 /**

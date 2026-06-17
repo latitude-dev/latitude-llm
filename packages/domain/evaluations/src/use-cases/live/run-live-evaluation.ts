@@ -22,11 +22,11 @@ import {
 } from "@domain/scores"
 import {
   EvaluationId,
-  SignalId,
   OrganizationId,
   ProjectId,
   type RepositoryError,
   type SettingsReader,
+  SignalId,
   type SqlClient,
   TraceId,
 } from "@domain/shared"

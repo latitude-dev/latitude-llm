@@ -3,12 +3,12 @@ import { OutboxEventWriter } from "@domain/events"
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import {
   type ChSqlClient,
-  SignalId,
   type NotFoundError,
   OrganizationId,
   ProjectId,
   type RepositoryError,
   SettingsReader,
+  SignalId,
   SqlClient,
 } from "@domain/shared"
 import { Effect } from "effect"
@@ -186,7 +186,11 @@ export const checkSignalEscalationUseCase = (input: CheckSignalEscalationInput) 
           .pipe(Effect.map((entries) => entries[0])),
         settingsReader.getProjectSettings(ProjectId(input.projectId)),
         wasEscalating
-          ? alertIncidentRepository.findOpen({ sourceType: "issue", sourceId: input.signalId, kind: "issue.escalating" })
+          ? alertIncidentRepository.findOpen({
+              sourceType: "issue",
+              sourceId: input.signalId,
+              kind: "issue.escalating",
+            })
           : Effect.succeed(null),
       ],
       { concurrency: "unbounded" },

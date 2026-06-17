@@ -1,7 +1,7 @@
 import { OutboxEventWriter } from "@domain/events"
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
-import { ChSqlClient, type FilterSet, SignalId, OrganizationId, SqlClient, type TraceId } from "@domain/shared"
+import { ChSqlClient, type FilterSet, OrganizationId, SignalId, SqlClient, type TraceId } from "@domain/shared"
 import { createFakeChSqlClient } from "@domain/shared/testing"
 import { TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"

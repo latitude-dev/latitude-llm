@@ -71,7 +71,9 @@ const createIncidentFor = (
   }).pipe(
     withPostgres(repoLayer, pgClient, OrganizationId(payload.organizationId)),
     Effect.tapError((error) =>
-      Effect.sync(() => logger.error(`alert_incident creation failed kind=${kind} signalId=${payload.signalId}`, error)),
+      Effect.sync(() =>
+        logger.error(`alert_incident creation failed kind=${kind} signalId=${payload.signalId}`, error),
+      ),
     ),
     Effect.asVoid,
     withTracing,

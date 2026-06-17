@@ -18,12 +18,12 @@ import {
   SEED_GENERATE_SIGNAL_UUID,
   SEED_INSTALLATION_SIGNAL_ID,
   SEED_INSTALLATION_SIGNAL_UUID,
-  SEED_SIGNAL_ID,
-  SEED_SIGNAL_UUID,
   SEED_RETURNS_EVALUATION_HASH,
   SEED_RETURNS_EVALUATION_ID,
   SEED_RETURNS_SIGNAL_ID,
   SEED_RETURNS_SIGNAL_UUID,
+  SEED_SIGNAL_ID,
+  SEED_SIGNAL_UUID,
   SEED_TIMELINE_WINDOW_DAYS,
   SEED_WARRANTY_ARCHIVED_EVALUATION_HASH,
   SEED_WARRANTY_EVALUATION_HASH,
@@ -496,21 +496,22 @@ const generatedExtraSignalBlueprints = Array.from({ length: GENERATED_EXTRA_SIGN
   buildGeneratedExtraSignalBlueprint(index),
 )
 
-const extraSignalFixtures: SeedSignalFixture[] = [...curatedExtraSignalBlueprints, ...generatedExtraSignalBlueprints].map(
-  (issue, index) => ({
-    id:
-      SEED_EXTRA_SIGNAL_IDS[index] ??
-      (() => {
-        throw new Error(`Missing extra seed issue ID for index ${index}`)
-      })(),
-    uuid:
-      SEED_EXTRA_SIGNAL_UUIDS[index] ??
-      (() => {
-        throw new Error(`Missing extra seed issue UUID for index ${index}`)
-      })(),
-    ...issue,
-  }),
-)
+const extraSignalFixtures: SeedSignalFixture[] = [
+  ...curatedExtraSignalBlueprints,
+  ...generatedExtraSignalBlueprints,
+].map((issue, index) => ({
+  id:
+    SEED_EXTRA_SIGNAL_IDS[index] ??
+    (() => {
+      throw new Error(`Missing extra seed issue ID for index ${index}`)
+    })(),
+  uuid:
+    SEED_EXTRA_SIGNAL_UUIDS[index] ??
+    (() => {
+      throw new Error(`Missing extra seed issue UUID for index ${index}`)
+    })(),
+  ...issue,
+}))
 
 export const SEED_SIGNAL_FIXTURES: readonly SeedSignalFixture[] = [...baseSignalFixtures, ...extraSignalFixtures]
 
@@ -2142,43 +2143,45 @@ function buildExtraSignalOccurrenceFeedback(input: {
   return `${sourceLabel} ${evidenceLabel} where ${scenario}. The case remained a ${input.severity}-severity example of ${signalLabel}.`
 }
 
-const extraSignalOccurrenceRows: readonly SeedSignalOccurrenceFixture[] = extraSignalFixtures.flatMap((issue, index) => {
-  const sourceId = index % 2 === 0 ? "seed-issue-scout" : "backlog-audit"
-  const idPrefix = `x${index.toString(36)}`
-  const severity = index % 4 === 0 ? "high" : index % 4 === 1 ? "medium" : "low"
-  const occurrenceDays = buildExtraOccurrenceDays(issue, index)
+const extraSignalOccurrenceRows: readonly SeedSignalOccurrenceFixture[] = extraSignalFixtures.flatMap(
+  (issue, index) => {
+    const sourceId = index % 2 === 0 ? "seed-issue-scout" : "backlog-audit"
+    const idPrefix = `x${index.toString(36)}`
+    const severity = index % 4 === 0 ? "high" : index % 4 === 1 ? "medium" : "low"
+    const occurrenceDays = buildExtraOccurrenceDays(issue, index)
 
-  return occurrenceDays.map((daysAgo, occurrenceIndex) => ({
-    signalId: issue.id,
-    source: "custom" as const,
-    sourceId,
-    idPrefix,
-    evaluationHash: null,
-    daysAgo,
-    hour: 8 + ((index + occurrenceIndex) % 7),
-    minute: (index * 7 + occurrenceIndex * 13) % 60,
-    value: 0.05 + ((index + occurrenceIndex) % 5) * 0.02,
-    passed: false,
-    errored: false,
-    error: null,
-    feedback: buildExtraSignalOccurrenceFeedback({
-      issue,
+    return occurrenceDays.map((daysAgo, occurrenceIndex) => ({
+      signalId: issue.id,
+      source: "custom" as const,
       sourceId,
-      severity,
-      occurrenceIndex,
-    }),
-    metadata: {
-      importName: sourceId,
-      reviewer: index % 2 === 0 ? "seed-quality" : "ops-triage",
-      batch: `extra-issues-${Math.floor(index / 4) + 1}`,
-      severity,
-      expectedVisibility: occurrenceDays.length >= 3 ? "visible" : "denoised",
-    },
-    duration: 0,
-    tokens: 0,
-    cost: 0,
-  }))
-})
+      idPrefix,
+      evaluationHash: null,
+      daysAgo,
+      hour: 8 + ((index + occurrenceIndex) % 7),
+      minute: (index * 7 + occurrenceIndex * 13) % 60,
+      value: 0.05 + ((index + occurrenceIndex) % 5) * 0.02,
+      passed: false,
+      errored: false,
+      error: null,
+      feedback: buildExtraSignalOccurrenceFeedback({
+        issue,
+        sourceId,
+        severity,
+        occurrenceIndex,
+      }),
+      metadata: {
+        importName: sourceId,
+        reviewer: index % 2 === 0 ? "seed-quality" : "ops-triage",
+        batch: `extra-issues-${Math.floor(index / 4) + 1}`,
+        severity,
+        expectedVisibility: occurrenceDays.length >= 3 ? "visible" : "denoised",
+      },
+      duration: 0,
+      tokens: 0,
+      cost: 0,
+    }))
+  },
+)
 
 // Today-bursts make a curated set of issues genuinely escalating per the
 // production threshold (recent >= max(20, baseline*1.33+1)). Without these

@@ -1,4 +1,4 @@
-import type { SignalId, ProjectId, RepositoryError } from "@domain/shared"
+import type { ProjectId, RepositoryError, SignalId } from "@domain/shared"
 import { Effect } from "effect"
 import { EvaluationRepository } from "../ports/evaluation-repository.ts"
 

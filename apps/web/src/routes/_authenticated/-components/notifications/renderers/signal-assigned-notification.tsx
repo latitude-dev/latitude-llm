@@ -4,7 +4,7 @@ import { UserRoundPlusIcon } from "lucide-react"
 import { useMemberByUserIdMap } from "../../../../../domains/members/members.collection.ts"
 import type { NotificationRecord } from "../../../../../domains/notifications/notifications.functions.ts"
 import { BaseNotification } from "../base-notification.tsx"
-import { useSignalUrl, useLiveSignalSummary } from "./incident/-incident-helpers.ts"
+import { useLiveSignalSummary, useSignalUrl } from "./incident/-incident-helpers.ts"
 import { SignalSummaryCard } from "./incident/signal-summary-card.tsx"
 
 /**
