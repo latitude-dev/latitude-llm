@@ -119,7 +119,7 @@ function buildQueueRows(scope: SeedScope) {
         "Review traces with unusually high cost. Check whether token usage is justified by the request, or whether the assistant is " +
         "making redundant calls, over-explaining, or otherwise spending more than necessary.",
       settings: {
-        filter: { cost: [{ op: "gte" as const, value: 500 }] },
+        filter: { cost: [{ op: "gte" as const, value: 1_000_000 }] },
         sampling: 25,
       },
       assignees: [assignee(0)],

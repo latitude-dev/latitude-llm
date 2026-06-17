@@ -39,7 +39,7 @@ export interface PosthogDelivererOptions {
 }
 
 interface SerializedEvent {
-  readonly spanId: string
+  readonly sourceRecordId: string
   readonly json: string
   readonly bytes: number
 }
@@ -51,15 +51,15 @@ const serializeEvent = (event: DestinationEvent): SerializedEvent => {
     timestamp: event.timestamp.toISOString(),
     properties: { ...event.properties, distinct_id: event.distinctId },
   })
-  return { spanId: event.spanId, json, bytes: Buffer.byteLength(json, "utf8") }
+  return { sourceRecordId: event.sourceRecordId, json, bytes: Buffer.byteLength(json, "utf8") }
 }
 
-const groupBySpan = (events: readonly SerializedEvent[]): SerializedEvent[][] => {
+const groupBySourceRecord = (events: readonly SerializedEvent[]): SerializedEvent[][] => {
   const groups = new Map<string, SerializedEvent[]>()
   for (const event of events) {
-    const group = groups.get(event.spanId)
+    const group = groups.get(event.sourceRecordId)
     if (group) group.push(event)
-    else groups.set(event.spanId, [event])
+    else groups.set(event.sourceRecordId, [event])
   }
   return [...groups.values()]
 }
@@ -191,7 +191,7 @@ export const createPosthogDeliverer = (options: PosthogDelivererOptions = {}): D
           buildBody({ apiKey: credentials.apiKey, historicalMigration, chunk: [] }),
           "utf8",
         )
-        const chunks = packChunks(groupBySpan(kept), envelopeBytes)
+        const chunks = packChunks(groupBySourceRecord(kept), envelopeBytes)
 
         let delivered = 0
         for (const chunk of chunks) {

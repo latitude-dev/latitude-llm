@@ -37,38 +37,38 @@ const USAGE_PROFILES: Record<
   }
 > = {
   tiny: {
-    costRangeUsd: [0.0000002, 0.0000006],
+    costRangeUsd: [0.0004, 0.0012],
     inputJitter: [-6, 4],
     outputJitter: [-6, 4],
     reasoningChance: 0,
   },
   low: {
-    costRangeUsd: [0.0000006, 0.0000018],
+    costRangeUsd: [0.0012, 0.0036],
     inputJitter: [-8, 10],
     outputJitter: [-6, 12],
     reasoningChance: 0.05,
   },
   medium: {
-    costRangeUsd: [0.0000018, 0.0000046],
+    costRangeUsd: [0.0036, 0.0092],
     inputJitter: [-12, 18],
     outputJitter: [-8, 18],
     reasoningChance: 0.2,
   },
   high: {
-    costRangeUsd: [0.0000075, 0.0000118],
+    costRangeUsd: [0.015, 0.0236],
     inputJitter: [-18, 30],
     outputJitter: [-12, 28],
     reasoningChance: 0.6,
   },
   veryHigh: {
-    costRangeUsd: [0.0000118, 0.0000175],
+    costRangeUsd: [0.0236, 0.035],
     inputJitter: [-20, 36],
     outputJitter: [-16, 36],
     reasoningChance: 0.85,
   },
 }
 
-export const LIVE_QUEUE_COST_THRESHOLD_USD = 0.000005
+export const LIVE_QUEUE_COST_THRESHOLD_USD = 0.01
 export const SUPPORT_SERVICE_NAME = "acme-support-agent"
 export const ORDER_ROUTER_SERVICE_NAME = "acme-order-router"
 export const QA_TRIAGE_SERVICE_NAME = "acme-qa-classifier"
@@ -147,10 +147,20 @@ function buildUsage(input: {
   const includeReasoning = input.forceReasoning || input.rng.chance(profile.reasoningChance)
   const reasoningTokens = includeReasoning ? Math.max(24, Math.round(outputTokens * input.rng.float(0.8, 1.6))) : 0
 
+  // Split the total token-weighted so input + output == total (faithful: matches what
+  // ingestion stores and what flows to destinations), instead of leaving input/output to
+  // token-estimation while the total stays a separate, divergent number.
+  const totalCostUsd = roundUsd(input.rng.float(profile.costRangeUsd[0], profile.costRangeUsd[1]))
+  const costTokenTotal = inputTokens + outputTokens
+  const inputCostUsd = roundUsd(costTokenTotal > 0 ? totalCostUsd * (inputTokens / costTokenTotal) : totalCostUsd)
+  const outputCostUsd = roundUsd(totalCostUsd - inputCostUsd)
+
   return {
     inputTokens,
     outputTokens,
-    totalCostUsd: roundUsd(input.rng.float(profile.costRangeUsd[0], profile.costRangeUsd[1])),
+    totalCostUsd,
+    inputCostUsd,
+    outputCostUsd,
     ...(reasoningTokens > 0 ? { reasoningTokens } : {}),
     ttftNs:
       input.rng.int(

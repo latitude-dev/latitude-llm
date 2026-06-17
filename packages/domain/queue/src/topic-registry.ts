@@ -584,16 +584,18 @@ const _registry = {
      */
     pruneSyncRuns: Record<string, never>
     /**
-     * One sync run for a single destination. The handler re-loads the
-     * destination, reads its spans window from ClickHouse, maps and delivers
-     * it, then advances the compound cursor. Published with
-     * `dedupeKey: destinations:runSync:${destinationId}` so at most one run per
-     * destination is queued; retryable delivery failures drive BullMQ backoff.
+     * One sync run for a single `(destination, source)` pair. The handler
+     * re-loads the destination and the source cursor, reads that source's
+     * window, maps and delivers it, then advances the per-source compound
+     * cursor. Published with `dedupeKey: destinations:runSync:${destinationId}:${source}`
+     * so at most one run per pair is queued; retryable delivery failures drive
+     * BullMQ backoff.
      */
     runSync: {
       readonly organizationId: string
       readonly projectId: string
       readonly destinationId: string
+      readonly source: string
     }
     /**
      * Cascade cleanup. Fired by the domain-events worker on `ProjectDeleted`.

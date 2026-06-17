@@ -122,7 +122,7 @@ describe("mapSpansToPosthogEvents", () => {
     expect(event.name).toBe("$ai_generation")
     expect(event.distinctId).toBe("user-1")
     expect(event.timestamp).toEqual(span.endTime)
-    expect(event.spanId).toBe(span.spanId)
+    expect(event.sourceRecordId).toBe(span.spanId)
     expect(event.uuid).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
     expect(event.properties).toMatchObject({
       $ai_trace_id: TRACE_ID,
@@ -145,6 +145,7 @@ describe("mapSpansToPosthogEvents", () => {
       $ai_tools: span.toolDefinitions,
       latitude_project_id: span.projectId,
       latitude_span_url: buildSpanUrl(span),
+      latitude_source: "spans",
     })
     expect(event.properties).not.toHaveProperty("$process_person_profile")
     expect(event.properties).not.toHaveProperty("$ai_is_error")
@@ -311,7 +312,7 @@ describe("mapSpansToPosthogEvents", () => {
 
     expect(dropped).toBe(1)
     expect(events).toHaveLength(1)
-    expect(events[0].spanId).toBe(fine.spanId)
+    expect(events[0].sourceRecordId).toBe(fine.spanId)
   })
 
   it("produces identical UUIDs across re-runs and distinct UUIDs per destination", async () => {

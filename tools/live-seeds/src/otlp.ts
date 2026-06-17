@@ -39,6 +39,9 @@ export type SeedSpanUsage = {
   readonly inputTokens: number
   readonly outputTokens: number
   readonly totalCostUsd: number
+  /** Token-weighted split of `totalCostUsd`; emitted so ingestion stores input + output == total. */
+  readonly inputCostUsd: number
+  readonly outputCostUsd: number
   readonly reasoningTokens?: number
   readonly ttftNs?: number
 }
@@ -276,6 +279,8 @@ export function buildTraceRequests(input: {
           stringAttr("gen_ai.response.id", responseId),
           intAttr("gen_ai.usage.input_tokens", span.usage.inputTokens),
           intAttr("gen_ai.usage.output_tokens", span.usage.outputTokens),
+          floatAttr("gen_ai.usage.input_cost", span.usage.inputCostUsd),
+          floatAttr("gen_ai.usage.output_cost", span.usage.outputCostUsd),
           floatAttr("gen_ai.usage.total_cost", span.usage.totalCostUsd),
           intAttr("gen_ai.server.time_to_first_token", span.usage.ttftNs ?? 180_000_000),
           stringArrayAttr("gen_ai.response.finish_reasons", span.finishReasons ?? ["stop"]),

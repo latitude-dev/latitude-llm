@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "9421ad08-35a8-43de-8772-85c7548a81aa",
+  "id": "4ecd8658-5ee8-4c1d-8503-d3d997880071",
   "prevIds": [
-    "e7eaa599-6e22-47b6-a35f-ff2c28ecd1a1"
+    "9421ad08-35a8-43de-8772-85c7548a81aa"
   ],
   "ddl": [
     {
@@ -129,6 +129,24 @@
     {
       "isRlsEnabled": true,
       "name": "dataset_versions",
+      "entityType": "tables",
+      "schema": "latitude"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "destination_source_cursors",
+      "entityType": "tables",
+      "schema": "latitude"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "destination_sync_runs",
+      "entityType": "tables",
+      "schema": "latitude"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "destinations",
       "entityType": "tables",
       "schema": "latitude"
     },
@@ -3221,6 +3239,487 @@
       "entityType": "columns",
       "schema": "latitude",
       "table": "dataset_versions"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "organization_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_source_cursors"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "destination_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_source_cursors"
+    },
+    {
+      "type": "varchar(32)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "source",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_source_cursors"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "watermark",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_source_cursors"
+    },
+    {
+      "type": "varchar(32)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "''",
+      "generated": null,
+      "identity": null,
+      "name": "watermark_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_source_cursors"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "last_run_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_source_cursors"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "consecutive_empty_runs",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_source_cursors"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_source_cursors"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_source_cursors"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_sync_runs"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "organization_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_sync_runs"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "destination_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_sync_runs"
+    },
+    {
+      "type": "varchar(32)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "source",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_sync_runs"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "window_start",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_sync_runs"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "window_end",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_sync_runs"
+    },
+    {
+      "type": "varchar(16)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "status",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_sync_runs"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "spans_read",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_sync_runs"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "events_sent",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_sync_runs"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "events_dropped",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_sync_runs"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "error",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_sync_runs"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "started_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_sync_runs"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "finished_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_sync_runs"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_sync_runs"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_sync_runs"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destinations"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "organization_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destinations"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destinations"
+    },
+    {
+      "type": "varchar(64)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "kind",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destinations"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "name",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destinations"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "config",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destinations"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "credentials",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destinations"
+    },
+    {
+      "type": "varchar(16)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "status",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destinations"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "consecutive_failures",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destinations"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "last_failure_message",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destinations"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "created_by_user_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destinations"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destinations"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destinations"
     },
     {
       "type": "varchar(24)",
@@ -7399,6 +7898,125 @@
       "nameExplicit": true,
       "columns": [
         {
+          "value": "last_run_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "destination_source_cursors_last_run_at_idx",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "destination_source_cursors"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "destination_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "started_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "destination_sync_runs_destination_id_started_at_idx",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "destination_sync_runs"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "finished_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "brin",
+      "concurrently": false,
+      "name": "destination_sync_runs_finished_at_brin_idx",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "destination_sync_runs"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "project_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "kind",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "destinations_project_id_kind_idx",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "destinations"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "organization_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "destinations_organization_id_idx",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "destinations"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
           "value": "organization_id",
           "isExpression": false,
           "asc": true,
@@ -9137,6 +9755,17 @@
     },
     {
       "columns": [
+        "destination_id",
+        "source"
+      ],
+      "nameExplicit": false,
+      "name": "destination_source_cursors_pkey",
+      "entityType": "pks",
+      "schema": "latitude",
+      "table": "destination_source_cursors"
+    },
+    {
+      "columns": [
         "id"
       ],
       "nameExplicit": false,
@@ -9333,6 +9962,26 @@
       "name": "dataset_versions_pkey",
       "schema": "latitude",
       "table": "dataset_versions",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "destination_sync_runs_pkey",
+      "schema": "latitude",
+      "table": "destination_sync_runs",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "destinations_pkey",
+      "schema": "latitude",
+      "table": "destinations",
       "entityType": "pks"
     },
     {
@@ -10005,6 +10654,45 @@
       ],
       "using": "organization_id = get_current_organization_id()",
       "withCheck": "organization_id = get_current_organization_id()",
+      "name": "destination_source_cursors_organization_policy",
+      "entityType": "policies",
+      "schema": "latitude",
+      "table": "destination_source_cursors"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "ALL",
+      "roles": [
+        "public"
+      ],
+      "using": "organization_id = get_current_organization_id()",
+      "withCheck": "organization_id = get_current_organization_id()",
+      "name": "destination_sync_runs_organization_policy",
+      "entityType": "policies",
+      "schema": "latitude",
+      "table": "destination_sync_runs"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "ALL",
+      "roles": [
+        "public"
+      ],
+      "using": "organization_id = get_current_organization_id()",
+      "withCheck": "organization_id = get_current_organization_id()",
+      "name": "destinations_organization_policy",
+      "entityType": "policies",
+      "schema": "latitude",
+      "table": "destinations"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "ALL",
+      "roles": [
+        "public"
+      ],
+      "using": "organization_id = get_current_organization_id()",
+      "withCheck": "organization_id = get_current_organization_id()",
       "name": "evaluations_organization_policy",
       "entityType": "policies",
       "schema": "latitude",
@@ -10243,593 +10931,6 @@
       "entityType": "policies",
       "schema": "latitude",
       "table": "wrapped_reports"
-    },
-    {
-      "isRlsEnabled": true,
-      "name": "destination_sync_runs",
-      "entityType": "tables",
-      "schema": "latitude"
-    },
-    {
-      "isRlsEnabled": true,
-      "name": "destinations",
-      "entityType": "tables",
-      "schema": "latitude"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destination_sync_runs"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "organization_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destination_sync_runs"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "destination_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destination_sync_runs"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "window_start",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destination_sync_runs"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "window_end",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destination_sync_runs"
-    },
-    {
-      "type": "varchar(16)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "status",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destination_sync_runs"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "spans_read",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destination_sync_runs"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "events_sent",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destination_sync_runs"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "0",
-      "generated": null,
-      "identity": null,
-      "name": "events_dropped",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destination_sync_runs"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "error",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destination_sync_runs"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "started_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destination_sync_runs"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "finished_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destination_sync_runs"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destination_sync_runs"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destination_sync_runs"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destinations"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "organization_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destinations"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "project_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destinations"
-    },
-    {
-      "type": "varchar(64)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "kind",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destinations"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "name",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destinations"
-    },
-    {
-      "type": "jsonb",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "config",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destinations"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "credentials",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destinations"
-    },
-    {
-      "type": "varchar(16)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "status",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destinations"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "0",
-      "generated": null,
-      "identity": null,
-      "name": "consecutive_failures",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destinations"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "last_failure_message",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destinations"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "cursor_ingested_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destinations"
-    },
-    {
-      "type": "varchar(16)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "''",
-      "generated": null,
-      "identity": null,
-      "name": "cursor_span_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destinations"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "last_run_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destinations"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "0",
-      "generated": null,
-      "identity": null,
-      "name": "consecutive_empty_runs",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destinations"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "created_by_user_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destinations"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destinations"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "destinations"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "destination_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "started_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "destination_sync_runs_destination_id_started_at_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "destination_sync_runs"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "finished_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "brin",
-      "concurrently": false,
-      "name": "destination_sync_runs_finished_at_brin_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "destination_sync_runs"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "project_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "kind",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": true,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "destinations_project_id_kind_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "destinations"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "organization_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "destinations_organization_id_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "destinations"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "status",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "last_run_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "destinations_status_last_run_at_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "destinations"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "destination_sync_runs_pkey",
-      "schema": "latitude",
-      "table": "destination_sync_runs",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "destinations_pkey",
-      "schema": "latitude",
-      "table": "destinations",
-      "entityType": "pks"
-    },
-    {
-      "as": "PERMISSIVE",
-      "for": "ALL",
-      "roles": [
-        "public"
-      ],
-      "using": "organization_id = get_current_organization_id()",
-      "withCheck": "organization_id = get_current_organization_id()",
-      "name": "destination_sync_runs_organization_policy",
-      "entityType": "policies",
-      "schema": "latitude",
-      "table": "destination_sync_runs"
-    },
-    {
-      "as": "PERMISSIVE",
-      "for": "ALL",
-      "roles": [
-        "public"
-      ],
-      "using": "organization_id = get_current_organization_id()",
-      "withCheck": "organization_id = get_current_organization_id()",
-      "name": "destinations_organization_policy",
-      "entityType": "policies",
-      "schema": "latitude",
-      "table": "destinations"
     }
   ],
   "renames": []

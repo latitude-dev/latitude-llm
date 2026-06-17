@@ -1,6 +1,7 @@
 import type { OrganizationId, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { DestinationRepository } from "../ports/destination-repository.ts"
+import { DestinationSourceCursorRepository } from "../ports/destination-source-cursor-repository.ts"
 import { DestinationSyncRunRepository } from "../ports/destination-sync-run-repository.ts"
 
 export interface DeleteProjectDestinationsInput {
@@ -32,9 +33,12 @@ export const deleteProjectDestinationsUseCase = (input: DeleteProjectDestination
     const syncRuns = yield* DestinationSyncRunRepository
     yield* syncRuns.deleteByDestinationIds(deletedIds)
 
+    const cursors = yield* DestinationSourceCursorRepository
+    yield* Effect.forEach(deletedIds, (id) => cursors.deleteByDestinationId(id), { discard: true })
+
     return { deleted: deletedIds.length }
   }).pipe(Effect.withSpan("destinations.deleteProjectDestinations")) as Effect.Effect<
     { readonly deleted: number },
     DeleteProjectDestinationsError,
-    SqlClient | DestinationRepository | DestinationSyncRunRepository
+    SqlClient | DestinationRepository | DestinationSourceCursorRepository | DestinationSyncRunRepository
   >

@@ -43,22 +43,14 @@ function setup(seed: Destination) {
 }
 
 describe("resumeDestinationUseCase", () => {
-  it("resumes a paused destination to active without touching the cursor", async () => {
-    const { rows, layer } = setup(
-      baseDestination({
-        status: "paused",
-        cursorSpanId: "span-123",
-        cursorIngestedAt: new Date("2026-06-01T00:00:00Z"),
-      }),
-    )
+  it("resumes a paused destination to active", async () => {
+    const { rows, layer } = setup(baseDestination({ status: "paused" }))
 
     const updated = await Effect.runPromise(
       resumeDestinationUseCase({ organizationId: orgId, projectId, destinationId }).pipe(Effect.provide(layer)),
     )
 
     expect(updated.status).toBe("active")
-    expect(updated.cursorSpanId).toBe("span-123")
-    expect(updated.cursorIngestedAt).toEqual(new Date("2026-06-01T00:00:00Z"))
     expect(rows[0]?.status).toBe("active")
   })
 

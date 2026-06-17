@@ -11,7 +11,7 @@ import {
   Plug,
   ScanSearch,
   SettingsIcon,
-  Share2,
+  Share2Icon,
   ShieldAlertIcon,
   TagsIcon,
   TextIcon,
@@ -177,7 +177,7 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
       {
         key: "data-destinations",
         label: "Data destinations",
-        icon: Share2,
+        icon: Share2Icon,
         path: (slug) => `/projects/${slug}/settings/data-destinations`,
         flag: "destinations",
       },

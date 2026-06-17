@@ -24,7 +24,7 @@ const makeEvent = (overrides: Partial<DestinationEvent> = {}): DestinationEvent 
     name: "$ai_span",
     distinctId: "user-1",
     timestamp: new Date("2026-06-01T00:00:00Z"),
-    spanId: span(`s${eventCounter}`),
+    sourceRecordId: span(`s${eventCounter}`),
     properties: { $ai_trace_id: "trace-1" },
     ...overrides,
   }
@@ -202,8 +202,8 @@ describe("createPosthogDeliverer", () => {
     const singles = Array.from({ length: 499 }, () => makeEvent())
     const rootSpanId = span("root")
     const pair = [
-      makeEvent({ spanId: rootSpanId, name: "$ai_trace" }),
-      makeEvent({ spanId: rootSpanId, name: "$ai_generation" }),
+      makeEvent({ sourceRecordId: rootSpanId, name: "$ai_trace" }),
+      makeEvent({ sourceRecordId: rootSpanId, name: "$ai_generation" }),
     ]
 
     const result = await deliver(deliverer, [...singles, ...pair])

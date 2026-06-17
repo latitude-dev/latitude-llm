@@ -2,15 +2,17 @@ import type { QueuePublishError } from "@domain/queue"
 import type { OrganizationId, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
 import { Effect, Ref } from "effect"
 import type { Destination } from "../entities/destination.ts"
-import { DestinationRepository } from "../ports/destination-repository.ts"
+import type { DestinationSource } from "../entities/destination-source.ts"
+import { DestinationSourceCursorRepository } from "../ports/destination-source-cursor-repository.ts"
 
 const PUBLISH_CONCURRENCY = 10
 
-/** Fan-out callback, one per due destination; wired to `QueuePublisher.publish` in the worker. */
+/** Fan-out callback, one per due `(destination, source)` pair; wired to `QueuePublisher.publish` in the worker. */
 export type SweepDestinationsPublish = (target: {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly destination: Destination
+  readonly source: DestinationSource
 }) => Effect.Effect<void, QueuePublishError>
 
 export interface SweepDestinationsResult {
@@ -20,41 +22,41 @@ export interface SweepDestinationsResult {
 }
 
 /**
- * Fan-out side of the every-minute sweep: selects due destinations (idle
- * backoff + sandbox exclusion live in `listDue`) and enqueues one `runSync`
- * per destination. The publish dedupe key (set by the worker) keeps at most one
- * run per destination queued. Per-destination publish failures are tallied,
- * never fatal.
+ * Fan-out side of the every-minute sweep: selects due `(destination, source)`
+ * cursor rows (idle backoff + sandbox exclusion live in `listDue`) and enqueues
+ * one `runSync` per pair. The publish dedupe key (set by the worker, per
+ * `(destination, source)`) keeps at most one run per pair queued. Per-pair
+ * publish failures are tallied, never fatal.
  *
- * Audit-row pruning is *not* here — it's a separate nightly job
- * (`pruneDestinationSyncRunsUseCase`), since 30-day retention has no reason to
- * run on the every-minute cadence.
+ * The sweep stays a single source-agnostic timer — per-source cadence is data
+ * in the cursor row, not a separate timer. Audit-row pruning is its own nightly
+ * job (`pruneDestinationSyncRunsUseCase`).
  *
  * The `destinations` feature flag is *not* re-checked: creation is UI-only and
- * flag-gated, and the runtime stop is `pause` (by the customer in settings or
- * by an operator via backoffice), so the sweep runs every active destination
- * the repository hands back.
+ * flag-gated, and the runtime stop is `pause`, so the sweep runs every active
+ * destination's sources the repository hands back.
  */
 export const sweepDestinationsUseCase = (deps: {
   readonly now: Date
   readonly publish: SweepDestinationsPublish
-}): Effect.Effect<SweepDestinationsResult, RepositoryError, SqlClient | DestinationRepository> =>
+}): Effect.Effect<SweepDestinationsResult, RepositoryError, SqlClient | DestinationSourceCursorRepository> =>
   Effect.gen(function* () {
-    const destinations = yield* DestinationRepository
+    const cursors = yield* DestinationSourceCursorRepository
 
-    const due = yield* destinations.listDue(deps.now)
+    const due = yield* cursors.listDue(deps.now)
 
     const failedRef = yield* Ref.make(0)
     const publishedRef = yield* Ref.make(0)
 
     yield* Effect.forEach(
       due,
-      (destination) =>
+      ({ destination, cursor }) =>
         deps
           .publish({
             organizationId: destination.organizationId,
             projectId: destination.projectId,
             destination,
+            source: cursor.source,
           })
           .pipe(
             Effect.tap(() => Ref.update(publishedRef, (n) => n + 1)),
@@ -74,5 +76,5 @@ export const sweepDestinationsUseCase = (deps: {
   }).pipe(Effect.withSpan("destinations.sweep")) as Effect.Effect<
     SweepDestinationsResult,
     RepositoryError,
-    SqlClient | DestinationRepository
+    SqlClient | DestinationSourceCursorRepository
   >

@@ -103,6 +103,8 @@ function createChatSpan(label: string, offsetMs: number, durationMs: number, par
       inputTokens: 12,
       outputTokens: 10,
       totalCostUsd: 0.0000007,
+      inputCostUsd: 0.0000004,
+      outputCostUsd: 0.0000003,
     },
   }
 }

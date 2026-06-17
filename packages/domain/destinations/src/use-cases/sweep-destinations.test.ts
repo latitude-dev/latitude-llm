@@ -5,8 +5,9 @@ import { Effect, Layer, Ref } from "effect"
 import { describe, expect, it } from "vitest"
 import { POSTHOG_US_INGESTION_HOST } from "../constants.ts"
 import { createDestination, type Destination } from "../entities/destination.ts"
-import { DestinationRepository } from "../ports/destination-repository.ts"
-import { createFakeDestinationRepository } from "../testing/fake-destination-repository.ts"
+import { createDestinationSourceCursor, type DestinationSourceCursor } from "../entities/destination-source-cursor.ts"
+import { DestinationSourceCursorRepository } from "../ports/destination-source-cursor-repository.ts"
+import { createFakeDestinationSourceCursorRepository } from "../testing/fake-destination-source-cursor-repository.ts"
 import { sweepDestinationsUseCase } from "./sweep-destinations.ts"
 
 const cuid = (seed: string) => seed.padEnd(24, "0")
@@ -29,25 +30,35 @@ const makeDestination = (seed: string, organizationId: string, overrides: Partia
     credentials: { kind: "posthog", apiKey: "phc_test" },
     createdByUserId: USER_ID,
   }),
-  // never-ran rows are always due
-  lastRunAt: null,
   ...overrides,
 })
 
+// never-ran cursors are always due
+const makeCursor = (destination: Destination): DestinationSourceCursor =>
+  createDestinationSourceCursor({
+    organizationId: destination.organizationId,
+    destinationId: destination.id,
+    source: "spans",
+    watermark: destination.createdAt,
+  })
+
 const run = (opts: { destinations: readonly Destination[] }) =>
   Effect.gen(function* () {
-    const { repo: destinationRepo } = createFakeDestinationRepository(opts.destinations)
-    const publishedRef = yield* Ref.make<{ organizationId: string; destinationId: string }[]>([])
+    const { repo: cursorRepo } = createFakeDestinationSourceCursorRepository(
+      opts.destinations.map(makeCursor),
+      opts.destinations,
+    )
+    const publishedRef = yield* Ref.make<{ organizationId: string; destinationId: string; source: string }[]>([])
 
     const layer = Layer.mergeAll(
       Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId("system") })),
-      Layer.succeed(DestinationRepository, destinationRepo),
+      Layer.succeed(DestinationSourceCursorRepository, cursorRepo),
     )
 
     const result = yield* sweepDestinationsUseCase({
       now: NOW,
-      publish: ({ organizationId, destination }) =>
-        Ref.update(publishedRef, (acc) => [...acc, { organizationId, destinationId: destination.id }]).pipe(
+      publish: ({ organizationId, destination, source }) =>
+        Ref.update(publishedRef, (acc) => [...acc, { organizationId, destinationId: destination.id, source }]).pipe(
           Effect.asVoid,
         ),
     }).pipe(Effect.provide(layer))
@@ -77,16 +88,21 @@ describe("sweepDestinationsUseCase", () => {
     expect(result.published).toBe(3)
     expect(result.failed).toBe(0)
     expect(published.map((p) => p.destinationId).sort()).toEqual([cuid("d1"), cuid("d2"), cuid("d3")].sort())
+    expect(published.map((p) => p.source)).toEqual(["spans", "spans", "spans"])
   })
 
   it("tallies per-destination publish failures without failing the sweep", async () => {
     const orgA = cuid("oa")
     const { result } = await Effect.runPromise(
       Effect.gen(function* () {
-        const { repo: destinationRepo } = createFakeDestinationRepository([makeDestination("1", orgA)])
+        const destination = makeDestination("1", orgA)
+        const { repo: cursorRepo } = createFakeDestinationSourceCursorRepository(
+          [makeCursor(destination)],
+          [destination],
+        )
         const layer = Layer.mergeAll(
           Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId("system") })),
-          Layer.succeed(DestinationRepository, destinationRepo),
+          Layer.succeed(DestinationSourceCursorRepository, cursorRepo),
         )
         const result = yield* sweepDestinationsUseCase({
           now: NOW,

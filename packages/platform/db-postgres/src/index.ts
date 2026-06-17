@@ -38,6 +38,7 @@ export { BillingUsageEventRepositoryLive } from "./repositories/billing-usage-ev
 export { BillingUsagePeriodRepositoryLive } from "./repositories/billing-usage-period-repository.ts"
 export { DatasetRepositoryLive } from "./repositories/dataset-repository.ts"
 export { DestinationRepositoryLive } from "./repositories/destination-repository.ts"
+export { DestinationSourceCursorRepositoryLive } from "./repositories/destination-source-cursor-repository.ts"
 export { DestinationSyncRunRepositoryLive } from "./repositories/destination-sync-run-repository.ts"
 // Repository implementations
 export { EvaluationAlignmentExamplesRepositoryLive } from "./repositories/evaluation-alignment-examples-repository.ts"

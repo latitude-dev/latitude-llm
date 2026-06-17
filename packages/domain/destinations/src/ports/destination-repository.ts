@@ -2,28 +2,18 @@ import type { ConflictError, DestinationId, NotFoundError, ProjectId, Repository
 import { Context, type Effect } from "effect"
 import type { Destination, DestinationStatus } from "../entities/destination.ts"
 
-/** Position in the `(ingested_at, span_id)` compound cursor. `spanId` is `""` before the first advance. */
-export interface DestinationCursor {
-  readonly ingestedAt: Date
-  readonly spanId: string
-}
-
-export interface AdvanceDestinationCursorInput {
-  readonly id: DestinationId
-  /** The cursor the run started from; the write only applies while the row still holds it. */
-  readonly expected: DestinationCursor
-  readonly next: DestinationCursor
-}
-
-/** Post-run bookkeeping (status, counters, `last_run_at`) — never the cursor. */
-export interface UpdateDestinationRunStateInput {
+/**
+ * Destination-level failure/quarantine bookkeeping. Credentials and host are
+ * shared across a destination's sources, so auth/host/transport failures are
+ * destination faults: they live here, not on the per-source cursor. A successful
+ * run resets the counter (`consecutiveFailures: 0`, `status: 'active'`).
+ */
+export interface UpdateDestinationQuarantineStateInput {
   readonly id: DestinationId
   readonly status: DestinationStatus
   readonly consecutiveFailures: number
-  readonly consecutiveEmptyRuns: number
   /** Sanitized: HTTP status + our error taxonomy, never upstream response bodies. */
   readonly lastFailureMessage: string | null
-  readonly lastRunAt: Date
 }
 
 export interface DestinationRepositoryShape {
@@ -33,30 +23,14 @@ export interface DestinationRepositoryShape {
   findById(id: DestinationId): Effect.Effect<Destination, NotFoundError | RepositoryError, SqlClient>
   /** Destinations configured for a project within the caller's organization, newest first. */
   listByProjectId(projectId: ProjectId): Effect.Effect<readonly Destination[], RepositoryError, SqlClient>
-  /** Hard-deletes a destination by id within the caller's organization; cursor history goes with the row. */
+  /** Hard-deletes a destination by id within the caller's organization. Source cursors cascade separately. */
   delete(id: DestinationId): Effect.Effect<void, RepositoryError, SqlClient>
   /**
-   * Active destinations due for a sync at `now`: idle backoff applied as
-   * `last_run_at + intervalMs × 2^consecutive_empty_runs ≤ now` (never-ran rows
-   * are always due), sandbox organizations excluded. Cross-org by design —
-   * drive through the admin Postgres client so RLS is bypassed. The
-   * `destinations` flag gates only the settings UI; the sweep does not re-check
-   * it, so no flag filtering happens here or in the sweep.
+   * Persists destination-level failure/quarantine bookkeeping. Never touches a
+   * source cursor — those move only through the cursor repository's optimistic
+   * advance, so a stale run cannot drag a cursor while recording a failure.
    */
-  listDue(now: Date): Effect.Effect<readonly Destination[], RepositoryError, SqlClient>
-  /**
-   * Optimistic compound-cursor advance: applies only while the row still holds
-   * `expected`, returning whether the write claimed. A stale concurrent run can
-   * never move the cursor backwards or double-advance it.
-   */
-  advanceCursor(input: AdvanceDestinationCursorInput): Effect.Effect<boolean, RepositoryError, SqlClient>
-  /**
-   * Persists post-run bookkeeping without touching the cursor columns — the
-   * cursor moves only through the optimistic {@link advanceCursor}. Keeping the
-   * two writes separate is what stops a stale run from dragging the cursor
-   * backwards while it records its failure or idle counters.
-   */
-  updateRunState(input: UpdateDestinationRunStateInput): Effect.Effect<void, RepositoryError, SqlClient>
+  updateQuarantineState(input: UpdateDestinationQuarantineStateInput): Effect.Effect<void, RepositoryError, SqlClient>
   deleteByProjectId(projectId: ProjectId): Effect.Effect<readonly DestinationId[], RepositoryError, SqlClient>
 }
 

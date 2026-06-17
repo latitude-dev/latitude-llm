@@ -63,6 +63,7 @@ const commonProperties = (span: SpanDetail, input: MapSpansToPosthogEventsInput)
   ...(span.provider === "" ? {} : { $ai_provider: span.provider }),
   ...(span.userId === "" ? { $process_person_profile: false } : {}),
   latitude_project_id: span.projectId,
+  latitude_source: "spans",
   latitude_span_url: input.buildSpanUrl(span),
 })
 
@@ -193,7 +194,7 @@ export const mapSpansToPosthogEvents = async (
         name: draft.name,
         distinctId,
         timestamp: span.endTime,
-        spanId: span.spanId,
+        sourceRecordId: span.spanId,
         properties: stripContentProperties({
           properties: draft.properties,
           errorType: span.errorType,

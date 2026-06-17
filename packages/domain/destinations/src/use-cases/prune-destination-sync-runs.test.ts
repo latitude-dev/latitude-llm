@@ -15,6 +15,7 @@ const makeSyncRun = (destinationId: string, finishedAt: Date): DestinationSyncRu
   createDestinationSyncRun({
     organizationId: OrganizationId(cuid("o")),
     destinationId: destinationId as DestinationId,
+    source: "spans",
     windowStart: finishedAt,
     windowEnd: finishedAt,
     status: "succeeded",

@@ -1,18 +1,21 @@
 import { isSandbox, OrganizationRepository } from "@domain/organizations"
-import type {
-  ConflictError,
-  NotFoundError,
-  OrganizationId,
-  ProjectId,
-  RepositoryError,
+import {
+  type ConflictError,
+  type NotFoundError,
+  type OrganizationId,
+  type ProjectId,
+  type RepositoryError,
   SqlClient,
-  UserId,
+  type UserId,
 } from "@domain/shared"
 import { Effect } from "effect"
 import type { Destination, DestinationConfig, DestinationCredentials } from "../entities/destination.ts"
 import { createDestination } from "../entities/destination.ts"
+import { DESTINATION_SOURCES } from "../entities/destination-source.ts"
+import { createDestinationSourceCursor } from "../entities/destination-source-cursor.ts"
 import { SandboxOrganizationDestinationError } from "../errors.ts"
 import { DestinationRepository } from "../ports/destination-repository.ts"
+import { DestinationSourceCursorRepository } from "../ports/destination-source-cursor-repository.ts"
 
 export interface CreateDestinationInput {
   readonly organizationId: OrganizationId
@@ -57,11 +60,29 @@ export const createDestinationUseCase = (input: CreateDestinationInput) =>
     })
 
     const destinations = yield* DestinationRepository
-    yield* destinations.save(destination)
+    const cursors = yield* DestinationSourceCursorRepository
+    const sqlClient = yield* SqlClient
+
+    yield* sqlClient.transaction(
+      Effect.gen(function* () {
+        yield* destinations.save(destination)
+        // Seed one cursor per source the destination exports (v1: spans). Watermark = creation time → forward-only sync.
+        for (const source of DESTINATION_SOURCES) {
+          yield* cursors.create(
+            createDestinationSourceCursor({
+              organizationId: destination.organizationId,
+              destinationId: destination.id,
+              source,
+              watermark: destination.createdAt,
+            }),
+          )
+        }
+      }),
+    )
 
     return destination
   }).pipe(Effect.withSpan("destinations.createDestination")) as Effect.Effect<
     Destination,
     CreateDestinationError,
-    SqlClient | DestinationRepository | OrganizationRepository
+    SqlClient | DestinationRepository | DestinationSourceCursorRepository | OrganizationRepository
   >

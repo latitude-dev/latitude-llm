@@ -4,10 +4,13 @@ import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { POSTHOG_US_INGESTION_HOST } from "../constants.ts"
 import { createDestination } from "../entities/destination.ts"
+import { createDestinationSourceCursor } from "../entities/destination-source-cursor.ts"
 import { createDestinationSyncRun } from "../entities/destination-sync-run.ts"
 import { DestinationRepository } from "../ports/destination-repository.ts"
+import { DestinationSourceCursorRepository } from "../ports/destination-source-cursor-repository.ts"
 import { DestinationSyncRunRepository } from "../ports/destination-sync-run-repository.ts"
 import { createFakeDestinationRepository } from "../testing/fake-destination-repository.ts"
+import { createFakeDestinationSourceCursorRepository } from "../testing/fake-destination-source-cursor-repository.ts"
 import { createFakeDestinationSyncRunRepository } from "../testing/fake-destination-sync-run-repository.ts"
 import { deleteDestinationUseCase } from "./delete-destination.ts"
 
@@ -38,6 +41,7 @@ const syncRun = () =>
   createDestinationSyncRun({
     organizationId: orgId,
     destinationId,
+    source: "spans",
     windowStart: new Date("2026-06-01T00:00:00Z"),
     windowEnd: new Date("2026-06-01T00:05:00Z"),
     status: "succeeded",
@@ -49,20 +53,33 @@ const syncRun = () =>
     finishedAt: new Date("2026-06-01T00:05:01Z"),
   })
 
+const cursor = () =>
+  createDestinationSourceCursor({
+    organizationId: orgId,
+    destinationId,
+    source: "spans",
+    watermark: new Date("2026-06-01T00:00:00Z"),
+  })
+
 function setup() {
   const { repo: destinationRepo, rows: destinationRows } = createFakeDestinationRepository([destination()])
   const { repo: syncRunRepo, rows: syncRunRows } = createFakeDestinationSyncRunRepository([syncRun()])
+  const { repo: cursorRepo, rows: cursorRows } = createFakeDestinationSourceCursorRepository(
+    [cursor()],
+    destinationRows,
+  )
   const layer = Layer.mergeAll(
     Layer.succeed(DestinationRepository, destinationRepo),
     Layer.succeed(DestinationSyncRunRepository, syncRunRepo),
+    Layer.succeed(DestinationSourceCursorRepository, cursorRepo),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: orgId })),
   )
-  return { destinationRows, syncRunRows, layer }
+  return { destinationRows, syncRunRows, cursorRows, layer }
 }
 
 describe("deleteDestinationUseCase", () => {
-  it("hard-deletes the destination and its sync-run history", async () => {
-    const { destinationRows, syncRunRows, layer } = setup()
+  it("hard-deletes the destination and its sync-run and cursor history", async () => {
+    const { destinationRows, syncRunRows, cursorRows, layer } = setup()
 
     await Effect.runPromise(
       deleteDestinationUseCase({ organizationId: orgId, projectId, destinationId }).pipe(Effect.provide(layer)),
@@ -70,10 +87,11 @@ describe("deleteDestinationUseCase", () => {
 
     expect(destinationRows).toHaveLength(0)
     expect(syncRunRows).toHaveLength(0)
+    expect(cursorRows).toHaveLength(0)
   })
 
   it("fails with NotFoundError for an unknown destination and leaves rows intact", async () => {
-    const { destinationRows, syncRunRows, layer } = setup()
+    const { destinationRows, syncRunRows, cursorRows, layer } = setup()
 
     const error = await Effect.runPromise(
       deleteDestinationUseCase({
@@ -86,6 +104,7 @@ describe("deleteDestinationUseCase", () => {
     expect(error._tag).toBe("NotFoundError")
     expect(destinationRows).toHaveLength(1)
     expect(syncRunRows).toHaveLength(1)
+    expect(cursorRows).toHaveLength(1)
   })
 
   it("fails with NotFoundError when the destination belongs to another project", async () => {

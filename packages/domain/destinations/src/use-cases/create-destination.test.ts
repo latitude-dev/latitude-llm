@@ -6,7 +6,9 @@ import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { POSTHOG_US_INGESTION_HOST } from "../constants.ts"
 import { DestinationRepository } from "../ports/destination-repository.ts"
+import { DestinationSourceCursorRepository } from "../ports/destination-source-cursor-repository.ts"
 import { createFakeDestinationRepository } from "../testing/fake-destination-repository.ts"
+import { createFakeDestinationSourceCursorRepository } from "../testing/fake-destination-source-cursor-repository.ts"
 import { createDestinationUseCase } from "./create-destination.ts"
 
 const cuid = (seed: string) => seed.padEnd(24, "0")
@@ -28,14 +30,16 @@ function setup(opts: { sandbox?: boolean } = {}) {
   )
 
   const { repo: destinationRepo, rows } = createFakeDestinationRepository()
+  const { repo: cursorRepo, rows: cursorRows } = createFakeDestinationSourceCursorRepository([], rows)
 
   const layer = Layer.mergeAll(
     Layer.succeed(OrganizationRepository, organizationRepo),
     Layer.succeed(DestinationRepository, destinationRepo),
+    Layer.succeed(DestinationSourceCursorRepository, cursorRepo),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: orgId })),
   )
 
-  return { orgId, projectId, userId, rows, layer }
+  return { orgId, projectId, userId, rows, cursorRows, layer }
 }
 
 const input = (ids: { orgId: OrganizationId; projectId: ProjectId; userId: UserId }) => ({
@@ -55,13 +59,19 @@ const input = (ids: { orgId: OrganizationId; projectId: ProjectId; userId: UserI
 
 describe("createDestinationUseCase", () => {
   it("creates an active destination for a regular organization", async () => {
-    const { rows, layer, ...ids } = setup()
+    const { rows, cursorRows, layer, ...ids } = setup()
 
     const destination = await Effect.runPromise(createDestinationUseCase(input(ids)).pipe(Effect.provide(layer)))
 
     expect(destination.status).toBe("active")
     expect(destination.projectId).toBe(ids.projectId)
     expect(rows).toHaveLength(1)
+
+    expect(cursorRows).toHaveLength(1)
+    const cursor = cursorRows[0]
+    expect(cursor?.destinationId).toBe(destination.id)
+    expect(cursor?.source).toBe("spans")
+    expect(cursor?.watermark).toEqual(destination.createdAt)
   })
 
   it("rejects sandbox organizations", async () => {

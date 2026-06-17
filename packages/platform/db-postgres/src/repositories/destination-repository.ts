@@ -1,9 +1,4 @@
-import {
-  DESTINATION_IDLE_BACKOFF_MAX_MS,
-  type Destination,
-  DestinationRepository,
-  destinationSchema,
-} from "@domain/destinations"
+import { type Destination, DestinationRepository, destinationSchema } from "@domain/destinations"
 import {
   ConflictError,
   DestinationId,
@@ -14,11 +9,10 @@ import {
   type SqlClientShape,
   toRepositoryError,
 } from "@domain/shared"
-import { and, desc, eq, isNull, or, sql } from "drizzle-orm"
+import { and, desc, eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { decryptField, encryptField, getEncryptionKey } from "../encryption-key.ts"
-import { organizations } from "../schema/better-auth.ts"
 import { destinations } from "../schema/destinations.ts"
 
 /**
@@ -49,7 +43,7 @@ const mapProjectKindConflict = (
 
 type DestinationRow = typeof destinations.$inferSelect
 
-const toDomainDestination = (row: DestinationRow, encryptionKey: Buffer) =>
+export const toDomainDestination = (row: DestinationRow, encryptionKey: Buffer) =>
   Effect.gen(function* () {
     const credentialsJson = yield* decryptField(row.credentials, encryptionKey, "decryptDestinationCredentials")
 
@@ -64,10 +58,6 @@ const toDomainDestination = (row: DestinationRow, encryptionKey: Buffer) =>
       status: row.status,
       consecutiveFailures: row.consecutiveFailures,
       lastFailureMessage: row.lastFailureMessage,
-      cursorIngestedAt: row.cursorIngestedAt,
-      cursorSpanId: row.cursorSpanId,
-      lastRunAt: row.lastRunAt,
-      consecutiveEmptyRuns: row.consecutiveEmptyRuns,
       createdByUserId: row.createdByUserId,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
@@ -94,10 +84,6 @@ const toInsertRow = (destination: Destination, organizationId: string, encryptio
       status: destination.status,
       consecutiveFailures: destination.consecutiveFailures,
       lastFailureMessage: destination.lastFailureMessage,
-      cursorIngestedAt: destination.cursorIngestedAt,
-      cursorSpanId: destination.cursorSpanId,
-      lastRunAt: destination.lastRunAt,
-      consecutiveEmptyRuns: destination.consecutiveEmptyRuns,
       createdByUserId: destination.createdByUserId,
       createdAt: destination.createdAt,
       updatedAt: destination.updatedAt,
@@ -175,74 +161,17 @@ export const DestinationRepositoryLive = Layer.effect(
             .pipe(Effect.mapError((e) => toRepositoryError(e, "deleteDestination")))
         }),
 
-      listDue: (now: Date) =>
-        Effect.gen(function* () {
-          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          // Cross-org sweep selection on the admin client — no org filter; the
-          // organizations join excludes sandbox orgs (parent_org_id IS NOT NULL).
-          const rows = yield* sqlClient
-            .query((db) =>
-              db
-                .select({ destination: destinations })
-                .from(destinations)
-                .innerJoin(organizations, eq(organizations.id, destinations.organizationId))
-                .where(
-                  and(
-                    eq(destinations.status, "active"),
-                    isNull(organizations.parentOrgId),
-                    or(
-                      isNull(destinations.lastRunAt),
-                      sql`${destinations.lastRunAt} + least((${destinations.config} ->> 'intervalMs')::double precision * power(2, ${destinations.consecutiveEmptyRuns}), ${DESTINATION_IDLE_BACKOFF_MAX_MS}::double precision) * interval '1 millisecond' <= ${now.toISOString()}::timestamptz`,
-                    ),
-                  ),
-                ),
-            )
-            .pipe(Effect.mapError((e) => toRepositoryError(e, "listDueDestinations")))
-
-          return yield* Effect.forEach(rows, (row) => toDomainDestination(row.destination, encryptionKey))
-        }),
-
-      advanceCursor: ({ id, expected, next }) =>
-        Effect.gen(function* () {
-          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const rows = yield* sqlClient
-            .query((db, organizationId) =>
-              db
-                .update(destinations)
-                .set({ cursorIngestedAt: next.ingestedAt, cursorSpanId: next.spanId, updatedAt: new Date() })
-                .where(
-                  and(
-                    eq(destinations.id, id),
-                    eq(destinations.organizationId, organizationId),
-                    eq(destinations.cursorIngestedAt, expected.ingestedAt),
-                    eq(destinations.cursorSpanId, expected.spanId),
-                  ),
-                )
-                .returning({ id: destinations.id }),
-            )
-            .pipe(Effect.mapError((e) => toRepositoryError(e, "advanceDestinationCursor")))
-
-          return rows.length > 0
-        }),
-
-      updateRunState: ({ id, status, consecutiveFailures, consecutiveEmptyRuns, lastFailureMessage, lastRunAt }) =>
+      updateQuarantineState: ({ id, status, consecutiveFailures, lastFailureMessage }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           yield* sqlClient
             .query((db, organizationId) =>
               db
                 .update(destinations)
-                .set({
-                  status,
-                  consecutiveFailures,
-                  consecutiveEmptyRuns,
-                  lastFailureMessage,
-                  lastRunAt,
-                  updatedAt: new Date(),
-                })
+                .set({ status, consecutiveFailures, lastFailureMessage, updatedAt: new Date() })
                 .where(and(eq(destinations.id, id), eq(destinations.organizationId, organizationId))),
             )
-            .pipe(Effect.mapError((e) => toRepositoryError(e, "updateDestinationRunState")))
+            .pipe(Effect.mapError((e) => toRepositoryError(e, "updateDestinationQuarantineState")))
         }),
 
       deleteByProjectId: (projectId) =>
