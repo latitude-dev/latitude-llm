@@ -18,7 +18,7 @@ import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { organizations } from "../schema/better-auth.ts"
 import { evaluations } from "../schema/evaluations.ts"
-import { issues } from "../schema/issues.ts"
+import { signals } from "../schema/signals.ts"
 import { projects } from "../schema/projects.ts"
 
 /**
@@ -92,7 +92,7 @@ export const AdminProjectRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           // EXISTS-based per-issue classification — one row per issue,
           // counted once. A LEFT JOIN to `evaluations` would fan out
-          // issues with multiple evals and overcount tracked.
+          // signals with multiple evals and overcount tracked.
           //
           // Per the metrics design, `evaluations.archived_at` is
           // ignored — once an issue ever had any (non-soft-deleted)
@@ -101,29 +101,29 @@ export const AdminProjectRepositoryLive = Layer.effect(
           // way.
           const hasEvaluation = sql`EXISTS (
             SELECT 1 FROM ${evaluations}
-            WHERE ${evaluations.signalId} = ${issues.id}
+            WHERE ${evaluations.signalId} = ${signals.id}
               AND ${evaluations.deletedAt} IS NULL
           )`
           const rows = yield* sqlClient.query((db) =>
             db
               .select({
                 resolved: sql<number>`COUNT(*) FILTER (
-                  WHERE ${issues.resolvedAt} IS NOT NULL
-                     OR ${issues.ignoredAt} IS NOT NULL
+                  WHERE ${signals.resolvedAt} IS NOT NULL
+                     OR ${signals.ignoredAt} IS NOT NULL
                 )::int`,
                 tracked: sql<number>`COUNT(*) FILTER (
-                  WHERE ${issues.resolvedAt} IS NULL
-                    AND ${issues.ignoredAt} IS NULL
+                  WHERE ${signals.resolvedAt} IS NULL
+                    AND ${signals.ignoredAt} IS NULL
                     AND ${hasEvaluation}
                 )::int`,
                 untracked: sql<number>`COUNT(*) FILTER (
-                  WHERE ${issues.resolvedAt} IS NULL
-                    AND ${issues.ignoredAt} IS NULL
+                  WHERE ${signals.resolvedAt} IS NULL
+                    AND ${signals.ignoredAt} IS NULL
                     AND NOT ${hasEvaluation}
                 )::int`,
               })
-              .from(issues)
-              .where(eq(issues.projectId, projectId)),
+              .from(signals)
+              .where(eq(signals.projectId, projectId)),
           )
 
           const row = rows[0]
@@ -137,7 +137,7 @@ export const AdminProjectRepositoryLive = Layer.effect(
 
       getSignalLifecycleEvents: (projectId: ProjectId, since: Date) =>
         Effect.gen(function* () {
-          // Pull issues whose own lifecycle timestamps fall in the
+          // Pull signals whose own lifecycle timestamps fall in the
           // window, OR which have any (non-soft-deleted) evaluation
           // created in the window. `evaluations.archived_at` is
           // ignored per design — once an issue had any eval it's
@@ -147,28 +147,28 @@ export const AdminProjectRepositoryLive = Layer.effect(
           const rows = yield* sqlClient.query((db) =>
             db
               .select({
-                signalId: issues.id,
-                createdAt: issues.createdAt,
-                resolvedAt: issues.resolvedAt,
-                ignoredAt: issues.ignoredAt,
+                signalId: signals.id,
+                createdAt: signals.createdAt,
+                resolvedAt: signals.resolvedAt,
+                ignoredAt: signals.ignoredAt,
                 firstEvalAttachedAt: sql<Date | null>`(
                   SELECT MIN(${evaluations.createdAt})
                   FROM ${evaluations}
-                  WHERE ${evaluations.signalId} = ${issues.id}
+                  WHERE ${evaluations.signalId} = ${signals.id}
                     AND ${evaluations.deletedAt} IS NULL
                 )`,
               })
-              .from(issues)
+              .from(signals)
               .where(
                 and(
-                  eq(issues.projectId, projectId),
+                  eq(signals.projectId, projectId),
                   or(
-                    gte(issues.createdAt, since),
-                    and(isNotNull(issues.resolvedAt), gte(issues.resolvedAt, since)),
-                    and(isNotNull(issues.ignoredAt), gte(issues.ignoredAt, since)),
+                    gte(signals.createdAt, since),
+                    and(isNotNull(signals.resolvedAt), gte(signals.resolvedAt, since)),
+                    and(isNotNull(signals.ignoredAt), gte(signals.ignoredAt, since)),
                     sql`EXISTS (
                       SELECT 1 FROM ${evaluations}
-                      WHERE ${evaluations.signalId} = ${issues.id}
+                      WHERE ${evaluations.signalId} = ${signals.id}
                         AND ${evaluations.deletedAt} IS NULL
                         AND ${evaluations.createdAt} >= ${since}
                     )`,
@@ -195,19 +195,19 @@ export const AdminProjectRepositoryLive = Layer.effect(
           const rows = yield* sqlClient.query((db) =>
             db
               .select({
-                id: issues.id,
-                name: issues.name,
-                resolvedAt: issues.resolvedAt,
-                ignoredAt: issues.ignoredAt,
+                id: signals.id,
+                name: signals.name,
+                resolvedAt: signals.resolvedAt,
+                ignoredAt: signals.ignoredAt,
                 hasEval: exists(
                   db
                     .select({ one: sql`1` })
                     .from(evaluations)
-                    .where(and(eq(evaluations.signalId, issues.id), isNull(evaluations.deletedAt))),
+                    .where(and(eq(evaluations.signalId, signals.id), isNull(evaluations.deletedAt))),
                 ),
               })
-              .from(issues)
-              .where(inArray(issues.id, idList)),
+              .from(signals)
+              .where(inArray(signals.id, idList)),
           )
           const out = new Map<SignalId, ProjectSignalDetails>()
           for (const row of rows) {

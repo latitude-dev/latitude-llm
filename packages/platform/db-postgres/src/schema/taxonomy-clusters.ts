@@ -14,7 +14,7 @@ const tsvector = customType<{ data: string; driverData: string }>({
 })
 
 /**
- * Canonical leaf-cluster row. Mirrors the issues shape: JSONB centroid +
+ * Canonical leaf-cluster row. Mirrors the signals shape: JSONB centroid +
  * derived `vector(2048)` materialized inside the repository `save`, plus
  * a GIN-indexed `tsvector` for hybrid search.
  *

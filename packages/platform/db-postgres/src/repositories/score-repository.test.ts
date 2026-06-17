@@ -854,7 +854,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(found?.traceId).toBe(traceId1)
   })
 
-  it("listFlaggerSlugsBySignalId returns distinct flagger slugs ordered most-recent-first and filters out drafts, non-SYSTEM annotations, and other issues", async () => {
+  it("listFlaggerSlugsBySignalId returns distinct flagger slugs ordered most-recent-first and filters out drafts, non-SYSTEM annotations, and other signals", async () => {
     const organizationId = "z".repeat(24)
     const signalA = SignalId("a".repeat(24))
     const signalB = SignalId("b".repeat(24))

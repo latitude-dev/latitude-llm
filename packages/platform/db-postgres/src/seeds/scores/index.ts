@@ -173,7 +173,7 @@ function buildAllScoreRows(scope: SeedScope) {
 
 /**
  * The subset of seeded score rows that are linked to an issue and not in
- * draft state — consumed by the issues seeder to derive issue centroids
+ * draft state — consumed by the signals seeder to derive issue centroids
  * from feedback embeddings.
  */
 export const buildSignalLinkedScoreSeedRows = (scope: SeedScope) =>

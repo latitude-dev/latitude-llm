@@ -4,7 +4,7 @@ import { SignalId, toSlug } from "@domain/shared"
 import { SEED_SIGNAL_FIXTURES, SEED_REGRESSED_SIGNAL_IDS, type SeedScope } from "@domain/shared/seeding"
 import { AIEmbedLive } from "@platform/ai"
 import { Effect } from "effect"
-import { issues } from "../../schema/issues.ts"
+import { signals } from "../../schema/signals.ts"
 import { buildSignalLinkedScoreSeedRows } from "../scores/index.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 
@@ -37,7 +37,7 @@ const fixtureScopedUuid = (index: number, scope: SeedScope): string =>
     : scope.uuid(`issue:extra:${index - NAMED_SIGNAL_KEYS.length}:uuid`)
 
 /** Stable key per fixture index — used to namespace cross-seeder ids
- * (e.g. alert_incidents rows that reference these issues). */
+ * (e.g. alert_incidents rows that reference these signals). */
 export const fixtureScopedKey = (index: number): string =>
   index < NAMED_SIGNAL_KEYS.length ? (NAMED_SIGNAL_KEYS[index] as string) : `extra:${index - NAMED_SIGNAL_KEYS.length}`
 
@@ -186,7 +186,7 @@ function buildSignalRow(input: {
   readonly projectId: string
   readonly signalScores: readonly SignalLinkedScoreSeedRow[]
   readonly embeddedSignalScores: readonly EmbeddedSignalLinkedScoreSeedRow[] | null
-}): typeof issues.$inferInsert {
+}): typeof signals.$inferInsert {
   const fixtureDates = signalFixtureDates(input.scope, input.issue)
   const sortedSignalScores = [...input.signalScores].sort(
     (left, right) => left.createdAt.getTime() - right.createdAt.getTime(),
@@ -208,7 +208,7 @@ function buildSignalRow(input: {
     ].filter((date): date is Date => date !== null),
   )
 
-  // Regression-demo issues are kept un-resolved on purpose: the
+  // Regression-demo signals are kept un-resolved on purpose: the
   // `Regressed` derived state requires `resolvedAt IS NULL` plus an
   // `issue.regressed` alert_incident, which the alert-incidents seeder
   // inserts for these ids. Production behavior is the same — when
@@ -241,7 +241,7 @@ function buildSignalRow(input: {
 }
 
 const seedSignals: Seeder = {
-  name: "issues/acme-support-issue-families",
+  name: "signals/acme-support-issue-families",
   run: (ctx: SeedContext) =>
     Effect.tryPromise({
       try: async () => {
@@ -269,7 +269,7 @@ const seedSignals: Seeder = {
           embedSignalFeedbacks(signalLinkedScoreSeedRows).pipe(
             Effect.catchTag("AIError", (error) =>
               Effect.sync(() => {
-                console.log(`  -> issues: embedding provider unavailable (${error.message})`)
+                console.log(`  -> signals: embedding provider unavailable (${error.message})`)
                 return null
               }),
             ),
@@ -309,17 +309,17 @@ const seedSignals: Seeder = {
 
         for (const row of signalRows) {
           const { id, ...set } = row
-          await ctx.db.insert(issues).values(row).onConflictDoUpdate({
-            target: issues.id,
+          await ctx.db.insert(signals).values(row).onConflictDoUpdate({
+            target: signals.id,
             set,
           })
         }
 
         console.log(
-          `  -> issues: ${signalRows.length} Acme support issue families (${embedded ? `${embedded.provider} centroid embeddings` : "deterministic random centroid fallback"})`,
+          `  -> signals: ${signalRows.length} Acme support issue families (${embedded ? `${embedded.provider} centroid embeddings` : "deterministic random centroid fallback"})`,
         )
       },
-      catch: (error) => new SeedError({ reason: "Failed to seed issues", cause: error }),
+      catch: (error) => new SeedError({ reason: "Failed to seed signals", cause: error }),
     }).pipe(Effect.asVoid),
 }
 

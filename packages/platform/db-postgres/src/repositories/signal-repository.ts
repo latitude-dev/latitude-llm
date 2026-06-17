@@ -19,7 +19,7 @@ import { and, asc, desc, eq, getTableColumns, ilike, inArray, isNotNull, isNull,
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { alertIncidents } from "../schema/alert-incidents.ts"
-import { issues } from "../schema/issues.ts"
+import { signals } from "../schema/signals.ts"
 import { projects } from "../schema/projects.ts"
 import { scores } from "../schema/scores.ts"
 import { preferProjectFirst } from "./org-search.ts"
@@ -29,12 +29,12 @@ import { preferProjectFirst } from "./org-search.ts"
 // for "is this issue currently escalating / regressed" — see
 // `deriveSignalLifecycleStates` in @domain/signals.
 //
-// `issues.id` is qualified via raw SQL because Drizzle's template renders
+// `signals.id` is qualified via raw SQL because Drizzle's template renders
 // the bare column inside the EXISTS subquery as `"id"` (unqualified), which
 // collides with `alert_incidents.id` (the inner scope's PK) and silently
 // resolves to the wrong column. The fully qualified outer reference avoids
 // the shadowing.
-const outerSignalId = sql.raw(`"latitude"."issues"."id"`)
+const outerSignalId = sql.raw(`"latitude"."signals"."id"`)
 
 const isEscalatingExpr = sql<boolean>`exists (
   select 1
@@ -45,11 +45,11 @@ const isEscalatingExpr = sql<boolean>`exists (
     and ${alertIncidents.endedAt} is null
 )`
 
-// Gated on `issues.resolved_at IS NULL` so a "resolved → regressed → resolved
+// Gated on `signals.resolved_at IS NULL` so a "resolved → regressed → resolved
 // again" issue doesn't keep showing as regressed forever — the historical
 // regression incident stays in the table, but the flag clears once the issue is
 // resolved again.
-const isRegressedExpr = sql<boolean>`(${issues.resolvedAt} is null and exists (
+const isRegressedExpr = sql<boolean>`(${signals.resolvedAt} is null and exists (
   select 1
   from ${alertIncidents}
   where ${alertIncidents.sourceType} = 'issue'
@@ -58,17 +58,17 @@ const isRegressedExpr = sql<boolean>`(${issues.resolvedAt} is null and exists (
 ))`
 
 const signalColumnsWithLifecycle = {
-  ...getTableColumns(issues),
+  ...getTableColumns(signals),
   isEscalating: isEscalatingExpr,
   isRegressed: isRegressedExpr,
 } as const
 
-type SignalRowWithLifecycle = typeof issues.$inferSelect & {
+type SignalRowWithLifecycle = typeof signals.$inferSelect & {
   readonly isEscalating: boolean
   readonly isRegressed: boolean
 }
 
-const toDomainSignal = (row: typeof issues.$inferSelect): Signal =>
+const toDomainSignal = (row: typeof signals.$inferSelect): Signal =>
   signalSchema.parse({
     id: row.id,
     organizationId: row.organizationId,
@@ -170,7 +170,7 @@ const toCentroidEmbedding = (issue: Signal): Effect.Effect<readonly number[] | n
     return yield* validateVector(vector, "SignalRepository.save")
   })
 
-const toInsertRow = (issue: Signal, centroidEmbedding: readonly number[] | null): typeof issues.$inferInsert => ({
+const toInsertRow = (issue: Signal, centroidEmbedding: readonly number[] | null): typeof signals.$inferInsert => ({
   id: issue.id,
   organizationId: issue.organizationId,
   projectId: issue.projectId,
@@ -202,7 +202,7 @@ const signalRepositoryCoreLive = Layer.effect(
               const hasAnnotationEvidence = sql<boolean>`exists (
                 select 1
                 from ${scores}
-                where ${scores.signalId} = ${issues.id}
+                where ${scores.signalId} = ${signals.id}
                   and ${scores.draftedAt} is null
                   and ${scores.source} = 'annotation'
               )`
@@ -210,21 +210,21 @@ const signalRepositoryCoreLive = Layer.effect(
               const meetsVisibilityThreshold = sql<boolean>`(
                 select count(*)
                 from ${scores}
-                where ${scores.signalId} = ${issues.id}
+                where ${scores.signalId} = ${signals.id}
                   and ${scores.draftedAt} is null
               ) >= ${MIN_OCCURRENCES_FOR_VISIBILITY}`
 
               return db
                 .select(signalColumnsWithLifecycle)
-                .from(issues)
+                .from(signals)
                 .where(
                   and(
-                    eq(issues.organizationId, organizationId),
-                    eq(issues.projectId, projectId),
+                    eq(signals.organizationId, organizationId),
+                    eq(signals.projectId, projectId),
                     or(hasAnnotationEvidence, meetsVisibilityThreshold),
                   ),
                 )
-                .orderBy(desc(issues.createdAt))
+                .orderBy(desc(signals.createdAt))
                 .limit(limit + 1)
                 .offset(offset)
             })
@@ -245,8 +245,8 @@ const signalRepositoryCoreLive = Layer.effect(
             .query((db, organizationId) =>
               db
                 .select(signalColumnsWithLifecycle)
-                .from(issues)
-                .where(and(eq(issues.organizationId, organizationId), eq(issues.id, id)))
+                .from(signals)
+                .where(and(eq(signals.organizationId, organizationId), eq(signals.id, id)))
                 .limit(1),
             )
             .pipe(
@@ -265,8 +265,8 @@ const signalRepositoryCoreLive = Layer.effect(
             .query((db, organizationId) =>
               db
                 .select()
-                .from(issues)
-                .where(and(eq(issues.organizationId, organizationId), eq(issues.id, id)))
+                .from(signals)
+                .where(and(eq(signals.organizationId, organizationId), eq(signals.id, id)))
                 .limit(1)
                 .for("update"),
             )
@@ -285,17 +285,17 @@ const signalRepositoryCoreLive = Layer.effect(
           return yield* sqlClient
             .query((db, organizationId) => {
               if (signalIds.length === 0) {
-                return db.select(signalColumnsWithLifecycle).from(issues).where(sql`1 = 0`) // Return empty result
+                return db.select(signalColumnsWithLifecycle).from(signals).where(sql`1 = 0`) // Return empty result
               }
 
               return db
                 .select(signalColumnsWithLifecycle)
-                .from(issues)
+                .from(signals)
                 .where(
                   and(
-                    eq(issues.organizationId, organizationId),
-                    eq(issues.projectId, projectId),
-                    inArray(issues.id, signalIds),
+                    eq(signals.organizationId, organizationId),
+                    eq(signals.projectId, projectId),
+                    inArray(signals.id, signalIds),
                   ),
                 )
             })
@@ -313,10 +313,10 @@ const signalRepositoryCoreLive = Layer.effect(
           const queryVector = sql.raw(`'[${vector.join(",")}]'::vector`)
 
           const lexicalQuery = sql`websearch_to_tsquery('english', ${query})`
-          const vectorScore = sql<number>`(1::double precision - (${issues.centroidEmbedding} <=> ${queryVector}))`
+          const vectorScore = sql<number>`(1::double precision - (${signals.centroidEmbedding} <=> ${queryVector}))`
           const lexicalScore = sql<number>`least(
             1::double precision,
-            greatest(0::double precision, ts_rank_cd(${issues.searchDocument}, ${lexicalQuery})::double precision)
+            greatest(0::double precision, ts_rank_cd(${signals.searchDocument}, ${lexicalQuery})::double precision)
           )`
           const score = sql<number>`(${SIGNAL_DISCOVERY_SEARCH_RATIO}::double precision * ${vectorScore} + ${
             1 - SIGNAL_DISCOVERY_SEARCH_RATIO
@@ -325,21 +325,21 @@ const signalRepositoryCoreLive = Layer.effect(
           const rows = yield* sqlClient.query((db, organizationId) =>
             db
               .select({
-                signalId: issues.id,
-                name: issues.name,
-                description: issues.description,
+                signalId: signals.id,
+                name: signals.name,
+                description: signals.description,
                 score,
               })
-              .from(issues)
+              .from(signals)
               .where(
                 and(
-                  eq(issues.organizationId, organizationId),
-                  eq(issues.projectId, projectId),
-                  isNotNull(issues.centroidEmbedding),
+                  eq(signals.organizationId, organizationId),
+                  eq(signals.projectId, projectId),
+                  isNotNull(signals.centroidEmbedding),
                   sql`(${score} >= ${SIGNAL_DISCOVERY_MIN_SIMILARITY} OR ${vectorScore} >= ${SIGNAL_DISCOVERY_MIN_VECTOR_SIMILARITY})`,
                 ),
               )
-              .orderBy(desc(score), desc(vectorScore), desc(issues.updatedAt), asc(issues.id))
+              .orderBy(desc(score), desc(vectorScore), desc(signals.updatedAt), asc(signals.id))
               .limit(SIGNAL_DISCOVERY_SEARCH_CANDIDATES),
           )
 
@@ -359,10 +359,10 @@ const signalRepositoryCoreLive = Layer.effect(
           // binds as a Postgres array, which cannot be cast to `vector`).
           const [source] = yield* sqlClient.query((db, organizationId) =>
             db
-              .select({ centroidEmbedding: issues.centroidEmbedding })
-              .from(issues)
+              .select({ centroidEmbedding: signals.centroidEmbedding })
+              .from(signals)
               .where(
-                and(eq(issues.organizationId, organizationId), eq(issues.projectId, projectId), eq(issues.id, signalId)),
+                and(eq(signals.organizationId, organizationId), eq(signals.projectId, projectId), eq(signals.id, signalId)),
               )
               .limit(1),
           )
@@ -374,25 +374,25 @@ const signalRepositoryCoreLive = Layer.effect(
           const vector = yield* validateVector(embedding, "SignalRepository.findSimilarByCentroid")
           const queryVector = sql.raw(`'[${vector.join(",")}]'::vector`)
 
-          // Exact cosine scan over the project's other issues — no ANN index by
+          // Exact cosine scan over the project's other signals — no ANN index by
           // design (see the schema comment on `centroidEmbedding`). Resolved and
-          // ignored issues are deliberately included. `save()` only persists
+          // ignored signals are deliberately included. `save()` only persists
           // embeddings for the configured embedding model, so every non-null
           // row is in the same embedding space by construction.
-          const similarity = sql<number>`(1::double precision - (${issues.centroidEmbedding} <=> ${queryVector}))`
+          const similarity = sql<number>`(1::double precision - (${signals.centroidEmbedding} <=> ${queryVector}))`
           const rows = yield* sqlClient.query((db, organizationId) =>
             db
-              .select({ signalId: issues.id, similarity })
-              .from(issues)
+              .select({ signalId: signals.id, similarity })
+              .from(signals)
               .where(
                 and(
-                  eq(issues.organizationId, organizationId),
-                  eq(issues.projectId, projectId),
-                  ne(issues.id, signalId),
-                  isNotNull(issues.centroidEmbedding),
+                  eq(signals.organizationId, organizationId),
+                  eq(signals.projectId, projectId),
+                  ne(signals.id, signalId),
+                  isNotNull(signals.centroidEmbedding),
                 ),
               )
-              .orderBy(desc(similarity), desc(issues.updatedAt), asc(issues.id))
+              .orderBy(desc(similarity), desc(signals.updatedAt), asc(signals.id))
               .limit(limit),
           )
 
@@ -408,12 +408,12 @@ const signalRepositoryCoreLive = Layer.effect(
           const lexicalQuery = sql`websearch_to_tsquery('english', ${query})`
           // Current project first *within* the tier, so a local lexical hit still beats a remote
           // semantic one (the tiers are merged lexical-first by the caller).
-          const projectFirst = preferProjectFirst(issues.projectId, preferProjectId)
+          const projectFirst = preferProjectFirst(signals.projectId, preferProjectId)
 
           // Lexical tier: GIN-backed full-text match OR a literal name substring. No embedding
           // round-trip, so this is the instant, index-backed path.
           if (normalizedEmbedding === undefined) {
-            const lexicalScore = sql<number>`ts_rank_cd(${issues.searchDocument}, ${lexicalQuery})::double precision`
+            const lexicalScore = sql<number>`ts_rank_cd(${signals.searchDocument}, ${lexicalQuery})::double precision`
             const rows = yield* sqlClient.query((db, organizationId) =>
               db
                 .select({
@@ -422,18 +422,18 @@ const signalRepositoryCoreLive = Layer.effect(
                   projectName: projects.name,
                   score: lexicalScore,
                 })
-                .from(issues)
-                .innerJoin(projects, eq(projects.id, issues.projectId))
+                .from(signals)
+                .innerJoin(projects, eq(projects.id, signals.projectId))
                 .where(
                   and(
-                    eq(issues.organizationId, organizationId),
+                    eq(signals.organizationId, organizationId),
                     isNull(projects.deletedAt),
-                    isNull(issues.resolvedAt),
-                    isNull(issues.ignoredAt),
-                    or(sql`${issues.searchDocument} @@ ${lexicalQuery}`, ilike(issues.name, `%${query}%`)),
+                    isNull(signals.resolvedAt),
+                    isNull(signals.ignoredAt),
+                    or(sql`${signals.searchDocument} @@ ${lexicalQuery}`, ilike(signals.name, `%${query}%`)),
                   ),
                 )
-                .orderBy(...projectFirst, desc(lexicalScore), desc(issues.updatedAt), asc(issues.id))
+                .orderBy(...projectFirst, desc(lexicalScore), desc(signals.updatedAt), asc(signals.id))
                 .limit(limit),
             )
             return rows.map(toOrgSignalSearchHit)
@@ -445,10 +445,10 @@ const signalRepositoryCoreLive = Layer.effect(
           // an HNSW index if a large org regresses.
           const vector = yield* validateVector(normalizedEmbedding, "SignalRepository.searchOrgWide")
           const queryVector = sql.raw(`'[${vector.join(",")}]'::vector`)
-          const vectorScore = sql<number>`(1::double precision - (${issues.centroidEmbedding} <=> ${queryVector}))`
+          const vectorScore = sql<number>`(1::double precision - (${signals.centroidEmbedding} <=> ${queryVector}))`
           const lexicalScore = sql<number>`least(
             1::double precision,
-            greatest(0::double precision, ts_rank_cd(${issues.searchDocument}, ${lexicalQuery})::double precision)
+            greatest(0::double precision, ts_rank_cd(${signals.searchDocument}, ${lexicalQuery})::double precision)
           )`
           const score = sql<number>`(${SIGNAL_DISCOVERY_SEARCH_RATIO}::double precision * ${vectorScore} + ${
             1 - SIGNAL_DISCOVERY_SEARCH_RATIO
@@ -462,19 +462,19 @@ const signalRepositoryCoreLive = Layer.effect(
                 projectName: projects.name,
                 score,
               })
-              .from(issues)
-              .innerJoin(projects, eq(projects.id, issues.projectId))
+              .from(signals)
+              .innerJoin(projects, eq(projects.id, signals.projectId))
               .where(
                 and(
-                  eq(issues.organizationId, organizationId),
+                  eq(signals.organizationId, organizationId),
                   isNull(projects.deletedAt),
-                  isNull(issues.resolvedAt),
-                  isNull(issues.ignoredAt),
-                  isNotNull(issues.centroidEmbedding),
+                  isNull(signals.resolvedAt),
+                  isNull(signals.ignoredAt),
+                  isNotNull(signals.centroidEmbedding),
                   sql`(${score} >= ${SIGNAL_DISCOVERY_MIN_SIMILARITY} OR ${vectorScore} >= ${SIGNAL_DISCOVERY_MIN_VECTOR_SIMILARITY})`,
                 ),
               )
-              .orderBy(...projectFirst, desc(score), desc(vectorScore), desc(issues.updatedAt), asc(issues.id))
+              .orderBy(...projectFirst, desc(score), desc(vectorScore), desc(signals.updatedAt), asc(signals.id))
               .limit(limit),
           )
           return rows.map(toOrgSignalSearchHit)
@@ -488,10 +488,10 @@ const signalRepositoryCoreLive = Layer.effect(
 
           yield* sqlClient.query((db) =>
             db
-              .insert(issues)
+              .insert(signals)
               .values(row)
               .onConflictDoUpdate({
-                target: issues.id,
+                target: signals.id,
                 set: {
                   projectId: row.projectId,
                   slug: row.slug,
@@ -516,13 +516,13 @@ const signalRepositoryCoreLive = Layer.effect(
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const conditions = and(
-            eq(issues.organizationId, sqlClient.organizationId),
-            eq(issues.projectId, input.projectId),
-            eq(issues.slug, input.slug),
-            ...(input.excludeSignalId ? [ne(issues.id, input.excludeSignalId)] : []),
+            eq(signals.organizationId, sqlClient.organizationId),
+            eq(signals.projectId, input.projectId),
+            eq(signals.slug, input.slug),
+            ...(input.excludeSignalId ? [ne(signals.id, input.excludeSignalId)] : []),
           )
           const [row] = yield* sqlClient.query((db) =>
-            db.select({ count: sql<number>`count(*)::int` }).from(issues).where(conditions),
+            db.select({ count: sql<number>`count(*)::int` }).from(signals).where(conditions),
           )
           return row?.count ?? 0
         }),
@@ -534,12 +534,12 @@ const signalRepositoryCoreLive = Layer.effect(
             .query((db, organizationId) =>
               db
                 .select(signalColumnsWithLifecycle)
-                .from(issues)
+                .from(signals)
                 .where(
                   and(
-                    eq(issues.organizationId, organizationId),
-                    eq(issues.projectId, projectId),
-                    eq(issues.slug, slug),
+                    eq(signals.organizationId, organizationId),
+                    eq(signals.projectId, projectId),
+                    eq(signals.slug, slug),
                   ),
                 )
                 .limit(1),
@@ -558,10 +558,10 @@ const signalRepositoryCoreLive = Layer.effect(
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const [row] = yield* sqlClient.query((db, organizationId) =>
             db
-              .select({ id: issues.id })
-              .from(issues)
+              .select({ id: signals.id })
+              .from(signals)
               .where(
-                and(eq(issues.organizationId, organizationId), eq(issues.projectId, projectId), eq(issues.slug, slug)),
+                and(eq(signals.organizationId, organizationId), eq(signals.projectId, projectId), eq(signals.slug, slug)),
               )
               .limit(1),
           )

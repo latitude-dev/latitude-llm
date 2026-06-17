@@ -5,7 +5,7 @@ import { SEED_SIGNAL_FIXTURES, SEED_REGRESSED_SIGNAL_IDS } from "@domain/shared/
 import { sql } from "drizzle-orm"
 import { Effect } from "effect"
 import { alertIncidents } from "../../schema/alert-incidents.ts"
-import { fixtureScopedId, fixtureScopedKey, signalFixtureDates } from "../issues/index.ts"
+import { fixtureScopedId, fixtureScopedKey, signalFixtureDates } from "../signals/index.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 
 const buildIncidentRow = (input: {
@@ -152,7 +152,7 @@ const seedAlertIncidents: Seeder = {
 
         // 3. Curated `issue.regressed` rows for the regression demo set.
         //    Signal ids designated by `SEED_REGRESSED_SIGNAL_IDS` have their
-        //    `resolvedAt` cleared by the issues seeder (mirroring what the
+        //    `resolvedAt` cleared by the signals seeder (mirroring what the
         //    production `assign-score-to-issue` regression detection does)
         //    so the read path derives them as Regressed.
         const regressionStartedAt = ctx.scope.dateDaysAgo(2, 9, 0)

@@ -8,7 +8,7 @@ export const evaluations = latitudeSchema.table(
     id: cuid("id").primaryKey(),
     organizationId: cuid("organization_id").notNull(), // owning organization
     projectId: cuid("project_id").notNull(), // owning project
-    signalId: cuid("issue_id").notNull(), // in MVP evaluations are issue-linked; multiple evaluations may link to the same issue
+    signalId: cuid("signal_id").notNull(), // in MVP evaluations are issue-linked; multiple evaluations may link to the same issue
     name: varchar("name", { length: 128 }).notNull(), // unique name within the project among non-deleted rows
     description: text("description").notNull(), // generated from the resulting script after alignment
     script: text("script").notNull(), // javascript-like evaluation script that runs inside a sandbox/runtime wrapper
@@ -30,7 +30,7 @@ export const evaluations = latitudeSchema.table(
       t.createdAt,
     ),
     // issue-linked evaluation lookups and issue-driven lifecycle updates
-    index("evaluations_issue_lookup_idx").on(t.organizationId, t.projectId, t.signalId, t.deletedAt),
+    index("evaluations_signal_lookup_idx").on(t.organizationId, t.projectId, t.signalId, t.deletedAt),
     // soft-delete-aware unique name per project; nulls-not-distinct ensures only one active row per name
     unique("evaluations_unique_name_per_project_idx")
       .on(t.organizationId, t.projectId, t.name, t.deletedAt)

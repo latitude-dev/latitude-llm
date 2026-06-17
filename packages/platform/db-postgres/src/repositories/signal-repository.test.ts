@@ -9,12 +9,12 @@ import { SignalId, NotFoundError, OrganizationId, ProjectId, SqlClient, toSlug }
 import { Effect } from "effect"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { alertIncidents as alertIncidentsTable } from "../schema/alert-incidents.ts"
-import { issues as signalsTable } from "../schema/issues.ts"
+import { signals as signalsTable } from "../schema/signals.ts"
 import { projects as projectsTable } from "../schema/projects.ts"
 import { scores as scoresTable } from "../schema/scores.ts"
 import { closeInMemoryPostgres, createInMemoryPostgres, type InMemoryPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
-import { SignalRepositoryLive } from "./issue-repository.ts"
+import { SignalRepositoryLive } from "./signal-repository.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
@@ -140,7 +140,7 @@ describe("SignalRepositoryLive", () => {
     await closeInMemoryPostgres(database)
   })
 
-  it("persists and reads canonical issues", async () => {
+  it("persists and reads canonical signals", async () => {
     const canonicalSignal = makeSignal()
     const otherSignal = makeSignal({
       id: otherSignalId,
@@ -162,7 +162,7 @@ describe("SignalRepositoryLive", () => {
     )
   })
 
-  it("persists and reads flagger-sourced issues", async () => {
+  it("persists and reads flagger-sourced signals", async () => {
     const flaggerSignal = makeSignal({
       source: "flagger",
     })
@@ -190,7 +190,7 @@ describe("SignalRepositoryLive", () => {
     ).rejects.toBeInstanceOf(NotFoundError)
   })
 
-  it("finds canonical issues by id within the requested project", async () => {
+  it("finds canonical signals by id within the requested project", async () => {
     const firstSignal = makeSignal()
     const secondSignal = makeSignal({
       id: SignalId("k".repeat(24)),
@@ -407,7 +407,7 @@ describe("SignalRepositoryLive", () => {
     })
   })
 
-  it("lists only visible issues scoped to project, newest-first, and paginates with hasMore", async () => {
+  it("lists only visible signals scoped to project, newest-first, and paginates with hasMore", async () => {
     const older = makeSignal({
       id: SignalId("aaaaaaaaaaaaaaaaaaaaaaaa"),
       projectId: listTestProjectId,
@@ -827,7 +827,7 @@ describe("SignalRepositoryLive searchOrgWide", () => {
       { id: projOther, organizationId: otherOrgId, name: "Other Org Project", slug: "iss-other" },
     ])
 
-    // Lexical issues (no embedding) across two live projects, a deleted project, and another org.
+    // Lexical signals (no embedding) across two live projects, a deleted project, and another org.
     await database.db
       .insert(signalsTable)
       .values([
@@ -840,7 +840,7 @@ describe("SignalRepositoryLive searchOrgWide", () => {
         signalRow("isl7", searchOrgId, projB, "Ignored timeout", { ignoredAt: baseTime }),
       ])
 
-    // Semantic issues: identical 1-hot embedding in two live projects + one in another org. The
+    // Semantic signals: identical 1-hot embedding in two live projects + one in another org. The
     // centroid must have positive mass + the right model to satisfy the embedding consistency check.
     const sharedEmbedding = makeEmbedding({ 0: 1 })
     const embeddedCentroid = { ...createSignalCentroid(), base: sharedEmbedding, mass: 1 }
@@ -873,7 +873,7 @@ describe("SignalRepositoryLive searchOrgWide", () => {
       expect(byName.get("Checkout timeout")).toMatchObject({ projectSlug: "iss-beta", projectName: "Beta Project" })
     })
 
-    it("excludes archived issues, issues in deleted projects, and other organizations", async () => {
+    it("excludes archived signals, signals in deleted projects, and other organizations", async () => {
       const results = await search({ query: "timeout", limit: 25 })
       const names = results.map((r) => r.issue.name)
       expect(names).not.toContain("Resolved timeout")
@@ -888,7 +888,7 @@ describe("SignalRepositoryLive searchOrgWide", () => {
       expect(results).toHaveLength(1)
     })
 
-    it("ranks the preferred project's issues first within the tier", async () => {
+    it("ranks the preferred project's signals first within the tier", async () => {
       const results = await search({ query: "timeout", preferProjectId: projB, limit: 25 })
       const names = results.map((r) => r.issue.name)
       // "Checkout timeout" lives in project B; preferring B floats it ahead of project A's match.
@@ -898,7 +898,7 @@ describe("SignalRepositoryLive searchOrgWide", () => {
   })
 
   describe("semantic tier (embedding)", () => {
-    it("matches by embedding across projects and excludes archived issues and other orgs", async () => {
+    it("matches by embedding across projects and excludes archived signals and other orgs", async () => {
       const results = await search({ query: "zeta", normalizedEmbedding: makeEmbedding({ 0: 1 }), limit: 25 })
       const names = results.map((r) => r.issue.name)
       expect(names).toContain("Zeta alpha")

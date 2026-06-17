@@ -8,8 +8,8 @@ const tsvector = customType<{ data: string; driverData: string }>({
   dataType: () => "tsvector",
 })
 
-export const issues = latitudeSchema.table(
-  "issues",
+export const signals = latitudeSchema.table(
+  "signals",
   {
     id: cuid("id").primaryKey(),
     uuid: uuid("uuid").notNull().unique().defaultRandom(), // legacy stable UUID retained for backwards compatibility; issue search uses the canonical id. New rows get the value from the DB default so the application layer never has to populate it.
@@ -22,9 +22,9 @@ export const issues = latitudeSchema.table(
     assigneeId: cuid("assignee_id", { default: false }), // nullable; user (org member) assigned to triage this issue. No FK (repo convention); not auto-generated.
     priority: varchar("priority", { length: 16 }).$type<SignalPriority>(), // nullable; manual triage priority (low/medium/high/urgent). Null = unset.
     centroid: jsonb("centroid").$type<SignalCentroid>().notNull(), // canonical running weighted sum of clustered score feedback embeddings; `centroidEmbedding` stores the derived normalized pgvector used for search.
-    // No IVFFlat/HNSW index: issues per project are expected in the hundreds to low thousands, so an
+    // No IVFFlat/HNSW index: signals per project are expected in the hundreds to low thousands, so an
     // exact sequential scan over the project-scoped subset outperforms an approximate index (and
-    // sidesteps HNSW's recall/precision tradeoff). Revisit if a single project crosses ~10k issues.
+    // sidesteps HNSW's recall/precision tradeoff). Revisit if a single project crosses ~10k signals.
     centroidEmbedding: vector("centroid_embedding", { dimensions: EMBEDDING_DIMENSIONS }),
     searchDocument: tsvector("search_document")
       .generatedAlwaysAs(
@@ -41,12 +41,12 @@ export const issues = latitudeSchema.table(
     ...timestamps(),
   },
   (t) => [
-    organizationRLSPolicy("issues"),
+    organizationRLSPolicy("signals"),
     // project-scoped lifecycle filtering and management actions.
-    index("issues_project_lifecycle_idx").on(t.organizationId, t.projectId, t.ignoredAt, t.resolvedAt, t.createdAt),
-    index("issues_search_document_idx").using("gin", t.searchDocument),
+    index("signals_project_lifecycle_idx").on(t.organizationId, t.projectId, t.ignoredAt, t.resolvedAt, t.createdAt),
+    index("signals_search_document_idx").using("gin", t.searchDocument),
     // Signals are not soft-deleted, so a plain unique constraint is sufficient
     // (no need for `nullsNotDistinct` over a deletedAt column).
-    unique("issues_unique_slug_per_project_idx").on(t.organizationId, t.projectId, t.slug),
+    unique("signals_unique_slug_per_project_idx").on(t.organizationId, t.projectId, t.slug),
   ],
 )

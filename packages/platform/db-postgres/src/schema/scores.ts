@@ -18,11 +18,11 @@ export const scores = latitudeSchema.table(
     sourceId: varchar("source_id", { length: 128 }).notNull(),
 
     simulationId: cuid("simulation_id"), // optional simulation CUID link
-    signalId: cuid("issue_id"), // optional issue CUID assignment
+    signalId: cuid("signal_id"), // optional issue CUID assignment
 
     value: doublePrecision("value").notNull(), // normalized [0, 1] score value
     passed: boolean("passed").notNull(), // true if passed, false if failed or errored
-    feedback: text("feedback").notNull(), // clusterable feedback text used by issues
+    feedback: text("feedback").notNull(), // clusterable feedback text used by signals
     metadata: jsonb("metadata").$type<ScoreMetadata>().notNull(), // JSON-encoded EvaluationScoreMetadata | AnnotationScoreMetadata | CustomScoreMetadata
     error: text("error"), // canonical error text when the score generation truly errored
     errored: boolean("errored").notNull(), // maintained in application/domain code on create or update
@@ -48,7 +48,7 @@ export const scores = latitudeSchema.table(
     uniqueIndex("scores_canonical_evaluation_trace_idx")
       .on(t.organizationId, t.projectId, t.sourceId, t.traceId)
       .where(sql`${t.source} = 'evaluation' AND ${t.draftedAt} IS NULL AND ${t.traceId} IS NOT NULL`),
-    index("scores_issue_lookup_idx")
+    index("scores_signal_lookup_idx")
       .on(t.organizationId, t.projectId, t.signalId, t.createdAt, t.id)
       .where(sql`${t.signalId} IS NOT NULL AND ${t.draftedAt} IS NULL`),
     index("scores_trace_lookup_idx")
@@ -60,7 +60,7 @@ export const scores = latitudeSchema.table(
     index("scores_span_lookup_idx")
       .on(t.organizationId, t.projectId, t.spanId, t.createdAt, t.id)
       .where(sql`${t.spanId} IS NOT NULL`),
-    index("scores_issue_discovery_work_idx")
+    index("scores_signal_discovery_work_idx")
       .on(t.organizationId, t.projectId, t.createdAt, t.id)
       .where(sql`${t.draftedAt} IS NULL AND ${t.errored} = false AND ${t.passed} = false AND ${t.signalId} IS NULL`),
     index("scores_draft_finalization_idx").on(t.updatedAt, t.id).where(sql`${t.draftedAt} IS NOT NULL`),

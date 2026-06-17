@@ -261,9 +261,9 @@ describe("MonitorRepositoryLive", () => {
       await database.db
         .insert(monitorsTable)
         .values([
-          makeMonitorRow({ id: generateId(), slug: "production-issues", name: "Production issues" }),
+          makeMonitorRow({ id: generateId(), slug: "production-signals", name: "Production signals" }),
           makeMonitorRow({ id: generateId(), slug: "5xx-spikes", name: "5xx spikes" }),
-          makeMonitorRow({ id: generateId(), slug: "low-issues", name: "Login issues" }),
+          makeMonitorRow({ id: generateId(), slug: "low-signals", name: "Login signals" }),
         ])
 
       const result = await Effect.runPromise(
@@ -273,7 +273,7 @@ describe("MonitorRepositoryLive", () => {
         }).pipe(provideRls(database, organizationId)),
       )
 
-      expect(result.items.map((m) => m.name).sort()).toEqual(["Login issues", "Production issues"])
+      expect(result.items.map((m) => m.name).sort()).toEqual(["Login signals", "Production signals"])
       expect(result.totalCount).toBe(2)
     })
 

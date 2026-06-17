@@ -4,7 +4,7 @@ import { apiKeySeeders } from "./api-keys/index.ts"
 import { datasetSeeders } from "./datasets/index.ts"
 import { evaluationSeeders } from "./evaluations/index.ts"
 import { bootstrapTelemetryFlaggerSeeders, flaggerSeeders } from "./flaggers/index.ts"
-import { signalSeeders } from "./issues/index.ts"
+import { signalSeeders } from "./signals/index.ts"
 import { monitorSeeders } from "./monitors/index.ts"
 import { notificationSeeders } from "./notifications/index.ts"
 import { organizationSeeders } from "./organizations/index.ts"
@@ -15,7 +15,7 @@ import type { Seeder } from "./types.ts"
 import { wrappedReportSeeders } from "./wrapped-reports/index.ts"
 
 /**
- * Per-project ("content") seeders — datasets, evaluations, issues,
+ * Per-project ("content") seeders — datasets, evaluations, signals,
  * simulations, scores, annotation queues. Re-used by the runtime
  * "Create Demo Project" Temporal activity, which threads a per-project
  * `SeedScope` so all entity ids derive fresh under the new project.
@@ -33,7 +33,7 @@ export const contentSeeders: readonly Seeder[] = [
   ...scoreSeeders,
   ...annotationQueueSeeders,
   ...flaggerSeeders,
-  // Runs after issues + scores so it can derive "currently escalating"
+  // Runs after signals + scores so it can derive "currently escalating"
   // from real occurrence patterns in the seeded data via the same
   // threshold the production worker uses, instead of a fixture flag.
   ...alertIncidentSeeders,
