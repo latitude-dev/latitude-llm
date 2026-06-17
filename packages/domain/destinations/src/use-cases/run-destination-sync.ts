@@ -26,7 +26,7 @@ export interface RunDestinationSyncResult {
   readonly outcome: RunDestinationSyncOutcome
   readonly destinationId: DestinationId
   readonly source: DestinationSource
-  readonly spansRead: number
+  readonly recordsRead: number
   readonly eventsSent: number
   readonly eventsDropped: number
   readonly cursorAdvanced: boolean
@@ -60,7 +60,7 @@ const result = (
     source: DestinationSource
   },
 ): RunDestinationSyncResult => ({
-  spansRead: 0,
+  recordsRead: 0,
   eventsSent: 0,
   eventsDropped: 0,
   cursorAdvanced: false,
@@ -194,7 +194,7 @@ export const runDestinationSyncUseCase = (input: RunDestinationSyncInput) =>
         windowStart: deliveryWindow.start,
         windowEnd: deliveryWindow.end,
         status: "failed",
-        spansRead: window.records.length,
+        recordsRead: window.records.length,
         eventsSent: 0,
         eventsDropped: mapped.dropped,
         error: message,
@@ -207,7 +207,7 @@ export const runDestinationSyncUseCase = (input: RunDestinationSyncInput) =>
         outcome: "failed",
         destinationId: destination.id,
         source,
-        spansRead: window.records.length,
+        recordsRead: window.records.length,
         eventsDropped: mapped.dropped,
         quarantined,
         syncRunId: run.id,
@@ -225,7 +225,7 @@ export const runDestinationSyncUseCase = (input: RunDestinationSyncInput) =>
         outcome: "stale",
         destinationId: destination.id,
         source,
-        spansRead: window.records.length,
+        recordsRead: window.records.length,
       })
 
     yield* destinations.updateQuarantineState({
@@ -249,7 +249,7 @@ export const runDestinationSyncUseCase = (input: RunDestinationSyncInput) =>
       windowStart: deliveryWindow.start,
       windowEnd: deliveryWindow.end,
       status: "succeeded",
-      spansRead: window.records.length,
+      recordsRead: window.records.length,
       eventsSent: delivery.success.delivered,
       eventsDropped,
       error: null,
@@ -262,7 +262,7 @@ export const runDestinationSyncUseCase = (input: RunDestinationSyncInput) =>
       outcome: "delivered",
       destinationId: destination.id,
       source,
-      spansRead: window.records.length,
+      recordsRead: window.records.length,
       eventsSent: delivery.success.delivered,
       eventsDropped,
       cursorAdvanced: true,

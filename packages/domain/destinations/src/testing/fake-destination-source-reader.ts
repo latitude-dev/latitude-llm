@@ -29,9 +29,9 @@ export const createFakeDestinationSourceReader = (
 
 /** Wraps a single reader into a registry; v1 has only the `spans` source. */
 export const fakeSourceReaderRegistry = (
-  spansReader: DestinationSourceReader<SpanDetail>,
+  recordsReader: DestinationSourceReader<SpanDetail>,
 ): DestinationSourceReaderRegistry => ({
-  spans: spansReader,
+  spans: recordsReader,
 })
 
 /** Convenience: a reader that always returns the given records + nextCursor regardless of input. */

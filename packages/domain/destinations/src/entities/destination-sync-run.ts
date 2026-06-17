@@ -21,7 +21,7 @@ export const destinationSyncRunSchema = z.object({
   windowStart: z.date(),
   windowEnd: z.date(),
   status: destinationSyncRunStatusSchema,
-  spansRead: z.number().int().min(0),
+  recordsRead: z.number().int().min(0),
   eventsSent: z.number().int().min(0),
   /** Events removed by the oversized-event truncate-then-drop policy. */
   eventsDropped: z.number().int().min(0),

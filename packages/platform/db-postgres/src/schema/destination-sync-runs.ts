@@ -19,7 +19,8 @@ export const destinationSyncRuns = latitudeSchema.table(
     windowStart: tzTimestamp("window_start").notNull(),
     windowEnd: tzTimestamp("window_end").notNull(),
     status: varchar("status", { length: 16 }).notNull().$type<DestinationSyncRunStatus>(),
-    spansRead: integer("spans_read").notNull(),
+    // Physical column stays `spans_read` (shipped in prod) — renamed to the source-agnostic `recordsRead` in code only, no migration.
+    recordsRead: integer("spans_read").notNull(),
     eventsSent: integer("events_sent").notNull(),
     eventsDropped: integer("events_dropped").notNull().default(0),
     error: text("error"),

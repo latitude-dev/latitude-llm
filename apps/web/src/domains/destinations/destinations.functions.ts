@@ -366,8 +366,9 @@ export const testExistingDestinationConnection = createServerFn({ method: "POST"
 /** Wire projection of one {@link DestinationSyncRun}. Powers the card summary and the run-history list. */
 export interface DestinationSyncRunRecord {
   readonly id: string
+  readonly source: DestinationSource
   readonly status: DestinationSyncRunStatus
-  readonly spansRead: number
+  readonly recordsRead: number
   readonly eventsSent: number
   readonly eventsDropped: number
   readonly error: string | null
@@ -379,8 +380,9 @@ export interface DestinationSyncRunRecord {
 
 const toSyncRunRecord = (run: DestinationSyncRun): DestinationSyncRunRecord => ({
   id: run.id,
+  source: run.source,
   status: run.status,
-  spansRead: run.spansRead,
+  recordsRead: run.recordsRead,
   eventsSent: run.eventsSent,
   eventsDropped: run.eventsDropped,
   error: run.error,

@@ -44,7 +44,7 @@ const syncRun = () =>
     windowStart: new Date("2026-06-01T00:00:00Z"),
     windowEnd: new Date("2026-06-01T00:05:00Z"),
     status: "succeeded",
-    spansRead: 10,
+    recordsRead: 10,
     eventsSent: 12,
     eventsDropped: 0,
     error: null,

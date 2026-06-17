@@ -194,7 +194,7 @@ export const createDestinationsWorker = ({
           )
 
           logger.info(
-            `destinations.runSync destinationId=${destinationId} source=${source} outcome=${result.outcome} spansRead=${result.spansRead} eventsSent=${result.eventsSent} eventsDropped=${result.eventsDropped} quarantined=${result.quarantined}`,
+            `destinations.runSync destinationId=${destinationId} source=${source} outcome=${result.outcome} recordsRead=${result.recordsRead} eventsSent=${result.eventsSent} eventsDropped=${result.eventsDropped} quarantined=${result.quarantined}`,
           )
         }).pipe(
           withPostgres(runSyncLayer, pgClient, organizationId),

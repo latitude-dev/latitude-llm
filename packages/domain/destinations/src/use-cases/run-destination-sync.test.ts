@@ -302,7 +302,7 @@ describe("runDestinationSyncUseCase", () => {
 
     expect(res.outcome).toBe("delivered")
     expect(res.source).toBe(SOURCE)
-    expect(res.spansRead).toBe(2)
+    expect(res.recordsRead).toBe(2)
     expect(res.eventsSent).toBe(2)
     expect(deliveries).toHaveLength(1)
     expect(deliveries[0]?.context.window.start).toEqual(CURSOR_AT)
