@@ -1,14 +1,14 @@
 import { ProjectRepository } from "@domain/projects"
 import { ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
-import { ClaudeCodeIcon, CopyableText, useMountEffect } from "@repo/ui"
+import { ClaudeCodeIcon, CopyableText, cn, Text, useMountEffect } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
-import { PROJECT_SETTINGS_SECTION, useVisibleProjectSections } from "../../../domains/projects/project-sections.ts"
+import { PROJECT_SETTINGS_SECTION, useVisibleProjectSectionGroups } from "../../../domains/projects/project-sections.ts"
 import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
 import { type ProjectRecord, rememberLastProjectSlug, toRecord } from "../../../domains/projects/projects.functions.ts"
 import { getLatestWrappedReportForProject } from "../../../domains/wrapped/wrapped.functions.ts"
@@ -68,7 +68,7 @@ const WRAPPED_REPORT_STALE_TIME_MS = 10 * 60 * 1000
 
 function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; projectSlug: string }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
-  const sections = useVisibleProjectSections()
+  const sectionGroups = useVisibleProjectSectionGroups()
 
   // Fire-and-forget client-side fetch: surfaces a sidebar shortcut to this
   // week's Wrapped report when one exists. Returns null for the typical
@@ -109,15 +109,28 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
     >
       {({ collapsed }) => (
         <>
-          {sections.map((section) => (
-            <NavItem
-              key={section.key}
-              icon={section.icon}
-              label={section.label}
-              to={section.path(projectSlug)}
-              active={section.isActive(pathname, projectSlug)}
-              collapsed={collapsed}
-            />
+          {sectionGroups.map((group, index) => (
+            <div key={group.key} className={cn("flex flex-col gap-1", index > 0 && "mt-4")}>
+              {collapsed ? (
+                index > 0 ? (
+                  <div className="mb-2 h-px w-6 self-center bg-border" />
+                ) : null
+              ) : (
+                <Text.H6 color="foregroundMuted" weight="medium" className="px-2 uppercase tracking-wide">
+                  {group.label}
+                </Text.H6>
+              )}
+              {group.sections.map((section) => (
+                <NavItem
+                  key={section.key}
+                  icon={section.icon}
+                  label={section.label}
+                  to={section.path(projectSlug)}
+                  active={section.isActive(pathname, projectSlug)}
+                  collapsed={collapsed}
+                />
+              ))}
+            </div>
           ))}
         </>
       )}
