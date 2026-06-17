@@ -174,6 +174,19 @@ describe("buildOtlpRequest", () => {
     expect(traceIds.size).toBe(1)
   })
 
+  it("redacts matching attributes before export", () => {
+    const req = buildOtlpRequest(makeAgentResult(), {
+      allowConversationAccess: true,
+      redact: { attributes: ["/^gen_ai\\.(input|output)\\.messages$/"], mask: "[]" },
+    })
+    const span = findSpanByName(req, "agent")
+    const attrs = attrMap(span?.attributes ?? [])
+
+    expect(attrs["gen_ai.input.messages"]).toBe("[]")
+    expect(attrs["gen_ai.output.messages"]).toBe("[]")
+    expect(attrs["openclaw.agent.name"]).toBe("router")
+  })
+
   it("encodes latitude.tags as a JSON-stringified string array (resolver contract)", () => {
     // The resolver in domain/spans/src/otlp/resolvers/enrichment.ts reads
     // `latitude.tags` via `fromJsonStringArray` — that helper expects a

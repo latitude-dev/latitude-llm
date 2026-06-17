@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto"
 import { arch, hostname, platform, release } from "node:os"
+import { type RedactConfig, redactAttributes } from "./redaction.ts"
 import type { AnthropicMessage, AnthropicMessageBlock, AnthropicSystem, StoredRequest } from "./request-store.ts"
 import type {
   AssistantCall,
@@ -44,6 +45,7 @@ export function buildOtlpRequest(opts: {
   context?: TraceContext | undefined
   conversationHistory?: Turn[] | undefined
   requestsByMessageId?: Map<string, StoredRequest> | undefined
+  redact?: RedactConfig | undefined
 }): OtlpExportRequest {
   const contextAttrs = buildContextAttrs(opts.context)
   const history = opts.conversationHistory ?? []
@@ -57,17 +59,23 @@ export function buildOtlpRequest(opts: {
     )
   })
 
+  const redact = opts.redact
+  const redactedSpans = redact ? spans.map((span) => redactSpan(span, redact)) : spans
   const rs: OtlpResourceSpans = {
     resource: { attributes: resourceAttrs() },
     scopeSpans: [
       {
         scope: { name: SCOPE_NAME, version: SCOPE_VERSION },
-        spans,
+        spans: redactedSpans,
       },
     ],
   }
 
   return { resourceSpans: [rs] }
+}
+
+function redactSpan(span: OtlpSpan, redact: RedactConfig): OtlpSpan {
+  return { ...span, attributes: redactAttributes(span.attributes, redact) }
 }
 
 function buildTurnSpans(

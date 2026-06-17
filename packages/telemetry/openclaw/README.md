@@ -211,6 +211,7 @@ Two blocks live under `plugins.entries["@latitude-data/openclaw-telemetry"]`:
 | `project` | yes | — | Slug of the project to route traces into. |
 | `baseUrl` | no | `https://ingest.latitude.so` | Override OTLP ingest origin. The CLI sets this only when `--staging` or `--dev` is passed. |
 | `allowConversationAccess` | no | `false` | When `true`, attach raw prompts, assistant responses, system instructions, and tool I/O to spans. When `false`, emit only timing, token usage, model name, agent id, and structural ids — same span tree, scrubbed payloads. **Must match `hooks.allowConversationAccess` below — see [The two flags](#the-two-flags).** |
+| `redact` | no | — | Custom local attribute redaction before export: `{ "attributes": ["/^gen_ai\\.(input|output)\\.messages$/"], "mask": "[]" }`. Patterns are exact strings, regex source strings, or `/pattern/flags` strings. |
 | `enabled` | no | `true` | Set to `false` to pause emission without uninstalling. |
 | `debug` | no | `false` | Log diagnostic lines to stderr (visible in the gateway log). |
 
@@ -244,6 +245,25 @@ The CLI's first-install default writes `allowConversationAccess: true` to both b
 For hand-edited configs, leaving `allowConversationAccess` out entirely produces **no traces** (not "structural-only traces") because `hooks.allowConversationAccess` defaults to `false` at OpenClaw's level and dispatch is blocked. Always set both keys explicitly.
 
 To pause emission without uninstalling, set `enabled: false` on the plugin entry, or `LATITUDE_OPENCLAW_ENABLED=0` in the gateway environment.
+
+For field-level PII controls while keeping content capture enabled, add `config.redact`. For example, to send empty message arrays for prompts/responses before anything leaves the gateway:
+
+```jsonc
+{
+  "plugins": {
+    "entries": {
+      "@latitude-data/openclaw-telemetry": {
+        "config": {
+          "redact": {
+            "attributes": ["/^gen_ai\\.(input|output)\\.messages$/"],
+            "mask": "[]"
+          }
+        }
+      }
+    }
+  }
+}
+```
 
 ## Supported OpenClaw versions
 

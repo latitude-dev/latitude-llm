@@ -222,7 +222,10 @@ export default function registerLatitudePlugin(api: OpenClawPluginApiLike, opts:
             return
           }
           opts.onEmit?.(result)
-          const payload = buildOtlpRequest(result, { allowConversationAccess: config.allowConversationAccess })
+          const payload = buildOtlpRequest(result, {
+            allowConversationAccess: config.allowConversationAccess,
+            redact: config.redact,
+          })
           void postTraces({
             baseUrl: config.baseUrl,
             apiKey: config.apiKey,

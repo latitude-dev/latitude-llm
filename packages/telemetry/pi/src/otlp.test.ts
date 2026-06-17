@@ -94,4 +94,18 @@ describe("buildOtlpRequest", () => {
     expect(finishReasons?.value.arrayValue?.values).toEqual([{ stringValue: "stop" }])
     expect(finishReasons?.value.stringValue).toBeUndefined()
   })
+
+  it("redacts matching attributes after content gating", () => {
+    const req = buildOtlpRequest(result(), {
+      allowConversationAccess: true,
+      identity,
+      redact: { attributes: ["/^gen_ai\\.(input|output)\\.messages$/"], mask: "[]" },
+    })
+    const span = req.resourceSpans[0]?.scopeSpans[0]?.spans[0]
+    const attrs = attrMap(span?.attributes ?? [])
+
+    expect(attrs["gen_ai.input.messages"]).toBe("[]")
+    expect(attrs["gen_ai.output.messages"]).toBe("[]")
+    expect(attrs["gen_ai.operation.name"]).toBe("chat")
+  })
 })

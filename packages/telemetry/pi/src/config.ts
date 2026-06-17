@@ -2,6 +2,7 @@ import { execSync } from "node:child_process"
 import { existsSync, readFileSync } from "node:fs"
 import { hostname, userInfo } from "node:os"
 import { join } from "node:path"
+import { parseRedactConfig, parseRedactEnv } from "./redaction.ts"
 import type { RuntimeConfig, UserIdentity } from "./types.ts"
 
 export const configFileName = "latitude-telemetry.json"
@@ -15,6 +16,7 @@ interface FileConfig {
   allowConversationAccess?: boolean | undefined
   tags?: string[] | undefined
   metadata?: Record<string, string> | undefined
+  redact?: unknown
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig {
@@ -44,6 +46,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
     enabled,
     debug,
     allowConversationAccess,
+    redact: parseRedactEnv(env) ?? parseRedactConfig(file.redact),
     tags: file.tags ?? ["pi"],
     metadata: file.metadata ?? {},
     configSource,
@@ -93,6 +96,7 @@ function readFileConfig(path: string): FileConfig {
       allowConversationAccess: booleanValue(obj.allowConversationAccess),
       tags: stringArrayValue(obj.tags),
       metadata: stringRecordValue(obj.metadata),
+      redact: obj.redact,
     }
   } catch {
     return {}

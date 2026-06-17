@@ -11,6 +11,12 @@ export interface PiTelemetryConfigFile {
   enabled: boolean
   debug?: boolean | undefined
   allowConversationAccess: boolean
+  redact?:
+    | {
+        attributes: string[]
+        mask?: string | undefined
+      }
+    | undefined
   tags: string[]
   metadata: Record<string, string>
 }

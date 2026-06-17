@@ -771,6 +771,25 @@ describe("span size capping", () => {
   })
 })
 
+describe("redaction", () => {
+  it("redacts matching attributes before export", () => {
+    const req = buildOtlpRequest({
+      sessionId: "sess-redact",
+      turnStartNumber: 1,
+      turns: [baseTurn({ userText: "secret prompt", assistantText: "secret output" })],
+      redact: { attributes: ["/^gen_ai\\.(input|output)\\.messages$/", "user_prompt"], mask: "[]" },
+    })
+    const spans = otlpSpans(req)
+    const interaction = unwrap(spans.find((span) => span.name === "interaction"))
+    const llm = unwrap(spans.find((span) => span.name === "llm_request"))
+
+    expect(getAttr(interaction.attributes, "user_prompt")).toBe("[]")
+    expect(getAttr(interaction.attributes, "gen_ai.input.messages")).toBe("[]")
+    expect(getAttr(llm.attributes, "gen_ai.input.messages")).toBe("[]")
+    expect(getAttr(llm.attributes, "gen_ai.output.messages")).toBe("[]")
+  })
+})
+
 describe("chunkOtlpRequest", () => {
   it("returns the original request when it fits the budget", () => {
     const req = buildOtlpRequest({ sessionId: "sess-chunk", turnStartNumber: 1, turns: [baseTurn()] })
