@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## v0.3.7 - 2026-06-17
+
+### Workers
+
+- Fixed sandbox evaluation startup in worker bundles by keeping the QuickJS runtime external so its Emscripten loader can resolve the package layout at runtime (ref: 9ebeb71).
+
+### Signals
+
+- Reworked the Signals implementation plan around evaluation-backed sandbox scripts, removed the unbuilt Tracker model, and deferred semantic similarity detectors to a later phase (ref: #3600).
+
 ## v0.3.6 - 2026-06-17
 
 ### Data destinations
