@@ -1,4 +1,3 @@
-import { FeatureFlagRepository } from "@domain/feature-flags"
 import { WrappedReportId } from "@domain/shared"
 import {
   CURRENT_REPORT_VERSION,
@@ -44,20 +43,14 @@ interface RenderInput {
   readonly webAppUrl: string
   readonly reportId: string
   readonly reportVersion: ReportVersion
-  /** V1 ignores it; V2 renders the 41st.latitude.so banner when true. */
-  readonly showMerchPromo: boolean
 }
-
-const MERCH_PROMO_URL =
-  "https://41st.latitude.so/?utm_source=wrapped_email&utm_medium=email&utm_campaign=merch_41st#howto"
 
 /**
  * Pure HTML builder. Picks a versioned React template by `(type,
  * reportVersion)` and renders to HTML + plaintext.
  *
- * V2 receives the optional `showMerchPromo` prop; V1 is rendered through
- * the shared registry signature, which doesn't include the prop, so old
- * V1 reports keep their frozen output verbatim.
+ * V1 is rendered through the shared registry signature, so old V1 reports
+ * keep their frozen output verbatim.
  */
 const renderWrappedHtml = async (input: RenderInput): Promise<RenderedEmail> => {
   const projectName = input.report.project.name
@@ -74,7 +67,6 @@ const renderWrappedHtml = async (input: RenderInput): Promise<RenderedEmail> => 
         report={input.report}
         webAppUrl={input.webAppUrl}
         reportId={reportIdBranded}
-        showMerchPromo={input.showMerchPromo}
       />
     ) : (
       <Template
@@ -90,14 +82,10 @@ const renderWrappedHtml = async (input: RenderInput): Promise<RenderedEmail> => 
   )} UTC):\n\n• ${input.report.totals.sessions.toLocaleString("en-US")} sessions\n• ${input.report.totals.toolCalls.toLocaleString(
     "en-US",
   )} tool calls\n• ${input.report.totals.filesTouched.toLocaleString("en-US")} files touched\n\nSee your full week:\n${fullReportUrl}`
-  const promoText =
-    input.showMerchPromo && resolvedVersion === 2
-      ? `\n\n---\nShare your Wrapped on X · win free Latitude merch\nPost this week's Wrapped on X and tag @trylatitude. Top 5 posts each week get a free tee, DM'd by us, shipped worldwide.\n${MERCH_PROMO_URL}`
-      : ""
   return {
     html: await renderEmail(emailJsx),
     subject: `Your Claude Code week in ${projectName}`,
-    text: `${baseText}${promoText}`,
+    text: baseText,
   }
 }
 
@@ -127,12 +115,6 @@ export const wrappedReportRenderer: NotificationEmailRenderer<"wrapped.report"> 
         cause,
       })),
     )
-    // Promo flag failures are non-fatal — render the email without the
-    // banner rather than dropping the whole send because of a flag lookup.
-    const flags = yield* FeatureFlagRepository
-    const showMerchPromo = yield* flags
-      .isEnabledForOrganization("wrapped-merch-promo")
-      .pipe(Effect.orElseSucceed(() => false))
     return yield* Effect.tryPromise({
       try: () =>
         renderWrappedHtml({
@@ -142,7 +124,6 @@ export const wrappedReportRenderer: NotificationEmailRenderer<"wrapped.report"> 
           webAppUrl: ctx.webAppUrl,
           reportId: record.id,
           reportVersion: record.reportVersion,
-          showMerchPromo,
         }),
       catch: (cause) => ({
         _tag: "RenderNotificationEmailError" as const,

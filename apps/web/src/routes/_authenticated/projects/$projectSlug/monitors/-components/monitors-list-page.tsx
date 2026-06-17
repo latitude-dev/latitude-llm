@@ -1,11 +1,10 @@
-import { Button, Icon, Input, Modal, type TabOption, Tabs, Text, toast, useValueWithDefault } from "@repo/ui"
+import { Button, Icon, Input, Modal, type TabOption, Tabs, toast, useValueWithDefault } from "@repo/ui"
 import { useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import {
   BellOffIcon,
   BellPlusIcon,
   CheckIcon,
-  LockIcon,
   SearchIcon,
   ShieldAlertIcon,
   TextSearchIcon,
@@ -14,7 +13,6 @@ import {
 import { useCallback, useMemo, useState } from "react"
 import { useRegisterCommands } from "../../../../../../components/command-palette/command-palette-provider.tsx"
 import type { PaletteCommand } from "../../../../../../components/command-palette/types.ts"
-import { useHasFeatureFlag } from "../../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { invalidateAllMonitorQueries, useMonitors } from "../../../../../../domains/monitors/monitors.collection.ts"
 import {
   bulkDeleteMonitors,
@@ -77,18 +75,6 @@ export function MonitorsBreadcrumb() {
  * lists the system-managed issue-event monitors (`system: true`).
  */
 export function MonitorsListPage({ system }: { readonly system: boolean }) {
-  const monitorsEnabled = useHasFeatureFlag("monitors")
-
-  if (!monitorsEnabled) {
-    return (
-      <Layout>
-        <Layout.Content>
-          <FeatureFlagOffSplash />
-        </Layout.Content>
-      </Layout>
-    )
-  }
-
   return <MonitorsPageContent system={system} />
 }
 
@@ -139,8 +125,7 @@ function MonitorsPageContent({ system }: { readonly system: boolean }) {
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false)
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
 
-  // Registered only while this page is mounted, so it's implicitly gated to the
-  // monitors flag. Creation is search-tab only (issue monitors are system-provisioned).
+  // Registered only while this page is mounted. Creation is search-tab only (issue monitors are system-provisioned).
   const paletteCommands = useMemo<readonly PaletteCommand[]>(
     () =>
       system
@@ -437,24 +422,5 @@ function MonitorsPageContent({ system }: { readonly system: boolean }) {
         />
       </Layout.Content>
     </Layout>
-  )
-}
-
-function FeatureFlagOffSplash() {
-  return (
-    <div className="h-full w-full flex items-center justify-center p-8">
-      <div className="max-w-lg flex flex-col items-center gap-6 text-center">
-        <div className="h-14 w-14 rounded-xl bg-muted flex items-center justify-center">
-          <Icon icon={LockIcon} size="lg" color="foregroundMuted" />
-        </div>
-        <div className="flex flex-col items-center gap-2">
-          <Text.H3 centered>Monitors aren't available yet</Text.H3>
-          <Text.H5 color="foregroundMuted" centered>
-            This feature is rolling out gradually. Reach out to support if you'd like early access for your
-            organization.
-          </Text.H5>
-        </div>
-      </div>
-    </div>
   )
 }

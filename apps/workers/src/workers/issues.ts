@@ -1,4 +1,3 @@
-import { hasFeatureFlagUseCase } from "@domain/feature-flags"
 import {
   checkIssueEscalationUseCase,
   type DiscoverIssueResult,
@@ -24,7 +23,6 @@ import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-click
 import {
   AlertIncidentRepositoryLive,
   EvaluationRepositoryLive,
-  FeatureFlagRepositoryLive,
   IssueRepositoryLive,
   MonitorRepositoryLive,
   OutboxEventWriterLive,
@@ -133,19 +131,13 @@ export const createIssuesWorker = async ({
     // plus cold-start recovery for already-stuck rows).
     checkEscalation: (payload) =>
       Effect.gen(function* () {
-        // Flag-on: read sensitivity off the system "Issue escalating" monitor alert
-        // (relocated from project settings). Flag-off leaves it to the use-case.
-        const monitorsEnabled = yield* hasFeatureFlagUseCase({ identifier: "monitors" })
-        let escalationSensitivity: number | undefined
-        if (monitorsEnabled) {
-          const alerts = yield* resolveMonitorAlertsForSourceEventUseCase({
-            projectId: ProjectId(payload.projectId),
-            kind: "issue.escalating",
-            sourceId: payload.issueId,
-          })
-          const condition = alerts[0]?.condition
-          if (condition?.kind === "issue.escalating") escalationSensitivity = condition.sensitivity
-        }
+        const alerts = yield* resolveMonitorAlertsForSourceEventUseCase({
+          projectId: ProjectId(payload.projectId),
+          kind: "issue.escalating",
+          sourceId: payload.issueId,
+        })
+        const condition = alerts[0]?.condition
+        const escalationSensitivity = condition?.kind === "issue.escalating" ? condition.sensitivity : undefined
         return yield* checkIssueEscalationUseCase({
           ...payload,
           ...(escalationSensitivity !== undefined ? { escalationSensitivity } : {}),
@@ -157,7 +149,6 @@ export const createIssuesWorker = async ({
             OutboxEventWriterLive,
             AlertIncidentRepositoryLive,
             SettingsReaderLive,
-            FeatureFlagRepositoryLive,
             MonitorRepositoryLive,
           ),
           pgClient,

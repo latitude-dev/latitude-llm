@@ -107,7 +107,7 @@ export const alertIncidentSchema = z.object({
   createdAt: z.date(),
   entrySignals: incidentEntrySignalsSchema.nullable(),
   exitEligibleSince: z.date().nullable(),
-  // Firing monitor alert; `null` on legacy/flag-off rows. `.default(null)` keeps pre-monitors `.parse` callers valid.
+  // Firing monitor alert; `null` on fallback rows. `.default(null)` keeps pre-monitors `.parse` callers valid.
   monitorAlertId: monitorAlertIdSchema.nullable().default(null),
   // Condition snapshot frozen at open time; `null` for no-condition kinds.
   condition: alertIncidentConditionSchema.nullable().default(null),

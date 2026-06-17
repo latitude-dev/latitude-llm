@@ -16,7 +16,6 @@ import {
 import { useForm } from "@tanstack/react-form"
 import { BellRingIcon, CircleHelpIcon } from "lucide-react"
 import { useState } from "react"
-import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import {
   useCreateSavedSearch,
   useUpdateSavedSearch,
@@ -76,14 +75,13 @@ function monitorAlertErrorsFrom(error: unknown): AlertFieldErrors {
 function CreateModal({ open, onClose, projectId, projectSlug, query, filterSet, onCreated }: CreateProps) {
   const { toast } = useToast()
   const createMutation = useCreateSavedSearch(projectId)
-  const monitorsEnabled = useHasFeatureFlag("monitors")
   const [withMonitor, setWithMonitor] = useState(false)
   const [alertDraft, setAlertDraft] = useState<AlertDraft>(() => emptyAlertDraft())
   const [alertErrors, setAlertErrors] = useState<AlertFieldErrors>({})
 
   // Searches with a semantic part have no exact match rule for a monitor to count against.
   const semanticQuery = searchHasSemanticPart(query)
-  const createMonitor = monitorsEnabled && withMonitor && !semanticQuery
+  const createMonitor = withMonitor && !semanticQuery
 
   const form = useForm({
     defaultValues: { name: "" },
@@ -167,73 +165,71 @@ function CreateModal({ open, onClose, projectId, projectSlug, query, filterSet, 
               />
             )}
           </form.Field>
-          {monitorsEnabled ? (
-            <div className="flex flex-col gap-1.5">
-              {semanticQuery ? (
-                <div className="flex items-center gap-1.5">
-                  <Text.H6 color="foregroundMuted">This search can&apos;t have a monitor</Text.H6>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        aria-label="Why can't this search have a monitor?"
-                        className="flex shrink-0 cursor-pointer items-center"
-                      >
-                        <Icon icon={CircleHelpIcon} size="sm" color="foregroundMuted" />
-                      </button>
-                    </PopoverTrigger>
-                    <SemanticMonitorPopoverContent />
-                  </Popover>
+          <div className="flex flex-col gap-1.5">
+            {semanticQuery ? (
+              <div className="flex items-center gap-1.5">
+                <Text.H6 color="foregroundMuted">This search can&apos;t have a monitor</Text.H6>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Why can't this search have a monitor?"
+                      className="flex shrink-0 cursor-pointer items-center"
+                    >
+                      <Icon icon={CircleHelpIcon} size="sm" color="foregroundMuted" />
+                    </button>
+                  </PopoverTrigger>
+                  <SemanticMonitorPopoverContent />
+                </Popover>
+              </div>
+            ) : null}
+            <div className={cn("flex flex-col rounded-lg border border-border", { "opacity-60": semanticQuery })}>
+              <label
+                htmlFor="save-search-monitor-toggle"
+                className={cn("flex items-center justify-between gap-3 p-3", {
+                  "cursor-default": semanticQuery,
+                  "cursor-pointer": !semanticQuery,
+                })}
+              >
+                <div className="flex items-start gap-2">
+                  <Icon icon={BellRingIcon} size="sm" color="foregroundMuted" className="mt-0.5 shrink-0" />
+                  <div className="flex flex-col gap-0.5">
+                    <Text.H5M>Monitor this search</Text.H5M>
+                    <Text.H6 color="foregroundMuted">Open incidents when traces match this search</Text.H6>
+                  </div>
+                </div>
+                <Switch
+                  id="save-search-monitor-toggle"
+                  disabled={semanticQuery}
+                  checked={withMonitor && !semanticQuery}
+                  onCheckedChange={(checked) => {
+                    setWithMonitor(checked)
+                    if (!checked) setAlertErrors({})
+                  }}
+                />
+              </label>
+              {createMonitor ? (
+                <div className="border-t border-border p-3">
+                  <form.Subscribe selector={(state) => state.values.name}>
+                    {(name) => (
+                      <AlertCardForm
+                        value={alertDraft}
+                        onChange={(next) => {
+                          setAlertDraft(next)
+                          setAlertErrors({})
+                        }}
+                        projectId={projectId}
+                        projectSlug={projectSlug}
+                        showSourcePicker={false}
+                        {...(name.trim() ? { sourceName: name.trim() } : {})}
+                        errors={alertErrors}
+                      />
+                    )}
+                  </form.Subscribe>
                 </div>
               ) : null}
-              <div className={cn("flex flex-col rounded-lg border border-border", semanticQuery && "opacity-60")}>
-                <label
-                  htmlFor="save-search-monitor-toggle"
-                  className={cn(
-                    "flex items-center justify-between gap-3 p-3",
-                    semanticQuery ? "cursor-default" : "cursor-pointer",
-                  )}
-                >
-                  <div className="flex items-start gap-2">
-                    <Icon icon={BellRingIcon} size="sm" color="foregroundMuted" className="mt-0.5 shrink-0" />
-                    <div className="flex flex-col gap-0.5">
-                      <Text.H5M>Monitor this search</Text.H5M>
-                      <Text.H6 color="foregroundMuted">Open incidents when traces match this search</Text.H6>
-                    </div>
-                  </div>
-                  <Switch
-                    id="save-search-monitor-toggle"
-                    disabled={semanticQuery}
-                    checked={withMonitor && !semanticQuery}
-                    onCheckedChange={(checked) => {
-                      setWithMonitor(checked)
-                      if (!checked) setAlertErrors({})
-                    }}
-                  />
-                </label>
-                {createMonitor ? (
-                  <div className="border-t border-border p-3">
-                    <form.Subscribe selector={(state) => state.values.name}>
-                      {(name) => (
-                        <AlertCardForm
-                          value={alertDraft}
-                          onChange={(next) => {
-                            setAlertDraft(next)
-                            setAlertErrors({})
-                          }}
-                          projectId={projectId}
-                          projectSlug={projectSlug}
-                          showSourcePicker={false}
-                          {...(name.trim() ? { sourceName: name.trim() } : {})}
-                          errors={alertErrors}
-                        />
-                      )}
-                    </form.Subscribe>
-                  </div>
-                ) : null}
-              </div>
             </div>
-          ) : null}
+          </div>
         </FormWrapper>
       </form>
     </Modal>

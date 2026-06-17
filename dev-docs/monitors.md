@@ -4,8 +4,6 @@ A **Monitor** is the user-facing entity that owns _what to watch_ and _when an i
 
 Monitors live in `@domain/monitors`. The shared enums (`AlertIncidentKind`, source types, conditions, severities) live in `@domain/shared` so both the monitors domain and the notifications/incidents pipeline can reference them without a circular dependency.
 
-> Gated by the **`monitors`** feature flag. The new monitor-driven path runs only for orgs with the flag on; orgs without it keep the legacy issue-event path. See [Feature flag](#feature-flag).
-
 Related docs:
 
 - [issues.md](./issues.md) — issue lifecycle events feed the `issue.*` alert kinds; the seasonal escalation detector is shared.
@@ -225,8 +223,8 @@ CREATE INDEX alert_incidents_monitor_alert_idx
 
 #### Write semantics for `monitorAlertId` and `condition`
 
-- **Monitor-driven incidents** (flag on): `monitorAlertId` set to the specific firing alert; `condition` set to a snapshot of that alert's condition (or `null` if the alert had none). The owning monitor is resolved via the join, never stored.
-- **Legacy issue-event path** (orgs without the `monitors` flag): `monitorAlertId = null`, `condition = null`. The producer step continues to consult `projects.settings.notifications.incidents` for these rows.
+- **Monitor-backed incidents**: `monitorAlertId` set to the specific firing alert; `condition` set to a snapshot of that alert's condition (or `null` if the alert had none). The owning monitor is resolved via the join, never stored.
+- **Fallback issue-event incidents**: if an issue event finds no matching system monitor alert (for example, an old project missing backfilled system monitors), the worker writes one incident with `monitorAlertId = null` and `condition = null`. The producer step continues to consult `projects.settings.notifications.incidents` for these rows.
 
 #### Why snapshot `condition` on the incident
 
@@ -267,10 +265,10 @@ IssueCreated / IssueRegressed / IssueEscalated / IssueEscalationEnded
     ▼  alert-incidents worker (apps/workers/src/workers/domain-events/alert-incidents.ts)
 resolveMonitorAlertsForSourceEvent({ orgId, projectId, kind, sourceId })
     │  Returns alerts matching kind + source.type "issue" + (source.id IS NULL OR = sourceId).
-    │  Flag off → skip the lookup, write a single legacy incident (monitorAlertId = null);
-    │  the project-level gate continues to apply for legacy rows.
+    │  No matching alert → write a single fallback incident (monitorAlertId = null);
+    │  the project-level gate continues to apply for fallback rows.
     ▼
-createAlertIncidentFromIssueEventUseCase  (one row per matching alert)
+createAlertIncidentFromIssueEventUseCase  (one row per matching alert, or one fallback row)
     │  Each row carries monitorAlertId, condition (snapshot or null), severity (from the
     │  matching alert), startedAt (backtracked for escalating), and the standard issue fields.
     ▼
@@ -281,7 +279,7 @@ IncidentCreated outbox event → domain-events worker → notifications:request-
 
 **Backtracking `startedAt` / `endedAt` for `issue.escalating`.** The seasonal detector flags an escalation only after the band has been crossed for a while, so the event time is a late `startedAt`. `checkIssueEscalationUseCase` (which already holds `ScoreAnalyticsRepository` + `ChSqlClient`) backtracks `startedAt` to the **first** histogram bucket where the occurrence count crossed the seasonal threshold (`backtrackEscalationStart`), walking `histogramByIssues` and `escalationThresholdHistogramByIssues` in lockstep over a 24h / 1h-bucket window. The detector also exits late, so on the organic exit `endedAt` is backtracked symmetrically to the **last** bucket still above the threshold (`backtrackEscalationEnd`, the mirror, scanned newest→oldest). Both timestamps ride the existing `IssueEscalated.startedAt` / `IssueEscalationEnded.endedAt` payloads through to the alert-incidents worker. A **manual** resolve/ignore close keeps `endedAt = now` — the user closed it now, mirroring that the open side never backtracks a manual action. `issue.new` / `issue.regressed` are point-in-time, so `startedAt = endedAt = occurredAt`.
 
-**Escalation sensitivity sourcing.** Sensitivity lives on the monitor. The flag-on detector path resolves the project's system "Issue escalating" monitor alert and reads `sensitivity` from its condition rather than from `projects.settings.escalation.sensitivity`. (Flag-off orgs keep reading project settings on the legacy path.)
+**Escalation sensitivity sourcing.** Sensitivity lives on the monitor. The detector resolves the project's system "Issue escalating" monitor alert and reads `sensitivity` from its condition rather than from `projects.settings.escalation.sensitivity`. If the project has no matching system monitor alert, the use-case falls back to the legacy project setting.
 
 ### Saved-search alerts
 
@@ -345,13 +343,13 @@ The `NOTIFICATION_KIND_META` registry (`incident.event` / `incident.opened` / `i
 - When `monitorName` is set, email / in-app / Slack templates show a "Created by monitor `<name>`" line; email + Slack deep-link to the monitor details panel via `monitorSlug`.
 - When `condition` is set, templates render a humanised summary via the shared `formatHumanReadableAlert` helper.
 
-Incidents created on the legacy path have both absent and fall back to today's copy.
+Fallback issue-event incidents have both absent and fall back to the generic incident copy.
 
 ## Web UI
 
-Monitor surfaces follow the repository product pattern: human-facing pages in `apps/web`, route-specific components in the route's `-components/` subfolder, server reads/writes via `createServerFn`. The whole surface is gated by `useHasFeatureFlag("monitors")`.
+Monitor surfaces follow the repository product pattern: human-facing pages in `apps/web`, route-specific components in the route's `-components/` subfolder, server reads/writes via `createServerFn`.
 
-- **Left navbar** — a `Monitors` item in `ProjectSidebar`, between Issues and Datasets, active on `/monitors`, hidden when the flag is off.
+- **Left navbar** — a `Monitors` item in `ProjectSidebar`, between Issues and Datasets, active on `/monitors`.
 - **Dashboard route** (`.../monitors/index.tsx`) — mirrors the issues dashboard: `ListingLayout` with content + aside, a debounced search input (`query` URL param) and a "+ New monitor" button, and an `InfiniteTable` with offset/limit pagination. Columns: **Name** (system monitors prepend `<LatitudeLogo />`), **Status** (`Live`/`Muted`), **Last incident** ("Closed Xh ago" / "Ongoing since Xh"), and an **Actions** 3-dots menu (Mute/Unmute, plus Rename/Delete for user monitors only). All three data columns are sortable client-side, persisted in `monitorsSort`; default is last-incident descending, with `createdAt` desc then `id` as tiebreaks. System monitors are not pinned. The list read surfaces each monitor's latest-incident timestamp (`MonitorRepository.list` → `lastIncidentByMonitorId`), which both orders the page and populates the column.
 - **Details panel** (`.../monitors/-components/monitor-detail-drawer.tsx`) — mirrors `issue-detail-drawer.tsx`. A single read/manage mode: a header block (title, description, copyable slug, a "System" tag for system monitors, a "Muted" badge), a Mute/Unmute right-action, and next/prev nav. Body sections: **Alert** (an inline block rendering `formatHumanReadableAlert` + kind/severity; editing the configurable values saves through `updateMonitorAlertUseCase` — alerts are never added or deleted from the app, a monitor keeps the single alert it was created with) and **Incidents** (an embedded `InfiniteTable`, **keyset-paginated** over `(started_at, id)` since incidents are append-heavy and unbounded; backed by the composite incident index). Incident columns: Start time, End time, Source (deep-linked to the issue/saved-search, server-resolved per page; a deleted source falls back to its copyable id), and Notified ("Notified"/"Muted").
 - **Create monitor modal** — opened from the dashboard button or the saved-searches dropdown. Fields: name, optional description, and a vertical card stack of alerts. The kind dropdown is limited to `USER_CREATABLE_ALERT_KINDS` (re-validated server-side at submit). Each card has a kind dropdown, a searchable saved-search `Combobox` source picker (no "All saved searches" option — the user must pick one), a conditional condition form, and a severity selector. The threshold/window form expresses `AlertCountThreshold` + (for escalating) `window` in two rows, binding bidirectionally to the discriminated union; "the average of the last 7 days" is the default, and the "expected" option carries an info tooltip explaining the dynamically-learned baseline.
@@ -391,15 +389,6 @@ Monitors are exposed as a public REST surface under `/v1/projects/{projectSlug}/
 - **Monitor-alert updates.** Alerts only come into existence with their monitor and are never added or deleted individually (no `createAlert` / `deleteAlert` operations; alerts disappear with their monitor or watched saved search). `updateMonitorAlert` updates an alert's `kind` / `source` / `condition` / `severity` in place. On a **user** monitor the kind may change to another user-creatable kind; on **system** monitors it's the only permitted alert mutation, and only an existing alert's configurable condition values may change — for the system "Issue escalating" monitor this is how `sensitivity` is tuned.
 
 Field descriptions on the OpenAPI schemas are rich enough to render meaningfully as MCP tool descriptions, and the same descriptions propagate to the TS SDK via codegen. Schema and description changes therefore drive the `openapi.json` / `mcp.json` / SDK regeneration (`pnpm openapi:emit`, `pnpm mcp:emit`, `pnpm --filter @latitude-data/sdk generate`).
-
-## Feature flag
-
-Identifier `monitors`, registered in `FEATURE_FLAGS` (`packages/domain/feature-flags/src/registry.ts`). The new path is **additive** — the alert-incidents worker keeps the legacy code path and adds the monitor lookup behind a per-org `hasFeatureFlagUseCase({ identifier: "monitors" })` check:
-
-- **Flag off:** `alert_incidents.monitorAlertId = null`, `condition = null`; the project-level gate (`projects.settings.notifications.incidents`) applies in the producer.
-- **Flag on:** the worker resolves matching alerts, writes one incident per alert with `monitorAlertId` + the snapshot condition, and the producer's mute gate applies to monitor-driven incidents.
-
-Frontend: the sidebar nav item is hidden and the `/monitors` route renders a "Not available" splash when the flag is off.
 
 ## Provisioning system monitors
 
