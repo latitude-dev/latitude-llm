@@ -61,7 +61,7 @@
                 "type": "object",
                 "properties": {
                   "keepMonitoring": {
-                    "description": "When `true`, the evaluation linked to an issue keeps running after the issue is resolved. When `false`, resolving the issue stops the evaluation. Defaults to `true` when omitted.",
+                    "description": "When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
                     "type": "boolean"
                   },
                   "notifications": {
@@ -73,15 +73,15 @@
                         "type": "object",
                         "properties": {
                           "issue.new": {
-                            "description": "Send a notification when a new issue is discovered. Defaults to `true` when omitted.",
+                            "description": "Send a notification when a new signal is discovered. Defaults to `true` when omitted.",
                             "type": "boolean"
                           },
                           "issue.regressed": {
-                            "description": "Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted.",
+                            "description": "Send a notification when a previously-resolved signal regresses. Defaults to `true` when omitted.",
                             "type": "boolean"
                           },
                           "issue.escalating": {
-                            "description": "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.",
+                            "description": "Send a notification when an active signal is escalating in volume or severity. Defaults to `true` when omitted.",
                             "type": "boolean"
                           }
                         },
@@ -203,7 +203,7 @@
                       "type": "object",
                       "properties": {
                         "keepMonitoring": {
-                          "description": "When `true`, the evaluation linked to an issue keeps running after the issue is resolved. When `false`, resolving the issue stops the evaluation. Defaults to `true` when omitted.",
+                          "description": "When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
                           "type": "boolean"
                         },
                         "notifications": {
@@ -215,15 +215,15 @@
                               "type": "object",
                               "properties": {
                                 "issue.new": {
-                                  "description": "Send a notification when a new issue is discovered. Defaults to `true` when omitted.",
+                                  "description": "Send a notification when a new signal is discovered. Defaults to `true` when omitted.",
                                   "type": "boolean"
                                 },
                                 "issue.regressed": {
-                                  "description": "Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted.",
+                                  "description": "Send a notification when a previously-resolved signal regresses. Defaults to `true` when omitted.",
                                   "type": "boolean"
                                 },
                                 "issue.escalating": {
-                                  "description": "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.",
+                                  "description": "Send a notification when an active signal is escalating in volume or severity. Defaults to `true` when omitted.",
                                   "type": "boolean"
                                 }
                               },
@@ -373,7 +373,7 @@
                 "type": "object",
                 "properties": {
                   "keepMonitoring": {
-                    "description": "When `true`, the evaluation linked to an issue keeps running after the issue is resolved. When `false`, resolving the issue stops the evaluation. Defaults to `true` when omitted.",
+                    "description": "When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
                     "type": "boolean"
                   },
                   "notifications": {
@@ -385,15 +385,15 @@
                         "type": "object",
                         "properties": {
                           "issue.new": {
-                            "description": "Send a notification when a new issue is discovered. Defaults to `true` when omitted.",
+                            "description": "Send a notification when a new signal is discovered. Defaults to `true` when omitted.",
                             "type": "boolean"
                           },
                           "issue.regressed": {
-                            "description": "Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted.",
+                            "description": "Send a notification when a previously-resolved signal regresses. Defaults to `true` when omitted.",
                             "type": "boolean"
                           },
                           "issue.escalating": {
-                            "description": "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.",
+                            "description": "Send a notification when an active signal is escalating in volume or severity. Defaults to `true` when omitted.",
                             "type": "boolean"
                           }
                         },
@@ -496,7 +496,7 @@
             "type": "object",
             "properties": {
               "keepMonitoring": {
-                "description": "When `true`, the evaluation linked to an issue keeps running after the issue is resolved. When `false`, resolving the issue stops the evaluation. Defaults to `true` when omitted.",
+                "description": "When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
                 "type": "boolean"
               },
               "notifications": {
@@ -508,15 +508,15 @@
                     "type": "object",
                     "properties": {
                       "issue.new": {
-                        "description": "Send a notification when a new issue is discovered. Defaults to `true` when omitted.",
+                        "description": "Send a notification when a new signal is discovered. Defaults to `true` when omitted.",
                         "type": "boolean"
                       },
                       "issue.regressed": {
-                        "description": "Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted.",
+                        "description": "Send a notification when a previously-resolved signal regresses. Defaults to `true` when omitted.",
                         "type": "boolean"
                       },
                       "issue.escalating": {
-                        "description": "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.",
+                        "description": "Send a notification when an active signal is escalating in volume or severity. Defaults to `true` when omitted.",
                         "type": "boolean"
                       }
                     },
@@ -595,7 +595,7 @@
                 "type": "object",
                 "properties": {
                   "keepMonitoring": {
-                    "description": "When `true`, the evaluation linked to an issue keeps running after the issue is resolved. When `false`, resolving the issue stops the evaluation. Defaults to `true` when omitted.",
+                    "description": "When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
                     "type": "boolean"
                   },
                   "notifications": {
@@ -607,15 +607,15 @@
                         "type": "object",
                         "properties": {
                           "issue.new": {
-                            "description": "Send a notification when a new issue is discovered. Defaults to `true` when omitted.",
+                            "description": "Send a notification when a new signal is discovered. Defaults to `true` when omitted.",
                             "type": "boolean"
                           },
                           "issue.regressed": {
-                            "description": "Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted.",
+                            "description": "Send a notification when a previously-resolved signal regresses. Defaults to `true` when omitted.",
                             "type": "boolean"
                           },
                           "issue.escalating": {
-                            "description": "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.",
+                            "description": "Send a notification when an active signal is escalating in volume or severity. Defaults to `true` when omitted.",
                             "type": "boolean"
                           }
                         },
@@ -6589,8 +6589,8 @@
     },
     {
       "name": "listSignals",
-      "title": "List project issues",
-      "description": "Returns a cursor-paginated page of issues in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `trend`, and `tags`.",
+      "title": "List project signals",
+      "description": "Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `trend`, and `tags`.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -6611,13 +6611,13 @@
             "maximum": 200
           },
           "query": {
-            "description": "Free-text semantic search across the issues' names and descriptions.",
+            "description": "Free-text semantic search across the signals' names and descriptions.",
             "type": "string",
             "minLength": 1,
             "maxLength": 500
           },
           "lifecycleGroup": {
-            "description": "`\"active\"` for unresolved/unignored issues; `\"archived\"` for the rest. Omit to include both.",
+            "description": "`\"active\"` for unresolved/unignored signals; `\"archived\"` for the rest. Omit to include both.",
             "type": "string",
             "enum": [
               "active",
@@ -6677,19 +6677,19 @@
                   "type": "string",
                   "minLength": 24,
                   "maxLength": 24,
-                  "description": "Stable issue identifier."
+                  "description": "Stable signal identifier."
                 },
                 "organizationId": {
                   "type": "string",
                   "minLength": 24,
                   "maxLength": 24,
-                  "description": "Organization that owns this issue."
+                  "description": "Organization that owns this signal."
                 },
                 "projectId": {
                   "type": "string",
                   "minLength": 24,
                   "maxLength": 24,
-                  "description": "Project this issue belongs to."
+                  "description": "Project this signal belongs to."
                 },
                 "slug": {
                   "type": "string",
@@ -6701,7 +6701,7 @@
                 },
                 "description": {
                   "type": "string",
-                  "description": "Description of the issue."
+                  "description": "Description of the signal."
                 },
                 "source": {
                   "type": "string",
@@ -6710,7 +6710,7 @@
                     "flagger",
                     "custom"
                   ],
-                  "description": "Where the issue originated from."
+                  "description": "Where the signal originated from."
                 },
                 "states": {
                   "type": "array",
@@ -6725,7 +6725,7 @@
                       "ignored"
                     ]
                   },
-                  "description": "Active lifecycle states. An issue may carry multiple states at once (e.g. `escalating` + `ongoing`)."
+                  "description": "Active lifecycle states. An signal may carry multiple states at once (e.g. `escalating` + `ongoing`)."
                 },
                 "resolvedAt": {
                   "anyOf": [
@@ -6736,7 +6736,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "ISO-8601 timestamp at which the issue was resolved, or `null`."
+                  "description": "ISO-8601 timestamp at which the signal was resolved, or `null`."
                 },
                 "ignoredAt": {
                   "anyOf": [
@@ -6747,7 +6747,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "ISO-8601 timestamp at which the issue was ignored, or `null`."
+                  "description": "ISO-8601 timestamp at which the signal was ignored, or `null`."
                 },
                 "createdAt": {
                   "type": "string",
@@ -6786,7 +6786,7 @@
                   "items": {
                     "type": "string"
                   },
-                  "description": "Tags seen on the issue's occurrences."
+                  "description": "Tags seen on the signal's occurrences."
                 },
                 "firstSeenAt": {
                   "type": "string",
@@ -6806,7 +6806,7 @@
                   "type": "number",
                   "minimum": 0,
                   "maximum": 1,
-                  "description": "Fraction of project traces affected by this issue in the time window, in `[0, 1]`."
+                  "description": "Fraction of project traces affected by this signal in the time window, in `[0, 1]`."
                 }
               },
               "required": [
@@ -6859,8 +6859,8 @@
     },
     {
       "name": "getSignalAnalytics",
-      "title": "Get project issue analytics",
-      "description": "Returns issue analytics for the project: counts of ongoing, new, escalating, regressed, and resolved issues, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
+      "title": "Get project signal analytics",
+      "description": "Returns signal analytics for the project: counts of ongoing, new, escalating, regressed, and resolved signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -7020,8 +7020,8 @@
     },
     {
       "name": "getSignal",
-      "title": "Get project issue",
-      "description": "Returns the full-history detail view of one issue: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.",
+      "title": "Get project signal",
+      "description": "Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -7049,19 +7049,19 @@
             "type": "string",
             "minLength": 24,
             "maxLength": 24,
-            "description": "Stable issue identifier."
+            "description": "Stable signal identifier."
           },
           "organizationId": {
             "type": "string",
             "minLength": 24,
             "maxLength": 24,
-            "description": "Organization that owns this issue."
+            "description": "Organization that owns this signal."
           },
           "projectId": {
             "type": "string",
             "minLength": 24,
             "maxLength": 24,
-            "description": "Project this issue belongs to."
+            "description": "Project this signal belongs to."
           },
           "slug": {
             "type": "string",
@@ -7073,7 +7073,7 @@
           },
           "description": {
             "type": "string",
-            "description": "Description of the issue."
+            "description": "Description of the signal."
           },
           "source": {
             "type": "string",
@@ -7082,7 +7082,7 @@
               "flagger",
               "custom"
             ],
-            "description": "Where the issue originated from."
+            "description": "Where the signal originated from."
           },
           "states": {
             "type": "array",
@@ -7097,7 +7097,7 @@
                 "ignored"
               ]
             },
-            "description": "Active lifecycle states. An issue may carry multiple states at once (e.g. `escalating` + `ongoing`)."
+            "description": "Active lifecycle states. An signal may carry multiple states at once (e.g. `escalating` + `ongoing`)."
           },
           "resolvedAt": {
             "anyOf": [
@@ -7108,7 +7108,7 @@
                 "type": "null"
               }
             ],
-            "description": "ISO-8601 timestamp at which the issue was resolved, or `null`."
+            "description": "ISO-8601 timestamp at which the signal was resolved, or `null`."
           },
           "ignoredAt": {
             "anyOf": [
@@ -7119,7 +7119,7 @@
                 "type": "null"
               }
             ],
-            "description": "ISO-8601 timestamp at which the issue was ignored, or `null`."
+            "description": "ISO-8601 timestamp at which the signal was ignored, or `null`."
           },
           "createdAt": {
             "type": "string",
@@ -7158,7 +7158,7 @@
             "items": {
               "type": "string"
             },
-            "description": "Tags seen on the issue's occurrences."
+            "description": "Tags seen on the signal's occurrences."
           },
           "firstSeenAt": {
             "anyOf": [
@@ -7169,7 +7169,7 @@
                 "type": "null"
               }
             ],
-            "description": "ISO-8601 timestamp of the earliest occurrence over the issue's lifetime, or `null` if none yet."
+            "description": "ISO-8601 timestamp of the earliest occurrence over the signal's lifetime, or `null` if none yet."
           },
           "lastSeenAt": {
             "anyOf": [
@@ -7180,7 +7180,7 @@
                 "type": "null"
               }
             ],
-            "description": "ISO-8601 timestamp of the latest occurrence over the issue's lifetime, or `null` if none yet."
+            "description": "ISO-8601 timestamp of the latest occurrence over the signal's lifetime, or `null` if none yet."
           },
           "occurrences": {
             "type": "integer",
@@ -7192,7 +7192,7 @@
             "type": "number",
             "minimum": 0,
             "maximum": 1,
-            "description": "Lifetime fraction of project traces affected by this issue, in `[0, 1]`."
+            "description": "Lifetime fraction of project traces affected by this signal, in `[0, 1]`."
           },
           "evaluations": {
             "type": "array",
@@ -7322,7 +7322,7 @@
               ],
               "additionalProperties": false
             },
-            "description": "Active evaluations monitoring the issue. Archived and deleted evaluations are excluded."
+            "description": "Active evaluations monitoring the signal. Archived and deleted evaluations are excluded."
           },
           "monitoringState": {
             "oneOf": [
@@ -7338,7 +7338,7 @@
                   "kind"
                 ],
                 "additionalProperties": false,
-                "description": "The issue is automatically monitored by the system and does not need an evaluation."
+                "description": "The signal is automatically monitored by the system and does not need an evaluation."
               },
               {
                 "type": "object",
@@ -7352,7 +7352,7 @@
                   "kind"
                 ],
                 "additionalProperties": false,
-                "description": "The issue is not currently being monitored."
+                "description": "The signal is not currently being monitored."
               },
               {
                 "type": "object",
@@ -7366,7 +7366,7 @@
                   "kind"
                 ],
                 "additionalProperties": false,
-                "description": "An evaluation is being generated for this issue. The issue has no active evaluation yet."
+                "description": "An evaluation is being generated for this signal. The signal has no active evaluation yet."
               },
               {
                 "type": "object",
@@ -7390,7 +7390,7 @@
                 "description": "An active evaluation is being realigned."
               }
             ],
-            "description": "Whether the issue is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`."
+            "description": "Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`."
           }
         },
         "required": [
@@ -7420,8 +7420,8 @@
     },
     {
       "name": "getSignalTrend",
-      "title": "Get issue occurrence histogram",
-      "description": "Returns the occurrence histogram for one issue over `[fromIso, toIso]`. The default range is the trailing 14 days. Buckets are 12-hour wide and UTC-aligned.",
+      "title": "Get signal occurrence histogram",
+      "description": "Returns the occurrence histogram for one signal over `[fromIso, toIso]`. The default range is the trailing 14 days. Buckets are 12-hour wide and UTC-aligned.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -7490,8 +7490,8 @@
     },
     {
       "name": "listSignalTraces",
-      "title": "List issue traces",
-      "description": "Returns the page of distinct traces that contributed at least one occurrence of the issue, ordered by most recent activity first.",
+      "title": "List signal traces",
+      "description": "Returns the page of distinct traces that contributed at least one occurrence of the signal, ordered by most recent activity first.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -7765,8 +7765,8 @@
     },
     {
       "name": "resolveSignals",
-      "title": "Resolve issues",
-      "description": "Marks each issue in `signalIds` as resolved. When `keepMonitoring` is `false`, monitoring is also stopped for each resolved issue; when omitted, the project's default applies.",
+      "title": "Resolve signals",
+      "description": "Marks each signal in `signalIds` as resolved. When `keepMonitoring` is `false`, monitoring is also stopped for each resolved signal; when omitted, the project's default applies.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -7783,10 +7783,10 @@
               "minLength": 24,
               "maxLength": 24
             },
-            "description": "Non-empty list of issue ids. Operations are idempotent — already-applied issues are unchanged."
+            "description": "Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged."
           },
           "keepMonitoring": {
-            "description": "When `true`, monitoring continues after the issues are resolved. When `false`, monitoring stops. Defaults to the project setting.",
+            "description": "When `true`, monitoring continues after the signals are resolved. When `false`, monitoring stops. Defaults to the project setting.",
             "type": "boolean"
           }
         },
@@ -7820,7 +7820,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "ISO-8601 timestamp at which the issue was resolved, or `null`."
+                  "description": "ISO-8601 timestamp at which the signal was resolved, or `null`."
                 },
                 "ignoredAt": {
                   "anyOf": [
@@ -7831,7 +7831,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "ISO-8601 timestamp at which the issue was ignored, or `null`."
+                  "description": "ISO-8601 timestamp at which the signal was ignored, or `null`."
                 },
                 "updatedAt": {
                   "type": "string",
@@ -7839,7 +7839,7 @@
                 },
                 "changed": {
                   "type": "boolean",
-                  "description": "`true` when this call changed the issue, `false` when it was already in that state."
+                  "description": "`true` when this call changed the signal, `false` when it was already in that state."
                 }
               },
               "required": [
@@ -7851,7 +7851,7 @@
               ],
               "additionalProperties": false
             },
-            "description": "Per-issue result, in the order requested."
+            "description": "Per-signal result, in the order requested."
           }
         },
         "required": [
@@ -7862,8 +7862,8 @@
     },
     {
       "name": "unresolveSignals",
-      "title": "Unresolve issues",
-      "description": "Reverts each issue in `signalIds` to the unresolved state.",
+      "title": "Unresolve signals",
+      "description": "Reverts each signal in `signalIds` to the unresolved state.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -7880,7 +7880,7 @@
               "minLength": 24,
               "maxLength": 24
             },
-            "description": "Non-empty list of issue ids. Operations are idempotent — already-applied issues are unchanged."
+            "description": "Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged."
           }
         },
         "required": [
@@ -7913,7 +7913,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "ISO-8601 timestamp at which the issue was resolved, or `null`."
+                  "description": "ISO-8601 timestamp at which the signal was resolved, or `null`."
                 },
                 "ignoredAt": {
                   "anyOf": [
@@ -7924,7 +7924,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "ISO-8601 timestamp at which the issue was ignored, or `null`."
+                  "description": "ISO-8601 timestamp at which the signal was ignored, or `null`."
                 },
                 "updatedAt": {
                   "type": "string",
@@ -7932,7 +7932,7 @@
                 },
                 "changed": {
                   "type": "boolean",
-                  "description": "`true` when this call changed the issue, `false` when it was already in that state."
+                  "description": "`true` when this call changed the signal, `false` when it was already in that state."
                 }
               },
               "required": [
@@ -7944,7 +7944,7 @@
               ],
               "additionalProperties": false
             },
-            "description": "Per-issue result, in the order requested."
+            "description": "Per-signal result, in the order requested."
           }
         },
         "required": [
@@ -7955,8 +7955,8 @@
     },
     {
       "name": "ignoreSignals",
-      "title": "Ignore issues",
-      "description": "Marks each issue in `signalIds` as ignored. Monitoring is also stopped for each ignored issue.",
+      "title": "Ignore signals",
+      "description": "Marks each signal in `signalIds` as ignored. Monitoring is also stopped for each ignored signal.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -7973,7 +7973,7 @@
               "minLength": 24,
               "maxLength": 24
             },
-            "description": "Non-empty list of issue ids. Operations are idempotent — already-applied issues are unchanged."
+            "description": "Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged."
           }
         },
         "required": [
@@ -8006,7 +8006,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "ISO-8601 timestamp at which the issue was resolved, or `null`."
+                  "description": "ISO-8601 timestamp at which the signal was resolved, or `null`."
                 },
                 "ignoredAt": {
                   "anyOf": [
@@ -8017,7 +8017,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "ISO-8601 timestamp at which the issue was ignored, or `null`."
+                  "description": "ISO-8601 timestamp at which the signal was ignored, or `null`."
                 },
                 "updatedAt": {
                   "type": "string",
@@ -8025,7 +8025,7 @@
                 },
                 "changed": {
                   "type": "boolean",
-                  "description": "`true` when this call changed the issue, `false` when it was already in that state."
+                  "description": "`true` when this call changed the signal, `false` when it was already in that state."
                 }
               },
               "required": [
@@ -8037,7 +8037,7 @@
               ],
               "additionalProperties": false
             },
-            "description": "Per-issue result, in the order requested."
+            "description": "Per-signal result, in the order requested."
           }
         },
         "required": [
@@ -8048,8 +8048,8 @@
     },
     {
       "name": "unignoreSignals",
-      "title": "Unignore issues",
-      "description": "Reverts each issue in `signalIds` to a non-ignored state.",
+      "title": "Unignore signals",
+      "description": "Reverts each signal in `signalIds` to a non-ignored state.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -8066,7 +8066,7 @@
               "minLength": 24,
               "maxLength": 24
             },
-            "description": "Non-empty list of issue ids. Operations are idempotent — already-applied issues are unchanged."
+            "description": "Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged."
           }
         },
         "required": [
@@ -8099,7 +8099,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "ISO-8601 timestamp at which the issue was resolved, or `null`."
+                  "description": "ISO-8601 timestamp at which the signal was resolved, or `null`."
                 },
                 "ignoredAt": {
                   "anyOf": [
@@ -8110,7 +8110,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "ISO-8601 timestamp at which the issue was ignored, or `null`."
+                  "description": "ISO-8601 timestamp at which the signal was ignored, or `null`."
                 },
                 "updatedAt": {
                   "type": "string",
@@ -8118,7 +8118,7 @@
                 },
                 "changed": {
                   "type": "boolean",
-                  "description": "`true` when this call changed the issue, `false` when it was already in that state."
+                  "description": "`true` when this call changed the signal, `false` when it was already in that state."
                 }
               },
               "required": [
@@ -8130,7 +8130,7 @@
               ],
               "additionalProperties": false
             },
-            "description": "Per-issue result, in the order requested."
+            "description": "Per-signal result, in the order requested."
           }
         },
         "required": [
@@ -8141,8 +8141,8 @@
     },
     {
       "name": "monitorSignal",
-      "title": "Monitor issue",
-      "description": "Starts (or realigns) monitoring for the issue. When the issue has no active evaluation, a new one is generated. When an active evaluation exists, the call realigns it. The work runs asynchronously and the response returns immediately. Returns 400 when monitoring is already in progress for this issue.",
+      "title": "Monitor signal",
+      "description": "Starts (or realigns) monitoring for the signal. When the signal has no active evaluation, a new one is generated. When an active evaluation exists, the call realigns it. The work runs asynchronously and the response returns immediately. Returns 400 when monitoring is already in progress for this signal.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -8195,8 +8195,8 @@
     },
     {
       "name": "unmonitorSignal",
-      "title": "Unmonitor issue",
-      "description": "Stops monitoring the issue. Idempotent — issues that aren't being monitored return 204 without changing anything.",
+      "title": "Unmonitor signal",
+      "description": "Stops monitoring the signal. Idempotent — signals that aren't being monitored return 204 without changing anything.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -8219,7 +8219,7 @@
     },
     {
       "name": "exportSignals",
-      "title": "Export project issues (async)",
+      "title": "Export project signals (async)",
       "description": "Enqueues an asynchronous CSV export. The response returns immediately; the download link is emailed to `recipient` when the file is ready. The recipient must be a member of the requesting organization.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -8236,7 +8236,7 @@
             "description": "Email address the download link is sent to. Must belong to a member of the requesting organization."
           },
           "signalIds": {
-            "description": "Restrict the export to this subset of issues. Omit to export every issue in the project.",
+            "description": "Restrict the export to this subset of signals. Omit to export every signal in the project.",
             "type": "array",
             "items": {
               "type": "string",
@@ -8245,7 +8245,7 @@
             }
           },
           "lifecycleGroup": {
-            "description": "`\"active\"` for unresolved/unignored issues; `\"archived\"` for the rest. Omit to include both.",
+            "description": "`\"active\"` for unresolved/unignored signals; `\"archived\"` for the rest. Omit to include both.",
             "type": "string",
             "enum": [
               "active",
