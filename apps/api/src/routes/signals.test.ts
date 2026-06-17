@@ -34,7 +34,7 @@ describe("Signals Routes Integration", () => {
 
   it<ApiTestContext>("redirects the legacy /issues path to /signals with 307", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
-    const projectId = "aaaaaaaaaaaaaaaaaaaaaaaa"
+    const projectId = "0000000000000000aaaaaaaa"
     const slug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const res = await app.fetch(
