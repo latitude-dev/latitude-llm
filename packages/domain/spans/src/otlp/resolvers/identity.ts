@@ -91,6 +91,7 @@ export const sessionIdCandidates = [
   fromString("traceloop.association.properties.session_id"), // Traceloop / OpenLLMetry
   fromString("langsmith.trace.session_id"), // LangSmith
   fromString("session_id"), // Datadog / HoneyHive
+  fromString("eve.session.id"), // Eve framework
 
   // Fallbacks
   // These do not actually represent sessions, they represent specific threads.
@@ -98,6 +99,7 @@ export const sessionIdCandidates = [
   fromString("wandb.thread_id"), // W&B Weave
   fromString("ai.telemetry.metadata.threadId"), // Opik (via Vercel AI SDK metadata)
   fromString("gen_ai.conversation.id"), // GenAI semconv
+  fromString("eve.turn.id"), // Eve framework (per-turn thread fallback)
 ]
 
 export const userIdCandidates = [

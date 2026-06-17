@@ -1,0 +1,116 @@
+---
+title: Eve
+description: Connect your Eve-powered agent to Latitude for observability.
+---
+
+## Overview
+
+This guide shows you how to send traces from an agent built with **[Eve](https://eve.dev)** to Latitude.
+
+Eve is built on the **Vercel AI SDK** and exports standard OpenTelemetry spans (`ai.streamText`, `ai.toolCall`, …) through whatever exporter you register in `agent/instrumentation.ts`. Because Latitude already understands Vercel AI SDK spans, you can point Eve's OTel exporter straight at Latitude's OTLP endpoint — no Latitude SDK required.
+
+<Check>
+  You'll keep building with Eve exactly as you do today. The exporter simply
+  sends your traces to Latitude alongside any other observability backend.
+</Check>
+
+<Note>
+  The Eve integration is **TypeScript only**.
+</Note>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- An **Eve** project (with an `agent/instrumentation.ts` file)
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    <CodeGroup>
+      ```bash npm
+      npm install @vercel/otel @opentelemetry/exporter-trace-otlp-http
+      ```
+
+      ```bash pnpm
+      pnpm add @vercel/otel @opentelemetry/exporter-trace-otlp-http
+      ```
+
+      ```bash yarn
+      yarn add @vercel/otel @opentelemetry/exporter-trace-otlp-http
+      ```
+
+      ```bash bun
+      bun add @vercel/otel @opentelemetry/exporter-trace-otlp-http
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Point the exporter at Latitude">
+    In `agent/instrumentation.ts`, register an OTLP exporter that targets Latitude's ingestion endpoint. Eve auto-discovers this file and runs it at startup, which implicitly enables telemetry.
+
+    ```ts
+    import { defineInstrumentation } from "eve/instrumentation"
+    import { registerOTel } from "@vercel/otel"
+    import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http"
+
+    export default defineInstrumentation({
+      setup: ({ agentName }) =>
+        registerOTel({
+          serviceName: agentName,
+          traceExporter: new OTLPTraceExporter({
+            url: "https://ingest.latitude.so/v1/traces",
+            headers: {
+              Authorization: `Bearer ${process.env.LATITUDE_API_KEY!}`,
+              "X-Latitude-Project": process.env.LATITUDE_PROJECT_SLUG!,
+            },
+          }),
+        }),
+    })
+    ```
+
+    <Note>
+      Eve records full message history and model outputs on spans by default
+      (`recordInputs` / `recordOutputs`). Set them to `false` for sensitive or
+      regulated data.
+    </Note>
+  </Step>
+
+  <Step title="Group turns into sessions (optional)">
+    Eve tags every turn with `eve.session.id`, which Latitude reads automatically to group related traces into a session — no extra work needed.
+
+    To also associate traces with an end user, return a `user.id` attribute from the `step.started` event so it lands on the spans:
+
+    ```ts
+    export default defineInstrumentation({
+      setup: ({ agentName }) => registerOTel({ /* … */ }),
+      events: {
+        "step.started"(input) {
+          return {
+            runtimeContext: {
+              "user.id": input.channel.metadata.triggeringUserId ?? "",
+            },
+          }
+        },
+      },
+    })
+    ```
+  </Step>
+
+</Steps>
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each turn shows input/output messages, model, token usage, latency, and errors
+3. Eve turns, model calls, and tool executions appear as nested spans, grouped by session
