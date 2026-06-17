@@ -10,13 +10,17 @@ import {
   Skeleton,
   Text,
 } from "@repo/ui"
+import { formatBytes } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { DownloadIcon } from "lucide-react"
 import { type ReactNode, type RefObject, useCallback, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
 import { useAuthSession } from "../../../../../../../domains/sessions/session.collection.ts"
 import { useConversationSpanMaps } from "../../../../../../../domains/spans/spans.collection.ts"
-import { useTraceSearchHighlights } from "../../../../../../../domains/traces/traces.collection.ts"
+import {
+  useTraceConversationMessages,
+  useTraceSearchHighlights,
+} from "../../../../../../../domains/traces/traces.collection.ts"
 import type { TraceDetailRecord } from "../../../../../../../domains/traces/traces.functions.ts"
 import type {
   ConversationTimeline,
@@ -57,22 +61,28 @@ function toSearchHighlightRanges(result: TraceSearchHighlightsResult | undefined
  * `useAuthSession` (tree-agnostic), so it works the same in the sandbox tree,
  * which has no `_authenticated` match.
  */
-function StaffConversationDownloadButton({ traceDetail }: { readonly traceDetail: TraceDetailRecord }) {
+function StaffConversationDownloadButton({
+  traceId,
+  messages,
+}: {
+  readonly traceId: string
+  readonly messages: readonly unknown[]
+}) {
   const { isAdmin, isImpersonating } = useAuthSession()
   const isStaff = import.meta.env.DEV || isAdmin || isImpersonating
 
   const handleDownload = useCallback(() => {
-    const json = JSON.stringify(traceDetail.allMessages, null, 2)
+    const json = JSON.stringify(messages, null, 2)
     const blob = new Blob([json], { type: "application/json" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `trace-${traceDetail.traceId.slice(0, 7)}-conversation.json`
+    a.download = `trace-${traceId.slice(0, 7)}-conversation-loaded.json`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-  }, [traceDetail])
+  }, [messages, traceId])
 
   if (!isStaff) return null
   return (
@@ -84,6 +94,7 @@ function StaffConversationDownloadButton({ traceDetail }: { readonly traceDetail
 
 function ConversationContent({
   traceDetail,
+  messages,
   navigateToSpan,
   projectId,
   isActive,
@@ -94,8 +105,14 @@ function ConversationContent({
   searchQuery,
   messageTrailingSlot,
   timeline,
+  totalMessages,
+  payloadBytes,
+  hasMoreMessages,
+  isLoadingMoreMessages,
+  onLoadMoreMessages,
 }: {
   readonly traceDetail: TraceDetailRecord
+  readonly messages: TraceDetailRecord["allMessages"]
   readonly navigateToSpan?: ((spanId: string) => void) | undefined
   readonly projectId: string
   readonly isActive: boolean
@@ -109,6 +126,11 @@ function ConversationContent({
   readonly messageTrailingSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
   /** Timeline for the minimap bar: null while loading, undefined when the feature is off. */
   readonly timeline?: ConversationTimeline | null | undefined
+  readonly totalMessages: number
+  readonly payloadBytes: number
+  readonly hasMoreMessages: boolean
+  readonly isLoadingMoreMessages: boolean
+  readonly onLoadMoreMessages: () => void
 }) {
   const internalScrollRef = useRef<HTMLDivElement>(null)
   const scrollRef = scrollContainerRef ?? internalScrollRef
@@ -120,7 +142,8 @@ function ConversationContent({
     projectId,
     traceId: traceDetail.traceId,
     startTime: traceDetail.startTime,
-    allMessages: traceDetail.allMessages,
+    allMessages: messages,
+    enabled: messages.length > 0 && (annotationsEnabled || navigateToSpan !== undefined),
   })
 
   const band = useViewportBand({ scrollRef, timeline: timeline ?? null, isActive })
@@ -329,7 +352,7 @@ function ConversationContent({
         onPointerLeave={() => setHoveredMessageIndex(null)}
       >
         <Conversation
-          messages={traceDetail.allMessages}
+          messages={messages}
           enableNavigator
           scrollContainerRef={scrollRef}
           navigatorRef={navigatorRef}
@@ -365,6 +388,16 @@ function ConversationContent({
           {...(toolCallActions ? { toolCallActions } : {})}
           {...(messageTrailingSlot ? { messageTrailingSlot } : {})}
         />
+        {hasMoreMessages ? (
+          <div className="flex flex-col items-center gap-2 py-6">
+            <Text.H6 color="foregroundMuted">
+              Showing {messages.length} of {totalMessages} messages ({formatBytes(payloadBytes)} total payload)
+            </Text.H6>
+            <Button variant="outline" size="sm" onClick={onLoadMoreMessages} disabled={isLoadingMoreMessages}>
+              {isLoadingMoreMessages ? "Loading…" : "Load more messages"}
+            </Button>
+          </div>
+        ) : null}
         {annotationsEnabled ? (
           <AnnotationPopover
             position={textSelectionPopoverPosition}
@@ -387,7 +420,7 @@ function ConversationContent({
         ) : null}
       </div>
       <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-        <StaffConversationDownloadButton traceDetail={traceDetail} />
+        <StaffConversationDownloadButton traceId={traceDetail.traceId} messages={messages} />
         <ScrollNavigator
           ref={navigatorRef}
           scrollContainerRef={scrollRef}
@@ -455,7 +488,13 @@ export function ConversationTab({
   /** Timeline for the minimap bar: null while loading, undefined when the feature is off. */
   readonly timeline?: ConversationTimeline | null | undefined
 }) {
-  if (isDetailLoading) {
+  const conversation = useTraceConversationMessages({
+    projectId,
+    traceId: traceDetail?.traceId ?? "",
+    enabled: traceDetail != null,
+  })
+
+  if (isDetailLoading || (traceDetail && conversation.isLoading)) {
     return (
       <div className="flex flex-col gap-4 py-8 px-4 flex-1">
         <Skeleton className="h-20 w-full" />
@@ -478,6 +517,7 @@ export function ConversationTab({
       isActive={isActive}
       annotationsEnabled={annotationsEnabled}
       traceDetail={traceDetail}
+      messages={conversation.messages}
       navigateToSpan={navigateToSpan}
       projectId={projectId}
       scrollContainerRef={scrollContainerRef}
@@ -486,6 +526,11 @@ export function ConversationTab({
       searchQuery={searchQuery}
       messageTrailingSlot={messageTrailingSlot}
       timeline={timeline}
+      totalMessages={conversation.totalMessages}
+      payloadBytes={conversation.payloadBytes}
+      hasMoreMessages={conversation.hasNextPage}
+      isLoadingMoreMessages={conversation.isFetchingNextPage}
+      onLoadMoreMessages={() => void conversation.fetchNextPage()}
     />
   )
 }

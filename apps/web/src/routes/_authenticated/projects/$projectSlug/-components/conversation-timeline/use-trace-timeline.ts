@@ -30,6 +30,7 @@ export function useTraceTimeline({
     traceId,
     startTime: traceDetail?.startTime,
     allMessages: traceDetail?.allMessages,
+    enabled: (traceDetail?.allMessages.length ?? 0) > 0,
   })
   const { data: annotationsData } = useAnnotationsByTrace({
     projectId,
