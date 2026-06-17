@@ -2,18 +2,18 @@
 
 > **Documentation** — eventual durable homes: `dev-docs/signals.md` (new) and an updated `dev-docs/monitors.md`. Related current docs: `dev-docs/issues.md`, `dev-docs/scores.md`, `dev-docs/notifications.md`, `dev-docs/conversation-intelligence.md`, `dev-docs/evaluations.md`.
 >
-> **Depends on** — `specs/sandbox-runtime.md`, the execution contract for `llm_as_judge` and `script` trackers: a tracker run returns `Score(value, feedback?)` where `value` is signal-exhibition strength, and the host derives membership as `value >= tracker.threshold`. Phases 0–1 of that spec are built; Phase 2 (rule/script codegen + dry-run harness) is the substrate this spec consumes.
+> **Depends on** — `specs/sandbox-runtime.md`, the execution contract for evaluations: an evaluation run returns a normalized score (`value` ∈ [0,1]), a `passed` verdict (membership — the script decides; no host-side threshold), and optional `feedback`. Phases 0–1 of that spec are built; Phase 2 (rule/script codegen + dry-run harness) is the substrate this spec consumes.
 >
 > **Supersedes (conceptually)** — `specs/monitors.md` and `specs/alerts.md`. Those specs still accurately describe what is *currently built*; this spec defines the model that replaces their framing. Do not retire them until the migration phases are underway.
 >
-> **Origin** — LAT-664 ("Consolidate monitor situation"), extended through spec review into the **trackers** model below. This revision reverses two stances of the original spec (no automatic discovery, separate occurrence ledger) — see [Decisions](#decisions).
+> **Origin** — LAT-664 ("Consolidate monitor situation"). The foundational choices (a signal's occurrences are its scores; membership is materialized at write time) are argued under [Why membership is materialized at write time](#why-membership-is-materialized-at-write-time).
 
 ## Contents
 
 1. [Purpose](#purpose) — the problem and the consolidated model
 2. [Why membership is materialized at write time](#why-membership-is-materialized-at-write-time) — the foundational argument
-3. [Concepts](#concepts) — Signal, Tracker, Score, Monitor, Alert, Incident
-4. [Discovery: sinks and promotion](#discovery-sinks-and-promotion)
+3. [Concepts](#concepts) — Signal, Evaluation, Score, Monitor, Alert, Incident
+4. [Discovery and tracking](#discovery-and-tracking)
 5. [The matching pipeline](#the-matching-pipeline)
 6. [Main flows](#main-flows)
 7. [Data model](#data-model) — schemas, enums, and types
@@ -35,7 +35,7 @@ Latitude has two parallel tracking systems with overlapping names and separate U
 This spec consolidates both around one small set of concepts:
 
 ```
-                tracker runs at ingest        monitors aggregate         alerts fire on        records the
+                evaluation runs per trace     monitors aggregate         alerts fire on        records the
                 (or annotation lands)         the score stream           conditions            firing
   Trace ──────▶ SIGNAL ─────────────────────▶ MONITOR ─────────────────▶ ALERT ──────────────▶ INCIDENT ──▶ notifications
                 membership = its SCORES        (a metric over the
@@ -44,12 +44,12 @@ This spec consolidates both around one small set of concepts:
 
 The one-line mental model for users and docs:
 
-> Latitude groups your traces into **Signals** — buckets you define with a **Tracker** (an LLM judge, a script, or semantic similarity), plus the buckets Latitude discovers for you automatically from annotations. A signal's members are its **Scores**. Any signal can be watched with a **Monitor**; monitors have **Alerts**, and a fired alert opens an **Incident**, which is what notifies you.
+> Latitude groups your traces into **Signals** — buckets you define with an **Evaluation** (a script Latitude runs on each trace, typically an LLM-as-judge it generates for you), plus the buckets Latitude discovers for you automatically from annotations. A signal's members are its **Scores**. Any signal can be watched with a **Monitor**; monitors have **Alerts**, and a fired alert opens an **Incident**, which is what notifies you.
 
 Two structural decisions carry the whole spec. Both are stated here and argued in full under [Why membership is materialized at write time](#why-membership-is-materialized-at-write-time):
 
-1. **A signal's occurrences ARE its scores.** There is no separate occurrence ledger. Every tracker run, every annotation, and every (future) custom push writes a `scores` row carrying `signal_id`. A signal's membership is the subset of those rows that *matched* (`value >= threshold`). This collapses today's inconsistency — issues count scores, saved searches count traces — into one counting unit, and reuses the entire scores pipeline.
-2. **Membership is materialized at write time.** A tracker is evaluated against each in-scope trace once, on arrival, and the verdict is frozen as a score. This is forced by the cost model, not a preference.
+1. **A signal's occurrences ARE its scores.** There is no separate occurrence ledger. Every evaluation run, every annotation, and every (future) custom push writes a `scores` row carrying `signal_id`. A signal's membership is the subset of those rows that *matched* (`passed = true`). This collapses today's inconsistency — issues count scores, saved searches count traces — into one counting unit, and reuses the entire scores pipeline.
+2. **Membership is materialized at write time.** A signal's evaluation is run against each in-scope trace once, on arrival, and the verdict is frozen as a score. This is forced by the cost model, not a preference.
 
 ## Why membership is materialized at write time
 
@@ -59,13 +59,13 @@ Both foundational decisions follow from a single constraint: counting and alerti
 
 **2. Tracking over time multiplies that cost forever.** An alert on "last-5-minutes match count vs its historical average" needs μ and σ over *every historical bucket* — the verdict for every trace in the corpus — recomputed on every evaluation (288×/day), even though each trace's verdict is frozen the moment it arrives. The only fix is "score each trace once, on arrival, and remember it" — which **is** write-time materialization.
 
-**3. "Occurrences are scores" is the cheap way to remember it — given the existing PG/CH split.** The objection to storing membership in `scores` is write amplification through the canonical mutable Postgres path. But `scores` is *already* a Postgres-canonical + ClickHouse-analytics split, and the rules already say immutable scores skip straight to ClickHouse. A pure-tracker match is immutable by construction (a value, no feedback, nothing to draft), so it goes **ClickHouse-only** and never touches Postgres. Mutable membership (judge feedback, human/flagger annotations) is bounded (sampled / human-paced) and takes the canonical path as it does today. So one ledger scales without a second table.
+**3. "Occurrences are scores" reuses the existing scores pipeline — no second table.** Membership could have been a new `signal_occurrences` table; instead it rides `scores`, which already has the infrastructure signals need: a Postgres-canonical record plus a ClickHouse-analytics mirror that counts and aggregates over huge volumes. Counts and trend series come from ClickHouse; the canonical, editable record (drafts, feedback) lives in Postgres. So one ledger serves membership without inventing a second store.
 
 These consequences carry through the rest of the spec:
 
 - Query-time semantic search remains an **exploration** tool: a ranked best-effort sample on the Traces page. No counts, histograms, or alerts over a semantic query — a banner says so, with "create a signal" as the path to set semantics.
-- Anything needing **set** semantics — charts, baselines, alerts, "every matching trace" — must be a signal whose tracker decides membership per trace at ingest.
-- History is immutable under definition edits: editing a tracker changes membership *forward only* (a definition-changed marker). The "editing a virtual signal rewrites its history" problem disappears.
+- Anything needing **set** semantics — charts, baselines, alerts, "every matching trace" — must be a signal whose evaluation decides membership per trace at ingest.
+- History is immutable under definition edits: editing an evaluation changes membership *forward only* (a definition-changed marker). The "editing a virtual signal rewrites its history" problem disappears.
 
 ## Concepts
 
@@ -73,47 +73,45 @@ These consequences carry through the rest of the spec:
 
 **A signal is a tracked bucket of traces.** Its members are the traces with a *matching* score for that signal. A signal has:
 
-- an **origin**: `user` (built deliberately by a person) or `system` (auto-created by Latitude — see [Discovery](#discovery-sinks-and-promotion)). Origin is the differentiator between hand-built and discovered signals.
-- an optional **`filters`** (a `FilterSet`): a cheap, row-local pre-gate restricting which traces the tracker is even run against ("only `service = checkout`", "only traces above p90 latency"). Empty/absent = all traces. `filters` is only meaningful alongside a tracker — it gates tracker execution.
-- an optional **`tracker`** (a jsonb column, **one per signal**): the membership detector run at write time. A `NULL` tracker means a **sink** — no write-time detection, with membership coming only from annotations. This is how discovered signals work.
+- an **origin** (immutable, set at creation): `user` (built deliberately by a person) or `system` (auto-generated by Latitude's discovery — see [Discovery](#discovery-and-tracking)). Origin is the durable record of *how the signal was created*, independent of whether it has an evaluation, and it does **not** change when a discovered signal is later tracked with an evaluation. It is what gates annotation assignment — see [Discovery](#discovery-and-tracking).
+- an optional **`filters`** (a `FilterSet`): a cheap, row-local pre-gate restricting which traces the evaluation is even run against ("only `service = checkout`", "only traces above p90 latency"). Empty/absent = all traces. `filters` is only meaningful alongside an evaluation — it gates evaluation execution.
+- an optional **`evaluation`** (an `evaluations` row linked 1:1 via `evaluations.signal_id`, **one active per signal**): the membership detector, run at write time. With no linked evaluation there is no write-time detection — membership comes only from annotations. Having or not having an evaluation is a *state*, not a kind: a system-created signal starts with no evaluation and can later gain one (when tracked) while keeping `origin = 'system'`. Tell auto-generated from hand-built by `origin`, never by the presence of an evaluation.
 - **triage metadata**: priority and a single assignee, carried over from issues (multi-assignee deferred).
 - a **lifecycle**: `resolved` / `ignored` / `escalating` etc., carried over from issues **unchanged for the MVP**. It stays on the signal row; it is not relocated onto a monitor.
 
 Constraints:
 
-- **Users cannot create a tracker-less signal.** A `user`-origin signal must have a tracker. Tracker-less (`NULL`) signals exist only as `system`-origin sinks. This deliberately keeps "plain filter slices" out of signals — those stay **saved searches**. (A broad `filters`-only signal would write a score per trace; banning user-created tracker-less signals removes that footgun entirely.)
-- **One tracker per signal.** A bucket has at most one detector. A concept that needs two detectors — e.g. semantic *and* judge for "frustration" — is one signal that gets *promoted* from one tracker to another, or two signals. It is never one signal with two trackers.
+- **Users cannot create an evaluation-less signal.** A `user`-origin signal must have an evaluation; only `system`-origin signals may have none. Because `origin` is fixed at creation, a `system` signal that is later tracked keeps `origin = 'system'` — and stays annotation-assignable — even though it now has an evaluation. This deliberately keeps "plain filter slices" out of signals — those stay **saved searches**. (A broad `filters`-only signal would write a score per trace; banning user-created evaluation-less signals removes that footgun entirely.)
+- **One evaluation per signal.** A bucket has exactly one *active* detector evaluation (archived predecessors are kept for lineage across re-tracking / re-optimization, but only one is live). A concept that needs two detectors — e.g. semantic *and* judge for "frustration" — is one signal re-tracked with a different evaluation, or two signals. It is never one signal with two active evaluations.
 
-### Tracker
+### Evaluation (the detector)
 
-**The write-time detector embedded on a signal** — `signals.tracker` (jsonb, discriminated by `type`), at most one per signal. Three types: `semantic_similarity`, `script`, and `llm_as_judge`. Their shapes are defined once in [Data model → Shared contracts](#shared-contracts-domainshared-domainscores).
+**A signal's membership detector is an `evaluations` row**, linked 1:1 via `evaluations.signal_id` — exactly one active evaluation per signal. **An evaluation is always a script** that runs in the shared QuickJS sandbox (`specs/sandbox-runtime.md`); there is no detector taxonomy and no second engine. Its shape is defined once in [Data model → Shared contracts](#shared-contracts-domainshared-domainscores).
 
-- **`semantic_similarity`** and **`script`** are **pure** detectors — deterministic, no `feedback`. `script` runs through the sandbox runtime (`specs/sandbox-runtime.md`); `semantic_similarity` runs through the native batch anchor runner (the conversation-intelligence path), not the sandbox. The semantic detector value is `max(chunk · positiveAnchor)`, and a trace matches only when the best positive anchor also beats the best contrast anchor by `margin`. This multi-anchor + contrast + margin shape is proven in production for conversation-intelligence moment labels and is adopted wholesale, generalizing those labels' static per-kind gate into the uniform per-tracker `threshold`.
-- **`llm_as_judge`** is **not** stored inline. Its config is an `evaluations` row linked by `evaluations.signal_id` (1:1); the tracker jsonb records only `{ type, threshold }`. The judge script, alignment state, and `optimize-evaluation` workflow stay in `@domain/evaluations` exactly as today. Users can author a judge tracker directly (judge criteria → compiled to a backing evaluation linked to the signal), and alignment ground truth then accrues as annotations arrive on the signal. The same tracker type *also* arises automatically via the sink → promotion path ([Discovery](#discovery-sinks-and-promotion)); both paths land on the same backing-evaluation shape.
-- A tracker's **`threshold`** is the membership cutoff over the detector value, per `specs/sandbox-runtime.md` (semantic emits continuous similarity; judges emit ≈{0,1}; scripts emit whatever they compute). Threshold and definition edits apply **forward only** — a definition-changed marker appears on charts, and existing scores are never re-evaluated.
+- **One engine, three ways to author the same script.** Every evaluation produces one `script` artifact, and that is exactly what executes: write it from a declarative **`settings`** object (compiled **deterministically** — the sandbox-runtime *SignalRule* codegen; the option shapes are defined as the builder grows), generate and align it with **GEPA** (`optimize-evaluation`), or hand-write a **raw** script (advanced). `settings` is optional (NULL for a raw or GEPA-generated script); `script` is always present.
+- **A judge is just a script that calls `llm()`.** "LLM-as-judge" is not a distinct type — it is the common case of a generated script whose body calls `llm()` (`const result = await llm(\`…\`, { schema }); return result.passed ? Passed() : Failed()`), running on the sandbox behind the `evaluation-sandbox-runtime` flag exactly as today. The `optimize-evaluation` workflow and alignment state (`alignment`/`aligned_at`) apply to these judge scripts; both arise when a user authors a judge directly (criteria → generated/aligned script) and via the discovery → tracking path ([Discovery](#discovery-and-tracking)), and are NULL for scripts that never call `llm()`.
+- **The script returns a score, a verdict, and optional reasoning.** Each run yields `value` (a normalized score ∈ [0,1], for sort/confidence/display), `passed` (the membership verdict — the script decides it; there is no host-side threshold), and optional `feedback`. Definition edits (script or settings) apply **forward only** — a definition-changed marker appears on charts, and existing scores are never re-evaluated.
+- **Type is a property of the `settings`, not the script.** A script can mix `llm()`, deterministic checks, and (later) semantic similarity, so an arbitrary script has no single type. The type lives in the **`settings`** of templated evaluations and drives the builder form; raw and GEPA-generated scripts are simply custom. "How many evaluations use `llm()` / semantic / code" is a separate, **multi-valued capability** question — answered by inspecting what the script does, not by a single type label (post-MVP analytics).
+- **Every score is stored the same way.** There is no per-type or per-capability storage split: every evaluation's scores go to Postgres (canonical) and ClickHouse (analytics), exactly like annotations (see [Score](#score--the-membership-ledger)).
+
+> **Semantic similarity is a future capability, not an MVP type.** Today's conversation-intelligence anchor matching is *not* yet expressed as an evaluation. A future phase adds it — most likely as a `similarity()`/`embedding()` host function the script can call (with a possible native batch-runner optimization), its exact shape deferred until then (see [Tasks → Phase 7](#phase-7--semantic-similarity-evaluations-future)). Until then, every evaluation is a sandbox script as above.
 
 ### Score — the membership ledger
 
-**A signal's occurrences are its scores.** Every membership-bearing event writes a `scores` row carrying `signal_id`; nothing else records membership. A score's `source_type` is one of `tracker`, `flagger`, `user`, or `custom` (enum in [Data model](#shared-contracts-domainshared-domainscores)).
+**A signal's occurrences are its scores.** Every membership-bearing event writes a `scores` row carrying `signal_id`; nothing else records membership. A score's `source_type` is one of `evaluation`, `flagger`, `user`, or `custom` (enum in [Data model](#shared-contracts-domainshared-domainscores)).
 
-- **Membership is the matched subset.** A trace is a member of a signal when it has a score for that signal with `value >= threshold`. (A judge "exhibits" the behavior at `passed:false` under today's problem-detector polarity; this is normalized to exhibition at migration.) The signal's occurrence count is exactly that subset.
-- **Non-matches are written too**, consistent with how evaluations already persist both `passed:true` *and* `passed:false`: a tracker writes a score on **every** run, matched or not. The matched rows are occurrences; the non-matched rows give exact pass-rate, denominators, and dashboards without read-time estimation. *(Lever, if pure-tracker non-match volume ever hurts: switch pure trackers to match-only and compute the denominator from `filters` over traces at read time. The MVP default is write-both.)*
-- **The write path routes by mutability**, reusing the existing scores PG/CH split (`dev-docs/scores.md`):
+- **Membership is the matched subset.** A trace is a member of a signal when it has a score for that signal with `passed = true`. (A judge "exhibits" the behavior at `passed:false` under today's problem-detector polarity; this is normalized to exhibition at migration.) The signal's occurrence count is exactly that subset, counted as **distinct `trace_id`** per signal — so a trace touched by successive evaluation generations (after the signal is re-tracked or re-optimized into a new evaluation id) counts once, matching the per-`(signal, trace)` monotone-membership guarantee in `specs/sandbox-runtime.md`.
+- **Non-matches are written too**, consistent with how evaluations already persist both `passed:true` *and* `passed:false`: an evaluation writes a score on **every** run, matched or not. The matched rows are occurrences; the non-matched rows give exact pass-rate, denominators, and dashboards without read-time estimation.
+- **Every score is stored the same way** — written to Postgres (the canonical, mutable source of truth) and synced to ClickHouse (the analytics mirror monitors count over), reusing the existing scores pipeline (`dev-docs/scores.md`). There is **no per-type or per-capability storage split**: judge scores, deterministic-script scores, and annotations all persist identically. The only nuance is the existing draft lifecycle — a *mutable* score (a drafted annotation) stays Postgres-only until published, then syncs; an evaluation run (or a confirmed annotation) is immutable and is written + synced on arrival.
 
-  | Score | Mutable? | Store |
-  | --- | --- | --- |
-  | `tracker` / `llm_as_judge` (pass + fail; has `feedback`; sampled → bounded) | yes (feedback) | Postgres-canonical + ClickHouse, as today |
-  | `tracker` / `semantic_similarity` · `script` (matched + non-matched; no feedback; runs per in-scope trace) | no | **ClickHouse-analytics only** (immutable, skip the canonical Postgres row) |
-  | `user` / `flagger` annotation (draftable, editable) | yes | Postgres-canonical + ClickHouse, as today |
-
-Pure-tracker scores carry `signal_id` at write time, so they are immutable on arrival and go straight to ClickHouse — they never push trace-volume writes through the canonical mutable Postgres path. This is the mechanism that makes "occurrences are scores" scale; see [Why membership is materialized at write time](#why-membership-is-materialized-at-write-time).
+  *(Scale lever, not the MVP: if deterministic scripts that run on every trace ever strain the canonical path, those recomputable, feedback-free scores could go ClickHouse-only — a future per-run optimization, never a rule about evaluation kinds.)*
 
 ### Monitor
 
-**A monitor watches one signal over time.** Monitors never own detection — that lives on the signal's tracker. A monitor owns:
+**A monitor watches one signal over time.** Monitors never own detection — that lives on the signal's evaluation. A monitor owns:
 
 - a **target**: a signal (`monitors.target_signal_id` = signal CUID). Saved-search and raw-stream targets remain available via the existing `target_*` columns; this spec focuses on signal targets. Saved searches stay the home for plain filter tracking — `SavedSearchMatchReader` is reused unchanged.
-- a **metric** (`MonitorMetric`, already exists): `count` of matching scores (default), `errorRate`, or `avg`/`p95`/`sum` of `duration`/`cost`/`tokens`. Field aggregates read the matched traces (`score.trace_id → traces`); the score's own cost/tokens are the *judge's*, not the trace's.
+- a **metric** (`MonitorMetric`, already exists): `count` of matching scores (default), `errorRate`, or `avg`/`p95`/`sum` of `duration`/`cost`/`tokens`. Field aggregates read the matched traces (`score.trace_id → traces`); the score's own cost/tokens are the *evaluation's* (an llm judge's; zero for scripts that don't call `llm()`), not the trace's.
 - **mute** (`muted_at`): notifications off; evaluation and incident recording continue.
 
 Every signal gets a **default monitor** provisioned at creation — the occurrences (`count`) monitor carrying the same alerts issues get today: a high-severity `metric.escalating` alert in `expected` mode plus an `event.regressed` alert.
@@ -129,20 +127,20 @@ The two unrelated "is this escalating?" implementations — the issue seasonal d
 
 ### Incident
 
-**Unchanged.** Same `alert_incidents` lifecycle (point vs sustained), backtracked `started_at`/`ended_at`, and notifications pipeline (`incident.event` / `incident.opened` / `incident.closed`). Incidents snapshot the firing alert's `condition`, and additionally snapshot the monitor's **target definition** at open time so closed incidents stay self-describing after edits.
+**Unchanged.** Same `alert_incidents` lifecycle (point vs sustained), backtracked `started_at`/`ended_at`, and notifications pipeline (`incident.event` / `incident.opened` / `incident.closed`). Incidents snapshot the firing alert's `condition`, and additionally snapshot the monitor's **target definition** (the signal plus a summary of its evaluation — `type`/`settings`/`script`) at open time so closed incidents stay self-describing after an evaluation edit or signal delete.
 
-## Discovery: sinks and promotion
+## Discovery and tracking
 
-Automatic discovery is **kept**, reframed: it produces **sink signals** (origin `system`, no tracker), not a separate entity. The flagger + annotation machinery is unchanged.
+Automatic discovery is **kept**, reframed: it produces **system-created signals** (`origin = 'system'`, immutable) that start with no evaluation, not a separate entity. The flagger + annotation machinery is unchanged.
 
 ```
 flaggers (trace-end) + human annotations
    └─ each writes an annotation score (source_type = 'flagger' | 'user')
    └─ discovery routes the score (centroid + hybrid search + locked serialization, UNCHANGED):
-        ├─ to an existing sink signal      → +1 occurrence
-        └─ or creates a new sink signal    → origin 'system', tracker NULL
-   └─ once a sink has enough evidence, the user can PROMOTE it:
-        └─ generate an llm_as_judge tracker from its accumulated annotations
+        ├─ to an existing system-created signal      → +1 occurrence
+        └─ or creates a new system-created signal    → origin 'system', no evaluation
+   └─ once a system-created signal has enough evidence, the user can TRACK it (give it an evaluation):
+        └─ generate an llm_as_judge evaluation from its accumulated annotations
            (today's "Monitor issue" → optimize-evaluation; deterministic workflow id
             evaluations:generate:${signalId})
         └─ the signal's accumulated annotation scores become the alignment ground truth
@@ -150,72 +148,64 @@ flaggers (trace-end) + human annotations
             traces; zero-annotation traces excluded — the alignment set is built from
             annotations, and the judge is re-run against it, exactly as today)
         └─ the signal now auto-detects forward; old annotation occurrences stay, the judge
-           adds tracker-sourced ones
+           adds evaluation-sourced ones
 ```
 
-So a signal's life is **sink (annotation-fed) → optionally promoted to a tracker (detector-fed)**, with identity and occurrence history preserved across the promotion. This is the bridge between auto-discovery and the hand-built trackers; it reuses the entire existing discovery + `optimize-evaluation` + alignment machinery.
+So a system-created signal's life is **annotation-fed (no evaluation) → optionally tracked with an evaluation (detector-fed)**, with identity and occurrence history preserved across the transition. This is the bridge between auto-discovery and the hand-built evaluations; it reuses the entire existing discovery + `optimize-evaluation` + alignment machinery.
 
-**Annotation assignment is allowed exactly on tracker-less (sink) signals.** A tracker-backed signal is detector-driven; you do not hand-assign traces into it. While annotating, the UI suggests existing sinks via hybrid search over `search_document` (lexical) + `centroid_embedding` (the existing discovery path); the user links explicitly or lets discovery route.
+**Annotations can be added only to system-created signals (`origin = 'system'`) — for now.** This is gated on `origin`, not on whether the signal has an evaluation, so a system-created signal that's been tracked keeps accepting annotations (they become its judge's alignment ground truth); a `user`-origin signal is detector-defined and is never hand-annotated into. While annotating, the UI suggests existing system-created signals via hybrid search over `search_document` (lexical) + `centroid_embedding` (the existing discovery path); the user links explicitly or lets discovery route.
 
 ## The matching pipeline
 
-Today's write-time machinery is evaluation-oriented (`EvaluationTrigger`: filter / turn / debounce / sampling decides when an evaluation runs). This generalizes into a single **signal matching pipeline** that runs every active *tracked* signal's detector against incoming traces; evaluations become one runner inside it.
+Today's write-time machinery is evaluation-oriented (`EvaluationTrigger`: filter / turn / debounce / sampling decides when an evaluation runs). This generalizes into a single **signal matching pipeline** that runs every active signal's evaluation against incoming traces — every evaluation is a script, so there is one runner.
 
-- the **filters pre-gate** is shared (one pass per trace over all active signals' `filters`); out-of-gate traces never reach the tracker.
-- the **sandbox runner** executes `script` trackers (and `llm_as_judge` trackers' generated scripts) in the shared sandboxed JS runtime.
-- the **semantic runner** compares trace content-chunk embeddings (already produced at ingest for trace search and semantic moments) against Redis-cached anchor embeddings — one batch pass over a trace's chunks against all anchor sets.
-- evaluation-specific options (`sampling`, `turn`, `debounce`) remain runner-level settings on the backing evaluation, not pipeline concepts.
+- the **filters pre-gate** is shared (one pass per trace over all active signals' `filters`); out-of-gate traces never reach the evaluation.
+- the **sandbox runner** executes the evaluation's `script` in the shared sandboxed JS (QuickJS) runtime — the single execution path for every evaluation (judge scripts call `llm()`; deterministic scripts don't).
+- evaluation-specific options (`sampling`, `turn`, `debounce`) are settings on the evaluation row, not pipeline concepts.
 
-A run writes a score (matched or not) with `signal_id`, `source_type = 'tracker'`, routed PG/CH per the [Score routing table](#score--the-membership-ledger). Sinks (`tracker IS NULL`) are not in this pipeline — they receive membership only via annotations.
+A run writes a score (matched or not) with `signal_id`, `source_type = 'evaluation'`, `source_id` = the evaluation id, persisted to Postgres + ClickHouse like any score (see [Score](#score--the-membership-ledger)). Signals with no evaluation are not in this pipeline — their membership comes only from annotations.
+
+*(A future phase adds semantic-similarity detection — likely a `similarity()`/`embedding()` host function the script calls, possibly with a native batch-runner optimization for that case; see [Tasks → Phase 7](#phase-7--semantic-similarity-evaluations-future).)*
 
 ## Main flows
 
 `@domain/signals` is the evolved `@domain/issues` package. Existing machinery reused unchanged is marked `[reuse]`.
 
-### A. Trace ingest → tracker → score
+### A. Trace ingest → evaluation → score
 
 ```
 span ingestion → ClickHouse spans insert → TracesIngested (outbox)             [reuse]
 └─ domain-events dispatcher                                                     [reuse]
    └─ signals:match (queue task, batched per project)
       └─ matchTracesToSignalsUseCase (@domain/signals)
-         ├─ SignalRepository.listActiveTracked(projectId)            -- Redis-cached, org-prefixed
+         ├─ listActiveDetectors(projectId)   -- signals with an active evaluation (join evaluations); Redis-cached, org-prefixed
          ├─ filters pre-gate per signal (row-local, in-process)
-         ├─ script  → sandbox runner
-         ├─ judge   → evaluation runner (sampling/turn/debounce on the backing evaluation)
-         └─ write score (matched or not) with signal_id, source_type='tracker'
-              · pure (script): CH-analytics-only          · judge: Postgres-canonical + CH
+         ├─ run the evaluation's script  → sandbox runner (sampling/turn/debounce are evaluation settings)
+         └─ write score (matched or not) with signal_id, source_type='evaluation', source_id=evaluationId
+              · Postgres-canonical + ClickHouse, like any score
       └─ publishes monitors:evaluate (leading-edge throttle, 5 min)             [reuse shape]
-
-semantic trackers (separate hop joining content embeddings produced at ingest): [reuse]
-trace_search_embeddings chunks written
-└─ signals:semanticMatch (queue task per trace)
-   └─ load project anchor sets (Redis-cached, moment-label pattern; includes system moment signals)
-   └─ filters pre-gate; per signal value = max(chunk · positiveAnchor); matched when
-        value ≥ threshold AND best-positive − best-contrast ≥ margin
-   └─ write CH-analytics-only score (matched or not), source_type='tracker'
 ```
 
-### B. Create a signal manually (user origin, must have a tracker)
+### B. Create a signal manually (user origin, must have an evaluation)
 
 ```
 UI: Signals page / "Create signal from this search" → builder (live preview required)
-└─ createSignalUseCase { origin: 'user', tracker, filters? }
-   ├─ semantic: embed + Redis-cache anchors
-   ├─ script:   compile (sandbox ScriptCompileError rejects at save time)
-   ├─ judge:    create backing evaluation (evaluations.signal_id); alignment accrues from annotations
+└─ createSignalUseCase { origin: 'user', evaluation: { settings | script }, filters? }
+   ├─ compile settings→script (or accept a raw script); sandbox ScriptCompileError rejects at save time
+   ├─ judge path: generate the script via optimize-evaluation; alignment accrues from annotations
+   ├─ detect capability from the script (does it call llm()?) → execution lane + backfill eligibility (not storage; storage is uniform)
    ├─ provisionDefaultMonitorUseCase (count monitor + metric.escalating 'expected' + event.regressed)
-   └─ enqueue signals:backfill { signalId, window: 14d }   (pure trackers only)
+   └─ enqueue signals:backfill { signalId, window: 14d }   (deterministic scripts only)
 ```
 
-### C. Annotation → sink routing (auto-discovery)
+### C. Annotation → discovery routing (system-created signals)
 
 ```
 flagger (trace-end) / human annotation
 └─ writes annotation score (source_type 'flagger'|'user'), draft/publish as today  [reuse]
 └─ ScoreCreated → discovery (centroid + hybrid search + locked serialization)      [reuse]
-     ├─ assign to existing sink signal  → +1 occurrence
-     └─ create new sink signal { origin: 'system', tracker: NULL }
+     ├─ assign to existing system-created signal  → +1 occurrence
+     └─ create new system-created signal { origin: 'system', no evaluation }
 ```
 
 ### D. Monitor evaluation → alert → incident → notification
@@ -237,16 +227,16 @@ triggers: monitors:evaluate (leading-edge throttle) + 5-min sweep cron          
 ```
 [Resolve] → resolveSignalUseCase: signal.resolved_at = now; close open sustained incidents (silent)
 [Ignore]  → ignoreSignalUseCase:  signal.ignored_at = now (scores keep recording; nothing notifies)
-[Delete]  → deleteSignalUseCase:  soft-delete signal + its monitors; archive backing evaluation;
+[Delete]  → deleteSignalUseCase:  soft-delete signal + its monitors; archive its evaluation;
               enqueue CH score cleanup for the signal
 regression → flow D, event.regressed branch
 ```
 
-### F. Promote a sink to a judge tracker
+### F. Track a system-created signal with a judge evaluation
 
 ```
-UI: sink signal page → "Start tracking with a judge"
-└─ promoteSignalUseCase: set tracker = { type:'llm_as_judge', threshold }
+UI: system-created signal page → "Start tracking with a judge"
+└─ trackSignalUseCase: create the signal's evaluation (a generated judge script that calls llm())
    └─ start optimize-evaluation (workflow id evaluations:generate:${signalId})      [reuse]
       └─ build alignment set from the signal's annotation scores; generate + align the judge;
          persist with evaluations.signal_id
@@ -255,45 +245,49 @@ frontend polls getSignalAlignmentState (Temporal workflow.describe())           
 
 ## Data model
 
-**No new tables.** Every entity evolves a table that already exists: `issues` → `signals` (rename + columns), `scores` (rename + widened source), `evaluations` (rename), `monitors` (one target column), and the ClickHouse `scores` analytics table (one column). The original spec's `signal_occurrences` table is gone — "occurrences are scores". The unified `event.*`/`metric.*` alert model, `MonitorMetric`, and the `monitors.target_*` columns are **already built** (only `event.regressed` is genuinely new). `legend: ▸NEW ▸CHANGED ▸KEPT ▸DROPPED` is per-line below.
+**No new tables.** Every entity evolves a table that already exists: `issues` → `signals` (rename + columns), `scores` (rename + split source), `evaluations` (rename + a `settings` column — the detector now lives here, always as a script), `monitors` (one target column), and the ClickHouse `scores` analytics table (one column). Occurrences are scores — there is no separate occurrence table. The unified `event.*`/`metric.*` alert model, `MonitorMetric`, and the `monitors.target_*` columns are **already built** (only `event.regressed` is genuinely new). `legend: ▸NEW ▸CHANGED ▸KEPT ▸DROPPED` is per-line below.
 
 ### Shared contracts (`@domain/shared`, `@domain/scores`)
 
-These are the single source of truth for the enums and tracker types referenced throughout the spec.
+These are the single source of truth for the enums and evaluation shape referenced throughout the spec.
 
 ```ts
 // NEW (@domain/shared)
 export const SIGNAL_ORIGINS = ["user", "system"] as const
-//   user   — hand-built by a person; MUST have a tracker
-//   system — auto-created sink / provisioned (may be tracker-less)
+//   user   — hand-built by a person; MUST have an evaluation; never annotation-assignable
+//   system — auto-generated by discovery; annotation-assignable, even after it's tracked with an evaluation
+// `origin` is set at creation and never changes — the durable "auto-generated?" marker, distinct from the
+// mutable "has no evaluation yet" state, and the gate for annotation assignment.
+// (POST-MVP: once system-PROVISIONED detector signals exist — e.g. moments, Phase 7 — split `system` into
+//  `discovered` vs `provisioned` so provisioned detector signals are not annotation-assignable.)
 
-export const SIGNAL_TRACKER_TYPES = ["semantic_similarity", "script", "llm_as_judge"] as const
-export type SignalTrackerType = (typeof SIGNAL_TRACKER_TYPES)[number]
+// An evaluation is ALWAYS a script (evaluations.script) that runs in the QuickJS sandbox
+// (specs/sandbox-runtime.md). There is no `type` or `capability` column on the row:
+//   - the script returns { value (score 0..1), passed (membership), feedback? } — no host-side threshold.
+//   - type lives in `settings` (templated evals → forms); what a script does (llm/semantic/code) is
+//     detected when needed (execution lane, analytics) — not a stored column.
+//   - storage is uniform: every score → Postgres (canonical) + ClickHouse (analytics); no store-routing.
 
-// tracker config stored inline on the signal row (signals.tracker jsonb), discriminated by type.
-// Proven in production for conversation-intelligence moment labels (multi-anchor + contrast +
-// margin), adopted wholesale. Semantic detector value = max(chunk · positiveAnchor); membership is
-// the uniform per-tracker `threshold`, generalizing moment labels' static per-kind gate:
-export type SignalTracker =
-  | { type: "semantic_similarity"; semantic: SemanticAnchors; threshold: number }
-  | { type: "script";              source: string;            threshold: number }   // sandbox JS
-  | { type: "llm_as_judge";        threshold: number }   // detector lives in evaluations.signal_id (1:1)
+// `settings` is the OPTIONAL declarative config a user edits in the builder; it compiles to `script`
+// (deterministic codegen for rule-like options, or GEPA generation for a judge) and is NULL when the
+// script is hand-written (advanced). Concrete shapes are defined as the builder grows — kept open
+// here; the judge case is the first:
+export type EvaluationSettings =
+  | { kind: "judge"; criteria: string }   // → a script that calls llm(), generated + aligned via optimize-evaluation
+  // future kinds that compile to a script: deterministic rule comparators; semantic similarity (Phase 7)
 
-export type SemanticAnchors = {
-  anchors: string[]                  // positive anchor phrases (1..n); best match wins
-  contrastAnchors?: string[]         // a trace matches only if best-positive ALSO beats
-                                     //   best-contrast by `margin`
-  margin?: number                    // required positive-vs-contrast separation (default per constants)
-  roles?: ("user" | "assistant")[]   // optionally restrict which turns are compared
-}
+// (Semantic-similarity anchors — positive/contrast/margin/roles — are deferred to Phase 7, where the
+//  semantic detector is added as a host function the script can call.)
 
-// CHANGED (@domain/scores): replaces SCORE_SOURCES = ["evaluation","annotation","custom"]
-export const SCORE_SOURCE_TYPES = ["tracker", "flagger", "user", "custom"] as const
+// CHANGED (@domain/scores): renames SCORE_SOURCES `source`→`source_type` and splits annotation→flagger/user.
+// `evaluation` is KEPT (a signal's detector is an evaluation), so existing evaluation-sourced scores need
+// no remap or backfill.
+export const SCORE_SOURCE_TYPES = ["evaluation", "flagger", "user", "custom"] as const
 export type ScoreSourceType = (typeof SCORE_SOURCE_TYPES)[number]
-//   tracker — written by the signal's tracker at ingest    (source_id = signal id; judge may keep the evaluation id to preserve evaluation-source dashboards)
-//   flagger — automatic flagger annotation                 (source_id = flagger key)
-//   user    — human annotation (UI / API / queue)          (source_id = user id / sentinel)
-//   custom  — public /scores push  [POST-MVP]              (source_id = caller tag)
+//   evaluation — written by the signal's evaluation at ingest   (source_id = evaluation id)
+//   flagger    — automatic flagger annotation                   (source_id = flagger key)
+//   user       — human annotation (UI / API / queue)            (source_id = user id / sentinel)
+//   custom     — public /scores push  [POST-MVP]                (source_id = caller tag)
 
 // CHANGED (@domain/shared, alert-incident-kinds.ts): ALERT_INCIDENT_KINDS already contains
 // event.matched / metric.threshold / metric.escalating (unified, target-on-monitor) plus the
@@ -317,15 +311,14 @@ signals                                  -- was `issues`
   slug                varchar(128)        ▸KEPT  -- unique per project among non-deleted
   name                varchar(128)        ▸KEPT
   description         text                ▸KEPT
-  origin              varchar(16)         ▸CHANGED  -- was `source` varchar(32); now SignalOrigin (user|system)
-  tracker             jsonb null          ▸NEW   -- SignalTracker; NULL = sink (membership via annotations only)
-  filters             jsonb null          ▸NEW   -- FilterSet pre-gate; only meaningful alongside a tracker
+  origin              varchar(16)         ▸CHANGED  -- was `source` varchar(32); now SignalOrigin (user|system); immutable; gates annotation assignment (system = auto-generated)
+  filters             jsonb null          ▸NEW   -- FilterSet pre-gate; only meaningful alongside an evaluation
   priority            varchar(16) null    ▸KEPT  -- low|medium|high|urgent
   assignee_id         varchar(24) null    ▸KEPT  -- single assignee, as today (multi-assignee deferred)
-  centroid            jsonb null          ▸CHANGED  -- was NOT NULL; now nullable (user-created tracker signals have none)
-  centroid_embedding  vector(2048) null   ▸KEPT  -- derived from centroid; sink similarity routing (discovery)
+  centroid            jsonb null          ▸CHANGED  -- was NOT NULL; now nullable (user-created evaluation-backed signals have none)
+  centroid_embedding  vector(2048) null   ▸KEPT  -- derived from centroid; similarity routing for discovery (system-created signals)
   search_document     tsvector GENERATED  ▸KEPT  -- setweight(name 'A') || setweight(description 'B'); GIN
-  clustered_at        timestamptz null    ▸CHANGED  -- was NOT NULL; nullable (only discovery sinks cluster)
+  clustered_at        timestamptz null    ▸CHANGED  -- was NOT NULL; nullable (only discovered signals cluster)
   resolved_at         timestamptz null    ▸KEPT  -- lifecycle (MVP: stays on the signal row, not the monitor)
   ignored_at          timestamptz null    ▸KEPT  -- lifecycle
   escalated_at        timestamptz null    ▸KEPT  -- dormant; "escalating" derived from open alert_incidents
@@ -336,10 +329,11 @@ signals                                  -- was `issues`
   unique  (organization_id, project_id, slug)  WHERE deleted_at IS NULL     ▸CHANGED  -- now partial (soft-delete)
   gin     (search_document)                                                 ▸KEPT
   btree   (organization_id, project_id, ignored_at, resolved_at, created_at) WHERE deleted_at IS NULL   ▸KEPT
-  btree   (organization_id, project_id)        WHERE deleted_at IS NULL AND tracker IS NOT NULL   ▸NEW  -- "list active tracked signals" (matching pipeline)
 ```
 
-`semantic_similarity` anchor embeddings are **not** a column — embedded once on save and Redis-cached (org-prefixed key), exactly as moment-label anchors today. Nothing searches anchors via SQL.
+The detector is no longer a `signals` column — it is the linked `evaluations` row (one active per signal; a system-created signal may have none). "List active detectors" for the matching pipeline reads `evaluations` (the supporting partial index lives there — see below) and joins back to `signals` to apply signal-level lifecycle gating (`deleted_at`; `resolved`/`ignored` signals still record per [Triage](#e-triage-from-the-signal-page), so they are not excluded here).
+
+(Semantic-similarity anchors and their Redis-cached embeddings are deferred to [Phase 7](#phase-7--semantic-similarity-evaluations-future); the MVP detector is always a sandbox script.)
 
 ### Postgres: `scores` (rename `issue_id`, widen the source)
 
@@ -347,7 +341,7 @@ signals                                  -- was `issues`
 scores
   id, organization_id, project_id                              ▸KEPT
   session_id varchar(128) / trace_id varchar(32) / span_id varchar(16)   ▸KEPT (nullable)
-  source_type  varchar(32)   ▸CHANGED  -- was `source`; ScoreSourceType (tracker|flagger|user|custom)
+  source_type  varchar(32)   ▸CHANGED  -- was `source`; ScoreSourceType (evaluation|flagger|user|custom)
   source_id    varchar(128)  ▸KEPT
   simulation_id varchar(24) null                               ▸KEPT
   signal_id    varchar(24) null   ▸CHANGED  -- was `issue_id`
@@ -357,18 +351,26 @@ scores
   created_at, updated_at                                       ▸KEPT
 ```
 
-- **`passed` IS the materialized membership flag.** The tracker host derives `matched = (value >= tracker.threshold)` at write time and stores it as `passed`; `value` is kept for confidence/sort. So **membership reads need no runtime threshold**: a signal's occurrences are `scores WHERE signal_id = ? AND passed = true`. This is also why threshold edits apply forward-only — old rows keep their frozen `passed`.
-- Index renames (same shapes, `issue`→`signal`): `scores_issue_lookup_idx` → `scores_signal_lookup_idx` (`WHERE signal_id IS NOT NULL`), `scores_issue_discovery_work_idx` → `scores_signal_discovery_work_idx`. The canonical idempotency unique index `scores_canonical_evaluation_trace_idx` flips its predicate `source='evaluation'` → `source_type='tracker'`, giving one tracker score per `(source_id, trace)`.
+- **`passed` IS the materialized membership flag.** The detector reports it directly — a sandbox script returns `Passed`/`Failed`, and the semantic native runner applies its `settings` cutoff (`threshold` + `margin`) — and it is stored verbatim; `value` is kept only for confidence/sort. So **membership reads need no runtime threshold**: a signal's occurrences are the distinct traces in `scores WHERE signal_id = ? AND passed = true`. This is also why definition edits apply forward-only — old rows keep their frozen `passed`.
+- Index renames (same shapes, `issue`→`signal`): `scores_issue_lookup_idx` → `scores_signal_lookup_idx` (`WHERE signal_id IS NOT NULL`), `scores_issue_discovery_work_idx` → `scores_signal_discovery_work_idx`. The canonical idempotency unique index `scores_canonical_evaluation_trace_idx` keeps its meaning — only the column renames `source` → `source_type`; the value stays `'evaluation'`, giving one evaluation score per `(source_id = evaluation id, trace)`. Occurrence counts dedupe to distinct `trace_id` per signal, so a trace touched by successive evaluation generations (re-tracking or re-optimization mints a new evaluation id) counts once.
 - `custom` source is **POST-MVP**: it requires the public `/scores` API to accept a caller-supplied `signal_id` (today it refuses caller ownership — `dev-docs/scores.md`).
 
-### Postgres: `evaluations` (rename only)
+### Postgres: `evaluations` (rename + polymorphism — the detector lives here)
 
 ```
 evaluations
-  signal_id  varchar(24) NOT NULL   ▸CHANGED  -- was `issue_id` NOT NULL; still required (a judge tracker always backs a signal)
-  -- name, description, script, trigger, alignment, aligned_at, archived_at, deleted_at, timestamps  ▸KEPT
-  index evaluations_signal_lookup_idx (organization_id, project_id, signal_id, deleted_at)   ▸CHANGED (rename)
+  signal_id    varchar(24) NOT NULL   ▸CHANGED  -- was `issue_id` NOT NULL; the evaluation backs exactly one signal (1:1 active)
+  settings     jsonb null             ▸NEW      -- EvaluationSettings; optional declarative config that compiles to `script`; NULL for a raw / GEPA-generated script
+  script       text NOT NULL          ▸KEPT     -- every evaluation IS a sandbox script; the canonical executable (unchanged: still NOT NULL)
+  alignment    jsonb null             ▸CHANGED  -- was NOT NULL; set only once aligned (judge scripts that call llm()); NULL otherwise
+  aligned_at   timestamptz null       ▸CHANGED  -- was NOT NULL; judge-only
+  -- name, description, trigger (filter/turn/debounce/sampling), archived_at, deleted_at, timestamps  ▸KEPT
+  index evaluations_signal_lookup_idx (organization_id, project_id, signal_id, deleted_at)            ▸CHANGED (rename)
+  partial unique (signal_id) WHERE deleted_at IS NULL AND archived_at IS NULL                          ▸NEW  -- one ACTIVE detector per signal
+  btree  (organization_id, project_id, signal_id) WHERE deleted_at IS NULL AND archived_at IS NULL     ▸NEW  -- "list active detectors" for the matching pipeline
 ```
+
+No `type` or `capability` column: every evaluation is a script. Type lives in `settings` (templated evals); what a script does (llm/semantic/code) is detected from it when needed (execution lane, analytics). Invariants: `script` is always present; `settings` is optional (compiles to `script` when set); `alignment`/`aligned_at` are set only for aligned judge scripts (those that call `llm()`), NULL otherwise. The active-detector partial-unique index requires a one-time migration that **dedupes today's multiple-evaluations-per-issue rows** (keep the most-recently-aligned as active, archive the rest) before it can be created.
 
 ### Postgres: `monitors` (one new target column)
 
@@ -398,7 +400,7 @@ Reused as-is. A signal monitor's alerts use the **unified** kinds — `event.mat
 
 ### Postgres: `alert_incidents` (no required change)
 
-The unified model already resolves a signal incident's target by joining `monitor_alert_id → monitors.target_signal_id`; `source_type`/`source_id` stay null, `condition` snapshots the firing alert (metric included), and `entry_signals`/`exit_eligible_since`/backtracking carry over. **Optional hardening** (recommended, not required): add `target_snapshot jsonb` so a closed incident stays self-describing if its signal is later deleted — otherwise a deleted signal's closed incidents lose their target label.
+The unified model already resolves a signal incident's target by joining `monitor_alert_id → monitors.target_signal_id`; `source_type`/`source_id` stay null (note: this is `AlertIncidentSourceType`, a **different** enum from the score `ScoreSourceType` renamed above — do not conflate), `condition` snapshots the firing alert (metric included), and `entry_signals`/`exit_eligible_since`/backtracking carry over. **Optional hardening** (recommended, not required): add `target_snapshot jsonb` capturing the signal plus a summary of its evaluation (`type`/`settings`/`script`) so a closed incident stays self-describing if its signal or evaluation is later edited or deleted — otherwise a deleted signal's closed incidents lose their target label.
 
 ### ClickHouse: `scores` analytics (one new column; append-only)
 
@@ -406,13 +408,13 @@ ClickHouse migrations are append-only (`ch:create`), so this is `ADD COLUMN`, no
 
 ```sql
 ALTER TABLE scores ADD COLUMN signal_id FixedString(24) DEFAULT '';   -- NEW; backfill = old issue_id via one ALTER UPDATE, then issue_id deprecated
--- `source` (FixedString(32)) now also carries tracker|flagger|user (no migration; values are not enum-constrained).
+-- `source` (FixedString(32)) now also carries flagger|user (it already carries 'evaluation' today, so no historical remap).
 --   bump skip index idx_source set(3) → set(4) to keep it selective for four values.
 -- everything else unchanged: value Float32, passed Bool, errored Bool, duration/tokens/cost UInt64, created_at.
 ```
 
-- **The CH `scores` table is the single signal counting/aggregate surface** monitors read; it loses its issue-trend special-casing. Occurrence count = `WHERE signal_id = ? AND passed`. Metric aggregates (`avg`/`p95`/`sum` of trace `duration`/`cost`/`tokens`) join the matched `trace_id` back to the traces analytics — the score's own duration/tokens/cost are the *judge's*, not the trace's.
-- Pure-tracker scores (semantic/script) are written **CH-only** (immutable on arrival); judge/annotation scores follow today's Postgres-canonical → CH sync.
+- **The CH `scores` table is the single signal counting/aggregate surface** monitors read; it loses its issue-trend special-casing. Occurrence count = `countDistinct(trace_id) WHERE signal_id = ? AND passed`. Metric aggregates (`avg`/`p95`/`sum` of trace `duration`/`cost`/`tokens`) join the matched `trace_id` back to the traces analytics — the score's own duration/tokens/cost are the *evaluation's* (zero for scripts that don't call `llm()`), not the trace's.
+- All scores follow the existing Postgres-canonical → ClickHouse sync (drafted annotations sync once published). No CH-only split in the MVP.
 
 ## UI
 
@@ -422,15 +424,15 @@ A **Signals** nav item replaces **Issues** (single list — hand-built and disco
 
 ### Signals list
 
-One table; `origin` (auto/manual), tracker type, priority, assignee, trend, monitors, and last incident are columns/filters on the same surface.
+One table; `origin` (auto/manual), priority, assignee, trend, monitors, and last incident are columns/filters on the same surface.
 
 ### Signal detail page
 
-Definition (tracker + filters), monitor charts, alerts, incidents, and member traces in one context. Sinks show their annotation evidence and a **Promote** action; judge-backed signals show the linked evaluation/alignment sections (confusion matrix, realign).
+Definition (evaluation + filters), monitor charts, alerts, incidents, and member traces in one context. System-created signals with no evaluation show their annotation evidence and a **Track** action; judge evaluations (scripts that call `llm()`) additionally show the alignment sections (confusion matrix, realign).
 
 ### Creating a signal
 
-One builder, three entry points (Signals list, "Create signal from this search", annotation flow), one rule: **never let users define membership blind** — the builder always shows a live preview (a bounded query-time evaluation over recent traces; for `semantic`, an exact scan over a recent window using existing content embeddings; for `script`/`llm_as_judge`, the sandbox dry-run harness against sample traces). The tracker picker offers all three types — **Semantic**, **Script**, and **LLM-as-judge**.
+One builder, three entry points (Signals list, "Create signal from this search", annotation flow), one rule: **never let users define membership blind** — the builder always shows a live preview via the sandbox dry-run harness against sample traces. The builder edits a declarative `settings` form (or, for advanced users, a raw `script`); either way it produces the evaluation's `script`, generating a judge that calls `llm()` via `optimize-evaluation` when that's the chosen form.
 
 ### Creating a monitor
 
@@ -449,37 +451,32 @@ Signals are exposed as a public REST surface under `/v1/projects/{projectSlug}/s
 | GET / POST | `/` | `listSignals` / `createSignal` |
 | GET / PATCH / DELETE | `/{signalSlug}` | `getSignal` / `updateSignal` / `deleteSignal` |
 | GET | `/{signalSlug}/traces` | `listSignalTraces` |
-| POST | `/{signalSlug}/resolve`, `/ignore`, `/promote` | `resolveSignal` / `ignoreSignal` / `promoteSignal` |
+| POST | `/{signalSlug}/resolve`, `/ignore`, `/track` | `resolveSignal` / `ignoreSignal` / `trackSignal` |
 
-- `createSignal` accepts a `tracker` of any of the three types (`semantic_similarity`, `script`, `llm_as_judge`) and optional `filters`; rejects tracker-less creation (sinks are system-only).
+- `createSignal` accepts an `evaluation` — its `settings` (default, compiled to a script; judge `criteria` is the first settings form) or a raw `script` (advanced) — plus optional `filters`; rejects evaluation-less creation (only system-created signals may have no evaluation).
 - Monitors gain `signal` as a target type in their existing API.
 - `custom`-source score push (the `/scores` API accepting `signal_id`) is **POST-MVP**.
 
 ## Migration
 
-- **Issues → signals, in place.** Rename `issues` → `signals` (keep rows, centroid, embeddings); existing issues become `origin = 'system'` sinks (`tracker = NULL`) — their membership already comes from annotation/evaluation scores. Issue-linked evaluations become `llm_as_judge` trackers (`evaluations.signal_id`; the signal's `tracker` is set to `{ type:'llm_as_judge' }`). `scores.issue_id` → `signal_id`; `source` → `source_type` with the documented mapping.
+- **Issues → signals, in place.** Rename `issues` → `signals` (keep rows, centroid, embeddings); existing issues become `origin = 'system'` (auto-generated, annotation-assignable as today) — those with no linked evaluation keep none, those with a generated evaluation keep it; either way `origin` stays `system`. Issue-linked evaluations stay as they are (they are already judge scripts that call `llm()`): set `evaluations.signal_id` and **dedupe to one active per signal** (keep the most-recently-aligned active, archive the rest) so the active-detector unique index can be created. `scores.issue_id` → `signal_id`; `source` → `source_type` (rename only — `evaluation` is kept; `annotation` splits into `flagger`/`user`).
 - **System monitors** become signal monitors (the three `issue.*` system monitors remap to the new `ALERT_KINDS` over signal targets).
-- **Semantic moments → default per-project signals** (soft requirement): the eight moment-label kinds (`MOMENT_LABEL_ANCHORS`) are provisioned as `origin = 'system'`, `tracker = { type:'semantic_similarity', semantic: <existing anchors>, threshold: <the kind's static gate> }`. The conversation-intelligence anchor matching becomes the semantic runner of the matching pipeline.
-- **Flaggers** stay as the trace-end auto-annotation engine feeding sinks (flow C). Where a flagger overlaps a moment label (e.g. `frustration`), consolidate to **one** signal — prefer the semantic moment-anchor tracker as the canonical detector and retire the overlapping flagger into it (soft requirement). Do not convert all 11 flaggers to trackers for the MVP; most keep feeding sinks via discovery.
+- **Flaggers** stay as the trace-end auto-annotation engine feeding system-created signals (flow C), unchanged.
+- **Semantic moments** stay as the conversation-intelligence anchor matching they are today; folding them into signal evaluations (and consolidating overlapping flaggers) is deferred to [Phase 7](#phase-7--semantic-similarity-evaluations-future), once semantic detection is added.
 
 ## Decisions
-
-### What this revision changed (vs the original LAT-664 spec)
-
-- **Two ledgers → one.** "Occurrences are scores"; the separate `signal_occurrences` table is removed. *(Reverses the original spec's two-ledger decision 6.)* Rationale: [Why membership is materialized at write time](#why-membership-is-materialized-at-write-time).
-- **"No automatic discovery" → discovery kept**, reframed as sink signals (`origin = 'system'`, `tracker = NULL`) produced by the unchanged flagger + discovery machinery; centroid/embedding columns stay. *(Reverses the original spec's "no automatic discovery" decision 2.)* Detail: [Discovery](#discovery-sinks-and-promotion).
 
 ### Settled choices (each is detailed in the linked section)
 
 1. **Membership is materialized at write time** — forced by the cost model. → [Why](#why-membership-is-materialized-at-write-time)
-2. **A signal's occurrences ARE its scores** — membership = scores with `passed = true` (the host freezes `passed = value >= threshold` at write); pure-tracker scores route ClickHouse-only so the single ledger scales. → [Score](#score--the-membership-ledger)
-3. **Automatic discovery is kept** as sink signals. → [Discovery](#discovery-sinks-and-promotion)
-4. **One tracker per signal, stored as a jsonb column** (`signals.tracker`), not a separate table; three types (`semantic_similarity`, `script`, `llm_as_judge`); there is **no** `annotation_sink` tracker — a sink is simply a tracker-less signal. → [Tracker](#tracker)
-5. **Trackers write every run** (matched and non-matched), mirroring how evaluations persist pass and fail today; occurrences are the matched subset. → [Score](#score--the-membership-ledger)
-6. **Users cannot create tracker-less signals** — only `system`-origin sinks are tracker-less, which removes the pure-filter write-amplification footgun; `filters` is only a tracker pre-gate; plain filter tracking stays saved searches + monitors. → [Signal](#signal)
+2. **A signal's occurrences ARE its scores** — membership = scores with `passed = true` (the script reports `passed` directly; no host threshold), counted as distinct traces per signal; all scores reuse the existing Postgres + ClickHouse scores pipeline, so the single ledger needs no new table. → [Score](#score--the-membership-ledger)
+3. **Automatic discovery is kept** as system-created (`origin = 'system'`) signals. Annotation assignment is gated on `origin` (immutable), not on whether the signal has an evaluation — so a tracked system-created signal keeps accepting annotations. → [Discovery](#discovery-and-tracking)
+4. **One evaluation per signal, on the existing `evaluations` table, always a script** — not a separate detector entity, not a jsonb column on the signal, no `type`/`capability` columns. A `settings` object optionally compiles to the `script`; the script is what executes. Exactly one *active* evaluation per signal (archived predecessors kept for lineage); a system-created signal may have none. → [Evaluation](#evaluation-the-detector)
+5. **Evaluations write every run** (matched and non-matched), mirroring how judges persist pass and fail today; occurrences are the matched subset. **All scores are stored the same way** — Postgres-canonical + ClickHouse mirror, no per-type or per-capability split. → [Score](#score--the-membership-ledger)
+6. **Users cannot create evaluation-less signals** — only `system`-origin signals may have no evaluation, which removes the pure-filter write-amplification footgun; `filters` is only an evaluation pre-gate; plain filter tracking stays saved searches + monitors. → [Signal](#signal)
 7. **Lifecycle stays on the signal row** for the MVP (resolve/ignore/escalating carried over from issues), not relocated onto the default monitor. → [Signal](#signal)
-8. **`semantic_similarity` and `llm_as_judge` are user-creatable in the MVP; `script` is post-MVP** (nothing depends on it — see [Tasks](#tasks)). Judge trackers *also* arise automatically from the sink → promotion path, landing on the same backing-evaluation shape. **Custom-source scores** (`/scores` accepting `signal_id`) are POST-MVP.
-9. **Signals per project are capped** per plan — bounds tracker matching cost and pure-tracker score write volume.
+8. **Script evaluations are the MVP detector; the judge is a generated script that calls `llm()`.** Both arise from the builder (settings → script, or raw script) and from the discovery → tracking path. **There is no tunable threshold**: the script returns `Passed`/`Failed`, so the cutoff is written into the script; `value` is only confidence/sort. **Semantic similarity is a future capability** ([Phase 7](#phase-7--semantic-similarity-evaluations-future)) — likely a `similarity()`/`embedding()` host function the script can call (with a possible native batch-runner optimization), shape deferred. **Custom-source scores** (`/scores` accepting `signal_id`) are POST-MVP.
+9. **Signals per project are capped** per plan — bounds evaluation matching cost and score write volume.
 
 ## Tasks
 
@@ -487,7 +484,7 @@ Signals are exposed as a public REST surface under `/v1/projects/{projectSlug}/s
 >
 > Each phase is an **independently shippable, behavior-preserving deploy**: production keeps working after every phase. Parallelism lives *within* a phase (tasks sharing dependencies run concurrently); phases themselves are mostly sequential, which is the deliberate price of safe incremental rollout. **MVP = Phases 1–4.** Every phase updates the relevant `dev-docs/*` as part of its definition of done (the "remember docs" requirement).
 >
-> **Incremental-schema note.** The data-model end state above is reached over several phases, not at once. `source_type`'s four values arrive in two steps (Phase 2 adds `tracker`; Phase 9 collapses `evaluation`→`tracker` and splits `annotation`→`user`/`flagger`). Monitoring unifies similarly — discovery-born signals keep the existing issue-event escalation path until Phase 5/9, while custom signals get the new signal-score path in Phase 4. Running two paths temporarily is intentional and non-breaking.
+> **Incremental-schema note.** The data-model end state above is reached over several phases, not at once. `source_type` is a one-step rename (`source`→`source_type`); the `evaluation` value is **kept** (no remap), and `annotation` splits into `flagger`/`user` in Phase 6 — there is no add-then-collapse round trip. Monitoring unifies similarly — discovery-born signals keep the existing issue-event escalation path until Phase 5/6, while custom signals get the new signal-score path in Phase 4. Running two paths temporarily is intentional and non-breaking.
 
 ### Phase 1 — Rename Issues → Signals `[MVP]`
 
@@ -506,30 +503,30 @@ Signals are exposed as a public REST surface under `/v1/projects/{projectSlug}/s
 
 **Exit gate:** full suite green; `/issues` URLs + `?issueId=` deep links redirect; SDK back-compat alias resolves; zero behavioral diff.
 
-### Phase 2 — Tracker substrate + custom semantic signals `[MVP]`
+### Phase 2 — Evaluation substrate + script evaluations `[MVP]`
 
 **Deps:** P1.
-**Ships:** user-created `semantic_similarity` signals; write-time matching populates them; the signal page shows matched traces + occurrence trend. (Alerting on custom signals arrives in P4.)
-**Safe because:** it's additive schema + new code behind the `signals` flag; discovery/monitors untouched.
+**Ships:** user-created **script** evaluations (raw script, or a `settings` form compiled to a script) that run on the QuickJS sandbox; write-time matching populates the signal; the signal page shows matched traces + occurrence trend. (Alerting on custom signals arrives in P4.)
+**Safe because:** it's additive schema + new code behind the `signals` flag; the sandbox runtime is already built (`sandbox-runtime.md` Phases 0–1); discovery/monitors untouched.
 
-- [ ] **P2-a** Contracts (`@domain/shared`, `@domain/scores`): `SIGNAL_ORIGINS`, `SIGNAL_TRACKER_TYPES`, `SignalTracker`/`SemanticAnchors` zod; rename score `source`→`source_type` and **add value `tracker`** (values `{tracker, evaluation, annotation, custom}`; the `evaluation`→`tracker` collapse + `annotation` split are P9).
-- [ ] **P2-b** PG migration (additive): `signals.tracker jsonb null`, `filters jsonb null`, `origin varchar(16)` (backfill existing → `'system'`), `deleted_at` + partial-unique slug; make `centroid`/`clustered_at` nullable; add the `(org, project) WHERE deleted_at IS NULL AND tracker IS NOT NULL` "active tracked" index.
-- [ ] **P2-c** Scores CH-only write path (`@domain/scores`): a tracker-score writer that freezes `passed = value ≥ tracker.threshold` and **inserts straight to CH analytics, skipping the canonical Postgres row** for pure trackers — the one genuinely new write path; reuse `syncScoreAnalyticsUseCase`'s CH insert + at-most-once-by-id guard; idempotent per `(signal, trace)`.
-- [ ] **P2-d** Matching pipeline skeleton (`@domain/signals` + a `signals:match` worker off `TracesIngested` via the domain-events dispatcher): `matchTracesToSignalsUseCase`, `listActiveTracked(projectId)` Redis-cached (org-prefixed), shared `filters` pre-gate reusing row-local `FilterSet` evaluation. Generalized from `EvaluationTrigger`'s filter stage.
-- [ ] **P2-e** Semantic runner (`signals:semanticMatch` per trace, off `trace_search_embeddings`): load per-signal anchor embeddings (Redis-cached, reuse the conversation-intelligence anchor-cache pattern), `value = max(chunk · positiveAnchor)`, match on `value ≥ threshold ∧ bestPos − bestContrast ≥ margin` → CH-only tracker score. Generalize `@domain/conversation-intelligence` anchor matching from fixed `MOMENT_LABEL_ANCHORS` to per-signal anchors.
-- [ ] **P2-f** Backfill (`signals:backfill {signalId, window}`): `backfillSignalScoresUseCase` runs the detector over historical traces in batches → CH-only scores; enqueued on semantic-signal create.
-- [ ] **P2-g** Builder UI (semantic): `apps/web` signals `-components` — `filters` + anchors/contrast + threshold (sensitivity); **live preview** = bounded exact scan over a recent window using existing content embeddings. Entry points: "New signal", "Create signal from this search".
-- [ ] **P2-h** Signal CRUD API + MCP: `createSignal`/`updateSignal`/`deleteSignal` (reject tracker-less create for `origin=user`); MCP/SDK regen. Reuse the monitors route template.
+- [ ] **P2-a** Contracts (`@domain/shared`, `@domain/scores`): `SIGNAL_ORIGINS`, `EvaluationSettings` (the optional declarative config that compiles to `script`) zod; rename score `source`→`source_type` and split `annotation`→`flagger`/`user` (the `evaluation` value is **kept** — no remap). No `type`/`capability` columns on the row — type lives in `settings`; what a script does is detected from it when needed.
+- [ ] **P2-b** PG migration (additive): on `signals` — `filters jsonb null`, `origin varchar(16)` (backfill existing → `'system'`), `deleted_at` + partial-unique slug; make `centroid`/`clustered_at` nullable. On `evaluations` — add `settings jsonb null`; relax `alignment`/`aligned_at` to nullable (judge-only); `script` stays NOT NULL; add the active-detector partial-unique index `(signal_id) WHERE deleted_at IS NULL AND archived_at IS NULL` + its lookup btree. **Pre-migration:** dedupe multiple-evaluations-per-issue rows (keep most-recently-aligned active, archive the rest) before creating the unique index.
+- [ ] **P2-c** Scores write path (`@domain/scores`): an evaluation-score writer that stores the script's returned `value`/`passed`/`feedback`, written Postgres-canonical and synced to ClickHouse like any score (reuse the existing scores write + `syncScoreAnalyticsUseCase`); idempotent per `(evaluation, trace)`.
+- [ ] **P2-d** Matching pipeline skeleton (`@domain/signals` + a `signals:match` worker off `TracesIngested` via the domain-events dispatcher): `matchTracesToSignalsUseCase`, `listActiveDetectors(projectId)` (signals join active evaluations) Redis-cached (org-prefixed), shared `filters` pre-gate reusing row-local `FilterSet` evaluation, then the **sandbox runner** executes the evaluation's `script`. Generalized from `EvaluationTrigger`.
+- [ ] **P2-e** Settings → script codegen (`@domain/sandbox`/`@domain/signals`): consume the sandbox-runtime *SignalRule* codegen so a `settings` form compiles deterministically to a stored `script` + content hash; compile-on-save validation (`ScriptCompileError` rejects at save time).
+- [ ] **P2-f** Backfill (`signals:backfill {signalId, window}`): `backfillSignalScoresUseCase` runs the script over historical traces in batches → scores (Postgres + ClickHouse); enqueued for cheap deterministic scripts (backfilling an llm judge is a costed operation — judges collect forward).
+- [ ] **P2-g** Builder UI (script): `apps/web` signals `-components` — `filters` + a raw-script editor and/or the `settings` form; **live preview** = sandbox dry-run harness against sample traces. Entry points: "New signal", "Create signal from this search".
+- [ ] **P2-h** Signal CRUD API + MCP: `createSignal`/`updateSignal`/`deleteSignal` (reject evaluation-less create for `origin=user`); MCP/SDK regen. Reuse the monitors route template.
 
-**Exit gate:** create a semantic signal → new in-scope traces produce CH-only tracker scores → visible on the signal page; backfill works; existing signals/discovery unaffected.
+**Exit gate:** create a script signal → new in-scope traces produce evaluation scores (Postgres + ClickHouse) → visible on the signal page; backfill works; existing signals/discovery unaffected.
 
 ### Phase 3 — User-created LLM-as-judge signals `[MVP]`
 
-**Deps:** P2 (substrate only — **not** the semantic runner).
-**Ships:** a builder option to author a judge signal (describe the behavior + optional example traces → generated judge), running on the **existing** evaluation execution path.
-**Safe because:** it reuses the proven evaluation generation/alignment/execution stack; additive UI.
+**Deps:** P2.
+**Ships:** a builder option to author a judge signal (describe the behavior + optional example traces → generated judge script that calls `llm()`), running on the **existing** evaluation execution path.
+**Safe because:** it reuses the proven evaluation generation/alignment/execution stack; additive UI. **Mostly pre-existing** — `llm_as_judge` already ships as a templated sandbox script (behind `evaluation-sandbox-runtime`) and GEPA already generates scripts, so P3-a/P3-b/P3-d are largely wiring; only **P3-c** (judge builder UI) is genuinely new.
 
-- [ ] **P3-a** Standalone evaluation creation (`@domain/evaluations`): allow creating an evaluation linked to a fresh signal (not only via issue promotion); set the signal's `tracker = { type:'llm_as_judge', threshold }` and `evaluations.signal_id`.
+- [ ] **P3-a** Standalone evaluation creation (`@domain/evaluations`): allow creating a judge evaluation (a script that calls `llm()`) linked to a fresh signal, not only via the discovery → tracking path; set `evaluations.signal_id`.
 - [ ] **P3-b** Generation reuse: drive the existing `optimize-evaluation` workflow (`evaluations:generate:${signalId}`) from the builder; with example traces → aligned (reuse `collectAlignmentExamples` + `evaluateDraftAgainstExamples`); without → unaligned start, alignment accrues as annotations land.
 - [ ] **P3-c** Builder UI (judge): description + optional example-trace picker (reuse the annotation-flow picker); preview via the sandbox dry-run harness; alignment polled via `workflow.describe()` (reuse `getSignalAlignmentState`).
 - [ ] **P3-d** Execution linkage: verify the `EvaluationTrigger` path writes `signal_id`-bearing scores for a user-created (non-discovered) signal; polarity/`passed` normalized to exhibition.
@@ -554,11 +551,11 @@ Signals are exposed as a public REST surface under `/v1/projects/{projectSlug}/s
 
 > **— MVP line: Phases 1–4 —**
 
-### Phase 5 — Unify judge execution onto the tracker pipeline `[POST-MVP · internal]`
+### Phase 5 — Unify judge execution onto the evaluation matching pipeline `[POST-MVP · internal]`
 
 **Deps:** P2, P3.
 **Ships:** judge execution moved from the standalone `EvaluationTrigger` path into the Phase-2 matching pipeline (shared `filters` pre-gate, one sandbox runner). No user-facing change.
-**Safe because:** parity-tested behind a flag, then cut over; retires the temporary two-path state.
+**Safe because:** parity-tested behind a flag, then cut over; retires the temporary two-path state. **Shrinks** — judges already execute on the sandbox today, so P5-a/P5-b are largely verification; the genuinely-remaining work is **P5-c** (retire the standalone `EvaluationTrigger` *scheduling* path so all detectors share one pipeline).
 
 - [ ] **P5-a** Run judges through `matchTracesToSignalsUseCase`'s sandbox runner.
 - [ ] **P5-b** Parity suite (every stored judge: old path vs pipeline → identical scores).
@@ -566,43 +563,26 @@ Signals are exposed as a public REST surface under `/v1/projects/{projectSlug}/s
 
 **Exit gate:** parity suite green; standalone trigger path removed; no behavioral diff.
 
-### Phase 6 — Script (custom code) trackers `[POST-MVP · last]`
-
-**Deps:** P2 (+ sandbox P2).
-**Ships:** the `script` tracker type — raw user JS via the sandbox. Nothing depends on it.
-**Safe because:** it's an additive type behind the flag.
-
-- [ ] **P6-a** Finish `specs/sandbox-runtime.md` P2 (dry-run harness + threshold membership) if outstanding.
-- [ ] **P6-b** `script` tracker in the matching pipeline (sandbox runner; CH-only pure scores; capability detection — a script calling `llm()` persists like a judge).
-- [ ] **P6-c** Builder + MCP authoring: compile-on-save validation (`ScriptCompileError`), dry-run against sample traces, and **surface the sandbox globals** (`conversation`, `llm()`, `z`, `Score/Passed/Failed`) in the MCP tool description (soft-req 1).
-
-**Exit gate:** create a `script` signal → it compiles on save, dry-runs against samples, and produces tracker scores in the pipeline.
-
-### Phase 7 — Moments → default signals `[SOFT]`
-
-**Deps:** P2.
-
-- [ ] **P7-a** Provision the 8 `MOMENT_KINDS` as `origin=system` `semantic_similarity` signals (anchors = `MOMENT_LABEL_ANCHORS`, threshold = each kind's static gate) via the project-provision hook.
-- [ ] **P7-b** The semantic runner subsumes the moment-label anchor pass (one matching path).
-
-**Exit gate:** new projects provision the 8 moment signals; moment labeling runs through the semantic runner with no behavioral diff.
-
-### Phase 8 — Flagger consolidation `[SOFT]`
-
-**Deps:** P7.
-
-- [ ] **P8-a** For flaggers overlapping a moment/semantic signal (e.g. `frustration`), make the semantic signal canonical and retire the flagger from `provisionFlaggers`.
-- [ ] **P8-b** Non-overlapping flaggers keep feeding sinks via discovery (unchanged).
-
-**Exit gate:** overlapping flaggers retired into their semantic signal; non-overlapping flaggers still feed sinks.
-
-### Phase 9 — Taxonomy cleanup + legacy retirement `[POST-MVP]`
+### Phase 6 — Taxonomy cleanup + legacy retirement `[POST-MVP]`
 
 **Deps:** P1–P5.
 
-- [ ] **P9-a** Finish `source_type`: remap `evaluation`→`tracker`, split `annotation`→`flagger` (sourceId=SYSTEM) / `user` (else) (PG + CH backfill).
-- [ ] **P9-b** Retire `issue.*` / `savedSearch.*` alert kinds once all monitors run on signal targets (breaking SDK — major bump).
-- [ ] **P9-c** Drop deprecated CH `issue_id` and any dormant columns.
-- [ ] **P9-d** `/scores` accepts caller-supplied `signal_id` for `custom`-source trackers (the POST-MVP custom-source path).
+- [ ] **P6-a** Finish `source_type`: split `annotation`→`flagger` (sourceId=SYSTEM) / `user` (else) (PG + CH backfill). (`evaluation` is unchanged — no remap, no evaluation-sourced backfill.)
+- [ ] **P6-b** Retire `issue.*` / `savedSearch.*` alert kinds once all monitors run on signal targets (breaking SDK — major bump).
+- [ ] **P6-c** Drop deprecated CH `issue_id` and any dormant columns.
+- [ ] **P6-d** `/scores` accepts caller-supplied `signal_id` for `custom`-source evaluations (the POST-MVP custom-source path).
 
-**Exit gate:** `source_type` fully collapsed to the four-value enum; legacy `issue.*`/`savedSearch.*` kinds and `issue_id` removed; `custom`-source push live.
+**Exit gate:** `source_type` is the four-value enum (`annotation` split into `flagger`/`user`); legacy `issue.*`/`savedSearch.*` kinds and `issue_id` removed; `custom`-source push live.
+
+### Phase 7 — Semantic similarity evaluations `[FUTURE]`
+
+**Deps:** P2 (+ the sandbox runtime). Not part of the MVP — sequenced after the script substrate is proven; this is where we "worry about improving the script to include semantic similarity".
+**Ships:** semantic similarity as a capability an evaluation script can use, then folds the existing conversation-intelligence anchor matching (moments) and overlapping flaggers into signal evaluations.
+**Open design (resolve before building):** how semantic executes — most likely a `similarity()`/`embedding()` **host function the script calls** (mirroring the `llm()` host bridge, `installHostLlm` in `@platform/sandbox-quickjs`), with a possible **native batch-runner optimization** for the pure-similarity case (one pass over a trace's chunk embeddings against all anchor sets, instead of a per-trace isolate). Needs a coordinated `specs/sandbox-runtime.md` edit — a new capability beyond `{pure, llm}` and an **embeddings-ready execution lane** (a `similarity()`-calling script needs chunk embeddings that exist only on the later `trace_search_embeddings` hop, not at trace-end) — plus a precedence rule for a script that calls both `similarity()` and `llm()`.
+
+- [ ] **P7-a** Add the `similarity()`/`embedding()` sandbox host function + its capability and embeddings-ready execution lane (coordinated `sandbox-runtime.md` edit); surface the globals in the builder/MCP authoring.
+- [ ] **P7-b** Decide + (if warranted) implement the native batch-runner optimization for pure-similarity evaluations.
+- [ ] **P7-c** Moments → signal evaluations: express the 8 `MOMENT_KINDS` as `origin=system` semantic evaluations (anchors + their static gates), so moment labeling runs through the one matching pipeline.
+- [ ] **P7-d** Flagger consolidation: where a flagger overlaps a semantic signal (e.g. `frustration`), make the semantic evaluation canonical and retire the overlapping flagger; non-overlapping flaggers keep feeding system-created signals via discovery.
+
+**Exit gate:** an evaluation script can call `similarity()`; moments run as semantic evaluations through the matching pipeline; overlapping flaggers retired, others unchanged.
