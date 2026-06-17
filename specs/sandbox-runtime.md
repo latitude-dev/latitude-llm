@@ -1,12 +1,12 @@
 # Sandbox runtime
 
-> **Documentation**: eventual durable home `dev-docs/sandbox-runtime.md`; updates `dev-docs/evaluations.md` (Runtime Architecture section). Related: `specs/signals.md` — the signals spec **depends on this one**: every signal detector type (evaluation, rule, script; semantic excepted) executes through the runtime defined here. This ships first.
+> **Documentation**: eventual durable home `dev-docs/sandbox-runtime.md`; updates `dev-docs/evaluations.md` (Runtime Architecture section). Related: `specs/signals.md` — the signals spec **depends on this one**: a signal's detector is an **evaluation**, which is **always a script** (a judge is a script that calls `llm()`; a `settings` form compiles to a script) executing through the runtime defined here. Semantic similarity is a future capability — a host function the script will call — not part of this contract yet. This ships first.
 >
 > **Closes**: the `TODO(eval-sandbox)` in `packages/domain/evaluations/src/runtime/evaluation-execution.ts`.
 
 ## Purpose
 
-Latitude stores evaluations as JavaScript source text, but **no JavaScript actually executes today**: `executeEvaluationScript` accepts only the rigid LLM-as-judge template (`wrapPromptAsEvaluationScript`), *extracts the prompt back out of the script text*, and calls the model directly. Every evaluation is therefore constrained to one template, and the upcoming signal detectors (code rules, raw user scripts) have no execution substrate at all.
+Latitude stores evaluations as JavaScript source text, but **no JavaScript actually executes today**: `executeEvaluationScript` accepts only the rigid LLM-as-judge template (`wrapPromptAsEvaluationScript`), *extracts the prompt back out of the script text*, and calls the model directly. Every evaluation is therefore constrained to one template, and the upcoming evaluation types (settings-compiled rules, raw user scripts) have no execution substrate at all.
 
 This spec defines the real **sandbox runtime**: a portable, host-controlled, resource-limited JavaScript sandbox that
 
@@ -15,19 +15,21 @@ This spec defines the real **sandbox runtime**: a portable, host-controlled, res
 
 ## The execution contract
 
-One score-shaped contract for every detector. The script reports a **value**; the **host** derives membership from the signal's threshold. There are no dialects — what differs between judgment-bearing detectors and bare-membership detectors is only the persistence policy below.
+One score-shaped contract for every detector. The script reports a **verdict** — `Passed`/`Failed` — and that verdict IS membership; there is no host-side threshold. There are no dialects — what differs between judgment-bearing detectors and bare-membership detectors is only the persistence policy below.
 
-### Output: one score, host-derived membership
+### Output: one verdict, detector-decided membership
 
 ```ts
-// Script return type
-Score(value: number, feedback?: string)   // value ∈ [0, 1]
-Passed(value?, feedback)                  // sugar → Score(value ?? 1, feedback)
-Failed(value?, feedback)                  // sugar → Score(value ?? 0, feedback)
+// Script return — a verdict (membership), with optional confidence + feedback
+Passed(value?: number, feedback?: string)   // matched
+Failed(value?: number, feedback?: string)   // not matched
+//   value ∈ [0,1] is OPTIONAL confidence for sort/UX (e.g. semantic similarity); it does NOT decide membership.
+//   Score(value, feedback?) is retained as a low-level alias for stored templates; new scripts return Passed/Failed.
 
 // Host-side result
 type RunResult = {
-  value: number        // signal-exhibition strength ∈ [0, 1]
+  passed: boolean      // the detector's verdict — this IS membership (no host-side threshold)
+  value?: number       // optional confidence ∈ [0, 1] for sort/UX
   feedback?: string    // judge-grade detectors only; optional (its clustering
                        //   consumer died with issue discovery)
   duration: number     // ns, wall time of the run including host calls
@@ -35,26 +37,26 @@ type RunResult = {
   cost: number         // microcents consumed by llm() calls (0 for pure runs)
 }
 
-// The script never decides membership — the host does:
-matched = result.value >= signal.threshold
+// The detector decides membership; the host stores it verbatim:
+matched = result.passed
 ```
 
-- **`value` is signal-exhibition strength, never goodness**: "how strongly does this trace exhibit *this signal*" — for moments and failure modes alike. Generated judges are phrased *as the signal* ("does this trace exhibit X?") so judge-yes = high value, and polarity disappears from the contract. Legacy quality-phrased evaluation scripts (where *fail* = exhibits) migrate by value inversion (`1 − value`) or regeneration — that migration belongs to the signals rollout, not to this spec's executor swap.
-- **`threshold` is a per-signal knob** (`signals.threshold`, default `0.5`) — the semantic detector's `minSimilarity` generalized to every type. Rules emit a degenerate 0/1; semantic emits similarity (genuinely continuous); judges emit ≈{0,1} (binary LLM judgments are better calibrated than continuous scoring — the UX must not render judge values as confidence); scripts emit whatever they compute. Threshold edits apply forward only, like every definition edit.
-- Membership is monotone per (signal, trace) downstream — a later below-threshold run never un-matches (occurrence dedup is first-match-wins), which makes non-deterministic `llm()` detectors safe by construction.
+- **The detector decides membership directly** — a judge's LLM returns yes/no; a script does its own comparison and returns `Passed`/`Failed`; the semantic native runner applies the cutoff in its anchor settings. There is no tunable threshold the host compares against. Generated judges are phrased *as the signal* ("does this trace exhibit X?") so judge-yes = matched, and polarity disappears from the contract. Legacy quality-phrased evaluation scripts (where *pass* = does-not-exhibit) migrate by verdict inversion or regeneration — that migration belongs to the signals rollout, not to this spec's executor swap.
+- **`value` is optional confidence, never membership** — judges may omit it (binary LLM judgments are better calibrated than continuous scoring — the UX must not render judge values as confidence); scripts emit whatever they compute, if anything (e.g. a future `similarity()` would return a continuous score). The cutoff is written into the script, never a host knob; a sink (no evaluation) has no detector. Definition edits apply forward only, like every definition edit.
+- Membership is monotone per (signal, trace) downstream — a later non-matching run never un-matches (occurrence dedup is first-match-wins), which makes non-deterministic `llm()` detectors safe by construction. Occurrences are counted as **distinct `trace_id` per signal**, so a trace re-scored by a fresh evaluation generation (after a promotion or re-optimization minted a new evaluation id) still counts once.
 
 ### Persistence policy (separate from the contract)
 
-A score-shaped *result* is not a persisted score *row*. Persist a score only when the run produced information that **cannot be recomputed** — an LLM judgment (non-deterministic, costed) or a human annotation (irreplaceable). Pure runs are deterministic functions of `(definition, trace)`: a score row would duplicate the occurrence at the highest volume tier, and match-rate denominators are computable at read time (the scope `FilterSet` over the traces table).
+Every run is persisted as a score *row* — membership *is* scores (`specs/signals.md`), and the write-both default records matched and non-matched runs alike (mirroring how judges persist pass and fail today, giving exact denominators without read-time estimation). What differs by **capability** is only the *store*: an `llm`-capability run (non-deterministic, costed) or a human annotation (irreplaceable) takes the canonical Postgres path; a `pure` run is a deterministic function of `(definition, trace)`, immutable on arrival, so it goes **ClickHouse-only** (skipping the canonical row) at the highest volume tier.
 
 | Run | Persists |
 | --- | --- |
-| pure detector, `value ≥ threshold` | occurrence row only (with denormalized `value`) |
-| pure detector, below threshold | nothing |
-| `llm`-capability detector (evaluations included) | score row (value, feedback) via the canonical path, + occurrence when matched |
-| annotation linked to a signal | score row as today, + occurrence |
+| pure evaluation, matched (verdict `Passed`) | ClickHouse-only score row (`passed=true`, optional `value`) |
+| pure evaluation, not matched (verdict `Failed`) | ClickHouse-only score row (`passed=false`) — write-both default |
+| `llm`-capability evaluation (judge, or a script calling `llm()`) | Postgres-canonical score row (value, feedback) + ClickHouse, matched or not |
+| annotation linked to a signal | Postgres-canonical score row as today + ClickHouse |
 
-The policy is capability-driven, not type-driven: a raw script that calls `llm()` persists scores; a pure script doesn't. Flipping a row of this table later is a policy change, not a migration.
+The policy is capability-driven, not type-driven: a raw script that calls `llm()` persists to Postgres; a pure script is ClickHouse-only. *(Lever, if pure-evaluation non-match volume ever hurts: switch pure evaluations to match-only and compute denominators from the scope `FilterSet` over the traces table at read time. Flipping it is a policy change, not a migration.)*
 
 ### Script globals (host-controlled, nothing else in scope)
 
@@ -63,20 +65,21 @@ Per the contract already documented in `dev-docs/evaluations.md`:
 | Global | Capability | Notes |
 | --- | --- | --- |
 | `conversation` | — | Read-only message view (`{ role, content }[]`, today's `toEvaluationConversationMessages` shape; grows a richer trace view — tool calls, metadata, metrics — for detectors) |
-| `issue` / `signal` | — | `{ name, description }` context of the owning entity |
+| `signal` / `evaluation` | — | `{ name, description }` context of the owning signal and its evaluation |
 | `z` | — | Zod, for schemas passed to `llm()` and `parse()` |
 | `parse(value, schema)` | — | Validates an unknown value against a schema |
 | `llm(prompt, { schema })` | `llm` | Structured generation through the host (`@domain/ai`); the schema is required — schema-less calls throw in-sandbox; model/provider stay host-managed (`EVALUATION_SCRIPT_RUNTIME_MODEL`); remaining options are host-approved only |
-| `Score(value, feedback?)` | — | The single return type |
-| `Passed(value?, feedback)` / `Failed(value?, feedback)` | — | Sugar over `Score` (`value ?? 1` / `value ?? 0`); keeps stored templates valid |
+| `similarity(...)` / `embedding(...)` | `embeddings` | **FUTURE (`specs/signals.md` → Phase 7)** — semantic similarity as something a script can call. A host bridge mirroring `llm()`; needs an embeddings-ready execution lane (chunk embeddings exist only on the later `trace_search_embeddings` hop, not at trace-end). See the semantic-similarity future below. |
+| `Passed(value?, feedback?)` / `Failed(value?, feedback?)` | — | The return verdict — matched / not matched. This IS membership; `value` is optional confidence; `feedback` is judge-grade only |
+| `Score(value, feedback?)` | — | Low-level alias retained so stored templates stay valid; new scripts return `Passed`/`Failed` |
 
 No ambient I/O: no `fetch`, no timers, no `process`, no dynamic import. Anything a script can *do* beyond pure computation is an explicit host function.
 
-### Compatibility and the semantic exception
+### Compatibility and the semantic-similarity future
 
-- **Existing evaluation templates run unchanged**: the stored template *is* `const result = await llm(\`…\`, { schema: z.object({ passed, feedback }) }); return result.passed ? Passed(1, …) : Failed(0, …)` — with `Passed`/`Failed` as sugar over `Score`, execution under the new runtime is byte-compatible. The exhibition-polarity migration of legacy scripts happens later, at the signals rollout.
-- **Compiled rules** — `SignalRule` → generated script returning `Score(1)` / `Score(0)`; the compiled text + content hash are stored, debuggable, and exactly what executes.
-- **Semantic detectors do not run here** — they are a native batch runner producing the same `RunResult` shape (`value` = similarity, thresholded by the same per-signal knob): one pass over a trace's chunk embeddings against all anchor sets; per-signal script execution would destroy the batching for zero expressiveness gain. The one principled exception to "everything is a script".
+- **Existing evaluation templates run unchanged**: the stored template *is* `const result = await llm(\`…\`, { schema: z.object({ passed, feedback }) }); return result.passed ? Passed(1, …) : Failed(0, …)` — the judge's LLM returns the verdict, and `Passed`/`Failed` set membership directly, so execution under the new runtime is byte-compatible. The exhibition-polarity migration of legacy scripts happens later, at the signals rollout.
+- **Compiled rules** — a `SignalRule` (the declarative `evaluations.settings` payload) compiles deterministically to a generated script returning `Passed()` / `Failed()`; the compiled text + content hash are stored, debuggable, and exactly what executes.
+- **Semantic similarity is a future capability, not in this contract yet.** Today every evaluation is a script that runs here. A future phase (`specs/signals.md` → Phase 7) adds semantic similarity — most likely a `similarity()`/`embedding()` host function the script calls (an embeddings-gated lane, since chunk embeddings land on a later ingest hop), with a possible **native batch-runner optimization** for the pure-similarity case (one pass over a trace's chunk embeddings against all anchor sets, instead of a per-trace isolate). Its shape — including any precedence rule for a script that calls both `similarity()` and `llm()` — is deferred to that phase.
 
 ### Capabilities drive runtime decisions — never the script's origin
 
@@ -152,7 +155,7 @@ The swap is deliberately boring:
 
 ## Testing
 
-- **Unit (pure)**: contract conformance — `Score`/sugar mapping, threshold-derived membership, capability detection, limit enforcement (instruction/memory/wall), error taxonomy, determinism of pure runs, bytecode-cache correctness.
+- **Unit (pure)**: contract conformance — `Passed`/`Failed`/`Score` mapping, verdict membership (`passed` reported by the detector), capability detection, limit enforcement (instruction/memory/wall), error taxonomy, determinism of pure runs, bytecode-cache correctness.
 - **Parity**: every seeded/stored template script through old and new executors; identical llm requests and results.
 - **Adversarial**: infinite loops, memory bombs, catastrophic regexes, prototype-pollution attempts, host-function abuse — each must die by budget or boundary, never by worker.
 
@@ -177,7 +180,7 @@ The swap is deliberately boring:
 
 ### Phase 2 - Detector enablement (pre-signals)
 
-- [ ] **P2-1**: threshold-derived membership wiring + `SignalRule` → script codegen with stored compiled text + hash.
+- [ ] **P2-1**: verdict membership wiring (`Passed`/`Failed` → stored `passed`) + `SignalRule` → script codegen with stored compiled text + hash.
 - [ ] **P2-2**: dry-run harness entry point (run against a historical trace) consumed by a minimal preview surface.
 
 **Exit gate**: `specs/signals.md` flows A/F can be built against the runtime with no further runtime work.
