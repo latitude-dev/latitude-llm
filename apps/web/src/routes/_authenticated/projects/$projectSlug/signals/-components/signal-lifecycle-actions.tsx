@@ -180,7 +180,7 @@ export function SignalLifecycleActions({
         group: "Signal",
         keywords: "copy link url share",
         perform: () => {
-          void navigator.clipboard.writeText(`${window.location.origin}/projects/${projectSlug}/issues/${signalId}`)
+          void navigator.clipboard.writeText(`${window.location.origin}/projects/${projectSlug}/signals/${signalId}`)
           toast({ description: "Signal link copied to clipboard." })
         },
       })

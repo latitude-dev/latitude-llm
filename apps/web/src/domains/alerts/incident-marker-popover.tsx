@@ -8,7 +8,7 @@ import { formatIncidentKindLabel, SEVERITY_LABELS } from "./incident-markers.ts"
 
 /**
  * Popover anchored at a chart-bucket point, listing every incident touching that bucket. Signal
- * rows link to the issue page (`/issues/<id>`); saved-search rows link to their monitor
+ * rows link to the issue page (`/signals/<id>`); saved-search rows link to their monitor
  * (`?monitorSlug=…`). The popover is consumer-owned — the chart surfaces the bucket anchor; this
  * component renders the list and the navigation links.
  */

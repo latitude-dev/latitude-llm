@@ -31,7 +31,7 @@ export function useLiveSignalSummary(target: IncidentTarget): SignalLifecycleSum
 }
 
 /**
- * Build the `/projects/<slug>/issues/<id>` deep link by looking
+ * Build the `/projects/<slug>/signals/<id>` deep link by looking
  * up the project slug from the live projects collection (same source the
  * `BaseNotification` footer uses for the project name). Returns
  * `undefined` while the collection is loading or when the project has
@@ -43,7 +43,7 @@ export function useSignalUrl(target: IncidentTarget): string | undefined {
     [target.projectId ?? null],
   )
   if (!project) return undefined
-  return `/projects/${project.slug}/issues/${encodeURIComponent(target.sourceId)}`
+  return `/projects/${project.slug}/signals/${encodeURIComponent(target.sourceId)}`
 }
 
 /**

@@ -19,7 +19,7 @@ export const incidentEventRenderer: SlackNotificationRenderer<"incident.event"> 
     const color = severityColor(payload.severity)
     const isSavedSearch = payload.sourceType === "savedSearch"
     const signalUrl = ctx.project
-      ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues/${payload.sourceId}`
+      ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals/${payload.sourceId}`
       : ctx.webAppUrl
     const monitorUrl =
       monitorDeepLink({ webAppUrl: ctx.webAppUrl, projectSlug: ctx.project?.slug, monitorSlug: payload.monitorSlug }) ??

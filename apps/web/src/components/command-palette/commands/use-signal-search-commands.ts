@@ -68,7 +68,7 @@ export function useSignalSearchCommands(query: string): {
         section: "search",
         subtitle,
         keywords: `${issue.name} ${issue.projectName}`,
-        perform: () => navigate({ to: `/projects/${issue.projectSlug}/issues`, search: { signalId: issue.id } }),
+        perform: () => navigate({ to: `/projects/${issue.projectSlug}/signals`, search: { signalId: issue.id } }),
       }
     })
   }, [liveQuery, lexicalSignals, semanticSignals, navigate])

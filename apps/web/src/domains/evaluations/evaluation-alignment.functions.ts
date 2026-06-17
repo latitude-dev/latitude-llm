@@ -83,7 +83,7 @@ export type EvaluationSummaryRecord = ReturnType<typeof toEvaluationSummaryRecor
 
 /**
  * Starts (or realigns) monitoring for an issue. Mirrors the public API's
- * `POST /v1/projects/{projectSlug}/issues/{signalSlug}/monitor`: when the
+ * `POST /v1/projects/{projectSlug}/signals/{signalSlug}/monitor`: when the
  * issue has no active evaluation a new one is generated; when one already
  * exists, the use-case realigns it.
  */
@@ -133,7 +133,7 @@ export const monitorSignal = createServerFn({ method: "POST" })
 
 /**
  * Stops monitoring an issue by soft-deleting every active evaluation linked
- * to it. Mirrors the API's `POST /v1/projects/{projectSlug}/issues/{signalSlug}/unmonitor`.
+ * to it. Mirrors the API's `POST /v1/projects/{projectSlug}/signals/{signalSlug}/unmonitor`.
  */
 export const unmonitorSignal = createServerFn({ method: "POST" })
   .inputValidator(signalOpInputSchema)

@@ -17,7 +17,7 @@ const loadError = (cause: unknown) => ({
 
 const buildSignalUrl = (ctx: NotificationEmailRenderContext, signalId: string): string | undefined => {
   if (!ctx.project) return undefined
-  return `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues/${encodeURIComponent(signalId)}`
+  return `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals/${encodeURIComponent(signalId)}`
 }
 
 /**
