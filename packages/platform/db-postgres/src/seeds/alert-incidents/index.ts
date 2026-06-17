@@ -47,12 +47,12 @@ const fetchSignalOccurrenceStats = async (
   projectId: string,
 ): Promise<readonly SignalOccurrenceStats[]> => {
   const rows = await ctx.db.execute<{
-    issue_id: string
+    signal_id: string
     recent_count: number
     baseline_avg_per_day: number
   }>(sql`
     select
-      issue_id,
+      signal_id,
       count(*) filter (
         where created_at >= now() - interval '1 day'
       )::int as recent_count,
@@ -63,22 +63,22 @@ const fetchSignalOccurrenceStats = async (
     from latitude.scores
     where organization_id = ${organizationId}
       and project_id = ${projectId}
-      and issue_id is not null
+      and signal_id is not null
       and drafted_at is null
-    group by issue_id
+    group by signal_id
   `)
 
   // Drizzle's execute returns the result wrapped depending on driver — use
   // the array shape directly for node-postgres / pg-pool.
   const list = Array.isArray(rows) ? rows : (rows as { rows?: unknown[] }).rows
   const safe = (list ?? []) as readonly {
-    issue_id: string
+    signal_id: string
     recent_count: number
     baseline_avg_per_day: number
   }[]
 
   return safe.map((row) => ({
-    signalId: row.issue_id,
+    signalId: row.signal_id,
     recentCount: Number(row.recent_count),
     baselineAvgPerDay: Number(row.baseline_avg_per_day),
   }))
