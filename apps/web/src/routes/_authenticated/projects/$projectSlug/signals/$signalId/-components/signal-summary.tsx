@@ -109,7 +109,7 @@ export function SignalSummary({ projectId, signalId }: { readonly projectId: str
                   </div>
                 }
               >
-                {formatPercent(impact.affectedTracesPercent)} of all project traces are part of this issue — the
+                {formatPercent(impact.affectedTracesPercent)} of all project traces are part of this signal — the
                 baseline the Patterns section compares against.
               </Tooltip>
             ) : (

@@ -414,8 +414,8 @@ export function SignalDrawerEvaluations({
           <Text.H5M>Automatically evaluated</Text.H5M>
           <Text.H6 color="foregroundMuted">
             {hasFlaggers
-              ? "This issue is automatically evaluated by:"
-              : "This issue is automatically evaluated by the system"}
+              ? "This signal is automatically evaluated by:"
+              : "This signal is automatically evaluated by the system"}
           </Text.H6>
           {hasFlaggers ? (
             <div className="flex flex-wrap items-center gap-1 pt-1">
@@ -445,12 +445,12 @@ export function SignalDrawerEvaluations({
         <div className="flex w-full items-center justify-between gap-3 rounded-lg border border-dashed border-border px-5 py-4">
           <div className="flex min-w-0 flex-col gap-1">
             <Text.H5M>No evaluations</Text.H5M>
-            <Text.H6 color="foregroundMuted">Generate an evaluation for this issue</Text.H6>
+            <Text.H6 color="foregroundMuted">Generate an evaluation for this signal</Text.H6>
           </div>
           {monitorBlockedByLifecycle ? (
             <Tooltip asChild trigger={<span className="inline-flex">{monitorButton}</span>}>
               <Text.H6 color="foregroundMuted">
-                Unresolve and unignore this issue first to be able to generate an evaluation
+                Unresolve and unignore this signal first to be able to generate an evaluation
               </Text.H6>
             </Tooltip>
           ) : (
@@ -462,7 +462,7 @@ export function SignalDrawerEvaluations({
           onOpenChange={setMonitorModalOpen}
           dismissible
           title="Generate evaluation"
-          description="We will use the latest traces and related human annotations to generate an evaluation aligned with this issue. This may take some time"
+          description="We will use the latest traces and related human annotations to generate an evaluation aligned with this signal. This may take some time"
           footer={
             <>
               <CloseTrigger />
@@ -520,7 +520,7 @@ export function SignalDrawerEvaluations({
                   }
                 >
                   <Text.H6 color="foregroundMuted">
-                    Click to change. We evaluate this issue on {formatPercent(primaryEvaluation.trigger.sampling / 100)}{" "}
+                    Click to change. We evaluate this signal on {formatPercent(primaryEvaluation.trigger.sampling / 100)}{" "}
                     of the incoming traces.
                   </Text.H6>
                 </Tooltip>
@@ -621,7 +621,7 @@ export function SignalDrawerEvaluations({
         onOpenChange={(open) => (!open ? setDeleteEvaluationId(null) : undefined)}
         dismissible
         title="Remove evaluation"
-        description="Are you sure you want to remove this issue's evaluation? You can generate a new evaluation at any time"
+        description="Are you sure you want to remove this signal's evaluation? You can generate a new evaluation at any time"
         footer={
           <>
             <CloseTrigger />

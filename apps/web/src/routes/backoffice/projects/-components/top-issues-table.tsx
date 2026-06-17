@@ -25,7 +25,7 @@ export function TopSignalsTable({ issues }: TopSignalsTableProps) {
   if (issues.length === 0) {
     return (
       <div className="flex h-full min-h-[120px] items-center justify-center">
-        <Text.H6 color="foregroundMuted">No issues with occurrences in this window.</Text.H6>
+        <Text.H6 color="foregroundMuted">No signals with occurrences in this window.</Text.H6>
       </div>
     )
   }

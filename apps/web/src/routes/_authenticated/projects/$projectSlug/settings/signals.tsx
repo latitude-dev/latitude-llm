@@ -42,13 +42,13 @@ function ProjectSignalsSettingsPage() {
   }
 
   return (
-    <SettingsPage title="Signals" description="Manage issues in your project">
+    <SettingsPage title="Signals" description="Manage signals in your project">
       <div className="flex w-full flex-col gap-1">
         <div className="flex w-full flex-row items-center justify-between gap-4 rounded-lg bg-muted/30 p-4">
           <div className="flex flex-col gap-1">
-            <Label htmlFor="keep-monitoring">Monitor resolved issues</Label>
+            <Label htmlFor="keep-monitoring">Monitor resolved signals</Label>
             <Text.H6 color="foregroundMuted">
-              When enabled, evaluations monitoring active issues stay active after the issues are resolved to detect
+              When enabled, evaluations monitoring active signals stay active after the signals are resolved to detect
               further regressions
             </Text.H6>
           </div>

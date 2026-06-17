@@ -29,7 +29,7 @@ export function UserSignalsSection({
   if (!issues || issues.length === 0) {
     return (
       <div className="flex min-h-16 items-center">
-        <Text.H6 color="foregroundMuted">No issues have been seen on this user's traces.</Text.H6>
+        <Text.H6 color="foregroundMuted">No signals have been seen on this user's traces.</Text.H6>
       </div>
     )
   }

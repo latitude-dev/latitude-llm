@@ -9,15 +9,15 @@ export function SignalsEmptyState({ isLoading = false }: { readonly isLoading?: 
           <Icon icon={SearchAlert} size="lg" color="foregroundMuted" />
         </div>
         <div className="flex flex-col items-center gap-2">
-          <Text.H3 centered>{isLoading ? "Loading issues" : "No issues yet"}</Text.H3>
+          <Text.H3 centered>{isLoading ? "Loading signals" : "No signals yet"}</Text.H3>
           <Text.H5 color="foregroundMuted" centered>
             {isLoading
-              ? "Preparing your issues view."
+              ? "Preparing your signals view."
               : "Signals are discovered automatically by grouping failed annotations left on your traces. Start annotating traces to surface recurring problems here."}
           </Text.H5>
         </div>
         {!isLoading ? (
-          <a href="https://docs.latitude.so/issues/overview" target="_blank" rel="noopener noreferrer">
+          <a href="https://docs.latitude.so/signals/overview" target="_blank" rel="noopener noreferrer">
             <Button>
               <Icon size="sm" icon={ExternalLinkIcon} />
               Read the docs

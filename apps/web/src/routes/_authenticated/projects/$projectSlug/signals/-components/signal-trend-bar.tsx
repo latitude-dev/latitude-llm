@@ -207,7 +207,7 @@ export function SignalTrendBar({
   buckets,
   height = 48,
   isLoading = false,
-  emptyLabel = "No issue occurrences",
+  emptyLabel = "No signal occurrences",
   showLabels = true,
   labelLayout = "bucket",
   maxVisibleBucketLabels = DEFAULT_MAX_VISIBLE_BUCKET_LABELS,

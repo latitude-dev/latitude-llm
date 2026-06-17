@@ -23,7 +23,7 @@ export function SignalRegressedNotification({ notification, payload }: IncidentR
       createdAt={createdAt}
       projectId={notification.projectId}
       icon={<ShieldAlertIcon />}
-      title="A resolved issue has regressed."
+      title="A resolved signal has regressed."
       url={url}
     >
       {live?.name ? (

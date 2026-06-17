@@ -20,7 +20,7 @@ const formatRate = (fraction: number) => {
   return `${Math.round(fraction * 100)}%`
 }
 
-/** One value, merged with the dimension it belongs to and the issue's trace total (the coverage denominator). */
+/** One value, merged with the dimension it belongs to and the signal's trace total (the coverage denominator). */
 type RankedPattern = DimensionPattern & {
   readonly dimension: (typeof DIMENSIONS)[number]
   readonly signalAffectedTraces: number
@@ -89,11 +89,11 @@ function PatternRow({ pattern }: { readonly pattern: RankedPattern }) {
       <div className="flex max-w-[280px] flex-col gap-1">
         <Text.H6>
           {formatCount(affectedTraces)} of the {formatCount(totalTraces)} traces with this{" "}
-          <span className="font-semibold">{dimension.noun}</span> fall into this issue (
+          <span className="font-semibold">{dimension.noun}</span> fall into this signal (
           <span className="font-semibold">{formatRate(conditionalRate)}</span>).
         </Text.H6>
         <Text.H6 color="foregroundMuted">
-          This {dimension.noun} appears in {formatCount(affectedTraces)} of the issue's{" "}
+          This {dimension.noun} appears in {formatCount(affectedTraces)} of the signal's{" "}
           {formatCount(signalAffectedTraces)} traces ({formatRate(coverage)}).
         </Text.H6>
       </div>
@@ -104,9 +104,9 @@ function PatternRow({ pattern }: { readonly pattern: RankedPattern }) {
 /**
  * Patterns panel: a single vertical list of the dimension values (model /
  * provider / tool / tag / finish reason) whose traces most disproportionately
- * fall into this issue. Uses reverse conditioning (`P(issue | value)`): each row
+ * fall into this signal. Uses reverse conditioning (`P(issue | value)`): each row
  * states the share of that value's traces that are part of the issue. Ranked by
- * rate-elevation against the issue's base rate (shown once in the summary, not
+ * rate-elevation against the signal's base rate (shown once in the summary, not
  * per row); gated to a minimum elevation so near-baseline noise is dropped.
  * Bars stay on one shared vertical axis so values are comparable. Fills its
  * container and scrolls; the height is owned by the page layout so it matches
@@ -138,11 +138,11 @@ export function SignalPatterns({ projectId, signalId }: { readonly projectId: st
   return (
     <div className="flex h-full flex-col gap-3 rounded-lg bg-secondary p-4">
       <div className="flex flex-col gap-0.5">
-        <Text.H6 color="foregroundMuted">What's unusual about this issue</Text.H6>
+        <Text.H6 color="foregroundMuted">What's unusual about this signal</Text.H6>
         {/* States the metric once so the bare per-row percentages aren't misread
-            as "share of the issue's occurrences" (it's the reverse). */}
+            as "share of the signal's occurrences" (it's the reverse). */}
         <Text.H6 color="foregroundMuted" className="opacity-70">
-          Share of each value's traces that are part of this issue
+          Share of each value's traces that are part of this signal
         </Text.H6>
       </div>
       <div className="flex flex-1 flex-col gap-3 overflow-y-auto">

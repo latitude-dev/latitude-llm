@@ -12,7 +12,7 @@ import { IncidentStatus } from "./incident-status.tsx"
 
 /** Human-readable, lowercased source-type labels for the deleted-source fallback. */
 const SOURCE_TYPE_LABEL: Record<"issue" | "savedSearch", string> = {
-  issue: "issue",
+  issue: "signal",
   savedSearch: "saved search",
 }
 

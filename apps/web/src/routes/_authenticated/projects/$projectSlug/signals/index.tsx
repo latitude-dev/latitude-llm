@@ -438,7 +438,7 @@ function SignalsPage() {
                 <Input
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
-                  placeholder="Search issues"
+                  placeholder="Search signals"
                   size="sm"
                   className="w-64 pl-8 rounded-lg"
                 />
@@ -452,7 +452,7 @@ function SignalsPage() {
                 aria-pressed={isMySignalsActive}
               >
                 <Icon icon={CircleUserRoundIcon} size="sm" />
-                My issues
+                My signals
                 <Badge variant={isMySignalsActive ? "default" : "muted"} size="small">
                   {mySignalsCount.toLocaleString()}
                 </Badge>
@@ -535,7 +535,7 @@ function SignalsPage() {
           <ExportConfirmationModal
             open={exportModalOpen}
             onOpenChange={setExportModalOpen}
-            itemLabel="issue"
+            itemLabel="signal"
             selectedCount={selection.selectedCount}
             onConfirm={() => void handleExportSignals()}
             exporting={exporting}
@@ -546,11 +546,11 @@ function SignalsPage() {
           open={bulkResolveModalOpen}
           onOpenChange={setBulkResolveModalOpen}
           dismissible
-          title={archived ? "Unresolve issues" : "Resolve issues"}
+          title={archived ? "Unresolve signals" : "Resolve signals"}
           description={
             archived
-              ? `Reopen ${selection.selectedCount === 1 ? "this issue" : `${selection.selectedCount} issues`}. New occurrences won't mark ${selection.selectedCount === 1 ? "it" : "them"} as regressed.`
-              : `Mark ${selection.selectedCount === 1 ? "this issue" : `${selection.selectedCount} issues`} as resolved. If any of these issues start occurring again we will alert you and promote them as regressed.`
+              ? `Reopen ${selection.selectedCount === 1 ? "this signal" : `${selection.selectedCount} signals`}. New occurrences won't mark ${selection.selectedCount === 1 ? "it" : "them"} as regressed.`
+              : `Mark ${selection.selectedCount === 1 ? "this signal" : `${selection.selectedCount} signals`} as resolved. If any of these signals start occurring again we will alert you and promote them as regressed.`
           }
           footer={
             <>
@@ -573,9 +573,9 @@ function SignalsPage() {
             <div className="flex flex-col gap-3">
               <div className="flex flex-row items-center justify-between gap-4">
                 <div className="flex flex-col gap-1">
-                  <Label htmlFor="bulk-keep-monitoring">Keep evaluating these issues</Label>
+                  <Label htmlFor="bulk-keep-monitoring">Keep evaluating these signals</Label>
                   <Text.H6 color="foregroundMuted">
-                    Evaluations for these issues will stay active to detect further regressions
+                    Evaluations for these signals will stay active to detect further regressions
                   </Text.H6>
                 </div>
                 <Switch
@@ -583,7 +583,7 @@ function SignalsPage() {
                   checked={keepMonitoring}
                   onCheckedChange={setKeepMonitoring}
                   disabled={bulkActionLoading}
-                  aria-label="Keep evaluating these issues"
+                  aria-label="Keep evaluating these signals"
                 />
               </div>
             </div>
@@ -594,11 +594,11 @@ function SignalsPage() {
           open={bulkIgnoreModalOpen}
           onOpenChange={setBulkIgnoreModalOpen}
           dismissible
-          title={archived ? "Unignore issues" : "Ignore issues"}
+          title={archived ? "Unignore signals" : "Ignore signals"}
           description={
             archived
-              ? `Stop ignoring ${selection.selectedCount === 1 ? "this issue" : `${selection.selectedCount} issues`}. New occurrences will surface ${selection.selectedCount === 1 ? "it" : "them"} again.`
-              : `Mark ${selection.selectedCount === 1 ? "this issue" : `${selection.selectedCount} issues`} as ignored. You won't be alerted about new occurrences of these issues anymore.`
+              ? `Stop ignoring ${selection.selectedCount === 1 ? "this signal" : `${selection.selectedCount} signals`}. New occurrences will surface ${selection.selectedCount === 1 ? "it" : "them"} again.`
+              : `Mark ${selection.selectedCount === 1 ? "this signal" : `${selection.selectedCount} signals`} as ignored. You won't be alerted about new occurrences of these signals anymore.`
           }
           footer={
             <>

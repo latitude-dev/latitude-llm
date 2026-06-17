@@ -96,7 +96,7 @@ export function SignalsTab({
   if (isError) {
     return (
       <div className="flex flex-1 items-center justify-center px-6 py-10">
-        <Text.H5 color="foregroundMuted">Couldn't load issues — retry.</Text.H5>
+        <Text.H5 color="foregroundMuted">Couldn't load signals — retry.</Text.H5>
       </div>
     )
   }
@@ -113,7 +113,7 @@ export function SignalsTab({
         sorting={sorting}
         defaultSorting={DEFAULT_SORTING}
         onSortChange={setSorting}
-        blankSlate="No issues detected in this session."
+        blankSlate="No signals detected in this session."
       />
     </div>
   )
