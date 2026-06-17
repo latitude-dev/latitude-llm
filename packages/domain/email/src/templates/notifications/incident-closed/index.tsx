@@ -22,7 +22,7 @@ export const incidentClosedRenderer: NotificationEmailRenderer<"incident.closed"
     const isSavedSearch = payload.sourceType === "savedSearch"
     const source = yield* resolveIncidentSource(payload)
     const assigneeName = yield* resolveAssigneeName(payload.assigneeId)
-    const sourceName = source.name ?? (isSavedSearch ? "a saved search" : "an issue")
+    const sourceName = source.name ?? (isSavedSearch ? "a saved search" : "a signal")
     const signalUrl = isSavedSearch ? undefined : buildSignalUrl(ctx, payload)
 
     const chartUrl = buildChartUrl({

@@ -65,7 +65,7 @@ export const incidentClosedRenderer: SlackNotificationRenderer<"incident.closed"
         ...(chart ? [chart] : []),
         ...attribution,
         context,
-        actionsLink("View issue", signalUrl),
+        actionsLink("View signal", signalUrl),
       ],
     }
   })

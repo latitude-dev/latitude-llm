@@ -60,12 +60,12 @@ export const incidentEventRenderer: SlackNotificationRenderer<"incident.event"> 
       color,
       blocks: [
         ...(sourceName ? [sectionMarkdown(`*<${signalUrl}|${sourceName}>*`)] : []),
-        sectionMarkdown(sourceName ? `A new <${signalUrl}|issue> has been detected.` : `A new issue has been detected.`),
+        sectionMarkdown(sourceName ? `A new <${signalUrl}|signal> has been detected.` : `A new signal has been detected.`),
         ...(payload.sampleExcerpt?.text ? [sectionMarkdown(`\`\`\`\n${payload.sampleExcerpt.text}\n\`\`\``)] : []),
         ...(tags.length > 0 ? [sectionMarkdown(tags.map((t) => `\`${t}\``).join("  "))] : []),
         ...attribution,
         context,
-        actionsLink("View issue", signalUrl),
+        actionsLink("View signal", signalUrl),
       ],
     }
   })

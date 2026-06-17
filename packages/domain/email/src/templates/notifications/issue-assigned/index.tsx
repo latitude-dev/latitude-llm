@@ -40,7 +40,7 @@ export const signalAssignedRenderer: NotificationEmailRenderer<"issue.assigned">
       Effect.catchTag("RepositoryError", (cause) => Effect.fail(loadError(cause))),
     )
 
-    const signalName = issue?.name ?? "an issue"
+    const signalName = issue?.name ?? "a signal"
     const actorName = actor ? (actor.name?.trim().length ? actor.name : actor.email) : "A teammate"
     const subject = `You were assigned to ${signalName}`
     const signalUrl = buildSignalUrl(ctx, payload.signalId)

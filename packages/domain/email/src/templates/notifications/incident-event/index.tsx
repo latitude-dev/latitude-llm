@@ -22,7 +22,7 @@ export const incidentEventRenderer: NotificationEmailRenderer<"incident.event"> 
     const isSavedSearch = payload.sourceType === "savedSearch"
     const source = yield* resolveIncidentSource(payload)
     const assigneeName = yield* resolveAssigneeName(payload.assigneeId)
-    const sourceName = source.name ?? (isSavedSearch ? "a saved search" : "an issue")
+    const sourceName = source.name ?? (isSavedSearch ? "a saved search" : "a signal")
     const heading = ALERT_INCIDENT_KIND_LABEL[payload.incidentKind] ?? "Incident"
     const monitor = buildMonitorAttribution({
       webAppUrl: ctx.webAppUrl,

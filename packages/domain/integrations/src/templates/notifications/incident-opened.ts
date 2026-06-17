@@ -71,7 +71,7 @@ export const incidentOpenedRenderer: SlackNotificationRenderer<"incident.opened"
         ...(tags.length > 0 ? [sectionMarkdown(tags.map((t) => `\`${t}\``).join("  "))] : []),
         ...attribution,
         context,
-        actionsLink("View issue", signalUrl),
+        actionsLink("View signal", signalUrl),
       ],
     }
   })

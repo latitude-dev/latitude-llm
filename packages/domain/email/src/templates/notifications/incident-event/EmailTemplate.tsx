@@ -30,10 +30,10 @@ import {
 } from "../-incident-components.tsx"
 
 const ALERT_KIND_TO_SUBTITLE: Record<AlertIncidentKind, string> = {
-  "issue.new": "We notified everyone watching this project — a new issue was discovered.",
-  "issue.regressed": "We notified everyone watching this project — a resolved issue was detected again.",
+  "issue.new": "We notified everyone watching this project — a new signal was discovered.",
+  "issue.regressed": "We notified everyone watching this project — a resolved signal was detected again.",
   "issue.escalating":
-    "We notified everyone watching this project — an ongoing issue is being detected more than expected.",
+    "We notified everyone watching this project — an ongoing signal is being detected more than expected.",
   "savedSearch.match": "We notified everyone watching this project — a new trace matching the search was detected.",
   "savedSearch.threshold":
     "We notified everyone watching this project — traces matching the search were detected above the configured threshold.",
@@ -130,7 +130,7 @@ export function IncidentEventEmail({
 
       {ctaHref ? (
         <Section className={emailDesignTokens.spacing.buttonTop}>
-          <EmailButton href={ctaHref} label={isSavedSearch ? "View monitor" : "View issue"} />
+          <EmailButton href={ctaHref} label={isSavedSearch ? "View monitor" : "View signal"} />
         </Section>
       ) : null}
     </ContainerLayout>

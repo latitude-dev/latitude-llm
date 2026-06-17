@@ -70,7 +70,7 @@ export function IncidentClosedEmail({
   const duration = humanizeDurationMs(recovery.durationMs)
   const recoveryLine = isSavedSearch
     ? `Elevated for ${duration} — no further action needed unless matching traces climb again.`
-    : `Elevated for ${duration} — no further action needed unless the issue regresses again.`
+    : `Elevated for ${duration} — no further action needed unless the signal regresses again.`
   const ctaHref = isSavedSearch ? monitor?.url : signalUrl
 
   const metadataRows = [
@@ -117,7 +117,7 @@ export function IncidentClosedEmail({
 
       {ctaHref ? (
         <Section className={emailDesignTokens.spacing.buttonTop}>
-          <EmailButton href={ctaHref} label={isSavedSearch ? "View monitor" : "View issue"} />
+          <EmailButton href={ctaHref} label={isSavedSearch ? "View monitor" : "View signal"} />
         </Section>
       ) : null}
     </ContainerLayout>
@@ -141,7 +141,7 @@ IncidentClosedEmail.PreviewProps = {
   monitor: {
     name: "Signal escalating",
     url: "https://console.latitude.so/projects/sample-project/monitors?monitorSlug=issue-escalating",
-    conditionSummary: "Opens an incident when an ongoing issue is being detected more than expected.",
+    conditionSummary: "Opens an incident when an ongoing signal is being detected more than expected.",
   },
   webAppUrl: "http://localhost:3000",
 } satisfies IncidentClosedEmailProps

@@ -48,9 +48,9 @@ export function SignalAssignedEmail({
       footer={<EmailFooter unsubscribe={{ webAppUrl, group: "personal" }} />}
     >
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>
-        You were assigned to an issue
+        You were assigned to a signal
       </EmailText>
-      <EmailText variant="body">{`${actorName} assigned you to this issue in ${scope}.`}</EmailText>
+      <EmailText variant="body">{`${actorName} assigned you to this signal in ${scope}.`}</EmailText>
 
       <SectionHeader label="Signal" />
       <EmailText variant="heading">{signalName}</EmailText>
@@ -68,7 +68,7 @@ export function SignalAssignedEmail({
 
       {signalUrl ? (
         <Section className={emailDesignTokens.spacing.buttonTop}>
-          <EmailButton href={signalUrl} label="View issue" />
+          <EmailButton href={signalUrl} label="View signal" />
         </Section>
       ) : null}
     </ContainerLayout>

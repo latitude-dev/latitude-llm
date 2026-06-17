@@ -88,7 +88,7 @@ export function IncidentOpenedEmail({
   const heading = ALERT_INCIDENT_KIND_LABEL[incidentKind]
   const subtitle = isSavedSearch
     ? "We notified everyone watching this project — traces matching the search stayed above the threshold for the configured window."
-    : "We notified everyone watching this project — an ongoing issue is being detected more than expected."
+    : "We notified everyone watching this project — an ongoing signal is being detected more than expected."
   const scope = formatScope(organizationName, projectName)
   const breachLine = buildBreachLine(breach)
   const ctaHref = isSavedSearch ? monitor?.url : signalUrl
@@ -141,7 +141,7 @@ export function IncidentOpenedEmail({
 
       {ctaHref ? (
         <Section className={emailDesignTokens.spacing.buttonTop}>
-          <EmailButton href={ctaHref} label={isSavedSearch ? "View monitor" : "View issue"} />
+          <EmailButton href={ctaHref} label={isSavedSearch ? "View monitor" : "View signal"} />
         </Section>
       ) : null}
     </ContainerLayout>
@@ -171,7 +171,7 @@ IncidentOpenedEmail.PreviewProps = {
   monitor: {
     name: "Signal escalating",
     url: "https://console.latitude.so/projects/sample-project/monitors?monitorSlug=issue-escalating",
-    conditionSummary: "Opens an incident when an ongoing issue is being detected more than expected.",
+    conditionSummary: "Opens an incident when an ongoing signal is being detected more than expected.",
   },
   webAppUrl: "http://localhost:3000",
 } satisfies IncidentOpenedEmailProps
