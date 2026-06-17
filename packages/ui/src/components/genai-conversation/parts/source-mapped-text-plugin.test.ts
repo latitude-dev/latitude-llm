@@ -125,7 +125,7 @@ describe("className generation", () => {
     expect(props(highlighted).className).toContain("bg-blue-100")
   })
 
-  it("adds cursor-pointer and hit-area when annotation has an id", () => {
+  it("adds cursor-pointer without an extended hit area when annotation has an id", () => {
     const h: HighlightRange = {
       messageIndex: 0,
       partIndex: 0,
@@ -139,7 +139,7 @@ describe("className generation", () => {
     run(tree, [h])
     const highlighted = children(tree).find((n) => props(n)["data-annotated-text"])
     expect(props(highlighted).className).toContain("cursor-pointer")
-    expect(props(highlighted).className).toContain("hit-area-inline-y-2")
+    expect(props(highlighted).className).not.toContain("hit-area-inline-y")
   })
 
   it("does not add cursor-pointer when annotation has no id", () => {
