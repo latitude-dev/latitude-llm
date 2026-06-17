@@ -17,8 +17,8 @@ export interface EvaluationScoreResponse {
     spanId?: string | undefined;
     /** Simulation reference, if any. */
     simulationId?: string | undefined;
-    /** Issue this score contributes to, if any. */
-    issueId?: string | undefined;
+    /** Signal this score contributes to, if any. */
+    signalId?: string | undefined;
     /** Normalized score value in [0, 1]. */
     value: number;
     /** Whether the score marks the output as passing. */

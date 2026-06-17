@@ -353,14 +353,14 @@
             "maxLength": 24,
             "description": "Simulation reference, if any."
           },
-          "issueId": {
+          "signalId": {
             "type": [
               "string",
               "null"
             ],
             "minLength": 24,
             "maxLength": 24,
-            "description": "Issue this score contributes to, if any."
+            "description": "Signal this score contributes to, if any."
           },
           "value": {
             "type": "number",
@@ -457,7 +457,7 @@
           "traceId",
           "spanId",
           "simulationId",
-          "issueId",
+          "signalId",
           "value",
           "passed",
           "feedback",
@@ -531,14 +531,14 @@
             "maxLength": 24,
             "description": "Simulation reference, if any."
           },
-          "issueId": {
+          "signalId": {
             "type": [
               "string",
               "null"
             ],
             "minLength": 24,
             "maxLength": 24,
-            "description": "Issue this score contributes to, if any."
+            "description": "Signal this score contributes to, if any."
           },
           "value": {
             "type": "number",
@@ -633,7 +633,7 @@
           "traceId",
           "spanId",
           "simulationId",
-          "issueId",
+          "signalId",
           "value",
           "passed",
           "feedback",
@@ -1010,14 +1010,14 @@
             "maxLength": 24,
             "description": "Simulation reference, if any."
           },
-          "issueId": {
+          "signalId": {
             "type": [
               "string",
               "null"
             ],
             "minLength": 24,
             "maxLength": 24,
-            "description": "Issue this annotation contributes to, if any."
+            "description": "Signal this annotation contributes to, if any."
           },
           "value": {
             "type": "number",
@@ -1124,7 +1124,7 @@
           "traceId",
           "spanId",
           "simulationId",
-          "issueId",
+          "signalId",
           "value",
           "passed",
           "feedback",
@@ -1195,7 +1195,7 @@
             "default": null,
             "description": "Simulation this annotation is tied to, if any. `null` (default) when not part of a simulation."
           },
-          "issueId": {
+          "signalId": {
             "type": [
               "string",
               "null"
@@ -3455,13 +3455,13 @@
           }
         }
       },
-      "PaginatedIssues": {
+      "PaginatedSignals": {
         "type": "object",
         "properties": {
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Issue"
+              "$ref": "#/components/schemas/Signal"
             },
             "description": "Page of items, in the requested sort order."
           },
@@ -3483,7 +3483,7 @@
           "hasMore"
         ]
       },
-      "Issue": {
+      "Signal": {
         "type": "object",
         "properties": {
           "id": {
@@ -3565,7 +3565,7 @@
           "trend": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/IssueTrendBucket"
+              "$ref": "#/components/schemas/SignalTrendBucket"
             },
             "description": "Daily occurrence counts over the past 14 days."
           },
@@ -3617,7 +3617,7 @@
           "affectedTracesPercent"
         ]
       },
-      "IssueTrendBucket": {
+      "SignalTrendBucket": {
         "type": "object",
         "properties": {
           "bucket": {
@@ -3635,26 +3635,26 @@
           "count"
         ]
       },
-      "IssueAnalyticsResponse": {
+      "SignalAnalyticsResponse": {
         "type": "object",
         "properties": {
           "ongoing": {
-            "$ref": "#/components/schemas/IssueAnalyticsOngoing"
+            "$ref": "#/components/schemas/SignalAnalyticsOngoing"
           },
           "new": {
-            "$ref": "#/components/schemas/IssueAnalyticsNew"
+            "$ref": "#/components/schemas/SignalAnalyticsNew"
           },
           "escalating": {
-            "$ref": "#/components/schemas/IssueAnalyticsEscalating"
+            "$ref": "#/components/schemas/SignalAnalyticsEscalating"
           },
           "regressed": {
-            "$ref": "#/components/schemas/IssueAnalyticsRegressed"
+            "$ref": "#/components/schemas/SignalAnalyticsRegressed"
           },
           "resolved": {
-            "$ref": "#/components/schemas/IssueAnalyticsResolved"
+            "$ref": "#/components/schemas/SignalAnalyticsResolved"
           },
           "occurrences": {
-            "$ref": "#/components/schemas/IssueAnalyticsOccurrences"
+            "$ref": "#/components/schemas/SignalAnalyticsOccurrences"
           }
         },
         "required": [
@@ -3666,7 +3666,7 @@
           "occurrences"
         ]
       },
-      "IssueAnalyticsOngoing": {
+      "SignalAnalyticsOngoing": {
         "type": "object",
         "properties": {
           "total": {
@@ -3679,7 +3679,7 @@
           "total"
         ]
       },
-      "IssueAnalyticsNew": {
+      "SignalAnalyticsNew": {
         "type": "object",
         "properties": {
           "total": {
@@ -3692,7 +3692,7 @@
           "total"
         ]
       },
-      "IssueAnalyticsEscalating": {
+      "SignalAnalyticsEscalating": {
         "type": "object",
         "properties": {
           "total": {
@@ -3705,7 +3705,7 @@
           "total"
         ]
       },
-      "IssueAnalyticsRegressed": {
+      "SignalAnalyticsRegressed": {
         "type": "object",
         "properties": {
           "total": {
@@ -3718,7 +3718,7 @@
           "total"
         ]
       },
-      "IssueAnalyticsResolved": {
+      "SignalAnalyticsResolved": {
         "type": "object",
         "properties": {
           "total": {
@@ -3731,7 +3731,7 @@
           "total"
         ]
       },
-      "IssueAnalyticsOccurrences": {
+      "SignalAnalyticsOccurrences": {
         "type": "object",
         "properties": {
           "total": {
@@ -3742,7 +3742,7 @@
           "buckets": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/IssueAnalyticsBucket"
+              "$ref": "#/components/schemas/SignalAnalyticsBucket"
             },
             "description": "Number of issue occurrences per bucket."
           }
@@ -3752,7 +3752,7 @@
           "buckets"
         ]
       },
-      "IssueAnalyticsBucket": {
+      "SignalAnalyticsBucket": {
         "type": "object",
         "properties": {
           "bucket": {
@@ -3770,7 +3770,7 @@
           "value"
         ]
       },
-      "IssueDetail": {
+      "SignalDetail": {
         "type": "object",
         "properties": {
           "id": {
@@ -3852,7 +3852,7 @@
           "trend": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/IssueTrendBucket"
+              "$ref": "#/components/schemas/SignalTrendBucket"
             },
             "description": "Daily occurrence counts over the past 14 days."
           },
@@ -3896,7 +3896,7 @@
             "description": "Active evaluations monitoring the issue. Archived and deleted evaluations are excluded."
           },
           "monitoringState": {
-            "$ref": "#/components/schemas/IssueMonitoringState"
+            "$ref": "#/components/schemas/SignalMonitoringState"
           }
         },
         "required": [
@@ -4041,7 +4041,7 @@
         ],
         "description": "Alignment metrics computed from the evaluation's confusion matrix."
       },
-      "IssueMonitoringState": {
+      "SignalMonitoringState": {
         "oneOf": [
           {
             "type": "object",
@@ -4113,13 +4113,13 @@
         ],
         "description": "Whether the issue is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`."
       },
-      "IssueHistogram": {
+      "SignalHistogram": {
         "type": "object",
         "properties": {
           "buckets": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/IssueHistogramBucket"
+              "$ref": "#/components/schemas/SignalHistogramBucket"
             },
             "description": "One entry per 12-hour UTC-aligned bucket in the requested range, including empty buckets (`count: 0`)."
           }
@@ -4128,7 +4128,7 @@
           "buckets"
         ]
       },
-      "IssueHistogramBucket": {
+      "SignalHistogramBucket": {
         "type": "object",
         "properties": {
           "bucket": {
@@ -4146,13 +4146,13 @@
           "count"
         ]
       },
-      "IssuesLifecycleResponse": {
+      "SignalsLifecycleResponse": {
         "type": "object",
         "properties": {
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/IssueLifecycleItem"
+              "$ref": "#/components/schemas/SignalLifecycleItem"
             },
             "description": "Per-issue result, in the order requested."
           }
@@ -4161,14 +4161,14 @@
           "items"
         ]
       },
-      "IssueLifecycleItem": {
+      "SignalLifecycleItem": {
         "type": "object",
         "properties": {
-          "issueId": {
+          "signalId": {
             "type": "string",
             "minLength": 24,
             "maxLength": 24,
-            "description": "Issue this entry applies to."
+            "description": "Signal this entry applies to."
           },
           "resolvedAt": {
             "type": [
@@ -4194,17 +4194,17 @@
           }
         },
         "required": [
-          "issueId",
+          "signalId",
           "resolvedAt",
           "ignoredAt",
           "updatedAt",
           "changed"
         ]
       },
-      "ResolveIssuesBody": {
+      "ResolveSignalsBody": {
         "allOf": [
           {
-            "$ref": "#/components/schemas/IssuesLifecycleBody"
+            "$ref": "#/components/schemas/SignalsLifecycleBody"
           },
           {
             "type": "object",
@@ -4217,10 +4217,10 @@
           }
         ]
       },
-      "IssuesLifecycleBody": {
+      "SignalsLifecycleBody": {
         "type": "object",
         "properties": {
-          "issueIds": {
+          "signalIds": {
             "type": "array",
             "items": {
               "type": "string",
@@ -4232,10 +4232,10 @@
           }
         },
         "required": [
-          "issueIds"
+          "signalIds"
         ]
       },
-      "MonitorIssueResponse": {
+      "MonitorSignalResponse": {
         "type": "object",
         "properties": {
           "jobId": {
@@ -4259,7 +4259,7 @@
           "evaluationId"
         ]
       },
-      "ExportIssuesResponse": {
+      "ExportSignalsResponse": {
         "type": "object",
         "properties": {
           "status": {
@@ -4274,7 +4274,7 @@
           "status"
         ]
       },
-      "ExportIssuesBody": {
+      "ExportSignalsBody": {
         "type": "object",
         "properties": {
           "recipient": {
@@ -4282,7 +4282,7 @@
             "format": "email",
             "description": "Email address the download link is sent to. Must belong to a member of the requesting organization."
           },
-          "issueIds": {
+          "signalIds": {
             "type": "array",
             "items": {
               "type": "string",
@@ -9364,12 +9364,12 @@
         }
       }
     },
-    "/v1/projects/{projectSlug}/issues": {
+    "/v1/projects/{projectSlug}/signals": {
       "get": {
         "tags": [
-          "Issues"
+          "Signals"
         ],
-        "x-fern-sdk-group-name": "issues",
+        "x-fern-sdk-group-name": "signals",
         "x-fern-sdk-method-name": "list",
         "summary": "List project issues",
         "description": "Returns a cursor-paginated page of issues in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `trend`, and `tags`.",
@@ -9378,7 +9378,7 @@
             "ApiKeyAuth": []
           }
         ],
-        "operationId": "listIssues",
+        "operationId": "listSignals",
         "parameters": [
           {
             "schema": {
@@ -9499,7 +9499,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PaginatedIssues"
+                  "$ref": "#/components/schemas/PaginatedSignals"
                 }
               }
             }
@@ -9537,12 +9537,12 @@
         }
       }
     },
-    "/v1/projects/{projectSlug}/issues/analytics": {
+    "/v1/projects/{projectSlug}/signals/analytics": {
       "get": {
         "tags": [
-          "Issues"
+          "Signals"
         ],
-        "x-fern-sdk-group-name": "issues",
+        "x-fern-sdk-group-name": "signals",
         "x-fern-sdk-method-name": "analytics",
         "summary": "Get project issue analytics",
         "description": "Returns issue analytics for the project: counts of ongoing, new, escalating, regressed, and resolved issues, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
@@ -9551,7 +9551,7 @@
             "ApiKeyAuth": []
           }
         ],
-        "operationId": "getIssueAnalytics",
+        "operationId": "getSignalAnalytics",
         "parameters": [
           {
             "schema": {
@@ -9588,11 +9588,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Issue analytics",
+            "description": "Signal analytics",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/IssueAnalyticsResponse"
+                  "$ref": "#/components/schemas/SignalAnalyticsResponse"
                 }
               }
             }
@@ -9630,12 +9630,12 @@
         }
       }
     },
-    "/v1/projects/{projectSlug}/issues/{issueSlug}": {
+    "/v1/projects/{projectSlug}/signals/{signalSlug}": {
       "get": {
         "tags": [
-          "Issues"
+          "Signals"
         ],
-        "x-fern-sdk-group-name": "issues",
+        "x-fern-sdk-group-name": "signals",
         "x-fern-sdk-method-name": "get",
         "summary": "Get project issue",
         "description": "Returns the full-history detail view of one issue: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.",
@@ -9644,7 +9644,7 @@
             "ApiKeyAuth": []
           }
         ],
-        "operationId": "getIssue",
+        "operationId": "getSignal",
         "parameters": [
           {
             "schema": {
@@ -9659,21 +9659,21 @@
           {
             "schema": {
               "type": "string",
-              "description": "Issue slug."
+              "description": "Signal slug."
             },
             "required": true,
-            "description": "Issue slug.",
-            "name": "issueSlug",
+            "description": "Signal slug.",
+            "name": "signalSlug",
             "in": "path"
           }
         ],
         "responses": {
           "200": {
-            "description": "Issue",
+            "description": "Signal",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/IssueDetail"
+                  "$ref": "#/components/schemas/SignalDetail"
                 }
               }
             }
@@ -9711,12 +9711,12 @@
         }
       }
     },
-    "/v1/projects/{projectSlug}/issues/{issueSlug}/trend": {
+    "/v1/projects/{projectSlug}/signals/{signalSlug}/trend": {
       "get": {
         "tags": [
-          "Issues"
+          "Signals"
         ],
-        "x-fern-sdk-group-name": "issues",
+        "x-fern-sdk-group-name": "signals",
         "x-fern-sdk-method-name": "trend",
         "summary": "Get issue occurrence histogram",
         "description": "Returns the occurrence histogram for one issue over `[fromIso, toIso]`. The default range is the trailing 14 days. Buckets are 12-hour wide and UTC-aligned.",
@@ -9725,7 +9725,7 @@
             "ApiKeyAuth": []
           }
         ],
-        "operationId": "getIssueTrend",
+        "operationId": "getSignalTrend",
         "parameters": [
           {
             "schema": {
@@ -9740,11 +9740,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Issue slug."
+              "description": "Signal slug."
             },
             "required": true,
-            "description": "Issue slug.",
-            "name": "issueSlug",
+            "description": "Signal slug.",
+            "name": "signalSlug",
             "in": "path"
           },
           {
@@ -9776,7 +9776,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/IssueHistogram"
+                  "$ref": "#/components/schemas/SignalHistogram"
                 }
               }
             }
@@ -9814,12 +9814,12 @@
         }
       }
     },
-    "/v1/projects/{projectSlug}/issues/{issueSlug}/traces": {
+    "/v1/projects/{projectSlug}/signals/{signalSlug}/traces": {
       "get": {
         "tags": [
-          "Issues"
+          "Signals"
         ],
-        "x-fern-sdk-group-name": "issues",
+        "x-fern-sdk-group-name": "signals",
         "x-fern-sdk-method-name": "listTraces",
         "summary": "List issue traces",
         "description": "Returns the page of distinct traces that contributed at least one occurrence of the issue, ordered by most recent activity first.",
@@ -9828,7 +9828,7 @@
             "ApiKeyAuth": []
           }
         ],
-        "operationId": "listIssueTraces",
+        "operationId": "listSignalTraces",
         "parameters": [
           {
             "schema": {
@@ -9843,11 +9843,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Issue slug."
+              "description": "Signal slug."
             },
             "required": true,
-            "description": "Issue slug.",
-            "name": "issueSlug",
+            "description": "Signal slug.",
+            "name": "signalSlug",
             "in": "path"
           },
           {
@@ -9918,21 +9918,21 @@
         }
       }
     },
-    "/v1/projects/{projectSlug}/issues/resolve": {
+    "/v1/projects/{projectSlug}/signals/resolve": {
       "post": {
         "tags": [
-          "Issues"
+          "Signals"
         ],
-        "x-fern-sdk-group-name": "issues",
+        "x-fern-sdk-group-name": "signals",
         "x-fern-sdk-method-name": "resolve",
         "summary": "Resolve issues",
-        "description": "Marks each issue in `issueIds` as resolved. When `keepMonitoring` is `false`, monitoring is also stopped for each resolved issue; when omitted, the project's default applies.",
+        "description": "Marks each issue in `signalIds` as resolved. When `keepMonitoring` is `false`, monitoring is also stopped for each resolved issue; when omitted, the project's default applies.",
         "security": [
           {
             "ApiKeyAuth": []
           }
         ],
-        "operationId": "resolveIssues",
+        "operationId": "resolveSignals",
         "parameters": [
           {
             "schema": {
@@ -9950,7 +9950,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ResolveIssuesBody"
+                "$ref": "#/components/schemas/ResolveSignalsBody"
               }
             }
           }
@@ -9961,7 +9961,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/IssuesLifecycleResponse"
+                  "$ref": "#/components/schemas/SignalsLifecycleResponse"
                 }
               }
             }
@@ -9999,21 +9999,21 @@
         }
       }
     },
-    "/v1/projects/{projectSlug}/issues/unresolve": {
+    "/v1/projects/{projectSlug}/signals/unresolve": {
       "post": {
         "tags": [
-          "Issues"
+          "Signals"
         ],
-        "x-fern-sdk-group-name": "issues",
+        "x-fern-sdk-group-name": "signals",
         "x-fern-sdk-method-name": "unresolve",
         "summary": "Unresolve issues",
-        "description": "Reverts each issue in `issueIds` to the unresolved state.",
+        "description": "Reverts each issue in `signalIds` to the unresolved state.",
         "security": [
           {
             "ApiKeyAuth": []
           }
         ],
-        "operationId": "unresolveIssues",
+        "operationId": "unresolveSignals",
         "parameters": [
           {
             "schema": {
@@ -10031,7 +10031,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/IssuesLifecycleBody"
+                "$ref": "#/components/schemas/SignalsLifecycleBody"
               }
             }
           }
@@ -10042,7 +10042,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/IssuesLifecycleResponse"
+                  "$ref": "#/components/schemas/SignalsLifecycleResponse"
                 }
               }
             }
@@ -10080,21 +10080,21 @@
         }
       }
     },
-    "/v1/projects/{projectSlug}/issues/ignore": {
+    "/v1/projects/{projectSlug}/signals/ignore": {
       "post": {
         "tags": [
-          "Issues"
+          "Signals"
         ],
-        "x-fern-sdk-group-name": "issues",
+        "x-fern-sdk-group-name": "signals",
         "x-fern-sdk-method-name": "ignore",
         "summary": "Ignore issues",
-        "description": "Marks each issue in `issueIds` as ignored. Monitoring is also stopped for each ignored issue.",
+        "description": "Marks each issue in `signalIds` as ignored. Monitoring is also stopped for each ignored issue.",
         "security": [
           {
             "ApiKeyAuth": []
           }
         ],
-        "operationId": "ignoreIssues",
+        "operationId": "ignoreSignals",
         "parameters": [
           {
             "schema": {
@@ -10112,7 +10112,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/IssuesLifecycleBody"
+                "$ref": "#/components/schemas/SignalsLifecycleBody"
               }
             }
           }
@@ -10123,7 +10123,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/IssuesLifecycleResponse"
+                  "$ref": "#/components/schemas/SignalsLifecycleResponse"
                 }
               }
             }
@@ -10161,21 +10161,21 @@
         }
       }
     },
-    "/v1/projects/{projectSlug}/issues/unignore": {
+    "/v1/projects/{projectSlug}/signals/unignore": {
       "post": {
         "tags": [
-          "Issues"
+          "Signals"
         ],
-        "x-fern-sdk-group-name": "issues",
+        "x-fern-sdk-group-name": "signals",
         "x-fern-sdk-method-name": "unignore",
         "summary": "Unignore issues",
-        "description": "Reverts each issue in `issueIds` to a non-ignored state.",
+        "description": "Reverts each issue in `signalIds` to a non-ignored state.",
         "security": [
           {
             "ApiKeyAuth": []
           }
         ],
-        "operationId": "unignoreIssues",
+        "operationId": "unignoreSignals",
         "parameters": [
           {
             "schema": {
@@ -10193,7 +10193,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/IssuesLifecycleBody"
+                "$ref": "#/components/schemas/SignalsLifecycleBody"
               }
             }
           }
@@ -10204,7 +10204,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/IssuesLifecycleResponse"
+                  "$ref": "#/components/schemas/SignalsLifecycleResponse"
                 }
               }
             }
@@ -10242,12 +10242,12 @@
         }
       }
     },
-    "/v1/projects/{projectSlug}/issues/{issueSlug}/monitor": {
+    "/v1/projects/{projectSlug}/signals/{signalSlug}/monitor": {
       "post": {
         "tags": [
-          "Issues"
+          "Signals"
         ],
-        "x-fern-sdk-group-name": "issues",
+        "x-fern-sdk-group-name": "signals",
         "x-fern-sdk-method-name": "monitor",
         "summary": "Monitor issue",
         "description": "Starts (or realigns) monitoring for the issue. When the issue has no active evaluation, a new one is generated. When an active evaluation exists, the call realigns it. The work runs asynchronously and the response returns immediately. Returns 400 when monitoring is already in progress for this issue.",
@@ -10256,7 +10256,7 @@
             "ApiKeyAuth": []
           }
         ],
-        "operationId": "monitorIssue",
+        "operationId": "monitorSignal",
         "parameters": [
           {
             "schema": {
@@ -10271,11 +10271,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Issue slug."
+              "description": "Signal slug."
             },
             "required": true,
-            "description": "Issue slug.",
-            "name": "issueSlug",
+            "description": "Signal slug.",
+            "name": "signalSlug",
             "in": "path"
           }
         ],
@@ -10285,7 +10285,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MonitorIssueResponse"
+                  "$ref": "#/components/schemas/MonitorSignalResponse"
                 }
               }
             }
@@ -10323,12 +10323,12 @@
         }
       }
     },
-    "/v1/projects/{projectSlug}/issues/{issueSlug}/unmonitor": {
+    "/v1/projects/{projectSlug}/signals/{signalSlug}/unmonitor": {
       "post": {
         "tags": [
-          "Issues"
+          "Signals"
         ],
-        "x-fern-sdk-group-name": "issues",
+        "x-fern-sdk-group-name": "signals",
         "x-fern-sdk-method-name": "unmonitor",
         "summary": "Unmonitor issue",
         "description": "Stops monitoring the issue. Idempotent — issues that aren't being monitored return 204 without changing anything.",
@@ -10337,7 +10337,7 @@
             "ApiKeyAuth": []
           }
         ],
-        "operationId": "unmonitorIssue",
+        "operationId": "unmonitorSignal",
         "parameters": [
           {
             "schema": {
@@ -10352,27 +10352,27 @@
           {
             "schema": {
               "type": "string",
-              "description": "Issue slug."
+              "description": "Signal slug."
             },
             "required": true,
-            "description": "Issue slug.",
-            "name": "issueSlug",
+            "description": "Signal slug.",
+            "name": "signalSlug",
             "in": "path"
           }
         ],
         "responses": {
           "204": {
-            "description": "Issue unmonitored"
+            "description": "Signal unmonitored"
           }
         }
       }
     },
-    "/v1/projects/{projectSlug}/issues/export": {
+    "/v1/projects/{projectSlug}/signals/export": {
       "post": {
         "tags": [
-          "Issues"
+          "Signals"
         ],
-        "x-fern-sdk-group-name": "issues",
+        "x-fern-sdk-group-name": "signals",
         "x-fern-sdk-method-name": "export",
         "summary": "Export project issues (async)",
         "description": "Enqueues an asynchronous CSV export. The response returns immediately; the download link is emailed to `recipient` when the file is ready. The recipient must be a member of the requesting organization.",
@@ -10381,7 +10381,7 @@
             "ApiKeyAuth": []
           }
         ],
-        "operationId": "exportIssues",
+        "operationId": "exportSignals",
         "parameters": [
           {
             "schema": {
@@ -10399,7 +10399,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ExportIssuesBody"
+                "$ref": "#/components/schemas/ExportSignalsBody"
               }
             }
           }
@@ -10410,7 +10410,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ExportIssuesResponse"
+                  "$ref": "#/components/schemas/ExportSignalsResponse"
                 }
               }
             }
@@ -12230,7 +12230,7 @@
         "x-fern-sdk-group-name": "members",
         "x-fern-sdk-method-name": "invite",
         "summary": "Invite a member",
-        "description": "Issues an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user).",
+        "description": "Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user).",
         "security": [
           {
             "ApiKeyAuth": []

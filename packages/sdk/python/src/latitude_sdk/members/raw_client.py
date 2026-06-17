@@ -102,7 +102,7 @@ class RawMembersClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[InvitedMember]:
         """
-        Issues an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user).
+        Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user).
 
         Parameters
         ----------
@@ -466,7 +466,7 @@ class AsyncRawMembersClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[InvitedMember]:
         """
-        Issues an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user).
+        Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user).
 
         Parameters
         ----------

@@ -21,7 +21,7 @@ class ScoreResponse_Custom(UniversalBaseModel):
     trace_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="traceId")] = None
     span_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="spanId")] = None
     simulation_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="simulationId")] = None
-    issue_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="issueId")] = None
+    signal_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="signalId")] = None
     value: float
     passed: bool
     feedback: str
@@ -49,7 +49,7 @@ class ScoreResponse_Evaluation(UniversalBaseModel):
     trace_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="traceId")] = None
     span_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="spanId")] = None
     simulation_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="simulationId")] = None
-    issue_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="issueId")] = None
+    signal_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="signalId")] = None
     value: float
     passed: bool
     feedback: str

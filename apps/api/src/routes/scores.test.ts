@@ -6,7 +6,7 @@ import { stubListSpan } from "@domain/spans/testing"
 import { queryClickhouse, SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { eq } from "@platform/db-postgres"
 import { evaluations } from "@platform/db-postgres/schema/evaluations"
-import { issues } from "@platform/db-postgres/schema/issues"
+import { signals } from "@platform/db-postgres/schema/signals"
 import { outboxEvents } from "@platform/db-postgres/schema/outbox-events"
 import { projects } from "@platform/db-postgres/schema/projects"
 import { scores as scoresTable } from "@platform/db-postgres/schema/scores"
@@ -260,7 +260,7 @@ describe("Scores Routes Integration", () => {
       traceId: API_TEST_ANCHOR_TRACE_ID,
     })
 
-    await database.db.insert(issues).values({
+    await database.db.insert(signals).values({
       id: signalId,
       uuid: crypto.randomUUID(),
       organizationId: tenant.organizationId,
@@ -410,7 +410,7 @@ describe("Scores Routes Integration", () => {
       traceId: API_TEST_ANCHOR_TRACE_ID,
     })
 
-    await database.db.insert(issues).values({
+    await database.db.insert(signals).values({
       id: signalId,
       uuid: crypto.randomUUID(),
       organizationId: tenant.organizationId,

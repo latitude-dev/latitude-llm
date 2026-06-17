@@ -17,8 +17,8 @@ export interface Annotation {
     spanId?: string | undefined;
     /** Simulation reference, if any. */
     simulationId?: string | undefined;
-    /** Issue this annotation contributes to, if any. */
-    issueId?: string | undefined;
+    /** Signal this annotation contributes to, if any. */
+    signalId?: string | undefined;
     /** Normalized score value in [0, 1]. Higher = better. */
     value: number;
     /** Whether the annotation marks the output as passing. */

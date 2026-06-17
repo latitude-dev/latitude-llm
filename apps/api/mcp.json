@@ -1183,7 +1183,7 @@
               }
             ]
           },
-          "issueId": {
+          "signalId": {
             "default": null,
             "description": "Pre-selected issue this annotation belongs to. Leave `null` (default) to let the automatic issue-discovery pipeline route the annotation.",
             "anyOf": [
@@ -1358,7 +1358,7 @@
         "required": [
           "projectSlug",
           "simulationId",
-          "issueId",
+          "signalId",
           "value",
           "passed",
           "feedback",
@@ -1442,7 +1442,7 @@
             ],
             "description": "Simulation reference, if any."
           },
-          "issueId": {
+          "signalId": {
             "anyOf": [
               {
                 "type": "string",
@@ -1453,7 +1453,7 @@
                 "type": "null"
               }
             ],
-            "description": "Issue this annotation contributes to, if any."
+            "description": "Signal this annotation contributes to, if any."
           },
           "value": {
             "type": "number",
@@ -1618,7 +1618,7 @@
           "traceId",
           "spanId",
           "simulationId",
-          "issueId",
+          "signalId",
           "value",
           "passed",
           "feedback",
@@ -3518,7 +3518,7 @@
                   ],
                   "description": "Simulation reference, if any."
                 },
-                "issueId": {
+                "signalId": {
                   "anyOf": [
                     {
                       "type": "string",
@@ -3529,7 +3529,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "Issue this annotation contributes to, if any."
+                  "description": "Signal this annotation contributes to, if any."
                 },
                 "value": {
                   "type": "number",
@@ -3694,7 +3694,7 @@
                 "traceId",
                 "spanId",
                 "simulationId",
-                "issueId",
+                "signalId",
                 "value",
                 "passed",
                 "feedback",
@@ -3847,7 +3847,7 @@
             ],
             "description": "Simulation reference, if any."
           },
-          "issueId": {
+          "signalId": {
             "anyOf": [
               {
                 "type": "string",
@@ -3858,7 +3858,7 @@
                 "type": "null"
               }
             ],
-            "description": "Issue this annotation contributes to, if any."
+            "description": "Signal this annotation contributes to, if any."
           },
           "value": {
             "type": "number",
@@ -4023,7 +4023,7 @@
           "traceId",
           "spanId",
           "simulationId",
-          "issueId",
+          "signalId",
           "value",
           "passed",
           "feedback",
@@ -6588,7 +6588,7 @@
       }
     },
     {
-      "name": "listIssues",
+      "name": "listSignals",
       "title": "List project issues",
       "description": "Returns a cursor-paginated page of issues in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `trend`, and `tags`.",
       "inputSchema": {
@@ -6858,7 +6858,7 @@
       }
     },
     {
-      "name": "getIssueAnalytics",
+      "name": "getSignalAnalytics",
       "title": "Get project issue analytics",
       "description": "Returns issue analytics for the project: counts of ongoing, new, escalating, regressed, and resolved issues, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
       "inputSchema": {
@@ -7019,7 +7019,7 @@
       }
     },
     {
-      "name": "getIssue",
+      "name": "getSignal",
       "title": "Get project issue",
       "description": "Returns the full-history detail view of one issue: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.",
       "inputSchema": {
@@ -7030,14 +7030,14 @@
             "type": "string",
             "description": "Project slug (human-readable identifier)"
           },
-          "issueSlug": {
+          "signalSlug": {
             "type": "string",
-            "description": "Issue slug."
+            "description": "Signal slug."
           }
         },
         "required": [
           "projectSlug",
-          "issueSlug"
+          "signalSlug"
         ],
         "additionalProperties": false
       },
@@ -7419,7 +7419,7 @@
       }
     },
     {
-      "name": "getIssueTrend",
+      "name": "getSignalTrend",
       "title": "Get issue occurrence histogram",
       "description": "Returns the occurrence histogram for one issue over `[fromIso, toIso]`. The default range is the trailing 14 days. Buckets are 12-hour wide and UTC-aligned.",
       "inputSchema": {
@@ -7430,9 +7430,9 @@
             "type": "string",
             "description": "Project slug (human-readable identifier)"
           },
-          "issueSlug": {
+          "signalSlug": {
             "type": "string",
-            "description": "Issue slug."
+            "description": "Signal slug."
           },
           "fromIso": {
             "description": "Lower bound (inclusive). Defaults to ~14 days before `toIso`.",
@@ -7449,7 +7449,7 @@
         },
         "required": [
           "projectSlug",
-          "issueSlug"
+          "signalSlug"
         ],
         "additionalProperties": false
       },
@@ -7489,7 +7489,7 @@
       }
     },
     {
-      "name": "listIssueTraces",
+      "name": "listSignalTraces",
       "title": "List issue traces",
       "description": "Returns the page of distinct traces that contributed at least one occurrence of the issue, ordered by most recent activity first.",
       "inputSchema": {
@@ -7500,9 +7500,9 @@
             "type": "string",
             "description": "Project slug (human-readable identifier)"
           },
-          "issueSlug": {
+          "signalSlug": {
             "type": "string",
-            "description": "Issue slug."
+            "description": "Signal slug."
           },
           "cursor": {
             "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.",
@@ -7518,7 +7518,7 @@
         },
         "required": [
           "projectSlug",
-          "issueSlug",
+          "signalSlug",
           "limit"
         ],
         "additionalProperties": false
@@ -7764,9 +7764,9 @@
       }
     },
     {
-      "name": "resolveIssues",
+      "name": "resolveSignals",
       "title": "Resolve issues",
-      "description": "Marks each issue in `issueIds` as resolved. When `keepMonitoring` is `false`, monitoring is also stopped for each resolved issue; when omitted, the project's default applies.",
+      "description": "Marks each issue in `signalIds` as resolved. When `keepMonitoring` is `false`, monitoring is also stopped for each resolved issue; when omitted, the project's default applies.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -7775,7 +7775,7 @@
             "type": "string",
             "description": "Project slug (human-readable identifier)"
           },
-          "issueIds": {
+          "signalIds": {
             "minItems": 1,
             "type": "array",
             "items": {
@@ -7792,7 +7792,7 @@
         },
         "required": [
           "projectSlug",
-          "issueIds"
+          "signalIds"
         ],
         "additionalProperties": false
       },
@@ -7805,11 +7805,11 @@
             "items": {
               "type": "object",
               "properties": {
-                "issueId": {
+                "signalId": {
                   "type": "string",
                   "minLength": 24,
                   "maxLength": 24,
-                  "description": "Issue this entry applies to."
+                  "description": "Signal this entry applies to."
                 },
                 "resolvedAt": {
                   "anyOf": [
@@ -7843,7 +7843,7 @@
                 }
               },
               "required": [
-                "issueId",
+                "signalId",
                 "resolvedAt",
                 "ignoredAt",
                 "updatedAt",
@@ -7861,9 +7861,9 @@
       }
     },
     {
-      "name": "unresolveIssues",
+      "name": "unresolveSignals",
       "title": "Unresolve issues",
-      "description": "Reverts each issue in `issueIds` to the unresolved state.",
+      "description": "Reverts each issue in `signalIds` to the unresolved state.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -7872,7 +7872,7 @@
             "type": "string",
             "description": "Project slug (human-readable identifier)"
           },
-          "issueIds": {
+          "signalIds": {
             "minItems": 1,
             "type": "array",
             "items": {
@@ -7885,7 +7885,7 @@
         },
         "required": [
           "projectSlug",
-          "issueIds"
+          "signalIds"
         ],
         "additionalProperties": false
       },
@@ -7898,11 +7898,11 @@
             "items": {
               "type": "object",
               "properties": {
-                "issueId": {
+                "signalId": {
                   "type": "string",
                   "minLength": 24,
                   "maxLength": 24,
-                  "description": "Issue this entry applies to."
+                  "description": "Signal this entry applies to."
                 },
                 "resolvedAt": {
                   "anyOf": [
@@ -7936,7 +7936,7 @@
                 }
               },
               "required": [
-                "issueId",
+                "signalId",
                 "resolvedAt",
                 "ignoredAt",
                 "updatedAt",
@@ -7954,9 +7954,9 @@
       }
     },
     {
-      "name": "ignoreIssues",
+      "name": "ignoreSignals",
       "title": "Ignore issues",
-      "description": "Marks each issue in `issueIds` as ignored. Monitoring is also stopped for each ignored issue.",
+      "description": "Marks each issue in `signalIds` as ignored. Monitoring is also stopped for each ignored issue.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -7965,7 +7965,7 @@
             "type": "string",
             "description": "Project slug (human-readable identifier)"
           },
-          "issueIds": {
+          "signalIds": {
             "minItems": 1,
             "type": "array",
             "items": {
@@ -7978,7 +7978,7 @@
         },
         "required": [
           "projectSlug",
-          "issueIds"
+          "signalIds"
         ],
         "additionalProperties": false
       },
@@ -7991,11 +7991,11 @@
             "items": {
               "type": "object",
               "properties": {
-                "issueId": {
+                "signalId": {
                   "type": "string",
                   "minLength": 24,
                   "maxLength": 24,
-                  "description": "Issue this entry applies to."
+                  "description": "Signal this entry applies to."
                 },
                 "resolvedAt": {
                   "anyOf": [
@@ -8029,7 +8029,7 @@
                 }
               },
               "required": [
-                "issueId",
+                "signalId",
                 "resolvedAt",
                 "ignoredAt",
                 "updatedAt",
@@ -8047,9 +8047,9 @@
       }
     },
     {
-      "name": "unignoreIssues",
+      "name": "unignoreSignals",
       "title": "Unignore issues",
-      "description": "Reverts each issue in `issueIds` to a non-ignored state.",
+      "description": "Reverts each issue in `signalIds` to a non-ignored state.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -8058,7 +8058,7 @@
             "type": "string",
             "description": "Project slug (human-readable identifier)"
           },
-          "issueIds": {
+          "signalIds": {
             "minItems": 1,
             "type": "array",
             "items": {
@@ -8071,7 +8071,7 @@
         },
         "required": [
           "projectSlug",
-          "issueIds"
+          "signalIds"
         ],
         "additionalProperties": false
       },
@@ -8084,11 +8084,11 @@
             "items": {
               "type": "object",
               "properties": {
-                "issueId": {
+                "signalId": {
                   "type": "string",
                   "minLength": 24,
                   "maxLength": 24,
-                  "description": "Issue this entry applies to."
+                  "description": "Signal this entry applies to."
                 },
                 "resolvedAt": {
                   "anyOf": [
@@ -8122,7 +8122,7 @@
                 }
               },
               "required": [
-                "issueId",
+                "signalId",
                 "resolvedAt",
                 "ignoredAt",
                 "updatedAt",
@@ -8140,7 +8140,7 @@
       }
     },
     {
-      "name": "monitorIssue",
+      "name": "monitorSignal",
       "title": "Monitor issue",
       "description": "Starts (or realigns) monitoring for the issue. When the issue has no active evaluation, a new one is generated. When an active evaluation exists, the call realigns it. The work runs asynchronously and the response returns immediately. Returns 400 when monitoring is already in progress for this issue.",
       "inputSchema": {
@@ -8151,14 +8151,14 @@
             "type": "string",
             "description": "Project slug (human-readable identifier)"
           },
-          "issueSlug": {
+          "signalSlug": {
             "type": "string",
-            "description": "Issue slug."
+            "description": "Signal slug."
           }
         },
         "required": [
           "projectSlug",
-          "issueSlug"
+          "signalSlug"
         ],
         "additionalProperties": false
       },
@@ -8194,7 +8194,7 @@
       }
     },
     {
-      "name": "unmonitorIssue",
+      "name": "unmonitorSignal",
       "title": "Unmonitor issue",
       "description": "Stops monitoring the issue. Idempotent — issues that aren't being monitored return 204 without changing anything.",
       "inputSchema": {
@@ -8205,20 +8205,20 @@
             "type": "string",
             "description": "Project slug (human-readable identifier)"
           },
-          "issueSlug": {
+          "signalSlug": {
             "type": "string",
-            "description": "Issue slug."
+            "description": "Signal slug."
           }
         },
         "required": [
           "projectSlug",
-          "issueSlug"
+          "signalSlug"
         ],
         "additionalProperties": false
       }
     },
     {
-      "name": "exportIssues",
+      "name": "exportSignals",
       "title": "Export project issues (async)",
       "description": "Enqueues an asynchronous CSV export. The response returns immediately; the download link is emailed to `recipient` when the file is ready. The recipient must be a member of the requesting organization.",
       "inputSchema": {
@@ -8235,7 +8235,7 @@
             "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
             "description": "Email address the download link is sent to. Must belong to a member of the requesting organization."
           },
-          "issueIds": {
+          "signalIds": {
             "description": "Restrict the export to this subset of issues. Omit to export every issue in the project.",
             "type": "array",
             "items": {
@@ -11491,7 +11491,7 @@
     {
       "name": "inviteMember",
       "title": "Invite a member",
-      "description": "Issues an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user).",
+      "description": "Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user).",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",

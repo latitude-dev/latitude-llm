@@ -11,7 +11,7 @@ import { apiKeysPath, createApiKeysRoutes } from "./api-keys.ts"
 import { createDatasetsRoutes, datasetsPath } from "./datasets.ts"
 import { registerHealthRoute } from "./health.ts"
 import { createIncidentsRoutes, incidentsPath } from "./incidents.ts"
-import { createSignalsRoutes, signalsPath } from "./issues.ts"
+import { createSignalsRoutes, signalsPath } from "./signals.ts"
 import { createMembersRoutes, membersPath } from "./members.ts"
 import { createMonitorsRoutes, monitorsPath } from "./monitors.ts"
 import { createOAuthKeysRoutes, oauthKeysPath } from "./oauth-keys.ts"
@@ -68,6 +68,21 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
   routes.route(accountPath, createAccountRoutes())
   routes.route(membersPath, createMembersRoutes())
   routes.route(monitorsPath, createMonitorsRoutes())
+
+  // Back-compat: the Issues API moved to /signals. 307 preserves method + body so
+  // already-published SDKs calling /issues keep working at runtime.
+  // TODO(signals): remove once the issues alias is retired.
+  const toSignalsPath = (pathname: string): string => pathname.replace(/\/issues(\/|$)/, "/signals$1")
+  routes.all("/projects/:projectSlug/issues", (c) => {
+    const url = new URL(c.req.url)
+    url.pathname = toSignalsPath(url.pathname)
+    return c.redirect(url.toString(), 307)
+  })
+  routes.all("/projects/:projectSlug/issues/*", (c) => {
+    const url = new URL(c.req.url)
+    url.pathname = toSignalsPath(url.pathname)
+    return c.redirect(url.toString(), 307)
+  })
 
   registerMcpRoute({ app, routes })
 

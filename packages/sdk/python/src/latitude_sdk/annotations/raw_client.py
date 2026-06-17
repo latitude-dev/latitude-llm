@@ -35,7 +35,7 @@ class RawAnnotationsClient:
         feedback: str,
         trace: TraceRef,
         simulation_id: typing.Optional[str] = OMIT,
-        issue_id: typing.Optional[str] = OMIT,
+        signal_id: typing.Optional[str] = OMIT,
         anchor: typing.Optional[AnnotationAnchor] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[Annotation]:
@@ -61,7 +61,7 @@ class RawAnnotationsClient:
         simulation_id : typing.Optional[str]
             Simulation this annotation is tied to, if any. `null` (default) when not part of a simulation.
 
-        issue_id : typing.Optional[str]
+        signal_id : typing.Optional[str]
             Pre-selected issue this annotation belongs to. Leave `null` (default) to let the automatic issue-discovery pipeline route the annotation.
 
         anchor : typing.Optional[AnnotationAnchor]
@@ -79,7 +79,7 @@ class RawAnnotationsClient:
             method="POST",
             json={
                 "simulationId": simulation_id,
-                "issueId": issue_id,
+                "signalId": signal_id,
                 "value": value,
                 "passed": passed,
                 "feedback": feedback,
@@ -156,7 +156,7 @@ class AsyncRawAnnotationsClient:
         feedback: str,
         trace: TraceRef,
         simulation_id: typing.Optional[str] = OMIT,
-        issue_id: typing.Optional[str] = OMIT,
+        signal_id: typing.Optional[str] = OMIT,
         anchor: typing.Optional[AnnotationAnchor] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[Annotation]:
@@ -182,7 +182,7 @@ class AsyncRawAnnotationsClient:
         simulation_id : typing.Optional[str]
             Simulation this annotation is tied to, if any. `null` (default) when not part of a simulation.
 
-        issue_id : typing.Optional[str]
+        signal_id : typing.Optional[str]
             Pre-selected issue this annotation belongs to. Leave `null` (default) to let the automatic issue-discovery pipeline route the annotation.
 
         anchor : typing.Optional[AnnotationAnchor]
@@ -200,7 +200,7 @@ class AsyncRawAnnotationsClient:
             method="POST",
             json={
                 "simulationId": simulation_id,
-                "issueId": issue_id,
+                "signalId": signal_id,
                 "value": value,
                 "passed": passed,
                 "feedback": feedback,

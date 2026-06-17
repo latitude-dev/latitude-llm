@@ -55,11 +55,11 @@ class Annotation(UniversalBaseModel):
     Simulation reference, if any.
     """
 
-    issue_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="issueId")] = pydantic.Field(
+    signal_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="signalId")] = pydantic.Field(
         default=None
     )
     """
-    Issue this annotation contributes to, if any.
+    Signal this annotation contributes to, if any.
     """
 
     value: float = pydantic.Field()

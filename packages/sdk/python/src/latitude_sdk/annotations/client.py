@@ -37,7 +37,7 @@ class AnnotationsClient:
         feedback: str,
         trace: TraceRef,
         simulation_id: typing.Optional[str] = OMIT,
-        issue_id: typing.Optional[str] = OMIT,
+        signal_id: typing.Optional[str] = OMIT,
         anchor: typing.Optional[AnnotationAnchor] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> Annotation:
@@ -63,7 +63,7 @@ class AnnotationsClient:
         simulation_id : typing.Optional[str]
             Simulation this annotation is tied to, if any. `null` (default) when not part of a simulation.
 
-        issue_id : typing.Optional[str]
+        signal_id : typing.Optional[str]
             Pre-selected issue this annotation belongs to. Leave `null` (default) to let the automatic issue-discovery pipeline route the annotation.
 
         anchor : typing.Optional[AnnotationAnchor]
@@ -100,7 +100,7 @@ class AnnotationsClient:
             feedback=feedback,
             trace=trace,
             simulation_id=simulation_id,
-            issue_id=issue_id,
+            signal_id=signal_id,
             anchor=anchor,
             request_options=request_options,
         )
@@ -131,7 +131,7 @@ class AsyncAnnotationsClient:
         feedback: str,
         trace: TraceRef,
         simulation_id: typing.Optional[str] = OMIT,
-        issue_id: typing.Optional[str] = OMIT,
+        signal_id: typing.Optional[str] = OMIT,
         anchor: typing.Optional[AnnotationAnchor] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> Annotation:
@@ -157,7 +157,7 @@ class AsyncAnnotationsClient:
         simulation_id : typing.Optional[str]
             Simulation this annotation is tied to, if any. `null` (default) when not part of a simulation.
 
-        issue_id : typing.Optional[str]
+        signal_id : typing.Optional[str]
             Pre-selected issue this annotation belongs to. Leave `null` (default) to let the automatic issue-discovery pipeline route the annotation.
 
         anchor : typing.Optional[AnnotationAnchor]
@@ -202,7 +202,7 @@ class AsyncAnnotationsClient:
             feedback=feedback,
             trace=trace,
             simulation_id=simulation_id,
-            issue_id=issue_id,
+            signal_id=signal_id,
             anchor=anchor,
             request_options=request_options,
         )
