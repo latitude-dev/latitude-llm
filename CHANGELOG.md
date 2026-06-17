@@ -2,6 +2,39 @@
 
 ## Unreleased
 
+## v0.3.4 - 2026-06-17
+
+### Data destinations
+
+- Added the first data-destinations workflow with encrypted Postgres storage, PostHog delivery, source cursors, sync-run tracking, background sweep/run workers, connection testing, pause/resume/delete flows, project-deletion cleanup, and settings UI for configuring destinations (ref: #3543, #3544, #3545, #3570, #3571, #3574, #3575, #3576, #3577, #3594).
+
+### Monitors and incidents
+
+- Introduced unified monitor targets and metric alerts, including traces and tool-call metric streams, sourceless alert kinds, target-aware monitor creation, in-context tool/user monitor creation, dashboard target columns, matching-trace context, and firing-vertical incident rendering (ref: #3555, #3557, #3558, #3559, #3560, #3561, #3562, #3563, #3564, #3572, #3578).
+- Fixed monitor incident table sizing and incident notification formatting (ref: #3585).
+
+### Tools and trace analysis
+
+- Added tool analytics API, MCP, TypeScript SDK, and Python SDK surfaces with summaries, histograms, recent calls, error/context breakdowns, co-occurrence data, parameter statistics, and tool definition details (ref: #3568).
+- Persisted defined tools in ClickHouse session and trace rollups, and surfaced where defined-but-never-called tools come from in the Tools UI and trace details (ref: #3541).
+- Added the conversation timeline to session and trace detail drawers, with activity tracks, clustered markers, viewport navigation, and highlight-safe annotation selection (ref: #3596, c34339f).
+
+### Onboarding and demo data
+
+- Improved onboarding with seeded sample projects backed by derived demo snapshots and added tooling/workflows to export and seed the demo project dataset (ref: #3584, #3587).
+
+### OSS self-hosting and infrastructure
+
+- Improved the Helm chart with wait-for-dependencies init containers, clearer install notes, Temporal configuration helpers, and Railway one-click deployment docs (ref: #3542, #3573).
+- Re-enabled Latitude self-telemetry and tuned production API capacity, Node heap limits, and Datadog sidecar memory for production stability (ref: #3569, 65c99ad, 579e8ea, 62f0eb5).
+- Added Temporal worker configuration safety checks and increased taxonomy workflow spreading to reduce burst load (ref: #3592).
+
+### Performance and fixes
+
+- Rebuilt the ClickHouse `sessions` primary key to include `session_id` for faster session-specific reads (ref: #3593).
+- Fixed annotation queries without trace ids, conversation timeline marker navigation, settings card text colors, hidden taxonomy clusters in backoffice, and unit formatting when rounded values roll into the next unit (ref: #3591, #3589, #3588, #3551).
+- Refreshed bundled models.dev data and bumped CI/dependency tooling, including protobufjs, Claude Code action, and Docker QEMU setup (ref: #3552, #3565, #3566, #3567, #3598).
+
 ## v0.3.3 - 2026-06-14
 
 ### Trace search
