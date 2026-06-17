@@ -174,6 +174,10 @@ export const createPosthogDeliverer = (options: PosthogDelivererOptions = {}): D
   const lookupHost = options.lookupHost ?? defaultHostLookup
 
   return {
+    // The 48h rule is PostHog's: events older than it must use `historical_migration`.
+    // Surfaced so backfill keeps any single window from straddling `now − 48h`;
+    // the per-window flag is still derived below from `context.window`.
+    historicalBoundaryMs: POSTHOG_HISTORICAL_MIGRATION_MIN_WINDOW_AGE_MS,
     deliver: (events, config, credentials, context: DeliveryContext): Effect.Effect<DeliveryResult, DeliveryError> =>
       Effect.gen(function* () {
         if (config.kind !== KIND || credentials.kind !== KIND) {

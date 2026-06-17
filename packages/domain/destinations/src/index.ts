@@ -78,12 +78,15 @@ export {
 export type {
   DestinationSyncRun,
   DestinationSyncRunStatus,
+  DestinationSyncRunTrigger,
 } from "./entities/destination-sync-run.ts"
 export {
   createDestinationSyncRun,
   DESTINATION_SYNC_RUN_STATUSES,
+  DESTINATION_SYNC_RUN_TRIGGERS,
   destinationSyncRunSchema,
   destinationSyncRunStatusSchema,
+  destinationSyncRunTriggerSchema,
 } from "./entities/destination-sync-run.ts"
 // Errors
 export type { DeliveryError } from "./errors.ts"
@@ -135,6 +138,8 @@ export type {
   UpdateDestinationQuarantineStateInput,
 } from "./ports/destination-repository.ts"
 export { DestinationRepository } from "./ports/destination-repository.ts"
+export type { DestinationRetentionPolicyShape } from "./ports/destination-retention-policy.ts"
+export { DestinationRetentionPolicy } from "./ports/destination-retention-policy.ts"
 export type {
   DestinationSourceReader,
   DestinationSourceReaderRegistry,
@@ -160,6 +165,23 @@ export { DestinationSyncRunRepository } from "./ports/destination-sync-run-repos
 export { createSpansSourceReader, SpansSourceReadersLive } from "./sources/spans-source-reader.ts"
 
 // Use cases
+export type {
+  BackfillDestinationError,
+  BackfillDestinationInput,
+  BackfillDestinationOutcome,
+  BackfillDestinationResult,
+  BackfillSegment,
+  BackfillWindowJob,
+  RunBackfillWindowError,
+  RunBackfillWindowInput,
+  RunBackfillWindowOutcome,
+  RunBackfillWindowResult,
+} from "./use-cases/backfill-destination.ts"
+export {
+  backfillDestinationUseCase,
+  backfillSegments,
+  runBackfillWindowUseCase,
+} from "./use-cases/backfill-destination.ts"
 export type {
   CreateDestinationError,
   CreateDestinationInput,
@@ -192,14 +214,23 @@ export type {
 export { previewDestinationDeliveryUseCase } from "./use-cases/preview-destination-delivery.ts"
 export type { PruneDestinationSyncRunsResult } from "./use-cases/prune-destination-sync-runs.ts"
 export { pruneDestinationSyncRunsUseCase } from "./use-cases/prune-destination-sync-runs.ts"
+export type { RecordBackfillFailureInput } from "./use-cases/record-backfill-failure.ts"
+export { recordBackfillFailureUseCase } from "./use-cases/record-backfill-failure.ts"
 export type {
   RecordDestinationSyncFailureInput,
   RecordDestinationSyncFailureResult,
 } from "./use-cases/record-destination-sync-failure.ts"
 export { recordDestinationSyncFailureUseCase } from "./use-cases/record-destination-sync-failure.ts"
 export type {
+  RequestDestinationBackfillInput,
+  RequestDestinationBackfillPublish,
+  RequestDestinationBackfillResult,
+} from "./use-cases/request-destination-backfill.ts"
+export { requestDestinationBackfillUseCase } from "./use-cases/request-destination-backfill.ts"
+export type {
   ResumeDestinationError,
   ResumeDestinationInput,
+  ResumeDestinationResult,
 } from "./use-cases/resume-destination.ts"
 export { resumeDestinationUseCase } from "./use-cases/resume-destination.ts"
 export type {

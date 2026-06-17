@@ -6,6 +6,8 @@
  * visibility and the sync sweep — not these calls. Credentials never cross the
  * wire — {@link toRecord} strips them.
  */
+
+import { PLAN_CONFIGS } from "@domain/billing"
 import {
   createDestinationUseCase,
   createPosthogMapper,
@@ -16,6 +18,7 @@ import {
   type DestinationMapperRegistry,
   DestinationMappers,
   DestinationRepository,
+  DestinationRetentionPolicy,
   type DestinationSource,
   type DestinationSourceConfig,
   type DestinationSourceState,
@@ -24,6 +27,7 @@ import {
   type DestinationSyncRun,
   DestinationSyncRunRepository,
   type DestinationSyncRunStatus,
+  type DestinationSyncRunTrigger,
   deleteDestinationUseCase,
   destinationConfigPatchSchema,
   destinationConfigSchema,
@@ -35,21 +39,27 @@ import {
   pauseDestinationUseCase,
   previewCredentials,
   previewDestinationDeliveryUseCase,
+  requestDestinationBackfillUseCase,
   resumeDestinationUseCase,
   SpansSourceReadersLive,
   type TestDestinationConnectionResult,
   testDestinationConnectionUseCase,
   updateDestinationUseCase,
 } from "@domain/destinations"
-import { DestinationId, DestinationSyncRunId, ProjectId } from "@domain/shared"
+import { DestinationId, DestinationSyncRunId, NotFoundError, type OrganizationId, ProjectId } from "@domain/shared"
 import type { SpanDetail } from "@domain/spans"
+import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { createPosthogDeliverer } from "@platform/data-destinations"
 import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
+  BillingOverrideRepositoryLive,
   DestinationRepositoryLive,
   DestinationSourceStateRepositoryLive,
   DestinationSyncRunRepositoryLive,
   OrganizationRepositoryLive,
+  resolveEffectivePlanCached,
+  SettingsReaderLive,
+  StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { parseEnv, parseEnvOptional } from "@platform/env"
@@ -58,7 +68,40 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getClickhouseClient, getPostgresClient } from "../../server/clients.ts"
+import { getClickhouseClient, getPostgresClient, getQueuePublisher, getRedisClient } from "../../server/clients.ts"
+
+const DAY_MS = 24 * 60 * 60 * 1000
+/** Widest plan retention — the over-reach fallback if billing is momentarily unresolvable. */
+const MAX_RETENTION_MS = Math.max(...Object.values(PLAN_CONFIGS).map((p) => p.retentionDays)) * DAY_MS
+
+/** Billing layers needed to resolve an org's effective plan (mirrors the span-ingestion worker). */
+const billingPlanLayers = Layer.mergeAll(
+  BillingOverrideRepositoryLive,
+  SettingsReaderLive,
+  StripeSubscriptionLookupLive,
+  OrganizationRepositoryLive,
+)
+
+/**
+ * Billing-aware retention adapter for the destinations engine — resolves the
+ * org's subscription retention window (how far back a backfill can reach; past
+ * it spans are already TTL-deleted). Self-contained: provides its own pg +
+ * cache, falls back to the widest plan retention if billing is momentarily down.
+ */
+const retentionPolicyLayer = Layer.succeed(DestinationRetentionPolicy, {
+  maxAgeMs: (organizationId: OrganizationId) =>
+    resolveEffectivePlanCached(organizationId).pipe(
+      Effect.map((plan) => plan.plan.retentionDays * DAY_MS),
+      withPostgres(billingPlanLayers, getPostgresClient(), organizationId),
+      Effect.provide(RedisCacheStoreLive(getRedisClient())),
+      Effect.orElseSucceed(() => MAX_RETENTION_MS),
+    ),
+})
+
+/** Per-kind deliverer registry — built once; reused by connection tests and resume's boundary read. */
+const destinationDeliverers: DestinationDelivererRegistry = {
+  posthog: createPosthogDeliverer(),
+}
 
 /** Wire projection of one enabled/disabled source on a destination. */
 export interface DestinationSourceRecord {
@@ -148,11 +191,21 @@ const createDestinationSchema = z.object({
   config: destinationConfigSchema,
   credentials: destinationCredentialsSchema,
   sourceConfigs: z.array(destinationSourceConfigSchema).optional(),
+  /** Opt-in history import on connect. Omit to sync forward-only; set to backfill every source on creation. */
+  importHistory: z.boolean().optional(),
+  /** ISO instant to import from; omit (with `importHistory`) for "as far back as retained". Clamped to the org's retention by the worker. */
+  importSince: z.string().datetime().optional(),
 })
+
+/** Create result envelope: the record plus whether the opt-in history import was enqueued. */
+interface CreateDestinationResultRecord {
+  readonly destination: DestinationRecord
+  readonly importStarted: boolean
+}
 
 export const createDestination = createServerFn({ method: "POST" })
   .inputValidator(createDestinationSchema)
-  .handler(async ({ data }): Promise<DestinationRecord> => {
+  .handler(async ({ data }): Promise<CreateDestinationResultRecord> => {
     const { organizationId, userId } = await requireSession()
 
     const record = await Effect.runPromise(
@@ -177,7 +230,42 @@ export const createDestination = createServerFn({ method: "POST" })
       ),
     )
 
-    return record
+    if (!data.importHistory) return { destination: record, importStarted: false }
+
+    // Opt-in history import: fan out one backfill job per source. `since === null`
+    // means "as far back as retained" — the worker resolves the org's TTL and
+    // clamps the reach; we never pass a floor from here. Best-effort: the
+    // destination already exists, so per-source publish failures are tallied, not
+    // fatal, and the dedupeKey makes a later manual retry idempotent.
+    const publisher = await getQueuePublisher()
+    const result = await Effect.runPromise(
+      requestDestinationBackfillUseCase({
+        destinationId: DestinationId(record.id),
+        since: data.importSince ? new Date(data.importSince) : null,
+        now: new Date(),
+        publish: ({ source, since, until }) =>
+          publisher.publish(
+            "destinations-backfill",
+            "backfill",
+            {
+              organizationId,
+              projectId: data.projectId,
+              destinationId: record.id,
+              source,
+              ...(since ? { since: since.toISOString() } : {}),
+              until: until.toISOString(),
+            },
+            { dedupeKey: `destinations:backfill:${record.id}:${source}`, leadingThrottleMs: 60_000 },
+          ),
+      }).pipe(
+        withPostgres(DestinationSourceStateRepositoryLive, getPostgresClient(), organizationId),
+        Effect.provide(retentionPolicyLayer),
+        withTracing,
+      ),
+    )
+
+    // v1 has a single `spans` source, so import is all-or-nothing — any per-source failure ⇒ not started.
+    return { destination: record, importStarted: result.enqueued > 0 && result.failed === 0 }
   })
 
 const updateDestinationSchema = z.object({
@@ -250,19 +338,156 @@ export const pauseDestination = createServerFn({ method: "POST" })
     return record
   })
 
+interface ResumeDestinationResultRecord {
+  readonly destination: DestinationRecord
+  /** Sources whose missed window (past the historical boundary) was enqueued as a gap backfill. */
+  readonly backfillsStarted: number
+  /** Sources whose gap backfill failed to enqueue — live catch-up still covers the gap. */
+  readonly backfillsFailed: number
+}
+
 export const resumeDestination = createServerFn({ method: "POST" })
   .inputValidator(destinationActionSchema)
-  .handler(async ({ data }): Promise<DestinationRecord> => {
+  .handler(async ({ data }): Promise<ResumeDestinationResultRecord> => {
     const { organizationId } = await requireSession()
+    const publisher = await getQueuePublisher()
 
-    const record = await Effect.runPromise(
+    const result = await Effect.runPromise(
       Effect.gen(function* () {
-        const destination = yield* resumeDestinationUseCase({
+        const { destination, backfillsStarted, backfillsFailed } = yield* resumeDestinationUseCase({
           organizationId,
           projectId: ProjectId(data.projectId),
           destinationId: DestinationId(data.destinationId),
+          now: new Date(),
+          // Resume owns the gap backfill: it enqueues the missed window itself so a
+          // dismissed UI never leaves the (cursor-skipped) gap permanently unfilled.
+          publish: ({ source, since, until }) =>
+            publisher.publish(
+              "destinations-backfill",
+              "backfill",
+              {
+                organizationId,
+                projectId: data.projectId,
+                destinationId: data.destinationId,
+                source,
+                since: since.toISOString(),
+                until: until.toISOString(),
+              },
+              { dedupeKey: `destinations:backfill:${data.destinationId}:${source}`, leadingThrottleMs: 60_000 },
+            ),
         })
-        return yield* buildRecord(destination)
+        const record = yield* buildRecord(destination)
+        return { record, backfillsStarted, backfillsFailed }
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(DestinationRepositoryLive, DestinationSourceStateRepositoryLive),
+          getPostgresClient(),
+          organizationId,
+        ),
+        Effect.provide(Layer.succeed(DestinationDeliverers, destinationDeliverers)),
+        Effect.provide(retentionPolicyLayer),
+        withTracing,
+      ),
+    )
+
+    return {
+      destination: result.record,
+      backfillsStarted: result.backfillsStarted,
+      backfillsFailed: result.backfillsFailed,
+    }
+  })
+
+const startDestinationBackfillSchema = z.object({
+  projectId: z.string(),
+  destinationId: z.string(),
+  /** ISO instant to backfill from; omit for "as far back as retained". The engine clamps to the org's retention window. */
+  since: z.string().datetime().optional(),
+})
+
+/**
+ * Enqueues a user-initiated historical backfill across a destination's enabled
+ * sources. Authorizes the destination against the caller's org + project (RLS),
+ * then fans out one `backfill` job per source via {@link requestDestinationBackfillUseCase}
+ * — the worker resolves the org's retention window, clamps `since` to it, and
+ * drives the paced, resumable, idempotent chain. A leading-edge throttle
+ * debounces accidental double-submits.
+ */
+export const startDestinationBackfill = createServerFn({ method: "POST" })
+  .inputValidator(startDestinationBackfillSchema)
+  .handler(async ({ data }): Promise<{ readonly enqueued: number; readonly failed: number }> => {
+    const { organizationId } = await requireSession()
+    const publisher = await getQueuePublisher()
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* DestinationRepository
+        const destination = yield* repo.findById(DestinationId(data.destinationId))
+        if (destination.projectId !== data.projectId) {
+          return yield* Effect.fail(new NotFoundError({ entity: "Destination", id: data.destinationId }))
+        }
+        return yield* requestDestinationBackfillUseCase({
+          destinationId: DestinationId(data.destinationId),
+          since: data.since ? new Date(data.since) : null,
+          now: new Date(),
+          publish: ({ source, since, until }) =>
+            publisher.publish(
+              "destinations-backfill",
+              "backfill",
+              {
+                organizationId,
+                projectId: data.projectId,
+                destinationId: data.destinationId,
+                source,
+                ...(since ? { since: since.toISOString() } : {}),
+                until: until.toISOString(),
+              },
+              { dedupeKey: `destinations:backfill:${data.destinationId}:${source}`, leadingThrottleMs: 60_000 },
+            ),
+        })
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(DestinationRepositoryLive, DestinationSourceStateRepositoryLive),
+          getPostgresClient(),
+          organizationId,
+        ),
+        Effect.provide(retentionPolicyLayer),
+        withTracing,
+      ),
+    )
+
+    return { enqueued: result.enqueued, failed: result.failed }
+  })
+
+/**
+ * Cancels an in-flight backfill by clearing each source's in-flight marker. The
+ * running chain reads the cleared marker on its next window and stops (without
+ * advancing coverage), so the range stays re-importable. The current in-flight
+ * window finishes first, so cancellation takes effect within ~one window.
+ */
+export const cancelDestinationBackfill = createServerFn({ method: "POST" })
+  .inputValidator(destinationActionSchema)
+  .handler(async ({ data }): Promise<{ readonly cancelled: true }> => {
+    const { organizationId } = await requireSession()
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* DestinationRepository
+        const destination = yield* repo.findById(DestinationId(data.destinationId))
+        if (destination.projectId !== data.projectId) {
+          return yield* Effect.fail(new NotFoundError({ entity: "Destination", id: data.destinationId }))
+        }
+        const sourceStates = yield* DestinationSourceStateRepository
+        const sources = yield* sourceStates.listByDestinationId(DestinationId(data.destinationId))
+        yield* Effect.forEach(
+          sources,
+          (s) =>
+            sourceStates.setBackfillStartedAt({
+              destinationId: DestinationId(data.destinationId),
+              source: s.source,
+              at: null,
+            }),
+          { discard: true },
+        )
       }).pipe(
         withPostgres(
           Layer.mergeAll(DestinationRepositoryLive, DestinationSourceStateRepositoryLive),
@@ -273,7 +498,7 @@ export const resumeDestination = createServerFn({ method: "POST" })
       ),
     )
 
-    return record
+    return { cancelled: true } as const
   })
 
 export const deleteDestination = createServerFn({ method: "POST" })
@@ -326,10 +551,6 @@ const toConnectionTestResult = (result: TestDestinationConnectionResult): Destin
         reason: result.reason,
         upstreamStatus: result.upstreamStatus ?? null,
       }
-
-const destinationDeliverers: DestinationDelivererRegistry = {
-  posthog: createPosthogDeliverer(),
-}
 
 const testDestinationConnectionSchema = z.object({
   config: destinationConfigSchema,
@@ -386,6 +607,7 @@ export const testExistingDestinationConnection = createServerFn({
 export interface DestinationSyncRunRecord {
   readonly id: string
   readonly source: DestinationSource
+  readonly trigger: DestinationSyncRunTrigger
   readonly status: DestinationSyncRunStatus
   readonly recordsRead: number
   readonly eventsSent: number
@@ -400,6 +622,7 @@ export interface DestinationSyncRunRecord {
 const toSyncRunRecord = (run: DestinationSyncRun): DestinationSyncRunRecord => ({
   id: run.id,
   source: run.source,
+  trigger: run.trigger,
   status: run.status,
   recordsRead: run.recordsRead,
   eventsSent: run.eventsSent,
@@ -434,6 +657,9 @@ export const getDestinationFreshness = createServerFn({ method: "GET" })
       data,
     }): Promise<{
       readonly sources: readonly DestinationSourceFreshnessRecord[]
+      readonly backfillAvailable: boolean
+      readonly backfillInProgress: boolean
+      readonly backfillProgress: number | null
     }> => {
       const { organizationId } = await requireSession()
       const devSafetyLagMs = resolveDevSafetyLagMs()
@@ -456,6 +682,7 @@ export const getDestinationFreshness = createServerFn({ method: "GET" })
             getClickhouseClient(),
             organizationId,
           ),
+          Effect.provide(retentionPolicyLayer),
           withTracing,
         ),
       )
@@ -465,6 +692,9 @@ export const getDestinationFreshness = createServerFn({ method: "GET" })
           source: s.source,
           lagMs: s.lagMs,
         })),
+        backfillAvailable: freshness.backfillAvailable,
+        backfillInProgress: freshness.backfillInProgress,
+        backfillProgress: freshness.backfillProgress,
       }
     },
   )

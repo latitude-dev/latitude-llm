@@ -5,7 +5,7 @@ import {
   destinationSourceStateSchema,
 } from "@domain/destinations"
 import { SqlClient, type SqlClientShape, toRepositoryError } from "@domain/shared"
-import { and, eq, isNull, or, sql } from "drizzle-orm"
+import { and, eq, isNull, lt, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { getEncryptionKey } from "../encryption-key.ts"
@@ -25,6 +25,9 @@ const toDomainSourceState = (row: SourceRow): DestinationSourceState =>
     config: row.config,
     watermark: row.watermark,
     watermarkId: row.watermarkId,
+    coverageStartAt: row.coverageStartAt,
+    backfillStartedAt: row.backfillStartedAt,
+    backfillProgressAt: row.backfillProgressAt,
     lastRunAt: row.lastRunAt,
     consecutiveEmptyRuns: row.consecutiveEmptyRuns,
     createdAt: row.createdAt,
@@ -39,6 +42,9 @@ const toInsertRow = (sourceState: DestinationSourceState) => ({
   config: sourceState.config,
   watermark: sourceState.watermark,
   watermarkId: sourceState.watermarkId,
+  coverageStartAt: sourceState.coverageStartAt,
+  backfillStartedAt: sourceState.backfillStartedAt,
+  backfillProgressAt: sourceState.backfillProgressAt,
   lastRunAt: sourceState.lastRunAt,
   consecutiveEmptyRuns: sourceState.consecutiveEmptyRuns,
   createdAt: sourceState.createdAt,
@@ -178,6 +184,25 @@ export const DestinationSourceStateRepositoryLive = Layer.effect(
             .pipe(Effect.mapError((e) => toRepositoryError(e, "updateDestinationSourceRunState")))
         }),
 
+      setWatermark: ({ destinationId, source, watermark }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .update(destinationSources)
+                .set({ watermark: watermark.watermark, watermarkId: watermark.id, updatedAt: new Date() })
+                .where(
+                  and(
+                    eq(destinationSources.destinationId, destinationId),
+                    eq(destinationSources.source, source),
+                    eq(destinationSources.organizationId, organizationId),
+                  ),
+                ),
+            )
+            .pipe(Effect.mapError((e) => toRepositoryError(e, "setDestinationSourceWatermark")))
+        }),
+
       updateConfig: ({ destinationId, source, config, status }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
@@ -199,6 +224,107 @@ export const DestinationSourceStateRepositoryLive = Layer.effect(
                 ),
             )
             .pipe(Effect.mapError((e) => toRepositoryError(e, "updateDestinationSourceConfig")))
+        }),
+
+      extendCoverageStart: ({ destinationId, source, to }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .update(destinationSources)
+                .set({
+                  coverageStartAt: sql`least(${destinationSources.coverageStartAt}, ${to.toISOString()}::timestamptz)`,
+                  updatedAt: new Date(),
+                })
+                .where(
+                  and(
+                    eq(destinationSources.destinationId, destinationId),
+                    eq(destinationSources.source, source),
+                    eq(destinationSources.organizationId, organizationId),
+                  ),
+                ),
+            )
+            .pipe(Effect.mapError((e) => toRepositoryError(e, "extendDestinationSourceCoverageStart")))
+        }),
+
+      acquireBackfill: ({ destinationId, source, at, staleBefore }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const rows = yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .update(destinationSources)
+                .set({ backfillStartedAt: at, updatedAt: new Date() })
+                .where(
+                  and(
+                    eq(destinationSources.destinationId, destinationId),
+                    eq(destinationSources.source, source),
+                    eq(destinationSources.organizationId, organizationId),
+                    or(isNull(destinationSources.backfillStartedAt), lt(destinationSources.updatedAt, staleBefore)),
+                  ),
+                )
+                .returning({ destinationId: destinationSources.destinationId }),
+            )
+            .pipe(Effect.mapError((e) => toRepositoryError(e, "acquireDestinationSourceBackfill")))
+
+          return rows.length > 0
+        }),
+
+      setBackfillStartedAt: ({ destinationId, source, at }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .update(destinationSources)
+                .set({ backfillStartedAt: at, updatedAt: new Date() })
+                .where(
+                  and(
+                    eq(destinationSources.destinationId, destinationId),
+                    eq(destinationSources.source, source),
+                    eq(destinationSources.organizationId, organizationId),
+                  ),
+                ),
+            )
+            .pipe(Effect.mapError((e) => toRepositoryError(e, "setDestinationSourceBackfillStartedAt")))
+        }),
+
+      setBackfillProgress: ({ destinationId, source, at }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .update(destinationSources)
+                .set({ backfillProgressAt: at, updatedAt: new Date() })
+                .where(
+                  and(
+                    eq(destinationSources.destinationId, destinationId),
+                    eq(destinationSources.source, source),
+                    eq(destinationSources.organizationId, organizationId),
+                  ),
+                ),
+            )
+            .pipe(Effect.mapError((e) => toRepositoryError(e, "setDestinationSourceBackfillProgress")))
+        }),
+
+      resetCoverageStart: (destinationId) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .update(destinationSources)
+                .set({ coverageStartAt: sql`${destinationSources.createdAt}`, updatedAt: new Date() })
+                .where(
+                  and(
+                    eq(destinationSources.destinationId, destinationId),
+                    eq(destinationSources.organizationId, organizationId),
+                  ),
+                ),
+            )
+            .pipe(Effect.mapError((e) => toRepositoryError(e, "resetDestinationSourceCoverageStart")))
         }),
 
       deleteByDestinationId: (destinationId) =>

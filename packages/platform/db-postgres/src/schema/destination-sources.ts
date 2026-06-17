@@ -29,6 +29,10 @@ export const destinationSources = latitudeSchema.table(
     config: jsonb("config").notNull().$type<DestinationSourceConfig>(),
     watermark: tzTimestamp("watermark").notNull(),
     watermarkId: varchar("watermark_id", { length: 32 }).notNull().default(""),
+    // Earliest instant this source has taken responsibility for; backfills extend it leftward, the historical-export upper bound.
+    coverageStartAt: tzTimestamp("coverage_start_at").defaultNow().notNull(),
+    backfillStartedAt: tzTimestamp("backfill_started_at"),
+    backfillProgressAt: tzTimestamp("backfill_progress_at"),
     lastRunAt: tzTimestamp("last_run_at"),
     consecutiveEmptyRuns: integer("consecutive_empty_runs").notNull().default(0),
     ...timestamps(),
