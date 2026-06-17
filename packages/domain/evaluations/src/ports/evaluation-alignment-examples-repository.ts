@@ -1,5 +1,5 @@
 import {
-  type IssueId,
+  type SignalId,
   type ProjectId,
   type RepositoryError,
   SessionId,
@@ -40,7 +40,7 @@ export type EvaluationAlignmentExample = z.infer<typeof evaluationAlignmentExamp
 
 export interface ListEvaluationAlignmentExamplesInput {
   readonly projectId: ProjectId
-  readonly issueId: IssueId
+  readonly signalId: SignalId
   readonly limit?: number
   readonly createdAfter?: Date
 }

@@ -1,16 +1,16 @@
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
-import { ChSqlClient, IssueId, OrganizationId, ProjectId, TraceId } from "@domain/shared"
+import { ChSqlClient, SignalId, OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { createFakeChSqlClient } from "@domain/shared/testing"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { listIssueTracesUseCase } from "./list-issue-traces.ts"
+import { listSignalTracesUseCase } from "./list-issue-traces.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
-const issueId = IssueId("i".repeat(24))
+const signalId = SignalId("i".repeat(24))
 
 const cuidTraceId = (seed: string) => seed.padEnd(32, "0")
 
@@ -66,7 +66,7 @@ const buildLayer = (input: {
   const listByTraceIdsCalls: Array<readonly string[]> = []
 
   const { repository: scoreAnalytics } = createFakeScoreAnalyticsRepository({
-    listTracesByIssue: ({ limit, offset }) =>
+    listTracesBySignal: ({ limit, offset }) =>
       Effect.sync(() => {
         listTracesCalls.push({ limit, offset })
         return {
@@ -100,7 +100,7 @@ const buildLayer = (input: {
   }
 }
 
-describe("listIssueTracesUseCase", () => {
+describe("listSignalTracesUseCase", () => {
   it("returns the resolved TraceDetail page, preserving repo order", async () => {
     const first = makeTraceDetail(cuidTraceId("a"))
     const second = makeTraceDetail(cuidTraceId("b"))
@@ -118,7 +118,7 @@ describe("listIssueTracesUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      listIssueTracesUseCase({ organizationId, projectId, issueId, limit: 25 }).pipe(Effect.provide(layer)),
+      listSignalTracesUseCase({ organizationId, projectId, signalId, limit: 25 }).pipe(Effect.provide(layer)),
     )
 
     expect(result.items.map((t) => t.traceId)).toEqual([first.traceId, second.traceId])
@@ -135,7 +135,7 @@ describe("listIssueTracesUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      listIssueTracesUseCase({ organizationId, projectId, issueId }).pipe(Effect.provide(layer)),
+      listSignalTracesUseCase({ organizationId, projectId, signalId }).pipe(Effect.provide(layer)),
     )
 
     expect(result.items).toEqual([])
@@ -160,7 +160,7 @@ describe("listIssueTracesUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      listIssueTracesUseCase({ organizationId, projectId, issueId }).pipe(Effect.provide(layer)),
+      listSignalTracesUseCase({ organizationId, projectId, signalId }).pipe(Effect.provide(layer)),
     )
 
     expect(result.items.map((t) => t.traceId as string)).toEqual([cuidTraceId("a")])
@@ -172,7 +172,7 @@ describe("listIssueTracesUseCase", () => {
     })
 
     await Effect.runPromise(
-      listIssueTracesUseCase({ organizationId, projectId, issueId, limit: 10, offset: 30 }).pipe(Effect.provide(layer)),
+      listSignalTracesUseCase({ organizationId, projectId, signalId, limit: 10, offset: 30 }).pipe(Effect.provide(layer)),
     )
 
     expect(listTracesCalls).toEqual([{ limit: 10, offset: 30 }])

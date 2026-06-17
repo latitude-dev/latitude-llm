@@ -50,14 +50,14 @@ export const gepaProposalOutputSchema = z.object({
 })
 
 export const buildGepaProposalPrompt = (input: {
-  readonly issueName: string
-  readonly issueDescription: string
+  readonly signalName: string
+  readonly signalDescription: string
   readonly currentScript: string
   readonly trajectories: readonly OptimizationTrajectory[]
 }): string =>
   [
-    `Issue name: ${input.issueName}`,
-    `Issue description: ${input.issueDescription}`,
+    `Signal name: ${input.signalName}`,
+    `Signal description: ${input.signalDescription}`,
     "",
     "Current evaluation script:",
     input.currentScript,

@@ -1,7 +1,7 @@
 import { EMBEDDING_DIMENSIONS } from "@domain/ai"
 import type { EntrySignalsSnapshot } from "@domain/alerts"
-import type { IssueEscalationSignals } from "@domain/scores"
-import { IssueId } from "@domain/shared"
+import type { SignalEscalationSignals } from "@domain/scores"
+import { SignalId } from "@domain/shared"
 import { describe, expect, it } from "vitest"
 import {
   CENTROID_HALF_LIFE_SECONDS,
@@ -9,15 +9,15 @@ import {
   ESCALATION_EXIT_DWELL_MS,
   ESCALATION_MAX_DURATION_MS,
 } from "./constants.ts"
-import { type Issue, type IssueCentroid, IssueState } from "./entities/issue.ts"
+import { type Signal, type SignalCentroid, SignalState } from "./entities/issue.ts"
 import {
-  createIssueCentroid,
-  deriveIssueLifecycleStates,
+  createSignalCentroid,
+  deriveSignalLifecycleStates,
   evaluateSeasonalEscalation,
   getEscalationOccurrenceThreshold,
   normalizeEmbedding,
-  normalizeIssueCentroid,
-  updateIssueCentroid,
+  normalizeSignalCentroid,
+  updateSignalCentroid,
 } from "./helpers.ts"
 
 const halfLifeMilliseconds = CENTROID_HALF_LIFE_SECONDS * 1000
@@ -32,8 +32,8 @@ const makeVector = (entries: ReadonlyArray<readonly [number, number]>): number[]
   return vector
 }
 
-const makeCentroid = (overrides: Partial<IssueCentroid> = {}): IssueCentroid => {
-  const centroid = createIssueCentroid()
+const makeCentroid = (overrides: Partial<SignalCentroid> = {}): SignalCentroid => {
+  const centroid = createSignalCentroid()
 
   return {
     ...centroid,
@@ -43,8 +43,8 @@ const makeCentroid = (overrides: Partial<IssueCentroid> = {}): IssueCentroid => 
   }
 }
 
-const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
-  id: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
+const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
+  id: SignalId("iiiiiiiiiiiiiiiiiiiiiiii"),
   slug: "test-issue",
   organizationId: "oooooooooooooooooooooooo",
   projectId: "pppppppppppppppppppppppp",
@@ -53,7 +53,7 @@ const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
   source: "annotation",
   assigneeId: null,
   priority: null,
-  centroid: createIssueCentroid(),
+  centroid: createSignalCentroid(),
   clusteredAt: new Date("2026-04-01T00:00:00.000Z"),
   escalatedAt: null,
   resolvedAt: null,
@@ -65,7 +65,7 @@ const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
 
 describe("issue centroid helpers", () => {
   it("creates empty centroids with the pinned v2 config", () => {
-    const centroid = createIssueCentroid()
+    const centroid = createSignalCentroid()
 
     expect(centroid.base).toHaveLength(EMBEDDING_DIMENSIONS)
     expect(centroid.base.every((value) => value === 0)).toBe(true)
@@ -77,9 +77,9 @@ describe("issue centroid helpers", () => {
   it("adds source-weighted contributions and clamps future score timestamps", () => {
     const timestamp = new Date("2026-04-01T12:00:00.000Z")
 
-    const result = updateIssueCentroid({
+    const result = updateSignalCentroid({
       centroid: {
-        ...createIssueCentroid(),
+        ...createSignalCentroid(),
         clusteredAt: timestamp,
       },
       score: {
@@ -104,7 +104,7 @@ describe("issue centroid helpers", () => {
     const clusteredAt = new Date("2026-01-01T00:00:00.000Z")
     const timestamp = new Date(clusteredAt.getTime() + halfLifeMilliseconds)
 
-    const result = updateIssueCentroid({
+    const result = updateSignalCentroid({
       centroid: {
         ...makeCentroid({
           base: makeVector([[0, 2]]),
@@ -129,7 +129,7 @@ describe("issue centroid helpers", () => {
   it("zeros base and mass when removal would drive mass non-positive", () => {
     const timestamp = new Date("2026-04-01T12:00:00.000Z")
 
-    const result = updateIssueCentroid({
+    const result = updateSignalCentroid({
       centroid: {
         ...makeCentroid({
           base: makeVector([[0, 0.5]]),
@@ -152,7 +152,7 @@ describe("issue centroid helpers", () => {
   })
 
   it("normalizes centroid vectors for search and skips empty centroids", () => {
-    const vector = normalizeIssueCentroid(
+    const vector = normalizeSignalCentroid(
       makeCentroid({
         base: makeVector([
           [0, 3],
@@ -164,7 +164,7 @@ describe("issue centroid helpers", () => {
 
     expect(vector[0]).toBeCloseTo(0.6)
     expect(vector[1]).toBeCloseTo(0.8)
-    expect(normalizeIssueCentroid(createIssueCentroid())).toEqual([])
+    expect(normalizeSignalCentroid(createSignalCentroid())).toEqual([])
   })
 
   it("normalizes raw embeddings", () => {
@@ -179,9 +179,9 @@ describe("issue centroid helpers", () => {
     const timestamp = new Date("2026-04-01T12:00:00.000Z")
 
     expect(() =>
-      updateIssueCentroid({
+      updateSignalCentroid({
         centroid: {
-          ...createIssueCentroid(),
+          ...createSignalCentroid(),
           clusteredAt: timestamp,
         },
         score: {
@@ -208,8 +208,8 @@ describe("issue lifecycle helpers", () => {
   })
 
   it("marks recently created issues as new", () => {
-    const states = deriveIssueLifecycleStates({
-      issue: makeIssue({
+    const states = deriveSignalLifecycleStates({
+      issue: makeSignal({
         createdAt: new Date("2026-04-05T08:00:00.000Z"),
         updatedAt: new Date("2026-04-05T08:00:00.000Z"),
         clusteredAt: new Date("2026-04-05T08:00:00.000Z"),
@@ -219,12 +219,12 @@ describe("issue lifecycle helpers", () => {
       now,
     })
 
-    expect(states).toEqual([IssueState.New])
+    expect(states).toEqual([SignalState.New])
   })
 
   it("marks the issue as escalating when the lifecycle flag is true", () => {
-    const states = deriveIssueLifecycleStates({
-      issue: makeIssue({
+    const states = deriveSignalLifecycleStates({
+      issue: makeSignal({
         createdAt: new Date("2026-03-20T08:00:00.000Z"),
         updatedAt: new Date("2026-03-20T08:00:00.000Z"),
         clusteredAt: new Date("2026-03-20T08:00:00.000Z"),
@@ -234,12 +234,12 @@ describe("issue lifecycle helpers", () => {
       now,
     })
 
-    expect(states).toEqual([IssueState.Escalating])
+    expect(states).toEqual([SignalState.Escalating])
   })
 
   it("does not mark as escalating when the flag is false", () => {
-    const states = deriveIssueLifecycleStates({
-      issue: makeIssue({
+    const states = deriveSignalLifecycleStates({
+      issue: makeSignal({
         createdAt: new Date("2026-03-20T08:00:00.000Z"),
         updatedAt: new Date("2026-03-20T08:00:00.000Z"),
         clusteredAt: new Date("2026-03-20T08:00:00.000Z"),
@@ -249,12 +249,12 @@ describe("issue lifecycle helpers", () => {
       now,
     })
 
-    expect(states).toEqual([IssueState.Ongoing])
+    expect(states).toEqual([SignalState.Ongoing])
   })
 
   it("marks the issue as regressed when isRegressed is true and resolvedAt is null", () => {
-    const states = deriveIssueLifecycleStates({
-      issue: makeIssue({
+    const states = deriveSignalLifecycleStates({
+      issue: makeSignal({
         createdAt: new Date("2026-03-01T08:00:00.000Z"),
         updatedAt: new Date("2026-03-01T08:00:00.000Z"),
         clusteredAt: new Date("2026-03-01T08:00:00.000Z"),
@@ -265,15 +265,15 @@ describe("issue lifecycle helpers", () => {
       now,
     })
 
-    expect(states).toEqual([IssueState.Regressed])
+    expect(states).toEqual([SignalState.Regressed])
   })
 
   it("treats explicitly resolved issues as resolved even if a regression incident exists", () => {
     // resolvedAt being set means the user has acknowledged the regression
     // by resolving again. Take that signal as authoritative — the regression
     // history still lives in alert_incidents for surfacing separately.
-    const states = deriveIssueLifecycleStates({
-      issue: makeIssue({
+    const states = deriveSignalLifecycleStates({
+      issue: makeSignal({
         createdAt: new Date("2026-03-01T08:00:00.000Z"),
         updatedAt: new Date("2026-03-01T08:00:00.000Z"),
         clusteredAt: new Date("2026-03-01T08:00:00.000Z"),
@@ -284,12 +284,12 @@ describe("issue lifecycle helpers", () => {
       now,
     })
 
-    expect(states).toEqual([IssueState.Resolved])
+    expect(states).toEqual([SignalState.Resolved])
   })
 
   it("derives both new and ignored when the issue is brand new and ignored", () => {
-    const states = deriveIssueLifecycleStates({
-      issue: makeIssue({
+    const states = deriveSignalLifecycleStates({
+      issue: makeSignal({
         createdAt: new Date("2026-04-06T08:00:00.000Z"),
         updatedAt: new Date("2026-04-06T08:00:00.000Z"),
         clusteredAt: new Date("2026-04-06T08:00:00.000Z"),
@@ -300,12 +300,12 @@ describe("issue lifecycle helpers", () => {
       now,
     })
 
-    expect(states).toEqual([IssueState.New, IssueState.Ignored])
+    expect(states).toEqual([SignalState.New, SignalState.Ignored])
   })
 
   it("marks older active issues with no specific lifecycle signal as ongoing", () => {
-    const states = deriveIssueLifecycleStates({
-      issue: makeIssue({
+    const states = deriveSignalLifecycleStates({
+      issue: makeSignal({
         createdAt: new Date("2026-03-15T08:00:00.000Z"),
         updatedAt: new Date("2026-03-15T08:00:00.000Z"),
         clusteredAt: new Date("2026-03-15T08:00:00.000Z"),
@@ -315,15 +315,15 @@ describe("issue lifecycle helpers", () => {
       now,
     })
 
-    expect(states).toEqual([IssueState.Ongoing])
+    expect(states).toEqual([SignalState.Ongoing])
   })
 })
 
 describe("evaluateSeasonalEscalation", () => {
   const now = new Date("2026-05-08T12:00:00.000Z")
 
-  const baseSignals = (overrides: Partial<IssueEscalationSignals> = {}): IssueEscalationSignals => ({
-    issueId: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
+  const baseSignals = (overrides: Partial<SignalEscalationSignals> = {}): SignalEscalationSignals => ({
+    signalId: SignalId("iiiiiiiiiiiiiiiiiiiiiiii"),
     recent1h: 0,
     recent6h: 0,
     recent24h: 0,

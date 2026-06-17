@@ -82,7 +82,7 @@ export interface TaxonomyClusterRepositoryShape {
   /**
    * Persist the cluster row, materializing the derived `centroid_embedding`
    * column from the JSONB centroid inside the repository (same pattern as
-   * `IssueRepository.save`).
+   * `SignalRepository.save`).
    */
   save(cluster: TaxonomyCluster): Effect.Effect<void, RepositoryError, SqlClient>
   markMerged(input: MarkMergedInput): Effect.Effect<void, RepositoryError, SqlClient>

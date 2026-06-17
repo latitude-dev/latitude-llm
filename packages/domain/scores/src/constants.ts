@@ -8,21 +8,21 @@ export const SCORE_PUBLICATION_DEBOUNCE = 5 * 1000
 
 /**
  * Cap on how many of an issue's most-recent SYSTEM annotation occurrences a
- * `ScoreRepository.listFlaggerSlugsByIssueId` implementation must sample
+ * `ScoreRepository.listFlaggerSlugsBySignalId` implementation must sample
  * before collapsing to distinct `metadata.flaggerSlug` values. Flagger
  * variety on an issue converges fast (almost always one or two flaggers), so
  * a bounded recent sample captures effectively every slug while keeping the
  * scan cheap for noisy issues — same rationale as
- * `ISSUE_TAG_TRACE_SAMPLE_LIMIT` in the ClickHouse tags-by-issue path.
+ * `SIGNAL_TAG_TRACE_SAMPLE_LIMIT` in the ClickHouse tags-by-issue path.
  *
  * Exposed in the domain layer (rather than as a private platform constant)
  * so both the live Postgres impl and the in-memory fake apply the exact same
  * cap; this keeps fake-backed tests faithful to the port contract.
  */
-export const ISSUE_FLAGGER_SLUG_SAMPLE_LIMIT = 200
+export const SIGNAL_FLAGGER_SLUG_SAMPLE_LIMIT = 200
 
 // ---------------------------------------------------------------------------
-// Seasonal escalation detection (consumed by `escalationSignalsByIssues`)
+// Seasonal escalation detection (consumed by `escalationSignalsBySignals`)
 // ---------------------------------------------------------------------------
 
 /** Number of prior weeks pooled to derive the seasonal expected/stddev for a (dow, hour) bin. */

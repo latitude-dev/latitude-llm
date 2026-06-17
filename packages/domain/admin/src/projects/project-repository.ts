@@ -1,16 +1,16 @@
-import type { IssueId, NotFoundError, ProjectId, RepositoryError } from "@domain/shared"
+import type { SignalId, NotFoundError, ProjectId, RepositoryError } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { AdminProjectDetails } from "./project-details.ts"
 
 /** Snapshot of issue counts by lifecycle state at request time. */
-export interface ProjectIssueStateSnapshot {
+export interface ProjectSignalStateSnapshot {
   readonly untracked: number
   readonly tracked: number
   readonly resolved: number
 }
 
 /**
- * Lifecycle event row for one issue. Any field other than `issueId` and
+ * Lifecycle event row for one issue. Any field other than `signalId` and
  * `createdAt` may be `null`. The composer treats `ignoredAt` as a
  * resolution event (rolling Ignored into Resolved).
  *
@@ -18,8 +18,8 @@ export interface ProjectIssueStateSnapshot {
  * Per the project metrics design, `evaluations.archived_at` is ignored —
  * once an issue had any eval, it's "tracked" until it resolves.
  */
-export interface ProjectIssueLifecycleEvent {
-  readonly issueId: IssueId
+export interface ProjectSignalLifecycleEvent {
+  readonly signalId: SignalId
   readonly createdAt: Date
   readonly firstEvalAttachedAt: Date | null
   readonly resolvedAt: Date | null
@@ -33,7 +33,7 @@ export interface ProjectIssueLifecycleEvent {
  * lifecycle events — an issue that became `tracked` long before the
  * window opened still reports `tracked` here.
  */
-export interface ProjectIssueDetails {
+export interface ProjectSignalDetails {
   readonly name: string
   readonly state: "untracked" | "tracked" | "resolved"
 }
@@ -59,23 +59,23 @@ export class AdminProjectRepository extends Context.Service<
     findById(projectId: ProjectId): Effect.Effect<AdminProjectDetails, NotFoundError | RepositoryError>
 
     /**
-     * Issue count grouped by lifecycle state for the project. Used as
+     * Signal count grouped by lifecycle state for the project. Used as
      * the anchor for the stacked-area composer — events in the window
      * walk back from this snapshot.
      */
-    getCurrentIssueStateCounts(projectId: ProjectId): Effect.Effect<ProjectIssueStateSnapshot, RepositoryError>
+    getCurrentSignalStateCounts(projectId: ProjectId): Effect.Effect<ProjectSignalStateSnapshot, RepositoryError>
 
     /**
      * Lifecycle events for issues whose `created_at`, `resolved_at`,
      * `ignored_at`, or first-evaluation `created_at` falls in
-     * `[since, now]`. Issues with no event in the window aren't
+     * `[since, now]`. Signals with no event in the window aren't
      * returned — they have constant state and are reconstructed from
      * the snapshot baseline.
      */
-    getIssueLifecycleEvents(
+    getSignalLifecycleEvents(
       projectId: ProjectId,
       since: Date,
-    ): Effect.Effect<readonly ProjectIssueLifecycleEvent[], RepositoryError>
+    ): Effect.Effect<readonly ProjectSignalLifecycleEvent[], RepositoryError>
 
     /**
      * Hydrate display details (name + current lifecycle state) for the
@@ -84,8 +84,8 @@ export class AdminProjectRepository extends Context.Service<
      * ids missing from PG are simply absent (callers fall back to the
      * id and an `untracked` default).
      */
-    findIssueDetailsByIds(
-      ids: readonly IssueId[],
-    ): Effect.Effect<ReadonlyMap<IssueId, ProjectIssueDetails>, RepositoryError>
+    findSignalDetailsByIds(
+      ids: readonly SignalId[],
+    ): Effect.Effect<ReadonlyMap<SignalId, ProjectSignalDetails>, RepositoryError>
   }
 >()("@domain/admin/AdminProjectRepository") {}

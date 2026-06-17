@@ -4,16 +4,16 @@ import type { EvaluationAlignmentJudgeTelemetryScope } from "../../runtime/ai-te
 import { evaluateDraftAgainstExamplesUseCase } from "./evaluate-draft-against-examples.ts"
 
 export const evaluateBaselineDraftUseCase = (input: {
-  readonly issueName: string
-  readonly issueDescription: string
+  readonly signalName: string
+  readonly signalDescription: string
   readonly script: string
   readonly positiveExamples: readonly HydratedEvaluationAlignmentExample[]
   readonly negativeExamples: readonly HydratedEvaluationAlignmentExample[]
   readonly judgeTelemetry: EvaluationAlignmentJudgeTelemetryScope
 }) =>
   evaluateDraftAgainstExamplesUseCase({
-    issueName: input.issueName,
-    issueDescription: input.issueDescription,
+    signalName: input.signalName,
+    signalDescription: input.signalDescription,
     script: input.script,
     positiveExamples: input.positiveExamples,
     negativeExamples: input.negativeExamples,

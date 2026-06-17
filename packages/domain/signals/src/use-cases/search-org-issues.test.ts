@@ -1,24 +1,24 @@
-import { IssueId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { SignalId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import type { Issue } from "../entities/issue.ts"
-import { createIssueCentroid } from "../helpers.ts"
+import type { Signal } from "../entities/issue.ts"
+import { createSignalCentroid } from "../helpers.ts"
 import {
-  IssueRepository,
-  type IssueRepositoryShape,
-  type IssueWithLifecycle,
-  type OrgIssueSearchHit,
+  SignalRepository,
+  type SignalRepositoryShape,
+  type SignalWithLifecycle,
+  type OrgSignalSearchHit,
 } from "../ports/issue-repository.ts"
-import { createFakeIssueRepository } from "../testing/fake-issue-repository.ts"
-import { searchOrgIssuesUseCase } from "./search-org-issues.ts"
+import { createFakeSignalRepository } from "../testing/fake-issue-repository.ts"
+import { searchOrgSignalsUseCase } from "./search-org-issues.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectA = ProjectId("a".repeat(24))
 const projectB = ProjectId("b".repeat(24))
 
-const makeIssue = (id: string, projectId: ProjectId, name: string, overrides: Partial<Issue> = {}): Issue => ({
-  id: IssueId(id.padEnd(24, "0")),
+const makeSignal = (id: string, projectId: ProjectId, name: string, overrides: Partial<Signal> = {}): Signal => ({
+  id: SignalId(id.padEnd(24, "0")),
   organizationId: organizationId as string,
   projectId: projectId as string,
   slug: name.toLowerCase().replace(/\s+/g, "-"),
@@ -27,7 +27,7 @@ const makeIssue = (id: string, projectId: ProjectId, name: string, overrides: Pa
   source: "annotation",
   assigneeId: null,
   priority: null,
-  centroid: createIssueCentroid(),
+  centroid: createSignalCentroid(),
   clusteredAt: new Date("2026-03-01T00:00:00.000Z"),
   escalatedAt: null,
   resolvedAt: null,
@@ -37,34 +37,34 @@ const makeIssue = (id: string, projectId: ProjectId, name: string, overrides: Pa
   ...overrides,
 })
 
-const hit = (issue: Issue, score: number): OrgIssueSearchHit => ({
-  issue: Object.assign({}, issue, { lifecycle: { isEscalating: false, isRegressed: false } }) as IssueWithLifecycle,
+const hit = (issue: Signal, score: number): OrgSignalSearchHit => ({
+  issue: Object.assign({}, issue, { lifecycle: { isEscalating: false, isRegressed: false } }) as SignalWithLifecycle,
   projectSlug: `slug-${issue.projectId}`,
   projectName: `Project ${issue.projectId}`,
   score,
 })
 
 const run = (
-  searchOrgWide: IssueRepositoryShape["searchOrgWide"],
+  searchOrgWide: SignalRepositoryShape["searchOrgWide"],
   args: { readonly query: string; readonly normalizedEmbedding?: readonly number[]; readonly limit?: number },
 ) => {
-  const { repository } = createFakeIssueRepository([], { searchOrgWide })
+  const { repository } = createFakeSignalRepository([], { searchOrgWide })
   return Effect.runPromise(
-    searchOrgIssuesUseCase({ organizationId, ...args }).pipe(
+    searchOrgSignalsUseCase({ organizationId, ...args }).pipe(
       Effect.provide(
-        Layer.mergeAll(Layer.succeed(IssueRepository, repository), Layer.succeed(SqlClient, createFakeSqlClient())),
+        Layer.mergeAll(Layer.succeed(SignalRepository, repository), Layer.succeed(SqlClient, createFakeSqlClient())),
       ),
     ),
   )
 }
 
-const lexA = makeIssue("ix1", projectA, "Payment Errors")
-const lexB = makeIssue("ix2", projectB, "Error Rate", { resolvedAt: new Date("2026-03-02T00:00:00.000Z") })
-const semC = makeIssue("ix3", projectA, "Latency")
+const lexA = makeSignal("ix1", projectA, "Payment Errors")
+const lexB = makeSignal("ix2", projectB, "Error Rate", { resolvedAt: new Date("2026-03-02T00:00:00.000Z") })
+const semC = makeSignal("ix3", projectA, "Latency")
 
-describe("searchOrgIssuesUseCase", () => {
+describe("searchOrgSignalsUseCase", () => {
   it("returns lexical hits across projects with derived states when no embedding is passed", async () => {
-    const searchOrgWide: IssueRepositoryShape["searchOrgWide"] = ({ limit }) =>
+    const searchOrgWide: SignalRepositoryShape["searchOrgWide"] = ({ limit }) =>
       Effect.sync(() => [hit(lexA, 0.9), hit(lexB, 0.8)].slice(0, limit))
 
     const results = await run(searchOrgWide, { query: "error" })
@@ -78,7 +78,7 @@ describe("searchOrgIssuesUseCase", () => {
   })
 
   it("merges lexical-first, then de-duped semantic hits", async () => {
-    const searchOrgWide: IssueRepositoryShape["searchOrgWide"] = ({ normalizedEmbedding, limit }) =>
+    const searchOrgWide: SignalRepositoryShape["searchOrgWide"] = ({ normalizedEmbedding, limit }) =>
       Effect.sync(
         () =>
           normalizedEmbedding === undefined
@@ -93,7 +93,7 @@ describe("searchOrgIssuesUseCase", () => {
   })
 
   it("caps the merged result at the limit", async () => {
-    const searchOrgWide: IssueRepositoryShape["searchOrgWide"] = ({ normalizedEmbedding, limit }) =>
+    const searchOrgWide: SignalRepositoryShape["searchOrgWide"] = ({ normalizedEmbedding, limit }) =>
       Effect.sync(() =>
         normalizedEmbedding === undefined ? [hit(lexA, 0.9), hit(lexB, 0.8)].slice(0, limit) : [hit(semC, 0.6)],
       )

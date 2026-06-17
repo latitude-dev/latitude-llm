@@ -1,21 +1,21 @@
 import { AIEmbed, type AIError, EMBEDDING_DIMENSIONS, resolveEmbeddingConfig } from "@domain/ai"
-import { createIssueCentroid, type IssueCentroid, updateIssueCentroid } from "@domain/issues"
-import { IssueId, toSlug } from "@domain/shared"
-import { SEED_ISSUE_FIXTURES, SEED_REGRESSED_ISSUE_IDS, type SeedScope } from "@domain/shared/seeding"
+import { createSignalCentroid, type SignalCentroid, updateSignalCentroid } from "@domain/signals"
+import { SignalId, toSlug } from "@domain/shared"
+import { SEED_SIGNAL_FIXTURES, SEED_REGRESSED_SIGNAL_IDS, type SeedScope } from "@domain/shared/seeding"
 import { AIEmbedLive } from "@platform/ai"
 import { Effect } from "effect"
 import { issues } from "../../schema/issues.ts"
-import { buildIssueLinkedScoreSeedRows } from "../scores/index.ts"
+import { buildSignalLinkedScoreSeedRows } from "../scores/index.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 
 const EMBEDDING_CONCURRENCY = 8
 
-type IssueLinkedScoreSeedRow = ReturnType<typeof buildIssueLinkedScoreSeedRows>[number]
-type EmbeddedIssueLinkedScoreSeedRow = IssueLinkedScoreSeedRow & {
+type SignalLinkedScoreSeedRow = ReturnType<typeof buildSignalLinkedScoreSeedRows>[number]
+type EmbeddedSignalLinkedScoreSeedRow = SignalLinkedScoreSeedRow & {
   readonly embedding: readonly number[]
 }
 
-const NAMED_ISSUE_KEYS = [
+const NAMED_SIGNAL_KEYS = [
   "warranty-fab",
   "combination",
   "logistics",
@@ -27,19 +27,19 @@ const NAMED_ISSUE_KEYS = [
 ] as const
 
 export const fixtureScopedId = (index: number, scope: SeedScope): string =>
-  index < NAMED_ISSUE_KEYS.length
-    ? scope.cuid(`issue:${NAMED_ISSUE_KEYS[index]}`)
-    : scope.cuid(`issue:extra:${index - NAMED_ISSUE_KEYS.length}`)
+  index < NAMED_SIGNAL_KEYS.length
+    ? scope.cuid(`issue:${NAMED_SIGNAL_KEYS[index]}`)
+    : scope.cuid(`issue:extra:${index - NAMED_SIGNAL_KEYS.length}`)
 
 const fixtureScopedUuid = (index: number, scope: SeedScope): string =>
-  index < NAMED_ISSUE_KEYS.length
-    ? scope.uuid(`issue:${NAMED_ISSUE_KEYS[index]}:uuid`)
-    : scope.uuid(`issue:extra:${index - NAMED_ISSUE_KEYS.length}:uuid`)
+  index < NAMED_SIGNAL_KEYS.length
+    ? scope.uuid(`issue:${NAMED_SIGNAL_KEYS[index]}:uuid`)
+    : scope.uuid(`issue:extra:${index - NAMED_SIGNAL_KEYS.length}:uuid`)
 
 /** Stable key per fixture index — used to namespace cross-seeder ids
  * (e.g. alert_incidents rows that reference these issues). */
 export const fixtureScopedKey = (index: number): string =>
-  index < NAMED_ISSUE_KEYS.length ? (NAMED_ISSUE_KEYS[index] as string) : `extra:${index - NAMED_ISSUE_KEYS.length}`
+  index < NAMED_SIGNAL_KEYS.length ? (NAMED_SIGNAL_KEYS[index] as string) : `extra:${index - NAMED_SIGNAL_KEYS.length}`
 
 function hashString(input: string): number {
   let hash = 1779033703 ^ input.length
@@ -96,14 +96,14 @@ function minDate(dates: readonly Date[]): Date {
   return dates.reduce((earliest, current) => (current.getTime() < earliest.getTime() ? current : earliest))
 }
 
-interface EmbeddedIssueFeedbacks {
+interface EmbeddedSignalFeedbacks {
   readonly provider: string
   readonly embeddings: Map<string, number[]>
 }
 
-const embedIssueFeedbacks = (
-  rows: readonly IssueLinkedScoreSeedRow[],
-): Effect.Effect<EmbeddedIssueFeedbacks, AIError> =>
+const embedSignalFeedbacks = (
+  rows: readonly SignalLinkedScoreSeedRow[],
+): Effect.Effect<EmbeddedSignalFeedbacks, AIError> =>
   Effect.gen(function* () {
     const embed = yield* AIEmbed
     const embeddingConfig = yield* resolveEmbeddingConfig()
@@ -127,8 +127,8 @@ const embedIssueFeedbacks = (
   }).pipe(Effect.provide(AIEmbedLive))
 
 function buildCentroidFromEmbeddings(
-  rows: readonly EmbeddedIssueLinkedScoreSeedRow[],
-): IssueCentroid & { clusteredAt: Date } {
+  rows: readonly EmbeddedSignalLinkedScoreSeedRow[],
+): SignalCentroid & { clusteredAt: Date } {
   const sortedRows = [...rows].sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())
   const firstRow = sortedRows[0]
 
@@ -136,13 +136,13 @@ function buildCentroidFromEmbeddings(
     throw new Error("Cannot build an issue centroid without any score rows")
   }
 
-  let centroid: IssueCentroid & { clusteredAt: Date } = {
-    ...createIssueCentroid(),
+  let centroid: SignalCentroid & { clusteredAt: Date } = {
+    ...createSignalCentroid(),
     clusteredAt: firstRow.createdAt,
   }
 
   for (const row of sortedRows) {
-    centroid = updateIssueCentroid({
+    centroid = updateSignalCentroid({
       centroid,
       score: {
         embedding: row.embedding,
@@ -157,16 +157,16 @@ function buildCentroidFromEmbeddings(
   return centroid
 }
 
-function buildRandomFallbackCentroid(seedKey: string, clusteredAt: Date): IssueCentroid & { clusteredAt: Date } {
+function buildRandomFallbackCentroid(seedKey: string, clusteredAt: Date): SignalCentroid & { clusteredAt: Date } {
   return {
-    ...createIssueCentroid(),
+    ...createSignalCentroid(),
     base: deterministicUnitVector(seedKey, EMBEDDING_DIMENSIONS),
     mass: 1,
     clusteredAt,
   }
 }
 
-export function issueFixtureDates(scope: SeedScope, issue: (typeof SEED_ISSUE_FIXTURES)[number]) {
+export function signalFixtureDates(scope: SeedScope, issue: (typeof SEED_SIGNAL_FIXTURES)[number]) {
   return {
     createdAt: scope.dateDaysAgo(issue.createdDaysAgo, 14, 15),
     clusteredAt: scope.dateDaysAgo(issue.clusteredDaysAgo, 14, 15),
@@ -177,26 +177,26 @@ export function issueFixtureDates(scope: SeedScope, issue: (typeof SEED_ISSUE_FI
   }
 }
 
-function buildIssueRow(input: {
+function buildSignalRow(input: {
   readonly scope: SeedScope
-  readonly issue: (typeof SEED_ISSUE_FIXTURES)[number]
-  readonly issueId: string
-  readonly issueUuid: string
+  readonly issue: (typeof SEED_SIGNAL_FIXTURES)[number]
+  readonly signalId: string
+  readonly signalUuid: string
   readonly organizationId: string
   readonly projectId: string
-  readonly issueScores: readonly IssueLinkedScoreSeedRow[]
-  readonly embeddedIssueScores: readonly EmbeddedIssueLinkedScoreSeedRow[] | null
+  readonly signalScores: readonly SignalLinkedScoreSeedRow[]
+  readonly embeddedSignalScores: readonly EmbeddedSignalLinkedScoreSeedRow[] | null
 }): typeof issues.$inferInsert {
-  const fixtureDates = issueFixtureDates(input.scope, input.issue)
-  const sortedIssueScores = [...input.issueScores].sort(
+  const fixtureDates = signalFixtureDates(input.scope, input.issue)
+  const sortedSignalScores = [...input.signalScores].sort(
     (left, right) => left.createdAt.getTime() - right.createdAt.getTime(),
   )
-  const firstSeenAt = sortedIssueScores[0]?.createdAt ?? fixtureDates.createdAt
-  const lastSeenAt = sortedIssueScores.at(-1)?.createdAt ?? fixtureDates.clusteredAt
+  const firstSeenAt = sortedSignalScores[0]?.createdAt ?? fixtureDates.createdAt
+  const lastSeenAt = sortedSignalScores.at(-1)?.createdAt ?? fixtureDates.clusteredAt
   const centroid =
-    input.embeddedIssueScores && input.embeddedIssueScores.length > 0
-      ? buildCentroidFromEmbeddings(input.embeddedIssueScores)
-      : buildRandomFallbackCentroid(input.issueUuid, lastSeenAt)
+    input.embeddedSignalScores && input.embeddedSignalScores.length > 0
+      ? buildCentroidFromEmbeddings(input.embeddedSignalScores)
+      : buildRandomFallbackCentroid(input.signalUuid, lastSeenAt)
   const createdAt = minDate([fixtureDates.createdAt, firstSeenAt])
   const updatedAt = maxDate(
     [
@@ -213,11 +213,11 @@ function buildIssueRow(input: {
   // `issue.regressed` alert_incident, which the alert-incidents seeder
   // inserts for these ids. Production behavior is the same — when
   // `assign-score-to-issue` reifies a regression it clears `resolvedAt`.
-  const isRegressedDemo = SEED_REGRESSED_ISSUE_IDS.includes(input.issueId)
+  const isRegressedDemo = SEED_REGRESSED_SIGNAL_IDS.includes(input.signalId)
   const resolvedAt = isRegressedDemo ? null : fixtureDates.resolvedAt
 
   return {
-    id: IssueId(input.issueId),
+    id: SignalId(input.signalId),
     organizationId: input.organizationId,
     projectId: input.projectId,
     // Seeds run before the migration backfill is exercised; we provide a slug
@@ -231,7 +231,7 @@ function buildIssueRow(input: {
     clusteredAt: centroid.clusteredAt,
     // escalatedAt is intentionally not written: the column is dormant and
     // "currently escalating" is sourced from open `alert_incidents` rows
-    // by `IssueRepository`.
+    // by `SignalRepository`.
     escalatedAt: null,
     resolvedAt,
     ignoredAt: fixtureDates.ignoredAt,
@@ -240,25 +240,25 @@ function buildIssueRow(input: {
   }
 }
 
-const seedIssues: Seeder = {
+const seedSignals: Seeder = {
   name: "issues/acme-support-issue-families",
   run: (ctx: SeedContext) =>
     Effect.tryPromise({
       try: async () => {
-        const issueLinkedScoreSeedRows = buildIssueLinkedScoreSeedRows(ctx.scope)
+        const signalLinkedScoreSeedRows = buildSignalLinkedScoreSeedRows(ctx.scope)
 
-        const issueScoresByIssueId = new Map<string, IssueLinkedScoreSeedRow[]>()
-        for (const row of issueLinkedScoreSeedRows) {
-          const issueId = row.issueId
-          if (issueId === null) {
+        const signalScoresBySignalId = new Map<string, SignalLinkedScoreSeedRow[]>()
+        for (const row of signalLinkedScoreSeedRows) {
+          const signalId = row.signalId
+          if (signalId === null) {
             continue
           }
 
-          const existing = issueScoresByIssueId.get(issueId)
+          const existing = signalScoresBySignalId.get(signalId)
           if (existing) {
             existing.push(row)
           } else {
-            issueScoresByIssueId.set(issueId, [row])
+            signalScoresBySignalId.set(signalId, [row])
           }
         }
 
@@ -266,7 +266,7 @@ const seedIssues: Seeder = {
         // unavailable (no credentials, unreachable) the seeds degrade to
         // deterministic random centroids instead of failing.
         const embedded = await Effect.runPromise(
-          embedIssueFeedbacks(issueLinkedScoreSeedRows).pipe(
+          embedSignalFeedbacks(signalLinkedScoreSeedRows).pipe(
             Effect.catchTag("AIError", (error) =>
               Effect.sync(() => {
                 console.log(`  -> issues: embedding provider unavailable (${error.message})`)
@@ -276,14 +276,14 @@ const seedIssues: Seeder = {
           ),
         )
         const embeddingsByScoreId = embedded?.embeddings ?? null
-        const issueRows = SEED_ISSUE_FIXTURES.map((issue, index) => {
-          const issueId = fixtureScopedId(index, ctx.scope)
-          const issueUuid = fixtureScopedUuid(index, ctx.scope)
-          const issueScores = issueScoresByIssueId.get(issueId) ?? []
-          const embeddedIssueScores =
+        const signalRows = SEED_SIGNAL_FIXTURES.map((issue, index) => {
+          const signalId = fixtureScopedId(index, ctx.scope)
+          const signalUuid = fixtureScopedUuid(index, ctx.scope)
+          const signalScores = signalScoresBySignalId.get(signalId) ?? []
+          const embeddedSignalScores =
             embeddingsByScoreId === null
               ? null
-              : issueScores.map((row) => {
+              : signalScores.map((row) => {
                   const embedding = embeddingsByScoreId.get(row.id)
                   if (!embedding) {
                     throw new Error(`Missing seeded issue embedding for score ${row.id}`)
@@ -292,22 +292,22 @@ const seedIssues: Seeder = {
                   return {
                     ...row,
                     embedding,
-                  } satisfies EmbeddedIssueLinkedScoreSeedRow
+                  } satisfies EmbeddedSignalLinkedScoreSeedRow
                 })
 
-          return buildIssueRow({
+          return buildSignalRow({
             scope: ctx.scope,
             issue,
-            issueId,
-            issueUuid,
+            signalId,
+            signalUuid,
             organizationId: ctx.scope.organizationId,
             projectId: ctx.scope.projectId,
-            issueScores,
-            embeddedIssueScores,
+            signalScores,
+            embeddedSignalScores,
           })
         })
 
-        for (const row of issueRows) {
+        for (const row of signalRows) {
           const { id, ...set } = row
           await ctx.db.insert(issues).values(row).onConflictDoUpdate({
             target: issues.id,
@@ -316,11 +316,11 @@ const seedIssues: Seeder = {
         }
 
         console.log(
-          `  -> issues: ${issueRows.length} Acme support issue families (${embedded ? `${embedded.provider} centroid embeddings` : "deterministic random centroid fallback"})`,
+          `  -> issues: ${signalRows.length} Acme support issue families (${embedded ? `${embedded.provider} centroid embeddings` : "deterministic random centroid fallback"})`,
         )
       },
       catch: (error) => new SeedError({ reason: "Failed to seed issues", cause: error }),
     }).pipe(Effect.asVoid),
 }
 
-export const issueSeeders: readonly Seeder[] = [seedIssues]
+export const signalSeeders: readonly Seeder[] = [seedSignals]

@@ -10,7 +10,7 @@ type AnnotationPopoverState = {
   position: { x: number; y: number }
   passed: boolean | null
   comment: string
-  issueId: string | null
+  signalId: string | null
 } & ({ kind: "new"; anchor: TextSelectionAnchor } | { kind: "existing"; annotation: AnnotationRecord })
 
 interface UseAnnotationPopoverOptions {
@@ -63,7 +63,7 @@ export function useAnnotationPopover({
         position,
         passed: annotation.passed,
         comment: annotation.feedback ?? "",
-        issueId: annotation.issueId,
+        signalId: annotation.signalId,
       })
     },
     [openAnnotationPopover],
@@ -111,7 +111,7 @@ export function useAnnotationPopover({
         position,
         passed,
         comment: "",
-        issueId: null,
+        signalId: null,
       })
     },
     [highlightRanges, annotations, openAnnotationPopover, openExistingAnnotationPopover],

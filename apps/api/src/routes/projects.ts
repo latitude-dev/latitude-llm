@@ -67,8 +67,8 @@ const IncidentNotificationsSettingSchema = z
 // Compile-time check that this per-project toggle covers every `issue.*` kind.
 // Saved-search kinds are scoped to monitors, not this settings block.
 // TODO: Remove this after releasing monitors for everybody (replaced by per-monitor mute).
-type _IssueAlertKind = Extract<(typeof ALERT_INCIDENT_KINDS)[number], `issue.${string}`>
-type _AlertKindsCovered = Exclude<_IssueAlertKind, keyof z.infer<typeof IncidentNotificationsSettingSchema>>
+type _SignalAlertKind = Extract<(typeof ALERT_INCIDENT_KINDS)[number], `issue.${string}`>
+type _AlertKindsCovered = Exclude<_SignalAlertKind, keyof z.infer<typeof IncidentNotificationsSettingSchema>>
 const _alertKindsAreCovered: _AlertKindsCovered extends never ? true : false = true
 void _alertKindsAreCovered
 

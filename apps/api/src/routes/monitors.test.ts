@@ -51,7 +51,7 @@ const createSystemMonitorRecord = async (
     organizationId,
     projectId,
     slug,
-    name: "Issue escalating",
+    name: "Signal escalating",
     system: true,
   })
   await database.db.insert(monitorAlerts).values({

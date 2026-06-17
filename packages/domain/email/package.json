@@ -11,7 +11,7 @@
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
-    "@domain/issues": "workspace:*",
+    "@domain/signals": "workspace:*",
     "@domain/monitors": "workspace:*",
     "@domain/notifications": "workspace:*",
     "@domain/saved-searches": "workspace:*",

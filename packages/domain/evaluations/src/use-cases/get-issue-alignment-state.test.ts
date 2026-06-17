@@ -1,15 +1,15 @@
 import { WorkflowQuerier, type WorkflowQuerierShape } from "@domain/queue"
-import { EvaluationId, IssueId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { EvaluationId, SignalId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { defaultEvaluationTrigger, type Evaluation, emptyEvaluationAlignment } from "../entities/evaluation.ts"
 import { EvaluationRepository, type EvaluationRepositoryShape } from "../ports/evaluation-repository.ts"
-import { deriveIssueAlignmentState, getIssueAlignmentStateUseCase } from "./get-issue-alignment-state.ts"
+import { deriveSignalAlignmentState, getSignalAlignmentStateUseCase } from "./get-issue-alignment-state.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
-const issueId = IssueId("i".repeat(24))
+const signalId = SignalId("i".repeat(24))
 const evaluationId = EvaluationId("e".repeat(24))
 
 const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation =>
@@ -17,7 +17,7 @@ const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation =>
     id: evaluationId,
     organizationId,
     projectId,
-    issueId,
+    signalId,
     name: "Eval",
     description: "Generated description",
     script: "return { passed: false }",
@@ -49,11 +49,11 @@ const provideWorkflowQuerier = (running: ReadonlySet<string> = new Set()) => {
   return Layer.succeed(WorkflowQuerier, querier)
 }
 
-describe("deriveIssueAlignmentState", () => {
+describe("deriveSignalAlignmentState", () => {
   it("returns `automatic` when the issue is auto-monitored and has no active evaluations", async () => {
     const state = await Effect.runPromise(
-      deriveIssueAlignmentState({
-        issueId,
+      deriveSignalAlignmentState({
+        signalId,
         activeEvaluations: [],
         isAutomaticallyMonitored: true,
       }).pipe(Effect.provide(provideWorkflowQuerier())),
@@ -64,7 +64,7 @@ describe("deriveIssueAlignmentState", () => {
 
   it("returns `idle` when no workflow is running and no active evaluations exist", async () => {
     const state = await Effect.runPromise(
-      deriveIssueAlignmentState({ issueId, activeEvaluations: [] }).pipe(Effect.provide(provideWorkflowQuerier())),
+      deriveSignalAlignmentState({ signalId, activeEvaluations: [] }).pipe(Effect.provide(provideWorkflowQuerier())),
     )
 
     expect(state).toEqual({ kind: "idle" })
@@ -72,8 +72,8 @@ describe("deriveIssueAlignmentState", () => {
 
   it("returns `generating` when the per-issue generation workflow is running", async () => {
     const state = await Effect.runPromise(
-      deriveIssueAlignmentState({ issueId, activeEvaluations: [] }).pipe(
-        Effect.provide(provideWorkflowQuerier(new Set([`evaluations:generate:${issueId}`]))),
+      deriveSignalAlignmentState({ signalId, activeEvaluations: [] }).pipe(
+        Effect.provide(provideWorkflowQuerier(new Set([`evaluations:generate:${signalId}`]))),
       ),
     )
 
@@ -83,7 +83,7 @@ describe("deriveIssueAlignmentState", () => {
   it("returns `realigning` when an optimization workflow is running for an active evaluation", async () => {
     const evaluation = makeEvaluation()
     const state = await Effect.runPromise(
-      deriveIssueAlignmentState({ issueId, activeEvaluations: [evaluation] }).pipe(
+      deriveSignalAlignmentState({ signalId, activeEvaluations: [evaluation] }).pipe(
         Effect.provide(provideWorkflowQuerier(new Set([`evaluations:optimize:${evaluation.id}`]))),
       ),
     )
@@ -94,7 +94,7 @@ describe("deriveIssueAlignmentState", () => {
   it("returns `realigning` when a refresh-alignment workflow is running for an active evaluation", async () => {
     const evaluation = makeEvaluation()
     const state = await Effect.runPromise(
-      deriveIssueAlignmentState({ issueId, activeEvaluations: [evaluation] }).pipe(
+      deriveSignalAlignmentState({ signalId, activeEvaluations: [evaluation] }).pipe(
         Effect.provide(provideWorkflowQuerier(new Set([`evaluations:refreshAlignment:${evaluation.id}`]))),
       ),
     )
@@ -105,9 +105,9 @@ describe("deriveIssueAlignmentState", () => {
   it("prefers `generating` over `realigning` when both signals fire", async () => {
     const evaluation = makeEvaluation()
     const state = await Effect.runPromise(
-      deriveIssueAlignmentState({ issueId, activeEvaluations: [evaluation] }).pipe(
+      deriveSignalAlignmentState({ signalId, activeEvaluations: [evaluation] }).pipe(
         Effect.provide(
-          provideWorkflowQuerier(new Set([`evaluations:generate:${issueId}`, `evaluations:optimize:${evaluation.id}`])),
+          provideWorkflowQuerier(new Set([`evaluations:generate:${signalId}`, `evaluations:optimize:${evaluation.id}`])),
         ),
       ),
     )
@@ -118,8 +118,8 @@ describe("deriveIssueAlignmentState", () => {
   it("ignores `isAutomaticallyMonitored` once an active evaluation exists — `idle`/`realigning` take over", async () => {
     const evaluation = makeEvaluation()
     const state = await Effect.runPromise(
-      deriveIssueAlignmentState({
-        issueId,
+      deriveSignalAlignmentState({
+        signalId,
         activeEvaluations: [evaluation],
         isAutomaticallyMonitored: true,
       }).pipe(Effect.provide(provideWorkflowQuerier())),
@@ -133,24 +133,24 @@ const createEvaluationRepository = (activeEvaluations: readonly Evaluation[]): E
   findById: () => Effect.die("Unexpected findById"),
   save: () => Effect.die("Unexpected save"),
   listByProjectId: () => Effect.die("Unexpected listByProjectId"),
-  listByIssueId: () =>
+  listBySignalId: () =>
     Effect.succeed({
       items: activeEvaluations,
       hasMore: false,
       limit: activeEvaluations.length,
       offset: 0,
     }),
-  listByIssueIds: () => Effect.die("Unexpected listByIssueIds"),
+  listBySignalIds: () => Effect.die("Unexpected listBySignalIds"),
   archive: () => Effect.die("Unexpected archive"),
   unarchive: () => Effect.die("Unexpected unarchive"),
   softDelete: () => Effect.die("Unexpected softDelete"),
-  softDeleteByIssueId: () => Effect.die("Unexpected softDeleteByIssueId"),
+  softDeleteBySignalId: () => Effect.die("Unexpected softDeleteBySignalId"),
 })
 
-describe("getIssueAlignmentStateUseCase", () => {
+describe("getSignalAlignmentStateUseCase", () => {
   it("loads active evaluations and returns the derived state", async () => {
     const state = await Effect.runPromise(
-      getIssueAlignmentStateUseCase({ projectId, issueId }).pipe(
+      getSignalAlignmentStateUseCase({ projectId, signalId }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(EvaluationRepository, createEvaluationRepository([makeEvaluation()])),
@@ -166,7 +166,7 @@ describe("getIssueAlignmentStateUseCase", () => {
 
   it("threads `isAutomaticallyMonitored` through to the deriver", async () => {
     const state = await Effect.runPromise(
-      getIssueAlignmentStateUseCase({ projectId, issueId, isAutomaticallyMonitored: true }).pipe(
+      getSignalAlignmentStateUseCase({ projectId, signalId, isAutomaticallyMonitored: true }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(EvaluationRepository, createEvaluationRepository([])),

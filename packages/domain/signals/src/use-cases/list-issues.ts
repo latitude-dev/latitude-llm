@@ -1,10 +1,10 @@
 import { type Evaluation, EvaluationRepository } from "@domain/evaluations"
 import {
-  type IssueOccurrenceAggregate,
-  type IssueOccurrenceBucket,
-  type IssueTagsTimeRange,
-  type IssueTrendSeries,
-  type IssueWindowMetric,
+  type SignalOccurrenceAggregate,
+  type SignalOccurrenceBucket,
+  type SignalTagsTimeRange,
+  type SignalTrendSeries,
+  type SignalWindowMetric,
   ScoreAnalyticsRepository,
   type ScoreAnalyticsTimeRange,
 } from "@domain/scores"
@@ -13,8 +13,8 @@ import {
   cuidSchema,
   type FilterCondition,
   type FilterSet,
-  type IssueId,
-  issueIdSchema,
+  type SignalId,
+  signalIdSchema,
   OrganizationId,
   ProjectId,
   type RepositoryError,
@@ -23,41 +23,41 @@ import {
 import { pickTraceHistogramBucketSeconds, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
-import { ISSUE_PRIORITY_GROUPS, ISSUE_PRIORITY_ORDER } from "../constants.ts"
-import { type IssuePriority, type IssueSource, IssueState } from "../entities/issue.ts"
-import { deriveIssueLifecycleStates, getEscalationOccurrenceThreshold } from "../helpers.ts"
+import { SIGNAL_PRIORITY_GROUPS, SIGNAL_PRIORITY_ORDER } from "../constants.ts"
+import { type SignalPriority, type SignalSource, SignalState } from "../entities/issue.ts"
+import { deriveSignalLifecycleStates, getEscalationOccurrenceThreshold } from "../helpers.ts"
 import { buildHistogramBucketScaffold, fillBuckets } from "../histogram-buckets.ts"
-import { IssueRepository, type IssueSearchCandidate, type IssueWithLifecycle } from "../ports/issue-repository.ts"
+import { SignalRepository, type SignalSearchCandidate, type SignalWithLifecycle } from "../ports/issue-repository.ts"
 
-export const issuesLifecycleGroupSchema = z.enum(["active", "archived"])
-export type IssuesLifecycleGroup = z.infer<typeof issuesLifecycleGroupSchema>
+export const signalsLifecycleGroupSchema = z.enum(["active", "archived"])
+export type SignalsLifecycleGroup = z.infer<typeof signalsLifecycleGroupSchema>
 
-export const issuesSortFieldSchema = z.enum(["lastSeen", "occurrences", "state"])
-export type IssuesSortField = z.infer<typeof issuesSortFieldSchema>
+export const signalsSortFieldSchema = z.enum(["lastSeen", "occurrences", "state"])
+export type SignalsSortField = z.infer<typeof signalsSortFieldSchema>
 
 /** Sentinel accepted by the assignee filter to match issues with no assignee. */
 export const UNASSIGNED_FILTER = "unassigned" as const
 
-export const issueAssigneeFilterSchema = z.union([cuidSchema, z.literal(UNASSIGNED_FILTER)])
-export type IssueAssigneeFilter = z.infer<typeof issueAssigneeFilterSchema>
+export const signalAssigneeFilterSchema = z.union([cuidSchema, z.literal(UNASSIGNED_FILTER)])
+export type SignalAssigneeFilter = z.infer<typeof signalAssigneeFilterSchema>
 
 /** Priority bucket of an issue in the always-grouped list; `"none"` = `priority: null`. */
-export type IssuePriorityGroup = (typeof ISSUE_PRIORITY_GROUPS)[number]
+export type SignalPriorityGroup = (typeof SIGNAL_PRIORITY_GROUPS)[number]
 
-export const issuesSortDirectionSchema = z.enum(["asc", "desc"])
-export type IssuesSortDirection = z.infer<typeof issuesSortDirectionSchema>
+export const signalsSortDirectionSchema = z.enum(["asc", "desc"])
+export type SignalsSortDirection = z.infer<typeof signalsSortDirectionSchema>
 
-export const issuesTimeRangeSchema = z.object({
+export const signalsTimeRangeSchema = z.object({
   from: z.date().optional(),
   to: z.date().optional(),
 })
 
-export const issueSearchSchema = z.object({
+export const signalSearchSchema = z.object({
   query: z.string().min(1),
   normalizedEmbedding: z.array(z.number()),
 })
 
-const listIssuesInputSchema = z.object({
+const listSignalsInputSchema = z.object({
   organizationId: cuidSchema.transform(OrganizationId),
   projectId: cuidSchema.transform(ProjectId),
   /**
@@ -66,16 +66,16 @@ const listIssuesInputSchema = z.object({
    * issue even when it had no activity in the selected time range — the
    * use-case returns it with synthetic zero metrics in that case.
    */
-  issueIds: z.array(issueIdSchema).optional(),
-  lifecycleGroup: issuesLifecycleGroupSchema.optional(),
+  signalIds: z.array(signalIdSchema).optional(),
+  lifecycleGroup: signalsLifecycleGroupSchema.optional(),
   /** Restrict to issues assigned to any of these users; `"unassigned"` matches `assigneeId: null`. */
-  assigneeIds: z.array(issueAssigneeFilterSchema).min(1).optional(),
-  search: issueSearchSchema.optional(),
-  timeRange: issuesTimeRangeSchema.optional(),
+  assigneeIds: z.array(signalAssigneeFilterSchema).min(1).optional(),
+  search: signalSearchSchema.optional(),
+  timeRange: signalsTimeRangeSchema.optional(),
   sort: z
     .object({
-      field: issuesSortFieldSchema.default("lastSeen"),
-      direction: issuesSortDirectionSchema.default("desc"),
+      field: signalsSortFieldSchema.default("lastSeen"),
+      direction: signalsSortDirectionSchema.default("desc"),
     })
     .default({
       field: "lastSeen",
@@ -86,21 +86,21 @@ const listIssuesInputSchema = z.object({
   now: z.date().optional(),
 })
 
-export type ListIssuesInput = z.input<typeof listIssuesInputSchema>
-export type ListIssuesError = RepositoryError
+export type ListSignalsInput = z.input<typeof listSignalsInputSchema>
+export type ListSignalsError = RepositoryError
 
-export interface IssueListAnalyticsCounts {
-  readonly newIssues: number
-  readonly escalatingIssues: number
-  readonly ongoingIssues: number
-  readonly regressedIssues: number
-  readonly resolvedIssues: number
+export interface SignalListAnalyticsCounts {
+  readonly newSignals: number
+  readonly escalatingSignals: number
+  readonly ongoingSignals: number
+  readonly regressedSignals: number
+  readonly resolvedSignals: number
   readonly seenOccurrences: number
 }
 
-export interface IssueListAnalytics {
-  readonly counts: IssueListAnalyticsCounts
-  readonly histogram: readonly IssueOccurrenceBucket[]
+export interface SignalListAnalytics {
+  readonly counts: SignalListAnalyticsCounts
+  readonly histogram: readonly SignalOccurrenceBucket[]
   /**
    * Width (seconds) of each `histogram` bucket. Adaptive — picked from the time range so a
    * 6-day default lands at ~3h–4h bars and longer ranges step up to 12h, 1d, 1w. Bucket keys
@@ -110,16 +110,16 @@ export interface IssueListAnalytics {
   readonly totalTraces: number
 }
 
-export interface IssueListItem {
+export interface SignalListItem {
   readonly id: string
   readonly projectId: string
   readonly slug: string
   readonly name: string
   readonly description: string
-  readonly source: IssueSource
+  readonly source: SignalSource
   readonly states: readonly string[]
   readonly assigneeId: string | null
-  readonly priority: IssuePriority | null
+  readonly priority: SignalPriority | null
   readonly createdAt: Date
   readonly updatedAt: Date
   readonly escalatedAt: Date | null
@@ -131,29 +131,29 @@ export interface IssueListItem {
   readonly similarityScore: number | null
   readonly affectedTracesPercent: number
   readonly escalationOccurrenceThreshold: number | null
-  readonly trend: readonly IssueOccurrenceBucket[]
+  readonly trend: readonly SignalOccurrenceBucket[]
   readonly evaluations: readonly Evaluation[]
   readonly tags: readonly string[]
 }
 
-export interface ListIssuesResult {
-  readonly analytics: IssueListAnalytics
-  readonly items: readonly IssueListItem[]
+export interface ListSignalsResult {
+  readonly analytics: SignalListAnalytics
+  readonly items: readonly SignalListItem[]
   readonly totalCount: number
   readonly hasMore: boolean
   /** True when the project has at least one issue, regardless of lifecycle group or activity window. */
-  readonly hasAnyIssues: boolean
+  readonly hasAnySignals: boolean
   readonly limit: number
   readonly offset: number
   readonly occurrencesSum: number
   /**
-   * Issue count per priority group over the fully filtered table set (all
+   * Signal count per priority group over the fully filtered table set (all
    * pages), so group headers can show complete totals before every page is
    * loaded.
    */
-  readonly priorityCounts: Readonly<Record<IssuePriorityGroup, number>>
+  readonly priorityCounts: Readonly<Record<SignalPriorityGroup, number>>
   /**
-   * Issue count per assignee (`"unassigned"` for null) over the lifecycle-,
+   * Signal count per assignee (`"unassigned"` for null) over the lifecycle-,
    * search-, and time-filtered set but BEFORE the assignee filter — a
    * "My issues" badge must not zero itself when its own filter is active.
    */
@@ -161,8 +161,8 @@ export interface ListIssuesResult {
 }
 
 interface AnalyticsCandidate {
-  readonly issue: IssueWithLifecycle
-  readonly windowMetric: IssueWindowMetric
+  readonly issue: SignalWithLifecycle
+  readonly windowMetric: SignalWindowMetric
   readonly lifecycleStates: readonly string[]
   readonly similarityScore: number | null
   readonly firstSeenAt: Date
@@ -177,7 +177,7 @@ const toUtcDayEnd = (value: Date): Date =>
   new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate(), 23, 59, 59, 999))
 
 const resolveHistogramTimeRange = (input: {
-  readonly timeRange: z.infer<typeof issuesTimeRangeSchema> | undefined
+  readonly timeRange: z.infer<typeof signalsTimeRangeSchema> | undefined
   readonly now: Date
 }): { readonly from: Date; readonly to: Date } => {
   if (input.timeRange?.from && input.timeRange?.to) {
@@ -206,7 +206,7 @@ const resolveHistogramTimeRange = (input: {
 }
 
 const resolveTrendTimeRange = (input: {
-  readonly timeRange: z.infer<typeof issuesTimeRangeSchema> | undefined
+  readonly timeRange: z.infer<typeof signalsTimeRangeSchema> | undefined
   readonly now: Date
 }): { readonly from: Date; readonly to: Date } => {
   const end = toUtcDayEnd(input.timeRange?.to ?? input.timeRange?.from ?? input.now)
@@ -222,7 +222,7 @@ const resolveTrendTimeRange = (input: {
 
 /**
  * Tag aggregation needs an explicit lower-bound time so CH scans on `scores`
- * and `traces` stay partition-pruned (see `aggregateTagsByIssues` impl). If
+ * and `traces` stay partition-pruned (see `aggregateTagsBySignals` impl). If
  * the operator selected a range we honor it; otherwise we fall back to ~30
  * days, which captures effectively all currently-relevant tags while still
  * pinning the scan to a small number of monthly partitions.
@@ -236,7 +236,7 @@ export const TAG_AGGREGATION_FALLBACK_DAYS = 30
 const resolveTagsTimeRange = (input: {
   readonly timeRange: ScoreAnalyticsTimeRange | undefined
   readonly now: Date
-}): IssueTagsTimeRange => {
+}): SignalTagsTimeRange => {
   if (input.timeRange?.from) {
     return input.timeRange.to ? { from: input.timeRange.from, to: input.timeRange.to } : { from: input.timeRange.from }
   }
@@ -247,7 +247,7 @@ const resolveTagsTimeRange = (input: {
 }
 
 const toScoreAnalyticsTimeRange = (
-  timeRange: z.infer<typeof issuesTimeRangeSchema> | undefined,
+  timeRange: z.infer<typeof signalsTimeRangeSchema> | undefined,
 ): ScoreAnalyticsTimeRange | undefined => {
   const normalized: {
     from?: Date
@@ -284,19 +284,19 @@ const buildBucketScaffold = (input: { readonly from: Date; readonly to: Date }):
 
 const matchesLifecycleGroup = (
   candidate: AnalyticsCandidate,
-  lifecycleGroup: IssuesLifecycleGroup | undefined,
+  lifecycleGroup: SignalsLifecycleGroup | undefined,
 ): boolean => {
   if (lifecycleGroup === undefined) {
     return true
   }
 
-  const isArchived = candidate.issue.ignoredAt !== null || candidate.lifecycleStates.includes(IssueState.Resolved)
+  const isArchived = candidate.issue.ignoredAt !== null || candidate.lifecycleStates.includes(SignalState.Resolved)
   return lifecycleGroup === "archived" ? isArchived : !isArchived
 }
 
 const matchesAssigneeFilter = (
   candidate: AnalyticsCandidate,
-  assigneeIds: readonly IssueAssigneeFilter[] | undefined,
+  assigneeIds: readonly SignalAssigneeFilter[] | undefined,
 ): boolean => {
   if (assigneeIds === undefined) {
     return true
@@ -305,12 +305,12 @@ const matchesAssigneeFilter = (
   return assigneeIds.includes(candidate.issue.assigneeId ?? UNASSIGNED_FILTER)
 }
 
-const toPriorityGroup = (priority: IssuePriority | null): IssuePriorityGroup => priority ?? "none"
+const toPriorityGroup = (priority: SignalPriority | null): SignalPriorityGroup => priority ?? "none"
 
-const emptyPriorityCounts = (): Record<IssuePriorityGroup, number> =>
-  Object.fromEntries(ISSUE_PRIORITY_GROUPS.map((group) => [group, 0])) as Record<IssuePriorityGroup, number>
+const emptyPriorityCounts = (): Record<SignalPriorityGroup, number> =>
+  Object.fromEntries(SIGNAL_PRIORITY_GROUPS.map((group) => [group, 0])) as Record<SignalPriorityGroup, number>
 
-const toPriorityCounts = (candidates: readonly AnalyticsCandidate[]): Record<IssuePriorityGroup, number> => {
+const toPriorityCounts = (candidates: readonly AnalyticsCandidate[]): Record<SignalPriorityGroup, number> => {
   const counts = emptyPriorityCounts()
   for (const candidate of candidates) {
     counts[toPriorityGroup(candidate.issue.priority)] += 1
@@ -331,12 +331,12 @@ const compareDesc = (left: number, right: number): number => right - left
 const compareAsc = (left: number, right: number): number => left - right
 
 const LIFECYCLE_STATE_PRIORITY: Record<string, number> = {
-  [IssueState.Regressed]: 0,
-  [IssueState.Escalating]: 1,
-  [IssueState.New]: 2,
-  [IssueState.Ongoing]: 3,
-  [IssueState.Resolved]: 4,
-  [IssueState.Ignored]: 5,
+  [SignalState.Regressed]: 0,
+  [SignalState.Escalating]: 1,
+  [SignalState.New]: 2,
+  [SignalState.Ongoing]: 3,
+  [SignalState.Resolved]: 4,
+  [SignalState.Ignored]: 5,
 }
 
 const UNKNOWN_STATE_PRIORITY = 99
@@ -355,8 +355,8 @@ const getPrimaryStatePriority = (states: readonly string[]): number => {
 const sortCandidates = (
   candidates: readonly AnalyticsCandidate[],
   input: {
-    readonly field: IssuesSortField
-    readonly direction: IssuesSortDirection
+    readonly field: SignalsSortField
+    readonly direction: SignalsSortDirection
     readonly hasSearch: boolean
   },
 ): readonly AnalyticsCandidate[] =>
@@ -366,8 +366,8 @@ const sortCandidates = (
     // user-selected sort applies within each group. Unconditional so exports,
     // bulk pagination, and issue prev/next stay consistent with the web list.
     const priorityComparison = compareAsc(
-      ISSUE_PRIORITY_ORDER[toPriorityGroup(left.issue.priority)],
-      ISSUE_PRIORITY_ORDER[toPriorityGroup(right.issue.priority)],
+      SIGNAL_PRIORITY_ORDER[toPriorityGroup(left.issue.priority)],
+      SIGNAL_PRIORITY_ORDER[toPriorityGroup(right.issue.priority)],
     )
     if (priorityComparison !== 0) {
       return priorityComparison
@@ -425,13 +425,13 @@ const sortCandidates = (
   })
 
 const toCandidate = (input: {
-  readonly issue: IssueWithLifecycle
-  readonly windowMetric: IssueWindowMetric
-  readonly occurrence: IssueOccurrenceAggregate | null
+  readonly issue: SignalWithLifecycle
+  readonly windowMetric: SignalWindowMetric
+  readonly occurrence: SignalOccurrenceAggregate | null
   readonly similarityScore: number | null
   readonly now: Date
 }): AnalyticsCandidate => {
-  const lifecycleStates = deriveIssueLifecycleStates({
+  const lifecycleStates = deriveSignalLifecycleStates({
     issue: input.issue,
     isEscalating: input.issue.lifecycle.isEscalating,
     isRegressed: input.issue.lifecycle.isRegressed,
@@ -450,39 +450,39 @@ const toCandidate = (input: {
   }
 }
 
-const toAnalyticsCounts = (candidates: readonly AnalyticsCandidate[]): IssueListAnalyticsCounts => ({
-  newIssues: candidates.filter((candidate) => candidate.lifecycleStates.includes(IssueState.New)).length,
-  escalatingIssues: candidates.filter((candidate) => candidate.lifecycleStates.includes(IssueState.Escalating)).length,
-  ongoingIssues: candidates.filter((candidate) => candidate.lifecycleStates.includes(IssueState.Ongoing)).length,
-  regressedIssues: candidates.filter((candidate) => candidate.lifecycleStates.includes(IssueState.Regressed)).length,
-  resolvedIssues: candidates.filter((candidate) => candidate.lifecycleStates.includes(IssueState.Resolved)).length,
+const toAnalyticsCounts = (candidates: readonly AnalyticsCandidate[]): SignalListAnalyticsCounts => ({
+  newSignals: candidates.filter((candidate) => candidate.lifecycleStates.includes(SignalState.New)).length,
+  escalatingSignals: candidates.filter((candidate) => candidate.lifecycleStates.includes(SignalState.Escalating)).length,
+  ongoingSignals: candidates.filter((candidate) => candidate.lifecycleStates.includes(SignalState.Ongoing)).length,
+  regressedSignals: candidates.filter((candidate) => candidate.lifecycleStates.includes(SignalState.Regressed)).length,
+  resolvedSignals: candidates.filter((candidate) => candidate.lifecycleStates.includes(SignalState.Resolved)).length,
   seenOccurrences: candidates.reduce((sum, candidate) => sum + candidate.windowMetric.occurrences, 0),
 })
 
-export const listIssuesUseCase = (
-  input: ListIssuesInput,
+export const listSignalsUseCase = (
+  input: ListSignalsInput,
 ): Effect.Effect<
-  ListIssuesResult,
-  ListIssuesError,
-  ChSqlClient | EvaluationRepository | IssueRepository | ScoreAnalyticsRepository | SqlClient | TraceRepository
+  ListSignalsResult,
+  ListSignalsError,
+  ChSqlClient | EvaluationRepository | SignalRepository | ScoreAnalyticsRepository | SqlClient | TraceRepository
 > =>
   Effect.gen(function* () {
-    const parsed = listIssuesInputSchema.parse(input)
+    const parsed = listSignalsInputSchema.parse(input)
     yield* Effect.annotateCurrentSpan("projectId", String(parsed.projectId))
-    const issueRepository = yield* IssueRepository
+    const signalRepository = yield* SignalRepository
     const now = parsed.now ?? new Date()
     const selectedTimeRange = toScoreAnalyticsTimeRange(parsed.timeRange)
 
-    let hasAnyIssues = parsed.issueIds !== undefined
-    if (!parsed.issueIds) {
-      const firstIssuePage = yield* issueRepository.list({
+    let hasAnySignals = parsed.signalIds !== undefined
+    if (!parsed.signalIds) {
+      const firstSignalPage = yield* signalRepository.list({
         projectId: parsed.projectId,
         limit: 1,
         offset: 0,
       })
-      hasAnyIssues = firstIssuePage.items.length > 0
+      hasAnySignals = firstSignalPage.items.length > 0
 
-      if (!hasAnyIssues) {
+      if (!hasAnySignals) {
         const histogramTimeRange = resolveHistogramTimeRange({
           timeRange: parsed.timeRange,
           now,
@@ -500,11 +500,11 @@ export const listIssuesUseCase = (
         return {
           analytics: {
             counts: {
-              newIssues: 0,
-              escalatingIssues: 0,
-              ongoingIssues: 0,
-              regressedIssues: 0,
-              resolvedIssues: 0,
+              newSignals: 0,
+              escalatingSignals: 0,
+              ongoingSignals: 0,
+              regressedSignals: 0,
+              resolvedSignals: 0,
               seenOccurrences: 0,
             },
             histogram: fillBuckets({ scaffold: histogramScaffold, buckets: [] }),
@@ -514,13 +514,13 @@ export const listIssuesUseCase = (
           items: [],
           totalCount: 0,
           hasMore: false,
-          hasAnyIssues,
+          hasAnySignals,
           limit: parsed.limit,
           offset: parsed.offset,
           occurrencesSum: 0,
           priorityCounts: emptyPriorityCounts(),
           assigneeCounts: {},
-        } satisfies ListIssuesResult
+        } satisfies ListSignalsResult
       }
     }
 
@@ -528,20 +528,20 @@ export const listIssuesUseCase = (
     const evaluationRepository = yield* EvaluationRepository
     const traceRepository = yield* TraceRepository
 
-    const windowMetricsEffect = scoreAnalyticsRepository.listIssueWindowMetrics({
+    const windowMetricsEffect = scoreAnalyticsRepository.listSignalWindowMetrics({
       organizationId: parsed.organizationId,
       projectId: parsed.projectId,
       ...(selectedTimeRange ? { timeRange: selectedTimeRange } : {}),
-      ...(parsed.issueIds ? { issueIds: parsed.issueIds } : {}),
+      ...(parsed.signalIds ? { signalIds: parsed.signalIds } : {}),
     })
 
     const searchCandidatesEffect = parsed.search
-      ? issueRepository.hybridSearch({
+      ? signalRepository.hybridSearch({
           projectId: parsed.projectId,
           query: parsed.search.query,
           normalizedEmbedding: parsed.search.normalizedEmbedding,
         })
-      : Effect.succeed([] satisfies readonly IssueSearchCandidate[])
+      : Effect.succeed([] satisfies readonly SignalSearchCandidate[])
 
     // The denominator for `affectedTracesPercent` must be counted against
     // `traces.start_time` (not `scores.created_at`) so the percentage stays
@@ -569,16 +569,16 @@ export const listIssuesUseCase = (
       }),
     ])
 
-    const windowMetricsByIssueId = new Map(windowMetrics.map((metric) => [metric.issueId, metric] as const))
+    const windowMetricsBySignalId = new Map(windowMetrics.map((metric) => [metric.signalId, metric] as const))
     const baseCandidateIds = parsed.search
-      ? searchCandidates.map((candidate) => candidate.issueId).filter((issueId) => windowMetricsByIssueId.has(issueId))
-      : windowMetrics.map((metric) => metric.issueId)
-    // When the caller passed an explicit `issueIds` filter, include those
+      ? searchCandidates.map((candidate) => candidate.signalId).filter((signalId) => windowMetricsBySignalId.has(signalId))
+      : windowMetrics.map((metric) => metric.signalId)
+    // When the caller passed an explicit `signalIds` filter, include those
     // issues in the candidate set even if they had no activity in the
     // window — they get synthesized zero `windowMetric` rows below so the
     // analytics pipeline still produces a stable shape.
-    const candidateIssueIds = parsed.issueIds
-      ? Array.from(new Set<IssueId>([...baseCandidateIds, ...parsed.issueIds]))
+    const candidateSignalIds = parsed.signalIds
+      ? Array.from(new Set<SignalId>([...baseCandidateIds, ...parsed.signalIds]))
       : baseCandidateIds
     const histogramTimeRange = resolveHistogramTimeRange({
       timeRange: parsed.timeRange,
@@ -597,15 +597,15 @@ export const listIssuesUseCase = (
       bucketSeconds: histogramBucketSeconds,
     })
 
-    if (candidateIssueIds.length === 0) {
+    if (candidateSignalIds.length === 0) {
       return {
         analytics: {
           counts: {
-            newIssues: 0,
-            escalatingIssues: 0,
-            ongoingIssues: 0,
-            regressedIssues: 0,
-            resolvedIssues: 0,
+            newSignals: 0,
+            escalatingSignals: 0,
+            ongoingSignals: 0,
+            regressedSignals: 0,
+            resolvedSignals: 0,
             seenOccurrences: 0,
           },
           histogram: fillBuckets({ scaffold: histogramScaffold, buckets: [] }),
@@ -615,65 +615,65 @@ export const listIssuesUseCase = (
         items: [],
         totalCount: 0,
         hasMore: false,
-        hasAnyIssues,
+        hasAnySignals,
         limit: parsed.limit,
         offset: parsed.offset,
         occurrencesSum: 0,
         priorityCounts: emptyPriorityCounts(),
         assigneeCounts: {},
-      } satisfies ListIssuesResult
+      } satisfies ListSignalsResult
     }
 
-    const searchScoresByIssueId = new Map(
-      searchCandidates.map((candidate) => [candidate.issueId, candidate.score] as const),
+    const searchScoresBySignalId = new Map(
+      searchCandidates.map((candidate) => [candidate.signalId, candidate.score] as const),
     )
-    const forceIncludeIssueIds = parsed.issueIds ? new Set<string>(parsed.issueIds) : null
-    const canonicalIssues = yield* issueRepository.findByIds({
+    const forceIncludeSignalIds = parsed.signalIds ? new Set<string>(parsed.signalIds) : null
+    const canonicalSignals = yield* signalRepository.findByIds({
       projectId: parsed.projectId,
-      issueIds: candidateIssueIds,
+      signalIds: candidateSignalIds,
     })
 
-    const matchedIssueIds = canonicalIssues.map((issue) => issue.id)
+    const matchedSignalIds = canonicalSignals.map((issue) => issue.id)
     const fullHistoryOccurrences =
-      matchedIssueIds.length === 0
+      matchedSignalIds.length === 0
         ? []
-        : yield* scoreAnalyticsRepository.aggregateByIssues({
+        : yield* scoreAnalyticsRepository.aggregateBySignals({
             organizationId: parsed.organizationId,
             projectId: parsed.projectId,
-            issueIds: matchedIssueIds,
+            signalIds: matchedSignalIds,
           })
-    const occurrencesByIssueId = new Map(
-      fullHistoryOccurrences.map((occurrence) => [occurrence.issueId, occurrence] as const),
+    const occurrencesBySignalId = new Map(
+      fullHistoryOccurrences.map((occurrence) => [occurrence.signalId, occurrence] as const),
     )
 
-    const analyticsCandidates = canonicalIssues
+    const analyticsCandidates = canonicalSignals
       .map((issue) => {
-        const windowMetric = windowMetricsByIssueId.get(issue.id) ?? null
-        // Issues without window metrics are normally filtered out — but when
-        // the caller passed `issueIds`, force-include them with a synthesized
+        const windowMetric = windowMetricsBySignalId.get(issue.id) ?? null
+        // Signals without window metrics are normally filtered out — but when
+        // the caller passed `signalIds`, force-include them with a synthesized
         // zero-activity metric so a point-lookup over a known issue id still
         // returns a stable analytics shape.
-        if (!windowMetric && !forceIncludeIssueIds?.has(issue.id)) {
+        if (!windowMetric && !forceIncludeSignalIds?.has(issue.id)) {
           return null
         }
 
         return toCandidate({
           issue,
-          windowMetric: windowMetric ?? ({ issueId: issue.id, occurrences: 0 } as unknown as IssueWindowMetric),
-          occurrence: occurrencesByIssueId.get(issue.id) ?? null,
-          similarityScore: searchScoresByIssueId.get(issue.id) ?? null,
+          windowMetric: windowMetric ?? ({ signalId: issue.id, occurrences: 0 } as unknown as SignalWindowMetric),
+          occurrence: occurrencesBySignalId.get(issue.id) ?? null,
+          similarityScore: searchScoresBySignalId.get(issue.id) ?? null,
           now,
         })
       })
       .filter((candidate): candidate is AnalyticsCandidate => candidate !== null)
 
     const analyticsHistogram =
-      matchedIssueIds.length === 0
+      matchedSignalIds.length === 0
         ? []
-        : yield* scoreAnalyticsRepository.histogramByIssues({
+        : yield* scoreAnalyticsRepository.histogramBySignals({
             organizationId: parsed.organizationId,
             projectId: parsed.projectId,
-            issueIds: matchedIssueIds,
+            signalIds: matchedSignalIds,
             timeRange: histogramTimeRange,
             bucketSeconds: histogramBucketSeconds,
           })
@@ -696,7 +696,7 @@ export const listIssuesUseCase = (
 
     const occurrencesSum = tableCandidates.reduce((sum, candidate) => sum + candidate.windowMetric.occurrences, 0)
     const pageCandidates = tableCandidates.slice(parsed.offset, parsed.offset + parsed.limit)
-    const pageIssueIds = pageCandidates.map((candidate) => candidate.issue.id)
+    const pageSignalIds = pageCandidates.map((candidate) => candidate.issue.id)
     const trendTimeRange = resolveTrendTimeRange({
       timeRange: parsed.timeRange,
       now,
@@ -705,49 +705,49 @@ export const listIssuesUseCase = (
     const tagsTimeRange = resolveTagsTimeRange({ timeRange: selectedTimeRange, now })
 
     const [evaluationPage, trendSeries, tagsAggregates] = yield* Effect.all([
-      pageIssueIds.length === 0
+      pageSignalIds.length === 0
         ? Effect.succeed({
             items: [] as readonly Evaluation[],
             hasMore: false,
             limit: 0,
             offset: 0,
           })
-        : evaluationRepository.listByIssueIds({
+        : evaluationRepository.listBySignalIds({
             projectId: parsed.projectId,
-            issueIds: pageIssueIds,
+            signalIds: pageSignalIds,
             options: {
               lifecycle: "active",
               limit: 1000,
             },
           }),
-      pageIssueIds.length === 0
-        ? Effect.succeed([] satisfies readonly IssueTrendSeries[])
-        : scoreAnalyticsRepository.trendByIssues({
+      pageSignalIds.length === 0
+        ? Effect.succeed([] satisfies readonly SignalTrendSeries[])
+        : scoreAnalyticsRepository.trendBySignals({
             organizationId: parsed.organizationId,
             projectId: parsed.projectId,
-            issueIds: pageIssueIds,
+            signalIds: pageSignalIds,
             timeRange: trendTimeRange,
           }),
-      pageIssueIds.length === 0
+      pageSignalIds.length === 0
         ? Effect.succeed([])
-        : scoreAnalyticsRepository.aggregateTagsByIssues({
+        : scoreAnalyticsRepository.aggregateTagsBySignals({
             organizationId: parsed.organizationId,
             projectId: parsed.projectId,
-            issueIds: pageIssueIds,
+            signalIds: pageSignalIds,
             timeRange: tagsTimeRange,
           }),
     ])
 
-    const evaluationsByIssueId = new Map<string, Evaluation[]>()
+    const evaluationsBySignalId = new Map<string, Evaluation[]>()
     for (const evaluation of evaluationPage.items) {
-      const evaluations = evaluationsByIssueId.get(evaluation.issueId) ?? []
+      const evaluations = evaluationsBySignalId.get(evaluation.signalId) ?? []
       evaluations.push(evaluation)
-      evaluationsByIssueId.set(evaluation.issueId, evaluations)
+      evaluationsBySignalId.set(evaluation.signalId, evaluations)
     }
 
-    const trendByIssueId = new Map(
+    const trendBySignalId = new Map(
       trendSeries.map((series) => [
-        series.issueId,
+        series.signalId,
         fillBuckets({
           scaffold: trendScaffold,
           buckets: series.buckets,
@@ -755,7 +755,7 @@ export const listIssuesUseCase = (
       ]),
     )
 
-    const tagsByIssueId = new Map(tagsAggregates.map((entry) => [entry.issueId, entry.tags] as const))
+    const tagsBySignalId = new Map(tagsAggregates.map((entry) => [entry.signalId, entry.tags] as const))
 
     return {
       analytics: {
@@ -788,17 +788,17 @@ export const listIssuesUseCase = (
         similarityScore: candidate.similarityScore,
         affectedTracesPercent: totalTraces === 0 ? 0 : Math.min(candidate.windowMetric.occurrences / totalTraces, 1),
         escalationOccurrenceThreshold: candidate.escalationOccurrenceThreshold,
-        trend: trendByIssueId.get(candidate.issue.id) ?? fillBuckets({ scaffold: trendScaffold, buckets: [] }),
-        evaluations: evaluationsByIssueId.get(candidate.issue.id) ?? [],
-        tags: tagsByIssueId.get(candidate.issue.id) ?? [],
+        trend: trendBySignalId.get(candidate.issue.id) ?? fillBuckets({ scaffold: trendScaffold, buckets: [] }),
+        evaluations: evaluationsBySignalId.get(candidate.issue.id) ?? [],
+        tags: tagsBySignalId.get(candidate.issue.id) ?? [],
       })),
       totalCount: tableCandidates.length,
       hasMore: parsed.offset + parsed.limit < tableCandidates.length,
-      hasAnyIssues,
+      hasAnySignals,
       limit: parsed.limit,
       offset: parsed.offset,
       occurrencesSum,
       priorityCounts,
       assigneeCounts,
-    } satisfies ListIssuesResult
-  }).pipe(Effect.withSpan("issues.listIssues"))
+    } satisfies ListSignalsResult
+  }).pipe(Effect.withSpan("issues.listSignals"))

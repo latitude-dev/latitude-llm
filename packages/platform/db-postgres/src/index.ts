@@ -47,7 +47,7 @@ export { FeatureFlagRepositoryLive } from "./repositories/feature-flag-repositor
 export { FlaggerRepositoryLive } from "./repositories/flagger-repository.ts"
 export { IncidentMonitorReaderLive } from "./repositories/incident-monitor-reader.ts"
 export { InvitationRepositoryLive } from "./repositories/invitation-repository.ts"
-export { IssueRepositoryLive } from "./repositories/issue-repository.ts"
+export { SignalRepositoryLive } from "./repositories/issue-repository.ts"
 export { MembershipRepositoryLive } from "./repositories/membership-repository.ts"
 export { MonitorRepositoryLive } from "./repositories/monitor-repository.ts"
 export { NotificationRepositoryLive } from "./repositories/notification-repository.ts"

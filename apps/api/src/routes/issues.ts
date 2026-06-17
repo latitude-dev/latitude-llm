@@ -9,7 +9,7 @@ import {
   IssueRepository,
   listIssuesUseCase,
   listIssueTracesUseCase,
-} from "@domain/issues"
+} from "@domain/signals"
 import { MembershipRepository } from "@domain/organizations"
 import { ProjectRepository } from "@domain/projects"
 import { WorkflowQuerier, WorkflowStarter } from "@domain/queue"

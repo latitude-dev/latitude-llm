@@ -6,9 +6,9 @@ import { MultiSelectFilter } from "../../../../../../components/filters-builder/
 import type { DistinctColumn } from "../../../../../../components/filters-builder/types.ts"
 import {
   type EvaluationSummaryRecord,
-  updateIssueEvaluationTriggerFilter,
+  updateSignalEvaluationTriggerFilter,
 } from "../../../../../../domains/evaluations/evaluation-alignment.functions.ts"
-import { invalidateIssueQueries } from "../../../../../../domains/issues/issues.collection.ts"
+import { invalidateSignalQueries } from "../../../../../../domains/issues/issues.collection.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 
 // Dimensions surfaced to users for evaluation scoping. Numeric/percentile
@@ -67,27 +67,27 @@ function applyMetadataEntries(filter: FilterSet, entries: readonly { key: string
 export function EvaluationFilterModal({
   evaluation,
   projectId,
-  issueId,
+  signalId,
   onClose,
 }: {
   readonly evaluation: EvaluationSummaryRecord | null
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly onClose: () => void
 }) {
   if (evaluation === null) return null
-  return <EvaluationFilterModalForm evaluation={evaluation} projectId={projectId} issueId={issueId} onClose={onClose} />
+  return <EvaluationFilterModalForm evaluation={evaluation} projectId={projectId} signalId={signalId} onClose={onClose} />
 }
 
 function EvaluationFilterModalForm({
   evaluation,
   projectId,
-  issueId,
+  signalId,
   onClose,
 }: {
   readonly evaluation: EvaluationSummaryRecord
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly onClose: () => void
 }) {
   const { toast } = useToast()
@@ -112,15 +112,15 @@ function EvaluationFilterModalForm({
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      await updateIssueEvaluationTriggerFilter({
+      await updateSignalEvaluationTriggerFilter({
         data: {
           projectId,
-          issueId,
+          signalId,
           evaluationId: evaluation.id,
           filter: draft,
         },
       })
-      await invalidateIssueQueries(projectId, issueId)
+      await invalidateSignalQueries(projectId, signalId)
       toast({ description: "Scope updated." })
       // `onClose` unmounts the modal — no need (and no point) resetting
       // `isSaving` afterwards, so the reset lives in the failure path only.

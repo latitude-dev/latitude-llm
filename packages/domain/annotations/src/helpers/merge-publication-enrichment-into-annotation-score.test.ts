@@ -13,7 +13,7 @@ const baseScore = {
   source: "annotation",
   sourceId: "UI",
   simulationId: null,
-  issueId: "i".repeat(24),
+  signalId: "i".repeat(24),
   value: 0.2,
   passed: false,
   feedback: "raw",
@@ -38,7 +38,7 @@ describe("mergeEnrichmentIntoAnnotationScoreForPublication", () => {
       resolvedSpanId: span,
     })
 
-    expect(out.issueId).toBeNull()
+    expect(out.signalId).toBeNull()
     expect(out.feedback).toBe("Enriched one-liner")
     expect(out.draftedAt).toBeNull()
     expect(out.sessionId).toBe(session)

@@ -2,27 +2,27 @@ import { Button, cn, Icon, Select, type SelectOption, Text, Textarea, ThumbButto
 import { InfoIcon, SparklesIcon } from "lucide-react"
 import { memo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
-import { useIssue, useIssues } from "../../../../../../domains/issues/issues.collection.ts"
+import { useSignal, useSignals } from "../../../../../../domains/issues/issues.collection.ts"
 import { useDebounce } from "../../../../../../lib/hooks/useDebounce.ts"
 
 const SAVE_HOTKEY = "Mod+Enter"
 
-const ISSUE_SELECTOR_BATCH_SIZE = 50
-const ISSUE_SELECTOR_SEARCH_DEBOUNCE_MS = 300
+const SIGNAL_SELECTOR_BATCH_SIZE = 50
+const SIGNAL_SELECTOR_SEARCH_DEBOUNCE_MS = 300
 
 interface AnnotationInputProps {
   readonly projectId: string
   readonly isLoading?: boolean
   readonly initialPassed?: boolean | null
   readonly initialComment?: string
-  readonly initialIssueId?: string | null
+  readonly initialSignalId?: string | null
   readonly cancellable?: boolean
   readonly autoFocus?: boolean
-  readonly onSave: (data: { passed: boolean; comment: string; issueId: string | null }) => void
+  readonly onSave: (data: { passed: boolean; comment: string; signalId: string | null }) => void
   readonly onCancel?: (() => void) | undefined
 }
 
-const IssueSelector = memo(function IssueSelector({
+const SignalSelector = memo(function SignalSelector({
   projectId,
   value,
   onChange,
@@ -33,18 +33,18 @@ const IssueSelector = memo(function IssueSelector({
 }) {
   const [searchInput, setSearchInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
-  const { data: selectedIssue } = useIssue({
+  const { data: selectedSignal } = useSignal({
     projectId,
-    issueId: value ?? "",
+    signalId: value ?? "",
     enabled: value !== null,
   })
   const {
     data: issues = [],
-    isLoading: isIssuesLoading,
+    isLoading: isSignalsLoading,
     infiniteScroll,
-  } = useIssues({
+  } = useSignals({
     projectId,
-    limit: ISSUE_SELECTOR_BATCH_SIZE,
+    limit: SIGNAL_SELECTOR_BATCH_SIZE,
     ...(searchQuery ? { searchQuery } : {}),
   })
 
@@ -55,38 +55,38 @@ const IssueSelector = memo(function IssueSelector({
         setSearchQuery(normalizedSearchQuery)
       }
     },
-    ISSUE_SELECTOR_SEARCH_DEBOUNCE_MS,
+    SIGNAL_SELECTOR_SEARCH_DEBOUNCE_MS,
     [searchInput, searchQuery],
   )
 
-  const issueOptionsById = new Map<string, SelectOption<string>>()
-  if (selectedIssue) {
-    issueOptionsById.set(selectedIssue.id, {
-      label: selectedIssue.name,
-      value: selectedIssue.id,
+  const signalOptionsById = new Map<string, SelectOption<string>>()
+  if (selectedSignal) {
+    signalOptionsById.set(selectedSignal.id, {
+      label: selectedSignal.name,
+      value: selectedSignal.id,
     })
   }
   for (const issue of issues) {
-    if (!issueOptionsById.has(issue.id)) {
-      issueOptionsById.set(issue.id, {
+    if (!signalOptionsById.has(issue.id)) {
+      signalOptionsById.set(issue.id, {
         label: issue.name,
         value: issue.id,
       })
     }
   }
-  const issueOptions = [...issueOptionsById.values()]
+  const signalOptions = [...signalOptionsById.values()]
 
   return (
     <Select<string>
       name="issue"
       placeholderIcon={<Icon icon={SparklesIcon} size="sm" />}
       placeholder="Discover issue"
-      options={issueOptions}
+      options={signalOptions}
       value={value ?? undefined}
       searchable
       searchPlaceholder="Search issues…"
       searchableEmptyMessage="No issues found"
-      searchLoading={isIssuesLoading}
+      searchLoading={isSignalsLoading}
       onSearch={setSearchInput}
       infiniteScroll={infiniteScroll}
       contentClassName="w-80"
@@ -104,7 +104,7 @@ export function AnnotationInput({
   isLoading = false,
   initialPassed = null,
   initialComment = "",
-  initialIssueId = null,
+  initialSignalId = null,
   cancellable = false,
   autoFocus = false,
   onSave,
@@ -112,7 +112,7 @@ export function AnnotationInput({
 }: AnnotationInputProps) {
   const [passed, setPassed] = useState<boolean | null>(initialPassed)
   const [comment, setComment] = useState(initialComment)
-  const [issueId, setIssueId] = useState<string | null>(initialIssueId)
+  const [signalId, setSignalId] = useState<string | null>(initialSignalId)
   const [ratingError, setRatingError] = useState(false)
   const [commentError, setCommentError] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -125,17 +125,17 @@ export function AnnotationInput({
       setCommentError(trimmedComment.length === 0)
       return
     }
-    onSave({ passed, comment: trimmedComment, issueId })
+    onSave({ passed, comment: trimmedComment, signalId })
     setPassed(initialPassed)
     setComment(initialComment)
-    setIssueId(initialIssueId)
+    setSignalId(initialSignalId)
     setRatingError(false)
     setCommentError(false)
   }
 
   function handleThumbUp() {
     setPassed(true)
-    setIssueId(null)
+    setSignalId(null)
     setRatingError(false)
     textareaRef.current?.focus()
   }
@@ -198,7 +198,7 @@ export function AnnotationInput({
           {passed === false && (
             <>
               <div className="w-48 shrink-0">
-                <IssueSelector projectId={projectId} value={issueId} onChange={setIssueId} />
+                <SignalSelector projectId={projectId} value={signalId} onChange={setSignalId} />
               </div>
               <Tooltip
                 asChild

@@ -2,25 +2,25 @@ import { cn, Status, type StatusProps, TagList, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { type ReactNode, useMemo } from "react"
 
-type MockIssueStatus = "new" | "regressed" | "escalating" | "ongoing"
+type MockSignalStatus = "new" | "regressed" | "escalating" | "ongoing"
 
-type MockIssue = {
+type MockSignal = {
   readonly title: string
-  readonly status: MockIssueStatus
+  readonly status: MockSignalStatus
   readonly tags: ReadonlyArray<string>
   readonly trend: ReadonlyArray<number>
   readonly occurrences: number
   readonly affectedTracesPercent: number
 }
 
-const STATUS_META: Record<MockIssueStatus, { readonly label: string; readonly variant: StatusProps["variant"] }> = {
+const STATUS_META: Record<MockSignalStatus, { readonly label: string; readonly variant: StatusProps["variant"] }> = {
   new: { label: "New", variant: "info" },
   regressed: { label: "Regressed", variant: "destructive" },
   escalating: { label: "Escalating", variant: "warning" },
   ongoing: { label: "Ongoing", variant: "neutral" },
 }
 
-const MOCK_ISSUES_BY_FLAGGER: Record<string, MockIssue> = {
+const MOCK_ISSUES_BY_FLAGGER: Record<string, MockSignal> = {
   "empty-response": {
     title: "Blank reply on long PDF uploads",
     status: "new",
@@ -138,7 +138,7 @@ function MiniTrendBar({ trend, regressed }: { readonly trend: ReadonlyArray<numb
   )
 }
 
-function IssueCard({ issue }: { readonly issue: MockIssue }) {
+function SignalCard({ issue }: { readonly issue: MockSignal }) {
   const isRegressed = issue.status === "regressed"
   const status = STATUS_META[issue.status]
   return (
@@ -199,7 +199,7 @@ function CollapsibleRow({
   )
 }
 
-export function MockIssuesFeed({
+export function MockSignalsFeed({
   enabledFlaggerSlugs,
   availableFlaggers,
 }: {
@@ -219,7 +219,7 @@ export function MockIssuesFeed({
   return (
     <div className="flex h-fit w-full max-w-[591px] flex-col gap-4 self-center">
       <div className="flex flex-col gap-1">
-        <Text.H5M>Issues you'd see in your project</Text.H5M>
+        <Text.H5M>Signals you'd see in your project</Text.H5M>
         <Text.H6 color="foregroundMuted">
           {openCount > 0
             ? `${openCount} example ${openCount === 1 ? "issue" : "issues"} from your selected flaggers`
@@ -239,7 +239,7 @@ export function MockIssuesFeed({
               open={enabledFlaggerSlugs.has(flagger.slug)}
               delayMs={Math.min(index * STAGGER_STEP_MS, STAGGER_MAX_MS)}
             >
-              <IssueCard issue={issue} />
+              <SignalCard issue={issue} />
             </CollapsibleRow>
           )
         })}

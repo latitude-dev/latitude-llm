@@ -3,7 +3,7 @@ import {
   MIN_SEASONAL_SAMPLES,
   SEASONAL_HISTORY_WEEKS,
   seasonalAnomalyThreshold,
-} from "@domain/issues"
+} from "@domain/signals"
 import type {
   AlertBaseline,
   AlertDuration,
@@ -128,7 +128,7 @@ export const evaluateSavedSearchAlert = (
       isMet = count > 0 && count >= thresholdValue
     } else {
       // `expected`: σ-band over the same-time-of-week window across the last N weeks
-      // (detector math shared from `@domain/issues`).
+      // (detector math shared from `@domain/signals`).
       const sensitivity = threshold.sensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K
       const historical = yield* Effect.all(
         Array.from({ length: SEASONAL_HISTORY_WEEKS }, (_unused, index) => {

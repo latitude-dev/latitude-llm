@@ -18,7 +18,7 @@ export const incidentEventRenderer: SlackNotificationRenderer<"incident.event"> 
     const name = ALERT_INCIDENT_KIND_LABEL[payload.incidentKind] ?? "Incident"
     const color = severityColor(payload.severity)
     const isSavedSearch = payload.sourceType === "savedSearch"
-    const issueUrl = ctx.project
+    const signalUrl = ctx.project
       ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues/${payload.sourceId}`
       : ctx.webAppUrl
     const monitorUrl =
@@ -59,13 +59,13 @@ export const incidentEventRenderer: SlackNotificationRenderer<"incident.event"> 
       text: `${name} in ${ctx.project?.name ?? ctx.organization.name}${sourceName ? `: ${sourceName}` : ""}`,
       color,
       blocks: [
-        ...(sourceName ? [sectionMarkdown(`*<${issueUrl}|${sourceName}>*`)] : []),
-        sectionMarkdown(sourceName ? `A new <${issueUrl}|issue> has been detected.` : `A new issue has been detected.`),
+        ...(sourceName ? [sectionMarkdown(`*<${signalUrl}|${sourceName}>*`)] : []),
+        sectionMarkdown(sourceName ? `A new <${signalUrl}|issue> has been detected.` : `A new issue has been detected.`),
         ...(payload.sampleExcerpt?.text ? [sectionMarkdown(`\`\`\`\n${payload.sampleExcerpt.text}\n\`\`\``)] : []),
         ...(tags.length > 0 ? [sectionMarkdown(tags.map((t) => `\`${t}\``).join("  "))] : []),
         ...attribution,
         context,
-        actionsLink("View issue", issueUrl),
+        actionsLink("View issue", signalUrl),
       ],
     }
   })

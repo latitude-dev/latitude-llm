@@ -6,9 +6,9 @@ import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
 import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alerts/alerts.collection.ts"
 import { useShowIncidentsOverlay } from "../../../../../../domains/alerts/use-show-incidents-overlay.ts"
 import {
-  useIssueDetail,
-  useIssueTracesCount,
-  useIssueTracesInfiniteScroll,
+  useSignalDetail,
+  useSignalTracesCount,
+  useSignalTracesInfiniteScroll,
 } from "../../../../../../domains/issues/issues.collection.ts"
 import { useSelectableRows } from "../../../../../../lib/hooks/useSelectableRows.ts"
 import { AddToDatasetModal } from "../../-components/add-to-dataset-modal.tsx"
@@ -18,18 +18,18 @@ import {
   type TraceColumnId,
 } from "../../-components/project-traces-table.tsx"
 import { TraceDetailDrawer } from "../../-components/trace-detail-drawer.tsx"
-import { IssueDrawerEvaluations } from "./issue-drawer-evaluations.tsx"
-import { formatIssueAgeAgoLabel, formatSeenAgeParts } from "./issue-formatters.ts"
-import { IssueLifecycleStatuses } from "./issue-lifecycle-statuses.tsx"
-import { IssueTrendBar } from "./issue-trend-bar.tsx"
+import { SignalDrawerEvaluations } from "./issue-drawer-evaluations.tsx"
+import { formatSignalAgeAgoLabel, formatSeenAgeParts } from "./issue-formatters.ts"
+import { SignalLifecycleStatuses } from "./issue-lifecycle-statuses.tsx"
+import { SignalTrendBar } from "./issue-trend-bar.tsx"
 
 /**
  * Shared fixed height for the page's side-by-side Trend + Patterns panels, so
  * the two always line up; each scrolls internally if its content is taller.
  */
-const ISSUE_PAGE_PANEL_HEIGHT = "h-72"
+const SIGNAL_PAGE_PANEL_HEIGHT = "h-72"
 /** Trend chart height inside that panel (leaves room for the panel header + padding). */
-const ISSUE_PAGE_TREND_CHART_HEIGHT = 200
+const SIGNAL_PAGE_TREND_CHART_HEIGHT = 200
 
 function SummaryField({ label, value }: { readonly label: string; readonly value: ReactNode }) {
   return (
@@ -69,14 +69,14 @@ function SeenAtSummaryValue({
   )
 }
 
-function IssueLifecycleTimestampSummaryValue({
+function SignalLifecycleTimestampSummaryValue({
   tooltipHeading,
   iso,
 }: {
   readonly tooltipHeading: string
   readonly iso: string
 }) {
-  const label = formatIssueAgeAgoLabel(iso)
+  const label = formatSignalAgeAgoLabel(iso)
 
   return (
     <Text.H5 color="foreground" className="flex min-w-0 flex-wrap items-center gap-1">
@@ -90,10 +90,10 @@ function IssueLifecycleTimestampSummaryValue({
   )
 }
 
-const ISSUE_TRACE_COLUMN_IDS = ["startTime", "name", "tags", "duration"] as const satisfies readonly TraceColumnId[]
+const SIGNAL_TRACE_COLUMN_IDS = ["startTime", "name", "tags", "duration"] as const satisfies readonly TraceColumnId[]
 
 /**
- * Issue detail surface minus the `DetailDrawer` chrome (close, next/prev nav).
+ * Signal detail surface minus the `DetailDrawer` chrome (close, next/prev nav).
  *
  * Owns which trace is showing in the side `Sheet` so the standalone drawer
  * and the session-panel issue slot share the same "click trace → sliding
@@ -105,9 +105,9 @@ const ISSUE_TRACE_COLUMN_IDS = ["startTime", "name", "tags", "duration"] as cons
  * the standalone drawer to disable its next/previous-issue arrows while a
  * trace is showing.
  */
-export function IssueDetailBody({
+export function SignalDetailBody({
   projectId,
-  issueId,
+  signalId,
   onOverlayActiveChange,
   variant = "drawer",
   prepend,
@@ -116,11 +116,11 @@ export function IssueDetailBody({
   append,
 }: {
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly onOverlayActiveChange?: (active: boolean) => void
   /**
    * `drawer` (default) renders the identity header + summary fields above the
-   * scrollable sections. `page` omits both — the full-page Issue view renders
+   * scrollable sections. `page` omits both — the full-page Signal view renders
    * its own header and summary — and `prepend` lets the page drop extra
    * sections (e.g. Patterns) into the same scroll area.
    */
@@ -136,14 +136,14 @@ export function IssueDetailBody({
   /** Rendered at the end of the scroll area, after the Traces section (e.g. Related issues). */
   readonly append?: ReactNode
 }) {
-  const { data: issue, isLoading } = useIssueDetail({ projectId, issueId })
+  const { data: issue, isLoading } = useSignalDetail({ projectId, signalId })
   const {
     data: traces,
     isLoading: tracesLoading,
     infiniteScroll,
-  } = useIssueTracesInfiniteScroll({
+  } = useSignalTracesInfiniteScroll({
     projectId,
-    issueId,
+    signalId,
     enabled: issue !== null,
   })
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
@@ -151,7 +151,7 @@ export function IssueDetailBody({
   const [traceSheetOpen, setTraceSheetOpen] = useState(false)
 
   const traceIds = useMemo(() => traces.map((t) => t.traceId), [traces])
-  const totalTraceCount = useIssueTracesCount({ projectId, issueId, enabled: issue !== null })
+  const totalTraceCount = useSignalTracesCount({ projectId, signalId, enabled: issue !== null })
   const traceSelection = useSelectableRows({ rowIds: traceIds, totalRowCount: totalTraceCount })
 
   // Window the incident query to the same range that the trend chart paints. Bucket keys are
@@ -180,7 +180,7 @@ export function IssueDetailBody({
     fromIso: trendIncidentRange?.fromIso ?? "",
     toIso: trendIncidentRange?.toIso ?? "",
     sourceType: "issue",
-    sourceId: issueId,
+    sourceId: signalId,
     enabled: incidentsFlagEnabled && trendIncidentRange !== null,
   })
   const { selectedCount, bulkSelection, clearSelections } = traceSelection
@@ -231,7 +231,7 @@ export function IssueDetailBody({
                 {isLoading ? (
                   <Skeleton className="h-7 w-56" />
                 ) : (
-                  <Text.H4M>{issue?.name ?? "Issue not found"}</Text.H4M>
+                  <Text.H4M>{issue?.name ?? "Signal not found"}</Text.H4M>
                 )}
                 {isLoading ? (
                   <Skeleton className="h-5 w-full" />
@@ -262,7 +262,7 @@ export function IssueDetailBody({
                 {isLoading ? (
                   <SummaryField label="Status" value={<Skeleton className="h-5 w-24" />} />
                 ) : issue && issue.states.length > 0 ? (
-                  <SummaryField label="Status" value={<IssueLifecycleStatuses states={issue.states} wrap />} />
+                  <SummaryField label="Status" value={<SignalLifecycleStatuses states={issue.states} wrap />} />
                 ) : null}
                 <SummaryField
                   label="Seen at"
@@ -279,13 +279,13 @@ export function IssueDetailBody({
                 {!isLoading && issue?.resolvedAt ? (
                   <SummaryField
                     label="Resolved at"
-                    value={<IssueLifecycleTimestampSummaryValue tooltipHeading="Resolved at" iso={issue.resolvedAt} />}
+                    value={<SignalLifecycleTimestampSummaryValue tooltipHeading="Resolved at" iso={issue.resolvedAt} />}
                   />
                 ) : null}
                 {!isLoading && issue?.ignoredAt ? (
                   <SummaryField
                     label="Ignored at"
-                    value={<IssueLifecycleTimestampSummaryValue tooltipHeading="Ignored at" iso={issue.ignoredAt} />}
+                    value={<SignalLifecycleTimestampSummaryValue tooltipHeading="Ignored at" iso={issue.ignoredAt} />}
                   />
                 ) : null}
                 <SummaryField
@@ -307,14 +307,14 @@ export function IssueDetailBody({
             // fixed height so they always line up; each scrolls internally if taller.
             <div className="flex flex-col gap-4 xl:flex-row xl:items-stretch">
               <div
-                className={`flex ${ISSUE_PAGE_PANEL_HEIGHT} min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4 xl:flex-1`}
+                className={`flex ${SIGNAL_PAGE_PANEL_HEIGHT} min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4 xl:flex-1`}
               >
                 <Text.H6 color="foregroundMuted">Trend</Text.H6>
                 <div className="flex min-w-0 flex-1 flex-col justify-center">
-                  <IssueTrendBar
+                  <SignalTrendBar
                     buckets={issue?.trend ?? []}
                     bucketSeconds={issue?.trendBucketSeconds ?? 24 * 60 * 60}
-                    height={ISSUE_PAGE_TREND_CHART_HEIGHT}
+                    height={SIGNAL_PAGE_TREND_CHART_HEIGHT}
                     isLoading={isLoading}
                     labelLayout="floating"
                     maxVisibleBucketLabels={4}
@@ -326,7 +326,7 @@ export function IssueDetailBody({
                   />
                 </div>
               </div>
-              <div className={`${ISSUE_PAGE_PANEL_HEIGHT} xl:w-[340px] xl:shrink-0`}>{trendAside}</div>
+              <div className={`${SIGNAL_PAGE_PANEL_HEIGHT} xl:w-[340px] xl:shrink-0`}>{trendAside}</div>
             </div>
           ) : (
             <DetailSection
@@ -337,7 +337,7 @@ export function IssueDetailBody({
             >
               <div className="flex flex-col rounded-lg bg-secondary p-2">
                 <div className="px-4 py-3">
-                  <IssueTrendBar
+                  <SignalTrendBar
                     buckets={issue?.trend ?? []}
                     bucketSeconds={issue?.trendBucketSeconds ?? 24 * 60 * 60}
                     height={120}
@@ -356,7 +356,7 @@ export function IssueDetailBody({
           )}
 
           {/* The page variant relocates Evaluations into the summary card's actions
-              column (see `IssueSummary`), so it only renders here for the drawer. */}
+              column (see `SignalSummary`), so it only renders here for the drawer. */}
           {variant === "drawer" ? (
             <DetailSection
               icon={<Icon icon={CheckIcon} size="sm" />}
@@ -364,14 +364,14 @@ export function IssueDetailBody({
               defaultOpen
               contentClassName="pl-0 max-h-none overflow-visible"
             >
-              <IssueDrawerEvaluations
+              <SignalDrawerEvaluations
                 projectId={projectId}
-                issueId={issueId}
-                issueSource={issue?.source ?? "annotation"}
+                signalId={signalId}
+                signalSource={issue?.source ?? "annotation"}
                 evaluations={issue?.evaluations ?? []}
                 flaggerSlugs={issue?.flaggerSlugs ?? []}
-                canMonitorIssue={issue ? issue.resolvedAt === null && issue.ignoredAt === null : false}
-                isIssueLoading={isLoading}
+                canMonitorSignal={issue ? issue.resolvedAt === null && issue.ignoredAt === null : false}
+                isSignalLoading={isLoading}
               />
             </DetailSection>
           ) : null}
@@ -397,7 +397,7 @@ export function IssueDetailBody({
               projectId={projectId}
               data={traces}
               isLoading={tracesLoading}
-              visibleColumnIds={ISSUE_TRACE_COLUMN_IDS}
+              visibleColumnIds={SIGNAL_TRACE_COLUMN_IDS}
               defaultSorting={DEFAULT_TRACE_TABLE_SORTING}
               onTraceClick={(trace) => openTraceSheet(trace.traceId)}
               getTraceRowAriaLabel={getTraceRowAriaLabel}
@@ -419,7 +419,7 @@ export function IssueDetailBody({
             open={addToDatasetOpen}
             onOpenChange={setAddToDatasetOpen}
             projectId={projectId}
-            issueId={issueId}
+            signalId={signalId}
             selection={bulkSelection}
             selectedCount={selectedCount}
             onSuccess={clearSelections}

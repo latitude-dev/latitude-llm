@@ -17,17 +17,17 @@ const PUBLISH_CONCURRENCY = 10
  * `QueuePublisher.publish("issues", "checkEscalation", payload, ...)`; tests
  * substitute a capture function.
  */
-export type SweepEscalatingIssuesPublish = (payload: {
+export type SweepEscalatingSignalsPublish = (payload: {
   readonly organizationId: string
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
 }) => Effect.Effect<void, QueuePublishError>
 
-interface SweepEscalatingIssuesDeps {
-  readonly publish: SweepEscalatingIssuesPublish
+interface SweepEscalatingSignalsDeps {
+  readonly publish: SweepEscalatingSignalsPublish
 }
 
-export interface SweepEscalatingIssuesResult {
+export interface SweepEscalatingSignalsResult {
   readonly attempted: number
   readonly published: number
   readonly failed: number
@@ -39,7 +39,7 @@ export interface SweepEscalatingIssuesResult {
  * (via the admin Postgres client → RLS bypass) and enqueues one
  * `checkEscalation` task per incident.
  *
- * Why this exists: `ScoreAssignedToIssue`-driven checks only fire when new
+ * Why this exists: `ScoreAssignedToSignal`-driven checks only fire when new
  * scores arrive on the issue. If a burst opens an incident and then
  * scoring stops, the one debounced recheck at T+1h often sees the burst
  * still inside the 6h window and decides "still escalating", and no further
@@ -55,7 +55,7 @@ export interface SweepEscalatingIssuesResult {
  * The publish step is a callback so the use case stays decoupled from the
  * queue adapter — tests pass a capture function.
  */
-export const sweepEscalatingIssuesUseCase = (deps: SweepEscalatingIssuesDeps) =>
+export const sweepEscalatingSignalsUseCase = (deps: SweepEscalatingSignalsDeps) =>
   Effect.gen(function* () {
     const alertIncidentRepository = yield* AlertIncidentRepository
     const incidents = yield* alertIncidentRepository.listOpenByKind("issue.escalating")
@@ -72,7 +72,7 @@ export const sweepEscalatingIssuesUseCase = (deps: SweepEscalatingIssuesDeps) =>
           .publish({
             organizationId: incident.organizationId,
             projectId: incident.projectId,
-            issueId: incident.sourceId,
+            signalId: incident.sourceId,
           })
           .pipe(Effect.catch(() => Ref.update(failedRef, (n) => n + 1)))
       },
@@ -87,9 +87,9 @@ export const sweepEscalatingIssuesUseCase = (deps: SweepEscalatingIssuesDeps) =>
     yield* Effect.annotateCurrentSpan("published", published)
     yield* Effect.annotateCurrentSpan("failed", failed)
 
-    return { attempted, published, failed } satisfies SweepEscalatingIssuesResult
-  }).pipe(Effect.withSpan("issues.sweepEscalatingIssues")) as Effect.Effect<
-    SweepEscalatingIssuesResult,
+    return { attempted, published, failed } satisfies SweepEscalatingSignalsResult
+  }).pipe(Effect.withSpan("issues.sweepEscalatingSignals")) as Effect.Effect<
+    SweepEscalatingSignalsResult,
     RepositoryError,
     SqlClient | AlertIncidentRepository
   >

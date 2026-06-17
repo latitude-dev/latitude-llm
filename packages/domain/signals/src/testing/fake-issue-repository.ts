@@ -1,9 +1,9 @@
 import { NotFoundError } from "@domain/shared"
 import { Effect } from "effect"
-import type { Issue } from "../entities/issue.ts"
-import type { IssueLifecycleFlags, IssueRepositoryShape, IssueWithLifecycle } from "../ports/issue-repository.ts"
+import type { Signal } from "../entities/issue.ts"
+import type { SignalLifecycleFlags, SignalRepositoryShape, SignalWithLifecycle } from "../ports/issue-repository.ts"
 
-const DEFAULT_LIFECYCLE: IssueLifecycleFlags = {
+const DEFAULT_LIFECYCLE: SignalLifecycleFlags = {
   isEscalating: false,
   isRegressed: false,
 }
@@ -17,48 +17,48 @@ const normalize = (vector: readonly number[]): readonly number[] | null => {
   return vector.map((value) => value / magnitude)
 }
 
-interface FakeIssueRepositoryOptions {
+interface FakeSignalRepositoryOptions {
   /**
    * Per-issue lifecycle overlay. Tests that exercise escalation / regression
    * derivation set the flags here per issue id; everything else defaults to
    * `{ isEscalating: false, isRegressed: false }`.
    */
-  readonly lifecycle?: ReadonlyMap<string, IssueLifecycleFlags>
+  readonly lifecycle?: ReadonlyMap<string, SignalLifecycleFlags>
 }
 
-export const createFakeIssueRepository = (
-  seed: readonly Issue[] = [],
-  overrides?: Partial<IssueRepositoryShape>,
-  options: FakeIssueRepositoryOptions = {},
+export const createFakeSignalRepository = (
+  seed: readonly Signal[] = [],
+  overrides?: Partial<SignalRepositoryShape>,
+  options: FakeSignalRepositoryOptions = {},
 ) => {
-  const issues = new Map<string, Issue>(seed.map((issue) => [issue.id, issue] as const))
-  const lifecycleOverlay = new Map<string, IssueLifecycleFlags>(options.lifecycle ?? [])
+  const issues = new Map<string, Signal>(seed.map((issue) => [issue.id, issue] as const))
+  const lifecycleOverlay = new Map<string, SignalLifecycleFlags>(options.lifecycle ?? [])
 
-  const lifecycleFor = (issueId: string): IssueLifecycleFlags => lifecycleOverlay.get(issueId) ?? DEFAULT_LIFECYCLE
+  const lifecycleFor = (signalId: string): SignalLifecycleFlags => lifecycleOverlay.get(signalId) ?? DEFAULT_LIFECYCLE
 
-  const withLifecycle = (issue: Issue): IssueWithLifecycle =>
+  const withLifecycle = (issue: Signal): SignalWithLifecycle =>
     Object.assign({}, issue, { lifecycle: lifecycleFor(issue.id) })
 
-  const repository: IssueRepositoryShape = {
+  const repository: SignalRepositoryShape = {
     findById: (id) =>
       Effect.gen(function* () {
         const issue = issues.get(id)
-        if (!issue) return yield* new NotFoundError({ entity: "Issue", id })
+        if (!issue) return yield* new NotFoundError({ entity: "Signal", id })
         return withLifecycle(issue)
       }),
 
     findByIdForUpdate: (id) =>
       Effect.gen(function* () {
         const issue = issues.get(id)
-        if (!issue) return yield* new NotFoundError({ entity: "Issue", id })
+        if (!issue) return yield* new NotFoundError({ entity: "Signal", id })
         return issue
       }),
 
-    findByIds: ({ projectId, issueIds }) =>
+    findByIds: ({ projectId, signalIds }) =>
       Effect.sync(() =>
-        issueIds
-          .map((issueId) => issues.get(issueId))
-          .filter((issue): issue is Issue => issue !== undefined && issue.projectId === projectId)
+        signalIds
+          .map((signalId) => issues.get(signalId))
+          .filter((issue): issue is Signal => issue !== undefined && issue.projectId === projectId)
           .map(withLifecycle),
       ),
 
@@ -67,28 +67,28 @@ export const createFakeIssueRepository = (
         [...issues.values()]
           .filter((issue) => issue.projectId === projectId)
           .map((issue) => ({
-            issueId: issue.id,
+            signalId: issue.id,
             name: issue.name,
             description: issue.description,
             score: 1,
           })),
       ),
 
-    findSimilarByCentroid: ({ projectId, issueId, limit }) =>
+    findSimilarByCentroid: ({ projectId, signalId, limit }) =>
       Effect.sync(() => {
         // Mirrors the real adapter: cosine over normalized centroid bases,
         // empty when the source is missing or has a zero-mass centroid,
         // zero-mass neighbors skipped, self excluded, project-scoped.
-        const source = issues.get(issueId)
+        const source = issues.get(signalId)
         if (!source || source.projectId !== projectId || source.centroid.mass <= 0) return []
         const sourceVector = normalize(source.centroid.base)
         if (sourceVector === null) return []
         return [...issues.values()]
-          .filter((issue) => issue.projectId === projectId && issue.id !== issueId && issue.centroid.mass > 0)
+          .filter((issue) => issue.projectId === projectId && issue.id !== signalId && issue.centroid.mass > 0)
           .flatMap((issue) => {
             const vector = normalize(issue.centroid.base)
             if (vector === null) return []
-            return [{ issueId: issue.id, similarity: dot(sourceVector, vector) }]
+            return [{ signalId: issue.id, similarity: dot(sourceVector, vector) }]
           })
           .sort((a, b) => b.similarity - a.similarity)
           .slice(0, limit)
@@ -116,7 +116,7 @@ export const createFakeIssueRepository = (
     findBySlug: ({ projectId, slug }) =>
       Effect.gen(function* () {
         const issue = [...issues.values()].find((i) => i.projectId === projectId && i.slug === slug)
-        if (!issue) return yield* new NotFoundError({ entity: "Issue", id: slug })
+        if (!issue) return yield* new NotFoundError({ entity: "Signal", id: slug })
         return withLifecycle(issue)
       }),
 
@@ -128,12 +128,12 @@ export const createFakeIssueRepository = (
         issues.set(issue.id, issue)
       }),
 
-    countBySlug: ({ projectId, slug, excludeIssueId }) =>
+    countBySlug: ({ projectId, slug, excludeSignalId }) =>
       Effect.sync(
         () =>
           [...issues.values()].filter(
             (issue) =>
-              issue.projectId === projectId && issue.slug === slug && (!excludeIssueId || issue.id !== excludeIssueId),
+              issue.projectId === projectId && issue.slug === slug && (!excludeSignalId || issue.id !== excludeSignalId),
           ).length,
       ),
 
@@ -154,8 +154,8 @@ export const createFakeIssueRepository = (
     ...overrides,
   }
 
-  const setLifecycle = (issueId: string, flags: IssueLifecycleFlags): void => {
-    lifecycleOverlay.set(issueId, flags)
+  const setLifecycle = (signalId: string, flags: SignalLifecycleFlags): void => {
+    lifecycleOverlay.set(signalId, flags)
   }
 
   return { repository, issues, setLifecycle }

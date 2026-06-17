@@ -153,32 +153,32 @@ describe("createNotificationUseCase", () => {
 
   it("dedupes a redelivered issue.assigned but inserts a fresh row for a new assignedAt", async () => {
     const { orgId, userId, layer, rows } = setup()
-    const issueAssigned = (assignedAt: string) => ({
+    const signalAssigned = (assignedAt: string) => ({
       organizationId: orgId,
       userId,
       kind: "issue.assigned" as const,
       idempotencyKey: `issue.assigned:${cuid("i")}:${assignedAt}`,
       projectId: null,
-      payload: { issueId: cuid("i"), actorUserId: cuid("a"), assignedAt },
+      payload: { signalId: cuid("i"), actorUserId: cuid("a"), assignedAt },
     })
 
     const first = await Effect.runPromise(
       createNotificationUseCase({
-        ...issueAssigned("2026-05-07T10:00:00.000Z"),
+        ...signalAssigned("2026-05-07T10:00:00.000Z"),
         notificationId: NotificationId(generateId()),
       }).pipe(Effect.provide(layer)),
     )
     // Outbox/queue redelivery: identical key → silently absorbed.
     const redelivered = await Effect.runPromise(
       createNotificationUseCase({
-        ...issueAssigned("2026-05-07T10:00:00.000Z"),
+        ...signalAssigned("2026-05-07T10:00:00.000Z"),
         notificationId: NotificationId(generateId()),
       }).pipe(Effect.provide(layer)),
     )
     // A later re-assignment back to the same user: new assignedAt → new row.
     const reassigned = await Effect.runPromise(
       createNotificationUseCase({
-        ...issueAssigned("2026-05-08T09:00:00.000Z"),
+        ...signalAssigned("2026-05-08T09:00:00.000Z"),
         notificationId: NotificationId(generateId()),
       }).pipe(Effect.provide(layer)),
     )
@@ -200,7 +200,7 @@ describe("createNotificationUseCase", () => {
         kind: "issue.assigned",
         idempotencyKey: `issue.assigned:${cuid("i")}:2026-05-07T10:00:00.000Z`,
         projectId: null,
-        payload: { issueId: cuid("i"), actorUserId: cuid("a"), assignedAt: "2026-05-07T10:00:00.000Z" },
+        payload: { signalId: cuid("i"), actorUserId: cuid("a"), assignedAt: "2026-05-07T10:00:00.000Z" },
       }).pipe(Effect.provide(layer)),
     )
 

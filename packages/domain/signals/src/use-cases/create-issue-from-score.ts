@@ -3,28 +3,28 @@ import { OutboxEventWriter } from "@domain/events"
 import { type Score, ScoreRepository } from "@domain/scores"
 import { generateId, generateSlug, ProjectId, type RepositoryError, ScoreId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
-import type { Issue, IssueSource } from "../entities/issue.ts"
+import type { Signal, SignalSource } from "../entities/issue.ts"
 import type { CheckEligibilityError } from "../errors.ts"
-import { ScoreAlreadyOwnedByIssueError } from "../errors.ts"
-import { createIssueCentroid, updateIssueCentroid } from "../helpers.ts"
-import { IssueRepository } from "../ports/issue-repository.ts"
+import { ScoreAlreadyOwnedBySignalError } from "../errors.ts"
+import { createSignalCentroid, updateSignalCentroid } from "../helpers.ts"
+import { SignalRepository } from "../ports/issue-repository.ts"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
-import type { GenerateIssueDetailsError } from "./generate-issue-details.ts"
-import { generateIssueDetailsUseCase } from "./generate-issue-details.ts"
+import type { GenerateSignalDetailsError } from "./generate-issue-details.ts"
+import { generateSignalDetailsUseCase } from "./generate-issue-details.ts"
 
-export interface CreateIssueFromScoreInput {
+export interface CreateSignalFromScoreInput {
   readonly organizationId: string
   readonly projectId: string
   readonly scoreId: string
   readonly normalizedEmbedding: readonly number[]
 }
 
-export type CreateIssueFromScoreResult = {
-  readonly issueId: string
+export type CreateSignalFromScoreResult = {
+  readonly signalId: string
   readonly action: "created" | "already-assigned"
 }
 
-export type CreateIssueFromScoreError = CheckEligibilityError | GenerateIssueDetailsError | RepositoryError
+export type CreateSignalFromScoreError = CheckEligibilityError | GenerateSignalDetailsError | RepositoryError
 
 type LoadedEligibleScoreResult =
   | {
@@ -33,7 +33,7 @@ type LoadedEligibleScoreResult =
     }
   | {
       readonly action: "already-assigned"
-      readonly issueId: string
+      readonly signalId: string
     }
 
 const loadEligibleScoreOrCurrentOwner = (input: {
@@ -43,27 +43,27 @@ const loadEligibleScoreOrCurrentOwner = (input: {
 }) =>
   checkEligibilityUseCase(input).pipe(
     Effect.map((score) => ({ action: "ready", score }) satisfies LoadedEligibleScoreResult),
-    Effect.catchTag("ScoreAlreadyOwnedByIssueError", () =>
+    Effect.catchTag("ScoreAlreadyOwnedBySignalError", () =>
       Effect.gen(function* () {
         const scoreRepository = yield* ScoreRepository
         const currentScore = yield* scoreRepository
           .findById(ScoreId(input.scoreId))
           .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-        const existingIssueId = currentScore?.issueId
+        const existingSignalId = currentScore?.signalId
 
-        if (existingIssueId != null) {
+        if (existingSignalId != null) {
           return {
             action: "already-assigned",
-            issueId: existingIssueId,
+            signalId: existingSignalId,
           } satisfies LoadedEligibleScoreResult
         }
 
-        return yield* new ScoreAlreadyOwnedByIssueError({ scoreId: input.scoreId })
+        return yield* new ScoreAlreadyOwnedBySignalError({ scoreId: input.scoreId })
       }),
     ),
   )
 
-const buildNewIssueFromScore = ({
+const buildNewSignalFromScore = ({
   score,
   normalizedEmbedding,
   embeddingModel,
@@ -79,10 +79,10 @@ const buildNewIssueFromScore = ({
   readonly name: string
   readonly description: string
   readonly slug: string
-}): Issue => {
-  const centroid = updateIssueCentroid({
+}): Signal => {
+  const centroid = updateSignalCentroid({
     centroid: {
-      ...createIssueCentroid(embeddingModel),
+      ...createSignalCentroid(embeddingModel),
       clusteredAt: assignedAt,
     },
     score: {
@@ -94,11 +94,11 @@ const buildNewIssueFromScore = ({
     timestamp: assignedAt,
   })
 
-  const source: IssueSource =
+  const source: SignalSource =
     score.source === "annotation" ? (score.sourceId === "SYSTEM" ? "flagger" : "annotation") : "custom"
 
   return {
-    id: generateId<"IssueId">(),
+    id: generateId<"SignalId">(),
     organizationId: score.organizationId,
     projectId: score.projectId,
     slug,
@@ -117,7 +117,7 @@ const buildNewIssueFromScore = ({
   }
 }
 
-export const createIssueFromScoreUseCase = (input: CreateIssueFromScoreInput) =>
+export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("scoreId", input.scoreId)
     yield* Effect.annotateCurrentSpan("projectId", input.projectId)
@@ -126,11 +126,11 @@ export const createIssueFromScoreUseCase = (input: CreateIssueFromScoreInput) =>
     if (initialScoreResult.action === "already-assigned") {
       return {
         action: "already-assigned",
-        issueId: initialScoreResult.issueId,
-      } satisfies CreateIssueFromScoreResult
+        signalId: initialScoreResult.signalId,
+      } satisfies CreateSignalFromScoreResult
     }
 
-    const issueDetails = yield* generateIssueDetailsUseCase({
+    const signalDetails = yield* generateSignalDetailsUseCase({
       organizationId: input.organizationId,
       projectId: input.projectId,
       occurrences: [
@@ -145,7 +145,7 @@ export const createIssueFromScoreUseCase = (input: CreateIssueFromScoreInput) =>
 
     const assignment = yield* sqlClient.transaction(
       Effect.gen(function* () {
-        const issueRepository = yield* IssueRepository
+        const signalRepository = yield* SignalRepository
         const scoreRepository = yield* ScoreRepository
         const outboxEventWriter = yield* OutboxEventWriter
 
@@ -153,8 +153,8 @@ export const createIssueFromScoreUseCase = (input: CreateIssueFromScoreInput) =>
         if (scoreResult.action === "already-assigned") {
           return {
             action: "already-assigned",
-            issueId: scoreResult.issueId,
-          } satisfies CreateIssueFromScoreResult
+            signalId: scoreResult.signalId,
+          } satisfies CreateSignalFromScoreResult
         }
 
         const score = scoreResult.score
@@ -164,22 +164,22 @@ export const createIssueFromScoreUseCase = (input: CreateIssueFromScoreInput) =>
         // are visible to the existence check) and so we don't have to retry on
         // a unique-constraint conflict.
         const slug = yield* generateSlug({
-          name: issueDetails.name,
-          count: (slug) => issueRepository.countBySlug({ projectId: ProjectId(score.projectId), slug }),
+          name: signalDetails.name,
+          count: (slug) => signalRepository.countBySlug({ projectId: ProjectId(score.projectId), slug }),
         })
-        const issue = buildNewIssueFromScore({
+        const issue = buildNewSignalFromScore({
           score,
           normalizedEmbedding: input.normalizedEmbedding,
           embeddingModel: embeddingConfig.model,
           assignedAt,
-          name: issueDetails.name,
-          description: issueDetails.description,
+          name: signalDetails.name,
+          description: signalDetails.description,
           slug,
         })
 
-        const claimed = yield* scoreRepository.assignIssueIfUnowned({
+        const claimed = yield* scoreRepository.assignSignalIfUnowned({
           scoreId: score.id,
-          issueId: issue.id,
+          signalId: issue.id,
           updatedAt: assignedAt,
         })
 
@@ -187,40 +187,40 @@ export const createIssueFromScoreUseCase = (input: CreateIssueFromScoreInput) =>
           const currentScore = yield* scoreRepository
             .findById(score.id)
             .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-          if (currentScore && currentScore.issueId !== null) {
+          if (currentScore && currentScore.signalId !== null) {
             return {
               action: "already-assigned",
-              issueId: currentScore.issueId,
-            } satisfies CreateIssueFromScoreResult
+              signalId: currentScore.signalId,
+            } satisfies CreateSignalFromScoreResult
           }
 
-          return yield* new ScoreAlreadyOwnedByIssueError({ scoreId: score.id })
+          return yield* new ScoreAlreadyOwnedBySignalError({ scoreId: score.id })
         }
 
-        yield* issueRepository.save(issue)
+        yield* signalRepository.save(issue)
 
         yield* outboxEventWriter.write({
-          eventName: "IssueCreated",
+          eventName: "SignalCreated",
           aggregateType: "issue",
           aggregateId: issue.id,
           organizationId: issue.organizationId,
           payload: {
             organizationId: issue.organizationId,
             projectId: issue.projectId,
-            issueId: issue.id,
+            signalId: issue.id,
             createdAt: issue.createdAt.toISOString(),
           },
         })
 
         return {
           action: "created",
-          issueId: issue.id,
-        } satisfies CreateIssueFromScoreResult
+          signalId: issue.id,
+        } satisfies CreateSignalFromScoreResult
       }),
     )
 
     return assignment
-  }).pipe(Effect.withSpan("issues.createIssueFromScore")) as Effect.Effect<
-    CreateIssueFromScoreResult,
-    CreateIssueFromScoreError
+  }).pipe(Effect.withSpan("issues.createSignalFromScore")) as Effect.Effect<
+    CreateSignalFromScoreResult,
+    CreateSignalFromScoreError
   >

@@ -35,7 +35,7 @@ describe("createEvaluationsWorker", () => {
     await consumer.dispatchTask("evaluations", "automaticRefreshAlignment", {
       organizationId: "org-1",
       projectId: "proj-1",
-      issueId: "issue-1",
+      signalId: "issue-1",
       evaluationId: "evaluation-1",
     })
 
@@ -45,7 +45,7 @@ describe("createEvaluationsWorker", () => {
         input: {
           organizationId: "org-1",
           projectId: "proj-1",
-          issueId: "issue-1",
+          signalId: "issue-1",
           evaluationId: "evaluation-1",
         },
         options: { workflowId: "evaluations:refreshAlignment:evaluation-1" },
@@ -61,7 +61,7 @@ describe("createEvaluationsWorker", () => {
     await consumer.dispatchTask("evaluations", "automaticOptimization", {
       organizationId: "org-1",
       projectId: "proj-1",
-      issueId: "issue-1",
+      signalId: "issue-1",
       evaluationId: "evaluation-1",
     })
 
@@ -71,7 +71,7 @@ describe("createEvaluationsWorker", () => {
         input: {
           organizationId: "org-1",
           projectId: "proj-1",
-          issueId: "issue-1",
+          signalId: "issue-1",
           evaluationId: "evaluation-1",
           jobId: "auto-optimize:evaluation-1",
           billingOperationId: expect.any(String),
@@ -95,7 +95,7 @@ describe("createEvaluationsWorker", () => {
       consumer.dispatchTask("evaluations", "automaticRefreshAlignment", {
         organizationId: "org-1",
         projectId: "proj-1",
-        issueId: "issue-1",
+        signalId: "issue-1",
         evaluationId: "evaluation-1",
       }),
     ).resolves.toBeUndefined()

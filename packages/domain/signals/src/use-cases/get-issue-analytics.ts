@@ -1,14 +1,14 @@
-import { type IssueOccurrenceBucket, ScoreAnalyticsRepository, type ScoreAnalyticsTimeRange } from "@domain/scores"
+import { type SignalOccurrenceBucket, ScoreAnalyticsRepository, type ScoreAnalyticsTimeRange } from "@domain/scores"
 import type { ChSqlClient, OrganizationId, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
-import { IssueState } from "../entities/issue.ts"
-import { deriveIssueLifecycleStates } from "../helpers.ts"
-import { IssueRepository } from "../ports/issue-repository.ts"
+import { SignalState } from "../entities/issue.ts"
+import { deriveSignalLifecycleStates } from "../helpers.ts"
+import { SignalRepository } from "../ports/issue-repository.ts"
 
 const TWELVE_HOURS_SECONDS = 12 * 60 * 60
 const DEFAULT_RANGE_DAYS = 7
 
-export interface GetIssueAnalyticsInput {
+export interface GetSignalAnalyticsInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   /** Inclusive lower bound. Defaults to ~7 days before `to`. */
@@ -18,31 +18,31 @@ export interface GetIssueAnalyticsInput {
   readonly now?: Date
 }
 
-export interface IssueAnalyticsBucket {
+export interface SignalAnalyticsBucket {
   /** ISO-8601 UTC timestamp of the bucket's start. Aligned to 12-hour UTC boundaries. */
   readonly bucket: string
   readonly value: number
 }
 
-export interface IssueAnalyticsCountMetric {
+export interface SignalAnalyticsCountMetric {
   readonly total: number
 }
 
-export interface IssueAnalyticsOccurrencesMetric {
+export interface SignalAnalyticsOccurrencesMetric {
   readonly total: number
-  readonly buckets: readonly IssueAnalyticsBucket[]
+  readonly buckets: readonly SignalAnalyticsBucket[]
 }
 
-export interface GetIssueAnalyticsResult {
-  readonly ongoing: IssueAnalyticsCountMetric
-  readonly new: IssueAnalyticsCountMetric
-  readonly escalating: IssueAnalyticsCountMetric
-  readonly regressed: IssueAnalyticsCountMetric
-  readonly resolved: IssueAnalyticsCountMetric
-  readonly occurrences: IssueAnalyticsOccurrencesMetric
+export interface GetSignalAnalyticsResult {
+  readonly ongoing: SignalAnalyticsCountMetric
+  readonly new: SignalAnalyticsCountMetric
+  readonly escalating: SignalAnalyticsCountMetric
+  readonly regressed: SignalAnalyticsCountMetric
+  readonly resolved: SignalAnalyticsCountMetric
+  readonly occurrences: SignalAnalyticsOccurrencesMetric
 }
 
-export type GetIssueAnalyticsError = RepositoryError
+export type GetSignalAnalyticsError = RepositoryError
 
 const toUtcDayStart = (value: Date): Date =>
   new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate(), 0, 0, 0, 0))
@@ -82,8 +82,8 @@ const buildBucketScaffold = (input: {
 
 const fillBuckets = (input: {
   readonly scaffold: readonly string[]
-  readonly buckets: readonly IssueOccurrenceBucket[]
-}): readonly IssueAnalyticsBucket[] => {
+  readonly buckets: readonly SignalOccurrenceBucket[]
+}): readonly SignalAnalyticsBucket[] => {
   const countsByBucket = new Map(input.buckets.map((bucket) => [bucket.bucket, bucket.count] as const))
   return input.scaffold.map((bucket) => ({
     bucket,
@@ -91,7 +91,7 @@ const fillBuckets = (input: {
   }))
 }
 
-const emptyResult = (scaffold: readonly string[]): GetIssueAnalyticsResult => ({
+const emptyResult = (scaffold: readonly string[]): GetSignalAnalyticsResult => ({
   ongoing: { total: 0 },
   new: { total: 0 },
   escalating: { total: 0 },
@@ -106,12 +106,12 @@ const emptyResult = (scaffold: readonly string[]): GetIssueAnalyticsResult => ({
  * total occurrences, and a 12-hour UTC-aligned bucket series for occurrences.
  * Range defaults to the trailing 7 days.
  */
-export const getIssueAnalyticsUseCase = (
-  input: GetIssueAnalyticsInput,
+export const getSignalAnalyticsUseCase = (
+  input: GetSignalAnalyticsInput,
 ): Effect.Effect<
-  GetIssueAnalyticsResult,
-  GetIssueAnalyticsError,
-  ChSqlClient | IssueRepository | ScoreAnalyticsRepository | SqlClient
+  GetSignalAnalyticsResult,
+  GetSignalAnalyticsError,
+  ChSqlClient | SignalRepository | ScoreAnalyticsRepository | SqlClient
 > =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("projectId", String(input.projectId))
@@ -126,9 +126,9 @@ export const getIssueAnalyticsUseCase = (
     const timeRange: ScoreAnalyticsTimeRange = { from, to }
 
     const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
-    const issueRepository = yield* IssueRepository
+    const signalRepository = yield* SignalRepository
 
-    const windowMetrics = yield* scoreAnalyticsRepository.listIssueWindowMetrics({
+    const windowMetrics = yield* scoreAnalyticsRepository.listSignalWindowMetrics({
       organizationId: input.organizationId,
       projectId: input.projectId,
       timeRange,
@@ -138,10 +138,10 @@ export const getIssueAnalyticsUseCase = (
       return emptyResult(scaffold)
     }
 
-    const candidateIssueIds = windowMetrics.map((metric) => metric.issueId)
-    const canonicalIssues = yield* issueRepository.findByIds({
+    const candidateSignalIds = windowMetrics.map((metric) => metric.signalId)
+    const canonicalSignals = yield* signalRepository.findByIds({
       projectId: input.projectId,
-      issueIds: candidateIssueIds,
+      signalIds: candidateSignalIds,
     })
 
     const counts: Record<"ongoing" | "new" | "escalating" | "regressed" | "resolved", number> = {
@@ -151,24 +151,24 @@ export const getIssueAnalyticsUseCase = (
       regressed: 0,
       resolved: 0,
     }
-    for (const issue of canonicalIssues) {
-      const states = deriveIssueLifecycleStates({
+    for (const issue of canonicalSignals) {
+      const states = deriveSignalLifecycleStates({
         issue,
         isEscalating: issue.lifecycle.isEscalating,
         isRegressed: issue.lifecycle.isRegressed,
         now,
       })
-      if (states.includes(IssueState.New)) counts.new += 1
-      if (states.includes(IssueState.Escalating)) counts.escalating += 1
-      if (states.includes(IssueState.Ongoing)) counts.ongoing += 1
-      if (states.includes(IssueState.Regressed)) counts.regressed += 1
-      if (states.includes(IssueState.Resolved)) counts.resolved += 1
+      if (states.includes(SignalState.New)) counts.new += 1
+      if (states.includes(SignalState.Escalating)) counts.escalating += 1
+      if (states.includes(SignalState.Ongoing)) counts.ongoing += 1
+      if (states.includes(SignalState.Regressed)) counts.regressed += 1
+      if (states.includes(SignalState.Resolved)) counts.resolved += 1
     }
 
-    const rawBuckets = yield* scoreAnalyticsRepository.histogramByIssues({
+    const rawBuckets = yield* scoreAnalyticsRepository.histogramBySignals({
       organizationId: input.organizationId,
       projectId: input.projectId,
-      issueIds: candidateIssueIds,
+      signalIds: candidateSignalIds,
       timeRange,
       bucketSeconds: TWELVE_HOURS_SECONDS,
     })
@@ -182,5 +182,5 @@ export const getIssueAnalyticsUseCase = (
       regressed: { total: counts.regressed },
       resolved: { total: counts.resolved },
       occurrences: { total: occurrencesTotal, buckets },
-    } satisfies GetIssueAnalyticsResult
-  }).pipe(Effect.withSpan("issues.getIssueAnalytics"))
+    } satisfies GetSignalAnalyticsResult
+  }).pipe(Effect.withSpan("issues.getSignalAnalytics"))

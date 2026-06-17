@@ -3,7 +3,7 @@ import { createFakeAI } from "@domain/ai/testing"
 import {
   EVALUATION_CONVERSATION_PLACEHOLDER,
   type EvaluationConversationMessage,
-  type EvaluationIssueContext,
+  type EvaluationSignalContext,
   executeEvaluationScript,
   executeEvaluationScriptSandboxed,
   wrapPromptAsEvaluationScript,
@@ -23,7 +23,7 @@ const conversation: readonly EvaluationConversationMessage[] = [
   { role: "assistant", content: "Verify migrations, rollback steps, and dashboards after deploy." },
 ]
 
-const issue: EvaluationIssueContext = {
+const issue: EvaluationSignalContext = {
   name: "Deployment checklist omission",
   description: "The assistant fails to mention key deployment steps.",
 }

@@ -7,8 +7,8 @@ import {
   type EvaluationAlignmentExample,
   EvaluationAlignmentExamplesRepository,
   type EvaluationAlignmentExamplesRepositoryShape,
-  type EvaluationIssue,
-  EvaluationIssueRepository,
+  type EvaluationSignal,
+  EvaluationSignalRepository,
   EvaluationRepository,
   type EvaluationRepositoryShape,
   emptyEvaluationAlignment,
@@ -24,7 +24,7 @@ import {
   ChSqlClient,
   EvaluationId,
   ExternalUserId,
-  IssueId,
+  SignalId,
   NotFoundError,
   OrganizationId,
   ProjectId,
@@ -109,11 +109,11 @@ silenceLoggerInTests()
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
-const issueId = IssueId("i".repeat(24))
+const signalId = SignalId("i".repeat(24))
 const evaluationId = EvaluationId("e".repeat(24))
 
-const ISSUE_NAME = "Tool output leakage"
-const ISSUE_DESCRIPTION = "Secrets are exposed in assistant tool output."
+const SIGNAL_NAME = "Tool output leakage"
+const SIGNAL_DESCRIPTION = "Secrets are exposed in assistant tool output."
 
 const inertSqlClient: SqlClientShape = {
   organizationId,
@@ -128,11 +128,11 @@ const sha1Hex = async (value: string): Promise<string> => {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")
 }
 
-const makeIssue = (): EvaluationIssue => ({
-  id: issueId,
+const makeSignal = (): EvaluationSignal => ({
+  id: signalId,
   projectId: projectId as string,
-  name: ISSUE_NAME,
-  description: ISSUE_DESCRIPTION,
+  name: SIGNAL_NAME,
+  description: SIGNAL_DESCRIPTION,
 })
 
 const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation =>
@@ -140,7 +140,7 @@ const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation =>
     id: evaluationId,
     organizationId,
     projectId,
-    issueId,
+    signalId,
     name: "Existing evaluation",
     description: "Existing evaluation description",
     script: wrapPromptAsEvaluationScript("Evaluate the conversation for the issue."),
@@ -157,12 +157,12 @@ const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation =>
     ...overrides,
   }) as Evaluation
 
-const makeIssueRepoLayer = () =>
-  Layer.succeed(EvaluationIssueRepository, {
+const makeSignalRepoLayer = () =>
+  Layer.succeed(EvaluationSignalRepository, {
     findById: (id) =>
-      String(id) === String(issueId)
-        ? Effect.succeed(makeIssue())
-        : Effect.fail(new NotFoundError({ entity: "EvaluationIssue", id: String(id) })),
+      String(id) === String(signalId)
+        ? Effect.succeed(makeSignal())
+        : Effect.fail(new NotFoundError({ entity: "EvaluationSignal", id: String(id) })),
   })
 
 const makeEvaluationRepoLayer = (overrides?: Partial<EvaluationRepositoryShape>) => {
@@ -177,12 +177,12 @@ const makeEvaluationRepoLayer = (overrides?: Partial<EvaluationRepositoryShape>)
         stored.set(evaluation.id, evaluation)
       }),
     listByProjectId: () => Effect.die("listByProjectId unused"),
-    listByIssueId: () => Effect.die("listByIssueId unused"),
-    listByIssueIds: () => Effect.die("listByIssueIds unused"),
+    listBySignalId: () => Effect.die("listBySignalId unused"),
+    listBySignalIds: () => Effect.die("listBySignalIds unused"),
     archive: () => Effect.die("archive unused"),
     unarchive: () => Effect.die("unarchive unused"),
     softDelete: () => Effect.die("softDelete unused"),
-    softDeleteByIssueId: () => Effect.die("softDeleteByIssueId unused"),
+    softDeleteBySignalId: () => Effect.die("softDeleteBySignalId unused"),
     ...overrides,
   }
   return { layer: Layer.succeed(EvaluationRepository, repo), stored }
@@ -263,11 +263,11 @@ describe("evaluation-alignment activities", () => {
       collectAlignmentExamplesUseCase({
         organizationId: String(organizationId),
         projectId: String(projectId),
-        issueId: String(issueId),
+        signalId: String(signalId),
       }).pipe(
         Effect.provide(
           Layer.mergeAll(
-            makeIssueRepoLayer(),
+            makeSignalRepoLayer(),
             makeAlignmentExamplesRepoLayer({
               listPositiveExamples: () => Effect.succeed([positiveExample]),
               listNegativeExamples: () => Effect.succeed([negativeExample]),
@@ -292,10 +292,10 @@ describe("evaluation-alignment activities", () => {
     const { calls } = createFakeAI()
 
     const result = await Effect.runPromise(
-      generateBaselineDraftUseCase({ issueName: ISSUE_NAME, issueDescription: ISSUE_DESCRIPTION }),
+      generateBaselineDraftUseCase({ signalName: SIGNAL_NAME, signalDescription: SIGNAL_DESCRIPTION }),
     )
 
-    const expectedPrompt = generateBaselinePromptText(ISSUE_NAME, ISSUE_DESCRIPTION)
+    const expectedPrompt = generateBaselinePromptText(SIGNAL_NAME, SIGNAL_DESCRIPTION)
     const expectedScript = wrapPromptAsEvaluationScript(expectedPrompt)
 
     expect(result.script).toBe(expectedScript)
@@ -321,8 +321,8 @@ describe("evaluation-alignment activities", () => {
 
     const result = await Effect.runPromise(
       evaluateBaselineDraftUseCase({
-        issueName: ISSUE_NAME,
-        issueDescription: ISSUE_DESCRIPTION,
+        signalName: SIGNAL_NAME,
+        signalDescription: SIGNAL_DESCRIPTION,
         script: wrapPromptAsEvaluationScript(
           `Check if the conversation contains leaked secrets:\n${EVALUATION_CONVERSATION_PLACEHOLDER}`,
         ),
@@ -361,7 +361,7 @@ describe("evaluation-alignment activities", () => {
         judgeTelemetry: {
           organizationId: String(organizationId),
           projectId: String(projectId),
-          issueId: String(issueId),
+          signalId: String(signalId),
           evaluationId: String(evaluationId),
           jobId: "job-baseline",
         },
@@ -398,16 +398,16 @@ describe("evaluation-alignment activities", () => {
       loadAlignmentStateUseCase({
         organizationId: String(organizationId),
         projectId: String(projectId),
-        issueId: String(issueId),
+        signalId: String(signalId),
         evaluationId: String(evaluationId),
-      }).pipe(Effect.provide(Layer.mergeAll(layer, makeIssueRepoLayer(), Layer.succeed(SqlClient, inertSqlClient)))),
+      }).pipe(Effect.provide(Layer.mergeAll(layer, makeSignalRepoLayer(), Layer.succeed(SqlClient, inertSqlClient)))),
     )
 
     expect(result).toEqual({
       evaluationId: String(evaluationId),
-      issueId: String(issueId),
-      issueName: ISSUE_NAME,
-      issueDescription: ISSUE_DESCRIPTION,
+      signalId: String(signalId),
+      signalName: SIGNAL_NAME,
+      signalDescription: SIGNAL_DESCRIPTION,
       name: "Existing evaluation",
       description: "Existing evaluation description",
       alignedAt: new Date("2026-04-01T00:00:00.000Z").toISOString(),
@@ -427,8 +427,8 @@ describe("evaluation-alignment activities", () => {
 
     const result = await Effect.runPromise(
       evaluateIncrementalDraftUseCase({
-        issueName: ISSUE_NAME,
-        issueDescription: ISSUE_DESCRIPTION,
+        signalName: SIGNAL_NAME,
+        signalDescription: SIGNAL_DESCRIPTION,
         draft: {
           script: wrapPromptAsEvaluationScript("Evaluate the conversation for the issue."),
           evaluationHash: "hash-existing",
@@ -440,7 +440,7 @@ describe("evaluation-alignment activities", () => {
         judgeTelemetry: {
           organizationId: String(organizationId),
           projectId: String(projectId),
-          issueId: String(issueId),
+          signalId: String(signalId),
           evaluationId: String(evaluationId),
           jobId: "job-incremental",
         },
@@ -481,8 +481,8 @@ describe("evaluation-alignment activities", () => {
 
     const result = await Effect.runPromise(
       evaluateIncrementalDraftUseCase({
-        issueName: ISSUE_NAME,
-        issueDescription: ISSUE_DESCRIPTION,
+        signalName: SIGNAL_NAME,
+        signalDescription: SIGNAL_DESCRIPTION,
         draft: {
           script: wrapPromptAsEvaluationScript(
             `Check if the conversation contains leaked secrets:\n${EVALUATION_CONVERSATION_PLACEHOLDER}`,
@@ -511,7 +511,7 @@ describe("evaluation-alignment activities", () => {
         judgeTelemetry: {
           organizationId: String(organizationId),
           projectId: String(projectId),
-          issueId: String(issueId),
+          signalId: String(signalId),
           evaluationId: String(evaluationId),
           jobId: "job-incremental",
         },
@@ -545,8 +545,8 @@ describe("evaluation-alignment activities", () => {
 
     const result = await Effect.runPromise(
       evaluateIncrementalDraftUseCase({
-        issueName: ISSUE_NAME,
-        issueDescription: ISSUE_DESCRIPTION,
+        signalName: SIGNAL_NAME,
+        signalDescription: SIGNAL_DESCRIPTION,
         draft: {
           script: wrapPromptAsEvaluationScript("Always flag as issue present"),
           evaluationHash: "hash-existing",
@@ -573,7 +573,7 @@ describe("evaluation-alignment activities", () => {
         judgeTelemetry: {
           organizationId: String(organizationId),
           projectId: String(projectId),
-          issueId: String(issueId),
+          signalId: String(signalId),
           evaluationId: String(evaluationId),
           jobId: "job-incremental",
         },
@@ -651,7 +651,7 @@ describe("evaluation-alignment activities", () => {
     const result = await optimizeEvaluationDraft({
       organizationId: String(organizationId),
       projectId: String(projectId),
-      issueId: String(issueId),
+      signalId: String(signalId),
       evaluationId: null,
       jobId: "job-opt-test",
       draft: {
@@ -659,8 +659,8 @@ describe("evaluation-alignment activities", () => {
         evaluationHash: "hash-baseline",
         trigger: defaultEvaluationTrigger(),
       },
-      issueName: ISSUE_NAME,
-      issueDescription: ISSUE_DESCRIPTION,
+      signalName: SIGNAL_NAME,
+      signalDescription: SIGNAL_DESCRIPTION,
       positiveExamples: [
         {
           traceId: TraceId("trace-positive"),
@@ -707,7 +707,7 @@ describe("evaluation-alignment activities", () => {
       persistAlignmentResultUseCase({
         organizationId: String(organizationId),
         projectId: String(projectId),
-        issueId: String(issueId),
+        signalId: String(signalId),
         evaluationId: null,
         script: wrapPromptAsEvaluationScript(
           `Check for leaked tokens in the conversation.\n${EVALUATION_CONVERSATION_PLACEHOLDER}`,
@@ -715,12 +715,12 @@ describe("evaluation-alignment activities", () => {
         evaluationHash: "hash-activity-test",
         confusionMatrix: { truePositives: 3, falsePositives: 1, falseNegatives: 0, trueNegatives: 4 },
         trigger: defaultEvaluationTrigger(),
-      }).pipe(Effect.provide(Layer.mergeAll(layer, makeIssueRepoLayer(), Layer.succeed(SqlClient, inertSqlClient)))),
+      }).pipe(Effect.provide(Layer.mergeAll(layer, makeSignalRepoLayer(), Layer.succeed(SqlClient, inertSqlClient)))),
     )
 
     const evaluation = stored.get(String(result.evaluationId))
-    expect(evaluation?.name).toBe(ISSUE_NAME)
-    expect(evaluation?.description).toBe(ISSUE_DESCRIPTION)
+    expect(evaluation?.name).toBe(SIGNAL_NAME)
+    expect(evaluation?.description).toBe(SIGNAL_DESCRIPTION)
     expect(evaluation?.alignment).toEqual({
       evaluationHash: "hash-activity-test",
       confusionMatrix: { truePositives: 3, falsePositives: 1, falseNegatives: 0, trueNegatives: 4 },
@@ -735,7 +735,7 @@ describe("evaluation-alignment activities", () => {
       persistAlignmentResultUseCase({
         organizationId: String(organizationId),
         projectId: String(projectId),
-        issueId: String(issueId),
+        signalId: String(signalId),
         evaluationId: String(evaluationId),
         script: wrapPromptAsEvaluationScript(
           `Check for leaked tokens in the conversation.\n${EVALUATION_CONVERSATION_PLACEHOLDER}`,
@@ -743,12 +743,12 @@ describe("evaluation-alignment activities", () => {
         evaluationHash: "hash-overwrite-test",
         confusionMatrix: { truePositives: 5, falsePositives: 0, falseNegatives: 0, trueNegatives: 5 },
         trigger: defaultEvaluationTrigger(),
-      }).pipe(Effect.provide(Layer.mergeAll(layer, makeIssueRepoLayer(), Layer.succeed(SqlClient, inertSqlClient)))),
+      }).pipe(Effect.provide(Layer.mergeAll(layer, makeSignalRepoLayer(), Layer.succeed(SqlClient, inertSqlClient)))),
     )
 
     const evaluation = stored.get(String(result.evaluationId))
-    expect(evaluation?.name).toBe(ISSUE_NAME)
-    expect(evaluation?.description).toBe(ISSUE_DESCRIPTION)
+    expect(evaluation?.name).toBe(SIGNAL_NAME)
+    expect(evaluation?.description).toBe(SIGNAL_DESCRIPTION)
     expect(evaluation?.name).not.toBe("Existing evaluation")
     expect(evaluation?.description).not.toBe("Existing evaluation description")
   })

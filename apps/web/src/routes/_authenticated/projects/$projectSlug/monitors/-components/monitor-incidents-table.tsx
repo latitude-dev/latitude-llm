@@ -125,8 +125,8 @@ export function MonitorIncidentsTable({
       if (incident.sourceType === "issue" && incident.sourceName) {
         return (
           <Link
-            to="/projects/$projectSlug/issues/$issueId"
-            params={{ projectSlug, issueId: incident.sourceId }}
+            to="/projects/$projectSlug/issues/$signalId"
+            params={{ projectSlug, signalId: incident.sourceId }}
             aria-label={`Open issue ${incident.sourceName}`}
             {...props}
           />

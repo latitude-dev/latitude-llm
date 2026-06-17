@@ -12,7 +12,7 @@ export interface SlackRefreshLockRepositoryShape {
    * Run `effect` while holding a per-workspace Redis lock (keyed
    * `org:${organizationId}:slack:refresh`). Acquires via `SET NX EX`
    * with a unique token and releases via token-comparison delete,
-   * exactly like `IssueDiscoveryLockRepository` / `TaxonomyLockRepository`.
+   * exactly like `SignalDiscoveryLockRepository` / `TaxonomyLockRepository`.
    * Single-flights token rotation so concurrent triggers (on-use reads
    * + the scheduled sweep) can never double-rotate the same workspace
    * and clobber each other's single-use refresh token.

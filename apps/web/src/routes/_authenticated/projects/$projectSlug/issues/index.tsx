@@ -20,7 +20,7 @@ import { useProjectFlaggers } from "../../../../../domains/flaggers/flaggers.col
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 
-function IssuesBreadcrumb() {
+function SignalsBreadcrumb() {
   const { projectSlug } = useParams({ strict: false })
   const { data: project } = useProjectsCollection(
     (projects) => projects.where(({ project: p }) => eq(p.slug, projectSlug ?? "")).findOne(),
@@ -31,7 +31,7 @@ function IssuesBreadcrumb() {
 
   return (
     <span className="flex min-w-0 items-center gap-0">
-      <BreadcrumbText variant="current">Issues</BreadcrumbText>
+      <BreadcrumbText variant="current">Signals</BreadcrumbText>
       {hasActiveFlaggers && (
         <Tooltip
           side="bottom"
@@ -61,11 +61,11 @@ import {
   XIcon,
 } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
-import { invalidateIssueQueries, useIssues } from "../../../../../domains/issues/issues.collection.ts"
+import { invalidateSignalQueries, useSignals } from "../../../../../domains/issues/issues.collection.ts"
 import {
-  applyBulkIssueLifecycleAction,
-  enqueueIssuesExport,
-  type IssueRecord,
+  applyBulkSignalLifecycleAction,
+  enqueueSignalsExport,
+  type SignalRecord,
 } from "../../../../../domains/issues/issues.functions.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { toUserMessage } from "../../../../../lib/errors.ts"
@@ -79,41 +79,41 @@ import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { AssigneeFilter, UNASSIGNED_FILTER_TOKEN } from "./-components/assignee-filter.tsx"
-import { IssuesAnalyticsPanel } from "./-components/issues-analytics-panel.tsx"
-import { IssuesEmptyState } from "./-components/issues-empty-state.tsx"
+import { SignalsAnalyticsPanel } from "./-components/issues-analytics-panel.tsx"
+import { SignalsEmptyState } from "./-components/issues-empty-state.tsx"
 import {
   ISSUES_COLUMN_OPTIONS,
-  type IssuesColumnId,
-  type IssuesTableSorting,
-  IssuesView,
+  type SignalsColumnId,
+  type SignalsTableSorting,
+  SignalsView,
 } from "./-components/issues-view.tsx"
 
-const DEFAULT_SORTING: IssuesTableSorting = { column: "lastSeen", direction: "desc" }
-const ISSUE_SEARCH_DEBOUNCE_MS = 300
-const SORT_COLUMNS = ["lastSeen", "occurrences", "state"] as const satisfies readonly IssuesTableSorting["column"][]
-const SORT_DIRECTIONS = ["asc", "desc"] as const satisfies readonly IssuesTableSorting["direction"][]
+const DEFAULT_SORTING: SignalsTableSorting = { column: "lastSeen", direction: "desc" }
+const SIGNAL_SEARCH_DEBOUNCE_MS = 300
+const SORT_COLUMNS = ["lastSeen", "occurrences", "state"] as const satisfies readonly SignalsTableSorting["column"][]
+const SORT_DIRECTIONS = ["asc", "desc"] as const satisfies readonly SignalsTableSorting["direction"][]
 const SORT_PARAM_PATTERN = /^(lastSeen|occurrences|state):(asc|desc)$/
-const EMPTY_ISSUES: readonly IssueRecord[] = []
+const EMPTY_ISSUES: readonly SignalRecord[] = []
 
-function serializeSorting(sorting: IssuesTableSorting): string {
+function serializeSorting(sorting: SignalsTableSorting): string {
   return `${sorting.column}:${sorting.direction}`
 }
 
-function parseSorting(raw: string): IssuesTableSorting {
+function parseSorting(raw: string): SignalsTableSorting {
   const [column, direction] = raw.split(":")
   if (
-    SORT_COLUMNS.includes(column as IssuesTableSorting["column"]) &&
-    SORT_DIRECTIONS.includes(direction as IssuesTableSorting["direction"])
+    SORT_COLUMNS.includes(column as SignalsTableSorting["column"]) &&
+    SORT_DIRECTIONS.includes(direction as SignalsTableSorting["direction"])
   ) {
     return {
-      column: column as IssuesTableSorting["column"],
-      direction: direction as IssuesTableSorting["direction"],
+      column: column as SignalsTableSorting["column"],
+      direction: direction as SignalsTableSorting["direction"],
     }
   }
   return DEFAULT_SORTING
 }
 
-// Matches the server's `issueAssigneeFilterSchema`: a 24-char cuid or the
+// Matches the server's `signalAssigneeFilterSchema`: a 24-char cuid or the
 // unassigned sentinel. Invalid URL tokens are dropped instead of erroring.
 const ASSIGNEE_TOKEN_PATTERN = /^[a-z0-9]{24}$/
 
@@ -134,42 +134,42 @@ function serializeAssignees(tokens: readonly string[]): string {
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/issues/")({
   // Preserve every list search param (lifecycle/time/search/sort live in the URL via
-  // `useParamState`, not here); we only inspect `issueId` so the legacy drawer deep link
+  // `useParamState`, not here); we only inspect `signalId` so the legacy drawer deep link
   // — still live in already-sent emails/Slack messages — redirects to the full issue page.
   validateSearch: (search: Record<string, unknown>): Record<string, unknown> => search,
   beforeLoad: ({ params, search }) => {
-    const issueId = search.issueId
-    if (typeof issueId === "string" && issueId.length > 0) {
+    const signalId = search.signalId
+    if (typeof signalId === "string" && signalId.length > 0) {
       const example = search.example
       throw redirect({
-        to: "/projects/$projectSlug/issues/$issueId",
-        params: { projectSlug: params.projectSlug, issueId },
+        to: "/projects/$projectSlug/issues/$signalId",
+        params: { projectSlug: params.projectSlug, signalId },
         ...(typeof example === "string" && example.length > 0 ? { search: { example } } : {}),
       })
     }
   },
   staticData: {
-    breadcrumb: IssuesBreadcrumb,
+    breadcrumb: SignalsBreadcrumb,
   },
-  component: IssuesPage,
+  component: SignalsPage,
 })
 
-function IssuesPage() {
+function SignalsPage() {
   const project = useRouteProject()
   const me = useAuthenticatedUser()
-  const [lifecycleGroup, setLifecycleGroup] = useParamState("issuesLifecycle", "active", {
+  const [lifecycleGroup, setLifecycleGroup] = useParamState("signalsLifecycle", "active", {
     validate: (value): value is "active" | "archived" => value === "active" || value === "archived",
   })
-  const [timeFrom, setTimeFrom] = useParamState("issuesTimeFrom", "")
-  const [timeTo, setTimeTo] = useParamState("issuesTimeTo", "")
-  const [assigneesParam, setAssigneesParam] = useParamState("issuesAssignees", "")
-  const [searchQuery, setSearchQuery] = useParamState("issuesSearch", "")
+  const [timeFrom, setTimeFrom] = useParamState("signalsTimeFrom", "")
+  const [timeTo, setTimeTo] = useParamState("signalsTimeTo", "")
+  const [assigneesParam, setAssigneesParam] = useParamState("signalsAssignees", "")
+  const [searchQuery, setSearchQuery] = useParamState("signalsSearch", "")
   const [searchInput, setSearchInput] = useValueWithDefault(searchQuery)
-  const [rawSorting, setRawSorting] = useParamState("issuesSort", serializeSorting(DEFAULT_SORTING), {
+  const [rawSorting, setRawSorting] = useParamState("signalsSort", serializeSorting(DEFAULT_SORTING), {
     validate: (value): value is string => SORT_PARAM_PATTERN.test(value),
   })
   const sorting = useMemo(() => parseSorting(rawSorting), [rawSorting])
-  const setSorting = useCallback((next: IssuesTableSorting) => setRawSorting(serializeSorting(next)), [setRawSorting])
+  const setSorting = useCallback((next: SignalsTableSorting) => setRawSorting(serializeSorting(next)), [setRawSorting])
   // The archived tab lists resolved/ignored issues, so its bulk actions undo
   // the lifecycle commands instead of re-applying them.
   const archived = lifecycleGroup === "archived"
@@ -188,11 +188,11 @@ function IssuesPage() {
         setSearchQuery(normalizedSearchQuery)
       }
     },
-    ISSUE_SEARCH_DEBOUNCE_MS,
+    SIGNAL_SEARCH_DEBOUNCE_MS,
     [searchInput, searchQuery, setSearchQuery],
   )
 
-  const columnSettings = useTableColumnSettings<IssuesColumnId>({
+  const columnSettings = useTableColumnSettings<SignalsColumnId>({
     storageKey: "projects.issues.columns.v1",
     columns: ISSUES_COLUMN_OPTIONS,
   })
@@ -209,24 +209,24 @@ function IssuesPage() {
     (next: readonly string[]) => setAssigneesParam(serializeAssignees(next)),
     [setAssigneesParam],
   )
-  const isMyIssuesActive = assigneeIds.length === 1 && assigneeIds[0] === me.id
-  const toggleMyIssues = useCallback(
-    () => setAssigneeIds(isMyIssuesActive ? [] : [me.id]),
-    [isMyIssuesActive, me.id, setAssigneeIds],
+  const isMySignalsActive = assigneeIds.length === 1 && assigneeIds[0] === me.id
+  const toggleMySignals = useCallback(
+    () => setAssigneeIds(isMySignalsActive ? [] : [me.id]),
+    [isMySignalsActive, me.id, setAssigneeIds],
   )
 
   const {
-    data: issuesData,
+    data: signalsData,
     analytics,
     occurrencesSum,
     priorityCounts,
-    myIssuesCount,
+    mySignalsCount,
     totalCount,
-    hasAnyIssues,
+    hasAnySignals,
     isLoading,
     isReloading,
     infiniteScroll,
-  } = useIssues({
+  } = useSignals({
     projectId: project.id,
     lifecycleGroup,
     sorting,
@@ -240,23 +240,23 @@ function IssuesPage() {
   // surrounding page layout (filters, search, lifecycle tabs) keeps rendering
   // because `isLoading` itself stays false during the placeholder window.
   const showSkeletons = isLoading || isReloading
-  const issues = isReloading ? EMPTY_ISSUES : issuesData
+  const issues = isReloading ? EMPTY_ISSUES : signalsData
 
-  const issueIds = useMemo(() => issues.map((issue) => issue.id), [issues])
+  const signalIds = useMemo(() => issues.map((issue) => issue.id), [issues])
   const selection = useSelectableRows({
-    rowIds: issueIds,
+    rowIds: signalIds,
     totalRowCount: totalCount,
     controlledState: selectionState,
     onStateChange: setSelectionState,
   })
 
-  const handleExportIssues = useCallback(async () => {
+  const handleExportSignals = useCallback(async () => {
     const bulkSelection = selection.bulkSelection
     if (!bulkSelection) return
 
     setExporting(true)
     try {
-      await enqueueIssuesExport({
+      await enqueueSignalsExport({
         data: {
           projectId: project.id,
           selection: bulkSelection,
@@ -292,7 +292,7 @@ function IssuesPage() {
 
     setBulkActionLoading(true)
     try {
-      const result = await applyBulkIssueLifecycleAction({
+      const result = await applyBulkSignalLifecycleAction({
         data: {
           projectId: project.id,
           selection: bulkSelection,
@@ -310,7 +310,7 @@ function IssuesPage() {
       })
       const changedCount = result.items.filter((item) => item.changed).length
       const verb = archived ? "unresolved" : "resolved"
-      await invalidateIssueQueries(project.id)
+      await invalidateSignalQueries(project.id)
       toast({
         description:
           changedCount === 0
@@ -347,7 +347,7 @@ function IssuesPage() {
 
     setBulkActionLoading(true)
     try {
-      const result = await applyBulkIssueLifecycleAction({
+      const result = await applyBulkSignalLifecycleAction({
         data: {
           projectId: project.id,
           selection: bulkSelection,
@@ -364,7 +364,7 @@ function IssuesPage() {
       })
       const changedCount = result.items.filter((item) => item.changed).length
       const verb = archived ? "unignored" : "ignored"
-      await invalidateIssueQueries(project.id)
+      await invalidateSignalQueries(project.id)
       toast({
         description:
           changedCount === 0
@@ -389,14 +389,14 @@ function IssuesPage() {
     lifecycleGroup !== "active" || searchQuery !== "" || Boolean(timeRange) || assigneeIds.length > 0
   // Derived from the un-substituted data so a placeholder reload (which forces
   // `issues` to []) does not falsely trigger the empty state.
-  const hasNoIssues = !hasAnyIssues && !hasActiveFilters
-  const showEmptyState = !showSkeletons && hasNoIssues
+  const hasNoSignals = !hasAnySignals && !hasActiveFilters
+  const showEmptyState = !showSkeletons && hasNoSignals
 
-  if (isLoading && !hasAnyIssues && !hasActiveFilters) {
+  if (isLoading && !hasAnySignals && !hasActiveFilters) {
     return (
       <Layout>
         <Layout.Content>
-          <IssuesEmptyState isLoading />
+          <SignalsEmptyState isLoading />
         </Layout.Content>
       </Layout>
     )
@@ -406,7 +406,7 @@ function IssuesPage() {
     return (
       <Layout>
         <Layout.Content>
-          <IssuesEmptyState />
+          <SignalsEmptyState />
         </Layout.Content>
       </Layout>
     )
@@ -431,8 +431,8 @@ function IssuesPage() {
               <ColumnsSelector
                 columns={columnSettings.columns}
                 selectedColumnIds={columnSettings.visibleColumnIds}
-                onChange={(nextColumnIds) => columnSettings.setVisibleColumnIds(nextColumnIds as IssuesColumnId[])}
-                onOrderChange={(nextColumnIds) => columnSettings.setColumnIds(nextColumnIds as IssuesColumnId[])}
+                onChange={(nextColumnIds) => columnSettings.setVisibleColumnIds(nextColumnIds as SignalsColumnId[])}
+                onOrderChange={(nextColumnIds) => columnSettings.setColumnIds(nextColumnIds as SignalsColumnId[])}
               />
               <div className="relative">
                 <Input
@@ -446,15 +446,15 @@ function IssuesPage() {
               </div>
               <AssigneeFilter value={assigneeIds} onChange={setAssigneeIds} />
               <Button
-                variant={isMyIssuesActive ? "secondary" : "outline"}
+                variant={isMySignalsActive ? "secondary" : "outline"}
                 size="sm"
-                onClick={toggleMyIssues}
-                aria-pressed={isMyIssuesActive}
+                onClick={toggleMySignals}
+                aria-pressed={isMySignalsActive}
               >
                 <Icon icon={CircleUserRoundIcon} size="sm" />
                 My issues
-                <Badge variant={isMyIssuesActive ? "default" : "muted"} size="small">
-                  {myIssuesCount.toLocaleString()}
+                <Badge variant={isMySignalsActive ? "default" : "muted"} size="small">
+                  {mySignalsCount.toLocaleString()}
                 </Badge>
               </Button>
               <Tabs
@@ -508,7 +508,7 @@ function IssuesPage() {
           </div>
         )}
         <div className="px-6">
-          <IssuesAnalyticsPanel
+          <SignalsAnalyticsPanel
             projectId={project.id}
             projectSlug={project.slug}
             analytics={analytics}
@@ -519,7 +519,7 @@ function IssuesPage() {
             }}
           />
         </div>
-        <IssuesView
+        <SignalsView
           issues={issues}
           isLoading={showSkeletons}
           infiniteScroll={infiniteScroll}
@@ -537,7 +537,7 @@ function IssuesPage() {
             onOpenChange={setExportModalOpen}
             itemLabel="issue"
             selectedCount={selection.selectedCount}
-            onConfirm={() => void handleExportIssues()}
+            onConfirm={() => void handleExportSignals()}
             exporting={exporting}
           />
         )}
@@ -564,7 +564,7 @@ function IssuesPage() {
               >
                 <Icon icon={archived ? XIcon : CheckIcon} size="sm" />
                 {archived ? "Unresolve" : "Resolve"}{" "}
-                {selection.selectedCount === 1 ? "Issue" : `${selection.selectedCount} Issues`}
+                {selection.selectedCount === 1 ? "Signal" : `${selection.selectedCount} Signals`}
               </Button>
             </>
           }
@@ -610,7 +610,7 @@ function IssuesPage() {
               >
                 <Icon icon={archived ? PlayIcon : PauseIcon} size="sm" />
                 {archived ? "Unignore" : "Ignore"}{" "}
-                {selection.selectedCount === 1 ? "Issue" : `${selection.selectedCount} Issues`}
+                {selection.selectedCount === 1 ? "Signal" : `${selection.selectedCount} Signals`}
               </Button>
             </>
           }

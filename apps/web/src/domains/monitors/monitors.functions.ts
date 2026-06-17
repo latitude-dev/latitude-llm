@@ -1,6 +1,6 @@
 import { AlertIncidentRepository, resolveAlertIncidentUseCase } from "@domain/alerts"
 import { exportSelectionSchema } from "@domain/exports"
-import { IssueRepository } from "@domain/issues"
+import { SignalRepository } from "@domain/signals"
 import {
   createMonitorUseCase,
   deleteMonitorUseCase,
@@ -34,7 +34,7 @@ import {
   alertIncidentSourceTypeSchema,
   alertSeveritySchema,
   filterSetSchema,
-  IssueId,
+  SignalId,
   MonitorAlertId,
   MonitorId,
   monitorStreamSchema,
@@ -45,7 +45,7 @@ import {
 import { MetricSeriesReaderLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   AlertIncidentRepositoryLive,
-  IssueRepositoryLive,
+  SignalRepositoryLive,
   MonitorRepositoryLive,
   NotificationRepositoryLive,
   OutboxEventWriterLive,
@@ -822,22 +822,22 @@ export const listMonitorIncidents = createServerFn({ method: "GET" })
       )
 
       // Resolve source names/slugs for the "Source" column; unresolved ids fall back to the id in the UI.
-      const issueIds = [
+      const signalIds = [
         ...new Set(
           result.items.flatMap((i) =>
             i.incident.sourceType === "issue" && i.incident.sourceId !== null ? [i.incident.sourceId] : [],
           ),
         ),
       ]
-      const issueNameById = new Map<string, string>()
-      if (issueIds.length > 0) {
+      const signalNameById = new Map<string, string>()
+      if (signalIds.length > 0) {
         const issues = await Effect.runPromise(
           Effect.gen(function* () {
-            const repository = yield* IssueRepository
-            return yield* repository.findByIds({ projectId, issueIds: issueIds.map(IssueId) })
-          }).pipe(withPostgres(IssueRepositoryLive, pgClient, orgId), withTracing),
+            const repository = yield* SignalRepository
+            return yield* repository.findByIds({ projectId, signalIds: signalIds.map(SignalId) })
+          }).pipe(withPostgres(SignalRepositoryLive, pgClient, orgId), withTracing),
         )
-        for (const issue of issues) issueNameById.set(issue.id, issue.name)
+        for (const issue of issues) signalNameById.set(issue.id, issue.name)
       }
 
       const savedSearchById = new Map<string, { readonly name: string; readonly slug: string }>()
@@ -853,7 +853,7 @@ export const listMonitorIncidents = createServerFn({ method: "GET" })
           const { sourceType, sourceId } = item.incident
           const saved = sourceType === "savedSearch" && sourceId !== null ? savedSearchById.get(sourceId) : undefined
           const sourceName =
-            sourceType === "issue" && sourceId !== null ? (issueNameById.get(sourceId) ?? null) : (saved?.name ?? null)
+            sourceType === "issue" && sourceId !== null ? (signalNameById.get(sourceId) ?? null) : (saved?.name ?? null)
           return toMonitorIncidentRecord(item, sourceName, saved?.slug ?? null)
         }),
         nextCursor: result.nextCursor

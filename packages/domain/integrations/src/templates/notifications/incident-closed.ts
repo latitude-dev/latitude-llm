@@ -17,7 +17,7 @@ export const incidentClosedRenderer: SlackNotificationRenderer<"incident.closed"
   Effect.gen(function* () {
     const projectName = ctx.project?.name ?? ctx.organization.name
     const isSavedSearch = payload.sourceType === "savedSearch"
-    const issueUrl = ctx.project
+    const signalUrl = ctx.project
       ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues/${payload.sourceId}`
       : ctx.webAppUrl
     const monitorUrl =
@@ -57,15 +57,15 @@ export const incidentClosedRenderer: SlackNotificationRenderer<"incident.closed"
     const chart = trendChartBlock(ctx.notificationId, ctx.webAppUrl)
 
     return {
-      text: `Issue recovered in ${projectName} — elevated for ${duration}`,
+      text: `Signal recovered in ${projectName} — elevated for ${duration}`,
       color: COLORS.resolved,
       blocks: [
-        ...(sourceName ? [sectionMarkdown(`*<${issueUrl}|${sourceName}>*`)] : []),
+        ...(sourceName ? [sectionMarkdown(`*<${signalUrl}|${sourceName}>*`)] : []),
         sectionMarkdown(`Elevated for *${duration}*.`),
         ...(chart ? [chart] : []),
         ...attribution,
         context,
-        actionsLink("View issue", issueUrl),
+        actionsLink("View issue", signalUrl),
       ],
     }
   })

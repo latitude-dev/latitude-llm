@@ -1,4 +1,4 @@
-import type { IssuePriority } from "@domain/issues"
+import type { SignalPriority } from "@domain/signals"
 import type { IncidentRecovery } from "@domain/notifications"
 import { ALERT_INCIDENT_KIND_SOURCE_TYPE, type AlertIncidentKind, type AlertSeverity } from "@domain/shared"
 import { Section } from "@react-email/components"
@@ -15,8 +15,8 @@ import {
   formatScope,
   humanizeDurationMs,
   IncidentTrendChartImage,
-  IssueIdFooter,
-  IssueTimestamp,
+  SignalIdFooter,
+  SignalTimestamp,
   MonitorAttribution,
   type MonitorAttributionInfo,
   PriorityBadge,
@@ -30,13 +30,13 @@ interface IncidentClosedEmailProps {
   readonly sourceId: string
   readonly sourceName: string
   readonly description: string | undefined
-  readonly issueUrl: string | undefined
+  readonly signalUrl: string | undefined
   readonly chartUrl: string
   readonly notificationCreatedAt: Date
   readonly organizationName: string
   readonly projectName: string | undefined
-  /** Issue triage snapshot at incident time; absent on legacy payloads and saved-search sources. */
-  readonly priority: IssuePriority | undefined
+  /** Signal triage snapshot at incident time; absent on legacy payloads and saved-search sources. */
+  readonly priority: SignalPriority | undefined
   /** Live-resolved assignee display name; absent when unassigned or unresolvable. */
   readonly assigneeName: string | undefined
   readonly recovery: IncidentRecovery
@@ -50,7 +50,7 @@ export function IncidentClosedEmail({
   sourceId,
   sourceName,
   description,
-  issueUrl,
+  signalUrl,
   chartUrl,
   notificationCreatedAt,
   organizationName,
@@ -71,7 +71,7 @@ export function IncidentClosedEmail({
   const recoveryLine = isSavedSearch
     ? `Elevated for ${duration} — no further action needed unless matching traces climb again.`
     : `Elevated for ${duration} — no further action needed unless the issue regresses again.`
-  const ctaHref = isSavedSearch ? monitor?.url : issueUrl
+  const ctaHref = isSavedSearch ? monitor?.url : signalUrl
 
   const metadataRows = [
     { label: "Project", value: scope },
@@ -92,7 +92,7 @@ export function IncidentClosedEmail({
 
       <MonitorAttribution monitor={monitor} />
 
-      <SectionHeader label={isSavedSearch ? "Saved search" : "Issue"} />
+      <SectionHeader label={isSavedSearch ? "Saved search" : "Signal"} />
       <EmailText variant="heading">{sourceName}</EmailText>
       {description ? (
         <EmailText variant="bodySmall" className="text-muted-foreground">
@@ -100,7 +100,7 @@ export function IncidentClosedEmail({
         </EmailText>
       ) : null}
 
-      <IssueTimestamp timestamp={notificationCreatedAt} />
+      <SignalTimestamp timestamp={notificationCreatedAt} />
 
       <EmailMetadataTable rows={metadataRows} />
 
@@ -111,7 +111,7 @@ export function IncidentClosedEmail({
       {isSavedSearch ? null : (
         <>
           <IncidentTrendChartImage src={chartUrl} />
-          <IssueIdFooter issueId={sourceId} />
+          <SignalIdFooter signalId={sourceId} />
         </>
       )}
 
@@ -130,7 +130,7 @@ IncidentClosedEmail.PreviewProps = {
   sourceId: "dds0rt8sqgpuku4u4wabze9r",
   sourceName: "Token leakage in responses",
   description: "Agent occasionally echoes API keys or PII back to the user when summarising prior tool outputs.",
-  issueUrl: "https://console.latitude.so/projects/sample-project/issues/preview-issue",
+  signalUrl: "https://console.latitude.so/projects/sample-project/issues/preview-issue",
   chartUrl: "https://placehold.co/600x200/dbe5ff/3b5bff?text=Trend+chart",
   notificationCreatedAt: new Date("2026-03-18T10:37:00Z"),
   organizationName: "Acme Inc.",
@@ -139,7 +139,7 @@ IncidentClosedEmail.PreviewProps = {
   assigneeName: "Anna Bosch",
   recovery: { durationMs: 32 * 60 * 1000 },
   monitor: {
-    name: "Issue escalating",
+    name: "Signal escalating",
     url: "https://console.latitude.so/projects/sample-project/monitors?monitorSlug=issue-escalating",
     conditionSummary: "Opens an incident when an ongoing issue is being detected more than expected.",
   },

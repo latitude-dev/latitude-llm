@@ -23,7 +23,7 @@ function buildBaseScoreInput() {
     traceId,
     spanId,
     simulationId: null,
-    issueId: null,
+    signalId: null,
     value: 0.75,
     passed: true,
     feedback: "Model followed the expected behavior.",

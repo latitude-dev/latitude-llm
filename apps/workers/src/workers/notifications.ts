@@ -5,17 +5,17 @@ import {
   NOTIFICATION_KIND_META,
   type NotificationKind,
   requestIncidentNotificationsUseCase,
-  requestIssueAssignedNotificationsUseCase,
+  requestSignalAssignedNotificationsUseCase,
   requestWrappedReportNotificationsUseCase,
 } from "@domain/notifications"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
-import { IssueId, NOTIFICATION_GROUP_META, OrganizationId, ProjectId, type SqlClient } from "@domain/shared"
+import { SignalId, NOTIFICATION_GROUP_META, OrganizationId, ProjectId, type SqlClient } from "@domain/shared"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   AlertIncidentRepositoryLive,
   EvaluationRepositoryLive,
   IncidentMonitorReaderLive,
-  IssueRepositoryLive,
+  SignalRepositoryLive,
   MembershipRepositoryLive,
   NotificationRepositoryLive,
   ProjectRepositoryLive,
@@ -40,7 +40,7 @@ const requestLayer = Layer.mergeAll(
   AlertIncidentRepositoryLive,
   EvaluationRepositoryLive,
   IncidentMonitorReaderLive,
-  IssueRepositoryLive,
+  SignalRepositoryLive,
   MembershipRepositoryLive,
   ProjectRepositoryLive,
   ScoreRepositoryLive,
@@ -253,9 +253,9 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
       ),
 
     "request-issue-assigned-notifications": (payload) =>
-      requestIssueAssignedNotificationsUseCase({
+      requestSignalAssignedNotificationsUseCase({
         organizationId: OrganizationId(payload.organizationId),
-        issueId: IssueId(payload.issueId),
+        signalId: SignalId(payload.signalId),
         assigneeId: payload.assigneeId,
         actorUserId: payload.actorUserId,
         assignedAt: payload.assignedAt,
@@ -263,7 +263,7 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
         Effect.flatMap((result) => {
           if (result.status === "skipped") {
             logger.info(
-              `notifications.request-issue-assigned skipped issueId=${payload.issueId} reason=${result.reason}`,
+              `notifications.request-issue-assigned skipped signalId=${payload.signalId} reason=${result.reason}`,
             )
             return Effect.void
           }
@@ -290,7 +290,7 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
         }),
         Effect.tapError((error) =>
           Effect.sync(() =>
-            logger.error(`notifications.request-issue-assigned failed issueId=${payload.issueId}`, error),
+            logger.error(`notifications.request-issue-assigned failed signalId=${payload.signalId}`, error),
           ),
         ),
         withPostgres(requestLayer, pgClient, OrganizationId(payload.organizationId)),

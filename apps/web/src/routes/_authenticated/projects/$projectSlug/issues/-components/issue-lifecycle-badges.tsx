@@ -11,21 +11,21 @@ const STATE_VARIANTS = {
   ignored: "outlineMuted",
 } as const
 
-interface IssueExtraBadge {
+interface SignalExtraBadge {
   readonly key: string
   readonly label: string
   readonly variant?: ComponentProps<typeof Badge>["variant"]
   readonly tooltip?: ReactNode
 }
 
-export function IssueLifecycleBadges({
+export function SignalLifecycleBadges({
   states,
   wrap = true,
   extraBadges = [],
 }: {
   readonly states: readonly string[]
   readonly wrap?: boolean
-  readonly extraBadges?: readonly IssueExtraBadge[]
+  readonly extraBadges?: readonly SignalExtraBadge[]
 }) {
   if (states.length === 0 && extraBadges.length === 0) {
     return null

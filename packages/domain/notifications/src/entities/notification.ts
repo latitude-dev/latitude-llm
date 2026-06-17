@@ -1,4 +1,4 @@
-import { issuePrioritySchema } from "@domain/issues"
+import { signalPrioritySchema } from "@domain/signals"
 import {
   alertIncidentConditionSchema,
   alertIncidentKindSchema,
@@ -76,14 +76,14 @@ const incidentBasePayloadShape = {
   /** Firing alert's condition snapshot, for the humanised summary. */
   condition: alertIncidentConditionSchema.nullable().optional(),
   /**
-   * Issue triage snapshot at producer time. Present only for issue-sourced
+   * Signal triage snapshot at producer time. Present only for issue-sourced
    * incidents produced after these fields landed; absent for savedSearch
    * sources and legacy stored rows (hence optional). `null` means
    * "snapshotted, but unassigned / no priority". The assignee's display
    * name is NOT snapshotted — renderers resolve it live from the id.
    */
   assigneeId: cuidSchema.nullable().optional(),
-  priority: issuePrioritySchema.nullable().optional(),
+  priority: signalPrioritySchema.nullable().optional(),
 }
 
 /**
@@ -177,7 +177,7 @@ export type IncidentEventPayload = z.infer<typeof incidentEventPayloadSchema>
  */
 export const incidentOpenedPayloadSchema = z.object({
   ...incidentBasePayloadShape,
-  // Issue trend snapshot — absent for non-issue sources (e.g. `savedSearch.escalating`).
+  // Signal trend snapshot — absent for non-issue sources (e.g. `savedSearch.escalating`).
   trend: incidentTrendSchema.optional(),
   tags: incidentTagsSchema.optional(),
   /**
@@ -205,7 +205,7 @@ export type IncidentOpenedPayload = z.infer<typeof incidentOpenedPayloadSchema>
  */
 export const incidentClosedPayloadSchema = z.object({
   ...incidentBasePayloadShape,
-  // Issue trend snapshot — absent for non-issue sources (e.g. `savedSearch.escalating`).
+  // Signal trend snapshot — absent for non-issue sources (e.g. `savedSearch.escalating`).
   trend: incidentTrendSchema.optional(),
   recovery: incidentRecoverySchema,
 })
@@ -235,12 +235,12 @@ export type CustomMessagePayload = z.infer<typeof customMessagePayloadSchema>
  * assignment events (each change writes a new timestamp), so A→B→A
  * re-notifies A without ever duplicating a single assignment.
  */
-export const issueAssignedPayloadSchema = z.object({
-  issueId: cuidSchema,
+export const signalAssignedPayloadSchema = z.object({
+  signalId: cuidSchema,
   actorUserId: cuidSchema,
   assignedAt: z.iso.datetime(),
 })
-export type IssueAssignedPayload = z.infer<typeof issueAssignedPayloadSchema>
+export type SignalAssignedPayload = z.infer<typeof signalAssignedPayloadSchema>
 
 /**
  * Single source of truth for notification kinds. Every kind declares its
@@ -255,7 +255,7 @@ export const NOTIFICATION_KIND_META = {
   "incident.closed": { group: "incidents", payload: incidentClosedPayloadSchema },
   "wrapped.report": { group: "wrapped_reports", payload: wrappedReportPayloadSchema },
   "custom.message": { group: "custom_messages", payload: customMessagePayloadSchema },
-  "issue.assigned": { group: "personal", payload: issueAssignedPayloadSchema },
+  "issue.assigned": { group: "personal", payload: signalAssignedPayloadSchema },
 } as const satisfies Record<string, { readonly group: NotificationGroup; readonly payload: z.ZodTypeAny }>
 
 export type NotificationKind = keyof typeof NOTIFICATION_KIND_META

@@ -1,34 +1,34 @@
-import type { IssueId, NotFoundError, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
+import type { SignalId, NotFoundError, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
 import { Context, type Effect } from "effect"
-import type { Issue } from "../entities/issue.ts"
+import type { Signal } from "../entities/issue.ts"
 
 /**
  * Lifecycle flags derived from `alert_incidents` rows joined onto an issue
  * read. These are the stored truth for "is this issue currently escalating /
- * regressed" — see `deriveIssueLifecycleStates`.
+ * regressed" — see `deriveSignalLifecycleStates`.
  */
-export interface IssueLifecycleFlags {
+export interface SignalLifecycleFlags {
   readonly isEscalating: boolean
   readonly isRegressed: boolean
 }
 
 /**
- * Issue payload returned by read methods that JOIN `alert_incidents`. The
+ * Signal payload returned by read methods that JOIN `alert_incidents`. The
  * lifecycle flags are attached as an extra property so existing consumers
- * that just read `Issue` columns (e.g. `issue.name`, `issue.projectId`)
+ * that just read `Signal` columns (e.g. `issue.name`, `issue.projectId`)
  * keep working without changes.
  */
-export type IssueWithLifecycle = Issue & { readonly lifecycle: IssueLifecycleFlags }
+export type SignalWithLifecycle = Signal & { readonly lifecycle: SignalLifecycleFlags }
 
-export interface IssueListPage {
-  readonly items: readonly IssueWithLifecycle[]
+export interface SignalListPage {
+  readonly items: readonly SignalWithLifecycle[]
   readonly hasMore: boolean
   readonly limit: number
   readonly offset: number
 }
 
-export interface IssueSearchCandidate {
-  readonly issueId: IssueId
+export interface SignalSearchCandidate {
+  readonly signalId: SignalId
   readonly name: string
   readonly description: string
   readonly score: number
@@ -38,8 +38,8 @@ export interface IssueSearchCandidate {
  * One semantic neighbor of an issue: another issue in the same project ranked
  * by cosine similarity between the two `centroid_embedding` vectors.
  */
-export interface IssueCentroidNeighbor {
-  readonly issueId: IssueId
+export interface SignalCentroidNeighbor {
+  readonly signalId: SignalId
   /** Cosine similarity in `[-1, 1]` (in practice `[0, 1]` for feedback embeddings). */
   readonly similarity: number
 }
@@ -49,36 +49,36 @@ export interface IssueCentroidNeighbor {
  * caller can derive its states without a second read) plus its owning project's slug/name and the
  * relevance score of whichever tier produced it.
  */
-export interface OrgIssueSearchHit {
-  readonly issue: IssueWithLifecycle
+export interface OrgSignalSearchHit {
+  readonly issue: SignalWithLifecycle
   readonly projectSlug: string
   readonly projectName: string
   readonly score: number
 }
 
-export interface ListIssuesRepositoryInput {
+export interface ListSignalsRepositoryInput {
   readonly projectId: ProjectId
   readonly limit: number
   readonly offset: number
 }
 
-export interface IssueRepositoryShape {
-  findById(id: IssueId): Effect.Effect<IssueWithLifecycle, NotFoundError | RepositoryError, SqlClient>
+export interface SignalRepositoryShape {
+  findById(id: SignalId): Effect.Effect<SignalWithLifecycle, NotFoundError | RepositoryError, SqlClient>
   /**
    * Locking read used by lifecycle write paths (resolve, ignore, etc.).
-   * Returns plain `Issue` — lifecycle flags would require an extra JOIN
+   * Returns plain `Signal` — lifecycle flags would require an extra JOIN
    * that callers in this path don't need.
    */
-  findByIdForUpdate(id: IssueId): Effect.Effect<Issue, NotFoundError | RepositoryError, SqlClient>
+  findByIdForUpdate(id: SignalId): Effect.Effect<Signal, NotFoundError | RepositoryError, SqlClient>
   findByIds(input: {
     readonly projectId: ProjectId
-    readonly issueIds: readonly IssueId[]
-  }): Effect.Effect<readonly IssueWithLifecycle[], RepositoryError, SqlClient>
+    readonly signalIds: readonly SignalId[]
+  }): Effect.Effect<readonly SignalWithLifecycle[], RepositoryError, SqlClient>
   hybridSearch(input: {
     readonly projectId: ProjectId
     readonly query: string
     readonly normalizedEmbedding: readonly number[]
-  }): Effect.Effect<readonly IssueSearchCandidate[], RepositoryError, SqlClient>
+  }): Effect.Effect<readonly SignalSearchCandidate[], RepositoryError, SqlClient>
   /**
    * Semantic neighbors for the Related-issues list: the project's other issues
    * ranked by cosine similarity against this issue's `centroid_embedding`
@@ -92,9 +92,9 @@ export interface IssueRepositoryShape {
    */
   findSimilarByCentroid(input: {
     readonly projectId: ProjectId
-    readonly issueId: IssueId
+    readonly signalId: SignalId
     readonly limit: number
-  }): Effect.Effect<readonly IssueCentroidNeighbor[], RepositoryError, SqlClient>
+  }): Effect.Effect<readonly SignalCentroidNeighbor[], RepositoryError, SqlClient>
   /**
    * Org-wide issue search across every project in the organization (RLS-scoped to the caller's
    * org), powering the Command Palette. Two tiers selected by `normalizedEmbedding`:
@@ -116,7 +116,7 @@ export interface IssueRepositoryShape {
     readonly normalizedEmbedding?: readonly number[]
     readonly preferProjectId?: ProjectId
     readonly limit: number
-  }): Effect.Effect<readonly OrgIssueSearchHit[], RepositoryError, SqlClient>
+  }): Effect.Effect<readonly OrgSignalSearchHit[], RepositoryError, SqlClient>
   /**
    * Point-lookup by `(projectId, slug)`. Slugs are unique within a project,
    * so this is the natural read path for slug-keyed API endpoints.
@@ -124,7 +124,7 @@ export interface IssueRepositoryShape {
   findBySlug(input: {
     readonly projectId: ProjectId
     readonly slug: string
-  }): Effect.Effect<IssueWithLifecycle, NotFoundError | RepositoryError, SqlClient>
+  }): Effect.Effect<SignalWithLifecycle, NotFoundError | RepositoryError, SqlClient>
   /** Cheap existence check for slug uniqueness paths. */
   existsBySlug(input: {
     readonly projectId: ProjectId
@@ -138,12 +138,12 @@ export interface IssueRepositoryShape {
   countBySlug(input: {
     readonly projectId: ProjectId
     readonly slug: string
-    readonly excludeIssueId?: IssueId
+    readonly excludeSignalId?: SignalId
   }): Effect.Effect<number, RepositoryError, SqlClient>
-  save(issue: Issue): Effect.Effect<void, RepositoryError, SqlClient>
-  list(input: ListIssuesRepositoryInput): Effect.Effect<IssueListPage, RepositoryError, SqlClient>
+  save(issue: Signal): Effect.Effect<void, RepositoryError, SqlClient>
+  list(input: ListSignalsRepositoryInput): Effect.Effect<SignalListPage, RepositoryError, SqlClient>
 }
 
-export class IssueRepository extends Context.Service<IssueRepository, IssueRepositoryShape>()(
-  "@domain/issues/IssueRepository",
+export class SignalRepository extends Context.Service<SignalRepository, SignalRepositoryShape>()(
+  "@domain/signals/SignalRepository",
 ) {}

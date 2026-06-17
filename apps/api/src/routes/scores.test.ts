@@ -1,5 +1,5 @@
 import { defaultEvaluationTrigger, emptyEvaluationAlignment } from "@domain/evaluations"
-import { createIssueCentroid } from "@domain/issues"
+import { createSignalCentroid } from "@domain/signals"
 import { OrganizationId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
 import { type SpanDetail, SpanRepository } from "@domain/spans"
 import { stubListSpan } from "@domain/spans/testing"
@@ -156,7 +156,7 @@ describe("Scores Routes Integration", () => {
       organizationId: tenant.organizationId,
       projectId,
       scoreId: body.id,
-      issueId: null,
+      signalId: null,
       status: "published",
     })
 
@@ -234,7 +234,7 @@ describe("Scores Routes Integration", () => {
       organizationId: tenant.organizationId,
       projectId,
       scoreId: body.id,
-      issueId: null,
+      signalId: null,
       status: "published",
     })
 
@@ -251,7 +251,7 @@ describe("Scores Routes Integration", () => {
     const tenant = await createTenantSetup(database)
     const projectId = "aa11aa11aa11aa11aa11aa11"
     const evaluationId = "bb22bb22bb22bb22bb22bb22"
-    const issueId = "ii33ii33ii33ii33ii33ii33"
+    const signalId = "ii33ii33ii33ii33ii33ii33"
     const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
     await seedTrace({
       clickhouse,
@@ -261,15 +261,15 @@ describe("Scores Routes Integration", () => {
     })
 
     await database.db.insert(issues).values({
-      id: issueId,
+      id: signalId,
       uuid: crypto.randomUUID(),
       organizationId: tenant.organizationId,
       projectId,
-      slug: `test-issue-${issueId.slice(-6)}`,
-      name: "Test Issue",
+      slug: `test-issue-${signalId.slice(-6)}`,
+      name: "Test Signal",
       description: "An issue for testing direct assignment",
       source: "annotation",
-      centroid: createIssueCentroid(),
+      centroid: createSignalCentroid(),
       clusteredAt: new Date(),
     })
 
@@ -277,7 +277,7 @@ describe("Scores Routes Integration", () => {
       id: evaluationId,
       organizationId: tenant.organizationId,
       projectId,
-      issueId,
+      signalId,
       name: "Test Evaluation",
       description: "An evaluation linked to the test issue",
       script: "return { passed: false }",
@@ -308,7 +308,7 @@ describe("Scores Routes Integration", () => {
     expect(response.status).toBe(201)
     const body = await response.json()
     expect(body.source).toBe("evaluation")
-    expect(body.issueId).toBeNull()
+    expect(body.signalId).toBeNull()
 
     const persistedScores = await database.db
       .select()
@@ -316,7 +316,7 @@ describe("Scores Routes Integration", () => {
       .where(eq(scoresTable.organizationId, tenant.organizationId))
 
     expect(persistedScores).toHaveLength(1)
-    expect(persistedScores[0]?.issueId).toBeNull()
+    expect(persistedScores[0]?.signalId).toBeNull()
 
     const outboxRows = await database.db
       .select()
@@ -329,7 +329,7 @@ describe("Scores Routes Integration", () => {
       organizationId: tenant.organizationId,
       projectId,
       scoreId: body.id,
-      issueId: null,
+      signalId: null,
       status: "published",
     })
 
@@ -375,7 +375,7 @@ describe("Scores Routes Integration", () => {
     expect(response.status).toBe(201)
     const body = await response.json()
     expect(body.source).toBe("evaluation")
-    expect(body.issueId).toBeNull()
+    expect(body.signalId).toBeNull()
 
     const outboxRows = await database.db
       .select()
@@ -388,7 +388,7 @@ describe("Scores Routes Integration", () => {
       organizationId: tenant.organizationId,
       projectId,
       scoreId: body.id,
-      issueId: null,
+      signalId: null,
       status: "published",
     })
   })
@@ -401,7 +401,7 @@ describe("Scores Routes Integration", () => {
     const tenant = await createTenantSetup(database)
     const projectId = "gg88gg88gg88gg88gg88gg88"
     const evaluationId = "hh99hh99hh99hh99hh99hh99"
-    const issueId = "kk00kk00kk00kk00kk00kk00"
+    const signalId = "kk00kk00kk00kk00kk00kk00"
     const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
     await seedTrace({
       clickhouse,
@@ -411,15 +411,15 @@ describe("Scores Routes Integration", () => {
     })
 
     await database.db.insert(issues).values({
-      id: issueId,
+      id: signalId,
       uuid: crypto.randomUUID(),
       organizationId: tenant.organizationId,
       projectId,
-      slug: `linked-issue-${issueId.slice(-6)}`,
+      slug: `linked-issue-${signalId.slice(-6)}`,
       name: "Linked issue",
       description: "Used to verify passed linked evaluations stay unowned",
       source: "annotation",
-      centroid: createIssueCentroid(),
+      centroid: createSignalCentroid(),
       clusteredAt: new Date(),
     })
 
@@ -427,7 +427,7 @@ describe("Scores Routes Integration", () => {
       id: evaluationId,
       organizationId: tenant.organizationId,
       projectId,
-      issueId,
+      signalId,
       name: "Linked Evaluation",
       description: "Linked evaluation that passes",
       script: "return { passed: true }",
@@ -457,7 +457,7 @@ describe("Scores Routes Integration", () => {
 
     expect(response.status).toBe(201)
     const body = await response.json()
-    expect(body.issueId).toBeNull()
+    expect(body.signalId).toBeNull()
 
     const persistedScores = await database.db
       .select()
@@ -465,7 +465,7 @@ describe("Scores Routes Integration", () => {
       .where(eq(scoresTable.organizationId, tenant.organizationId))
 
     expect(persistedScores).toHaveLength(1)
-    expect(persistedScores[0]?.issueId).toBeNull()
+    expect(persistedScores[0]?.signalId).toBeNull()
 
     const outboxRows = await database.db
       .select()
@@ -478,7 +478,7 @@ describe("Scores Routes Integration", () => {
       organizationId: tenant.organizationId,
       projectId,
       scoreId: body.id,
-      issueId: null,
+      signalId: null,
       status: "published",
     })
 
@@ -534,7 +534,7 @@ describe("Scores Routes Integration", () => {
       organizationId: tenant.organizationId,
       projectId,
       scoreId: body.id,
-      issueId: null,
+      signalId: null,
       status: "published",
     })
   })

@@ -1,40 +1,40 @@
 import { ALIGNMENT_METRIC_RECOMPUTE_THROTTLE_MS, EvaluationRepository, isActiveEvaluation } from "@domain/evaluations"
 import type { QueuePublishError } from "@domain/queue"
 import { QueuePublisher } from "@domain/queue"
-import { generateSlug, IssueId, ProjectId, type RepositoryError, SqlClient } from "@domain/shared"
+import { generateSlug, SignalId, ProjectId, type RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
-import { IssueRepository } from "../ports/issue-repository.ts"
-import { type GenerateIssueDetailsError, generateIssueDetailsUseCase } from "./generate-issue-details.ts"
+import { SignalRepository } from "../ports/issue-repository.ts"
+import { type GenerateSignalDetailsError, generateSignalDetailsUseCase } from "./generate-issue-details.ts"
 
-export interface RefreshIssueDetailsInput {
+export interface RefreshSignalDetailsInput {
   readonly organizationId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly projectId: string
 }
 
-export type RefreshIssueDetailsResult =
+export type RefreshSignalDetailsResult =
   | {
       readonly action: "not-found"
-      readonly issueId: string
+      readonly signalId: string
     }
   | {
       readonly action: "unchanged"
-      readonly issueId: string
+      readonly signalId: string
     }
   | {
       readonly action: "updated"
-      readonly issueId: string
+      readonly signalId: string
     }
 
-export type RefreshIssueDetailsError = RepositoryError | GenerateIssueDetailsError | QueuePublishError
+export type RefreshSignalDetailsError = RepositoryError | GenerateSignalDetailsError | QueuePublishError
 
-const enqueueLinkedEvaluationAlignments = (input: RefreshIssueDetailsInput) =>
+const enqueueLinkedEvaluationAlignments = (input: RefreshSignalDetailsInput) =>
   Effect.gen(function* () {
     const evaluationRepository = yield* EvaluationRepository
     const queuePublisher = yield* QueuePublisher
-    const evaluations = yield* evaluationRepository.listByIssueId({
+    const evaluations = yield* evaluationRepository.listBySignalId({
       projectId: ProjectId(input.projectId),
-      issueId: IssueId(input.issueId),
+      signalId: SignalId(input.signalId),
       options: { lifecycle: "active" },
     })
 
@@ -56,7 +56,7 @@ const enqueueLinkedEvaluationAlignments = (input: RefreshIssueDetailsInput) =>
           {
             organizationId: input.organizationId,
             projectId: input.projectId,
-            issueId: input.issueId,
+            signalId: input.signalId,
             evaluationId: evaluation.id,
           },
           {
@@ -68,44 +68,44 @@ const enqueueLinkedEvaluationAlignments = (input: RefreshIssueDetailsInput) =>
     )
   })
 
-export const refreshIssueDetailsUseCase = (input: RefreshIssueDetailsInput) =>
+export const refreshSignalDetailsUseCase = (input: RefreshSignalDetailsInput) =>
   Effect.gen(function* () {
-    yield* Effect.annotateCurrentSpan("issueId", input.issueId)
+    yield* Effect.annotateCurrentSpan("signalId", input.signalId)
     yield* Effect.annotateCurrentSpan("projectId", input.projectId)
-    const generatedDetailsResult = yield* generateIssueDetailsUseCase({
+    const generatedDetailsResult = yield* generateSignalDetailsUseCase({
       organizationId: input.organizationId,
       projectId: input.projectId,
-      issueId: input.issueId,
+      signalId: input.signalId,
     }).pipe(
       Effect.map((details) => ({ action: "ready", details }) as const),
-      Effect.catchTag("IssueNotFoundForDetailsGenerationError", () => Effect.succeed({ action: "not-found" } as const)),
+      Effect.catchTag("SignalNotFoundForDetailsGenerationError", () => Effect.succeed({ action: "not-found" } as const)),
     )
 
     if (generatedDetailsResult.action === "not-found") {
       return {
         action: "not-found",
-        issueId: input.issueId,
-      } satisfies RefreshIssueDetailsResult
+        signalId: input.signalId,
+      } satisfies RefreshSignalDetailsResult
     }
 
     const sqlClient = yield* SqlClient
 
     const result = yield* sqlClient.transaction(
       Effect.gen(function* () {
-        const issueRepository = yield* IssueRepository
-        const lockedIssueResult = yield* issueRepository.findByIdForUpdate(IssueId(input.issueId)).pipe(
+        const signalRepository = yield* SignalRepository
+        const lockedSignalResult = yield* signalRepository.findByIdForUpdate(SignalId(input.signalId)).pipe(
           Effect.map((issue) => ({ action: "found", issue }) as const),
           Effect.catchTag("NotFoundError", () => Effect.succeed({ action: "not-found" } as const)),
         )
 
-        if (lockedIssueResult.action === "not-found") {
+        if (lockedSignalResult.action === "not-found") {
           return {
             action: "not-found",
-            issueId: input.issueId,
-          } satisfies RefreshIssueDetailsResult
+            signalId: input.signalId,
+          } satisfies RefreshSignalDetailsResult
         }
 
-        const issue = lockedIssueResult.issue
+        const issue = lockedSignalResult.issue
 
         if (
           issue.name === generatedDetailsResult.details.name &&
@@ -113,8 +113,8 @@ export const refreshIssueDetailsUseCase = (input: RefreshIssueDetailsInput) =>
         ) {
           return {
             action: "unchanged",
-            issueId: issue.id,
-          } satisfies RefreshIssueDetailsResult
+            signalId: issue.id,
+          } satisfies RefreshSignalDetailsResult
         }
 
         // Slug regenerates only when the name actually changed; description-only refreshes keep the slug.
@@ -124,14 +124,14 @@ export const refreshIssueDetailsUseCase = (input: RefreshIssueDetailsInput) =>
             : yield* generateSlug({
                 name: generatedDetailsResult.details.name,
                 count: (slug) =>
-                  issueRepository.countBySlug({
+                  signalRepository.countBySlug({
                     projectId: ProjectId(issue.projectId),
                     slug,
-                    excludeIssueId: issue.id,
+                    excludeSignalId: issue.id,
                   }),
               })
 
-        yield* issueRepository.save({
+        yield* signalRepository.save({
           ...issue,
           slug,
           name: generatedDetailsResult.details.name,
@@ -141,8 +141,8 @@ export const refreshIssueDetailsUseCase = (input: RefreshIssueDetailsInput) =>
 
         return {
           action: "updated",
-          issueId: issue.id,
-        } satisfies RefreshIssueDetailsResult
+          signalId: issue.id,
+        } satisfies RefreshSignalDetailsResult
       }),
     )
 
@@ -151,7 +151,7 @@ export const refreshIssueDetailsUseCase = (input: RefreshIssueDetailsInput) =>
     }
 
     return result
-  }).pipe(Effect.withSpan("issues.refreshIssueDetails")) as Effect.Effect<
-    RefreshIssueDetailsResult,
-    RefreshIssueDetailsError
+  }).pipe(Effect.withSpan("issues.refreshSignalDetails")) as Effect.Effect<
+    RefreshSignalDetailsResult,
+    RefreshSignalDetailsError
   >

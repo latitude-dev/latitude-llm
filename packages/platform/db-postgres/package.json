@@ -45,7 +45,7 @@
     "@domain/feature-flags": "workspace:*",
     "@domain/flaggers": "workspace:*",
     "@domain/integrations": "workspace:*",
-    "@domain/issues": "workspace:*",
+    "@domain/signals": "workspace:*",
     "@domain/monitors": "workspace:*",
     "@domain/notifications": "workspace:*",
     "@domain/oauth-keys": "workspace:*",

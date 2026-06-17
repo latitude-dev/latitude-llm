@@ -20,7 +20,7 @@ const makeScore = (overrides: Partial<Score> = {}): Score =>
     traceId: null,
     spanId: null,
     simulationId: null,
-    issueId: null,
+    signalId: null,
     source: "annotation",
     sourceId: "UI",
     value: 0.1,

@@ -1,33 +1,33 @@
-import type { IssueOccurrenceBucket } from "@domain/scores"
+import type { SignalOccurrenceBucket } from "@domain/scores"
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
-import { ChSqlClient, IssueId, OrganizationId, ProjectId } from "@domain/shared"
+import { ChSqlClient, SignalId, OrganizationId, ProjectId } from "@domain/shared"
 import { createFakeChSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { getIssueTrendUseCase } from "./get-issue-trend.ts"
+import { getSignalTrendUseCase } from "./get-issue-trend.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
-const issueId = IssueId("i".repeat(24))
+const signalId = SignalId("i".repeat(24))
 
 interface HistogramCall {
   readonly from: Date
   readonly to: Date
   readonly bucketSeconds: number
-  readonly issueIds: readonly string[]
+  readonly signalIds: readonly string[]
 }
 
-const buildLayer = (input: { readonly buckets?: readonly IssueOccurrenceBucket[] } = {}) => {
+const buildLayer = (input: { readonly buckets?: readonly SignalOccurrenceBucket[] } = {}) => {
   const calls: HistogramCall[] = []
   const { repository } = createFakeScoreAnalyticsRepository({
-    histogramByIssues: ({ issueIds, timeRange, bucketSeconds }) =>
+    histogramBySignals: ({ signalIds, timeRange, bucketSeconds }) =>
       Effect.sync(() => {
         calls.push({
           from: timeRange.from ?? new Date(0),
           to: timeRange.to ?? new Date(0),
           bucketSeconds,
-          issueIds: issueIds.map((id) => id as string),
+          signalIds: signalIds.map((id) => id as string),
         })
         return input.buckets ?? []
       }),
@@ -42,18 +42,18 @@ const buildLayer = (input: { readonly buckets?: readonly IssueOccurrenceBucket[]
   }
 }
 
-describe("getIssueTrendUseCase", () => {
+describe("getSignalTrendUseCase", () => {
   it("defaults to the trailing 14-day window with 12h UTC-aligned buckets", async () => {
     const { calls, layer } = buildLayer()
     const now = new Date("2026-04-15T12:34:56.000Z")
 
     const result = await Effect.runPromise(
-      getIssueTrendUseCase({ organizationId, projectId, issueId, now }).pipe(Effect.provide(layer)),
+      getSignalTrendUseCase({ organizationId, projectId, signalId, now }).pipe(Effect.provide(layer)),
     )
 
     expect(calls).toHaveLength(1)
     expect(calls[0]?.bucketSeconds).toBe(12 * 60 * 60)
-    expect(calls[0]?.issueIds).toEqual([issueId])
+    expect(calls[0]?.signalIds).toEqual([signalId])
     // `to` snaps to end-of-day UTC.
     expect(calls[0]?.to.toISOString()).toBe("2026-04-15T23:59:59.999Z")
     // `from` snaps to start-of-day UTC, 13 days back from `to`.
@@ -68,7 +68,7 @@ describe("getIssueTrendUseCase", () => {
     const to = new Date("2026-03-12T03:00:00.000Z")
 
     await Effect.runPromise(
-      getIssueTrendUseCase({ organizationId, projectId, issueId, from, to }).pipe(Effect.provide(layer)),
+      getSignalTrendUseCase({ organizationId, projectId, signalId, from, to }).pipe(Effect.provide(layer)),
     )
 
     expect(calls[0]?.from.toISOString()).toBe("2026-03-10T00:00:00.000Z")
@@ -81,10 +81,10 @@ describe("getIssueTrendUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      getIssueTrendUseCase({
+      getSignalTrendUseCase({
         organizationId,
         projectId,
-        issueId,
+        signalId,
         from: new Date("2026-04-15T00:00:00.000Z"),
         to: new Date("2026-04-15T23:59:59.999Z"),
       }).pipe(Effect.provide(layer)),

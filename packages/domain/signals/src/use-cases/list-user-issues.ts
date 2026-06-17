@@ -1,20 +1,20 @@
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import type { ChSqlClient, ExternalUserId, OrganizationId, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
-import type { Issue, IssueState } from "../entities/issue.ts"
-import { deriveIssueLifecycleStates } from "../helpers.ts"
-import { IssueRepository } from "../ports/issue-repository.ts"
+import type { Signal, SignalState } from "../entities/issue.ts"
+import { deriveSignalLifecycleStates } from "../helpers.ts"
+import { SignalRepository } from "../ports/issue-repository.ts"
 
-export interface ListUserIssuesInput {
+export interface ListUserSignalsInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly userId: ExternalUserId
   readonly limit?: number
 }
 
-export interface UserIssueItem {
-  readonly issue: Issue
-  readonly states: readonly IssueState[]
+export interface UserSignalItem {
+  readonly issue: Signal
+  readonly states: readonly SignalState[]
   readonly occurrences: number
   /** Distinct traces of the user that contributed an occurrence. */
   readonly affectedTraces: number
@@ -22,29 +22,29 @@ export interface UserIssueItem {
   readonly lastSeenAt: Date
 }
 
-export type ListUserIssuesError = RepositoryError
+export type ListUserSignalsError = RepositoryError
 
 /**
- * Issues that occurred on the given end-user's traces, ordered by most recent
+ * Signals that occurred on the given end-user's traces, ordered by most recent
  * occurrence first. Occurrence counts are user-scoped (only scores on the
  * user's traces), while the issue rows and lifecycle states are the project's.
  */
-export const listUserIssuesUseCase = (
-  input: ListUserIssuesInput,
+export const listUserSignalsUseCase = (
+  input: ListUserSignalsInput,
 ): Effect.Effect<
-  readonly UserIssueItem[],
-  ListUserIssuesError,
-  ChSqlClient | SqlClient | ScoreAnalyticsRepository | IssueRepository
+  readonly UserSignalItem[],
+  ListUserSignalsError,
+  ChSqlClient | SqlClient | ScoreAnalyticsRepository | SignalRepository
 > =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("projectId", String(input.projectId))
     yield* Effect.annotateCurrentSpan("userId", String(input.userId))
 
     const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
-    const issueRepository = yield* IssueRepository
+    const signalRepository = yield* SignalRepository
     const now = new Date()
 
-    const rollups = yield* scoreAnalyticsRepository.listIssuesByUser({
+    const rollups = yield* scoreAnalyticsRepository.listSignalsByUser({
       organizationId: input.organizationId,
       projectId: input.projectId,
       userId: input.userId,
@@ -52,19 +52,19 @@ export const listUserIssuesUseCase = (
     })
     if (rollups.length === 0) return []
 
-    const issues = yield* issueRepository.findByIds({
+    const issues = yield* signalRepository.findByIds({
       projectId: input.projectId,
-      issueIds: rollups.map((rollup) => rollup.issueId),
+      signalIds: rollups.map((rollup) => rollup.signalId),
     })
-    const issueById = new Map(issues.map((issue) => [issue.id, issue] as const))
+    const signalById = new Map(issues.map((issue) => [issue.id, issue] as const))
 
-    return rollups.flatMap((rollup): UserIssueItem[] => {
-      const issue = issueById.get(rollup.issueId)
+    return rollups.flatMap((rollup): UserSignalItem[] => {
+      const issue = signalById.get(rollup.signalId)
       if (!issue) return []
       return [
         {
           issue,
-          states: deriveIssueLifecycleStates({
+          states: deriveSignalLifecycleStates({
             issue,
             isEscalating: issue.lifecycle.isEscalating,
             isRegressed: issue.lifecycle.isRegressed,
@@ -77,4 +77,4 @@ export const listUserIssuesUseCase = (
         },
       ]
     })
-  }).pipe(Effect.withSpan("issues.listUserIssues"))
+  }).pipe(Effect.withSpan("issues.listUserSignals"))

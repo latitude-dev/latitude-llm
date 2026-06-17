@@ -9,7 +9,7 @@ import {
 } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { sweepEscalatingIssuesUseCase } from "./sweep-escalating-issues.ts"
+import { sweepEscalatingSignalsUseCase } from "./sweep-escalating-issues.ts"
 
 const makeIncident = (idx: number, overrides: Partial<AlertIncident> = {}): AlertIncident => ({
   id: AlertIncidentId(`a${idx}`.padEnd(24, "a")),
@@ -41,7 +41,7 @@ const createPassthroughSqlClient = (id: string): SqlClientShape => {
 interface CapturedPayload {
   readonly organizationId: string
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
 }
 
 const provideRepository = (incidents: readonly AlertIncident[]): AlertIncidentRepositoryShape => ({
@@ -71,14 +71,14 @@ const runSweep = (
     captured.push(payload)
     return publishImpl(payload)
   }
-  const program = sweepEscalatingIssuesUseCase({ publish }).pipe(
+  const program = sweepEscalatingSignalsUseCase({ publish }).pipe(
     Effect.provideService(AlertIncidentRepository, provideRepository(incidents)),
     Effect.provideService(SqlClient, createPassthroughSqlClient("system".padEnd(24, "s"))),
   )
   return Effect.runPromise(program).then((result) => ({ result, captured }))
 }
 
-describe("sweepEscalatingIssuesUseCase", () => {
+describe("sweepEscalatingSignalsUseCase", () => {
   it("publishes one checkEscalation per open escalating incident", async () => {
     const incidents = [makeIncident(1), makeIncident(2), makeIncident(3)]
 
@@ -89,7 +89,7 @@ describe("sweepEscalatingIssuesUseCase", () => {
       incidents.map((i) => ({
         organizationId: i.organizationId,
         projectId: i.projectId,
-        issueId: i.sourceId,
+        signalId: i.sourceId,
       })),
     )
   })
@@ -105,7 +105,7 @@ describe("sweepEscalatingIssuesUseCase", () => {
     const incidents = [makeIncident(1), makeIncident(2), makeIncident(3)]
 
     const { result, captured } = await runSweep(incidents, (payload) =>
-      payload.issueId.startsWith("i2")
+      payload.signalId.startsWith("i2")
         ? Effect.fail(new QueuePublishError({ cause: new Error("boom"), queue: "issues" }))
         : Effect.void,
     )

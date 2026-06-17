@@ -104,7 +104,7 @@ export const tracingFnMiddleware = ({ tracer, logger }: { tracer: Tracer; logger
       const dataKeys = getDataKeys(args.data)
       const projectId = getStringField(args.data, "projectId")
       const traceId = getStringField(args.data, "traceId")
-      const issueId = getStringField(args.data, "issueId")
+      const signalId = getStringField(args.data, "signalId")
       const datasetId = getStringField(args.data, "datasetId")
 
       span.setAttributes({
@@ -117,7 +117,7 @@ export const tracingFnMiddleware = ({ tracer, logger }: { tracer: Tracer; logger
       })
       if (projectId) span.setAttribute("project.id", projectId)
       if (traceId) span.setAttribute("trace.trace_id", traceId)
-      if (issueId) span.setAttribute("issue.id", issueId)
+      if (signalId) span.setAttribute("issue.id", signalId)
       if (datasetId) span.setAttribute("dataset.id", datasetId)
 
       try {

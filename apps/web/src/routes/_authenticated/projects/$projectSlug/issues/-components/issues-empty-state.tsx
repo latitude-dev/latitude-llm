@@ -1,7 +1,7 @@
 import { Button, Icon, Text } from "@repo/ui"
 import { ExternalLinkIcon, SearchAlert } from "lucide-react"
 
-export function IssuesEmptyState({ isLoading = false }: { readonly isLoading?: boolean }) {
+export function SignalsEmptyState({ isLoading = false }: { readonly isLoading?: boolean }) {
   return (
     <div className="h-full w-full flex items-center justify-center p-8">
       <div className="max-w-lg flex flex-col items-center gap-6 text-center">
@@ -13,7 +13,7 @@ export function IssuesEmptyState({ isLoading = false }: { readonly isLoading?: b
           <Text.H5 color="foregroundMuted" centered>
             {isLoading
               ? "Preparing your issues view."
-              : "Issues are discovered automatically by grouping failed annotations left on your traces. Start annotating traces to surface recurring problems here."}
+              : "Signals are discovered automatically by grouping failed annotations left on your traces. Start annotating traces to surface recurring problems here."}
           </Text.H5>
         </div>
         {!isLoading ? (

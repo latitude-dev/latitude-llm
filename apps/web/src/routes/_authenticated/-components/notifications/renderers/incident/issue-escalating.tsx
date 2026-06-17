@@ -1,15 +1,15 @@
 import { Icon } from "@repo/ui"
 import { TrendingDownIcon, TrendingUpIcon } from "lucide-react"
-import { IssueTrendBar } from "../../../../projects/$projectSlug/issues/-components/issue-trend-bar.tsx"
+import { SignalTrendBar } from "../../../../projects/$projectSlug/issues/-components/issue-trend-bar.tsx"
 import { BaseNotification } from "../../base-notification.tsx"
-import { useIssueUrl, useLiveIssueSummary } from "./-incident-helpers.ts"
+import { useSignalUrl, useLiveSignalSummary } from "./-incident-helpers.ts"
 import type { IncidentRendererProps } from "./index.tsx"
-import { IssueSummaryCard } from "./issue-summary-card.tsx"
+import { SignalSummaryCard } from "./issue-summary-card.tsx"
 import { MonitorAttribution } from "./monitor-attribution.tsx"
 
 type EscalatingTrend = IncidentRendererProps<"opened" | "closed">["payload"]["trend"]
 
-export function IssueEscalatingNotification({
+export function SignalEscalatingNotification({
   notification,
   payload,
   event,
@@ -17,13 +17,13 @@ export function IssueEscalatingNotification({
   const seenAt = notification.seenAt ? new Date(notification.seenAt) : undefined
   const createdAt = new Date(notification.createdAt)
   const target = { projectId: notification.projectId, sourceId: payload.sourceId }
-  const live = useLiveIssueSummary(target)
+  const live = useLiveSignalSummary(target)
   const opened = event === "opened"
   // Snapshot status for opened is "escalating"; for closed we genuinely
   // don't know (the escalation just ended — the issue could be ongoing,
   // resolved, or regressed). Wait for the live lookup in that case.
   const states = live?.states ?? (opened ? ["escalating"] : [])
-  const url = useIssueUrl(target)
+  const url = useSignalUrl(target)
   const icon = opened ? TrendingUpIcon : TrendingDownIcon
 
   return (
@@ -37,7 +37,7 @@ export function IssueEscalatingNotification({
       url={url}
     >
       {live?.name ? (
-        <IssueSummaryCard
+        <SignalSummaryCard
           name={live.name}
           states={states}
           priority={payload.priority}
@@ -74,7 +74,7 @@ function EscalatingTrend({
   // chart without leaning on margins.
   return (
     <div className="pt-2">
-      <IssueTrendBar
+      <SignalTrendBar
         buckets={buckets}
         escalationThresholds={escalationThresholds}
         bucketSeconds={trend.bucketDurationMs / 1000}

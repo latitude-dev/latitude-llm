@@ -5,7 +5,7 @@ import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 type RefreshEvaluationAlignmentWorkflowInput = {
   readonly organizationId: string
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly evaluationId: string
 }
 
@@ -80,7 +80,7 @@ export const refreshEvaluationAlignmentWorkflow = async (
   const loaded = await loadEvaluationAlignmentStateOrInactive({
     organizationId: input.organizationId,
     projectId: input.projectId,
-    issueId: input.issueId,
+    signalId: input.signalId,
     evaluationId: input.evaluationId,
   })
 
@@ -94,7 +94,7 @@ export const refreshEvaluationAlignmentWorkflow = async (
     const collected = await collectEvaluationAlignmentExamples({
       organizationId: input.organizationId,
       projectId: input.projectId,
-      issueId: input.issueId,
+      signalId: input.signalId,
       // `collectAlignmentExamplesUseCase` throws when there are no positive
       // examples unless this flag is explicitly false. A rebuild triggered
       // purely by hash drift (say, every positive annotation was deleted
@@ -108,11 +108,11 @@ export const refreshEvaluationAlignmentWorkflow = async (
     const baseline = await evaluateBaselineEvaluationDraft({
       organizationId: input.organizationId,
       projectId: input.projectId,
-      issueId: input.issueId,
+      signalId: input.signalId,
       evaluationId: state.evaluationId,
       jobId: `refresh-rebuild:${state.evaluationId}`,
-      issueName: state.issueName,
-      issueDescription: state.issueDescription,
+      signalName: state.signalName,
+      signalDescription: state.signalDescription,
       draft: state.draft,
       positiveExamples: collected.positiveExamples,
       negativeExamples: collected.negativeExamples,
@@ -120,7 +120,7 @@ export const refreshEvaluationAlignmentWorkflow = async (
     await persistEvaluationAlignmentResult({
       organizationId: input.organizationId,
       projectId: input.projectId,
-      issueId: input.issueId,
+      signalId: input.signalId,
       evaluationId: state.evaluationId,
       script: state.draft.script,
       // Use the freshly computed hash so the persisted row is back in sync —
@@ -138,7 +138,7 @@ export const refreshEvaluationAlignmentWorkflow = async (
   const collected = await collectEvaluationAlignmentExamples({
     organizationId: input.organizationId,
     projectId: input.projectId,
-    issueId: input.issueId,
+    signalId: input.signalId,
     createdAfter: state.alignedAt,
     requirePositiveExamples: false,
   })
@@ -146,10 +146,10 @@ export const refreshEvaluationAlignmentWorkflow = async (
   const refresh = await evaluateIncrementalEvaluationDraft({
     organizationId: input.organizationId,
     projectId: input.projectId,
-    issueId: input.issueId,
+    signalId: input.signalId,
     evaluationId: state.evaluationId,
-    issueName: state.issueName,
-    issueDescription: state.issueDescription,
+    signalName: state.signalName,
+    signalDescription: state.signalDescription,
     draft: state.draft,
     previousConfusionMatrix: state.confusionMatrix,
     positiveExamples: collected.positiveExamples,
@@ -160,7 +160,7 @@ export const refreshEvaluationAlignmentWorkflow = async (
     await persistEvaluationAlignmentResult({
       organizationId: input.organizationId,
       projectId: input.projectId,
-      issueId: input.issueId,
+      signalId: input.signalId,
       evaluationId: state.evaluationId,
       script: state.draft.script,
       evaluationHash: state.draft.evaluationHash,
@@ -174,7 +174,7 @@ export const refreshEvaluationAlignmentWorkflow = async (
     await scheduleEvaluationOptimization({
       organizationId: input.organizationId,
       projectId: input.projectId,
-      issueId: input.issueId,
+      signalId: input.signalId,
       evaluationId: state.evaluationId,
     })
     return { status: "escalated-to-optimization", newExampleCount: refresh.newExampleCount }

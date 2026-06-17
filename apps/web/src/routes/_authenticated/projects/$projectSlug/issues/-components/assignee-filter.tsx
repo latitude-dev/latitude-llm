@@ -13,7 +13,7 @@ import { CheckIcon, ChevronDown, CircleDashedIcon, UserRoundIcon } from "lucide-
 import { useMemo } from "react"
 import { useMembersCollection } from "../../../../../../domains/members/members.collection.ts"
 
-/** Issues-list assignee filter token: a member userId or the unassigned sentinel. */
+/** Signals-list assignee filter token: a member userId or the unassigned sentinel. */
 export const UNASSIGNED_FILTER_TOKEN = "unassigned"
 
 interface AssigneeFilterOption {

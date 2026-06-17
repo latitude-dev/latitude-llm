@@ -14,7 +14,7 @@ import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@
 import {
   ChSqlClient,
   EvaluationId,
-  IssueId,
+  SignalId,
   NotFoundError,
   OrganizationId,
   ProjectId,
@@ -24,11 +24,11 @@ import {
 import { createFakeChSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import type { Issue } from "../entities/issue.ts"
-import { createIssueCentroid } from "../helpers.ts"
-import { IssueRepository } from "../ports/issue-repository.ts"
-import { createFakeIssueRepository } from "../testing/index.ts"
-import { discoverIssueUseCase } from "./discover-issue.ts"
+import type { Signal } from "../entities/issue.ts"
+import { createSignalCentroid } from "../helpers.ts"
+import { SignalRepository } from "../ports/issue-repository.ts"
+import { createFakeSignalRepository } from "../testing/index.ts"
+import { discoverSignalUseCase } from "./discover-issue.ts"
 
 const organizationId = "oooooooooooooooooooooooo"
 const projectId = "pppppppppppppppppppppppp"
@@ -52,7 +52,7 @@ const makeScore = (overrides: Partial<Score> = {}): Score =>
     source: "annotation",
     sourceId: "UI",
     simulationId: null,
-    issueId: null,
+    signalId: null,
     value: 0.2,
     passed: false,
     feedback: "The assistant leaks API tokens in its response.",
@@ -70,8 +70,8 @@ const makeScore = (overrides: Partial<Score> = {}): Score =>
     ...overrides,
   }) as Score
 
-const makeIssue = (overrides?: Partial<Issue>): Issue => ({
-  id: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
+const makeSignal = (overrides?: Partial<Signal>): Signal => ({
+  id: SignalId("iiiiiiiiiiiiiiiiiiiiiiii"),
   slug: "test-issue",
   organizationId,
   projectId,
@@ -80,7 +80,7 @@ const makeIssue = (overrides?: Partial<Issue>): Issue => ({
   source: "annotation",
   assigneeId: null,
   priority: null,
-  centroid: createIssueCentroid(),
+  centroid: createSignalCentroid(),
   clusteredAt: new Date("2026-03-29T10:00:00.000Z"),
   escalatedAt: null,
   resolvedAt: null,
@@ -90,12 +90,12 @@ const makeIssue = (overrides?: Partial<Issue>): Issue => ({
   ...overrides,
 })
 
-const makeEvaluation = (issueId: string, overrides: Partial<Evaluation> = {}): Evaluation =>
+const makeEvaluation = (signalId: string, overrides: Partial<Evaluation> = {}): Evaluation =>
   ({
     id: EvaluationId("eeeeeeeeeeeeeeeeeeeeeeee"),
     organizationId,
     projectId: ProjectId(projectId),
-    issueId: IssueId(issueId),
+    signalId: SignalId(signalId),
     name: "Token leakage evaluation",
     description: "Flags token leakage",
     script: "return { passed: false }",
@@ -130,7 +130,7 @@ const createWorkflowStarter = () => {
       Effect.sync(() => {
         startedWorkflows.push({ workflow, input, options })
       }),
-    signalWithStart: () => Effect.die("signalWithStart should not be called in discoverIssueUseCase tests"),
+    signalWithStart: () => Effect.die("signalWithStart should not be called in discoverSignalUseCase tests"),
   }
 
   return { workflowStarter, startedWorkflows }
@@ -140,19 +140,19 @@ const createEvaluationRepository = (findById: EvaluationRepositoryShape["findByI
   findById,
   save: () => Effect.die("Unexpected EvaluationRepository.save in unit test"),
   listByProjectId: () => Effect.die("Unexpected EvaluationRepository.listByProjectId in unit test"),
-  listByIssueId: () => Effect.die("Unexpected EvaluationRepository.listByIssueId in unit test"),
-  listByIssueIds: () => Effect.die("Unexpected EvaluationRepository.listByIssueIds in unit test"),
+  listBySignalId: () => Effect.die("Unexpected EvaluationRepository.listBySignalId in unit test"),
+  listBySignalIds: () => Effect.die("Unexpected EvaluationRepository.listBySignalIds in unit test"),
   archive: () => Effect.die("Unexpected EvaluationRepository.archive in unit test"),
   unarchive: () => Effect.die("Unexpected EvaluationRepository.unarchive in unit test"),
   softDelete: () => Effect.die("Unexpected EvaluationRepository.softDelete in unit test"),
-  softDeleteByIssueId: () => Effect.die("Unexpected EvaluationRepository.softDeleteByIssueId in unit test"),
+  softDeleteBySignalId: () => Effect.die("Unexpected EvaluationRepository.softDeleteBySignalId in unit test"),
 })
 
-describe("discoverIssueUseCase", () => {
+describe("discoverSignalUseCase", () => {
   it("assigns a published annotation directly when a preselected issue is provided", async () => {
-    const existingIssue = makeIssue()
+    const existingSignal = makeSignal()
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: issueRepository, issues } = createFakeIssueRepository([existingIssue])
+    const { repository: signalRepository, issues } = createFakeSignalRepository([existingSignal])
     const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository()
     const fakeAi = createFakeAI({
       embed: () => Effect.succeed({ embedding: makeEmbedding() }),
@@ -163,14 +163,14 @@ describe("discoverIssueUseCase", () => {
     scores.set(score.id, score)
 
     const result = await Effect.runPromise(
-      discoverIssueUseCase({
+      discoverSignalUseCase({
         organizationId,
         projectId,
         scoreId: score.id,
-        issueId: existingIssue.id,
+        signalId: existingSignal.id,
       }).pipe(
         Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
         Effect.provideService(
           EvaluationRepository,
@@ -191,21 +191,21 @@ describe("discoverIssueUseCase", () => {
 
     expect(result).toEqual({
       action: "workflow-started",
-      workflow: "assignScoreToKnownIssueWorkflow",
+      workflow: "assignScoreToKnownSignalWorkflow",
       scoreId: score.id,
     })
-    expect(scores.get(score.id)?.issueId).toBeNull()
-    expect(issues.get(existingIssue.id)?.centroid.mass).toBe(0)
+    expect(scores.get(score.id)?.signalId).toBeNull()
+    expect(issues.get(existingSignal.id)?.centroid.mass).toBe(0)
     expect(inserted).toHaveLength(0)
     expect(fakeAi.calls.embed).toHaveLength(0)
     expect(startedWorkflows).toEqual([
       {
-        workflow: "assignScoreToKnownIssueWorkflow",
+        workflow: "assignScoreToKnownSignalWorkflow",
         input: {
           organizationId,
           projectId,
           scoreId: score.id,
-          issueId: existingIssue.id,
+          signalId: existingSignal.id,
         },
         options: {
           workflowId: `issues:assign-known:${score.id}`,
@@ -216,10 +216,10 @@ describe("discoverIssueUseCase", () => {
   })
 
   it("uses the linked evaluation issue before starting the full workflow", async () => {
-    const existingIssue = makeIssue()
-    const linkedEvaluation = makeEvaluation(existingIssue.id)
+    const existingSignal = makeSignal()
+    const linkedEvaluation = makeEvaluation(existingSignal.id)
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: issueRepository } = createFakeIssueRepository([existingIssue])
+    const { repository: signalRepository } = createFakeSignalRepository([existingSignal])
     const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository()
     const fakeAi = createFakeAI({
       embed: () => Effect.succeed({ embedding: makeEmbedding() }),
@@ -238,14 +238,14 @@ describe("discoverIssueUseCase", () => {
     )
 
     const result = await Effect.runPromise(
-      discoverIssueUseCase({
+      discoverSignalUseCase({
         organizationId,
         projectId,
         scoreId: ScoreId("tttttttttttttttttttttttt"),
-        issueId: null,
+        signalId: null,
       }).pipe(
         Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
         Effect.provideService(
           EvaluationRepository,
@@ -265,19 +265,19 @@ describe("discoverIssueUseCase", () => {
 
     expect(result).toEqual({
       action: "workflow-started",
-      workflow: "assignScoreToKnownIssueWorkflow",
+      workflow: "assignScoreToKnownSignalWorkflow",
       scoreId: ScoreId("tttttttttttttttttttttttt"),
     })
     expect(inserted).toHaveLength(0)
     expect(fakeAi.calls.embed).toHaveLength(0)
     expect(startedWorkflows).toEqual([
       {
-        workflow: "assignScoreToKnownIssueWorkflow",
+        workflow: "assignScoreToKnownSignalWorkflow",
         input: {
           organizationId,
           projectId,
           scoreId: ScoreId("tttttttttttttttttttttttt"),
-          issueId: existingIssue.id,
+          signalId: existingSignal.id,
         },
         options: {
           workflowId: "issues:assign-known:tttttttttttttttttttttttt",
@@ -288,7 +288,7 @@ describe("discoverIssueUseCase", () => {
 
   it("starts the discovery workflow when no selected or linked issue is available", async () => {
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: issueRepository } = createFakeIssueRepository()
+    const { repository: signalRepository } = createFakeSignalRepository()
     const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository()
     const fakeAi = createFakeAI({
       embed: () => Effect.succeed({ embedding: makeEmbedding() }),
@@ -298,14 +298,14 @@ describe("discoverIssueUseCase", () => {
     scores.set(score.id, score)
 
     const result = await Effect.runPromise(
-      discoverIssueUseCase({
+      discoverSignalUseCase({
         organizationId,
         projectId,
         scoreId: score.id,
-        issueId: null,
+        signalId: null,
       }).pipe(
         Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
         Effect.provideService(
           EvaluationRepository,
@@ -321,13 +321,13 @@ describe("discoverIssueUseCase", () => {
 
     expect(result).toEqual({
       action: "workflow-started",
-      workflow: "issueDiscoveryWorkflow",
+      workflow: "signalDiscoveryWorkflow",
       scoreId: score.id,
     })
     expect(inserted).toHaveLength(0)
     expect(startedWorkflows).toEqual([
       {
-        workflow: "issueDiscoveryWorkflow",
+        workflow: "signalDiscoveryWorkflow",
         input: {
           organizationId,
           projectId,
@@ -341,12 +341,12 @@ describe("discoverIssueUseCase", () => {
   })
 
   it("falls back to the workflow when the selected issue belongs to another project", async () => {
-    const foreignIssue = makeIssue({
-      id: IssueId("jjjjjjjjjjjjjjjjjjjjjjjj"),
+    const foreignSignal = makeSignal({
+      id: SignalId("jjjjjjjjjjjjjjjjjjjjjjjj"),
       projectId: otherProjectId,
     })
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: issueRepository, issues } = createFakeIssueRepository([foreignIssue])
+    const { repository: signalRepository, issues } = createFakeSignalRepository([foreignSignal])
     const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository()
     const fakeAi = createFakeAI({
       embed: () => Effect.succeed({ embedding: makeEmbedding() }),
@@ -356,14 +356,14 @@ describe("discoverIssueUseCase", () => {
     scores.set(score.id, score)
 
     const result = await Effect.runPromise(
-      discoverIssueUseCase({
+      discoverSignalUseCase({
         organizationId,
         projectId,
         scoreId: score.id,
-        issueId: foreignIssue.id,
+        signalId: foreignSignal.id,
       }).pipe(
         Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
         Effect.provideService(
           EvaluationRepository,
@@ -379,27 +379,27 @@ describe("discoverIssueUseCase", () => {
 
     expect(result).toEqual({
       action: "workflow-started",
-      workflow: "issueDiscoveryWorkflow",
+      workflow: "signalDiscoveryWorkflow",
       scoreId: score.id,
     })
-    expect(scores.get(score.id)?.issueId).toBeNull()
-    expect(issues.get(foreignIssue.id)?.centroid.mass).toBe(0)
+    expect(scores.get(score.id)?.signalId).toBeNull()
+    expect(issues.get(foreignSignal.id)?.centroid.mass).toBe(0)
     expect(inserted).toHaveLength(0)
     expect(startedWorkflows).toHaveLength(1)
   })
 
   it("falls back to the workflow when the linked evaluation belongs to another project", async () => {
-    const foreignIssue = makeIssue({
-      id: IssueId("kkkkkkkkkkkkkkkkkkkkkkkk"),
+    const foreignSignal = makeSignal({
+      id: SignalId("kkkkkkkkkkkkkkkkkkkkkkkk"),
       projectId: otherProjectId,
     })
-    const foreignEvaluation = makeEvaluation(foreignIssue.id, {
+    const foreignEvaluation = makeEvaluation(foreignSignal.id, {
       id: EvaluationId("ffffffffffffffffffffffff"),
       projectId: ProjectId(otherProjectId),
-      issueId: foreignIssue.id,
+      signalId: foreignSignal.id,
     })
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: issueRepository, issues } = createFakeIssueRepository([foreignIssue])
+    const { repository: signalRepository, issues } = createFakeSignalRepository([foreignSignal])
     const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository()
     const fakeAi = createFakeAI({
       embed: () => Effect.succeed({ embedding: makeEmbedding() }),
@@ -416,14 +416,14 @@ describe("discoverIssueUseCase", () => {
     scores.set(score.id, score)
 
     const result = await Effect.runPromise(
-      discoverIssueUseCase({
+      discoverSignalUseCase({
         organizationId,
         projectId,
         scoreId: score.id,
-        issueId: null,
+        signalId: null,
       }).pipe(
         Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
         Effect.provideService(
           EvaluationRepository,
@@ -443,22 +443,22 @@ describe("discoverIssueUseCase", () => {
 
     expect(result).toEqual({
       action: "workflow-started",
-      workflow: "issueDiscoveryWorkflow",
+      workflow: "signalDiscoveryWorkflow",
       scoreId: score.id,
     })
-    expect(scores.get(score.id)?.issueId).toBeNull()
-    expect(issues.get(foreignIssue.id)?.centroid.mass).toBe(0)
+    expect(scores.get(score.id)?.signalId).toBeNull()
+    expect(issues.get(foreignSignal.id)?.centroid.mass).toBe(0)
     expect(inserted).toHaveLength(0)
     expect(startedWorkflows).toHaveLength(1)
   })
 
   it("replays analytics sync when the score was already assigned before retry", async () => {
-    const existingIssue = makeIssue()
+    const existingSignal = makeSignal()
     const assignedScore = makeScore({
-      issueId: existingIssue.id,
+      signalId: existingSignal.id,
     })
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: issueRepository } = createFakeIssueRepository([existingIssue])
+    const { repository: signalRepository } = createFakeSignalRepository([existingSignal])
     const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository()
     const fakeAi = createFakeAI({
       embed: () => Effect.succeed({ embedding: makeEmbedding() }),
@@ -467,14 +467,14 @@ describe("discoverIssueUseCase", () => {
     scores.set(assignedScore.id, assignedScore)
 
     const result = await Effect.runPromise(
-      discoverIssueUseCase({
+      discoverSignalUseCase({
         organizationId,
         projectId,
         scoreId: assignedScore.id,
-        issueId: existingIssue.id,
+        signalId: existingSignal.id,
       }).pipe(
         Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
         Effect.provideService(
           EvaluationRepository,
@@ -490,7 +490,7 @@ describe("discoverIssueUseCase", () => {
 
     expect(result).toEqual({
       action: "already-assigned",
-      issueId: existingIssue.id,
+      signalId: existingSignal.id,
     })
     expect(fakeAi.calls.embed).toHaveLength(0)
     expect(inserted).toEqual([assignedScore.id])
@@ -499,7 +499,7 @@ describe("discoverIssueUseCase", () => {
 
   it("skips a human-authored draft (source = annotation) and does not start any workflow", async () => {
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: issueRepository } = createFakeIssueRepository()
+    const { repository: signalRepository } = createFakeSignalRepository()
     const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository()
     const fakeAi = createFakeAI({
       embed: () => Effect.succeed({ embedding: makeEmbedding() }),
@@ -511,14 +511,14 @@ describe("discoverIssueUseCase", () => {
     scores.set(humanDraft.id, humanDraft)
 
     const result = await Effect.runPromise(
-      discoverIssueUseCase({
+      discoverSignalUseCase({
         organizationId,
         projectId,
         scoreId: humanDraft.id,
-        issueId: null,
+        signalId: null,
       }).pipe(
         Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
         Effect.provideService(
           EvaluationRepository,
@@ -540,12 +540,12 @@ describe("discoverIssueUseCase", () => {
   })
 
   it("does not write immutable analytics twice when retrying an already-synced assignment", async () => {
-    const existingIssue = makeIssue()
+    const existingSignal = makeSignal()
     const assignedScore = makeScore({
-      issueId: existingIssue.id,
+      signalId: existingSignal.id,
     })
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: issueRepository } = createFakeIssueRepository([existingIssue])
+    const { repository: signalRepository } = createFakeSignalRepository([existingSignal])
     const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository({
       existsById: () => Effect.succeed(true),
       insert: () => Effect.die("analytics insert should be skipped when the score is already synced"),
@@ -557,14 +557,14 @@ describe("discoverIssueUseCase", () => {
     scores.set(assignedScore.id, assignedScore)
 
     const result = await Effect.runPromise(
-      discoverIssueUseCase({
+      discoverSignalUseCase({
         organizationId,
         projectId,
         scoreId: assignedScore.id,
-        issueId: existingIssue.id,
+        signalId: existingSignal.id,
       }).pipe(
         Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
         Effect.provideService(
           EvaluationRepository,
@@ -580,7 +580,7 @@ describe("discoverIssueUseCase", () => {
 
     expect(result).toEqual({
       action: "already-assigned",
-      issueId: existingIssue.id,
+      signalId: existingSignal.id,
     })
     expect(fakeAi.calls.embed).toHaveLength(0)
     expect(inserted).toHaveLength(0)

@@ -2,23 +2,23 @@ import {
   type AlertIncident,
   AlertIncidentRepository,
   type AlertIncidentSourceType,
-  isIssueEscalationEntrySignals,
+  isSignalEscalationEntrySignals,
 } from "@domain/alerts"
 import { EvaluationRepository } from "@domain/evaluations"
 import {
   buildHistogramBucketScaffold,
   DEFAULT_ESCALATION_SENSITIVITY_K,
   fillBuckets,
-  type IssuePriority,
-  IssueRepository,
-} from "@domain/issues"
+  type SignalPriority,
+  SignalRepository,
+} from "@domain/signals"
 import type { MembershipRepository } from "@domain/organizations"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import {
   AlertIncidentId,
   type ChSqlClient,
   generateId,
-  IssueId,
+  SignalId,
   isIncidentNotificationEnabled,
   type NotFoundError,
   NotificationId,
@@ -85,7 +85,7 @@ export type RequestIncidentNotificationsError = RepositoryError | NotFoundError
 
 /**
  * Window/bucket size for the trend snapshot on sustained kinds. 14 days of UTC-aligned 12h
- * buckets (~28 points) — identical to the in-app issue-detail drawer (`getIssueDetail`) so the
+ * buckets (~28 points) — identical to the in-app issue-detail drawer (`getSignalDetail`) so the
  * Slack/email chart shows the same data at the same granularity instead of a divergent 3h zoom.
  * The window is frozen at incident time (the PNG is immutable/cached), UTC-day-aligned the same
  * way the drawer aligns to "now".
@@ -118,7 +118,7 @@ const toUtcDayEnd = (value: Date): Date =>
 
 /** Cap on sample-excerpt text length; truncated longer feedback gets `truncated: true`. */
 const SAMPLE_EXCERPT_MAX_CHARS = 200
-/** Top-N tags surfaced in the email body. Sorted alphabetically (matches `IssueTagsAggregate` UI rendering). */
+/** Top-N tags surfaced in the email body. Sorted alphabetically (matches `SignalTagsAggregate` UI rendering). */
 const TAGS_TOP_N = 5
 /** History window for tag aggregation. Matches the issue-list/drawer convention. */
 const TAGS_LOOKBACK_DAYS = 30
@@ -160,17 +160,17 @@ const snapshotTrend = (input: {
 
     const analytics = yield* ScoreAnalyticsRepository
     const [counts, thresholds] = yield* Effect.all([
-      analytics.histogramByIssues({
+      analytics.histogramBySignals({
         organizationId: incident.organizationId,
         projectId: incident.projectId,
-        issueIds: [IssueId(incident.sourceId)],
+        signalIds: [SignalId(incident.sourceId)],
         timeRange: { from, to },
         bucketSeconds: TREND_BUCKET_SECONDS,
       }),
-      analytics.escalationThresholdHistogramByIssues({
+      analytics.escalationThresholdHistogramBySignals({
         organizationId: incident.organizationId,
         projectId: incident.projectId,
-        issueIds: [IssueId(incident.sourceId)],
+        signalIds: [SignalId(incident.sourceId)],
         timeRange: { from, to },
         bucketSeconds: TREND_BUCKET_SECONDS,
         kShort,
@@ -182,7 +182,7 @@ const snapshotTrend = (input: {
     // it round-trips through the JSON payload cleanly (NaN serialises to
     // `null` anyway, but we'd lose the type-level guarantee). The bell
     // sparkline + email chart break the dashed curve across `null`s the
-    // same way `IssueTrendBar` does today.
+    // same way `SignalTrendBar` does today.
     const thresholdByBucket = new Map<string, number | null>()
     for (const entry of thresholds[0]?.buckets ?? []) {
       thresholdByBucket.set(entry.bucket, Number.isFinite(entry.thresholdCount) ? entry.thresholdCount : null)
@@ -213,10 +213,10 @@ const snapshotTriggerRatePerHour = (incident: SourcedIncident) =>
     const to = incident.startedAt
     const from = new Date(to.getTime() - RATE_PEAK_WINDOW_MS)
     const analytics = yield* ScoreAnalyticsRepository
-    const counts = yield* analytics.histogramByIssues({
+    const counts = yield* analytics.histogramBySignals({
       organizationId: incident.organizationId,
       projectId: incident.projectId,
-      issueIds: [IssueId(incident.sourceId)],
+      signalIds: [SignalId(incident.sourceId)],
       timeRange: { from, to },
       bucketSeconds: RATE_PEAK_BUCKET_SECONDS,
     })
@@ -227,7 +227,7 @@ const snapshotTriggerRatePerHour = (incident: SourcedIncident) =>
 
 /**
  * Snapshot the top-N tags from the issue's recent traces. Sorted
- * alphabetically (matches the `IssueTagsAggregate` UI rendering) and
+ * alphabetically (matches the `SignalTagsAggregate` UI rendering) and
  * sliced so the email body stays compact. Returns `undefined` when
  * there are no tags so the template can skip the chips block.
  */
@@ -235,10 +235,10 @@ const snapshotTags = (incident: SourcedIncident) =>
   Effect.gen(function* () {
     const analytics = yield* ScoreAnalyticsRepository
     const from = new Date(Date.now() - TAGS_LOOKBACK_DAYS * 24 * 60 * 60 * 1000)
-    const aggregates = yield* analytics.aggregateTagsByIssues({
+    const aggregates = yield* analytics.aggregateTagsBySignals({
       organizationId: incident.organizationId,
       projectId: incident.projectId,
-      issueIds: [IssueId(incident.sourceId)],
+      signalIds: [SignalId(incident.sourceId)],
       timeRange: { from },
     })
     const all = aggregates[0]?.tags ?? []
@@ -299,9 +299,9 @@ const snapshotSampleExcerpt = (incident: SourcedIncident) =>
     const scores = yield* ScoreRepository
     const truncate = (text: string): IncidentSampleExcerpt["text"] => text.slice(0, SAMPLE_EXCERPT_MAX_CHARS)
 
-    const annotations = yield* scores.listByIssueId({
+    const annotations = yield* scores.listBySignalId({
       projectId: incident.projectId,
-      issueId: IssueId(incident.sourceId),
+      signalId: SignalId(incident.sourceId),
       source: "annotation",
       options: { limit: 1 },
     })
@@ -318,9 +318,9 @@ const snapshotSampleExcerpt = (incident: SourcedIncident) =>
       }
     }
 
-    const evaluations = yield* scores.listByIssueId({
+    const evaluations = yield* scores.listBySignalId({
       projectId: incident.projectId,
-      issueId: IssueId(incident.sourceId),
+      signalId: SignalId(incident.sourceId),
       source: "evaluation",
       options: { limit: 1 },
     })
@@ -344,10 +344,10 @@ const snapshotSampleExcerpt = (incident: SourcedIncident) =>
     return undefined
   })
 
-/** Issue triage state snapshotted onto incident payloads at producer time. */
-interface IssueTriageSnapshot {
+/** Signal triage state snapshotted onto incident payloads at producer time. */
+interface SignalTriageSnapshot {
   readonly assigneeId: string | null
-  readonly priority: IssuePriority | null
+  readonly priority: SignalPriority | null
 }
 
 /**
@@ -357,14 +357,14 @@ interface IssueTriageSnapshot {
  * (deleted between the incident and this producer) degrades to `null` so the
  * payload simply omits the fields, like legacy rows.
  */
-const snapshotIssueTriage = (incident: SourcedIncident) =>
+const snapshotSignalTriage = (incident: SourcedIncident) =>
   Effect.gen(function* () {
-    const issues = yield* IssueRepository
+    const issues = yield* SignalRepository
     const issue = yield* issues
-      .findById(IssueId(incident.sourceId))
+      .findById(SignalId(incident.sourceId))
       .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
     if (issue === null) return null
-    return { assigneeId: issue.assigneeId, priority: issue.priority } satisfies IssueTriageSnapshot
+    return { assigneeId: issue.assigneeId, priority: issue.priority } satisfies SignalTriageSnapshot
   })
 
 /**
@@ -380,7 +380,7 @@ const snapshotIssueTriage = (incident: SourcedIncident) =>
 const buildBreach = (incident: AlertIncident, triggerRatePerHour: number | null): IncidentBreach | undefined => {
   // Seasonal breach scalars only exist on `issue.escalating` snapshots; saved-search
   // incidents carry a frozen-threshold snapshot instead and have no such copy.
-  if (!isIssueEscalationEntrySignals(incident.entrySignals)) return undefined
+  if (!isSignalEscalationEntrySignals(incident.entrySignals)) return undefined
   return {
     triggerRate: triggerRatePerHour ?? 0,
     baselineRate: incident.entrySignals.expected1h,
@@ -405,7 +405,7 @@ const buildPayload = (input: {
   readonly tags: readonly string[] | undefined
   readonly sampleExcerpt: IncidentSampleExcerpt | undefined
   readonly monitor: IncidentMonitorInfo | null
-  readonly triage: IssueTriageSnapshot | null
+  readonly triage: SignalTriageSnapshot | null
 }): IncidentEventPayload | IncidentOpenedPayload | IncidentClosedPayload => {
   const { incident, kind, trend, triggerRatePerHour, tags, sampleExcerpt, monitor, triage } = input
   const base = {
@@ -420,7 +420,7 @@ const buildPayload = (input: {
     ...(monitor ? { monitorId: monitor.monitorId, monitorName: monitor.name, monitorSlug: monitor.slug } : {}),
     ...(incident.condition !== null ? { condition: incident.condition } : {}),
   }
-  // Issue triage snapshot, spread into every variant (incl. closed — the
+  // Signal triage snapshot, spread into every variant (incl. closed — the
   // recovery email still shows who owns the issue); absent for savedSearch
   // sources and when the issue row vanished.
   const triageFields = triage ? { assigneeId: triage.assigneeId, priority: triage.priority } : {}
@@ -525,18 +525,18 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
     // so they only apply to `issue`-sourced incidents. Saved-search incidents skip
     // them (the templates render from the kind + monitor attribution + condition).
     // Closed kind also skips tags/excerpt: the recovery copy focuses on the descent.
-    const isIssueSource = incident.sourceType === "issue"
-    const wantsSourceContext = isIssueSource && notificationKind !== "incident.closed"
+    const isSignalSource = incident.sourceType === "issue"
+    const wantsSourceContext = isSignalSource && notificationKind !== "incident.closed"
     const [trend, triggerRatePerHour, tags, sampleExcerpt, triage] = yield* Effect.all(
       [
-        isIssueSource ? snapshotTrend({ incident, kind: notificationKind, kShort }) : Effect.succeed(null),
+        isSignalSource ? snapshotTrend({ incident, kind: notificationKind, kShort }) : Effect.succeed(null),
         // Only the opened-side breach copy needs the fine-grained hourly rate (issue sources only).
-        isIssueSource && notificationKind === "incident.opened"
+        isSignalSource && notificationKind === "incident.opened"
           ? snapshotTriggerRatePerHour(incident)
           : Effect.succeed(null),
         wantsSourceContext ? snapshotTags(incident) : Effect.succeed(undefined),
         wantsSourceContext ? snapshotSampleExcerpt(incident) : Effect.succeed(undefined),
-        isIssueSource ? snapshotIssueTriage(incident) : Effect.succeed(null),
+        isSignalSource ? snapshotSignalTriage(incident) : Effect.succeed(null),
       ],
       { concurrency: "unbounded" },
     )
@@ -595,7 +595,7 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
     | AlertIncidentRepository
     | EvaluationRepository
     | IncidentMonitorReader
-    | IssueRepository
+    | SignalRepository
     | MembershipRepository
     | ScoreAnalyticsRepository
     | ScoreRepository

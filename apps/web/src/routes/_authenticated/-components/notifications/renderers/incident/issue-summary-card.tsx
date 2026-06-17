@@ -1,8 +1,8 @@
 import { Icon, Text } from "@repo/ui"
-import { IssueLifecycleStatuses } from "../../../../../../components/issues/issue-lifecycle-statuses.tsx"
+import { SignalLifecycleStatuses } from "../../../../../../components/issues/issue-lifecycle-statuses.tsx"
 import {
-  ISSUE_PRIORITY_META,
-  type IssuePriorityValue,
+  SIGNAL_PRIORITY_META,
+  type SignalPriorityValue,
 } from "../../../../../../components/issues/issue-priority-meta.tsx"
 import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
 
@@ -17,7 +17,7 @@ import { useMemberByUserIdMap } from "../../../../../../domains/members/members.
  * already a click target wrapping the whole row, so making this card a
  * second link would create a nested-anchor invalid HTML.
  */
-export function IssueSummaryCard({
+export function SignalSummaryCard({
   name,
   states,
   priority,
@@ -25,7 +25,7 @@ export function IssueSummaryCard({
 }: {
   readonly name: string
   readonly states: readonly string[]
-  readonly priority?: IssuePriorityValue | null | undefined
+  readonly priority?: SignalPriorityValue | null | undefined
   readonly assigneeId?: string | null | undefined
 }) {
   const memberByUserId = useMemberByUserIdMap()
@@ -35,7 +35,7 @@ export function IssueSummaryCard({
       ? assignee.name.trim()
       : assignee.email
     : undefined
-  const priorityMeta = priority ? ISSUE_PRIORITY_META[priority] : undefined
+  const priorityMeta = priority ? SIGNAL_PRIORITY_META[priority] : undefined
 
   return (
     <>
@@ -50,7 +50,7 @@ export function IssueSummaryCard({
           </span>
         ) : null}
       </div>
-      {states.length > 0 ? <IssueLifecycleStatuses states={states} wrap={false} /> : null}
+      {states.length > 0 ? <SignalLifecycleStatuses states={states} wrap={false} /> : null}
       {assigneeName ? <Text.H6 color="foregroundMuted">Assigned to {assigneeName}</Text.H6> : null}
     </>
   )

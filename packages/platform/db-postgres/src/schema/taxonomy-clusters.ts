@@ -21,7 +21,7 @@ const tsvector = customType<{ data: string; driverData: string }>({
  * No HNSW/IVFFlat on `centroid_embedding`: per-project cluster count is
  * expected in the hundreds to low thousands; exact sequential scan under
  * `(organization_id, project_id)` outperforms approximate indexes at that
- * scale. Same rule as `@domain/issues`.
+ * scale. Same rule as `@domain/signals`.
  */
 export const taxonomyClusters = latitudeSchema.table(
   "taxonomy_clusters",

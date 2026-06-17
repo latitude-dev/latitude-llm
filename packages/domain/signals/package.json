@@ -1,5 +1,5 @@
 {
-  "name": "@domain/issues",
+  "name": "@domain/signals",
   "version": "0.0.1",
   "private": true,
   "type": "module",

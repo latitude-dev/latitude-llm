@@ -1,14 +1,14 @@
-import { type IssueOccurrenceBucket, ScoreAnalyticsRepository } from "@domain/scores"
-import type { ChSqlClient, IssueId, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
+import { type SignalOccurrenceBucket, ScoreAnalyticsRepository } from "@domain/scores"
+import type { ChSqlClient, SignalId, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
 import { Effect } from "effect"
 
 const TWELVE_HOURS_SECONDS = 12 * 60 * 60
 const DEFAULT_TREND_DAYS = 14
 
-export interface GetIssueTrendInput {
+export interface GetSignalTrendInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
-  readonly issueId: IssueId
+  readonly signalId: SignalId
   /** Inclusive lower bound. Defaults to ~14 days before `to`. */
   readonly from?: Date
   /** Inclusive upper bound. Defaults to "now". */
@@ -16,12 +16,12 @@ export interface GetIssueTrendInput {
   readonly now?: Date
 }
 
-export interface GetIssueTrendResult {
+export interface GetSignalTrendResult {
   /** One entry per 12h bucket between `from` and `to`. Empty buckets are returned with `count: 0`. */
-  readonly buckets: readonly IssueOccurrenceBucket[]
+  readonly buckets: readonly SignalOccurrenceBucket[]
 }
 
-export type GetIssueTrendError = RepositoryError
+export type GetSignalTrendError = RepositoryError
 
 const toUtcDayEnd = (value: Date): Date =>
   new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate(), 23, 59, 59, 999))
@@ -47,8 +47,8 @@ const buildScaffold = (input: {
 
 const fillBuckets = (input: {
   readonly scaffold: readonly string[]
-  readonly buckets: readonly IssueOccurrenceBucket[]
-}): readonly IssueOccurrenceBucket[] => {
+  readonly buckets: readonly SignalOccurrenceBucket[]
+}): readonly SignalOccurrenceBucket[] => {
   const countsByBucket = new Map(input.buckets.map((bucket) => [bucket.bucket, bucket.count] as const))
   return input.scaffold.map((bucket) => ({
     bucket,
@@ -62,12 +62,12 @@ const fillBuckets = (input: {
  * empty buckets filled in so the caller can render a chart without
  * post-processing.
  */
-export const getIssueTrendUseCase = (
-  input: GetIssueTrendInput,
-): Effect.Effect<GetIssueTrendResult, GetIssueTrendError, ChSqlClient | ScoreAnalyticsRepository> =>
+export const getSignalTrendUseCase = (
+  input: GetSignalTrendInput,
+): Effect.Effect<GetSignalTrendResult, GetSignalTrendError, ChSqlClient | ScoreAnalyticsRepository> =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("projectId", String(input.projectId))
-    yield* Effect.annotateCurrentSpan("issueId", String(input.issueId))
+    yield* Effect.annotateCurrentSpan("signalId", String(input.signalId))
 
     const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
     const now = input.now ?? new Date()
@@ -81,10 +81,10 @@ export const getIssueTrendUseCase = (
           return start
         })()
 
-    const rawBuckets = yield* scoreAnalyticsRepository.histogramByIssues({
+    const rawBuckets = yield* scoreAnalyticsRepository.histogramBySignals({
       organizationId: input.organizationId,
       projectId: input.projectId,
-      issueIds: [input.issueId],
+      signalIds: [input.signalId],
       timeRange: { from, to },
       bucketSeconds: TWELVE_HOURS_SECONDS,
     })
@@ -92,5 +92,5 @@ export const getIssueTrendUseCase = (
     const scaffold = buildScaffold({ from, to, bucketSeconds: TWELVE_HOURS_SECONDS })
     const buckets = fillBuckets({ scaffold, buckets: rawBuckets })
 
-    return { buckets } satisfies GetIssueTrendResult
-  }).pipe(Effect.withSpan("issues.getIssueTrend"))
+    return { buckets } satisfies GetSignalTrendResult
+  }).pipe(Effect.withSpan("issues.getSignalTrend"))

@@ -48,7 +48,7 @@ export const upsertFlaggerAnnotationScore = (input: UpsertFlaggerAnnotationScore
       traceId: input.traceId,
       spanId: null,
       simulationId: input.simulationId,
-      issueId: null,
+      signalId: null,
       annotatorId: null,
       value: FLAGGER_DRAFT_DEFAULTS.value,
       passed: FLAGGER_DRAFT_DEFAULTS.passed,

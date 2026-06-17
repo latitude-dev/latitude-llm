@@ -2,9 +2,9 @@ import { DetailSection, Icon, Skeleton, Status, Text, Tooltip } from "@repo/ui"
 import { formatCount, relativeTime } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
 import { NetworkIcon } from "lucide-react"
-import { useRelatedIssues } from "../../../../../../../domains/issues/issues.collection.ts"
-import type { RelatedIssueRecord } from "../../../../../../../domains/issues/issues.functions.ts"
-import { IssueLifecycleStatuses } from "../../-components/issue-lifecycle-statuses.tsx"
+import { useRelatedSignals } from "../../../../../../../domains/issues/issues.collection.ts"
+import type { RelatedSignalRecord } from "../../../../../../../domains/issues/issues.functions.ts"
+import { SignalLifecycleStatuses } from "../../-components/issue-lifecycle-statuses.tsx"
 
 /**
  * Semantic score above which the chip reads "Very similar topic" instead of
@@ -26,7 +26,7 @@ const formatPercent = (fraction: number) => {
  * never shown (they rank, the chips explain). A card carrying both chips is
  * the "possibly the same issue" case and ranks above either signal alone.
  */
-function ReasonChips({ row }: { readonly row: RelatedIssueRecord }) {
+function ReasonChips({ row }: { readonly row: RelatedSignalRecord }) {
   return (
     <div className="flex min-w-0 flex-row flex-wrap items-center gap-1.5">
       {row.semantic ? (
@@ -68,11 +68,11 @@ function ReasonChips({ row }: { readonly row: RelatedIssueRecord }) {
   )
 }
 
-function RelatedIssueCard({ projectSlug, row }: { readonly projectSlug: string; readonly row: RelatedIssueRecord }) {
+function RelatedSignalCard({ projectSlug, row }: { readonly projectSlug: string; readonly row: RelatedSignalRecord }) {
   return (
     <Link
-      to="/projects/$projectSlug/issues/$issueId"
-      params={{ projectSlug, issueId: row.issueId }}
+      to="/projects/$projectSlug/issues/$signalId"
+      params={{ projectSlug, signalId: row.signalId }}
       aria-label={`Open the ${row.name} issue`}
       className="group flex flex-col gap-2 rounded-lg bg-secondary p-4 hover:bg-accent"
     >
@@ -81,7 +81,7 @@ function RelatedIssueCard({ projectSlug, row }: { readonly projectSlug: string; 
         {/* Resolved/ignored cards are included on purpose — "a similar issue was
             already resolved" is the most actionable neighbor to surface. */}
         <div className="shrink-0">
-          <IssueLifecycleStatuses states={row.states} wrap={false} />
+          <SignalLifecycleStatuses states={row.states} wrap={false} />
         </div>
       </div>
       {/* The description lets users judge the similarity themselves. */}
@@ -106,16 +106,16 @@ function RelatedIssueCard({ projectSlug, row }: { readonly projectSlug: string; 
  * grid at the bottom of the page; cards link to the related issue's page.
  * See `specs/issue-details-page.md` (Data model #3).
  */
-export function IssueRelated({
+export function SignalRelated({
   projectId,
   projectSlug,
-  issueId,
+  signalId,
 }: {
   readonly projectId: string
   readonly projectSlug: string
-  readonly issueId: string
+  readonly signalId: string
 }) {
-  const { data: related, isLoading } = useRelatedIssues({ projectId, issueId })
+  const { data: related, isLoading } = useRelatedSignals({ projectId, signalId })
 
   return (
     <DetailSection
@@ -137,7 +137,7 @@ export function IssueRelated({
       ) : (
         <div className="grid grid-cols-1 gap-2 lg:grid-cols-2 2xl:grid-cols-3">
           {related.map((row) => (
-            <RelatedIssueCard key={row.issueId} projectSlug={projectSlug} row={row} />
+            <RelatedSignalCard key={row.signalId} projectSlug={projectSlug} row={row} />
           ))}
         </div>
       )}

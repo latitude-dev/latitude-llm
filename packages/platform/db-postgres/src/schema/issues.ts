@@ -1,5 +1,5 @@
 import { EMBEDDING_DIMENSIONS } from "@domain/ai"
-import type { IssueCentroid, IssuePriority, IssueSource } from "@domain/issues"
+import type { SignalCentroid, SignalPriority, SignalSource } from "@domain/signals"
 import { sql } from "drizzle-orm"
 import { customType, index, jsonb, text, unique, uuid, varchar, vector } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
@@ -15,13 +15,13 @@ export const issues = latitudeSchema.table(
     uuid: uuid("uuid").notNull().unique().defaultRandom(), // legacy stable UUID retained for backwards compatibility; issue search uses the canonical id. New rows get the value from the DB default so the application layer never has to populate it.
     organizationId: cuid("organization_id").notNull(),
     projectId: cuid("project_id").notNull(),
-    slug: varchar("slug", { length: 128 }).notNull(), // url-safe identifier derived from name; regenerated on rename. Unique per (organization_id, project_id). Length matches `SLUG_MAX_LENGTH` in `@domain/shared/slug`. Backfilled from `name` in the M1 migration cascade; new rows get a slug from `createIssueFromScoreUseCase` (and `refreshIssueDetailsUseCase` regenerates on rename).
+    slug: varchar("slug", { length: 128 }).notNull(), // url-safe identifier derived from name; regenerated on rename. Unique per (organization_id, project_id). Length matches `SLUG_MAX_LENGTH` in `@domain/shared/slug`. Backfilled from `name` in the M1 migration cascade; new rows get a slug from `createSignalFromScoreUseCase` (and `refreshSignalDetailsUseCase` regenerates on rename).
     name: varchar("name", { length: 128 }).notNull(), // generated from clustered score feedback and related context; generic enough to represent the shared failure pattern across different backgrounds
     description: text("description").notNull(), // generated from clustered score feedback; focused on the underlying problem rather than one specific conversation
-    source: varchar("source", { length: 32 }).$type<IssueSource>().notNull(), // provenance of the first creating score
+    source: varchar("source", { length: 32 }).$type<SignalSource>().notNull(), // provenance of the first creating score
     assigneeId: cuid("assignee_id", { default: false }), // nullable; user (org member) assigned to triage this issue. No FK (repo convention); not auto-generated.
-    priority: varchar("priority", { length: 16 }).$type<IssuePriority>(), // nullable; manual triage priority (low/medium/high/urgent). Null = unset.
-    centroid: jsonb("centroid").$type<IssueCentroid>().notNull(), // canonical running weighted sum of clustered score feedback embeddings; `centroidEmbedding` stores the derived normalized pgvector used for search.
+    priority: varchar("priority", { length: 16 }).$type<SignalPriority>(), // nullable; manual triage priority (low/medium/high/urgent). Null = unset.
+    centroid: jsonb("centroid").$type<SignalCentroid>().notNull(), // canonical running weighted sum of clustered score feedback embeddings; `centroidEmbedding` stores the derived normalized pgvector used for search.
     // No IVFFlat/HNSW index: issues per project are expected in the hundreds to low thousands, so an
     // exact sequential scan over the project-scoped subset outperforms an approximate index (and
     // sidesteps HNSW's recall/precision tradeoff). Revisit if a single project crosses ~10k issues.
@@ -45,7 +45,7 @@ export const issues = latitudeSchema.table(
     // project-scoped lifecycle filtering and management actions.
     index("issues_project_lifecycle_idx").on(t.organizationId, t.projectId, t.ignoredAt, t.resolvedAt, t.createdAt),
     index("issues_search_document_idx").using("gin", t.searchDocument),
-    // Issues are not soft-deleted, so a plain unique constraint is sufficient
+    // Signals are not soft-deleted, so a plain unique constraint is sufficient
     // (no need for `nullsNotDistinct` over a deletedAt column).
     unique("issues_unique_slug_per_project_idx").on(t.organizationId, t.projectId, t.slug),
   ],

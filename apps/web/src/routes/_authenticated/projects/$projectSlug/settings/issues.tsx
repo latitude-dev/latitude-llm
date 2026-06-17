@@ -8,10 +8,10 @@ import { useRouteProject } from "../-route-data.ts"
 import { SettingsPage } from "./-components/settings-page.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/issues")({
-  component: ProjectIssuesSettingsPage,
+  component: ProjectSignalsSettingsPage,
 })
 
-function ProjectIssuesSettingsPage() {
+function ProjectSignalsSettingsPage() {
   const { projectSlug } = Route.useParams()
   const { toast } = useToast()
   const routeProject = useRouteProject()
@@ -42,7 +42,7 @@ function ProjectIssuesSettingsPage() {
   }
 
   return (
-    <SettingsPage title="Issues" description="Manage issues in your project">
+    <SettingsPage title="Signals" description="Manage issues in your project">
       <div className="flex w-full flex-col gap-1">
         <div className="flex w-full flex-row items-center justify-between gap-4 rounded-lg bg-muted/30 p-4">
           <div className="flex flex-col gap-1">

@@ -1,120 +1,120 @@
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import {
   type ChSqlClient,
-  IssueId,
+  SignalId,
   type OrganizationId,
   type ProjectId,
   type RepositoryError,
   type SqlClient,
 } from "@domain/shared"
 import { Effect } from "effect"
-import { ISSUE_RELATED_CANDIDATE_LIMIT, ISSUE_RELATED_COOCCURRENCE_WINDOW_DAYS } from "../constants.ts"
-import type { IssueState } from "../entities/issue.ts"
-import { deriveIssueLifecycleStates } from "../helpers.ts"
-import { IssueRepository } from "../ports/issue-repository.ts"
-import { type RelatedIssueSignals, rankRelatedIssues } from "../related-issues.ts"
+import { SIGNAL_RELATED_CANDIDATE_LIMIT, SIGNAL_RELATED_COOCCURRENCE_WINDOW_DAYS } from "../constants.ts"
+import type { SignalState } from "../entities/issue.ts"
+import { deriveSignalLifecycleStates } from "../helpers.ts"
+import { SignalRepository } from "../ports/issue-repository.ts"
+import { type RelatedSignalSignals, rankRelatedSignals } from "../related-issues.ts"
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
 
-export interface GetRelatedIssuesInput {
+export interface GetRelatedSignalsInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
-  readonly issueId: IssueId
+  readonly signalId: SignalId
   readonly now?: Date
 }
 
 /** One Related-list row: scored signals hydrated with the canonical issue. */
-export interface RelatedIssue extends RelatedIssueSignals {
+export interface RelatedSignal extends RelatedSignalSignals {
   readonly slug: string
   readonly name: string
   /** Shown on the card so users can judge the similarity themselves. */
   readonly description: string
-  readonly states: readonly IssueState[]
+  readonly states: readonly SignalState[]
   /** Lifetime occurrence count; 0 when the issue has no analytics rows. */
   readonly occurrences: number
   /** Last occurrence timestamp; null when the issue has no analytics rows. */
   readonly lastSeenAt: Date | null
 }
 
-export type GetRelatedIssuesError = RepositoryError
+export type GetRelatedSignalsError = RepositoryError
 
 /**
  * The Related-issues read: runs the two candidate reads in parallel —
  * semantic neighbors (pgvector centroid cosine, lifetime) and session
  * co-occurrence counts (ClickHouse, trailing
- * `ISSUE_RELATED_COOCCURRENCE_WINDOW_DAYS`) — fuses them with the pure
- * scorer (`rankRelatedIssues`), and hydrates the surviving rows from
+ * `SIGNAL_RELATED_COOCCURRENCE_WINDOW_DAYS`) — fuses them with the pure
+ * scorer (`rankRelatedSignals`), and hydrates the surviving rows from
  * Postgres with lifecycle states derived here. Resolved/ignored issues are
  * included by design: "a similar issue was already resolved" is the most
  * actionable row. Project-scoped only.
  */
-export const getRelatedIssuesUseCase = (
-  input: GetRelatedIssuesInput,
+export const getRelatedSignalsUseCase = (
+  input: GetRelatedSignalsInput,
 ): Effect.Effect<
-  readonly RelatedIssue[],
-  GetRelatedIssuesError,
-  ChSqlClient | IssueRepository | ScoreAnalyticsRepository | SqlClient
+  readonly RelatedSignal[],
+  GetRelatedSignalsError,
+  ChSqlClient | SignalRepository | ScoreAnalyticsRepository | SqlClient
 > =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("projectId", String(input.projectId))
-    yield* Effect.annotateCurrentSpan("issueId", String(input.issueId))
+    yield* Effect.annotateCurrentSpan("signalId", String(input.signalId))
 
-    const issueRepository = yield* IssueRepository
+    const signalRepository = yield* SignalRepository
     const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
     const now = input.now ?? new Date()
-    const from = new Date(now.getTime() - ISSUE_RELATED_COOCCURRENCE_WINDOW_DAYS * MILLISECONDS_PER_DAY)
+    const from = new Date(now.getTime() - SIGNAL_RELATED_COOCCURRENCE_WINDOW_DAYS * MILLISECONDS_PER_DAY)
 
     const [neighbors, coOccurrence] = yield* Effect.all(
       [
-        issueRepository.findSimilarByCentroid({
+        signalRepository.findSimilarByCentroid({
           projectId: input.projectId,
-          issueId: input.issueId,
-          limit: ISSUE_RELATED_CANDIDATE_LIMIT,
+          signalId: input.signalId,
+          limit: SIGNAL_RELATED_CANDIDATE_LIMIT,
         }),
-        scoreAnalyticsRepository.coOccurrenceByIssue({
+        scoreAnalyticsRepository.coOccurrenceBySignal({
           organizationId: input.organizationId,
           projectId: input.projectId,
-          issueId: input.issueId,
+          signalId: input.signalId,
           timeRange: { from, to: now },
-          limit: ISSUE_RELATED_CANDIDATE_LIMIT,
+          limit: SIGNAL_RELATED_CANDIDATE_LIMIT,
         }),
       ],
       { concurrency: 2 },
     )
 
-    const ranked = rankRelatedIssues({ neighbors, coOccurrence })
+    const ranked = rankRelatedSignals({ neighbors, coOccurrence })
     if (ranked.length === 0) return []
 
-    const rankedIssueIds = ranked.map((signals) => IssueId(signals.issueId))
+    const rankedSignalIds = ranked.map((signals) => SignalId(signals.signalId))
     const [issues, occurrenceAggregates] = yield* Effect.all(
       [
-        issueRepository.findByIds({ projectId: input.projectId, issueIds: rankedIssueIds }),
+        signalRepository.findByIds({ projectId: input.projectId, signalIds: rankedSignalIds }),
         // Lifetime occurrences + last-seen per row, so the card can show how
         // active each neighbor is. Batched — one read for the whole list.
-        scoreAnalyticsRepository.aggregateByIssues({
+        scoreAnalyticsRepository.aggregateBySignals({
           organizationId: input.organizationId,
           projectId: input.projectId,
-          issueIds: rankedIssueIds,
+          signalIds: rankedSignalIds,
         }),
       ],
       { concurrency: 2 },
     )
-    const issuesById = new Map(issues.map((issue) => [issue.id as string, issue]))
-    const aggregatesById = new Map(occurrenceAggregates.map((aggregate) => [aggregate.issueId as string, aggregate]))
+    const signalsById = new Map(issues.map((issue) => [issue.id as string, issue]))
+    const aggregatesById = new Map(occurrenceAggregates.map((aggregate) => [aggregate.signalId as string, aggregate]))
 
-    return ranked.flatMap((signals): RelatedIssue[] => {
+    return ranked.flatMap((signals): RelatedSignal[] => {
       // A candidate can vanish between the analytics read and hydration (or
       // exist only in ClickHouse after a Postgres delete) — drop it silently.
-      const issue = issuesById.get(signals.issueId)
+      const issue = signalsById.get(signals.signalId)
       if (issue === undefined) return []
-      const aggregate = aggregatesById.get(signals.issueId)
+      const aggregate = aggregatesById.get(signals.signalId)
       return [
         {
           ...signals,
           slug: issue.slug,
           name: issue.name,
           description: issue.description,
-          states: deriveIssueLifecycleStates({
+          states: deriveSignalLifecycleStates({
             issue,
             isEscalating: issue.lifecycle.isEscalating,
             isRegressed: issue.lifecycle.isRegressed,
@@ -125,4 +125,4 @@ export const getRelatedIssuesUseCase = (
         },
       ]
     })
-  }).pipe(Effect.withSpan("issues.getRelatedIssues"))
+  }).pipe(Effect.withSpan("issues.getRelatedSignals"))

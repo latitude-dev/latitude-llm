@@ -5,9 +5,9 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/moni
   staticData: {
     breadcrumb: MonitorsBreadcrumb,
   },
-  component: MonitorsIssuesPage,
+  component: MonitorsSignalsPage,
 })
 
-function MonitorsIssuesPage() {
+function MonitorsSignalsPage() {
   return <MonitorsListPage system={true} />
 }

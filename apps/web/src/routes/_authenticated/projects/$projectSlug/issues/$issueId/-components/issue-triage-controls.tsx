@@ -1,14 +1,14 @@
 import { Icon, Select, type SelectOption, Text, useToast } from "@repo/ui"
 import {
-  ISSUE_PRIORITY_META,
-  type IssuePriorityGroupId,
+  SIGNAL_PRIORITY_META,
+  type SignalPriorityGroupId,
 } from "../../../../../../../components/issues/issue-priority-meta.tsx"
 import { MemberSelector } from "../../../../../../../components/member-selector.tsx"
-import { useIssueDetail, useUpdateIssueTriage } from "../../../../../../../domains/issues/issues.collection.ts"
-import type { UpdateIssueTriageRecord } from "../../../../../../../domains/issues/issues.functions.ts"
+import { useSignalDetail, useUpdateSignalTriage } from "../../../../../../../domains/issues/issues.collection.ts"
+import type { UpdateSignalTriageRecord } from "../../../../../../../domains/issues/issues.functions.ts"
 import { toUserMessage } from "../../../../../../../lib/errors.ts"
 
-type Priority = NonNullable<UpdateIssueTriageRecord["priority"]>
+type Priority = NonNullable<UpdateSignalTriageRecord["priority"]>
 
 // Non-empty sentinel for the "cleared" option: Radix `Select.Item` forbids an
 // empty-string value (it reserves "" for the placeholder/clear state).
@@ -17,34 +17,34 @@ const UNSET = "__unset__" as const
 // Ascending urgency in the picker (Linear-style), derived from the shared
 // priority meta so icons/labels match the list group headers and the palette.
 const PRIORITY_OPTIONS: SelectOption<Priority | typeof UNSET>[] = (
-  ["none", "low", "medium", "high", "urgent"] satisfies readonly IssuePriorityGroupId[]
+  ["none", "low", "medium", "high", "urgent"] satisfies readonly SignalPriorityGroupId[]
 ).map((id) => ({
-  label: ISSUE_PRIORITY_META[id].label,
+  label: SIGNAL_PRIORITY_META[id].label,
   value: id === "none" ? UNSET : id,
-  icon: <Icon icon={ISSUE_PRIORITY_META[id].icon} size="sm" color={ISSUE_PRIORITY_META[id].iconColor} />,
+  icon: <Icon icon={SIGNAL_PRIORITY_META[id].icon} size="sm" color={SIGNAL_PRIORITY_META[id].iconColor} />,
 }))
 
 /**
  * Light-triage controls for the issue page: assignee + priority. Status stays
- * the existing resolve/ignore lifecycle (rendered by `IssueLifecycleActions`).
- * Reads current values from the issue detail and writes via `updateIssueTriage`.
+ * the existing resolve/ignore lifecycle (rendered by `SignalLifecycleActions`).
+ * Reads current values from the issue detail and writes via `updateSignalTriage`.
  *
  * `compact` drops the floating field labels and renders the two pickers inline —
  * for the page header's action cluster, where the placeholders ("Unassigned" /
  * "No priority") already say what each control is, tracker-style.
  */
-export function IssueTriageControls({
+export function SignalTriageControls({
   projectId,
-  issueId,
+  signalId,
   compact = false,
 }: {
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly compact?: boolean
 }) {
   const { toast } = useToast()
-  const { data: issue, isLoading } = useIssueDetail({ projectId, issueId })
-  const triage = useUpdateIssueTriage(projectId, issueId)
+  const { data: issue, isLoading } = useSignalDetail({ projectId, signalId })
+  const triage = useUpdateSignalTriage(projectId, signalId)
 
   const onError = (error: unknown) => toast({ variant: "destructive", description: toUserMessage(error) })
 

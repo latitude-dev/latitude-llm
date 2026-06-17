@@ -24,7 +24,7 @@ const insertMonitorWithAlert = async (
     organizationId: org,
     projectId: projectId as string,
     slug: `monitor-${monitorId.slice(0, 6)}`,
-    name: "Issue discovered",
+    name: "Signal discovered",
     description: "",
     system: true,
     mutedAt: input.mutedAt ?? null,
@@ -76,7 +76,7 @@ describe("IncidentMonitorReaderLive", () => {
     const { monitorId } = await insertMonitorWithAlert(database, { alertId, mutedAt: at })
 
     const result = await findByAlertId(database, alertId)
-    expect(result).toEqual({ monitorId, slug: expect.any(String), name: "Issue discovered", mutedAt: at })
+    expect(result).toEqual({ monitorId, slug: expect.any(String), name: "Signal discovered", mutedAt: at })
   })
 
   it("resolves a soft-deleted alert so incident history stays attributable", async () => {

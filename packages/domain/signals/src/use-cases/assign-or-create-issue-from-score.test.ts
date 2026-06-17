@@ -6,7 +6,7 @@ import { createFakeScoreRepository } from "@domain/scores/testing"
 import {
   DistributedLockRepository,
   DistributedLockUnavailableError,
-  IssueId,
+  SignalId,
   OrganizationId,
   ScoreId,
   SqlClient,
@@ -14,12 +14,12 @@ import {
 } from "@domain/shared"
 import { Cause, Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import type { Issue } from "../entities/issue.ts"
-import { IssueDiscoveryLockUnavailableError } from "../errors.ts"
-import { createIssueCentroid } from "../helpers.ts"
-import { IssueRepository } from "../ports/issue-repository.ts"
-import { createFakeIssueRepository } from "../testing/index.ts"
-import { assignOrCreateIssueUseCase } from "./assign-or-create-issue-from-score.ts"
+import type { Signal } from "../entities/issue.ts"
+import { SignalDiscoveryLockUnavailableError } from "../errors.ts"
+import { createSignalCentroid } from "../helpers.ts"
+import { SignalRepository } from "../ports/issue-repository.ts"
+import { createFakeSignalRepository } from "../testing/index.ts"
+import { assignOrCreateSignalUseCase } from "./assign-or-create-issue-from-score.ts"
 
 const organizationId = "oooooooooooooooooooooooo"
 const projectId = "pppppppppppppppppppppppp"
@@ -42,7 +42,7 @@ const makeScore = (overrides: Partial<Score> = {}): Score =>
     source: "annotation",
     sourceId: "UI",
     simulationId: null,
-    issueId: null,
+    signalId: null,
     value: 0.2,
     passed: false,
     feedback: "The assistant leaks API tokens in its response.",
@@ -61,8 +61,8 @@ const makeScore = (overrides: Partial<Score> = {}): Score =>
     ...overrides,
   }) as Score
 
-const makeIssue = (overrides?: Partial<Issue>): Issue => ({
-  id: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
+const makeSignal = (overrides?: Partial<Signal>): Signal => ({
+  id: SignalId("iiiiiiiiiiiiiiiiiiiiiiii"),
   slug: "test-issue",
   organizationId,
   projectId,
@@ -71,7 +71,7 @@ const makeIssue = (overrides?: Partial<Issue>): Issue => ({
   source: "annotation",
   assigneeId: null,
   priority: null,
-  centroid: createIssueCentroid(),
+  centroid: createSignalCentroid(),
   clusteredAt: new Date("2026-03-29T10:00:00.000Z"),
   escalatedAt: null,
   resolvedAt: null,
@@ -91,12 +91,12 @@ const createPassthroughSqlClient = (id: string): SqlClientShape => {
   return sqlClient
 }
 
-describe("assignOrCreateIssueUseCase", () => {
+describe("assignOrCreateSignalUseCase", () => {
   it("re-runs retrieval under the bounded discovery lock before creating a duplicate issue", async () => {
-    const existingIssue = makeIssue()
+    const existingSignal = makeSignal()
     const score = makeScore()
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: issueRepository, issues } = createFakeIssueRepository([existingIssue])
+    const { repository: signalRepository, issues } = createFakeSignalRepository([existingSignal])
     const lockCalls: string[] = []
     const writtenEvents: unknown[] = []
     const fakeAi = createFakeAI({
@@ -114,7 +114,7 @@ describe("assignOrCreateIssueUseCase", () => {
 
     scores.set(score.id, score)
     const result = await Effect.runPromise(
-      assignOrCreateIssueUseCase({
+      assignOrCreateSignalUseCase({
         organizationId,
         projectId,
         scoreId: score.id,
@@ -123,7 +123,7 @@ describe("assignOrCreateIssueUseCase", () => {
       }).pipe(
         Effect.provide(fakeAi.layer),
         Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(DistributedLockRepository, {
           withLock: (input, effect) =>
             Effect.gen(function* () {
@@ -141,36 +141,36 @@ describe("assignOrCreateIssueUseCase", () => {
       ),
     )
 
-    expect(result).toEqual({ action: "assigned", issueId: existingIssue.id })
-    expect(scores.get(score.id)?.issueId).toBe(existingIssue.id)
+    expect(result).toEqual({ action: "assigned", signalId: existingSignal.id })
+    expect(scores.get(score.id)?.signalId).toBe(existingSignal.id)
     expect(issues.size).toBe(1)
     // Outer feedback lock + inner per-issue update lock around the centroid recompute and projection sync.
     expect(lockCalls).toHaveLength(2)
     expect(lockCalls[0]).toMatch(
       new RegExp(`^org:${organizationId}:issues:discovery:${projectId}:feedback:[a-f0-9]{64}$`),
     )
-    expect(lockCalls[1]).toBe(`org:${organizationId}:issues:discovery:${projectId}:issue:${existingIssue.id}`)
+    expect(lockCalls[1]).toBe(`org:${organizationId}:issues:discovery:${projectId}:issue:${existingSignal.id}`)
     expect(writtenEvents).toHaveLength(1)
     expect(fakeAi.calls.rerank).toHaveLength(1)
     expect(fakeAi.calls.generate).toHaveLength(0)
   })
 
   it("tries raw annotation feedback before creating a new issue", async () => {
-    const existingIssue = makeIssue()
+    const existingSignal = makeSignal()
     const score = makeScore({
       feedback: "Generic enriched feedback",
       metadata: { rawFeedback: "raw human report about token leakage" },
     })
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: issueRepository, issues } = createFakeIssueRepository([existingIssue], {
+    const { repository: signalRepository, issues } = createFakeSignalRepository([existingSignal], {
       hybridSearch: ({ query }) =>
         Effect.succeed(
           query === "raw human report about token leakage"
             ? [
                 {
-                  issueId: existingIssue.id,
-                  name: existingIssue.name,
-                  description: existingIssue.description,
+                  signalId: existingSignal.id,
+                  name: existingSignal.name,
+                  description: existingSignal.description,
                   score: 1,
                 },
               ]
@@ -184,7 +184,7 @@ describe("assignOrCreateIssueUseCase", () => {
     scores.set(score.id, score)
 
     const result = await Effect.runPromise(
-      assignOrCreateIssueUseCase({
+      assignOrCreateSignalUseCase({
         organizationId,
         projectId,
         scoreId: score.id,
@@ -195,7 +195,7 @@ describe("assignOrCreateIssueUseCase", () => {
       }).pipe(
         Effect.provide(fakeAi.layer),
         Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(DistributedLockRepository, {
           withLock: (_input, effect) => effect,
         }),
@@ -204,8 +204,8 @@ describe("assignOrCreateIssueUseCase", () => {
       ),
     )
 
-    expect(result).toEqual({ action: "assigned", issueId: existingIssue.id })
-    expect(scores.get(score.id)?.issueId).toBe(existingIssue.id)
+    expect(result).toEqual({ action: "assigned", signalId: existingSignal.id })
+    expect(scores.get(score.id)?.signalId).toBe(existingSignal.id)
     expect(issues.size).toBe(1)
     expect(fakeAi.calls.rerank.map((call) => call.query)).toEqual(["raw human report about token leakage"])
     expect(fakeAi.calls.generate).toHaveLength(0)
@@ -214,7 +214,7 @@ describe("assignOrCreateIssueUseCase", () => {
   it("falls through to the project lock before creating a new issue", async () => {
     const score = makeScore()
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: issueRepository, issues } = createFakeIssueRepository()
+    const { repository: signalRepository, issues } = createFakeSignalRepository()
     const lockCalls: string[] = []
     const fakeAi = createFakeAI({
       generate: (input) =>
@@ -231,7 +231,7 @@ describe("assignOrCreateIssueUseCase", () => {
     scores.set(score.id, score)
 
     const result = await Effect.runPromise(
-      assignOrCreateIssueUseCase({
+      assignOrCreateSignalUseCase({
         organizationId,
         projectId,
         scoreId: score.id,
@@ -240,7 +240,7 @@ describe("assignOrCreateIssueUseCase", () => {
       }).pipe(
         Effect.provide(fakeAi.layer),
         Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(DistributedLockRepository, {
           withLock: (input, effect) =>
             Effect.gen(function* () {
@@ -255,7 +255,7 @@ describe("assignOrCreateIssueUseCase", () => {
 
     expect(result.action).toBe("created")
     if (result.action === "skipped") expect.fail(`expected non-skipped result, got reason ${result.reason}`)
-    expect(scores.get(score.id)?.issueId).toBe(result.issueId)
+    expect(scores.get(score.id)?.signalId).toBe(result.signalId)
     expect(issues.size).toBe(1)
     expect(lockCalls).toHaveLength(2)
     expect(lockCalls[0]).toMatch(
@@ -266,16 +266,16 @@ describe("assignOrCreateIssueUseCase", () => {
     expect(fakeAi.calls.generate).toHaveLength(1)
   })
 
-  it("propagates IssueDiscoveryLockUnavailableError when the feedback lock cannot be acquired", async () => {
+  it("propagates SignalDiscoveryLockUnavailableError when the feedback lock cannot be acquired", async () => {
     const score = makeScore()
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: issueRepository, issues } = createFakeIssueRepository()
+    const { repository: signalRepository, issues } = createFakeSignalRepository()
     const fakeAi = createFakeAI()
 
     scores.set(score.id, score)
 
     const exit = await Effect.runPromiseExit(
-      assignOrCreateIssueUseCase({
+      assignOrCreateSignalUseCase({
         organizationId,
         projectId,
         scoreId: score.id,
@@ -284,7 +284,7 @@ describe("assignOrCreateIssueUseCase", () => {
       }).pipe(
         Effect.provide(fakeAi.layer),
         Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(DistributedLockRepository, {
           withLock: (input) => Effect.fail(new DistributedLockUnavailableError({ key: input.key })),
         }),
@@ -298,30 +298,30 @@ describe("assignOrCreateIssueUseCase", () => {
       const errOpt = Cause.findErrorOption(exit.cause)
       expect(errOpt._tag).toBe("Some")
       if (errOpt._tag === "Some") {
-        expect(errOpt.value).toBeInstanceOf(IssueDiscoveryLockUnavailableError)
-        expect((errOpt.value as IssueDiscoveryLockUnavailableError).lockKey).toMatch(/^feedback:[a-f0-9]{64}$/)
+        expect(errOpt.value).toBeInstanceOf(SignalDiscoveryLockUnavailableError)
+        expect((errOpt.value as SignalDiscoveryLockUnavailableError).lockKey).toMatch(/^feedback:[a-f0-9]{64}$/)
       }
     }
     expect(issues.size).toBe(0)
-    expect(scores.get(score.id)?.issueId).toBeNull()
+    expect(scores.get(score.id)?.signalId).toBeNull()
     expect(fakeAi.calls.rerank).toHaveLength(0)
     expect(fakeAi.calls.generate).toHaveLength(0)
   })
 
   it("returns skipped without creating an issue when the project-lock eligibility re-check fails", async () => {
     // Score is already owned by an unrelated issue by the time we acquire the project lock — the inner
-    // eligibility check converts ScoreAlreadyOwnedByIssueError into a clean skipped result so the workflow
+    // eligibility check converts ScoreAlreadyOwnedBySignalError into a clean skipped result so the workflow
     // can short-circuit without burning AI generation or activity retries.
-    const winningIssueId = IssueId("wwwwwwwwwwwwwwwwwwwwwwww")
-    const score = makeScore({ issueId: winningIssueId })
+    const winningSignalId = SignalId("wwwwwwwwwwwwwwwwwwwwwwww")
+    const score = makeScore({ signalId: winningSignalId })
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: issueRepository, issues } = createFakeIssueRepository()
+    const { repository: signalRepository, issues } = createFakeSignalRepository()
     const fakeAi = createFakeAI()
 
     scores.set(score.id, score)
 
     const result = await Effect.runPromise(
-      assignOrCreateIssueUseCase({
+      assignOrCreateSignalUseCase({
         organizationId,
         projectId,
         scoreId: score.id,
@@ -330,7 +330,7 @@ describe("assignOrCreateIssueUseCase", () => {
       }).pipe(
         Effect.provide(fakeAi.layer),
         Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(DistributedLockRepository, {
           withLock: (_input, effect) => effect,
         }),
@@ -341,7 +341,7 @@ describe("assignOrCreateIssueUseCase", () => {
 
     expect(result).toEqual({
       action: "skipped",
-      reason: "ScoreAlreadyOwnedByIssueError",
+      reason: "ScoreAlreadyOwnedBySignalError",
     })
     expect(issues.size).toBe(0)
     expect(fakeAi.calls.generate).toHaveLength(0)

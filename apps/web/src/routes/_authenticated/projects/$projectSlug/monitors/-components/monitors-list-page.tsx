@@ -44,7 +44,7 @@ type MonitorsTab = "search" | "issues"
 
 const MONITORS_TABS: readonly TabOption<MonitorsTab>[] = [
   { id: "search", label: "Search monitors", icon: <TextSearchIcon className="w-4 h-4" /> },
-  { id: "issues", label: "Issue monitors", icon: <ShieldAlertIcon className="w-4 h-4" /> },
+  { id: "issues", label: "Signal monitors", icon: <ShieldAlertIcon className="w-4 h-4" /> },
 ]
 
 function serializeSorting(sorting: MonitorsTableSorting): string {

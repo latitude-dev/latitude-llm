@@ -15,7 +15,7 @@ const lockKey = (organizationId: string) => `org:${organizationId}:slack:refresh
 
 /**
  * Per-workspace single-flight lock for Slack token rotation. Mirrors
- * `RedisTaxonomyLockRepositoryLive` / `RedisIssueDiscoveryLockRepositoryLive`:
+ * `RedisTaxonomyLockRepositoryLive` / `RedisSignalDiscoveryLockRepositoryLive`:
  * `SET NX EX` with a unique token, released via a token-comparison Lua
  * delete (best-effort — the TTL reclaims if release fails). Serializes
  * the on-use refresh paths (web channel listing + notification worker)

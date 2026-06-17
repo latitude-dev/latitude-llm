@@ -17,7 +17,7 @@ export const incidentOpenedRenderer: SlackNotificationRenderer<"incident.opened"
   Effect.gen(function* () {
     const projectName = ctx.project?.name ?? ctx.organization.name
     const isSavedSearch = payload.sourceType === "savedSearch"
-    const issueUrl = ctx.project
+    const signalUrl = ctx.project
       ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues/${payload.sourceId}`
       : ctx.webAppUrl
     const monitorUrl =
@@ -61,17 +61,17 @@ export const incidentOpenedRenderer: SlackNotificationRenderer<"incident.opened"
     const chart = trendChartBlock(ctx.notificationId, ctx.webAppUrl)
 
     return {
-      text: `Issue escalating in ${projectName}${sourceName ? `: ${sourceName}` : ""}`,
+      text: `Signal escalating in ${projectName}${sourceName ? `: ${sourceName}` : ""}`,
       color: severityColor(payload.severity),
       blocks: [
-        ...(sourceName ? [sectionMarkdown(`*<${issueUrl}|${sourceName}>*`)] : []),
+        ...(sourceName ? [sectionMarkdown(`*<${signalUrl}|${sourceName}>*`)] : []),
         ...(breachLine ? [sectionMarkdown(breachLine)] : []),
         ...(payload.sampleExcerpt?.text ? [sectionMarkdown(`\`\`\`\n${payload.sampleExcerpt.text}\n\`\`\``)] : []),
         ...(chart ? [chart] : []),
         ...(tags.length > 0 ? [sectionMarkdown(tags.map((t) => `\`${t}\``).join("  "))] : []),
         ...attribution,
         context,
-        actionsLink("View issue", issueUrl),
+        actionsLink("View issue", signalUrl),
       ],
     }
   })

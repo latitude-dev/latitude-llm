@@ -53,7 +53,7 @@ export const writeAnnotation = (
       traceId: parsed.traceId,
       spanId,
       simulationId: parsed.simulationId,
-      issueId: parsed.issueId,
+      signalId: parsed.signalId,
       annotatorId: parsed.annotatorId,
       value: parsed.value,
       passed: parsed.passed,

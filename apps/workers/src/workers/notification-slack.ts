@@ -16,7 +16,7 @@ import type { QueueConsumer } from "@domain/queue"
 import { NotificationId, OrganizationId, ProjectId, SlackIntegrationId } from "@domain/shared"
 import { type RedisClient, RedisSlackRefreshLockRepositoryLive } from "@platform/cache-redis"
 import {
-  IssueRepositoryLive,
+  SignalRepositoryLive,
   OrganizationRepositoryLive,
   ProjectRepositoryLive,
   SavedSearchRepositoryLive,
@@ -61,7 +61,7 @@ const buildSlackRefresherLayer = () => {
 }
 
 const repoLayer = Layer.mergeAll(
-  IssueRepositoryLive,
+  SignalRepositoryLive,
   SavedSearchRepositoryLive,
   OrganizationRepositoryLive,
   ProjectRepositoryLive,

@@ -4,7 +4,7 @@ import {
   BadRequestError,
   type ConcurrentSqlTransactionError,
   cuidSchema,
-  issueIdSchema,
+  signalIdSchema,
   type NotFoundError,
   OrganizationId,
   ProjectId,
@@ -13,57 +13,57 @@ import {
 } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
-import { type Issue, type IssuePriority, issuePrioritySchema } from "../entities/issue.ts"
-import { IssueRepository } from "../ports/issue-repository.ts"
+import { type Signal, type SignalPriority, signalPrioritySchema } from "../entities/issue.ts"
+import { SignalRepository } from "../ports/issue-repository.ts"
 
-const updateIssueTriageInputSchema = z.object({
+const updateSignalTriageInputSchema = z.object({
   projectId: cuidSchema.transform(ProjectId),
-  issueId: issueIdSchema,
-  /** User performing the edit — carried on `IssueAssigneeChanged` so consumers can skip self-assignments. */
+  signalId: signalIdSchema,
+  /** User performing the edit — carried on `SignalAssigneeChanged` so consumers can skip self-assignments. */
   actorUserId: cuidSchema,
   // `undefined` (key omitted) leaves the field unchanged; explicit `null` clears it; a value sets it.
   assigneeId: cuidSchema.nullable().optional(),
-  priority: issuePrioritySchema.nullable().optional(),
+  priority: signalPrioritySchema.nullable().optional(),
   now: z.date().optional(),
 })
 
-export type UpdateIssueTriageInput = z.input<typeof updateIssueTriageInputSchema>
+export type UpdateSignalTriageInput = z.input<typeof updateSignalTriageInputSchema>
 
-export interface UpdateIssueTriageResult {
-  readonly issueId: string
+export interface UpdateSignalTriageResult {
+  readonly signalId: string
   readonly assigneeId: string | null
-  readonly priority: IssuePriority | null
+  readonly priority: SignalPriority | null
   readonly updatedAt: Date
   readonly changed: boolean
 }
 
-export type UpdateIssueTriageError = BadRequestError | ConcurrentSqlTransactionError | NotFoundError | RepositoryError
+export type UpdateSignalTriageError = BadRequestError | ConcurrentSqlTransactionError | NotFoundError | RepositoryError
 
-const toResult = (issue: Issue, changed: boolean): UpdateIssueTriageResult => ({
-  issueId: issue.id,
+const toResult = (issue: Signal, changed: boolean): UpdateSignalTriageResult => ({
+  signalId: issue.id,
   assigneeId: issue.assigneeId,
   priority: issue.priority,
   updatedAt: issue.updatedAt,
   changed,
 })
 
-export const updateIssueTriageUseCase = (input: UpdateIssueTriageInput) =>
+export const updateSignalTriageUseCase = (input: UpdateSignalTriageInput) =>
   Effect.gen(function* () {
-    const parsed = updateIssueTriageInputSchema.parse(input)
+    const parsed = updateSignalTriageInputSchema.parse(input)
     yield* Effect.annotateCurrentSpan("projectId", String(parsed.projectId))
-    yield* Effect.annotateCurrentSpan("issueId", parsed.issueId)
+    yield* Effect.annotateCurrentSpan("signalId", parsed.signalId)
     const sqlClient = yield* SqlClient
     const now = parsed.now ?? new Date()
 
     return yield* sqlClient.transaction(
       Effect.gen(function* () {
-        const issueRepository = yield* IssueRepository
+        const signalRepository = yield* SignalRepository
         const membershipRepository = yield* MembershipRepository
-        const issue = yield* issueRepository.findByIdForUpdate(parsed.issueId)
+        const issue = yield* signalRepository.findByIdForUpdate(parsed.signalId)
 
         if (issue.projectId !== parsed.projectId) {
           return yield* new BadRequestError({
-            message: `Issue ${issue.id} does not belong to project ${parsed.projectId}`,
+            message: `Signal ${issue.id} does not belong to project ${parsed.projectId}`,
           })
         }
 
@@ -86,13 +86,13 @@ export const updateIssueTriageUseCase = (input: UpdateIssueTriageInput) =>
           return toResult(issue, false)
         }
 
-        const nextIssue: Issue = {
+        const nextSignal: Signal = {
           ...issue,
           assigneeId: nextAssigneeId,
           priority: nextPriority,
           updatedAt: now,
         }
-        yield* issueRepository.save(nextIssue)
+        yield* signalRepository.save(nextSignal)
 
         // Assignee changes (set / reassign / clear) emit a domain event from
         // the same transaction; priority-only edits stay silent. `assignedAt`
@@ -100,14 +100,14 @@ export const updateIssueTriageUseCase = (input: UpdateIssueTriageInput) =>
         if (nextAssigneeId !== issue.assigneeId) {
           const outboxEventWriter = yield* OutboxEventWriter
           yield* outboxEventWriter.write({
-            eventName: "IssueAssigneeChanged",
+            eventName: "SignalAssigneeChanged",
             aggregateType: "issue",
             aggregateId: issue.id,
             organizationId: issue.organizationId,
             payload: {
               organizationId: issue.organizationId,
               projectId: issue.projectId,
-              issueId: issue.id,
+              signalId: issue.id,
               assigneeId: nextAssigneeId,
               previousAssigneeId: issue.assigneeId,
               actorUserId: parsed.actorUserId,
@@ -116,11 +116,11 @@ export const updateIssueTriageUseCase = (input: UpdateIssueTriageInput) =>
           })
         }
 
-        return toResult(nextIssue, true)
+        return toResult(nextSignal, true)
       }),
     )
-  }).pipe(Effect.withSpan("issues.updateIssueTriage")) as Effect.Effect<
-    UpdateIssueTriageResult,
-    UpdateIssueTriageError,
-    IssueRepository | MembershipRepository | OutboxEventWriter | SqlClient
+  }).pipe(Effect.withSpan("issues.updateSignalTriage")) as Effect.Effect<
+    UpdateSignalTriageResult,
+    UpdateSignalTriageError,
+    SignalRepository | MembershipRepository | OutboxEventWriter | SqlClient
   >

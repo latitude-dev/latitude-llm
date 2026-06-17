@@ -1,10 +1,10 @@
 import { InfiniteTable, type InfiniteTableColumn, type InfiniteTableSorting, Text } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { useMemo, useState } from "react"
-import { IssueLifecycleStatuses } from "../../../../../../components/issues/issue-lifecycle-statuses.tsx"
+import { SignalLifecycleStatuses } from "../../../../../../components/issues/issue-lifecycle-statuses.tsx"
 import { getPrimaryLifecycleState } from "../../../../../../components/issues/lifecycle-formatters.ts"
-import { useSessionIssues } from "../../../../../../domains/sessions/sessions.collection.ts"
-import type { SessionIssueRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
+import { useSessionSignals } from "../../../../../../domains/sessions/sessions.collection.ts"
+import type { SessionSignalRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
 
 // Mirrors the standalone issues table's primary-state ordering so "Status" sort
 // surfaces the most actionable issues first (regressed → escalating → new → …).
@@ -22,7 +22,7 @@ function lifecycleRank(states: readonly string[]): number {
   return idx === -1 ? LIFECYCLE_PRIORITY.length : idx
 }
 
-function compareIssues(a: SessionIssueRecord, b: SessionIssueRecord, sorting: InfiniteTableSorting): number {
+function compareSignals(a: SessionSignalRecord, b: SessionSignalRecord, sorting: InfiniteTableSorting): number {
   const dir = sorting.direction === "asc" ? 1 : -1
   switch (sorting.column) {
     case "name":
@@ -36,28 +36,28 @@ function compareIssues(a: SessionIssueRecord, b: SessionIssueRecord, sorting: In
   }
 }
 
-export function IssuesTab({
+export function SignalsTab({
   projectId,
   traceIds,
-  onOpenIssue,
+  onOpenSignal,
 }: {
   readonly projectId: string
   readonly traceIds: readonly string[]
-  readonly onOpenIssue: (issueId: string) => void
+  readonly onOpenSignal: (signalId: string) => void
 }) {
-  const { data: issues, isLoading, isError } = useSessionIssues({ projectId, traceIds })
+  const { data: issues, isLoading, isError } = useSessionSignals({ projectId, traceIds })
   const [sorting, setSorting] = useState<InfiniteTableSorting>(DEFAULT_SORTING)
 
-  const sortedIssues = useMemo(() => {
+  const sortedSignals = useMemo(() => {
     if (!issues) return []
-    return [...issues].sort((a, b) => compareIssues(a, b, sorting))
+    return [...issues].sort((a, b) => compareSignals(a, b, sorting))
   }, [issues, sorting])
 
-  const columns = useMemo<InfiniteTableColumn<SessionIssueRecord>[]>(
+  const columns = useMemo<InfiniteTableColumn<SessionSignalRecord>[]>(
     () => [
       {
         key: "name",
-        header: "Issue",
+        header: "Signal",
         sortKey: "name",
         minWidth: 200,
         render: (issue) => (
@@ -74,7 +74,7 @@ export function IssuesTab({
         minWidth: 110,
         render: (issue) => {
           const primaryState = getPrimaryLifecycleState(issue.states)
-          return <IssueLifecycleStatuses states={primaryState ? [primaryState] : []} wrap={false} />
+          return <SignalLifecycleStatuses states={primaryState ? [primaryState] : []} wrap={false} />
         },
       },
       {
@@ -104,11 +104,11 @@ export function IssuesTab({
   return (
     <div className="flex min-h-0 flex-1 flex-col pt-6 px-6">
       <InfiniteTable
-        data={sortedIssues}
+        data={sortedSignals}
         isLoading={isLoading}
         columns={columns}
         getRowKey={(issue) => issue.id}
-        onRowClick={(issue) => onOpenIssue(issue.id)}
+        onRowClick={(issue) => onOpenSignal(issue.id)}
         getRowAriaLabel={(issue) => `Open issue ${issue.name}`}
         sorting={sorting}
         defaultSorting={DEFAULT_SORTING}

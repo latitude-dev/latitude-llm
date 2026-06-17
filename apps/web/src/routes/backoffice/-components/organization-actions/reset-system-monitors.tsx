@@ -55,7 +55,7 @@ export function ResetSystemMonitorsButton({ organizationId }: ResetSystemMonitor
           <Modal.Body>
             <Alert
               variant="warning"
-              description="Re-applies the three system monitors (Issue discovered / Issue regressed / Issue escalating) to every project in this org. Overwrites their names, descriptions, and default alert condition values (e.g. resets the escalation sensitivity to the default). Mute state and incident history are preserved. A monitor slug already held by a user-created monitor is left untouched."
+              description="Re-applies the three system monitors (Signal discovered / Signal regressed / Signal escalating) to every project in this org. Overwrites their names, descriptions, and default alert condition values (e.g. resets the escalation sensitivity to the default). Mute state and incident history are preserved. A monitor slug already held by a user-created monitor is left untouched."
             />
           </Modal.Body>
           <Modal.Footer>

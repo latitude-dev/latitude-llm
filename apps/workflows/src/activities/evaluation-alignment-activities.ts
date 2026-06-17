@@ -26,7 +26,7 @@ import {
   BillingUsagePeriodRepositoryLive,
   EvaluationAlignmentExamplesRepositoryLive,
   EvaluationRepositoryLive,
-  IssueRepositoryLive,
+  SignalRepositoryLive,
   OutboxEventWriterLive,
   SettingsReaderLive,
   StripeSubscriptionLookupLive,
@@ -52,7 +52,7 @@ class EvaluationAlignmentActivityError extends Data.TaggedError("EvaluationAlign
 const evaluationAlignmentRepositoriesLive = Layer.mergeAll(
   EvaluationRepositoryLive,
   EvaluationAlignmentExamplesRepositoryLive,
-  IssueRepositoryLive,
+  SignalRepositoryLive,
 )
 
 const evaluationGenerationBillingRepositoriesLive = Layer.mergeAll(
@@ -67,7 +67,7 @@ const evaluationGenerationBillingRepositoriesLive = Layer.mergeAll(
 export const loadEvaluationAlignmentState = (input: {
   readonly organizationId: string
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly evaluationId: string
 }): Promise<LoadedEvaluationAlignmentState> =>
   Effect.runPromise(
@@ -84,7 +84,7 @@ export const loadEvaluationAlignmentState = (input: {
 export const loadEvaluationAlignmentStateOrInactive = (input: {
   readonly organizationId: string
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly evaluationId: string
 }): Promise<LoadAlignmentStateOrInactiveResult> =>
   Effect.runPromise(
@@ -97,7 +97,7 @@ export const loadEvaluationAlignmentStateOrInactive = (input: {
 export const collectEvaluationAlignmentExamples = (input: {
   readonly organizationId: string
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly createdAfter?: string | null
   readonly requirePositiveExamples?: boolean
 }): Promise<CollectedEvaluationAlignmentExamples> =>
@@ -238,8 +238,8 @@ export const recordEvaluationGenerationUsage = (input: {
 
 export const generateBaselineEvaluationDraft = (input: {
   readonly jobId: string
-  readonly issueName: string
-  readonly issueDescription: string
+  readonly signalName: string
+  readonly signalDescription: string
   readonly positiveExamples: readonly HydratedEvaluationAlignmentExample[]
   readonly negativeExamples: readonly HydratedEvaluationAlignmentExample[]
 }): Promise<GeneratedEvaluationDraft> =>
@@ -259,26 +259,26 @@ export const generateBaselineEvaluationDraft = (input: {
 export const evaluateBaselineEvaluationDraft = (input: {
   readonly organizationId: string
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly evaluationId: string | null
   readonly jobId: string
-  readonly issueName: string
-  readonly issueDescription: string
+  readonly signalName: string
+  readonly signalDescription: string
   readonly draft: GeneratedEvaluationDraft
   readonly positiveExamples: readonly HydratedEvaluationAlignmentExample[]
   readonly negativeExamples: readonly HydratedEvaluationAlignmentExample[]
 }): Promise<BaselineEvaluationResult> =>
   Effect.runPromise(
     evaluateBaselineDraftUseCase({
-      issueName: input.issueName,
-      issueDescription: input.issueDescription,
+      signalName: input.signalName,
+      signalDescription: input.signalDescription,
       script: input.draft.script,
       positiveExamples: input.positiveExamples,
       negativeExamples: input.negativeExamples,
       judgeTelemetry: {
         organizationId: input.organizationId,
         projectId: input.projectId,
-        issueId: input.issueId,
+        signalId: input.signalId,
         evaluationId: input.evaluationId,
         jobId: input.jobId,
       },
@@ -298,11 +298,11 @@ export const evaluateBaselineEvaluationDraft = (input: {
 export const evaluateIncrementalEvaluationDraft = (input: {
   readonly organizationId: string
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly evaluationId: string | null
   readonly jobId?: string | null
-  readonly issueName: string
-  readonly issueDescription: string
+  readonly signalName: string
+  readonly signalDescription: string
   readonly draft: GeneratedEvaluationDraft
   readonly previousConfusionMatrix: Parameters<typeof evaluateIncrementalDraftUseCase>[0]["previousConfusionMatrix"]
   readonly positiveExamples: readonly HydratedEvaluationAlignmentExample[]
@@ -310,8 +310,8 @@ export const evaluateIncrementalEvaluationDraft = (input: {
 }): Promise<IncrementalEvaluationRefreshResult> =>
   Effect.runPromise(
     evaluateIncrementalDraftUseCase({
-      issueName: input.issueName,
-      issueDescription: input.issueDescription,
+      signalName: input.signalName,
+      signalDescription: input.signalDescription,
       draft: input.draft,
       previousConfusionMatrix: input.previousConfusionMatrix,
       positiveExamples: input.positiveExamples,
@@ -319,7 +319,7 @@ export const evaluateIncrementalEvaluationDraft = (input: {
       judgeTelemetry: {
         organizationId: input.organizationId,
         projectId: input.projectId,
-        issueId: input.issueId,
+        signalId: input.signalId,
         evaluationId: input.evaluationId,
         ...(input.jobId !== undefined ? { jobId: input.jobId } : {}),
       },

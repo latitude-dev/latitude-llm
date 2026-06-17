@@ -4,7 +4,7 @@ import { type AnnotationScore, ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
 import {
   DistributedLockRepository,
-  IssueId,
+  SignalId,
   OrganizationId,
   ScoreId,
   SqlClient,
@@ -12,11 +12,11 @@ import {
 } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import type { Issue } from "../entities/issue.ts"
-import { createIssueCentroid } from "../helpers.ts"
-import { IssueRepository } from "../ports/issue-repository.ts"
-import { createFakeIssueRepository } from "../testing/index.ts"
-import { assignScoreToIssueUseCase } from "./assign-score-to-issue.ts"
+import type { Signal } from "../entities/issue.ts"
+import { createSignalCentroid } from "../helpers.ts"
+import { SignalRepository } from "../ports/issue-repository.ts"
+import { createFakeSignalRepository } from "../testing/index.ts"
+import { assignScoreToSignalUseCase } from "./assign-score-to-issue.ts"
 
 const organizationId = "oooooooooooooooooooooooo"
 const projectId = "pppppppppppppppppppppppp"
@@ -39,7 +39,7 @@ const makeScore = (overrides: Partial<AnnotationScore> = {}): AnnotationScore =>
   source: "annotation",
   sourceId: "UI",
   simulationId: null,
-  issueId: null,
+  signalId: null,
   value: 0.2,
   passed: false,
   feedback: "The assistant leaks API tokens in its response.",
@@ -58,8 +58,8 @@ const makeScore = (overrides: Partial<AnnotationScore> = {}): AnnotationScore =>
   ...overrides,
 })
 
-const makeIssue = (overrides?: Partial<Issue>): Issue => ({
-  id: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
+const makeSignal = (overrides?: Partial<Signal>): Signal => ({
+  id: SignalId("iiiiiiiiiiiiiiiiiiiiiiii"),
   slug: "test-issue",
   organizationId,
   projectId,
@@ -68,7 +68,7 @@ const makeIssue = (overrides?: Partial<Issue>): Issue => ({
   source: "annotation",
   assigneeId: null,
   priority: null,
-  centroid: createIssueCentroid(),
+  centroid: createSignalCentroid(),
   clusteredAt: new Date("2026-03-29T10:00:00.000Z"),
   escalatedAt: null,
   resolvedAt: null,
@@ -92,25 +92,25 @@ const passthroughLockRepository = {
   withLock: <A, E, R>(_input: unknown, effect: Effect.Effect<A, E, R>) => effect,
 }
 
-describe("assignScoreToIssueUseCase", () => {
+describe("assignScoreToSignalUseCase", () => {
   it("assigns to an existing issue and requests async refresh", async () => {
-    const existingIssue = makeIssue()
+    const existingSignal = makeSignal()
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: issueRepository, issues } = createFakeIssueRepository([existingIssue])
+    const { repository: signalRepository, issues } = createFakeSignalRepository([existingSignal])
     const score = makeScore()
     scores.set(score.id, score)
     const writtenEvents: unknown[] = []
 
     const result = await Effect.runPromise(
-      assignScoreToIssueUseCase({
+      assignScoreToSignalUseCase({
         organizationId,
         projectId,
         scoreId: score.id,
-        issueId: existingIssue.id,
+        signalId: existingSignal.id,
         normalizedEmbedding: makeEmbedding(),
       }).pipe(
         Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(OutboxEventWriter, {
           write: (event) =>
             Effect.sync(() => {
@@ -124,19 +124,19 @@ describe("assignScoreToIssueUseCase", () => {
 
     expect(result).toEqual({
       action: "assigned",
-      issueId: existingIssue.id,
+      signalId: existingSignal.id,
     })
-    expect(scores.get(score.id)?.issueId).toBe(existingIssue.id)
-    expect(issues.get(existingIssue.id)?.centroid.mass).toBeGreaterThan(0)
+    expect(scores.get(score.id)?.signalId).toBe(existingSignal.id)
+    expect(issues.get(existingSignal.id)?.centroid.mass).toBeGreaterThan(0)
     expect(writtenEvents).toEqual([
       expect.objectContaining({
-        eventName: "ScoreAssignedToIssue",
+        eventName: "ScoreAssignedToSignal",
         aggregateType: "score",
         aggregateId: score.id,
         organizationId,
         payload: expect.objectContaining({
           projectId,
-          issueId: existingIssue.id,
+          signalId: existingSignal.id,
           organizationId,
         }),
       }),
@@ -144,60 +144,60 @@ describe("assignScoreToIssueUseCase", () => {
   })
 
   it("locks the canonical issue row before updating the centroid", async () => {
-    const existingIssue = makeIssue()
+    const existingSignal = makeSignal()
     const lockCalls: string[] = []
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
     // findById is allowed (the post-tx projection sync legitimately uses it); we only assert that
     // findByIdForUpdate is what gates the centroid recompute path.
-    const { repository: issueRepository } = createFakeIssueRepository([existingIssue], {
+    const { repository: signalRepository } = createFakeSignalRepository([existingSignal], {
       findByIdForUpdate: (id) => {
         lockCalls.push(id)
-        return Effect.succeed(existingIssue)
+        return Effect.succeed(existingSignal)
       },
     })
     const score = makeScore()
     scores.set(score.id, score)
 
     await Effect.runPromise(
-      assignScoreToIssueUseCase({
+      assignScoreToSignalUseCase({
         organizationId,
         projectId,
         scoreId: score.id,
-        issueId: existingIssue.id,
+        signalId: existingSignal.id,
         normalizedEmbedding: makeEmbedding(),
       }).pipe(
         Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
         Effect.provideService(DistributedLockRepository, passthroughLockRepository),
       ),
     )
 
-    expect(lockCalls).toEqual([existingIssue.id])
+    expect(lockCalls).toEqual([existingSignal.id])
   })
 
   it("returns already-assigned without mutating the issue when the score is already linked", async () => {
-    const existingIssue = makeIssue()
-    const winningIssueId = IssueId("wwwwwwwwwwwwwwwwwwwwwwww")
+    const existingSignal = makeSignal()
+    const winningSignalId = SignalId("wwwwwwwwwwwwwwwwwwwwwwww")
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: issueRepository, issues } = createFakeIssueRepository([existingIssue])
+    const { repository: signalRepository, issues } = createFakeSignalRepository([existingSignal])
     const score = makeScore({
-      issueId: winningIssueId,
+      signalId: winningSignalId,
     })
     scores.set(score.id, score)
     const writtenEvents: unknown[] = []
 
     const result = await Effect.runPromise(
-      assignScoreToIssueUseCase({
+      assignScoreToSignalUseCase({
         organizationId,
         projectId,
         scoreId: score.id,
-        issueId: existingIssue.id,
+        signalId: existingSignal.id,
         normalizedEmbedding: makeEmbedding(),
       }).pipe(
         Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(OutboxEventWriter, {
           write: (event) =>
             Effect.sync(() => {
@@ -211,43 +211,43 @@ describe("assignScoreToIssueUseCase", () => {
 
     expect(result).toEqual({
       action: "already-assigned",
-      issueId: winningIssueId,
+      signalId: winningSignalId,
     })
-    expect(issues.get(existingIssue.id)?.centroid.mass).toBe(0)
+    expect(issues.get(existingSignal.id)?.centroid.mass).toBe(0)
     expect(writtenEvents).toHaveLength(0)
   })
 
   it("returns already-assigned when another worker claims the score during assignment", async () => {
-    const existingIssue = makeIssue()
-    const winningIssueId = IssueId("wwwwwwwwwwwwwwwwwwwwwwww")
+    const existingSignal = makeSignal()
+    const winningSignalId = SignalId("wwwwwwwwwwwwwwwwwwwwwwww")
     const { repository: scoreRepository, scores } = createFakeScoreRepository({
-      assignIssueIfUnowned: ({ scoreId, updatedAt }) => {
+      assignSignalIfUnowned: ({ scoreId, updatedAt }) => {
         const score = scores.get(scoreId)
         if (score) {
           scores.set(scoreId, {
             ...score,
-            issueId: winningIssueId,
+            signalId: winningSignalId,
             updatedAt,
           })
         }
         return Effect.succeed(false)
       },
     })
-    const { repository: issueRepository, issues } = createFakeIssueRepository([existingIssue])
+    const { repository: signalRepository, issues } = createFakeSignalRepository([existingSignal])
     const score = makeScore()
     scores.set(score.id, score)
     const writtenEvents: unknown[] = []
 
     const result = await Effect.runPromise(
-      assignScoreToIssueUseCase({
+      assignScoreToSignalUseCase({
         organizationId,
         projectId,
         scoreId: score.id,
-        issueId: existingIssue.id,
+        signalId: existingSignal.id,
         normalizedEmbedding: makeEmbedding(),
       }).pipe(
         Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(OutboxEventWriter, {
           write: (event) =>
             Effect.sync(() => {
@@ -261,31 +261,31 @@ describe("assignScoreToIssueUseCase", () => {
 
     expect(result).toEqual({
       action: "already-assigned",
-      issueId: winningIssueId,
+      signalId: winningSignalId,
     })
-    expect(issues.get(existingIssue.id)?.centroid.mass).toBe(0)
+    expect(issues.get(existingSignal.id)?.centroid.mass).toBe(0)
     expect(writtenEvents).toHaveLength(0)
   })
 
   it("rejects assigning a score into an issue from another project", async () => {
-    const foreignIssue = makeIssue({
+    const foreignSignal = makeSignal({
       projectId: otherProjectId,
     })
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: issueRepository, issues } = createFakeIssueRepository([foreignIssue])
+    const { repository: signalRepository, issues } = createFakeSignalRepository([foreignSignal])
     const score = makeScore()
     scores.set(score.id, score)
 
     const error = await Effect.runPromise(
-      assignScoreToIssueUseCase({
+      assignScoreToSignalUseCase({
         organizationId,
         projectId,
         scoreId: score.id,
-        issueId: foreignIssue.id,
+        signalId: foreignSignal.id,
         normalizedEmbedding: makeEmbedding(),
       }).pipe(
         Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
         Effect.provideService(DistributedLockRepository, passthroughLockRepository),
@@ -298,31 +298,31 @@ describe("assignScoreToIssueUseCase", () => {
       ),
     )
 
-    expect(error._tag).toBe("IssueNotFoundForAssignmentError")
-    expect(scores.get(score.id)?.issueId).toBeNull()
-    expect(issues.get(foreignIssue.id)?.centroid.mass).toBe(0)
+    expect(error._tag).toBe("SignalNotFoundForAssignmentError")
+    expect(scores.get(score.id)?.signalId).toBeNull()
+    expect(issues.get(foreignSignal.id)?.centroid.mass).toBe(0)
   })
 
   describe("regression detection", () => {
-    it("clears resolvedAt and emits IssueRegressed when score is newer than the issue's resolution", async () => {
+    it("clears resolvedAt and emits SignalRegressed when score is newer than the issue's resolution", async () => {
       const resolvedAt = new Date("2026-04-01T00:00:00.000Z")
-      const existingIssue = makeIssue({ resolvedAt })
+      const existingSignal = makeSignal({ resolvedAt })
       const { repository: scoreRepository, scores } = createFakeScoreRepository()
-      const { repository: issueRepository, issues } = createFakeIssueRepository([existingIssue])
+      const { repository: signalRepository, issues } = createFakeSignalRepository([existingSignal])
       const score = makeScore({ createdAt: new Date("2026-04-15T10:00:00.000Z") })
       scores.set(score.id, score)
       const writtenEvents: unknown[] = []
 
       await Effect.runPromise(
-        assignScoreToIssueUseCase({
+        assignScoreToSignalUseCase({
           organizationId,
           projectId,
           scoreId: score.id,
-          issueId: existingIssue.id,
+          signalId: existingSignal.id,
           normalizedEmbedding: makeEmbedding(),
         }).pipe(
           Effect.provideService(ScoreRepository, scoreRepository),
-          Effect.provideService(IssueRepository, issueRepository),
+          Effect.provideService(SignalRepository, signalRepository),
           Effect.provideService(OutboxEventWriter, {
             write: (event) =>
               Effect.sync(() => {
@@ -334,17 +334,17 @@ describe("assignScoreToIssueUseCase", () => {
         ),
       )
 
-      expect(issues.get(existingIssue.id)?.resolvedAt).toBeNull()
+      expect(issues.get(existingSignal.id)?.resolvedAt).toBeNull()
       expect(writtenEvents).toContainEqual(
         expect.objectContaining({
-          eventName: "IssueRegressed",
+          eventName: "SignalRegressed",
           aggregateType: "issue",
-          aggregateId: existingIssue.id,
+          aggregateId: existingSignal.id,
           organizationId,
           payload: expect.objectContaining({
             organizationId,
             projectId,
-            issueId: existingIssue.id,
+            signalId: existingSignal.id,
             triggerScoreId: score.id,
             regressedAt: score.createdAt.toISOString(),
           }),
@@ -352,26 +352,26 @@ describe("assignScoreToIssueUseCase", () => {
       )
     })
 
-    it("does not emit IssueRegressed or clear resolvedAt for ignored issues", async () => {
+    it("does not emit SignalRegressed or clear resolvedAt for ignored issues", async () => {
       const resolvedAt = new Date("2026-04-01T00:00:00.000Z")
       const ignoredAt = new Date("2026-04-02T00:00:00.000Z")
-      const existingIssue = makeIssue({ resolvedAt, ignoredAt })
+      const existingSignal = makeSignal({ resolvedAt, ignoredAt })
       const { repository: scoreRepository, scores } = createFakeScoreRepository()
-      const { repository: issueRepository, issues } = createFakeIssueRepository([existingIssue])
+      const { repository: signalRepository, issues } = createFakeSignalRepository([existingSignal])
       const score = makeScore({ createdAt: new Date("2026-04-15T10:00:00.000Z") })
       scores.set(score.id, score)
       const writtenEvents: unknown[] = []
 
       await Effect.runPromise(
-        assignScoreToIssueUseCase({
+        assignScoreToSignalUseCase({
           organizationId,
           projectId,
           scoreId: score.id,
-          issueId: existingIssue.id,
+          signalId: existingSignal.id,
           normalizedEmbedding: makeEmbedding(),
         }).pipe(
           Effect.provideService(ScoreRepository, scoreRepository),
-          Effect.provideService(IssueRepository, issueRepository),
+          Effect.provideService(SignalRepository, signalRepository),
           Effect.provideService(OutboxEventWriter, {
             write: (event) =>
               Effect.sync(() => {
@@ -383,34 +383,34 @@ describe("assignScoreToIssueUseCase", () => {
         ),
       )
 
-      expect(scores.get(score.id)?.issueId).toBe(existingIssue.id)
-      expect(issues.get(existingIssue.id)?.resolvedAt?.getTime()).toBe(resolvedAt.getTime())
-      expect(issues.get(existingIssue.id)?.ignoredAt?.getTime()).toBe(ignoredAt.getTime())
-      expect(writtenEvents.find((e) => (e as { eventName?: string }).eventName === "IssueRegressed")).toBeUndefined()
+      expect(scores.get(score.id)?.signalId).toBe(existingSignal.id)
+      expect(issues.get(existingSignal.id)?.resolvedAt?.getTime()).toBe(resolvedAt.getTime())
+      expect(issues.get(existingSignal.id)?.ignoredAt?.getTime()).toBe(ignoredAt.getTime())
+      expect(writtenEvents.find((e) => (e as { eventName?: string }).eventName === "SignalRegressed")).toBeUndefined()
       expect(
-        writtenEvents.find((e) => (e as { eventName?: string }).eventName === "ScoreAssignedToIssue"),
+        writtenEvents.find((e) => (e as { eventName?: string }).eventName === "ScoreAssignedToSignal"),
       ).toBeDefined()
     })
 
-    it("does not emit IssueRegressed and preserves resolvedAt when score predates resolution", async () => {
+    it("does not emit SignalRegressed and preserves resolvedAt when score predates resolution", async () => {
       const resolvedAt = new Date("2026-04-15T00:00:00.000Z")
-      const existingIssue = makeIssue({ resolvedAt })
+      const existingSignal = makeSignal({ resolvedAt })
       const { repository: scoreRepository, scores } = createFakeScoreRepository()
-      const { repository: issueRepository, issues } = createFakeIssueRepository([existingIssue])
+      const { repository: signalRepository, issues } = createFakeSignalRepository([existingSignal])
       const score = makeScore({ createdAt: new Date("2026-04-01T10:00:00.000Z") })
       scores.set(score.id, score)
       const writtenEvents: unknown[] = []
 
       await Effect.runPromise(
-        assignScoreToIssueUseCase({
+        assignScoreToSignalUseCase({
           organizationId,
           projectId,
           scoreId: score.id,
-          issueId: existingIssue.id,
+          signalId: existingSignal.id,
           normalizedEmbedding: makeEmbedding(),
         }).pipe(
           Effect.provideService(ScoreRepository, scoreRepository),
-          Effect.provideService(IssueRepository, issueRepository),
+          Effect.provideService(SignalRepository, signalRepository),
           Effect.provideService(OutboxEventWriter, {
             write: (event) =>
               Effect.sync(() => {
@@ -422,28 +422,28 @@ describe("assignScoreToIssueUseCase", () => {
         ),
       )
 
-      expect(issues.get(existingIssue.id)?.resolvedAt?.getTime()).toBe(resolvedAt.getTime())
-      expect(writtenEvents.find((e) => (e as { eventName?: string }).eventName === "IssueRegressed")).toBeUndefined()
+      expect(issues.get(existingSignal.id)?.resolvedAt?.getTime()).toBe(resolvedAt.getTime())
+      expect(writtenEvents.find((e) => (e as { eventName?: string }).eventName === "SignalRegressed")).toBeUndefined()
     })
 
-    it("does not emit IssueRegressed when the issue is not resolved", async () => {
-      const existingIssue = makeIssue({ resolvedAt: null })
+    it("does not emit SignalRegressed when the issue is not resolved", async () => {
+      const existingSignal = makeSignal({ resolvedAt: null })
       const { repository: scoreRepository, scores } = createFakeScoreRepository()
-      const { repository: issueRepository } = createFakeIssueRepository([existingIssue])
+      const { repository: signalRepository } = createFakeSignalRepository([existingSignal])
       const score = makeScore({ createdAt: new Date("2026-05-01T10:00:00.000Z") })
       scores.set(score.id, score)
       const writtenEvents: unknown[] = []
 
       await Effect.runPromise(
-        assignScoreToIssueUseCase({
+        assignScoreToSignalUseCase({
           organizationId,
           projectId,
           scoreId: score.id,
-          issueId: existingIssue.id,
+          signalId: existingSignal.id,
           normalizedEmbedding: makeEmbedding(),
         }).pipe(
           Effect.provideService(ScoreRepository, scoreRepository),
-          Effect.provideService(IssueRepository, issueRepository),
+          Effect.provideService(SignalRepository, signalRepository),
           Effect.provideService(OutboxEventWriter, {
             write: (event) =>
               Effect.sync(() => {
@@ -455,7 +455,7 @@ describe("assignScoreToIssueUseCase", () => {
         ),
       )
 
-      expect(writtenEvents.find((e) => (e as { eventName?: string }).eventName === "IssueRegressed")).toBeUndefined()
+      expect(writtenEvents.find((e) => (e as { eventName?: string }).eventName === "SignalRegressed")).toBeUndefined()
     })
   })
 })

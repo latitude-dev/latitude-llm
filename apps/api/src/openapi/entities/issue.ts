@@ -1,5 +1,5 @@
-import type { GetIssueTrendResult, IssueDetails, IssueListItem } from "@domain/issues"
-import { ISSUE_SOURCES, ISSUE_STATES } from "@domain/issues"
+import type { GetSignalTrendResult, SignalDetails, SignalListItem } from "@domain/signals"
+import { SIGNAL_SOURCES, SIGNAL_STATES } from "@domain/signals"
 import { cuidSchema } from "@domain/shared"
 import { z } from "@hono/zod-openapi"
 import { Paginated } from "../pagination.ts"
@@ -10,30 +10,30 @@ const TrendBucketSchema = z
     bucket: z.string().describe("UTC day bucket (`YYYY-MM-DD`)."),
     count: z.number().int().nonnegative().describe("Number of occurrences within the bucket."),
   })
-  .openapi("IssueTrendBucket")
+  .openapi("SignalTrendBucket")
 
-const IssueHistogramBucketSchema = z
+const SignalHistogramBucketSchema = z
   .object({
     bucket: z.string().describe("ISO-8601 UTC timestamp of the bucket's start."),
     count: z.number().int().nonnegative().describe("Number of occurrences within the bucket."),
   })
-  .openapi("IssueHistogramBucket")
+  .openapi("SignalHistogramBucket")
 
-export const IssueHistogramSchema = z
+export const SignalHistogramSchema = z
   .object({
     buckets: z
-      .array(IssueHistogramBucketSchema)
+      .array(SignalHistogramBucketSchema)
       .describe(
         "One entry per 12-hour UTC-aligned bucket in the requested range, including empty buckets (`count: 0`).",
       ),
   })
-  .openapi("IssueHistogram")
+  .openapi("SignalHistogram")
 
-export const toIssueHistogramResponse = (trend: GetIssueTrendResult) => ({
+export const toSignalHistogramResponse = (trend: GetSignalTrendResult) => ({
   buckets: trend.buckets.map((bucket) => ({ bucket: bucket.bucket, count: bucket.count })),
 })
 
-const IssueMonitoringStateSchema = z
+const SignalMonitoringStateSchema = z
   .discriminatedUnion("kind", [
     z
       .object({ kind: z.literal("automatic") })
@@ -49,19 +49,19 @@ const IssueMonitoringStateSchema = z
       })
       .describe("An active evaluation is being realigned."),
   ])
-  .openapi("IssueMonitoringState")
+  .openapi("SignalMonitoringState")
 
-// Fields shared by the list-row (`Issue`) and the detail (`IssueDetail`) shapes.
-const issueCoreFields = {
+// Fields shared by the list-row (`Signal`) and the detail (`SignalDetail`) shapes.
+const signalCoreFields = {
   id: cuidSchema.describe("Stable issue identifier."),
   organizationId: cuidSchema.describe("Organization that owns this issue."),
   projectId: cuidSchema.describe("Project this issue belongs to."),
   slug: z.string().describe("URL-safe slug derived from `name`. Unique within the project."),
   name: z.string().describe("Human-readable name."),
   description: z.string().describe("Description of the issue."),
-  source: z.enum(ISSUE_SOURCES).describe("Where the issue originated from."),
+  source: z.enum(SIGNAL_SOURCES).describe("Where the issue originated from."),
   states: z
-    .array(z.enum(ISSUE_STATES))
+    .array(z.enum(SIGNAL_STATES))
     .describe("Active lifecycle states. An issue may carry multiple states at once (e.g. `escalating` + `ongoing`)."),
   resolvedAt: z.string().nullable().describe("ISO-8601 timestamp at which the issue was resolved, or `null`."),
   ignoredAt: z.string().nullable().describe("ISO-8601 timestamp at which the issue was ignored, or `null`."),
@@ -73,8 +73,8 @@ const issueCoreFields = {
 
 // Fields scoped to the list endpoint: time-windowed activity stats for the
 // page (rolled up against the user-selected `fromIso` / `toIso` range).
-const issueListFields = {
-  ...issueCoreFields,
+const signalListFields = {
+  ...signalCoreFields,
   firstSeenAt: z.string().describe("ISO-8601 timestamp of the earliest occurrence in the time window."),
   lastSeenAt: z.string().describe("ISO-8601 timestamp of the latest occurrence in the time window."),
   occurrences: z.number().int().nonnegative().describe("Number of occurrences in the time window."),
@@ -88,8 +88,8 @@ const issueListFields = {
 // Detail-endpoint fields: full-history versions of every list stat plus
 // monitoring info. Same field names as the list so downstream tooling can
 // share types; semantics are "lifetime" rather than "windowed".
-const issueDetailFields = {
-  ...issueCoreFields,
+const signalDetailFields = {
+  ...signalCoreFields,
   firstSeenAt: z
     .string()
     .nullable()
@@ -107,18 +107,18 @@ const issueDetailFields = {
   evaluations: z
     .array(EvaluationSchema)
     .describe("Active evaluations monitoring the issue. Archived and deleted evaluations are excluded."),
-  monitoringState: IssueMonitoringStateSchema.describe(
+  monitoringState: SignalMonitoringStateSchema.describe(
     "Whether the issue is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`.",
   ),
 } as const
 
-const IssueSchema = z.object(issueListFields).openapi("Issue")
+const SignalSchema = z.object(signalListFields).openapi("Signal")
 
-export const IssueDetailSchema = z.object(issueDetailFields).openapi("IssueDetail")
+export const SignalDetailSchema = z.object(signalDetailFields).openapi("SignalDetail")
 
-export const PaginatedIssuesSchema = Paginated(IssueSchema, "PaginatedIssues")
+export const PaginatedSignalsSchema = Paginated(SignalSchema, "PaginatedSignals")
 
-export const toIssueResponse = (item: IssueListItem, organizationId: string) => ({
+export const toSignalResponse = (item: SignalListItem, organizationId: string) => ({
   id: item.id,
   organizationId,
   projectId: item.projectId,
@@ -139,7 +139,7 @@ export const toIssueResponse = (item: IssueListItem, organizationId: string) => 
   tags: [...item.tags],
 })
 
-export const toIssueDetailResponse = (details: IssueDetails, organizationId: string) => ({
+export const toSignalDetailResponse = (details: SignalDetails, organizationId: string) => ({
   id: details.issue.id as string,
   organizationId,
   projectId: details.issue.projectId as string,

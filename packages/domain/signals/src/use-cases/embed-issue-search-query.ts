@@ -3,23 +3,23 @@ import { Effect } from "effect"
 import { z } from "zod"
 import { normalizeEmbedding } from "../helpers.ts"
 
-const embedIssueSearchQueryInputSchema = z.object({
+const embedSignalSearchQueryInputSchema = z.object({
   organizationId: z.string(),
   projectId: z.string(),
   query: z.string().trim().min(1),
 })
 
-export type EmbedIssueSearchQueryInput = z.input<typeof embedIssueSearchQueryInputSchema>
+export type EmbedSignalSearchQueryInput = z.input<typeof embedSignalSearchQueryInputSchema>
 
-export interface EmbedIssueSearchQueryResult {
+export interface EmbedSignalSearchQueryResult {
   readonly query: string
   readonly normalizedEmbedding: number[]
 }
 
-export const embedIssueSearchQueryUseCase = Effect.fn("issues.embedIssueSearchQuery")(function* (
-  input: EmbedIssueSearchQueryInput,
+export const embedSignalSearchQueryUseCase = Effect.fn("issues.embedSignalSearchQuery")(function* (
+  input: EmbedSignalSearchQueryInput,
 ) {
-  const parsed = embedIssueSearchQueryInputSchema.parse(input)
+  const parsed = embedSignalSearchQueryInputSchema.parse(input)
   yield* Effect.annotateCurrentSpan("projectId", parsed.projectId)
   const ai = yield* AI
   const embeddingConfig = yield* resolveEmbeddingConfig()
@@ -42,5 +42,5 @@ export const embedIssueSearchQueryUseCase = Effect.fn("issues.embedIssueSearchQu
   return {
     query: parsed.query,
     normalizedEmbedding,
-  } satisfies EmbedIssueSearchQueryResult
+  } satisfies EmbedSignalSearchQueryResult
 })

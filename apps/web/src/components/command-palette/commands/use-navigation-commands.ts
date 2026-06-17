@@ -9,7 +9,7 @@ import type { PaletteCommand } from "../types.ts"
 
 /**
  * Navigation commands for the project the user is currently inside: top-level sections
- * (Search, Traces, Issues, …), the Settings entry, and every settings subsection. Returns
+ * (Search, Traces, Signals, …), the Settings entry, and every settings subsection. Returns
  * an empty list when not inside a project. Sourced from the shared `project-sections`
  * module so it never drifts from the sidebar.
  */

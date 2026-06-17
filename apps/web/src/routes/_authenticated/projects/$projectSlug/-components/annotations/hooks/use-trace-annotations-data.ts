@@ -44,7 +44,7 @@ interface MessageAnnotationData {
 export interface AnnotationFormData {
   readonly passed: boolean
   readonly comment: string
-  readonly issueId: string | null
+  readonly signalId: string | null
   readonly anchor?: AnnotationAnchor
   readonly spanId?: string | null
 }
@@ -132,7 +132,7 @@ export function useTraceAnnotationsData({ projectId, traceId, enabled = true }: 
           value: data.passed ? 1 : 0,
           passed: data.passed,
           feedback,
-          ...(data.issueId ? { issueId: data.issueId } : {}),
+          ...(data.signalId ? { signalId: data.signalId } : {}),
           ...(data.spanId ? { spanId: data.spanId } : {}),
           ...(data.anchor ? { anchor: data.anchor } : {}),
         },
@@ -153,7 +153,7 @@ export function useTraceAnnotationsData({ projectId, traceId, enabled = true }: 
           value: data.passed ? 1 : 0,
           passed: data.passed,
           feedback,
-          ...(data.issueId ? { issueId: data.issueId } : {}),
+          ...(data.signalId ? { signalId: data.signalId } : {}),
         },
         options?.onSuccess ? { onSuccess: options.onSuccess } : undefined,
       )

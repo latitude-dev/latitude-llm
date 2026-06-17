@@ -16,7 +16,7 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
-    "@domain/issues": "workspace:*",
+    "@domain/signals": "workspace:*",
     "@domain/monitors": "workspace:*",
     "@domain/notifications": "workspace:*",
     "@domain/organizations": "workspace:*",

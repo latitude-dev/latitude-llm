@@ -11,7 +11,7 @@ const mockAnnotations = [
     id: "ann-1",
     passed: true,
     feedback: "Good response",
-    issueId: null,
+    signalId: null,
     draftedAt: "2024-01-01",
     metadata: { rawFeedback: "Good response", messageIndex: 1, partIndex: 0, startOffset: 5, endOffset: 15 },
   },
@@ -79,7 +79,7 @@ describe("useAnnotationPopover", () => {
         position: { x: 100, y: 200 },
         passed: null,
         comment: "",
-        issueId: null,
+        signalId: null,
       })
     })
 
@@ -98,7 +98,7 @@ describe("useAnnotationPopover", () => {
         position: { x: 100, y: 200 },
         passed: null,
         comment: "",
-        issueId: null,
+        signalId: null,
       })
     })
 
@@ -119,7 +119,7 @@ describe("useAnnotationPopover", () => {
         position: { x: 100, y: 200 },
         passed: null,
         comment: "",
-        issueId: null,
+        signalId: null,
       })
     })
 
@@ -185,7 +185,7 @@ describe("useAnnotationPopover", () => {
           position: { x: 100, y: 200 },
           passed: null,
           comment: "",
-          issueId: null,
+          signalId: null,
         })
       })
 
@@ -193,7 +193,7 @@ describe("useAnnotationPopover", () => {
         result.current.createTextSelectionAnnotation({
           passed: true,
           comment: "Looks good",
-          issueId: null,
+          signalId: null,
         })
       })
 
@@ -201,7 +201,7 @@ describe("useAnnotationPopover", () => {
         {
           passed: true,
           comment: "Looks good",
-          issueId: null,
+          signalId: null,
           anchor: { messageIndex: 3, partIndex: 1, startOffset: 10, endOffset: 20 },
           spanId: null,
         },
@@ -228,7 +228,7 @@ describe("useAnnotationPopover", () => {
           position: { x: 100, y: 200 },
           passed: null,
           comment: "",
-          issueId: null,
+          signalId: null,
         })
       })
 
@@ -236,7 +236,7 @@ describe("useAnnotationPopover", () => {
         result.current.createTextSelectionAnnotation({
           passed: false,
           comment: "Not good",
-          issueId: "issue-1",
+          signalId: "issue-1",
         })
       })
 
@@ -258,7 +258,7 @@ describe("useAnnotationPopover", () => {
         result.current.createTextSelectionAnnotation({
           passed: true,
           comment: "Test",
-          issueId: null,
+          signalId: null,
         })
       })
 
@@ -276,13 +276,13 @@ describe("useAnnotationPopover", () => {
         result.current.updateTextSelectionAnnotation("ann-1", {
           passed: false,
           comment: "Updated comment",
-          issueId: "issue-2",
+          signalId: "issue-2",
         })
       })
 
       expect(mockUpdateAnnotation).toHaveBeenCalledWith(
         "ann-1",
-        { passed: false, comment: "Updated comment", issueId: "issue-2" },
+        { passed: false, comment: "Updated comment", signalId: "issue-2" },
         expect.objectContaining({ onSuccess: expect.any(Function) }),
       )
     })
@@ -337,7 +337,7 @@ describe("useAnnotationPopover", () => {
           position: { x: 100, y: 200 },
           passed: null,
           comment: "",
-          issueId: null,
+          signalId: null,
         })
       })
 

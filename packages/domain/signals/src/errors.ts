@@ -39,7 +39,7 @@ export class ErroredScoreNotEligibleForDiscoveryError extends Data.TaggedError(
   readonly httpMessage = "Errored scores are not eligible for issue discovery"
 }
 
-export class ScoreAlreadyOwnedByIssueError extends Data.TaggedError("ScoreAlreadyOwnedByIssueError")<{
+export class ScoreAlreadyOwnedBySignalError extends Data.TaggedError("ScoreAlreadyOwnedBySignalError")<{
   readonly scoreId: string
 }> {
   readonly httpStatus = 409
@@ -62,42 +62,42 @@ export class PassedScoreNotEligibleForDiscoveryError extends Data.TaggedError(
   readonly httpMessage = "Passed scores are not eligible for issue discovery"
 }
 
-export class IssueNotFoundForDetailsGenerationError extends Data.TaggedError("IssueNotFoundForDetailsGenerationError")<{
-  readonly issueId: string
+export class SignalNotFoundForDetailsGenerationError extends Data.TaggedError("SignalNotFoundForDetailsGenerationError")<{
+  readonly signalId: string
 }> {
   readonly httpStatus = 404
-  readonly httpMessage = "Issue not found for details generation"
+  readonly httpMessage = "Signal not found for details generation"
 }
 
-export class MissingIssueOccurrencesForDetailsGenerationError extends Data.TaggedError(
-  "MissingIssueOccurrencesForDetailsGenerationError",
+export class MissingSignalOccurrencesForDetailsGenerationError extends Data.TaggedError(
+  "MissingSignalOccurrencesForDetailsGenerationError",
 )<{
   readonly projectId: string
 }> {
   readonly httpStatus = 400
-  readonly httpMessage = "Issue details generation requires issue occurrences"
+  readonly httpMessage = "Signal details generation requires issue occurrences"
 }
 
-export class IssueNotFoundForAssignmentError extends Data.TaggedError("IssueNotFoundForAssignmentError")<{
-  readonly issueId: string
+export class SignalNotFoundForAssignmentError extends Data.TaggedError("SignalNotFoundForAssignmentError")<{
+  readonly signalId: string
 }> {
   readonly httpStatus = 404
-  readonly httpMessage = "Issue not found for assignment"
+  readonly httpMessage = "Signal not found for assignment"
 }
 
-export class IssueNotFoundForEscalationCheckError extends Data.TaggedError("IssueNotFoundForEscalationCheckError")<{
-  readonly issueId: string
+export class SignalNotFoundForEscalationCheckError extends Data.TaggedError("SignalNotFoundForEscalationCheckError")<{
+  readonly signalId: string
 }> {
   readonly httpStatus = 404
-  readonly httpMessage = "Issue not found for escalation check"
+  readonly httpMessage = "Signal not found for escalation check"
 }
 
-export class IssueDiscoveryLockUnavailableError extends Data.TaggedError("IssueDiscoveryLockUnavailableError")<{
+export class SignalDiscoveryLockUnavailableError extends Data.TaggedError("SignalDiscoveryLockUnavailableError")<{
   readonly projectId: string
   readonly lockKey: string
 }> {
   readonly httpStatus = 409
-  readonly httpMessage = "Issue discovery serialization lock is currently unavailable"
+  readonly httpMessage = "Signal discovery serialization lock is currently unavailable"
 }
 
 const eligibilityErrors = [
@@ -106,7 +106,7 @@ const eligibilityErrors = [
   ScoreDiscoveryProjectMismatchError,
   DraftScoreNotEligibleForDiscoveryError,
   ErroredScoreNotEligibleForDiscoveryError,
-  ScoreAlreadyOwnedByIssueError,
+  ScoreAlreadyOwnedBySignalError,
   MissingScoreFeedbackForDiscoveryError,
   PassedScoreNotEligibleForDiscoveryError,
 ] as const

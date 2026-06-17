@@ -8,8 +8,8 @@ import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
 import { useSessionDetail } from "../../../../../domains/sessions/sessions.collection.ts"
 import { TraceScopeContext } from "../../../../../domains/traces/trace-scope.tsx"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
-import { IssueLifecycleActions } from "../issues/-components/issue-lifecycle-actions.tsx"
-import { IssueSlot } from "./session-detail-drawer/issue-slot.tsx"
+import { SignalLifecycleActions } from "../issues/-components/issue-lifecycle-actions.tsx"
+import { SignalSlot } from "./session-detail-drawer/issue-slot.tsx"
 import { isSessionTab, SessionSlot, type SessionTabId } from "./session-detail-drawer/session-slot.tsx"
 import { type DetailSlotKind, SlotTransition } from "./session-detail-drawer/slot-transition.tsx"
 import { isTraceDetailTab, type TraceDetailTabId, TraceSlot } from "./session-detail-drawer/trace-slot.tsx"
@@ -47,7 +47,7 @@ export function SessionDetailDrawer({
   readonly defaultTab?: SessionTabId | undefined
 }) {
   const [traceId, setTraceId] = useParamState("traceId", "")
-  const [issueId, setIssueId] = useParamState("issueId", "")
+  const [signalId, setSignalId] = useParamState("signalId", "")
   const [, setFocusAnnotationId] = useParamState("annotationId", "")
   const [q] = useParamState("q", "")
   // Land on the conversation tab when arriving from an active search, so the
@@ -58,7 +58,7 @@ export function SessionDetailDrawer({
     validate: isSessionTab,
   })
   // Owned by `TraceSlot` once it mounts, but written here when sliding into a
-  // trace so the slot lands on the requested tab (Issues → "trace",
+  // trace so the slot lands on the requested tab (Signals → "trace",
   // Annotations → "conversation"). Kept distinct from `sessionTab` so the two
   // never collide.
   const [, setTraceTab] = useParamState<TraceDetailTabId>("traceTab", "trace", { validate: isTraceDetailTab })
@@ -89,18 +89,18 @@ export function SessionDetailDrawer({
   // Defensive precedence for URLs that arrive with both params already set
   // (deep links, browser history, hand-edited URLs). Our own code never sets
   // both at the same time — opening a trace from inside the issue slot uses
-  // `IssueDetailBody`'s local Sheet state, not the `traceId` param. Trace
-  // wins so a stale `issueId` doesn't shadow the requested trace; "View
+  // `SignalDetailBody`'s local Sheet state, not the `traceId` param. Trace
+  // wins so a stale `signalId` doesn't shadow the requested trace; "View
   // session" clears both so we can't land in an ambiguous state after close.
   // When the session itself is missing we suppress the back affordance —
   // there is nothing to go back to.
-  // Issues are an analysis feature the sandbox doesn't surface — never resolve
-  // the issue slot under a sandbox scope, even from a deep-linked `?issueId=`
-  // (its `IssueLifecycleActions` registers command-palette commands, and the
+  // Signals are an analysis feature the sandbox doesn't surface — never resolve
+  // the issue slot under a sandbox scope, even from a deep-linked `?signalId=`
+  // (its `SignalLifecycleActions` registers command-palette commands, and the
   // sandbox tree has no provider).
-  const issuesEnabled = !use(TraceScopeContext)
+  const signalsEnabled = !use(TraceScopeContext)
   const detailKind: DetailSlotKind | null =
-    traceId.length > 0 ? "trace" : issueId.length > 0 && issuesEnabled ? "issue" : null
+    traceId.length > 0 ? "trace" : signalId.length > 0 && signalsEnabled ? "issue" : null
   const showDetail = detailKind !== null && !isSessionMissing
 
   const openTrace = (nextTraceId: string, options: OpenTraceOptions = {}) => {
@@ -110,10 +110,10 @@ export function SessionDetailDrawer({
     setTraceId(nextTraceId)
   }
 
-  const openIssue = (nextIssueId: string) => {
+  const openSignal = (nextSignalId: string) => {
     setFocusAnnotationId("")
     setTraceId("")
-    setIssueId(nextIssueId)
+    setSignalId(nextSignalId)
   }
 
   const focusAnnotationInConversation = (annotationId: string) => {
@@ -124,13 +124,13 @@ export function SessionDetailDrawer({
   const backToSession = () => {
     setFocusAnnotationId("")
     setTraceId("")
-    setIssueId("")
+    setSignalId("")
   }
 
   const handleClose = () => {
     setFocusAnnotationId("")
     setTraceId("")
-    setIssueId("")
+    setSignalId("")
     onClose()
   }
 
@@ -168,7 +168,7 @@ export function SessionDetailDrawer({
         ) : undefined
       }
       rightActions={
-        detailKind === "issue" ? <IssueLifecycleActions projectId={projectId} issueId={issueId} /> : undefined
+        detailKind === "issue" ? <SignalLifecycleActions projectId={projectId} signalId={signalId} /> : undefined
       }
     >
       {sessionLoading && !session ? (
@@ -192,7 +192,7 @@ export function SessionDetailDrawer({
               onActiveTabChange={setActiveTab}
               isActive={!showDetail}
               onOpenTrace={openTrace}
-              onOpenIssue={openIssue}
+              onOpenSignal={openSignal}
               onOpenInConversation={focusAnnotationInConversation}
               focusMomentKind={focusMomentKind}
               focusMomentId={focusMomentId}
@@ -206,7 +206,7 @@ export function SessionDetailDrawer({
               <TraceSlot projectId={projectId} traceId={traceId} {...(searchQuery ? { searchQuery } : {})} />
             ) : null
           }
-          issueSlot={detailKind === "issue" ? <IssueSlot projectId={projectId} issueId={issueId} /> : null}
+          signalSlot={detailKind === "issue" ? <SignalSlot projectId={projectId} signalId={signalId} /> : null}
         />
       )}
     </DetailDrawer>

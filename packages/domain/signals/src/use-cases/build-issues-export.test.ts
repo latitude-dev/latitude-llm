@@ -1,34 +1,34 @@
 import { type EvaluationListPage, EvaluationRepository, type EvaluationRepositoryShape } from "@domain/evaluations"
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
-import { ChSqlClient, IssueId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { ChSqlClient, SignalId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import type { Issue } from "../entities/issue.ts"
-import { createIssueCentroid } from "../helpers.ts"
-import { IssueRepository } from "../ports/issue-repository.ts"
-import { createFakeIssueRepository } from "../testing/fake-issue-repository.ts"
-import { buildIssuesExportUseCase } from "./build-issues-export.ts"
+import type { Signal } from "../entities/issue.ts"
+import { createSignalCentroid } from "../helpers.ts"
+import { SignalRepository } from "../ports/issue-repository.ts"
+import { createFakeSignalRepository } from "../testing/fake-issue-repository.ts"
+import { buildSignalsExportUseCase } from "./build-issues-export.ts"
 
 const encoder = new TextEncoder()
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
 
-const makeIssue = (overrides: Partial<Issue> = {}): Issue =>
+const makeSignal = (overrides: Partial<Signal> = {}): Signal =>
   ({
-    id: IssueId("i".repeat(24)),
+    id: SignalId("i".repeat(24)),
     slug: "test-issue",
     organizationId,
     projectId,
-    name: "Issue candidate",
+    name: "Signal candidate",
     description: "Repeated assistant failure",
     source: "annotation",
     assigneeId: null,
     priority: null,
-    centroid: createIssueCentroid(),
+    centroid: createSignalCentroid(),
     clusteredAt: new Date("2026-03-01T00:00:00.000Z"),
     escalatedAt: null,
     resolvedAt: null,
@@ -36,7 +36,7 @@ const makeIssue = (overrides: Partial<Issue> = {}): Issue =>
     createdAt: new Date("2026-03-01T00:00:00.000Z"),
     updatedAt: new Date("2026-03-01T00:00:00.000Z"),
     ...overrides,
-  }) satisfies Issue
+  }) satisfies Signal
 
 const emptyEvaluationPage: EvaluationListPage = {
   items: [],
@@ -49,62 +49,62 @@ const createEvaluationRepository = (): EvaluationRepositoryShape => ({
   findById: () => Effect.die("Unexpected EvaluationRepository.findById"),
   save: () => Effect.die("Unexpected EvaluationRepository.save"),
   listByProjectId: () => Effect.die("Unexpected EvaluationRepository.listByProjectId"),
-  listByIssueId: () => Effect.die("Unexpected EvaluationRepository.listByIssueId"),
-  listByIssueIds: () => Effect.succeed(emptyEvaluationPage),
+  listBySignalId: () => Effect.die("Unexpected EvaluationRepository.listBySignalId"),
+  listBySignalIds: () => Effect.succeed(emptyEvaluationPage),
   archive: () => Effect.die("Unexpected EvaluationRepository.archive"),
   unarchive: () => Effect.die("Unexpected EvaluationRepository.unarchive"),
   softDelete: () => Effect.die("Unexpected EvaluationRepository.softDelete"),
-  softDeleteByIssueId: () => Effect.die("Unexpected EvaluationRepository.softDeleteByIssueId"),
+  softDeleteBySignalId: () => Effect.die("Unexpected EvaluationRepository.softDeleteBySignalId"),
 })
 
-describe("buildIssuesExportUseCase", () => {
+describe("buildSignalsExportUseCase", () => {
   it("applies lifecycle filtering, selected rows, sort order, and time range", async () => {
-    const activeIssue = makeIssue({
-      id: IssueId("a".repeat(24)),
+    const activeSignal = makeSignal({
+      id: SignalId("a".repeat(24)),
       name: "Active issue",
     })
-    const archivedIssue = makeIssue({
-      id: IssueId("b".repeat(24)),
+    const archivedSignal = makeSignal({
+      id: SignalId("b".repeat(24)),
       name: "Archived issue",
       ignoredAt: new Date("2026-04-04T00:00:00.000Z"),
     })
-    const secondArchivedIssue = makeIssue({
-      id: IssueId("c".repeat(24)),
+    const secondArchivedSignal = makeSignal({
+      id: SignalId("c".repeat(24)),
       name: "Second archived issue",
       ignoredAt: new Date("2026-04-05T00:00:00.000Z"),
     })
-    const { repository: issueRepository } = createFakeIssueRepository([activeIssue, archivedIssue, secondArchivedIssue])
+    const { repository: signalRepository } = createFakeSignalRepository([activeSignal, archivedSignal, secondArchivedSignal])
     const timeRangeCalls: Array<{ from?: Date; to?: Date } | undefined> = []
     const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
-      listIssueWindowMetrics: (input) =>
+      listSignalWindowMetrics: (input) =>
         Effect.sync(() => {
           timeRangeCalls.push(input.timeRange)
           return [
             {
-              issueId: activeIssue.id,
+              signalId: activeSignal.id,
               occurrences: 2,
               firstSeenAt: new Date("2026-04-20T00:00:00.000Z"),
               lastSeenAt: new Date("2026-04-21T00:00:00.000Z"),
             },
             {
-              issueId: archivedIssue.id,
+              signalId: archivedSignal.id,
               occurrences: 5,
               firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
               lastSeenAt: new Date("2026-04-05T00:00:00.000Z"),
             },
             {
-              issueId: secondArchivedIssue.id,
+              signalId: secondArchivedSignal.id,
               occurrences: 1,
               firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
               lastSeenAt: new Date("2026-04-04T00:00:00.000Z"),
             },
           ]
         }),
-      aggregateByIssues: ({ issueIds }) =>
+      aggregateBySignals: ({ signalIds }) =>
         Effect.succeed(
           [
             {
-              issueId: activeIssue.id,
+              signalId: activeSignal.id,
               totalOccurrences: 2,
               recentOccurrences: 1,
               baselineAvgOccurrences: 1,
@@ -112,7 +112,7 @@ describe("buildIssuesExportUseCase", () => {
               lastSeenAt: new Date("2026-04-21T00:00:00.000Z"),
             },
             {
-              issueId: archivedIssue.id,
+              signalId: archivedSignal.id,
               totalOccurrences: 5,
               recentOccurrences: 1,
               baselineAvgOccurrences: 1,
@@ -120,23 +120,23 @@ describe("buildIssuesExportUseCase", () => {
               lastSeenAt: new Date("2026-04-05T00:00:00.000Z"),
             },
             {
-              issueId: secondArchivedIssue.id,
+              signalId: secondArchivedSignal.id,
               totalOccurrences: 1,
               recentOccurrences: 0,
               baselineAvgOccurrences: 1,
               firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
               lastSeenAt: new Date("2026-04-04T00:00:00.000Z"),
             },
-          ].filter((occurrence) => issueIds.includes(occurrence.issueId)),
+          ].filter((occurrence) => signalIds.includes(occurrence.signalId)),
         ),
       countDistinctTracesByTimeRange: () => Effect.succeed(10),
     })
 
     const result = await Effect.runPromise(
-      buildIssuesExportUseCase({
+      buildSignalsExportUseCase({
         organizationId,
         projectId,
-        selection: { mode: "selected", rowIds: [activeIssue.id, secondArchivedIssue.id, archivedIssue.id] },
+        selection: { mode: "selected", rowIds: [activeSignal.id, secondArchivedSignal.id, archivedSignal.id] },
         lifecycleGroup: "archived",
         sort: { field: "occurrences", direction: "asc" },
         timeRange: {
@@ -147,7 +147,7 @@ describe("buildIssuesExportUseCase", () => {
       }).pipe(
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
         Effect.provideService(EvaluationRepository, createEvaluationRepository()),
-        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(SqlClient, createFakeSqlClient({ organizationId })),
         Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId })),
         Effect.provideService(
@@ -159,9 +159,9 @@ describe("buildIssuesExportUseCase", () => {
 
     const lines = result.csv.split("\n")
 
-    expect(lines[1]).toContain(secondArchivedIssue.id)
-    expect(lines[2]).toContain(archivedIssue.id)
-    expect(result.csv).not.toContain(activeIssue.id)
+    expect(lines[1]).toContain(secondArchivedSignal.id)
+    expect(lines[2]).toContain(archivedSignal.id)
+    expect(result.csv).not.toContain(activeSignal.id)
     expect(timeRangeCalls).toEqual([
       {
         from: new Date("2026-04-01T00:00:00.000Z"),
@@ -171,46 +171,46 @@ describe("buildIssuesExportUseCase", () => {
   })
 
   it("applies search scoping before exporting issues", async () => {
-    const firstIssue = makeIssue({
-      id: IssueId("a".repeat(24)),
+    const firstSignal = makeSignal({
+      id: SignalId("a".repeat(24)),
       name: "Timeout issue",
     })
-    const secondIssue = makeIssue({
-      id: IssueId("b".repeat(24)),
+    const secondSignal = makeSignal({
+      id: SignalId("b".repeat(24)),
       name: "Rate limit issue",
     })
-    const { repository: issueRepository } = createFakeIssueRepository([firstIssue, secondIssue], {
+    const { repository: signalRepository } = createFakeSignalRepository([firstSignal, secondSignal], {
       hybridSearch: () =>
         Effect.succeed([
           {
-            issueId: secondIssue.id,
-            name: secondIssue.name,
-            description: secondIssue.description,
+            signalId: secondSignal.id,
+            name: secondSignal.name,
+            description: secondSignal.description,
             score: 0.9,
           },
         ]),
     })
     const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
-      listIssueWindowMetrics: () =>
+      listSignalWindowMetrics: () =>
         Effect.succeed([
           {
-            issueId: firstIssue.id,
+            signalId: firstSignal.id,
             occurrences: 3,
             firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
             lastSeenAt: new Date("2026-04-03T00:00:00.000Z"),
           },
           {
-            issueId: secondIssue.id,
+            signalId: secondSignal.id,
             occurrences: 4,
             firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
             lastSeenAt: new Date("2026-04-04T00:00:00.000Z"),
           },
         ]),
-      aggregateByIssues: ({ issueIds }) =>
+      aggregateBySignals: ({ signalIds }) =>
         Effect.succeed(
           [
             {
-              issueId: firstIssue.id,
+              signalId: firstSignal.id,
               totalOccurrences: 3,
               recentOccurrences: 1,
               baselineAvgOccurrences: 1,
@@ -218,20 +218,20 @@ describe("buildIssuesExportUseCase", () => {
               lastSeenAt: new Date("2026-04-03T00:00:00.000Z"),
             },
             {
-              issueId: secondIssue.id,
+              signalId: secondSignal.id,
               totalOccurrences: 4,
               recentOccurrences: 2,
               baselineAvgOccurrences: 1,
               firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
               lastSeenAt: new Date("2026-04-04T00:00:00.000Z"),
             },
-          ].filter((occurrence) => issueIds.includes(occurrence.issueId)),
+          ].filter((occurrence) => signalIds.includes(occurrence.signalId)),
         ),
       countDistinctTracesByTimeRange: () => Effect.succeed(10),
     })
 
     const result = await Effect.runPromise(
-      buildIssuesExportUseCase({
+      buildSignalsExportUseCase({
         organizationId,
         projectId,
         search: {
@@ -241,7 +241,7 @@ describe("buildIssuesExportUseCase", () => {
       }).pipe(
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
         Effect.provideService(EvaluationRepository, createEvaluationRepository()),
-        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(SqlClient, createFakeSqlClient({ organizationId })),
         Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId })),
         Effect.provideService(
@@ -251,57 +251,57 @@ describe("buildIssuesExportUseCase", () => {
       ),
     )
 
-    expect(result.csv).toContain(secondIssue.id)
-    expect(result.csv).not.toContain(firstIssue.id)
+    expect(result.csv).toContain(secondSignal.id)
+    expect(result.csv).not.toContain(firstSignal.id)
   })
 
   it("narrows exported rows to the assignee filter", async () => {
     const userA = "1".repeat(24)
-    const assignedIssue = makeIssue({
-      id: IssueId("a".repeat(24)),
+    const assignedSignal = makeSignal({
+      id: SignalId("a".repeat(24)),
       name: "Assigned issue",
       assigneeId: userA,
     })
-    const unassignedIssue = makeIssue({
-      id: IssueId("b".repeat(24)),
+    const unassignedSignal = makeSignal({
+      id: SignalId("b".repeat(24)),
       name: "Unassigned issue",
     })
-    const { repository: issueRepository } = createFakeIssueRepository([assignedIssue, unassignedIssue])
+    const { repository: signalRepository } = createFakeSignalRepository([assignedSignal, unassignedSignal])
     const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
-      listIssueWindowMetrics: () =>
+      listSignalWindowMetrics: () =>
         Effect.succeed(
-          [assignedIssue, unassignedIssue].map((issue) => ({
-            issueId: IssueId(issue.id),
+          [assignedSignal, unassignedSignal].map((issue) => ({
+            signalId: SignalId(issue.id),
             occurrences: 2,
             firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
             lastSeenAt: new Date("2026-04-03T00:00:00.000Z"),
           })),
         ),
-      aggregateByIssues: ({ issueIds }) =>
+      aggregateBySignals: ({ signalIds }) =>
         Effect.succeed(
-          [assignedIssue, unassignedIssue]
+          [assignedSignal, unassignedSignal]
             .map((issue) => ({
-              issueId: IssueId(issue.id),
+              signalId: SignalId(issue.id),
               totalOccurrences: 2,
               recentOccurrences: 1,
               baselineAvgOccurrences: 1,
               firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
               lastSeenAt: new Date("2026-04-03T00:00:00.000Z"),
             }))
-            .filter((occurrence) => issueIds.includes(occurrence.issueId)),
+            .filter((occurrence) => signalIds.includes(occurrence.signalId)),
         ),
       countDistinctTracesByTimeRange: () => Effect.succeed(10),
     })
 
     const result = await Effect.runPromise(
-      buildIssuesExportUseCase({
+      buildSignalsExportUseCase({
         organizationId,
         projectId,
         assigneeIds: [userA],
       }).pipe(
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
         Effect.provideService(EvaluationRepository, createEvaluationRepository()),
-        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(SqlClient, createFakeSqlClient({ organizationId })),
         Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId })),
         Effect.provideService(
@@ -311,7 +311,7 @@ describe("buildIssuesExportUseCase", () => {
       ),
     )
 
-    expect(result.csv).toContain(assignedIssue.id)
-    expect(result.csv).not.toContain(unassignedIssue.id)
+    expect(result.csv).toContain(assignedSignal.id)
+    expect(result.csv).not.toContain(unassignedSignal.id)
   })
 })

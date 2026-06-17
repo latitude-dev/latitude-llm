@@ -1,42 +1,42 @@
 import { AI, resolveEmbeddingConfig } from "@domain/ai"
 import type { ScoreSource } from "@domain/scores"
-import { IssueId, type RepositoryError, SqlClient } from "@domain/shared"
+import { SignalId, type RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
-import { normalizeEmbedding, updateIssueCentroid } from "../helpers.ts"
-import { IssueRepository } from "../ports/issue-repository.ts"
+import { normalizeEmbedding, updateSignalCentroid } from "../helpers.ts"
+import { SignalRepository } from "../ports/issue-repository.ts"
 
-export interface RemoveScoreFromIssueInput {
+export interface RemoveScoreFromSignalInput {
   readonly organizationId: string
   readonly projectId: string
-  readonly issueId: string | null
+  readonly signalId: string | null
   readonly draftedAt: Date | null
   readonly feedback: string
   readonly source: ScoreSource
   readonly createdAt: Date
 }
 
-export type RemoveScoreFromIssueResult =
+export type RemoveScoreFromSignalResult =
   | { readonly action: "removed" }
   | { readonly action: "skipped"; readonly reason: "draft" | "not-linked" }
   | { readonly action: "issue-not-found" }
 
-export type RemoveScoreFromIssueError = RepositoryError
+export type RemoveScoreFromSignalError = RepositoryError
 
-export const removeScoreFromIssueUseCase = (input: RemoveScoreFromIssueInput) =>
+export const removeScoreFromSignalUseCase = (input: RemoveScoreFromSignalInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("projectId", input.projectId)
-    if (input.issueId !== null) {
-      yield* Effect.annotateCurrentSpan("issueId", input.issueId)
+    if (input.signalId !== null) {
+      yield* Effect.annotateCurrentSpan("signalId", input.signalId)
     }
     if (input.draftedAt !== null) {
-      return { action: "skipped", reason: "draft" } satisfies RemoveScoreFromIssueResult
+      return { action: "skipped", reason: "draft" } satisfies RemoveScoreFromSignalResult
     }
 
-    if (input.issueId === null) {
-      return { action: "skipped", reason: "not-linked" } satisfies RemoveScoreFromIssueResult
+    if (input.signalId === null) {
+      return { action: "skipped", reason: "not-linked" } satisfies RemoveScoreFromSignalResult
     }
 
-    const issueId = input.issueId
+    const signalId = input.signalId
     const ai = yield* AI
     const sqlClient = yield* SqlClient
     const embeddingConfig = yield* resolveEmbeddingConfig()
@@ -51,7 +51,7 @@ export const removeScoreFromIssueUseCase = (input: RemoveScoreFromIssueInput) =>
         metadata: {
           organizationId: input.organizationId,
           projectId: input.projectId,
-          issueId,
+          signalId,
         },
       },
     })
@@ -61,18 +61,18 @@ export const removeScoreFromIssueUseCase = (input: RemoveScoreFromIssueInput) =>
 
     const result = yield* sqlClient.transaction(
       Effect.gen(function* () {
-        const issueRepository = yield* IssueRepository
+        const signalRepository = yield* SignalRepository
 
-        const issue = yield* issueRepository.findByIdForUpdate(IssueId(issueId)).pipe(
+        const issue = yield* signalRepository.findByIdForUpdate(SignalId(signalId)).pipe(
           Effect.map((issue) => ({ action: "found" as const, issue })),
           Effect.catchTag("NotFoundError", () => Effect.succeed({ action: "not-found" as const })),
         )
 
         if (issue.action === "not-found") {
-          return { action: "issue-not-found" } satisfies RemoveScoreFromIssueResult
+          return { action: "issue-not-found" } satisfies RemoveScoreFromSignalResult
         }
 
-        const updatedCentroid = updateIssueCentroid({
+        const updatedCentroid = updateSignalCentroid({
           centroid: {
             ...issue.issue.centroid,
             clusteredAt: issue.issue.clusteredAt,
@@ -86,19 +86,19 @@ export const removeScoreFromIssueUseCase = (input: RemoveScoreFromIssueInput) =>
           timestamp,
         })
 
-        yield* issueRepository.save({
+        yield* signalRepository.save({
           ...issue.issue,
           centroid: updatedCentroid,
           clusteredAt: updatedCentroid.clusteredAt,
           updatedAt: timestamp,
         })
 
-        return { action: "removed" } satisfies RemoveScoreFromIssueResult
+        return { action: "removed" } satisfies RemoveScoreFromSignalResult
       }),
     )
 
     return result
-  }).pipe(Effect.withSpan("issues.removeScoreFromIssue")) as Effect.Effect<
-    RemoveScoreFromIssueResult,
-    RemoveScoreFromIssueError
+  }).pipe(Effect.withSpan("issues.removeScoreFromSignal")) as Effect.Effect<
+    RemoveScoreFromSignalResult,
+    RemoveScoreFromSignalError
   >

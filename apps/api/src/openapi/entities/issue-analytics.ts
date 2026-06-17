@@ -1,35 +1,35 @@
-import type { GetIssueAnalyticsResult } from "@domain/issues"
+import type { GetSignalAnalyticsResult } from "@domain/signals"
 import { z } from "@hono/zod-openapi"
 
-const IssueAnalyticsBucketSchema = z
+const SignalAnalyticsBucketSchema = z
   .object({
     bucket: z.string().describe("ISO-8601 UTC timestamp of the bucket's start."),
     value: z.number().int().nonnegative().describe("Number of occurrences in this bucket."),
   })
-  .openapi("IssueAnalyticsBucket")
+  .openapi("SignalAnalyticsBucket")
 
-const IssueAnalyticsCountMetricSchema = (totalDescription: string) =>
+const SignalAnalyticsCountMetricSchema = (totalDescription: string) =>
   z.object({
     total: z.number().int().nonnegative().describe(totalDescription),
   })
 
-export const IssueAnalyticsResponseSchema = z
+export const SignalAnalyticsResponseSchema = z
   .object({
-    ongoing: IssueAnalyticsCountMetricSchema("Number of ongoing issues.").openapi("IssueAnalyticsOngoing"),
-    new: IssueAnalyticsCountMetricSchema("Number of new issues.").openapi("IssueAnalyticsNew"),
-    escalating: IssueAnalyticsCountMetricSchema("Number of escalating issues.").openapi("IssueAnalyticsEscalating"),
-    regressed: IssueAnalyticsCountMetricSchema("Number of regressed issues.").openapi("IssueAnalyticsRegressed"),
-    resolved: IssueAnalyticsCountMetricSchema("Number of resolved issues.").openapi("IssueAnalyticsResolved"),
+    ongoing: SignalAnalyticsCountMetricSchema("Number of ongoing issues.").openapi("SignalAnalyticsOngoing"),
+    new: SignalAnalyticsCountMetricSchema("Number of new issues.").openapi("SignalAnalyticsNew"),
+    escalating: SignalAnalyticsCountMetricSchema("Number of escalating issues.").openapi("SignalAnalyticsEscalating"),
+    regressed: SignalAnalyticsCountMetricSchema("Number of regressed issues.").openapi("SignalAnalyticsRegressed"),
+    resolved: SignalAnalyticsCountMetricSchema("Number of resolved issues.").openapi("SignalAnalyticsResolved"),
     occurrences: z
       .object({
         total: z.number().int().nonnegative().describe("Number of issue occurrences in the range."),
-        buckets: z.array(IssueAnalyticsBucketSchema).describe("Number of issue occurrences per bucket."),
+        buckets: z.array(SignalAnalyticsBucketSchema).describe("Number of issue occurrences per bucket."),
       })
-      .openapi("IssueAnalyticsOccurrences"),
+      .openapi("SignalAnalyticsOccurrences"),
   })
-  .openapi("IssueAnalyticsResponse")
+  .openapi("SignalAnalyticsResponse")
 
-export const toIssueAnalyticsResponse = (analytics: GetIssueAnalyticsResult) => ({
+export const toSignalAnalyticsResponse = (analytics: GetSignalAnalyticsResult) => ({
   ongoing: { total: analytics.ongoing.total },
   new: { total: analytics.new.total },
   escalating: { total: analytics.escalating.total },

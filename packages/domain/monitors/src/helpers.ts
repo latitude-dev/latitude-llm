@@ -75,7 +75,7 @@ const formatWindowMinutes = (minutes: number): string => {
   return `${minutes} minutes`
 }
 
-const issueSentenceForKind: Record<Extract<AlertIncidentKind, `issue.${string}`>, string> = {
+const signalSentenceForKind: Record<Extract<AlertIncidentKind, `issue.${string}`>, string> = {
   "issue.new": "Opens an incident each time a new issue is detected.",
   "issue.regressed": "Opens an incident each time a resolved issue is detected again.",
   "issue.escalating": "Opens an incident when an ongoing issue is being detected more than expected.",
@@ -125,7 +125,7 @@ const targetSubject = (context?: HumanReadableAlertContext): string => context?.
 /** Renders an alert as one complete sentence. Shared by the form preview, panel, and notification templates. */
 export function formatHumanReadableAlert(alert: HumanReadableAlertInput, context?: HumanReadableAlertContext): string {
   if (alert.kind === "issue.new" || alert.kind === "issue.regressed" || alert.kind === "issue.escalating") {
-    return issueSentenceForKind[alert.kind]
+    return signalSentenceForKind[alert.kind]
   }
 
   if (alert.kind === "savedSearch.match") {

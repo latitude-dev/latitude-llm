@@ -1,4 +1,4 @@
-import type { IssueRepository } from "@domain/issues"
+import type { SignalRepository } from "@domain/signals"
 import { NOTIFICATION_KIND_META, type NotificationKind } from "@domain/notifications"
 import { isSandbox, OrganizationRepository } from "@domain/organizations"
 import type { SavedSearchRepository } from "@domain/saved-searches"
@@ -74,7 +74,7 @@ export const dispatchSlackNotificationUseCase = (
   DispatchSlackNotificationError,
   | SqlClient
   | SlackDeliveryRepository
-  | IssueRepository
+  | SignalRepository
   | SavedSearchRepository
   | OrganizationRepository
   | UserRepository

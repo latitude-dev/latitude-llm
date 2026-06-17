@@ -1,15 +1,15 @@
-import { BadRequestError, EvaluationId, generateId, IssueId, ProjectId } from "@domain/shared"
+import { BadRequestError, EvaluationId, generateId, SignalId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import type { PersistEvaluationAlignmentResult } from "../../alignment/types.ts"
 import { type ConfusionMatrix, type EvaluationTrigger, evaluationSchema } from "../../entities/evaluation.ts"
 import { isDeletedEvaluation } from "../../helpers.ts"
-import { EvaluationIssueRepository } from "../../ports/evaluation-issue-repository.ts"
+import { EvaluationSignalRepository } from "../../ports/evaluation-issue-repository.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
 
 export const persistAlignmentResultUseCase = Effect.fn("evaluations.persistAlignmentResult")(function* (input: {
   readonly organizationId: string
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly evaluationId?: string | null
   readonly script: string
   readonly evaluationHash: string
@@ -17,15 +17,15 @@ export const persistAlignmentResultUseCase = Effect.fn("evaluations.persistAlign
   readonly trigger: EvaluationTrigger
 }) {
   yield* Effect.annotateCurrentSpan("evaluation.projectId", input.projectId)
-  yield* Effect.annotateCurrentSpan("evaluation.issueId", input.issueId)
+  yield* Effect.annotateCurrentSpan("evaluation.signalId", input.signalId)
   if (input.evaluationId) {
     yield* Effect.annotateCurrentSpan("evaluation.id", input.evaluationId)
   }
 
   const evaluationRepository = yield* EvaluationRepository
-  const issueRepository = yield* EvaluationIssueRepository
+  const signalRepository = yield* EvaluationSignalRepository
   const projectId = ProjectId(input.projectId)
-  const issueId = IssueId(input.issueId)
+  const signalId = SignalId(input.signalId)
   const existingEvaluation = input.evaluationId
     ? yield* evaluationRepository
         .findById(EvaluationId(input.evaluationId))
@@ -44,17 +44,17 @@ export const persistAlignmentResultUseCase = Effect.fn("evaluations.persistAlign
     })
   }
 
-  if (existingEvaluation && (existingEvaluation.projectId !== projectId || existingEvaluation.issueId !== issueId)) {
+  if (existingEvaluation && (existingEvaluation.projectId !== projectId || existingEvaluation.signalId !== signalId)) {
     return yield* new BadRequestError({
       message: `Evaluation ${existingEvaluation.id} does not match the requested issue or project`,
     })
   }
 
-  const issue = yield* issueRepository.findById(issueId).pipe(
+  const issue = yield* signalRepository.findById(signalId).pipe(
     Effect.catchTag("NotFoundError", () =>
       Effect.fail(
         new BadRequestError({
-          message: `Issue ${input.issueId} was not found for alignment`,
+          message: `Signal ${input.signalId} was not found for alignment`,
         }),
       ),
     ),
@@ -65,7 +65,7 @@ export const persistAlignmentResultUseCase = Effect.fn("evaluations.persistAlign
     id: existingEvaluation?.id ?? input.evaluationId ?? generateId(),
     organizationId: input.organizationId,
     projectId: input.projectId,
-    issueId: input.issueId,
+    signalId: input.signalId,
     name: issue.name,
     description: issue.description,
     script: input.script,

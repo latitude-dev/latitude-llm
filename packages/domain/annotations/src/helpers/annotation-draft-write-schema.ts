@@ -16,7 +16,7 @@ const annotationDraftWriteCoreSchema = z.object({
   traceId: traceIdSchema.transform(TraceId),
   spanId: spanIdSchema.nullable().default(null),
   simulationId: baseWriteScoreInputSchema.shape.simulationId,
-  issueId: baseWriteScoreInputSchema.shape.issueId,
+  signalId: baseWriteScoreInputSchema.shape.signalId,
   annotatorId: cuidSchema.transform(UserId).nullable().default(null),
   value: scoreValueSchema,
   passed: z.boolean(),

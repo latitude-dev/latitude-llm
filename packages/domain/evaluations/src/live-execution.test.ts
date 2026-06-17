@@ -140,7 +140,7 @@ describe("executeLiveEvaluationUseCase", () => {
           organizationId: "o".repeat(24),
           projectId: "p".repeat(24),
           evaluationId,
-          issueId: "i".repeat(24),
+          signalId: "i".repeat(24),
           traceId: "t".repeat(32),
         },
       },

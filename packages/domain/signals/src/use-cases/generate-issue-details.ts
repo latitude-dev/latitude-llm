@@ -8,20 +8,20 @@ import {
   resolveGenerationConfig,
 } from "@domain/ai"
 import { ScoreRepository, type ScoreSource } from "@domain/scores"
-import { IssueId, LATITUDE_TELEMETRY_PROJECT_SLUGS, ProjectId, type RepositoryError } from "@domain/shared"
+import { SignalId, LATITUDE_TELEMETRY_PROJECT_SLUGS, ProjectId, type RepositoryError } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
 import {
-  ISSUE_DETAILS_DEFAULT_GENERATION_MODEL,
-  ISSUE_DETAILS_MAX_OCCURRENCES,
-  ISSUE_NAME_MAX_LENGTH,
+  SIGNAL_DETAILS_DEFAULT_GENERATION_MODEL,
+  SIGNAL_DETAILS_MAX_OCCURRENCES,
+  SIGNAL_NAME_MAX_LENGTH,
 } from "../constants.ts"
-import { IssueNotFoundForDetailsGenerationError, MissingIssueOccurrencesForDetailsGenerationError } from "../errors.ts"
-import { IssueRepository } from "../ports/issue-repository.ts"
+import { SignalNotFoundForDetailsGenerationError, MissingSignalOccurrencesForDetailsGenerationError } from "../errors.ts"
+import { SignalRepository } from "../ports/issue-repository.ts"
 
 const collapseWhitespace = (text: string) => text.replace(/\s+/g, " ").trim()
 
-const truncateIssueName = (name: string) => {
+const truncateSignalName = (name: string) => {
   const collapsed = collapseWhitespace(name)
   if (collapsed.length <= 128) {
     return collapsed
@@ -30,11 +30,11 @@ const truncateIssueName = (name: string) => {
   return `${collapsed.slice(0, 125).trimEnd()}...`
 }
 
-const issueDetailsSchema = z.object({
+const signalDetailsSchema = z.object({
   name: z
     .string()
     .min(1)
-    .max(ISSUE_NAME_MAX_LENGTH)
+    .max(SIGNAL_NAME_MAX_LENGTH)
     .describe(
       "Short issue title: stable across the same failure mechanism, but specific enough to separate incompatible mechanisms (e.g. different tools or error classes should not share a vague umbrella title)",
     ),
@@ -44,31 +44,31 @@ const issueDetailsSchema = z.object({
     .describe("One concise paragraph describing the shared underlying problem across the occurrences"),
 })
 
-export interface IssueOccurrenceInput {
+export interface SignalOccurrenceInput {
   readonly source: ScoreSource
   readonly feedback: string
 }
 
-export interface GeneratedIssueDetails {
+export interface GeneratedSignalDetails {
   readonly name: string
   readonly description: string
 }
 
-export interface GenerateIssueDetailsInput {
+export interface GenerateSignalDetailsInput {
   readonly organizationId: string
   readonly projectId: string
-  readonly issueId?: string | null
-  readonly occurrences?: readonly IssueOccurrenceInput[]
+  readonly signalId?: string | null
+  readonly occurrences?: readonly SignalOccurrenceInput[]
 }
 
-export type GenerateIssueDetailsError =
+export type GenerateSignalDetailsError =
   | RepositoryError
   | AIError
   | AICredentialError
-  | IssueNotFoundForDetailsGenerationError
-  | MissingIssueOccurrencesForDetailsGenerationError
+  | SignalNotFoundForDetailsGenerationError
+  | MissingSignalOccurrencesForDetailsGenerationError
 
-const buildOccurrenceBlock = (occurrences: readonly IssueOccurrenceInput[]) =>
+const buildOccurrenceBlock = (occurrences: readonly SignalOccurrenceInput[]) =>
   occurrences
     .map(
       (occurrence, index) => `${index + 1}. [source=${occurrence.source}] ${collapseWhitespace(occurrence.feedback)}`,
@@ -78,7 +78,7 @@ const buildOccurrenceBlock = (occurrences: readonly IssueOccurrenceInput[]) =>
 const buildPrompt = (input: {
   readonly previousName: string | null
   readonly previousDescription: string | null
-  readonly occurrences: readonly IssueOccurrenceInput[]
+  readonly occurrences: readonly SignalOccurrenceInput[]
 }) => {
   const parts = ["Recent assigned issue occurrences (newest first):", buildOccurrenceBlock(input.occurrences)]
 
@@ -104,7 +104,7 @@ const buildPrompt = (input: {
   return parts.join("\n\n")
 }
 
-const ISSUE_DETAILS_SYSTEM_PROMPT = `
+const SIGNAL_DETAILS_SYSTEM_PROMPT = `
 You generate canonical issue names and descriptions for clustered reliability failures.
 
 Your job is to summarize the shared underlying problem across several issue occurrences, not the incidental specifics of one occurrence.
@@ -119,11 +119,11 @@ You must:
 Use the simplest wording that still carries the full meaning. Prefer short, everyday words over formal or technical synonyms when both fit, and keep both the title and description only as long as they need to be. The original context and nuance must still come through; simpler wording is the goal, not less information.
 `.trim()
 
-export const generateIssueDetailsUseCase = (input: GenerateIssueDetailsInput) =>
+export const generateSignalDetailsUseCase = (input: GenerateSignalDetailsInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("projectId", input.projectId)
-    if (input.issueId) {
-      yield* Effect.annotateCurrentSpan("issueId", input.issueId)
+    if (input.signalId) {
+      yield* Effect.annotateCurrentSpan("signalId", input.signalId)
     }
     const ai = yield* AI
 
@@ -131,25 +131,25 @@ export const generateIssueDetailsUseCase = (input: GenerateIssueDetailsInput) =>
     let previousDescription: string | null = null
     let occurrences = input.occurrences ?? []
 
-    if (input.issueId) {
-      const issueRepository = yield* IssueRepository
+    if (input.signalId) {
+      const signalRepository = yield* SignalRepository
       const scoreRepository = yield* ScoreRepository
-      const issue = yield* issueRepository
-        .findById(IssueId(input.issueId))
+      const issue = yield* signalRepository
+        .findById(SignalId(input.signalId))
         .pipe(
           Effect.catchTag("NotFoundError", () =>
-            Effect.fail(new IssueNotFoundForDetailsGenerationError({ issueId: String(input.issueId) })),
+            Effect.fail(new SignalNotFoundForDetailsGenerationError({ signalId: String(input.signalId) })),
           ),
         )
 
       previousName = issue.name
       previousDescription = issue.description
 
-      const recentScores = yield* scoreRepository.listByIssueId({
+      const recentScores = yield* scoreRepository.listBySignalId({
         projectId: ProjectId(input.projectId),
-        issueId: issue.id,
+        signalId: issue.id,
         options: {
-          limit: ISSUE_DETAILS_MAX_OCCURRENCES,
+          limit: SIGNAL_DETAILS_MAX_OCCURRENCES,
         },
       })
 
@@ -164,7 +164,7 @@ export const generateIssueDetailsUseCase = (input: GenerateIssueDetailsInput) =>
         return {
           name: issue.name,
           description: issue.description,
-        } satisfies GeneratedIssueDetails
+        } satisfies GeneratedSignalDetails
       }
     } else {
       occurrences = occurrences
@@ -173,10 +173,10 @@ export const generateIssueDetailsUseCase = (input: GenerateIssueDetailsInput) =>
           feedback: collapseWhitespace(occurrence.feedback),
         }))
         .filter((occurrence) => occurrence.feedback.length > 0)
-        .slice(0, ISSUE_DETAILS_MAX_OCCURRENCES)
+        .slice(0, SIGNAL_DETAILS_MAX_OCCURRENCES)
 
       if (occurrences.length === 0) {
-        return yield* new MissingIssueOccurrencesForDetailsGenerationError({
+        return yield* new MissingSignalOccurrencesForDetailsGenerationError({
           projectId: input.projectId,
         })
       }
@@ -184,36 +184,36 @@ export const generateIssueDetailsUseCase = (input: GenerateIssueDetailsInput) =>
 
     const modelConfig = yield* resolveGenerationConfig(
       "ISSUE_DETAILS_GENERATOR",
-      ISSUE_DETAILS_DEFAULT_GENERATION_MODEL,
+      SIGNAL_DETAILS_DEFAULT_GENERATION_MODEL,
     )
     const result = yield* ai.generate({
       ...modelConfig,
       telemetry: {
-        spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.issueDetails,
-        project: LATITUDE_TELEMETRY_PROJECT_SLUGS.issueDiscovery,
-        tags: [...AI_GENERATE_TELEMETRY_TAGS.issueDetails],
+        spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.signalDetails,
+        project: LATITUDE_TELEMETRY_PROJECT_SLUGS.signalDiscovery,
+        tags: [...AI_GENERATE_TELEMETRY_TAGS.signalDetails],
         metadata: buildProjectScopedAiMetadata(
           { organizationId: input.organizationId, projectId: input.projectId },
           {
-            ...(input.issueId ? { issueId: input.issueId } : {}),
+            ...(input.signalId ? { signalId: input.signalId } : {}),
             occurrenceCount: occurrences.length,
           },
         ),
       },
-      system: ISSUE_DETAILS_SYSTEM_PROMPT,
+      system: SIGNAL_DETAILS_SYSTEM_PROMPT,
       prompt: buildPrompt({
         previousName,
         previousDescription,
         occurrences,
       }),
-      schema: issueDetailsSchema,
+      schema: signalDetailsSchema,
     })
 
     return {
-      name: truncateIssueName(result.object.name),
+      name: truncateSignalName(result.object.name),
       description: collapseWhitespace(result.object.description),
-    } satisfies GeneratedIssueDetails
-  }).pipe(Effect.withSpan("issues.generateIssueDetails")) as Effect.Effect<
-    GeneratedIssueDetails,
-    GenerateIssueDetailsError
+    } satisfies GeneratedSignalDetails
+  }).pipe(Effect.withSpan("issues.generateSignalDetails")) as Effect.Effect<
+    GeneratedSignalDetails,
+    GenerateSignalDetailsError
   >

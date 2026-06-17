@@ -1,24 +1,24 @@
-import { issueAssignedPayloadSchema } from "@domain/notifications"
+import { signalAssignedPayloadSchema } from "@domain/notifications"
 import { Text } from "@repo/ui"
 import { UserRoundPlusIcon } from "lucide-react"
 import { useMemberByUserIdMap } from "../../../../../domains/members/members.collection.ts"
 import type { NotificationRecord } from "../../../../../domains/notifications/notifications.functions.ts"
 import { BaseNotification } from "../base-notification.tsx"
-import { useIssueUrl, useLiveIssueSummary } from "./incident/-incident-helpers.ts"
-import { IssueSummaryCard } from "./incident/issue-summary-card.tsx"
+import { useSignalUrl, useLiveSignalSummary } from "./incident/-incident-helpers.ts"
+import { SignalSummaryCard } from "./incident/issue-summary-card.tsx"
 
 /**
  * "X assigned you to an issue" — the `personal`-group, single-recipient
  * kind. The payload deliberately carries only ids; the issue name/states
  * and the actor's display name are live-resolved at render time.
  */
-export function IssueAssignedNotification({ notification }: { readonly notification: NotificationRecord }) {
-  const parsed = issueAssignedPayloadSchema.safeParse(notification.payload)
+export function SignalAssignedNotification({ notification }: { readonly notification: NotificationRecord }) {
+  const parsed = signalAssignedPayloadSchema.safeParse(notification.payload)
   const seenAt = notification.seenAt ? new Date(notification.seenAt) : undefined
   const createdAt = new Date(notification.createdAt)
-  const target = { projectId: notification.projectId, sourceId: parsed.success ? parsed.data.issueId : "" }
-  const live = useLiveIssueSummary(target)
-  const url = useIssueUrl(target)
+  const target = { projectId: notification.projectId, sourceId: parsed.success ? parsed.data.signalId : "" }
+  const live = useLiveSignalSummary(target)
+  const url = useSignalUrl(target)
   const memberByUserId = useMemberByUserIdMap()
 
   if (!parsed.success) {
@@ -46,7 +46,7 @@ export function IssueAssignedNotification({ notification }: { readonly notificat
       title={`${actorName ?? "A teammate"} assigned you to an issue.`}
       url={url}
     >
-      {live?.name ? <IssueSummaryCard name={live.name} states={live.states} /> : null}
+      {live?.name ? <SignalSummaryCard name={live.name} states={live.states} /> : null}
     </BaseNotification>
   )
 }

@@ -18,13 +18,13 @@ import { FilterIcon, PencilIcon, RotateCwIcon, ShieldCheckIcon, XIcon } from "lu
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import {
   type EvaluationSummaryRecord,
-  getIssueAlignmentState,
-  type IssueAlignmentStateRecord,
-  monitorIssue,
-  unmonitorIssue,
-  updateIssueEvaluationSampling,
+  getSignalAlignmentState,
+  type SignalAlignmentStateRecord,
+  monitorSignal,
+  unmonitorSignal,
+  updateSignalEvaluationSampling,
 } from "../../../../../../domains/evaluations/evaluation-alignment.functions.ts"
-import { invalidateIssueQueries } from "../../../../../../domains/issues/issues.collection.ts"
+import { invalidateSignalQueries } from "../../../../../../domains/issues/issues.collection.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { createFormSubmitHandler } from "../../../../../../lib/form-server-action.ts"
 import { FlaggerBadge } from "../../-components/flaggers/flagger-badge.tsx"
@@ -105,27 +105,27 @@ function AlignmentTooltipContent({
 function SamplingModal({
   evaluation,
   projectId,
-  issueId,
+  signalId,
   onClose,
 }: {
   readonly evaluation: EvaluationSummaryRecord | null
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly onClose: () => void
 }) {
   if (evaluation === null) return null
-  return <SamplingModalForm evaluation={evaluation} projectId={projectId} issueId={issueId} onClose={onClose} />
+  return <SamplingModalForm evaluation={evaluation} projectId={projectId} signalId={signalId} onClose={onClose} />
 }
 
 function SamplingModalForm({
   evaluation,
   projectId,
-  issueId,
+  signalId,
   onClose,
 }: {
   readonly evaluation: EvaluationSummaryRecord
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly onClose: () => void
 }) {
   const { toast } = useToast()
@@ -135,10 +135,10 @@ function SamplingModalForm({
     },
     onSubmit: createFormSubmitHandler(
       async (value) => {
-        await updateIssueEvaluationSampling({
+        await updateSignalEvaluationSampling({
           data: {
             projectId,
-            issueId,
+            signalId,
             evaluationId: evaluation.id,
             sampling: value.sampling,
           },
@@ -147,7 +147,7 @@ function SamplingModalForm({
       {
         onSuccess: async () => {
           onClose()
-          await invalidateIssueQueries(projectId, issueId)
+          await invalidateSignalQueries(projectId, signalId)
           toast({ description: "Sampling updated." })
         },
         onError: (error) => {
@@ -215,7 +215,7 @@ function countFilterConditions(filter: FilterSet): number {
   return total
 }
 
-const toTracked = (state: IssueAlignmentStateRecord): TrackedWorkflow | null => {
+const toTracked = (state: SignalAlignmentStateRecord): TrackedWorkflow | null => {
   if (state.kind === "generating") {
     return { kind: "initial" }
   }
@@ -227,22 +227,22 @@ const toTracked = (state: IssueAlignmentStateRecord): TrackedWorkflow | null => 
   return null
 }
 
-export function IssueDrawerEvaluations({
+export function SignalDrawerEvaluations({
   projectId,
-  issueId,
-  issueSource,
+  signalId,
+  signalSource,
   evaluations,
   flaggerSlugs,
-  canMonitorIssue,
-  isIssueLoading,
+  canMonitorSignal,
+  isSignalLoading,
 }: {
   readonly projectId: string
-  readonly issueId: string
-  readonly issueSource: "annotation" | "custom" | "flagger"
+  readonly signalId: string
+  readonly signalSource: "annotation" | "custom" | "flagger"
   readonly evaluations: readonly EvaluationSummaryRecord[]
   readonly flaggerSlugs?: readonly string[]
-  readonly canMonitorIssue: boolean
-  readonly isIssueLoading: boolean
+  readonly canMonitorSignal: boolean
+  readonly isSignalLoading: boolean
 }) {
   const { toast } = useToast()
   const { projectSlug } = useParams({ strict: false })
@@ -275,8 +275,8 @@ export function IssueDrawerEvaluations({
 
     const poll = async () => {
       try {
-        const state = await getIssueAlignmentState({
-          data: { projectId, issueId },
+        const state = await getSignalAlignmentState({
+          data: { projectId, signalId },
         })
 
         if (cancelled || !mountedRef.current) {
@@ -287,7 +287,7 @@ export function IssueDrawerEvaluations({
         const previous = trackedRef.current
 
         if (previous !== null && next === null) {
-          await invalidateIssueQueries(projectId, issueId)
+          await invalidateSignalQueries(projectId, signalId)
           toast({
             description:
               previous.kind === "initial" ? "An evaluation has been generated" : "An evaluation has been realigned",
@@ -308,13 +308,13 @@ export function IssueDrawerEvaluations({
       cancelled = true
       clearInterval(intervalId)
     }
-  }, [projectId, issueId, toast])
+  }, [projectId, signalId, toast])
 
   const handleGenerate = async () => {
     setIsStartingGenerate(true)
     try {
-      const { evaluationId } = await monitorIssue({
-        data: { projectId, issueId },
+      const { evaluationId } = await monitorSignal({
+        data: { projectId, signalId },
       })
       setTracked(evaluationId ? { kind: "realign", evaluationId } : { kind: "initial" })
       setMonitorModalOpen(false)
@@ -331,8 +331,8 @@ export function IssueDrawerEvaluations({
   const handleRealign = async (_evaluationId: string) => {
     setIsStartingRealign(true)
     try {
-      const { evaluationId } = await monitorIssue({
-        data: { projectId, issueId },
+      const { evaluationId } = await monitorSignal({
+        data: { projectId, signalId },
       })
       setTracked(evaluationId ? { kind: "realign", evaluationId } : { kind: "initial" })
       setRealignEvaluationId(null)
@@ -353,10 +353,10 @@ export function IssueDrawerEvaluations({
 
     setIsDeleting(true)
     try {
-      await unmonitorIssue({
-        data: { projectId, issueId },
+      await unmonitorSignal({
+        data: { projectId, signalId },
       })
-      await invalidateIssueQueries(projectId, issueId)
+      await invalidateSignalQueries(projectId, signalId)
       toast({ description: "Evaluation removed." })
       setDeleteEvaluationId(null)
     } catch (error) {
@@ -376,12 +376,12 @@ export function IssueDrawerEvaluations({
   const primaryEvaluation = visibleEvaluations[0] ?? null
   const hiddenEvaluationCount = Math.max(0, visibleEvaluations.length - 1)
   const isActionPending = isBusy || isStartingGenerate || isStartingRealign || isDeleting
-  const monitorBlockedByLifecycle = !canMonitorIssue
+  const monitorBlockedByLifecycle = !canMonitorSignal
   const isGenerating = isStartingGenerate || tracked?.kind === "initial"
   const isPrimaryEvaluationRealigning =
     primaryEvaluation !== null && tracked?.kind === "realign" && tracked.evaluationId === primaryEvaluation.id
 
-  if (!hasAlignmentStateSynced || isIssueLoading) {
+  if (!hasAlignmentStateSynced || isSignalLoading) {
     return visibleEvaluations.length === 0 ? (
       <Skeleton className="h-20 w-full rounded-xl" />
     ) : (
@@ -405,7 +405,7 @@ export function IssueDrawerEvaluations({
     )
   }
 
-  if (visibleEvaluations.length === 0 && issueSource === "flagger") {
+  if (visibleEvaluations.length === 0 && signalSource === "flagger") {
     const hasFlaggers = flaggerSlugs !== undefined && flaggerSlugs.length > 0
     return (
       <div className="flex w-full items-start gap-3 rounded-lg border border-dashed border-border px-5 py-4">
@@ -638,14 +638,14 @@ export function IssueDrawerEvaluations({
       <SamplingModal
         evaluation={samplingEvaluation}
         projectId={projectId}
-        issueId={issueId}
+        signalId={signalId}
         onClose={() => setSamplingEvaluation(null)}
       />
 
       <EvaluationFilterModal
         evaluation={filterEvaluation}
         projectId={projectId}
-        issueId={issueId}
+        signalId={signalId}
         onClose={() => setFilterEvaluation(null)}
       />
     </>

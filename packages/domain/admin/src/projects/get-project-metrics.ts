@@ -1,10 +1,10 @@
-import { type IssueId, type NotFoundError, OrganizationId, type ProjectId, type RepositoryError } from "@domain/shared"
+import { type SignalId, type NotFoundError, OrganizationId, type ProjectId, type RepositoryError } from "@domain/shared"
 import { Effect } from "effect"
 import type {
-  ProjectIssueLifecyclePoint,
+  ProjectSignalLifecyclePoint,
   ProjectMetrics,
   ProjectMetricsActivityPoint,
-  ProjectTopIssue,
+  ProjectTopSignal,
 } from "./project-metrics.ts"
 import {
   AdminProjectMetricsRepository,
@@ -13,8 +13,8 @@ import {
 } from "./project-metrics-repository.ts"
 import {
   AdminProjectRepository,
-  type ProjectIssueDetails,
-  type ProjectIssueLifecycleEvent,
+  type ProjectSignalDetails,
+  type ProjectSignalLifecycleEvent,
 } from "./project-repository.ts"
 
 const DAY_SECONDS = 24 * 60 * 60
@@ -106,13 +106,13 @@ const denseAnnotationSeries = (
  * avoids subtle bugs around issues created mid-window — they shouldn't
  * contribute on days before their `createdAt`.
  */
-export const composeIssueLifecycleTimeline = (input: {
+export const composeSignalLifecycleTimeline = (input: {
   readonly snapshot: { readonly untracked: number; readonly tracked: number; readonly resolved: number }
-  readonly events: readonly ProjectIssueLifecycleEvent[]
+  readonly events: readonly ProjectSignalLifecycleEvent[]
   readonly buckets: readonly Date[]
-}): ProjectIssueLifecyclePoint[] => {
+}): ProjectSignalLifecyclePoint[] => {
   type State = "absent" | "untracked" | "tracked" | "resolved"
-  const stateAt = (event: ProjectIssueLifecycleEvent, atDayStart: Date): State => {
+  const stateAt = (event: ProjectSignalLifecycleEvent, atDayStart: Date): State => {
     // "atDayStart" is midnight UTC of bucket D; we ask the question
     // "what is the issue's state at the *end* of day D?" — i.e. just
     // before midnight of D+1. Compare against the next-day midnight.
@@ -178,7 +178,7 @@ export const composeIssueLifecycleTimeline = (input: {
  * reads in parallel:
  *  - trace histogram (CH)
  *  - manual-annotation histogram (CH, scores where `source='annotation'`)
- *  - top-N issues by occurrences in window (CH; mirrors the user-facing Issues page signal)
+ *  - top-N issues by occurrences in window (CH; mirrors the user-facing Signals page signal)
  *  - issue lifecycle snapshot + events (PG)
  *
  * Composes the stacked-area timeline in pure code; densifies the activity
@@ -226,14 +226,14 @@ export const getProjectMetricsUseCase = (
           since,
           bucketSeconds: DAY_SECONDS,
         }),
-        metricsRepo.getTopIssuesByOccurrences({
+        metricsRepo.getTopSignalsByOccurrences({
           organizationId,
           projectId: input.projectId,
           since,
           limit: TOP_ISSUES_LIMIT,
         }),
-        projectRepo.getCurrentIssueStateCounts(input.projectId),
-        projectRepo.getIssueLifecycleEvents(input.projectId, since),
+        projectRepo.getCurrentSignalStateCounts(input.projectId),
+        projectRepo.getSignalLifecycleEvents(input.projectId, since),
       ],
       { concurrency: "unbounded" },
     )
@@ -244,11 +244,11 @@ export const getProjectMetricsUseCase = (
     // have no event in the window, and the events port intentionally
     // returns nothing for them). Fetch the authoritative state in one
     // batched query keyed on the CH-returned ids.
-    const topIssueIds = topOccurrences.map((row) => row.issueId)
+    const topSignalIds = topOccurrences.map((row) => row.signalId)
     const detailsById =
-      topIssueIds.length > 0
-        ? yield* projectRepo.findIssueDetailsByIds(topIssueIds)
-        : new Map<IssueId, ProjectIssueDetails>()
+      topSignalIds.length > 0
+        ? yield* projectRepo.findSignalDetailsByIds(topSignalIds)
+        : new Map<SignalId, ProjectSignalDetails>()
 
     const traceByKey = denseCountSeries(traceBuckets, buckets)
     const annotationByKey = denseAnnotationSeries(annotationBuckets, buckets)
@@ -263,13 +263,13 @@ export const getProjectMetricsUseCase = (
       }
     })
 
-    const issuesLifecycle = composeIssueLifecycleTimeline({ snapshot, events, buckets })
+    const signalsLifecycle = composeSignalLifecycleTimeline({ snapshot, events, buckets })
 
-    const topIssues: ProjectTopIssue[] = topOccurrences.map((row) => {
-      const details = detailsById.get(row.issueId)
+    const topSignals: ProjectTopSignal[] = topOccurrences.map((row) => {
+      const details = detailsById.get(row.signalId)
       return {
-        id: row.issueId,
-        name: details?.name ?? row.issueId,
+        id: row.signalId,
+        name: details?.name ?? row.signalId,
         occurrences: row.occurrences,
         lastSeenAt: row.lastSeenAt,
         // Fall back to "untracked" for ids that PG can't find (the issue
@@ -284,7 +284,7 @@ export const getProjectMetricsUseCase = (
       windowEnd: now,
       windowDays,
       activity,
-      issuesLifecycle,
-      topIssues,
+      signalsLifecycle,
+      topSignals,
     }
   }).pipe(Effect.withSpan("admin.getProjectMetrics"))

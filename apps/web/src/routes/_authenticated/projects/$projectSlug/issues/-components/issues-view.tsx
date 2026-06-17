@@ -13,10 +13,10 @@ import { formatCount } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
 import { CircleDashedIcon } from "lucide-react"
 import {
-  ISSUE_PRIORITY_META,
-  type IssuePriorityGroupId,
+  SIGNAL_PRIORITY_META,
+  type SignalPriorityGroupId,
 } from "../../../../../../components/issues/issue-priority-meta.tsx"
-import type { IssueRecord, IssuesListResultRecord } from "../../../../../../domains/issues/issues.functions.ts"
+import type { SignalRecord, SignalsListResultRecord } from "../../../../../../domains/issues/issues.functions.ts"
 import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
 import type { MemberRecord } from "../../../../../../domains/members/members.functions.ts"
 import {
@@ -24,11 +24,11 @@ import {
   listingLayoutIntrinsicScroll,
 } from "../../../../../../layouts/ListingLayout/index.tsx"
 import { formatPercent, formatSeenAgeParts, getPrimaryLifecycleState } from "./issue-formatters.ts"
-import { IssueLifecycleStatuses } from "./issue-lifecycle-statuses.tsx"
-import { IssueTrendBar } from "./issue-trend-bar.tsx"
+import { SignalLifecycleStatuses } from "./issue-lifecycle-statuses.tsx"
+import { SignalTrendBar } from "./issue-trend-bar.tsx"
 
 export const ISSUES_COLUMN_OPTIONS = [
-  { id: "issue", label: "Issue", required: true },
+  { id: "issue", label: "Signal", required: true },
   { id: "tags", label: "Tags" },
   { id: "status", label: "Status" },
   { id: "assignee", label: "Assignee" },
@@ -38,7 +38,7 @@ export const ISSUES_COLUMN_OPTIONS = [
   { id: "affectedTraces", label: "Affected traces" },
 ] as const
 
-export type IssuesColumnId = (typeof ISSUES_COLUMN_OPTIONS)[number]["id"]
+export type SignalsColumnId = (typeof ISSUES_COLUMN_OPTIONS)[number]["id"]
 
 function SeenAtCell({
   lastSeenAtIso,
@@ -99,8 +99,8 @@ function AssigneeCell({
   )
 }
 
-function PriorityGroupHeader({ group, count }: { readonly group: IssuePriorityGroupId; readonly count: number }) {
-  const meta = ISSUE_PRIORITY_META[group]
+function PriorityGroupHeader({ group, count }: { readonly group: SignalPriorityGroupId; readonly count: number }) {
+  const meta = SIGNAL_PRIORITY_META[group]
   return (
     // Deliberately NOT a filled band — a full-width rectangle reads as just
     // another row. Instead: an eyebrow-style section heading (icon +
@@ -128,12 +128,12 @@ function EvaluatedByTooltip({ evaluationNames }: { readonly evaluationNames: rea
   )
 }
 
-export interface IssuesTableSorting {
+export interface SignalsTableSorting {
   readonly column: "lastSeen" | "occurrences" | "state"
   readonly direction: "asc" | "desc"
 }
 
-export function IssuesView({
+export function SignalsView({
   issues,
   isLoading,
   infiniteScroll,
@@ -145,23 +145,23 @@ export function IssuesView({
   onSortChange,
   projectSlug,
 }: {
-  readonly issues: readonly IssueRecord[]
+  readonly issues: readonly SignalRecord[]
   readonly isLoading: boolean
   readonly infiniteScroll: InfiniteTableInfiniteScroll
-  readonly sorting: IssuesTableSorting
+  readonly sorting: SignalsTableSorting
   readonly occurrencesSum: number
-  readonly priorityCounts: IssuesListResultRecord["priorityCounts"]
-  readonly visibleColumnIds: readonly IssuesColumnId[]
+  readonly priorityCounts: SignalsListResultRecord["priorityCounts"]
+  readonly visibleColumnIds: readonly SignalsColumnId[]
   readonly selection: InfiniteTableSelection
-  readonly onSortChange: (sorting: IssuesTableSorting) => void
+  readonly onSortChange: (sorting: SignalsTableSorting) => void
   readonly projectSlug: string
 }) {
   const memberByUserId = useMemberByUserIdMap()
 
-  const allColumns: readonly InfiniteTableColumn<IssueRecord>[] = [
+  const allColumns: readonly InfiniteTableColumn<SignalRecord>[] = [
     {
       key: "issue",
-      header: "Issue",
+      header: "Signal",
       width: 360,
       minWidth: 280,
       render: (issue) => (
@@ -171,7 +171,7 @@ export function IssuesView({
           </Text.H5>
           {issue.evaluations.length > 0 ? (
             <div className="shrink-0">
-              <IssueLifecycleStatuses
+              <SignalLifecycleStatuses
                 states={[]}
                 wrap={false}
                 extraStatuses={[
@@ -200,7 +200,7 @@ export function IssuesView({
         const primaryState = getPrimaryLifecycleState(issue.states)
         return (
           <div className="flex min-w-0 items-center">
-            <IssueLifecycleStatuses states={primaryState ? [primaryState] : []} wrap={false} />
+            <SignalLifecycleStatuses states={primaryState ? [primaryState] : []} wrap={false} />
           </div>
         )
       },
@@ -229,7 +229,7 @@ export function IssuesView({
       width: 176,
       minWidth: 176,
       render: (issue) => (
-        <IssueTrendBar
+        <SignalTrendBar
           buckets={issue.trend}
           height={36}
           emptyLabel="-"
@@ -312,14 +312,14 @@ export function IssuesView({
           getRowGroup={(issue) => issue.priority ?? "none"}
           renderGroupHeader={(groupKey) => (
             <PriorityGroupHeader
-              group={groupKey as IssuePriorityGroupId}
-              count={priorityCounts[groupKey as IssuePriorityGroupId] ?? 0}
+              group={groupKey as SignalPriorityGroupId}
+              count={priorityCounts[groupKey as SignalPriorityGroupId] ?? 0}
             />
           )}
           renderRowLink={(issue, props) => (
             <Link
-              to="/projects/$projectSlug/issues/$issueId"
-              params={{ projectSlug, issueId: issue.id }}
+              to="/projects/$projectSlug/issues/$signalId"
+              params={{ projectSlug, signalId: issue.id }}
               aria-label={`Open ${issue.name}`}
               {...props}
             />
@@ -329,8 +329,8 @@ export function IssuesView({
           defaultSorting={{ column: "lastSeen", direction: "desc" }}
           onSortChange={(nextSorting) =>
             onSortChange({
-              column: nextSorting.column as IssuesTableSorting["column"],
-              direction: nextSorting.direction as IssuesTableSorting["direction"],
+              column: nextSorting.column as SignalsTableSorting["column"],
+              direction: nextSorting.direction as SignalsTableSorting["direction"],
             })
           }
           blankSlate="No issues match the current filters"

@@ -47,19 +47,19 @@ class EvaluationOptimizationActivityError extends Data.TaggedError("EvaluationAl
 const proposeOptimizationCandidate = (input: {
   readonly organizationId: string
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly evaluationId: string | null
   readonly jobId: string
   readonly draftEvaluationHash: string
   readonly candidate: OptimizationCandidate
-  readonly issueName: string
-  readonly issueDescription: string
+  readonly signalName: string
+  readonly signalDescription: string
   readonly context: readonly OptimizationTrajectory[]
 }): Promise<OptimizationCandidate> =>
   Effect.runPromise(
     Effect.gen(function* () {
       yield* Effect.annotateCurrentSpan("projectId", input.projectId)
-      yield* Effect.annotateCurrentSpan("issueId", input.issueId)
+      yield* Effect.annotateCurrentSpan("signalId", input.signalId)
       yield* Effect.annotateCurrentSpan("jobId", input.jobId)
       yield* Effect.annotateCurrentSpan("evaluation.candidateHash", input.candidate.hash)
 
@@ -77,7 +77,7 @@ const proposeOptimizationCandidate = (input: {
         telemetry: buildEvaluationGepaProposeTelemetryCapture({
           organizationId: input.organizationId,
           projectId: input.projectId,
-          issueId: input.issueId,
+          signalId: input.signalId,
           evaluationId: input.evaluationId,
           jobId: input.jobId,
           evaluationHash: input.draftEvaluationHash,
@@ -85,8 +85,8 @@ const proposeOptimizationCandidate = (input: {
         }),
         system: GEPA_PROPOSER_SYSTEM_PROMPT,
         prompt: buildGepaProposalPrompt({
-          issueName: input.issueName,
-          issueDescription: input.issueDescription,
+          signalName: input.signalName,
+          signalDescription: input.signalDescription,
           currentScript: input.candidate.text,
           trajectories: input.context,
         }),
@@ -131,19 +131,19 @@ const proposeOptimizationCandidate = (input: {
 export const optimizeEvaluationDraft = (input: {
   readonly organizationId: string
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly evaluationId: string | null
   readonly jobId: string
   readonly draft: GeneratedEvaluationDraft
-  readonly issueName: string
-  readonly issueDescription: string
+  readonly signalName: string
+  readonly signalDescription: string
   readonly positiveExamples: readonly HydratedEvaluationAlignmentExample[]
   readonly negativeExamples: readonly HydratedEvaluationAlignmentExample[]
 }): Promise<GeneratedEvaluationDraft> =>
   Effect.runPromise(
     Effect.gen(function* () {
       yield* Effect.annotateCurrentSpan("projectId", input.projectId)
-      yield* Effect.annotateCurrentSpan("issueId", input.issueId)
+      yield* Effect.annotateCurrentSpan("signalId", input.signalId)
       yield* Effect.annotateCurrentSpan("jobId", input.jobId)
       yield* Effect.annotateCurrentSpan("alignment.positiveExampleCount", input.positiveExamples.length)
       yield* Effect.annotateCurrentSpan("alignment.negativeExampleCount", input.negativeExamples.length)
@@ -195,12 +195,12 @@ export const optimizeEvaluationDraft = (input: {
             evaluateOptimizationCandidate({
               candidate,
               example: hydratedExample,
-              issueName: input.issueName,
-              issueDescription: input.issueDescription,
+              signalName: input.signalName,
+              signalDescription: input.signalDescription,
               judgeTelemetry: {
                 organizationId: input.organizationId,
                 projectId: input.projectId,
-                issueId: input.issueId,
+                signalId: input.signalId,
                 evaluationId: input.evaluationId,
                 jobId: input.jobId,
               },
@@ -221,13 +221,13 @@ export const optimizeEvaluationDraft = (input: {
           proposeOptimizationCandidate({
             organizationId: input.organizationId,
             projectId: input.projectId,
-            issueId: input.issueId,
+            signalId: input.signalId,
             evaluationId: input.evaluationId,
             jobId: input.jobId,
             draftEvaluationHash: input.draft.evaluationHash,
             candidate,
-            issueName: input.issueName,
-            issueDescription: input.issueDescription,
+            signalName: input.signalName,
+            signalDescription: input.signalDescription,
             context,
           }),
       })

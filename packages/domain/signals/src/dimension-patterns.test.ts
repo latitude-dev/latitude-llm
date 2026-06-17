@@ -1,25 +1,25 @@
-import type { DimensionConditionalRate, IssueDimensionComparison } from "@domain/scores"
+import type { DimensionConditionalRate, SignalDimensionComparison } from "@domain/scores"
 import { describe, expect, it } from "vitest"
-import { ISSUE_DIMENSION_MIN_SUPPORT } from "./constants.ts"
+import { SIGNAL_DIMENSION_MIN_SUPPORT } from "./constants.ts"
 import { rankDimensionValues } from "./dimension-patterns.ts"
 
 const value = (
   v: string,
   affectedTraces: number,
   totalTraces: number,
-  issueAffectedTraces: number,
+  signalAffectedTraces: number,
 ): DimensionConditionalRate => ({
   value: v,
   affectedTraces,
   totalTraces,
   conditionalRate: totalTraces === 0 ? 0 : affectedTraces / totalTraces,
-  coverage: issueAffectedTraces === 0 ? 0 : affectedTraces / issueAffectedTraces,
+  coverage: signalAffectedTraces === 0 ? 0 : affectedTraces / signalAffectedTraces,
 })
 
-const comparison = (overrides: Partial<IssueDimensionComparison>): IssueDimensionComparison => ({
+const comparison = (overrides: Partial<SignalDimensionComparison>): SignalDimensionComparison => ({
   dimension: "model",
   baseRate: 0.1,
-  issueAffectedTraces: 100,
+  signalAffectedTraces: 100,
   values: [],
   ...overrides,
 })
@@ -29,9 +29,9 @@ describe("rankDimensionValues", () => {
     const result = rankDimensionValues(
       comparison({
         baseRate: 0.1,
-        issueAffectedTraces: 100,
-        // 100% conditional rate, but only ISSUE_DIMENSION_MIN_SUPPORT - 1 traces back it.
-        values: [value("rare-model", ISSUE_DIMENSION_MIN_SUPPORT - 1, ISSUE_DIMENSION_MIN_SUPPORT - 1, 100)],
+        signalAffectedTraces: 100,
+        // 100% conditional rate, but only SIGNAL_DIMENSION_MIN_SUPPORT - 1 traces back it.
+        values: [value("rare-model", SIGNAL_DIMENSION_MIN_SUPPORT - 1, SIGNAL_DIMENSION_MIN_SUPPORT - 1, 100)],
       }),
     )
     expect(result).toEqual([])
@@ -41,7 +41,7 @@ describe("rankDimensionValues", () => {
     const result = rankDimensionValues(
       comparison({
         baseRate: 0.1,
-        issueAffectedTraces: 100,
+        signalAffectedTraces: 100,
         values: [
           // 85% of gpt-5.5 traces are in the issue vs a 10% base rate → elevation +0.75.
           value("gpt-5.5", 85, 100, 100),
@@ -59,7 +59,7 @@ describe("rankDimensionValues", () => {
     const result = rankDimensionValues(
       comparison({
         baseRate: 0.1,
-        issueAffectedTraces: 100,
+        signalAffectedTraces: 100,
         values: [
           value("at-base", 10, 100, 100), // exactly the base rate → elevation 0
           value("below-base", 4, 100, 100), // below the base rate → negative elevation
@@ -73,7 +73,7 @@ describe("rankDimensionValues", () => {
     const result = rankDimensionValues(
       comparison({
         baseRate: 0.1,
-        issueAffectedTraces: 100,
+        signalAffectedTraces: 100,
         values: [
           value("barely", 1005, 10_000, 100), // 10.05% → +0.0005 elevation, below the 1pp floor
           value("clears", 1200, 10_000, 100), // 12% → +0.02 elevation, clears the floor
@@ -87,7 +87,7 @@ describe("rankDimensionValues", () => {
     const result = rankDimensionValues(
       comparison({
         baseRate: 0.05,
-        issueAffectedTraces: 200,
+        signalAffectedTraces: 200,
         values: [
           value("mid", 60, 200, 200), // 30% → +0.25
           value("top", 90, 100, 200), // 90% → +0.85
@@ -102,7 +102,7 @@ describe("rankDimensionValues", () => {
     const [pattern] = rankDimensionValues(
       comparison({
         baseRate: 0.03,
-        issueAffectedTraces: 1000,
+        signalAffectedTraces: 1000,
         // 93% conditional rate but only 28 of 1000 issue traces → 2.8% coverage.
         values: [value("niche", 28, 30, 1000)],
       }),

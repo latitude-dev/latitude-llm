@@ -6,7 +6,7 @@ import {
   FLAGGER_USE_CASE_PRESETS,
   type FlaggerPresetSlug,
 } from "../../../../../../../domains/flaggers/presets.ts"
-import { MockIssuesFeed } from "../mocks/mock-issues-feed.tsx"
+import { MockSignalsFeed } from "../mocks/mock-issues-feed.tsx"
 
 type AvailableFlagger = {
   readonly slug: string
@@ -190,5 +190,5 @@ export function Right({
   readonly enabledFlaggerSlugs: ReadonlySet<string>
   readonly availableFlaggers: ReadonlyArray<AvailableFlagger>
 }) {
-  return <MockIssuesFeed enabledFlaggerSlugs={enabledFlaggerSlugs} availableFlaggers={availableFlaggers} />
+  return <MockSignalsFeed enabledFlaggerSlugs={enabledFlaggerSlugs} availableFlaggers={availableFlaggers} />
 }

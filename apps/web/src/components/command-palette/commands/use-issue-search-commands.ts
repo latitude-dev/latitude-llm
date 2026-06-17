@@ -1,8 +1,8 @@
 import { useNavigate } from "@tanstack/react-router"
 import { ShieldAlertIcon } from "lucide-react"
 import { useMemo, useState } from "react"
-import { useIssuesOrgSearch } from "../../../domains/issues/issues.collection.ts"
-import type { OrgIssueSearchRecord } from "../../../domains/issues/issues.functions.ts"
+import { useSignalsOrgSearch } from "../../../domains/issues/issues.collection.ts"
+import type { OrgSignalSearchRecord } from "../../../domains/issues/issues.functions.ts"
 import { useDebounce } from "../../../lib/hooks/useDebounce.ts"
 import type { PaletteCommand } from "../types.ts"
 import { useCurrentProject } from "./use-current-project.ts"
@@ -12,7 +12,7 @@ const SEMANTIC_DEBOUNCE_MS = 250
 
 /**
  * Org-wide issue search for the palette, across every project in the organization, combining two
- * tiers from {@link useIssuesOrgSearch}:
+ * tiers from {@link useSignalsOrgSearch}:
  *
  * - **Lexical (instant):** GIN-backed full-text + name-substring match. Fires on every keystroke.
  * - **Semantic (debounced):** vector relevance, surfacing related issues whose titles don't
@@ -22,7 +22,7 @@ const SEMANTIC_DEBOUNCE_MS = 250
  * (dedupe by id). Each result shows its owning project (plus current states) and selecting one
  * opens that project's issue drawer.
  */
-export function useIssueSearchCommands(query: string): {
+export function useSignalSearchCommands(query: string): {
   readonly commands: readonly PaletteCommand[]
   readonly isLoading: boolean
 } {
@@ -34,14 +34,14 @@ export function useIssueSearchCommands(query: string): {
   useDebounce(() => setDebouncedQuery(query.trim()), SEMANTIC_DEBOUNCE_MS, [query])
 
   // Lexical tier — instant, fires on every keystroke.
-  const { data: lexicalIssues } = useIssuesOrgSearch(liveQuery, {
+  const { data: lexicalSignals } = useSignalsOrgSearch(liveQuery, {
     semantic: false,
     enabled: liveQuery.length > 0,
     preferProjectId: project?.id,
   })
 
   // Semantic tier — debounced; embeds the query server-side.
-  const { data: semanticIssues, isLoading: semanticLoading } = useIssuesOrgSearch(debouncedQuery, {
+  const { data: semanticSignals, isLoading: semanticLoading } = useSignalsOrgSearch(debouncedQuery, {
     semantic: true,
     enabled: debouncedQuery.length > 0,
     preferProjectId: project?.id,
@@ -52,8 +52,8 @@ export function useIssueSearchCommands(query: string): {
 
     // Lexical matches first, then semantic matches not already shown; dedupe by id.
     const seen = new Set<string>()
-    const merged: OrgIssueSearchRecord[] = []
-    for (const issue of [...lexicalIssues, ...semanticIssues]) {
+    const merged: OrgSignalSearchRecord[] = []
+    for (const issue of [...lexicalSignals, ...semanticSignals]) {
       if (seen.has(issue.id)) continue
       seen.add(issue.id)
       merged.push(issue)
@@ -68,10 +68,10 @@ export function useIssueSearchCommands(query: string): {
         section: "search",
         subtitle,
         keywords: `${issue.name} ${issue.projectName}`,
-        perform: () => navigate({ to: `/projects/${issue.projectSlug}/issues`, search: { issueId: issue.id } }),
+        perform: () => navigate({ to: `/projects/${issue.projectSlug}/issues`, search: { signalId: issue.id } }),
       }
     })
-  }, [liveQuery, lexicalIssues, semanticIssues, navigate])
+  }, [liveQuery, lexicalSignals, semanticSignals, navigate])
 
   return { commands, isLoading: debouncedQuery.length > 0 && semanticLoading }
 }

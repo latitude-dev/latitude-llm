@@ -5,10 +5,10 @@ import {
   SEED_ANNOTATION_QUEUE_WARRANTY_ID,
   SEED_DATASET_ID,
   SEED_EVALUATION_ID,
-  SEED_EXTRA_ISSUE_IDS,
-  SEED_EXTRA_ISSUE_UUIDS,
-  SEED_ISSUE_ID,
-  SEED_ISSUE_UUID,
+  SEED_EXTRA_SIGNAL_IDS,
+  SEED_EXTRA_SIGNAL_UUIDS,
+  SEED_SIGNAL_ID,
+  SEED_SIGNAL_UUID,
   SEED_LIFECYCLE_TRACE_IDS,
   SEED_MANUAL_QUEUE_ASSIGNEES,
   SEED_ORG_ID,
@@ -44,14 +44,14 @@ describe("bootstrapSeedScope — invariance with seeds.ts literals", () => {
   })
 
   it("resolves named issue cuids and uuids to seeds.ts literals", () => {
-    expect(bootstrapSeedScope.cuid("issue:warranty-fab")).toBe(SEED_ISSUE_ID)
-    expect(bootstrapSeedScope.uuid("issue:warranty-fab:uuid")).toBe(SEED_ISSUE_UUID)
+    expect(bootstrapSeedScope.cuid("issue:warranty-fab")).toBe(SEED_SIGNAL_ID)
+    expect(bootstrapSeedScope.uuid("issue:warranty-fab:uuid")).toBe(SEED_SIGNAL_UUID)
   })
 
   it("resolves the 128 long-tail issue ids and uuids by index", () => {
-    for (let i = 0; i < SEED_EXTRA_ISSUE_IDS.length; i++) {
-      expect(bootstrapSeedScope.cuid(`issue:extra:${i}`)).toBe(SEED_EXTRA_ISSUE_IDS[i])
-      expect(bootstrapSeedScope.uuid(`issue:extra:${i}:uuid`)).toBe(SEED_EXTRA_ISSUE_UUIDS[i])
+    for (let i = 0; i < SEED_EXTRA_SIGNAL_IDS.length; i++) {
+      expect(bootstrapSeedScope.cuid(`issue:extra:${i}`)).toBe(SEED_EXTRA_SIGNAL_IDS[i])
+      expect(bootstrapSeedScope.uuid(`issue:extra:${i}:uuid`)).toBe(SEED_EXTRA_SIGNAL_UUIDS[i])
     }
   })
 

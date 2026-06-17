@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { IncidentEventPayload, IssueAssignedPayload, WrappedReportPayload } from "../entities/notification.ts"
+import type { IncidentEventPayload, SignalAssignedPayload, WrappedReportPayload } from "../entities/notification.ts"
 import { buildIdempotencyKey } from "./idempotency-key.ts"
 
 const cuid = (seed: string) => seed.padEnd(24, "0")
@@ -29,8 +29,8 @@ describe("buildIdempotencyKey", () => {
   })
 
   it("keys issue.assigned per assignment event via assignedAt", () => {
-    const payload: IssueAssignedPayload = {
-      issueId: cuid("i"),
+    const payload: SignalAssignedPayload = {
+      signalId: cuid("i"),
       actorUserId: cuid("a"),
       assignedAt: "2026-05-07T10:00:00.000Z",
     }

@@ -43,7 +43,7 @@ export {
  * of recomputing live (which would let the rolling baseline catch up to a
  * sustained incident and silently flip it closed).
  *
- * Field names mirror `IssueEscalationSignals` in `@domain/scores`. Kept as
+ * Field names mirror `SignalEscalationSignals` in `@domain/scores`. Kept as
  * a structural Zod schema rather than imported from there so `@domain/alerts`
  * stays free of a `@domain/scores` dependency — the snapshot is a value
  * type on this entity, not a behaviour pulled from the analytics port.
@@ -85,7 +85,7 @@ export const incidentEntrySignalsSchema = z.union([entrySignalsSnapshotSchema, s
 export type IncidentEntrySignals = z.infer<typeof incidentEntrySignalsSchema>
 
 /** Narrow a stored snapshot to the issue-escalation shape — the only consumer of the seasonal scalars. */
-export const isIssueEscalationEntrySignals = (signals: IncidentEntrySignals | null): signals is EntrySignalsSnapshot =>
+export const isSignalEscalationEntrySignals = (signals: IncidentEntrySignals | null): signals is EntrySignalsSnapshot =>
   signals !== null && "expected1h" in signals
 
 /** Narrow a stored snapshot to the saved-search shape — the sustained close-side reads its frozen threshold. */

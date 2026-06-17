@@ -1,4 +1,4 @@
-import type { IssuePriority } from "@domain/issues"
+import type { SignalPriority } from "@domain/signals"
 import type { IncidentSampleExcerpt } from "@domain/notifications"
 import {
   ALERT_INCIDENT_KIND_LABEL,
@@ -18,8 +18,8 @@ import { emailDesignTokens } from "../../../tokens/design-system.ts"
 import {
   EmailMetadataTable,
   formatScope,
-  IssueIdFooter,
-  IssueTimestamp,
+  SignalIdFooter,
+  SignalTimestamp,
   MonitorAttribution,
   type MonitorAttributionInfo,
   PriorityBadge,
@@ -53,14 +53,14 @@ interface IncidentEventEmailProps {
   readonly sourceId: string
   /** Live-resolved source display name (issue title or saved search name). */
   readonly sourceName: string
-  /** Issue description; absent for saved-search sources. */
+  /** Signal description; absent for saved-search sources. */
   readonly description: string | undefined
-  readonly issueUrl: string | undefined
+  readonly signalUrl: string | undefined
   readonly notificationCreatedAt: Date
   readonly organizationName: string
   readonly projectName: string | undefined
-  /** Issue triage snapshot at incident time; absent on legacy payloads and saved-search sources. */
-  readonly priority: IssuePriority | undefined
+  /** Signal triage snapshot at incident time; absent on legacy payloads and saved-search sources. */
+  readonly priority: SignalPriority | undefined
   /** Live-resolved assignee display name; absent when unassigned or unresolvable. */
   readonly assigneeName: string | undefined
   readonly tags: readonly string[] | undefined
@@ -75,7 +75,7 @@ export function IncidentEventEmail({
   sourceId,
   sourceName,
   description,
-  issueUrl,
+  signalUrl,
   notificationCreatedAt,
   organizationName,
   projectName,
@@ -90,7 +90,7 @@ export function IncidentEventEmail({
   const subtitle = ALERT_KIND_TO_SUBTITLE[incidentKind]
   const isSavedSearch = ALERT_INCIDENT_KIND_SOURCE_TYPE[incidentKind] === "savedSearch"
   const scope = formatScope(organizationName, projectName)
-  const ctaHref = isSavedSearch ? monitor?.url : issueUrl
+  const ctaHref = isSavedSearch ? monitor?.url : signalUrl
 
   const metadataRows = [
     { label: "Project", value: scope },
@@ -112,7 +112,7 @@ export function IncidentEventEmail({
 
       <MonitorAttribution monitor={monitor} />
 
-      <SectionHeader label={isSavedSearch ? "Saved search" : "Issue"} />
+      <SectionHeader label={isSavedSearch ? "Saved search" : "Signal"} />
       <EmailText variant="heading">{sourceName}</EmailText>
       {description ? (
         <EmailText variant="bodySmall" className="text-muted-foreground">
@@ -120,13 +120,13 @@ export function IncidentEventEmail({
         </EmailText>
       ) : null}
 
-      <IssueTimestamp timestamp={notificationCreatedAt} />
+      <SignalTimestamp timestamp={notificationCreatedAt} />
 
       <EmailMetadataTable rows={metadataRows} />
 
       {sampleExcerpt ? <SampleExcerptCard excerpt={sampleExcerpt} /> : null}
 
-      {isSavedSearch ? null : <IssueIdFooter issueId={sourceId} />}
+      {isSavedSearch ? null : <SignalIdFooter signalId={sourceId} />}
 
       {ctaHref ? (
         <Section className={emailDesignTokens.spacing.buttonTop}>
@@ -143,7 +143,7 @@ IncidentEventEmail.PreviewProps = {
   sourceId: "dds0rt8sqgpuku4u4wabze9r",
   sourceName: "Token leakage in responses",
   description: "Agent occasionally echoes API keys or PII back to the user when summarising prior tool outputs.",
-  issueUrl: "https://console.latitude.so/projects/sample-project/issues/preview-issue",
+  signalUrl: "https://console.latitude.so/projects/sample-project/issues/preview-issue",
   notificationCreatedAt: new Date("2026-03-18T10:05:00Z"),
   organizationName: "Acme Inc.",
   projectName: "Support agent",
@@ -156,7 +156,7 @@ IncidentEventEmail.PreviewProps = {
     author: { kind: "user", name: "Anna Bosch", imageUrl: null },
   },
   monitor: {
-    name: "Issue discovered",
+    name: "Signal discovered",
     url: "https://console.latitude.so/projects/sample-project/monitors?monitorSlug=issue-discovered",
   },
   webAppUrl: "http://localhost:3000",

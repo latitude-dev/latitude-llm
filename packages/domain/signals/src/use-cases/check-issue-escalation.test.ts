@@ -6,12 +6,12 @@ import {
   type UpdateAlertIncidentExitDwellInput,
 } from "@domain/alerts"
 import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
-import { type IssueEscalationSignals, ScoreAnalyticsRepository } from "@domain/scores"
+import { type SignalEscalationSignals, ScoreAnalyticsRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
 import {
   AlertIncidentId,
   ChSqlClient,
-  IssueId,
+  SignalId,
   OrganizationId,
   ProjectId as ProjectIdValue,
   type ProjectSettings,
@@ -23,18 +23,18 @@ import { createFakeChSqlClient } from "@domain/shared/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { ESCALATION_EXIT_DWELL_MS, ESCALATION_MAX_DURATION_MS } from "../constants.ts"
-import type { Issue } from "../entities/issue.ts"
-import { createIssueCentroid } from "../helpers.ts"
-import { IssueRepository } from "../ports/issue-repository.ts"
-import { createFakeIssueRepository } from "../testing/fake-issue-repository.ts"
-import { checkIssueEscalationUseCase } from "./check-issue-escalation.ts"
+import type { Signal } from "../entities/issue.ts"
+import { createSignalCentroid } from "../helpers.ts"
+import { SignalRepository } from "../ports/issue-repository.ts"
+import { createFakeSignalRepository } from "../testing/fake-issue-repository.ts"
+import { checkSignalEscalationUseCase } from "./check-issue-escalation.ts"
 
 const organizationId = "oooooooooooooooooooooooo"
 const projectId = "pppppppppppppppppppppppp"
-const issueId = "iiiiiiiiiiiiiiiiiiiiiiii"
+const signalId = "iiiiiiiiiiiiiiiiiiiiiiii"
 
-const makeIssue = (overrides?: Partial<Issue>): Issue => ({
-  id: IssueId(issueId),
+const makeSignal = (overrides?: Partial<Signal>): Signal => ({
+  id: SignalId(signalId),
   slug: "test-issue",
   organizationId,
   projectId,
@@ -43,7 +43,7 @@ const makeIssue = (overrides?: Partial<Issue>): Issue => ({
   source: "annotation",
   assigneeId: null,
   priority: null,
-  centroid: createIssueCentroid(),
+  centroid: createSignalCentroid(),
   clusteredAt: new Date("2026-04-29T10:00:00.000Z"),
   escalatedAt: null,
   resolvedAt: null,
@@ -53,8 +53,8 @@ const makeIssue = (overrides?: Partial<Issue>): Issue => ({
   ...overrides,
 })
 
-const makeSignals = (overrides: Partial<IssueEscalationSignals> = {}): IssueEscalationSignals => ({
-  issueId: IssueId(issueId),
+const makeSignals = (overrides: Partial<SignalEscalationSignals> = {}): SignalEscalationSignals => ({
+  signalId: SignalId(signalId),
   recent1h: 0,
   recent6h: 0,
   recent24h: 0,
@@ -71,7 +71,7 @@ const makeOpenIncident = (overrides: Partial<AlertIncident> = {}): AlertIncident
   organizationId: OrganizationId(organizationId),
   projectId: ProjectIdValue(projectId),
   sourceType: "issue",
-  sourceId: issueId,
+  sourceId: signalId,
   kind: "issue.escalating",
   severity: "high",
   startedAt: new Date("2026-05-07T10:00:00.000Z"),
@@ -94,9 +94,9 @@ const createPassthroughSqlClient = (id: string): SqlClientShape => {
 }
 
 const provideTestLayers = (params: {
-  readonly issue: Issue
+  readonly issue: Signal
   readonly isEscalating?: boolean
-  readonly signals: IssueEscalationSignals
+  readonly signals: SignalEscalationSignals
   readonly events: OutboxWriteEvent[]
   readonly openIncident?: AlertIncident | null
   readonly dwellWrites?: UpdateAlertIncidentExitDwellInput[]
@@ -106,14 +106,14 @@ const provideTestLayers = (params: {
   readonly thresholdBuckets?: readonly { bucket: string; thresholdCount: number }[]
   readonly escalationSensitivity?: number
 }) => {
-  const { repository: issueRepository, issues } = createFakeIssueRepository([params.issue], undefined, {
+  const { repository: signalRepository, issues } = createFakeSignalRepository([params.issue], undefined, {
     lifecycle: new Map([[params.issue.id, { isEscalating: params.isEscalating ?? false, isRegressed: false }]]),
   })
   const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
-    escalationSignalsByIssues: () => Effect.succeed([params.signals]),
-    histogramByIssues: () => Effect.succeed(params.occurrenceBuckets ?? []),
-    escalationThresholdHistogramByIssues: () =>
-      Effect.succeed([{ issueId: IssueId(issueId), buckets: params.thresholdBuckets ?? [] }]),
+    escalationSignalsBySignals: () => Effect.succeed([params.signals]),
+    histogramBySignals: () => Effect.succeed(params.occurrenceBuckets ?? []),
+    escalationThresholdHistogramBySignals: () =>
+      Effect.succeed([{ signalId: SignalId(signalId), buckets: params.thresholdBuckets ?? [] }]),
   })
 
   const dwellWrites = params.dwellWrites ?? []
@@ -145,7 +145,7 @@ const provideTestLayers = (params: {
         A,
         E,
         | ScoreAnalyticsRepository
-        | IssueRepository
+        | SignalRepository
         | OutboxEventWriter
         | SqlClient
         | ChSqlClient
@@ -155,7 +155,7 @@ const provideTestLayers = (params: {
     ) =>
       effect.pipe(
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(AlertIncidentRepository, alertIncidentRepository),
         Effect.provideService(SettingsReader, {
           getOrganizationSettings: () => Effect.succeed(null),
@@ -173,9 +173,9 @@ const provideTestLayers = (params: {
   }
 }
 
-describe("checkIssueEscalationUseCase", () => {
-  it("emits IssueEscalated with the entry snapshot when both windows cross their bands", async () => {
-    const issue = makeIssue({ createdAt: new Date("2026-04-01T10:00:00.000Z") })
+describe("checkSignalEscalationUseCase", () => {
+  it("emits SignalEscalated with the entry snapshot when both windows cross their bands", async () => {
+    const issue = makeSignal({ createdAt: new Date("2026-04-01T10:00:00.000Z") })
     const events: OutboxWriteEvent[] = []
     const { apply } = provideTestLayers({
       issue,
@@ -184,16 +184,16 @@ describe("checkIssueEscalationUseCase", () => {
       events,
     })
 
-    const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
 
     expect(result.transition).toBe("entered")
     expect(result.currentlyEscalating).toBe(true)
     expect(events).toHaveLength(1)
     expect(events[0]).toMatchObject({
-      eventName: "IssueEscalated",
+      eventName: "SignalEscalated",
       aggregateType: "issue",
-      aggregateId: issueId,
-      payload: { organizationId, projectId, issueId },
+      aggregateId: signalId,
+      payload: { organizationId, projectId, signalId },
     })
     const escalated = events[0]?.payload as { entrySignals: EntrySignalsSnapshot | null }
     expect(escalated.entrySignals).toMatchObject({ entryCount24h: 600, kShort: 3, kLong: 2 })
@@ -201,7 +201,7 @@ describe("checkIssueEscalationUseCase", () => {
 
   it("clears resolvedAt when a resolved issue enters escalation", async () => {
     const resolvedAt = new Date("2026-05-01T10:00:00.000Z")
-    const issue = makeIssue({
+    const issue = makeSignal({
       createdAt: new Date("2026-04-01T10:00:00.000Z"),
       resolvedAt,
     })
@@ -213,17 +213,17 @@ describe("checkIssueEscalationUseCase", () => {
       events,
     })
 
-    const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
 
     expect(result.transition).toBe("entered")
     expect(issues.get(issue.id)?.resolvedAt).toBeNull()
     expect(issues.get(issue.id)?.updatedAt.getTime()).toBeGreaterThan(resolvedAt.getTime())
     expect(events).toHaveLength(1)
-    expect(events[0]?.eventName).toBe("IssueEscalated")
+    expect(events[0]?.eventName).toBe("SignalEscalated")
   })
 
   it("backtracks escalatedAt to the first bucket that crossed the seasonal threshold", async () => {
-    const issue = makeIssue({ createdAt: new Date("2026-04-01T10:00:00.000Z") })
+    const issue = makeSignal({ createdAt: new Date("2026-04-01T10:00:00.000Z") })
     const events: OutboxWriteEvent[] = []
     const { apply } = provideTestLayers({
       issue,
@@ -242,7 +242,7 @@ describe("checkIssueEscalationUseCase", () => {
       ],
     })
 
-    const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
 
     expect(result.transition).toBe("entered")
     const payload = events[0]?.payload as { escalatedAt: string }
@@ -250,7 +250,7 @@ describe("checkIssueEscalationUseCase", () => {
   })
 
   it("falls back to the event time when no bucket crossed the threshold", async () => {
-    const issue = makeIssue({ createdAt: new Date("2026-04-01T10:00:00.000Z") })
+    const issue = makeSignal({ createdAt: new Date("2026-04-01T10:00:00.000Z") })
     const events: OutboxWriteEvent[] = []
     const before = Date.now()
     const { apply } = provideTestLayers({
@@ -268,7 +268,7 @@ describe("checkIssueEscalationUseCase", () => {
       ],
     })
 
-    const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
 
     expect(result.transition).toBe("entered")
     const payload = events[0]?.payload as { escalatedAt: string }
@@ -277,7 +277,7 @@ describe("checkIssueEscalationUseCase", () => {
   })
 
   it("uses the supplied escalationSensitivity (system-monitor override) for the entry snapshot", async () => {
-    const issue = makeIssue({ createdAt: new Date("2026-04-01T10:00:00.000Z") })
+    const issue = makeSignal({ createdAt: new Date("2026-04-01T10:00:00.000Z") })
     const events: OutboxWriteEvent[] = []
     const { apply } = provideTestLayers({
       issue,
@@ -288,7 +288,7 @@ describe("checkIssueEscalationUseCase", () => {
     })
 
     await Effect.runPromise(
-      apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId, escalationSensitivity: 5 })),
+      apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId, escalationSensitivity: 5 })),
     )
 
     const escalated = events[0]?.payload as { entrySignals: EntrySignalsSnapshot | null }
@@ -297,7 +297,7 @@ describe("checkIssueEscalationUseCase", () => {
 
   it("does not transition ignored issues into escalation", async () => {
     const ignoredAt = new Date("2026-05-01T10:00:00.000Z")
-    const issue = makeIssue({
+    const issue = makeSignal({
       createdAt: new Date("2026-04-01T10:00:00.000Z"),
       ignoredAt,
     })
@@ -309,7 +309,7 @@ describe("checkIssueEscalationUseCase", () => {
       events,
     })
 
-    const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
 
     expect(result.transition).toBe("none")
     expect(result.currentlyEscalating).toBe(false)
@@ -317,8 +317,8 @@ describe("checkIssueEscalationUseCase", () => {
     expect(events).toHaveLength(0)
   })
 
-  it("does not emit IssueEscalated while the issue is still new", async () => {
-    const issue = makeIssue({ createdAt: new Date(Date.now() - 60 * 60 * 1000) })
+  it("does not emit SignalEscalated while the issue is still new", async () => {
+    const issue = makeSignal({ createdAt: new Date(Date.now() - 60 * 60 * 1000) })
     const events: OutboxWriteEvent[] = []
     const { apply } = provideTestLayers({
       issue,
@@ -327,7 +327,7 @@ describe("checkIssueEscalationUseCase", () => {
       events,
     })
 
-    const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
 
     expect(result.transition).toBe("none")
     expect(result.currentlyEscalating).toBe(false)
@@ -335,7 +335,7 @@ describe("checkIssueEscalationUseCase", () => {
   })
 
   it("starts the dwell tracker and writes it on no-op when the exit shape first holds", async () => {
-    const issue = makeIssue()
+    const issue = makeSignal()
     const events: OutboxWriteEvent[] = []
     const openIncident = makeOpenIncident({
       entrySignals: {
@@ -360,7 +360,7 @@ describe("checkIssueEscalationUseCase", () => {
       openIncident,
     })
 
-    const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
 
     expect(result.transition).toBe("none")
     expect(events).toHaveLength(0)
@@ -368,8 +368,8 @@ describe("checkIssueEscalationUseCase", () => {
     expect(dwellWrites[0]?.exitEligibleSince).toBeInstanceOf(Date)
   })
 
-  it("emits IssueEscalationEnded with reason='threshold' once the dwell duration is met", async () => {
-    const issue = makeIssue()
+  it("emits SignalEscalationEnded with reason='threshold' once the dwell duration is met", async () => {
+    const issue = makeSignal()
     const events: OutboxWriteEvent[] = []
     const dwellStart = new Date(Date.now() - ESCALATION_EXIT_DWELL_MS - 1000)
     const openIncident = makeOpenIncident({
@@ -395,18 +395,18 @@ describe("checkIssueEscalationUseCase", () => {
       openIncident,
     })
 
-    const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
 
     expect(result.transition).toBe("exited")
     expect(events).toHaveLength(1)
     expect(events[0]).toMatchObject({
-      eventName: "IssueEscalationEnded",
+      eventName: "SignalEscalationEnded",
       payload: { reason: "threshold" },
     })
   })
 
-  it("backtracks IssueEscalationEnded.endedAt to the last bucket still above the threshold", async () => {
-    const issue = makeIssue()
+  it("backtracks SignalEscalationEnded.endedAt to the last bucket still above the threshold", async () => {
+    const issue = makeSignal()
     const events: OutboxWriteEvent[] = []
     const dwellStart = new Date(Date.now() - ESCALATION_EXIT_DWELL_MS - 1000)
     const openIncident = makeOpenIncident({
@@ -442,7 +442,7 @@ describe("checkIssueEscalationUseCase", () => {
       ],
     })
 
-    const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
 
     expect(result.transition).toBe("exited")
     const payload = events[0]?.payload as { endedAt: string }
@@ -450,7 +450,7 @@ describe("checkIssueEscalationUseCase", () => {
   })
 
   it("falls back to the event time for endedAt when no bucket crossed in the window", async () => {
-    const issue = makeIssue()
+    const issue = makeSignal()
     const events: OutboxWriteEvent[] = []
     const before = Date.now()
     const openIncident = makeOpenIncident({
@@ -484,7 +484,7 @@ describe("checkIssueEscalationUseCase", () => {
       ],
     })
 
-    const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
 
     expect(result.transition).toBe("exited")
     const payload = events[0]?.payload as { endedAt: string }
@@ -492,7 +492,7 @@ describe("checkIssueEscalationUseCase", () => {
   })
 
   it("forwards reason='absolute-rate-drop' when the 24h backstop trips", async () => {
-    const issue = makeIssue()
+    const issue = makeSignal()
     const events: OutboxWriteEvent[] = []
     const openIncident = makeOpenIncident({
       entrySignals: {
@@ -517,17 +517,17 @@ describe("checkIssueEscalationUseCase", () => {
       openIncident,
     })
 
-    const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
 
     expect(result.transition).toBe("exited")
     expect(events[0]).toMatchObject({
-      eventName: "IssueEscalationEnded",
+      eventName: "SignalEscalationEnded",
       payload: { reason: "absolute-rate-drop" },
     })
   })
 
   it("forwards reason='timeout' once the 72h ceiling is reached", async () => {
-    const issue = makeIssue()
+    const issue = makeSignal()
     const events: OutboxWriteEvent[] = []
     const openIncident = makeOpenIncident({
       startedAt: new Date(Date.now() - ESCALATION_MAX_DURATION_MS - 60 * 1000),
@@ -540,18 +540,18 @@ describe("checkIssueEscalationUseCase", () => {
       openIncident,
     })
 
-    const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
 
     expect(result.transition).toBe("exited")
     expect(events[0]).toMatchObject({
-      eventName: "IssueEscalationEnded",
+      eventName: "SignalEscalationEnded",
       payload: { reason: "timeout" },
     })
   })
 
   it("uses projectSettings.escalation.sensitivity to widen the band", async () => {
     // Signals trip the default k=3 (band1h ≈ 19.5) but should not trip k=6 (band1h ≈ 29).
-    const issue = makeIssue({ createdAt: new Date("2026-04-01T10:00:00.000Z") })
+    const issue = makeSignal({ createdAt: new Date("2026-04-01T10:00:00.000Z") })
     const events: OutboxWriteEvent[] = []
     const { apply } = provideTestLayers({
       issue,
@@ -561,14 +561,14 @@ describe("checkIssueEscalationUseCase", () => {
       projectSettings: { escalation: { sensitivity: 6 } },
     })
 
-    const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
 
     expect(result.transition).toBe("none")
     expect(events).toHaveLength(0)
   })
 
-  it("does not re-emit IssueEscalated when already escalating and bands are still crossed", async () => {
-    const issue = makeIssue()
+  it("does not re-emit SignalEscalated when already escalating and bands are still crossed", async () => {
+    const issue = makeSignal()
     const events: OutboxWriteEvent[] = []
     const openIncident = makeOpenIncident({
       entrySignals: {
@@ -592,7 +592,7 @@ describe("checkIssueEscalationUseCase", () => {
       openIncident,
     })
 
-    const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
 
     expect(result.transition).toBe("none")
     expect(result.currentlyEscalating).toBe(true)

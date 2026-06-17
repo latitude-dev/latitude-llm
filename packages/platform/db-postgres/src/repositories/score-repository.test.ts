@@ -9,7 +9,7 @@ import {
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
 import {
   ChSqlClient,
-  IssueId,
+  SignalId,
   NotFoundError,
   OrganizationId,
   ProjectId,
@@ -101,7 +101,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
       source: "annotation",
       sourceId: "UI",
       simulationId: null,
-      issueId: null,
+      signalId: null,
       value: 0,
       passed: false,
       feedback: "Tool call failed",
@@ -235,12 +235,12 @@ describe("ScoreRepositoryLive + score use cases", () => {
       organizationId,
       projectId: customProjectId,
       scoreId: score.id,
-      issueId: null,
+      signalId: null,
       status: "published",
     })
   })
 
-  it("still writes ScoreCreated when the score already carries issueId (discovery worker noops)", async () => {
+  it("still writes ScoreCreated when the score already carries signalId (discovery worker noops)", async () => {
     const organizationId = "rrrrrrrrrrrrrrrrrrrrrrrr"
 
     const score = await Effect.runPromise(
@@ -248,7 +248,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
         projectId: customProjectId,
         source: "custom",
         sourceId: "api-source",
-        issueId: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
+        signalId: SignalId("iiiiiiiiiiiiiiiiiiiiiiii"),
         value: 0.1,
         passed: false,
         feedback: "Explicitly assigned to an issue",
@@ -265,7 +265,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(publicationRequests[0]?.eventName).toBe("ScoreCreated")
   })
 
-  it("claims score issue ownership only once with assignIssueIfUnowned", async () => {
+  it("claims score issue ownership only once with assignSignalIfUnowned", async () => {
     const organizationId = "qqqqqqqqqqqqqqqqqqqqqqqq"
     const score = await Effect.runPromise(
       writeScoreUseCase({
@@ -282,9 +282,9 @@ describe("ScoreRepositoryLive + score use cases", () => {
     const firstClaim = await Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* ScoreRepository
-        return yield* repository.assignIssueIfUnowned({
+        return yield* repository.assignSignalIfUnowned({
           scoreId: score.id,
-          issueId: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
+          signalId: SignalId("iiiiiiiiiiiiiiiiiiiiiiii"),
           updatedAt: new Date("2026-03-30T12:00:00.000Z"),
         })
       }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
@@ -293,9 +293,9 @@ describe("ScoreRepositoryLive + score use cases", () => {
     const secondClaim = await Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* ScoreRepository
-        return yield* repository.assignIssueIfUnowned({
+        return yield* repository.assignSignalIfUnowned({
           scoreId: score.id,
-          issueId: IssueId("jjjjjjjjjjjjjjjjjjjjjjjj"),
+          signalId: SignalId("jjjjjjjjjjjjjjjjjjjjjjjj"),
           updatedAt: new Date("2026-03-30T13:00:00.000Z"),
         })
       }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
@@ -308,7 +308,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
 
     expect(firstClaim).toBe(true)
     expect(secondClaim).toBe(false)
-    expect(persistedRows[0]?.issueId).toBe("iiiiiiiiiiiiiiiiiiiiiiii")
+    expect(persistedRows[0]?.signalId).toBe("iiiiiiiiiiiiiiiiiiiiiiii")
   })
 
   it("findById fails with NotFoundError when the score does not exist", async () => {
@@ -854,10 +854,10 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(found?.traceId).toBe(traceId1)
   })
 
-  it("listFlaggerSlugsByIssueId returns distinct flagger slugs ordered most-recent-first and filters out drafts, non-SYSTEM annotations, and other issues", async () => {
+  it("listFlaggerSlugsBySignalId returns distinct flagger slugs ordered most-recent-first and filters out drafts, non-SYSTEM annotations, and other issues", async () => {
     const organizationId = "z".repeat(24)
-    const issueA = IssueId("a".repeat(24))
-    const issueB = IssueId("b".repeat(24))
+    const signalA = SignalId("a".repeat(24))
+    const signalB = SignalId("b".repeat(24))
 
     // Inserted via the use-case so RLS + metadata validation runs; `createdAt`
     // is then pinned per row so recency ordering is deterministic regardless of
@@ -868,7 +868,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
           projectId: annotationProjectId,
           source: "annotation",
           sourceId: "SYSTEM",
-          issueId: issueA,
+          signalId: signalA,
           value: 0,
           passed: false,
           feedback: "old alpha occurrence",
@@ -879,7 +879,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
           projectId: annotationProjectId,
           source: "annotation",
           sourceId: "SYSTEM",
-          issueId: issueA,
+          signalId: signalA,
           value: 0,
           passed: false,
           feedback: "newer alpha occurrence",
@@ -890,7 +890,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
           projectId: annotationProjectId,
           source: "annotation",
           sourceId: "SYSTEM",
-          issueId: issueA,
+          signalId: signalA,
           value: 0,
           passed: false,
           feedback: "newest beta occurrence",
@@ -901,7 +901,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
           projectId: annotationProjectId,
           source: "annotation",
           sourceId: "SYSTEM",
-          issueId: issueA,
+          signalId: signalA,
           value: 0,
           passed: false,
           feedback: "drafted gamma occurrence",
@@ -912,7 +912,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
           projectId: annotationProjectId,
           source: "annotation",
           sourceId: "UI",
-          issueId: issueA,
+          signalId: signalA,
           value: 0,
           passed: false,
           feedback: "human-authored",
@@ -923,25 +923,25 @@ describe("ScoreRepositoryLive + score use cases", () => {
           projectId: annotationProjectId,
           source: "annotation",
           sourceId: "SYSTEM",
-          issueId: issueA,
+          signalId: signalA,
           value: 0,
           passed: false,
           feedback: "system without slug",
           metadata: { rawFeedback: "system without slug" },
           draftedAt: null,
         })
-        const otherIssue = yield* writeScoreUseCase({
+        const otherSignal = yield* writeScoreUseCase({
           projectId: annotationProjectId,
           source: "annotation",
           sourceId: "SYSTEM",
-          issueId: issueB,
+          signalId: signalB,
           value: 0,
           passed: false,
           feedback: "different issue",
           metadata: { rawFeedback: "different issue", flaggerSlug: "should-be-ignored" },
           draftedAt: null,
         })
-        return { alphaOld, alphaMid, betaNewest, gammaDraft, uiNotSystem, systemNoSlug, otherIssue }
+        return { alphaOld, alphaMid, betaNewest, gammaDraft, uiNotSystem, systemNoSlug, otherSignal }
       }).pipe(createWriteProvider(database, organizationId)),
     )
 
@@ -963,9 +963,9 @@ describe("ScoreRepositoryLive + score use cases", () => {
     const slugs = await Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* ScoreRepository
-        return yield* repository.listFlaggerSlugsByIssueId({
+        return yield* repository.listFlaggerSlugsBySignalId({
           projectId: annotationProjectId,
-          issueId: issueA,
+          signalId: signalA,
         })
       }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
     )

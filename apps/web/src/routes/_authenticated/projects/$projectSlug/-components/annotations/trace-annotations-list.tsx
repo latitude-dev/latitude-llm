@@ -56,7 +56,7 @@ export function TraceAnnotationsList({
           value: data.passed ? 1 : 0,
           passed: data.passed,
           feedback: data.comment.trim(),
-          ...(data.issueId ? { issueId: data.issueId } : {}),
+          ...(data.signalId ? { signalId: data.signalId } : {}),
         })
       }
       updatePending={updateMutation.isPending}
@@ -68,7 +68,7 @@ export function TraceAnnotationsList({
           value: data.passed ? 1 : 0,
           passed: data.passed,
           feedback: data.comment.trim(),
-          issueId: data.issueId ?? undefined,
+          signalId: data.signalId ?? undefined,
         })
       }
       {...(onAnnotationClick ? { onAnnotationClick } : {})}

@@ -11,7 +11,7 @@ export type AlertIncidentSourceType = z.infer<typeof alertIncidentSourceTypeSche
  * on the alerts package.
  */
 export const ALERT_INCIDENT_KINDS = [
-  // ── LEGACY · issue.* — system, event-driven (fired from @domain/issues). Folded into
+  // ── LEGACY · issue.* — system, event-driven (fired from @domain/signals). Folded into
   //    the unified model with the signals migration; not user-creatable.
   "issue.new",
   "issue.regressed",
@@ -65,9 +65,9 @@ export const ALERT_INCIDENT_KIND_LIFECYCLE: Record<AlertIncidentKind, "point" | 
  * this so the same kind never shows two different names.
  */
 export const ALERT_INCIDENT_KIND_LABEL: Record<AlertIncidentKind, string> = {
-  "issue.new": "Issue discovered",
-  "issue.regressed": "Issue regressed",
-  "issue.escalating": "Issue escalating",
+  "issue.new": "Signal discovered",
+  "issue.regressed": "Signal regressed",
+  "issue.escalating": "Signal escalating",
   "savedSearch.match": "Search match",
   "savedSearch.threshold": "Search threshold",
   "savedSearch.escalating": "Search escalating",

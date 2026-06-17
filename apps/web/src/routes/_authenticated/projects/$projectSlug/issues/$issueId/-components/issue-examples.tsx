@@ -18,8 +18,8 @@ import { useHotkeys } from "@tanstack/react-hotkeys"
 import { useParams } from "@tanstack/react-router"
 import { ChevronLeftIcon, ChevronRightIcon, ListTreeIcon, Maximize2Icon, MessageSquareTextIcon } from "lucide-react"
 import { type RefObject, useMemo, useRef, useState } from "react"
-import { useIssueOccurrences } from "../../../../../../../domains/issues/issues.collection.ts"
-import type { IssueOccurrenceRecord } from "../../../../../../../domains/issues/issues.functions.ts"
+import { useSignalOccurrences } from "../../../../../../../domains/issues/issues.collection.ts"
+import type { SignalOccurrenceRecord } from "../../../../../../../domains/issues/issues.functions.ts"
 import { useMemberByUserIdMap } from "../../../../../../../domains/members/members.collection.ts"
 import { pickUserFromMembersMap } from "../../../../../../../domains/members/pick-users-from-members.ts"
 import { useTraceDetail } from "../../../../../../../domains/traces/traces.collection.ts"
@@ -45,7 +45,7 @@ function centerVertically(container: HTMLElement, target: Element) {
   container.scrollTo({ top: Math.max(0, top), behavior: "smooth" })
 }
 
-function findAnchorNode(container: HTMLElement, anchor: IssueOccurrenceRecord["anchor"]): Element | null {
+function findAnchorNode(container: HTMLElement, anchor: SignalOccurrenceRecord["anchor"]): Element | null {
   const messageSelector = `[data-message-index="${anchor.messageIndex}"]`
   // Substring anchor: scroll to the exact highlighted text run; fall back to a
   // ±window scan (markdown transforms can shift offsets), then the message.
@@ -74,7 +74,7 @@ function findAnchorNode(container: HTMLElement, anchor: IssueOccurrenceRecord["a
  * keyed by score id so switching examples remounts it and re-runs this. Waits
  * for the (async-rendered markdown) node via a MutationObserver, then centers it.
  */
-function useScrollToAnchor(scrollRef: RefObject<HTMLDivElement | null>, anchor: IssueOccurrenceRecord["anchor"]) {
+function useScrollToAnchor(scrollRef: RefObject<HTMLDivElement | null>, anchor: SignalOccurrenceRecord["anchor"]) {
   useMountEffect(() => {
     const container = scrollRef.current
     if (!container) return
@@ -112,7 +112,7 @@ function ExampleConversation({
   occurrence,
 }: {
   readonly projectId: string
-  readonly occurrence: IssueOccurrenceRecord
+  readonly occurrence: SignalOccurrenceRecord
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const { data: traceDetail, isLoading } = useTraceDetail({ projectId, traceId: occurrence.traceId })
@@ -188,7 +188,7 @@ function OccurrenceAnnotation({
   occurrence,
 }: {
   readonly projectId: string
-  readonly occurrence: IssueOccurrenceRecord
+  readonly occurrence: SignalOccurrenceRecord
 }) {
   const { projectSlug } = useParams({ strict: false })
   const memberByUserId = useMemberByUserIdMap()
@@ -226,18 +226,18 @@ function OccurrenceAnnotation({
  * Conversation / Trace tab respectively), like clicking a row in Traces. The
  * current example is reflected in `?example=<scoreId>` for sharable links.
  */
-export function IssueExamples({
+export function SignalExamples({
   projectId,
-  issueId,
+  signalId,
   onOverlayActiveChange,
 }: {
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   /** Notifies the page when the trace sheet opens/closes, so issue-level
    * prev/next hotkeys can stand down while a trace is showing. */
   readonly onOverlayActiveChange?: (active: boolean) => void
 }) {
-  const { data, isLoading } = useIssueOccurrences({ projectId, issueId })
+  const { data, isLoading } = useSignalOccurrences({ projectId, signalId })
   const occurrences = useMemo(() => data?.items ?? [], [data])
   const [exampleId, setExampleId] = useParamState("example", "")
   const [traceSheet, setTraceSheet] = useState<{

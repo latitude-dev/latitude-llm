@@ -50,7 +50,7 @@ export type DatasetVersionId = Id<"DatasetVersionId">
 
 // Reliability-related IDs
 export type ScoreId = Id<"ScoreId">
-export type IssueId = Id<"IssueId">
+export type SignalId = Id<"SignalId">
 export type EvaluationId = Id<"EvaluationId">
 export type SimulationId = Id<"SimulationId">
 export type AnnotationQueueId = Id<"AnnotationQueueId">
@@ -96,7 +96,7 @@ export const ApiKeyId = (value: string): ApiKeyId => value as ApiKeyId
 export const OrganizationFeatureFlagId = (value: string): OrganizationFeatureFlagId =>
   value as OrganizationFeatureFlagId
 export const ScoreId = (value: string): ScoreId => value as ScoreId
-export const IssueId = (value: string): IssueId => value as IssueId
+export const SignalId = (value: string): SignalId => value as SignalId
 export const EvaluationId = (value: string): EvaluationId => value as EvaluationId
 export const SimulationId = (value: string): SimulationId => value as SimulationId
 export const AnnotationQueueId = (value: string): AnnotationQueueId => value as AnnotationQueueId
@@ -136,7 +136,7 @@ export const datasetIdSchema = cuidSchema.transform(DatasetId)
 export const datasetRowIdSchema = cuidSchema.transform(DatasetRowId)
 export const datasetVersionIdSchema = cuidSchema.transform(DatasetVersionId)
 export const scoreIdSchema = cuidSchema.transform(ScoreId)
-export const issueIdSchema = cuidSchema.transform(IssueId)
+export const signalIdSchema = cuidSchema.transform(SignalId)
 export const evaluationIdSchema = cuidSchema.transform(EvaluationId)
 export const annotationQueueIdSchema = cuidSchema.transform(AnnotationQueueId)
 export const annotationQueueItemIdSchema = cuidSchema.transform(AnnotationQueueItemId)

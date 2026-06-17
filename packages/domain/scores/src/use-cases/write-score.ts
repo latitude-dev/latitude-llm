@@ -29,7 +29,7 @@ export const baseWriteScoreInputSchema = baseWritableScoreSchema.extend({
   traceId: baseScoreSchema.shape.traceId.default(null),
   spanId: baseScoreSchema.shape.spanId.default(null),
   simulationId: baseScoreSchema.shape.simulationId.default(null),
-  issueId: baseScoreSchema.shape.issueId.default(null),
+  signalId: baseScoreSchema.shape.signalId.default(null),
   error: baseScoreSchema.shape.error.default(null),
   duration: baseScoreSchema.shape.duration.default(0),
   tokens: baseScoreSchema.shape.tokens.default(0),
@@ -88,14 +88,14 @@ const validateDraftUpdate = (existingScore: Score, input: ParsedWriteScoreInput)
   return null
 }
 
-const scoreDiscoveryPayloadIssueId = (score: Score, existingScore: Score | null): string | null => {
+const scoreDiscoveryPayloadSignalId = (score: Score, existingScore: Score | null): string | null => {
   if (
     existingScore !== null &&
     existingScore.draftedAt !== null &&
-    existingScore.issueId !== null &&
-    score.issueId === null
+    existingScore.signalId !== null &&
+    score.signalId === null
   ) {
-    return existingScore.issueId
+    return existingScore.signalId
   }
   return null
 }
@@ -123,7 +123,7 @@ const buildScore = ({
       source: input.source,
       sourceId: input.sourceId,
       simulationId: input.simulationId,
-      issueId: input.issueId,
+      signalId: input.signalId,
       value: input.value,
       passed: input.passed,
       feedback: input.feedback,
@@ -192,7 +192,7 @@ export const writeScoreUseCase = Effect.fn("scores.writeScore")(function* (input
           organizationId: score.organizationId,
           projectId: score.projectId,
           scoreId: score.id,
-          issueId: scoreDiscoveryPayloadIssueId(score, existingScore),
+          signalId: scoreDiscoveryPayloadSignalId(score, existingScore),
           status: score.draftedAt === null ? "published" : "draft",
         },
       })

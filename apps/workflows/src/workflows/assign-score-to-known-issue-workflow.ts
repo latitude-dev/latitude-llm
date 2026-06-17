@@ -3,16 +3,16 @@ import type * as activities from "../activities/index.ts"
 import { runWithLockRetry } from "./lock-retry.ts"
 import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 
-const { embedScoreFeedback, assignScoreToIssue, syncScoreAnalytics } = proxyActivities<typeof activities>({
+const { embedScoreFeedback, assignScoreToSignal, syncScoreAnalytics } = proxyActivities<typeof activities>({
   startToCloseTimeout: "5 minutes",
   retry: defaultActivityRetryPolicy,
 })
 
-export const assignScoreToKnownIssueWorkflow = async (input: {
+export const assignScoreToKnownSignalWorkflow = async (input: {
   readonly organizationId: string
   readonly projectId: string
   readonly scoreId: string
-  readonly issueId: string
+  readonly signalId: string
 }) => {
   const embeddedScoreFeedback = await embedScoreFeedback({
     organizationId: input.organizationId,
@@ -21,11 +21,11 @@ export const assignScoreToKnownIssueWorkflow = async (input: {
   })
 
   const result = await runWithLockRetry(() =>
-    assignScoreToIssue({
+    assignScoreToSignal({
       organizationId: input.organizationId,
       projectId: input.projectId,
       scoreId: input.scoreId,
-      issueId: input.issueId,
+      signalId: input.signalId,
       normalizedEmbedding: embeddedScoreFeedback.normalizedEmbedding,
     }),
   )
@@ -35,5 +35,5 @@ export const assignScoreToKnownIssueWorkflow = async (input: {
     scoreId: input.scoreId,
   })
 
-  return { action: result.assignment.action, issueId: result.assignment.issueId }
+  return { action: result.assignment.action, signalId: result.assignment.signalId }
 }

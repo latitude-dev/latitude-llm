@@ -22,17 +22,17 @@ export function SlotTransition({
   detailKind,
   sessionSlot,
   traceSlot,
-  issueSlot,
+  signalSlot,
 }: {
   /** `null` means the session pane is visible. */
   readonly detailKind: DetailSlotKind | null
   readonly sessionSlot: ReactNode
   readonly traceSlot: ReactNode
-  readonly issueSlot: ReactNode
+  readonly signalSlot: ReactNode
 }) {
   const showDetail = detailKind !== null
   const showTrace = detailKind === "trace"
-  const showIssue = detailKind === "issue"
+  const showSignal = detailKind === "issue"
   return (
     <div className="relative min-h-0 flex-1 overflow-hidden">
       <div
@@ -53,11 +53,11 @@ export function SlotTransition({
       </div>
       <div
         className="absolute inset-0 flex flex-col transition-transform duration-200 ease-out"
-        style={{ transform: showIssue ? "translateX(0)" : "translateX(100%)" }}
-        aria-hidden={!showIssue}
-        inert={!showIssue}
+        style={{ transform: showSignal ? "translateX(0)" : "translateX(100%)" }}
+        aria-hidden={!showSignal}
+        inert={!showSignal}
       >
-        {issueSlot}
+        {signalSlot}
       </div>
     </div>
   )

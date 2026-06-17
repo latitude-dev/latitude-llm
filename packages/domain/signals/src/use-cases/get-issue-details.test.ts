@@ -6,27 +6,27 @@ import {
   emptyEvaluationAlignment,
 } from "@domain/evaluations"
 import { WorkflowQuerier, type WorkflowQuerierShape } from "@domain/queue"
-import type { IssueOccurrenceAggregate, IssueOccurrenceBucket, IssueTagsAggregate } from "@domain/scores"
+import type { SignalOccurrenceAggregate, SignalOccurrenceBucket, SignalTagsAggregate } from "@domain/scores"
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
-import { ChSqlClient, EvaluationId, IssueId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { ChSqlClient, EvaluationId, SignalId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import type { Issue, IssueSource } from "../entities/issue.ts"
-import { createIssueCentroid } from "../helpers.ts"
-import { IssueRepository } from "../ports/issue-repository.ts"
-import { createFakeIssueRepository } from "../testing/index.ts"
-import { getIssueDetailsUseCase } from "./get-issue-details.ts"
+import type { Signal, SignalSource } from "../entities/issue.ts"
+import { createSignalCentroid } from "../helpers.ts"
+import { SignalRepository } from "../ports/issue-repository.ts"
+import { createFakeSignalRepository } from "../testing/index.ts"
+import { getSignalDetailsUseCase } from "./get-issue-details.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
-const issueId = IssueId("i".repeat(24))
+const signalId = SignalId("i".repeat(24))
 
-const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
-  id: issueId,
+const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
+  id: signalId,
   slug: "test-issue",
   organizationId,
   projectId,
@@ -35,7 +35,7 @@ const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
   source: "annotation",
   assigneeId: null,
   priority: null,
-  centroid: createIssueCentroid(),
+  centroid: createSignalCentroid(),
   clusteredAt: new Date("2026-03-01T00:00:00.000Z"),
   escalatedAt: null,
   resolvedAt: null,
@@ -50,7 +50,7 @@ const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation =>
     id: EvaluationId("e".repeat(24)),
     organizationId,
     projectId,
-    issueId,
+    signalId,
     name: "Eval",
     description: "Generated description",
     script: "return { passed: false }",
@@ -64,8 +64,8 @@ const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation =>
     ...overrides,
   }) as Evaluation
 
-const makeOccurrence = (overrides: Partial<IssueOccurrenceAggregate> = {}): IssueOccurrenceAggregate => ({
-  issueId,
+const makeOccurrence = (overrides: Partial<SignalOccurrenceAggregate> = {}): SignalOccurrenceAggregate => ({
+  signalId,
   totalOccurrences: 10,
   recentOccurrences: 2,
   baselineAvgOccurrences: 1,
@@ -78,18 +78,18 @@ const createEvaluationRepository = (activeEvaluations: readonly Evaluation[]): E
   findById: () => Effect.die("Unexpected findById"),
   save: () => Effect.die("Unexpected save"),
   listByProjectId: () => Effect.die("Unexpected listByProjectId"),
-  listByIssueId: () =>
+  listBySignalId: () =>
     Effect.succeed({
       items: activeEvaluations,
       hasMore: false,
       limit: activeEvaluations.length,
       offset: 0,
     }),
-  listByIssueIds: () => Effect.die("Unexpected listByIssueIds"),
+  listBySignalIds: () => Effect.die("Unexpected listBySignalIds"),
   archive: () => Effect.die("Unexpected archive"),
   unarchive: () => Effect.die("Unexpected unarchive"),
   softDelete: () => Effect.die("Unexpected softDelete"),
-  softDeleteByIssueId: () => Effect.die("Unexpected softDeleteByIssueId"),
+  softDeleteBySignalId: () => Effect.die("Unexpected softDeleteBySignalId"),
 })
 
 const provideWorkflowQuerier = (running: ReadonlySet<string> = new Set()) => {
@@ -111,23 +111,23 @@ const provideWorkflowQuerier = (running: ReadonlySet<string> = new Set()) => {
 }
 
 interface BuildLayerInput {
-  readonly source?: IssueSource
-  readonly occurrence?: IssueOccurrenceAggregate | null
-  readonly trend?: readonly IssueOccurrenceBucket[]
-  readonly tags?: readonly IssueTagsAggregate[]
+  readonly source?: SignalSource
+  readonly occurrence?: SignalOccurrenceAggregate | null
+  readonly trend?: readonly SignalOccurrenceBucket[]
+  readonly tags?: readonly SignalTagsAggregate[]
   readonly totalTraces?: number
   readonly activeEvaluations?: readonly Evaluation[]
   readonly runningWorkflows?: ReadonlySet<string>
 }
 
 const buildLayer = (input: BuildLayerInput = {}) => {
-  const issue = makeIssue({ source: input.source ?? "annotation" })
-  const { repository: issueRepository } = createFakeIssueRepository([issue])
+  const issue = makeSignal({ source: input.source ?? "annotation" })
+  const { repository: signalRepository } = createFakeSignalRepository([issue])
 
   const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
-    aggregateByIssues: () => Effect.succeed(input.occurrence === null ? [] : [input.occurrence ?? makeOccurrence()]),
-    trendByIssue: () => Effect.succeed(input.trend ?? []),
-    aggregateTagsByIssues: () => Effect.succeed(input.tags ?? []),
+    aggregateBySignals: () => Effect.succeed(input.occurrence === null ? [] : [input.occurrence ?? makeOccurrence()]),
+    trendBySignal: () => Effect.succeed(input.trend ?? []),
+    aggregateTagsBySignals: () => Effect.succeed(input.tags ?? []),
   })
 
   const { repository: traceRepo } = createFakeTraceRepository({
@@ -135,7 +135,7 @@ const buildLayer = (input: BuildLayerInput = {}) => {
   })
 
   return Layer.mergeAll(
-    Layer.succeed(IssueRepository, issueRepository),
+    Layer.succeed(SignalRepository, signalRepository),
     Layer.succeed(EvaluationRepository, createEvaluationRepository(input.activeEvaluations ?? [])),
     Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
     Layer.succeed(TraceRepository, traceRepo),
@@ -145,21 +145,21 @@ const buildLayer = (input: BuildLayerInput = {}) => {
   )
 }
 
-describe("getIssueDetailsUseCase", () => {
+describe("getSignalDetailsUseCase", () => {
   it("returns the full-detail view with lifetime stats and active evaluations", async () => {
     const evaluation = makeEvaluation()
     const layer = buildLayer({
       occurrence: makeOccurrence({ totalOccurrences: 25 }),
       totalTraces: 100,
-      tags: [{ issueId, tags: ["checkout", "billing"] }],
+      tags: [{ signalId, tags: ["checkout", "billing"] }],
       activeEvaluations: [evaluation],
     })
 
     const result = await Effect.runPromise(
-      getIssueDetailsUseCase({ organizationId, projectId, issueId }).pipe(Effect.provide(layer)),
+      getSignalDetailsUseCase({ organizationId, projectId, signalId }).pipe(Effect.provide(layer)),
     )
 
-    expect(result.issue.id).toBe(issueId)
+    expect(result.issue.id).toBe(signalId)
     expect(result.occurrences).toBe(25)
     expect(result.firstSeenAt?.toISOString()).toBe("2026-03-05T00:00:00.000Z")
     expect(result.lastSeenAt?.toISOString()).toBe("2026-04-10T00:00:00.000Z")
@@ -172,7 +172,7 @@ describe("getIssueDetailsUseCase", () => {
     const layer = buildLayer({ occurrence: null, totalTraces: 50 })
 
     const result = await Effect.runPromise(
-      getIssueDetailsUseCase({ organizationId, projectId, issueId }).pipe(Effect.provide(layer)),
+      getSignalDetailsUseCase({ organizationId, projectId, signalId }).pipe(Effect.provide(layer)),
     )
 
     expect(result.occurrences).toBe(0)
@@ -188,7 +188,7 @@ describe("getIssueDetailsUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      getIssueDetailsUseCase({ organizationId, projectId, issueId }).pipe(Effect.provide(layer)),
+      getSignalDetailsUseCase({ organizationId, projectId, signalId }).pipe(Effect.provide(layer)),
     )
 
     expect(result.affectedTracesPercent).toBe(1)
@@ -201,7 +201,7 @@ describe("getIssueDetailsUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      getIssueDetailsUseCase({ organizationId, projectId, issueId }).pipe(Effect.provide(layer)),
+      getSignalDetailsUseCase({ organizationId, projectId, signalId }).pipe(Effect.provide(layer)),
     )
 
     expect(result.affectedTracesPercent).toBe(0)
@@ -212,7 +212,7 @@ describe("getIssueDetailsUseCase", () => {
       const layer = buildLayer({ source: "flagger" })
 
       const result = await Effect.runPromise(
-        getIssueDetailsUseCase({ organizationId, projectId, issueId }).pipe(Effect.provide(layer)),
+        getSignalDetailsUseCase({ organizationId, projectId, signalId }).pipe(Effect.provide(layer)),
       )
 
       expect(result.alignmentState).toEqual({ kind: "automatic" })
@@ -222,7 +222,7 @@ describe("getIssueDetailsUseCase", () => {
       const layer = buildLayer({ source: "flagger", activeEvaluations: [makeEvaluation()] })
 
       const result = await Effect.runPromise(
-        getIssueDetailsUseCase({ organizationId, projectId, issueId }).pipe(Effect.provide(layer)),
+        getSignalDetailsUseCase({ organizationId, projectId, signalId }).pipe(Effect.provide(layer)),
       )
 
       expect(result.alignmentState).toEqual({ kind: "idle" })
@@ -232,7 +232,7 @@ describe("getIssueDetailsUseCase", () => {
       const layer = buildLayer({ source: "annotation" })
 
       const result = await Effect.runPromise(
-        getIssueDetailsUseCase({ organizationId, projectId, issueId }).pipe(Effect.provide(layer)),
+        getSignalDetailsUseCase({ organizationId, projectId, signalId }).pipe(Effect.provide(layer)),
       )
 
       expect(result.alignmentState).toEqual({ kind: "idle" })
@@ -241,11 +241,11 @@ describe("getIssueDetailsUseCase", () => {
     it("returns `generating` when the per-issue generation workflow is running", async () => {
       const layer = buildLayer({
         source: "annotation",
-        runningWorkflows: new Set([`evaluations:generate:${issueId}`]),
+        runningWorkflows: new Set([`evaluations:generate:${signalId}`]),
       })
 
       const result = await Effect.runPromise(
-        getIssueDetailsUseCase({ organizationId, projectId, issueId }).pipe(Effect.provide(layer)),
+        getSignalDetailsUseCase({ organizationId, projectId, signalId }).pipe(Effect.provide(layer)),
       )
 
       expect(result.alignmentState).toEqual({ kind: "generating" })
@@ -260,7 +260,7 @@ describe("getIssueDetailsUseCase", () => {
       })
 
       const result = await Effect.runPromise(
-        getIssueDetailsUseCase({ organizationId, projectId, issueId }).pipe(Effect.provide(layer)),
+        getSignalDetailsUseCase({ organizationId, projectId, signalId }).pipe(Effect.provide(layer)),
       )
 
       expect(result.alignmentState).toEqual({ kind: "realigning", evaluationId: evaluation.id })

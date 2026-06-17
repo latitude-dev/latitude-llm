@@ -7,15 +7,15 @@ import { IncidentMarkerPopover } from "../../../../../../domains/alerts/incident
 import { buildIncidentMarkers } from "../../../../../../domains/alerts/incident-markers.ts"
 import { useIncidentBucketHoverPopover } from "../../../../../../domains/alerts/use-incident-bucket-hover-popover.ts"
 import { useShowIncidentsOverlay } from "../../../../../../domains/alerts/use-show-incidents-overlay.ts"
-import type { IssuesListResultRecord } from "../../../../../../domains/issues/issues.functions.ts"
+import type { SignalsListResultRecord } from "../../../../../../domains/issues/issues.functions.ts"
 import { formatHistogramBucketLabel, formatHistogramBucketTooltipLabel } from "./issue-formatters.ts"
 
 const COUNT_CARDS = [
-  { key: "ongoingIssues", label: "Ongoing" },
-  { key: "newIssues", label: "New" },
-  { key: "escalatingIssues", label: "Escalating" },
-  { key: "regressedIssues", label: "Regressed" },
-  { key: "resolvedIssues", label: "Resolved" },
+  { key: "ongoingSignals", label: "Ongoing" },
+  { key: "newSignals", label: "New" },
+  { key: "escalatingSignals", label: "Escalating" },
+  { key: "regressedSignals", label: "Regressed" },
+  { key: "resolvedSignals", label: "Resolved" },
   { key: "seenOccurrences", label: "Occurrences" },
 ] as const
 
@@ -44,7 +44,7 @@ function AggregationItem({
   )
 }
 
-export function IssuesAnalyticsPanel({
+export function SignalsAnalyticsPanel({
   projectId,
   projectSlug,
   analytics,
@@ -53,7 +53,7 @@ export function IssuesAnalyticsPanel({
 }: {
   readonly projectId: string
   readonly projectSlug: string
-  readonly analytics: IssuesListResultRecord["analytics"]
+  readonly analytics: SignalsListResultRecord["analytics"]
   readonly isLoading: boolean
   readonly onRangeSelect?: ((range: { from: string; to: string } | null) => void) | undefined
 }) {
@@ -164,7 +164,7 @@ export function IssuesAnalyticsPanel({
         <div className="flex items-center justify-between px-4 py-2">
           <div className="flex items-center gap-1.5">
             <Icon icon={BarChart2} size="sm" color="foregroundMuted" />
-            <Text.H6 color="foregroundMuted">Issues statistics</Text.H6>
+            <Text.H6 color="foregroundMuted">Signals statistics</Text.H6>
           </div>
           <Button variant="ghost" size="icon" onClick={() => setCollapsed(false)} aria-label="Expand statistics">
             <Icon icon={ChevronDown} size="sm" />
@@ -245,7 +245,7 @@ export function IssuesAnalyticsPanel({
                 height={160}
                 showYAxis={false}
                 xAxisLabelFontSize={10}
-                ariaLabel="Issue occurrences over time"
+                ariaLabel="Signal occurrences over time"
                 formatTooltip={formatHistogramTooltip}
                 onSelect={onRangeSelect ? handleSelect : undefined}
                 {...(overlay ? { overlay } : {})}

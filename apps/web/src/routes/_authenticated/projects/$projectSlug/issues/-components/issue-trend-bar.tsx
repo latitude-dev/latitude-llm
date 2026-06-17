@@ -203,7 +203,7 @@ function IncidentBucketTooltipExtras({ info }: { readonly info: IncidentBucketIn
   )
 }
 
-export function IssueTrendBar({
+export function SignalTrendBar({
   buckets,
   height = 48,
   isLoading = false,
@@ -329,8 +329,8 @@ export function IssueTrendBar({
   const bucketWidthMs = bucketSeconds * 1000
 
   const resolvedAtMs = resolvedAt ? new Date(resolvedAt).getTime() : null
-  const isRegressedIssue = states.includes("regressed")
-  const isEscalatingIssue = states.includes("escalating")
+  const isRegressedSignal = states.includes("regressed")
+  const isEscalatingSignal = states.includes("escalating")
   const incidentsEnabled = barVariant === "details" && incidents.length > 0
   const incidentInfoByBucket = incidentsEnabled
     ? buildIncidentInfoByBucket(
@@ -344,17 +344,17 @@ export function IssueTrendBar({
     const bucketStartMs = parseBucketStartMs(bucket.key)
     const bucketEndMs = toBucketEndMs(bucket.key, bucketWidthMs)
     const isRegressedBucket =
-      isRegressedIssue && resolvedAtMs !== null && bucket.count > 0 && bucketEndMs > resolvedAtMs
+      isRegressedSignal && resolvedAtMs !== null && bucket.count > 0 && bucketEndMs > resolvedAtMs
     // Per-bucket coloring: prefer the seasonal series when available so the highlight follows
     // the same band the dashed line draws. Fall back to the legacy flat threshold (passed by
     // the row variant in the issues table) when the seasonal series isn't loaded.
     const escalatingThreshold = bucket.thresholdCount ?? escalationOccurrenceThreshold
     const isEscalatingBucket =
-      !isRegressedBucket && isEscalatingIssue && escalatingThreshold !== null && bucket.count >= escalatingThreshold
+      !isRegressedBucket && isEscalatingSignal && escalatingThreshold !== null && bucket.count >= escalatingThreshold
     // The "this bucket contains the resolved-at moment" marker — works for both daily and
     // sub-day buckets since we just check whether resolvedAt falls in the bucket's [start, end).
     const isResolvedBoundaryBucket =
-      isRegressedIssue &&
+      isRegressedSignal &&
       resolvedAtMs !== null &&
       Number.isFinite(bucketStartMs) &&
       resolvedAtMs >= bucketStartMs &&
@@ -372,7 +372,7 @@ export function IssueTrendBar({
   const hasLifecycleHighlight = visualBuckets.some((bucket) => bucket.isRegressedBucket || bucket.isEscalatingBucket)
 
   return (
-    <div className="flex min-w-0 flex-col" style={{ height }} role="img" aria-label="Issue occurrence trend">
+    <div className="flex min-w-0 flex-col" style={{ height }} role="img" aria-label="Signal occurrence trend">
       <TooltipProvider>
         <div className="relative min-h-0 flex-1 overflow-hidden">
           <div
@@ -489,7 +489,7 @@ export function IssueTrendBar({
                     <div className="flex flex-col gap-0.5">
                       <Text.H6>{bucket.tooltipLabel}</Text.H6>
                       {bucket.isResolvedBoundaryBucket ? (
-                        <Text.H6 color="foregroundMuted">Issue was resolved</Text.H6>
+                        <Text.H6 color="foregroundMuted">Signal was resolved</Text.H6>
                       ) : null}
                       <Text.H6B>{formatCount(bucket.count)} occurrences</Text.H6B>
                       {showIncidentExtras ? <IncidentBucketTooltipExtras info={bucket.incidentInfo} /> : null}

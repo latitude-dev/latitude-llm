@@ -12,7 +12,7 @@ import { getChartFontFile } from "./fonts.ts"
 
 /**
  * Server-side renderer for the incident-trend chart embedded in the escalating-incident Slack
- * message and email. It mirrors the in-app issue-detail drawer chart (`IssueTrendBar`) — same
+ * message and email. It mirrors the in-app issue-detail drawer chart (`SignalTrendBar`) — same
  * 14-day / 12h window, same gray occurrence bars, the same smooth dashed seasonal-expectation
  * curve, and a severity band + start dot for the triggering incident — so the notification and
  * the issue page read as the same chart.

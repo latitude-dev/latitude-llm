@@ -41,7 +41,7 @@ const toRecord = (score: AnnotationScore) => ({
   source: score.source,
   sourceId: score.sourceId,
   simulationId: score.simulationId,
-  issueId: score.issueId,
+  signalId: score.signalId,
   value: score.value,
   passed: score.passed,
   feedback: score.feedback,
@@ -99,7 +99,7 @@ export const createAnnotation = createServerFn({ method: "POST" })
       // Empty feedback is allowed — `passed` carries the signal. Downstream issue eligibility drops empty-feedback rows before embedding.
       feedback: z.string(),
       anchor: annotationAnchorSchema.optional(),
-      issueId: z.string().optional(),
+      signalId: z.string().optional(),
     }),
   )
   .handler(async ({ data }): Promise<AnnotationRecord> => {
@@ -118,7 +118,7 @@ export const createAnnotation = createServerFn({ method: "POST" })
         traceId: data.traceId,
         spanId: data.spanId ?? null,
         sessionId: data.sessionId ?? null,
-        issueId: data.issueId ?? null,
+        signalId: data.signalId ?? null,
         annotatorId: userId,
         value: data.value,
         passed: data.passed,
@@ -148,7 +148,7 @@ export const updateAnnotation = createServerFn({ method: "POST" })
       value: z.number(),
       passed: z.boolean(),
       feedback: z.string(),
-      issueId: z.string().optional(),
+      signalId: z.string().optional(),
     }),
   )
   .handler(async ({ data }): Promise<AnnotationRecord> => {
@@ -166,7 +166,7 @@ export const updateAnnotation = createServerFn({ method: "POST" })
         projectId: ProjectId(data.projectId),
         sourceId: getSourceId(data.queueId),
         traceId: data.traceId,
-        issueId: data.issueId ?? null,
+        signalId: data.signalId ?? null,
         value: data.value,
         passed: data.passed,
         feedback: data.feedback,

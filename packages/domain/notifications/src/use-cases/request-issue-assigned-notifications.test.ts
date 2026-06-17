@@ -1,23 +1,23 @@
-import type { Issue } from "@domain/issues"
-import { createIssueCentroid, IssueRepository } from "@domain/issues"
-import { createFakeIssueRepository } from "@domain/issues/testing"
-import { IssueId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import type { Signal } from "@domain/signals"
+import { createSignalCentroid, SignalRepository } from "@domain/signals"
+import { createFakeSignalRepository } from "@domain/signals/testing"
+import { SignalId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { requestIssueAssignedNotificationsUseCase } from "./request-issue-assigned-notifications.ts"
+import { requestSignalAssignedNotificationsUseCase } from "./request-issue-assigned-notifications.ts"
 
 const cuid = (seed: string) => seed.padEnd(24, "0")
 
 const orgId = OrganizationId(cuid("o"))
 const projectId = ProjectId(cuid("p"))
-const issueId = IssueId(cuid("i"))
+const signalId = SignalId(cuid("i"))
 const assigneeId = cuid("u1")
 const actorUserId = cuid("u2")
 const assignedAt = "2026-05-07T10:00:00.000Z"
 
-const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
-  id: issueId,
+const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
+  id: signalId,
   organizationId: orgId as string,
   projectId: projectId as string,
   slug: "assigned-issue",
@@ -26,7 +26,7 @@ const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
   source: "annotation",
   assigneeId,
   priority: null,
-  centroid: createIssueCentroid(),
+  centroid: createSignalCentroid(),
   clusteredAt: new Date("2026-05-01T00:00:00Z"),
   escalatedAt: null,
   resolvedAt: null,
@@ -36,20 +36,20 @@ const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
   ...overrides,
 })
 
-const makeLayer = (issues: readonly Issue[] = [makeIssue()]) => {
-  const { repository: issueRepository } = createFakeIssueRepository(issues)
+const makeLayer = (issues: readonly Signal[] = [makeSignal()]) => {
+  const { repository: signalRepository } = createFakeSignalRepository(issues)
   return Layer.mergeAll(
-    Layer.succeed(IssueRepository, issueRepository),
+    Layer.succeed(SignalRepository, signalRepository),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: orgId })),
   )
 }
 
-describe("requestIssueAssignedNotificationsUseCase", () => {
+describe("requestSignalAssignedNotificationsUseCase", () => {
   it("produces exactly one request targeting the new assignee", async () => {
     const result = await Effect.runPromise(
-      requestIssueAssignedNotificationsUseCase({
+      requestSignalAssignedNotificationsUseCase({
         organizationId: orgId,
-        issueId,
+        signalId,
         assigneeId,
         actorUserId,
         assignedAt,
@@ -64,16 +64,16 @@ describe("requestIssueAssignedNotificationsUseCase", () => {
     const request = result.requests[0]
     expect(request.userId).toBe(assigneeId)
     expect(request.kind).toBe("issue.assigned")
-    expect(request.idempotencyKey).toBe(`issue.assigned:${issueId}:${assignedAt}`)
+    expect(request.idempotencyKey).toBe(`issue.assigned:${signalId}:${assignedAt}`)
     expect(request.projectId).toBe(projectId)
-    expect(request.payload).toEqual({ issueId, actorUserId, assignedAt })
+    expect(request.payload).toEqual({ signalId, actorUserId, assignedAt })
   })
 
   it("skips self-assignments", async () => {
     const result = await Effect.runPromise(
-      requestIssueAssignedNotificationsUseCase({
+      requestSignalAssignedNotificationsUseCase({
         organizationId: orgId,
-        issueId,
+        signalId,
         assigneeId: actorUserId,
         actorUserId,
         assignedAt,
@@ -85,9 +85,9 @@ describe("requestIssueAssignedNotificationsUseCase", () => {
 
   it("skips when the issue no longer exists", async () => {
     const result = await Effect.runPromise(
-      requestIssueAssignedNotificationsUseCase({
+      requestSignalAssignedNotificationsUseCase({
         organizationId: orgId,
-        issueId,
+        signalId,
         assigneeId,
         actorUserId,
         assignedAt,
@@ -100,9 +100,9 @@ describe("requestIssueAssignedNotificationsUseCase", () => {
   it("keys idempotency per assignment event: redelivery replays the key, re-assignment mints a new one", async () => {
     const run = (at: string) =>
       Effect.runPromise(
-        requestIssueAssignedNotificationsUseCase({
+        requestSignalAssignedNotificationsUseCase({
           organizationId: orgId,
-          issueId,
+          signalId,
           assigneeId,
           actorUserId,
           assignedAt: at,

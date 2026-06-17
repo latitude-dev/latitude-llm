@@ -1,33 +1,33 @@
 import {
-  createIssueCentroid,
-  type Issue,
-  IssueRepository,
-  issueSchema,
+  createSignalCentroid,
+  type Signal,
+  SignalRepository,
+  signalSchema,
   MIN_OCCURRENCES_FOR_VISIBILITY,
-} from "@domain/issues"
-import { IssueId, NotFoundError, OrganizationId, ProjectId, SqlClient, toSlug } from "@domain/shared"
+} from "@domain/signals"
+import { SignalId, NotFoundError, OrganizationId, ProjectId, SqlClient, toSlug } from "@domain/shared"
 import { Effect } from "effect"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { alertIncidents as alertIncidentsTable } from "../schema/alert-incidents.ts"
-import { issues as issuesTable } from "../schema/issues.ts"
+import { issues as signalsTable } from "../schema/issues.ts"
 import { projects as projectsTable } from "../schema/projects.ts"
 import { scores as scoresTable } from "../schema/scores.ts"
 import { closeInMemoryPostgres, createInMemoryPostgres, type InMemoryPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
-import { IssueRepositoryLive } from "./issue-repository.ts"
+import { SignalRepositoryLive } from "./issue-repository.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
 const listTestProjectId = "r".repeat(24)
 const otherProjectId = ProjectId("q".repeat(24))
-const issueId = IssueId("i".repeat(24))
-const otherIssueId = IssueId("j".repeat(24))
+const signalId = SignalId("i".repeat(24))
+const otherSignalId = SignalId("j".repeat(24))
 
-const issueBase = {
+const signalBase = {
   organizationId: organizationId as string,
   projectId: projectId as string,
   source: "annotation" as const,
-  centroid: createIssueCentroid(),
+  centroid: createSignalCentroid(),
   clusteredAt: new Date("2026-04-01T00:00:00.000Z"),
   escalatedAt: null,
   resolvedAt: null,
@@ -39,32 +39,32 @@ const issueBase = {
 }
 
 const makeEmbedding = (values: Record<number, number>): number[] => {
-  const embedding = createIssueCentroid().base
+  const embedding = createSignalCentroid().base
   for (const [index, value] of Object.entries(values)) {
     embedding[Number(index)] = value
   }
   return embedding
 }
 
-const makeIssue = (overrides: Partial<Issue> = {}): Issue => {
+const makeSignal = (overrides: Partial<Signal> = {}): Signal => {
   const name = overrides.name ?? "Secret leakage"
-  return issueSchema.parse({
-    id: issueId,
+  return signalSchema.parse({
+    id: signalId,
     slug: toSlug(name),
     name,
     description: "The agent exposes sensitive secrets.",
-    ...issueBase,
+    ...signalBase,
     ...overrides,
   })
 }
 
 const makeProvider = (database: InMemoryPostgres) =>
-  withPostgres(IssueRepositoryLive, database.appPostgresClient, organizationId)
+  withPostgres(SignalRepositoryLive, database.appPostgresClient, organizationId)
 
 const makeCustomScoreRow = (input: {
   readonly id: string
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly createdAt: Date
 }): typeof scoresTable.$inferInsert => ({
   id: input.id,
@@ -76,7 +76,7 @@ const makeCustomScoreRow = (input: {
   source: "custom",
   sourceId: `source-${input.id}`,
   simulationId: null,
-  issueId: input.issueId,
+  signalId: input.signalId,
   value: 0.1,
   passed: false,
   feedback: `Feedback for ${input.id}`,
@@ -94,7 +94,7 @@ const makeCustomScoreRow = (input: {
 const makeAnnotationScoreRow = (input: {
   readonly id: string
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly createdAt: Date
 }): typeof scoresTable.$inferInsert => ({
   id: input.id,
@@ -106,7 +106,7 @@ const makeAnnotationScoreRow = (input: {
   source: "annotation",
   sourceId: "UI",
   simulationId: null,
-  issueId: input.issueId,
+  signalId: input.signalId,
   value: 0.1,
   passed: false,
   feedback: `Feedback for ${input.id}`,
@@ -123,7 +123,7 @@ const makeAnnotationScoreRow = (input: {
   updatedAt: input.createdAt,
 })
 
-describe("IssueRepositoryLive", () => {
+describe("SignalRepositoryLive", () => {
   let database: InMemoryPostgres
 
   beforeAll(async () => {
@@ -133,7 +133,7 @@ describe("IssueRepositoryLive", () => {
   beforeEach(async () => {
     await database.db.delete(alertIncidentsTable)
     await database.db.delete(scoresTable)
-    await database.db.delete(issuesTable)
+    await database.db.delete(signalsTable)
   })
 
   afterAll(async () => {
@@ -141,9 +141,9 @@ describe("IssueRepositoryLive", () => {
   })
 
   it("persists and reads canonical issues", async () => {
-    const canonicalIssue = makeIssue()
-    const otherIssue = makeIssue({
-      id: otherIssueId,
+    const canonicalSignal = makeSignal()
+    const otherSignal = makeSignal({
+      id: otherSignalId,
       name: "Incorrect refusal",
       description: "The agent refuses valid requests.",
       projectId: otherProjectId as string,
@@ -151,28 +151,28 @@ describe("IssueRepositoryLive", () => {
 
     await Effect.runPromise(
       Effect.gen(function* () {
-        const repository = yield* IssueRepository
-        yield* repository.save(canonicalIssue)
-        yield* repository.save(otherIssue)
+        const repository = yield* SignalRepository
+        yield* repository.save(canonicalSignal)
+        yield* repository.save(otherSignal)
 
-        const found = yield* repository.findById(canonicalIssue.id)
+        const found = yield* repository.findById(canonicalSignal.id)
 
-        expect(found.name).toBe(canonicalIssue.name)
+        expect(found.name).toBe(canonicalSignal.name)
       }).pipe(makeProvider(database)),
     )
   })
 
   it("persists and reads flagger-sourced issues", async () => {
-    const flaggerIssue = makeIssue({
+    const flaggerSignal = makeSignal({
       source: "flagger",
     })
 
     await Effect.runPromise(
       Effect.gen(function* () {
-        const repository = yield* IssueRepository
-        yield* repository.save(flaggerIssue)
+        const repository = yield* SignalRepository
+        yield* repository.save(flaggerSignal)
 
-        const found = yield* repository.findById(flaggerIssue.id)
+        const found = yield* repository.findById(flaggerSignal.id)
 
         expect(found.source).toBe("flagger")
       }).pipe(makeProvider(database)),
@@ -183,53 +183,53 @@ describe("IssueRepositoryLive", () => {
     await expect(
       Effect.runPromise(
         Effect.gen(function* () {
-          const repository = yield* IssueRepository
-          return yield* repository.findById(IssueId("z".repeat(24)))
+          const repository = yield* SignalRepository
+          return yield* repository.findById(SignalId("z".repeat(24)))
         }).pipe(makeProvider(database)),
       ),
     ).rejects.toBeInstanceOf(NotFoundError)
   })
 
   it("finds canonical issues by id within the requested project", async () => {
-    const firstIssue = makeIssue()
-    const secondIssue = makeIssue({
-      id: IssueId("k".repeat(24)),
+    const firstSignal = makeSignal()
+    const secondSignal = makeSignal({
+      id: SignalId("k".repeat(24)),
       name: "Second canonical issue",
     })
-    const otherProjectIssue = makeIssue({
-      id: IssueId("l".repeat(24)),
+    const otherProjectSignal = makeSignal({
+      id: SignalId("l".repeat(24)),
       projectId: otherProjectId as string,
       name: "Other project issue",
     })
 
     await Effect.runPromise(
       Effect.gen(function* () {
-        const repository = yield* IssueRepository
-        yield* repository.save(firstIssue)
-        yield* repository.save(secondIssue)
-        yield* repository.save(otherProjectIssue)
+        const repository = yield* SignalRepository
+        yield* repository.save(firstSignal)
+        yield* repository.save(secondSignal)
+        yield* repository.save(otherProjectSignal)
       }).pipe(makeProvider(database)),
     )
 
     const items = await Effect.runPromise(
       Effect.gen(function* () {
-        const repository = yield* IssueRepository
+        const repository = yield* SignalRepository
         return yield* repository.findByIds({
           projectId,
-          issueIds: [firstIssue.id, secondIssue.id, otherProjectIssue.id],
+          signalIds: [firstSignal.id, secondSignal.id, otherProjectSignal.id],
         })
       }).pipe(makeProvider(database)),
     )
 
-    expect(items.map((item) => item.id).sort()).toEqual([firstIssue.id, secondIssue.id].sort())
+    expect(items.map((item) => item.id).sort()).toEqual([firstSignal.id, secondSignal.id].sort())
   })
 
   it("runs hybrid search with pgvector score expressions when there are no matches", async () => {
-    const normalizedEmbedding = createIssueCentroid().base.map((_, index) => (index === 0 ? 1 : 0))
+    const normalizedEmbedding = createSignalCentroid().base.map((_, index) => (index === 0 ? 1 : 0))
 
     const items = await Effect.runPromise(
       Effect.gen(function* () {
-        const repository = yield* IssueRepository
+        const repository = yield* SignalRepository
         return yield* repository.hybridSearch({
           projectId,
           query: "secret leakage",
@@ -242,14 +242,14 @@ describe("IssueRepositoryLive", () => {
   })
 
   it("runs hybrid search against existing issue vectors", async () => {
-    const centroid = createIssueCentroid()
+    const centroid = createSignalCentroid()
     const normalizedEmbedding = makeEmbedding({ 0: 1 })
 
     const items = await Effect.runPromise(
       Effect.gen(function* () {
-        const repository = yield* IssueRepository
+        const repository = yield* SignalRepository
         yield* repository.save(
-          makeIssue({
+          makeSignal({
             centroid: {
               ...centroid,
               base: normalizedEmbedding,
@@ -266,19 +266,19 @@ describe("IssueRepositoryLive", () => {
       }).pipe(makeProvider(database)),
     )
 
-    expect(items.map((item) => item.issueId)).toEqual([issueId])
+    expect(items.map((item) => item.signalId)).toEqual([signalId])
   })
 
   it("keeps semantically similar issue candidates even with no lexical overlap", async () => {
-    const centroid = createIssueCentroid()
+    const centroid = createSignalCentroid()
     const normalizedEmbedding = makeEmbedding({ 0: 1 })
     const candidateEmbedding = makeEmbedding({ 0: 0.76, 1: Math.sqrt(1 - 0.76 ** 2) })
 
     const items = await Effect.runPromise(
       Effect.gen(function* () {
-        const repository = yield* IssueRepository
+        const repository = yield* SignalRepository
         yield* repository.save(
-          makeIssue({
+          makeSignal({
             name: "Billing reconciliation drift",
             description: "Ledger totals differ from invoice exports.",
             centroid: {
@@ -297,151 +297,151 @@ describe("IssueRepositoryLive", () => {
       }).pipe(makeProvider(database)),
     )
 
-    expect(items.map((item) => item.issueId)).toEqual([issueId])
+    expect(items.map((item) => item.signalId)).toEqual([signalId])
   })
 
   describe("findSimilarByCentroid", () => {
     const sourceEmbedding = makeEmbedding({ 0: 1 })
 
-    const saveWithEmbedding = (issue: Issue, embedding: number[]) =>
+    const saveWithEmbedding = (issue: Signal, embedding: number[]) =>
       Effect.gen(function* () {
-        const repository = yield* IssueRepository
+        const repository = yield* SignalRepository
         yield* repository.save({
           ...issue,
-          centroid: { ...createIssueCentroid(), base: embedding, mass: 1 },
+          centroid: { ...createSignalCentroid(), base: embedding, mass: 1 },
         })
       })
 
     it("ranks project neighbors by cosine similarity, excluding self and other projects", async () => {
-      const closeNeighborId = IssueId("a".repeat(24))
-      const farNeighborId = IssueId("b".repeat(24))
-      const orthogonalId = IssueId("c".repeat(24))
-      const otherProjectNeighborId = IssueId("d".repeat(24))
+      const closeNeighborId = SignalId("a".repeat(24))
+      const farNeighborId = SignalId("b".repeat(24))
+      const orthogonalId = SignalId("c".repeat(24))
+      const otherProjectNeighborId = SignalId("d".repeat(24))
 
       const neighbors = await Effect.runPromise(
         Effect.gen(function* () {
-          const repository = yield* IssueRepository
-          yield* saveWithEmbedding(makeIssue(), sourceEmbedding)
+          const repository = yield* SignalRepository
+          yield* saveWithEmbedding(makeSignal(), sourceEmbedding)
           yield* saveWithEmbedding(
-            makeIssue({ id: closeNeighborId, name: "Close neighbor" }),
+            makeSignal({ id: closeNeighborId, name: "Close neighbor" }),
             makeEmbedding({ 0: 0.9, 1: Math.sqrt(1 - 0.9 ** 2) }),
           )
           yield* saveWithEmbedding(
-            makeIssue({ id: farNeighborId, name: "Far neighbor" }),
+            makeSignal({ id: farNeighborId, name: "Far neighbor" }),
             makeEmbedding({ 0: 0.6, 1: 0.8 }),
           )
-          yield* saveWithEmbedding(makeIssue({ id: orthogonalId, name: "Orthogonal" }), makeEmbedding({ 1: 1 }))
+          yield* saveWithEmbedding(makeSignal({ id: orthogonalId, name: "Orthogonal" }), makeEmbedding({ 1: 1 }))
           yield* saveWithEmbedding(
-            makeIssue({ id: otherProjectNeighborId, name: "Other project", projectId: otherProjectId as string }),
+            makeSignal({ id: otherProjectNeighborId, name: "Other project", projectId: otherProjectId as string }),
             makeEmbedding({ 0: 0.95, 1: Math.sqrt(1 - 0.95 ** 2) }),
           )
 
-          return yield* repository.findSimilarByCentroid({ projectId, issueId, limit: 10 })
+          return yield* repository.findSimilarByCentroid({ projectId, signalId, limit: 10 })
         }).pipe(makeProvider(database)),
       )
 
-      expect(neighbors.map((neighbor) => neighbor.issueId)).toEqual([closeNeighborId, farNeighborId, orthogonalId])
+      expect(neighbors.map((neighbor) => neighbor.signalId)).toEqual([closeNeighborId, farNeighborId, orthogonalId])
       expect(neighbors[0]?.similarity).toBeCloseTo(0.9, 5)
       expect(neighbors[1]?.similarity).toBeCloseTo(0.6, 5)
       expect(neighbors[2]?.similarity).toBeCloseTo(0, 5)
     })
 
     it("includes resolved and ignored neighbors and respects the limit", async () => {
-      const resolvedId = IssueId("a".repeat(24))
-      const ignoredId = IssueId("b".repeat(24))
+      const resolvedId = SignalId("a".repeat(24))
+      const ignoredId = SignalId("b".repeat(24))
 
       const neighbors = await Effect.runPromise(
         Effect.gen(function* () {
-          const repository = yield* IssueRepository
-          yield* saveWithEmbedding(makeIssue(), sourceEmbedding)
+          const repository = yield* SignalRepository
+          yield* saveWithEmbedding(makeSignal(), sourceEmbedding)
           yield* saveWithEmbedding(
-            makeIssue({ id: resolvedId, name: "Resolved twin", resolvedAt: new Date("2026-04-02T00:00:00.000Z") }),
+            makeSignal({ id: resolvedId, name: "Resolved twin", resolvedAt: new Date("2026-04-02T00:00:00.000Z") }),
             makeEmbedding({ 0: 0.9, 1: Math.sqrt(1 - 0.9 ** 2) }),
           )
           yield* saveWithEmbedding(
-            makeIssue({ id: ignoredId, name: "Ignored twin", ignoredAt: new Date("2026-04-02T00:00:00.000Z") }),
+            makeSignal({ id: ignoredId, name: "Ignored twin", ignoredAt: new Date("2026-04-02T00:00:00.000Z") }),
             makeEmbedding({ 0: 0.8, 1: 0.6 }),
           )
 
-          return yield* repository.findSimilarByCentroid({ projectId, issueId, limit: 1 })
+          return yield* repository.findSimilarByCentroid({ projectId, signalId, limit: 1 })
         }).pipe(makeProvider(database)),
       )
 
-      expect(neighbors.map((neighbor) => neighbor.issueId)).toEqual([resolvedId])
+      expect(neighbors.map((neighbor) => neighbor.signalId)).toEqual([resolvedId])
     })
 
     it("skips neighbors without an embedding and returns empty when the source has none", async () => {
-      const embeddedNeighborId = IssueId("a".repeat(24))
-      const embeddinglessId = IssueId("b".repeat(24))
+      const embeddedNeighborId = SignalId("a".repeat(24))
+      const embeddinglessId = SignalId("b".repeat(24))
 
       const { fromSource, fromEmbeddingless, fromMissing } = await Effect.runPromise(
         Effect.gen(function* () {
-          const repository = yield* IssueRepository
-          yield* saveWithEmbedding(makeIssue(), sourceEmbedding)
+          const repository = yield* SignalRepository
+          yield* saveWithEmbedding(makeSignal(), sourceEmbedding)
           yield* saveWithEmbedding(
-            makeIssue({ id: embeddedNeighborId, name: "Embedded neighbor" }),
+            makeSignal({ id: embeddedNeighborId, name: "Embedded neighbor" }),
             makeEmbedding({ 0: 0.7, 1: Math.sqrt(1 - 0.7 ** 2) }),
           )
           // Zero-mass centroid → `save` persists a NULL `centroid_embedding`.
-          yield* repository.save(makeIssue({ id: embeddinglessId, name: "No embedding yet" }))
+          yield* repository.save(makeSignal({ id: embeddinglessId, name: "No embedding yet" }))
 
           return {
-            fromSource: yield* repository.findSimilarByCentroid({ projectId, issueId, limit: 10 }),
+            fromSource: yield* repository.findSimilarByCentroid({ projectId, signalId, limit: 10 }),
             fromEmbeddingless: yield* repository.findSimilarByCentroid({
               projectId,
-              issueId: embeddinglessId,
+              signalId: embeddinglessId,
               limit: 10,
             }),
             fromMissing: yield* repository.findSimilarByCentroid({
               projectId,
-              issueId: IssueId("z".repeat(24)),
+              signalId: SignalId("z".repeat(24)),
               limit: 10,
             }),
           }
         }).pipe(makeProvider(database)),
       )
 
-      expect(fromSource.map((neighbor) => neighbor.issueId)).toEqual([embeddedNeighborId])
+      expect(fromSource.map((neighbor) => neighbor.signalId)).toEqual([embeddedNeighborId])
       expect(fromEmbeddingless).toEqual([])
       expect(fromMissing).toEqual([])
     })
   })
 
   it("lists only visible issues scoped to project, newest-first, and paginates with hasMore", async () => {
-    const older = makeIssue({
-      id: IssueId("aaaaaaaaaaaaaaaaaaaaaaaa"),
+    const older = makeSignal({
+      id: SignalId("aaaaaaaaaaaaaaaaaaaaaaaa"),
       projectId: listTestProjectId,
       name: "Zebra ordering",
       createdAt: new Date("2026-03-30T08:00:00.000Z"),
       updatedAt: new Date("2026-03-30T08:00:00.000Z"),
       clusteredAt: new Date("2026-03-30T08:00:00.000Z"),
     })
-    const mid = makeIssue({
-      id: IssueId("bbbbbbbbbbbbbbbbbbbbbbbb"),
+    const mid = makeSignal({
+      id: SignalId("bbbbbbbbbbbbbbbbbbbbbbbb"),
       projectId: listTestProjectId,
       name: "Beta token mention",
       createdAt: new Date("2026-03-30T09:00:00.000Z"),
       updatedAt: new Date("2026-03-30T09:00:00.000Z"),
       clusteredAt: new Date("2026-03-30T09:00:00.000Z"),
     })
-    const newest = makeIssue({
-      id: IssueId("cccccccccccccccccccccccc"),
+    const newest = makeSignal({
+      id: SignalId("cccccccccccccccccccccccc"),
       projectId: listTestProjectId,
       name: "Most recent issue",
       createdAt: new Date("2026-03-30T11:00:00.000Z"),
       updatedAt: new Date("2026-03-30T11:00:00.000Z"),
       clusteredAt: new Date("2026-03-30T11:00:00.000Z"),
     })
-    const hiddenLowEvidence = makeIssue({
-      id: IssueId("dddddddddddddddddddddddd"),
+    const hiddenLowEvidence = makeSignal({
+      id: SignalId("dddddddddddddddddddddddd"),
       projectId: listTestProjectId,
       name: "Single weak occurrence",
       createdAt: new Date("2026-03-30T12:00:00.000Z"),
       updatedAt: new Date("2026-03-30T12:00:00.000Z"),
       clusteredAt: new Date("2026-03-30T12:00:00.000Z"),
     })
-    const wrongProject = makeIssue({
-      id: IssueId("eeeeeeeeeeeeeeeeeeeeeeee"),
+    const wrongProject = makeSignal({
+      id: SignalId("eeeeeeeeeeeeeeeeeeeeeeee"),
       projectId: otherProjectId,
       name: "Wrong project issue",
       createdAt: new Date("2026-03-30T13:00:00.000Z"),
@@ -451,7 +451,7 @@ describe("IssueRepositoryLive", () => {
 
     await Effect.runPromise(
       Effect.gen(function* () {
-        const repository = yield* IssueRepository
+        const repository = yield* SignalRepository
         yield* repository.save(older)
         yield* repository.save(mid)
         yield* repository.save(newest)
@@ -465,7 +465,7 @@ describe("IssueRepositoryLive", () => {
         makeCustomScoreRow({
           id: `oldcustomscore000000000${index + 1}`,
           projectId: listTestProjectId,
-          issueId: older.id,
+          signalId: older.id,
           createdAt: new Date("2026-03-30T08:30:00.000Z"),
         }),
       ),
@@ -473,21 +473,21 @@ describe("IssueRepositoryLive", () => {
         makeCustomScoreRow({
           id: `newcustomscore000000000${index + 1}`,
           projectId: listTestProjectId,
-          issueId: newest.id,
+          signalId: newest.id,
           createdAt: new Date("2026-03-30T11:30:00.000Z"),
         }),
       ),
       makeCustomScoreRow({
         id: "hiddenlowevidencecustom1",
         projectId: listTestProjectId,
-        issueId: hiddenLowEvidence.id,
+        signalId: hiddenLowEvidence.id,
         createdAt: new Date("2026-03-30T12:30:00.000Z"),
       }),
       ...Array.from({ length: MIN_OCCURRENCES_FOR_VISIBILITY }, (_, index) =>
         makeCustomScoreRow({
           id: `wrongprojectscore000000${index + 1}`,
           projectId: otherProjectId,
-          issueId: wrongProject.id,
+          signalId: wrongProject.id,
           createdAt: new Date("2026-03-30T13:30:00.000Z"),
         }),
       ),
@@ -496,13 +496,13 @@ describe("IssueRepositoryLive", () => {
       makeAnnotationScoreRow({
         id: "midannotationevidence001",
         projectId: listTestProjectId,
-        issueId: mid.id,
+        signalId: mid.id,
         createdAt: new Date("2026-03-30T09:30:00.000Z"),
       }),
     )
     const page1 = await Effect.runPromise(
       Effect.gen(function* () {
-        const repository = yield* IssueRepository
+        const repository = yield* SignalRepository
         return yield* repository.list({
           projectId: ProjectId(listTestProjectId),
           limit: 2,
@@ -519,7 +519,7 @@ describe("IssueRepositoryLive", () => {
 
     const page2 = await Effect.runPromise(
       Effect.gen(function* () {
-        const repository = yield* IssueRepository
+        const repository = yield* SignalRepository
         return yield* repository.list({
           projectId: ProjectId(listTestProjectId),
           limit: 2,
@@ -533,34 +533,34 @@ describe("IssueRepositoryLive", () => {
   })
 
   it("can lock an issue row by id inside a transaction", async () => {
-    const issue = makeIssue()
+    const issue = makeSignal()
 
     await Effect.runPromise(
       Effect.gen(function* () {
-        const repository = yield* IssueRepository
+        const repository = yield* SignalRepository
         yield* repository.save(issue)
-      }).pipe(withPostgres(IssueRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+      }).pipe(withPostgres(SignalRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
     )
 
-    const lockedIssue = await Effect.runPromise(
+    const lockedSignal = await Effect.runPromise(
       Effect.gen(function* () {
-        const repository = yield* IssueRepository
+        const repository = yield* SignalRepository
         const sqlClient = yield* SqlClient
 
         return yield* sqlClient.transaction(repository.findByIdForUpdate(issue.id))
-      }).pipe(withPostgres(IssueRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+      }).pipe(withPostgres(SignalRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
     )
 
-    expect(lockedIssue).toEqual(issue)
+    expect(lockedSignal).toEqual(issue)
   })
 
   describe("lifecycle JOIN", () => {
     it("findById attaches isEscalating=true when an open issue.escalating row exists", async () => {
-      const issue = makeIssue()
+      const issue = makeSignal()
 
       await Effect.runPromise(
         Effect.gen(function* () {
-          const repository = yield* IssueRepository
+          const repository = yield* SignalRepository
           yield* repository.save(issue)
         }).pipe(makeProvider(database)),
       )
@@ -579,7 +579,7 @@ describe("IssueRepositoryLive", () => {
 
       const result = await Effect.runPromise(
         Effect.gen(function* () {
-          const repository = yield* IssueRepository
+          const repository = yield* SignalRepository
           return yield* repository.findById(issue.id)
         }).pipe(makeProvider(database)),
       )
@@ -589,11 +589,11 @@ describe("IssueRepositoryLive", () => {
     })
 
     it("findById attaches isEscalating=false when the escalating row is closed", async () => {
-      const issue = makeIssue()
+      const issue = makeSignal()
 
       await Effect.runPromise(
         Effect.gen(function* () {
-          const repository = yield* IssueRepository
+          const repository = yield* SignalRepository
           yield* repository.save(issue)
         }).pipe(makeProvider(database)),
       )
@@ -612,7 +612,7 @@ describe("IssueRepositoryLive", () => {
 
       const result = await Effect.runPromise(
         Effect.gen(function* () {
-          const repository = yield* IssueRepository
+          const repository = yield* SignalRepository
           return yield* repository.findById(issue.id)
         }).pipe(makeProvider(database)),
       )
@@ -621,11 +621,11 @@ describe("IssueRepositoryLive", () => {
     })
 
     it("findById attaches isRegressed=true when an unresolved issue has a regressed incident", async () => {
-      const issue = makeIssue()
+      const issue = makeSignal()
 
       await Effect.runPromise(
         Effect.gen(function* () {
-          const repository = yield* IssueRepository
+          const repository = yield* SignalRepository
           yield* repository.save(issue)
         }).pipe(makeProvider(database)),
       )
@@ -644,7 +644,7 @@ describe("IssueRepositoryLive", () => {
 
       const result = await Effect.runPromise(
         Effect.gen(function* () {
-          const repository = yield* IssueRepository
+          const repository = yield* SignalRepository
           return yield* repository.findById(issue.id)
         }).pipe(makeProvider(database)),
       )
@@ -653,11 +653,11 @@ describe("IssueRepositoryLive", () => {
     })
 
     it("findById attaches isRegressed=false when the issue has been resolved again after regressing", async () => {
-      const issue = makeIssue({ resolvedAt: new Date("2026-04-20T00:00:00.000Z") })
+      const issue = makeSignal({ resolvedAt: new Date("2026-04-20T00:00:00.000Z") })
 
       await Effect.runPromise(
         Effect.gen(function* () {
-          const repository = yield* IssueRepository
+          const repository = yield* SignalRepository
           yield* repository.save(issue)
         }).pipe(makeProvider(database)),
       )
@@ -678,7 +678,7 @@ describe("IssueRepositoryLive", () => {
 
       const result = await Effect.runPromise(
         Effect.gen(function* () {
-          const repository = yield* IssueRepository
+          const repository = yield* SignalRepository
           return yield* repository.findById(issue.id)
         }).pipe(makeProvider(database)),
       )
@@ -687,30 +687,30 @@ describe("IssueRepositoryLive", () => {
     })
 
     it("list and findByIds populate the same lifecycle flags as findById", async () => {
-      const escalatingIssue = makeIssue()
-      const regressedIssue = makeIssue({
-        id: otherIssueId,
+      const escalatingSignal = makeSignal()
+      const regressedSignal = makeSignal({
+        id: otherSignalId,
         name: "Incorrect refusal",
       })
 
       await Effect.runPromise(
         Effect.gen(function* () {
-          const repository = yield* IssueRepository
-          yield* repository.save(escalatingIssue)
-          yield* repository.save(regressedIssue)
+          const repository = yield* SignalRepository
+          yield* repository.save(escalatingSignal)
+          yield* repository.save(regressedSignal)
         }).pipe(makeProvider(database)),
       )
 
       // Add three annotation scores to each issue so they pass the
       // visibility threshold in `list`.
       const baseDate = new Date("2026-04-15T00:00:00.000Z")
-      for (const target of [escalatingIssue, regressedIssue]) {
+      for (const target of [escalatingSignal, regressedSignal]) {
         for (let index = 0; index < 3; index++) {
           await database.db.insert(scoresTable).values(
             makeAnnotationScoreRow({
               id: `${target.id.slice(0, 6)}score${index}`.padEnd(24, "x"),
               projectId: target.projectId,
-              issueId: target.id,
+              signalId: target.id,
               createdAt: baseDate,
             }),
           )
@@ -721,9 +721,9 @@ describe("IssueRepositoryLive", () => {
         {
           id: "ai-esc-list-aaaaaaaaaaaa",
           organizationId,
-          projectId: escalatingIssue.projectId,
+          projectId: escalatingSignal.projectId,
           sourceType: "issue",
-          sourceId: escalatingIssue.id,
+          sourceId: escalatingSignal.id,
           kind: "issue.escalating",
           severity: "high",
           startedAt: baseDate,
@@ -732,9 +732,9 @@ describe("IssueRepositoryLive", () => {
         {
           id: "ai-reg-list-aaaaaaaaaaaa",
           organizationId,
-          projectId: regressedIssue.projectId,
+          projectId: regressedSignal.projectId,
           sourceType: "issue",
-          sourceId: regressedIssue.id,
+          sourceId: regressedSignal.id,
           kind: "issue.regressed",
           severity: "high",
           startedAt: baseDate,
@@ -744,33 +744,33 @@ describe("IssueRepositoryLive", () => {
 
       const { listResult, findByIdsResult } = await Effect.runPromise(
         Effect.gen(function* () {
-          const repository = yield* IssueRepository
+          const repository = yield* SignalRepository
           const listResult = yield* repository.list({ projectId, limit: 50, offset: 0 })
           const findByIdsResult = yield* repository.findByIds({
             projectId,
-            issueIds: [escalatingIssue.id, regressedIssue.id],
+            signalIds: [escalatingSignal.id, regressedSignal.id],
           })
           return { listResult, findByIdsResult }
         }).pipe(makeProvider(database)),
       )
 
       const listFlags = new Map(listResult.items.map((item) => [item.id, item.lifecycle] as const))
-      expect(listFlags.get(escalatingIssue.id)).toEqual({ isEscalating: true, isRegressed: false })
-      expect(listFlags.get(regressedIssue.id)).toEqual({ isEscalating: false, isRegressed: true })
+      expect(listFlags.get(escalatingSignal.id)).toEqual({ isEscalating: true, isRegressed: false })
+      expect(listFlags.get(regressedSignal.id)).toEqual({ isEscalating: false, isRegressed: true })
 
       const findByIdsFlags = new Map(findByIdsResult.map((item) => [item.id, item.lifecycle] as const))
-      expect(findByIdsFlags.get(escalatingIssue.id)).toEqual({ isEscalating: true, isRegressed: false })
-      expect(findByIdsFlags.get(regressedIssue.id)).toEqual({ isEscalating: false, isRegressed: true })
+      expect(findByIdsFlags.get(escalatingSignal.id)).toEqual({ isEscalating: true, isRegressed: false })
+      expect(findByIdsFlags.get(regressedSignal.id)).toEqual({ isEscalating: false, isRegressed: true })
     })
   })
 })
 
-describe("IssueRepositoryLive searchOrgWide", () => {
+describe("SignalRepositoryLive searchOrgWide", () => {
   let database: InMemoryPostgres
 
   const iid = (prefix: string) => prefix.padEnd(24, "x").slice(0, 24)
 
-  // Issue reads go through `issueSchema.parse`, which requires 24-char cuid ids — pad org/project ids.
+  // Signal reads go through `signalSchema.parse`, which requires 24-char cuid ids — pad org/project ids.
   const searchOrgId = OrganizationId(iid("org-issue-search-test"))
   const otherOrgId = OrganizationId(iid("org-issue-search-othr"))
   const projA = ProjectId(iid("proj-issue-search-a"))
@@ -779,13 +779,13 @@ describe("IssueRepositoryLive searchOrgWide", () => {
   const projOther = ProjectId(iid("proj-issue-search-oth"))
   const baseTime = new Date("2026-04-01T00:00:00.000Z")
 
-  const issueRow = (
+  const signalRow = (
     id: string,
     org: OrganizationId,
     project: ProjectId,
     name: string,
-    extra: Partial<typeof issuesTable.$inferInsert> = {},
-  ): typeof issuesTable.$inferInsert => ({
+    extra: Partial<typeof signalsTable.$inferInsert> = {},
+  ): typeof signalsTable.$inferInsert => ({
     id: iid(id),
     organizationId: org,
     projectId: project,
@@ -793,7 +793,7 @@ describe("IssueRepositoryLive searchOrgWide", () => {
     name,
     description: `Description for ${name}`,
     source: "annotation",
-    centroid: createIssueCentroid(),
+    centroid: createSignalCentroid(),
     centroidEmbedding: null,
     clusteredAt: baseTime,
     escalatedAt: null,
@@ -812,9 +812,9 @@ describe("IssueRepositoryLive searchOrgWide", () => {
   }) =>
     Effect.runPromise(
       Effect.gen(function* () {
-        const repo = yield* IssueRepository
+        const repo = yield* SignalRepository
         return yield* repo.searchOrgWide(input)
-      }).pipe(withPostgres(IssueRepositoryLive, database.appPostgresClient, searchOrgId)),
+      }).pipe(withPostgres(SignalRepositoryLive, database.appPostgresClient, searchOrgId)),
     )
 
   beforeAll(async () => {
@@ -829,30 +829,30 @@ describe("IssueRepositoryLive searchOrgWide", () => {
 
     // Lexical issues (no embedding) across two live projects, a deleted project, and another org.
     await database.db
-      .insert(issuesTable)
+      .insert(signalsTable)
       .values([
-        issueRow("isl1", searchOrgId, projA, "Payment timeout errors"),
-        issueRow("isl2", searchOrgId, projB, "Checkout timeout"),
-        issueRow("isl3", searchOrgId, projA, "Unrelated latency"),
-        issueRow("isl4", searchOrgId, projDeleted, "Timeout in deleted project"),
-        issueRow("isl5", otherOrgId, projOther, "Timeout secret"),
-        issueRow("isl6", searchOrgId, projA, "Resolved timeout", { resolvedAt: baseTime }),
-        issueRow("isl7", searchOrgId, projB, "Ignored timeout", { ignoredAt: baseTime }),
+        signalRow("isl1", searchOrgId, projA, "Payment timeout errors"),
+        signalRow("isl2", searchOrgId, projB, "Checkout timeout"),
+        signalRow("isl3", searchOrgId, projA, "Unrelated latency"),
+        signalRow("isl4", searchOrgId, projDeleted, "Timeout in deleted project"),
+        signalRow("isl5", otherOrgId, projOther, "Timeout secret"),
+        signalRow("isl6", searchOrgId, projA, "Resolved timeout", { resolvedAt: baseTime }),
+        signalRow("isl7", searchOrgId, projB, "Ignored timeout", { ignoredAt: baseTime }),
       ])
 
     // Semantic issues: identical 1-hot embedding in two live projects + one in another org. The
     // centroid must have positive mass + the right model to satisfy the embedding consistency check.
     const sharedEmbedding = makeEmbedding({ 0: 1 })
-    const embeddedCentroid = { ...createIssueCentroid(), base: sharedEmbedding, mass: 1 }
+    const embeddedCentroid = { ...createSignalCentroid(), base: sharedEmbedding, mass: 1 }
     const embedded = { centroid: embeddedCentroid, centroidEmbedding: sharedEmbedding }
     await database.db
-      .insert(issuesTable)
+      .insert(signalsTable)
       .values([
-        issueRow("ise1", searchOrgId, projA, "Zeta alpha", embedded),
-        issueRow("ise2", searchOrgId, projB, "Zeta beta", embedded),
-        issueRow("ise3", otherOrgId, projOther, "Zeta secret", embedded),
-        issueRow("ise4", searchOrgId, projA, "Zeta resolved", { ...embedded, resolvedAt: baseTime }),
-        issueRow("ise5", searchOrgId, projB, "Zeta ignored", { ...embedded, ignoredAt: baseTime }),
+        signalRow("ise1", searchOrgId, projA, "Zeta alpha", embedded),
+        signalRow("ise2", searchOrgId, projB, "Zeta beta", embedded),
+        signalRow("ise3", otherOrgId, projOther, "Zeta secret", embedded),
+        signalRow("ise4", searchOrgId, projA, "Zeta resolved", { ...embedded, resolvedAt: baseTime }),
+        signalRow("ise5", searchOrgId, projB, "Zeta ignored", { ...embedded, ignoredAt: baseTime }),
       ])
   })
 

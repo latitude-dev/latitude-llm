@@ -1,46 +1,46 @@
 import { EvaluationRepository } from "@domain/evaluations"
 import { WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
 import { type Score, ScoreRepository, syncScoreAnalyticsUseCase } from "@domain/scores"
-import { IssueId, type RepositoryError, ScoreId } from "@domain/shared"
+import { SignalId, type RepositoryError, ScoreId } from "@domain/shared"
 import { Effect } from "effect"
 import type { CheckEligibilityError } from "../errors.ts"
-import { ScoreAlreadyOwnedByIssueError } from "../errors.ts"
-import { IssueRepository } from "../ports/issue-repository.ts"
+import { ScoreAlreadyOwnedBySignalError } from "../errors.ts"
+import { SignalRepository } from "../ports/issue-repository.ts"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
 
-export interface DiscoverIssueInput {
+export interface DiscoverSignalInput {
   readonly organizationId: string
   readonly projectId: string
   readonly scoreId: string
-  readonly issueId: string | null
+  readonly signalId: string | null
 }
 
-type DiscoverIssueSkipReason = CheckEligibilityError["_tag"]
+type DiscoverSignalSkipReason = CheckEligibilityError["_tag"]
 
-export type DiscoverIssueStartedWorkflow = "issueDiscoveryWorkflow" | "assignScoreToKnownIssueWorkflow"
+export type DiscoverSignalStartedWorkflow = "signalDiscoveryWorkflow" | "assignScoreToKnownSignalWorkflow"
 
-export type DiscoverIssueResult =
+export type DiscoverSignalResult =
   | {
       readonly action: "skipped"
-      readonly reason: DiscoverIssueSkipReason
+      readonly reason: DiscoverSignalSkipReason
     }
   | {
       readonly action: "already-assigned"
-      readonly issueId: string
+      readonly signalId: string
     }
   | {
       readonly action: "workflow-started"
-      readonly workflow: DiscoverIssueStartedWorkflow
+      readonly workflow: DiscoverSignalStartedWorkflow
       readonly scoreId: string
     }
 
-export type DiscoverIssueError = RepositoryError | ScoreAlreadyOwnedByIssueError
+export type DiscoverSignalError = RepositoryError | ScoreAlreadyOwnedBySignalError
 
-const resolveKnownIssueId = ({ issueId, projectId }: { readonly issueId: string; readonly projectId: string }) =>
+const resolveKnownSignalId = ({ signalId, projectId }: { readonly signalId: string; readonly projectId: string }) =>
   Effect.gen(function* () {
-    const issueRepository = yield* IssueRepository
-    const issue = yield* issueRepository
-      .findById(IssueId(issueId))
+    const signalRepository = yield* SignalRepository
+    const issue = yield* signalRepository
+      .findById(SignalId(signalId))
       .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
 
     if (issue === null || issue.projectId !== projectId) {
@@ -50,7 +50,7 @@ const resolveKnownIssueId = ({ issueId, projectId }: { readonly issueId: string;
     return issue.id
   })
 
-const resolveLinkedIssueId = (score: Score) =>
+const resolveLinkedSignalId = (score: Score) =>
   Effect.gen(function* () {
     if (score.source !== "evaluation") {
       return null
@@ -65,15 +65,15 @@ const resolveLinkedIssueId = (score: Score) =>
       return null
     }
 
-    return yield* resolveKnownIssueId({
-      issueId: evaluation.issueId,
+    return yield* resolveKnownSignalId({
+      signalId: evaluation.signalId,
       projectId: score.projectId,
     })
   })
 
-const startDiscoveryWorkflow = (workflowStarter: WorkflowStarterShape, input: DiscoverIssueInput) =>
+const startDiscoveryWorkflow = (workflowStarter: WorkflowStarterShape, input: DiscoverSignalInput) =>
   workflowStarter.start(
-    "issueDiscoveryWorkflow",
+    "signalDiscoveryWorkflow",
     {
       organizationId: input.organizationId,
       projectId: input.projectId,
@@ -84,18 +84,18 @@ const startDiscoveryWorkflow = (workflowStarter: WorkflowStarterShape, input: Di
     },
   )
 
-const startAssignScoreToKnownIssueWorkflow = (
+const startAssignScoreToKnownSignalWorkflow = (
   workflowStarter: WorkflowStarterShape,
-  input: DiscoverIssueInput,
-  issueId: string,
+  input: DiscoverSignalInput,
+  signalId: string,
 ) =>
   workflowStarter.start(
-    "assignScoreToKnownIssueWorkflow",
+    "assignScoreToKnownSignalWorkflow",
     {
       organizationId: input.organizationId,
       projectId: input.projectId,
       scoreId: input.scoreId,
-      issueId,
+      signalId,
     },
     {
       workflowId: `issues:assign-known:${input.scoreId}`,
@@ -109,34 +109,34 @@ const loadAssignedScoreOrSkip = (scoreId: string) =>
       .findById(ScoreId(scoreId))
       .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
 
-    if (currentScore?.issueId != null) {
+    if (currentScore?.signalId != null) {
       return {
         action: "already-assigned",
-        issueId: currentScore.issueId,
+        signalId: currentScore.signalId,
         score: currentScore,
       } as const
     }
 
-    return yield* new ScoreAlreadyOwnedByIssueError({ scoreId })
+    return yield* new ScoreAlreadyOwnedBySignalError({ scoreId })
   })
 
-const asSkipped = (reason: DiscoverIssueSkipReason) =>
+const asSkipped = (reason: DiscoverSignalSkipReason) =>
   Effect.succeed({
     action: "skipped",
     reason,
   } as const)
 
-export const discoverIssueUseCase = Effect.fn("issues.discoverIssue")(function* (input: DiscoverIssueInput) {
+export const discoverSignalUseCase = Effect.fn("issues.discoverSignal")(function* (input: DiscoverSignalInput) {
   yield* Effect.annotateCurrentSpan("scoreId", input.scoreId)
   yield* Effect.annotateCurrentSpan("projectId", input.projectId)
-  if (input.issueId !== null) {
-    yield* Effect.annotateCurrentSpan("issueId", input.issueId)
+  if (input.signalId !== null) {
+    yield* Effect.annotateCurrentSpan("signalId", input.signalId)
   }
   const workflowStarter = yield* WorkflowStarter
 
   const eligibilityResult = yield* checkEligibilityUseCase(input).pipe(
     Effect.map((score) => ({ action: "ready", score }) as const),
-    Effect.catchTag("ScoreAlreadyOwnedByIssueError", () => loadAssignedScoreOrSkip(input.scoreId)),
+    Effect.catchTag("ScoreAlreadyOwnedBySignalError", () => loadAssignedScoreOrSkip(input.scoreId)),
     Effect.catchTag("ScoreNotFoundForDiscoveryError", () => asSkipped("ScoreNotFoundForDiscoveryError")),
     Effect.catchTag("ScoreDiscoveryOrganizationMismatchError", () =>
       asSkipped("ScoreDiscoveryOrganizationMismatchError"),
@@ -155,7 +155,7 @@ export const discoverIssueUseCase = Effect.fn("issues.discoverIssue")(function* 
   )
 
   if (eligibilityResult.action === "skipped") {
-    return eligibilityResult satisfies DiscoverIssueResult
+    return eligibilityResult satisfies DiscoverSignalResult
   }
 
   if (eligibilityResult.action === "already-assigned") {
@@ -166,32 +166,32 @@ export const discoverIssueUseCase = Effect.fn("issues.discoverIssue")(function* 
 
     return {
       action: "already-assigned",
-      issueId: eligibilityResult.issueId,
-    } satisfies DiscoverIssueResult
+      signalId: eligibilityResult.signalId,
+    } satisfies DiscoverSignalResult
   }
 
   const score = eligibilityResult.score
-  const selectedIssueId =
-    input.issueId === null
-      ? yield* resolveLinkedIssueId(score)
-      : yield* resolveKnownIssueId({
-          issueId: input.issueId,
+  const selectedSignalId =
+    input.signalId === null
+      ? yield* resolveLinkedSignalId(score)
+      : yield* resolveKnownSignalId({
+          signalId: input.signalId,
           projectId: score.projectId,
         })
 
-  if (selectedIssueId === null) {
+  if (selectedSignalId === null) {
     yield* startDiscoveryWorkflow(workflowStarter, input)
     return {
       action: "workflow-started",
-      workflow: "issueDiscoveryWorkflow",
+      workflow: "signalDiscoveryWorkflow",
       scoreId: score.id,
-    } satisfies DiscoverIssueResult
+    } satisfies DiscoverSignalResult
   }
 
-  yield* startAssignScoreToKnownIssueWorkflow(workflowStarter, input, selectedIssueId)
+  yield* startAssignScoreToKnownSignalWorkflow(workflowStarter, input, selectedSignalId)
   return {
     action: "workflow-started",
-    workflow: "assignScoreToKnownIssueWorkflow",
+    workflow: "assignScoreToKnownSignalWorkflow",
     scoreId: score.id,
-  } satisfies DiscoverIssueResult
+  } satisfies DiscoverSignalResult
 })

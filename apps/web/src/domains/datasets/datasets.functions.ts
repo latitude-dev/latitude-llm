@@ -25,7 +25,7 @@ import {
   DatasetRowId,
   DatasetVersionId,
   filterSetSchema,
-  IssueId,
+  SignalId,
   isValidId,
   OrganizationId,
   ProjectId,
@@ -658,8 +658,8 @@ function toTraceSelection(sel: z.infer<typeof rowSelectionSchema>): TraceSelecti
   return { mode: sel.mode, traceIds: sel.rowIds.map(TraceId) }
 }
 
-function toTraceSource(issueId: string | undefined): TraceSource {
-  return issueId ? { kind: "issue", issueId: IssueId(issueId) } : { kind: "project" }
+function toTraceSource(signalId: string | undefined): TraceSource {
+  return signalId ? { kind: "issue", signalId: SignalId(signalId) } : { kind: "project" }
 }
 
 export const addTracesToDatasetFunction = createServerFn({ method: "POST" })
@@ -667,7 +667,7 @@ export const addTracesToDatasetFunction = createServerFn({ method: "POST" })
     z.object({
       projectId: z.string(),
       datasetId: z.string(),
-      issueId: z.string().optional(),
+      signalId: z.string().optional(),
       selection: rowSelectionSchema,
       searchQuery: z.string().max(500).optional(),
       filters: filterSetSchema.optional(),
@@ -682,7 +682,7 @@ export const addTracesToDatasetFunction = createServerFn({ method: "POST" })
       addTracesToDataset({
         projectId: ProjectId(data.projectId),
         datasetId: DatasetId(data.datasetId),
-        source: toTraceSource(data.issueId),
+        source: toTraceSource(data.signalId),
         selection: toTraceSelection(data.selection),
         ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
         ...(data.filters ? { filters: data.filters } : {}),
@@ -715,7 +715,7 @@ export const createDatasetFromTracesFunction = createServerFn({
           message: "Invalid dataset id",
         }),
       projectId: z.string(),
-      issueId: z.string().optional(),
+      signalId: z.string().optional(),
       name: z.string().min(1),
       selection: rowSelectionSchema,
       searchQuery: z.string().max(500).optional(),
@@ -741,7 +741,7 @@ export const createDatasetFromTracesFunction = createServerFn({
           ...(data.datasetId ? { datasetId: DatasetId(data.datasetId) } : {}),
           projectId: ProjectId(data.projectId),
           name: data.name,
-          source: toTraceSource(data.issueId),
+          source: toTraceSource(data.signalId),
           selection: toTraceSelection(data.selection),
           ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
           ...(data.filters ? { filters: data.filters } : {}),

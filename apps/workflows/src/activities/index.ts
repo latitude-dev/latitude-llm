@@ -33,10 +33,10 @@ export {
 export { optimizeEvaluationDraft } from "./evaluation-optimization-activities.ts"
 export { draftAnnotate, runFlagger, saveAnnotation } from "./flagger-activities.ts"
 export {
-  assignOrCreateIssue,
-  assignScoreToIssue,
+  assignOrCreateSignal,
+  assignScoreToSignal,
   checkEligibility,
-  createIssueFromScore,
+  createSignalFromScore,
   embedScoreFeedback,
   syncScoreAnalytics,
 } from "./issue-discovery-activities.ts"

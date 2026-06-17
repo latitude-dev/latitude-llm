@@ -4,7 +4,7 @@ import { apiKeySeeders } from "./api-keys/index.ts"
 import { datasetSeeders } from "./datasets/index.ts"
 import { evaluationSeeders } from "./evaluations/index.ts"
 import { bootstrapTelemetryFlaggerSeeders, flaggerSeeders } from "./flaggers/index.ts"
-import { issueSeeders } from "./issues/index.ts"
+import { signalSeeders } from "./issues/index.ts"
 import { monitorSeeders } from "./monitors/index.ts"
 import { notificationSeeders } from "./notifications/index.ts"
 import { organizationSeeders } from "./organizations/index.ts"
@@ -27,7 +27,7 @@ import { wrappedReportSeeders } from "./wrapped-reports/index.ts"
  */
 export const contentSeeders: readonly Seeder[] = [
   ...datasetSeeders,
-  ...issueSeeders,
+  ...signalSeeders,
   ...evaluationSeeders,
   ...simulationSeeders,
   ...scoreSeeders,

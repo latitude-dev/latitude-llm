@@ -40,6 +40,6 @@ export function buildTracesExportFilename(projectName: string): string {
 /**
  * Builds a filename for an issues export.
  */
-export function buildIssuesExportFilename(projectName: string): string {
+export function buildSignalsExportFilename(projectName: string): string {
   return buildExportFilename("issues", projectName)
 }

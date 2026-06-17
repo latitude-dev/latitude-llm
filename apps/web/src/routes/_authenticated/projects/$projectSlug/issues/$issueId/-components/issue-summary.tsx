@@ -1,8 +1,8 @@
 import { Skeleton, Text, Tooltip } from "@repo/ui"
 import { formatCount, formatPrice } from "@repo/utils"
 import type { ReactNode } from "react"
-import { useIssueDetail, useIssueImpact } from "../../../../../../../domains/issues/issues.collection.ts"
-import { IssueDrawerEvaluations } from "../../-components/issue-drawer-evaluations.tsx"
+import { useSignalDetail, useSignalImpact } from "../../../../../../../domains/issues/issues.collection.ts"
+import { SignalDrawerEvaluations } from "../../-components/issue-drawer-evaluations.tsx"
 import { formatSeenAgeParts } from "../../-components/issue-formatters.ts"
 
 const MICROCENTS_PER_DOLLAR = 100_000_000
@@ -12,7 +12,7 @@ const MICROCENTS_PER_DOLLAR = 100_000_000
  * stranded when stretched edge-to-edge. */
 const EVALUATIONS_PANEL_WIDTH = "xl:w-[500px]"
 
-/** Issue's share of all project traces, with `<1%` for a tiny-but-present rate. */
+/** Signal's share of all project traces, with `<1%` for a tiny-but-present rate. */
 const formatPercent = (fraction: number) => {
   if (fraction <= 0) return "0%"
   if (fraction < 0.01) return "<1%"
@@ -60,9 +60,9 @@ function SeenTile({
  * page header, tracker-style. "Affected users" is hidden when there's no user
  * attribution (count 0).
  */
-export function IssueSummary({ projectId, issueId }: { readonly projectId: string; readonly issueId: string }) {
-  const { data: issue, isLoading } = useIssueDetail({ projectId, issueId })
-  const { data: impact, isLoading: impactLoading } = useIssueImpact({ projectId, issueId })
+export function SignalSummary({ projectId, signalId }: { readonly projectId: string; readonly signalId: string }) {
+  const { data: issue, isLoading } = useSignalDetail({ projectId, signalId })
+  const { data: impact, isLoading: impactLoading } = useSignalImpact({ projectId, signalId })
   const seen = issue ? formatSeenAgeParts(issue.lastSeenAt, issue.firstSeenAt) : null
   const showUsers = impactLoading || (impact !== undefined && impact.affectedUsers > 0)
 
@@ -150,14 +150,14 @@ export function IssueSummary({ projectId, issueId }: { readonly projectId: strin
       {/* Evaluations — kept at its native width so it renders like the drawer. */}
       <div className={`flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4 xl:shrink-0 ${EVALUATIONS_PANEL_WIDTH}`}>
         <Text.H6 color="foregroundMuted">Evaluations</Text.H6>
-        <IssueDrawerEvaluations
+        <SignalDrawerEvaluations
           projectId={projectId}
-          issueId={issueId}
-          issueSource={issue?.source ?? "annotation"}
+          signalId={signalId}
+          signalSource={issue?.source ?? "annotation"}
           evaluations={issue?.evaluations ?? []}
           flaggerSlugs={issue?.flaggerSlugs ?? []}
-          canMonitorIssue={issue ? issue.resolvedAt === null && issue.ignoredAt === null : false}
-          isIssueLoading={isLoading}
+          canMonitorSignal={issue ? issue.resolvedAt === null && issue.ignoredAt === null : false}
+          isSignalLoading={isLoading}
         />
       </div>
     </div>

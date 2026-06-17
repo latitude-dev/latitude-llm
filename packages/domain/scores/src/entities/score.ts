@@ -113,7 +113,7 @@ export const baseScoreSchema = z.object({
   traceId: traceIdSchema.nullable(), // optional trace id inherited from instrumentation
   spanId: spanIdSchema.nullable(), // optional span id inherited from instrumentation
   simulationId: cuidSchema.nullable(), // optional simulation CUID link
-  issueId: cuidSchema.nullable(), // optional issue CUID assignment
+  signalId: cuidSchema.nullable(), // optional issue CUID assignment
   value: scoreValueSchema, // normalized [0, 1] score value
   passed: z.boolean(), // true if passed, false if failed or errored
   feedback: z.string(), // clusterable feedback text used by issues

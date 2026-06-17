@@ -95,7 +95,7 @@ function buildDraftAnnotationScore(): Score {
     source: "annotation",
     sourceId: "UI" as const,
     simulationId: null,
-    issueId: null,
+    signalId: null,
     value: 0.2,
     passed: false,
     feedback: "The model hallucinated a date",

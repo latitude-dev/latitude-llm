@@ -1,53 +1,53 @@
 import { ScoreAnalyticsRepository } from "@domain/scores"
-import type { ChSqlClient, IssueId, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
+import type { ChSqlClient, SignalId, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 
-export interface ListIssueTracesInput {
+export interface ListSignalTracesInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
-  readonly issueId: IssueId
+  readonly signalId: SignalId
   /** Page size. Repository default applies when omitted. */
   readonly limit?: number
   /** Zero-based offset into the issue's distinct-trace list, ordered by `lastSeenAt` desc. */
   readonly offset?: number
 }
 
-export interface ListIssueTracesResult {
+export interface ListSignalTracesResult {
   readonly items: readonly TraceDetail[]
   readonly hasMore: boolean
   readonly limit: number
   readonly offset: number
 }
 
-export type ListIssueTracesError = RepositoryError
+export type ListSignalTracesError = RepositoryError
 
 /**
  * Returns the page of distinct traces that contributed at least one occurrence
- * of `issueId`, ordered by most recent activity first. The pagination shape
- * mirrors the analytics repo's `listTracesByIssue` — offset-based with
+ * of `signalId`, ordered by most recent activity first. The pagination shape
+ * mirrors the analytics repo's `listTracesBySignal` — offset-based with
  * `hasMore` — and the trace payload is the same `TraceDetail` shape returned
  * by other trace endpoints, so callers can navigate directly to a single
  * trace without translating identifiers.
  */
-export const listIssueTracesUseCase = (
-  input: ListIssueTracesInput,
+export const listSignalTracesUseCase = (
+  input: ListSignalTracesInput,
 ): Effect.Effect<
-  ListIssueTracesResult,
-  ListIssueTracesError,
+  ListSignalTracesResult,
+  ListSignalTracesError,
   ChSqlClient | ScoreAnalyticsRepository | TraceRepository
 > =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("projectId", String(input.projectId))
-    yield* Effect.annotateCurrentSpan("issueId", String(input.issueId))
+    yield* Effect.annotateCurrentSpan("signalId", String(input.signalId))
 
     const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
     const traceRepository = yield* TraceRepository
 
-    const tracePage = yield* scoreAnalyticsRepository.listTracesByIssue({
+    const tracePage = yield* scoreAnalyticsRepository.listTracesBySignal({
       organizationId: input.organizationId,
       projectId: input.projectId,
-      issueId: input.issueId,
+      signalId: input.signalId,
       ...(input.limit !== undefined ? { limit: input.limit } : {}),
       ...(input.offset !== undefined ? { offset: input.offset } : {}),
     })
@@ -58,7 +58,7 @@ export const listIssueTracesUseCase = (
         hasMore: tracePage.hasMore,
         limit: tracePage.limit,
         offset: tracePage.offset,
-      } satisfies ListIssueTracesResult
+      } satisfies ListSignalTracesResult
     }
 
     const traces = yield* traceRepository.listByTraceIds({
@@ -75,5 +75,5 @@ export const listIssueTracesUseCase = (
       hasMore: tracePage.hasMore,
       limit: tracePage.limit,
       offset: tracePage.offset,
-    } satisfies ListIssueTracesResult
-  }).pipe(Effect.withSpan("issues.listIssueTraces"))
+    } satisfies ListSignalTracesResult
+  }).pipe(Effect.withSpan("issues.listSignalTraces"))

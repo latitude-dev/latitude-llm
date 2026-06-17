@@ -1,28 +1,28 @@
 import type { ScoreSource } from "@domain/scores"
 import { DEFAULT_ESCALATION_SENSITIVITY } from "@domain/shared"
 
-export const ISSUE_NAME_MAX_LENGTH = 128
+export const SIGNAL_NAME_MAX_LENGTH = 128
 
-export const ISSUE_STATES = ["new", "escalating", "ongoing", "resolved", "regressed", "ignored"] as const
+export const SIGNAL_STATES = ["new", "escalating", "ongoing", "resolved", "regressed", "ignored"] as const
 
-export const ISSUE_SOURCES = ["annotation", "flagger", "custom"] as const
+export const SIGNAL_SOURCES = ["annotation", "flagger", "custom"] as const
 
 /** Manual triage priority levels, ascending in urgency. Null means "unset". */
-export const ISSUE_PRIORITIES = ["low", "medium", "high", "urgent"] as const
+export const SIGNAL_PRIORITIES = ["low", "medium", "high", "urgent"] as const
 
 /**
  * Priority groups in display order for the always-grouped issues list.
  * `"none"` is the group for issues with `priority = null` and always sorts
  * last, mirroring how Linear renders a trailing "No priority" section.
  */
-export const ISSUE_PRIORITY_GROUPS = ["urgent", "high", "medium", "low", "none"] as const
+export const SIGNAL_PRIORITY_GROUPS = ["urgent", "high", "medium", "low", "none"] as const
 
 /**
  * Sort rank per priority group (lower = earlier in the list). Used as the
  * primary key of the issues-list ordering so rows stay grouped by priority
  * regardless of the user-selected sort, which applies within each group.
  */
-export const ISSUE_PRIORITY_ORDER: Readonly<Record<(typeof ISSUE_PRIORITY_GROUPS)[number], number>> = {
+export const SIGNAL_PRIORITY_ORDER: Readonly<Record<(typeof SIGNAL_PRIORITY_GROUPS)[number], number>> = {
   urgent: 0,
   high: 1,
   medium: 2,
@@ -46,7 +46,7 @@ export const ISSUE_PRIORITY_ORDER: Readonly<Record<(typeof ISSUE_PRIORITY_GROUPS
  * stack: under reverse conditioning the rare-value inflation those guarded
  * against is gated at its source (the denominator), not patched after the fact.
  */
-export const ISSUE_DIMENSION_MIN_SUPPORT = 10
+export const SIGNAL_DIMENSION_MIN_SUPPORT = 10
 
 /**
  * Minimum rate-elevation (`conditionalRate − baseRate`, in `[0, 1]`) for a value
@@ -57,7 +57,7 @@ export const ISSUE_DIMENSION_MIN_SUPPORT = 10
  * 0.01% base) still qualifies — its elevation is what matters, not its absolute
  * share. Keeps the (scrollable) list to genuinely over-represented values.
  */
-export const ISSUE_DIMENSION_MIN_RATE_ELEVATION = 0.01
+export const SIGNAL_DIMENSION_MIN_RATE_ELEVATION = 0.01
 
 // ---------------------------------------------------------------------------
 // Related issues (Related panel)
@@ -69,35 +69,35 @@ export const ISSUE_DIMENSION_MIN_RATE_ELEVATION = 0.01
  * are simply unrelated; at/above the ceiling they are effectively duplicate
  * clusters (discovery would merge a new score into either). Surviving issue
  * pairs sit *below* the discovery merge thresholds by construction
- * (`ISSUE_DISCOVERY_MIN_*`), so this band is where all the signal lives.
+ * (`SIGNAL_DISCOVERY_MIN_*`), so this band is where all the signal lives.
  * Provisional values — calibrate against real data before widening use.
  */
-export const ISSUE_RELATED_SEMANTIC_FLOOR = 0.55
-export const ISSUE_RELATED_SEMANTIC_CEILING = 0.85
+export const SIGNAL_RELATED_SEMANTIC_FLOOR = 0.55
+export const SIGNAL_RELATED_SEMANTIC_CEILING = 0.85
 
 /**
  * Minimum sessions shared with the source issue before a candidate's
  * co-occurrence is scored at all. Below this, NPMI is meaningless — one or
  * two coincidental sessions would otherwise post a high score for tiny pairs.
  */
-export const ISSUE_RELATED_MIN_SHARED_SESSIONS = 3
+export const SIGNAL_RELATED_MIN_SHARED_SESSIONS = 3
 
 /**
  * Minimum combined relatedness (noisy-OR of the semantic and co-occurrence
  * scores, in `[0, 1]`) for a row to appear in the Related list. Drops
  * candidates that only barely cleared either signal's own gate.
  */
-export const ISSUE_RELATED_MIN_RELATEDNESS = 0.05
+export const SIGNAL_RELATED_MIN_RELATEDNESS = 0.05
 
 /** Maximum rows in the Related list. */
-export const ISSUE_RELATED_LIMIT = 8
+export const SIGNAL_RELATED_LIMIT = 8
 
 /**
  * Candidate pool fetched per signal (pgvector neighbors / co-occurrence
  * candidates) before scoring, gating, and merging down to
- * `ISSUE_RELATED_LIMIT`.
+ * `SIGNAL_RELATED_LIMIT`.
  */
-export const ISSUE_RELATED_CANDIDATE_LIMIT = 25
+export const SIGNAL_RELATED_CANDIDATE_LIMIT = 25
 
 /**
  * Window for the co-occurrence signal. Fixed (not wired to a page range
@@ -105,9 +105,9 @@ export const ISSUE_RELATED_CANDIDATE_LIMIT = 25
  * signal, while the semantic signal is lifetime by nature (the centroid is a
  * decayed running sum).
  */
-export const ISSUE_RELATED_COOCCURRENCE_WINDOW_DAYS = 30
+export const SIGNAL_RELATED_COOCCURRENCE_WINDOW_DAYS = 30
 
-export const NEW_ISSUE_AGE_DAYS = 7
+export const NEW_SIGNAL_AGE_DAYS = 7
 
 /**
  * @deprecated Legacy flat-multiplier factor — removed when the seasonal
@@ -185,7 +185,7 @@ export const ESCALATION_MAX_DURATION_MS = 72 * 60 * 60 * 1000
 
 /**
  * Throttle window for the per-issue escalation-state recheck task triggered
- * by `ScoreAssignedToIssue`. Caps the rate of `recentOccurrences`
+ * by `ScoreAssignedToSignal`. Caps the rate of `recentOccurrences`
  * recomputation per issue. Trades off detection latency for compute. While
  * an issue is actively receiving scores, the same use case evaluates exit
  * conditions on every tick; once activity stops, the hourly sweep
@@ -217,7 +217,7 @@ export const ESCALATION_SWEEPER_PATTERN = "0 * * * *"
 /**
  * Critical issue-discovery configuration.
  *
- * These values define the persisted `IssueCentroid` space and the query vectors
+ * These values define the persisted `SignalCentroid` space and the query vectors
  * matched against it during issue discovery. Do not change them directly in
  * place: changing model, dimensions, decay semantics, or source weights
  * requires explicit support for old and new embedding spaces plus a centroid
@@ -244,16 +244,16 @@ export const CENTROID_SOURCE_WEIGHTS: Readonly<Record<ScoreSource, number>> = {
 // ---------------------------------------------------------------------------
 
 /** Alpha for Postgres pgvector + full-text hybrid search: 75% vector search, 25% keyword search */
-export const ISSUE_DISCOVERY_SEARCH_RATIO = 0.75
+export const SIGNAL_DISCOVERY_SEARCH_RATIO = 0.75
 
 /** Minimum fused hybrid score to consider a candidate: 80% relevance after vector/BM25 fusion. */
-export const ISSUE_DISCOVERY_MIN_SIMILARITY = 0.8
+export const SIGNAL_DISCOVERY_MIN_SIMILARITY = 0.8
 
 /** Minimum semantic similarity to consider a candidate even when lexical overlap is low. */
-export const ISSUE_DISCOVERY_MIN_VECTOR_SIMILARITY = 0.75
+export const SIGNAL_DISCOVERY_MIN_VECTOR_SIMILARITY = 0.75
 
 /** Maximum candidates returned from the hybrid search stage. */
-export const ISSUE_DISCOVERY_SEARCH_CANDIDATES = 1000
+export const SIGNAL_DISCOVERY_SEARCH_CANDIDATES = 1000
 
 // ---------------------------------------------------------------------------
 // Discovery thresholds (rerank)
@@ -263,42 +263,42 @@ export const ISSUE_DISCOVERY_SEARCH_CANDIDATES = 1000
 // third-party rerank stage once pgvector-only matching is calibrated.
 
 /** Maximum candidates sent into the reranking stage. */
-export const ISSUE_DISCOVERY_RERANK_CANDIDATES = 25
+export const SIGNAL_DISCOVERY_RERANK_CANDIDATES = 25
 
 /** Minimum rerank relevance score required to accept an existing issue match. */
-export const ISSUE_DISCOVERY_MIN_RELEVANCE = 0.3
+export const SIGNAL_DISCOVERY_MIN_RELEVANCE = 0.3
 
 // The rerank model is resolved at call time via `resolveRerankingConfig()`
 // (`@domain/ai`): default `rerank-2.5` on Voyage, overridable with
 // `LAT_AI_RERANKING_{PROVIDER,MODEL}`.
 
 // ---------------------------------------------------------------------------
-// Issue details generation
+// Signal details generation
 // ---------------------------------------------------------------------------
 
 /** Language model used to generate stable issue names/descriptions. */
-export const ISSUE_DETAILS_DEFAULT_GENERATION_MODEL = {
+export const SIGNAL_DETAILS_DEFAULT_GENERATION_MODEL = {
   provider: "amazon-bedrock",
   model: "minimax.minimax-m2.5",
   reasoning: "high",
 } as const
 
 /** Maximum recent assigned issue occurrences used when regenerating existing issue details. */
-export const ISSUE_DETAILS_MAX_OCCURRENCES = 25
+export const SIGNAL_DETAILS_MAX_OCCURRENCES = 25
 
 // ---------------------------------------------------------------------------
-// Issue refresh throttle
+// Signal refresh throttle
 // ---------------------------------------------------------------------------
 
 /**
  * Throttle window for issue name/description regeneration (8 hours in
  * milliseconds). Used as `throttleMs` on the `issues:refresh` queue task:
- * the first `ScoreAssignedToIssue` schedules the refresh for `now + 8h`, and
+ * the first `ScoreAssignedToSignal` schedules the refresh for `now + 8h`, and
  * subsequent assignments within that window are dropped by BullMQ. Guarantees
  * an upper bound of 8h on refresh latency and at most one refresh per issue
  * per 8h, even under a constant annotation stream.
  */
-export const ISSUE_REFRESH_THROTTLE_MS = 8 * 60 * 60 * 1000
+export const SIGNAL_REFRESH_THROTTLE_MS = 8 * 60 * 60 * 1000
 
 // ---------------------------------------------------------------------------
 // Denoising / visibility
@@ -306,7 +306,7 @@ export const ISSUE_REFRESH_THROTTLE_MS = 8 * 60 * 60 * 1000
 
 /**
  * Minimum number of linked scores before a non-annotation-backed issue
- * becomes visible in the main Issues UI.
+ * becomes visible in the main Signals UI.
  */
 export const MIN_OCCURRENCES_FOR_VISIBILITY = 3
 
@@ -320,27 +320,27 @@ export const MIN_OCCURRENCES_FOR_VISIBILITY = 3
  * activity `startToCloseTimeout` so the lock outlives any single activity
  * run; if a worker dies, Redis auto-deletion never strands the key.
  */
-export const ISSUE_DISCOVERY_FEEDBACK_LOCK_TTL_SECONDS = 300
+export const SIGNAL_DISCOVERY_FEEDBACK_LOCK_TTL_SECONDS = 300
 
 /**
  * TTL for the inner project-scoped serialization lock. Serializes brand-new
  * issue creation per project while a prior worker is still writing the
  * Postgres issue row and derived search vector. Matches the activity timeout.
  */
-export const ISSUE_DISCOVERY_PROJECT_LOCK_TTL_SECONDS = 300
+export const SIGNAL_DISCOVERY_PROJECT_LOCK_TTL_SECONDS = 300
 
 /** Inner project-scoped serialization lock key. */
-export const ISSUE_DISCOVERY_PROJECT_LOCK_KEY = "project"
+export const SIGNAL_DISCOVERY_PROJECT_LOCK_KEY = "project"
 
 /**
  * Outer feedback-scoped serialization lock key. Takes the SHA-256 hex digest
  * of the canonical feedback string. Hashing serializes identical feedback
  * across all sources without leaking the feedback into Redis keys.
  */
-export const ISSUE_DISCOVERY_FEEDBACK_LOCK_KEY = (hash: string) => `feedback:${hash}`
+export const SIGNAL_DISCOVERY_FEEDBACK_LOCK_KEY = (hash: string) => `feedback:${hash}`
 
 // ---------------------------------------------------------------------------
-// Issue update lock
+// Signal update lock
 // ---------------------------------------------------------------------------
 
 /**
@@ -348,7 +348,7 @@ export const ISSUE_DISCOVERY_FEEDBACK_LOCK_KEY = (hash: string) => `feedback:${h
  * transaction (centroid recompute plus derived pgvector maintenance) so
  * concurrent writers to the same issue do not race on centroid state.
  */
-export const ISSUE_UPDATE_LOCK_KEY = (issueId: string) => `issue:${issueId}`
+export const SIGNAL_UPDATE_LOCK_KEY = (signalId: string) => `issue:${signalId}`
 
 /** TTL for the per-issue update serialization lock. Matches the activity timeout. */
-export const ISSUE_UPDATE_LOCK_TTL_SECONDS = 300
+export const SIGNAL_UPDATE_LOCK_TTL_SECONDS = 300

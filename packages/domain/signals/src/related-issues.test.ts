@@ -1,20 +1,20 @@
-import type { IssueCoOccurrenceAggregate } from "@domain/scores"
-import { IssueId } from "@domain/shared"
+import type { SignalCoOccurrenceAggregate } from "@domain/scores"
+import { SignalId } from "@domain/shared"
 import { describe, expect, it } from "vitest"
-import { ISSUE_RELATED_SEMANTIC_CEILING, ISSUE_RELATED_SEMANTIC_FLOOR } from "./constants.ts"
+import { SIGNAL_RELATED_SEMANTIC_CEILING, SIGNAL_RELATED_SEMANTIC_FLOOR } from "./constants.ts"
 import {
   combinedRelatedness,
   coOccurrenceRelatednessScore,
-  rankRelatedIssues,
+  rankRelatedSignals,
   semanticRelatednessScore,
 } from "./related-issues.ts"
 
-const issueA = IssueId("a".repeat(24))
-const issueB = IssueId("b".repeat(24))
-const issueC = IssueId("c".repeat(24))
-const issueD = IssueId("d".repeat(24))
+const signalA = SignalId("a".repeat(24))
+const signalB = SignalId("b".repeat(24))
+const signalC = SignalId("c".repeat(24))
+const signalD = SignalId("d".repeat(24))
 
-const emptyCoOccurrence: IssueCoOccurrenceAggregate = {
+const emptyCoOccurrence: SignalCoOccurrenceAggregate = {
   mySessions: 0,
   totalSessions: 0,
   candidates: [],
@@ -22,18 +22,18 @@ const emptyCoOccurrence: IssueCoOccurrenceAggregate = {
 
 describe("semanticRelatednessScore", () => {
   it("clamps below the floor to 0 and above the ceiling to 1", () => {
-    expect(semanticRelatednessScore(ISSUE_RELATED_SEMANTIC_FLOOR)).toBe(0)
+    expect(semanticRelatednessScore(SIGNAL_RELATED_SEMANTIC_FLOOR)).toBe(0)
     expect(semanticRelatednessScore(0.2)).toBe(0)
     expect(semanticRelatednessScore(-1)).toBe(0)
-    expect(semanticRelatednessScore(ISSUE_RELATED_SEMANTIC_CEILING)).toBe(1)
+    expect(semanticRelatednessScore(SIGNAL_RELATED_SEMANTIC_CEILING)).toBe(1)
     expect(semanticRelatednessScore(0.99)).toBe(1)
   })
 
   it("rescales linearly inside the band", () => {
-    const mid = (ISSUE_RELATED_SEMANTIC_FLOOR + ISSUE_RELATED_SEMANTIC_CEILING) / 2
+    const mid = (SIGNAL_RELATED_SEMANTIC_FLOOR + SIGNAL_RELATED_SEMANTIC_CEILING) / 2
     expect(semanticRelatednessScore(mid)).toBeCloseTo(0.5, 10)
     expect(semanticRelatednessScore(0.7)).toBeCloseTo(
-      (0.7 - ISSUE_RELATED_SEMANTIC_FLOOR) / (ISSUE_RELATED_SEMANTIC_CEILING - ISSUE_RELATED_SEMANTIC_FLOOR),
+      (0.7 - SIGNAL_RELATED_SEMANTIC_FLOOR) / (SIGNAL_RELATED_SEMANTIC_CEILING - SIGNAL_RELATED_SEMANTIC_FLOOR),
       10,
     )
   })
@@ -103,26 +103,26 @@ describe("combinedRelatedness", () => {
   })
 })
 
-describe("rankRelatedIssues", () => {
+describe("rankRelatedSignals", () => {
   it("merges both candidate sets, ranks by fused relatedness, and nulls non-contributing signals", () => {
-    const ranked = rankRelatedIssues({
+    const ranked = rankRelatedSignals({
       neighbors: [
-        { issueId: issueA, similarity: 0.7 }, // dual signal: semScore 0.5
-        { issueId: issueB, similarity: 0.79 }, // semantic only: semScore 0.8
+        { signalId: signalA, similarity: 0.7 }, // dual signal: semScore 0.5
+        { signalId: signalB, similarity: 0.79 }, // semantic only: semScore 0.8
       ],
       coOccurrence: {
         mySessions: 20,
         totalSessions: 1000,
         candidates: [
-          { issueId: issueA, sharedSessions: 10, theirSessions: 20 }, // coocScore ≈ 0.70
-          { issueId: issueC, sharedSessions: 12, theirSessions: 15 }, // cooc only ≈ 0.83
-          { issueId: issueB, sharedSessions: 2, theirSessions: 5 }, // under the floor → cooc null
+          { signalId: signalA, sharedSessions: 10, theirSessions: 20 }, // coocScore ≈ 0.70
+          { signalId: signalC, sharedSessions: 12, theirSessions: 15 }, // cooc only ≈ 0.83
+          { signalId: signalB, sharedSessions: 2, theirSessions: 5 }, // under the floor → cooc null
         ],
       },
     })
 
     // A: 1 − (1−0.5)(1−0.70) ≈ 0.85 > C ≈ 0.83 > B = 0.8.
-    expect(ranked.map((row) => row.issueId)).toEqual([issueA, issueC, issueB])
+    expect(ranked.map((row) => row.signalId)).toEqual([signalA, signalC, signalB])
 
     const [a, c, b] = ranked
     expect(a?.semantic?.similarity).toBe(0.7)
@@ -139,16 +139,16 @@ describe("rankRelatedIssues", () => {
   })
 
   it("drops candidates below the minimum relatedness", () => {
-    const ranked = rankRelatedIssues({
+    const ranked = rankRelatedSignals({
       neighbors: [
         // Barely above the semantic floor: semScore ≈ 0.033 < min relatedness.
-        { issueId: issueA, similarity: ISSUE_RELATED_SEMANTIC_FLOOR + 0.01 },
+        { signalId: signalA, similarity: SIGNAL_RELATED_SEMANTIC_FLOOR + 0.01 },
         // Under-floor co-occurrence contributes nothing either.
       ],
       coOccurrence: {
         mySessions: 20,
         totalSessions: 1000,
-        candidates: [{ issueId: issueD, sharedSessions: 2, theirSessions: 10 }],
+        candidates: [{ signalId: signalD, sharedSessions: 2, theirSessions: 10 }],
       },
     })
 
@@ -156,16 +156,16 @@ describe("rankRelatedIssues", () => {
   })
 
   it("respects the row limit", () => {
-    const ranked = rankRelatedIssues({
+    const ranked = rankRelatedSignals({
       neighbors: [
-        { issueId: issueA, similarity: 0.8 },
-        { issueId: issueB, similarity: 0.75 },
-        { issueId: issueC, similarity: 0.7 },
+        { signalId: signalA, similarity: 0.8 },
+        { signalId: signalB, similarity: 0.75 },
+        { signalId: signalC, similarity: 0.7 },
       ],
       coOccurrence: emptyCoOccurrence,
       limit: 2,
     })
 
-    expect(ranked.map((row) => row.issueId)).toEqual([issueA, issueB])
+    expect(ranked.map((row) => row.signalId)).toEqual([signalA, signalB])
   })
 })

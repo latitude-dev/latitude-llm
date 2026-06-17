@@ -11,21 +11,21 @@ const STATE_VARIANTS = {
   ignored: "neutral",
 } as const satisfies Record<string, NonNullable<ComponentProps<typeof Status>["variant"]>>
 
-interface IssueExtraStatus {
+interface SignalExtraStatus {
   readonly key: string
   readonly label: string
   readonly variant?: ComponentProps<typeof Status>["variant"]
   readonly tooltip?: ReactNode
 }
 
-export function IssueLifecycleStatuses({
+export function SignalLifecycleStatuses({
   states,
   wrap = true,
   extraStatuses = [],
 }: {
   readonly states: readonly string[]
   readonly wrap?: boolean
-  readonly extraStatuses?: readonly IssueExtraStatus[]
+  readonly extraStatuses?: readonly SignalExtraStatus[]
 }) {
   if (states.length === 0 && extraStatuses.length === 0) {
     return null

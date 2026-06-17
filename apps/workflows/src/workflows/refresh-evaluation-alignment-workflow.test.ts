@@ -42,9 +42,9 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
         readonly currentScriptHash: string
         readonly state: {
           readonly evaluationId: string
-          readonly issueId: string
-          readonly issueName: string
-          readonly issueDescription: string
+          readonly signalId: string
+          readonly signalName: string
+          readonly signalDescription: string
           readonly name: string
           readonly description: string
           readonly alignedAt: string
@@ -68,9 +68,9 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
     currentScriptHash: "hash-existing",
     state: {
       evaluationId: "eval-existing",
-      issueId: "issue-1",
-      issueName: "Tool output leakage",
-      issueDescription: "Secrets are exposed in assistant tool output.",
+      signalId: "issue-1",
+      signalName: "Tool output leakage",
+      signalDescription: "Secrets are exposed in assistant tool output.",
       name: "Existing evaluation",
       description: "Existing evaluation description",
       alignedAt: new Date("2026-04-01T00:00:00.000Z").toISOString(),
@@ -101,9 +101,9 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
     collectEvaluationAlignmentExamples: vi.fn(async () => {
       callOrder.push("collectEvaluationAlignmentExamples")
       return {
-        issueId: "issue-1",
-        issueName: "Tool output leakage",
-        issueDescription: "Secrets are exposed in assistant tool output.",
+        signalId: "issue-1",
+        signalName: "Tool output leakage",
+        signalDescription: "Secrets are exposed in assistant tool output.",
         positiveExamples: [],
         negativeExamples: [],
       }
@@ -216,7 +216,7 @@ describe("refreshEvaluationAlignmentWorkflow", () => {
     const result = await refreshEvaluationAlignmentWorkflow({
       organizationId: "org-1",
       projectId: "proj-1",
-      issueId: "issue-1",
+      signalId: "issue-1",
       evaluationId: "eval-existing",
     })
 
@@ -292,7 +292,7 @@ describe("refreshEvaluationAlignmentWorkflow", () => {
     const result = await refreshEvaluationAlignmentWorkflow({
       organizationId: "org-1",
       projectId: "proj-1",
-      issueId: "issue-1",
+      signalId: "issue-1",
       evaluationId: "eval-existing",
     })
 
@@ -307,7 +307,7 @@ describe("refreshEvaluationAlignmentWorkflow", () => {
     expect(mockActivities.scheduleEvaluationOptimization).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
-      issueId: "issue-1",
+      signalId: "issue-1",
       evaluationId: "eval-existing",
     })
   })
@@ -321,7 +321,7 @@ describe("refreshEvaluationAlignmentWorkflow", () => {
     const result = await refreshEvaluationAlignmentWorkflow({
       organizationId: "org-1",
       projectId: "proj-1",
-      issueId: "issue-1",
+      signalId: "issue-1",
       evaluationId: "eval-existing",
     })
 
@@ -395,7 +395,7 @@ describe("refreshEvaluationAlignmentWorkflow", () => {
     const result = await refreshEvaluationAlignmentWorkflow({
       organizationId: "org-1",
       projectId: "proj-1",
-      issueId: "issue-1",
+      signalId: "issue-1",
       evaluationId: "eval-existing",
     })
 
@@ -413,9 +413,9 @@ describe("refreshEvaluationAlignmentWorkflow", () => {
         currentScriptHash: "sha1-of-the-live-script",
         state: {
           evaluationId: "eval-existing",
-          issueId: "issue-1",
-          issueName: "Tool output leakage",
-          issueDescription: "Secrets are exposed in assistant tool output.",
+          signalId: "issue-1",
+          signalName: "Tool output leakage",
+          signalDescription: "Secrets are exposed in assistant tool output.",
           name: "Existing evaluation",
           description: "Existing evaluation description",
           alignedAt: new Date("2026-04-01T00:00:00.000Z").toISOString(),
@@ -441,9 +441,9 @@ describe("refreshEvaluationAlignmentWorkflow", () => {
     mockActivities.collectEvaluationAlignmentExamples.mockImplementationOnce(async () => {
       callOrder.push("collectEvaluationAlignmentExamples")
       return {
-        issueId: "issue-1",
-        issueName: "Tool output leakage",
-        issueDescription: "Secrets are exposed in assistant tool output.",
+        signalId: "issue-1",
+        signalName: "Tool output leakage",
+        signalDescription: "Secrets are exposed in assistant tool output.",
         positiveExamples: [{}, {}] as never,
         negativeExamples: [{}, {}, {}] as never,
       }
@@ -452,7 +452,7 @@ describe("refreshEvaluationAlignmentWorkflow", () => {
     const result = await refreshEvaluationAlignmentWorkflow({
       organizationId: "org-1",
       projectId: "proj-1",
-      issueId: "issue-1",
+      signalId: "issue-1",
       evaluationId: "eval-existing",
     })
 
@@ -476,7 +476,7 @@ describe("refreshEvaluationAlignmentWorkflow", () => {
     expect(mockActivities.collectEvaluationAlignmentExamples).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
-      issueId: "issue-1",
+      signalId: "issue-1",
       requirePositiveExamples: false,
     })
     // The freshly computed hash replaces the stale one so subsequent refreshes

@@ -4,7 +4,7 @@ import {
   BadRequestError,
   type EvaluationId,
   generateId,
-  type IssueId,
+  type SignalId,
   type OrganizationId,
   type ProjectId,
   type RepositoryError,
@@ -14,10 +14,10 @@ import { Effect } from "effect"
 import { isActiveEvaluation } from "../entities/evaluation.ts"
 import { EvaluationRepository } from "../ports/evaluation-repository.ts"
 
-export interface MonitorIssueInput {
+export interface MonitorSignalInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
-  readonly issueId: IssueId
+  readonly signalId: SignalId
   /**
    * User who triggered the monitor, recorded on the resulting `EvaluationCreated`
    * or `EvaluationAligned` outbox event. Omit for callers without a real user
@@ -34,7 +34,7 @@ export interface MonitorIssueInput {
   readonly isAutomaticallyMonitored?: boolean
 }
 
-interface MonitorIssueResult {
+interface MonitorSignalResult {
   /**
    * Identifier for the monitor job. For new evaluations this is the future
    * evaluation id (and the `evaluationId` field is `null` until the workflow
@@ -49,9 +49,9 @@ interface MonitorIssueResult {
   readonly evaluationId: EvaluationId | null
 }
 
-export type MonitorIssueError = BadRequestError | RepositoryError
+export type MonitorSignalError = BadRequestError | RepositoryError
 
-const buildGenerateWorkflowId = (issueId: string) => `evaluations:generate:${issueId}`
+const buildGenerateWorkflowId = (signalId: string) => `evaluations:generate:${signalId}`
 const buildOptimizeWorkflowId = (evaluationId: string) => `evaluations:optimize:${evaluationId}`
 
 /**
@@ -69,15 +69,15 @@ const buildOptimizeWorkflowId = (evaluationId: string) => `evaluations:optimize:
  *
  * The caller is responsible for validating that the issue belongs to the
  * requested project (this use-case doesn't load the issue to avoid a
- * circular dependency between `@domain/evaluations` and `@domain/issues`).
+ * circular dependency between `@domain/evaluations` and `@domain/signals`).
  */
-export const monitorIssueUseCase = Effect.fn("evaluations.monitorIssue")(function* (input: MonitorIssueInput) {
+export const monitorSignalUseCase = Effect.fn("evaluations.monitorSignal")(function* (input: MonitorSignalInput) {
   yield* Effect.annotateCurrentSpan("projectId", input.projectId)
-  yield* Effect.annotateCurrentSpan("issueId", input.issueId)
+  yield* Effect.annotateCurrentSpan("signalId", input.signalId)
 
   const evaluationRepository = yield* EvaluationRepository
   const activeEvaluations = yield* evaluationRepository
-    .listByIssueId({ projectId: input.projectId, issueId: input.issueId, options: { lifecycle: "active" } })
+    .listBySignalId({ projectId: input.projectId, signalId: input.signalId, options: { lifecycle: "active" } })
     .pipe(Effect.map((page) => page.items.filter(isActiveEvaluation)))
 
   // Pick the most-recent active evaluation when one exists. Multiple active
@@ -96,7 +96,7 @@ export const monitorIssueUseCase = Effect.fn("evaluations.monitorIssue")(functio
       })
     }
 
-    const workflowId = buildGenerateWorkflowId(input.issueId)
+    const workflowId = buildGenerateWorkflowId(input.signalId)
     const description = yield* workflowQuerier.describe(workflowId)
     if (description?.status === "running") {
       return yield* new BadRequestError({
@@ -113,7 +113,7 @@ export const monitorIssueUseCase = Effect.fn("evaluations.monitorIssue")(functio
         {
           organizationId: input.organizationId,
           projectId: input.projectId,
-          issueId: input.issueId,
+          signalId: input.signalId,
           evaluationId: null,
           jobId,
           billingOperationId,
@@ -137,11 +137,11 @@ export const monitorIssueUseCase = Effect.fn("evaluations.monitorIssue")(functio
         actorUserId: input.actorUserId ?? "",
         projectId: input.projectId,
         evaluationId: jobId,
-        issueId: input.issueId,
+        signalId: input.signalId,
       },
     })
 
-    return { jobId, evaluationId: null } satisfies MonitorIssueResult
+    return { jobId, evaluationId: null } satisfies MonitorSignalResult
   }
 
   // Realign path
@@ -162,7 +162,7 @@ export const monitorIssueUseCase = Effect.fn("evaluations.monitorIssue")(functio
       {
         organizationId: input.organizationId,
         projectId: input.projectId,
-        issueId: input.issueId,
+        signalId: input.signalId,
         evaluationId: existing.id,
         jobId,
         billingOperationId,
@@ -186,9 +186,9 @@ export const monitorIssueUseCase = Effect.fn("evaluations.monitorIssue")(functio
       actorUserId: input.actorUserId ?? "",
       projectId: input.projectId,
       evaluationId: existing.id,
-      issueId: input.issueId,
+      signalId: input.signalId,
     },
   })
 
-  return { jobId, evaluationId: existing.id } satisfies MonitorIssueResult
+  return { jobId, evaluationId: existing.id } satisfies MonitorSignalResult
 })

@@ -115,7 +115,7 @@ const makeEvaluationRow = () =>
     id: "e".repeat(24),
     organizationId: ORGANIZATION_ID,
     projectId: PROJECT_ID,
-    issueId: "i".repeat(24),
+    signalId: "i".repeat(24),
     name: "pipeline-evaluation",
     description: "Live monitoring integration evaluation",
     script: "export default async function evaluate() { return { value: 1 } }",

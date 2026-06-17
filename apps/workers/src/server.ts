@@ -7,7 +7,7 @@ import {
   DESTINATION_SWEEPER_KEY,
   DESTINATION_SWEEPER_PATTERN,
 } from "@domain/destinations"
-import { ESCALATION_SWEEPER_KEY, ESCALATION_SWEEPER_PATTERN } from "@domain/issues"
+import { ESCALATION_SWEEPER_KEY, ESCALATION_SWEEPER_PATTERN } from "@domain/signals"
 import { SAVED_SEARCH_MONITORS_SWEEPER_KEY, SAVED_SEARCH_MONITORS_SWEEPER_PATTERN } from "@domain/monitors"
 import { SANDBOX_IDLE_SWEEPER_KEY, SANDBOX_IDLE_SWEEPER_PATTERN } from "@domain/sandboxes"
 import { TAXONOMY_GARDENING_CRON_KEY, TAXONOMY_GARDENING_CRON_PATTERN } from "@domain/taxonomy"
@@ -59,7 +59,7 @@ import { createUserDeletionWorker } from "./workers/domain-events/user-deletion.
 import { createDomainEventsWorker } from "./workers/domain-events.ts"
 import { createEvaluationsWorker } from "./workers/evaluations.ts"
 import { createExportsWorker } from "./workers/exports.ts"
-import { createIssuesWorker } from "./workers/issues.ts"
+import { createSignalsWorker } from "./workers/issues.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
 import { createMonitorsWorker } from "./workers/monitors.ts"
 import { createNotificationEmailerWorker } from "./workers/notification-emailer.ts"
@@ -212,7 +212,7 @@ const bootstrap = async () => {
       redisClient: ctx.redisClient,
     })
     createExportsWorker(ctx)
-    await createIssuesWorker({ ...ctx, adminPostgresClient: getAdminPostgresClient() })
+    await createSignalsWorker({ ...ctx, adminPostgresClient: getAdminPostgresClient() })
     createMonitorsWorker({ ...ctx, adminPostgresClient: getAdminPostgresClient() })
     createEvaluationsWorker(ctx)
     createAnnotationScoresWorker(ctx)
@@ -266,7 +266,7 @@ const bootstrap = async () => {
         .pipe(withTracing),
     )
 
-    // Hourly escalation sweep. Backs up the `ScoreAssignedToIssue`-driven
+    // Hourly escalation sweep. Backs up the `ScoreAssignedToSignal`-driven
     // throttled check by reconsidering every open `issue.escalating`
     // incident once an hour — closes incidents whose burst has aged out of
     // the 6h window and whose scoring has gone quiet, and lets the 24h

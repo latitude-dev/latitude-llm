@@ -188,7 +188,7 @@ export const updateEvaluationTriggerFilter = (input: {
   }
 }
 
-export const applyIssueResolutionToEvaluation = (input: {
+export const applySignalResolutionToEvaluation = (input: {
   readonly evaluation: Evaluation
   readonly keepMonitoring: ResolvedSettings["keepMonitoring"]
   readonly deletedAt?: Date
@@ -216,7 +216,7 @@ export const applyIssueResolutionToEvaluation = (input: {
   )
 }
 
-export const applyIssueIgnoreToEvaluation = (input: {
+export const applySignalIgnoreToEvaluation = (input: {
   readonly evaluation: Evaluation
   readonly deletedAt?: Date
 }): Evaluation => {

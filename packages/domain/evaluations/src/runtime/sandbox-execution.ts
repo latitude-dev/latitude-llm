@@ -6,7 +6,7 @@ import {
   EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL,
   EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
   type EvaluationConversationMessage,
-  type EvaluationIssueContext,
+  type EvaluationSignalContext,
   type EvaluationScriptExecution,
   estimateEvaluationScriptCostMicrocents,
 } from "./evaluation-execution.ts"
@@ -26,7 +26,7 @@ export const executeEvaluationScriptSandboxed = Effect.fn("evaluations.executeEv
   function* (input: {
     readonly script: string
     readonly conversation: readonly EvaluationConversationMessage[]
-    readonly issue: EvaluationIssueContext
+    readonly issue: EvaluationSignalContext
     readonly telemetry?: GenerateTelemetryCapture
   }) {
     yield* Effect.annotateCurrentSpan("evaluation.conversationMessageCount", input.conversation.length)

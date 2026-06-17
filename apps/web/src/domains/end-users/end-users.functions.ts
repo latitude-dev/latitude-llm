@@ -1,4 +1,4 @@
-import { buildHistogramBucketScaffold, fillBuckets, listUserIssuesUseCase } from "@domain/issues"
+import { buildHistogramBucketScaffold, fillBuckets, listUserSignalsUseCase } from "@domain/signals"
 import { ExternalUserId, OrganizationId, ProjectId } from "@domain/shared"
 import type { ProjectUserSummary, UserProfile, UsersOverview, UserUsageSlice } from "@domain/spans"
 import { USER_SORT_FIELDS, UserAnalyticsRepository } from "@domain/spans"
@@ -9,7 +9,7 @@ import {
   UserAnalyticsRepositoryLive,
   withClickHouse,
 } from "@platform/db-clickhouse"
-import { IssueRepositoryLive, TaxonomyClusterRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { SignalRepositoryLive, TaxonomyClusterRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
@@ -345,8 +345,8 @@ export const getUserUsage = createServerFn({ method: "GET" })
     return slices.map((slice: UserUsageSlice) => ({ value: slice.value, traceCount: slice.traceCount }))
   })
 
-export interface UserIssueRecord {
-  readonly issueId: string
+export interface UserSignalRecord {
+  readonly signalId: string
   readonly name: string
   readonly description: string
   readonly states: readonly string[]
@@ -357,29 +357,29 @@ export interface UserIssueRecord {
   readonly lastSeenAt: string
 }
 
-export const listUserIssues = createServerFn({ method: "GET" })
+export const listUserSignals = createServerFn({ method: "GET" })
   .inputValidator(userInputSchema)
-  .handler(async ({ data }): Promise<readonly UserIssueRecord[]> => {
+  .handler(async ({ data }): Promise<readonly UserSignalRecord[]> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
     const pgClient = getPostgresClient()
     const chClient = getClickhouseClient()
 
     const items = await Effect.runPromise(
-      listUserIssuesUseCase({
+      listUserSignalsUseCase({
         organizationId: orgId,
         projectId: ProjectId(data.projectId),
         userId: ExternalUserId(data.userId),
       }).pipe(
-        withPostgres(IssueRepositoryLive, pgClient, orgId),
+        withPostgres(SignalRepositoryLive, pgClient, orgId),
         withClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId),
         withTracing,
       ),
     )
 
     return items.map(
-      (item): UserIssueRecord => ({
-        issueId: item.issue.id,
+      (item): UserSignalRecord => ({
+        signalId: item.issue.id,
         name: item.issue.name,
         description: item.issue.description,
         states: item.states,

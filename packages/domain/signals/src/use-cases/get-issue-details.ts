@@ -1,15 +1,15 @@
 import {
-  deriveIssueAlignmentState,
+  deriveSignalAlignmentState,
   type Evaluation,
   EvaluationRepository,
-  type IssueAlignmentState,
+  type SignalAlignmentState,
   isActiveEvaluation,
 } from "@domain/evaluations"
 import type { WorkflowQuerier } from "@domain/queue"
-import { type IssueOccurrenceBucket, ScoreAnalyticsRepository } from "@domain/scores"
+import { type SignalOccurrenceBucket, ScoreAnalyticsRepository } from "@domain/scores"
 import type {
   ChSqlClient,
-  IssueId,
+  SignalId,
   NotFoundError,
   OrganizationId,
   ProjectId,
@@ -18,23 +18,23 @@ import type {
 } from "@domain/shared"
 import { TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
-import type { IssueState } from "../entities/issue.ts"
-import { deriveIssueLifecycleStates } from "../helpers.ts"
-import { IssueRepository, type IssueWithLifecycle } from "../ports/issue-repository.ts"
+import type { SignalState } from "../entities/issue.ts"
+import { deriveSignalLifecycleStates } from "../helpers.ts"
+import { SignalRepository, type SignalWithLifecycle } from "../ports/issue-repository.ts"
 
 const TREND_DAYS = 14
 const ONE_DAY_SECONDS = 86_400
 
-export interface GetIssueDetailsInput {
+export interface GetSignalDetailsInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
-  readonly issueId: IssueId
+  readonly signalId: SignalId
   readonly now?: Date
 }
 
-export interface IssueDetails {
-  readonly issue: IssueWithLifecycle
-  readonly states: readonly IssueState[]
+export interface SignalDetails {
+  readonly issue: SignalWithLifecycle
+  readonly states: readonly SignalState[]
   /** Earliest occurrence over the full history of the issue. `null` when no occurrences are recorded yet. */
   readonly firstSeenAt: Date | null
   /** Latest occurrence over the full history. `null` when no occurrences are recorded yet. */
@@ -46,14 +46,14 @@ export interface IssueDetails {
   /** Tags seen on the issue's occurrences over its lifetime. */
   readonly tags: readonly string[]
   /** Last 14 days of daily occurrence buckets, UTC-aligned. */
-  readonly trend: readonly IssueOccurrenceBucket[]
+  readonly trend: readonly SignalOccurrenceBucket[]
   /** Active evaluations linked to the issue (archived / soft-deleted are excluded). */
   readonly evaluations: readonly Evaluation[]
   /** Real-time monitoring workflow state — idle, generating, or realigning. */
-  readonly alignmentState: IssueAlignmentState
+  readonly alignmentState: SignalAlignmentState
 }
 
-export type GetIssueDetailsError = NotFoundError | RepositoryError
+export type GetSignalDetailsError = NotFoundError | RepositoryError
 
 /**
  * Loads the full-detail view of one issue: lifecycle states, lifetime
@@ -66,14 +66,14 @@ export type GetIssueDetailsError = NotFoundError | RepositoryError
  * to its `createdAt`) as the partition-pruning lower bound on ClickHouse, so
  * the scan stays bounded even for old, high-traffic issues.
  */
-export const getIssueDetailsUseCase = (
-  input: GetIssueDetailsInput,
+export const getSignalDetailsUseCase = (
+  input: GetSignalDetailsInput,
 ): Effect.Effect<
-  IssueDetails,
-  GetIssueDetailsError,
+  SignalDetails,
+  GetSignalDetailsError,
   | ChSqlClient
   | EvaluationRepository
-  | IssueRepository
+  | SignalRepository
   | ScoreAnalyticsRepository
   | SqlClient
   | TraceRepository
@@ -81,32 +81,32 @@ export const getIssueDetailsUseCase = (
 > =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("projectId", String(input.projectId))
-    yield* Effect.annotateCurrentSpan("issueId", String(input.issueId))
+    yield* Effect.annotateCurrentSpan("signalId", String(input.signalId))
 
     const now = input.now ?? new Date()
-    const issueRepository = yield* IssueRepository
+    const signalRepository = yield* SignalRepository
     const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
     const evaluationRepository = yield* EvaluationRepository
     const traceRepository = yield* TraceRepository
 
-    const issue = yield* issueRepository.findById(input.issueId)
+    const issue = yield* signalRepository.findById(input.signalId)
 
     const [occurrenceAggregates, trend, evaluationsPage, totalTraces] = yield* Effect.all([
-      scoreAnalyticsRepository.aggregateByIssues({
+      scoreAnalyticsRepository.aggregateBySignals({
         organizationId: input.organizationId,
         projectId: input.projectId,
-        issueIds: [input.issueId],
+        signalIds: [input.signalId],
       }),
-      scoreAnalyticsRepository.trendByIssue({
+      scoreAnalyticsRepository.trendBySignal({
         organizationId: input.organizationId,
         projectId: input.projectId,
-        issueId: input.issueId,
+        signalId: input.signalId,
         days: TREND_DAYS,
         bucketSeconds: ONE_DAY_SECONDS,
       }),
-      evaluationRepository.listByIssueId({
+      evaluationRepository.listBySignalId({
         projectId: input.projectId,
-        issueId: input.issueId,
+        signalId: input.signalId,
         options: { lifecycle: "active" },
       }),
       traceRepository.countByProjectId({
@@ -117,14 +117,14 @@ export const getIssueDetailsUseCase = (
 
     const aggregate = occurrenceAggregates[0] ?? null
     const tagsLowerBound = aggregate?.firstSeenAt ?? issue.createdAt
-    const tagsAggregates = yield* scoreAnalyticsRepository.aggregateTagsByIssues({
+    const tagsAggregates = yield* scoreAnalyticsRepository.aggregateTagsBySignals({
       organizationId: input.organizationId,
       projectId: input.projectId,
-      issueIds: [input.issueId],
+      signalIds: [input.signalId],
       timeRange: { from: tagsLowerBound, to: now },
     })
 
-    const states = deriveIssueLifecycleStates({
+    const states = deriveSignalLifecycleStates({
       issue,
       isEscalating: issue.lifecycle.isEscalating,
       isRegressed: issue.lifecycle.isRegressed,
@@ -136,8 +136,8 @@ export const getIssueDetailsUseCase = (
     const tags = tagsAggregates[0]?.tags ?? []
     const activeEvaluations = evaluationsPage.items.filter(isActiveEvaluation)
 
-    const alignmentState = yield* deriveIssueAlignmentState({
-      issueId: input.issueId,
+    const alignmentState = yield* deriveSignalAlignmentState({
+      signalId: input.signalId,
       activeEvaluations,
       isAutomaticallyMonitored: issue.source === "flagger",
     })
@@ -153,5 +153,5 @@ export const getIssueDetailsUseCase = (
       trend,
       evaluations: activeEvaluations,
       alignmentState,
-    } satisfies IssueDetails
-  }).pipe(Effect.withSpan("issues.getIssueDetails"))
+    } satisfies SignalDetails
+  }).pipe(Effect.withSpan("issues.getSignalDetails"))

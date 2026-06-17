@@ -1,11 +1,11 @@
 import { EVALUATION_CONVERSATION_PLACEHOLDER } from "../runtime/evaluation-execution.ts"
 
-export const generateBaselinePromptText = (issueName: string, issueDescription: string): string =>
+export const generateBaselinePromptText = (signalName: string, signalDescription: string): string =>
   [
     `You are evaluating a conversation for the following issue.`,
     ``,
-    `Issue: ${issueName}`,
-    `Description: ${issueDescription}`,
+    `Signal: ${signalName}`,
+    `Description: ${signalDescription}`,
     ``,
     `Conversation:`,
     EVALUATION_CONVERSATION_PLACEHOLDER,

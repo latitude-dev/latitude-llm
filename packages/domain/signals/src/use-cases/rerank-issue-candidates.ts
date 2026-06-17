@@ -1,37 +1,37 @@
 import { AI, resolveRerankingConfig } from "@domain/ai"
 import { Effect } from "effect"
-import { ISSUE_DISCOVERY_MIN_RELEVANCE, ISSUE_DISCOVERY_RERANK_CANDIDATES } from "../constants.ts"
-import type { IssueSearchCandidate } from "../ports/issue-repository.ts"
+import { SIGNAL_DISCOVERY_MIN_RELEVANCE, SIGNAL_DISCOVERY_RERANK_CANDIDATES } from "../constants.ts"
+import type { SignalSearchCandidate } from "../ports/issue-repository.ts"
 
 const collapseWhitespace = (text: string) => text.replace(/\s+/g, " ").trim()
 
-const buildRerankDocument = (candidate: IssueSearchCandidate): string =>
+const buildRerankDocument = (candidate: SignalSearchCandidate): string =>
   [collapseWhitespace(candidate.name), collapseWhitespace(candidate.description)].join("\n\n")
 
-export interface RerankIssueCandidatesInput {
+export interface RerankSignalCandidatesInput {
   readonly query: string
-  readonly candidates: readonly IssueSearchCandidate[]
+  readonly candidates: readonly SignalSearchCandidate[]
 }
 
 export interface RetrievalResult {
-  readonly matchedIssueId: string | null
+  readonly matchedSignalId: string | null
   readonly similarityScore: number
 }
 
 // TODO(issue-discovery-rerank): delete this use case when discovery matching
 // moves to pgvector-only top-candidate selection with calibrated thresholds.
 // Keeping this isolated makes the temporary third-party dependency easy to remove.
-export const rerankIssueCandidatesUseCase = Effect.fn("issues.rerankIssueCandidates")(function* (
-  input: RerankIssueCandidatesInput,
+export const rerankSignalCandidatesUseCase = Effect.fn("issues.rerankSignalCandidates")(function* (
+  input: RerankSignalCandidatesInput,
 ) {
   yield* Effect.annotateCurrentSpan("candidateCount", input.candidates.length)
   const limitedCandidates = [...input.candidates]
     .sort((left, right) => right.score - left.score)
-    .slice(0, ISSUE_DISCOVERY_RERANK_CANDIDATES)
+    .slice(0, SIGNAL_DISCOVERY_RERANK_CANDIDATES)
 
   if (limitedCandidates.length === 0) {
     return {
-      matchedIssueId: null,
+      matchedSignalId: null,
       similarityScore: 0,
     } satisfies RetrievalResult
   }
@@ -69,32 +69,32 @@ export const rerankIssueCandidatesUseCase = Effect.fn("issues.rerankIssueCandida
   if (reranked === null) {
     const top = limitedCandidates[0]
     return {
-      matchedIssueId: top?.issueId ?? null,
+      matchedSignalId: top?.signalId ?? null,
       similarityScore: top?.score ?? 0,
     } satisfies RetrievalResult
   }
 
   const best = reranked
-    .filter((item) => item.relevanceScore >= ISSUE_DISCOVERY_MIN_RELEVANCE)
+    .filter((item) => item.relevanceScore >= SIGNAL_DISCOVERY_MIN_RELEVANCE)
     .sort((left, right) => right.relevanceScore - left.relevanceScore)[0]
 
   if (!best) {
     return {
-      matchedIssueId: null,
+      matchedSignalId: null,
       similarityScore: 0,
     } satisfies RetrievalResult
   }
 
-  const matchedIssue = limitedCandidates[best.index]
-  if (!matchedIssue) {
+  const matchedSignal = limitedCandidates[best.index]
+  if (!matchedSignal) {
     return {
-      matchedIssueId: null,
+      matchedSignalId: null,
       similarityScore: 0,
     } satisfies RetrievalResult
   }
 
   return {
-    matchedIssueId: matchedIssue.issueId,
+    matchedSignalId: matchedSignal.signalId,
     similarityScore: best.relevanceScore,
   } satisfies RetrievalResult
 })

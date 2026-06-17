@@ -1,6 +1,6 @@
 /**
  * Pure geometry helpers for the issue occurrence-trend chart, shared between the live
- * in-app drawer chart (`IssueTrendBar`) and the server-side incident-trend PNG renderer
+ * in-app drawer chart (`SignalTrendBar`) and the server-side incident-trend PNG renderer
  * (`render-incident-trend.tsx`) so both produce the same bar heights and the same
  * seasonal-expectation dashed curve.
  *

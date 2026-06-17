@@ -1,22 +1,22 @@
-import { buildIssuesExportFilename, type ExportSelection } from "@domain/exports"
+import { buildSignalsExportFilename, type ExportSelection } from "@domain/exports"
 import type { OrganizationId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import {
-  type IssueAssigneeFilter,
-  type IssuesLifecycleGroup,
-  type IssuesSortDirection,
-  type IssuesSortField,
-  listIssuesUseCase,
+  type SignalAssigneeFilter,
+  type SignalsLifecycleGroup,
+  type SignalsSortDirection,
+  type SignalsSortField,
+  listSignalsUseCase,
 } from "./list-issues.ts"
 
 const ISSUES_EXPORT_BATCH_SIZE = 100
 
-export interface BuildIssuesExportInput {
+export interface BuildSignalsExportInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly selection?: ExportSelection
-  readonly lifecycleGroup?: IssuesLifecycleGroup
-  readonly assigneeIds?: readonly IssueAssigneeFilter[]
+  readonly lifecycleGroup?: SignalsLifecycleGroup
+  readonly assigneeIds?: readonly SignalAssigneeFilter[]
   readonly search?: {
     readonly query: string
     readonly normalizedEmbedding: number[]
@@ -26,13 +26,13 @@ export interface BuildIssuesExportInput {
     readonly to?: Date
   }
   readonly sort?: {
-    readonly field: IssuesSortField
-    readonly direction: IssuesSortDirection
+    readonly field: SignalsSortField
+    readonly direction: SignalsSortDirection
   }
   readonly now?: Date
 }
 
-export interface BuildIssuesExportResult {
+export interface BuildSignalsExportResult {
   readonly csv: string
   readonly filename: string
   readonly exportName: string
@@ -46,8 +46,8 @@ function escapeCsvField(value: string): string {
   return value
 }
 
-export const buildIssuesExportUseCase = Effect.fn("issues.buildIssuesExport")(function* (
-  input: BuildIssuesExportInput,
+export const buildSignalsExportUseCase = Effect.fn("issues.buildSignalsExport")(function* (
+  input: BuildSignalsExportInput,
 ) {
   yield* Effect.annotateCurrentSpan("projectId", input.projectId)
 
@@ -60,7 +60,7 @@ export const buildIssuesExportUseCase = Effect.fn("issues.buildIssuesExport")(fu
 
   let offset = 0
   while (true) {
-    const page = yield* listIssuesUseCase({
+    const page = yield* listSignalsUseCase({
       organizationId: input.organizationId,
       projectId: input.projectId,
       limit: ISSUES_EXPORT_BATCH_SIZE,
@@ -105,7 +105,7 @@ export const buildIssuesExportUseCase = Effect.fn("issues.buildIssuesExport")(fu
 
   return {
     csv: csvRows.map((row) => row.join(",")).join("\n"),
-    filename: buildIssuesExportFilename("project_issues"),
-    exportName: "Project Issues",
-  } satisfies BuildIssuesExportResult
+    filename: buildSignalsExportFilename("project_issues"),
+    exportName: "Project Signals",
+  } satisfies BuildSignalsExportResult
 })

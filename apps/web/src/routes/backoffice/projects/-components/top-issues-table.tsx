@@ -2,14 +2,14 @@ import { Badge, Text } from "@repo/ui"
 import { formatCount, relativeTime } from "@repo/utils"
 import type { AdminProjectMetricsDto } from "../../../../domains/admin/projects.functions.ts"
 
-const STATE_LABEL: Record<AdminProjectMetricsDto["topIssues"][number]["state"], string> = {
+const STATE_LABEL: Record<AdminProjectMetricsDto["topSignals"][number]["state"], string> = {
   untracked: "untracked",
   tracked: "tracked",
   resolved: "resolved",
 }
 
 const STATE_VARIANT: Record<
-  AdminProjectMetricsDto["topIssues"][number]["state"],
+  AdminProjectMetricsDto["topSignals"][number]["state"],
   "outlineWarningMuted" | "outlineAccent" | "outlineSuccessMuted"
 > = {
   untracked: "outlineWarningMuted",
@@ -17,11 +17,11 @@ const STATE_VARIANT: Record<
   resolved: "outlineSuccessMuted",
 }
 
-interface TopIssuesTableProps {
-  readonly issues: AdminProjectMetricsDto["topIssues"]
+interface TopSignalsTableProps {
+  readonly issues: AdminProjectMetricsDto["topSignals"]
 }
 
-export function TopIssuesTable({ issues }: TopIssuesTableProps) {
+export function TopSignalsTable({ issues }: TopSignalsTableProps) {
   if (issues.length === 0) {
     return (
       <div className="flex h-full min-h-[120px] items-center justify-center">

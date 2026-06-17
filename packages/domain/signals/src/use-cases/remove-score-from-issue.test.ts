@@ -1,17 +1,17 @@
 import { EMBEDDING_DIMENSIONS } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
-import { IssueId, OrganizationId, SqlClient } from "@domain/shared"
+import { SignalId, OrganizationId, SqlClient } from "@domain/shared"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import type { Issue } from "../entities/issue.ts"
-import { createIssueCentroid, updateIssueCentroid } from "../helpers.ts"
-import { IssueRepository } from "../ports/issue-repository.ts"
-import { createFakeIssueRepository } from "../testing/index.ts"
-import { removeScoreFromIssueUseCase } from "./remove-score-from-issue.ts"
+import type { Signal } from "../entities/issue.ts"
+import { createSignalCentroid, updateSignalCentroid } from "../helpers.ts"
+import { SignalRepository } from "../ports/issue-repository.ts"
+import { createFakeSignalRepository } from "../testing/index.ts"
+import { removeScoreFromSignalUseCase } from "./remove-score-from-issue.ts"
 
 const organizationId = "oooooooooooooooooooooooo"
 const projectId = "pppppppppppppppppppppppp"
-const issueId = IssueId("iiiiiiiiiiiiiiiiiiiiiiii")
+const signalId = SignalId("iiiiiiiiiiiiiiiiiiiiiiii")
 
 const makeEmbedding = (): number[] =>
   Array.from({ length: EMBEDDING_DIMENSIONS }, (_, index) => {
@@ -20,8 +20,8 @@ const makeEmbedding = (): number[] =>
     return 0
   })
 
-const makeIssue = (overrides?: Partial<Issue>): Issue => ({
-  id: issueId,
+const makeSignal = (overrides?: Partial<Signal>): Signal => ({
+  id: signalId,
   slug: "test-issue",
   organizationId,
   projectId,
@@ -30,7 +30,7 @@ const makeIssue = (overrides?: Partial<Issue>): Issue => ({
   source: "annotation",
   assigneeId: null,
   priority: null,
-  centroid: createIssueCentroid(),
+  centroid: createSignalCentroid(),
   clusteredAt: new Date("2026-03-29T10:00:00.000Z"),
   escalatedAt: null,
   resolvedAt: null,
@@ -47,13 +47,13 @@ const createPassthroughSqlClient = () =>
     query: () => Effect.die("Unexpected direct SQL query in unit test"),
   })
 
-describe("removeScoreFromIssueUseCase", () => {
+describe("removeScoreFromSignalUseCase", () => {
   it("returns skipped with reason 'draft' when draftedAt is not null", async () => {
     const result = await Effect.runPromise(
-      removeScoreFromIssueUseCase({
+      removeScoreFromSignalUseCase({
         organizationId,
         projectId,
-        issueId,
+        signalId,
         draftedAt: new Date("2026-03-30T10:00:00.000Z"),
         feedback: "Some feedback",
         source: "annotation",
@@ -64,12 +64,12 @@ describe("removeScoreFromIssueUseCase", () => {
     expect(result).toEqual({ action: "skipped", reason: "draft" })
   })
 
-  it("returns skipped with reason 'not-linked' when issueId is null", async () => {
+  it("returns skipped with reason 'not-linked' when signalId is null", async () => {
     const result = await Effect.runPromise(
-      removeScoreFromIssueUseCase({
+      removeScoreFromSignalUseCase({
         organizationId,
         projectId,
-        issueId: null,
+        signalId: null,
         draftedAt: null,
         feedback: "Some feedback",
         source: "annotation",
@@ -81,20 +81,20 @@ describe("removeScoreFromIssueUseCase", () => {
   })
 
   it("returns issue-not-found when the issue does not exist", async () => {
-    const { repository: issueRepository } = createFakeIssueRepository()
+    const { repository: signalRepository } = createFakeSignalRepository()
     const fakeAi = createFakeAI({ embed: () => Effect.succeed({ embedding: makeEmbedding() }) })
 
     const layer = Layer.mergeAll(
-      Layer.succeed(IssueRepository, issueRepository),
+      Layer.succeed(SignalRepository, signalRepository),
       fakeAi.layer,
       createPassthroughSqlClient(),
     )
 
     const result = await Effect.runPromise(
-      removeScoreFromIssueUseCase({
+      removeScoreFromSignalUseCase({
         organizationId,
         projectId,
-        issueId,
+        signalId,
         draftedAt: null,
         feedback: "The assistant leaks API tokens.",
         source: "annotation",
@@ -109,10 +109,10 @@ describe("removeScoreFromIssueUseCase", () => {
     const scoreCreatedAt = new Date("2026-03-30T10:00:00.000Z")
     const embedding = makeEmbedding()
 
-    const issueWithCentroid = makeIssue({
-      centroid: updateIssueCentroid({
+    const signalWithCentroid = makeSignal({
+      centroid: updateSignalCentroid({
         centroid: {
-          ...createIssueCentroid(),
+          ...createSignalCentroid(),
           clusteredAt: new Date("2026-03-29T10:00:00.000Z"),
         },
         score: {
@@ -125,24 +125,24 @@ describe("removeScoreFromIssueUseCase", () => {
       }),
     })
 
-    const { repository: issueRepository, issues } = createFakeIssueRepository()
-    issues.set(issueWithCentroid.id, issueWithCentroid)
+    const { repository: signalRepository, issues } = createFakeSignalRepository()
+    issues.set(signalWithCentroid.id, signalWithCentroid)
 
     const fakeAi = createFakeAI({ embed: () => Effect.succeed({ embedding }) })
 
     const layer = Layer.mergeAll(
-      Layer.succeed(IssueRepository, issueRepository),
+      Layer.succeed(SignalRepository, signalRepository),
       fakeAi.layer,
       createPassthroughSqlClient(),
     )
 
-    expect(issueWithCentroid.centroid.mass).toBeGreaterThan(0)
+    expect(signalWithCentroid.centroid.mass).toBeGreaterThan(0)
 
     const result = await Effect.runPromise(
-      removeScoreFromIssueUseCase({
+      removeScoreFromSignalUseCase({
         organizationId,
         projectId,
-        issueId,
+        signalId,
         draftedAt: null,
         feedback: "The assistant leaks API tokens.",
         source: "annotation",
@@ -153,8 +153,8 @@ describe("removeScoreFromIssueUseCase", () => {
     expect(result).toEqual({ action: "removed" })
     expect(fakeAi.calls.embed).toHaveLength(1)
 
-    const updatedIssue = issues.get(issueId)
-    expect(updatedIssue?.centroid.mass).toBe(0)
+    const updatedSignal = issues.get(signalId)
+    expect(updatedSignal?.centroid.mass).toBe(0)
   })
 
   it("keeps remaining centroid mass positive after removing one contribution", async () => {
@@ -163,36 +163,36 @@ describe("removeScoreFromIssueUseCase", () => {
     const embedding1 = makeEmbedding()
     const embedding2 = Array.from({ length: EMBEDDING_DIMENSIONS }, (_, i) => (i === 2 ? 1 : 0))
 
-    let centroid = updateIssueCentroid({
-      centroid: { ...createIssueCentroid(), clusteredAt: new Date("2026-03-29T10:00:00.000Z") },
+    let centroid = updateSignalCentroid({
+      centroid: { ...createSignalCentroid(), clusteredAt: new Date("2026-03-29T10:00:00.000Z") },
       score: { embedding: embedding1, source: "annotation", createdAt: scoreCreatedAt1 },
       operation: "add",
       timestamp: scoreCreatedAt1,
     })
-    centroid = updateIssueCentroid({
+    centroid = updateSignalCentroid({
       centroid,
       score: { embedding: embedding2, source: "annotation", createdAt: scoreCreatedAt2 },
       operation: "add",
       timestamp: scoreCreatedAt2,
     })
 
-    const issueWithTwoScores = makeIssue({ centroid })
-    const { repository: issueRepository, issues } = createFakeIssueRepository()
-    issues.set(issueWithTwoScores.id, issueWithTwoScores)
+    const signalWithTwoScores = makeSignal({ centroid })
+    const { repository: signalRepository, issues } = createFakeSignalRepository()
+    issues.set(signalWithTwoScores.id, signalWithTwoScores)
 
     const fakeAi = createFakeAI({ embed: () => Effect.succeed({ embedding: embedding1 }) })
 
     const layer = Layer.mergeAll(
-      Layer.succeed(IssueRepository, issueRepository),
+      Layer.succeed(SignalRepository, signalRepository),
       fakeAi.layer,
       createPassthroughSqlClient(),
     )
 
     const result = await Effect.runPromise(
-      removeScoreFromIssueUseCase({
+      removeScoreFromSignalUseCase({
         organizationId,
         projectId,
-        issueId,
+        signalId,
         draftedAt: null,
         feedback: "First feedback",
         source: "annotation",
@@ -202,7 +202,7 @@ describe("removeScoreFromIssueUseCase", () => {
 
     expect(result).toEqual({ action: "removed" })
 
-    const updatedIssue = issues.get(issueId)
-    expect(updatedIssue?.centroid.mass).toBeGreaterThan(0)
+    const updatedSignal = issues.get(signalId)
+    expect(updatedSignal?.centroid.mass).toBeGreaterThan(0)
   })
 })

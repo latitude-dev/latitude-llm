@@ -1,6 +1,6 @@
 import { DEFAULT_EMBEDDING_CONFIG, EMBEDDING_DIMENSIONS } from "@domain/ai"
 import type { EntrySignalsSnapshot } from "@domain/alerts"
-import type { IssueEscalationSignals, ScoreSource } from "@domain/scores"
+import type { SignalEscalationSignals, ScoreSource } from "@domain/scores"
 import {
   createCentroid,
   normalizeCentroid,
@@ -16,11 +16,11 @@ import {
   ESCALATION_MAX_DURATION_MS,
   ESCALATION_MIN_OCCURRENCES_THRESHOLD,
   ESCALATION_THRESHOLD_FACTOR,
-  ISSUE_STATES,
+  SIGNAL_STATES,
   MIN_SEASONAL_SAMPLES,
-  NEW_ISSUE_AGE_DAYS,
+  NEW_SIGNAL_AGE_DAYS,
 } from "./constants.ts"
-import { type Issue, type IssueCentroid, IssueState, type IssueState as IssueStateValue } from "./entities/issue.ts"
+import { type Signal, type SignalCentroid, SignalState, type SignalState as SignalStateValue } from "./entities/issue.ts"
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
 
@@ -30,16 +30,16 @@ const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
  * Callers with a resolved embedding config pass its model; the default keeps
  * tests and legacy paths on the stock configuration.
  */
-export const createIssueCentroid = (model: string = DEFAULT_EMBEDDING_CONFIG.model): IssueCentroid =>
+export const createSignalCentroid = (model: string = DEFAULT_EMBEDDING_CONFIG.model): SignalCentroid =>
   createCentroid({
     dimensions: EMBEDDING_DIMENSIONS,
     model,
     halfLifeSeconds: CENTROID_HALF_LIFE_SECONDS,
     weights: { ...CENTROID_SOURCE_WEIGHTS },
-  }) as IssueCentroid
+  }) as SignalCentroid
 
-export interface UpdateIssueCentroidInput {
-  readonly centroid: IssueCentroid & { clusteredAt: Date }
+export interface UpdateSignalCentroidInput {
+  readonly centroid: SignalCentroid & { clusteredAt: Date }
   readonly score: {
     readonly embedding: readonly number[]
     readonly source: ScoreSource
@@ -54,12 +54,12 @@ export interface UpdateIssueCentroidInput {
  * the shared running-decayed-sum primitive in `@domain/shared/centroid` after
  * resolving the per-source weight from the centroid's weight scheme.
  */
-export const updateIssueCentroid = ({
+export const updateSignalCentroid = ({
   centroid,
   score,
   operation,
   timestamp,
-}: UpdateIssueCentroidInput): IssueCentroid & { clusteredAt: Date } => {
+}: UpdateSignalCentroidInput): SignalCentroid & { clusteredAt: Date } => {
   if (centroid.base.length !== score.embedding.length) {
     throw new Error(`Dimension mismatch: centroid has ${centroid.base.length}, score has ${score.embedding.length}`)
   }
@@ -70,23 +70,23 @@ export const updateIssueCentroid = ({
     contributionWeight,
     operation,
     timestamp,
-  }) as IssueCentroid & { clusteredAt: Date }
+  }) as SignalCentroid & { clusteredAt: Date }
 }
 
 /**
  * Convert the persisted running sum into the unit vector used for cosine
  * search. The stored centroid `base` itself stays unnormalized.
  */
-export const normalizeIssueCentroid = (centroid: IssueCentroid): number[] => normalizeCentroid(centroid)
+export const normalizeSignalCentroid = (centroid: SignalCentroid): number[] => normalizeCentroid(centroid)
 
 /**
  * Normalize a raw embedding for query-time cosine search.
  */
 export const normalizeEmbedding = (embedding: readonly number[]): number[] => sharedNormalizeEmbedding(embedding)
 
-export interface DeriveIssueLifecycleStatesInput {
-  readonly issue: Issue
-  /** Lifecycle flags joined from `alert_incidents` by `IssueRepository` reads. */
+export interface DeriveSignalLifecycleStatesInput {
+  readonly issue: Signal
+  /** Lifecycle flags joined from `alert_incidents` by `SignalRepository` reads. */
   readonly isEscalating: boolean
   readonly isRegressed: boolean
   readonly now?: Date
@@ -109,13 +109,13 @@ export const getEscalationExitThreshold = (baselineAvgOccurrences: number): numb
 
 /**
  * An issue is "new" while its first seen timestamp is within
- * `NEW_ISSUE_AGE_DAYS` of `now`. New issues are excluded from escalation
+ * `NEW_SIGNAL_AGE_DAYS` of `now`. New issues are excluded from escalation
  * detection — their `baselineAvgOccurrences` window (days 1–8 ago) hasn't
  * filled in yet, so any volume above the floor would falsely trip the
  * threshold. The discrete `issue.new` alert covers this case.
  */
-export const isIssueNew = (firstSeenAt: Date, now: Date = new Date()): boolean =>
-  firstSeenAt.getTime() > now.getTime() - NEW_ISSUE_AGE_DAYS * MILLISECONDS_PER_DAY
+export const isSignalNew = (firstSeenAt: Date, now: Date = new Date()): boolean =>
+  firstSeenAt.getTime() > now.getTime() - NEW_SIGNAL_AGE_DAYS * MILLISECONDS_PER_DAY
 
 // ---------------------------------------------------------------------------
 // Seasonal escalation detector
@@ -140,7 +140,7 @@ export const seasonalAnomalyThreshold = (expected: number, stddev: number, k: nu
   expected + k * sigmaEffective(stddev, expected)
 
 const snapshotFromSignals = (
-  signals: IssueEscalationSignals,
+  signals: SignalEscalationSignals,
   kShort: number,
   kLong: number,
   entryThreshold1h: number,
@@ -158,7 +158,7 @@ const snapshotFromSignals = (
 })
 
 export interface SeasonalEscalationDecisionInput {
-  readonly signals: IssueEscalationSignals
+  readonly signals: SignalEscalationSignals
   /**
    * User-facing sensitivity. Lower = noisier (trips more easily); higher =
    * quieter. `k_long = k_short − 1` is derived internally — the multi-window
@@ -196,7 +196,7 @@ export type SeasonalEscalationExitReason =
   | "timeout"
   // Manual lifecycle closes: the user resolved or ignored the issue, so the
   // open escalation is stale and gets closed directly (no organic recovery).
-  // These are emitted by `applyIssueLifecycleCommandUseCase`, not the detector.
+  // These are emitted by `applySignalLifecycleCommandUseCase`, not the detector.
   | "resolved"
   | "ignored"
 
@@ -246,7 +246,7 @@ export const evaluateSeasonalEscalation = (input: SeasonalEscalationDecisionInpu
   const { signals, kShort, isNew, wasEscalating, entrySignals, startedAt, exitEligibleSince, now } = input
 
   if (isNew) {
-    // Never trip on issues younger than `NEW_ISSUE_AGE_DAYS` — the seasonal
+    // Never trip on issues younger than `NEW_SIGNAL_AGE_DAYS` — the seasonal
     // bins barely have data to compare against, and the discrete `issue.new`
     // alert already covers the surfacing case.
     return { transition: "none", nextExitEligibleSince: null }
@@ -338,43 +338,43 @@ export const evaluateSeasonalEscalation = (input: SeasonalEscalationDecisionInpu
   return { transition: "none", nextExitEligibleSince: exitEligibleSince }
 }
 
-export const deriveIssueLifecycleStates = ({
+export const deriveSignalLifecycleStates = ({
   issue,
   isEscalating,
   isRegressed,
   now = new Date(),
-}: DeriveIssueLifecycleStatesInput): readonly IssueStateValue[] => {
-  const states = new Set<IssueStateValue>()
+}: DeriveSignalLifecycleStatesInput): readonly SignalStateValue[] => {
+  const states = new Set<SignalStateValue>()
 
-  if (isIssueNew(issue.createdAt, now)) {
-    states.add(IssueState.New)
+  if (isSignalNew(issue.createdAt, now)) {
+    states.add(SignalState.New)
   }
 
   // Escalating and regressed flags are sourced from `alert_incidents` rows
-  // joined onto the issue read by `IssueRepository`. They're authoritative
+  // joined onto the issue read by `SignalRepository`. They're authoritative
   // — consumers don't recompute them from the occurrence aggregate.
   if (isEscalating) {
-    states.add(IssueState.Escalating)
+    states.add(SignalState.Escalating)
   }
 
   // Regressed only when the issue has actually-active regression history
   // AND the user hasn't re-resolved it. `resolvedAt` set wins: it means
   // the user has acknowledged the regression by resolving again.
   if (issue.resolvedAt === null && isRegressed) {
-    states.add(IssueState.Regressed)
+    states.add(SignalState.Regressed)
   }
 
   if (issue.resolvedAt !== null) {
-    states.add(IssueState.Resolved)
+    states.add(SignalState.Resolved)
   }
 
   if (issue.ignoredAt !== null) {
-    states.add(IssueState.Ignored)
+    states.add(SignalState.Ignored)
   }
 
   if (states.size === 0) {
-    states.add(IssueState.Ongoing)
+    states.add(SignalState.Ongoing)
   }
 
-  return ISSUE_STATES.filter((state): state is IssueStateValue => states.has(state))
+  return SIGNAL_STATES.filter((state): state is SignalStateValue => states.has(state))
 }

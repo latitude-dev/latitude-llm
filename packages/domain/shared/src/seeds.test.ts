@@ -4,14 +4,14 @@ function formatSeedTimestamp(date: Date): string {
   return date.toISOString().slice(0, 23).replace("T", " ")
 }
 
-function countIssueOccurrencesByDay(
-  issueId: string,
-  occurrences: readonly { readonly issueId: string; readonly daysAgo: number }[],
+function countSignalOccurrencesByDay(
+  signalId: string,
+  occurrences: readonly { readonly signalId: string; readonly daysAgo: number }[],
 ) {
   const counts = new Map<number, number>()
 
   for (const occurrence of occurrences) {
-    if (occurrence.issueId !== issueId) {
+    if (occurrence.signalId !== signalId) {
       continue
     }
 
@@ -56,29 +56,29 @@ describe("seed timeline helpers", () => {
     vi.setSystemTime(new Date("2026-04-10T11:23:45.000Z"))
     vi.resetModules()
 
-    const { SEED_ISSUE_COUNT } = await import("./seed-content/issues.ts")
+    const { SEED_SIGNAL_COUNT } = await import("./seed-content/issues.ts")
 
-    expect(SEED_ISSUE_COUNT).toBeGreaterThanOrEqual(100)
+    expect(SEED_SIGNAL_COUNT).toBeGreaterThanOrEqual(100)
   })
 
   it("includes seeded escalating and regressed issue occurrence shapes for histogram demos", async () => {
     vi.setSystemTime(new Date("2026-04-10T11:23:45.000Z"))
     vi.resetModules()
 
-    const { SEED_ACCESS_ISSUE_ID, SEED_COMBINATION_ISSUE_ID, SEED_INSTALLATION_ISSUE_ID, SEED_RETURNS_ISSUE_ID } =
+    const { SEED_ACCESS_SIGNAL_ID, SEED_COMBINATION_SIGNAL_ID, SEED_INSTALLATION_SIGNAL_ID, SEED_RETURNS_SIGNAL_ID } =
       await import("./seeds.ts")
-    const { SEED_ADDITIONAL_ISSUE_OCCURRENCES, SEED_ISSUE_FIXTURES_BY_ID } = await import("./seed-content/issues.ts")
+    const { SEED_ADDITIONAL_SIGNAL_OCCURRENCES, SEED_SIGNAL_FIXTURES_BY_ID } = await import("./seed-content/issues.ts")
 
-    const accessCounts = countIssueOccurrencesByDay(SEED_ACCESS_ISSUE_ID, SEED_ADDITIONAL_ISSUE_OCCURRENCES)
+    const accessCounts = countSignalOccurrencesByDay(SEED_ACCESS_SIGNAL_ID, SEED_ADDITIONAL_SIGNAL_OCCURRENCES)
     expect(accessCounts.get(0)).toBeGreaterThanOrEqual(20)
     expect([...accessCounts.values()].some((count) => count >= 20)).toBe(true)
     expect([...accessCounts.values()].some((count) => count > 0 && count < 20)).toBe(true)
 
-    const combinationIssue = SEED_ISSUE_FIXTURES_BY_ID.get(SEED_COMBINATION_ISSUE_ID)
-    expect(combinationIssue?.resolvedDaysAgo).not.toBeNull()
+    const combinationSignal = SEED_SIGNAL_FIXTURES_BY_ID.get(SEED_COMBINATION_SIGNAL_ID)
+    expect(combinationSignal?.resolvedDaysAgo).not.toBeNull()
 
-    const combinationResolvedDaysAgo = combinationIssue?.resolvedDaysAgo ?? 0
-    const combinationCounts = countIssueOccurrencesByDay(SEED_COMBINATION_ISSUE_ID, SEED_ADDITIONAL_ISSUE_OCCURRENCES)
+    const combinationResolvedDaysAgo = combinationSignal?.resolvedDaysAgo ?? 0
+    const combinationCounts = countSignalOccurrencesByDay(SEED_COMBINATION_SIGNAL_ID, SEED_ADDITIONAL_SIGNAL_OCCURRENCES)
 
     expect(
       [...combinationCounts.keys()].some(
@@ -90,11 +90,11 @@ describe("seed timeline helpers", () => {
     expect([...combinationCounts.values()].some((count) => count >= 20)).toBe(true)
     expect([...combinationCounts.values()].some((count) => count > 0 && count < 20)).toBe(true)
 
-    const returnsIssue = SEED_ISSUE_FIXTURES_BY_ID.get(SEED_RETURNS_ISSUE_ID)
-    expect(returnsIssue?.resolvedDaysAgo).not.toBeNull()
+    const returnsSignal = SEED_SIGNAL_FIXTURES_BY_ID.get(SEED_RETURNS_SIGNAL_ID)
+    expect(returnsSignal?.resolvedDaysAgo).not.toBeNull()
 
-    const returnsResolvedDaysAgo = returnsIssue?.resolvedDaysAgo ?? 0
-    const returnsCounts = countIssueOccurrencesByDay(SEED_RETURNS_ISSUE_ID, SEED_ADDITIONAL_ISSUE_OCCURRENCES)
+    const returnsResolvedDaysAgo = returnsSignal?.resolvedDaysAgo ?? 0
+    const returnsCounts = countSignalOccurrencesByDay(SEED_RETURNS_SIGNAL_ID, SEED_ADDITIONAL_SIGNAL_OCCURRENCES)
 
     expect(
       [...returnsCounts.keys()].some(
@@ -105,11 +105,11 @@ describe("seed timeline helpers", () => {
     expect(returnsCounts.get(0) ?? 0).toBeLessThan(20)
     expect(returnsCounts.has(1)).toBe(false)
 
-    const installationIssue = SEED_ISSUE_FIXTURES_BY_ID.get(SEED_INSTALLATION_ISSUE_ID)
-    expect(installationIssue?.resolvedDaysAgo).not.toBeNull()
+    const installationSignal = SEED_SIGNAL_FIXTURES_BY_ID.get(SEED_INSTALLATION_SIGNAL_ID)
+    expect(installationSignal?.resolvedDaysAgo).not.toBeNull()
 
-    const installationResolvedDaysAgo = installationIssue?.resolvedDaysAgo ?? 0
-    const installationCounts = countIssueOccurrencesByDay(SEED_INSTALLATION_ISSUE_ID, SEED_ADDITIONAL_ISSUE_OCCURRENCES)
+    const installationResolvedDaysAgo = installationSignal?.resolvedDaysAgo ?? 0
+    const installationCounts = countSignalOccurrencesByDay(SEED_INSTALLATION_SIGNAL_ID, SEED_ADDITIONAL_SIGNAL_OCCURRENCES)
 
     expect(
       [...installationCounts.keys()].some(
@@ -125,18 +125,18 @@ describe("seed timeline helpers", () => {
     vi.setSystemTime(new Date("2026-04-10T11:23:45.000Z"))
     vi.resetModules()
 
-    const { seedIssueOccurrenceSpanId, seedIssueOccurrenceTraceId } = await import("./seeds.ts")
-    const { SEED_ADDITIONAL_ISSUE_OCCURRENCES } = await import("./seed-content/issues.ts")
+    const { seedSignalOccurrenceSpanId, seedSignalOccurrenceTraceId } = await import("./seeds.ts")
+    const { SEED_ADDITIONAL_SIGNAL_OCCURRENCES } = await import("./seed-content/issues.ts")
 
-    const traceIds = SEED_ADDITIONAL_ISSUE_OCCURRENCES.map((_, index) => seedIssueOccurrenceTraceId(index))
-    const spanIds = SEED_ADDITIONAL_ISSUE_OCCURRENCES.map((_, index) => seedIssueOccurrenceSpanId(index))
-    const longTailFeedback = SEED_ADDITIONAL_ISSUE_OCCURRENCES.filter((occurrence) => {
+    const traceIds = SEED_ADDITIONAL_SIGNAL_OCCURRENCES.map((_, index) => seedSignalOccurrenceTraceId(index))
+    const spanIds = SEED_ADDITIONAL_SIGNAL_OCCURRENCES.map((_, index) => seedSignalOccurrenceSpanId(index))
+    const longTailFeedback = SEED_ADDITIONAL_SIGNAL_OCCURRENCES.filter((occurrence) => {
       const importName = occurrence.metadata.importName
       return importName === "seed-issue-scout" || importName === "backlog-audit"
     }).map((occurrence) => occurrence.feedback)
 
-    expect(new Set(traceIds).size).toBe(SEED_ADDITIONAL_ISSUE_OCCURRENCES.length)
-    expect(new Set(spanIds).size).toBe(SEED_ADDITIONAL_ISSUE_OCCURRENCES.length)
+    expect(new Set(traceIds).size).toBe(SEED_ADDITIONAL_SIGNAL_OCCURRENCES.length)
+    expect(new Set(spanIds).size).toBe(SEED_ADDITIONAL_SIGNAL_OCCURRENCES.length)
     expect(longTailFeedback.length).toBeGreaterThan(0)
     expect(longTailFeedback.every((feedback) => !feedback.startsWith("Seeded long-tail issue evidence captured"))).toBe(
       true,

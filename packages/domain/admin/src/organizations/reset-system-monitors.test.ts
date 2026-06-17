@@ -72,7 +72,7 @@ describe("resetSystemMonitorsUseCase", () => {
     expect(result).toEqual({ projectsCount: 1, monitorsReset: 3 })
     expect(monitors.length).toBe(3)
     const discovered = monitors.find((m) => m.projectId === projectA && m.slug === "issue-discovered")
-    expect(discovered?.name).toBe("Issue discovered")
+    expect(discovered?.name).toBe("Signal discovered")
     expect(discovered?.description).toBe("Notifies each time a new issue is detected.")
   })
 })

@@ -1,4 +1,4 @@
-import type { IssueRepository } from "@domain/issues"
+import type { SignalRepository } from "@domain/signals"
 import type { NOTIFICATION_KIND_META, NotificationKind } from "@domain/notifications"
 import type { SavedSearchRepository } from "@domain/saved-searches"
 import type { NotificationId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
@@ -77,9 +77,9 @@ export class RenderSlackError extends Data.TaggedError("RenderSlackError")<{
  * other kinds need nothing beyond the payload + context.
  */
 export type SlackRenderDepsByKind = {
-  readonly "incident.event": IssueRepository | SavedSearchRepository | UserRepository | SqlClient
-  readonly "incident.opened": IssueRepository | SavedSearchRepository | UserRepository | SqlClient
-  readonly "incident.closed": IssueRepository | SavedSearchRepository | UserRepository | SqlClient
+  readonly "incident.event": SignalRepository | SavedSearchRepository | UserRepository | SqlClient
+  readonly "incident.opened": SignalRepository | SavedSearchRepository | UserRepository | SqlClient
+  readonly "incident.closed": SignalRepository | SavedSearchRepository | UserRepository | SqlClient
   readonly "wrapped.report": never
   readonly "custom.message": never
   readonly "issue.assigned": never

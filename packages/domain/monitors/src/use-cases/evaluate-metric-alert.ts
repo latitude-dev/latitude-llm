@@ -3,7 +3,7 @@ import {
   MIN_SEASONAL_SAMPLES,
   SEASONAL_HISTORY_WEEKS,
   seasonalAnomalyThreshold,
-} from "@domain/issues"
+} from "@domain/signals"
 import type {
   AlertIncidentMetricEscalatingCondition,
   AlertIncidentMetricThresholdCondition,

@@ -1,54 +1,54 @@
-import type { IssueDimension } from "@domain/scores"
+import type { SignalDimension } from "@domain/scores"
 import type { InfiniteTableInfiniteScroll } from "@repo/ui"
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import type {
-  IssueDetailRecord,
-  IssueDimensionsRecord,
-  IssueImpactRecord,
-  IssueOccurrenceRecord,
-  IssueRecord,
-  IssueSummaryRecord,
-  IssuesListResultRecord,
-  IssueTracePageRecord,
-  IssueTraceRecord,
-  OrgIssueSearchRecord,
-  RelatedIssueRecord,
-  UpdateIssueTriageRecord,
+  SignalDetailRecord,
+  SignalDimensionsRecord,
+  SignalImpactRecord,
+  SignalOccurrenceRecord,
+  SignalRecord,
+  SignalSummaryRecord,
+  SignalsListResultRecord,
+  SignalTracePageRecord,
+  SignalTraceRecord,
+  OrgSignalSearchRecord,
+  RelatedSignalRecord,
+  UpdateSignalTriageRecord,
 } from "./issues.functions.ts"
 import {
-  countIssueTraces,
-  getIssue,
-  getIssueDetail,
-  getIssueDimensions,
-  getIssueImpact,
-  getIssueOccurrences,
-  getRelatedIssues,
-  listIssues,
-  listIssueTraces,
-  searchOrgIssues,
-  updateIssueTriage,
+  countSignalTraces,
+  getSignal,
+  getSignalDetail,
+  getSignalDimensions,
+  getSignalImpact,
+  getSignalOccurrences,
+  getRelatedSignals,
+  listSignals,
+  listSignalTraces,
+  searchOrgSignals,
+  updateSignalTriage,
 } from "./issues.functions.ts"
 
 const queryClient = getQueryClient()
 const DEFAULT_ISSUES_BATCH_SIZE = 50
-const ISSUE_TRACE_BATCH_SIZE = 25
+const SIGNAL_TRACE_BATCH_SIZE = 25
 const ISSUES_QUERY_STALE_TIME_MS = 30_000
-const EMPTY_ISSUES_ANALYTICS: IssuesListResultRecord["analytics"] = {
+const EMPTY_ISSUES_ANALYTICS: SignalsListResultRecord["analytics"] = {
   counts: {
-    newIssues: 0,
-    escalatingIssues: 0,
-    ongoingIssues: 0,
-    regressedIssues: 0,
-    resolvedIssues: 0,
+    newSignals: 0,
+    escalatingSignals: 0,
+    ongoingSignals: 0,
+    regressedSignals: 0,
+    resolvedSignals: 0,
     seenOccurrences: 0,
   },
   histogram: [],
   histogramBucketSeconds: 24 * 60 * 60,
   totalTraces: 0,
 }
-const EMPTY_PRIORITY_COUNTS: IssuesListResultRecord["priorityCounts"] = {
+const EMPTY_PRIORITY_COUNTS: SignalsListResultRecord["priorityCounts"] = {
   urgent: 0,
   high: 0,
   medium: 0,
@@ -58,29 +58,29 @@ const EMPTY_PRIORITY_COUNTS: IssuesListResultRecord["priorityCounts"] = {
 const DEFAULT_ISSUES_SORTING = {
   column: "lastSeen",
   direction: "desc",
-} as const satisfies IssuesSorting
+} as const satisfies SignalsSorting
 
-interface IssuesSorting {
+interface SignalsSorting {
   readonly column: "lastSeen" | "occurrences" | "state"
   readonly direction: "asc" | "desc"
 }
 
-interface IssuesTimeRange {
+interface SignalsTimeRange {
   readonly fromIso?: string
   readonly toIso?: string
 }
 
-interface IssuesKeyInput {
+interface SignalsKeyInput {
   readonly projectId: string
   readonly limit: number
   readonly lifecycleGroup: "active" | "archived" | undefined
   readonly assigneeIds: readonly string[] | undefined
-  readonly sorting: IssuesSorting
+  readonly sorting: SignalsSorting
   readonly searchQuery: string | undefined
-  readonly timeRange: IssuesTimeRange | undefined
+  readonly timeRange: SignalsTimeRange | undefined
 }
 
-const getIssuesQueryKey = (input: IssuesKeyInput) =>
+const getSignalsQueryKey = (input: SignalsKeyInput) =>
   [
     "issues",
     input.projectId,
@@ -94,32 +94,32 @@ const getIssuesQueryKey = (input: IssuesKeyInput) =>
     input.timeRange?.toIso ?? null,
   ] as const
 
-const getIssuesOffsetQueryKey = (input: IssuesKeyInput, offset: number) =>
-  [...getIssuesQueryKey(input), "offset", offset] as const
+const getSignalsOffsetQueryKey = (input: SignalsKeyInput, offset: number) =>
+  [...getSignalsQueryKey(input), "offset", offset] as const
 
-const getIssueQueryKey = (projectId: string, issueId: string) => ["issue", projectId, issueId] as const
+const getSignalQueryKey = (projectId: string, signalId: string) => ["issue", projectId, signalId] as const
 
-const getIssueDetailQueryKey = (projectId: string, issueId: string) => ["issue-detail", projectId, issueId] as const
+const getSignalDetailQueryKey = (projectId: string, signalId: string) => ["issue-detail", projectId, signalId] as const
 
-const getIssueImpactQueryKey = (projectId: string, issueId: string) => ["issue-impact", projectId, issueId] as const
+const getSignalImpactQueryKey = (projectId: string, signalId: string) => ["issue-impact", projectId, signalId] as const
 
-const getIssueDimensionsQueryKey = (projectId: string, issueId: string, dimension: IssueDimension) =>
-  ["issue-dimensions", projectId, issueId, dimension] as const
+const getSignalDimensionsQueryKey = (projectId: string, signalId: string, dimension: SignalDimension) =>
+  ["issue-dimensions", projectId, signalId, dimension] as const
 
-const getIssueOccurrencesQueryKey = (projectId: string, issueId: string) =>
-  ["issue-occurrences", projectId, issueId] as const
+const getSignalOccurrencesQueryKey = (projectId: string, signalId: string) =>
+  ["issue-occurrences", projectId, signalId] as const
 
-const getRelatedIssuesQueryKey = (projectId: string, issueId: string) => ["related-issues", projectId, issueId] as const
+const getRelatedSignalsQueryKey = (projectId: string, signalId: string) => ["related-issues", projectId, signalId] as const
 
-const getIssueTracesQueryKey = (projectId: string, issueId: string) => ["issue-traces", projectId, issueId] as const
+const getSignalTracesQueryKey = (projectId: string, signalId: string) => ["issue-traces", projectId, signalId] as const
 
-const getIssueTracesPageKey = (projectId: string, issueId: string, offset: number) =>
-  ["issue-traces-page", projectId, issueId, offset] as const
+const getSignalTracesPageKey = (projectId: string, signalId: string, offset: number) =>
+  ["issue-traces-page", projectId, signalId, offset] as const
 
-const getIssueTracesCountQueryKey = (projectId: string, issueId: string) =>
-  ["issue-traces-count", projectId, issueId] as const
+const getSignalTracesCountQueryKey = (projectId: string, signalId: string) =>
+  ["issue-traces-count", projectId, signalId] as const
 
-const buildListIssuesRequest = (input: IssuesKeyInput, offset: number) => ({
+const buildListSignalsRequest = (input: SignalsKeyInput, offset: number) => ({
   projectId: input.projectId,
   limit: input.limit,
   offset,
@@ -133,20 +133,20 @@ const buildListIssuesRequest = (input: IssuesKeyInput, offset: number) => ({
   ...(input.timeRange?.fromIso || input.timeRange?.toIso ? { timeRange: input.timeRange } : {}),
 })
 
-export function useIssues(input: {
+export function useSignals(input: {
   readonly projectId: string
   readonly lifecycleGroup?: "active" | "archived"
   readonly assigneeIds?: readonly string[]
-  readonly sorting?: IssuesSorting
+  readonly sorting?: SignalsSorting
   readonly searchQuery?: string
-  readonly timeRange?: IssuesTimeRange
+  readonly timeRange?: SignalsTimeRange
   readonly limit?: number
   readonly enabled?: boolean
 }) {
   const normalizedSearchQuery = input.searchQuery?.trim() || undefined
   const sorting = input.sorting ?? DEFAULT_ISSUES_SORTING
   const limit = input.limit ?? DEFAULT_ISSUES_BATCH_SIZE
-  const keyInput: IssuesKeyInput = {
+  const keyInput: SignalsKeyInput = {
     projectId: input.projectId,
     limit,
     lifecycleGroup: input.lifecycleGroup,
@@ -157,7 +157,7 @@ export function useIssues(input: {
   }
 
   const queryKey = useMemo(
-    () => getIssuesQueryKey(keyInput),
+    () => getSignalsQueryKey(keyInput),
     [
       keyInput.projectId,
       keyInput.limit,
@@ -171,15 +171,15 @@ export function useIssues(input: {
     ],
   )
 
-  const fetchPage = async (offset: number): Promise<IssuesListResultRecord> => {
-    const offsetKey = getIssuesOffsetQueryKey(keyInput, offset)
+  const fetchPage = async (offset: number): Promise<SignalsListResultRecord> => {
+    const offsetKey = getSignalsOffsetQueryKey(keyInput, offset)
     // Use the per-page query cache, but still refetch when invalidated instead of
     // short-circuiting to stale data via getQueryData().
     const result = await queryClient.fetchQuery({
       queryKey: offsetKey,
       queryFn: () =>
-        listIssues({
-          data: buildListIssuesRequest(keyInput, offset),
+        listSignals({
+          data: buildListSignalsRequest(keyInput, offset),
         }),
       staleTime: ISSUES_QUERY_STALE_TIME_MS,
     })
@@ -187,10 +187,10 @@ export function useIssues(input: {
     if (result.hasMore) {
       const nextOffset = result.offset + result.limit
       void queryClient.prefetchQuery({
-        queryKey: getIssuesOffsetQueryKey(keyInput, nextOffset),
+        queryKey: getSignalsOffsetQueryKey(keyInput, nextOffset),
         queryFn: () =>
-          listIssues({
-            data: buildListIssuesRequest(keyInput, nextOffset),
+          listSignals({
+            data: buildListSignalsRequest(keyInput, nextOffset),
           }),
         staleTime: ISSUES_QUERY_STALE_TIME_MS,
       })
@@ -229,13 +229,13 @@ export function useIssues(input: {
   const firstPage = paginatedData?.pages[0]
 
   return {
-    data: data as readonly IssueRecord[],
+    data: data as readonly SignalRecord[],
     analytics: firstPage?.analytics ?? EMPTY_ISSUES_ANALYTICS,
     totalCount: firstPage?.totalCount ?? 0,
-    hasAnyIssues: firstPage?.hasAnyIssues ?? false,
+    hasAnySignals: firstPage?.hasAnySignals ?? false,
     occurrencesSum: firstPage?.occurrencesSum ?? 0,
     priorityCounts: firstPage?.priorityCounts ?? EMPTY_PRIORITY_COUNTS,
-    myIssuesCount: firstPage?.myIssuesCount ?? 0,
+    mySignalsCount: firstPage?.mySignalsCount ?? 0,
     isLoading,
     // True while a new query key is in flight and the previous result is being
     // shown as placeholder (e.g. after a sort/filter change). Lets consumers
@@ -254,7 +254,7 @@ const ORG_SEARCH_LIMIT = 10
  * Resolved/ignored issues are excluded so the palette recommends active issues only.
  * `preferProjectId` (the current project, when inside one) ranks that project's issues first.
  */
-export function useIssuesOrgSearch(
+export function useSignalsOrgSearch(
   searchQuery: string,
   {
     semantic = false,
@@ -265,8 +265,8 @@ export function useIssuesOrgSearch(
   const trimmed = searchQuery.trim()
   const { data, isLoading } = useQuery({
     queryKey: ["issues", "orgSearch", trimmed, semantic, preferProjectId ?? null],
-    queryFn: (): Promise<readonly OrgIssueSearchRecord[]> =>
-      searchOrgIssues({
+    queryFn: (): Promise<readonly OrgSignalSearchRecord[]> =>
+      searchOrgSignals({
         data: {
           searchQuery: trimmed,
           semantic,
@@ -280,105 +280,105 @@ export function useIssuesOrgSearch(
   return { data: data ?? [], isLoading }
 }
 
-export function useIssueDetail({
+export function useSignalDetail({
   projectId,
-  issueId,
+  signalId,
   enabled = true,
 }: {
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly enabled?: boolean
 }) {
   return useQuery({
-    queryKey: getIssueDetailQueryKey(projectId, issueId),
-    queryFn: (): Promise<IssueDetailRecord | null> => getIssueDetail({ data: { projectId, issueId } }),
-    enabled: enabled && projectId.length > 0 && issueId.length > 0,
+    queryKey: getSignalDetailQueryKey(projectId, signalId),
+    queryFn: (): Promise<SignalDetailRecord | null> => getSignalDetail({ data: { projectId, signalId } }),
+    enabled: enabled && projectId.length > 0 && signalId.length > 0,
   })
 }
 
-export function useIssue({
+export function useSignal({
   projectId,
-  issueId,
+  signalId,
   enabled = true,
 }: {
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly enabled?: boolean
 }) {
   return useQuery({
-    queryKey: getIssueQueryKey(projectId, issueId),
-    queryFn: (): Promise<IssueSummaryRecord | null> => getIssue({ data: { projectId, issueId } }),
-    enabled: enabled && projectId.length > 0 && issueId.length > 0,
+    queryKey: getSignalQueryKey(projectId, signalId),
+    queryFn: (): Promise<SignalSummaryRecord | null> => getSignal({ data: { projectId, signalId } }),
+    enabled: enabled && projectId.length > 0 && signalId.length > 0,
   })
 }
 
-export function useIssueImpact({
+export function useSignalImpact({
   projectId,
-  issueId,
+  signalId,
   enabled = true,
 }: {
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly enabled?: boolean
 }) {
   return useQuery({
-    queryKey: getIssueImpactQueryKey(projectId, issueId),
-    queryFn: (): Promise<IssueImpactRecord> => getIssueImpact({ data: { projectId, issueId } }),
-    enabled: enabled && projectId.length > 0 && issueId.length > 0,
+    queryKey: getSignalImpactQueryKey(projectId, signalId),
+    queryFn: (): Promise<SignalImpactRecord> => getSignalImpact({ data: { projectId, signalId } }),
+    enabled: enabled && projectId.length > 0 && signalId.length > 0,
     staleTime: ISSUES_QUERY_STALE_TIME_MS,
   })
 }
 
-export function useIssueDimensions({
+export function useSignalDimensions({
   projectId,
-  issueId,
+  signalId,
   dimension,
   enabled = true,
 }: {
   readonly projectId: string
-  readonly issueId: string
-  readonly dimension: IssueDimension
+  readonly signalId: string
+  readonly dimension: SignalDimension
   readonly enabled?: boolean
 }) {
   return useQuery({
-    queryKey: getIssueDimensionsQueryKey(projectId, issueId, dimension),
-    queryFn: (): Promise<IssueDimensionsRecord> => getIssueDimensions({ data: { projectId, issueId, dimension } }),
-    enabled: enabled && projectId.length > 0 && issueId.length > 0,
+    queryKey: getSignalDimensionsQueryKey(projectId, signalId, dimension),
+    queryFn: (): Promise<SignalDimensionsRecord> => getSignalDimensions({ data: { projectId, signalId, dimension } }),
+    enabled: enabled && projectId.length > 0 && signalId.length > 0,
     staleTime: ISSUES_QUERY_STALE_TIME_MS,
   })
 }
 
-export function useRelatedIssues({
+export function useRelatedSignals({
   projectId,
-  issueId,
+  signalId,
   enabled = true,
 }: {
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly enabled?: boolean
 }) {
   return useQuery({
-    queryKey: getRelatedIssuesQueryKey(projectId, issueId),
-    queryFn: (): Promise<readonly RelatedIssueRecord[]> => getRelatedIssues({ data: { projectId, issueId } }),
-    enabled: enabled && projectId.length > 0 && issueId.length > 0,
+    queryKey: getRelatedSignalsQueryKey(projectId, signalId),
+    queryFn: (): Promise<readonly RelatedSignalRecord[]> => getRelatedSignals({ data: { projectId, signalId } }),
+    enabled: enabled && projectId.length > 0 && signalId.length > 0,
     staleTime: ISSUES_QUERY_STALE_TIME_MS,
   })
 }
 
-export function useIssueOccurrences({
+export function useSignalOccurrences({
   projectId,
-  issueId,
+  signalId,
   enabled = true,
 }: {
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly enabled?: boolean
 }) {
   return useQuery({
-    queryKey: getIssueOccurrencesQueryKey(projectId, issueId),
-    queryFn: (): Promise<{ readonly items: readonly IssueOccurrenceRecord[] }> =>
-      getIssueOccurrences({ data: { projectId, issueId } }),
-    enabled: enabled && projectId.length > 0 && issueId.length > 0,
+    queryKey: getSignalOccurrencesQueryKey(projectId, signalId),
+    queryFn: (): Promise<{ readonly items: readonly SignalOccurrenceRecord[] }> =>
+      getSignalOccurrences({ data: { projectId, signalId } }),
+    enabled: enabled && projectId.length > 0 && signalId.length > 0,
     staleTime: ISSUES_QUERY_STALE_TIME_MS,
   })
 }
@@ -389,31 +389,31 @@ export function useIssueOccurrences({
  * queries AND the issues list on success — the list groups by priority and
  * filters/counts by assignee, so triage edits must regroup it.
  */
-export function useUpdateIssueTriage(projectId: string, issueId: string) {
+export function useUpdateSignalTriage(projectId: string, signalId: string) {
   return useMutation({
     mutationFn: (input: {
       readonly assigneeId?: string | null
-      readonly priority?: UpdateIssueTriageRecord["priority"]
-    }): Promise<UpdateIssueTriageRecord> =>
-      updateIssueTriage({
+      readonly priority?: UpdateSignalTriageRecord["priority"]
+    }): Promise<UpdateSignalTriageRecord> =>
+      updateSignalTriage({
         data: {
           projectId,
-          issueId,
+          signalId,
           ...(input.assigneeId !== undefined ? { assigneeId: input.assigneeId } : {}),
           ...(input.priority !== undefined ? { priority: input.priority } : {}),
         },
       }),
-    onSuccess: () => invalidateIssueQueries(projectId, issueId),
+    onSuccess: () => invalidateSignalQueries(projectId, signalId),
   })
 }
 
-export function useIssueTracesInfiniteScroll({
+export function useSignalTracesInfiniteScroll({
   projectId,
-  issueId,
+  signalId,
   enabled = true,
 }: {
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly enabled?: boolean
 }) {
   const {
@@ -423,17 +423,17 @@ export function useIssueTracesInfiniteScroll({
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: getIssueTracesQueryKey(projectId, issueId),
-    queryFn: async ({ pageParam }): Promise<IssueTracePageRecord> => {
-      const pageKey = getIssueTracesPageKey(projectId, issueId, pageParam)
+    queryKey: getSignalTracesQueryKey(projectId, signalId),
+    queryFn: async ({ pageParam }): Promise<SignalTracePageRecord> => {
+      const pageKey = getSignalTracesPageKey(projectId, signalId, pageParam)
       const result = await queryClient.fetchQuery({
         queryKey: pageKey,
         queryFn: () =>
-          listIssueTraces({
+          listSignalTraces({
             data: {
               projectId,
-              issueId,
-              limit: ISSUE_TRACE_BATCH_SIZE,
+              signalId,
+              limit: SIGNAL_TRACE_BATCH_SIZE,
               offset: pageParam,
             },
           }),
@@ -443,13 +443,13 @@ export function useIssueTracesInfiniteScroll({
       if (result.hasMore) {
         const nextOffset = result.offset + result.limit
         void queryClient.prefetchQuery({
-          queryKey: getIssueTracesPageKey(projectId, issueId, nextOffset),
+          queryKey: getSignalTracesPageKey(projectId, signalId, nextOffset),
           queryFn: () =>
-            listIssueTraces({
+            listSignalTraces({
               data: {
                 projectId,
-                issueId,
-                limit: ISSUE_TRACE_BATCH_SIZE,
+                signalId,
+                limit: SIGNAL_TRACE_BATCH_SIZE,
                 offset: nextOffset,
               },
             }),
@@ -462,7 +462,7 @@ export function useIssueTracesInfiniteScroll({
     initialPageParam: 0,
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.offset + lastPage.limit : undefined),
     staleTime: ISSUES_QUERY_STALE_TIME_MS,
-    enabled: enabled && projectId.length > 0 && issueId.length > 0,
+    enabled: enabled && projectId.length > 0 && signalId.length > 0,
   })
 
   const infiniteScroll: InfiniteTableInfiniteScroll = useMemo(
@@ -474,7 +474,7 @@ export function useIssueTracesInfiniteScroll({
     [fetchNextPage, hasNextPage, isFetchingNextPage],
   )
 
-  const data: readonly IssueTraceRecord[] = useMemo(
+  const data: readonly SignalTraceRecord[] = useMemo(
     () => paginatedData?.pages.flatMap((page) => page.items) ?? [],
     [paginatedData],
   )
@@ -482,37 +482,37 @@ export function useIssueTracesInfiniteScroll({
   return { data, isLoading, infiniteScroll }
 }
 
-export function useIssueTracesCount({
+export function useSignalTracesCount({
   projectId,
-  issueId,
+  signalId,
   enabled = true,
 }: {
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly enabled?: boolean
 }) {
   const { data } = useQuery({
-    queryKey: getIssueTracesCountQueryKey(projectId, issueId),
-    queryFn: () => countIssueTraces({ data: { projectId, issueId } }),
-    enabled: enabled && projectId.length > 0 && issueId.length > 0,
+    queryKey: getSignalTracesCountQueryKey(projectId, signalId),
+    queryFn: () => countSignalTraces({ data: { projectId, signalId } }),
+    enabled: enabled && projectId.length > 0 && signalId.length > 0,
     staleTime: ISSUES_QUERY_STALE_TIME_MS,
   })
 
   return data?.total ?? 0
 }
 
-const invalidateIssueDetailQueries = (projectId: string, issueId: string) =>
+const invalidateSignalDetailQueries = (projectId: string, signalId: string) =>
   Promise.all([
-    queryClient.invalidateQueries({ queryKey: getIssueQueryKey(projectId, issueId) }),
-    queryClient.invalidateQueries({ queryKey: getIssueDetailQueryKey(projectId, issueId) }),
-    queryClient.invalidateQueries({ queryKey: getIssueImpactQueryKey(projectId, issueId) }),
-    queryClient.invalidateQueries({ queryKey: getIssueTracesQueryKey(projectId, issueId) }),
-    queryClient.invalidateQueries({ queryKey: ["issue-traces-page", projectId, issueId] }),
-    queryClient.invalidateQueries({ queryKey: getIssueTracesCountQueryKey(projectId, issueId) }),
+    queryClient.invalidateQueries({ queryKey: getSignalQueryKey(projectId, signalId) }),
+    queryClient.invalidateQueries({ queryKey: getSignalDetailQueryKey(projectId, signalId) }),
+    queryClient.invalidateQueries({ queryKey: getSignalImpactQueryKey(projectId, signalId) }),
+    queryClient.invalidateQueries({ queryKey: getSignalTracesQueryKey(projectId, signalId) }),
+    queryClient.invalidateQueries({ queryKey: ["issue-traces-page", projectId, signalId] }),
+    queryClient.invalidateQueries({ queryKey: getSignalTracesCountQueryKey(projectId, signalId) }),
   ])
 
-export const invalidateIssueQueries = (projectId: string, issueId?: string) =>
+export const invalidateSignalQueries = (projectId: string, signalId?: string) =>
   Promise.all([
     queryClient.invalidateQueries({ queryKey: ["issues", projectId] }),
-    ...(issueId ? [invalidateIssueDetailQueries(projectId, issueId)] : []),
+    ...(signalId ? [invalidateSignalDetailQueries(projectId, signalId)] : []),
   ])

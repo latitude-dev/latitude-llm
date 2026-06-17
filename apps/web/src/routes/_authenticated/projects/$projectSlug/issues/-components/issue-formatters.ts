@@ -46,7 +46,7 @@ export function formatSeenAgeParts(lastSeenAtIso: string, firstSeenAtIso: string
 }
 
 /** Same wording as the “last seen” half of {@link formatSeenAgeParts} (e.g. `3h ago`). */
-export function formatIssueAgeAgoLabel(iso: string): string {
+export function formatSignalAgeAgoLabel(iso: string): string {
   const now = Date.now()
   const t = new Date(iso).getTime()
   return `${formatCompactElapsed(Math.max(0, now - t))} ago`

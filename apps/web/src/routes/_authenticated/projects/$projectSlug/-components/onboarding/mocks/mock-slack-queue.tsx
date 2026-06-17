@@ -10,15 +10,15 @@ type IncidentNotification = {
   readonly id: string
   readonly kind: IncidentKind
   readonly severity: Severity
-  readonly issueName: string
+  readonly signalName: string
   readonly detail: string
   readonly trend?: ReadonlyArray<number>
 }
 
 const KIND_LABEL: Record<IncidentKind, string> = {
   new: "New issue",
-  escalating: "Issue escalating",
-  regressed: "Issue regressed",
+  escalating: "Signal escalating",
+  regressed: "Signal regressed",
   resolved: "Resolved",
 }
 
@@ -57,7 +57,7 @@ const NOTIFICATION_VARIANTS: ReadonlyArray<IncidentNotification> = [
     id: "checkout-regressed",
     kind: "regressed",
     severity: "high",
-    issueName: "Checkout total fails on string amounts",
+    signalName: "Checkout total fails on string amounts",
     detail: "Reopened after deploy 7c2b",
     trend: [2, 1, 1, 1, 1, 2, 5, 8],
   },
@@ -65,14 +65,14 @@ const NOTIFICATION_VARIANTS: ReadonlyArray<IncidentNotification> = [
     id: "pdf-new",
     kind: "new",
     severity: "medium",
-    issueName: "Blank reply on long PDF uploads",
+    signalName: "Blank reply on long PDF uploads",
     detail: "12 occurrences · production",
   },
   {
     id: "password-escalating",
     kind: "escalating",
     severity: "high",
-    issueName: "User abandons password reset after the agent loops",
+    signalName: "User abandons password reset after the agent loops",
     detail: "Climbed to 18/hr · 3× baseline",
     trend: [1, 1, 2, 2, 3, 4, 6, 9],
   },
@@ -80,14 +80,14 @@ const NOTIFICATION_VARIANTS: ReadonlyArray<IncidentNotification> = [
     id: "injection-new",
     kind: "new",
     severity: "low",
-    issueName: "Prompt injection via 'repeat the above'",
+    signalName: "Prompt injection via 'repeat the above'",
     detail: "4 occurrences this hour",
   },
   {
     id: "retry-regressed",
     kind: "regressed",
     severity: "medium",
-    issueName: "Agent retries a failing tool with identical args",
+    signalName: "Agent retries a failing tool with identical args",
     detail: "Reopened · was resolved 2d ago",
     trend: [1, 2, 1, 1, 1, 2, 4, 7],
   },
@@ -95,7 +95,7 @@ const NOTIFICATION_VARIANTS: ReadonlyArray<IncidentNotification> = [
     id: "abuse-resolved",
     kind: "resolved",
     severity: "medium",
-    issueName: "Abusive language mirrored back at users",
+    signalName: "Abusive language mirrored back at users",
     detail: "Recovered · elevated for 42 min",
     trend: [5, 7, 8, 6, 4, 2, 1, 0],
   },
@@ -265,7 +265,7 @@ export function MockSlackQueue({ isActive }: { readonly isActive: boolean }) {
                     </Text.H6>
                   </div>
                   <Text.H5M ellipsis noWrap className="min-w-0">
-                    {v.issueName}
+                    {v.signalName}
                   </Text.H5M>
                   <div className="flex flex-row items-end justify-between gap-2">
                     <Text.H6 color="foregroundMuted" className="min-w-0 truncate">

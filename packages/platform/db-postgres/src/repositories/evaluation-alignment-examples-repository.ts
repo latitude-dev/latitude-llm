@@ -10,7 +10,7 @@ import {
   EvaluationAlignmentExamplesRepository,
   evaluationAlignmentExampleSchema,
 } from "@domain/evaluations"
-import { type IssueId, SqlClient, type SqlClientShape } from "@domain/shared"
+import { type SignalId, SqlClient, type SqlClientShape } from "@domain/shared"
 import { and, asc, eq, gt, isNotNull, isNull } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
@@ -18,7 +18,7 @@ import { scores } from "../schema/scores.ts"
 
 type AlignmentScoreRow = Pick<
   typeof scores.$inferSelect,
-  "id" | "traceId" | "sessionId" | "issueId" | "source" | "passed" | "feedback" | "createdAt"
+  "id" | "traceId" | "sessionId" | "signalId" | "source" | "passed" | "feedback" | "createdAt"
 >
 
 const sortRows = (rows: readonly AlignmentScoreRow[]): readonly AlignmentScoreRow[] =>
@@ -82,11 +82,11 @@ const groupRowsByTrace = (rows: readonly AlignmentScoreRow[]): readonly (readonl
   return Array.from(groups.values()).map(sortRows)
 }
 
-const hasTargetIssueScore = (rows: readonly AlignmentScoreRow[], issueId: IssueId): boolean =>
-  rows.some((row) => row.issueId === issueId)
+const hasTargetSignalScore = (rows: readonly AlignmentScoreRow[], signalId: SignalId): boolean =>
+  rows.some((row) => row.signalId === signalId)
 
-const isPositiveGroup = (rows: readonly AlignmentScoreRow[], issueId: IssueId): boolean =>
-  rows.some((row) => row.source === "annotation" && row.issueId === issueId && row.passed === false)
+const isPositiveGroup = (rows: readonly AlignmentScoreRow[], signalId: SignalId): boolean =>
+  rows.some((row) => row.source === "annotation" && row.signalId === signalId && row.passed === false)
 
 const hasFailedScore = (rows: readonly AlignmentScoreRow[]): boolean => rows.some((row) => row.passed === false)
 
@@ -107,7 +107,7 @@ export const EvaluationAlignmentExamplesRepositoryLive = Layer.effect(
               id: scores.id,
               traceId: scores.traceId,
               sessionId: scores.sessionId,
-              issueId: scores.issueId,
+              signalId: scores.signalId,
               source: scores.source,
               passed: scores.passed,
               feedback: scores.feedback,
@@ -132,14 +132,14 @@ export const EvaluationAlignmentExamplesRepositoryLive = Layer.effect(
       listPositiveExamples: (input: ListEvaluationAlignmentExamplesInput) =>
         loadProjectRows(input).pipe(
           Effect.map((rows) => {
-            const candidates = groupRowsByTrace(rows).filter((group) => isPositiveGroup(group, input.issueId))
+            const candidates = groupRowsByTrace(rows).filter((group) => isPositiveGroup(group, input.signalId))
 
             const failedAnnotationNoPasses = candidates.filter((group) => !hasPassedScore(group))
             const failedAnnotationWithPasses = candidates.filter((group) => hasPassedScore(group))
 
             const buildEvidence = (group: readonly AlignmentScoreRow[]) =>
               group.filter(
-                (row) => row.source === "annotation" && row.issueId === input.issueId && row.passed === false,
+                (row) => row.source === "annotation" && row.signalId === input.signalId && row.passed === false,
               )
 
             return [
@@ -175,7 +175,7 @@ export const EvaluationAlignmentExamplesRepositoryLive = Layer.effect(
             })
 
             const candidates = groupedRows.filter(
-              (group) => !hasTargetIssueScore(group, input.issueId) && hasPassedAnnotation(group),
+              (group) => !hasTargetSignalScore(group, input.signalId) && hasPassedAnnotation(group),
             )
 
             const passedAnnotationNoFailures = candidates.filter((group) => !hasFailedScore(group))

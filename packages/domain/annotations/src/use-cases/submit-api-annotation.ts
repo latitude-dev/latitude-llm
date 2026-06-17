@@ -120,7 +120,7 @@ export const submitApiAnnotationUseCase = Effect.fn("annotations.submitApiAnnota
     traceId,
     spanId: null,
     simulationId: parsed.simulationId,
-    issueId: parsed.issueId,
+    signalId: parsed.signalId,
     annotatorId: input.annotatorId ?? null,
     value: parsed.value,
     passed: parsed.passed,

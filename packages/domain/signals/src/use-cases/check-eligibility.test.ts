@@ -16,7 +16,7 @@ const makeScore = (overrides: Partial<Score> = {}): Score =>
     traceId: null,
     spanId: null,
     simulationId: null,
-    issueId: null,
+    signalId: null,
     source: "annotation",
     sourceId: "UI",
     value: 0.1,
@@ -78,8 +78,8 @@ describe("checkEligibilityUseCase", () => {
   })
 
   it("rejects already-owned scores", async () => {
-    await expect(runEligibility(makeScore({ issueId: "iiiiiiiiiiiiiiiiiiiiiiii" }))).rejects.toMatchObject({
-      _tag: "ScoreAlreadyOwnedByIssueError",
+    await expect(runEligibility(makeScore({ signalId: "iiiiiiiiiiiiiiiiiiiiiiii" }))).rejects.toMatchObject({
+      _tag: "ScoreAlreadyOwnedBySignalError",
     })
   })
 

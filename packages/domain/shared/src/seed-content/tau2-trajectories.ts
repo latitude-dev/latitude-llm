@@ -49,7 +49,7 @@ export type Tau2SeedTrajectory = {
   readonly messages: readonly Tau2SeedTrajectoryMessage[]
 }
 
-export type Tau2SeedIssueFamily = {
+export type Tau2SeedSignalFamily = {
   readonly key:
     | "retail-return-eligibility"
     | "retail-authentication"
@@ -63,7 +63,7 @@ export type Tau2SeedIssueFamily = {
   readonly description: string
 }
 
-export const TAU2_SEED_ISSUE_FAMILIES = [
+export const TAU2_SEED_SIGNAL_FAMILIES = [
   {
     key: "retail-return-eligibility",
     title: "Retail return eligibility",
@@ -105,7 +105,7 @@ export const TAU2_SEED_ISSUE_FAMILIES = [
     title: "Tool-result grounding",
     description: "Assistant responses that treat missing, failed, or stale tool output as confirmed backend state.",
   },
-] as const satisfies readonly Tau2SeedIssueFamily[]
+] as const satisfies readonly Tau2SeedSignalFamily[]
 
 export const TAU2_SEED_TRAJECTORIES = generatedTau2Trajectories as readonly Tau2SeedTrajectory[]
 
@@ -124,7 +124,7 @@ const textForTrajectory = (trajectory: Tau2SeedTrajectory): string =>
     .join(" ")
     .toLowerCase()
 
-export function classifyTau2SeedTrajectory(trajectory: Tau2SeedTrajectory): Tau2SeedIssueFamily["key"] | null {
+export function classifyTau2SeedTrajectory(trajectory: Tau2SeedTrajectory): Tau2SeedSignalFamily["key"] | null {
   if (trajectory.outcome === "success" || trajectory.reward >= 1) return null
 
   const text = textForTrajectory(trajectory)

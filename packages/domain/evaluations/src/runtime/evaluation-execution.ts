@@ -51,11 +51,11 @@ export interface EvaluationConversationMessage {
   readonly content: string
 }
 
-export const evaluationIssueContextSchema = z.object({
+export const evaluationSignalContextSchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1),
 })
-export type EvaluationIssueContext = z.infer<typeof evaluationIssueContextSchema>
+export type EvaluationSignalContext = z.infer<typeof evaluationSignalContextSchema>
 
 export const evaluationExecutionResultPayloadSchema = z.object({
   passed: z.boolean(),
@@ -157,7 +157,7 @@ const llmJudgeResultSchema = evaluationRuntimeZod.object({
 export const executeEvaluationScript = async (input: {
   readonly script: string
   readonly conversation: readonly EvaluationConversationMessage[]
-  readonly issue: EvaluationIssueContext
+  readonly issue: EvaluationSignalContext
   readonly generateStructuredObject: <T>(input: {
     readonly prompt: string
     readonly schema: EvaluationScriptSchema<T>
@@ -194,7 +194,7 @@ export const executeEvaluationScript = async (input: {
 export const executeEvaluationScriptWithAI = Effect.fn("evaluations.executeEvaluationScriptWithAi")(function* (input: {
   readonly script: string
   readonly conversation: readonly EvaluationConversationMessage[]
-  readonly issue: EvaluationIssueContext
+  readonly issue: EvaluationSignalContext
   readonly telemetry?: GenerateTelemetryCapture
 }) {
   yield* Effect.annotateCurrentSpan("evaluation.conversationMessageCount", input.conversation.length)

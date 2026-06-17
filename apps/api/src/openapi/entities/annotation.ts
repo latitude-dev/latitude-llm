@@ -70,7 +70,7 @@ export const AnnotationSchema = z
       .nullable()
       .describe("Span the annotation pins to. Defaults to the trace's last LLM-completion span."),
     simulationId: cuidSchema.nullable().describe("Simulation reference, if any."),
-    issueId: cuidSchema.nullable().describe("Issue this annotation contributes to, if any."),
+    signalId: cuidSchema.nullable().describe("Signal this annotation contributes to, if any."),
     value: z.number().min(0).max(1).describe("Normalized score value in [0, 1]. Higher = better."),
     passed: z.boolean().describe("Whether the annotation marks the output as passing."),
     feedback: z.string().describe("Free-text feedback explaining the score."),
@@ -122,7 +122,7 @@ export const toAnnotationResponse = (score: AnnotationScore) => ({
   source: score.source,
   sourceId: score.sourceId,
   simulationId: score.simulationId,
-  issueId: score.issueId,
+  signalId: score.signalId,
   annotatorId: score.annotatorId,
   value: score.value,
   passed: score.passed,

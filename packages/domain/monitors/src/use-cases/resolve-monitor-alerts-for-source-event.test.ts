@@ -11,7 +11,7 @@ import { resolveMonitorAlertsForSourceEventUseCase } from "./resolve-monitor-ale
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
 const otherProjectId = ProjectId("q".repeat(24))
-const issueId = "i".repeat(24)
+const signalId = "i".repeat(24)
 const at = new Date("2026-06-01T10:00:00.000Z")
 
 const alert = (input: {
@@ -76,7 +76,7 @@ describe("resolveMonitorAlertsForSourceEventUseCase", () => {
       kind: "issue.new",
       source: { type: "issue", id: null },
     })
-    const result = await run([monitor("m".repeat(24), [a])], { kind: "issue.new", sourceId: issueId })
+    const result = await run([monitor("m".repeat(24), [a])], { kind: "issue.new", sourceId: signalId })
     expect(result.map((r) => r.id)).toEqual([a.id])
   })
 
@@ -85,9 +85,9 @@ describe("resolveMonitorAlertsForSourceEventUseCase", () => {
       id: "a".repeat(24),
       monitorId: "m".repeat(24),
       kind: "issue.new",
-      source: { type: "issue", id: issueId },
+      source: { type: "issue", id: signalId },
     })
-    const matched = await run([monitor("m".repeat(24), [scoped])], { kind: "issue.new", sourceId: issueId })
+    const matched = await run([monitor("m".repeat(24), [scoped])], { kind: "issue.new", sourceId: signalId })
     expect(matched.map((r) => r.id)).toEqual([scoped.id])
 
     const missed = await run([monitor("m".repeat(24), [scoped])], { kind: "issue.new", sourceId: "z".repeat(24) })
@@ -96,7 +96,7 @@ describe("resolveMonitorAlertsForSourceEventUseCase", () => {
 
   it("does not match alerts of a different kind", async () => {
     const a = alert({ id: "a".repeat(24), monitorId: "m".repeat(24), kind: "issue.regressed" })
-    const result = await run([monitor("m".repeat(24), [a])], { kind: "issue.new", sourceId: issueId })
+    const result = await run([monitor("m".repeat(24), [a])], { kind: "issue.new", sourceId: signalId })
     expect(result).toEqual([])
   })
 
@@ -104,7 +104,7 @@ describe("resolveMonitorAlertsForSourceEventUseCase", () => {
     const a = alert({ id: "a".repeat(24), monitorId: "m".repeat(24), kind: "issue.new" })
     const result = await run([monitor("m".repeat(24), [a], { projectId: otherProjectId })], {
       kind: "issue.new",
-      sourceId: issueId,
+      sourceId: signalId,
     })
     expect(result).toEqual([])
   })
@@ -113,7 +113,7 @@ describe("resolveMonitorAlertsForSourceEventUseCase", () => {
     const a = alert({ id: "a".repeat(24), monitorId: "m".repeat(24), kind: "issue.new" })
     const result = await run([monitor("m".repeat(24), [a], { deletedAt: at })], {
       kind: "issue.new",
-      sourceId: issueId,
+      sourceId: signalId,
     })
     expect(result).toEqual([])
   })
@@ -129,11 +129,11 @@ describe("resolveMonitorAlertsForSourceEventUseCase", () => {
       id: "b".repeat(24),
       monitorId: "n".repeat(24),
       kind: "issue.new",
-      source: { type: "issue", id: issueId },
+      source: { type: "issue", id: signalId },
     })
     const result = await run([monitor("m".repeat(24), [a1]), monitor("n".repeat(24), [a2])], {
       kind: "issue.new",
-      sourceId: issueId,
+      sourceId: signalId,
     })
     expect(result.map((r) => r.id).sort()).toEqual([a1.id, a2.id].sort())
   })

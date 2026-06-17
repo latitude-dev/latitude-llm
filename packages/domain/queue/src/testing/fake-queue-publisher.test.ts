@@ -10,7 +10,7 @@ describe("createFakeQueuePublisher", () => {
       publisher.publish("evaluations", "automaticRefreshAlignment", {
         organizationId: "o",
         projectId: "p",
-        issueId: "i",
+        signalId: "i",
         evaluationId: "e",
       }),
     )
@@ -18,7 +18,7 @@ describe("createFakeQueuePublisher", () => {
       publisher.publish(
         "evaluations",
         "automaticRefreshAlignment",
-        { organizationId: "o", projectId: "p", issueId: "i", evaluationId: "e" },
+        { organizationId: "o", projectId: "p", signalId: "i", evaluationId: "e" },
         { dedupeKey: "k" },
       ),
     )
@@ -33,7 +33,7 @@ describe("createFakeQueuePublisher", () => {
       publisher.publish(
         "evaluations",
         "automaticRefreshAlignment",
-        { organizationId: "o", projectId: "p", issueId: "i1", evaluationId: "e" },
+        { organizationId: "o", projectId: "p", signalId: "i1", evaluationId: "e" },
         { dedupeKey: "dup", debounceMs: 1000 },
       ),
     )
@@ -41,14 +41,14 @@ describe("createFakeQueuePublisher", () => {
       publisher.publish(
         "evaluations",
         "automaticRefreshAlignment",
-        { organizationId: "o", projectId: "p", issueId: "i2", evaluationId: "e" },
+        { organizationId: "o", projectId: "p", signalId: "i2", evaluationId: "e" },
         { dedupeKey: "dup", debounceMs: 1000 },
       ),
     )
 
     const latest = getPublishedByDedupeKey("evaluations", "dup")
     expect(latest).toBeDefined()
-    expect((latest?.payload as { issueId: string }).issueId).toBe("i2")
+    expect((latest?.payload as { signalId: string }).signalId).toBe("i2")
     expect(listDeduped()).toHaveLength(1)
   })
 
@@ -59,7 +59,7 @@ describe("createFakeQueuePublisher", () => {
       publisher.publish(
         "evaluations",
         "automaticRefreshAlignment",
-        { organizationId: "o", projectId: "p", issueId: "i", evaluationId: "a" },
+        { organizationId: "o", projectId: "p", signalId: "i", evaluationId: "a" },
         { dedupeKey: "a" },
       ),
     )
@@ -67,7 +67,7 @@ describe("createFakeQueuePublisher", () => {
       publisher.publish(
         "evaluations",
         "automaticRefreshAlignment",
-        { organizationId: "o", projectId: "p", issueId: "i", evaluationId: "b" },
+        { organizationId: "o", projectId: "p", signalId: "i", evaluationId: "b" },
         { dedupeKey: "b" },
       ),
     )
@@ -82,7 +82,7 @@ describe("createFakeQueuePublisher", () => {
       publisher.publish(
         "evaluations",
         "automaticRefreshAlignment",
-        { organizationId: "o", projectId: "p", issueId: "i-first", evaluationId: "e" },
+        { organizationId: "o", projectId: "p", signalId: "i-first", evaluationId: "e" },
         { dedupeKey: "rl", throttleMs: 1000 },
       ),
     )
@@ -90,7 +90,7 @@ describe("createFakeQueuePublisher", () => {
       publisher.publish(
         "evaluations",
         "automaticRefreshAlignment",
-        { organizationId: "o", projectId: "p", issueId: "i-second", evaluationId: "e" },
+        { organizationId: "o", projectId: "p", signalId: "i-second", evaluationId: "e" },
         { dedupeKey: "rl", throttleMs: 1000 },
       ),
     )
@@ -98,14 +98,14 @@ describe("createFakeQueuePublisher", () => {
       publisher.publish(
         "evaluations",
         "automaticRefreshAlignment",
-        { organizationId: "o", projectId: "p", issueId: "i-third", evaluationId: "e" },
+        { organizationId: "o", projectId: "p", signalId: "i-third", evaluationId: "e" },
         { dedupeKey: "rl", throttleMs: 1000 },
       ),
     )
 
     const pending = getPublishedByDedupeKey("evaluations", "rl")
     expect(pending).toBeDefined()
-    expect((pending?.payload as { issueId: string }).issueId).toBe("i-first")
+    expect((pending?.payload as { signalId: string }).signalId).toBe("i-first")
     expect(listDeduped()).toHaveLength(1)
   })
 
@@ -152,7 +152,7 @@ describe("createFakeQueuePublisher", () => {
       publisher.publish(
         "evaluations",
         "automaticRefreshAlignment",
-        { organizationId: "o", projectId: "p", issueId: "i", evaluationId: "e" },
+        { organizationId: "o", projectId: "p", signalId: "i", evaluationId: "e" },
         { dedupeKey: "k", throttleMs: 3600000 },
       ),
     )
@@ -187,7 +187,7 @@ describe("createFakeQueuePublisher", () => {
       publisher.publish("evaluations", "automaticRefreshAlignment", {
         organizationId: "o",
         projectId: "p",
-        issueId: "i",
+        signalId: "i",
         evaluationId: "e",
       }),
     )

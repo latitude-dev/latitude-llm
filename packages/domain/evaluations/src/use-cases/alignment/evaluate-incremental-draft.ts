@@ -15,8 +15,8 @@ import type { EvaluationAlignmentJudgeTelemetryScope } from "../../runtime/ai-te
 import { evaluateDraftAgainstExamplesUseCase } from "./evaluate-draft-against-examples.ts"
 
 export const evaluateIncrementalDraftUseCase = Effect.fn("evaluations.evaluateIncrementalDraft")(function* (input: {
-  readonly issueName: string
-  readonly issueDescription: string
+  readonly signalName: string
+  readonly signalDescription: string
   readonly draft: GeneratedEvaluationDraft
   readonly previousConfusionMatrix: ConfusionMatrix
   readonly positiveExamples: readonly HydratedEvaluationAlignmentExample[]
@@ -44,8 +44,8 @@ export const evaluateIncrementalDraftUseCase = Effect.fn("evaluations.evaluateIn
   }
 
   const incremental: BaselineEvaluationResult = yield* evaluateDraftAgainstExamplesUseCase({
-    issueName: input.issueName,
-    issueDescription: input.issueDescription,
+    signalName: input.signalName,
+    signalDescription: input.signalDescription,
     script: input.draft.script,
     positiveExamples: input.positiveExamples,
     negativeExamples: input.negativeExamples,

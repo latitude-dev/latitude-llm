@@ -24,7 +24,7 @@ const createProjectRecord = async (
   return slug
 }
 
-describe("Issues Routes Integration", () => {
+describe("Signals Routes Integration", () => {
   setupTestApi()
 
   it<ApiTestContext>("GET / rejects unauthenticated requests with 401", async ({ app }) => {
@@ -67,7 +67,7 @@ describe("Issues Routes Integration", () => {
     expect(res.status).toBe(400)
   })
 
-  it<ApiTestContext>("GET /{issueSlug} returns 404 for a non-existent issue", async ({ app, database }) => {
+  it<ApiTestContext>("GET /{signalSlug} returns 404 for a non-existent issue", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "cccccccccccccccccccccccc"
     const slug = await createProjectRecord(database, tenant.organizationId, projectId)
@@ -81,7 +81,7 @@ describe("Issues Routes Integration", () => {
     expect(res.status).toBe(404)
   })
 
-  it<ApiTestContext>("GET /{issueSlug} rejects unauthenticated requests with 401", async ({ app }) => {
+  it<ApiTestContext>("GET /{signalSlug} rejects unauthenticated requests with 401", async ({ app }) => {
     const res = await app.fetch(new Request("http://localhost/v1/projects/foo/issues/some-issue"))
     expect(res.status).toBe(401)
   })
@@ -151,7 +151,7 @@ describe("Issues Routes Integration", () => {
     expect(res.status).toBe(400)
   })
 
-  it<ApiTestContext>("POST /export accepts a typed lifecycleGroup + issueIds body", async ({ app, database }) => {
+  it<ApiTestContext>("POST /export accepts a typed lifecycleGroup + signalIds body", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "1111111111111111aaaaaaaa"
     const slug = await createProjectRecord(database, tenant.organizationId, projectId)
@@ -165,7 +165,7 @@ describe("Issues Routes Integration", () => {
         },
         body: JSON.stringify({
           recipient: `${tenant.userId}@example.com`,
-          issueIds: ["a".repeat(24)],
+          signalIds: ["a".repeat(24)],
           lifecycleGroup: "active",
         }),
       }),
@@ -179,7 +179,7 @@ describe("Issues Routes Integration", () => {
       new Request("http://localhost/v1/projects/foo/issues/resolve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ issueIds: ["a".repeat(24)] }),
+        body: JSON.stringify({ signalIds: ["a".repeat(24)] }),
       }),
     )
     expect(res.status).toBe(401)
@@ -198,13 +198,13 @@ describe("Issues Routes Integration", () => {
       new Request(`http://localhost/v1/projects/${slug}/issues/resolve`, {
         method: "POST",
         headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
-        body: JSON.stringify({ issueIds: ["a".repeat(24)] }),
+        body: JSON.stringify({ signalIds: ["a".repeat(24)] }),
       }),
     )
     expect(res.status).toBe(404)
   })
 
-  it<ApiTestContext>("POST /resolve rejects an empty issueIds list with 400", async ({ app, database }) => {
+  it<ApiTestContext>("POST /resolve rejects an empty signalIds list with 400", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "3333333333333333aaaaaaaa"
     const slug = await createProjectRecord(database, tenant.organizationId, projectId)
@@ -213,7 +213,7 @@ describe("Issues Routes Integration", () => {
       new Request(`http://localhost/v1/projects/${slug}/issues/resolve`, {
         method: "POST",
         headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
-        body: JSON.stringify({ issueIds: [] }),
+        body: JSON.stringify({ signalIds: [] }),
       }),
     )
     expect(res.status).toBe(400)
@@ -227,14 +227,14 @@ describe("Issues Routes Integration", () => {
         new Request(`http://localhost/v1/projects/foo/issues/${path}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ issueIds: ["a".repeat(24)] }),
+          body: JSON.stringify({ signalIds: ["a".repeat(24)] }),
         }),
       )
       expect(res.status).toBe(401)
     }
   })
 
-  it<ApiTestContext>("POST /{issueSlug}/monitor returns 404 for a non-existent issue (API-key caller)", async ({
+  it<ApiTestContext>("POST /{signalSlug}/monitor returns 404 for a non-existent issue (API-key caller)", async ({
     app,
     database,
   }) => {
@@ -252,7 +252,7 @@ describe("Issues Routes Integration", () => {
     expect(res.status).toBe(404)
   })
 
-  it<ApiTestContext>("POST /{issueSlug}/monitor returns 404 for a non-existent issue (OAuth caller)", async ({
+  it<ApiTestContext>("POST /{signalSlug}/monitor returns 404 for a non-existent issue (OAuth caller)", async ({
     app,
     database,
   }) => {
@@ -270,7 +270,7 @@ describe("Issues Routes Integration", () => {
     expect(res.status).toBe(404)
   })
 
-  it<ApiTestContext>("POST /{issueSlug}/unmonitor returns 404 for a non-existent issue", async ({ app, database }) => {
+  it<ApiTestContext>("POST /{signalSlug}/unmonitor returns 404 for a non-existent issue", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "6666666666666666aaaaaaaa"
     const slug = await createProjectRecord(database, tenant.organizationId, projectId)

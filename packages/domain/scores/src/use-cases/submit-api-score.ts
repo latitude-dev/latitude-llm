@@ -26,7 +26,7 @@ const parseOrBadRequest = <T>(schema: z.ZodType<T>, input: unknown, fallbackMess
  * Reuses `baseWriteScoreInputSchema` for the lifecycle fields (value, passed,
  * feedback, error, duration, tokens, cost, simulationId) but drops:
  *
- *   - `id` / `projectId` / `issueId` / `annotatorId` / `draftedAt` — managed
+ *   - `id` / `projectId` / `signalId` / `annotatorId` / `draftedAt` — managed
  *     by the platform (`projectId` comes from the URL).
  *   - `traceId` / `sessionId` / `spanId` — replaced by a required `trace`
  *     ref. `traceId` is resolved (by id or filter set), and `sessionId` /
@@ -36,7 +36,7 @@ export const baseSubmitApiScoreSchema = baseWriteScoreInputSchema
   .omit({
     id: true,
     projectId: true,
-    issueId: true,
+    signalId: true,
     annotatorId: true,
     draftedAt: true,
     traceId: true,

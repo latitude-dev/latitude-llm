@@ -9,7 +9,7 @@ import { resolveAssigneeName, resolveIncidentSource } from "../-incident-source.
 import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
 import { IncidentEventEmail } from "./EmailTemplate.tsx"
 
-const buildIssueUrl = (
+const buildSignalUrl = (
   ctx: NotificationEmailRenderContext,
   payload: Parameters<NotificationEmailRenderer<"incident.event">>[0],
 ): string | undefined => {
@@ -32,8 +32,8 @@ export const incidentEventRenderer: NotificationEmailRenderer<"incident.event"> 
       incidentKind: payload.incidentKind,
       condition: payload.condition,
     })
-    const issueUrl = isSavedSearch ? undefined : buildIssueUrl(ctx, payload)
-    const ctaUrl = isSavedSearch ? monitor?.url : issueUrl
+    const signalUrl = isSavedSearch ? undefined : buildSignalUrl(ctx, payload)
+    const ctaUrl = isSavedSearch ? monitor?.url : signalUrl
     const subject = `${heading}: ${sourceName}`
 
     const html = yield* Effect.tryPromise({
@@ -45,7 +45,7 @@ export const incidentEventRenderer: NotificationEmailRenderer<"incident.event"> 
             sourceId={payload.sourceId}
             sourceName={sourceName}
             description={source.description ?? undefined}
-            issueUrl={issueUrl}
+            signalUrl={signalUrl}
             notificationCreatedAt={ctx.notificationCreatedAt}
             organizationName={ctx.organization.name}
             projectName={ctx.project?.name}

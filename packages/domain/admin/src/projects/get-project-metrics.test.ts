@@ -1,18 +1,18 @@
-import type { IssueId, OrganizationId, ProjectId } from "@domain/shared"
+import type { SignalId, OrganizationId, ProjectId } from "@domain/shared"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { composeIssueLifecycleTimeline, getProjectMetricsUseCase } from "./get-project-metrics.ts"
+import { composeSignalLifecycleTimeline, getProjectMetricsUseCase } from "./get-project-metrics.ts"
 import { AdminProjectMetricsRepository } from "./project-metrics-repository.ts"
 import {
   AdminProjectRepository,
-  type ProjectIssueDetails,
-  type ProjectIssueLifecycleEvent,
-  type ProjectIssueStateSnapshot,
+  type ProjectSignalDetails,
+  type ProjectSignalLifecycleEvent,
+  type ProjectSignalStateSnapshot,
 } from "./project-repository.ts"
 
 const PROJECT_ID = "project-target" as ProjectId
 const ORG_ID = "org-target" as OrganizationId
-const issueId = (raw: string) => raw as IssueId
+const signalId = (raw: string) => raw as SignalId
 
 const NOW = new Date("2026-04-30T12:00:00Z")
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -32,26 +32,26 @@ const mkProjectDetails = () => ({
 })
 
 const projectRepo = (overrides: {
-  snapshot?: ProjectIssueStateSnapshot
-  events?: readonly ProjectIssueLifecycleEvent[]
-  details?: ReadonlyMap<IssueId, ProjectIssueDetails>
+  snapshot?: ProjectSignalStateSnapshot
+  events?: readonly ProjectSignalLifecycleEvent[]
+  details?: ReadonlyMap<SignalId, ProjectSignalDetails>
 }) =>
   Layer.succeed(AdminProjectRepository, {
     findById: () => Effect.succeed(mkProjectDetails()),
-    getCurrentIssueStateCounts: () => Effect.succeed(overrides.snapshot ?? { untracked: 0, tracked: 0, resolved: 0 }),
-    getIssueLifecycleEvents: () => Effect.succeed(overrides.events ?? []),
-    findIssueDetailsByIds: () => Effect.succeed(overrides.details ?? new Map<IssueId, ProjectIssueDetails>()),
+    getCurrentSignalStateCounts: () => Effect.succeed(overrides.snapshot ?? { untracked: 0, tracked: 0, resolved: 0 }),
+    getSignalLifecycleEvents: () => Effect.succeed(overrides.events ?? []),
+    findSignalDetailsByIds: () => Effect.succeed(overrides.details ?? new Map<SignalId, ProjectSignalDetails>()),
   })
 
 const metricsRepo = (overrides: {
   traces?: readonly { bucketStart: Date; count: number }[]
   annotations?: readonly { bucketStart: Date; passedCount: number; failedCount: number }[]
-  topIssues?: readonly { issueId: IssueId; occurrences: number; lastSeenAt: Date }[]
+  topSignals?: readonly { signalId: SignalId; occurrences: number; lastSeenAt: Date }[]
 }) =>
   Layer.succeed(AdminProjectMetricsRepository, {
     getTraceHistogram: () => Effect.succeed(overrides.traces ?? []),
     getAnnotationHistogram: () => Effect.succeed(overrides.annotations ?? []),
-    getTopIssuesByOccurrences: () => Effect.succeed(overrides.topIssues ?? []),
+    getTopSignalsByOccurrences: () => Effect.succeed(overrides.topSignals ?? []),
   })
 
 const startOfUtcDay = (msEpoch: number) => new Date(Math.floor(msEpoch / 1000 / DAY_SECONDS) * DAY_SECONDS * 1000)
@@ -113,8 +113,8 @@ describe("getProjectMetricsUseCase", () => {
       ),
     )
 
-    expect(result.issuesLifecycle).toHaveLength(3)
-    for (const point of result.issuesLifecycle) {
+    expect(result.signalsLifecycle).toHaveLength(3)
+    for (const point of result.signalsLifecycle) {
       expect(point).toMatchObject({ untracked: 4, tracked: 2, resolved: 11 })
     }
   })
@@ -126,28 +126,28 @@ describe("getProjectMetricsUseCase", () => {
           projectRepo({
             // No in-window events for either id — exactly the scenario
             // where inferring from events would mislabel both as
-            // "untracked". PG-side `findIssueDetailsByIds` gives us
+            // "untracked". PG-side `findSignalDetailsByIds` gives us
             // the authoritative current state.
-            details: new Map<IssueId, ProjectIssueDetails>([
-              [issueId("a"), { name: "Tracked thing", state: "tracked" }],
-              [issueId("b"), { name: "Bare thing", state: "untracked" }],
-              [issueId("c"), { name: "Done thing", state: "resolved" }],
+            details: new Map<SignalId, ProjectSignalDetails>([
+              [signalId("a"), { name: "Tracked thing", state: "tracked" }],
+              [signalId("b"), { name: "Bare thing", state: "untracked" }],
+              [signalId("c"), { name: "Done thing", state: "resolved" }],
             ]),
           }),
         ),
         Effect.provide(
           metricsRepo({
-            topIssues: [
-              { issueId: issueId("a"), occurrences: 100, lastSeenAt: NOW },
-              { issueId: issueId("b"), occurrences: 50, lastSeenAt: NOW },
-              { issueId: issueId("c"), occurrences: 25, lastSeenAt: NOW },
+            topSignals: [
+              { signalId: signalId("a"), occurrences: 100, lastSeenAt: NOW },
+              { signalId: signalId("b"), occurrences: 50, lastSeenAt: NOW },
+              { signalId: signalId("c"), occurrences: 25, lastSeenAt: NOW },
             ],
           }),
         ),
       ),
     )
 
-    expect(result.topIssues).toEqual([
+    expect(result.topSignals).toEqual([
       { id: "a", name: "Tracked thing", occurrences: 100, lastSeenAt: NOW, state: "tracked" },
       { id: "b", name: "Bare thing", occurrences: 50, lastSeenAt: NOW, state: "untracked" },
       { id: "c", name: "Done thing", occurrences: 25, lastSeenAt: NOW, state: "resolved" },
@@ -158,11 +158,11 @@ describe("getProjectMetricsUseCase", () => {
     const result = await Effect.runPromise(
       getProjectMetricsUseCase({ projectId: PROJECT_ID, now: NOW, windowDays: 5 }).pipe(
         Effect.provide(projectRepo({})),
-        Effect.provide(metricsRepo({ topIssues: [{ issueId: issueId("orphan"), occurrences: 1, lastSeenAt: NOW }] })),
+        Effect.provide(metricsRepo({ topSignals: [{ signalId: signalId("orphan"), occurrences: 1, lastSeenAt: NOW }] })),
       ),
     )
 
-    expect(result.topIssues[0]).toMatchObject({ id: "orphan", name: "orphan", state: "untracked" })
+    expect(result.topSignals[0]).toMatchObject({ id: "orphan", name: "orphan", state: "untracked" })
   })
 
   it("clamps oversized window requests to 90 days", async () => {
@@ -177,7 +177,7 @@ describe("getProjectMetricsUseCase", () => {
   })
 })
 
-describe("composeIssueLifecycleTimeline", () => {
+describe("composeSignalLifecycleTimeline", () => {
   const buckets: Date[] = []
   for (let i = 4; i >= 0; i--) {
     buckets.push(new Date(startOfUtcDay(NOW.getTime()).getTime() - i * DAY_MS))
@@ -191,9 +191,9 @@ describe("composeIssueLifecycleTimeline", () => {
     const day0 = must(days[0], "day0")
     const day2 = must(days[2], "day2")
     const day4 = must(days[4], "day4")
-    const events: ProjectIssueLifecycleEvent[] = [
+    const events: ProjectSignalLifecycleEvent[] = [
       {
-        issueId: issueId("walking"),
+        signalId: signalId("walking"),
         createdAt: new Date(day0.getTime() + 1000),
         firstEvalAttachedAt: new Date(day2.getTime() + 1000),
         resolvedAt: new Date(day4.getTime() + 1000),
@@ -201,7 +201,7 @@ describe("composeIssueLifecycleTimeline", () => {
       },
     ]
 
-    const result = composeIssueLifecycleTimeline({
+    const result = composeSignalLifecycleTimeline({
       snapshot: { untracked: 0, tracked: 0, resolved: 1 }, // 1 resolved today (matches the issue)
       events,
       buckets: days,
@@ -218,9 +218,9 @@ describe("composeIssueLifecycleTimeline", () => {
   it("treats `ignoredAt` as a resolution event", () => {
     const day0 = must(buckets[0], "day0")
     const day2 = must(buckets[2], "day2")
-    const events: ProjectIssueLifecycleEvent[] = [
+    const events: ProjectSignalLifecycleEvent[] = [
       {
-        issueId: issueId("ig"),
+        signalId: signalId("ig"),
         createdAt: new Date(day0.getTime() + 1000),
         firstEvalAttachedAt: null,
         resolvedAt: null,
@@ -228,7 +228,7 @@ describe("composeIssueLifecycleTimeline", () => {
       },
     ]
 
-    const result = composeIssueLifecycleTimeline({
+    const result = composeSignalLifecycleTimeline({
       snapshot: { untracked: 0, tracked: 0, resolved: 1 },
       events,
       buckets,
@@ -245,9 +245,9 @@ describe("composeIssueLifecycleTimeline", () => {
     // issue has any event in the window. The remaining 2 untracked + 1
     // tracked + 5 resolved should appear as a flat baseline on every day.
     const day1 = must(buckets[1], "day1")
-    const events: ProjectIssueLifecycleEvent[] = [
+    const events: ProjectSignalLifecycleEvent[] = [
       {
-        issueId: issueId("recent"),
+        signalId: signalId("recent"),
         createdAt: new Date(day1.getTime() + 1000),
         firstEvalAttachedAt: null,
         resolvedAt: null,
@@ -255,7 +255,7 @@ describe("composeIssueLifecycleTimeline", () => {
       },
     ]
 
-    const result = composeIssueLifecycleTimeline({
+    const result = composeSignalLifecycleTimeline({
       snapshot: { untracked: 3, tracked: 1, resolved: 5 },
       events,
       buckets,

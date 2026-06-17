@@ -1,12 +1,12 @@
 import {
   type AdminProjectDetails,
   AdminProjectRepository,
-  type ProjectIssueDetails,
-  type ProjectIssueLifecycleEvent,
-  type ProjectIssueStateSnapshot,
+  type ProjectSignalDetails,
+  type ProjectSignalLifecycleEvent,
+  type ProjectSignalStateSnapshot,
 } from "@domain/admin"
 import {
-  IssueId,
+  SignalId,
   NotFoundError,
   type ProjectId,
   type ProjectSettings,
@@ -88,7 +88,7 @@ export const AdminProjectRepositoryLive = Layer.effect(
           return details
         }),
 
-      getCurrentIssueStateCounts: (projectId: ProjectId) =>
+      getCurrentSignalStateCounts: (projectId: ProjectId) =>
         Effect.gen(function* () {
           // EXISTS-based per-issue classification — one row per issue,
           // counted once. A LEFT JOIN to `evaluations` would fan out
@@ -97,11 +97,11 @@ export const AdminProjectRepositoryLive = Layer.effect(
           // Per the metrics design, `evaluations.archived_at` is
           // ignored — once an issue ever had any (non-soft-deleted)
           // evaluation it remains tracked until it resolves. Lines up
-          // with `getIssueLifecycleEvents`, which filters the same
+          // with `getSignalLifecycleEvents`, which filters the same
           // way.
           const hasEvaluation = sql`EXISTS (
             SELECT 1 FROM ${evaluations}
-            WHERE ${evaluations.issueId} = ${issues.id}
+            WHERE ${evaluations.signalId} = ${issues.id}
               AND ${evaluations.deletedAt} IS NULL
           )`
           const rows = yield* sqlClient.query((db) =>
@@ -127,7 +127,7 @@ export const AdminProjectRepositoryLive = Layer.effect(
           )
 
           const row = rows[0]
-          const snapshot: ProjectIssueStateSnapshot = {
+          const snapshot: ProjectSignalStateSnapshot = {
             untracked: Number(row?.untracked ?? 0),
             tracked: Number(row?.tracked ?? 0),
             resolved: Number(row?.resolved ?? 0),
@@ -135,7 +135,7 @@ export const AdminProjectRepositoryLive = Layer.effect(
           return snapshot
         }),
 
-      getIssueLifecycleEvents: (projectId: ProjectId, since: Date) =>
+      getSignalLifecycleEvents: (projectId: ProjectId, since: Date) =>
         Effect.gen(function* () {
           // Pull issues whose own lifecycle timestamps fall in the
           // window, OR which have any (non-soft-deleted) evaluation
@@ -143,18 +143,18 @@ export const AdminProjectRepositoryLive = Layer.effect(
           // ignored per design — once an issue had any eval it's
           // tracked. `evaluations.deleted_at IS NULL` is enforced so
           // soft-deleted evals don't count as ever having attached
-          // (matches `getCurrentIssueStateCounts`).
+          // (matches `getCurrentSignalStateCounts`).
           const rows = yield* sqlClient.query((db) =>
             db
               .select({
-                issueId: issues.id,
+                signalId: issues.id,
                 createdAt: issues.createdAt,
                 resolvedAt: issues.resolvedAt,
                 ignoredAt: issues.ignoredAt,
                 firstEvalAttachedAt: sql<Date | null>`(
                   SELECT MIN(${evaluations.createdAt})
                   FROM ${evaluations}
-                  WHERE ${evaluations.issueId} = ${issues.id}
+                  WHERE ${evaluations.signalId} = ${issues.id}
                     AND ${evaluations.deletedAt} IS NULL
                 )`,
               })
@@ -168,7 +168,7 @@ export const AdminProjectRepositoryLive = Layer.effect(
                     and(isNotNull(issues.ignoredAt), gte(issues.ignoredAt, since)),
                     sql`EXISTS (
                       SELECT 1 FROM ${evaluations}
-                      WHERE ${evaluations.issueId} = ${issues.id}
+                      WHERE ${evaluations.signalId} = ${issues.id}
                         AND ${evaluations.deletedAt} IS NULL
                         AND ${evaluations.createdAt} >= ${since}
                     )`,
@@ -178,8 +178,8 @@ export const AdminProjectRepositoryLive = Layer.effect(
           )
 
           return rows.map(
-            (row): ProjectIssueLifecycleEvent => ({
-              issueId: IssueId(row.issueId),
+            (row): ProjectSignalLifecycleEvent => ({
+              signalId: SignalId(row.signalId),
               createdAt: row.createdAt,
               firstEvalAttachedAt: row.firstEvalAttachedAt ? new Date(row.firstEvalAttachedAt) : null,
               resolvedAt: row.resolvedAt,
@@ -188,9 +188,9 @@ export const AdminProjectRepositoryLive = Layer.effect(
           )
         }),
 
-      findIssueDetailsByIds: (ids) =>
+      findSignalDetailsByIds: (ids) =>
         Effect.gen(function* () {
-          if (ids.length === 0) return new Map<IssueId, ProjectIssueDetails>()
+          if (ids.length === 0) return new Map<SignalId, ProjectSignalDetails>()
           const idList = ids as readonly string[]
           const rows = yield* sqlClient.query((db) =>
             db
@@ -203,17 +203,17 @@ export const AdminProjectRepositoryLive = Layer.effect(
                   db
                     .select({ one: sql`1` })
                     .from(evaluations)
-                    .where(and(eq(evaluations.issueId, issues.id), isNull(evaluations.deletedAt))),
+                    .where(and(eq(evaluations.signalId, issues.id), isNull(evaluations.deletedAt))),
                 ),
               })
               .from(issues)
               .where(inArray(issues.id, idList)),
           )
-          const out = new Map<IssueId, ProjectIssueDetails>()
+          const out = new Map<SignalId, ProjectSignalDetails>()
           for (const row of rows) {
-            const state: ProjectIssueDetails["state"] =
+            const state: ProjectSignalDetails["state"] =
               row.resolvedAt !== null || row.ignoredAt !== null ? "resolved" : row.hasEval ? "tracked" : "untracked"
-            out.set(IssueId(row.id), { name: row.name, state })
+            out.set(SignalId(row.id), { name: row.name, state })
           }
           return out
         }),

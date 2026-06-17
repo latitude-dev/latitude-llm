@@ -1,4 +1,4 @@
-import { IssueRepository } from "@domain/issues"
+import { SignalRepository } from "@domain/signals"
 import { type Organization, OrganizationRepository } from "@domain/organizations"
 import { SavedSearchRepository } from "@domain/saved-searches"
 import {
@@ -15,10 +15,10 @@ import { describe, expect, it } from "vitest"
 import { InMemorySlackDeliveryRepositoryLive } from "../testing/in-memory-slack-delivery-repository.ts"
 import { dispatchSlackNotificationUseCase, type SlackMessenger } from "./dispatch-slack-notification.ts"
 
-// custom.message doesn't call IssueRepository, but the use case's R
+// custom.message doesn't call SignalRepository, but the use case's R
 // channel includes it. Provide a no-op stub so Effect.provide is happy.
-const NoopIssueRepository = Layer.succeed(IssueRepository, {
-  findById: () => Effect.die(new Error("IssueRepository.findById not expected in this test")),
+const NoopSignalRepository = Layer.succeed(SignalRepository, {
+  findById: () => Effect.die(new Error("SignalRepository.findById not expected in this test")),
   findByIdForUpdate: () => Effect.die(new Error("not expected")),
   findByIds: () => Effect.die(new Error("not expected")),
   findBySlug: () => Effect.die(new Error("not expected")),
@@ -30,12 +30,12 @@ const NoopIssueRepository = Layer.succeed(IssueRepository, {
   countBySlug: () => Effect.die(new Error("not expected")),
 } as never)
 
-// Same rationale as NoopIssueRepository: custom.message never resolves an assignee name.
+// Same rationale as NoopSignalRepository: custom.message never resolves an assignee name.
 const NoopUserRepository = Layer.succeed(UserRepository, {
   findById: () => Effect.die(new Error("UserRepository.findById not expected in this test")),
 } as never)
 
-// Same rationale as NoopIssueRepository: custom.message never resolves a source name.
+// Same rationale as NoopSignalRepository: custom.message never resolves a source name.
 const NoopSavedSearchRepository = Layer.succeed(SavedSearchRepository, {
   findById: () => Effect.die(new Error("SavedSearchRepository.findById not expected in this test")),
 } as never)
@@ -124,7 +124,7 @@ describe("dispatchSlackNotificationUseCase", () => {
         messenger,
       }).pipe(
         Effect.provide(layer),
-        Effect.provide(NoopIssueRepository),
+        Effect.provide(NoopSignalRepository),
         Effect.provide(NoopSavedSearchRepository),
         Effect.provide(NoopUserRepository),
         Effect.provide(NoopSqlClient),
@@ -152,7 +152,7 @@ describe("dispatchSlackNotificationUseCase", () => {
         messenger,
       }).pipe(
         Effect.provide(layer),
-        Effect.provide(NoopIssueRepository),
+        Effect.provide(NoopSignalRepository),
         Effect.provide(NoopSavedSearchRepository),
         Effect.provide(NoopUserRepository),
         Effect.provide(NoopSqlClient),
@@ -181,7 +181,7 @@ describe("dispatchSlackNotificationUseCase", () => {
         messenger,
       }).pipe(
         Effect.provide(layer),
-        Effect.provide(NoopIssueRepository),
+        Effect.provide(NoopSignalRepository),
         Effect.provide(NoopSavedSearchRepository),
         Effect.provide(NoopUserRepository),
         Effect.provide(NoopSqlClient),
@@ -209,7 +209,7 @@ describe("dispatchSlackNotificationUseCase", () => {
         messenger,
       }).pipe(
         Effect.provide(layer),
-        Effect.provide(NoopIssueRepository),
+        Effect.provide(NoopSignalRepository),
         Effect.provide(NoopSavedSearchRepository),
         Effect.provide(NoopUserRepository),
         Effect.provide(NoopSqlClient),

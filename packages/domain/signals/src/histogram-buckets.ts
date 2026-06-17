@@ -1,4 +1,4 @@
-import type { IssueOccurrenceBucket } from "@domain/scores"
+import type { SignalOccurrenceBucket } from "@domain/scores"
 
 /**
  * Sub-day-aware scaffold aligned to UTC bucket boundaries. Emits ISO-8601 UTC timestamps
@@ -32,8 +32,8 @@ export const buildHistogramBucketScaffold = (input: {
  */
 export const fillBuckets = (input: {
   readonly scaffold: readonly string[]
-  readonly buckets: readonly IssueOccurrenceBucket[]
-}): readonly IssueOccurrenceBucket[] => {
+  readonly buckets: readonly SignalOccurrenceBucket[]
+}): readonly SignalOccurrenceBucket[] => {
   const countsByBucket = new Map(input.buckets.map((bucket) => [bucket.bucket, bucket.count] as const))
   return input.scaffold.map((bucket) => ({
     bucket,

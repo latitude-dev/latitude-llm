@@ -5,34 +5,34 @@ import {
   type EvaluationRepositoryShape,
   emptyEvaluationAlignment,
 } from "@domain/evaluations"
-import { type IssueOccurrenceAggregate, type IssueWindowMetric, ScoreAnalyticsRepository } from "@domain/scores"
+import { type SignalOccurrenceAggregate, type SignalWindowMetric, ScoreAnalyticsRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
-import { ChSqlClient, EvaluationId, IssueId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { ChSqlClient, EvaluationId, SignalId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { beforeEach, describe, expect, it } from "vitest"
-import { type Issue, IssueState } from "../entities/issue.ts"
-import { createIssueCentroid } from "../helpers.ts"
-import { IssueRepository } from "../ports/issue-repository.ts"
-import { createFakeIssueRepository } from "../testing/fake-issue-repository.ts"
-import { type ListIssuesInput, listIssuesUseCase } from "./list-issues.ts"
+import { type Signal, SignalState } from "../entities/issue.ts"
+import { createSignalCentroid } from "../helpers.ts"
+import { SignalRepository } from "../ports/issue-repository.ts"
+import { createFakeSignalRepository } from "../testing/fake-issue-repository.ts"
+import { type ListSignalsInput, listSignalsUseCase } from "./list-issues.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
 
-const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
-  id: IssueId("i".repeat(24)),
+const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
+  id: SignalId("i".repeat(24)),
   organizationId: organizationId as string,
   projectId: projectId as string,
   slug: "test-issue",
-  name: "Issue candidate",
+  name: "Signal candidate",
   description: "Repeated assistant failure",
   source: "annotation",
   assigneeId: null,
   priority: null,
-  centroid: createIssueCentroid(),
+  centroid: createSignalCentroid(),
   clusteredAt: new Date("2026-03-01T00:00:00.000Z"),
   escalatedAt: null,
   resolvedAt: null,
@@ -46,7 +46,7 @@ const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation => ({
   id: EvaluationId("e".repeat(24)),
   organizationId: organizationId as string,
   projectId: projectId as string,
-  issueId: IssueId("i".repeat(24)),
+  signalId: SignalId("i".repeat(24)),
   name: "Monitor issue",
   description: "Regression monitor",
   script: "return { passed: false }",
@@ -60,16 +60,16 @@ const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation => ({
   ...overrides,
 })
 
-const makeWindowMetric = (overrides: Partial<IssueWindowMetric> = {}): IssueWindowMetric => ({
-  issueId: IssueId("i".repeat(24)),
+const makeWindowMetric = (overrides: Partial<SignalWindowMetric> = {}): SignalWindowMetric => ({
+  signalId: SignalId("i".repeat(24)),
   occurrences: 1,
   firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
   lastSeenAt: new Date("2026-04-01T00:00:00.000Z"),
   ...overrides,
 })
 
-const makeOccurrence = (overrides: Partial<IssueOccurrenceAggregate> = {}): IssueOccurrenceAggregate => ({
-  issueId: IssueId("i".repeat(24)),
+const makeOccurrence = (overrides: Partial<SignalOccurrenceAggregate> = {}): SignalOccurrenceAggregate => ({
+  signalId: SignalId("i".repeat(24)),
   totalOccurrences: 10,
   recentOccurrences: 2,
   baselineAvgOccurrences: 1,
@@ -79,17 +79,17 @@ const makeOccurrence = (overrides: Partial<IssueOccurrenceAggregate> = {}): Issu
 })
 
 const createEvaluationRepository = (seed: readonly Evaluation[] = []) => {
-  const listByIssueIdsCalls: Array<readonly string[]> = []
+  const listBySignalIdsCalls: Array<readonly string[]> = []
   const repository: EvaluationRepositoryShape = {
-    findById: () => Effect.die("Unexpected EvaluationRepository.findById in listIssuesUseCase test"),
-    save: () => Effect.die("Unexpected EvaluationRepository.save in listIssuesUseCase test"),
-    listByProjectId: () => Effect.die("Unexpected EvaluationRepository.listByProjectId in listIssuesUseCase test"),
-    listByIssueId: () => Effect.die("Unexpected EvaluationRepository.listByIssueId in listIssuesUseCase test"),
-    listByIssueIds: ({ issueIds, options }) =>
+    findById: () => Effect.die("Unexpected EvaluationRepository.findById in listSignalsUseCase test"),
+    save: () => Effect.die("Unexpected EvaluationRepository.save in listSignalsUseCase test"),
+    listByProjectId: () => Effect.die("Unexpected EvaluationRepository.listByProjectId in listSignalsUseCase test"),
+    listBySignalId: () => Effect.die("Unexpected EvaluationRepository.listBySignalId in listSignalsUseCase test"),
+    listBySignalIds: ({ signalIds, options }) =>
       Effect.sync(() => {
-        listByIssueIdsCalls.push(issueIds)
+        listBySignalIdsCalls.push(signalIds)
         const filteredSeed = seed.filter((evaluation) => {
-          if (!issueIds.some((issueId) => issueId === evaluation.issueId)) {
+          if (!signalIds.some((signalId) => signalId === evaluation.signalId)) {
             return false
           }
 
@@ -110,21 +110,21 @@ const createEvaluationRepository = (seed: readonly Evaluation[] = []) => {
           offset: 0,
         }
       }),
-    archive: () => Effect.die("Unexpected EvaluationRepository.archive in listIssuesUseCase test"),
-    unarchive: () => Effect.die("Unexpected EvaluationRepository.unarchive in listIssuesUseCase test"),
-    softDelete: () => Effect.die("Unexpected EvaluationRepository.softDelete in listIssuesUseCase test"),
-    softDeleteByIssueId: () =>
-      Effect.die("Unexpected EvaluationRepository.softDeleteByIssueId in listIssuesUseCase test"),
+    archive: () => Effect.die("Unexpected EvaluationRepository.archive in listSignalsUseCase test"),
+    unarchive: () => Effect.die("Unexpected EvaluationRepository.unarchive in listSignalsUseCase test"),
+    softDelete: () => Effect.die("Unexpected EvaluationRepository.softDelete in listSignalsUseCase test"),
+    softDeleteBySignalId: () =>
+      Effect.die("Unexpected EvaluationRepository.softDeleteBySignalId in listSignalsUseCase test"),
   }
 
-  return { repository, listByIssueIdsCalls }
+  return { repository, listBySignalIdsCalls }
 }
 
-// `aggregateByIssues` is invoked with the operator-projected `issueIds`, so
+// `aggregateBySignals` is invoked with the operator-projected `signalIds`, so
 // the fake filters the seeded full-history occurrences by what was asked for.
 const aggregateOccurrences =
-  (seed: readonly IssueOccurrenceAggregate[]) => (input: { readonly issueIds: readonly string[] }) =>
-    Effect.sync(() => seed.filter((occurrence) => input.issueIds.includes(occurrence.issueId)))
+  (seed: readonly SignalOccurrenceAggregate[]) => (input: { readonly signalIds: readonly string[] }) =>
+    Effect.sync(() => seed.filter((occurrence) => input.signalIds.includes(occurrence.signalId)))
 
 let traceCount = 0
 const provideTraceRepository = Layer.succeed(
@@ -134,9 +134,9 @@ const provideTraceRepository = Layer.succeed(
   }).repository,
 )
 
-const createIssueSearch = (
+const createSignalSearch = (
   candidates: readonly {
-    issueId: IssueId
+    signalId: SignalId
     name: string
     description: string
     score: number
@@ -160,30 +160,30 @@ const createIssueSearch = (
   }
 }
 
-describe("listIssuesUseCase", () => {
+describe("listSignalsUseCase", () => {
   beforeEach(() => {
     traceCount = 0
   })
 
   it("returns the empty issue shape without querying ClickHouse when the project has no issues", async () => {
     const now = new Date("2026-04-10T00:00:00.000Z")
-    const { repository: issueRepository } = createFakeIssueRepository([])
+    const { repository: signalRepository } = createFakeSignalRepository([])
     const { repository: evaluationRepository } = createEvaluationRepository()
     const windowMetricInputs: unknown[] = []
     const aggregateInputs: unknown[] = []
     const histogramInputs: unknown[] = []
     const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
-      listIssueWindowMetrics: (input) =>
+      listSignalWindowMetrics: (input) =>
         Effect.sync(() => {
           windowMetricInputs.push(input)
           return []
         }),
-      aggregateByIssues: (input) =>
+      aggregateBySignals: (input) =>
         Effect.sync(() => {
           aggregateInputs.push(input)
           return []
         }),
-      histogramByIssues: (input) =>
+      histogramBySignals: (input) =>
         Effect.sync(() => {
           histogramInputs.push(input)
           return []
@@ -199,10 +199,10 @@ describe("listIssuesUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      listIssuesUseCase({ organizationId, projectId, now }).pipe(
+      listSignalsUseCase({ organizationId, projectId, now }).pipe(
         Effect.provide(
           Layer.mergeAll(
-            Layer.succeed(IssueRepository, issueRepository),
+            Layer.succeed(SignalRepository, signalRepository),
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(TraceRepository, traceRepository),
@@ -215,7 +215,7 @@ describe("listIssuesUseCase", () => {
 
     expect(result.items).toEqual([])
     expect(result.totalCount).toBe(0)
-    expect(result.hasAnyIssues).toBe(false)
+    expect(result.hasAnySignals).toBe(false)
     expect(result.priorityCounts).toEqual({ urgent: 0, high: 0, medium: 0, low: 0, none: 0 })
     expect(result.assigneeCounts).toEqual({})
     expect(result.analytics.totalTraces).toBe(0)
@@ -228,25 +228,25 @@ describe("listIssuesUseCase", () => {
 
   it("reports project issue existence when the selected lifecycle group has no visible rows", async () => {
     const now = new Date("2026-04-10T00:00:00.000Z")
-    const resolvedIssue = makeIssue({
-      id: IssueId("r".repeat(24)),
+    const resolvedSignal = makeSignal({
+      id: SignalId("r".repeat(24)),
       resolvedAt: new Date("2026-04-08T00:00:00.000Z"),
     })
-    const { repository: issueRepository } = createFakeIssueRepository([resolvedIssue])
-    const { repository: evaluationRepository, listByIssueIdsCalls } = createEvaluationRepository()
+    const { repository: signalRepository } = createFakeSignalRepository([resolvedSignal])
+    const { repository: evaluationRepository, listBySignalIdsCalls } = createEvaluationRepository()
     const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
-      listIssueWindowMetrics: () =>
+      listSignalWindowMetrics: () =>
         Effect.succeed([
           makeWindowMetric({
-            issueId: resolvedIssue.id,
+            signalId: resolvedSignal.id,
             occurrences: 3,
             firstSeenAt: new Date("2026-04-07T00:00:00.000Z"),
             lastSeenAt: new Date("2026-04-08T00:00:00.000Z"),
           }),
         ]),
-      aggregateByIssues: aggregateOccurrences([
+      aggregateBySignals: aggregateOccurrences([
         makeOccurrence({
-          issueId: resolvedIssue.id,
+          signalId: resolvedSignal.id,
           totalOccurrences: 3,
           recentOccurrences: 0,
           baselineAvgOccurrences: 0,
@@ -257,7 +257,7 @@ describe("listIssuesUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      listIssuesUseCase({
+      listSignalsUseCase({
         organizationId,
         projectId,
         lifecycleGroup: "active",
@@ -265,7 +265,7 @@ describe("listIssuesUseCase", () => {
       }).pipe(
         Effect.provide(
           Layer.mergeAll(
-            Layer.succeed(IssueRepository, issueRepository),
+            Layer.succeed(SignalRepository, signalRepository),
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
@@ -278,39 +278,39 @@ describe("listIssuesUseCase", () => {
 
     expect(result.items).toEqual([])
     expect(result.totalCount).toBe(0)
-    expect(result.hasAnyIssues).toBe(true)
-    expect(result.analytics.counts.resolvedIssues).toBe(1)
-    expect(listByIssueIdsCalls).toEqual([])
+    expect(result.hasAnySignals).toBe(true)
+    expect(result.analytics.counts.resolvedSignals).toBe(1)
+    expect(listBySignalIdsCalls).toEqual([])
   })
 
   it("enriches the default listing with derived lifecycle states", async () => {
     const now = new Date("2026-04-10T00:00:00.000Z")
-    const newestIssue = makeIssue({
-      id: IssueId("aaaaaaaaaaaaaaaaaaaaaaaa"),
+    const newestSignal = makeSignal({
+      id: SignalId("aaaaaaaaaaaaaaaaaaaaaaaa"),
       createdAt: new Date("2026-04-07T08:00:00.000Z"),
       updatedAt: new Date("2026-04-07T08:00:00.000Z"),
       clusteredAt: new Date("2026-04-07T08:00:00.000Z"),
     })
-    const regressedIssue = makeIssue({
-      id: IssueId("bbbbbbbbbbbbbbbbbbbbbbbb"),
+    const regressedSignal = makeSignal({
+      id: SignalId("bbbbbbbbbbbbbbbbbbbbbbbb"),
       resolvedAt: new Date("2026-04-01T12:00:00.000Z"),
       createdAt: new Date("2026-03-20T08:00:00.000Z"),
       updatedAt: new Date("2026-03-20T08:00:00.000Z"),
       clusteredAt: new Date("2026-03-20T08:00:00.000Z"),
     })
-    const ignoredIssue = makeIssue({
-      id: IssueId("cccccccccccccccccccccccc"),
+    const ignoredSignal = makeSignal({
+      id: SignalId("cccccccccccccccccccccccc"),
       ignoredAt: new Date("2026-04-02T12:00:00.000Z"),
       createdAt: new Date("2026-03-10T08:00:00.000Z"),
       updatedAt: new Date("2026-03-10T08:00:00.000Z"),
       clusteredAt: new Date("2026-03-10T08:00:00.000Z"),
     })
 
-    const { repository: issueRepository } = createFakeIssueRepository([ignoredIssue, regressedIssue, newestIssue])
-    const { repository: evaluationRepository, listByIssueIdsCalls } = createEvaluationRepository()
-    const fullHistoryOccurrences: readonly IssueOccurrenceAggregate[] = [
+    const { repository: signalRepository } = createFakeSignalRepository([ignoredSignal, regressedSignal, newestSignal])
+    const { repository: evaluationRepository, listBySignalIdsCalls } = createEvaluationRepository()
+    const fullHistoryOccurrences: readonly SignalOccurrenceAggregate[] = [
       makeOccurrence({
-        issueId: newestIssue.id,
+        signalId: newestSignal.id,
         totalOccurrences: 4,
         recentOccurrences: 4,
         baselineAvgOccurrences: 2,
@@ -318,7 +318,7 @@ describe("listIssuesUseCase", () => {
         lastSeenAt: new Date("2026-04-09T20:00:00.000Z"),
       }),
       makeOccurrence({
-        issueId: regressedIssue.id,
+        signalId: regressedSignal.id,
         totalOccurrences: 6,
         recentOccurrences: 0,
         baselineAvgOccurrences: 0,
@@ -326,7 +326,7 @@ describe("listIssuesUseCase", () => {
         lastSeenAt: new Date("2026-04-05T08:00:00.000Z"),
       }),
       makeOccurrence({
-        issueId: ignoredIssue.id,
+        signalId: ignoredSignal.id,
         totalOccurrences: 2,
         recentOccurrences: 0,
         baselineAvgOccurrences: 0,
@@ -337,40 +337,40 @@ describe("listIssuesUseCase", () => {
     const windowMetricInputs: unknown[] = []
     const aggregateInputs: unknown[] = []
     const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
-      listIssueWindowMetrics: (input) =>
+      listSignalWindowMetrics: (input) =>
         Effect.sync(() => {
           windowMetricInputs.push(input)
           return [
             makeWindowMetric({
-              issueId: newestIssue.id,
+              signalId: newestSignal.id,
               occurrences: 4,
               firstSeenAt: new Date("2026-04-07T08:00:00.000Z"),
               lastSeenAt: new Date("2026-04-09T20:00:00.000Z"),
             }),
             makeWindowMetric({
-              issueId: regressedIssue.id,
+              signalId: regressedSignal.id,
               occurrences: 6,
               firstSeenAt: new Date("2026-03-20T08:00:00.000Z"),
               lastSeenAt: new Date("2026-04-05T08:00:00.000Z"),
             }),
             makeWindowMetric({
-              issueId: ignoredIssue.id,
+              signalId: ignoredSignal.id,
               occurrences: 2,
               firstSeenAt: new Date("2026-03-10T08:00:00.000Z"),
               lastSeenAt: new Date("2026-04-02T08:00:00.000Z"),
             }),
           ]
         }),
-      aggregateByIssues: (input) =>
+      aggregateBySignals: (input) =>
         Effect.sync(() => {
           aggregateInputs.push(input)
-          return fullHistoryOccurrences.filter((occurrence) => input.issueIds.includes(occurrence.issueId))
+          return fullHistoryOccurrences.filter((occurrence) => input.signalIds.includes(occurrence.signalId))
         }),
     })
-    const { calls } = createIssueSearch([])
+    const { calls } = createSignalSearch([])
 
     const result = await Effect.runPromise(
-      listIssuesUseCase({
+      listSignalsUseCase({
         organizationId,
         projectId,
         limit: 2,
@@ -379,7 +379,7 @@ describe("listIssuesUseCase", () => {
       }).pipe(
         Effect.provide(
           Layer.mergeAll(
-            Layer.succeed(IssueRepository, issueRepository),
+            Layer.succeed(SignalRepository, signalRepository),
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
@@ -401,14 +401,14 @@ describe("listIssuesUseCase", () => {
       {
         organizationId,
         projectId,
-        issueIds: [newestIssue.id, regressedIssue.id, ignoredIssue.id],
+        signalIds: [newestSignal.id, regressedSignal.id, ignoredSignal.id],
       },
     ])
-    expect(listByIssueIdsCalls).toEqual([[newestIssue.id, regressedIssue.id]])
+    expect(listBySignalIdsCalls).toEqual([[newestSignal.id, regressedSignal.id]])
     expect(result.items.map((issue) => ({ id: issue.id, states: issue.states }))).toEqual([
       {
-        id: newestIssue.id,
-        states: [IssueState.New],
+        id: newestSignal.id,
+        states: [SignalState.New],
       },
       {
         // The regressed lifecycle state is no longer derived from
@@ -416,14 +416,14 @@ describe("listIssuesUseCase", () => {
         // (which clears resolvedAt) and lives in alert_incidents. An issue
         // with resolvedAt still set derives as Resolved. The "regressed
         // recently" view is a UI follow-up against alert_incidents.
-        id: regressedIssue.id,
-        states: [IssueState.Resolved],
+        id: regressedSignal.id,
+        states: [SignalState.Resolved],
       },
     ])
-    expect(result.analytics.counts.regressedIssues).toBe(0)
+    expect(result.analytics.counts.regressedSignals).toBe(0)
     expect(result.analytics.counts.seenOccurrences).toBe(12)
     expect(result.totalCount).toBe(3)
-    expect(result.hasAnyIssues).toBe(true)
+    expect(result.hasAnySignals).toBe(true)
     expect(result.hasMore).toBe(true)
     expect(result.limit).toBe(2)
     expect(result.offset).toBe(0)
@@ -431,96 +431,96 @@ describe("listIssuesUseCase", () => {
 
   it("keeps analytics independent from the lifecycle tab and hydrates only visible issue ids", async () => {
     const now = new Date("2026-04-10T12:00:00.000Z")
-    const activeIssue = makeIssue({
-      id: IssueId("a".repeat(24)),
+    const activeSignal = makeSignal({
+      id: SignalId("a".repeat(24)),
       name: "Active issue",
     })
-    const regressedIssue = makeIssue({
-      id: IssueId("b".repeat(24)),
+    const regressedSignal = makeSignal({
+      id: SignalId("b".repeat(24)),
       name: "Regressed issue",
       resolvedAt: new Date("2026-04-05T00:00:00.000Z"),
     })
-    const archivedIssue = makeIssue({
-      id: IssueId("c".repeat(24)),
+    const archivedSignal = makeSignal({
+      id: SignalId("c".repeat(24)),
       name: "Archived issue",
       resolvedAt: new Date("2026-04-07T00:00:00.000Z"),
     })
 
-    const { repository: issueRepository } = createFakeIssueRepository([activeIssue, regressedIssue, archivedIssue])
-    const { repository: evaluationRepository, listByIssueIdsCalls } = createEvaluationRepository([
+    const { repository: signalRepository } = createFakeSignalRepository([activeSignal, regressedSignal, archivedSignal])
+    const { repository: evaluationRepository, listBySignalIdsCalls } = createEvaluationRepository([
       makeEvaluation({
         id: EvaluationId("1".repeat(24)),
-        issueId: activeIssue.id,
+        signalId: activeSignal.id,
         name: "Active monitor",
       }),
       makeEvaluation({
         id: EvaluationId("9".repeat(24)),
-        issueId: activeIssue.id,
+        signalId: activeSignal.id,
         name: "Archived monitor for active issue",
         archivedAt: new Date("2026-04-09T00:00:00.000Z"),
       }),
       makeEvaluation({
         id: EvaluationId("2".repeat(24)),
-        issueId: archivedIssue.id,
+        signalId: archivedSignal.id,
         name: "Archived monitor",
       }),
     ])
     const histogramInputs: Array<{
-      issueIds: readonly string[]
+      signalIds: readonly string[]
       from: Date
       to: Date
     }> = []
     const trendInputs: Array<{
-      issueIds: readonly string[]
+      signalIds: readonly string[]
       from: Date
       to: Date
     }> = []
     const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
-      listIssueWindowMetrics: () =>
+      listSignalWindowMetrics: () =>
         Effect.succeed([
           makeWindowMetric({
-            issueId: activeIssue.id,
+            signalId: activeSignal.id,
             occurrences: 5,
             firstSeenAt: new Date("2026-03-01T00:00:00.000Z"),
             lastSeenAt: new Date("2026-04-09T00:00:00.000Z"),
           }),
           makeWindowMetric({
-            issueId: regressedIssue.id,
+            signalId: regressedSignal.id,
             occurrences: 4,
             firstSeenAt: new Date("2026-03-02T00:00:00.000Z"),
             lastSeenAt: new Date("2026-04-08T00:00:00.000Z"),
           }),
           makeWindowMetric({
-            issueId: archivedIssue.id,
+            signalId: archivedSignal.id,
             occurrences: 7,
             firstSeenAt: new Date("2026-03-03T00:00:00.000Z"),
             lastSeenAt: new Date("2026-04-04T00:00:00.000Z"),
           }),
         ]),
-      aggregateByIssues: aggregateOccurrences([
+      aggregateBySignals: aggregateOccurrences([
         makeOccurrence({
-          issueId: activeIssue.id,
+          signalId: activeSignal.id,
           recentOccurrences: 3,
           baselineAvgOccurrences: 1,
           lastSeenAt: new Date("2026-04-09T00:00:00.000Z"),
         }),
         makeOccurrence({
-          issueId: regressedIssue.id,
+          signalId: regressedSignal.id,
           recentOccurrences: 1,
           baselineAvgOccurrences: 0,
           lastSeenAt: new Date("2026-04-08T00:00:00.000Z"),
         }),
         makeOccurrence({
-          issueId: archivedIssue.id,
+          signalId: archivedSignal.id,
           recentOccurrences: 0,
           baselineAvgOccurrences: 0,
           lastSeenAt: new Date("2026-04-04T00:00:00.000Z"),
         }),
       ]),
-      histogramByIssues: ({ issueIds, timeRange }) =>
+      histogramBySignals: ({ signalIds, timeRange }) =>
         Effect.sync(() => {
           histogramInputs.push({
-            issueIds,
+            signalIds,
             from: timeRange.from ?? new Date(0),
             to: timeRange.to ?? new Date(0),
           })
@@ -529,24 +529,24 @@ describe("listIssuesUseCase", () => {
             { bucket: "2026-04-10", count: 2 },
           ]
         }),
-      trendByIssues: ({ issueIds, timeRange }) =>
+      trendBySignals: ({ signalIds, timeRange }) =>
         Effect.sync(() => {
           trendInputs.push({
-            issueIds,
+            signalIds,
             from: timeRange.from ?? new Date(0),
             to: timeRange.to ?? new Date(0),
           })
           return [
-            { issueId: activeIssue.id, buckets: [{ bucket: "2026-04-09", count: 5 }] },
-            { issueId: regressedIssue.id, buckets: [{ bucket: "2026-04-08", count: 4 }] },
+            { signalId: activeSignal.id, buckets: [{ bucket: "2026-04-09", count: 5 }] },
+            { signalId: regressedSignal.id, buckets: [{ bucket: "2026-04-08", count: 4 }] },
           ]
         }),
     })
-    const { calls } = createIssueSearch([])
+    const { calls } = createSignalSearch([])
     traceCount = 10
 
     const result = await Effect.runPromise(
-      listIssuesUseCase({
+      listSignalsUseCase({
         organizationId,
         projectId,
         lifecycleGroup: "active",
@@ -554,7 +554,7 @@ describe("listIssuesUseCase", () => {
       }).pipe(
         Effect.provide(
           Layer.mergeAll(
-            Layer.succeed(IssueRepository, issueRepository),
+            Layer.succeed(SignalRepository, signalRepository),
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
@@ -572,12 +572,12 @@ describe("listIssuesUseCase", () => {
     // the archived issue. Regression history is reified at write time and
     // tracked via alert_incidents; UI hydration of "regressed recently"
     // will use that table as a follow-up.
-    expect(result.analytics.counts.resolvedIssues).toBe(2)
-    expect(result.analytics.counts.regressedIssues).toBe(0)
-    expect(result.analytics.counts.ongoingIssues).toBe(1)
+    expect(result.analytics.counts.resolvedSignals).toBe(2)
+    expect(result.analytics.counts.regressedSignals).toBe(0)
+    expect(result.analytics.counts.ongoingSignals).toBe(1)
     expect(result.analytics.counts.seenOccurrences).toBe(16)
-    expect(result.items.map((item) => item.states)).toEqual([[IssueState.Ongoing]])
-    expect(result.items.map((item) => item.id)).toEqual([activeIssue.id])
+    expect(result.items.map((item) => item.states)).toEqual([[SignalState.Ongoing]])
+    expect(result.items.map((item) => item.id)).toEqual([activeSignal.id])
     expect(result.occurrencesSum).toBe(5)
     expect(result.items[0]?.affectedTracesPercent).toBe(0.5)
     expect(result.items[0]?.evaluations.map((evaluation) => evaluation.id)).toEqual([EvaluationId("1".repeat(24))])
@@ -586,56 +586,56 @@ describe("listIssuesUseCase", () => {
     expect(result.analytics.histogramBucketSeconds).toBe(4 * 60 * 60)
     // Per-issue trend in the list keeps the daily 14-bar mini-bar.
     expect(result.items[0]?.trend).toHaveLength(14)
-    expect(listByIssueIdsCalls).toEqual([[activeIssue.id]])
-    expect(histogramInputs[0]?.issueIds).toEqual([activeIssue.id, regressedIssue.id, archivedIssue.id])
+    expect(listBySignalIdsCalls).toEqual([[activeSignal.id]])
+    expect(histogramInputs[0]?.signalIds).toEqual([activeSignal.id, regressedSignal.id, archivedSignal.id])
     expect(histogramInputs[0]?.from.toISOString()).toBe("2026-04-04T00:00:00.000Z")
     expect(histogramInputs[0]?.to.toISOString()).toBe("2026-04-10T23:59:59.999Z")
-    expect(trendInputs[0]?.issueIds).toEqual([activeIssue.id])
+    expect(trendInputs[0]?.signalIds).toEqual([activeSignal.id])
     expect(trendInputs[0]?.from.toISOString()).toBe("2026-03-28T00:00:00.000Z")
     expect(trendInputs[0]?.to.toISOString()).toBe("2026-04-10T23:59:59.999Z")
   })
 
   it("attaches per-issue tag aggregates to the visible page", async () => {
     const now = new Date("2026-04-10T00:00:00.000Z")
-    const taggedIssue = makeIssue({
-      id: IssueId("a".repeat(24)),
+    const taggedSignal = makeSignal({
+      id: SignalId("a".repeat(24)),
     })
-    const untaggedIssue = makeIssue({
-      id: IssueId("b".repeat(24)),
+    const untaggedSignal = makeSignal({
+      id: SignalId("b".repeat(24)),
     })
 
-    const { repository: issueRepository } = createFakeIssueRepository([taggedIssue, untaggedIssue])
+    const { repository: signalRepository } = createFakeSignalRepository([taggedSignal, untaggedSignal])
     const { repository: evaluationRepository } = createEvaluationRepository()
     const tagsInputs: Array<{
-      issueIds: readonly string[]
+      signalIds: readonly string[]
       from: Date
       to: Date | undefined
     }> = []
     const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
-      listIssueWindowMetrics: () =>
+      listSignalWindowMetrics: () =>
         Effect.succeed([
-          makeWindowMetric({ issueId: taggedIssue.id, occurrences: 1 }),
-          makeWindowMetric({ issueId: untaggedIssue.id, occurrences: 1 }),
+          makeWindowMetric({ signalId: taggedSignal.id, occurrences: 1 }),
+          makeWindowMetric({ signalId: untaggedSignal.id, occurrences: 1 }),
         ]),
-      aggregateByIssues: aggregateOccurrences([
-        makeOccurrence({ issueId: taggedIssue.id }),
-        makeOccurrence({ issueId: untaggedIssue.id }),
+      aggregateBySignals: aggregateOccurrences([
+        makeOccurrence({ signalId: taggedSignal.id }),
+        makeOccurrence({ signalId: untaggedSignal.id }),
       ]),
-      aggregateTagsByIssues: ({ issueIds, timeRange }) =>
+      aggregateTagsBySignals: ({ signalIds, timeRange }) =>
         Effect.sync(() => {
-          tagsInputs.push({ issueIds, from: timeRange.from, to: timeRange.to })
-          return [{ issueId: taggedIssue.id, tags: ["checkout", "billing"] }].filter((entry) =>
-            issueIds.includes(entry.issueId),
+          tagsInputs.push({ signalIds, from: timeRange.from, to: timeRange.to })
+          return [{ signalId: taggedSignal.id, tags: ["checkout", "billing"] }].filter((entry) =>
+            signalIds.includes(entry.signalId),
           )
         }),
     })
-    createIssueSearch([])
+    createSignalSearch([])
 
     const result = await Effect.runPromise(
-      listIssuesUseCase({ organizationId, projectId, now }).pipe(
+      listSignalsUseCase({ organizationId, projectId, now }).pipe(
         Effect.provide(
           Layer.mergeAll(
-            Layer.succeed(IssueRepository, issueRepository),
+            Layer.succeed(SignalRepository, signalRepository),
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
@@ -648,43 +648,43 @@ describe("listIssuesUseCase", () => {
 
     // No operator-selected time range → fallback ~30 days ending at `now`.
     expect(tagsInputs).toHaveLength(1)
-    expect(tagsInputs[0]?.issueIds).toEqual([taggedIssue.id, untaggedIssue.id])
+    expect(tagsInputs[0]?.signalIds).toEqual([taggedSignal.id, untaggedSignal.id])
     expect(tagsInputs[0]?.to?.toISOString()).toBe(now.toISOString())
     const expectedFrom = new Date(now)
     expectedFrom.setUTCDate(expectedFrom.getUTCDate() - 30)
     expect(tagsInputs[0]?.from?.toISOString()).toBe(expectedFrom.toISOString())
 
-    const tagsByIssueId = new Map(result.items.map((item) => [item.id, item.tags] as const))
-    expect(tagsByIssueId.get(taggedIssue.id)).toEqual(["checkout", "billing"])
-    expect(tagsByIssueId.get(untaggedIssue.id)).toEqual([])
+    const tagsBySignalId = new Map(result.items.map((item) => [item.id, item.tags] as const))
+    expect(tagsBySignalId.get(taggedSignal.id)).toEqual(["checkout", "billing"])
+    expect(tagsBySignalId.get(untaggedSignal.id)).toEqual([])
   })
 
   it("honors the operator-selected time range when aggregating tags", async () => {
     const now = new Date("2026-04-10T00:00:00.000Z")
-    const issue = makeIssue({ id: IssueId("a".repeat(24)) })
-    const { repository: issueRepository } = createFakeIssueRepository([issue])
+    const issue = makeSignal({ id: SignalId("a".repeat(24)) })
+    const { repository: signalRepository } = createFakeSignalRepository([issue])
     const { repository: evaluationRepository } = createEvaluationRepository()
     const tagsInputs: Array<{
-      issueIds: readonly string[]
+      signalIds: readonly string[]
       from: Date
       to: Date | undefined
     }> = []
     const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
-      listIssueWindowMetrics: () => Effect.succeed([makeWindowMetric({ issueId: issue.id })]),
-      aggregateByIssues: aggregateOccurrences([makeOccurrence({ issueId: issue.id })]),
-      aggregateTagsByIssues: ({ issueIds, timeRange }) =>
+      listSignalWindowMetrics: () => Effect.succeed([makeWindowMetric({ signalId: issue.id })]),
+      aggregateBySignals: aggregateOccurrences([makeOccurrence({ signalId: issue.id })]),
+      aggregateTagsBySignals: ({ signalIds, timeRange }) =>
         Effect.sync(() => {
-          tagsInputs.push({ issueIds, from: timeRange.from, to: timeRange.to })
+          tagsInputs.push({ signalIds, from: timeRange.from, to: timeRange.to })
           return []
         }),
     })
-    createIssueSearch([])
+    createSignalSearch([])
 
     const selectedFrom = new Date("2026-04-01T00:00:00.000Z")
     const selectedTo = new Date("2026-04-08T23:59:59.999Z")
 
     await Effect.runPromise(
-      listIssuesUseCase({
+      listSignalsUseCase({
         organizationId,
         projectId,
         now,
@@ -692,7 +692,7 @@ describe("listIssuesUseCase", () => {
       }).pipe(
         Effect.provide(
           Layer.mergeAll(
-            Layer.succeed(IssueRepository, issueRepository),
+            Layer.succeed(SignalRepository, signalRepository),
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
@@ -782,32 +782,32 @@ describe("listIssuesUseCase", () => {
       expectedLastBucketIso,
     }) => {
       const now = new Date("2026-04-10T12:00:00.000Z")
-      const issue = makeIssue({
-        id: IssueId("m".repeat(24)),
+      const issue = makeSignal({
+        id: SignalId("m".repeat(24)),
         name: "Histogram issue",
       })
 
-      const { repository: issueRepository } = createFakeIssueRepository([issue])
+      const { repository: signalRepository } = createFakeSignalRepository([issue])
       const { repository: evaluationRepository } = createEvaluationRepository()
       const histogramInputs: Array<{
-        issueIds: readonly string[]
+        signalIds: readonly string[]
         from: Date
         to: Date
         bucketSeconds: number
       }> = []
       const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
-        listIssueWindowMetrics: () =>
+        listSignalWindowMetrics: () =>
           Effect.succeed([
             makeWindowMetric({
-              issueId: issue.id,
+              signalId: issue.id,
               occurrences: 3,
               firstSeenAt: new Date("2026-03-01T00:00:00.000Z"),
               lastSeenAt: new Date("2026-04-10T00:00:00.000Z"),
             }),
           ]),
-        aggregateByIssues: aggregateOccurrences([
+        aggregateBySignals: aggregateOccurrences([
           makeOccurrence({
-            issueId: issue.id,
+            signalId: issue.id,
             totalOccurrences: 3,
             recentOccurrences: 3,
             baselineAvgOccurrences: 1,
@@ -815,10 +815,10 @@ describe("listIssuesUseCase", () => {
             lastSeenAt: new Date("2026-04-10T00:00:00.000Z"),
           }),
         ]),
-        histogramByIssues: ({ issueIds, timeRange, bucketSeconds }) =>
+        histogramBySignals: ({ signalIds, timeRange, bucketSeconds }) =>
           Effect.sync(() => {
             histogramInputs.push({
-              issueIds,
+              signalIds,
               from: timeRange.from ?? new Date(0),
               to: timeRange.to ?? new Date(0),
               bucketSeconds,
@@ -826,11 +826,11 @@ describe("listIssuesUseCase", () => {
             return []
           }),
       })
-      createIssueSearch([])
+      createSignalSearch([])
       traceCount = 3
 
       const result = await Effect.runPromise(
-        listIssuesUseCase({
+        listSignalsUseCase({
           organizationId,
           projectId,
           ...(timeRange ? { timeRange } : {}),
@@ -838,7 +838,7 @@ describe("listIssuesUseCase", () => {
         }).pipe(
           Effect.provide(
             Layer.mergeAll(
-              Layer.succeed(IssueRepository, issueRepository),
+              Layer.succeed(SignalRepository, signalRepository),
               Layer.succeed(EvaluationRepository, evaluationRepository),
               Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
               Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
@@ -849,7 +849,7 @@ describe("listIssuesUseCase", () => {
         ),
       )
 
-      expect(histogramInputs[0]?.issueIds).toEqual([issue.id])
+      expect(histogramInputs[0]?.signalIds).toEqual([issue.id])
       expect(histogramInputs[0]?.from.toISOString()).toBe(expectedFromIso)
       expect(histogramInputs[0]?.to.toISOString()).toBe(expectedToIso)
       expect(histogramInputs[0]?.bucketSeconds).toBe(expectedBucketSeconds)
@@ -870,78 +870,78 @@ describe("listIssuesUseCase", () => {
 
   it("intersects search candidates and uses similarity as the final default-sort tie-breaker", async () => {
     const now = new Date("2026-04-10T12:00:00.000Z")
-    const firstIssue = makeIssue({
-      id: IssueId("d".repeat(24)),
+    const firstSignal = makeSignal({
+      id: SignalId("d".repeat(24)),
       name: "First search match",
     })
-    const secondIssue = makeIssue({
-      id: IssueId("e".repeat(24)),
+    const secondSignal = makeSignal({
+      id: SignalId("e".repeat(24)),
       name: "Second search match",
     })
-    const thirdIssue = makeIssue({
-      id: IssueId("f".repeat(24)),
+    const thirdSignal = makeSignal({
+      id: SignalId("f".repeat(24)),
       name: "Filtered by search",
     })
 
-    const issueSearch = createIssueSearch([
+    const signalSearch = createSignalSearch([
       {
-        issueId: secondIssue.id,
-        name: secondIssue.name,
-        description: secondIssue.description,
+        signalId: secondSignal.id,
+        name: secondSignal.name,
+        description: secondSignal.description,
         score: 0.9,
       },
       {
-        issueId: firstIssue.id,
-        name: firstIssue.name,
-        description: firstIssue.description,
+        signalId: firstSignal.id,
+        name: firstSignal.name,
+        description: firstSignal.description,
         score: 0.6,
       },
     ])
-    const { repository: issueRepository } = createFakeIssueRepository([firstIssue, secondIssue, thirdIssue], {
-      hybridSearch: issueSearch.hybridSearch,
+    const { repository: signalRepository } = createFakeSignalRepository([firstSignal, secondSignal, thirdSignal], {
+      hybridSearch: signalSearch.hybridSearch,
     })
     const { repository: evaluationRepository } = createEvaluationRepository()
-    const histogramInputs: Array<{ issueIds: readonly string[] }> = []
+    const histogramInputs: Array<{ signalIds: readonly string[] }> = []
     const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
-      listIssueWindowMetrics: () =>
+      listSignalWindowMetrics: () =>
         Effect.succeed([
           makeWindowMetric({
-            issueId: firstIssue.id,
+            signalId: firstSignal.id,
             occurrences: 4,
             lastSeenAt: new Date("2026-04-09T00:00:00.000Z"),
           }),
           makeWindowMetric({
-            issueId: secondIssue.id,
+            signalId: secondSignal.id,
             occurrences: 4,
             lastSeenAt: new Date("2026-04-09T00:00:00.000Z"),
           }),
           makeWindowMetric({
-            issueId: thirdIssue.id,
+            signalId: thirdSignal.id,
             occurrences: 9,
             lastSeenAt: new Date("2026-04-10T00:00:00.000Z"),
           }),
         ]),
-      aggregateByIssues: aggregateOccurrences([
+      aggregateBySignals: aggregateOccurrences([
         makeOccurrence({
-          issueId: firstIssue.id,
+          signalId: firstSignal.id,
           lastSeenAt: new Date("2026-04-09T00:00:00.000Z"),
         }),
         makeOccurrence({
-          issueId: secondIssue.id,
+          signalId: secondSignal.id,
           lastSeenAt: new Date("2026-04-09T00:00:00.000Z"),
         }),
       ]),
-      histogramByIssues: ({ issueIds }) =>
+      histogramBySignals: ({ signalIds }) =>
         Effect.sync(() => {
-          histogramInputs.push({ issueIds })
+          histogramInputs.push({ signalIds })
           return [{ bucket: "2026-04-09", count: 8 }]
         }),
     })
-    const { calls } = issueSearch
+    const { calls } = signalSearch
     traceCount = 20
 
     const result = await Effect.runPromise(
-      listIssuesUseCase({
+      listSignalsUseCase({
         organizationId,
         projectId,
         search: {
@@ -952,7 +952,7 @@ describe("listIssuesUseCase", () => {
       }).pipe(
         Effect.provide(
           Layer.mergeAll(
-            Layer.succeed(IssueRepository, issueRepository),
+            Layer.succeed(SignalRepository, signalRepository),
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
@@ -969,71 +969,71 @@ describe("listIssuesUseCase", () => {
         normalizedEmbedding: [0.1, 0.9],
       },
     ])
-    expect(result.items.map((item) => item.id)).toEqual([secondIssue.id, firstIssue.id])
+    expect(result.items.map((item) => item.id)).toEqual([secondSignal.id, firstSignal.id])
     expect(result.items.map((item) => item.similarityScore)).toEqual([0.9, 0.6])
-    expect(histogramInputs[0]?.issueIds).toEqual([secondIssue.id, firstIssue.id])
+    expect(histogramInputs[0]?.signalIds).toEqual([secondSignal.id, firstSignal.id])
   })
 
   it("sorts by occurrences and paginates visible rows", async () => {
     const now = new Date("2026-04-10T12:00:00.000Z")
-    const firstIssue = makeIssue({
-      id: IssueId("g".repeat(24)),
+    const firstSignal = makeSignal({
+      id: SignalId("g".repeat(24)),
       name: "First issue",
     })
-    const secondIssue = makeIssue({
-      id: IssueId("h".repeat(24)),
+    const secondSignal = makeSignal({
+      id: SignalId("h".repeat(24)),
       name: "Second issue",
     })
-    const thirdIssue = makeIssue({
-      id: IssueId("j".repeat(24)),
+    const thirdSignal = makeSignal({
+      id: SignalId("j".repeat(24)),
       name: "Third issue",
     })
 
-    const { repository: issueRepository } = createFakeIssueRepository([firstIssue, secondIssue, thirdIssue])
-    const { repository: evaluationRepository, listByIssueIdsCalls } = createEvaluationRepository([
+    const { repository: signalRepository } = createFakeSignalRepository([firstSignal, secondSignal, thirdSignal])
+    const { repository: evaluationRepository, listBySignalIdsCalls } = createEvaluationRepository([
       makeEvaluation({
         id: EvaluationId("3".repeat(24)),
-        issueId: secondIssue.id,
+        signalId: secondSignal.id,
         name: "Second issue evaluation",
       }),
     ])
     const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
-      listIssueWindowMetrics: () =>
+      listSignalWindowMetrics: () =>
         Effect.succeed([
           makeWindowMetric({
-            issueId: firstIssue.id,
+            signalId: firstSignal.id,
             occurrences: 3,
             lastSeenAt: new Date("2026-04-09T00:00:00.000Z"),
           }),
           makeWindowMetric({
-            issueId: secondIssue.id,
+            signalId: secondSignal.id,
             occurrences: 1,
             lastSeenAt: new Date("2026-04-08T00:00:00.000Z"),
           }),
           makeWindowMetric({
-            issueId: thirdIssue.id,
+            signalId: thirdSignal.id,
             occurrences: 2,
             lastSeenAt: new Date("2026-04-07T00:00:00.000Z"),
           }),
         ]),
-      aggregateByIssues: aggregateOccurrences([
-        makeOccurrence({ issueId: firstIssue.id }),
-        makeOccurrence({ issueId: secondIssue.id }),
-        makeOccurrence({ issueId: thirdIssue.id }),
+      aggregateBySignals: aggregateOccurrences([
+        makeOccurrence({ signalId: firstSignal.id }),
+        makeOccurrence({ signalId: secondSignal.id }),
+        makeOccurrence({ signalId: thirdSignal.id }),
       ]),
-      trendByIssues: () =>
+      trendBySignals: () =>
         Effect.succeed([
           {
-            issueId: secondIssue.id,
+            signalId: secondSignal.id,
             buckets: [{ bucket: "2026-04-08", count: 1 }],
           },
         ]),
     })
-    createIssueSearch([])
+    createSignalSearch([])
     traceCount = 5
 
     const result = await Effect.runPromise(
-      listIssuesUseCase({
+      listSignalsUseCase({
         organizationId,
         projectId,
         sort: {
@@ -1046,7 +1046,7 @@ describe("listIssuesUseCase", () => {
       }).pipe(
         Effect.provide(
           Layer.mergeAll(
-            Layer.succeed(IssueRepository, issueRepository),
+            Layer.succeed(SignalRepository, signalRepository),
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
@@ -1059,54 +1059,54 @@ describe("listIssuesUseCase", () => {
 
     expect(result.totalCount).toBe(3)
     expect(result.hasMore).toBe(true)
-    expect(result.items.map((item) => item.id)).toEqual([secondIssue.id])
+    expect(result.items.map((item) => item.id)).toEqual([secondSignal.id])
     expect(result.items[0]?.evaluations.map((evaluation) => evaluation.id)).toEqual([EvaluationId("3".repeat(24))])
-    expect(listByIssueIdsCalls).toEqual([[secondIssue.id]])
+    expect(listBySignalIdsCalls).toEqual([[secondSignal.id]])
   })
 
   it("honors ascending last-seen sorting", async () => {
     const now = new Date("2026-04-10T12:00:00.000Z")
-    const oldestIssue = makeIssue({
-      id: IssueId("k".repeat(24)),
+    const oldestSignal = makeSignal({
+      id: SignalId("k".repeat(24)),
       name: "Oldest issue",
     })
-    const newestIssue = makeIssue({
-      id: IssueId("l".repeat(24)),
+    const newestSignal = makeSignal({
+      id: SignalId("l".repeat(24)),
       name: "Newest issue",
     })
 
-    const { repository: issueRepository } = createFakeIssueRepository([oldestIssue, newestIssue])
+    const { repository: signalRepository } = createFakeSignalRepository([oldestSignal, newestSignal])
     const { repository: evaluationRepository } = createEvaluationRepository()
     const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
-      listIssueWindowMetrics: () =>
+      listSignalWindowMetrics: () =>
         Effect.succeed([
           makeWindowMetric({
-            issueId: oldestIssue.id,
+            signalId: oldestSignal.id,
             occurrences: 2,
             lastSeenAt: new Date("2026-04-02T00:00:00.000Z"),
           }),
           makeWindowMetric({
-            issueId: newestIssue.id,
+            signalId: newestSignal.id,
             occurrences: 1,
             lastSeenAt: new Date("2026-04-09T00:00:00.000Z"),
           }),
         ]),
-      aggregateByIssues: aggregateOccurrences([
+      aggregateBySignals: aggregateOccurrences([
         makeOccurrence({
-          issueId: oldestIssue.id,
+          signalId: oldestSignal.id,
           lastSeenAt: new Date("2026-04-02T00:00:00.000Z"),
         }),
         makeOccurrence({
-          issueId: newestIssue.id,
+          signalId: newestSignal.id,
           lastSeenAt: new Date("2026-04-09T00:00:00.000Z"),
         }),
       ]),
     })
-    createIssueSearch([])
+    createSignalSearch([])
     traceCount = 4
 
     const result = await Effect.runPromise(
-      listIssuesUseCase({
+      listSignalsUseCase({
         organizationId,
         projectId,
         sort: {
@@ -1117,7 +1117,7 @@ describe("listIssuesUseCase", () => {
       }).pipe(
         Effect.provide(
           Layer.mergeAll(
-            Layer.succeed(IssueRepository, issueRepository),
+            Layer.succeed(SignalRepository, signalRepository),
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
@@ -1128,7 +1128,7 @@ describe("listIssuesUseCase", () => {
       ),
     )
 
-    expect(result.items.map((item) => item.id)).toEqual([oldestIssue.id, newestIssue.id])
+    expect(result.items.map((item) => item.id)).toEqual([oldestSignal.id, newestSignal.id])
   })
 
   describe("priority grouping and assignee filtering", () => {
@@ -1141,36 +1141,36 @@ describe("listIssuesUseCase", () => {
      */
     const runTriageList = async (input: {
       readonly seeded: readonly {
-        readonly issue: Issue
+        readonly issue: Signal
         readonly occurrences?: number
         readonly lastSeenAt?: Date
       }[]
-      readonly options?: Partial<ListIssuesInput>
+      readonly options?: Partial<ListSignalsInput>
     }) => {
-      const { repository: issueRepository } = createFakeIssueRepository(input.seeded.map((entry) => entry.issue))
+      const { repository: signalRepository } = createFakeSignalRepository(input.seeded.map((entry) => entry.issue))
       const { repository: evaluationRepository } = createEvaluationRepository()
       const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
-        listIssueWindowMetrics: () =>
+        listSignalWindowMetrics: () =>
           Effect.succeed(
             input.seeded.map((entry) =>
               makeWindowMetric({
-                issueId: IssueId(entry.issue.id),
+                signalId: SignalId(entry.issue.id),
                 occurrences: entry.occurrences ?? 1,
                 lastSeenAt: entry.lastSeenAt ?? new Date("2026-04-09T00:00:00.000Z"),
               }),
             ),
           ),
-        aggregateByIssues: aggregateOccurrences(
-          input.seeded.map((entry) => makeOccurrence({ issueId: IssueId(entry.issue.id) })),
+        aggregateBySignals: aggregateOccurrences(
+          input.seeded.map((entry) => makeOccurrence({ signalId: SignalId(entry.issue.id) })),
         ),
       })
       traceCount = 10
 
       return Effect.runPromise(
-        listIssuesUseCase({ organizationId, projectId, now, ...input.options }).pipe(
+        listSignalsUseCase({ organizationId, projectId, now, ...input.options }).pipe(
           Effect.provide(
             Layer.mergeAll(
-              Layer.succeed(IssueRepository, issueRepository),
+              Layer.succeed(SignalRepository, signalRepository),
               Layer.succeed(EvaluationRepository, evaluationRepository),
               Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
               Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
@@ -1182,22 +1182,22 @@ describe("listIssuesUseCase", () => {
       )
     }
 
-    const lowIssue = makeIssue({ id: IssueId("a".repeat(24)), priority: "low" })
-    const urgentIssue = makeIssue({ id: IssueId("b".repeat(24)), priority: "urgent" })
-    const unsetIssue = makeIssue({ id: IssueId("c".repeat(24)), priority: null })
-    const mediumIssue = makeIssue({ id: IssueId("d".repeat(24)), priority: "medium" })
-    const highIssue = makeIssue({ id: IssueId("e".repeat(24)), priority: "high" })
-    const mixedPrioritySeed = [lowIssue, urgentIssue, unsetIssue, mediumIssue, highIssue].map((issue) => ({ issue }))
+    const lowSignal = makeSignal({ id: SignalId("a".repeat(24)), priority: "low" })
+    const urgentSignal = makeSignal({ id: SignalId("b".repeat(24)), priority: "urgent" })
+    const unsetSignal = makeSignal({ id: SignalId("c".repeat(24)), priority: null })
+    const mediumSignal = makeSignal({ id: SignalId("d".repeat(24)), priority: "medium" })
+    const highSignal = makeSignal({ id: SignalId("e".repeat(24)), priority: "high" })
+    const mixedPrioritySeed = [lowSignal, urgentSignal, unsetSignal, mediumSignal, highSignal].map((issue) => ({ issue }))
 
     it("groups by priority urgent → high → medium → low → none regardless of the selected sort", async () => {
       const result = await runTriageList({ seeded: mixedPrioritySeed })
 
       expect(result.items.map((item) => item.id)).toEqual([
-        urgentIssue.id,
-        highIssue.id,
-        mediumIssue.id,
-        lowIssue.id,
-        unsetIssue.id,
+        urgentSignal.id,
+        highSignal.id,
+        mediumSignal.id,
+        lowSignal.id,
+        unsetSignal.id,
       ])
       expect(result.priorityCounts).toEqual({ urgent: 1, high: 1, medium: 1, low: 1, none: 1 })
       expect(result.items[0]?.priority).toBe("urgent")
@@ -1205,10 +1205,10 @@ describe("listIssuesUseCase", () => {
     })
 
     it("applies the user-selected sort within each priority group", async () => {
-      const highQuiet = makeIssue({ id: IssueId("a".repeat(24)), priority: "high" })
-      const highBusy = makeIssue({ id: IssueId("b".repeat(24)), priority: "high" })
-      const lowBusy = makeIssue({ id: IssueId("c".repeat(24)), priority: "low" })
-      const lowQuiet = makeIssue({ id: IssueId("d".repeat(24)), priority: "low" })
+      const highQuiet = makeSignal({ id: SignalId("a".repeat(24)), priority: "high" })
+      const highBusy = makeSignal({ id: SignalId("b".repeat(24)), priority: "high" })
+      const lowBusy = makeSignal({ id: SignalId("c".repeat(24)), priority: "low" })
+      const lowQuiet = makeSignal({ id: SignalId("d".repeat(24)), priority: "low" })
 
       const result = await runTriageList({
         seeded: [
@@ -1229,7 +1229,7 @@ describe("listIssuesUseCase", () => {
         options: { limit: 2, offset: 2 },
       })
 
-      expect(result.items.map((item) => item.id)).toEqual([mediumIssue.id, lowIssue.id])
+      expect(result.items.map((item) => item.id)).toEqual([mediumSignal.id, lowSignal.id])
       expect(result.totalCount).toBe(5)
       expect(result.hasMore).toBe(true)
       // Header counts cover the whole filtered set, not just the loaded page.
@@ -1238,9 +1238,9 @@ describe("listIssuesUseCase", () => {
 
     const userA = "1".repeat(24)
     const userB = "2".repeat(24)
-    const assignedToA = makeIssue({ id: IssueId("a".repeat(24)), assigneeId: userA, priority: "high" })
-    const assignedToB = makeIssue({ id: IssueId("b".repeat(24)), assigneeId: userB })
-    const unassigned = makeIssue({ id: IssueId("c".repeat(24)), assigneeId: null })
+    const assignedToA = makeSignal({ id: SignalId("a".repeat(24)), assigneeId: userA, priority: "high" })
+    const assignedToB = makeSignal({ id: SignalId("b".repeat(24)), assigneeId: userB })
+    const unassigned = makeSignal({ id: SignalId("c".repeat(24)), assigneeId: null })
     const assigneeSeed = [
       { issue: assignedToA, occurrences: 2 },
       { issue: assignedToB, occurrences: 3 },
@@ -1284,9 +1284,9 @@ describe("listIssuesUseCase", () => {
     })
 
     it("scopes assignee counts to the selected lifecycle group", async () => {
-      const activeAssigned = makeIssue({ id: IssueId("a".repeat(24)), assigneeId: userA })
-      const resolvedAssigned = makeIssue({
-        id: IssueId("b".repeat(24)),
+      const activeAssigned = makeSignal({ id: SignalId("a".repeat(24)), assigneeId: userA })
+      const resolvedAssigned = makeSignal({
+        id: SignalId("b".repeat(24)),
         assigneeId: userA,
         resolvedAt: new Date("2026-04-08T00:00:00.000Z"),
       })

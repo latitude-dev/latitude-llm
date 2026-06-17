@@ -3,9 +3,9 @@ import {
   AdminProjectMetricsRepository,
   type ProjectAnnotationBucket,
   type ProjectMetricCountBucket,
-  type ProjectTopIssueOccurrence,
+  type ProjectTopSignalOccurrence,
 } from "@domain/admin"
-import { ChSqlClient, type ChSqlClientShape, IssueId, toRepositoryError } from "@domain/shared"
+import { ChSqlClient, type ChSqlClientShape, SignalId, toRepositoryError } from "@domain/shared"
 import { parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 
@@ -121,10 +121,10 @@ export const AdminProjectMetricsRepositoryLive = Layer.effect(
             Effect.mapError((error) => toRepositoryError(error, "getAnnotationHistogram")),
           ),
 
-      getTopIssuesByOccurrences: ({ organizationId, projectId, since, limit }) =>
+      getTopSignalsByOccurrences: ({ organizationId, projectId, since, limit }) =>
         chSqlClient
           .query(async (client) => {
-            // Mirrors `score-analytics-repository.listIssueWindowMetrics`
+            // Mirrors `score-analytics-repository.listSignalWindowMetrics`
             // shape — same WHERE, same GROUP BY — with the `issue_id != ''`
             // filter and a LIMIT. Excludes the empty sentinel that
             // appears for scores not bound to an issue.
@@ -152,14 +152,14 @@ export const AdminProjectMetricsRepositoryLive = Layer.effect(
             return result.json<{ issue_id: string; occurrences: string; last_seen_at: string }>()
           })
           .pipe(
-            Effect.map((rows): readonly ProjectTopIssueOccurrence[] =>
+            Effect.map((rows): readonly ProjectTopSignalOccurrence[] =>
               rows.map((row) => ({
-                issueId: IssueId(row.issue_id),
+                signalId: SignalId(row.issue_id),
                 occurrences: Number(row.occurrences),
                 lastSeenAt: parseCHDate(row.last_seen_at),
               })),
             ),
-            Effect.mapError((error) => toRepositoryError(error, "getTopIssuesByOccurrences")),
+            Effect.mapError((error) => toRepositoryError(error, "getTopSignalsByOccurrences")),
           ),
     }
   }),

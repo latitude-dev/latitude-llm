@@ -16,9 +16,9 @@ export interface GeneratedEvaluationDraft {
 
 export interface LoadedEvaluationAlignmentState {
   readonly evaluationId: string
-  readonly issueId: string
-  readonly issueName: string
-  readonly issueDescription: string
+  readonly signalId: string
+  readonly signalName: string
+  readonly signalDescription: string
   readonly name: string
   readonly description: string
   readonly alignedAt: string
@@ -56,9 +56,9 @@ export interface PersistEvaluationAlignmentResult {
 }
 
 export interface CollectedEvaluationAlignmentExamples {
-  readonly issueId: string
-  readonly issueName: string
-  readonly issueDescription: string
+  readonly signalId: string
+  readonly signalName: string
+  readonly signalDescription: string
   readonly positiveExamples: readonly HydratedEvaluationAlignmentExample[]
   readonly negativeExamples: readonly HydratedEvaluationAlignmentExample[]
 }

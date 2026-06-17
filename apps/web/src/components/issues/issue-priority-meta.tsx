@@ -9,13 +9,13 @@ import {
 } from "lucide-react"
 import type { ComponentProps } from "react"
 
-/** Manual issue triage priority. Mirrors `ISSUE_PRIORITIES` in `@domain/issues`. */
-export type IssuePriorityValue = "low" | "medium" | "high" | "urgent"
+/** Manual issue triage priority. Mirrors `SIGNAL_PRIORITIES` in `@domain/signals`. */
+export type SignalPriorityValue = "low" | "medium" | "high" | "urgent"
 
 /** Priority bucket on the grouped issues list; `"none"` = `priority: null`. */
-export type IssuePriorityGroupId = IssuePriorityValue | "none"
+export type SignalPriorityGroupId = SignalPriorityValue | "none"
 
-interface IssuePriorityMeta {
+interface SignalPriorityMeta {
   readonly label: string
   readonly icon: LucideIcon
   readonly iconColor: NonNullable<ComponentProps<typeof Icon>["color"]>
@@ -26,7 +26,7 @@ interface IssuePriorityMeta {
  * list group headers, the palette commands, and the notification renderers
  * can't drift apart.
  */
-export const ISSUE_PRIORITY_META: Record<IssuePriorityGroupId, IssuePriorityMeta> = {
+export const SIGNAL_PRIORITY_META: Record<SignalPriorityGroupId, SignalPriorityMeta> = {
   urgent: { label: "Urgent", icon: TriangleAlertIcon, iconColor: "destructive" },
   high: { label: "High", icon: SignalHighIcon, iconColor: "warningForeground" },
   medium: { label: "Medium", icon: SignalMediumIcon, iconColor: "foreground" },

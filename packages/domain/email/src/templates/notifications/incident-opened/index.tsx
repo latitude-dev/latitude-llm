@@ -9,7 +9,7 @@ import { resolveAssigneeName, resolveIncidentSource } from "../-incident-source.
 import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
 import { IncidentOpenedEmail } from "./EmailTemplate.tsx"
 
-const buildIssueUrl = (
+const buildSignalUrl = (
   ctx: NotificationEmailRenderContext,
   payload: Parameters<NotificationEmailRenderer<"incident.opened">>[0],
 ): string | undefined => {
@@ -23,7 +23,7 @@ export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"
     const source = yield* resolveIncidentSource(payload)
     const assigneeName = yield* resolveAssigneeName(payload.assigneeId)
     const sourceName = source.name ?? (isSavedSearch ? "a saved search" : "an issue")
-    const issueUrl = isSavedSearch ? undefined : buildIssueUrl(ctx, payload)
+    const signalUrl = isSavedSearch ? undefined : buildSignalUrl(ctx, payload)
 
     const chartUrl = buildChartUrl({
       notificationId: ctx.notificationId,
@@ -37,7 +37,7 @@ export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"
       incidentKind: payload.incidentKind,
       condition: payload.condition,
     })
-    const ctaUrl = isSavedSearch ? monitor?.url : issueUrl
+    const ctaUrl = isSavedSearch ? monitor?.url : signalUrl
     const subject = `Escalating: ${sourceName}`
 
     const html = yield* Effect.tryPromise({
@@ -49,7 +49,7 @@ export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"
             sourceId={payload.sourceId}
             sourceName={sourceName}
             description={source.description ?? undefined}
-            issueUrl={issueUrl}
+            signalUrl={signalUrl}
             chartUrl={chartUrl}
             notificationCreatedAt={ctx.notificationCreatedAt}
             organizationName={ctx.organization.name}

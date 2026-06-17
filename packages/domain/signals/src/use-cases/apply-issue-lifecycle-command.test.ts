@@ -5,31 +5,31 @@ import {
   emptyEvaluationAlignment,
 } from "@domain/evaluations"
 import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
-import { EvaluationId, IssueId, OrganizationId, SettingsReader, SqlClient } from "@domain/shared"
+import { EvaluationId, SignalId, OrganizationId, SettingsReader, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import type { Issue } from "../entities/issue.ts"
-import { createIssueCentroid } from "../helpers.ts"
-import { IssueRepository } from "../ports/issue-repository.ts"
-import { createFakeIssueRepository } from "../testing/fake-issue-repository.ts"
-import { applyIssueLifecycleCommandUseCase } from "./apply-issue-lifecycle-command.ts"
+import type { Signal } from "../entities/issue.ts"
+import { createSignalCentroid } from "../helpers.ts"
+import { SignalRepository } from "../ports/issue-repository.ts"
+import { createFakeSignalRepository } from "../testing/fake-issue-repository.ts"
+import { applySignalLifecycleCommandUseCase } from "./apply-issue-lifecycle-command.ts"
 
 const organizationId = "oooooooooooooooooooooooo"
 const projectId = "pppppppppppppppppppppppp"
 const otherProjectId = "qqqqqqqqqqqqqqqqqqqqqqqq"
 
-const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
-  id: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
+const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
+  id: SignalId("iiiiiiiiiiiiiiiiiiiiiiii"),
   slug: "test-issue",
   organizationId,
   projectId,
-  name: "Issue lifecycle candidate",
+  name: "Signal lifecycle candidate",
   description: "The assistant fails in a repeatable way.",
   source: "annotation",
   assigneeId: null,
   priority: null,
-  centroid: createIssueCentroid(),
+  centroid: createSignalCentroid(),
   clusteredAt: new Date("2026-03-20T10:00:00.000Z"),
   escalatedAt: null,
   resolvedAt: null,
@@ -43,7 +43,7 @@ const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation => ({
   id: EvaluationId("eeeeeeeeeeeeeeeeeeeeeeee"),
   organizationId,
   projectId,
-  issueId: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
+  signalId: SignalId("iiiiiiiiiiiiiiiiiiiiiiii"),
   name: "Monitor the issue",
   description: "Generated evaluation",
   script: "return { passed: false }",
@@ -59,11 +59,11 @@ const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation => ({
 
 const createFakeEvaluationRepository = (seed: readonly Evaluation[] = []) => {
   const evaluations = new Map(seed.map((evaluation) => [evaluation.id, evaluation] as const))
-  const softDeleteByIssueIdCalls: Array<{ projectId: string; issueId: string }> = []
+  const softDeleteBySignalIdCalls: Array<{ projectId: string; signalId: string }> = []
 
   return {
     evaluations,
-    softDeleteByIssueIdCalls,
+    softDeleteBySignalIdCalls,
     repository: {
       findById: (id: string) =>
         Effect.sync(() => {
@@ -86,19 +86,19 @@ const createFakeEvaluationRepository = (seed: readonly Evaluation[] = []) => {
           limit: evaluations.size,
           offset: 0,
         })),
-      listByIssueId: ({ projectId, issueId }: { readonly projectId: string; readonly issueId: string }) =>
+      listBySignalId: ({ projectId, signalId }: { readonly projectId: string; readonly signalId: string }) =>
         Effect.sync(() => ({
           items: [...evaluations.values()].filter(
-            (evaluation) => evaluation.projectId === projectId && evaluation.issueId === issueId,
+            (evaluation) => evaluation.projectId === projectId && evaluation.signalId === signalId,
           ),
           hasMore: false,
           limit: evaluations.size,
           offset: 0,
         })),
-      listByIssueIds: ({ projectId, issueIds }: { readonly projectId: string; readonly issueIds: readonly string[] }) =>
+      listBySignalIds: ({ projectId, signalIds }: { readonly projectId: string; readonly signalIds: readonly string[] }) =>
         Effect.sync(() => ({
           items: [...evaluations.values()].filter(
-            (evaluation) => evaluation.projectId === projectId && issueIds.includes(evaluation.issueId),
+            (evaluation) => evaluation.projectId === projectId && signalIds.includes(evaluation.signalId),
           ),
           hasMore: false,
           limit: evaluations.size,
@@ -119,12 +119,12 @@ const createFakeEvaluationRepository = (seed: readonly Evaluation[] = []) => {
         }),
       unarchive: (_id: string) => Effect.void,
       softDelete: (_id: string) => Effect.void,
-      softDeleteByIssueId: ({ projectId, issueId }: { readonly projectId: string; readonly issueId: string }) =>
+      softDeleteBySignalId: ({ projectId, signalId }: { readonly projectId: string; readonly signalId: string }) =>
         Effect.sync(() => {
-          softDeleteByIssueIdCalls.push({ projectId, issueId })
+          softDeleteBySignalIdCalls.push({ projectId, signalId })
 
           for (const evaluation of evaluations.values()) {
-            if (evaluation.projectId === projectId && evaluation.issueId === issueId && evaluation.deletedAt === null) {
+            if (evaluation.projectId === projectId && evaluation.signalId === signalId && evaluation.deletedAt === null) {
               evaluations.set(EvaluationId(evaluation.id), {
                 ...evaluation,
                 deletedAt: new Date("2026-04-20T00:00:00.000Z"),
@@ -153,12 +153,12 @@ const makeSettingsReader = (input: {
   })
 
 const makeProvider = (input: {
-  readonly issueRepository: ReturnType<typeof createFakeIssueRepository>["repository"]
+  readonly signalRepository: ReturnType<typeof createFakeSignalRepository>["repository"]
   readonly evaluationRepository: ReturnType<typeof createFakeEvaluationRepository>["repository"]
   readonly organizationKeepMonitoring?: boolean
   readonly projectKeepMonitoring?: boolean
   // Optional sink that captures every outbox event the use-case writes, so
-  // tests can assert on the emitted `IssueEscalationEnded` events.
+  // tests can assert on the emitted `SignalEscalationEnded` events.
   readonly events?: OutboxWriteEvent[]
 }) => {
   const settingsReaderInput: {
@@ -177,7 +177,7 @@ const makeProvider = (input: {
   const events = input.events ?? []
 
   return Layer.mergeAll(
-    Layer.succeed(IssueRepository, input.issueRepository),
+    Layer.succeed(SignalRepository, input.signalRepository),
     Layer.succeed(EvaluationRepository, input.evaluationRepository),
     makeSettingsReader(settingsReaderInput),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(organizationId) })),
@@ -190,28 +190,28 @@ const makeProvider = (input: {
   )
 }
 
-describe("applyIssueLifecycleCommandUseCase", () => {
+describe("applySignalLifecycleCommandUseCase", () => {
   it("resolves issues using the project-over-organization keepMonitoring default", async () => {
     const now = new Date("2026-04-10T12:00:00.000Z")
-    const issue = makeIssue()
+    const issue = makeSignal()
     const evaluation = makeEvaluation()
-    const { repository: issueRepository, issues } = createFakeIssueRepository([issue])
+    const { repository: signalRepository, issues } = createFakeSignalRepository([issue])
     const {
       repository: evaluationRepository,
       evaluations,
-      softDeleteByIssueIdCalls,
+      softDeleteBySignalIdCalls,
     } = createFakeEvaluationRepository([evaluation])
 
     const result = await Effect.runPromise(
-      applyIssueLifecycleCommandUseCase({
+      applySignalLifecycleCommandUseCase({
         projectId,
-        issueIds: [issue.id],
+        signalIds: [issue.id],
         command: "resolve",
         now,
       }).pipe(
         Effect.provide(
           makeProvider({
-            issueRepository,
+            signalRepository,
             evaluationRepository,
             organizationKeepMonitoring: false,
             projectKeepMonitoring: true,
@@ -223,7 +223,7 @@ describe("applyIssueLifecycleCommandUseCase", () => {
     expect(result.keepMonitoring).toBe(true)
     expect(result.items).toEqual([
       {
-        issueId: issue.id,
+        signalId: issue.id,
         resolvedAt: now,
         ignoredAt: null,
         updatedAt: now,
@@ -231,76 +231,76 @@ describe("applyIssueLifecycleCommandUseCase", () => {
       },
     ])
     expect(issues.get(issue.id)?.resolvedAt).toEqual(now)
-    expect(softDeleteByIssueIdCalls).toEqual([])
+    expect(softDeleteBySignalIdCalls).toEqual([])
     expect(evaluations.get(evaluation.id)?.deletedAt).toBeNull()
   })
 
   it("soft deletes linked evaluations when resolving with keepMonitoring=false", async () => {
     const now = new Date("2026-04-11T09:00:00.000Z")
-    const firstIssue = makeIssue({
-      id: IssueId("aaaaaaaaaaaaaaaaaaaaaaaa"),
+    const firstSignal = makeSignal({
+      id: SignalId("aaaaaaaaaaaaaaaaaaaaaaaa"),
     })
-    const secondIssue = makeIssue({
-      id: IssueId("bbbbbbbbbbbbbbbbbbbbbbbb"),
+    const secondSignal = makeSignal({
+      id: SignalId("bbbbbbbbbbbbbbbbbbbbbbbb"),
     })
     const firstEvaluation = makeEvaluation({
       id: EvaluationId("cccccccccccccccccccccccc"),
-      issueId: firstIssue.id,
+      signalId: firstSignal.id,
     })
     const secondEvaluation = makeEvaluation({
       id: EvaluationId("dddddddddddddddddddddddd"),
-      issueId: secondIssue.id,
+      signalId: secondSignal.id,
     })
-    const { repository: issueRepository, issues } = createFakeIssueRepository([firstIssue, secondIssue])
+    const { repository: signalRepository, issues } = createFakeSignalRepository([firstSignal, secondSignal])
     const {
       repository: evaluationRepository,
       evaluations,
-      softDeleteByIssueIdCalls,
+      softDeleteBySignalIdCalls,
     } = createFakeEvaluationRepository([firstEvaluation, secondEvaluation])
 
     const result = await Effect.runPromise(
-      applyIssueLifecycleCommandUseCase({
+      applySignalLifecycleCommandUseCase({
         projectId,
-        issueIds: [firstIssue.id, secondIssue.id, firstIssue.id],
+        signalIds: [firstSignal.id, secondSignal.id, firstSignal.id],
         command: "resolve",
         keepMonitoring: false,
         now,
-      }).pipe(Effect.provide(makeProvider({ issueRepository, evaluationRepository }))),
+      }).pipe(Effect.provide(makeProvider({ signalRepository, evaluationRepository }))),
     )
 
     expect(result.keepMonitoring).toBe(false)
     expect(result.items).toHaveLength(2)
-    expect(softDeleteByIssueIdCalls).toEqual([
-      { projectId, issueId: firstIssue.id },
-      { projectId, issueId: secondIssue.id },
+    expect(softDeleteBySignalIdCalls).toEqual([
+      { projectId, signalId: firstSignal.id },
+      { projectId, signalId: secondSignal.id },
     ])
-    expect(issues.get(firstIssue.id)?.resolvedAt).toEqual(now)
-    expect(issues.get(secondIssue.id)?.resolvedAt).toEqual(now)
+    expect(issues.get(firstSignal.id)?.resolvedAt).toEqual(now)
+    expect(issues.get(secondSignal.id)?.resolvedAt).toEqual(now)
     expect(evaluations.get(firstEvaluation.id)?.deletedAt).not.toBeNull()
     expect(evaluations.get(secondEvaluation.id)?.deletedAt).not.toBeNull()
   })
 
   it("soft deletes linked evaluations immediately when ignoring an issue", async () => {
     const now = new Date("2026-04-12T09:00:00.000Z")
-    const issue = makeIssue()
+    const issue = makeSignal()
     const evaluation = makeEvaluation()
-    const { repository: issueRepository, issues } = createFakeIssueRepository([issue])
+    const { repository: signalRepository, issues } = createFakeSignalRepository([issue])
     const {
       repository: evaluationRepository,
       evaluations,
-      softDeleteByIssueIdCalls,
+      softDeleteBySignalIdCalls,
     } = createFakeEvaluationRepository([evaluation])
 
     const result = await Effect.runPromise(
-      applyIssueLifecycleCommandUseCase({
+      applySignalLifecycleCommandUseCase({
         projectId,
-        issueIds: [issue.id],
+        signalIds: [issue.id],
         command: "ignore",
         now,
       }).pipe(
         Effect.provide(
           makeProvider({
-            issueRepository,
+            signalRepository,
             evaluationRepository,
             organizationKeepMonitoring: true,
           }),
@@ -310,161 +310,161 @@ describe("applyIssueLifecycleCommandUseCase", () => {
 
     expect(result.keepMonitoring).toBeNull()
     expect(issues.get(issue.id)?.ignoredAt).toEqual(now)
-    expect(softDeleteByIssueIdCalls).toEqual([{ projectId, issueId: issue.id }])
+    expect(softDeleteBySignalIdCalls).toEqual([{ projectId, signalId: issue.id }])
     expect(evaluations.get(evaluation.id)?.deletedAt).not.toBeNull()
   })
 
   it("clears resolved and ignored flags without reactivating evaluations", async () => {
     const now = new Date("2026-04-13T09:00:00.000Z")
-    const issue = makeIssue({
+    const issue = makeSignal({
       resolvedAt: new Date("2026-04-01T00:00:00.000Z"),
       ignoredAt: new Date("2026-04-02T00:00:00.000Z"),
     })
     const archivedEvaluation = makeEvaluation({
       archivedAt: new Date("2026-04-02T00:00:00.000Z"),
     })
-    const { repository: issueRepository, issues } = createFakeIssueRepository([issue])
+    const { repository: signalRepository, issues } = createFakeSignalRepository([issue])
     const {
       repository: evaluationRepository,
       evaluations,
-      softDeleteByIssueIdCalls,
+      softDeleteBySignalIdCalls,
     } = createFakeEvaluationRepository([archivedEvaluation])
 
     await Effect.runPromise(
-      applyIssueLifecycleCommandUseCase({
+      applySignalLifecycleCommandUseCase({
         projectId,
-        issueIds: [issue.id],
+        signalIds: [issue.id],
         command: "unresolve",
         now,
-      }).pipe(Effect.provide(makeProvider({ issueRepository, evaluationRepository }))),
+      }).pipe(Effect.provide(makeProvider({ signalRepository, evaluationRepository }))),
     )
     await Effect.runPromise(
-      applyIssueLifecycleCommandUseCase({
+      applySignalLifecycleCommandUseCase({
         projectId,
-        issueIds: [issue.id],
+        signalIds: [issue.id],
         command: "unignore",
         now,
-      }).pipe(Effect.provide(makeProvider({ issueRepository, evaluationRepository }))),
+      }).pipe(Effect.provide(makeProvider({ signalRepository, evaluationRepository }))),
     )
 
     expect(issues.get(issue.id)?.resolvedAt).toBeNull()
     expect(issues.get(issue.id)?.ignoredAt).toBeNull()
     expect(issues.get(issue.id)?.updatedAt).toEqual(now)
-    expect(softDeleteByIssueIdCalls).toEqual([])
+    expect(softDeleteBySignalIdCalls).toEqual([])
     expect(evaluations.get(archivedEvaluation.id)?.archivedAt).toEqual(new Date("2026-04-02T00:00:00.000Z"))
   })
 
   it("is idempotent when a lifecycle flag is already set", async () => {
-    const issue = makeIssue({
+    const issue = makeSignal({
       resolvedAt: new Date("2026-04-01T00:00:00.000Z"),
     })
     const evaluation = makeEvaluation()
-    const { repository: issueRepository, issues } = createFakeIssueRepository([issue])
-    const { repository: evaluationRepository, softDeleteByIssueIdCalls } = createFakeEvaluationRepository([evaluation])
+    const { repository: signalRepository, issues } = createFakeSignalRepository([issue])
+    const { repository: evaluationRepository, softDeleteBySignalIdCalls } = createFakeEvaluationRepository([evaluation])
 
     const result = await Effect.runPromise(
-      applyIssueLifecycleCommandUseCase({
+      applySignalLifecycleCommandUseCase({
         projectId,
-        issueIds: [issue.id],
+        signalIds: [issue.id],
         command: "resolve",
         keepMonitoring: false,
-      }).pipe(Effect.provide(makeProvider({ issueRepository, evaluationRepository }))),
+      }).pipe(Effect.provide(makeProvider({ signalRepository, evaluationRepository }))),
     )
 
     expect(result.items[0]?.changed).toBe(false)
     expect(issues.get(issue.id)?.resolvedAt).toEqual(new Date("2026-04-01T00:00:00.000Z"))
-    expect(softDeleteByIssueIdCalls).toEqual([])
+    expect(softDeleteBySignalIdCalls).toEqual([])
   })
 
   it("rejects issues that do not belong to the requested project", async () => {
-    const issue = makeIssue({
+    const issue = makeSignal({
       projectId: otherProjectId,
     })
-    const { repository: issueRepository } = createFakeIssueRepository([issue])
+    const { repository: signalRepository } = createFakeSignalRepository([issue])
     const { repository: evaluationRepository } = createFakeEvaluationRepository()
 
     await expect(
       Effect.runPromise(
-        applyIssueLifecycleCommandUseCase({
+        applySignalLifecycleCommandUseCase({
           projectId,
-          issueIds: [issue.id],
+          signalIds: [issue.id],
           command: "ignore",
-        }).pipe(Effect.provide(makeProvider({ issueRepository, evaluationRepository }))),
+        }).pipe(Effect.provide(makeProvider({ signalRepository, evaluationRepository }))),
       ),
     ).rejects.toMatchObject({
       _tag: "BadRequestError",
     })
   })
 
-  it("emits IssueEscalationEnded with reason='resolved' when resolving changes the issue", async () => {
+  it("emits SignalEscalationEnded with reason='resolved' when resolving changes the issue", async () => {
     const now = new Date("2026-04-14T09:00:00.000Z")
-    const issue = makeIssue()
-    const { repository: issueRepository } = createFakeIssueRepository([issue])
+    const issue = makeSignal()
+    const { repository: signalRepository } = createFakeSignalRepository([issue])
     const { repository: evaluationRepository } = createFakeEvaluationRepository()
     const events: OutboxWriteEvent[] = []
 
     await Effect.runPromise(
-      applyIssueLifecycleCommandUseCase({
+      applySignalLifecycleCommandUseCase({
         projectId,
-        issueIds: [issue.id],
+        signalIds: [issue.id],
         command: "resolve",
         keepMonitoring: true,
         now,
-      }).pipe(Effect.provide(makeProvider({ issueRepository, evaluationRepository, events }))),
+      }).pipe(Effect.provide(makeProvider({ signalRepository, evaluationRepository, events }))),
     )
 
     expect(events).toHaveLength(1)
     expect(events[0]).toMatchObject({
-      eventName: "IssueEscalationEnded",
+      eventName: "SignalEscalationEnded",
       aggregateType: "issue",
       aggregateId: issue.id,
       organizationId,
       payload: {
         organizationId,
         projectId,
-        issueId: issue.id,
+        signalId: issue.id,
         endedAt: now.toISOString(),
         reason: "resolved",
       },
     })
   })
 
-  it("emits IssueEscalationEnded with reason='ignored' when ignoring changes the issue", async () => {
+  it("emits SignalEscalationEnded with reason='ignored' when ignoring changes the issue", async () => {
     const now = new Date("2026-04-14T10:00:00.000Z")
-    const issue = makeIssue()
-    const { repository: issueRepository } = createFakeIssueRepository([issue])
+    const issue = makeSignal()
+    const { repository: signalRepository } = createFakeSignalRepository([issue])
     const { repository: evaluationRepository } = createFakeEvaluationRepository()
     const events: OutboxWriteEvent[] = []
 
     await Effect.runPromise(
-      applyIssueLifecycleCommandUseCase({
+      applySignalLifecycleCommandUseCase({
         projectId,
-        issueIds: [issue.id],
+        signalIds: [issue.id],
         command: "ignore",
         now,
-      }).pipe(Effect.provide(makeProvider({ issueRepository, evaluationRepository, events }))),
+      }).pipe(Effect.provide(makeProvider({ signalRepository, evaluationRepository, events }))),
     )
 
     expect(events).toHaveLength(1)
     expect(events[0]).toMatchObject({
-      eventName: "IssueEscalationEnded",
-      payload: { issueId: issue.id, reason: "ignored" },
+      eventName: "SignalEscalationEnded",
+      payload: { signalId: issue.id, reason: "ignored" },
     })
   })
 
   it("emits no event when the lifecycle command is a no-op (already resolved)", async () => {
-    const issue = makeIssue({ resolvedAt: new Date("2026-04-01T00:00:00.000Z") })
-    const { repository: issueRepository } = createFakeIssueRepository([issue])
+    const issue = makeSignal({ resolvedAt: new Date("2026-04-01T00:00:00.000Z") })
+    const { repository: signalRepository } = createFakeSignalRepository([issue])
     const { repository: evaluationRepository } = createFakeEvaluationRepository()
     const events: OutboxWriteEvent[] = []
 
     await Effect.runPromise(
-      applyIssueLifecycleCommandUseCase({
+      applySignalLifecycleCommandUseCase({
         projectId,
-        issueIds: [issue.id],
+        signalIds: [issue.id],
         command: "resolve",
         keepMonitoring: true,
-      }).pipe(Effect.provide(makeProvider({ issueRepository, evaluationRepository, events }))),
+      }).pipe(Effect.provide(makeProvider({ signalRepository, evaluationRepository, events }))),
     )
 
     expect(events).toEqual([])
@@ -472,29 +472,29 @@ describe("applyIssueLifecycleCommandUseCase", () => {
 
   it("emits no escalation-ended event for unresolve / unignore", async () => {
     const now = new Date("2026-04-15T09:00:00.000Z")
-    const issue = makeIssue({
+    const issue = makeSignal({
       resolvedAt: new Date("2026-04-01T00:00:00.000Z"),
       ignoredAt: new Date("2026-04-02T00:00:00.000Z"),
     })
-    const { repository: issueRepository } = createFakeIssueRepository([issue])
+    const { repository: signalRepository } = createFakeSignalRepository([issue])
     const { repository: evaluationRepository } = createFakeEvaluationRepository()
     const events: OutboxWriteEvent[] = []
 
     await Effect.runPromise(
-      applyIssueLifecycleCommandUseCase({
+      applySignalLifecycleCommandUseCase({
         projectId,
-        issueIds: [issue.id],
+        signalIds: [issue.id],
         command: "unresolve",
         now,
-      }).pipe(Effect.provide(makeProvider({ issueRepository, evaluationRepository, events }))),
+      }).pipe(Effect.provide(makeProvider({ signalRepository, evaluationRepository, events }))),
     )
     await Effect.runPromise(
-      applyIssueLifecycleCommandUseCase({
+      applySignalLifecycleCommandUseCase({
         projectId,
-        issueIds: [issue.id],
+        signalIds: [issue.id],
         command: "unignore",
         now,
-      }).pipe(Effect.provide(makeProvider({ issueRepository, evaluationRepository, events }))),
+      }).pipe(Effect.provide(makeProvider({ signalRepository, evaluationRepository, events }))),
     )
 
     expect(events).toEqual([])
@@ -502,32 +502,32 @@ describe("applyIssueLifecycleCommandUseCase", () => {
 
   it("emits one escalation-ended event per changed issue on a bulk resolve", async () => {
     const now = new Date("2026-04-16T09:00:00.000Z")
-    const firstIssue = makeIssue({ id: IssueId("aaaaaaaaaaaaaaaaaaaaaaaa") })
+    const firstSignal = makeSignal({ id: SignalId("aaaaaaaaaaaaaaaaaaaaaaaa") })
     // Already resolved → no-op → no event.
-    const secondIssue = makeIssue({
-      id: IssueId("bbbbbbbbbbbbbbbbbbbbbbbb"),
+    const secondSignal = makeSignal({
+      id: SignalId("bbbbbbbbbbbbbbbbbbbbbbbb"),
       resolvedAt: new Date("2026-04-01T00:00:00.000Z"),
     })
-    const thirdIssue = makeIssue({ id: IssueId("cccccccccccccccccccccccc") })
-    const { repository: issueRepository } = createFakeIssueRepository([firstIssue, secondIssue, thirdIssue])
+    const thirdSignal = makeSignal({ id: SignalId("cccccccccccccccccccccccc") })
+    const { repository: signalRepository } = createFakeSignalRepository([firstSignal, secondSignal, thirdSignal])
     const { repository: evaluationRepository } = createFakeEvaluationRepository()
     const events: OutboxWriteEvent[] = []
 
     await Effect.runPromise(
-      applyIssueLifecycleCommandUseCase({
+      applySignalLifecycleCommandUseCase({
         projectId,
-        issueIds: [firstIssue.id, secondIssue.id, thirdIssue.id],
+        signalIds: [firstSignal.id, secondSignal.id, thirdSignal.id],
         command: "resolve",
         keepMonitoring: true,
         now,
-      }).pipe(Effect.provide(makeProvider({ issueRepository, evaluationRepository, events }))),
+      }).pipe(Effect.provide(makeProvider({ signalRepository, evaluationRepository, events }))),
     )
 
     expect(events).toHaveLength(2)
-    expect(events.map((event) => (event.payload as { issueId: string }).issueId)).toEqual([
-      firstIssue.id,
-      thirdIssue.id,
+    expect(events.map((event) => (event.payload as { signalId: string }).signalId)).toEqual([
+      firstSignal.id,
+      thirdSignal.id,
     ])
-    expect(events.every((event) => event.eventName === "IssueEscalationEnded")).toBe(true)
+    expect(events.every((event) => event.eventName === "SignalEscalationEnded")).toBe(true)
   })
 })

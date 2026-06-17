@@ -4,7 +4,7 @@ import {
   BadRequestError,
   type ConcurrentSqlTransactionError,
   cuidSchema,
-  issueIdSchema,
+  signalIdSchema,
   type NotFoundError,
   ProjectId,
   type RepositoryError,
@@ -14,70 +14,70 @@ import {
 } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
-import type { Issue } from "../entities/issue.ts"
-import { IssueRepository } from "../ports/issue-repository.ts"
+import type { Signal } from "../entities/issue.ts"
+import { SignalRepository } from "../ports/issue-repository.ts"
 
-export const issueLifecycleCommandSchema = z.enum(["resolve", "unresolve", "ignore", "unignore"])
+export const signalLifecycleCommandSchema = z.enum(["resolve", "unresolve", "ignore", "unignore"])
 
-export type IssueLifecycleCommand = z.infer<typeof issueLifecycleCommandSchema>
+export type SignalLifecycleCommand = z.infer<typeof signalLifecycleCommandSchema>
 
-const applyIssueLifecycleCommandInputSchema = z.object({
+const applySignalLifecycleCommandInputSchema = z.object({
   projectId: cuidSchema.transform(ProjectId),
-  issueIds: z.array(issueIdSchema).min(1),
-  command: issueLifecycleCommandSchema,
+  signalIds: z.array(signalIdSchema).min(1),
+  command: signalLifecycleCommandSchema,
   keepMonitoring: z.boolean().optional(),
   now: z.date().optional(),
 })
 
-export type ApplyIssueLifecycleCommandInput = z.input<typeof applyIssueLifecycleCommandInputSchema>
+export type ApplySignalLifecycleCommandInput = z.input<typeof applySignalLifecycleCommandInputSchema>
 
-export interface IssueLifecycleCommandItem {
-  readonly issueId: string
+export interface SignalLifecycleCommandItem {
+  readonly signalId: string
   readonly resolvedAt: Date | null
   readonly ignoredAt: Date | null
   readonly updatedAt: Date
   readonly changed: boolean
 }
 
-export interface ApplyIssueLifecycleCommandResult {
-  readonly command: IssueLifecycleCommand
+export interface ApplySignalLifecycleCommandResult {
+  readonly command: SignalLifecycleCommand
   readonly keepMonitoring: boolean | null
-  readonly items: readonly IssueLifecycleCommandItem[]
+  readonly items: readonly SignalLifecycleCommandItem[]
 }
 
-export type ApplyIssueLifecycleCommandError =
+export type ApplySignalLifecycleCommandError =
   | BadRequestError
   | ConcurrentSqlTransactionError
   | NotFoundError
   | RepositoryError
 
-const toLifecycleCommandItem = (issue: Issue, changed: boolean): IssueLifecycleCommandItem => ({
-  issueId: issue.id,
+const toLifecycleCommandItem = (issue: Signal, changed: boolean): SignalLifecycleCommandItem => ({
+  signalId: issue.id,
   resolvedAt: issue.resolvedAt,
   ignoredAt: issue.ignoredAt,
   updatedAt: issue.updatedAt,
   changed,
 })
 
-const applyCommandToIssue = (input: {
-  readonly issue: Issue
-  readonly command: IssueLifecycleCommand
+const applyCommandToSignal = (input: {
+  readonly issue: Signal
+  readonly command: SignalLifecycleCommand
   readonly now: Date
 }): {
-  readonly nextIssue: Issue
+  readonly nextSignal: Signal
   readonly changed: boolean
 } => {
   switch (input.command) {
     case "resolve":
       if (input.issue.resolvedAt !== null) {
         return {
-          nextIssue: input.issue,
+          nextSignal: input.issue,
           changed: false,
         }
       }
 
       return {
-        nextIssue: {
+        nextSignal: {
           ...input.issue,
           resolvedAt: input.now,
           updatedAt: input.now,
@@ -87,13 +87,13 @@ const applyCommandToIssue = (input: {
     case "unresolve":
       if (input.issue.resolvedAt === null) {
         return {
-          nextIssue: input.issue,
+          nextSignal: input.issue,
           changed: false,
         }
       }
 
       return {
-        nextIssue: {
+        nextSignal: {
           ...input.issue,
           resolvedAt: null,
           updatedAt: input.now,
@@ -103,13 +103,13 @@ const applyCommandToIssue = (input: {
     case "ignore":
       if (input.issue.ignoredAt !== null) {
         return {
-          nextIssue: input.issue,
+          nextSignal: input.issue,
           changed: false,
         }
       }
 
       return {
-        nextIssue: {
+        nextSignal: {
           ...input.issue,
           ignoredAt: input.now,
           updatedAt: input.now,
@@ -119,13 +119,13 @@ const applyCommandToIssue = (input: {
     case "unignore":
       if (input.issue.ignoredAt === null) {
         return {
-          nextIssue: input.issue,
+          nextSignal: input.issue,
           changed: false,
         }
       }
 
       return {
-        nextIssue: {
+        nextSignal: {
           ...input.issue,
           ignoredAt: null,
           updatedAt: input.now,
@@ -136,7 +136,7 @@ const applyCommandToIssue = (input: {
 }
 
 const shouldSoftDeleteLinkedEvaluations = (input: {
-  readonly command: IssueLifecycleCommand
+  readonly command: SignalLifecycleCommand
   readonly keepMonitoring: boolean | null
 }): boolean => {
   if (input.command === "ignore") {
@@ -146,9 +146,9 @@ const shouldSoftDeleteLinkedEvaluations = (input: {
   return input.command === "resolve" && input.keepMonitoring === false
 }
 
-export const applyIssueLifecycleCommandUseCase = (input: ApplyIssueLifecycleCommandInput) =>
+export const applySignalLifecycleCommandUseCase = (input: ApplySignalLifecycleCommandInput) =>
   Effect.gen(function* () {
-    const parsed = applyIssueLifecycleCommandInputSchema.parse(input)
+    const parsed = applySignalLifecycleCommandInputSchema.parse(input)
     yield* Effect.annotateCurrentSpan("projectId", String(parsed.projectId))
     yield* Effect.annotateCurrentSpan("command", parsed.command)
     const sqlClient = yield* SqlClient
@@ -156,61 +156,61 @@ export const applyIssueLifecycleCommandUseCase = (input: ApplyIssueLifecycleComm
       parsed.command === "resolve"
         ? (parsed.keepMonitoring ?? (yield* resolveSettings({ projectId: parsed.projectId })).keepMonitoring)
         : null
-    const issueIds = [...new Set(parsed.issueIds)]
+    const signalIds = [...new Set(parsed.signalIds)]
     const now = parsed.now ?? new Date()
 
     return yield* sqlClient.transaction(
       Effect.gen(function* () {
-        const issueRepository = yield* IssueRepository
+        const signalRepository = yield* SignalRepository
         const evaluationRepository = yield* EvaluationRepository
         const outboxEventWriter = yield* OutboxEventWriter
-        const items: IssueLifecycleCommandItem[] = []
+        const items: SignalLifecycleCommandItem[] = []
 
-        for (const issueId of issueIds) {
-          const issue = yield* issueRepository.findByIdForUpdate(issueId)
+        for (const signalId of signalIds) {
+          const issue = yield* signalRepository.findByIdForUpdate(signalId)
 
           if (issue.projectId !== parsed.projectId) {
             return yield* new BadRequestError({
-              message: `Issue ${issue.id} does not belong to project ${parsed.projectId}`,
+              message: `Signal ${issue.id} does not belong to project ${parsed.projectId}`,
             })
           }
 
-          const { nextIssue, changed } = applyCommandToIssue({
+          const { nextSignal, changed } = applyCommandToSignal({
             issue,
             command: parsed.command,
             now,
           })
 
           if (changed) {
-            yield* issueRepository.save(nextIssue)
+            yield* signalRepository.save(nextSignal)
 
             if (shouldSoftDeleteLinkedEvaluations({ command: parsed.command, keepMonitoring })) {
               // Temporary until the evaluations dashboard exists: stopping issue-level monitoring
               // should remove linked evaluations from the issue UI entirely, so we soft delete
               // them instead of moving them into the archived/read-only state.
-              yield* evaluationRepository.softDeleteByIssueId({
+              yield* evaluationRepository.softDeleteBySignalId({
                 projectId: parsed.projectId,
-                issueId,
+                signalId,
               })
             }
 
             // Resolving or ignoring an issue makes any open `issue.escalating`
             // incident stale — ignored/resolved issues no longer drive lifecycle
-            // or alerting transitions. Emit `IssueEscalationEnded` so the
+            // or alerting transitions. Emit `SignalEscalationEnded` so the
             // alert-incidents worker closes the open row (idempotent no-op when
             // none is open). The `resolved`/`ignored` reason flows through to
             // `IncidentClosed`, where the notification fan-out is suppressed —
             // a manual close shouldn't fire a recovery notification.
             if (parsed.command === "resolve" || parsed.command === "ignore") {
               yield* outboxEventWriter.write({
-                eventName: "IssueEscalationEnded",
+                eventName: "SignalEscalationEnded",
                 aggregateType: "issue",
-                aggregateId: nextIssue.id,
-                organizationId: nextIssue.organizationId,
+                aggregateId: nextSignal.id,
+                organizationId: nextSignal.organizationId,
                 payload: {
-                  organizationId: nextIssue.organizationId,
-                  projectId: nextIssue.projectId,
-                  issueId: nextIssue.id,
+                  organizationId: nextSignal.organizationId,
+                  projectId: nextSignal.projectId,
+                  signalId: nextSignal.id,
                   endedAt: now.toISOString(),
                   reason: parsed.command === "resolve" ? "resolved" : "ignored",
                 },
@@ -218,18 +218,18 @@ export const applyIssueLifecycleCommandUseCase = (input: ApplyIssueLifecycleComm
             }
           }
 
-          items.push(toLifecycleCommandItem(nextIssue, changed))
+          items.push(toLifecycleCommandItem(nextSignal, changed))
         }
 
         return {
           command: parsed.command,
           keepMonitoring,
           items,
-        } satisfies ApplyIssueLifecycleCommandResult
+        } satisfies ApplySignalLifecycleCommandResult
       }),
     )
-  }).pipe(Effect.withSpan("issues.applyIssueLifecycleCommand")) as Effect.Effect<
-    ApplyIssueLifecycleCommandResult,
-    ApplyIssueLifecycleCommandError,
-    EvaluationRepository | IssueRepository | OutboxEventWriter | SettingsReader | SqlClient
+  }).pipe(Effect.withSpan("issues.applySignalLifecycleCommand")) as Effect.Effect<
+    ApplySignalLifecycleCommandResult,
+    ApplySignalLifecycleCommandError,
+    EvaluationRepository | SignalRepository | OutboxEventWriter | SettingsReader | SqlClient
   >

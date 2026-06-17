@@ -1,5 +1,5 @@
-import type { DimensionConditionalRate, IssueDimensionComparison } from "@domain/scores"
-import { ISSUE_DIMENSION_MIN_RATE_ELEVATION, ISSUE_DIMENSION_MIN_SUPPORT } from "./constants.ts"
+import type { DimensionConditionalRate, SignalDimensionComparison } from "@domain/scores"
+import { SIGNAL_DIMENSION_MIN_RATE_ELEVATION, SIGNAL_DIMENSION_MIN_SUPPORT } from "./constants.ts"
 
 /**
  * A dimension value over-represented among an issue's traces under **reverse**
@@ -16,17 +16,17 @@ export interface DimensionPattern extends DimensionConditionalRate {
  * Pure pattern gate over a dimension comparison: keeps the values worth
  * surfacing as "unusual for this issue" and sorts them by rate-elevation (most
  * over-represented first). A value is kept when it has enough trace support to
- * trust its conditional rate (`totalTraces ≥ ISSUE_DIMENSION_MIN_SUPPORT`) and
- * its rate is elevated at least `ISSUE_DIMENSION_MIN_RATE_ELEVATION` above the
+ * trust its conditional rate (`totalTraces ≥ SIGNAL_DIMENSION_MIN_SUPPORT`) and
+ * its rate is elevated at least `SIGNAL_DIMENSION_MIN_RATE_ELEVATION` above the
  * base rate (so near-baseline values don't pad the list).
  *
  * Returns an empty list when nothing clears the gate — the caller then shows a
  * "not enough data" state rather than near-base-rate noise. The forward-vs-
  * reverse rationale lives in `specs/issue-details-page.md` (Data model #2).
  */
-export const rankDimensionValues = (comparison: IssueDimensionComparison): readonly DimensionPattern[] =>
+export const rankDimensionValues = (comparison: SignalDimensionComparison): readonly DimensionPattern[] =>
   comparison.values
-    .filter((value) => value.totalTraces >= ISSUE_DIMENSION_MIN_SUPPORT)
+    .filter((value) => value.totalTraces >= SIGNAL_DIMENSION_MIN_SUPPORT)
     .map((value) => ({ ...value, rateElevation: value.conditionalRate - comparison.baseRate }))
-    .filter((pattern) => pattern.rateElevation >= ISSUE_DIMENSION_MIN_RATE_ELEVATION)
+    .filter((pattern) => pattern.rateElevation >= SIGNAL_DIMENSION_MIN_RATE_ELEVATION)
     .sort((a, b) => b.rateElevation - a.rateElevation)

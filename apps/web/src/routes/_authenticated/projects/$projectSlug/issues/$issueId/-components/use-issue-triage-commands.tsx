@@ -4,10 +4,10 @@ import { useMemo } from "react"
 import { useRegisterCommands } from "../../../../../../../components/command-palette/command-palette-provider.tsx"
 import type { PaletteCommand } from "../../../../../../../components/command-palette/types.ts"
 import {
-  ISSUE_PRIORITY_META,
-  type IssuePriorityGroupId,
+  SIGNAL_PRIORITY_META,
+  type SignalPriorityGroupId,
 } from "../../../../../../../components/issues/issue-priority-meta.tsx"
-import { useIssueDetail, useUpdateIssueTriage } from "../../../../../../../domains/issues/issues.collection.ts"
+import { useSignalDetail, useUpdateSignalTriage } from "../../../../../../../domains/issues/issues.collection.ts"
 import { useMembersCollection } from "../../../../../../../domains/members/members.collection.ts"
 import { toUserMessage } from "../../../../../../../lib/errors.ts"
 import { useAuthenticatedUser } from "../../../../../-route-data.ts"
@@ -19,26 +19,26 @@ const PRIORITY_COMMAND_ORDER = [
   "medium",
   "low",
   "none",
-] as const satisfies readonly IssuePriorityGroupId[]
+] as const satisfies readonly SignalPriorityGroupId[]
 
 /**
  * Contributes "Assign to…" and "Set priority…" drill-down commands to the
  * command palette while an issue page is open. Both reuse the same
- * `updateIssueTriage` mutation the right-rail pickers use, so list grouping
+ * `updateSignalTriage` mutation the right-rail pickers use, so list grouping
  * and detail queries revalidate identically.
  */
-export function useIssueTriageCommands({
+export function useSignalTriageCommands({
   projectId,
-  issueId,
+  signalId,
 }: {
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
 }) {
   const { toast } = useToast()
   const me = useAuthenticatedUser()
-  const { data: issue } = useIssueDetail({ projectId, issueId })
+  const { data: issue } = useSignalDetail({ projectId, signalId })
   const { data: members } = useMembersCollection()
-  const triage = useUpdateIssueTriage(projectId, issueId)
+  const triage = useUpdateSignalTriage(projectId, signalId)
 
   const paletteCommands = useMemo<readonly PaletteCommand[]>(() => {
     if (!issue) return []
@@ -68,7 +68,7 @@ export function useIssueTriageCommands({
       .sort((a, b) => a.displayName.localeCompare(b.displayName))
       .map(
         (member): PaletteCommand => ({
-          id: `issue:${issueId}:assign:${member.userId}`,
+          id: `issue:${signalId}:assign:${member.userId}`,
           title: member.displayName,
           icon: UserRoundIcon,
           leading: <Avatar size="xs" name={member.displayName} imageSrc={member.image} />,
@@ -84,7 +84,7 @@ export function useIssueTriageCommands({
 
     const assignChildren: PaletteCommand[] = [
       {
-        id: `issue:${issueId}:assign:me`,
+        id: `issue:${signalId}:assign:me`,
         title: "Me",
         icon: CircleUserRoundIcon,
         section: "context",
@@ -96,7 +96,7 @@ export function useIssueTriageCommands({
         },
       },
       {
-        id: `issue:${issueId}:assign:unassigned`,
+        id: `issue:${signalId}:assign:unassigned`,
         title: "Unassigned",
         icon: CircleDashedIcon,
         section: "context",
@@ -111,10 +111,10 @@ export function useIssueTriageCommands({
     ]
 
     const priorityChildren: PaletteCommand[] = PRIORITY_COMMAND_ORDER.map((priority): PaletteCommand => {
-      const meta = ISSUE_PRIORITY_META[priority]
+      const meta = SIGNAL_PRIORITY_META[priority]
       const isCurrent = (issue.priority ?? "none") === priority
       return {
-        id: `issue:${issueId}:priority:${priority}`,
+        id: `issue:${signalId}:priority:${priority}`,
         title: meta.label,
         icon: meta.icon,
         section: "context",
@@ -133,26 +133,26 @@ export function useIssueTriageCommands({
     return [
       {
         kind: "parent",
-        id: `issue:${issueId}:assign`,
+        id: `issue:${signalId}:assign`,
         title: "Assign to…",
         icon: UsersRoundIcon,
         section: "context",
-        group: "Issue",
+        group: "Signal",
         keywords: "assign assignee triage owner member",
         getChildren: () => assignChildren,
       },
       {
         kind: "parent",
-        id: `issue:${issueId}:priority`,
+        id: `issue:${signalId}:priority`,
         title: "Set priority…",
         icon: FlagIcon,
         section: "context",
-        group: "Issue",
+        group: "Signal",
         keywords: "priority urgent high medium low triage",
         getChildren: () => priorityChildren,
       },
     ]
-  }, [issue, issueId, me.id, members, toast, triage])
+  }, [issue, signalId, me.id, members, toast, triage])
 
   useRegisterCommands(paletteCommands)
 }

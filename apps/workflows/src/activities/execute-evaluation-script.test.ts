@@ -61,7 +61,7 @@ describe("MVP script template helpers", () => {
     })
 
     it("rejects a prompt containing forbidden interpolations", () => {
-      const forbidden = ["Issue: ${", "issue.name}"].join("")
+      const forbidden = ["Signal: ${", "issue.name}"].join("")
       const script = wrapPromptAsEvaluationScript(forbidden)
       expect(validateEvaluationScript(script)).toBe(false)
     })
@@ -102,12 +102,12 @@ describe("MVP script template helpers", () => {
     })
 
     it("includes the conversation placeholder", () => {
-      const prompt = generateBaselinePromptText("Test Issue", "Test description")
+      const prompt = generateBaselinePromptText("Test Signal", "Test description")
       expect(prompt).toContain(EVALUATION_CONVERSATION_PLACEHOLDER)
     })
 
     it("produces a valid script when wrapped", () => {
-      const prompt = generateBaselinePromptText("Test Issue", "Test description")
+      const prompt = generateBaselinePromptText("Test Signal", "Test description")
       const script = wrapPromptAsEvaluationScript(prompt)
       expect(validateEvaluationScript(script)).toBe(true)
     })

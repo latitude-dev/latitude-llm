@@ -18,7 +18,7 @@ export const scores = latitudeSchema.table(
     sourceId: varchar("source_id", { length: 128 }).notNull(),
 
     simulationId: cuid("simulation_id"), // optional simulation CUID link
-    issueId: cuid("issue_id"), // optional issue CUID assignment
+    signalId: cuid("issue_id"), // optional issue CUID assignment
 
     value: doublePrecision("value").notNull(), // normalized [0, 1] score value
     passed: boolean("passed").notNull(), // true if passed, false if failed or errored
@@ -49,8 +49,8 @@ export const scores = latitudeSchema.table(
       .on(t.organizationId, t.projectId, t.sourceId, t.traceId)
       .where(sql`${t.source} = 'evaluation' AND ${t.draftedAt} IS NULL AND ${t.traceId} IS NOT NULL`),
     index("scores_issue_lookup_idx")
-      .on(t.organizationId, t.projectId, t.issueId, t.createdAt, t.id)
-      .where(sql`${t.issueId} IS NOT NULL AND ${t.draftedAt} IS NULL`),
+      .on(t.organizationId, t.projectId, t.signalId, t.createdAt, t.id)
+      .where(sql`${t.signalId} IS NOT NULL AND ${t.draftedAt} IS NULL`),
     index("scores_trace_lookup_idx")
       .on(t.organizationId, t.projectId, t.traceId, t.createdAt, t.id)
       .where(sql`${t.traceId} IS NOT NULL`),
@@ -62,7 +62,7 @@ export const scores = latitudeSchema.table(
       .where(sql`${t.spanId} IS NOT NULL`),
     index("scores_issue_discovery_work_idx")
       .on(t.organizationId, t.projectId, t.createdAt, t.id)
-      .where(sql`${t.draftedAt} IS NULL AND ${t.errored} = false AND ${t.passed} = false AND ${t.issueId} IS NULL`),
+      .where(sql`${t.draftedAt} IS NULL AND ${t.errored} = false AND ${t.passed} = false AND ${t.signalId} IS NULL`),
     index("scores_draft_finalization_idx").on(t.updatedAt, t.id).where(sql`${t.draftedAt} IS NOT NULL`),
   ],
 )

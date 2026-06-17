@@ -1,11 +1,11 @@
 import { type AlertIncidentKind, SEVERITY_FOR_KIND } from "@domain/alerts"
-import { ESCALATION_MIN_OCCURRENCES_THRESHOLD, ESCALATION_THRESHOLD_FACTOR } from "@domain/issues"
+import { ESCALATION_MIN_OCCURRENCES_THRESHOLD, ESCALATION_THRESHOLD_FACTOR } from "@domain/signals"
 import { AlertIncidentId } from "@domain/shared"
-import { SEED_ISSUE_FIXTURES, SEED_REGRESSED_ISSUE_IDS } from "@domain/shared/seeding"
+import { SEED_SIGNAL_FIXTURES, SEED_REGRESSED_SIGNAL_IDS } from "@domain/shared/seeding"
 import { sql } from "drizzle-orm"
 import { Effect } from "effect"
 import { alertIncidents } from "../../schema/alert-incidents.ts"
-import { fixtureScopedId, fixtureScopedKey, issueFixtureDates } from "../issues/index.ts"
+import { fixtureScopedId, fixtureScopedKey, signalFixtureDates } from "../issues/index.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 
 const buildIncidentRow = (input: {
@@ -28,8 +28,8 @@ const buildIncidentRow = (input: {
   endedAt: input.endedAt,
 })
 
-interface IssueOccurrenceStats {
-  readonly issueId: string
+interface SignalOccurrenceStats {
+  readonly signalId: string
   readonly recentCount: number
   readonly baselineAvgPerDay: number
 }
@@ -37,15 +37,15 @@ interface IssueOccurrenceStats {
 /**
  * Compute per-issue recent / baseline occurrence counts directly from the
  * seeded `scores` table. Mirrors what the production
- * `ScoreAnalyticsRepository.aggregateByIssues` query does (recent = last
+ * `ScoreAnalyticsRepository.aggregateBySignals` query does (recent = last
  * 24h, baseline = avg/day across days 1–8 ago) so escalation labels are
  * derived from the same data shape the runtime threshold check sees.
  */
-const fetchIssueOccurrenceStats = async (
+const fetchSignalOccurrenceStats = async (
   ctx: SeedContext,
   organizationId: string,
   projectId: string,
-): Promise<readonly IssueOccurrenceStats[]> => {
+): Promise<readonly SignalOccurrenceStats[]> => {
   const rows = await ctx.db.execute<{
     issue_id: string
     recent_count: number
@@ -78,7 +78,7 @@ const fetchIssueOccurrenceStats = async (
   }[]
 
   return safe.map((row) => ({
-    issueId: row.issue_id,
+    signalId: row.issue_id,
     recentCount: Number(row.recent_count),
     baselineAvgPerDay: Number(row.baseline_avg_per_day),
   }))
@@ -99,20 +99,20 @@ const seedAlertIncidents: Seeder = {
 
         // 1. One `issue.new` row per seeded fixture — the historical record
         //    of when the issue was first discovered. Mirrors what the
-        //    production `IssueCreated` event would have produced.
-        const fixtureScopedIssueIds = new Map<string, string>()
-        for (const [index, fixture] of SEED_ISSUE_FIXTURES.entries()) {
-          const issueKey = fixtureScopedKey(index)
-          const issueId = fixtureScopedId(index, ctx.scope)
-          fixtureScopedIssueIds.set(fixture.id, issueId)
-          const fixtureDates = issueFixtureDates(ctx.scope, fixture)
+        //    production `SignalCreated` event would have produced.
+        const fixtureScopedSignalIds = new Map<string, string>()
+        for (const [index, fixture] of SEED_SIGNAL_FIXTURES.entries()) {
+          const signalKey = fixtureScopedKey(index)
+          const signalId = fixtureScopedId(index, ctx.scope)
+          fixtureScopedSignalIds.set(fixture.id, signalId)
+          const fixtureDates = signalFixtureDates(ctx.scope, fixture)
 
           rows.push(
             buildIncidentRow({
-              id: ctx.scope.cuid(`alert-incident:${issueKey}:issue.new`),
+              id: ctx.scope.cuid(`alert-incident:${signalKey}:issue.new`),
               organizationId: ctx.scope.organizationId,
               projectId: ctx.scope.projectId,
-              sourceId: issueId,
+              sourceId: signalId,
               kind: "issue.new",
               startedAt: fixtureDates.createdAt,
               // Eventful kinds collapse to a single point in time.
@@ -122,27 +122,27 @@ const seedAlertIncidents: Seeder = {
         }
 
         // 2. Open `issue.escalating` rows derived from the actual seeded
-        //    score data. Issues whose recent (last 24h) occurrence count
+        //    score data. Signals whose recent (last 24h) occurrence count
         //    crosses the production entry threshold get an open incident.
-        const stats = await fetchIssueOccurrenceStats(ctx, ctx.scope.organizationId, ctx.scope.projectId)
-        const escalatingIssueIds = new Set<string>()
+        const stats = await fetchSignalOccurrenceStats(ctx, ctx.scope.organizationId, ctx.scope.projectId)
+        const escalatingSignalIds = new Set<string>()
         for (const stat of stats) {
           const threshold = escalationEntryThreshold(stat.baselineAvgPerDay)
           if (stat.recentCount >= threshold) {
-            escalatingIssueIds.add(stat.issueId)
+            escalatingSignalIds.add(stat.signalId)
           }
         }
 
-        for (let index = 0; index < SEED_ISSUE_FIXTURES.length; index++) {
-          const issueId = fixtureScopedId(index, ctx.scope)
-          if (!escalatingIssueIds.has(issueId)) continue
-          const issueKey = fixtureScopedKey(index)
+        for (let index = 0; index < SEED_SIGNAL_FIXTURES.length; index++) {
+          const signalId = fixtureScopedId(index, ctx.scope)
+          if (!escalatingSignalIds.has(signalId)) continue
+          const signalKey = fixtureScopedKey(index)
           rows.push(
             buildIncidentRow({
-              id: ctx.scope.cuid(`alert-incident:${issueKey}:issue.escalating`),
+              id: ctx.scope.cuid(`alert-incident:${signalKey}:issue.escalating`),
               organizationId: ctx.scope.organizationId,
               projectId: ctx.scope.projectId,
-              sourceId: issueId,
+              sourceId: signalId,
               kind: "issue.escalating",
               startedAt: ctx.scope.dateDaysAgo(0, 6, 0),
               endedAt: null,
@@ -151,22 +151,22 @@ const seedAlertIncidents: Seeder = {
         }
 
         // 3. Curated `issue.regressed` rows for the regression demo set.
-        //    Issue ids designated by `SEED_REGRESSED_ISSUE_IDS` have their
+        //    Signal ids designated by `SEED_REGRESSED_SIGNAL_IDS` have their
         //    `resolvedAt` cleared by the issues seeder (mirroring what the
         //    production `assign-score-to-issue` regression detection does)
         //    so the read path derives them as Regressed.
         const regressionStartedAt = ctx.scope.dateDaysAgo(2, 9, 0)
-        for (const fixtureIssueId of SEED_REGRESSED_ISSUE_IDS) {
-          const scopedIssueId = fixtureScopedIssueIds.get(fixtureIssueId)
-          if (!scopedIssueId) continue
-          const fixtureIndex = SEED_ISSUE_FIXTURES.findIndex((fixture) => fixture.id === fixtureIssueId)
-          const issueKey = fixtureIndex === -1 ? fixtureIssueId : fixtureScopedKey(fixtureIndex)
+        for (const fixtureSignalId of SEED_REGRESSED_SIGNAL_IDS) {
+          const scopedSignalId = fixtureScopedSignalIds.get(fixtureSignalId)
+          if (!scopedSignalId) continue
+          const fixtureIndex = SEED_SIGNAL_FIXTURES.findIndex((fixture) => fixture.id === fixtureSignalId)
+          const signalKey = fixtureIndex === -1 ? fixtureSignalId : fixtureScopedKey(fixtureIndex)
           rows.push(
             buildIncidentRow({
-              id: ctx.scope.cuid(`alert-incident:${issueKey}:issue.regressed`),
+              id: ctx.scope.cuid(`alert-incident:${signalKey}:issue.regressed`),
               organizationId: ctx.scope.organizationId,
               projectId: ctx.scope.projectId,
-              sourceId: scopedIssueId,
+              sourceId: scopedSignalId,
               kind: "issue.regressed",
               startedAt: regressionStartedAt,
               endedAt: regressionStartedAt,

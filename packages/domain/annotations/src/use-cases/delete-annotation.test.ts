@@ -9,7 +9,7 @@ import { deleteAnnotationUseCase } from "./delete-annotation.ts"
 const organizationId = "oooooooooooooooooooooooo"
 const projectId = "pppppppppppppppppppppppp"
 const scoreId = ScoreId("ssssssssssssssssssssssss")
-const issueId = "iiiiiiiiiiiiiiiiiiiiiiii"
+const signalId = "iiiiiiiiiiiiiiiiiiiiiiii"
 
 const makeScore = (overrides: Partial<Score> = {}): Score =>
   scoreSchema.parse({
@@ -20,7 +20,7 @@ const makeScore = (overrides: Partial<Score> = {}): Score =>
     traceId: null,
     spanId: null,
     simulationId: null,
-    issueId: null,
+    signalId: null,
     source: "annotation",
     sourceId: "UI",
     value: 0.2,
@@ -62,7 +62,7 @@ const createFakeOutboxEventWriter = () => {
 
 describe("deleteAnnotationUseCase", () => {
   it("deletes an annotation from PostgreSQL and emits AnnotationDeleted event", async () => {
-    const score = makeScore({ issueId, draftedAt: null })
+    const score = makeScore({ signalId, draftedAt: null })
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
     scores.set(score.id, score)
     const { outboxEventWriter, events } = createFakeOutboxEventWriter()
@@ -86,7 +86,7 @@ describe("deleteAnnotationUseCase", () => {
           organizationId,
           projectId,
           scoreId: score.id,
-          issueId,
+          signalId,
           draftedAt: null,
           feedback: score.feedback,
           source: score.source,
@@ -98,7 +98,7 @@ describe("deleteAnnotationUseCase", () => {
 
   it("emits event with draftedAt for draft annotations", async () => {
     const draftedAt = new Date("2026-03-30T10:00:00.000Z")
-    const score = makeScore({ issueId, draftedAt })
+    const score = makeScore({ signalId, draftedAt })
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
     scores.set(score.id, score)
     const { outboxEventWriter, events } = createFakeOutboxEventWriter()
@@ -121,8 +121,8 @@ describe("deleteAnnotationUseCase", () => {
     })
   })
 
-  it("emits event with null issueId for annotations not linked to issue", async () => {
-    const score = makeScore({ issueId: null, draftedAt: null })
+  it("emits event with null signalId for annotations not linked to issue", async () => {
+    const score = makeScore({ signalId: null, draftedAt: null })
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
     scores.set(score.id, score)
     const { outboxEventWriter, events } = createFakeOutboxEventWriter()
@@ -140,7 +140,7 @@ describe("deleteAnnotationUseCase", () => {
     expect(events[0]).toMatchObject({
       eventName: "AnnotationDeleted",
       payload: {
-        issueId: null,
+        signalId: null,
       },
     })
   })

@@ -1,33 +1,33 @@
-import { type IssueOccurrenceBucket, type IssueWindowMetric, ScoreAnalyticsRepository } from "@domain/scores"
+import { type SignalOccurrenceBucket, type SignalWindowMetric, ScoreAnalyticsRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
-import { ChSqlClient, IssueId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { ChSqlClient, SignalId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { type Issue, IssueState } from "../entities/issue.ts"
-import { createIssueCentroid } from "../helpers.ts"
-import type { IssueLifecycleFlags } from "../ports/issue-repository.ts"
-import { IssueRepository } from "../ports/issue-repository.ts"
-import { createFakeIssueRepository } from "../testing/fake-issue-repository.ts"
-import { getIssueAnalyticsUseCase } from "./get-issue-analytics.ts"
+import { type Signal, SignalState } from "../entities/issue.ts"
+import { createSignalCentroid } from "../helpers.ts"
+import type { SignalLifecycleFlags } from "../ports/issue-repository.ts"
+import { SignalRepository } from "../ports/issue-repository.ts"
+import { createFakeSignalRepository } from "../testing/fake-issue-repository.ts"
+import { getSignalAnalyticsUseCase } from "./get-issue-analytics.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
 
-const issueIdA = IssueId("a".repeat(24))
-const issueIdB = IssueId("b".repeat(24))
-const issueIdC = IssueId("c".repeat(24))
+const signalIdA = SignalId("a".repeat(24))
+const signalIdB = SignalId("b".repeat(24))
+const signalIdC = SignalId("c".repeat(24))
 
-const makeIssue = (overrides: Partial<Issue> & { id: Issue["id"] }): Issue => ({
+const makeSignal = (overrides: Partial<Signal> & { id: Signal["id"] }): Signal => ({
   organizationId: organizationId as string,
   projectId: projectId as string,
   slug: `issue-${(overrides.id as string).slice(0, 4)}`,
-  name: "Issue",
+  name: "Signal",
   description: "An issue",
   source: "annotation",
   assigneeId: null,
   priority: null,
-  centroid: createIssueCentroid(),
+  centroid: createSignalCentroid(),
   clusteredAt: new Date("2026-03-01T00:00:00.000Z"),
   escalatedAt: null,
   resolvedAt: null,
@@ -38,34 +38,34 @@ const makeIssue = (overrides: Partial<Issue> & { id: Issue["id"] }): Issue => ({
 })
 
 const buildLayer = (input: {
-  readonly issues?: readonly Issue[]
-  readonly lifecycle?: ReadonlyMap<string, IssueLifecycleFlags>
-  readonly windowMetrics?: readonly IssueWindowMetric[]
-  readonly histogramBuckets?: readonly IssueOccurrenceBucket[]
+  readonly issues?: readonly Signal[]
+  readonly lifecycle?: ReadonlyMap<string, SignalLifecycleFlags>
+  readonly windowMetrics?: readonly SignalWindowMetric[]
+  readonly histogramBuckets?: readonly SignalOccurrenceBucket[]
   readonly captureHistogramBucketSeconds?: (seconds: number) => void
   readonly captureWindow?: (range: { from: Date | undefined; to: Date | undefined }) => void
 }) => {
-  const issueRepo = createFakeIssueRepository(
+  const signalRepo = createFakeSignalRepository(
     input.issues ?? [],
     undefined,
     input.lifecycle ? { lifecycle: input.lifecycle } : {},
   )
   const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
-    listIssueWindowMetrics: ({ timeRange }) =>
+    listSignalWindowMetrics: ({ timeRange }) =>
       Effect.sync(() => {
         input.captureWindow?.({ from: timeRange?.from, to: timeRange?.to })
         return input.windowMetrics ?? []
       }),
-    histogramByIssues: ({ bucketSeconds }) =>
+    histogramBySignals: ({ bucketSeconds }) =>
       Effect.sync(() => {
         input.captureHistogramBucketSeconds?.(bucketSeconds)
         return input.histogramBuckets ?? []
       }),
   })
   return {
-    issueRepo,
+    signalRepo,
     layer: Layer.mergeAll(
-      Layer.succeed(IssueRepository, issueRepo.repository),
+      Layer.succeed(SignalRepository, signalRepo.repository),
       Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
       Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
       Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
@@ -73,13 +73,13 @@ const buildLayer = (input: {
   }
 }
 
-describe("getIssueAnalyticsUseCase", () => {
+describe("getSignalAnalyticsUseCase", () => {
   it("returns the zero shape when no issues had activity in the window", async () => {
     const { layer } = buildLayer({ windowMetrics: [] })
     const now = new Date("2026-04-15T12:00:00.000Z")
 
     const result = await Effect.runPromise(
-      getIssueAnalyticsUseCase({ organizationId, projectId, now }).pipe(Effect.provide(layer)),
+      getSignalAnalyticsUseCase({ organizationId, projectId, now }).pipe(Effect.provide(layer)),
     )
 
     expect(result.ongoing.total).toBe(0)
@@ -94,18 +94,18 @@ describe("getIssueAnalyticsUseCase", () => {
   })
 
   it("counts lifecycle states based on issues with window activity and surfaces the histogram", async () => {
-    const newIssue = makeIssue({
-      id: issueIdA,
+    const newSignal = makeSignal({
+      id: signalIdA,
       createdAt: new Date("2026-04-14T00:00:00.000Z"), // recent → NEW
       updatedAt: new Date("2026-04-14T00:00:00.000Z"),
     })
-    const ongoingIssue = makeIssue({
-      id: issueIdB,
+    const ongoingSignal = makeSignal({
+      id: signalIdB,
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
       updatedAt: new Date("2026-01-01T00:00:00.000Z"),
     })
-    const resolvedIssue = makeIssue({
-      id: issueIdC,
+    const resolvedSignal = makeSignal({
+      id: signalIdC,
       resolvedAt: new Date("2026-04-10T00:00:00.000Z"),
       createdAt: new Date("2026-02-01T00:00:00.000Z"),
       updatedAt: new Date("2026-04-10T00:00:00.000Z"),
@@ -114,23 +114,23 @@ describe("getIssueAnalyticsUseCase", () => {
     let captured: number | null = null
     let capturedWindow: { from: Date | undefined; to: Date | undefined } | null = null
     const { layer } = buildLayer({
-      issues: [newIssue, ongoingIssue, resolvedIssue],
-      lifecycle: new Map([[issueIdB as string, { isEscalating: true, isRegressed: false }]]),
+      issues: [newSignal, ongoingSignal, resolvedSignal],
+      lifecycle: new Map([[signalIdB as string, { isEscalating: true, isRegressed: false }]]),
       windowMetrics: [
         {
-          issueId: issueIdA,
+          signalId: signalIdA,
           occurrences: 3,
           firstSeenAt: new Date("2026-04-14T00:00:00.000Z"),
           lastSeenAt: new Date("2026-04-14T03:00:00.000Z"),
         },
         {
-          issueId: issueIdB,
+          signalId: signalIdB,
           occurrences: 5,
           firstSeenAt: new Date("2026-04-13T00:00:00.000Z"),
           lastSeenAt: new Date("2026-04-15T00:00:00.000Z"),
         },
         {
-          issueId: issueIdC,
+          signalId: signalIdC,
           occurrences: 2,
           firstSeenAt: new Date("2026-04-09T00:00:00.000Z"),
           lastSeenAt: new Date("2026-04-09T03:00:00.000Z"),
@@ -146,7 +146,7 @@ describe("getIssueAnalyticsUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      getIssueAnalyticsUseCase({
+      getSignalAnalyticsUseCase({
         organizationId,
         projectId,
         now: new Date("2026-04-15T12:00:00.000Z"),
@@ -156,12 +156,12 @@ describe("getIssueAnalyticsUseCase", () => {
     expect(captured).toBe(12 * 60 * 60)
     expect(capturedWindow).not.toBeNull()
     expect(result.occurrences.total).toBe(10)
-    expect(result.new.total).toBe(1) // issueA
-    expect(result.escalating.total).toBe(1) // issueB
+    expect(result.new.total).toBe(1) // signalA
+    expect(result.escalating.total).toBe(1) // signalB
     // Ongoing is mutually exclusive with the other lifecycle states; no issue
     // here is *just* ongoing, so the count is zero.
     expect(result.ongoing.total).toBe(0)
-    expect(result.resolved.total).toBe(1) // issueC
+    expect(result.resolved.total).toBe(1) // signalC
 
     const occurrencesBucket = result.occurrences.buckets.find((b) => b.bucket === "2026-04-15T00:00:00.000Z")
     expect(occurrencesBucket?.value).toBe(4)
@@ -176,7 +176,7 @@ describe("getIssueAnalyticsUseCase", () => {
     })
 
     await Effect.runPromise(
-      getIssueAnalyticsUseCase({
+      getSignalAnalyticsUseCase({
         organizationId,
         projectId,
         from: new Date("2026-04-01T15:00:00.000Z"),
@@ -192,6 +192,6 @@ describe("getIssueAnalyticsUseCase", () => {
 })
 
 // Suppress unused-symbol warnings — these are imported solely so the layer
-// types resolve, but the test relies on the exported `IssueState` for
+// types resolve, but the test relies on the exported `SignalState` for
 // future expansion. Reference once so Biome doesn't strip the import.
-void IssueState
+void SignalState

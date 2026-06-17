@@ -4,12 +4,12 @@ import { useNavigate } from "@tanstack/react-router"
 import { ArrowDownIcon, ArrowUpIcon } from "lucide-react"
 import { useMemo } from "react"
 import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
-import { useIssues } from "../../../../../../../domains/issues/issues.collection.ts"
+import { useSignals } from "../../../../../../../domains/issues/issues.collection.ts"
 
 /**
  * Previous/next-issue navigation for the full-page issue view, the page's
  * stand-in for the drawer's in-list cycling. It reconstructs the issue order by
- * re-running `useIssues` with the **default sort** for the issue's own
+ * re-running `useSignals` with the **default sort** for the issue's own
  * lifecycle group (active vs. archived) — it deliberately does NOT carry the
  * originating list's filters/sort/search, so cycling runs over the default
  * queue rather than the exact list the user came from. When the current issue
@@ -18,46 +18,46 @@ import { useIssues } from "../../../../../../../domains/issues/issues.collection
  * Examples carousel owns `H`/`L`. Hotkeys are suppressed while a trace sheet is
  * open (`overlayActive`) so paging a trace never swaps the issue underneath it.
  */
-export function IssueNeighborNav({
+export function SignalNeighborNav({
   projectId,
   projectSlug,
-  issueId,
+  signalId,
   lifecycleGroup,
   overlayActive,
 }: {
   readonly projectId: string
   readonly projectSlug: string
-  readonly issueId: string
+  readonly signalId: string
   readonly lifecycleGroup: "active" | "archived"
   readonly overlayActive: boolean
 }) {
   const navigate = useNavigate()
-  const { data: issues } = useIssues({ projectId, lifecycleGroup, enabled: projectId.length > 0 })
+  const { data: issues } = useSignals({ projectId, lifecycleGroup, enabled: projectId.length > 0 })
 
   const { prevId, nextId } = useMemo(() => {
     const ids = issues.map((issue) => issue.id)
-    const index = ids.indexOf(issueId)
+    const index = ids.indexOf(signalId)
     if (index < 0) return { prevId: undefined, nextId: undefined }
     return {
       prevId: index > 0 ? ids[index - 1] : undefined,
       nextId: index < ids.length - 1 ? ids[index + 1] : undefined,
     }
-  }, [issues, issueId])
+  }, [issues, signalId])
 
-  const goToIssue = (targetId: string | undefined) => {
+  const goToSignal = (targetId: string | undefined) => {
     if (!targetId) return
-    void navigate({ to: "/projects/$projectSlug/issues/$issueId", params: { projectSlug, issueId: targetId } })
+    void navigate({ to: "/projects/$projectSlug/issues/$signalId", params: { projectSlug, signalId: targetId } })
   }
 
   useHotkeys([
     {
       hotkey: "J",
-      callback: () => goToIssue(nextId),
+      callback: () => goToSignal(nextId),
       options: { enabled: !!nextId && !overlayActive, ignoreInputs: true },
     },
     {
       hotkey: "K",
-      callback: () => goToIssue(prevId),
+      callback: () => goToSignal(prevId),
       options: { enabled: !!prevId && !overlayActive, ignoreInputs: true },
     },
   ])
@@ -72,7 +72,7 @@ export function IssueNeighborNav({
             variant="ghost"
             className="h-8 w-8 p-0"
             disabled={!prevId}
-            onClick={() => goToIssue(prevId)}
+            onClick={() => goToSignal(prevId)}
             type="button"
             aria-label="Previous issue"
           >
@@ -90,7 +90,7 @@ export function IssueNeighborNav({
             variant="ghost"
             className="h-8 w-8 p-0"
             disabled={!nextId}
-            onClick={() => goToIssue(nextId)}
+            onClick={() => goToSignal(nextId)}
             type="button"
             aria-label="Next issue"
           >

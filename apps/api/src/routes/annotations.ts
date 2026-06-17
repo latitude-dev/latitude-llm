@@ -31,7 +31,7 @@ const RequestSchema = z
       .nullable()
       .default(null)
       .describe("Simulation this annotation is tied to, if any. `null` (default) when not part of a simulation."),
-    issueId: cuidSchema
+    signalId: cuidSchema
       .nullable()
       .default(null)
       .describe(

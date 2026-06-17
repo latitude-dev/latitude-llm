@@ -60,7 +60,7 @@ const PROJECT_SECTIONS: readonly ProjectSection[] = [
   },
   {
     key: "issues",
-    label: "Issues",
+    label: "Signals",
     icon: ShieldAlertIcon,
     group: "understand",
     path: (slug) => `/projects/${slug}/issues`,
@@ -139,7 +139,7 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
       },
       {
         key: "settings-issues",
-        label: "Issues",
+        label: "Signals",
         icon: ShieldAlertIcon,
         path: (slug) => `/projects/${slug}/settings/issues`,
       },

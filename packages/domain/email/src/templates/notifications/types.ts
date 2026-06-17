@@ -1,4 +1,4 @@
-import type { IssueRepository } from "@domain/issues"
+import type { SignalRepository } from "@domain/signals"
 import type { NOTIFICATION_KIND_META, NotificationKind, RenderNotificationEmailError } from "@domain/notifications"
 import type { SavedSearchRepository } from "@domain/saved-searches"
 import type { SqlClient } from "@domain/shared"
@@ -55,12 +55,12 @@ export interface NotificationEmailRenderContext {
  * `never` and stay as trivial `Effect.tryPromise(() => template(...))`.
  */
 export type RenderDepsByKind = {
-  readonly "incident.event": IssueRepository | SavedSearchRepository | UserRepository | SqlClient
-  readonly "incident.opened": IssueRepository | SavedSearchRepository | UserRepository | SqlClient
-  readonly "incident.closed": IssueRepository | SavedSearchRepository | UserRepository | SqlClient
+  readonly "incident.event": SignalRepository | SavedSearchRepository | UserRepository | SqlClient
+  readonly "incident.opened": SignalRepository | SavedSearchRepository | UserRepository | SqlClient
+  readonly "incident.closed": SignalRepository | SavedSearchRepository | UserRepository | SqlClient
   readonly "wrapped.report": WrappedReportRepository | SqlClient
   readonly "custom.message": never
-  readonly "issue.assigned": IssueRepository | UserRepository | SqlClient
+  readonly "issue.assigned": SignalRepository | UserRepository | SqlClient
 }
 
 export type RenderDepsFor<K extends NotificationKind> = RenderDepsByKind[K]

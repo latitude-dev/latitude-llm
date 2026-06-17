@@ -96,7 +96,7 @@ export const evaluationSchema = z.object({
   id: evaluationIdSchema, // CUID evaluation identifier
   organizationId: cuidSchema, // owning organization
   projectId: cuidSchema, // owning project
-  issueId: cuidSchema, // in MVP evaluations are issue-linked; multiple evaluations may link to the same issue
+  signalId: cuidSchema, // in MVP evaluations are issue-linked; multiple evaluations may link to the same issue
   name: z.string().min(1).max(EVALUATION_NAME_MAX_LENGTH), // unique name within the project among non-deleted rows
   description: z.string(), // generated from the resulting script after alignment
   // TODO(eval-sandbox): when sandbox is available, this field will hold arbitrary JS; until then

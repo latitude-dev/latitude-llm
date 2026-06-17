@@ -38,7 +38,7 @@ export const createEvaluationsWorker = ({ consumer, workflowStarter }: Evaluatio
           {
             organizationId: payload.organizationId,
             projectId: payload.projectId,
-            issueId: payload.issueId,
+            signalId: payload.signalId,
             evaluationId: payload.evaluationId,
           },
           { workflowId },
@@ -48,7 +48,7 @@ export const createEvaluationsWorker = ({ consumer, workflowStarter }: Evaluatio
             Effect.sync(() =>
               logger.info("Started evaluation refresh alignment workflow", {
                 projectId: payload.projectId,
-                issueId: payload.issueId,
+                signalId: payload.signalId,
                 evaluationId: payload.evaluationId,
                 workflowId,
               }),
@@ -67,7 +67,7 @@ export const createEvaluationsWorker = ({ consumer, workflowStarter }: Evaluatio
           {
             organizationId: payload.organizationId,
             projectId: payload.projectId,
-            issueId: payload.issueId,
+            signalId: payload.signalId,
             evaluationId: payload.evaluationId,
             jobId: `auto-optimize:${payload.evaluationId}`,
             billingOperationId: generateId(),
@@ -79,7 +79,7 @@ export const createEvaluationsWorker = ({ consumer, workflowStarter }: Evaluatio
             Effect.sync(() =>
               logger.info("Started evaluation optimization workflow", {
                 projectId: payload.projectId,
-                issueId: payload.issueId,
+                signalId: payload.signalId,
                 evaluationId: payload.evaluationId,
                 workflowId,
               }),

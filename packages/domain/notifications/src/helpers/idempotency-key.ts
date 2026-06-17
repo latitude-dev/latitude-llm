@@ -4,7 +4,7 @@ import type {
   IncidentClosedPayload,
   IncidentEventPayload,
   IncidentOpenedPayload,
-  IssueAssignedPayload,
+  SignalAssignedPayload,
   WrappedReportPayload,
 } from "../entities/notification.ts"
 
@@ -14,7 +14,7 @@ import type {
  * `${kind}:${naturalEntityId}` for kinds with a natural source entity,
  * `${kind}:${entityId}:${eventTimestamp}` for kinds whose natural anchor
  * is a recurring event on the same entity (issue assignments — the
- * unique index is permanent, so keying on `issueId:assigneeId` alone
+ * unique index is permanent, so keying on `signalId:assigneeId` alone
  * would suppress a legitimate later re-assignment forever), and
  * `${kind}:${generatedId}` for kinds that should never dedupe
  * (custom messages — every send is a distinct event).
@@ -25,7 +25,7 @@ export type BuildIdempotencyKeyInput =
   | { readonly kind: "incident.closed"; readonly payload: IncidentClosedPayload }
   | { readonly kind: "wrapped.report"; readonly payload: WrappedReportPayload }
   | { readonly kind: "custom.message"; readonly payload: CustomMessagePayload }
-  | { readonly kind: "issue.assigned"; readonly payload: IssueAssignedPayload }
+  | { readonly kind: "issue.assigned"; readonly payload: SignalAssignedPayload }
 
 export const buildIdempotencyKey = (input: BuildIdempotencyKeyInput): string => {
   switch (input.kind) {
@@ -40,6 +40,6 @@ export const buildIdempotencyKey = (input: BuildIdempotencyKeyInput): string => 
     case "issue.assigned":
       // The recipient (assignee) is already part of the unique index, so the
       // key only needs to discriminate assignment events on the same issue.
-      return `${input.kind}:${input.payload.issueId}:${input.payload.assignedAt}`
+      return `${input.kind}:${input.payload.signalId}:${input.payload.assignedAt}`
   }
 }

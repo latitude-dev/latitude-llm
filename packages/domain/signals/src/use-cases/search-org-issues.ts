@@ -1,11 +1,11 @@
 import type { OrganizationId, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
-import { deriveIssueLifecycleStates } from "../helpers.ts"
-import { IssueRepository } from "../ports/issue-repository.ts"
+import { deriveSignalLifecycleStates } from "../helpers.ts"
+import { SignalRepository } from "../ports/issue-repository.ts"
 
 const DEFAULT_SEARCH_LIMIT = 10
 
-export interface OrgIssueSearchItem {
+export interface OrgSignalSearchItem {
   readonly id: string
   readonly projectId: string
   readonly projectSlug: string
@@ -15,7 +15,7 @@ export interface OrgIssueSearchItem {
   readonly states: readonly string[]
 }
 
-export interface SearchOrgIssuesInput {
+export interface SearchOrgSignalsInput {
   /** Telemetry only — scoping is enforced by the {@link SqlClient}'s RLS context, not this value. */
   readonly organizationId: OrganizationId
   readonly query: string
@@ -34,12 +34,12 @@ export interface SearchOrgIssuesInput {
  * Lifecycle states are derived here (Postgres-only — no ClickHouse), so each result is ready to
  * render with its project and current states.
  */
-export const searchOrgIssuesUseCase = (
-  input: SearchOrgIssuesInput,
-): Effect.Effect<readonly OrgIssueSearchItem[], RepositoryError, IssueRepository | SqlClient> =>
+export const searchOrgSignalsUseCase = (
+  input: SearchOrgSignalsInput,
+): Effect.Effect<readonly OrgSignalSearchItem[], RepositoryError, SignalRepository | SqlClient> =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("organizationId", String(input.organizationId))
-    const repo = yield* IssueRepository
+    const repo = yield* SignalRepository
     const now = input.now ?? new Date()
     const limit = input.limit ?? DEFAULT_SEARCH_LIMIT
 
@@ -56,7 +56,7 @@ export const searchOrgIssuesUseCase = (
 
     // Lexical (exact/keyword) hits rank first, then semantic hits not already shown; dedupe by id.
     const seen = new Set<string>()
-    const merged: OrgIssueSearchItem[] = []
+    const merged: OrgSignalSearchItem[] = []
     for (const hit of [...lexical, ...semantic]) {
       if (seen.has(hit.issue.id)) continue
       seen.add(hit.issue.id)
@@ -68,7 +68,7 @@ export const searchOrgIssuesUseCase = (
         slug: hit.issue.slug,
         name: hit.issue.name,
         states: [
-          ...deriveIssueLifecycleStates({
+          ...deriveSignalLifecycleStates({
             issue: hit.issue,
             isEscalating: hit.issue.lifecycle.isEscalating,
             isRegressed: hit.issue.lifecycle.isRegressed,
@@ -79,4 +79,4 @@ export const searchOrgIssuesUseCase = (
       if (merged.length >= limit) break
     }
     return merged
-  }).pipe(Effect.withSpan("issues.searchOrgIssues"))
+  }).pipe(Effect.withSpan("issues.searchOrgSignals"))

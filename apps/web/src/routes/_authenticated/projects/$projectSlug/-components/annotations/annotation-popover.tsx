@@ -13,8 +13,8 @@ export interface AnnotationPopoverProps {
   readonly createAutoFocus?: boolean
   readonly isCreateLoading?: boolean
   readonly isUpdateLoading?: boolean
-  readonly onSave: (data: { passed: boolean; comment: string; issueId: string | null }) => void
-  readonly onUpdate: (annotationId: string, data: { passed: boolean; comment: string; issueId: string | null }) => void
+  readonly onSave: (data: { passed: boolean; comment: string; signalId: string | null }) => void
+  readonly onUpdate: (annotationId: string, data: { passed: boolean; comment: string; signalId: string | null }) => void
   readonly onDelete?: (() => void) | undefined
   readonly onClose: () => void
 }

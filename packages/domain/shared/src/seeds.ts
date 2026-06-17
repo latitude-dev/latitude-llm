@@ -5,7 +5,7 @@ import {
   DatasetId,
   DatasetVersionId,
   EvaluationId,
-  IssueId,
+  SignalId,
   MembershipId,
   OrganizationId,
   ProjectId,
@@ -71,39 +71,39 @@ export const SEED_DATASET_ID = DatasetId("m8k2p4r6t0v1w3x5y7z9a1b3")
 export const SEED_DATASET_VERSION_ID = DatasetVersionId("v1a2b3c4d5e6f7g8h9i0j1k2")
 
 // ---------------------------------------------------------------------------
-// Issues and evaluations
+// Signals and evaluations
 // ---------------------------------------------------------------------------
 
-/** Issue 1: mature warranty fabrication lifecycle. */
-export const SEED_ISSUE_ID = IssueId("dds0rt8sqgpuku4u4wabze9r")
-export const SEED_ISSUE_UUID = "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+/** Signal 1: mature warranty fabrication lifecycle. */
+export const SEED_SIGNAL_ID = SignalId("dds0rt8sqgpuku4u4wabze9r")
+export const SEED_SIGNAL_UUID = "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
 
-/** Issue 2: mature dangerous-combination lifecycle. */
-export const SEED_COMBINATION_ISSUE_ID = IssueId("c1o2m3b4i5n6a7t8i9o0n1s2")
-export const SEED_COMBINATION_ISSUE_UUID = "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e"
+/** Signal 2: mature dangerous-combination lifecycle. */
+export const SEED_COMBINATION_SIGNAL_ID = SignalId("c1o2m3b4i5n6a7t8i9o0n1s2")
+export const SEED_COMBINATION_SIGNAL_UUID = "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e"
 
-/** Issue 3: generate-ready logistics / service guarantees issue. */
-export const SEED_GENERATE_ISSUE_ID = IssueId("g1e2n3e4r5a6t7e8i9s0s1u2")
-export const SEED_GENERATE_ISSUE_UUID = "c3d4e5f6-a7b8-4c9d-8e1f-2a3b4c5d6e7f"
+/** Signal 3: generate-ready logistics / service guarantees issue. */
+export const SEED_GENERATE_SIGNAL_ID = SignalId("g1e2n3e4r5a6t7e8i9s0s1u2")
+export const SEED_GENERATE_SIGNAL_UUID = "c3d4e5f6-a7b8-4c9d-8e1f-2a3b4c5d6e7f"
 
-/** Issue 4: resolved returns-policy drift issue. */
-export const SEED_RETURNS_ISSUE_ID = IssueId("r1e2t3u4r5n6p7o8l9i0c1y2")
-export const SEED_RETURNS_ISSUE_UUID = "d4e5f6a7-b8c9-4d1e-9f2a-3b4c5d6e7f80"
+/** Signal 4: resolved returns-policy drift issue. */
+export const SEED_RETURNS_SIGNAL_ID = SignalId("r1e2t3u4r5n6p7o8l9i0c1y2")
+export const SEED_RETURNS_SIGNAL_UUID = "d4e5f6a7-b8c9-4d1e-9f2a-3b4c5d6e7f80"
 
-/** Issue 5: ignored courtesy-credit issue. */
-export const SEED_BILLING_ISSUE_ID = IssueId("b1i2l3l4i5n6g7c8r9e0d1t2")
-export const SEED_BILLING_ISSUE_UUID = "e5f6a7b8-c9d1-4e2f-8a3b-4c5d6e7f8091"
+/** Signal 5: ignored courtesy-credit issue. */
+export const SEED_BILLING_SIGNAL_ID = SignalId("b1i2l3l4i5n6g7c8r9e0d1t2")
+export const SEED_BILLING_SIGNAL_UUID = "e5f6a7b8-c9d1-4e2f-8a3b-4c5d6e7f8091"
 
-/** Issue 6: active account-recovery issue. */
-export const SEED_ACCESS_ISSUE_ID = IssueId("a1c2c3o4u5n6t7r8e9c0o1v2")
-export const SEED_ACCESS_ISSUE_UUID = "f6a7b8c9-d1e2-4f3a-9b4c-5d6e7f8091a2"
-/** Issue 7: historical installation-certification issue. */
-export const SEED_INSTALLATION_ISSUE_ID = IssueId("i1n2s3t4a5l6l7c8e9r0t1f2")
-export const SEED_INSTALLATION_ISSUE_UUID = "0a7b8c9d-e1f2-4a3b-8c4d-5e6f7091a2b3"
+/** Signal 6: active account-recovery issue. */
+export const SEED_ACCESS_SIGNAL_ID = SignalId("a1c2c3o4u5n6t7r8e9c0o1v2")
+export const SEED_ACCESS_SIGNAL_UUID = "f6a7b8c9-d1e2-4f3a-9b4c-5d6e7f8091a2"
+/** Signal 7: historical installation-certification issue. */
+export const SEED_INSTALLATION_SIGNAL_ID = SignalId("i1n2s3t4a5l6l7c8e9r0t1f2")
+export const SEED_INSTALLATION_SIGNAL_UUID = "0a7b8c9d-e1f2-4a3b-8c4d-5e6f7091a2b3"
 
-/** Issue 8: active issue seeded from flagger-authored annotations. */
-export const SEED_FLAGGER_ISSUE_ID = IssueId("f1l2a3g4g5e6r7e8m9p0t1y2")
-export const SEED_FLAGGER_ISSUE_UUID = "1b8c9d0e-f1a2-4b3c-9d4e-5f6071a2b3c4"
+/** Signal 8: active issue seeded from flagger-authored annotations. */
+export const SEED_FLAGGER_SIGNAL_ID = SignalId("f1l2a3g4g5e6r7e8m9p0t1y2")
+export const SEED_FLAGGER_SIGNAL_UUID = "1b8c9d0e-f1a2-4b3c-9d4e-5f6071a2b3c4"
 
 function fixedSeedEntityId(prefix: string, index: number): string {
   return `${prefix}${index.toString().padStart(3, "0")}${"x".repeat(24 - prefix.length - 3)}`
@@ -114,20 +114,20 @@ function fixedSeedUuid(index: number): string {
 }
 
 /** Additional long-tail issue IDs used to exercise pagination, infinite scroll, and denoising. */
-export const SEED_EXTRA_ISSUE_IDS: readonly IssueId[] = Array.from({ length: 128 }, (_, i) =>
-  IssueId(fixedSeedEntityId("xi", i)),
+export const SEED_EXTRA_SIGNAL_IDS: readonly SignalId[] = Array.from({ length: 128 }, (_, i) =>
+  SignalId(fixedSeedEntityId("xi", i)),
 )
-export const SEED_EXTRA_ISSUE_UUIDS: readonly string[] = Array.from({ length: 128 }, (_, i) => fixedSeedUuid(0x500 + i))
+export const SEED_EXTRA_SIGNAL_UUIDS: readonly string[] = Array.from({ length: 128 }, (_, i) => fixedSeedUuid(0x500 + i))
 
-/** Issue 1 active monitor. */
+/** Signal 1 active monitor. */
 export const SEED_EVALUATION_ID = EvaluationId("y0zr3gtsous6knd2qwdj1dit")
-/** Issue 1 archived historical monitor. */
+/** Signal 1 archived historical monitor. */
 export const SEED_EVALUATION_ARCHIVED_ID = EvaluationId("hphb8g6uwzx68pfh9hzormqn")
-/** Issue 2 active monitor. */
+/** Signal 2 active monitor. */
 export const SEED_COMBINATION_EVALUATION_ID = EvaluationId("c1o2m3b4e5v6a7l8u9a0t1e2")
-/** Issue 4 active monitor retained after the issue resolved. */
+/** Signal 4 active monitor retained after the issue resolved. */
 export const SEED_RETURNS_EVALUATION_ID = EvaluationId("r1e2t3u4r5n6e7v8a9l0u1a2")
-/** Issue 6 active monitor. */
+/** Signal 6 active monitor. */
 export const SEED_ACCESS_EVALUATION_ID = EvaluationId("a1c2c3e4s5s6e7v8a9l0u1a2")
 
 export const SEED_WARRANTY_EVALUATION_HASH = "aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00"
@@ -229,15 +229,15 @@ function fixedSpanHex(prefix: string, index: number): string {
   return `${prefix}${index.toString(16).padStart(6, "0")}${"0".repeat(8)}`
 }
 
-export function seedIssueOccurrenceTraceId(index: number): string {
+export function seedSignalOccurrenceTraceId(index: number): string {
   return fixedTraceHex("ef", index)
 }
 
-export function seedIssueOccurrenceSpanId(index: number): string {
+export function seedSignalOccurrenceSpanId(index: number): string {
   return fixedSpanHex("ef", index)
 }
 
-/** 48 annotation trace IDs (Issue 1: 0-15, Issue 2: 16-37, Issue 3: 38-47). */
+/** 48 annotation trace IDs (Signal 1: 0-15, Signal 2: 16-37, Signal 3: 38-47). */
 export const SEED_ANNOTATION_TRACE_IDS: readonly string[] = Array.from({ length: 48 }, (_, i) => fixedTraceHex("af", i))
 export const SEED_ANNOTATION_SPAN_IDS: readonly string[] = Array.from({ length: 48 }, (_, i) => fixedSpanHex("af", i))
 
@@ -333,9 +333,9 @@ export const SEED_API_KEY_TOKEN = "lat_seed_default_api_key_token"
 // annotations written back by `@platform/latitude-api`). All live in the seed org
 // so the shared API key token authenticates every one. Slugs come from the shared
 // constant so routing and seed never drift; IDs/names are seed-only.
-export const SEED_LATITUDE_ISSUE_DISCOVERY_PROJECT_ID = ProjectId("issudiscov01afjbcb7gzwla")
-export const SEED_LATITUDE_ISSUE_DISCOVERY_PROJECT_NAME = "Latitude Issue Discovery"
-export const SEED_LATITUDE_ISSUE_DISCOVERY_PROJECT_SLUG = LATITUDE_TELEMETRY_PROJECT_SLUGS.issueDiscovery
+export const SEED_LATITUDE_SIGNAL_DISCOVERY_PROJECT_ID = ProjectId("issudiscov01afjbcb7gzwla")
+export const SEED_LATITUDE_SIGNAL_DISCOVERY_PROJECT_NAME = "Latitude Signal Discovery"
+export const SEED_LATITUDE_SIGNAL_DISCOVERY_PROJECT_SLUG = LATITUDE_TELEMETRY_PROJECT_SLUGS.signalDiscovery
 
 export const SEED_LATITUDE_ANNOTATION_ENRICHMENT_PROJECT_ID = ProjectId("annoenrich02afjbcb7gzwlb")
 export const SEED_LATITUDE_ANNOTATION_ENRICHMENT_PROJECT_NAME = "Latitude Annotation Enrichment"

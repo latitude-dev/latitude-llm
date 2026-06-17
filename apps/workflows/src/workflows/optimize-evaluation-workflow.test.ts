@@ -15,9 +15,9 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
         readonly status: "active"
         readonly state: {
           readonly evaluationId: string
-          readonly issueId: string
-          readonly issueName: string
-          readonly issueDescription: string
+          readonly signalId: string
+          readonly signalName: string
+          readonly signalDescription: string
           readonly name: string
           readonly description: string
           readonly alignedAt: string
@@ -39,9 +39,9 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
     status: "active",
     state: {
       evaluationId: "eval-existing",
-      issueId: "issue-1",
-      issueName: "Tool output leakage",
-      issueDescription: "Secrets are exposed in assistant tool output.",
+      signalId: "issue-1",
+      signalName: "Tool output leakage",
+      signalDescription: "Secrets are exposed in assistant tool output.",
       name: "Existing evaluation",
       description: "Existing evaluation description",
       alignedAt: new Date("2026-04-01T00:00:00.000Z").toISOString(),
@@ -80,9 +80,9 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
     collectEvaluationAlignmentExamples: vi.fn(async () => {
       callOrder.push("collectEvaluationAlignmentExamples")
       return {
-        issueId: "issue-1",
-        issueName: "Tool output leakage",
-        issueDescription: "Secrets are exposed in assistant tool output.",
+        signalId: "issue-1",
+        signalName: "Tool output leakage",
+        signalDescription: "Secrets are exposed in assistant tool output.",
         positiveExamples: [
           {
             traceId: "trace-positive",
@@ -180,7 +180,7 @@ describe("optimizeEvaluationWorkflow", () => {
     const result = await optimizeEvaluationWorkflow({
       organizationId: "org-1",
       projectId: "proj-1",
-      issueId: "issue-1",
+      signalId: "issue-1",
       evaluationId: null,
       jobId: "job-1",
       billingOperationId: "billing-op-1",
@@ -211,7 +211,7 @@ describe("optimizeEvaluationWorkflow", () => {
     const result = await optimizeEvaluationWorkflow({
       organizationId: "org-1",
       projectId: "proj-1",
-      issueId: "issue-1",
+      signalId: "issue-1",
       evaluationId: "eval-existing",
       jobId: "job-1",
       billingOperationId: "billing-op-1",
@@ -242,7 +242,7 @@ describe("optimizeEvaluationWorkflow", () => {
     const result = await optimizeEvaluationWorkflow({
       organizationId: "org-1",
       projectId: "proj-1",
-      issueId: "issue-1",
+      signalId: "issue-1",
       evaluationId: "eval-existing",
       jobId: "job-1",
       billingOperationId: "billing-op-1",
@@ -262,7 +262,7 @@ describe("optimizeEvaluationWorkflow", () => {
     const result = await optimizeEvaluationWorkflow({
       organizationId: "org-1",
       projectId: "proj-1",
-      issueId: "issue-1",
+      signalId: "issue-1",
       evaluationId: null,
       jobId: "job-1",
       billingOperationId: "billing-op-1",

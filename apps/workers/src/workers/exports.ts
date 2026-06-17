@@ -1,7 +1,7 @@
 import { buildDatasetExportUseCase } from "@domain/datasets"
 import { type EmailSender, exportReadyTemplate, type RenderedEmail, sendEmail } from "@domain/email"
 import type { ExportPayload } from "@domain/exports"
-import { buildIssuesExportUseCase, embedIssueSearchQueryUseCase } from "@domain/issues"
+import { buildSignalsExportUseCase, embedSignalSearchQueryUseCase } from "@domain/signals"
 import type { QueueConsumer } from "@domain/queue"
 import {
   DatasetId,
@@ -25,7 +25,7 @@ import {
 import {
   DatasetRepositoryLive,
   EvaluationRepositoryLive,
-  IssueRepositoryLive,
+  SignalRepositoryLive,
   type PostgresClient,
   withPostgres,
 } from "@platform/db-postgres"
@@ -65,7 +65,7 @@ function csvEntryNameForZip(zipFilename: string): string {
   return zipFilename.endsWith(".zip") ? `${zipFilename.slice(0, -4)}.csv` : `${zipFilename}.csv`
 }
 
-type IssuesExportInput = {
+type SignalsExportInput = {
   readonly organizationId: OrganizationIdType
   readonly projectId: ProjectIdType
   readonly selection?: Extract<ExportPayload, { kind: "issues" }>["selection"]
@@ -85,14 +85,14 @@ type IssuesExportInput = {
   }
 }
 
-const toIssueTimeRange = (
+const toSignalTimeRange = (
   timeRange:
     | {
         readonly fromIso?: string | undefined
         readonly toIso?: string | undefined
       }
     | undefined,
-): IssuesExportInput["timeRange"] => {
+): SignalsExportInput["timeRange"] => {
   if (!timeRange?.fromIso && !timeRange?.toIso) {
     return undefined
   }
@@ -133,7 +133,7 @@ function generateTracesExport(
   )
 }
 
-function generateIssuesExport(
+function generateSignalsExport(
   organizationId: OrganizationIdType,
   projectId: ProjectIdType,
   input: {
@@ -151,7 +151,7 @@ function generateIssuesExport(
     }
   },
 ) {
-  const timeRange = toIssueTimeRange(input.timeRange)
+  const timeRange = toSignalTimeRange(input.timeRange)
   const baseEffectInput = {
     organizationId,
     projectId,
@@ -160,12 +160,12 @@ function generateIssuesExport(
     ...(input.assigneeIds?.length ? { assigneeIds: input.assigneeIds } : {}),
     ...(input.sort ? { sort: input.sort } : {}),
     ...(timeRange ? { timeRange } : {}),
-  } satisfies Omit<IssuesExportInput, "search">
+  } satisfies Omit<SignalsExportInput, "search">
 
   const trimmedSearchQuery = input.searchQuery?.trim() || undefined
   if (!trimmedSearchQuery) {
-    return buildIssuesExportUseCase(baseEffectInput).pipe(
-      withPostgres(Layer.mergeAll(EvaluationRepositoryLive, IssueRepositoryLive), getPostgresClient(), organizationId),
+    return buildSignalsExportUseCase(baseEffectInput).pipe(
+      withPostgres(Layer.mergeAll(EvaluationRepositoryLive, SignalRepositoryLive), getPostgresClient(), organizationId),
       withClickHouse(
         Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),
         getClickhouseClient(),
@@ -175,19 +175,19 @@ function generateIssuesExport(
   }
 
   return Effect.gen(function* () {
-    const search = yield* embedIssueSearchQueryUseCase({
+    const search = yield* embedSignalSearchQueryUseCase({
       organizationId,
       projectId,
       query: trimmedSearchQuery,
     }).pipe(withAi(AIEmbedLive, getRedisClient()))
-    return yield* buildIssuesExportUseCase({
+    return yield* buildSignalsExportUseCase({
       ...baseEffectInput,
       search: {
         query: search.query,
         normalizedEmbedding: search.normalizedEmbedding,
       },
     }).pipe(
-      withPostgres(Layer.mergeAll(EvaluationRepositoryLive, IssueRepositoryLive), getPostgresClient(), organizationId),
+      withPostgres(Layer.mergeAll(EvaluationRepositoryLive, SignalRepositoryLive), getPostgresClient(), organizationId),
       withClickHouse(
         Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),
         getClickhouseClient(),
@@ -207,7 +207,7 @@ function dispatchExport(payload: ExportPayload) {
     case "traces":
       return generateTracesExport(organizationId, projectId, payload.filters, payload.selection, payload.searchQuery)
     case "issues":
-      return generateIssuesExport(organizationId, projectId, {
+      return generateSignalsExport(organizationId, projectId, {
         ...(payload.selection ? { selection: payload.selection } : {}),
         ...(payload.lifecycleGroup ? { lifecycleGroup: payload.lifecycleGroup } : {}),
         ...(payload.assigneeIds?.length ? { assigneeIds: payload.assigneeIds } : {}),

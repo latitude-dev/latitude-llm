@@ -2,9 +2,9 @@ import { DEFAULT_EMBEDDING_CONFIG } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { embedIssueSearchQueryUseCase } from "./embed-issue-search-query.ts"
+import { embedSignalSearchQueryUseCase } from "./embed-issue-search-query.ts"
 
-describe("embedIssueSearchQueryUseCase", () => {
+describe("embedSignalSearchQueryUseCase", () => {
   it("embeds and normalizes the issue search query using the issue centroid model", async () => {
     const { layer, calls } = createFakeAI({
       embed: () =>
@@ -14,7 +14,7 @@ describe("embedIssueSearchQueryUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      embedIssueSearchQueryUseCase({
+      embedSignalSearchQueryUseCase({
         organizationId: "org-1",
         projectId: "project-1",
         query: "secret leakage",

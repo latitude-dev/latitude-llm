@@ -8,7 +8,7 @@ import {
   ErroredScoreNotEligibleForDiscoveryError,
   MissingScoreFeedbackForDiscoveryError,
   PassedScoreNotEligibleForDiscoveryError,
-  ScoreAlreadyOwnedByIssueError,
+  ScoreAlreadyOwnedBySignalError,
   ScoreDiscoveryOrganizationMismatchError,
   ScoreDiscoveryProjectMismatchError,
   ScoreNotFoundForDiscoveryError,
@@ -50,8 +50,8 @@ export const checkEligibilityUseCase = (input: CheckEligibilityInput) =>
       return yield* new ErroredScoreNotEligibleForDiscoveryError({ scoreId: input.scoreId })
     }
 
-    if (score.issueId !== null) {
-      return yield* new ScoreAlreadyOwnedByIssueError({ scoreId: input.scoreId })
+    if (score.signalId !== null) {
+      return yield* new ScoreAlreadyOwnedBySignalError({ scoreId: input.scoreId })
     }
 
     if (score.feedback.trim().length === 0) {

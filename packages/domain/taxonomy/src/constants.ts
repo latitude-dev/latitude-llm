@@ -1,7 +1,7 @@
 /**
  * Every tunable for the live behavior taxonomy.
  *
- * Initial values are seeded by analogy to `@domain/issues` and to published
+ * Initial values are seeded by analogy to `@domain/signals` and to published
  * cluster-labeling baselines, then refined by a tuning pass on the seeded
  * Acme corpus. They are MVP defaults, not optimal values — see
  * `dev-docs/taxonomy.md`.
@@ -50,7 +50,7 @@ export const TAXONOMY_OBSERVATION_ASSIGNMENT_METHODS = [
 // ---------------------------------------------------------------------------
 
 // The embedding model is resolved at call time via `resolveEmbeddingConfig()`
-// (`@domain/ai`) — same global config as `@domain/issues` + trace-search,
+// (`@domain/ai`) — same global config as `@domain/signals` + trace-search,
 // single embedding surface, fixed `EMBEDDING_DIMENSIONS` (2048).
 
 export const TAXONOMY_PROJECTION_METHODS = ["moment_text_embedding", "session_user_intent_embedding"] as const

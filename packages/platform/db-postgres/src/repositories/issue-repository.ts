@@ -1,20 +1,20 @@
 import { EMBEDDING_DIMENSIONS, resolveEmbeddingConfig } from "@domain/ai"
-import { EvaluationIssueRepository } from "@domain/evaluations"
+import { EvaluationSignalRepository } from "@domain/evaluations"
 import {
-  ISSUE_DISCOVERY_MIN_SIMILARITY,
-  ISSUE_DISCOVERY_MIN_VECTOR_SIMILARITY,
-  ISSUE_DISCOVERY_SEARCH_CANDIDATES,
-  ISSUE_DISCOVERY_SEARCH_RATIO,
-  type Issue,
-  type IssueLifecycleFlags,
-  IssueRepository,
-  type IssueWithLifecycle,
-  issueSchema,
+  SIGNAL_DISCOVERY_MIN_SIMILARITY,
+  SIGNAL_DISCOVERY_MIN_VECTOR_SIMILARITY,
+  SIGNAL_DISCOVERY_SEARCH_CANDIDATES,
+  SIGNAL_DISCOVERY_SEARCH_RATIO,
+  type Signal,
+  type SignalLifecycleFlags,
+  SignalRepository,
+  type SignalWithLifecycle,
+  signalSchema,
   MIN_OCCURRENCES_FOR_VISIBILITY,
-  normalizeIssueCentroid,
-  type OrgIssueSearchHit,
-} from "@domain/issues"
-import { IssueId, NotFoundError, type ProjectId, RepositoryError, SqlClient, type SqlClientShape } from "@domain/shared"
+  normalizeSignalCentroid,
+  type OrgSignalSearchHit,
+} from "@domain/signals"
+import { SignalId, NotFoundError, type ProjectId, RepositoryError, SqlClient, type SqlClientShape } from "@domain/shared"
 import { and, asc, desc, eq, getTableColumns, ilike, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
@@ -27,20 +27,20 @@ import { preferProjectFirst } from "./org-search.ts"
 // Lifecycle flags derived from `alert_incidents` are joined onto every
 // non-locking issue read. The two EXISTS subqueries are the system of record
 // for "is this issue currently escalating / regressed" — see
-// `deriveIssueLifecycleStates` in @domain/issues.
+// `deriveSignalLifecycleStates` in @domain/signals.
 //
 // `issues.id` is qualified via raw SQL because Drizzle's template renders
 // the bare column inside the EXISTS subquery as `"id"` (unqualified), which
 // collides with `alert_incidents.id` (the inner scope's PK) and silently
 // resolves to the wrong column. The fully qualified outer reference avoids
 // the shadowing.
-const outerIssueId = sql.raw(`"latitude"."issues"."id"`)
+const outerSignalId = sql.raw(`"latitude"."issues"."id"`)
 
 const isEscalatingExpr = sql<boolean>`exists (
   select 1
   from ${alertIncidents}
   where ${alertIncidents.sourceType} = 'issue'
-    and ${alertIncidents.sourceId} = ${outerIssueId}
+    and ${alertIncidents.sourceId} = ${outerSignalId}
     and ${alertIncidents.kind} = 'issue.escalating'
     and ${alertIncidents.endedAt} is null
 )`
@@ -53,23 +53,23 @@ const isRegressedExpr = sql<boolean>`(${issues.resolvedAt} is null and exists (
   select 1
   from ${alertIncidents}
   where ${alertIncidents.sourceType} = 'issue'
-    and ${alertIncidents.sourceId} = ${outerIssueId}
+    and ${alertIncidents.sourceId} = ${outerSignalId}
     and ${alertIncidents.kind} = 'issue.regressed'
 ))`
 
-const issueColumnsWithLifecycle = {
+const signalColumnsWithLifecycle = {
   ...getTableColumns(issues),
   isEscalating: isEscalatingExpr,
   isRegressed: isRegressedExpr,
 } as const
 
-type IssueRowWithLifecycle = typeof issues.$inferSelect & {
+type SignalRowWithLifecycle = typeof issues.$inferSelect & {
   readonly isEscalating: boolean
   readonly isRegressed: boolean
 }
 
-const toDomainIssue = (row: typeof issues.$inferSelect): Issue =>
-  issueSchema.parse({
+const toDomainSignal = (row: typeof issues.$inferSelect): Signal =>
+  signalSchema.parse({
     id: row.id,
     organizationId: row.organizationId,
     projectId: row.projectId,
@@ -88,23 +88,23 @@ const toDomainIssue = (row: typeof issues.$inferSelect): Issue =>
     updatedAt: row.updatedAt,
   })
 
-const toIssueWithLifecycle = (row: IssueRowWithLifecycle): IssueWithLifecycle => {
-  const issue = toDomainIssue(row)
-  const lifecycle: IssueLifecycleFlags = {
+const toSignalWithLifecycle = (row: SignalRowWithLifecycle): SignalWithLifecycle => {
+  const issue = toDomainSignal(row)
+  const lifecycle: SignalLifecycleFlags = {
     isEscalating: row.isEscalating,
     isRegressed: row.isRegressed,
   }
   return Object.assign({}, issue, { lifecycle })
 }
 
-type OrgIssueSearchRow = IssueRowWithLifecycle & {
+type OrgSignalSearchRow = SignalRowWithLifecycle & {
   readonly projectSlug: string
   readonly projectName: string
   readonly score: number
 }
 
-const toOrgIssueSearchHit = (row: OrgIssueSearchRow): OrgIssueSearchHit => ({
-  issue: toIssueWithLifecycle(row),
+const toOrgSignalSearchHit = (row: OrgSignalSearchRow): OrgSignalSearchHit => ({
+  issue: toSignalWithLifecycle(row),
   projectSlug: row.projectSlug,
   projectName: row.projectName,
   score: Number(row.score),
@@ -136,7 +136,7 @@ const validateVector = (
   return Effect.succeed(vector)
 }
 
-const toCentroidEmbedding = (issue: Issue): Effect.Effect<readonly number[] | null, RepositoryError> =>
+const toCentroidEmbedding = (issue: Signal): Effect.Effect<readonly number[] | null, RepositoryError> =>
   Effect.gen(function* () {
     if (issue.centroid.mass <= 0) {
       return null
@@ -146,31 +146,31 @@ const toCentroidEmbedding = (issue: Issue): Effect.Effect<readonly number[] | nu
     // produce incompatible vector spaces, and Latitude never re-embeds), so a
     // centroid stamped with anything but the configured model is a hard error.
     const embeddingConfig = yield* resolveEmbeddingConfig().pipe(
-      Effect.mapError((error) => new RepositoryError({ operation: "IssueRepository.save", cause: error })),
+      Effect.mapError((error) => new RepositoryError({ operation: "SignalRepository.save", cause: error })),
     )
     if (issue.centroid.model !== embeddingConfig.model) {
       return yield* Effect.fail(
         new RepositoryError({
-          operation: "IssueRepository.save",
+          operation: "SignalRepository.save",
           cause: new Error(`Unsupported centroid model ${issue.centroid.model}`),
         }),
       )
     }
 
-    const vector = normalizeIssueCentroid(issue.centroid)
+    const vector = normalizeSignalCentroid(issue.centroid)
     if (vector.length === 0) {
       return yield* Effect.fail(
         new RepositoryError({
-          operation: "IssueRepository.save",
+          operation: "SignalRepository.save",
           cause: new Error("Positive-mass centroid normalized to an empty vector"),
         }),
       )
     }
 
-    return yield* validateVector(vector, "IssueRepository.save")
+    return yield* validateVector(vector, "SignalRepository.save")
   })
 
-const toInsertRow = (issue: Issue, centroidEmbedding: readonly number[] | null): typeof issues.$inferInsert => ({
+const toInsertRow = (issue: Signal, centroidEmbedding: readonly number[] | null): typeof issues.$inferInsert => ({
   id: issue.id,
   organizationId: issue.organizationId,
   projectId: issue.projectId,
@@ -190,8 +190,8 @@ const toInsertRow = (issue: Issue, centroidEmbedding: readonly number[] | null):
   updatedAt: issue.updatedAt,
 })
 
-const issueRepositoryCoreLive = Layer.effect(
-  IssueRepository,
+const signalRepositoryCoreLive = Layer.effect(
+  SignalRepository,
   Effect.gen(function* () {
     return {
       list: ({ projectId, limit, offset }) =>
@@ -202,7 +202,7 @@ const issueRepositoryCoreLive = Layer.effect(
               const hasAnnotationEvidence = sql<boolean>`exists (
                 select 1
                 from ${scores}
-                where ${scores.issueId} = ${issues.id}
+                where ${scores.signalId} = ${issues.id}
                   and ${scores.draftedAt} is null
                   and ${scores.source} = 'annotation'
               )`
@@ -210,12 +210,12 @@ const issueRepositoryCoreLive = Layer.effect(
               const meetsVisibilityThreshold = sql<boolean>`(
                 select count(*)
                 from ${scores}
-                where ${scores.issueId} = ${issues.id}
+                where ${scores.signalId} = ${issues.id}
                   and ${scores.draftedAt} is null
               ) >= ${MIN_OCCURRENCES_FOR_VISIBILITY}`
 
               return db
-                .select(issueColumnsWithLifecycle)
+                .select(signalColumnsWithLifecycle)
                 .from(issues)
                 .where(
                   and(
@@ -230,7 +230,7 @@ const issueRepositoryCoreLive = Layer.effect(
             })
             .pipe(
               Effect.map((rows) => ({
-                items: rows.slice(0, limit).map(toIssueWithLifecycle),
+                items: rows.slice(0, limit).map(toSignalWithLifecycle),
                 hasMore: rows.length > limit,
                 limit,
                 offset,
@@ -238,13 +238,13 @@ const issueRepositoryCoreLive = Layer.effect(
             )
         }),
 
-      findById: (id: IssueId) =>
+      findById: (id: SignalId) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           return yield* sqlClient
             .query((db, organizationId) =>
               db
-                .select(issueColumnsWithLifecycle)
+                .select(signalColumnsWithLifecycle)
                 .from(issues)
                 .where(and(eq(issues.organizationId, organizationId), eq(issues.id, id)))
                 .limit(1),
@@ -252,13 +252,13 @@ const issueRepositoryCoreLive = Layer.effect(
             .pipe(
               Effect.flatMap((rows) => {
                 const row = rows[0]
-                if (!row) return Effect.fail(new NotFoundError({ entity: "Issue", id }))
-                return Effect.succeed(toIssueWithLifecycle(row))
+                if (!row) return Effect.fail(new NotFoundError({ entity: "Signal", id }))
+                return Effect.succeed(toSignalWithLifecycle(row))
               }),
             )
         }),
 
-      findByIdForUpdate: (id: IssueId) =>
+      findByIdForUpdate: (id: SignalId) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           return yield* sqlClient
@@ -273,39 +273,39 @@ const issueRepositoryCoreLive = Layer.effect(
             .pipe(
               Effect.flatMap((rows) => {
                 const row = rows[0]
-                if (!row) return Effect.fail(new NotFoundError({ entity: "Issue", id }))
-                return Effect.succeed(toDomainIssue(row))
+                if (!row) return Effect.fail(new NotFoundError({ entity: "Signal", id }))
+                return Effect.succeed(toDomainSignal(row))
               }),
             )
         }),
 
-      findByIds: ({ projectId, issueIds }: { readonly projectId: ProjectId; readonly issueIds: readonly IssueId[] }) =>
+      findByIds: ({ projectId, signalIds }: { readonly projectId: ProjectId; readonly signalIds: readonly SignalId[] }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           return yield* sqlClient
             .query((db, organizationId) => {
-              if (issueIds.length === 0) {
-                return db.select(issueColumnsWithLifecycle).from(issues).where(sql`1 = 0`) // Return empty result
+              if (signalIds.length === 0) {
+                return db.select(signalColumnsWithLifecycle).from(issues).where(sql`1 = 0`) // Return empty result
               }
 
               return db
-                .select(issueColumnsWithLifecycle)
+                .select(signalColumnsWithLifecycle)
                 .from(issues)
                 .where(
                   and(
                     eq(issues.organizationId, organizationId),
                     eq(issues.projectId, projectId),
-                    inArray(issues.id, issueIds),
+                    inArray(issues.id, signalIds),
                   ),
                 )
             })
-            .pipe(Effect.map((rows) => rows.map(toIssueWithLifecycle)))
+            .pipe(Effect.map((rows) => rows.map(toSignalWithLifecycle)))
         }),
 
       hybridSearch: ({ projectId, query, normalizedEmbedding }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const vector = yield* validateVector(normalizedEmbedding, "IssueRepository.hybridSearch")
+          const vector = yield* validateVector(normalizedEmbedding, "SignalRepository.hybridSearch")
           // pgvector's wire format expects a `vector` literal; node-postgres binds a JS
           // number[] as a Postgres array parameter, which cannot be cast to `vector`.
           // Inline the vector literal instead. This is safe because `validateVector` enforces
@@ -318,14 +318,14 @@ const issueRepositoryCoreLive = Layer.effect(
             1::double precision,
             greatest(0::double precision, ts_rank_cd(${issues.searchDocument}, ${lexicalQuery})::double precision)
           )`
-          const score = sql<number>`(${ISSUE_DISCOVERY_SEARCH_RATIO}::double precision * ${vectorScore} + ${
-            1 - ISSUE_DISCOVERY_SEARCH_RATIO
+          const score = sql<number>`(${SIGNAL_DISCOVERY_SEARCH_RATIO}::double precision * ${vectorScore} + ${
+            1 - SIGNAL_DISCOVERY_SEARCH_RATIO
           }::double precision * ${lexicalScore})`
 
           const rows = yield* sqlClient.query((db, organizationId) =>
             db
               .select({
-                issueId: issues.id,
+                signalId: issues.id,
                 name: issues.name,
                 description: issues.description,
                 score,
@@ -336,20 +336,20 @@ const issueRepositoryCoreLive = Layer.effect(
                   eq(issues.organizationId, organizationId),
                   eq(issues.projectId, projectId),
                   isNotNull(issues.centroidEmbedding),
-                  sql`(${score} >= ${ISSUE_DISCOVERY_MIN_SIMILARITY} OR ${vectorScore} >= ${ISSUE_DISCOVERY_MIN_VECTOR_SIMILARITY})`,
+                  sql`(${score} >= ${SIGNAL_DISCOVERY_MIN_SIMILARITY} OR ${vectorScore} >= ${SIGNAL_DISCOVERY_MIN_VECTOR_SIMILARITY})`,
                 ),
               )
               .orderBy(desc(score), desc(vectorScore), desc(issues.updatedAt), asc(issues.id))
-              .limit(ISSUE_DISCOVERY_SEARCH_CANDIDATES),
+              .limit(SIGNAL_DISCOVERY_SEARCH_CANDIDATES),
           )
 
           return rows.map((row) => ({
             ...row,
-            issueId: IssueId(row.issueId),
+            signalId: SignalId(row.signalId),
           }))
         }),
 
-      findSimilarByCentroid: ({ projectId, issueId, limit }) =>
+      findSimilarByCentroid: ({ projectId, signalId, limit }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
 
@@ -362,7 +362,7 @@ const issueRepositoryCoreLive = Layer.effect(
               .select({ centroidEmbedding: issues.centroidEmbedding })
               .from(issues)
               .where(
-                and(eq(issues.organizationId, organizationId), eq(issues.projectId, projectId), eq(issues.id, issueId)),
+                and(eq(issues.organizationId, organizationId), eq(issues.projectId, projectId), eq(issues.id, signalId)),
               )
               .limit(1),
           )
@@ -371,7 +371,7 @@ const issueRepositoryCoreLive = Layer.effect(
           // semantic signal degrades to nothing rather than failing the read.
           const embedding = source?.centroidEmbedding ?? null
           if (embedding === null) return []
-          const vector = yield* validateVector(embedding, "IssueRepository.findSimilarByCentroid")
+          const vector = yield* validateVector(embedding, "SignalRepository.findSimilarByCentroid")
           const queryVector = sql.raw(`'[${vector.join(",")}]'::vector`)
 
           // Exact cosine scan over the project's other issues — no ANN index by
@@ -382,13 +382,13 @@ const issueRepositoryCoreLive = Layer.effect(
           const similarity = sql<number>`(1::double precision - (${issues.centroidEmbedding} <=> ${queryVector}))`
           const rows = yield* sqlClient.query((db, organizationId) =>
             db
-              .select({ issueId: issues.id, similarity })
+              .select({ signalId: issues.id, similarity })
               .from(issues)
               .where(
                 and(
                   eq(issues.organizationId, organizationId),
                   eq(issues.projectId, projectId),
-                  ne(issues.id, issueId),
+                  ne(issues.id, signalId),
                   isNotNull(issues.centroidEmbedding),
                 ),
               )
@@ -397,7 +397,7 @@ const issueRepositoryCoreLive = Layer.effect(
           )
 
           return rows.map((row) => ({
-            issueId: IssueId(row.issueId),
+            signalId: SignalId(row.signalId),
             similarity: Number(row.similarity),
           }))
         }),
@@ -417,7 +417,7 @@ const issueRepositoryCoreLive = Layer.effect(
             const rows = yield* sqlClient.query((db, organizationId) =>
               db
                 .select({
-                  ...issueColumnsWithLifecycle,
+                  ...signalColumnsWithLifecycle,
                   projectSlug: projects.slug,
                   projectName: projects.name,
                   score: lexicalScore,
@@ -436,28 +436,28 @@ const issueRepositoryCoreLive = Layer.effect(
                 .orderBy(...projectFirst, desc(lexicalScore), desc(issues.updatedAt), asc(issues.id))
                 .limit(limit),
             )
-            return rows.map(toOrgIssueSearchHit)
+            return rows.map(toOrgSignalSearchHit)
           }
 
           // Semantic tier: the same vector + lexical blend `hybridSearch` uses, but org-wide.
           // NB: `centroid_embedding` has no ANN index (see schema) — this is an exact cosine scan
           // over every org issue. Acceptable for the debounced, capped palette tier; revisit with
           // an HNSW index if a large org regresses.
-          const vector = yield* validateVector(normalizedEmbedding, "IssueRepository.searchOrgWide")
+          const vector = yield* validateVector(normalizedEmbedding, "SignalRepository.searchOrgWide")
           const queryVector = sql.raw(`'[${vector.join(",")}]'::vector`)
           const vectorScore = sql<number>`(1::double precision - (${issues.centroidEmbedding} <=> ${queryVector}))`
           const lexicalScore = sql<number>`least(
             1::double precision,
             greatest(0::double precision, ts_rank_cd(${issues.searchDocument}, ${lexicalQuery})::double precision)
           )`
-          const score = sql<number>`(${ISSUE_DISCOVERY_SEARCH_RATIO}::double precision * ${vectorScore} + ${
-            1 - ISSUE_DISCOVERY_SEARCH_RATIO
+          const score = sql<number>`(${SIGNAL_DISCOVERY_SEARCH_RATIO}::double precision * ${vectorScore} + ${
+            1 - SIGNAL_DISCOVERY_SEARCH_RATIO
           }::double precision * ${lexicalScore})`
 
           const rows = yield* sqlClient.query((db, organizationId) =>
             db
               .select({
-                ...issueColumnsWithLifecycle,
+                ...signalColumnsWithLifecycle,
                 projectSlug: projects.slug,
                 projectName: projects.name,
                 score,
@@ -471,16 +471,16 @@ const issueRepositoryCoreLive = Layer.effect(
                   isNull(issues.resolvedAt),
                   isNull(issues.ignoredAt),
                   isNotNull(issues.centroidEmbedding),
-                  sql`(${score} >= ${ISSUE_DISCOVERY_MIN_SIMILARITY} OR ${vectorScore} >= ${ISSUE_DISCOVERY_MIN_VECTOR_SIMILARITY})`,
+                  sql`(${score} >= ${SIGNAL_DISCOVERY_MIN_SIMILARITY} OR ${vectorScore} >= ${SIGNAL_DISCOVERY_MIN_VECTOR_SIMILARITY})`,
                 ),
               )
               .orderBy(...projectFirst, desc(score), desc(vectorScore), desc(issues.updatedAt), asc(issues.id))
               .limit(limit),
           )
-          return rows.map(toOrgIssueSearchHit)
+          return rows.map(toOrgSignalSearchHit)
         }),
 
-      save: (issue: Issue) =>
+      save: (issue: Signal) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const centroidEmbedding = yield* toCentroidEmbedding(issue)
@@ -519,7 +519,7 @@ const issueRepositoryCoreLive = Layer.effect(
             eq(issues.organizationId, sqlClient.organizationId),
             eq(issues.projectId, input.projectId),
             eq(issues.slug, input.slug),
-            ...(input.excludeIssueId ? [ne(issues.id, input.excludeIssueId)] : []),
+            ...(input.excludeSignalId ? [ne(issues.id, input.excludeSignalId)] : []),
           )
           const [row] = yield* sqlClient.query((db) =>
             db.select({ count: sql<number>`count(*)::int` }).from(issues).where(conditions),
@@ -533,7 +533,7 @@ const issueRepositoryCoreLive = Layer.effect(
           return yield* sqlClient
             .query((db, organizationId) =>
               db
-                .select(issueColumnsWithLifecycle)
+                .select(signalColumnsWithLifecycle)
                 .from(issues)
                 .where(
                   and(
@@ -547,8 +547,8 @@ const issueRepositoryCoreLive = Layer.effect(
             .pipe(
               Effect.flatMap((rows) => {
                 const row = rows[0]
-                if (!row) return Effect.fail(new NotFoundError({ entity: "Issue", id: slug }))
-                return Effect.succeed(toIssueWithLifecycle(row))
+                if (!row) return Effect.fail(new NotFoundError({ entity: "Signal", id: slug }))
+                return Effect.succeed(toSignalWithLifecycle(row))
               }),
             )
         }),
@@ -571,14 +571,14 @@ const issueRepositoryCoreLive = Layer.effect(
   }),
 )
 
-const evaluationIssueRepositoryFromIssueRepositoryLive = Layer.effect(
-  EvaluationIssueRepository,
+const evaluationSignalRepositoryFromSignalRepositoryLive = Layer.effect(
+  EvaluationSignalRepository,
   Effect.gen(function* () {
-    return yield* IssueRepository
+    return yield* SignalRepository
   }),
 )
 
-export const IssueRepositoryLive = Layer.mergeAll(
-  issueRepositoryCoreLive,
-  evaluationIssueRepositoryFromIssueRepositoryLive.pipe(Layer.provide(issueRepositoryCoreLive)),
+export const SignalRepositoryLive = Layer.mergeAll(
+  signalRepositoryCoreLive,
+  evaluationSignalRepositoryFromSignalRepositoryLive.pipe(Layer.provide(signalRepositoryCoreLive)),
 )
