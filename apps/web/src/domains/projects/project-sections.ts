@@ -14,7 +14,6 @@ import {
   Share2Icon,
   ShieldAlertIcon,
   TagsIcon,
-  TextIcon,
   UserRound,
   Users,
   UsersRoundIcon,
@@ -41,13 +40,6 @@ const PROJECT_SECTIONS: readonly ProjectSection[] = [
     icon: MessagesSquareIcon,
     path: (slug) => `/projects/${slug}`,
     isActive: (pathname, slug) => pathname === `/projects/${slug}` || pathname === `/projects/${slug}/`,
-  },
-  {
-    key: "traces",
-    label: "Traces",
-    icon: TextIcon,
-    path: (slug) => `/projects/${slug}/traces`,
-    isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/traces`),
   },
   {
     key: "behaviours",

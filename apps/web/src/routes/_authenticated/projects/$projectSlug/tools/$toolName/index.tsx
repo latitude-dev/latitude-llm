@@ -375,9 +375,10 @@ function ToolDetailPageContent() {
               headerAction={
                 <Button asChild variant="outline" size="sm" className="w-auto">
                   <Link
-                    to="/projects/$projectSlug/traces"
+                    to="/projects/$projectSlug"
                     params={{ projectSlug }}
                     search={{
+                      tab: "traces",
                       filters: JSON.stringify({
                         tools: [{ op: "in", value: [toolName] }],
                         startTime: [

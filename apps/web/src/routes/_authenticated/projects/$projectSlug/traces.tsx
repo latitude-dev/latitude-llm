@@ -1,15 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { BreadcrumbText } from "../../-components/breadcrumb-ui.tsx"
-import { ProjectExplorer } from "./-components/project-explorer.tsx"
+import { createFileRoute, redirect } from "@tanstack/react-router"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/traces")({
-  staticData: {
-    breadcrumb: () => <BreadcrumbText variant="current">Traces</BreadcrumbText>,
+  beforeLoad: ({ params, location }) => {
+    throw redirect({
+      to: "/projects/$projectSlug",
+      params: { projectSlug: params.projectSlug },
+      search: { ...(location.search as Record<string, unknown>), tab: "traces" },
+    })
   },
-  component: TracesPage,
+  component: () => null,
 })
-
-function TracesPage() {
-  const { projectSlug } = Route.useParams()
-  return <ProjectExplorer projectSlug={projectSlug} mode="traces" />
-}

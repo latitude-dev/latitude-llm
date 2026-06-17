@@ -32,6 +32,7 @@ export function MonitorMatchingTraces({
   const rows = data.slice(0, PREVIEW_LIMIT)
 
   const viewAllSearch = {
+    tab: "traces",
     filters: JSON.stringify(filters),
     filtersOpen: true,
     ...(query ? { query } : {}),
@@ -94,7 +95,7 @@ export function MonitorMatchingTraces({
       <div className="flex items-center justify-between gap-2">
         <Text.H5M color="foreground">Matching traces</Text.H5M>
         <Button asChild variant="ghost" size="sm" className="w-auto">
-          <Link to="/projects/$projectSlug/traces" params={{ projectSlug }} search={viewAllSearch}>
+          <Link to="/projects/$projectSlug" params={{ projectSlug }} search={viewAllSearch}>
             View all
             <Icon icon={ArrowUpRightIcon} size="sm" />
           </Link>
