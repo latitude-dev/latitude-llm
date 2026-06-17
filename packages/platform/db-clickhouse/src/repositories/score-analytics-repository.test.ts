@@ -58,7 +58,7 @@ function makeScoreRow(overrides: Partial<Record<string, unknown>> = {}) {
     source: (overrides.source as string) ?? "evaluation",
     source_id: (overrides.source_id as string) ?? "eval_src_000000000000",
     simulation_id: (overrides.simulation_id as string) ?? "",
-    issue_id: (overrides.issue_id as string) ?? "",
+    signal_id: (overrides.signal_id as string) ?? "",
     value: (overrides.value as number) ?? 0.8,
     passed: overrides.passed !== undefined ? overrides.passed : true,
     errored: overrides.errored !== undefined ? overrides.errored : false,
@@ -376,7 +376,7 @@ describe("ScoreAnalyticsRepository", () => {
           errored: false,
           value: 0.2,
           source: "custom",
-          issue_id: "iiiiiiiiiiiiiiiiiiiiiiii",
+          signal_id: "iiiiiiiiiiiiiiiiiiiiiiii",
         }),
         makeScoreRow({ trace_id: traceB, passed: false, errored: true, value: 0.0, source: "evaluation" }),
       ])
@@ -436,14 +436,14 @@ describe("ScoreAnalyticsRepository", () => {
     beforeEach(async () => {
       await fixture.insertScores([
         // signalA seen on traceA twice (occurrences = 2) + once on traceB.
-        makeScoreRow({ trace_id: traceA, issue_id: signalA, created_at: "2026-03-20 10:00:00.000" }),
-        makeScoreRow({ trace_id: traceA, issue_id: signalA, created_at: "2026-03-25 10:00:00.000" }),
-        makeScoreRow({ trace_id: traceB, issue_id: signalA, created_at: "2026-03-22 10:00:00.000" }),
+        makeScoreRow({ trace_id: traceA, signal_id: signalA, created_at: "2026-03-20 10:00:00.000" }),
+        makeScoreRow({ trace_id: traceA, signal_id: signalA, created_at: "2026-03-25 10:00:00.000" }),
+        makeScoreRow({ trace_id: traceB, signal_id: signalA, created_at: "2026-03-22 10:00:00.000" }),
         // signalB only on traceB, more recent than signalA's last-seen.
-        makeScoreRow({ trace_id: traceB, issue_id: signalB, created_at: "2026-03-28 10:00:00.000" }),
+        makeScoreRow({ trace_id: traceB, signal_id: signalB, created_at: "2026-03-28 10:00:00.000" }),
         // No-issue score on traceA and an issue on a trace outside the session.
-        makeScoreRow({ trace_id: traceA, issue_id: "" }),
-        makeScoreRow({ trace_id: traceOther, issue_id: signalOther }),
+        makeScoreRow({ trace_id: traceA, signal_id: "" }),
+        makeScoreRow({ trace_id: traceOther, signal_id: signalOther }),
       ])
     })
 
@@ -523,10 +523,10 @@ describe("ScoreAnalyticsRepository", () => {
 
     beforeEach(async () => {
       await fixture.insertScores([
-        makeScoreRow({ issue_id: signalA, created_at: "2026-03-25 10:00:00.000" }),
-        makeScoreRow({ issue_id: signalA, created_at: "2026-03-20 10:00:00.000" }),
-        makeScoreRow({ issue_id: signalA, created_at: "2026-03-10 10:00:00.000" }),
-        makeScoreRow({ issue_id: signalB, created_at: "2026-03-25 10:00:00.000" }),
+        makeScoreRow({ signal_id: signalA, created_at: "2026-03-25 10:00:00.000" }),
+        makeScoreRow({ signal_id: signalA, created_at: "2026-03-20 10:00:00.000" }),
+        makeScoreRow({ signal_id: signalA, created_at: "2026-03-10 10:00:00.000" }),
+        makeScoreRow({ signal_id: signalB, created_at: "2026-03-25 10:00:00.000" }),
       ])
     })
 
@@ -609,13 +609,13 @@ describe("ScoreAnalyticsRepository", () => {
 
       await fixture.insertScores([
         // Two occurrences on the same trace/session → distinct counts must dedupe.
-        makeScoreRow({ issue_id: signalI, trace_id: traceI1, session_id: sessionI1 }),
-        makeScoreRow({ issue_id: signalI, trace_id: traceI1, session_id: sessionI1 }),
-        makeScoreRow({ issue_id: signalI, trace_id: traceI2, session_id: sessionI2 }),
+        makeScoreRow({ signal_id: signalI, trace_id: traceI1, session_id: sessionI1 }),
+        makeScoreRow({ signal_id: signalI, trace_id: traceI1, session_id: sessionI1 }),
+        makeScoreRow({ signal_id: signalI, trace_id: traceI2, session_id: sessionI2 }),
         // Occurrence with no trace/session: counts toward occurrences only.
-        makeScoreRow({ issue_id: signalI, trace_id: "", session_id: "" }),
+        makeScoreRow({ signal_id: signalI, trace_id: "", session_id: "" }),
         // Another issue's occurrence — excluded.
-        makeScoreRow({ issue_id: signalOther, trace_id: traceOther, session_id: sessionOther }),
+        makeScoreRow({ signal_id: signalOther, trace_id: traceOther, session_id: sessionOther }),
       ])
     })
 
@@ -682,26 +682,26 @@ describe("ScoreAnalyticsRepository", () => {
       await fixture.insertScores([
         // Source issue: sessions 1-4. Session 1 carries TWO source occurrences
         // so distinct session counting is exercised.
-        makeScoreRow({ issue_id: signalSource, session_id: session(1), created_at: inRange }),
-        makeScoreRow({ issue_id: signalSource, session_id: session(1), created_at: inRange }),
-        makeScoreRow({ issue_id: signalSource, session_id: session(2), created_at: inRange }),
-        makeScoreRow({ issue_id: signalSource, session_id: session(3), created_at: inRange }),
-        makeScoreRow({ issue_id: signalSource, session_id: session(4), created_at: inRange }),
+        makeScoreRow({ signal_id: signalSource, session_id: session(1), created_at: inRange }),
+        makeScoreRow({ signal_id: signalSource, session_id: session(1), created_at: inRange }),
+        makeScoreRow({ signal_id: signalSource, session_id: session(2), created_at: inRange }),
+        makeScoreRow({ signal_id: signalSource, session_id: session(3), created_at: inRange }),
+        makeScoreRow({ signal_id: signalSource, session_id: session(4), created_at: inRange }),
         // Sessionless source occurrence: ignored by session co-occurrence.
-        makeScoreRow({ issue_id: signalSource, session_id: "", created_at: inRange }),
+        makeScoreRow({ signal_id: signalSource, session_id: "", created_at: inRange }),
         // Heavy co-occurrer: shares sessions 1-3, plus its own sessions 5-6.
-        makeScoreRow({ issue_id: signalHeavy, session_id: session(1), created_at: inRange }),
-        makeScoreRow({ issue_id: signalHeavy, session_id: session(2), created_at: inRange }),
-        makeScoreRow({ issue_id: signalHeavy, session_id: session(3), created_at: inRange }),
-        makeScoreRow({ issue_id: signalHeavy, session_id: session(5), created_at: inRange }),
-        makeScoreRow({ issue_id: signalHeavy, session_id: session(6), created_at: inRange }),
+        makeScoreRow({ signal_id: signalHeavy, session_id: session(1), created_at: inRange }),
+        makeScoreRow({ signal_id: signalHeavy, session_id: session(2), created_at: inRange }),
+        makeScoreRow({ signal_id: signalHeavy, session_id: session(3), created_at: inRange }),
+        makeScoreRow({ signal_id: signalHeavy, session_id: session(5), created_at: inRange }),
+        makeScoreRow({ signal_id: signalHeavy, session_id: session(6), created_at: inRange }),
         // Light co-occurrer: shares session 1 only, plus its own session 7.
-        makeScoreRow({ issue_id: signalLight, session_id: session(1), created_at: inRange }),
-        makeScoreRow({ issue_id: signalLight, session_id: session(7), created_at: inRange }),
+        makeScoreRow({ signal_id: signalLight, session_id: session(1), created_at: inRange }),
+        makeScoreRow({ signal_id: signalLight, session_id: session(7), created_at: inRange }),
         // Disjoint issue: session 8 only — must not appear as a candidate.
-        makeScoreRow({ issue_id: signalDisjoint, session_id: session(8), created_at: inRange }),
+        makeScoreRow({ signal_id: signalDisjoint, session_id: session(8), created_at: inRange }),
         // Stale co-occurrer: shares session 1 but outside the window.
-        makeScoreRow({ issue_id: signalStale, session_id: session(1), created_at: outOfRange }),
+        makeScoreRow({ signal_id: signalStale, session_id: session(1), created_at: outOfRange }),
       ])
     })
 
@@ -838,10 +838,10 @@ describe("ScoreAnalyticsRepository", () => {
       ])
 
       await fixture.insertScores([
-        makeScoreRow({ issue_id: signalDim, trace_id: traceD1 }),
-        makeScoreRow({ issue_id: signalDim, trace_id: traceD2 }),
+        makeScoreRow({ signal_id: signalDim, trace_id: traceD1 }),
+        makeScoreRow({ signal_id: signalDim, trace_id: traceD2 }),
         // traceD3 has no occurrence — it is a pure project (baseline) trace.
-        makeScoreRow({ issue_id: signalOther, trace_id: traceOther }),
+        makeScoreRow({ signal_id: signalOther, trace_id: traceOther }),
       ])
     })
 
@@ -940,13 +940,13 @@ describe("ScoreAnalyticsRepository", () => {
       ])
 
       await fixture.insertScores([
-        makeScoreRow({ issue_id: signalA, trace_id: traceA1 }),
-        makeScoreRow({ issue_id: signalA, trace_id: traceA2 }),
-        makeScoreRow({ issue_id: signalB, trace_id: traceB1 }),
+        makeScoreRow({ signal_id: signalA, trace_id: traceA1 }),
+        makeScoreRow({ signal_id: signalA, trace_id: traceA2 }),
+        makeScoreRow({ signal_id: signalB, trace_id: traceB1 }),
         // Score linked to the cross-org trace under a foreign org id.
         makeScoreRow({
           organization_id: "other_orgggggggggggggggg",
-          issue_id: signalA,
+          signal_id: signalA,
           trace_id: otherOrgTrace,
         }),
       ])
@@ -1015,9 +1015,9 @@ describe("ScoreAnalyticsRepository", () => {
 
     beforeEach(async () => {
       await fixture.insertScores([
-        makeScoreRow({ issue_id: signalId, created_at: daysAgoDateTime(2, 10) }),
-        makeScoreRow({ issue_id: signalId, created_at: daysAgoDateTime(2, 18) }),
-        makeScoreRow({ issue_id: signalId, created_at: daysAgoDateTime(1, 8) }),
+        makeScoreRow({ signal_id: signalId, created_at: daysAgoDateTime(2, 10) }),
+        makeScoreRow({ signal_id: signalId, created_at: daysAgoDateTime(2, 18) }),
+        makeScoreRow({ signal_id: signalId, created_at: daysAgoDateTime(1, 8) }),
       ])
     })
 
@@ -1056,28 +1056,28 @@ describe("ScoreAnalyticsRepository", () => {
     beforeEach(async () => {
       await fixture.insertScores([
         makeScoreRow({
-          issue_id: signalA,
+          signal_id: signalA,
           trace_id: traceA,
           source: "evaluation",
           source_id: "eval_source_a",
           created_at: "2026-04-08 10:00:00.000",
         }),
         makeScoreRow({
-          issue_id: signalA,
+          signal_id: signalA,
           trace_id: traceA,
           source: "evaluation",
           source_id: "eval_source_a",
           created_at: "2026-04-09 10:00:00.000",
         }),
         makeScoreRow({
-          issue_id: signalB,
+          signal_id: signalB,
           trace_id: traceB,
           source: "custom",
           source_id: "custom_source_b",
           created_at: "2026-04-10 09:00:00.000",
         }),
         makeScoreRow({
-          issue_id: signalB,
+          signal_id: signalB,
           trace_id: traceB,
           source: "custom",
           source_id: "custom_source_b",
@@ -1315,11 +1315,11 @@ describe("ScoreAnalyticsRepository", () => {
       // recent_6h = 2 (t-30m, t-2h)
       // recent_24h = 4 (t-30m, t-2h, t-7h, t-20h) — t-26h is outside
       await fixture.insertScores([
-        makeScoreRow({ issue_id: signalId, created_at: fmt(minus(30 * 60 * 1000)) }),
-        makeScoreRow({ issue_id: signalId, created_at: fmt(minus(2 * HOUR)) }),
-        makeScoreRow({ issue_id: signalId, created_at: fmt(minus(7 * HOUR)) }),
-        makeScoreRow({ issue_id: signalId, created_at: fmt(minus(20 * HOUR)) }),
-        makeScoreRow({ issue_id: signalId, created_at: fmt(minus(26 * HOUR)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(30 * 60 * 1000)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(2 * HOUR)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(7 * HOUR)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(20 * HOUR)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(26 * HOUR)) }),
       ])
 
       const signals = await fixture.runCh(
@@ -1338,9 +1338,9 @@ describe("ScoreAnalyticsRepository", () => {
       // Plant one row at the center anchor for each of weeks 1, 2, 3 (skip week 4)
       // so the pool gathers samples from 3 distinct prior weeks.
       await fixture.insertScores([
-        makeScoreRow({ issue_id: signalId, created_at: fmt(minus(1 * WEEK)) }),
-        makeScoreRow({ issue_id: signalId, created_at: fmt(minus(2 * WEEK)) }),
-        makeScoreRow({ issue_id: signalId, created_at: fmt(minus(3 * WEEK)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(1 * WEEK)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(2 * WEEK)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(3 * WEEK)) }),
       ])
 
       const signals = await fixture.runCh(
@@ -1359,10 +1359,10 @@ describe("ScoreAnalyticsRepository", () => {
       // Plant 1 event per week at the center anchor (week N · 7d before NOW)
       // across all 4 prior weeks. With a constant count of 1, mean = 1 and stddev = 0.
       await fixture.insertScores([
-        makeScoreRow({ issue_id: signalId, created_at: fmt(minus(1 * WEEK)) }),
-        makeScoreRow({ issue_id: signalId, created_at: fmt(minus(2 * WEEK)) }),
-        makeScoreRow({ issue_id: signalId, created_at: fmt(minus(3 * WEEK)) }),
-        makeScoreRow({ issue_id: signalId, created_at: fmt(minus(4 * WEEK)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(1 * WEEK)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(2 * WEEK)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(3 * WEEK)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(4 * WEEK)) }),
       ])
 
       const signals = await fixture.runCh(
@@ -1385,9 +1385,9 @@ describe("ScoreAnalyticsRepository", () => {
     it("returns one signals row per requested issue", async () => {
       const otherSignal = "esc_signals_bbbbbbbbbbbb"
       await fixture.insertScores([
-        makeScoreRow({ issue_id: signalId, created_at: fmt(minus(30 * 60 * 1000)) }),
-        makeScoreRow({ issue_id: otherSignal, created_at: fmt(minus(30 * 60 * 1000)) }),
-        makeScoreRow({ issue_id: otherSignal, created_at: fmt(minus(30 * 60 * 1000)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(30 * 60 * 1000)) }),
+        makeScoreRow({ signal_id: otherSignal, created_at: fmt(minus(30 * 60 * 1000)) }),
+        makeScoreRow({ signal_id: otherSignal, created_at: fmt(minus(30 * 60 * 1000)) }),
       ])
 
       const signals = await fixture.runCh(
@@ -1471,9 +1471,9 @@ describe("ScoreAnalyticsRepository", () => {
       // Seed history inside the prior window [trendEnd − 4w, trendEnd) so the
       // pool has data to fold into expected / σ.
       await fixture.insertScores([
-        makeScoreRow({ issue_id: signalId, created_at: "2026-04-08 10:00:00.000" }),
-        makeScoreRow({ issue_id: signalId, created_at: "2026-04-08 11:00:00.000" }),
-        makeScoreRow({ issue_id: signalId, created_at: "2026-04-15 10:00:00.000" }),
+        makeScoreRow({ signal_id: signalId, created_at: "2026-04-08 10:00:00.000" }),
+        makeScoreRow({ signal_id: signalId, created_at: "2026-04-08 11:00:00.000" }),
+        makeScoreRow({ signal_id: signalId, created_at: "2026-04-15 10:00:00.000" }),
       ])
 
       const series = await fixture.runCh(
@@ -1505,8 +1505,8 @@ describe("ScoreAnalyticsRepository", () => {
       const trendFrom = new Date("2026-04-22T00:00:00.000Z")
       const trendTo = new Date("2026-04-29T00:00:00.000Z")
       await fixture.insertScores([
-        makeScoreRow({ issue_id: signalId, created_at: "2026-04-08 10:00:00.000" }),
-        makeScoreRow({ issue_id: signalId, created_at: "2026-04-15 10:00:00.000" }),
+        makeScoreRow({ signal_id: signalId, created_at: "2026-04-08 10:00:00.000" }),
+        makeScoreRow({ signal_id: signalId, created_at: "2026-04-15 10:00:00.000" }),
       ])
 
       const [low, high] = await Promise.all([

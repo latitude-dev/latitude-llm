@@ -79,6 +79,8 @@ const toAnalyticsRow = (score: Score) => ({
   source: score.source,
   source_id: score.sourceId,
   simulation_id: score.simulationId ?? "",
+  signal_id: score.signalId ?? "",
+  // Dual-write the legacy column so reads/rollback stay correct until issue_id is dropped (Phase 9).
   issue_id: score.signalId ?? "",
   value: score.value,
   passed: score.passed,
@@ -177,7 +179,7 @@ type SessionRollupRow = {
 }
 
 type SignalOccurrenceRow = {
-  issue_id: string
+  signal_id: string
   total_occurrences: string
   recent_occurrences: string
   baseline_avg_occurrences: string
@@ -212,7 +214,7 @@ type DimensionTotalsRow = {
 }
 
 type CoOccurrenceCandidateRow = {
-  issue_id: string
+  signal_id: string
   shared_sessions: string
   their_sessions: string
 }
@@ -228,33 +230,33 @@ type SignalOccurrenceBucketRow = {
 }
 
 type RecentCountsRow = {
-  issue_id: string
+  signal_id: string
   recent_1h: string
   recent_6h: string
   recent_24h: string
 }
 
 type HourlyBucketRow = {
-  issue_id: string
+  signal_id: string
   ts_hour: string
   count: string
 }
 
 type SignalWindowMetricRow = {
-  issue_id: string
+  signal_id: string
   occurrences: string
   first_seen_at: string
   last_seen_at: string
 }
 
 type SignalTrendSeriesRow = {
-  issue_id: string
+  signal_id: string
   bucket: string
   count: string
 }
 
 type SignalTagsRow = {
-  issue_id: string
+  signal_id: string
   tags: string[]
 }
 
@@ -268,7 +270,7 @@ type SignalTraceSummaryRow = {
 }
 
 type SessionSignalRollupRow = {
-  issue_id: string
+  signal_id: string
   occurrences: string
   first_seen_at: string
   last_seen_at: string
@@ -338,7 +340,7 @@ const toSessionRollup = (row: SessionRollupRow): SessionScoreRollup => ({
 })
 
 const toSignalOccurrence = (row: SignalOccurrenceRow): SignalOccurrenceAggregate => ({
-  signalId: toSignalId(normalizeCHString(row.issue_id)),
+  signalId: toSignalId(normalizeCHString(row.signal_id)),
   totalOccurrences: Number(row.total_occurrences),
   recentOccurrences: Number(row.recent_occurrences),
   baselineAvgOccurrences: Number(row.baseline_avg_occurrences),
@@ -371,7 +373,7 @@ const mergeEscalationSignals = (input: {
   // (signalId, ts_hour_ms) → count
   const bucketMap = new Map<string, Map<number, number>>()
   for (const row of bucketRows) {
-    const signalId = normalizeCHString(row.issue_id)
+    const signalId = normalizeCHString(row.signal_id)
     const tsHourMs = parseCHDate(row.ts_hour).getTime()
     const count = Number(row.count)
     let perSignal = bucketMap.get(signalId)
@@ -384,7 +386,7 @@ const mergeEscalationSignals = (input: {
 
   const recentBySignal = new Map<string, RecentCountsRow>()
   for (const row of recentRows) {
-    recentBySignal.set(normalizeCHString(row.issue_id), row)
+    recentBySignal.set(normalizeCHString(row.signal_id), row)
   }
 
   const meanStddev = (values: readonly number[]): { readonly mean: number; readonly stddev: number } => {
@@ -439,7 +441,7 @@ const mergeEscalationSignals = (input: {
 }
 
 const toSignalWindowMetric = (row: SignalWindowMetricRow): SignalWindowMetric => ({
-  signalId: toSignalId(normalizeCHString(row.issue_id)),
+  signalId: toSignalId(normalizeCHString(row.signal_id)),
   occurrences: Number(row.occurrences),
   firstSeenAt: parseCHDate(row.first_seen_at),
   lastSeenAt: parseCHDate(row.last_seen_at),
@@ -564,7 +566,7 @@ const toSignalTrendSeries = (rows: readonly SignalTrendSeriesRow[]): readonly Si
   const bucketsBySignalId = new Map<string, SignalOccurrenceBucket[]>()
 
   for (const row of rows) {
-    const signalId = normalizeCHString(row.issue_id)
+    const signalId = normalizeCHString(row.signal_id)
     const buckets = bucketsBySignalId.get(signalId) ?? []
     buckets.push({
       bucket: row.bucket,
@@ -580,7 +582,7 @@ const toSignalTrendSeries = (rows: readonly SignalTrendSeriesRow[]): readonly Si
 }
 
 const toSignalTagsAggregate = (row: SignalTagsRow): SignalTagsAggregate => ({
-  signalId: toSignalId(normalizeCHString(row.issue_id)),
+  signalId: toSignalId(normalizeCHString(row.signal_id)),
   tags: row.tags.map(normalizeCHString).filter((tag) => tag.length > 0),
 })
 
@@ -667,14 +669,14 @@ const buildSignalAnalyticsWhere = (input: {
     ? buildClickHouseWhere(input.filters, SCORE_FIELD_REGISTRY, { paramPrefix: input.paramPrefix })
     : { clauses: [], params: {} }
   const timeRangeResult = buildScoreCreatedAtTimeRange(input.timeRange, input.paramPrefix)
-  const clauses = ["issue_id != ''", ...filterResult.clauses, ...timeRangeResult.clauses]
+  const clauses = ["signal_id != ''", ...filterResult.clauses, ...timeRangeResult.clauses]
   const params = {
     ...filterResult.params,
     ...timeRangeResult.params,
   }
 
   if (input.signalIds && input.signalIds.length > 0) {
-    clauses.push(`issue_id IN ({${input.paramPrefix}_signalIds:Array(String)})`)
+    clauses.push(`signal_id IN ({${input.paramPrefix}_signalIds:Array(String)})`)
     params[`${input.paramPrefix}_signalIds`] = input.signalIds
   }
 
@@ -703,7 +705,7 @@ const querySignalImpactCore = (
               uniqExactIf(session_id, session_id != '')     AS affected_sessions
             FROM scores
             WHERE ${scopeClause(options)}
-              AND issue_id = {signalId:String}`,
+              AND signal_id = {signalId:String}`,
       query_params: params,
       format: "JSONEachRow",
     })
@@ -732,7 +734,7 @@ const querySignalImpactCostTokens = (
                 SELECT DISTINCT trace_id
                 FROM scores
                 WHERE ${scopeClause(options)}
-                  AND issue_id = {signalId:String}
+                  AND signal_id = {signalId:String}
                   AND trace_id != ''
               )`,
       query_params: params,
@@ -760,7 +762,7 @@ const querySignalImpactUsers = (
                   SELECT DISTINCT session_id
                   FROM scores
                   WHERE ${scopeClause(options)}
-                    AND issue_id = {signalId:String}
+                    AND signal_id = {signalId:String}
                     AND session_id != ''
                 )
               GROUP BY session_id
@@ -935,7 +937,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                         countIf(passed = false AND errored = false)          AS failed_count,
                         countIf(errored = true)                              AS errored_count,
                         avg(value)                                           AS avg_value,
-                        max(issue_id != '')                                  AS has_issue,
+                        max(signal_id != '')                                  AS has_issue,
                         groupUniqArray(source)                                AS sources
                       FROM scores
                       WHERE ${scopeClause(options)}
@@ -967,7 +969,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                         countIf(passed = false AND errored = false)          AS failed_count,
                         countIf(errored = true)                              AS errored_count,
                         avg(value)                                           AS avg_value,
-                        max(issue_id != '')                                  AS has_issue,
+                        max(signal_id != '')                                  AS has_issue,
                         groupUniqArray(source)                                AS sources
                       FROM scores
                       WHERE ${scopeClause(options)}
@@ -993,7 +995,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
             .query(async (client) => {
               const result = await client.query({
                 query: `SELECT
-                        issue_id,
+                        signal_id,
                         count()                                                AS total_occurrences,
                         countIf(created_at >= now() - INTERVAL 1 DAY)          AS recent_occurrences,
                         -- average daily occurrences over the previous 7-day baseline (days 1-8 ago)
@@ -1005,8 +1007,8 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                         max(created_at)                                        AS last_seen_at
                       FROM scores
                       WHERE ${scopeClause(options)}
-                        AND issue_id IN ({signalIds:Array(String)})
-                      GROUP BY issue_id`,
+                        AND signal_id IN ({signalIds:Array(String)})
+                      GROUP BY signal_id`,
                 query_params: {
                   ...scopeParams(organizationId, projectId),
                   signalIds: Array.from(signalIds) as string[],
@@ -1072,7 +1074,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           const signalTracesSql = `SELECT DISTINCT trace_id
             FROM scores
             WHERE ${scopeClause(options)}
-              AND issue_id = {signalId:String}
+              AND signal_id = {signalId:String}
               AND trace_id != ''${scoreRange.clauses.length > 0 ? ` AND ${scoreRange.clauses.join(" AND ")}` : ""}`
           const params = {
             ...scopeParams(organizationId, projectId),
@@ -1144,7 +1146,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
       // -- coOccurrenceBySignal -------------------------------------------------
       // Session co-occurrence counts for the Related-issues list. Two reads run
       // concurrently over issue-carrying scores in range:
-      //   1. per-candidate shared/their session counts (GROUP BY issue_id with
+      //   1. per-candidate shared/their session counts (GROUP BY signal_id with
       //      the source issue's session set as an IN subquery),
       //   2. the source issue's session count + the probability universe
       //      (sessions with any issue occurrence).
@@ -1167,23 +1169,23 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           const mySessionsSql = `SELECT DISTINCT session_id
                       FROM scores
                       WHERE ${scopeClause(options)}
-                        AND issue_id = {signalId:String}
+                        AND signal_id = {signalId:String}
                         AND session_id != ''${rangeWhere}`
 
           const candidates = chSqlClient.query<CoOccurrenceCandidateRow[]>(async (client) => {
             const result = await client.query({
               query: `SELECT
-                      issue_id,
+                      signal_id,
                       uniqExactIf(session_id, session_id IN (${mySessionsSql})) AS shared_sessions,
                       uniqExact(session_id) AS their_sessions
                     FROM scores
                     WHERE ${scopeClause(options)}
-                      AND issue_id != ''
-                      AND issue_id != {signalId:String}
+                      AND signal_id != ''
+                      AND signal_id != {signalId:String}
                       AND session_id != ''${rangeWhere}
-                    GROUP BY issue_id
+                    GROUP BY signal_id
                     HAVING shared_sessions > 0
-                    ORDER BY shared_sessions DESC, their_sessions ASC, issue_id ASC
+                    ORDER BY shared_sessions DESC, their_sessions ASC, signal_id ASC
                     LIMIT {candidateLimit:UInt32}`,
               query_params: params,
               format: "JSONEachRow",
@@ -1194,11 +1196,11 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           const totals = chSqlClient.query<CoOccurrenceTotalsRow[]>(async (client) => {
             const result = await client.query({
               query: `SELECT
-                      uniqExactIf(session_id, issue_id = {signalId:String}) AS my_sessions,
+                      uniqExactIf(session_id, signal_id = {signalId:String}) AS my_sessions,
                       uniqExact(session_id) AS total_sessions
                     FROM scores
                     WHERE ${scopeClause(options)}
-                      AND issue_id != ''
+                      AND signal_id != ''
                       AND session_id != ''${rangeWhere}`,
               query_params: params,
               format: "JSONEachRow",
@@ -1212,7 +1214,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
             mySessions: Number(totalsRows[0]?.my_sessions ?? 0),
             totalSessions: Number(totalsRows[0]?.total_sessions ?? 0),
             candidates: candidateRows.map((row) => ({
-              signalId: toSignalId(normalizeCHString(row.issue_id)),
+              signalId: toSignalId(normalizeCHString(row.signal_id)),
               sharedSessions: Number(row.shared_sessions),
               theirSessions: Number(row.their_sessions),
             })),
@@ -1255,15 +1257,15 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
               chSqlClient.query<RecentCountsRow[]>(async (client) => {
                 const result = await client.query({
                   query: `SELECT
-                          issue_id,
+                          signal_id,
                           countIf(created_at >= toDateTime({now:String}, 'UTC') - INTERVAL 1 HOUR) AS recent_1h,
                           countIf(created_at >= toDateTime({now:String}, 'UTC') - INTERVAL 6 HOUR) AS recent_6h,
                           countIf(created_at >= toDateTime({now:String}, 'UTC') - INTERVAL 1 DAY)  AS recent_24h
                         FROM scores
                         WHERE ${scopeClause(options)}
-                          AND issue_id IN ({signalIds:Array(String)})
+                          AND signal_id IN ({signalIds:Array(String)})
                           AND created_at >= toDateTime({now:String}, 'UTC') - INTERVAL 1 DAY
-                        GROUP BY issue_id`,
+                        GROUP BY signal_id`,
                   query_params: {
                     ...scopeParams(organizationId, projectId),
                     signalIds: Array.from(signalIds) as string[],
@@ -1276,15 +1278,15 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
               chSqlClient.query<HourlyBucketRow[]>(async (client) => {
                 const result = await client.query({
                   query: `SELECT
-                          issue_id,
+                          signal_id,
                           ts_hour,
                           sum(count) AS count
                         FROM scores_hourly_buckets
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
-                          AND issue_id IN ({signalIds:Array(String)})
+                          AND signal_id IN ({signalIds:Array(String)})
                           AND ts_hour IN ({tsHours:Array(DateTime)})
-                        GROUP BY issue_id, ts_hour`,
+                        GROUP BY signal_id, ts_hour`,
                   query_params: {
                     organizationId: organizationId as string,
                     projectId: projectId as string,
@@ -1311,8 +1313,8 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
       // -- aggregateTagsBySignals ---------------------------------------------
       // Performance shape (read carefully before relaxing the bounds):
       //   * `scores` is partitioned by `toYYYYMM(created_at)` and PK is
-      //     `(org, project, created_at)`. `issue_id` is NOT in the sort key,
-      //     so without a `created_at` filter `WHERE issue_id IN (...)` does
+      //     `(org, project, created_at)`. `signal_id` is NOT in the sort key,
+      //     so without a `created_at` filter `WHERE signal_id IN (...)` does
       //     a full scan of every monthly partition for the (org, project) —
       //     a year-old project means ~12 partitions × millions of rows.
       //   * `traces` is partitioned by `toYYYYMM(min_start_time)` with a
@@ -1323,13 +1325,13 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
       //   * The `timeRange` argument is therefore REQUIRED — both subqueries
       //     filter on it. The use-case picks the bound (typically a 30d
       //     fallback if the operator hasn't selected one).
-      //   * `LIMIT N BY issue_id` further caps the per-issue trace sample so
+      //   * `LIMIT N BY signal_id` further caps the per-issue trace sample so
       //     a single noisy issue can't blow up the join.
       //
       // TODO(perf): long-term this should be served by a dedicated per-issue
       // tags aggregating MV (insert-time work, O(1) read). Open questions
       // before building it: (a) which side denormalizes — `tags` onto
-      // `scores`, or `issue_id` onto `spans`/`traces`? (b) how to handle
+      // `scores`, or `signal_id` onto `spans`/`traces`? (b) how to handle
       // async issue clustering (an issue id is assigned after a score row
       // already exists), (c) backfill plan for historical data. Discussed
       // in PR #2893 review threads.
@@ -1361,17 +1363,17 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
             .query(async (client) => {
               const result = await client.query({
                 query: `WITH issue_traces AS (
-                        SELECT issue_id, trace_id
+                        SELECT signal_id, trace_id
                         FROM (
-                          SELECT issue_id, trace_id, max(created_at) AS last_seen_at
+                          SELECT signal_id, trace_id, max(created_at) AS last_seen_at
                           FROM scores
                           WHERE ${scopeClause(options)}
-                            AND issue_id IN ({signalIds:Array(String)})
+                            AND signal_id IN ({signalIds:Array(String)})
                             AND trace_id != ''
                             AND ${scoresClauses.join(" AND ")}
-                          GROUP BY issue_id, trace_id
-                          ORDER BY issue_id, last_seen_at DESC
-                          LIMIT {tracesPerSignal:UInt32} BY issue_id
+                          GROUP BY signal_id, trace_id
+                          ORDER BY signal_id, last_seen_at DESC
+                          LIMIT {tracesPerSignal:UInt32} BY signal_id
                         )
                       ),
                       trace_tags AS (
@@ -1384,11 +1386,11 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                         GROUP BY trace_id
                       )
                       SELECT
-                        issue_traces.issue_id AS issue_id,
+                        issue_traces.signal_id AS signal_id,
                         groupUniqArrayArray(trace_tags.tags) AS tags
                       FROM issue_traces
                       INNER JOIN trace_tags USING (trace_id)
-                      GROUP BY issue_traces.issue_id`,
+                      GROUP BY issue_traces.signal_id`,
                 query_params: {
                   ...scopeParams(organizationId, projectId),
                   signalIds: Array.from(signalIds) as string[],
@@ -1422,7 +1424,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                         count() AS count
                       FROM scores
                       WHERE ${scopeClause(options)}
-                        AND issue_id = {signalId:FixedString(24)}
+                        AND signal_id = {signalId:FixedString(24)}
                         AND created_at >= now() - INTERVAL {days:UInt32} DAY
                       GROUP BY bucket
                       ORDER BY bucket ASC`,
@@ -1457,13 +1459,13 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
             .query(async (client) => {
               const result = await client.query({
                 query: `SELECT
-                        issue_id,
+                        signal_id,
                         count()         AS occurrences,
                         min(created_at) AS first_seen_at,
                         max(created_at) AS last_seen_at
                       FROM scores
                       WHERE ${scopeClause(options)}${extraWhere}
-                      GROUP BY issue_id`,
+                      GROUP BY signal_id`,
                 query_params: {
                   ...scopeParams(organizationId, projectId),
                   ...params,
@@ -1545,16 +1547,16 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           const bucketRows = yield* chSqlClient.query<HourlyBucketRow[]>(async (client) => {
             const result = await client.query({
               query: `SELECT
-                      issue_id,
+                      signal_id,
                       ts_hour,
                       sum(count) AS count
                     FROM scores_hourly_buckets
                     WHERE organization_id = {organizationId:String}
                       AND project_id = {projectId:String}
-                      AND issue_id IN ({signalIds:Array(String)})
+                      AND signal_id IN ({signalIds:Array(String)})
                       AND ts_hour >= toDateTime({historyStart:String}, 'UTC')
                       AND ts_hour <  toDateTime({historyEnd:String}, 'UTC')
-                    GROUP BY issue_id, ts_hour`,
+                    GROUP BY signal_id, ts_hour`,
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
@@ -1570,7 +1572,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           // Group history rows by issue, then project per-issue thresholds.
           const rowsBySignal = new Map<string, HourlyBucketRow[]>()
           for (const row of bucketRows) {
-            const signalId = normalizeCHString(row.issue_id)
+            const signalId = normalizeCHString(row.signal_id)
             const list = rowsBySignal.get(signalId) ?? []
             list.push(row)
             rowsBySignal.set(signalId, list)
@@ -1629,13 +1631,13 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
             .query(async (client) => {
               const result = await client.query({
                 query: `SELECT
-                        issue_id,
+                        signal_id,
                         toDate(created_at) AS bucket,
                         count()            AS count
                       FROM scores
                       WHERE ${scopeClause(options)}${extraWhere}
-                      GROUP BY issue_id, bucket
-                      ORDER BY issue_id ASC, bucket ASC`,
+                      GROUP BY signal_id, bucket
+                      ORDER BY signal_id ASC, bucket ASC`,
                 query_params: {
                   ...scopeParams(organizationId, projectId),
                   ...params,
@@ -1683,7 +1685,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                         max(created_at) AS last_seen_at
                       FROM scores
                       WHERE ${scopeClause(options)}
-                        AND issue_id = {signalId:FixedString(24)}
+                        AND signal_id = {signalId:FixedString(24)}
                         AND trace_id != ''
                       GROUP BY trace_id
                       ORDER BY last_seen_at DESC, trace_id DESC
@@ -1722,7 +1724,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                 query: `SELECT uniqExact(trace_id) AS total
                       FROM scores
                       WHERE ${scopeClause(options)}
-                        AND issue_id = {signalId:FixedString(24)}
+                        AND signal_id = {signalId:FixedString(24)}
                         AND trace_id != ''`,
                 query_params: {
                   ...scopeParams(organizationId, projectId),
@@ -1745,7 +1747,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
             .query(async (client) => {
               const result = await client.query({
                 query: `SELECT
-                        issue_id,
+                        signal_id,
                         count()                                    AS occurrences,
                         min(created_at)                            AS first_seen_at,
                         max(created_at)                            AS last_seen_at,
@@ -1753,8 +1755,8 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                       FROM scores
                       WHERE ${scopeClause(options)}
                         AND trace_id IN ({traceIds:Array(String)})
-                        AND issue_id != ''
-                      GROUP BY issue_id
+                        AND signal_id != ''
+                      GROUP BY signal_id
                       ORDER BY last_seen_at DESC`,
                 query_params: {
                   ...scopeParams(organizationId, projectId),
@@ -1768,7 +1770,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
               Effect.map((rows) =>
                 rows.map(
                   (row): SessionSignalRollup => ({
-                    signalId: toSignalId(normalizeCHString(row.issue_id)),
+                    signalId: toSignalId(normalizeCHString(row.signal_id)),
                     occurrences: Number(row.occurrences),
                     firstSeenAt: parseCHDate(row.first_seen_at),
                     lastSeenAt: parseCHDate(row.last_seen_at),
@@ -1787,14 +1789,14 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
             .query(async (client) => {
               const result = await client.query({
                 query: `SELECT
-                        issue_id,
+                        signal_id,
                         count()                               AS occurrences,
                         uniqExactIf(trace_id, trace_id != '') AS affected_traces,
                         min(created_at)                       AS first_seen_at,
                         max(created_at)                       AS last_seen_at
                       FROM scores
                       WHERE ${scopeClause(options)}
-                        AND issue_id != ''
+                        AND signal_id != ''
                         AND trace_id IN (
                           SELECT trace_id
                           FROM traces
@@ -1803,7 +1805,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                           GROUP BY organization_id, project_id, trace_id
                           HAVING argMaxIfMerge(user_id) = {userId:String}
                         )
-                      GROUP BY issue_id
+                      GROUP BY signal_id
                       ORDER BY last_seen_at DESC
                       LIMIT {limit:UInt32}`,
                 query_params: {
@@ -1814,7 +1816,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                 format: "JSONEachRow",
               })
               return result.json<{
-                issue_id: string
+                signal_id: string
                 occurrences: string
                 affected_traces: string
                 first_seen_at: string
@@ -1825,7 +1827,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
               Effect.map((rows) =>
                 rows.map(
                   (row): UserSignalRollup => ({
-                    signalId: toSignalId(normalizeCHString(row.issue_id)),
+                    signalId: toSignalId(normalizeCHString(row.signal_id)),
                     occurrences: Number(row.occurrences),
                     affectedTraces: Number(row.affected_traces),
                     firstSeenAt: parseCHDate(row.first_seen_at),

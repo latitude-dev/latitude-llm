@@ -125,21 +125,21 @@ export const AdminProjectMetricsRepositoryLive = Layer.effect(
         chSqlClient
           .query(async (client) => {
             // Mirrors `score-analytics-repository.listSignalWindowMetrics`
-            // shape — same WHERE, same GROUP BY — with the `issue_id != ''`
+            // shape — same WHERE, same GROUP BY — with the `signal_id != ''`
             // filter and a LIMIT. Excludes the empty sentinel that
             // appears for scores not bound to an issue.
             const result = await client.query({
               query: `SELECT
-                        issue_id,
+                        signal_id,
                         count()         AS occurrences,
                         max(created_at) AS last_seen_at
                       FROM scores
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
-                        AND issue_id != ''
+                        AND signal_id != ''
                         AND created_at >= {since:DateTime64(3, 'UTC')}
-                      GROUP BY issue_id
-                      ORDER BY occurrences DESC, issue_id ASC
+                      GROUP BY signal_id
+                      ORDER BY occurrences DESC, signal_id ASC
                       LIMIT {limit:UInt32}`,
               query_params: {
                 organizationId: organizationId as string,
@@ -149,12 +149,12 @@ export const AdminProjectMetricsRepositoryLive = Layer.effect(
               },
               format: "JSONEachRow",
             })
-            return result.json<{ issue_id: string; occurrences: string; last_seen_at: string }>()
+            return result.json<{ signal_id: string; occurrences: string; last_seen_at: string }>()
           })
           .pipe(
             Effect.map((rows): readonly ProjectTopSignalOccurrence[] =>
               rows.map((row) => ({
-                signalId: SignalId(row.issue_id),
+                signalId: SignalId(row.signal_id),
                 occurrences: Number(row.occurrences),
                 lastSeenAt: parseCHDate(row.last_seen_at),
               })),
