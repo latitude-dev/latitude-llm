@@ -102,9 +102,58 @@ Set `config.allowConversationAccess` to `false` for structural-only telemetry wh
 By default, Latitude receives the content needed to reconstruct OpenClaw runs, including prompts, responses, system instructions, tool input/output, model metadata, and token usage.
 
 - Use `--no-content` when you only want structural telemetry.
-- Use `config.redact` for custom local attribute masking before export.
 - Telemetry runs for each agent run until disabled or uninstalled.
 - Disable telemetry before working with sensitive material you do not want sent to Latitude.
+
+## Custom redaction
+
+If you want to keep content capture enabled but mask specific span attributes before they leave the gateway, add a `redact` block to `config` in `~/.openclaw/openclaw.json`. Redaction happens locally, after the content gate and before the OTLP export.
+
+`redact.attributes` accepts an array of patterns. Each pattern can be:
+
+- An **exact attribute name** — `"gen_ai.tool.call.arguments"`
+- A **regex source string** — `"^gen_ai\\.(input|output)\\.messages$"` (anchored match)
+- A **`/pattern/flags` string** — `"/^gen_ai\\.tool\\.call\\.(arguments|result)$/i"`
+
+`redact.mask` sets the replacement value (default: `******`). Set it to `"[]"` to replace message arrays with an empty array instead of a string.
+
+### Examples
+
+Redact all prompt and response messages using `openclaw config set`:
+
+```bash
+openclaw config set 'plugins.entries["@latitude-data/openclaw-telemetry"].config.redact' \
+  '{"attributes":["/^gen_ai\\.(input|output)\\.messages$/"],"mask":"[]"}'
+openclaw gateway restart
+```
+
+Or hand-edit `~/.openclaw/openclaw.json` directly:
+
+```jsonc
+{
+  "plugins": {
+    "entries": {
+      "@latitude-data/openclaw-telemetry": {
+        "config": {
+          "redact": {
+            "attributes": [
+              "/^gen_ai\\.(input|output)\\.messages$/",
+              "/^gen_ai\\.tool\\.call\\.(arguments|result)$/"
+            ],
+            "mask": "[]"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Restart the gateway after editing:
+
+```bash
+openclaw gateway restart
+```
 
 ## Troubleshooting
 

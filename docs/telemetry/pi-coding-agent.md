@@ -90,9 +90,46 @@ The installer stores config in `~/.pi/agent/latitude-telemetry.json`. Environmen
 
 Use `--staging`, `--dev`, or `--base-url=<url>` during install to target a non-production Latitude ingest endpoint.
 
+## Custom redaction
+
+If you want to keep content capture enabled but mask specific span attributes before they leave your machine, use `redact` in `~/.pi/agent/latitude-telemetry.json` or the `LATITUDE_REDACT_ATTRIBUTES` environment variable. Redaction happens locally, after the content gate and before the OTLP export.
+
+`redact.attributes` (or `LATITUDE_REDACT_ATTRIBUTES`) accepts an array of patterns. Each pattern can be:
+
+- An **exact attribute name** — `"gen_ai.tool.call.arguments"`
+- A **regex source string** — `"^gen_ai\\.(input|output)\\.messages$"` (anchored match)
+- A **`/pattern/flags` string** — `"/^gen_ai\\.tool\\.call\\.(arguments|result)$/i"`
+
+`redact.mask` (or `LATITUDE_REDACT_MASK`) sets the replacement value (default: `******`). Set it to `"[]"` to replace message arrays with an empty array instead of a string.
+
+### Via config file
+
+Add a `redact` block to `~/.pi/agent/latitude-telemetry.json`:
+
+```json
+{
+  "redact": {
+    "attributes": [
+      "/^gen_ai\\.(input|output)\\.messages$/",
+      "gen_ai.tool.call.arguments",
+      "gen_ai.tool.call.result"
+    ],
+    "mask": "[]"
+  }
+}
+```
+
+### Via environment variable
+
+```bash
+LATITUDE_REDACT_ATTRIBUTES='["/^gen_ai\\.(input|output)\\.messages$/", "gen_ai.tool.call.arguments"]' \
+LATITUDE_REDACT_MASK='[]' \
+pi
+```
+
 ## Captured data and privacy
 
-Full-content mode sends prompts, responses, system instructions when available, tool inputs, and tool outputs. Use `--no-content` for structural-only telemetry or configure custom redaction with `redact` in `~/.pi/agent/latitude-telemetry.json` / `LATITUDE_REDACT_ATTRIBUTES`.
+Full-content mode sends prompts, responses, system instructions when available, tool inputs, and tool outputs. Use `--no-content` for structural-only telemetry or configure custom redaction as described above.
 
 Disable telemetry before working with sensitive material you do not want sent to Latitude. Even `--no-content` mode still sends structural metadata such as cwd/session identifiers, model names, tool names, timing, token usage, and user/host identity.
 
