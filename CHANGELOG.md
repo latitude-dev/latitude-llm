@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## v0.3.6 - 2026-06-17
+
+### Data destinations
+
+- Added per-source destination configuration with enable/disable status, payload exclusion, max-record limits, atomic source updates, and a delivery preview showing sampled mapped events before saving (ref: #3601).
+- Preserved hidden destination and source config fields during updates, showed the source in sync-run history, renamed read counts to records read, and made project-destination cleanup transactional (ref: #3601).
+
+### Telemetry
+
+- Added Eve framework instrumentation support by resolving Eve session and turn ids, preserving `eve.*` spans in the TypeScript SDK smart filter, and publishing the Eve setup guide (ref: #3604).
+- Added configurable custom redaction to the Claude Code, OpenClaw, and Pi Coding Agent telemetry packages with exact-name, regex, and mask options plus expanded privacy docs (ref: #3603).
+
+### Web UI
+
+- Grouped the project sidebar into Observe, Understand, and Refine sections, nested traces under sessions, and graduated monitors and behaviours from their feature flags (ref: #3599, #3602, #3597).
+
 ## v0.3.5 - 2026-06-17
 
 ### Telemetry
