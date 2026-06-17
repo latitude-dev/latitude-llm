@@ -16,7 +16,7 @@ import { useSpanFilters } from "../trace-detail-drawer/tabs/spans-tab/use-span-f
 import { SpansTab } from "../trace-detail-drawer/tabs/spans-tab.tsx"
 import { AnnotationsTab } from "./annotations-tab.tsx"
 import { ConversationTab } from "./conversation-tab.tsx"
-import { SignalsTab } from "./issues-tab.tsx"
+import { SignalsTab } from "./signals-tab.tsx"
 import { MetadataTab } from "./metadata-tab.tsx"
 import { SessionStatusPill } from "./session-status-pill.tsx"
 

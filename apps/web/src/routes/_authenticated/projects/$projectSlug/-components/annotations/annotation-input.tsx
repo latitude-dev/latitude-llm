@@ -2,7 +2,7 @@ import { Button, cn, Icon, Select, type SelectOption, Text, Textarea, ThumbButto
 import { InfoIcon, SparklesIcon } from "lucide-react"
 import { memo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
-import { useSignal, useSignals } from "../../../../../../domains/issues/issues.collection.ts"
+import { useSignal, useSignals } from "../../../../../../domains/signals/signals.collection.ts"
 import { useDebounce } from "../../../../../../lib/hooks/useDebounce.ts"
 
 const SAVE_HOTKEY = "Mod+Enter"
@@ -213,7 +213,7 @@ export function AnnotationInput({
                 }
               >
                 The system will cluster your feedback to the most relevant issue, or it will create a new one. You can
-                manually select an issue to override this.
+                manually select a signal to override this.
               </Tooltip>
             </>
           )}

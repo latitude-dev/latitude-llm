@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import {
   getSignalLifecycleSummary,
   type SignalLifecycleSummaryRecord,
-} from "../../../../../../domains/issues/issues.functions.ts"
+} from "../../../../../../domains/signals/signals.functions.ts"
 import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
 import { useSavedSearchesList } from "../../../../../../domains/saved-searches/saved-searches.collection.ts"
 

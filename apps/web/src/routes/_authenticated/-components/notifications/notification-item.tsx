@@ -3,7 +3,7 @@ import type { ComponentType } from "react"
 import type { NotificationRecord } from "../../../../domains/notifications/notifications.functions.ts"
 import { CustomMessageNotification } from "./renderers/custom-message-notification.tsx"
 import { IncidentNotification } from "./renderers/incident/index.tsx"
-import { SignalAssignedNotification } from "./renderers/issue-assigned-notification.tsx"
+import { SignalAssignedNotification } from "./renderers/signal-assigned-notification.tsx"
 import { WrappedReportNotification } from "./renderers/wrapped-report-notification.tsx"
 
 const RENDERERS: Record<NotificationKind, ComponentType<{ readonly notification: NotificationRecord }>> = {

@@ -1,0 +1,39 @@
+import { ShieldAlertIcon } from "lucide-react"
+import { BaseNotification } from "../../base-notification.tsx"
+import { useSignalUrl, useLiveSignalSummary } from "./-incident-helpers.ts"
+import type { IncidentRendererProps } from "./index.tsx"
+import { SignalSummaryCard } from "./signal-summary-card.tsx"
+import { MonitorAttribution } from "./monitor-attribution.tsx"
+
+export function SignalNewNotification({ notification, payload }: IncidentRendererProps<"event">) {
+  const seenAt = notification.seenAt ? new Date(notification.seenAt) : undefined
+  const createdAt = new Date(notification.createdAt)
+  const target = { projectId: notification.projectId, sourceId: payload.sourceId }
+  const live = useLiveSignalSummary(target)
+  // Snapshot status for issue.new is always "new"; the live lookup may
+  // upgrade this if the issue has moved on (resolved, escalated, etc.).
+  const states = live?.states ?? ["new"]
+  const url = useSignalUrl(target)
+
+  return (
+    <BaseNotification
+      notificationId={notification.id}
+      seenAt={seenAt}
+      createdAt={createdAt}
+      projectId={notification.projectId}
+      icon={<ShieldAlertIcon />}
+      title="A new signal has been detected."
+      url={url}
+    >
+      {live?.name ? (
+        <SignalSummaryCard
+          name={live.name}
+          states={states}
+          priority={payload.priority}
+          assigneeId={payload.assigneeId}
+        />
+      ) : null}
+      <MonitorAttribution payload={payload} />
+    </BaseNotification>
+  )
+}

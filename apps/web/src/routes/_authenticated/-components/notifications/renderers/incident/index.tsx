@@ -10,9 +10,9 @@ import {
 import { Text } from "@repo/ui"
 import type { NotificationRecord } from "../../../../../../domains/notifications/notifications.functions.ts"
 import { BaseNotification } from "../../base-notification.tsx"
-import { SignalEscalatingNotification } from "./issue-escalating.tsx"
-import { SignalNewNotification } from "./issue-new.tsx"
-import { SignalRegressedNotification } from "./issue-regressed.tsx"
+import { SignalEscalatingNotification } from "./signal-escalating.tsx"
+import { SignalNewNotification } from "./signal-new.tsx"
+import { SignalRegressedNotification } from "./signal-regressed.tsx"
 import { SavedSearchIncidentNotification } from "./saved-search.tsx"
 
 /**

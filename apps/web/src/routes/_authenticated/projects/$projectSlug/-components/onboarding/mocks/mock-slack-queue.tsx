@@ -16,7 +16,7 @@ type IncidentNotification = {
 }
 
 const KIND_LABEL: Record<IncidentKind, string> = {
-  new: "New issue",
+  new: "New signal",
   escalating: "Signal escalating",
   regressed: "Signal regressed",
   resolved: "Resolved",

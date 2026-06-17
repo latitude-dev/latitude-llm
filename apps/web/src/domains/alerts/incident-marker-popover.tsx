@@ -109,7 +109,7 @@ function IncidentRow({
   if (signalTarget !== null) {
     return (
       <Link
-        to="/projects/$projectSlug/issues/$signalId"
+        to="/projects/$projectSlug/signals/$signalId"
         params={{ projectSlug, signalId: signalTarget }}
         onClick={onNavigate}
         className={ROW_CLASS}

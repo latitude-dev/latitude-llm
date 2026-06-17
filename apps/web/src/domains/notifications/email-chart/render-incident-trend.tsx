@@ -7,7 +7,7 @@ import {
   computeTrendMaxCount,
   type ThresholdPoint,
   toVisibleHeightPercent,
-} from "../../issues/trend-chart/trend-geometry.ts"
+} from "../../signals/trend-chart/trend-geometry.ts"
 import { getChartFontFile } from "./fonts.ts"
 
 /**

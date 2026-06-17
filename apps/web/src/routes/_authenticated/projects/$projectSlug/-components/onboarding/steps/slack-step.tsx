@@ -39,7 +39,7 @@ export function Left({
           <div className="flex flex-col gap-2">
             <Text.H2 weight="medium">Get notified in Slack</Text.H2>
             <Text.H4 color="foregroundMuted">
-              Connect your workspace so Flaggers can alert your team the moment they detect an issue.
+              Connect your workspace so Flaggers can alert your team the moment they detect a signal.
             </Text.H4>
           </div>
         </div>

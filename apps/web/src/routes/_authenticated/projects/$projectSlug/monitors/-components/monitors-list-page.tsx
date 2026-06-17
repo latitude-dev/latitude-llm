@@ -40,11 +40,11 @@ const SORT_COLUMNS = ["name", "status", "lastIncident"] as const satisfies reado
 const SORT_DIRECTIONS = ["asc", "desc"] as const satisfies readonly MonitorsTableSorting["direction"][]
 const SORT_PARAM_PATTERN = /^(name|status|lastIncident):(asc|desc)$/
 
-type MonitorsTab = "search" | "issues"
+type MonitorsTab = "search" | "signals"
 
 const MONITORS_TABS: readonly TabOption<MonitorsTab>[] = [
   { id: "search", label: "Search monitors", icon: <TextSearchIcon className="w-4 h-4" /> },
-  { id: "issues", label: "Signal monitors", icon: <ShieldAlertIcon className="w-4 h-4" /> },
+  { id: "signals", label: "Signal monitors", icon: <ShieldAlertIcon className="w-4 h-4" /> },
 ]
 
 function serializeSorting(sorting: MonitorsTableSorting): string {
@@ -71,7 +71,7 @@ export function MonitorsBreadcrumb() {
 
 /**
  * Shared monitors listing, one route per tab: `/monitors/search` lists
- * user-created saved-search monitors (`system: false`) and `/monitors/issues`
+ * user-created saved-search monitors (`system: false`) and `/monitors/signals`
  * lists the system-managed issue-event monitors (`system: true`).
  */
 export function MonitorsListPage({ system }: { readonly system: boolean }) {
@@ -80,7 +80,7 @@ export function MonitorsListPage({ system }: { readonly system: boolean }) {
 
 function MonitorsTabs({ system, projectSlug }: { readonly system: boolean; readonly projectSlug: string }) {
   const navigate = useNavigate()
-  const active: MonitorsTab = system ? "issues" : "search"
+  const active: MonitorsTab = system ? "signals" : "search"
 
   return (
     <Tabs<MonitorsTab>
@@ -91,7 +91,7 @@ function MonitorsTabs({ system, projectSlug }: { readonly system: boolean; reado
       onSelect={(tab) => {
         if (tab === active) return
         void navigate({
-          to: tab === "issues" ? "/projects/$projectSlug/monitors/issues" : "/projects/$projectSlug/monitors/search",
+          to: tab === "signals" ? "/projects/$projectSlug/monitors/signals" : "/projects/$projectSlug/monitors/search",
           params: { projectSlug },
         })
       }}

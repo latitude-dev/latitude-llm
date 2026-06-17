@@ -1,8 +1,8 @@
 import { Skeleton, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
-import { SignalLifecycleStatuses } from "../../../../../../../components/issues/issue-lifecycle-statuses.tsx"
-import { getPrimaryLifecycleState } from "../../../../../../../components/issues/lifecycle-formatters.ts"
+import { SignalLifecycleStatuses } from "../../../../../../../components/signals/signal-lifecycle-statuses.tsx"
+import { getPrimaryLifecycleState } from "../../../../../../../components/signals/lifecycle-formatters.ts"
 import { useUserSignals } from "../../../../../../../domains/end-users/end-users.collection.ts"
 import { formatAgoLabel } from "../../-components/user-formatters.ts"
 
@@ -41,7 +41,7 @@ export function UserSignalsSection({
         return (
           <Link
             key={issue.signalId}
-            to="/projects/$projectSlug/issues/$signalId"
+            to="/projects/$projectSlug/signals/$signalId"
             params={{ projectSlug, signalId: issue.signalId }}
             aria-label={`Open issue ${issue.name}`}
             className="-mx-2 flex items-center gap-3 rounded-md px-2 py-2.5 transition-colors hover:bg-background"
