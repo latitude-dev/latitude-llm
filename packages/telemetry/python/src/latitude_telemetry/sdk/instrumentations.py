@@ -106,6 +106,11 @@ INTEGRATIONS: dict[InstrumentationName, IntegrationDef] = {
         instrumentor_class="DSPyInstrumentor",
         pypi_dist_name="dspy-ai",
     ),
+    "google_adk": IntegrationDef(
+        instrumentor_module="openinference.instrumentation.google_adk",
+        instrumentor_class="GoogleADKInstrumentor",
+        pypi_dist_name="google-adk",
+    ),
     "google_generativeai": IntegrationDef(
         instrumentor_module="opentelemetry.instrumentation.google_generativeai",
         instrumentor_class="GoogleGenerativeAiInstrumentor",

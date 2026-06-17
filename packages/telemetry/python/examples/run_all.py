@@ -23,6 +23,7 @@ TESTS = {
     "cohere": ["COHERE_API_KEY"],
     "together": ["TOGETHER_API_KEY"],
     "gemini": ["GEMINI_API_KEY"],
+    "google_adk": ["GOOGLE_API_KEY"],
     "ollama": [],  # Local, no API key needed
     "litellm": ["OPENAI_API_KEY"],  # Using OpenAI as backend
     "replicate": ["REPLICATE_API_TOKEN"],

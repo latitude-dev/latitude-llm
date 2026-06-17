@@ -133,6 +133,7 @@ Set the integration key on `instrumentations` to the SDK module your app imports
 | Together AI | `together` | `{"togetherai": together}` |
 | Vertex AI | `google-cloud-aiplatform` | `{"vertexai": vertexai}` |
 | Google AI Platform | `google-cloud-aiplatform` | `{"aiplatform": aiplatform}` |
+| Google ADK | `google-adk` | `{"google_adk": google.adk}` |
 | Google Generative AI | `google-generativeai` | `{"google_generativeai": genai}` |
 | Groq | `groq` | `{"groq": groq}` |
 | LiteLLM | `litellm` | `{"litellm": litellm}` |

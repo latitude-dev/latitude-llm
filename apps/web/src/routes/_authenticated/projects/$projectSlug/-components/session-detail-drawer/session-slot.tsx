@@ -119,6 +119,12 @@ export function SessionSlot({
     onActiveTabChange("spans")
   }
 
+  function navigateToSpan(spanId: string) {
+    if (!singleTrace) return
+    setSelectedSpanId(spanId)
+    onActiveTabChange("spans")
+  }
+
   // Badge counts. Both queries are shared (same key) with the tab panes, so
   // mounting a tab doesn't refetch.
   const { data: annotationsData } = useAnnotationsBySession({
@@ -288,6 +294,7 @@ export function SessionSlot({
               isActive={effectiveActiveTab === "conversation"}
               focusMomentKind={focusMomentKind}
               focusMomentId={focusMomentId}
+              {...(singleTrace ? { navigateToSpan } : {})}
               {...(searchQuery ? { searchQuery } : {})}
             />
           </div>
