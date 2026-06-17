@@ -445,6 +445,18 @@ describe("resolveAttributes", () => {
       const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.sessionId).toBe("sess-456")
     })
+
+    it("resolves from Eve eve.session.id", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("eve.session.id", "eve-sess-789")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.sessionId).toBe("eve-sess-789")
+    })
+
+    it("falls back to Eve eve.turn.id when no session id is present", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("eve.turn.id", "eve-turn-1")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.sessionId).toBe("eve-turn-1")
+    })
   })
 
   describe("error type", () => {

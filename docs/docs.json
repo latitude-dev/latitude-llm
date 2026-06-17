@@ -106,6 +106,7 @@
               "telemetry/frameworks/langchain",
               "telemetry/frameworks/llamaindex",
               "telemetry/frameworks/mastra",
+              "telemetry/frameworks/eve",
               "telemetry/frameworks/strands",
               "telemetry/frameworks/livekit"
             ]
