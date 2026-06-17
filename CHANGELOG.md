@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## v0.3.5 - 2026-06-17
+
+### Telemetry
+
+- Added Google ADK instrumentation support to the Python telemetry SDK, with example and docs for tracing Agent Development Kit apps (ref: #3595).
+- Joined tool calls with their results when mapping OpenInference traces so tool invocations and outputs render together in session and trace views (ref: #3595).
+
 ## v0.3.4 - 2026-06-17
 
 ### Data destinations
