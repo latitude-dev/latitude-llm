@@ -4,11 +4,12 @@ import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { DESTINATION_QUARANTINE_FAILURE_THRESHOLD, POSTHOG_US_INGESTION_HOST } from "../constants.ts"
 import { createDestination, type Destination } from "../entities/destination.ts"
-import { createDestinationSourceCursor } from "../entities/destination-source-cursor.ts"
+import { defaultSourceConfig } from "../entities/destination-source.ts"
+import { createDestinationSourceState } from "../entities/destination-source-state.ts"
 import { DestinationRepository } from "../ports/destination-repository.ts"
-import { DestinationSourceCursorRepository } from "../ports/destination-source-cursor-repository.ts"
+import { DestinationSourceStateRepository } from "../ports/destination-source-state-repository.ts"
 import { createFakeDestinationRepository } from "../testing/fake-destination-repository.ts"
-import { createFakeDestinationSourceCursorRepository } from "../testing/fake-destination-source-cursor-repository.ts"
+import { createFakeDestinationSourceStateRepository } from "../testing/fake-destination-source-state-repository.ts"
 import { recordDestinationSyncFailureUseCase } from "./record-destination-sync-failure.ts"
 
 const cuid = (seed: string) => seed.padEnd(24, "0")
@@ -25,9 +26,7 @@ const makeDestination = (overrides: Partial<Destination> = {}): Destination => (
     config: {
       kind: "posthog",
       host: POSTHOG_US_INGESTION_HOST,
-      excludePayloads: false,
       intervalMs: 300_000,
-      maxSpansPerRun: 50_000,
     },
     credentials: { kind: "posthog", apiKey: "phc_test" },
     createdByUserId: UserId(cuid("u")),
@@ -43,21 +42,22 @@ const setup = (seed: Destination | null, cursorOverrides: { consecutiveEmptyRuns
   const cursors = seed
     ? [
         {
-          ...createDestinationSourceCursor({
+          ...createDestinationSourceState({
             organizationId: ORG_ID,
             destinationId: DESTINATION_ID,
             source: SOURCE,
+            config: defaultSourceConfig(SOURCE),
             watermark: new Date("2026-05-01T00:00:00.000Z"),
           }),
           consecutiveEmptyRuns: cursorOverrides.consecutiveEmptyRuns ?? 0,
         },
       ]
     : []
-  const { repo: cursorRepo, rows: cursorRows } = createFakeDestinationSourceCursorRepository(cursors, rows)
+  const { repo: cursorRepo, rows: cursorRows } = createFakeDestinationSourceStateRepository(cursors, rows)
   const layer = Layer.mergeAll(
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORG_ID })),
     Layer.succeed(DestinationRepository, repo),
-    Layer.succeed(DestinationSourceCursorRepository, cursorRepo),
+    Layer.succeed(DestinationSourceStateRepository, cursorRepo),
   )
   return { rows, cursorRows, layer }
 }

@@ -4,9 +4,6 @@ import {
   DESTINATION_INTERVAL_MS_DEFAULT,
   DESTINATION_INTERVAL_MS_MAX,
   DESTINATION_INTERVAL_MS_MIN,
-  DESTINATION_MAX_SPANS_PER_RUN_DEFAULT,
-  DESTINATION_MAX_SPANS_PER_RUN_MAX,
-  DESTINATION_MAX_SPANS_PER_RUN_MIN,
   POSTHOG_EU_INGESTION_HOST,
   POSTHOG_US_INGESTION_HOST,
 } from "../constants.ts"
@@ -17,9 +14,7 @@ const cuid = (seed: string) => seed.padEnd(24, "0")
 const validConfig = {
   kind: "posthog" as const,
   host: POSTHOG_US_INGESTION_HOST,
-  excludePayloads: false,
   intervalMs: DESTINATION_INTERVAL_MS_DEFAULT,
-  maxSpansPerRun: DESTINATION_MAX_SPANS_PER_RUN_DEFAULT,
 }
 
 describe("destinationHostSchema", () => {
@@ -47,11 +42,9 @@ describe("destinationHostSchema", () => {
 })
 
 describe("destinationConfigSchema", () => {
-  it("applies defaults for excludePayloads, intervalMs, and maxSpansPerRun", () => {
+  it("applies defaults for intervalMs", () => {
     const parsed = destinationConfigSchema.parse({ kind: "posthog", host: POSTHOG_US_INGESTION_HOST })
-    expect(parsed.excludePayloads).toBe(false)
     expect(parsed.intervalMs).toBe(DESTINATION_INTERVAL_MS_DEFAULT)
-    expect(parsed.maxSpansPerRun).toBe(DESTINATION_MAX_SPANS_PER_RUN_DEFAULT)
   })
 
   it("bounds intervalMs to 1–60 minutes", () => {
@@ -64,17 +57,6 @@ describe("destinationConfigSchema", () => {
     expect(destinationConfigSchema.safeParse({ ...validConfig, intervalMs: DESTINATION_INTERVAL_MS_MIN }).success).toBe(
       true,
     )
-  })
-
-  it("bounds maxSpansPerRun to 1k–50k", () => {
-    expect(
-      destinationConfigSchema.safeParse({ ...validConfig, maxSpansPerRun: DESTINATION_MAX_SPANS_PER_RUN_MIN - 1 })
-        .success,
-    ).toBe(false)
-    expect(
-      destinationConfigSchema.safeParse({ ...validConfig, maxSpansPerRun: DESTINATION_MAX_SPANS_PER_RUN_MAX + 1 })
-        .success,
-    ).toBe(false)
   })
 })
 

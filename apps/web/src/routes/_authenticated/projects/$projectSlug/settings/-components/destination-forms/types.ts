@@ -1,4 +1,9 @@
-import type { DestinationKind, destinationConfigSchema, destinationCredentialsSchema } from "@domain/destinations"
+import type {
+  DestinationKind,
+  destinationConfigSchema,
+  destinationCredentialsSchema,
+  destinationSourceConfigSchema,
+} from "@domain/destinations"
 import type { FormAsyncValidateOrFn, FormValidateOrFn, ReactFormExtendedApi } from "@tanstack/react-form"
 import type { ReactNode } from "react"
 import type { z } from "zod"
@@ -11,6 +16,8 @@ import type { DestinationRecord } from "../../../../../../../domains/destination
  */
 export type DestinationConfigInput = z.input<typeof destinationConfigSchema>
 export type DestinationCredentialsInput = z.input<typeof destinationCredentialsSchema>
+/** Per-source config a builder emits; `maxRecordsPerRun` etc. default server-side. */
+export type DestinationSourceConfigInput = z.input<typeof destinationSourceConfigSchema>
 
 /** Shell-owned fields merged onto every kind's own form values. */
 export type DestinationFormValues<TKind> = { name: string } & TKind
@@ -43,6 +50,8 @@ export type DestinationFormApi<TKind> = ReactFormExtendedApi<
 export interface DestinationFieldsProps<TKind> {
   readonly form: DestinationFormApi<TKind>
   readonly isEdit: boolean
+  /** Project the destination belongs to — used by the per-source delivery preview. */
+  readonly projectId: string
   /** The destination being edited (undefined on create) — e.g. for showing the masked stored secret. */
   readonly destination: DestinationRecord | undefined
 }
@@ -61,6 +70,8 @@ export interface DestinationFormModule<TKind> {
   readonly label: string
   readonly defaultValues: (destination: DestinationRecord | undefined) => TKind
   readonly buildConfig: (values: DestinationFormValues<TKind>) => DestinationConfigInput
+  /** Per-source config rows the form persists alongside the destination (atomic on save). */
+  readonly buildSourceConfigs: (values: DestinationFormValues<TKind>) => DestinationSourceConfigInput[]
   readonly buildCredentials: (values: DestinationFormValues<TKind>) => DestinationCredentialsInput
   /** Whether the user supplied a secret this time — false on edit means leave the stored secret untouched. */
   readonly credentialsProvided: (values: DestinationFormValues<TKind>) => boolean

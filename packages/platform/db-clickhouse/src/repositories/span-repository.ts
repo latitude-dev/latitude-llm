@@ -549,6 +549,38 @@ export const SpanRepositoryLive = Layer.effect(
 
       listByIngestedAtWindow,
 
+      listRecentDetailsByProjectId: ({ organizationId, projectId, limit }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT *
+                      FROM (
+                        SELECT *, tool_names
+                        FROM spans
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                        ORDER BY span_id, ingested_at DESC
+                        LIMIT 1 BY span_id
+                      )
+                      ORDER BY ingested_at DESC, span_id DESC
+                      LIMIT {limit:UInt32}`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  limit,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<SpanDetailRow>()
+            })
+            .pipe(
+              Effect.map((rows) => rows.map(toDomainSpanDetail)),
+              Effect.mapError((error) => toRepositoryError(error, "listRecentDetailsByProjectId")),
+            )
+        }),
+
       findBySpanId: ({ organizationId, projectId, traceId, spanId, startTimeFrom, startTimeTo }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>

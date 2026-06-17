@@ -45,6 +45,16 @@ export interface DestinationSourceReader<TRecord> {
     readonly windowEnd: Date
     readonly limit: number
   }): Effect.Effect<SourceWindow<TRecord>, RepositoryError, ChSqlClient>
+  /**
+   * The most recent `limit` records of this source for a project, newest first —
+   * a cursor-free representative sample. Powers the delivery preview; never used
+   * by the sync engine.
+   */
+  sampleLatest(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly limit: number
+  }): Effect.Effect<readonly TRecord[], RepositoryError, ChSqlClient>
 }
 
 /** Per-source reader registry — each source's reader yields that source's record type. TS-enforced like the deliverer/mapper registries. */

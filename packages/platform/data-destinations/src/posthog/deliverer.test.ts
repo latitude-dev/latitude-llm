@@ -40,9 +40,7 @@ const historicalContext: DeliveryContext = {
 const posthogConfig = (host: string = POSTHOG_US_INGESTION_HOST): DestinationConfig => ({
   kind: "posthog",
   host,
-  excludePayloads: false,
   intervalMs: 300_000,
-  maxSpansPerRun: 50_000,
 })
 
 const credentials: DestinationCredentials = { kind: "posthog", apiKey: "phc_test_key" }

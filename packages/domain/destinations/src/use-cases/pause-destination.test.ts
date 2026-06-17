@@ -23,9 +23,7 @@ const baseDestination = (overrides: Partial<Destination> = {}): Destination => (
     config: {
       kind: "posthog",
       host: POSTHOG_US_INGESTION_HOST,
-      excludePayloads: false,
       intervalMs: 300_000,
-      maxSpansPerRun: 50_000,
     },
     credentials: { kind: "posthog", apiKey: "phc_test" },
     createdByUserId: userId,

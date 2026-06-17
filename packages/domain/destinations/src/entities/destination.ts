@@ -14,14 +14,29 @@ import {
   DESTINATION_INTERVAL_MS_DEFAULT,
   DESTINATION_INTERVAL_MS_MAX,
   DESTINATION_INTERVAL_MS_MIN,
-  DESTINATION_MAX_SPANS_PER_RUN_DEFAULT,
-  DESTINATION_MAX_SPANS_PER_RUN_MAX,
-  DESTINATION_MAX_SPANS_PER_RUN_MIN,
 } from "../constants.ts"
+import type { DestinationSource } from "./destination-source.ts"
 
 export const DESTINATION_KINDS = ["posthog"] as const
 export const destinationKindSchema = z.enum(DESTINATION_KINDS)
 export type DestinationKind = z.infer<typeof destinationKindSchema>
+
+/**
+ * Per-kind capability: which sources a destination of this kind can receive.
+ * The choice is semantic — PostHog's LLM-analytics model is span-granular
+ * (`$ai_*` events derive from spans), so it takes `spans`, not whole traces or
+ * sessions; a raw object-store sink could take coarser sources. The UI offers
+ * only these, and enabling a source is validated against them. Must stay in sync
+ * with the `(source × kind)` mapper registry — asserted in a unit test.
+ */
+export interface DestinationKindMeta {
+  readonly supportedSources: readonly [DestinationSource, ...DestinationSource[]]
+}
+export const DESTINATION_KIND_META: Record<DestinationKind, DestinationKindMeta> = {
+  posthog: { supportedSources: ["spans"] },
+}
+export const supportedSourcesForKind = (kind: DestinationKind): readonly DestinationSource[] =>
+  DESTINATION_KIND_META[kind].supportedSources
 
 export const DESTINATION_STATUSES = ["active", "paused", "quarantined"] as const
 export const destinationStatusSchema = z.enum(DESTINATION_STATUSES)
@@ -51,19 +66,12 @@ export const destinationHostSchema = z
 export const posthogDestinationConfigSchema = z.object({
   kind: z.literal("posthog"),
   host: destinationHostSchema,
-  excludePayloads: z.boolean().default(false),
   intervalMs: z
     .number()
     .int()
     .min(DESTINATION_INTERVAL_MS_MIN)
     .max(DESTINATION_INTERVAL_MS_MAX)
     .default(DESTINATION_INTERVAL_MS_DEFAULT),
-  maxSpansPerRun: z
-    .number()
-    .int()
-    .min(DESTINATION_MAX_SPANS_PER_RUN_MIN)
-    .max(DESTINATION_MAX_SPANS_PER_RUN_MAX)
-    .default(DESTINATION_MAX_SPANS_PER_RUN_DEFAULT),
 })
 export type PosthogDestinationConfig = z.infer<typeof posthogDestinationConfigSchema>
 

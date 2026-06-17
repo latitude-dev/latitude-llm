@@ -66,6 +66,7 @@ export function DestinationFormModal({
       async (value) => {
         const name = value.name.trim()
         const config = formModule.buildConfig(value)
+        const sourceConfigs = formModule.buildSourceConfigs(value)
 
         if (isEdit) {
           return update.mutateAsync({
@@ -74,13 +75,14 @@ export function DestinationFormModal({
               destinationId: destination.id,
               name,
               config,
+              sourceConfigs,
               ...(formModule.credentialsProvided(value) ? { credentials: formModule.buildCredentials(value) } : {}),
             },
           })
         }
 
         return create.mutateAsync({
-          data: { projectId, name, config, credentials: formModule.buildCredentials(value) },
+          data: { projectId, name, config, sourceConfigs, credentials: formModule.buildCredentials(value) },
         })
       },
       {
@@ -182,7 +184,7 @@ export function DestinationFormModal({
           )}
         </form.Field>
 
-        <Fields form={form} isEdit={isEdit} destination={destination} />
+        <Fields form={form} isEdit={isEdit} projectId={projectId} destination={destination} />
 
         {connectionTest.phase === "testing" ? (
           <div className="flex items-center gap-2">

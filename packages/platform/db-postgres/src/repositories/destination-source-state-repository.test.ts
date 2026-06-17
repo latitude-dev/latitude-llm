@@ -1,22 +1,23 @@
 import {
   createDestination,
-  createDestinationSourceCursor,
+  createDestinationSourceState,
   type Destination,
   type DestinationConfig,
   DestinationRepository,
-  type DestinationSourceCursor,
-  DestinationSourceCursorRepository,
+  type DestinationSourceState,
+  DestinationSourceStateRepository,
+  defaultSourceConfig,
 } from "@domain/destinations"
 import { OrganizationId, ProjectId, type SqlClient, UserId } from "@domain/shared"
 import { Effect } from "effect"
 import { afterEach, beforeAll, describe, expect, it } from "vitest"
 import { organizations } from "../schema/better-auth.ts"
-import { destinationSourceCursors } from "../schema/destination-source-cursors.ts"
+import { destinationSources } from "../schema/destination-sources.ts"
 import { destinations } from "../schema/destinations.ts"
 import { setupTestPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
 import { DestinationRepositoryLive } from "./destination-repository.ts"
-import { DestinationSourceCursorRepositoryLive } from "./destination-source-cursor-repository.ts"
+import { DestinationSourceStateRepositoryLive } from "./destination-source-state-repository.ts"
 
 // Same 32-byte hex key as .env.test for parity. The destination repo's
 // getEncryptionKey() resolves against this when seeding destination rows.
@@ -40,9 +41,9 @@ const FIVE_MINUTES_MS = 300_000
 const pg = setupTestPostgres()
 
 const withCursorRepo = <A, E>(
-  effect: Effect.Effect<A, E, DestinationSourceCursorRepository | SqlClient>,
+  effect: Effect.Effect<A, E, DestinationSourceStateRepository | SqlClient>,
   org: OrganizationId = ORG_A,
-) => Effect.runPromise(effect.pipe(withPostgres(DestinationSourceCursorRepositoryLive, pg.adminPostgresClient, org)))
+) => Effect.runPromise(effect.pipe(withPostgres(DestinationSourceStateRepositoryLive, pg.adminPostgresClient, org)))
 
 const withDestinationRepo = <A, E>(
   effect: Effect.Effect<A, E, DestinationRepository | SqlClient>,
@@ -52,9 +53,7 @@ const withDestinationRepo = <A, E>(
 const makeConfig = (overrides: Partial<DestinationConfig> = {}): DestinationConfig => ({
   kind: "posthog",
   host: "https://us.i.posthog.com",
-  excludePayloads: false,
   intervalMs: FIVE_MINUTES_MS,
-  maxSpansPerRun: 50_000,
   ...overrides,
 })
 
@@ -71,12 +70,13 @@ const makeDestination = (overrides: Partial<Parameters<typeof createDestination>
 
 const makeCursor = (
   destination: Destination,
-  overrides: Partial<DestinationSourceCursor> = {},
-): DestinationSourceCursor => ({
-  ...createDestinationSourceCursor({
+  overrides: Partial<DestinationSourceState> = {},
+): DestinationSourceState => ({
+  ...createDestinationSourceState({
     organizationId: destination.organizationId,
     destinationId: destination.id,
     source: SOURCE,
+    config: defaultSourceConfig(SOURCE),
     watermark: destination.createdAt,
   }),
   ...overrides,
@@ -91,10 +91,10 @@ const saveDestination = (destination: Destination, org: OrganizationId = ORG_A) 
     org,
   )
 
-const createCursor = (cursor: DestinationSourceCursor, org: OrganizationId) =>
+const createCursor = (cursor: DestinationSourceState, org: OrganizationId) =>
   withCursorRepo(
     Effect.gen(function* () {
-      const repo = yield* DestinationSourceCursorRepository
+      const repo = yield* DestinationSourceStateRepository
       yield* repo.create(cursor)
     }),
     org,
@@ -109,12 +109,12 @@ const seedOrganizations = async () => {
 }
 
 afterEach(async () => {
-  await pg.db.delete(destinationSourceCursors)
+  await pg.db.delete(destinationSources)
   await pg.db.delete(destinations)
   await pg.db.delete(organizations)
 })
 
-describe("DestinationSourceCursorRepositoryLive", () => {
+describe("DestinationSourceStateRepositoryLive", () => {
   describe("create / findByDestinationAndSource", () => {
     it("round-trips a cursor scoped to the RLS org", async () => {
       await seedOrganizations()
@@ -125,7 +125,7 @@ describe("DestinationSourceCursorRepositoryLive", () => {
 
       const found = await withCursorRepo(
         Effect.gen(function* () {
-          const repo = yield* DestinationSourceCursorRepository
+          const repo = yield* DestinationSourceStateRepository
           return yield* repo.findByDestinationAndSource({ destinationId: destination.id, source: SOURCE })
         }),
       )
@@ -140,7 +140,7 @@ describe("DestinationSourceCursorRepositoryLive", () => {
       // Same cursor read from another org's context — RLS returns nothing.
       const crossOrg = await withCursorRepo(
         Effect.gen(function* () {
-          const repo = yield* DestinationSourceCursorRepository
+          const repo = yield* DestinationSourceStateRepository
           return yield* repo.findByDestinationAndSource({ destinationId: destination.id, source: SOURCE })
         }),
         ORG_B,
@@ -153,7 +153,7 @@ describe("DestinationSourceCursorRepositoryLive", () => {
     const listDue = (now: Date) =>
       withCursorRepo(
         Effect.gen(function* () {
-          const repo = yield* DestinationSourceCursorRepository
+          const repo = yield* DestinationSourceStateRepository
           return yield* repo.listDue(now)
         }),
       )
@@ -235,7 +235,7 @@ describe("DestinationSourceCursorRepositoryLive", () => {
       const next = { watermark: new Date("2026-06-12T11:00:00.000Z"), id: "00f067aa0ba902b7" }
       const won = await withCursorRepo(
         Effect.gen(function* () {
-          const repo = yield* DestinationSourceCursorRepository
+          const repo = yield* DestinationSourceStateRepository
           return yield* repo.advanceCursor({
             destinationId: destination.id,
             source: SOURCE,
@@ -246,7 +246,7 @@ describe("DestinationSourceCursorRepositoryLive", () => {
       )
 
       expect(won).toBe(true)
-      const [row] = await pg.db.select().from(destinationSourceCursors)
+      const [row] = await pg.db.select().from(destinationSources)
       expect(row?.watermark).toEqual(next.watermark)
       expect(row?.watermarkId).toBe(next.id)
     })
@@ -264,7 +264,7 @@ describe("DestinationSourceCursorRepositoryLive", () => {
 
       const results = await withCursorRepo(
         Effect.gen(function* () {
-          const repo = yield* DestinationSourceCursorRepository
+          const repo = yield* DestinationSourceStateRepository
           const winner = yield* repo.advanceCursor({
             destinationId: destination.id,
             source: SOURCE,
@@ -290,7 +290,7 @@ describe("DestinationSourceCursorRepositoryLive", () => {
       )
 
       expect(results).toEqual({ winner: true, stale: false, fresh: true })
-      const [row] = await pg.db.select().from(destinationSourceCursors)
+      const [row] = await pg.db.select().from(destinationSources)
       expect(row?.watermark).toEqual(second.watermark)
       expect(row?.watermarkId).toBe(second.id)
     })
@@ -307,7 +307,7 @@ describe("DestinationSourceCursorRepositoryLive", () => {
       const lastRunAt = new Date("2026-06-12T11:30:00.000Z")
       await withCursorRepo(
         Effect.gen(function* () {
-          const repo = yield* DestinationSourceCursorRepository
+          const repo = yield* DestinationSourceStateRepository
           yield* repo.updateRunState({
             destinationId: destination.id,
             source: SOURCE,
@@ -317,7 +317,7 @@ describe("DestinationSourceCursorRepositoryLive", () => {
         }),
       )
 
-      const [row] = await pg.db.select().from(destinationSourceCursors)
+      const [row] = await pg.db.select().from(destinationSources)
       expect(row?.consecutiveEmptyRuns).toBe(4)
       expect(row?.lastRunAt).toEqual(lastRunAt)
       expect(row?.watermark).toEqual(cursor.watermark)
@@ -337,16 +337,14 @@ describe("DestinationSourceCursorRepositoryLive", () => {
 
       await withCursorRepo(
         Effect.gen(function* () {
-          const repo = yield* DestinationSourceCursorRepository
+          const repo = yield* DestinationSourceStateRepository
           // ORG_B's cursor deleted from ORG_A's context — org-scoped no-op.
           yield* repo.deleteByDestinationId(otherOrg.id)
           yield* repo.deleteByDestinationId(target.id)
         }),
       )
 
-      const remaining = await pg.db
-        .select({ destinationId: destinationSourceCursors.destinationId })
-        .from(destinationSourceCursors)
+      const remaining = await pg.db.select({ destinationId: destinationSources.destinationId }).from(destinationSources)
       expect(remaining.map((r) => r.destinationId)).toEqual([otherOrg.id])
     })
   })

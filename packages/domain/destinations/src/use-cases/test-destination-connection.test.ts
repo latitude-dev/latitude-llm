@@ -10,9 +10,7 @@ import { testDestinationConnectionUseCase } from "./test-destination-connection.
 const config: DestinationConfig = {
   kind: "posthog",
   host: POSTHOG_US_INGESTION_HOST,
-  excludePayloads: false,
   intervalMs: 300_000,
-  maxSpansPerRun: 50_000,
 }
 const credentials: DestinationCredentials = { kind: "posthog", apiKey: "phc_test" }
 

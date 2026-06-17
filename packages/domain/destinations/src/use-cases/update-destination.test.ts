@@ -5,7 +5,9 @@ import { describe, expect, it } from "vitest"
 import { POSTHOG_EU_INGESTION_HOST, POSTHOG_US_INGESTION_HOST } from "../constants.ts"
 import { createDestination, type Destination } from "../entities/destination.ts"
 import { DestinationRepository } from "../ports/destination-repository.ts"
+import { DestinationSourceStateRepository } from "../ports/destination-source-state-repository.ts"
 import { createFakeDestinationRepository } from "../testing/fake-destination-repository.ts"
+import { createFakeDestinationSourceStateRepository } from "../testing/fake-destination-source-state-repository.ts"
 import { updateDestinationUseCase } from "./update-destination.ts"
 
 const cuid = (seed: string) => seed.padEnd(24, "0")
@@ -23,9 +25,7 @@ const baseDestination = () =>
     config: {
       kind: "posthog",
       host: POSTHOG_US_INGESTION_HOST,
-      excludePayloads: false,
       intervalMs: 300_000,
-      maxSpansPerRun: 50_000,
     },
     credentials: { kind: "posthog", apiKey: "phc_old" },
     createdByUserId: userId,
@@ -33,11 +33,13 @@ const baseDestination = () =>
 
 function setup(seed: Destination) {
   const { repo, rows } = createFakeDestinationRepository([seed])
+  const { repo: sourceRepo, rows: sourceRows } = createFakeDestinationSourceStateRepository([], rows)
   const layer = Layer.mergeAll(
     Layer.succeed(DestinationRepository, repo),
+    Layer.succeed(DestinationSourceStateRepository, sourceRepo),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: orgId })),
   )
-  return { rows, layer }
+  return { rows, sourceRows, layer }
 }
 
 const quarantined = (overrides: Partial<Destination> = {}): Destination => ({
@@ -93,9 +95,7 @@ describe("updateDestinationUseCase", () => {
         config: {
           kind: "posthog",
           host: POSTHOG_EU_INGESTION_HOST,
-          excludePayloads: false,
           intervalMs: 300_000,
-          maxSpansPerRun: 50_000,
         },
       }).pipe(Effect.provide(layer)),
     )
@@ -116,16 +116,14 @@ describe("updateDestinationUseCase", () => {
         config: {
           kind: "posthog",
           host: POSTHOG_US_INGESTION_HOST,
-          excludePayloads: true,
           intervalMs: 60_000,
-          maxSpansPerRun: 10_000,
         },
       }).pipe(Effect.provide(layer)),
     )
 
     expect(updated.status).toBe("quarantined")
     expect(updated.consecutiveFailures).toBe(5)
-    expect(updated.config.excludePayloads).toBe(true)
+    expect(updated.config.intervalMs).toBe(60_000)
   })
 
   it("re-submitting identical credentials does not reset the counter", async () => {

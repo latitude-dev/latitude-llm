@@ -3,7 +3,7 @@ import type { OrganizationId, ProjectId, RepositoryError, SqlClient } from "@dom
 import { Effect, Ref } from "effect"
 import type { Destination } from "../entities/destination.ts"
 import type { DestinationSource } from "../entities/destination-source.ts"
-import { DestinationSourceCursorRepository } from "../ports/destination-source-cursor-repository.ts"
+import { DestinationSourceStateRepository } from "../ports/destination-source-state-repository.ts"
 
 const PUBLISH_CONCURRENCY = 10
 
@@ -39,24 +39,24 @@ export interface SweepDestinationsResult {
 export const sweepDestinationsUseCase = (deps: {
   readonly now: Date
   readonly publish: SweepDestinationsPublish
-}): Effect.Effect<SweepDestinationsResult, RepositoryError, SqlClient | DestinationSourceCursorRepository> =>
+}): Effect.Effect<SweepDestinationsResult, RepositoryError, SqlClient | DestinationSourceStateRepository> =>
   Effect.gen(function* () {
-    const cursors = yield* DestinationSourceCursorRepository
+    const sourceStates = yield* DestinationSourceStateRepository
 
-    const due = yield* cursors.listDue(deps.now)
+    const due = yield* sourceStates.listDue(deps.now)
 
     const failedRef = yield* Ref.make(0)
     const publishedRef = yield* Ref.make(0)
 
     yield* Effect.forEach(
       due,
-      ({ destination, cursor }) =>
+      ({ destination, sourceState }) =>
         deps
           .publish({
             organizationId: destination.organizationId,
             projectId: destination.projectId,
             destination,
-            source: cursor.source,
+            source: sourceState.source,
           })
           .pipe(
             Effect.tap(() => Ref.update(publishedRef, (n) => n + 1)),
@@ -76,5 +76,5 @@ export const sweepDestinationsUseCase = (deps: {
   }).pipe(Effect.withSpan("destinations.sweep")) as Effect.Effect<
     SweepDestinationsResult,
     RepositoryError,
-    SqlClient | DestinationSourceCursorRepository
+    SqlClient | DestinationSourceStateRepository
   >

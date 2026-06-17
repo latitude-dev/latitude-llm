@@ -7,8 +7,8 @@ import { type DeliveryError, isRetryableDeliveryError, type RetryableDeliveryErr
 import { type DeliveryWindow, DestinationDeliverers } from "../ports/destination-deliverer.ts"
 import { DestinationMappers } from "../ports/destination-mapper.ts"
 import { DestinationRepository } from "../ports/destination-repository.ts"
-import { DestinationSourceCursorRepository } from "../ports/destination-source-cursor-repository.ts"
 import { DestinationSourceReaders, type SourceCursor } from "../ports/destination-source-reader.ts"
+import { DestinationSourceStateRepository } from "../ports/destination-source-state-repository.ts"
 import { DestinationSyncRunRepository } from "../ports/destination-sync-run-repository.ts"
 
 export interface RunDestinationSyncInput {
@@ -41,7 +41,7 @@ type Requirements =
   | ChSqlClient
   | DestinationSourceReaders
   | DestinationRepository
-  | DestinationSourceCursorRepository
+  | DestinationSourceStateRepository
   | DestinationSyncRunRepository
   | DestinationDeliverers
   | DestinationMappers
@@ -86,7 +86,7 @@ export const runDestinationSyncUseCase = (input: RunDestinationSyncInput) =>
     yield* Effect.annotateCurrentSpan("destination.source", source)
 
     const destinations = yield* DestinationRepository
-    const cursors = yield* DestinationSourceCursorRepository
+    const sourceStates = yield* DestinationSourceStateRepository
     const syncRuns = yield* DestinationSyncRunRepository
 
     const destination = yield* destinations
@@ -97,14 +97,20 @@ export const runDestinationSyncUseCase = (input: RunDestinationSyncInput) =>
     }
     yield* Effect.annotateCurrentSpan("destination.kind", destination.kind)
 
-    const cursor = yield* cursors.findByDestinationAndSource({ destinationId, source })
-    if (!cursor) {
+    const sourceState = yield* sourceStates.findByDestinationAndSource({ destinationId, source })
+    if (!sourceState || sourceState.status !== "enabled") {
+      return result({ outcome: "skipped", destinationId, source })
+    }
+
+    const mappers = yield* DestinationMappers
+    const mapper = mappers[destination.kind][source]
+    if (!mapper) {
       return result({ outcome: "skipped", destinationId, source })
     }
 
     const startedAt = now
     const windowEnd = new Date(now.getTime() - (safetyLagMs ?? DESTINATION_SAFETY_LAG_MS))
-    const startCursor: SourceCursor = { watermark: cursor.watermark, id: cursor.watermarkId }
+    const startCursor: SourceCursor = { watermark: sourceState.watermark, id: sourceState.watermarkId }
 
     const readers = yield* DestinationSourceReaders
     const window = yield* readers[source].listWindow({
@@ -112,14 +118,14 @@ export const runDestinationSyncUseCase = (input: RunDestinationSyncInput) =>
       projectId: destination.projectId,
       cursor: startCursor,
       windowEnd,
-      limit: destination.config.maxSpansPerRun,
+      limit: sourceState.config.maxRecordsPerRun,
     })
 
     if (window.records.length === 0) {
       const emptyTarget: SourceCursor = { watermark: windowEnd, id: "" }
       const advances = isForward(emptyTarget, startCursor)
       if (advances) {
-        const claimed = yield* cursors.advanceCursor({
+        const claimed = yield* sourceStates.advanceCursor({
           destinationId: destination.id,
           source,
           expected: startCursor,
@@ -128,10 +134,10 @@ export const runDestinationSyncUseCase = (input: RunDestinationSyncInput) =>
         if (!claimed) return result({ outcome: "stale", destinationId: destination.id, source })
       }
 
-      yield* cursors.updateRunState({
+      yield* sourceStates.updateRunState({
         destinationId: destination.id,
         source,
-        consecutiveEmptyRuns: cursor.consecutiveEmptyRuns + 1,
+        consecutiveEmptyRuns: sourceState.consecutiveEmptyRuns + 1,
         lastRunAt: now,
       })
 
@@ -150,8 +156,7 @@ export const runDestinationSyncUseCase = (input: RunDestinationSyncInput) =>
       end: next ? next.watermark : windowEnd,
     }
 
-    const mappers = yield* DestinationMappers
-    const mapped = yield* mappers[destination.kind].toEvents(window.records, destination)
+    const mapped = yield* mapper.toEvents(window.records, destination.id, sourceState.config)
 
     const deliverers = yield* DestinationDeliverers
     const delivery = yield* deliverers[destination.kind]
@@ -175,10 +180,10 @@ export const runDestinationSyncUseCase = (input: RunDestinationSyncInput) =>
         consecutiveFailures,
         lastFailureMessage: message,
       })
-      yield* cursors.updateRunState({
+      yield* sourceStates.updateRunState({
         destinationId: destination.id,
         source,
-        consecutiveEmptyRuns: cursor.consecutiveEmptyRuns,
+        consecutiveEmptyRuns: sourceState.consecutiveEmptyRuns,
         lastRunAt: now,
       })
 
@@ -209,7 +214,7 @@ export const runDestinationSyncUseCase = (input: RunDestinationSyncInput) =>
       })
     }
 
-    const claimed = yield* cursors.advanceCursor({
+    const claimed = yield* sourceStates.advanceCursor({
       destinationId: destination.id,
       source,
       expected: startCursor,
@@ -229,7 +234,7 @@ export const runDestinationSyncUseCase = (input: RunDestinationSyncInput) =>
       consecutiveFailures: 0,
       lastFailureMessage: destination.lastFailureMessage,
     })
-    yield* cursors.updateRunState({
+    yield* sourceStates.updateRunState({
       destinationId: destination.id,
       source,
       consecutiveEmptyRuns: 0,
