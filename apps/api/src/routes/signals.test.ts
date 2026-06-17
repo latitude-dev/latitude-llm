@@ -28,8 +28,26 @@ describe("Signals Routes Integration", () => {
   setupTestApi()
 
   it<ApiTestContext>("GET / rejects unauthenticated requests with 401", async ({ app }) => {
-    const res = await app.fetch(new Request("http://localhost/v1/projects/foo/issues"))
+    const res = await app.fetch(new Request("http://localhost/v1/projects/foo/signals"))
     expect(res.status).toBe(401)
+  })
+
+  it<ApiTestContext>("redirects the legacy /issues path to /signals with 307", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "aaaaaaaaaaaaaaaaaaaaaaaa"
+    const slug = await createProjectRecord(database, tenant.organizationId, projectId)
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${slug}/issues/resolve`, {
+        method: "POST",
+        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "content-type": "application/json" },
+        body: JSON.stringify({ signalIds: ["cccccccccccccccccccccccc"] }),
+        redirect: "manual",
+      }),
+    )
+
+    expect(res.status).toBe(307)
+    expect(res.headers.get("location")).toContain(`/v1/projects/${slug}/signals/resolve`)
   })
 
   it<ApiTestContext>("GET / returns an empty paginated page when the project has no issues", async ({
@@ -41,7 +59,7 @@ describe("Signals Routes Integration", () => {
     const slug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const res = await app.fetch(
-      new Request(`http://localhost/v1/projects/${slug}/issues`, {
+      new Request(`http://localhost/v1/projects/${slug}/signals`, {
         headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
       }),
     )
@@ -59,7 +77,7 @@ describe("Signals Routes Integration", () => {
     const slug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const res = await app.fetch(
-      new Request(`http://localhost/v1/projects/${slug}/issues?cursor=not-a-valid-cursor`, {
+      new Request(`http://localhost/v1/projects/${slug}/signals?cursor=not-a-valid-cursor`, {
         headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
       }),
     )
@@ -73,7 +91,7 @@ describe("Signals Routes Integration", () => {
     const slug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const res = await app.fetch(
-      new Request(`http://localhost/v1/projects/${slug}/issues/missing-issue`, {
+      new Request(`http://localhost/v1/projects/${slug}/signals/missing-issue`, {
         headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
       }),
     )
@@ -82,7 +100,7 @@ describe("Signals Routes Integration", () => {
   })
 
   it<ApiTestContext>("GET /{signalSlug} rejects unauthenticated requests with 401", async ({ app }) => {
-    const res = await app.fetch(new Request("http://localhost/v1/projects/foo/issues/some-issue"))
+    const res = await app.fetch(new Request("http://localhost/v1/projects/foo/signals/some-issue"))
     expect(res.status).toBe(401)
   })
 
@@ -95,7 +113,7 @@ describe("Signals Routes Integration", () => {
     const slug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const res = await app.fetch(
-      new Request(`http://localhost/v1/projects/${slug}/issues/export`, {
+      new Request(`http://localhost/v1/projects/${slug}/signals/export`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -117,7 +135,7 @@ describe("Signals Routes Integration", () => {
     const slug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const res = await app.fetch(
-      new Request(`http://localhost/v1/projects/${slug}/issues/export`, {
+      new Request(`http://localhost/v1/projects/${slug}/signals/export`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -138,7 +156,7 @@ describe("Signals Routes Integration", () => {
     const slug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const res = await app.fetch(
-      new Request(`http://localhost/v1/projects/${slug}/issues/export`, {
+      new Request(`http://localhost/v1/projects/${slug}/signals/export`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -157,7 +175,7 @@ describe("Signals Routes Integration", () => {
     const slug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const res = await app.fetch(
-      new Request(`http://localhost/v1/projects/${slug}/issues/export`, {
+      new Request(`http://localhost/v1/projects/${slug}/signals/export`, {
         method: "POST",
         headers: {
           ...createApiKeyAuthHeaders(tenant.apiKeyToken),
@@ -176,7 +194,7 @@ describe("Signals Routes Integration", () => {
 
   it<ApiTestContext>("POST /resolve rejects unauthenticated requests with 401", async ({ app }) => {
     const res = await app.fetch(
-      new Request("http://localhost/v1/projects/foo/issues/resolve", {
+      new Request("http://localhost/v1/projects/foo/signals/resolve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ signalIds: ["a".repeat(24)] }),
@@ -195,7 +213,7 @@ describe("Signals Routes Integration", () => {
 
     // No real issue seeded — the underlying lookup raises NotFoundError → 404.
     const res = await app.fetch(
-      new Request(`http://localhost/v1/projects/${slug}/issues/resolve`, {
+      new Request(`http://localhost/v1/projects/${slug}/signals/resolve`, {
         method: "POST",
         headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
         body: JSON.stringify({ signalIds: ["a".repeat(24)] }),
@@ -210,7 +228,7 @@ describe("Signals Routes Integration", () => {
     const slug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const res = await app.fetch(
-      new Request(`http://localhost/v1/projects/${slug}/issues/resolve`, {
+      new Request(`http://localhost/v1/projects/${slug}/signals/resolve`, {
         method: "POST",
         headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
         body: JSON.stringify({ signalIds: [] }),
@@ -224,7 +242,7 @@ describe("Signals Routes Integration", () => {
   }) => {
     for (const path of ["ignore", "unresolve", "unignore"]) {
       const res = await app.fetch(
-        new Request(`http://localhost/v1/projects/foo/issues/${path}`, {
+        new Request(`http://localhost/v1/projects/foo/signals/${path}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ signalIds: ["a".repeat(24)] }),
@@ -243,7 +261,7 @@ describe("Signals Routes Integration", () => {
     const slug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const res = await app.fetch(
-      new Request(`http://localhost/v1/projects/${slug}/issues/some-issue/monitor`, {
+      new Request(`http://localhost/v1/projects/${slug}/signals/some-issue/monitor`, {
         method: "POST",
         headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
       }),
@@ -261,7 +279,7 @@ describe("Signals Routes Integration", () => {
     const slug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const res = await app.fetch(
-      new Request(`http://localhost/v1/projects/${slug}/issues/missing-issue/monitor`, {
+      new Request(`http://localhost/v1/projects/${slug}/signals/missing-issue/monitor`, {
         method: "POST",
         headers: createOAuthAuthHeaders(tenant.oauthAccessToken),
       }),
@@ -276,7 +294,7 @@ describe("Signals Routes Integration", () => {
     const slug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const res = await app.fetch(
-      new Request(`http://localhost/v1/projects/${slug}/issues/missing-issue/unmonitor`, {
+      new Request(`http://localhost/v1/projects/${slug}/signals/missing-issue/unmonitor`, {
         method: "POST",
         headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
       }),
@@ -286,7 +304,7 @@ describe("Signals Routes Integration", () => {
   })
 
   it<ApiTestContext>("GET /analytics rejects unauthenticated requests with 401", async ({ app }) => {
-    const res = await app.fetch(new Request("http://localhost/v1/projects/foo/issues/analytics"))
+    const res = await app.fetch(new Request("http://localhost/v1/projects/foo/signals/analytics"))
     expect(res.status).toBe(401)
   })
 
@@ -299,7 +317,7 @@ describe("Signals Routes Integration", () => {
     const slug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const res = await app.fetch(
-      new Request(`http://localhost/v1/projects/${slug}/issues/analytics`, {
+      new Request(`http://localhost/v1/projects/${slug}/signals/analytics`, {
         headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
       }),
     )
@@ -330,7 +348,7 @@ describe("Signals Routes Integration", () => {
 
     const res = await app.fetch(
       new Request(
-        `http://localhost/v1/projects/${slug}/issues/analytics?fromIso=2026-04-15T00:00:00.000Z&toIso=2026-04-14T00:00:00.000Z`,
+        `http://localhost/v1/projects/${slug}/signals/analytics?fromIso=2026-04-15T00:00:00.000Z&toIso=2026-04-14T00:00:00.000Z`,
         { headers: createApiKeyAuthHeaders(tenant.apiKeyToken) },
       ),
     )
@@ -345,7 +363,7 @@ describe("Signals Routes Integration", () => {
 
     const res = await app.fetch(
       new Request(
-        `http://localhost/v1/projects/${slug}/issues/analytics?fromIso=2026-04-15T00:00:00.000Z&toIso=2026-04-16T00:00:00.000Z`,
+        `http://localhost/v1/projects/${slug}/signals/analytics?fromIso=2026-04-15T00:00:00.000Z&toIso=2026-04-16T00:00:00.000Z`,
         { headers: createApiKeyAuthHeaders(tenant.apiKeyToken) },
       ),
     )

@@ -72,7 +72,9 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
   // Back-compat: the Issues API moved to /signals. 307 preserves method + body so
   // already-published SDKs calling /issues keep working at runtime.
   // TODO(signals): remove once the issues alias is retired.
-  const toSignalsPath = (pathname: string): string => pathname.replace(/\/issues(\/|$)/, "/signals$1")
+  // Anchored on the project-slug segment so a project literally slugged "issues" isn't rewritten.
+  const toSignalsPath = (pathname: string): string =>
+    pathname.replace(/(\/projects\/[^/]+)\/issues(\/|$)/, "$1/signals$2")
   routes.all("/projects/:projectSlug/issues", (c) => {
     const url = new URL(c.req.url)
     url.pathname = toSignalsPath(url.pathname)
