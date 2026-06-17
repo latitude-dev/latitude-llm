@@ -15,48 +15,39 @@ This spec defines the real **sandbox runtime**: a portable, host-controlled, res
 
 ## The execution contract
 
-One score-shaped contract for every detector. The script reports a **verdict** — `Passed`/`Failed` — and that verdict IS membership; there is no host-side threshold. There are no dialects — what differs between judgment-bearing detectors and bare-membership detectors is only the persistence policy below.
+One contract for every evaluation: the script returns a **score** (`value` ∈ [0,1]), a **`passed`** verdict (membership — the script decides; there is no host-side threshold), and optional **`feedback`** (reasoning). There are no dialects, and every evaluation runs and persists the same way.
 
-### Output: one verdict, detector-decided membership
+### Output: score, verdict, feedback
 
 ```ts
-// Script return — a verdict (membership), with optional confidence + feedback
-Passed(value?: number, feedback?: string)   // matched
-Failed(value?: number, feedback?: string)   // not matched
-//   value ∈ [0,1] is OPTIONAL confidence for sort/UX (e.g. semantic similarity); it does NOT decide membership.
-//   Score(value, feedback?) is retained as a low-level alias for stored templates; new scripts return Passed/Failed.
+// Script return — a normalized score, a pass/fail verdict, and optional reasoning
+Score(value: number, passed: boolean, feedback?: string)   // value ∈ [0,1]; passed = membership; feedback = reasoning
+Passed(value?: number, feedback?: string)                  // sugar → Score(value ?? 1, true,  feedback)
+Failed(value?: number, feedback?: string)                  // sugar → Score(value ?? 0, false, feedback)
 
 // Host-side result
 type RunResult = {
-  passed: boolean      // the detector's verdict — this IS membership (no host-side threshold)
-  value?: number       // optional confidence ∈ [0, 1] for sort/UX
-  feedback?: string    // judge-grade detectors only; optional (its clustering
-                       //   consumer died with issue discovery)
+  value: number        // the normalized score ∈ [0, 1] — always returned
+  passed: boolean      // the membership verdict — the script decides; no host-side threshold
+  feedback?: string    // optional reasoning text
   duration: number     // ns, wall time of the run including host calls
   tokens: number       // total tokens consumed by llm() calls (0 for pure runs)
   cost: number         // microcents consumed by llm() calls (0 for pure runs)
 }
 
-// The detector decides membership; the host stores it verbatim:
+// The script decides membership; the host stores it verbatim:
 matched = result.passed
 ```
 
-- **The detector decides membership directly** — a judge's LLM returns yes/no; a script does its own comparison and returns `Passed`/`Failed`; the semantic native runner applies the cutoff in its anchor settings. There is no tunable threshold the host compares against. Generated judges are phrased *as the signal* ("does this trace exhibit X?") so judge-yes = matched, and polarity disappears from the contract. Legacy quality-phrased evaluation scripts (where *pass* = does-not-exhibit) migrate by verdict inversion or regeneration — that migration belongs to the signals rollout, not to this spec's executor swap.
-- **`value` is optional confidence, never membership** — judges may omit it (binary LLM judgments are better calibrated than continuous scoring — the UX must not render judge values as confidence); scripts emit whatever they compute, if anything (e.g. a future `similarity()` would return a continuous score). The cutoff is written into the script, never a host knob; a sink (no evaluation) has no detector. Definition edits apply forward only, like every definition edit.
-- Membership is monotone per (signal, trace) downstream — a later non-matching run never un-matches (occurrence dedup is first-match-wins), which makes non-deterministic `llm()` detectors safe by construction. Occurrences are counted as **distinct `trace_id` per signal**, so a trace re-scored by a fresh evaluation generation (after a promotion or re-optimization minted a new evaluation id) still counts once.
+- **The script returns all three.** A normalized `value` (the score, for sort/confidence/display), `passed` (the membership verdict — the script decides it; there is no host-side threshold), and optional `feedback`. Generated judges are phrased *as the signal* ("does this trace exhibit X?") so judge-yes = matched, and polarity disappears from the contract. Legacy quality-phrased scripts (where *pass* = does-not-exhibit) migrate by verdict inversion or regeneration — that migration belongs to the signals rollout, not to this spec's executor swap.
+- **`value` is the score, `passed` is membership** — independent fields: the script computes a score and decides pass/fail (`value` is often a degenerate 0/1 for a binary judge; a future `similarity()` yields a continuous `value`). Any cutoff is written into the script, never a host knob. Definition edits apply forward only, like every definition edit.
+- Membership is monotone per (signal, trace) downstream — a later non-matching run never un-matches (occurrence dedup is first-match-wins), which makes non-deterministic `llm()` detectors safe by construction. Occurrences are counted as **distinct `trace_id` per signal**, so a trace re-scored by a fresh evaluation generation (after the signal is re-tracked or re-optimized into a new evaluation id) still counts once.
 
-### Persistence policy (separate from the contract)
+### Persistence policy
 
-Every run is persisted as a score *row* — membership *is* scores (`specs/signals.md`), and the write-both default records matched and non-matched runs alike (mirroring how judges persist pass and fail today, giving exact denominators without read-time estimation). What differs by **capability** is only the *store*: an `llm`-capability run (non-deterministic, costed) or a human annotation (irreplaceable) takes the canonical Postgres path; a `pure` run is a deterministic function of `(definition, trace)`, immutable on arrival, so it goes **ClickHouse-only** (skipping the canonical row) at the highest volume tier.
+Every run is persisted as a score *row*, and **every score is written to both stores the same way** — Postgres is the canonical, mutable source of truth; ClickHouse is the analytics mirror monitors count and aggregate over. The only nuance is the existing draft lifecycle: a *mutable* score (a drafted human annotation) lives in Postgres until it is published, then syncs to ClickHouse; an evaluation run (or a confirmed annotation) is immutable, so it is written to Postgres and synced to ClickHouse on arrival. There is **no per-type or per-capability storage split** — judges and deterministic scripts persist identically.
 
-| Run | Persists |
-| --- | --- |
-| pure evaluation, matched (verdict `Passed`) | ClickHouse-only score row (`passed=true`, optional `value`) |
-| pure evaluation, not matched (verdict `Failed`) | ClickHouse-only score row (`passed=false`) — write-both default |
-| `llm`-capability evaluation (judge, or a script calling `llm()`) | Postgres-canonical score row (value, feedback) + ClickHouse, matched or not |
-| annotation linked to a signal | Postgres-canonical score row as today + ClickHouse |
-
-The policy is capability-driven, not type-driven: a raw script that calls `llm()` persists to Postgres; a pure script is ClickHouse-only. *(Lever, if pure-evaluation non-match volume ever hurts: switch pure evaluations to match-only and compute denominators from the scope `FilterSet` over the traces table at read time. Flipping it is a policy change, not a migration.)*
+*(Scale lever, not the MVP: if deterministic scripts that run on every trace ever produce score volume that strains the canonical path, those — recomputable and feedback-free — could be written ClickHouse-only. That is a future, per-run optimization, never a rule about evaluation kinds.)*
 
 ### Script globals (host-controlled, nothing else in scope)
 
@@ -70,8 +61,8 @@ Per the contract already documented in `dev-docs/evaluations.md`:
 | `parse(value, schema)` | — | Validates an unknown value against a schema |
 | `llm(prompt, { schema })` | `llm` | Structured generation through the host (`@domain/ai`); the schema is required — schema-less calls throw in-sandbox; model/provider stay host-managed (`EVALUATION_SCRIPT_RUNTIME_MODEL`); remaining options are host-approved only |
 | `similarity(...)` / `embedding(...)` | `embeddings` | **FUTURE (`specs/signals.md` → Phase 7)** — semantic similarity as something a script can call. A host bridge mirroring `llm()`; needs an embeddings-ready execution lane (chunk embeddings exist only on the later `trace_search_embeddings` hop, not at trace-end). See the semantic-similarity future below. |
-| `Passed(value?, feedback?)` / `Failed(value?, feedback?)` | — | The return verdict — matched / not matched. This IS membership; `value` is optional confidence; `feedback` is judge-grade only |
-| `Score(value, feedback?)` | — | Low-level alias retained so stored templates stay valid; new scripts return `Passed`/`Failed` |
+| `Score(value, passed, feedback?)` | — | The return: normalized score `value` ∈ [0,1], the `passed` verdict (membership), optional `feedback` reasoning |
+| `Passed(value?, feedback?)` / `Failed(value?, feedback?)` | — | Sugar over `Score` (`value ?? 1, true` / `value ?? 0, false`); keeps stored templates valid |
 
 No ambient I/O: no `fetch`, no timers, no `process`, no dynamic import. Anything a script can *do* beyond pure computation is an explicit host function.
 
