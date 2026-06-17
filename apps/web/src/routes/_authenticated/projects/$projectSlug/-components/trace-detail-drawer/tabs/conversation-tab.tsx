@@ -130,13 +130,14 @@ function ConversationContent({
   readonly payloadBytes: number
   readonly hasMoreMessages: boolean
   readonly isLoadingMoreMessages: boolean
-  readonly onLoadMoreMessages: () => void
+  readonly onLoadMoreMessages: () => unknown
 }) {
   const internalScrollRef = useRef<HTMLDivElement>(null)
   const scrollRef = scrollContainerRef ?? internalScrollRef
   const navigatorRef = useRef<ScrollNavigatorHandle>(null)
   const navItemRefs = useRef<(HTMLDivElement | null)[]>([])
   const clearSelectionRef = useRef<(() => void) | null>(null)
+  const autoLoadingMoreRef = useRef(false)
 
   const { data: spanMaps } = useConversationSpanMaps({
     projectId,
@@ -224,6 +225,21 @@ function ConversationContent({
     },
     [timeline, dismissSelectionUi, scrollToMessageAnchor],
   )
+
+  const maybeLoadMoreMessages = useCallback(() => {
+    const container = scrollRef.current
+    if (!container || !hasMoreMessages || isLoadingMoreMessages || autoLoadingMoreRef.current) return
+
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight
+    if (distanceFromBottom > 1200) return
+
+    autoLoadingMoreRef.current = true
+    void Promise.resolve(onLoadMoreMessages())
+      .catch(() => undefined)
+      .finally(() => {
+        autoLoadingMoreRef.current = false
+      })
+  }, [scrollRef, hasMoreMessages, isLoadingMoreMessages, onLoadMoreMessages])
 
   const handleMarkerClick = useCallback(
     (marker: TimelineMarker) => {
@@ -343,6 +359,7 @@ function ConversationContent({
       <div
         ref={scrollRef}
         className="flex min-w-0 flex-col py-8 px-4 overflow-y-auto overflow-x-hidden flex-1"
+        onScroll={maybeLoadMoreMessages}
         onPointerMove={(e) => {
           const anchor = e.target instanceof HTMLElement ? e.target.closest("[data-message-index]") : null
           const raw = anchor?.getAttribute("data-message-index")
@@ -393,9 +410,7 @@ function ConversationContent({
             <Text.H6 color="foregroundMuted">
               Showing {messages.length} of {totalMessages} messages ({formatBytes(payloadBytes)} total payload)
             </Text.H6>
-            <Button variant="outline" size="sm" onClick={onLoadMoreMessages} disabled={isLoadingMoreMessages}>
-              {isLoadingMoreMessages ? "Loading…" : "Load more messages"}
-            </Button>
+            {isLoadingMoreMessages ? <Text.H6 color="foregroundMuted">Loading more messages…</Text.H6> : null}
           </div>
         ) : null}
         {annotationsEnabled ? (
@@ -530,7 +545,7 @@ export function ConversationTab({
       payloadBytes={conversation.payloadBytes}
       hasMoreMessages={conversation.hasNextPage}
       isLoadingMoreMessages={conversation.isFetchingNextPage}
-      onLoadMoreMessages={() => void conversation.fetchNextPage()}
+      onLoadMoreMessages={() => conversation.fetchNextPage()}
     />
   )
 }

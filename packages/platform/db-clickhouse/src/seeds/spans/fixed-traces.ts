@@ -409,6 +409,182 @@ export function buildCompatibilitySupportSpans(scope: SeedScope): SpanRow[] {
   return specs.map((spec) => createCompatibilityChatSpan({ scope, ...spec }))
 }
 
+type LargeConversationSpec = {
+  readonly traceKey: string
+  readonly index: number
+  readonly sessionId: string
+  readonly daysAgo: number
+  readonly turnCount: number
+  readonly scenario: string
+  readonly serviceName: string
+  readonly user: SeedUser | undefined
+}
+
+const LARGE_CONVERSATION_CONTEXT = [
+  "customer identity",
+  "order history",
+  "policy window",
+  "warehouse status",
+  "payment method",
+  "fraud review",
+  "shipping SLA",
+  "loyalty tier",
+  "prior escalation",
+  "inventory reservation",
+  "manager approval",
+  "refund ledger",
+] as const
+
+function largeConversationText(spec: LargeConversationSpec, turnIndex: number, role: "user" | "assistant"): string {
+  const checkpoint = turnIndex + 1
+  const context = Array.from({ length: 6 }, (_, index) => {
+    const item = LARGE_CONVERSATION_CONTEXT[(turnIndex + index) % LARGE_CONVERSATION_CONTEXT.length]
+    return `${item}: ${spec.scenario} checkpoint ${checkpoint}.${index + 1}`
+  }).join("; ")
+
+  if (role === "user") {
+    return `Large conversation seed ${spec.index + 1}, user turn ${checkpoint}. I need the assistant to keep every previous detail in mind while we test streamed conversation loading. ${context}. Please cross-check these facts before changing the recommendation.`
+  }
+
+  return `Large conversation seed ${spec.index + 1}, assistant turn ${checkpoint}. I am retaining the running case state, separating verified facts from pending checks, and keeping the recommendation conditional until the required evidence is complete. ${context}. Next I would verify the newest customer statement against the tool-backed record before committing to an outcome.`
+}
+
+function buildLargeConversationMessages(spec: LargeConversationSpec): Tau2Message[] {
+  return Array.from({ length: spec.turnCount }).flatMap((_, turnIndex) => [
+    { role: "user" as const, parts: [{ type: "text", content: largeConversationText(spec, turnIndex, "user") }] },
+    {
+      role: "assistant" as const,
+      parts: [{ type: "text", content: largeConversationText(spec, turnIndex, "assistant") }],
+    },
+  ])
+}
+
+function createLargeConversationChatSpan(opts: { scope: SeedScope; spec: LargeConversationSpec }): SpanRow {
+  const { scope, spec } = opts
+  const start = scope.dateDaysAgo(spec.daysAgo, 13 + spec.index, 15)
+  const traceId = scope.traceHex(spec.traceKey, spec.index)
+  const spanId = scope.spanHex(spec.traceKey, spec.index)
+  const inputMessages = buildLargeConversationMessages(spec)
+  const renderedMessageCount = inputMessages.length + 2
+  const outputMessages: Tau2Message[] = [
+    {
+      role: "assistant",
+      parts: [
+        {
+          type: "text",
+          content: `Large conversation seed ${spec.index + 1} final answer. This trace intentionally contains ${renderedMessageCount} rendered messages so the conversation drawer must page through chunks instead of returning the whole payload at once.`,
+        },
+      ],
+    },
+  ]
+  const inputTokens = estimateTau2Tokens(inputMessages)
+  const outputTokens = estimateTau2Tokens(outputMessages)
+  const durationMs = spec.turnCount * 1200
+
+  return {
+    organization_id: scope.organizationId,
+    project_id: scope.projectId,
+    session_id: spec.sessionId,
+    user_id: spec.user?.id ?? "",
+    user_email: spec.user?.email ?? "",
+    trace_id: traceId,
+    span_id: spanId,
+    parent_span_id: "",
+    api_key_id: scope.apiKeyId,
+    simulation_id: "",
+    start_time: formatClickHouseTimestamp(start),
+    end_time: formatClickHouseTimestamp(new Date(start.getTime() + durationMs)),
+    name: "chat gpt-4.1 large conversation",
+    service_name: spec.serviceName,
+    kind: 1,
+    status_code: 1,
+    status_message: "",
+    error_type: "",
+    tags: ["support", "large-conversation", "streaming-fixture"],
+    metadata: {
+      seed: "large-conversation",
+      story: spec.scenario,
+      fixture: "conversation-streaming",
+      turnCount: String(spec.turnCount),
+    },
+    operation: "chat",
+    provider: "openai",
+    model: "gpt-4.1",
+    response_model: "gpt-4.1-2025-04-14",
+    tokens_input: inputTokens,
+    tokens_output: outputTokens,
+    tokens_cache_read: 0,
+    tokens_cache_create: 0,
+    tokens_reasoning: 0,
+    cost_input_microcents: inputTokens * 25,
+    cost_output_microcents: outputTokens * 100,
+    cost_total_microcents: inputTokens * 25 + outputTokens * 100,
+    cost_is_estimated: 1,
+    time_to_first_token_ns: 260_000_000,
+    is_streaming: 1,
+    response_id: `seed-${spanId}`,
+    finish_reasons: ["stop"],
+    input_messages: JSON.stringify(inputMessages),
+    output_messages: JSON.stringify(outputMessages),
+    system_instructions: JSON.stringify([
+      {
+        type: "text",
+        content:
+          "You are a support agent in a deterministic load-test conversation. Preserve context across hundreds of turns and keep conclusions grounded in verified facts.",
+      },
+    ]),
+    tool_definitions: "",
+    tool_call_id: "",
+    tool_name: "",
+    tool_input: "",
+    tool_output: "",
+    attr_string: {},
+    attr_int: {},
+    attr_float: { "gen_ai.request.temperature": 0 },
+    attr_bool: {},
+    resource_string: { "service.name": spec.serviceName },
+    scope_name: "openai-instrumentation",
+    scope_version: "1.0.0",
+  }
+}
+
+function buildLargeConversationSpans(scope: SeedScope): SpanRow[] {
+  const specs: readonly LargeConversationSpec[] = [
+    {
+      traceKey: "large-conversation",
+      index: 0,
+      sessionId: "seed-large-conversation-1",
+      daysAgo: 1,
+      turnCount: 120,
+      scenario: "return eligibility investigation with repeated shipping and payment updates",
+      serviceName: "load-test-retail-support-agent",
+      user: CUSTOMER_USERS[4],
+    },
+    {
+      traceKey: "large-conversation",
+      index: 1,
+      sessionId: "seed-large-conversation-2",
+      daysAgo: 1,
+      turnCount: 240,
+      scenario: "telecom outage troubleshooting with many device-state checkpoints",
+      serviceName: "load-test-telecom-support-agent",
+      user: CUSTOMER_USERS[5],
+    },
+    {
+      traceKey: "large-conversation",
+      index: 2,
+      sessionId: "seed-large-conversation-3",
+      daysAgo: 1,
+      turnCount: 420,
+      scenario: "travel itinerary exception review with long-running policy comparisons",
+      serviceName: "load-test-travel-support-agent",
+      user: CUSTOMER_USERS[6],
+    },
+  ]
+
+  return specs.map((spec) => createLargeConversationChatSpan({ scope, spec }))
+}
+
 function buildTau2TrajectorySpans(scope: SeedScope): SpanRow[] {
   const spans: SpanRow[] = []
 
@@ -624,4 +800,24 @@ const seedFixedTraces: Seeder = {
     }),
 }
 
-export const fixedTraceSeeders: readonly Seeder[] = [seedFixedTraces]
+const seedLargeConversationTraces: Seeder = {
+  name: "spans/large-conversation-traces",
+  run: (ctx) =>
+    Effect.gen(function* () {
+      const sentinel = ctx.scope.traceHex("large-conversation", 0)
+      const present = yield* isSentinelPresent(ctx.client, "spans", "trace_id = {sentinel:String}", { sentinel })
+      if (present) {
+        if (!ctx.quiet) console.log("  -> spans/large-conversation-traces: already seeded, skipping")
+        return
+      }
+
+      const spans = buildLargeConversationSpans(ctx.scope)
+      const sentinelSpans = spans.filter((span) => span.trace_id === sentinel)
+      const nonSentinelSpans = spans.filter((span) => span.trace_id !== sentinel)
+      yield* insertJsonEachRow(ctx.client, "spans", nonSentinelSpans)
+      yield* insertJsonEachRow(ctx.client, "spans", sentinelSpans)
+      if (!ctx.quiet) console.log(`  -> spans/large-conversation-traces: ${spans.length} streaming stress traces`)
+    }),
+}
+
+export const fixedTraceSeeders: readonly Seeder[] = [seedFixedTraces, seedLargeConversationTraces]
