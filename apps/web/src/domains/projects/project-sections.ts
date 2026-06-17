@@ -24,10 +24,13 @@ import { useHasFeatureFlag } from "../feature-flags/feature-flags.collection.ts"
 
 type SectionFlag = "behaviours" | "monitors" | "destinations"
 
+type SectionGroupKey = "observe" | "understand" | "refine"
+
 interface ProjectSection {
   readonly key: string
   readonly label: string
   readonly icon: LucideIcon
+  readonly group: SectionGroupKey
   readonly path: (projectSlug: string) => string
   readonly isActive: (pathname: string, projectSlug: string) => boolean
   readonly flag?: SectionFlag
@@ -38,21 +41,15 @@ const PROJECT_SECTIONS: readonly ProjectSection[] = [
     key: "sessions",
     label: "Sessions",
     icon: MessagesSquareIcon,
+    group: "observe",
     path: (slug) => `/projects/${slug}`,
     isActive: (pathname, slug) => pathname === `/projects/${slug}` || pathname === `/projects/${slug}/`,
-  },
-  {
-    key: "behaviours",
-    label: "Behaviors",
-    icon: TagsIcon,
-    path: (slug) => `/projects/${slug}/behaviours`,
-    isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/behaviours`),
-    flag: "behaviours",
   },
   {
     key: "users",
     label: "Users",
     icon: UsersRoundIcon,
+    group: "observe",
     path: (slug) => `/projects/${slug}/users`,
     isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/users`),
   },
@@ -60,6 +57,7 @@ const PROJECT_SECTIONS: readonly ProjectSection[] = [
     key: "tools",
     label: "Tools",
     icon: WrenchIcon,
+    group: "observe",
     path: (slug) => `/projects/${slug}/tools`,
     isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/tools`),
   },
@@ -67,13 +65,24 @@ const PROJECT_SECTIONS: readonly ProjectSection[] = [
     key: "issues",
     label: "Issues",
     icon: ShieldAlertIcon,
+    group: "understand",
     path: (slug) => `/projects/${slug}/issues`,
     isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/issues`),
+  },
+  {
+    key: "behaviours",
+    label: "Behaviors",
+    icon: TagsIcon,
+    group: "understand",
+    path: (slug) => `/projects/${slug}/behaviours`,
+    isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/behaviours`),
+    flag: "behaviours",
   },
   {
     key: "monitors",
     label: "Monitors",
     icon: BellRingIcon,
+    group: "refine",
     path: (slug) => `/projects/${slug}/monitors`,
     isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/monitors`),
     flag: "monitors",
@@ -82,13 +91,25 @@ const PROJECT_SECTIONS: readonly ProjectSection[] = [
     key: "datasets",
     label: "Datasets",
     icon: DatabaseIcon,
+    group: "refine",
     path: (slug) => `/projects/${slug}/datasets`,
     isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/datasets`),
   },
 ]
 
+interface ProjectSectionGroup {
+  readonly key: SectionGroupKey
+  readonly label: string
+}
+
+const PROJECT_SECTION_GROUPS: readonly ProjectSectionGroup[] = [
+  { key: "observe", label: "Observe" },
+  { key: "understand", label: "Understand" },
+  { key: "refine", label: "Refine" },
+]
+
 /** Top-level Settings entry (rendered in the sidebar footer, separate from the main list). */
-export const PROJECT_SETTINGS_SECTION: ProjectSection = {
+export const PROJECT_SETTINGS_SECTION: Omit<ProjectSection, "group"> = {
   key: "settings",
   label: "Settings",
   icon: SettingsIcon,
@@ -206,6 +227,23 @@ function useSectionFlags(): Record<SectionFlag, boolean> {
 export function useVisibleProjectSections(): readonly ProjectSection[] {
   const flags = useSectionFlags()
   return useMemo(() => PROJECT_SECTIONS.filter((section) => !section.flag || flags[section.flag]), [flags])
+}
+
+interface VisibleProjectSectionGroup extends ProjectSectionGroup {
+  readonly sections: readonly ProjectSection[]
+}
+
+/** Visible project sections bucketed into their sidebar groups (empty groups dropped). */
+export function useVisibleProjectSectionGroups(): readonly VisibleProjectSectionGroup[] {
+  const sections = useVisibleProjectSections()
+  return useMemo(
+    () =>
+      PROJECT_SECTION_GROUPS.map((group) => ({
+        ...group,
+        sections: sections.filter((section) => section.group === group.key),
+      })).filter((group) => group.sections.length > 0),
+    [sections],
+  )
 }
 
 /** Settings groups with flag-gated items removed (empty groups are dropped). */
