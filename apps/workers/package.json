@@ -72,7 +72,6 @@
     "@repo/utils": "workspace:*",
     "effect": "catalog:",
     "fflate": "0.8.2",
-    "quickjs-emscripten": "catalog:",
     "tsx": "catalog:",
     "voyageai": "catalog:"
   },

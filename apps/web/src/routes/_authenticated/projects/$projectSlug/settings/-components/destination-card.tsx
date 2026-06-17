@@ -1,43 +1,35 @@
+import { deriveDestinationHealth } from "@domain/destinations"
 import { Alert, Badge, Button, Icon, Text, useToast } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { Pause, Play, Trash2 } from "lucide-react"
+import { ChevronDown, Pause, Play, Trash2 } from "lucide-react"
 import { useState } from "react"
 import {
   type DestinationRecord,
+  type DestinationSyncRunRecord,
+  getDestinationFreshness,
   getLatestDestinationSyncRun,
   pauseDestination,
   resumeDestination,
 } from "../../../../../../domains/destinations/destinations.functions.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { DeleteDestinationModal } from "./delete-destination-modal.tsx"
-import { DESTINATION_KIND_LABEL, DESTINATION_STATUS_BADGE } from "./destination-display.ts"
+import { DESTINATION_HEALTH_BADGE, DESTINATION_KIND_LABEL, formatLag } from "./destination-display.ts"
 import { DestinationFormModal } from "./destination-form-modal.tsx"
 import { DestinationLogo } from "./destination-logos/index.tsx"
 import { destinationsQueryKey } from "./destinations-section.tsx"
 
 const eventCountFormatter = new Intl.NumberFormat("en-US")
 
-function LastRunSummary({ destination }: { destination: DestinationRecord }) {
-  const { data: run } = useQuery({
-    queryKey: ["destination-sync-run", destination.id],
-    queryFn: () => getLatestDestinationSyncRun({ data: { destinationId: destination.id } }),
-    staleTime: 60_000,
-    refetchOnWindowFocus: false,
-  })
-
+function LastRunSummary({ run }: { run: DestinationSyncRunRecord | null | undefined }) {
   if (!run) {
     return <Text.H6 color="foregroundMuted">Not synced yet · waiting for the next run</Text.H6>
   }
 
-  const syncedAt = run.finishedAt
-  const events = run ? `${eventCountFormatter.format(run.eventsSent)} events` : null
-
   return (
     <Text.H6 color="foregroundMuted">
-      {syncedAt ? `Last synced ${relativeTime(new Date(syncedAt))}` : "Not synced yet"}
-      {events ? ` · ${events}` : null}
+      {`Last synced ${relativeTime(new Date(run.finishedAt))} · ${eventCountFormatter.format(run.eventsSent)} events`}
     </Text.H6>
   )
 }
@@ -63,10 +55,33 @@ export function DestinationCard({
 }) {
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  const status = DESTINATION_STATUS_BADGE[destination.status]
-  const hostLabel = destination.config.host.replace(/^https?:\/\//, "")
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [showSources, setShowSources] = useState(false)
+
+  const { data: latestRun } = useQuery({
+    queryKey: ["destination-sync-run", destination.id],
+    queryFn: () => getLatestDestinationSyncRun({ data: { destinationId: destination.id } }),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  })
+
+  const { data: freshness } = useQuery({
+    queryKey: ["destination-freshness", destination.id],
+    queryFn: () => getDestinationFreshness({ data: { projectId, destinationId: destination.id } }),
+    enabled: destination.status === "active",
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  })
+
+  const sourceFreshness = freshness?.sources ?? []
+  const health = deriveDestinationHealth({
+    status: destination.status,
+    sources: sourceFreshness,
+    latestRun: latestRun ? { status: latestRun.status, eventsDropped: latestRun.eventsDropped } : null,
+  })
+  const healthBadge = DESTINATION_HEALTH_BADGE[health.badge]
+  const hostLabel = destination.config.host.replace(/^https?:\/\//, "")
 
   const pause = useMutation({
     mutationFn: () => pauseDestination({ data: { projectId, destinationId: destination.id } }),
@@ -95,14 +110,50 @@ export function DestinationCard({
       <div className="flex min-w-0 flex-col gap-0.5">
         <div className="flex flex-row items-center gap-2">
           <Text.H5 weight="semibold">{destination.name}</Text.H5>
-          <Badge variant={status.variant}>{status.label}</Badge>
+          <Badge variant={healthBadge.variant}>{healthBadge.label}</Badge>
         </div>
         <div className="flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
           <Text.H6 color="foregroundMuted">{DESTINATION_KIND_LABEL[destination.kind]}</Text.H6>
           <Text.H6 color="foregroundMuted">·</Text.H6>
           <Text.H6 color="foregroundMuted">{hostLabel}</Text.H6>
           <Text.H6 color="foregroundMuted">·</Text.H6>
-          <LastRunSummary destination={destination} />
+          <LastRunSummary run={latestRun} />
+          {destination.status === "active" ? (
+            <>
+              <Text.H6 color="foregroundMuted">·</Text.H6>
+              <Text.H6 color={health.badge === "lagging" ? "warningMutedForeground" : "foregroundMuted"}>
+                {formatLag(health.lagMs)}
+              </Text.H6>
+              {!linkToDetail && sourceFreshness.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setShowSources((open) => !open)}
+                  className="flex flex-row items-center gap-0.5 transition-opacity hover:opacity-80"
+                >
+                  <Text.H6 color="foregroundMuted">{showSources ? "Hide sources" : "By source"}</Text.H6>
+                  <Icon
+                    icon={ChevronDown}
+                    size="sm"
+                    className={`transition-transform ${showSources ? "rotate-180" : ""}`}
+                  />
+                </button>
+              ) : null}
+            </>
+          ) : null}
+          {latestRun?.status === "failed" ? (
+            <>
+              <Text.H6 color="foregroundMuted">·</Text.H6>
+              <Text.H6 color="destructiveMutedForeground">last run failed</Text.H6>
+            </>
+          ) : null}
+          {health.eventsDropped > 0 ? (
+            <>
+              <Text.H6 color="foregroundMuted">·</Text.H6>
+              <Text.H6 color="warningMutedForeground">
+                {`${eventCountFormatter.format(health.eventsDropped)} dropped`}
+              </Text.H6>
+            </>
+          ) : null}
         </div>
       </div>
     </>
@@ -110,7 +161,7 @@ export function DestinationCard({
 
   return (
     <div className="flex flex-col rounded-lg border border-border">
-      {destination.status === "quarantined" ? (
+      {destination.status === "quarantined" && !linkToDetail ? (
         <div className="border-b border-border p-4">
           <Alert
             variant="destructive"
@@ -174,6 +225,18 @@ export function DestinationCard({
           </Button>
         </div>
       </div>
+
+      {!linkToDetail && showSources ? (
+        <div className="flex flex-col gap-1 border-t border-border px-4 py-3">
+          {sourceFreshness.map((s) => (
+            <div key={s.source} className="flex flex-row items-center gap-2">
+              <Text.H6 weight="medium">{s.source}</Text.H6>
+              <Text.H6 color="foregroundMuted">·</Text.H6>
+              <Text.H6 color="foregroundMuted">{formatLag(s.lagMs)}</Text.H6>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       {editing ? (
         <DestinationFormModal projectId={projectId} destination={destination} onClose={() => setEditing(false)} />

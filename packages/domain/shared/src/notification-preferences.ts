@@ -10,7 +10,13 @@ import { alertSeveritySchema } from "./alert-incident-kinds.ts"
  * entity can carry typed preferences without introducing a circular
  * package dep with `@domain/notifications`.
  */
-export const NOTIFICATION_GROUPS = ["incidents", "wrapped_reports", "custom_messages", "personal"] as const
+export const NOTIFICATION_GROUPS = [
+  "incidents",
+  "wrapped_reports",
+  "custom_messages",
+  "personal",
+  "destinations",
+] as const
 export type NotificationGroup = (typeof NOTIFICATION_GROUPS)[number]
 export const notificationGroupSchema = z.enum(NOTIFICATION_GROUPS)
 
@@ -47,6 +53,11 @@ export const NOTIFICATION_GROUP_META: Record<
   custom_messages: {
     label: "Announcements",
     description: "Product announcements and admin messages.",
+    slackRoutable: true,
+  },
+  destinations: {
+    label: "Data destinations",
+    description: "Get notified when a data destination stops syncing (e.g. quarantined after repeated failures).",
     slackRoutable: true,
   },
 }

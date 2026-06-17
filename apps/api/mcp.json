@@ -65,7 +65,7 @@
                     "type": "boolean"
                   },
                   "notifications": {
-                    "description": "Per-group project-level notification toggles. Today only `incidents` exists; future groups (wrapped reports, etc.) slot in alongside.",
+                    "description": "Per-group project-level notification toggles (`incidents`, `destinations`).",
                     "type": "object",
                     "properties": {
                       "incidents": {
@@ -82,6 +82,17 @@
                           },
                           "issue.escalating": {
                             "description": "Send a notification when an active signal is escalating in volume or severity. Defaults to `true` when omitted.",
+                            "type": "boolean"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "destinations": {
+                        "description": "Project-level opt-out for data-destination notifications.",
+                        "type": "object",
+                        "properties": {
+                          "quarantine": {
+                            "description": "Notify org members when a data destination is quarantined after repeated sync failures. Defaults to `true` when omitted.",
                             "type": "boolean"
                           }
                         },
@@ -207,7 +218,7 @@
                           "type": "boolean"
                         },
                         "notifications": {
-                          "description": "Per-group project-level notification toggles. Today only `incidents` exists; future groups (wrapped reports, etc.) slot in alongside.",
+                          "description": "Per-group project-level notification toggles (`incidents`, `destinations`).",
                           "type": "object",
                           "properties": {
                             "incidents": {
@@ -224,6 +235,17 @@
                                 },
                                 "issue.escalating": {
                                   "description": "Send a notification when an active signal is escalating in volume or severity. Defaults to `true` when omitted.",
+                                  "type": "boolean"
+                                }
+                              },
+                              "additionalProperties": false
+                            },
+                            "destinations": {
+                              "description": "Project-level opt-out for data-destination notifications.",
+                              "type": "object",
+                              "properties": {
+                                "quarantine": {
+                                  "description": "Notify org members when a data destination is quarantined after repeated sync failures. Defaults to `true` when omitted.",
                                   "type": "boolean"
                                 }
                               },
@@ -377,7 +399,7 @@
                     "type": "boolean"
                   },
                   "notifications": {
-                    "description": "Per-group project-level notification toggles. Today only `incidents` exists; future groups (wrapped reports, etc.) slot in alongside.",
+                    "description": "Per-group project-level notification toggles (`incidents`, `destinations`).",
                     "type": "object",
                     "properties": {
                       "incidents": {
@@ -394,6 +416,17 @@
                           },
                           "issue.escalating": {
                             "description": "Send a notification when an active signal is escalating in volume or severity. Defaults to `true` when omitted.",
+                            "type": "boolean"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "destinations": {
+                        "description": "Project-level opt-out for data-destination notifications.",
+                        "type": "object",
+                        "properties": {
+                          "quarantine": {
+                            "description": "Notify org members when a data destination is quarantined after repeated sync failures. Defaults to `true` when omitted.",
                             "type": "boolean"
                           }
                         },
@@ -500,7 +533,7 @@
                 "type": "boolean"
               },
               "notifications": {
-                "description": "Per-group project-level notification toggles. Today only `incidents` exists; future groups (wrapped reports, etc.) slot in alongside.",
+                "description": "Per-group project-level notification toggles (`incidents`, `destinations`).",
                 "type": "object",
                 "properties": {
                   "incidents": {
@@ -517,6 +550,17 @@
                       },
                       "issue.escalating": {
                         "description": "Send a notification when an active signal is escalating in volume or severity. Defaults to `true` when omitted.",
+                        "type": "boolean"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "destinations": {
+                    "description": "Project-level opt-out for data-destination notifications.",
+                    "type": "object",
+                    "properties": {
+                      "quarantine": {
+                        "description": "Notify org members when a data destination is quarantined after repeated sync failures. Defaults to `true` when omitted.",
                         "type": "boolean"
                       }
                     },
@@ -599,7 +643,7 @@
                     "type": "boolean"
                   },
                   "notifications": {
-                    "description": "Per-group project-level notification toggles. Today only `incidents` exists; future groups (wrapped reports, etc.) slot in alongside.",
+                    "description": "Per-group project-level notification toggles (`incidents`, `destinations`).",
                     "type": "object",
                     "properties": {
                       "incidents": {
@@ -616,6 +660,17 @@
                           },
                           "issue.escalating": {
                             "description": "Send a notification when an active signal is escalating in volume or severity. Defaults to `true` when omitted.",
+                            "type": "boolean"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "destinations": {
+                        "description": "Project-level opt-out for data-destination notifications.",
+                        "type": "object",
+                        "properties": {
+                          "quarantine": {
+                            "description": "Notify org members when a data destination is quarantined after repeated sync failures. Defaults to `true` when omitted.",
                             "type": "boolean"
                           }
                         },

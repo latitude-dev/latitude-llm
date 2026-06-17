@@ -77,6 +77,7 @@ describe("recordDestinationSyncFailureUseCase", () => {
 
     expect(result.outcome).toBe("recorded")
     expect(result.consecutiveFailures).toBe(2)
+    expect(result.quarantineEvent).toBeNull()
     expect(rows[0]?.status).toBe("active")
     expect(rows[0]?.consecutiveFailures).toBe(2)
     expect(rows[0]?.lastFailureMessage).toBe("[502] upstream")
@@ -101,6 +102,16 @@ describe("recordDestinationSyncFailureUseCase", () => {
     expect(result.outcome).toBe("quarantined")
     expect(result.consecutiveFailures).toBe(DESTINATION_QUARANTINE_FAILURE_THRESHOLD)
     expect(rows[0]?.status).toBe("quarantined")
+    // The flip emits a notification event the worker fans out from.
+    expect(result.quarantineEvent).toEqual({
+      organizationId: ORG_ID,
+      projectId: ProjectId(cuid("p")),
+      destinationId: DESTINATION_ID,
+      destinationName: "Acme PostHog",
+      destinationKind: "posthog",
+      failureMessage: "transport",
+      quarantinedAt: NOW,
+    })
   })
 
   it("leaves a non-active destination untouched", async () => {
@@ -116,8 +127,27 @@ describe("recordDestinationSyncFailureUseCase", () => {
     )
 
     expect(result.outcome).toBe("skipped")
+    expect(result.quarantineEvent).toBeNull()
     expect(rows[0]?.status).toBe("paused")
     expect(rows[0]?.consecutiveFailures).toBe(2)
+  })
+
+  it("is idempotent past the flip: an already-quarantined destination skips with no event", async () => {
+    const { layer } = setup(
+      makeDestination({ status: "quarantined", consecutiveFailures: DESTINATION_QUARANTINE_FAILURE_THRESHOLD }),
+    )
+
+    const result = await Effect.runPromise(
+      recordDestinationSyncFailureUseCase({
+        destinationId: DESTINATION_ID,
+        source: SOURCE,
+        now: NOW,
+        message: "transport",
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(result.outcome).toBe("skipped")
+    expect(result.quarantineEvent).toBeNull()
   })
 
   it("skips cleanly when the destination was deleted mid-retry", async () => {

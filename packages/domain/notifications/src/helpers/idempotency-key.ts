@@ -1,6 +1,7 @@
 import { generateId } from "@domain/shared"
 import type {
   CustomMessagePayload,
+  DestinationQuarantinedPayload,
   IncidentClosedPayload,
   IncidentEventPayload,
   IncidentOpenedPayload,
@@ -21,11 +22,21 @@ import type {
  */
 export type BuildIdempotencyKeyInput =
   | { readonly kind: "incident.event"; readonly payload: IncidentEventPayload }
-  | { readonly kind: "incident.opened"; readonly payload: IncidentOpenedPayload }
-  | { readonly kind: "incident.closed"; readonly payload: IncidentClosedPayload }
+  | {
+      readonly kind: "incident.opened"
+      readonly payload: IncidentOpenedPayload
+    }
+  | {
+      readonly kind: "incident.closed"
+      readonly payload: IncidentClosedPayload
+    }
   | { readonly kind: "wrapped.report"; readonly payload: WrappedReportPayload }
   | { readonly kind: "custom.message"; readonly payload: CustomMessagePayload }
   | { readonly kind: "issue.assigned"; readonly payload: SignalAssignedPayload }
+  | {
+      readonly kind: "destination.quarantined"
+      readonly payload: DestinationQuarantinedPayload
+    }
 
 export const buildIdempotencyKey = (input: BuildIdempotencyKeyInput): string => {
   switch (input.kind) {
@@ -41,5 +52,10 @@ export const buildIdempotencyKey = (input: BuildIdempotencyKeyInput): string => 
       // The recipient (assignee) is already part of the unique index, so the
       // key only needs to discriminate assignment events on the same issue.
       return `${input.kind}:${input.payload.signalId}:${input.payload.assignedAt}`
+    case "destination.quarantined":
+      // Per-occurrence: a destination recovered then re-quarantined is a new
+      // event the permanent index must not suppress, so the flip timestamp
+      // joins the id (mirrors issue.assigned).
+      return `${input.kind}:${input.payload.destinationId}:${input.payload.quarantinedAt}`
   }
 }

@@ -1,14 +1,21 @@
 import { MembershipRepository } from "@domain/organizations"
-import type { AlertIncidentKind } from "@domain/shared"
-import { type OrganizationId, type ProjectId, type RepositoryError, type SqlClient, UserId } from "@domain/shared"
+import {
+  type AlertIncidentKind,
+  type OrganizationId,
+  type ProjectId,
+  type RepositoryError,
+  type SqlClient,
+  UserId,
+} from "@domain/shared"
 import { Effect } from "effect"
+import type { NotificationKind } from "../entities/notification.ts"
 
 export interface ResolveRecipientsInput {
   readonly organizationId: OrganizationId
   /** Reserved for future per-(user, project) subscriptions; ignored in V1. */
   readonly projectId?: ProjectId | undefined
-  /** Reserved for future per-kind opt-out; ignored in V1. */
-  readonly kind?: AlertIncidentKind | undefined
+  /** Reserved for future per-kind opt-out; ignored in V1. Either taxonomy (incident alert kinds or notification kinds). */
+  readonly kind?: AlertIncidentKind | NotificationKind | undefined
 }
 
 /**

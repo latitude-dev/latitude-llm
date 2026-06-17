@@ -5,6 +5,7 @@ export {
   DESTINATION_INTERVAL_MS_DEFAULT,
   DESTINATION_INTERVAL_MS_MAX,
   DESTINATION_INTERVAL_MS_MIN,
+  DESTINATION_LAG_WARNING_MS,
   DESTINATION_MAX_EVENT_BYTES_DEFAULT,
   DESTINATION_MAX_RECORDS_PER_RUN_DEFAULT,
   DESTINATION_MAX_RECORDS_PER_RUN_MAX,
@@ -92,6 +93,12 @@ export {
   RetryableDeliveryError,
   SandboxOrganizationDestinationError,
 } from "./errors.ts"
+export type {
+  DeriveDestinationHealthInput,
+  DestinationHealth,
+  DestinationHealthBadge,
+} from "./health.ts"
+export { deriveDestinationHealth } from "./health.ts"
 export { uuidV5 } from "./helpers.ts"
 
 // Mappers
@@ -168,6 +175,11 @@ export type {
   DeleteProjectDestinationsInput,
 } from "./use-cases/delete-project-destinations.ts"
 export { deleteProjectDestinationsUseCase } from "./use-cases/delete-project-destinations.ts"
+export {
+  type DestinationFreshness,
+  getDestinationFreshnessUseCase,
+  type SourceFreshness,
+} from "./use-cases/get-destination-freshness.ts"
 export type {
   PauseDestinationError,
   PauseDestinationInput,
@@ -191,6 +203,7 @@ export type {
 } from "./use-cases/resume-destination.ts"
 export { resumeDestinationUseCase } from "./use-cases/resume-destination.ts"
 export type {
+  DestinationQuarantineEvent,
   RunDestinationSyncError,
   RunDestinationSyncInput,
   RunDestinationSyncOutcome,

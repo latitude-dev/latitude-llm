@@ -274,6 +274,8 @@ describe("runDestinationSyncUseCase", () => {
 
     expect(res.outcome).toBe("empty")
     expect(res.cursorAdvanced).toBe(true)
+    // Lag = now − resulting watermark; an empty run advances to the window end (safety lag).
+    expect(res.lagMs).toBe(NOW.getTime() - WINDOW_END.getTime())
     expect(res.syncRunId).toBeNull()
     expect(deliveries).toHaveLength(0)
     expect(cursorRows[0]?.watermark).toEqual(WINDOW_END)
@@ -304,6 +306,8 @@ describe("runDestinationSyncUseCase", () => {
     expect(res.source).toBe(SOURCE)
     expect(res.recordsRead).toBe(2)
     expect(res.eventsSent).toBe(2)
+    // Lag = now − the delivered watermark (how far behind real-time the cursor sits).
+    expect(res.lagMs).toBe(NOW.getTime() - ingestedAt.getTime())
     expect(deliveries).toHaveLength(1)
     expect(deliveries[0]?.context.window.start).toEqual(CURSOR_AT)
     expect(deliveries[0]?.context.window.end).toEqual(nextCursor.watermark)
@@ -389,6 +393,16 @@ describe("runDestinationSyncUseCase", () => {
     expect(syncRunRows[0]?.status).toBe("failed")
     expect(syncRunRows[0]?.source).toBe(SOURCE)
     expect(syncRunRows[0]?.error).toBe("[401] invalid_api_key")
+    // The quarantine flip emits a notification event for the worker to fan out.
+    expect(res.quarantineEvent).toEqual({
+      organizationId: ORG_ID,
+      projectId: PROJECT_ID,
+      destinationId: DESTINATION_ID,
+      destinationName: "Acme PostHog",
+      destinationKind: "posthog",
+      failureMessage: "[401] invalid_api_key",
+      quarantinedAt: NOW,
+    })
   })
 
   it("counts a non-retryable failure below the threshold without quarantining", async () => {
@@ -411,6 +425,7 @@ describe("runDestinationSyncUseCase", () => {
     )
 
     expect(res.quarantined).toBe(false)
+    expect(res.quarantineEvent).toBeNull()
     expect(destinationRows[0]?.status).toBe("active")
     expect(destinationRows[0]?.consecutiveFailures).toBe(2)
   })

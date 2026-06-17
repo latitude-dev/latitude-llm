@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.1.0] - 2026-06-17
+
+### Added
+
+- `ProjectSettings.notifications.destinations.quarantine` (`DestinationNotificationsSetting`) — project-level toggle for data-destination notifications. Members are notified (in-app + email) when a destination is quarantined after repeated sync failures; set `quarantine: false` to opt the project out. Defaults to `true`.
+
 ## [6.0.0] - 2026-06-12
 
 First stable release of the v6 SDK — the package leaves alpha. The API surface is unchanged from `6.0.0-alpha.8`; from here on, breaking changes only land with a major version bump.

@@ -243,6 +243,24 @@ export const signalAssignedPayloadSchema = z.object({
 export type SignalAssignedPayload = z.infer<typeof signalAssignedPayloadSchema>
 
 /**
+ * A data destination flipped to `quarantined` (5 consecutive terminal sync
+ * failures) and stopped exporting. Fans out to org members so someone
+ * reconnects it. Unlike issue/project display data, a destination has no live
+ * downstream resolver in the bell, so the name + kind are snapshotted here;
+ * `quarantinedAt` is the per-occurrence idempotency anchor (a later
+ * re-quarantine after recovery re-notifies). `failureMessage` is the sanitized
+ * `last_failure_message` (status + taxonomy, never an upstream response body).
+ */
+export const destinationQuarantinedPayloadSchema = z.object({
+  destinationId: cuidSchema,
+  destinationName: z.string().min(1),
+  destinationKind: z.string().min(1),
+  quarantinedAt: z.iso.datetime(),
+  failureMessage: z.string().nullable(),
+})
+export type DestinationQuarantinedPayload = z.infer<typeof destinationQuarantinedPayloadSchema>
+
+/**
  * Single source of truth for notification kinds. Every kind declares its
  * group (drives the user-visible preferences toggle) and its payload schema
  * (used to validate jsonb at read time). Adding a new kind = adding one
@@ -251,11 +269,27 @@ export type SignalAssignedPayload = z.infer<typeof signalAssignedPayloadSchema>
  */
 export const NOTIFICATION_KIND_META = {
   "incident.event": { group: "incidents", payload: incidentEventPayloadSchema },
-  "incident.opened": { group: "incidents", payload: incidentOpenedPayloadSchema },
-  "incident.closed": { group: "incidents", payload: incidentClosedPayloadSchema },
-  "wrapped.report": { group: "wrapped_reports", payload: wrappedReportPayloadSchema },
-  "custom.message": { group: "custom_messages", payload: customMessagePayloadSchema },
+  "incident.opened": {
+    group: "incidents",
+    payload: incidentOpenedPayloadSchema,
+  },
+  "incident.closed": {
+    group: "incidents",
+    payload: incidentClosedPayloadSchema,
+  },
+  "wrapped.report": {
+    group: "wrapped_reports",
+    payload: wrappedReportPayloadSchema,
+  },
+  "custom.message": {
+    group: "custom_messages",
+    payload: customMessagePayloadSchema,
+  },
   "issue.assigned": { group: "personal", payload: signalAssignedPayloadSchema },
+  "destination.quarantined": {
+    group: "destinations",
+    payload: destinationQuarantinedPayloadSchema,
+  },
 } as const satisfies Record<string, { readonly group: NotificationGroup; readonly payload: z.ZodTypeAny }>
 
 export type NotificationKind = keyof typeof NOTIFICATION_KIND_META

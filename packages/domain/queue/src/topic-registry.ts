@@ -129,6 +129,25 @@ const _registry = {
       readonly assignedAt: string
     }
     /**
+     * Producer step for destination quarantine. Fired directly by the
+     * destinations worker when a `(destination, source)` sync flip
+     * quarantines the destination (5 consecutive terminal failures). The
+     * consumer honors the project-level gate, resolves org-member recipients,
+     * and emits N `create-notification` tasks. `quarantinedAt` is the
+     * per-occurrence idempotency anchor (a recovery + re-quarantine notifies
+     * again); `destinationName`/`destinationKind` are snapshotted because the
+     * bell has no live destination resolver.
+     */
+    "request-destination-quarantined-notifications": {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly destinationId: string
+      readonly destinationName: string
+      readonly destinationKind: string
+      readonly quarantinedAt: string
+      readonly failureMessage: string | null
+    }
+    /**
      * Creator step. One message per recipient. The consumer writes the
      * in-app row idempotently via the `(org_id, user_id, idempotency_key)`
      * unique index and then fans out to channel-specific delivery jobs
