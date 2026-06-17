@@ -11,7 +11,8 @@ import {
 import { Effect } from "effect"
 import type { Destination, DestinationConfigPatch, DestinationCredentials } from "../entities/destination.ts"
 import { destinationConfigSchema, destinationSchema } from "../entities/destination.ts"
-import type { DestinationSourceConfig } from "../entities/destination-source.ts"
+import type { DestinationSourceConfigPatch } from "../entities/destination-source.ts"
+import { destinationSourceConfigSchema } from "../entities/destination-source.ts"
 import { DestinationRepository } from "../ports/destination-repository.ts"
 import { DestinationSourceStateRepository } from "../ports/destination-source-state-repository.ts"
 
@@ -23,8 +24,8 @@ export interface UpdateDestinationInput {
   /** Partial config merged onto the stored config — omitted fields (e.g. intervalMs) are preserved, not reset. */
   readonly config?: DestinationConfigPatch | undefined
   readonly credentials?: DestinationCredentials | undefined
-  /** Per-source config edits applied in the same transaction as the destination update. */
-  readonly sourceConfigs?: readonly DestinationSourceConfig[] | undefined
+  /** Per-source config patches, merged onto each source's stored config in the same transaction as the destination update. */
+  readonly sourceConfigs?: readonly DestinationSourceConfigPatch[] | undefined
 }
 
 export type UpdateDestinationError = NotFoundError | ValidationError | ConflictError | RepositoryError
@@ -86,8 +87,15 @@ export const updateDestinationUseCase = (input: UpdateDestinationInput) =>
     yield* sqlClient.transaction(
       Effect.gen(function* () {
         yield* destinations.save(updated)
-        for (const config of input.sourceConfigs ?? []) {
-          yield* sourceStates.updateConfig({ destinationId: updated.id, source: config.source, config })
+        if (input.sourceConfigs && input.sourceConfigs.length > 0) {
+          const currentSources = yield* sourceStates.listByDestinationId(updated.id)
+          for (const patch of input.sourceConfigs) {
+            const current = currentSources.find((s) => s.source === patch.source)
+            if (!current) continue
+            // Merge onto the stored source config so omitted fields (e.g. maxRecordsPerRun, no UI) are preserved.
+            const config = destinationSourceConfigSchema.parse({ ...current.config, ...patch })
+            yield* sourceStates.updateConfig({ destinationId: updated.id, source: patch.source, config })
+          }
         }
       }),
     )

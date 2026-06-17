@@ -42,6 +42,25 @@ export type SpansSourceConfig = z.infer<typeof spansSourceConfigSchema>
 export const destinationSourceConfigSchema = z.discriminatedUnion("source", [spansSourceConfigSchema])
 export type DestinationSourceConfig = z.infer<typeof destinationSourceConfigSchema>
 
+/**
+ * Partial per-source config for updates: `source` required, every other field
+ * optional with **no defaults**. Merged onto the stored source config so a field
+ * the caller omits (e.g. `maxRecordsPerRun`, which has no UI) is preserved
+ * instead of reset to the create-time default — mirrors `destinationConfigPatchSchema`.
+ */
+const spansSourceConfigPatchSchema = z.object({
+  source: z.literal("spans"),
+  excludePayloads: z.boolean().optional(),
+  maxRecordsPerRun: z
+    .number()
+    .int()
+    .min(DESTINATION_MAX_RECORDS_PER_RUN_MIN)
+    .max(DESTINATION_MAX_RECORDS_PER_RUN_MAX)
+    .optional(),
+})
+export const destinationSourceConfigPatchSchema = z.discriminatedUnion("source", [spansSourceConfigPatchSchema])
+export type DestinationSourceConfigPatch = z.infer<typeof destinationSourceConfigPatchSchema>
+
 /** Default config for a source, used when a destination enables it without explicit settings. */
 export const defaultSourceConfig = (source: DestinationSource): DestinationSourceConfig =>
   destinationSourceConfigSchema.parse({ source })

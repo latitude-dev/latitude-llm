@@ -4,6 +4,7 @@ import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { POSTHOG_EU_INGESTION_HOST, POSTHOG_US_INGESTION_HOST } from "../constants.ts"
 import { createDestination, type Destination } from "../entities/destination.ts"
+import { createDestinationSourceState } from "../entities/destination-source-state.ts"
 import { DestinationRepository } from "../ports/destination-repository.ts"
 import { DestinationSourceStateRepository } from "../ports/destination-source-state-repository.ts"
 import { createFakeDestinationRepository } from "../testing/fake-destination-repository.ts"
@@ -145,6 +146,36 @@ describe("updateDestinationUseCase", () => {
     expect(updated.config.host).toBe(POSTHOG_EU_INGESTION_HOST)
     expect(updated.config.intervalMs).toBe(60_000)
     expect(rows[0]?.config.intervalMs).toBe(60_000)
+  })
+
+  it("merges source-config patches onto the stored source config (maxRecordsPerRun preserved)", async () => {
+    const { repo, rows } = createFakeDestinationRepository([baseDestination()])
+    const sourceState = createDestinationSourceState({
+      organizationId: orgId,
+      destinationId,
+      source: "spans",
+      config: { source: "spans", excludePayloads: false, maxRecordsPerRun: 30_000 },
+      watermark: new Date("2026-06-01T00:00:00Z"),
+    })
+    const { repo: sourceRepo, rows: sourceRows } = createFakeDestinationSourceStateRepository([sourceState], rows)
+    const layer = Layer.mergeAll(
+      Layer.succeed(DestinationRepository, repo),
+      Layer.succeed(DestinationSourceStateRepository, sourceRepo),
+      Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: orgId })),
+    )
+
+    await Effect.runPromise(
+      updateDestinationUseCase({
+        organizationId: orgId,
+        projectId,
+        destinationId,
+        // Patch carries only excludePayloads — maxRecordsPerRun (no UI) must survive.
+        sourceConfigs: [{ source: "spans", excludePayloads: true }],
+      }).pipe(Effect.provide(layer)),
+    )
+
+    const spans = sourceRows.find((s) => s.source === "spans")
+    expect(spans?.config).toMatchObject({ source: "spans", excludePayloads: true, maxRecordsPerRun: 30_000 })
   })
 
   it("re-submitting identical credentials does not reset the counter", async () => {

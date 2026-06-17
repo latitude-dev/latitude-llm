@@ -55,6 +55,7 @@ export type { DestinationEvent } from "./entities/destination-event.ts"
 export type {
   DestinationSource,
   DestinationSourceConfig,
+  DestinationSourceConfigPatch,
   DestinationSourceStatus,
   SpansSourceConfig,
 } from "./entities/destination-source.ts"
@@ -62,6 +63,7 @@ export {
   DESTINATION_SOURCE_STATUSES,
   DESTINATION_SOURCES,
   defaultSourceConfig,
+  destinationSourceConfigPatchSchema,
   destinationSourceConfigSchema,
   destinationSourceSchema,
   destinationSourceStatusSchema,

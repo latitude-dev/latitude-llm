@@ -31,6 +31,7 @@ interface PosthogFormValues {
   config: {
     region: HostPreset
     host: string
+    // Per-source (spans) setting, kept here for form ergonomics — `buildConfig` ignores it; `buildSourceConfigs` routes it to the source config.
     excludePayloads: boolean
   }
   credentials: {
@@ -71,7 +72,13 @@ function SpansPreviewBody({
   })
 
   if (query.isPending) return <Text.H6 color="foregroundMuted">Loading preview…</Text.H6>
-  if (query.isError) return <Text.H6 color="destructive">Couldn't load the preview.</Text.H6>
+  if (query.isError) {
+    // Surface the cause in dev (401, schema mismatch, transport) without leaking it to users in prod.
+    const detail = import.meta.env.DEV
+      ? `: ${query.error instanceof Error ? query.error.message : String(query.error)}`
+      : ""
+    return <Text.H6 color="destructive">Couldn't load the preview{detail}.</Text.H6>
+  }
   return query.data.hasData ? (
     <pre className="max-h-64 overflow-auto rounded-md bg-muted p-3 text-xs">{query.data.eventsJson}</pre>
   ) : (

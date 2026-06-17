@@ -222,14 +222,19 @@ export const createPosthogMapper = (params: {
   readonly buildSpanUrl: (span: SpanDetail) => string
   readonly maxEventBytes?: number
 }): DestinationMapper<SpanDetail> => ({
-  toEvents: (spans, destinationId, sourceConfig: DestinationSourceConfig) =>
-    Effect.promise(() =>
+  toEvents: (spans, destinationId, sourceConfig: DestinationSourceConfig) => {
+    // Narrow instead of cast — a future miswiring under another source is a defect, not a silent mismap.
+    if (sourceConfig.source !== "spans") {
+      return Effect.die(new Error(`posthog mapper expects a spans source config, got "${sourceConfig.source}"`))
+    }
+    return Effect.promise(() =>
       mapSpansToPosthogEvents({
         spans,
         destinationId,
-        sourceConfig: sourceConfig as SpansSourceConfig,
+        sourceConfig,
         buildSpanUrl: params.buildSpanUrl,
         ...(params.maxEventBytes === undefined ? {} : { maxEventBytes: params.maxEventBytes }),
       }),
-    ),
+    )
+  },
 })

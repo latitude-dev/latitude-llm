@@ -28,6 +28,7 @@ import {
   destinationConfigPatchSchema,
   destinationConfigSchema,
   destinationCredentialsSchema,
+  destinationSourceConfigPatchSchema,
   destinationSourceConfigSchema,
   destinationSourceSchema,
   pauseDestinationUseCase,
@@ -100,7 +101,12 @@ const toRecord = (destination: Destination, sources: readonly DestinationSourceS
   updatedAt: destination.updatedAt.toISOString(),
 })
 
-/** Builds the wire record, fetching the destination's per-source rows. Requires the source-state repo in the layer. */
+/**
+ * Builds the wire record, fetching the destination's per-source rows. Requires
+ * the source-state repo in the layer. N+1 over a project's destinations — fine
+ * at current per-project counts (a handful); batch via a `listByProjectId` read
+ * if that grows.
+ */
 const buildRecord = (destination: Destination) =>
   Effect.gen(function* () {
     const sourceStates = yield* DestinationSourceStateRepository
@@ -175,7 +181,7 @@ const updateDestinationSchema = z.object({
   name: z.string().min(1).max(256).optional(),
   config: destinationConfigPatchSchema.optional(),
   credentials: destinationCredentialsSchema.optional(),
-  sourceConfigs: z.array(destinationSourceConfigSchema).optional(),
+  sourceConfigs: z.array(destinationSourceConfigPatchSchema).optional(),
 })
 
 export const updateDestination = createServerFn({ method: "POST" })
