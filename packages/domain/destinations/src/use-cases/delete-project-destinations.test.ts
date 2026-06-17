@@ -4,13 +4,14 @@ import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { POSTHOG_US_INGESTION_HOST } from "../constants.ts"
 import { createDestination, type Destination } from "../entities/destination.ts"
-import { createDestinationSourceCursor } from "../entities/destination-source-cursor.ts"
+import { defaultSourceConfig } from "../entities/destination-source.ts"
+import { createDestinationSourceState } from "../entities/destination-source-state.ts"
 import { createDestinationSyncRun, type DestinationSyncRun } from "../entities/destination-sync-run.ts"
 import { DestinationRepository } from "../ports/destination-repository.ts"
-import { DestinationSourceCursorRepository } from "../ports/destination-source-cursor-repository.ts"
+import { DestinationSourceStateRepository } from "../ports/destination-source-state-repository.ts"
 import { DestinationSyncRunRepository } from "../ports/destination-sync-run-repository.ts"
 import { createFakeDestinationRepository } from "../testing/fake-destination-repository.ts"
-import { createFakeDestinationSourceCursorRepository } from "../testing/fake-destination-source-cursor-repository.ts"
+import { createFakeDestinationSourceStateRepository } from "../testing/fake-destination-source-state-repository.ts"
 import { createFakeDestinationSyncRunRepository } from "../testing/fake-destination-sync-run-repository.ts"
 import { deleteProjectDestinationsUseCase } from "./delete-project-destinations.ts"
 
@@ -30,9 +31,7 @@ const destination = (id: string, projectId: ProjectId) =>
     config: {
       kind: "posthog",
       host: POSTHOG_US_INGESTION_HOST,
-      excludePayloads: false,
       intervalMs: 300_000,
-      maxSpansPerRun: 50_000,
     },
     credentials: { kind: "posthog", apiKey: "phc_test" },
     createdByUserId: userId,
@@ -46,7 +45,7 @@ const syncRun = (destinationId: string): DestinationSyncRun =>
     windowStart: new Date("2026-06-01T00:00:00Z"),
     windowEnd: new Date("2026-06-01T00:05:00Z"),
     status: "succeeded",
-    spansRead: 10,
+    recordsRead: 10,
     eventsSent: 12,
     eventsDropped: 0,
     error: null,
@@ -55,10 +54,11 @@ const syncRun = (destinationId: string): DestinationSyncRun =>
   })
 
 const cursor = (destination: Destination) =>
-  createDestinationSourceCursor({
+  createDestinationSourceState({
     organizationId: orgId,
     destinationId: destination.id,
     source: "spans",
+    config: defaultSourceConfig("spans"),
     watermark: new Date("2026-06-01T00:00:00Z"),
   })
 
@@ -71,7 +71,7 @@ function setup() {
     syncRun(target.id),
     syncRun(other.id),
   ])
-  const { repo: cursorRepo, rows: cursorRows } = createFakeDestinationSourceCursorRepository(
+  const { repo: cursorRepo, rows: cursorRows } = createFakeDestinationSourceStateRepository(
     [cursor(target), cursor(other)],
     destinationRows,
   )
@@ -79,7 +79,7 @@ function setup() {
   const layer = Layer.mergeAll(
     Layer.succeed(DestinationRepository, destinationRepo),
     Layer.succeed(DestinationSyncRunRepository, syncRunRepo),
-    Layer.succeed(DestinationSourceCursorRepository, cursorRepo),
+    Layer.succeed(DestinationSourceStateRepository, cursorRepo),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: orgId })),
   )
 
@@ -108,7 +108,7 @@ describe("deleteProjectDestinationsUseCase", () => {
     const due = await Effect.runPromise(
       Effect.gen(function* () {
         yield* deleteProjectDestinationsUseCase({ organizationId: orgId, projectId: targetProjectId })
-        const cursors = yield* DestinationSourceCursorRepository
+        const cursors = yield* DestinationSourceStateRepository
         return yield* cursors.listDue(new Date())
       }).pipe(Effect.provide(layer)),
     )

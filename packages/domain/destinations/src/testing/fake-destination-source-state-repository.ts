@@ -2,49 +2,52 @@ import type { DestinationId } from "@domain/shared"
 import { Effect } from "effect"
 import { DESTINATION_IDLE_BACKOFF_MAX_MS } from "../constants.ts"
 import type { Destination } from "../entities/destination.ts"
-import type { DestinationSourceCursor } from "../entities/destination-source-cursor.ts"
+import type { DestinationSourceState } from "../entities/destination-source-state.ts"
 import type {
-  DestinationSourceCursorRepositoryShape,
+  DestinationSourceStateRepositoryShape,
   DueDestinationSource,
-} from "../ports/destination-source-cursor-repository.ts"
+} from "../ports/destination-source-state-repository.ts"
 
 /**
- * In-memory DestinationSourceCursorRepository. `listDue` joins cursor rows to
- * the destinations array (the real repo does this in SQL) and applies the
- * idle-backoff formula; `advanceCursor` is a CAS that rejects stale writes.
- * Pass the same `destinations` array the fake DestinationRepository holds so the
- * join stays consistent. Seed only non-sandbox, active rows — sandbox exclusion
- * is a SQL join in the real repo.
+ * In-memory DestinationSourceStateRepository. `listDue` joins source rows to the
+ * destinations array (the real repo does this in SQL), filters to enabled
+ * sources of active destinations, and applies the idle-backoff formula;
+ * `advanceCursor` is a CAS that rejects stale writes. Pass the same
+ * `destinations` array the fake DestinationRepository holds so the join stays
+ * consistent. Seed only non-sandbox rows — sandbox exclusion is a SQL join in
+ * the real repo.
  */
-export const createFakeDestinationSourceCursorRepository = (
-  seedCursors: readonly DestinationSourceCursor[] = [],
+export const createFakeDestinationSourceStateRepository = (
+  seedRows: readonly DestinationSourceState[] = [],
   destinations: readonly Destination[] = [],
 ) => {
-  const rows: DestinationSourceCursor[] = [...seedCursors]
+  const rows: DestinationSourceState[] = [...seedRows]
   const find = (destinationId: DestinationId, source: string) =>
     rows.find((r) => r.destinationId === destinationId && r.source === source)
 
-  const repo: DestinationSourceCursorRepositoryShape = {
-    create: (cursor) =>
+  const repo: DestinationSourceStateRepositoryShape = {
+    create: (sourceState) =>
       Effect.sync(() => {
-        rows.push(cursor)
+        rows.push(sourceState)
       }),
     findByDestinationAndSource: ({ destinationId, source }) => Effect.sync(() => find(destinationId, source) ?? null),
+    listByDestinationId: (destinationId) => Effect.sync(() => rows.filter((r) => r.destinationId === destinationId)),
     listDue: (now: Date) =>
       Effect.sync(() => {
         const due: DueDestinationSource[] = []
-        for (const cursor of rows) {
-          const destination = destinations.find((d) => d.id === cursor.destinationId)
+        for (const sourceState of rows) {
+          if (sourceState.status !== "enabled") continue
+          const destination = destinations.find((d) => d.id === sourceState.destinationId)
           if (!destination || destination.status !== "active") continue
-          if (cursor.lastRunAt === null) {
-            due.push({ destination, cursor })
+          if (sourceState.lastRunAt === null) {
+            due.push({ destination, sourceState })
             continue
           }
           const backoffMs = Math.min(
-            destination.config.intervalMs * 2 ** cursor.consecutiveEmptyRuns,
+            destination.config.intervalMs * 2 ** sourceState.consecutiveEmptyRuns,
             DESTINATION_IDLE_BACKOFF_MAX_MS,
           )
-          if (cursor.lastRunAt.getTime() + backoffMs <= now.getTime()) due.push({ destination, cursor })
+          if (sourceState.lastRunAt.getTime() + backoffMs <= now.getTime()) due.push({ destination, sourceState })
         }
         return due
       }),
@@ -65,6 +68,19 @@ export const createFakeDestinationSourceCursorRepository = (
         const row = rows[index]
         if (!row) return
         rows[index] = { ...row, consecutiveEmptyRuns, lastRunAt, updatedAt: new Date() }
+      }),
+    updateConfig: ({ destinationId, source, config, status }) =>
+      Effect.sync(() => {
+        const index = rows.findIndex((r) => r.destinationId === destinationId && r.source === source)
+        if (index < 0) return
+        const row = rows[index]
+        if (!row) return
+        rows[index] = {
+          ...row,
+          ...(config === undefined ? {} : { config }),
+          ...(status === undefined ? {} : { status }),
+          updatedAt: new Date(),
+        }
       }),
     deleteByDestinationId: (destinationId: DestinationId) =>
       Effect.sync(() => {

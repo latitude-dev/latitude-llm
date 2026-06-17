@@ -137,6 +137,17 @@ export interface SpanRepositoryShape {
     readonly windowEnd: Date
     readonly limit: number
   }): Effect.Effect<SpanIngestedAtWindow, RepositoryError, ChSqlClient>
+
+  /**
+   * The most recent settled spans for a project, deduped (`LIMIT 1 BY span_id`,
+   * newest `ingested_at` wins), newest first. A representative sample for
+   * previews — not a paged read; no cursor.
+   */
+  listRecentDetailsByProjectId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly limit: number
+  }): Effect.Effect<readonly SpanDetail[], RepositoryError, ChSqlClient>
 }
 
 export interface SpanListOptions {

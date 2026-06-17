@@ -8,40 +8,63 @@
  */
 import {
   createDestinationUseCase,
+  createPosthogMapper,
   type Destination,
   type DestinationConfig,
   type DestinationDelivererRegistry,
   DestinationDeliverers,
+  type DestinationMapperRegistry,
+  DestinationMappers,
   DestinationRepository,
+  type DestinationSource,
+  type DestinationSourceConfig,
+  type DestinationSourceState,
+  DestinationSourceStateRepository,
   type DestinationStatus,
   type DestinationSyncRun,
   DestinationSyncRunRepository,
   type DestinationSyncRunStatus,
   deleteDestinationUseCase,
+  destinationConfigPatchSchema,
   destinationConfigSchema,
   destinationCredentialsSchema,
+  destinationSourceConfigPatchSchema,
+  destinationSourceConfigSchema,
+  destinationSourceSchema,
   pauseDestinationUseCase,
   previewCredentials,
+  previewDestinationDeliveryUseCase,
   resumeDestinationUseCase,
+  SpansSourceReadersLive,
   type TestDestinationConnectionResult,
   testDestinationConnectionUseCase,
   updateDestinationUseCase,
 } from "@domain/destinations"
 import { DestinationId, DestinationSyncRunId, ProjectId } from "@domain/shared"
+import type { SpanDetail } from "@domain/spans"
 import { createPosthogDeliverer } from "@platform/data-destinations"
+import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   DestinationRepositoryLive,
-  DestinationSourceCursorRepositoryLive,
+  DestinationSourceStateRepositoryLive,
   DestinationSyncRunRepositoryLive,
   OrganizationRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
+import { parseEnv } from "@platform/env"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getPostgresClient } from "../../server/clients.ts"
+import { getClickhouseClient, getPostgresClient } from "../../server/clients.ts"
+
+/** Wire projection of one enabled/disabled source on a destination. */
+export interface DestinationSourceRecord {
+  readonly source: DestinationSource
+  readonly status: DestinationSourceState["status"]
+  readonly config: DestinationSourceConfig
+}
 
 /** Wire projection of {@link Destination}. Omits `credentials` — secrets stay server-side. */
 export interface DestinationRecord {
@@ -56,11 +79,13 @@ export interface DestinationRecord {
   readonly status: DestinationStatus
   readonly consecutiveFailures: number
   readonly lastFailureMessage: string | null
+  /** Per-source config + status — what the edit form's Sources section reads. */
+  readonly sources: readonly DestinationSourceRecord[]
   readonly createdAt: string
   readonly updatedAt: string
 }
 
-const toRecord = (destination: Destination): DestinationRecord => ({
+const toRecord = (destination: Destination, sources: readonly DestinationSourceState[]): DestinationRecord => ({
   id: destination.id,
   organizationId: destination.organizationId,
   projectId: destination.projectId,
@@ -71,48 +96,37 @@ const toRecord = (destination: Destination): DestinationRecord => ({
   status: destination.status,
   consecutiveFailures: destination.consecutiveFailures,
   lastFailureMessage: destination.lastFailureMessage,
+  sources: sources.map((s) => ({ source: s.source, status: s.status, config: s.config })),
   createdAt: destination.createdAt.toISOString(),
   updatedAt: destination.updatedAt.toISOString(),
 })
+
+/**
+ * Builds the wire record, fetching the destination's per-source rows. Requires
+ * the source-state repo in the layer. N+1 over a project's destinations — fine
+ * at current per-project counts (a handful); batch via a `listByProjectId` read
+ * if that grows.
+ */
+const buildRecord = (destination: Destination) =>
+  Effect.gen(function* () {
+    const sourceStates = yield* DestinationSourceStateRepository
+    const sources = yield* sourceStates.listByDestinationId(destination.id)
+    return toRecord(destination, sources)
+  })
 
 export const listDestinations = createServerFn({ method: "GET" })
   .inputValidator(z.object({ projectId: z.string() }))
   .handler(async ({ data }): Promise<readonly DestinationRecord[]> => {
     const { organizationId } = await requireSession()
 
-    const destinations = await Effect.runPromise(
+    const records = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* DestinationRepository
-        return yield* repo.listByProjectId(ProjectId(data.projectId))
-      }).pipe(withPostgres(DestinationRepositoryLive, getPostgresClient(), organizationId), withTracing),
-    )
-
-    return destinations.map(toRecord)
-  })
-
-const createDestinationSchema = z.object({
-  projectId: z.string(),
-  name: z.string().min(1).max(256),
-  config: destinationConfigSchema,
-  credentials: destinationCredentialsSchema,
-})
-
-export const createDestination = createServerFn({ method: "POST" })
-  .inputValidator(createDestinationSchema)
-  .handler(async ({ data }): Promise<DestinationRecord> => {
-    const { organizationId, userId } = await requireSession()
-
-    const destination = await Effect.runPromise(
-      createDestinationUseCase({
-        organizationId,
-        projectId: ProjectId(data.projectId),
-        name: data.name,
-        config: data.config,
-        credentials: data.credentials,
-        createdByUserId: userId,
+        const destinations = yield* repo.listByProjectId(ProjectId(data.projectId))
+        return yield* Effect.forEach(destinations, buildRecord)
       }).pipe(
         withPostgres(
-          Layer.mergeAll(OrganizationRepositoryLive, DestinationRepositoryLive, DestinationSourceCursorRepositoryLive),
+          Layer.mergeAll(DestinationRepositoryLive, DestinationSourceStateRepositoryLive),
           getPostgresClient(),
           organizationId,
         ),
@@ -120,15 +134,54 @@ export const createDestination = createServerFn({ method: "POST" })
       ),
     )
 
-    return toRecord(destination)
+    return records
+  })
+
+const createDestinationSchema = z.object({
+  projectId: z.string(),
+  name: z.string().min(1).max(256),
+  config: destinationConfigSchema,
+  credentials: destinationCredentialsSchema,
+  sourceConfigs: z.array(destinationSourceConfigSchema).optional(),
+})
+
+export const createDestination = createServerFn({ method: "POST" })
+  .inputValidator(createDestinationSchema)
+  .handler(async ({ data }): Promise<DestinationRecord> => {
+    const { organizationId, userId } = await requireSession()
+
+    const record = await Effect.runPromise(
+      Effect.gen(function* () {
+        const destination = yield* createDestinationUseCase({
+          organizationId,
+          projectId: ProjectId(data.projectId),
+          name: data.name,
+          config: data.config,
+          credentials: data.credentials,
+          createdByUserId: userId,
+          ...(data.sourceConfigs === undefined ? {} : { sourceConfigs: data.sourceConfigs }),
+        })
+        return yield* buildRecord(destination)
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(OrganizationRepositoryLive, DestinationRepositoryLive, DestinationSourceStateRepositoryLive),
+          getPostgresClient(),
+          organizationId,
+        ),
+        withTracing,
+      ),
+    )
+
+    return record
   })
 
 const updateDestinationSchema = z.object({
   projectId: z.string(),
   destinationId: z.string(),
   name: z.string().min(1).max(256).optional(),
-  config: destinationConfigSchema.optional(),
+  config: destinationConfigPatchSchema.optional(),
   credentials: destinationCredentialsSchema.optional(),
+  sourceConfigs: z.array(destinationSourceConfigPatchSchema).optional(),
 })
 
 export const updateDestination = createServerFn({ method: "POST" })
@@ -136,18 +189,29 @@ export const updateDestination = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<DestinationRecord> => {
     const { organizationId } = await requireSession()
 
-    const destination = await Effect.runPromise(
-      updateDestinationUseCase({
-        organizationId,
-        projectId: ProjectId(data.projectId),
-        destinationId: DestinationId(data.destinationId),
-        name: data.name,
-        config: data.config,
-        credentials: data.credentials,
-      }).pipe(withPostgres(DestinationRepositoryLive, getPostgresClient(), organizationId), withTracing),
+    const record = await Effect.runPromise(
+      Effect.gen(function* () {
+        const destination = yield* updateDestinationUseCase({
+          organizationId,
+          projectId: ProjectId(data.projectId),
+          destinationId: DestinationId(data.destinationId),
+          name: data.name,
+          config: data.config,
+          credentials: data.credentials,
+          sourceConfigs: data.sourceConfigs,
+        })
+        return yield* buildRecord(destination)
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(DestinationRepositoryLive, DestinationSourceStateRepositoryLive),
+          getPostgresClient(),
+          organizationId,
+        ),
+        withTracing,
+      ),
     )
 
-    return toRecord(destination)
+    return record
   })
 
 const destinationActionSchema = z.object({
@@ -160,15 +224,25 @@ export const pauseDestination = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<DestinationRecord> => {
     const { organizationId } = await requireSession()
 
-    const destination = await Effect.runPromise(
-      pauseDestinationUseCase({
-        organizationId,
-        projectId: ProjectId(data.projectId),
-        destinationId: DestinationId(data.destinationId),
-      }).pipe(withPostgres(DestinationRepositoryLive, getPostgresClient(), organizationId), withTracing),
+    const record = await Effect.runPromise(
+      Effect.gen(function* () {
+        const destination = yield* pauseDestinationUseCase({
+          organizationId,
+          projectId: ProjectId(data.projectId),
+          destinationId: DestinationId(data.destinationId),
+        })
+        return yield* buildRecord(destination)
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(DestinationRepositoryLive, DestinationSourceStateRepositoryLive),
+          getPostgresClient(),
+          organizationId,
+        ),
+        withTracing,
+      ),
     )
 
-    return toRecord(destination)
+    return record
   })
 
 export const resumeDestination = createServerFn({ method: "POST" })
@@ -176,15 +250,25 @@ export const resumeDestination = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<DestinationRecord> => {
     const { organizationId } = await requireSession()
 
-    const destination = await Effect.runPromise(
-      resumeDestinationUseCase({
-        organizationId,
-        projectId: ProjectId(data.projectId),
-        destinationId: DestinationId(data.destinationId),
-      }).pipe(withPostgres(DestinationRepositoryLive, getPostgresClient(), organizationId), withTracing),
+    const record = await Effect.runPromise(
+      Effect.gen(function* () {
+        const destination = yield* resumeDestinationUseCase({
+          organizationId,
+          projectId: ProjectId(data.projectId),
+          destinationId: DestinationId(data.destinationId),
+        })
+        return yield* buildRecord(destination)
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(DestinationRepositoryLive, DestinationSourceStateRepositoryLive),
+          getPostgresClient(),
+          organizationId,
+        ),
+        withTracing,
+      ),
     )
 
-    return toRecord(destination)
+    return record
   })
 
 export const deleteDestination = createServerFn({ method: "POST" })
@@ -201,7 +285,7 @@ export const deleteDestination = createServerFn({ method: "POST" })
         withPostgres(
           Layer.mergeAll(
             DestinationRepositoryLive,
-            DestinationSourceCursorRepositoryLive,
+            DestinationSourceStateRepositoryLive,
             DestinationSyncRunRepositoryLive,
           ),
           getPostgresClient(),
@@ -289,8 +373,9 @@ export const testExistingDestinationConnection = createServerFn({ method: "POST"
 /** Wire projection of one {@link DestinationSyncRun}. Powers the card summary and the run-history list. */
 export interface DestinationSyncRunRecord {
   readonly id: string
+  readonly source: DestinationSource
   readonly status: DestinationSyncRunStatus
-  readonly spansRead: number
+  readonly recordsRead: number
   readonly eventsSent: number
   readonly eventsDropped: number
   readonly error: string | null
@@ -302,8 +387,9 @@ export interface DestinationSyncRunRecord {
 
 const toSyncRunRecord = (run: DestinationSyncRun): DestinationSyncRunRecord => ({
   id: run.id,
+  source: run.source,
   status: run.status,
-  spansRead: run.spansRead,
+  recordsRead: run.recordsRead,
   eventsSent: run.eventsSent,
   eventsDropped: run.eventsDropped,
   error: run.error,
@@ -378,5 +464,67 @@ export const listDestinationSyncRuns = createServerFn({ method: "GET" })
     return {
       runs: page.map(toSyncRunRecord),
       nextCursor: hasMore && last ? { startedAt: last.startedAt.toISOString(), id: last.id } : null,
+    }
+  })
+
+interface DestinationDeliveryPreview {
+  /** False when the source has no records yet — the UI shows "No data yet". */
+  readonly hasData: boolean
+  readonly recordsSampled: number
+  /** The mapped events, pretty-printed JSON — rendered verbatim in the form preview. */
+  readonly eventsJson: string
+}
+
+const previewDestinationDeliverySchema = z.object({
+  projectId: z.string(),
+  config: destinationConfigSchema,
+  source: destinationSourceSchema,
+  sourceConfig: destinationSourceConfigSchema,
+})
+
+/**
+ * "What gets sent" preview: samples the source's latest record and maps it with
+ * the candidate per-source config, returning the resulting events. Read-only —
+ * no delivery, no upstream call, no cursor move. Powers the form's per-source
+ * preview so users can see the exact payload before saving.
+ */
+export const previewDestinationDelivery = createServerFn({ method: "GET" })
+  .inputValidator(previewDestinationDeliverySchema)
+  .handler(async ({ data }): Promise<DestinationDeliveryPreview> => {
+    const { organizationId } = await requireSession()
+
+    const webUrl = Effect.runSync(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000"))
+    const buildSpanUrl = (span: SpanDetail) =>
+      `${webUrl}/projects/${data.projectId}?traceId=${encodeURIComponent(span.traceId)}&spanId=${encodeURIComponent(span.spanId)}`
+    const mapperRegistry: DestinationMapperRegistry = {
+      posthog: { spans: createPosthogMapper({ buildSpanUrl }) },
+    }
+
+    const result = await Effect.runPromise(
+      previewDestinationDeliveryUseCase({
+        organizationId,
+        projectId: ProjectId(data.projectId),
+        kind: data.config.kind,
+        source: data.source,
+        sourceConfig: data.sourceConfig,
+      }).pipe(
+        withClickHouse(
+          SpansSourceReadersLive.pipe(Layer.provide(SpanRepositoryLive)),
+          getClickhouseClient(),
+          organizationId,
+        ),
+        Effect.provide(Layer.succeed(DestinationMappers, mapperRegistry)),
+        withTracing,
+      ),
+    )
+
+    return {
+      hasData: result.hasData,
+      recordsSampled: result.recordsSampled,
+      eventsJson: JSON.stringify(
+        result.events.map((e) => ({ ...e, timestamp: e.timestamp.toISOString() })),
+        null,
+        2,
+      ),
     }
   })

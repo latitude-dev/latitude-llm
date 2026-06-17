@@ -6,9 +6,9 @@ export {
   DESTINATION_INTERVAL_MS_MAX,
   DESTINATION_INTERVAL_MS_MIN,
   DESTINATION_MAX_EVENT_BYTES_DEFAULT,
-  DESTINATION_MAX_SPANS_PER_RUN_DEFAULT,
-  DESTINATION_MAX_SPANS_PER_RUN_MAX,
-  DESTINATION_MAX_SPANS_PER_RUN_MIN,
+  DESTINATION_MAX_RECORDS_PER_RUN_DEFAULT,
+  DESTINATION_MAX_RECORDS_PER_RUN_MAX,
+  DESTINATION_MAX_RECORDS_PER_RUN_MIN,
   DESTINATION_PRUNE_KEY,
   DESTINATION_PRUNE_PATTERN,
   DESTINATION_QUARANTINE_FAILURE_THRESHOLD,
@@ -27,16 +27,20 @@ export { previewCredentials } from "./credentials-preview.ts"
 export type {
   Destination,
   DestinationConfig,
+  DestinationConfigPatch,
   DestinationCredentials,
   DestinationKind,
+  DestinationKindMeta,
   DestinationStatus,
   PosthogDestinationConfig,
   PosthogDestinationCredentials,
 } from "./entities/destination.ts"
 export {
   createDestination,
+  DESTINATION_KIND_META,
   DESTINATION_KINDS,
   DESTINATION_STATUSES,
+  destinationConfigPatchSchema,
   destinationConfigSchema,
   destinationCredentialsSchema,
   destinationHostSchema,
@@ -45,15 +49,31 @@ export {
   destinationStatusSchema,
   posthogDestinationConfigSchema,
   posthogDestinationCredentialsSchema,
+  supportedSourcesForKind,
 } from "./entities/destination.ts"
 export type { DestinationEvent } from "./entities/destination-event.ts"
-export type { DestinationSource } from "./entities/destination-source.ts"
-export { DESTINATION_SOURCES, destinationSourceSchema } from "./entities/destination-source.ts"
-export type { DestinationSourceCursor } from "./entities/destination-source-cursor.ts"
+export type {
+  DestinationSource,
+  DestinationSourceConfig,
+  DestinationSourceConfigPatch,
+  DestinationSourceStatus,
+  SpansSourceConfig,
+} from "./entities/destination-source.ts"
 export {
-  createDestinationSourceCursor,
-  destinationSourceCursorSchema,
-} from "./entities/destination-source-cursor.ts"
+  DESTINATION_SOURCE_STATUSES,
+  DESTINATION_SOURCES,
+  defaultSourceConfig,
+  destinationSourceConfigPatchSchema,
+  destinationSourceConfigSchema,
+  destinationSourceSchema,
+  destinationSourceStatusSchema,
+  spansSourceConfigSchema,
+} from "./entities/destination-source.ts"
+export type { DestinationSourceState } from "./entities/destination-source-state.ts"
+export {
+  createDestinationSourceState,
+  destinationSourceStateSchema,
+} from "./entities/destination-source-state.ts"
 export type {
   DestinationSyncRun,
   DestinationSyncRunStatus,
@@ -85,7 +105,7 @@ export {
   mapSpansToPosthogEvents,
   POSTHOG_CONTENT_PROPERTIES,
   POSTHOG_EVENT_NAMES,
-  posthogRedactionSet,
+  posthogExcludedProperties,
 } from "./mappers/posthog.ts"
 
 // Ports
@@ -109,19 +129,20 @@ export type {
 } from "./ports/destination-repository.ts"
 export { DestinationRepository } from "./ports/destination-repository.ts"
 export type {
-  AdvanceSourceCursorInput,
-  DestinationSourceCursorRepositoryShape,
-  DueDestinationSource,
-  UpdateSourceRunStateInput,
-} from "./ports/destination-source-cursor-repository.ts"
-export { DestinationSourceCursorRepository } from "./ports/destination-source-cursor-repository.ts"
-export type {
   DestinationSourceReader,
   DestinationSourceReaderRegistry,
   SourceCursor,
   SourceWindow,
 } from "./ports/destination-source-reader.ts"
 export { DestinationSourceReaders } from "./ports/destination-source-reader.ts"
+export type {
+  AdvanceSourceCursorInput,
+  DestinationSourceStateRepositoryShape,
+  DueDestinationSource,
+  UpdateSourceConfigInput,
+  UpdateSourceRunStateInput,
+} from "./ports/destination-source-state-repository.ts"
+export { DestinationSourceStateRepository } from "./ports/destination-source-state-repository.ts"
 export type {
   DestinationSyncRunCursor,
   DestinationSyncRunRepositoryShape,
@@ -152,6 +173,11 @@ export type {
   PauseDestinationInput,
 } from "./use-cases/pause-destination.ts"
 export { pauseDestinationUseCase } from "./use-cases/pause-destination.ts"
+export type {
+  PreviewDestinationDeliveryInput,
+  PreviewDestinationDeliveryResult,
+} from "./use-cases/preview-destination-delivery.ts"
+export { previewDestinationDeliveryUseCase } from "./use-cases/preview-destination-delivery.ts"
 export type { PruneDestinationSyncRunsResult } from "./use-cases/prune-destination-sync-runs.ts"
 export { pruneDestinationSyncRunsUseCase } from "./use-cases/prune-destination-sync-runs.ts"
 export type {

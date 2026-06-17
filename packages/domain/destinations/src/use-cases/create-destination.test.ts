@@ -6,9 +6,9 @@ import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { POSTHOG_US_INGESTION_HOST } from "../constants.ts"
 import { DestinationRepository } from "../ports/destination-repository.ts"
-import { DestinationSourceCursorRepository } from "../ports/destination-source-cursor-repository.ts"
+import { DestinationSourceStateRepository } from "../ports/destination-source-state-repository.ts"
 import { createFakeDestinationRepository } from "../testing/fake-destination-repository.ts"
-import { createFakeDestinationSourceCursorRepository } from "../testing/fake-destination-source-cursor-repository.ts"
+import { createFakeDestinationSourceStateRepository } from "../testing/fake-destination-source-state-repository.ts"
 import { createDestinationUseCase } from "./create-destination.ts"
 
 const cuid = (seed: string) => seed.padEnd(24, "0")
@@ -30,12 +30,12 @@ function setup(opts: { sandbox?: boolean } = {}) {
   )
 
   const { repo: destinationRepo, rows } = createFakeDestinationRepository()
-  const { repo: cursorRepo, rows: cursorRows } = createFakeDestinationSourceCursorRepository([], rows)
+  const { repo: cursorRepo, rows: cursorRows } = createFakeDestinationSourceStateRepository([], rows)
 
   const layer = Layer.mergeAll(
     Layer.succeed(OrganizationRepository, organizationRepo),
     Layer.succeed(DestinationRepository, destinationRepo),
-    Layer.succeed(DestinationSourceCursorRepository, cursorRepo),
+    Layer.succeed(DestinationSourceStateRepository, cursorRepo),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: orgId })),
   )
 
@@ -49,9 +49,7 @@ const input = (ids: { orgId: OrganizationId; projectId: ProjectId; userId: UserI
   config: {
     kind: "posthog" as const,
     host: POSTHOG_US_INGESTION_HOST,
-    excludePayloads: false,
     intervalMs: 300_000,
-    maxSpansPerRun: 50_000,
   },
   credentials: { kind: "posthog" as const, apiKey: "phc_test" },
   createdByUserId: ids.userId,

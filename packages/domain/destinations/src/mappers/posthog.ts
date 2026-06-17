@@ -2,8 +2,8 @@ import type { DestinationId } from "@domain/shared"
 import type { SpanDetail } from "@domain/spans"
 import { Effect } from "effect"
 import { DESTINATION_EVENT_UUID_NAMESPACE, DESTINATION_MAX_EVENT_BYTES_DEFAULT } from "../constants.ts"
-import type { Destination, PosthogDestinationConfig } from "../entities/destination.ts"
 import type { DestinationEvent } from "../entities/destination-event.ts"
+import type { DestinationSourceConfig, SpansSourceConfig } from "../entities/destination-source.ts"
 import { uuidV5 } from "../helpers.ts"
 import type { DestinationMapper } from "../ports/destination-mapper.ts"
 
@@ -13,7 +13,7 @@ const MS_PER_SECOND = 1_000
 export const POSTHOG_EVENT_NAMES = ["$ai_generation", "$ai_embedding", "$ai_span", "$ai_trace"] as const
 export type PosthogEventName = (typeof POSTHOG_EVENT_NAMES)[number]
 
-/** Content-bearing properties: nulled by redaction and truncation; `$ai_error` is replaced by the span's `error_type` instead. */
+/** Content-bearing properties: nulled by payload exclusion and truncation; `$ai_error` is replaced by the span's `error_type` instead. */
 export const POSTHOG_CONTENT_PROPERTIES = [
   "$ai_input",
   "$ai_output_choices",
@@ -25,14 +25,14 @@ export const POSTHOG_CONTENT_PROPERTIES = [
 
 const CONTENT_PROPERTY_SET: ReadonlySet<string> = new Set(POSTHOG_CONTENT_PROPERTIES)
 
-/** Property names to strip for this config; per-field granularity later is a config-only change here. */
-export const posthogRedactionSet = (config: PosthogDestinationConfig): ReadonlySet<string> =>
+/** Property names to exclude for this source config; per-field granularity later is a config-only change here. */
+export const posthogExcludedProperties = (config: SpansSourceConfig): ReadonlySet<string> =>
   config.excludePayloads ? CONTENT_PROPERTY_SET : new Set()
 
 export interface MapSpansToPosthogEventsInput {
   readonly spans: readonly SpanDetail[]
   readonly destinationId: DestinationId
-  readonly config: PosthogDestinationConfig
+  readonly sourceConfig: SpansSourceConfig
   /** Pure URL builder for `latitude_span_url`; the caller owns app host + routing. */
   readonly buildSpanUrl: (span: SpanDetail) => string
   /** Per-event size limit owned by the engine/adapter; defaults to {@link DESTINATION_MAX_EVENT_BYTES_DEFAULT}. */
@@ -179,7 +179,7 @@ export const mapSpansToPosthogEvents = async (
     Number.isFinite(input.maxEventBytes) && (input.maxEventBytes as number) > 0
       ? (input.maxEventBytes as number)
       : DESTINATION_MAX_EVENT_BYTES_DEFAULT
-  const redactionSet = posthogRedactionSet(input.config)
+  const excludedProperties = posthogExcludedProperties(input.sourceConfig)
   const events: DestinationEvent[] = []
   let dropped = 0
 
@@ -198,7 +198,7 @@ export const mapSpansToPosthogEvents = async (
         properties: stripContentProperties({
           properties: draft.properties,
           errorType: span.errorType,
-          names: redactionSet,
+          names: excludedProperties,
         }),
       }
       const deliverable = applyOversizedPolicy({ event, errorType: span.errorType, maxEventBytes })
@@ -221,15 +221,20 @@ export const mapSpansToPosthogEvents = async (
 export const createPosthogMapper = (params: {
   readonly buildSpanUrl: (span: SpanDetail) => string
   readonly maxEventBytes?: number
-}): DestinationMapper => ({
-  toEvents: (spans, destination: Destination) =>
-    Effect.promise(() =>
+}): DestinationMapper<SpanDetail> => ({
+  toEvents: (spans, destinationId, sourceConfig: DestinationSourceConfig) => {
+    // Narrow instead of cast — a future miswiring under another source is a defect, not a silent mismap.
+    if (sourceConfig.source !== "spans") {
+      return Effect.die(new Error(`posthog mapper expects a spans source config, got "${sourceConfig.source}"`))
+    }
+    return Effect.promise(() =>
       mapSpansToPosthogEvents({
         spans,
-        destinationId: destination.id,
-        config: destination.config as PosthogDestinationConfig,
+        destinationId,
+        sourceConfig,
         buildSpanUrl: params.buildSpanUrl,
         ...(params.maxEventBytes === undefined ? {} : { maxEventBytes: params.maxEventBytes }),
       }),
-    ),
+    )
+  },
 })

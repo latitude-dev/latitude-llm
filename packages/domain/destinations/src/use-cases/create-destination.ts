@@ -10,12 +10,12 @@ import {
 } from "@domain/shared"
 import { Effect } from "effect"
 import type { Destination, DestinationConfig, DestinationCredentials } from "../entities/destination.ts"
-import { createDestination } from "../entities/destination.ts"
-import { DESTINATION_SOURCES } from "../entities/destination-source.ts"
-import { createDestinationSourceCursor } from "../entities/destination-source-cursor.ts"
+import { createDestination, supportedSourcesForKind } from "../entities/destination.ts"
+import { type DestinationSourceConfig, defaultSourceConfig } from "../entities/destination-source.ts"
+import { createDestinationSourceState } from "../entities/destination-source-state.ts"
 import { SandboxOrganizationDestinationError } from "../errors.ts"
 import { DestinationRepository } from "../ports/destination-repository.ts"
-import { DestinationSourceCursorRepository } from "../ports/destination-source-cursor-repository.ts"
+import { DestinationSourceStateRepository } from "../ports/destination-source-state-repository.ts"
 
 export interface CreateDestinationInput {
   readonly organizationId: OrganizationId
@@ -24,6 +24,8 @@ export interface CreateDestinationInput {
   readonly config: DestinationConfig
   readonly credentials: DestinationCredentials
   readonly createdByUserId: UserId
+  /** Per-source config overrides keyed by source; sources without an entry seed with defaults. */
+  readonly sourceConfigs?: readonly DestinationSourceConfig[]
 }
 
 export type CreateDestinationError =
@@ -60,19 +62,21 @@ export const createDestinationUseCase = (input: CreateDestinationInput) =>
     })
 
     const destinations = yield* DestinationRepository
-    const cursors = yield* DestinationSourceCursorRepository
+    const sourceStates = yield* DestinationSourceStateRepository
     const sqlClient = yield* SqlClient
 
     yield* sqlClient.transaction(
       Effect.gen(function* () {
         yield* destinations.save(destination)
-        // Seed one cursor per source the destination exports (v1: spans). Watermark = creation time → forward-only sync.
-        for (const source of DESTINATION_SOURCES) {
-          yield* cursors.create(
-            createDestinationSourceCursor({
+        // Seed one enabled row per source this kind supports (v1: spans). Watermark = creation time → forward-only sync.
+        for (const source of supportedSourcesForKind(destination.kind)) {
+          const config = input.sourceConfigs?.find((c) => c.source === source) ?? defaultSourceConfig(source)
+          yield* sourceStates.create(
+            createDestinationSourceState({
               organizationId: destination.organizationId,
               destinationId: destination.id,
               source,
+              config,
               watermark: destination.createdAt,
             }),
           )
@@ -84,5 +88,5 @@ export const createDestinationUseCase = (input: CreateDestinationInput) =>
   }).pipe(Effect.withSpan("destinations.createDestination")) as Effect.Effect<
     Destination,
     CreateDestinationError,
-    SqlClient | DestinationRepository | DestinationSourceCursorRepository | OrganizationRepository
+    SqlClient | DestinationRepository | DestinationSourceStateRepository | OrganizationRepository
   >

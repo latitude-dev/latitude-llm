@@ -10,9 +10,8 @@ import {
 } from "@domain/shared"
 import type { SpanDetail } from "@domain/spans"
 import { describe, expect, it } from "vitest"
-import { POSTHOG_US_INGESTION_HOST } from "../constants.ts"
-import type { PosthogDestinationConfig } from "../entities/destination.ts"
-import { mapSpansToPosthogEvents, posthogRedactionSet } from "./posthog.ts"
+import type { SpansSourceConfig } from "../entities/destination-source.ts"
+import { mapSpansToPosthogEvents, posthogExcludedProperties } from "./posthog.ts"
 
 const cuid = (seed: string) => seed.padEnd(24, "0")
 
@@ -83,12 +82,10 @@ const stubSpanDetail = (overrides: Partial<SpanDetail> = {}): SpanDetail => ({
   ...overrides,
 })
 
-const baseConfig: PosthogDestinationConfig = {
-  kind: "posthog",
-  host: POSTHOG_US_INGESTION_HOST,
+const baseConfig: SpansSourceConfig = {
+  source: "spans",
   excludePayloads: false,
-  intervalMs: 300_000,
-  maxSpansPerRun: 50_000,
+  maxRecordsPerRun: 50_000,
 }
 
 const buildSpanUrl = (span: SpanDetail) =>
@@ -96,12 +93,12 @@ const buildSpanUrl = (span: SpanDetail) =>
 
 const map = (
   spans: readonly SpanDetail[],
-  options: { config?: Partial<PosthogDestinationConfig>; maxEventBytes?: number } = {},
+  options: { config?: Partial<SpansSourceConfig>; maxEventBytes?: number } = {},
 ) =>
   mapSpansToPosthogEvents({
     spans,
     destinationId,
-    config: { ...baseConfig, ...options.config },
+    sourceConfig: { ...baseConfig, ...options.config },
     buildSpanUrl,
     ...(options.maxEventBytes === undefined ? {} : { maxEventBytes: options.maxEventBytes }),
   })
@@ -281,9 +278,9 @@ describe("mapSpansToPosthogEvents", () => {
     expect(generation.properties).not.toHaveProperty("latitude_truncated")
   })
 
-  it("derives an empty redaction set when payloads are included", () => {
-    expect(posthogRedactionSet(baseConfig).size).toBe(0)
-    expect(posthogRedactionSet({ ...baseConfig, excludePayloads: true }).has("$ai_input")).toBe(true)
+  it("derives an empty excluded-property set when payloads are included", () => {
+    expect(posthogExcludedProperties(baseConfig).size).toBe(0)
+    expect(posthogExcludedProperties({ ...baseConfig, excludePayloads: true }).has("$ai_input")).toBe(true)
   })
 
   it("truncates content of an oversized event and marks it latitude_truncated", async () => {
@@ -327,7 +324,7 @@ describe("mapSpansToPosthogEvents", () => {
     const otherDestination = await mapSpansToPosthogEvents({
       spans: [span],
       destinationId: DestinationId(cuid("d2")),
-      config: baseConfig,
+      sourceConfig: baseConfig,
       buildSpanUrl,
     })
     expect(otherDestination.events[0].uuid).not.toBe(first.events[0].uuid)

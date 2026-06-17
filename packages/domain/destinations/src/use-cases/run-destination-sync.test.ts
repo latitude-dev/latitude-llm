@@ -18,19 +18,20 @@ import { describe, expect, it } from "vitest"
 import { POSTHOG_US_INGESTION_HOST } from "../constants.ts"
 import type { Destination } from "../entities/destination.ts"
 import { createDestination } from "../entities/destination.ts"
-import { createDestinationSourceCursor, type DestinationSourceCursor } from "../entities/destination-source-cursor.ts"
+import { defaultSourceConfig } from "../entities/destination-source.ts"
+import { createDestinationSourceState, type DestinationSourceState } from "../entities/destination-source-state.ts"
 import { NonRetryableDeliveryError, RetryableDeliveryError } from "../errors.ts"
 import { DestinationDeliverers } from "../ports/destination-deliverer.ts"
 import { DestinationMappers } from "../ports/destination-mapper.ts"
 import { DestinationRepository } from "../ports/destination-repository.ts"
-import { DestinationSourceCursorRepository } from "../ports/destination-source-cursor-repository.ts"
 import { DestinationSourceReaders, type SourceCursor } from "../ports/destination-source-reader.ts"
+import { DestinationSourceStateRepository } from "../ports/destination-source-state-repository.ts"
 import { DestinationSyncRunRepository } from "../ports/destination-sync-run-repository.ts"
 import { createFakeDestinationDeliverer } from "../testing/fake-destination-deliverer.ts"
 import { createFakeDestinationMapper } from "../testing/fake-destination-mapper.ts"
 import { createFakeDestinationRepository } from "../testing/fake-destination-repository.ts"
-import { createFakeDestinationSourceCursorRepository } from "../testing/fake-destination-source-cursor-repository.ts"
 import { fakeSourceReaderRegistry, staticSourceReader } from "../testing/fake-destination-source-reader.ts"
+import { createFakeDestinationSourceStateRepository } from "../testing/fake-destination-source-state-repository.ts"
 import { createFakeDestinationSyncRunRepository } from "../testing/fake-destination-sync-run-repository.ts"
 import { runDestinationSyncUseCase } from "./run-destination-sync.ts"
 
@@ -57,9 +58,7 @@ const makeDestination = (overrides: Partial<Destination> = {}): Destination => (
     config: {
       kind: "posthog",
       host: POSTHOG_US_INGESTION_HOST,
-      excludePayloads: false,
       intervalMs: 300_000,
-      maxSpansPerRun: 50_000,
     },
     credentials: { kind: "posthog", apiKey: "phc_test" },
     createdByUserId: USER_ID,
@@ -68,11 +67,12 @@ const makeDestination = (overrides: Partial<Destination> = {}): Destination => (
   ...overrides,
 })
 
-const makeCursor = (overrides: Partial<DestinationSourceCursor> = {}): DestinationSourceCursor => ({
-  ...createDestinationSourceCursor({
+const makeCursor = (overrides: Partial<DestinationSourceState> = {}): DestinationSourceState => ({
+  ...createDestinationSourceState({
     organizationId: ORG_ID,
     destinationId: DESTINATION_ID,
     source: SOURCE,
+    config: defaultSourceConfig(SOURCE),
     watermark: CURSOR_AT,
   }),
   ...overrides,
@@ -141,7 +141,7 @@ const stubSpan = (spanId: string, ingestedAt: Date): SpanDetail => ({
 
 interface SetupOpts {
   readonly seed?: Destination
-  readonly cursor?: DestinationSourceCursor
+  readonly cursor?: DestinationSourceState
   readonly window?: { records: readonly SpanDetail[]; nextCursor: SourceCursor | null }
   readonly deliveryFailure?: RetryableDeliveryError | NonRetryableDeliveryError
   readonly mapperDropped?: number
@@ -150,7 +150,7 @@ interface SetupOpts {
 const setup = (opts: SetupOpts) => {
   const seed = opts.seed ?? makeDestination()
   const { repo: destinationRepo, rows: destinationRows } = createFakeDestinationRepository([seed])
-  const { repo: cursorRepo, rows: cursorRows } = createFakeDestinationSourceCursorRepository(
+  const { repo: cursorRepo, rows: cursorRows } = createFakeDestinationSourceStateRepository(
     [opts.cursor ?? makeCursor()],
     destinationRows,
   )
@@ -170,10 +170,10 @@ const setup = (opts: SetupOpts) => {
     Layer.succeed(ChSqlClient, createFakeChSqlClient()),
     Layer.succeed(DestinationSourceReaders, fakeSourceReaderRegistry(reader)),
     Layer.succeed(DestinationRepository, destinationRepo),
-    Layer.succeed(DestinationSourceCursorRepository, cursorRepo),
+    Layer.succeed(DestinationSourceStateRepository, cursorRepo),
     Layer.succeed(DestinationSyncRunRepository, syncRunRepo),
     Layer.succeed(DestinationDeliverers, { posthog: deliverer }),
-    Layer.succeed(DestinationMappers, { posthog: mapper }),
+    Layer.succeed(DestinationMappers, { posthog: { spans: mapper } }),
   )
 
   return { destinationRows, cursorRows, syncRunRows, deliveries, mapped, layer }
@@ -201,7 +201,7 @@ describe("runDestinationSyncUseCase", () => {
   it("skips when the destination is missing", async () => {
     // No cursor row either; findById fails → skipped before reading the cursor.
     const { repo: destinationRepo, rows: destinationRows } = createFakeDestinationRepository([])
-    const { repo: cursorRepo, rows: cursorRows } = createFakeDestinationSourceCursorRepository([], destinationRows)
+    const { repo: cursorRepo, rows: cursorRows } = createFakeDestinationSourceStateRepository([], destinationRows)
     const { repo: syncRunRepo } = createFakeDestinationSyncRunRepository()
     const { deliverer, deliveries } = createFakeDestinationDeliverer()
     const { mapper } = createFakeDestinationMapper()
@@ -213,10 +213,10 @@ describe("runDestinationSyncUseCase", () => {
         fakeSourceReaderRegistry(staticSourceReader({ records: [], nextCursor: null })),
       ),
       Layer.succeed(DestinationRepository, destinationRepo),
-      Layer.succeed(DestinationSourceCursorRepository, cursorRepo),
+      Layer.succeed(DestinationSourceStateRepository, cursorRepo),
       Layer.succeed(DestinationSyncRunRepository, syncRunRepo),
       Layer.succeed(DestinationDeliverers, { posthog: deliverer }),
-      Layer.succeed(DestinationMappers, { posthog: mapper }),
+      Layer.succeed(DestinationMappers, { posthog: { spans: mapper } }),
     )
 
     const res = await Effect.runPromise(
@@ -232,7 +232,7 @@ describe("runDestinationSyncUseCase", () => {
 
   it("skips when the source has no cursor", async () => {
     const { repo: destinationRepo, rows: destinationRows } = createFakeDestinationRepository([makeDestination()])
-    const { repo: cursorRepo } = createFakeDestinationSourceCursorRepository([], destinationRows)
+    const { repo: cursorRepo } = createFakeDestinationSourceStateRepository([], destinationRows)
     const { repo: syncRunRepo, rows: syncRunRows } = createFakeDestinationSyncRunRepository()
     const { deliverer, deliveries } = createFakeDestinationDeliverer()
     const { mapper } = createFakeDestinationMapper()
@@ -244,10 +244,10 @@ describe("runDestinationSyncUseCase", () => {
         fakeSourceReaderRegistry(staticSourceReader({ records: [], nextCursor: null })),
       ),
       Layer.succeed(DestinationRepository, destinationRepo),
-      Layer.succeed(DestinationSourceCursorRepository, cursorRepo),
+      Layer.succeed(DestinationSourceStateRepository, cursorRepo),
       Layer.succeed(DestinationSyncRunRepository, syncRunRepo),
       Layer.succeed(DestinationDeliverers, { posthog: deliverer }),
-      Layer.succeed(DestinationMappers, { posthog: mapper }),
+      Layer.succeed(DestinationMappers, { posthog: { spans: mapper } }),
     )
 
     const res = await Effect.runPromise(
@@ -302,7 +302,7 @@ describe("runDestinationSyncUseCase", () => {
 
     expect(res.outcome).toBe("delivered")
     expect(res.source).toBe(SOURCE)
-    expect(res.spansRead).toBe(2)
+    expect(res.recordsRead).toBe(2)
     expect(res.eventsSent).toBe(2)
     expect(deliveries).toHaveLength(1)
     expect(deliveries[0]?.context.window.start).toEqual(CURSOR_AT)
@@ -422,7 +422,7 @@ describe("runDestinationSyncUseCase", () => {
     const records = [stubSpan("aaaaaaaaaaaaaaa1", CURSOR_AT)]
     const nextCursor: SourceCursor = { watermark: CURSOR_AT, id: "aaaaaaaaaaaaaaa1" }
     const { repo: destinationRepo, rows: destinationRows } = createFakeDestinationRepository([makeDestination()])
-    const { repo: baseCursorRepo, rows: cursorRows } = createFakeDestinationSourceCursorRepository(
+    const { repo: baseCursorRepo, rows: cursorRows } = createFakeDestinationSourceStateRepository(
       [makeCursor({ consecutiveEmptyRuns: 7 })],
       destinationRows,
     )
@@ -435,10 +435,10 @@ describe("runDestinationSyncUseCase", () => {
       Layer.succeed(ChSqlClient, createFakeChSqlClient()),
       Layer.succeed(DestinationSourceReaders, fakeSourceReaderRegistry(staticSourceReader({ records, nextCursor }))),
       Layer.succeed(DestinationRepository, destinationRepo),
-      Layer.succeed(DestinationSourceCursorRepository, cursorRepo),
+      Layer.succeed(DestinationSourceStateRepository, cursorRepo),
       Layer.succeed(DestinationSyncRunRepository, syncRunRepo),
       Layer.succeed(DestinationDeliverers, { posthog: deliverer }),
-      Layer.succeed(DestinationMappers, { posthog: mapper }),
+      Layer.succeed(DestinationMappers, { posthog: { spans: mapper } }),
     )
 
     const res = await Effect.runPromise(

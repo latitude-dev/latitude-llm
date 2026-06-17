@@ -40,9 +40,7 @@ const runWithLive = <A, E>(
 const makeConfig = (overrides: Partial<DestinationConfig> = {}): DestinationConfig => ({
   kind: "posthog",
   host: "https://us.i.posthog.com",
-  excludePayloads: false,
   intervalMs: FIVE_MINUTES_MS,
-  maxSpansPerRun: 50_000,
   ...overrides,
 })
 

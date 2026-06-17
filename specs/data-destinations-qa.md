@@ -63,11 +63,11 @@ Created a PostHog destination, seeded 52 spans → **delivered 92 events** to Po
 - [ ] Re-deliver the same window — either re-run the destination over already-synced data, or re-ingest an identical span (same `span_id`).
 - [ ] Confirm **zero duplicate events** in PostHog (stable UUIDv5 dedup). Event count must not grow.
 
-## 3. Redaction (`excludePayloads`)
+## 3. Payload exclusion (`excludePayloads`)
 
-- [ ] Toggle `excludePayloads` ON, seed new traces, sync.
-- [ ] In PostHog: `$ai_input`, `$ai_output_choices`, `$ai_input_state`, `$ai_output_state`, `$ai_tools` are null; `$ai_error` shows `error_type` only.
-- [ ] Tokens, costs, latency, model/provider, ids, timing **still present**.
+- [x] Toggle `excludePayloads` ON, seed new traces, sync.
+- [x] In PostHog: `$ai_input`, `$ai_output_choices`, `$ai_input_state`, `$ai_output_state`, `$ai_tools` are null; `$ai_error` shows `error_type` only.
+- [x] Tokens, costs, latency, model/provider, ids, timing **still present**.
 
 ## 4. Pause / resume + backlog catch-up
 

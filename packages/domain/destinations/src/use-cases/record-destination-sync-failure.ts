@@ -3,7 +3,7 @@ import { Effect } from "effect"
 import { DESTINATION_QUARANTINE_FAILURE_THRESHOLD } from "../constants.ts"
 import type { DestinationSource } from "../entities/destination-source.ts"
 import { DestinationRepository } from "../ports/destination-repository.ts"
-import { DestinationSourceCursorRepository } from "../ports/destination-source-cursor-repository.ts"
+import { DestinationSourceStateRepository } from "../ports/destination-source-state-repository.ts"
 
 export interface RecordDestinationSyncFailureInput {
   readonly destinationId: DestinationId
@@ -35,7 +35,7 @@ export const recordDestinationSyncFailureUseCase = (
 ): Effect.Effect<
   RecordDestinationSyncFailureResult,
   RepositoryError,
-  SqlClient | DestinationRepository | DestinationSourceCursorRepository
+  SqlClient | DestinationRepository | DestinationSourceStateRepository
 > =>
   Effect.gen(function* () {
     const destinations = yield* DestinationRepository
@@ -57,7 +57,7 @@ export const recordDestinationSyncFailureUseCase = (
       lastFailureMessage: input.message,
     })
 
-    const cursors = yield* DestinationSourceCursorRepository
+    const cursors = yield* DestinationSourceStateRepository
     const cursor = yield* cursors.findByDestinationAndSource({
       destinationId: destination.id,
       source: input.source,

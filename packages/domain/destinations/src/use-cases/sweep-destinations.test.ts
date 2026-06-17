@@ -5,9 +5,10 @@ import { Effect, Layer, Ref } from "effect"
 import { describe, expect, it } from "vitest"
 import { POSTHOG_US_INGESTION_HOST } from "../constants.ts"
 import { createDestination, type Destination } from "../entities/destination.ts"
-import { createDestinationSourceCursor, type DestinationSourceCursor } from "../entities/destination-source-cursor.ts"
-import { DestinationSourceCursorRepository } from "../ports/destination-source-cursor-repository.ts"
-import { createFakeDestinationSourceCursorRepository } from "../testing/fake-destination-source-cursor-repository.ts"
+import { defaultSourceConfig } from "../entities/destination-source.ts"
+import { createDestinationSourceState, type DestinationSourceState } from "../entities/destination-source-state.ts"
+import { DestinationSourceStateRepository } from "../ports/destination-source-state-repository.ts"
+import { createFakeDestinationSourceStateRepository } from "../testing/fake-destination-source-state-repository.ts"
 import { sweepDestinationsUseCase } from "./sweep-destinations.ts"
 
 const cuid = (seed: string) => seed.padEnd(24, "0")
@@ -23,9 +24,7 @@ const makeDestination = (seed: string, organizationId: string, overrides: Partia
     config: {
       kind: "posthog",
       host: POSTHOG_US_INGESTION_HOST,
-      excludePayloads: false,
       intervalMs: 300_000,
-      maxSpansPerRun: 50_000,
     },
     credentials: { kind: "posthog", apiKey: "phc_test" },
     createdByUserId: USER_ID,
@@ -34,17 +33,18 @@ const makeDestination = (seed: string, organizationId: string, overrides: Partia
 })
 
 // never-ran cursors are always due
-const makeCursor = (destination: Destination): DestinationSourceCursor =>
-  createDestinationSourceCursor({
+const makeCursor = (destination: Destination): DestinationSourceState =>
+  createDestinationSourceState({
     organizationId: destination.organizationId,
     destinationId: destination.id,
     source: "spans",
+    config: defaultSourceConfig("spans"),
     watermark: destination.createdAt,
   })
 
 const run = (opts: { destinations: readonly Destination[] }) =>
   Effect.gen(function* () {
-    const { repo: cursorRepo } = createFakeDestinationSourceCursorRepository(
+    const { repo: cursorRepo } = createFakeDestinationSourceStateRepository(
       opts.destinations.map(makeCursor),
       opts.destinations,
     )
@@ -52,7 +52,7 @@ const run = (opts: { destinations: readonly Destination[] }) =>
 
     const layer = Layer.mergeAll(
       Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId("system") })),
-      Layer.succeed(DestinationSourceCursorRepository, cursorRepo),
+      Layer.succeed(DestinationSourceStateRepository, cursorRepo),
     )
 
     const result = yield* sweepDestinationsUseCase({
@@ -96,13 +96,13 @@ describe("sweepDestinationsUseCase", () => {
     const { result } = await Effect.runPromise(
       Effect.gen(function* () {
         const destination = makeDestination("1", orgA)
-        const { repo: cursorRepo } = createFakeDestinationSourceCursorRepository(
+        const { repo: cursorRepo } = createFakeDestinationSourceStateRepository(
           [makeCursor(destination)],
           [destination],
         )
         const layer = Layer.mergeAll(
           Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId("system") })),
-          Layer.succeed(DestinationSourceCursorRepository, cursorRepo),
+          Layer.succeed(DestinationSourceStateRepository, cursorRepo),
         )
         const result = yield* sweepDestinationsUseCase({
           now: NOW,

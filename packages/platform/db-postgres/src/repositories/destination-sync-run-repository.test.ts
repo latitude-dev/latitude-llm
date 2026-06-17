@@ -28,7 +28,7 @@ const makeRun = (overrides: Partial<Omit<DestinationSyncRun, "createdAt" | "upda
     windowStart: new Date(startedAt.getTime() - 300_000),
     windowEnd: startedAt,
     status: "succeeded",
-    spansRead: 120,
+    recordsRead: 120,
     eventsSent: 130,
     eventsDropped: 0,
     error: null,
@@ -58,7 +58,7 @@ describe("DestinationSyncRunRepositoryLive", () => {
     const middle = makeRun({
       startedAt: at("2026-06-12T11:00:00.000Z"),
       status: "failed",
-      spansRead: 50_000,
+      recordsRead: 50_000,
       eventsSent: 0,
       eventsDropped: 0,
       error: "posthog: HTTP 429 (retryable, retries exhausted)",

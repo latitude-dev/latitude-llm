@@ -27,6 +27,8 @@ export const createSpansSourceReader = (spanRepo: SpanRepositoryShape): Destinat
             : null,
         })),
       ),
+  sampleLatest: ({ organizationId, projectId, limit }) =>
+    spanRepo.listRecentDetailsByProjectId({ organizationId, projectId, limit }),
 })
 
 /**

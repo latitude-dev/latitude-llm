@@ -169,6 +169,7 @@ export {
   ReasoningGroup,
   type ToolCallResult,
 } from "./components/genai-conversation/part.tsx"
+export { CollapsibleBlock } from "./components/genai-conversation/parts/collapsible-block.tsx"
 export {
   type FirstMatchHint,
   type HighlightRange,

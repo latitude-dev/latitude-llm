@@ -19,7 +19,7 @@ const makeSyncRun = (destinationId: string, finishedAt: Date): DestinationSyncRu
     windowStart: finishedAt,
     windowEnd: finishedAt,
     status: "succeeded",
-    spansRead: 0,
+    recordsRead: 0,
     eventsSent: 0,
     eventsDropped: 0,
     error: null,

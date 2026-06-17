@@ -11,7 +11,7 @@ import type { DestinationMapper } from "../ports/destination-mapper.ts"
 export const createFakeDestinationMapper = (opts: { dropped?: number } = {}) => {
   const mapped: SpanDetail[][] = []
 
-  const mapper: DestinationMapper = {
+  const mapper: DestinationMapper<SpanDetail> = {
     toEvents: (spans) =>
       Effect.sync(() => {
         mapped.push([...spans])

@@ -22,7 +22,7 @@ import { createPosthogDeliverer, POSTHOG_EVENT_MAX_BYTES } from "@platform/data-
 import { type ClickHouseClient, SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   DestinationRepositoryLive,
-  DestinationSourceCursorRepositoryLive,
+  DestinationSourceStateRepositoryLive,
   DestinationSyncRunRepositoryLive,
   type PostgresClient,
   ProjectRepositoryLive,
@@ -45,16 +45,16 @@ interface DestinationsDeps {
 
 const deleteByProjectLayer = Layer.mergeAll(
   DestinationRepositoryLive,
-  DestinationSourceCursorRepositoryLive,
+  DestinationSourceStateRepositoryLive,
   DestinationSyncRunRepositoryLive,
 )
 const runSyncLayer = Layer.mergeAll(
   DestinationRepositoryLive,
-  DestinationSourceCursorRepositoryLive,
+  DestinationSourceStateRepositoryLive,
   DestinationSyncRunRepositoryLive,
   ProjectRepositoryLive,
 )
-const recordFailureLayer = Layer.mergeAll(DestinationRepositoryLive, DestinationSourceCursorRepositoryLive)
+const recordFailureLayer = Layer.mergeAll(DestinationRepositoryLive, DestinationSourceStateRepositoryLive)
 
 /** v1 source-reader registry: the domain spans binding backed by the ClickHouse SpanRepository. */
 const sourceReadersLive = SpansSourceReadersLive.pipe(Layer.provide(SpanRepositoryLive))
@@ -139,7 +139,7 @@ export const createDestinationsWorker = ({
               },
             ),
         }).pipe(
-          withPostgres(DestinationSourceCursorRepositoryLive, adminPgClient),
+          withPostgres(DestinationSourceStateRepositoryLive, adminPgClient),
           Effect.tap((result) =>
             Effect.sync(() =>
               logger.info(`destinations.sweep due=${result.due} published=${result.published} failed=${result.failed}`),
@@ -174,10 +174,12 @@ export const createDestinationsWorker = ({
           )
 
           const mapperRegistry: DestinationMapperRegistry = {
-            posthog: createPosthogMapper({
-              buildSpanUrl: spanUrlBuilder(webUrl, projectSlug),
-              maxEventBytes: POSTHOG_EVENT_MAX_BYTES,
-            }),
+            posthog: {
+              spans: createPosthogMapper({
+                buildSpanUrl: spanUrlBuilder(webUrl, projectSlug),
+                maxEventBytes: POSTHOG_EVENT_MAX_BYTES,
+              }),
+            },
           }
 
           const result = yield* runDestinationSyncUseCase({
@@ -192,7 +194,7 @@ export const createDestinationsWorker = ({
           )
 
           logger.info(
-            `destinations.runSync destinationId=${destinationId} source=${source} outcome=${result.outcome} spansRead=${result.spansRead} eventsSent=${result.eventsSent} eventsDropped=${result.eventsDropped} quarantined=${result.quarantined}`,
+            `destinations.runSync destinationId=${destinationId} source=${source} outcome=${result.outcome} recordsRead=${result.recordsRead} eventsSent=${result.eventsSent} eventsDropped=${result.eventsDropped} quarantined=${result.quarantined}`,
           )
         }).pipe(
           withPostgres(runSyncLayer, pgClient, organizationId),
