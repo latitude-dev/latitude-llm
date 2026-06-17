@@ -320,6 +320,7 @@ export function useTraceConversationMessages({
   })
 
   const messages = useMemo(() => query.data?.pages.flatMap((page) => page.messages) ?? [], [query.data])
+  // Every chunk carries whole-conversation metadata; page 0 is the stable header.
   const totalMessages = query.data?.pages[0]?.totalMessages ?? 0
   const payloadBytes = query.data?.pages[0]?.payloadBytes ?? 0
 

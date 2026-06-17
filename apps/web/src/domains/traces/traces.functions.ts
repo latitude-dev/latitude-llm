@@ -18,6 +18,7 @@ import type {
 } from "@domain/spans"
 import {
   getTraceCohortSummaryUseCase,
+  getTraceConversationChunkUseCase,
   getTraceSearchHighlightsUseCase,
   mergeTraceHistogramTimeFilters,
   TraceRepository,
@@ -429,26 +430,6 @@ export const getSessionMomentIntelligence = createServerFn({ method: "GET" })
     )
   })
 
-const parseClickHouseNumber = (value: string | number | undefined): number => {
-  const numeric = Number(value)
-  return Number.isFinite(numeric) ? numeric : 0
-}
-
-const parseMessageJson = (json: string): GenAIMessage | null => {
-  try {
-    const parsed = JSON.parse(json)
-    return parsed && typeof parsed === "object" ? (parsed as GenAIMessage) : null
-  } catch {
-    return null
-  }
-}
-
-type TraceConversationChunkRow = {
-  readonly total_messages: string | number
-  readonly payload_bytes: string | number
-  readonly messages: readonly string[]
-}
-
 export const getTraceDetail = createServerFn({ method: "GET" })
   .inputValidator(z.object({ sandboxOrgId: z.string().optional(), projectId: z.string(), traceId: z.string() }))
   .handler(async ({ data }) => {
@@ -457,15 +438,13 @@ export const getTraceDetail = createServerFn({ method: "GET" })
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* TraceRepository
-        const page = yield* repo.listByProjectId({
-          organizationId: orgId,
-          projectId: ProjectId(data.projectId),
-          options: {
-            limit: 1,
-            filters: { traceId: [{ op: "eq", value: data.traceId }] },
-          },
-        })
-        const trace = page.items[0]
+        const trace = yield* repo
+          .findMetadataByTraceId({
+            organizationId: orgId,
+            projectId: ProjectId(data.projectId),
+            traceId: TraceId(data.traceId),
+          })
+          .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
         return trace ? serializeTraceMetadataDetail(trace) : null
       }).pipe(
         withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
@@ -492,57 +471,17 @@ export const getTraceConversationChunk = createServerFn({ method: "GET" })
     const offset = data.offset ?? 0
     const limit = data.limit ?? 25
 
-    const result = await getClickhouseClient().query({
-      query: `SELECT
-                length(all_messages) AS total_messages,
-                arraySum(message -> length(message), all_messages) AS payload_bytes,
-                arraySlice(all_messages, {offset:UInt64} + 1, {limit:UInt64}) AS messages
-              FROM (
-                SELECT arrayConcat(
-                  if(
-                    length(JSONExtractArrayRaw(system_instructions_json)) > 0,
-                    [concat('{"role":"system","parts":', system_instructions_json, '}')],
-                    []
-                  ),
-                  JSONExtractArrayRaw(last_input_messages_json),
-                  JSONExtractArrayRaw(output_messages_json)
-                ) AS all_messages
-                FROM (
-                  SELECT
-                    argMinIfMerge(system_instructions) AS system_instructions_json,
-                    argMaxIfMerge(last_input_messages) AS last_input_messages_json,
-                    argMaxIfMerge(output_messages) AS output_messages_json
-                  FROM traces
-                  WHERE organization_id = {organizationId:String}
-                    AND project_id = {projectId:String}
-                    AND trace_id = {traceId:FixedString(32)}
-                  GROUP BY organization_id, project_id, trace_id
-                  LIMIT 1
-                )
-              )`,
-      query_params: { organizationId: orgId, projectId: data.projectId, traceId: data.traceId, offset, limit },
-      format: "JSONEachRow",
-    })
-    const rows = await result.json<TraceConversationChunkRow>()
-    const row = rows[0]
-    if (!row) {
-      return { messages: [], offset, limit, totalMessages: 0, hasMore: false, payloadBytes: 0 } as never
-    }
+    const result = await Effect.runPromise(
+      getTraceConversationChunkUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        traceId: TraceId(data.traceId),
+        offset,
+        limit,
+      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
 
-    const totalMessages = parseClickHouseNumber(row.total_messages)
-    const messages = row.messages.flatMap((message) => {
-      const parsed = parseMessageJson(message)
-      return parsed ? [parsed] : []
-    })
-
-    return {
-      messages,
-      offset,
-      limit,
-      totalMessages,
-      hasMore: offset + messages.length < totalMessages,
-      payloadBytes: parseClickHouseNumber(row.payload_bytes),
-    } as never
+    return result as never
   })
 
 const DISTINCT_COLUMNS = ["tags", "models", "providers", "serviceNames", "tools", "definedTools"] as const

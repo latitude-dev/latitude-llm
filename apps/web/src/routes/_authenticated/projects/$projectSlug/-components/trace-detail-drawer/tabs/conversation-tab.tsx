@@ -13,7 +13,7 @@ import {
 import { formatBytes } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { DownloadIcon } from "lucide-react"
-import { type ReactNode, type RefObject, useCallback, useMemo, useRef, useState } from "react"
+import { type ReactNode, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
 import { useAuthSession } from "../../../../../../../domains/sessions/session.collection.ts"
 import { useConversationSpanMaps } from "../../../../../../../domains/spans/spans.collection.ts"
@@ -42,6 +42,8 @@ import { findNearestMessageAnchor, flashElement } from "../../conversation-timel
 import { TimelineBar } from "../../conversation-timeline/timeline-bar.tsx"
 import { useViewportBand } from "../../conversation-timeline/use-viewport-band.ts"
 import { useScrollToFirstHighlight } from "./use-scroll-to-first-highlight.ts"
+
+const LOAD_MORE_THRESHOLD_PX = 1200
 
 function toSearchHighlightRanges(result: TraceSearchHighlightsResult | undefined): readonly HighlightRange[] {
   if (!result || result.highlights.length === 0) return []
@@ -226,12 +228,8 @@ function ConversationContent({
     [timeline, dismissSelectionUi, scrollToMessageAnchor],
   )
 
-  const maybeLoadMoreMessages = useCallback(() => {
-    const container = scrollRef.current
-    if (!container || !hasMoreMessages || isLoadingMoreMessages || autoLoadingMoreRef.current) return
-
-    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight
-    if (distanceFromBottom > 1200) return
+  const loadMoreMessages = useCallback(() => {
+    if (!hasMoreMessages || isLoadingMoreMessages || autoLoadingMoreRef.current) return
 
     autoLoadingMoreRef.current = true
     void Promise.resolve(onLoadMoreMessages())
@@ -239,7 +237,17 @@ function ConversationContent({
       .finally(() => {
         autoLoadingMoreRef.current = false
       })
-  }, [scrollRef, hasMoreMessages, isLoadingMoreMessages, onLoadMoreMessages])
+  }, [hasMoreMessages, isLoadingMoreMessages, onLoadMoreMessages])
+
+  const maybeLoadMoreMessages = useCallback(() => {
+    const container = scrollRef.current
+    if (!container) return
+
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight
+    if (distanceFromBottom > LOAD_MORE_THRESHOLD_PX) return
+
+    loadMoreMessages()
+  }, [scrollRef, loadMoreMessages])
 
   const handleMarkerClick = useCallback(
     (marker: TimelineMarker) => {
@@ -317,11 +325,18 @@ function ConversationContent({
     return { messageIndex: first.messageIndex, partIndex: first.partIndex }
   }, [searchHighlightsData])
 
+  // TODO(frontend-use-effect-policy): loading search target pages is a query-side effect keyed by async highlight results.
+  useEffect(() => {
+    if (!firstMatchHint || firstMatchHint.messageIndex < messages.length) return
+    loadMoreMessages()
+  }, [firstMatchHint, messages.length, loadMoreMessages])
+
   useScrollToFirstHighlight({
     scrollRef,
     traceId: traceDetail.traceId,
     searchQuery: effectiveSearchQuery,
     highlightsData: searchHighlightsData,
+    loadedMessageCount: messages.length,
   })
 
   if (textSelectionPopoverControlsRef) {
