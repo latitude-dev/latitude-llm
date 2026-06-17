@@ -793,6 +793,9 @@ importers:
       hono:
         specifier: 4.12.16
         version: 4.12.16
+      quickjs-emscripten:
+        specifier: 'catalog:'
+        version: 0.32.0
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
