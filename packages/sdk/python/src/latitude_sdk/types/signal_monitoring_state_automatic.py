@@ -8,7 +8,7 @@ from ..core.pydantic_utilities import UniversalBaseModel
 
 class SignalMonitoringStateAutomatic(UniversalBaseModel):
     """
-    The issue is automatically monitored by the system and does not need an evaluation.
+    The signal is automatically monitored by the system and does not need an evaluation.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

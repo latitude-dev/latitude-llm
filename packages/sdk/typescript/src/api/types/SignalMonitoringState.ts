@@ -3,17 +3,17 @@
 import type * as LatitudeApi from "../index.js";
 
 /**
- * Whether the issue is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`.
+ * Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`.
  */
 export type SignalMonitoringState =
     /**
-     * The issue is automatically monitored by the system and does not need an evaluation. */
+     * The signal is automatically monitored by the system and does not need an evaluation. */
     | LatitudeApi.SignalMonitoringState.Automatic
     /**
-     * The issue is not currently being monitored. */
+     * The signal is not currently being monitored. */
     | LatitudeApi.SignalMonitoringState.Idle
     /**
-     * An evaluation is being generated for this issue. The issue has no active evaluation yet. */
+     * An evaluation is being generated for this signal. The signal has no active evaluation yet. */
     | LatitudeApi.SignalMonitoringState.Generating
     /**
      * An active evaluation is being realigned. */

@@ -18,14 +18,14 @@ class SignalLifecycleItem(UniversalBaseModel):
         default=None
     )
     """
-    ISO-8601 timestamp at which the issue was resolved, or `null`.
+    ISO-8601 timestamp at which the signal was resolved, or `null`.
     """
 
     ignored_at: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="ignoredAt")] = pydantic.Field(
         default=None
     )
     """
-    ISO-8601 timestamp at which the issue was ignored, or `null`.
+    ISO-8601 timestamp at which the signal was ignored, or `null`.
     """
 
     updated_at: typing_extensions.Annotated[str, FieldMetadata(alias="updatedAt")] = pydantic.Field()
@@ -35,7 +35,7 @@ class SignalLifecycleItem(UniversalBaseModel):
 
     changed: bool = pydantic.Field()
     """
-    `true` when this call changed the issue, `false` when it was already in that state.
+    `true` when this call changed the signal, `false` when it was already in that state.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -88,11 +88,11 @@ const ExportBodySchema = z
     signalIds: z
       .array(cuidSchema)
       .optional()
-      .describe("Restrict the export to this subset of issues. Omit to export every issue in the project."),
+      .describe("Restrict the export to this subset of signals. Omit to export every signal in the project."),
     lifecycleGroup: z
       .enum(SIGNAL_LIFECYCLE_GROUPS)
       .optional()
-      .describe('`"active"` for unresolved/unignored issues; `"archived"` for the rest. Omit to include both.'),
+      .describe('`"active"` for unresolved/unignored signals; `"archived"` for the rest. Omit to include both.'),
   })
   .openapi("ExportSignalsBody")
 
@@ -107,7 +107,7 @@ const LifecycleBodySchema = z
     signalIds: z
       .array(cuidSchema)
       .min(1)
-      .describe("Non-empty list of issue ids. Operations are idempotent — already-applied issues are unchanged."),
+      .describe("Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged."),
   })
   .openapi("SignalsLifecycleBody")
 
@@ -116,25 +116,25 @@ const ResolveBodySchema = LifecycleBodySchema.extend({
     .boolean()
     .optional()
     .describe(
-      "When `true`, monitoring continues after the issues are resolved. When `false`, monitoring stops. Defaults to the project setting.",
+      "When `true`, monitoring continues after the signals are resolved. When `false`, monitoring stops. Defaults to the project setting.",
     ),
 }).openapi("ResolveSignalsBody")
 
 const LifecycleItemSchema = z
   .object({
     signalId: cuidSchema.describe("Signal this entry applies to."),
-    resolvedAt: z.string().nullable().describe("ISO-8601 timestamp at which the issue was resolved, or `null`."),
-    ignoredAt: z.string().nullable().describe("ISO-8601 timestamp at which the issue was ignored, or `null`."),
+    resolvedAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was resolved, or `null`."),
+    ignoredAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was ignored, or `null`."),
     updatedAt: z.string().describe("ISO-8601 timestamp of the last update."),
     changed: z
       .boolean()
-      .describe("`true` when this call changed the issue, `false` when it was already in that state."),
+      .describe("`true` when this call changed the signal, `false` when it was already in that state."),
   })
   .openapi("SignalLifecycleItem")
 
 const LifecycleResponseSchema = z
   .object({
-    items: z.array(LifecycleItemSchema).describe("Per-issue result, in the order requested."),
+    items: z.array(LifecycleItemSchema).describe("Per-signal result, in the order requested."),
   })
   .openapi("SignalsLifecycleResponse")
 
@@ -170,7 +170,7 @@ const buildLifecycleEndpoint = ({
       description,
       security: PROTECTED_SECURITY,
       request: { params: ProjectParamsSchema, body: jsonBody(bodySchema) },
-      responses: openApiResponses({ status: 200, schema: LifecycleResponseSchema, description: "Per-issue result" }),
+      responses: openApiResponses({ status: 200, schema: LifecycleResponseSchema, description: "Per-signal result" }),
     }),
     handler: async (c) => {
       const { projectSlug } = c.req.valid("param")
@@ -226,9 +226,9 @@ const resolveSignals = buildLifecycleEndpoint({
   name: "resolveSignals",
   fernMethod: "resolve",
   pathSuffix: "/resolve",
-  summary: "Resolve issues",
+  summary: "Resolve signals",
   description:
-    "Marks each issue in `signalIds` as resolved. When `keepMonitoring` is `false`, monitoring is also stopped for each resolved issue; when omitted, the project's default applies.",
+    "Marks each signal in `signalIds` as resolved. When `keepMonitoring` is `false`, monitoring is also stopped for each resolved signal; when omitted, the project's default applies.",
   bodySchema: ResolveBodySchema,
 })
 
@@ -237,8 +237,8 @@ const unresolveSignals = buildLifecycleEndpoint({
   name: "unresolveSignals",
   fernMethod: "unresolve",
   pathSuffix: "/unresolve",
-  summary: "Unresolve issues",
-  description: "Reverts each issue in `signalIds` to the unresolved state.",
+  summary: "Unresolve signals",
+  description: "Reverts each signal in `signalIds` to the unresolved state.",
   bodySchema: LifecycleBodySchema,
 })
 
@@ -247,8 +247,8 @@ const ignoreSignals = buildLifecycleEndpoint({
   name: "ignoreSignals",
   fernMethod: "ignore",
   pathSuffix: "/ignore",
-  summary: "Ignore issues",
-  description: "Marks each issue in `signalIds` as ignored. Monitoring is also stopped for each ignored issue.",
+  summary: "Ignore signals",
+  description: "Marks each signal in `signalIds` as ignored. Monitoring is also stopped for each ignored signal.",
   bodySchema: LifecycleBodySchema,
 })
 
@@ -257,8 +257,8 @@ const unignoreSignals = buildLifecycleEndpoint({
   name: "unignoreSignals",
   fernMethod: "unignore",
   pathSuffix: "/unignore",
-  summary: "Unignore issues",
-  description: "Reverts each issue in `signalIds` to a non-ignored state.",
+  summary: "Unignore signals",
+  description: "Reverts each signal in `signalIds` to a non-ignored state.",
   bodySchema: LifecycleBodySchema,
 })
 
@@ -271,11 +271,11 @@ const ListSignalsQuerySchema = PaginatedQueryParamsSchema.extend({
     .min(1)
     .max(500)
     .optional()
-    .describe("Free-text semantic search across the issues' names and descriptions."),
+    .describe("Free-text semantic search across the signals' names and descriptions."),
   lifecycleGroup: z
     .enum(SIGNAL_LIFECYCLE_GROUP_VALUES)
     .optional()
-    .describe('`"active"` for unresolved/unignored issues; `"archived"` for the rest. Omit to include both.'),
+    .describe('`"active"` for unresolved/unignored signals; `"archived"` for the rest. Omit to include both.'),
   sortBy: z
     .enum(ISSUES_SORT_FIELDS)
     .default("lastSeen")
@@ -294,12 +294,12 @@ const listSignals = signalEndpoint({
     name: "listSignals",
     tags: ["Signals"],
     ...signalsFernGroup("list"),
-    summary: "List project issues",
+    summary: "List project signals",
     description:
-      "Returns a cursor-paginated page of issues in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `trend`, and `tags`.",
+      "Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `trend`, and `tags`.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, query: ListSignalsQuerySchema },
-    responses: openApiResponses({ status: 200, schema: PaginatedSignalsSchema, description: "Page of issues" }),
+    responses: openApiResponses({ status: 200, schema: PaginatedSignalsSchema, description: "Page of signals" }),
   }),
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
@@ -390,9 +390,9 @@ const getSignalAnalytics = signalEndpoint({
     name: "getSignalAnalytics",
     tags: ["Signals"],
     ...signalsFernGroup("analytics"),
-    summary: "Get project issue analytics",
+    summary: "Get project signal analytics",
     description:
-      "Returns issue analytics for the project: counts of ongoing, new, escalating, regressed, and resolved issues, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
+      "Returns signal analytics for the project: counts of ongoing, new, escalating, regressed, and resolved signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, query: SignalAnalyticsQuerySchema },
     responses: openApiResponses({
@@ -439,9 +439,9 @@ const getSignal = signalEndpoint({
     name: "getSignal",
     tags: ["Signals"],
     ...signalsFernGroup("get"),
-    summary: "Get project issue",
+    summary: "Get project signal",
     description:
-      "Returns the full-history detail view of one issue: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.",
+      "Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.",
     security: PROTECTED_SECURITY,
     request: { params: SignalSlugParamsSchema },
     responses: openApiResponses({ status: 200, schema: SignalDetailSchema, description: "Signal" }),
@@ -456,12 +456,12 @@ const getSignal = signalEndpoint({
         const project = yield* projectRepo.findBySlug(projectSlug)
 
         const signalRepo = yield* SignalRepository
-        const issue = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
+        const signal = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
 
         return yield* getSignalDetailsUseCase({
           organizationId: OrganizationId(organizationId as string),
           projectId: project.id,
-          signalId: SignalId(issue.id as string),
+          signalId: SignalId(signal.id as string),
         })
       }).pipe(
         withPostgres(
@@ -495,9 +495,9 @@ const getSignalTrend = signalEndpoint({
     name: "getSignalTrend",
     tags: ["Signals"],
     ...signalsFernGroup("trend"),
-    summary: "Get issue occurrence histogram",
+    summary: "Get signal occurrence histogram",
     description:
-      "Returns the occurrence histogram for one issue over `[fromIso, toIso]`. The default range is the trailing 14 days. Buckets are 12-hour wide and UTC-aligned.",
+      "Returns the occurrence histogram for one signal over `[fromIso, toIso]`. The default range is the trailing 14 days. Buckets are 12-hour wide and UTC-aligned.",
     security: PROTECTED_SECURITY,
     request: { params: SignalSlugParamsSchema, query: TimeRangeQuerySchema },
     responses: openApiResponses({ status: 200, schema: SignalHistogramSchema, description: "Occurrence histogram" }),
@@ -513,12 +513,12 @@ const getSignalTrend = signalEndpoint({
         const project = yield* projectRepo.findBySlug(projectSlug)
 
         const signalRepo = yield* SignalRepository
-        const issue = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
+        const signal = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
 
         return yield* getSignalTrendUseCase({
           organizationId: OrganizationId(organizationId as string),
           projectId: project.id,
-          signalId: SignalId(issue.id as string),
+          signalId: SignalId(signal.id as string),
           ...(fromIso ? { from: new Date(fromIso) } : {}),
           ...(toIso ? { to: new Date(toIso) } : {}),
         })
@@ -542,9 +542,9 @@ const listSignalTraces = signalEndpoint({
     name: "listSignalTraces",
     tags: ["Signals"],
     ...signalsFernGroup("listTraces"),
-    summary: "List issue traces",
+    summary: "List signal traces",
     description:
-      "Returns the page of distinct traces that contributed at least one occurrence of the issue, ordered by most recent activity first.",
+      "Returns the page of distinct traces that contributed at least one occurrence of the signal, ordered by most recent activity first.",
     security: PROTECTED_SECURITY,
     request: { params: SignalSlugParamsSchema, query: ListSignalTracesQuerySchema },
     responses: openApiResponses({ status: 200, schema: PaginatedTracesSchema, description: "Page of traces" }),
@@ -569,12 +569,12 @@ const listSignalTraces = signalEndpoint({
         const project = yield* projectRepo.findBySlug(projectSlug)
 
         const signalRepo = yield* SignalRepository
-        const issue = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
+        const signal = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
 
         const result = yield* listSignalTracesUseCase({
           organizationId: OrganizationId(organizationId as string),
           projectId: project.id,
-          signalId: SignalId(issue.id as string),
+          signalId: SignalId(signal.id as string),
           limit: query.limit,
           offset,
         })
@@ -618,7 +618,7 @@ const exportSignals = signalEndpoint({
     name: "exportSignals",
     tags: ["Signals"],
     ...signalsFernGroup("export"),
-    summary: "Export project issues (async)",
+    summary: "Export project signals (async)",
     description:
       "Enqueues an asynchronous CSV export. The response returns immediately; the download link is emailed to `recipient` when the file is ready. The recipient must be a member of the requesting organization.",
     security: PROTECTED_SECURITY,
@@ -644,6 +644,7 @@ const exportSignals = signalEndpoint({
         }
 
         yield* c.var.queuePublisher.publish("exports", "generate", {
+          // KEEP: the export queue kind is a wire token retained until Phase 9.
           kind: "issues",
           organizationId: organizationId as string,
           projectId: project.id as string,
@@ -683,9 +684,9 @@ const monitorSignal = signalEndpoint({
     name: "monitorSignal",
     tags: ["Signals"],
     ...signalsFernGroup("monitor"),
-    summary: "Monitor issue",
+    summary: "Monitor signal",
     description:
-      "Starts (or realigns) monitoring for the issue. When the issue has no active evaluation, a new one is generated. When an active evaluation exists, the call realigns it. The work runs asynchronously and the response returns immediately. Returns 400 when monitoring is already in progress for this issue.",
+      "Starts (or realigns) monitoring for the signal. When the signal has no active evaluation, a new one is generated. When an active evaluation exists, the call realigns it. The work runs asynchronously and the response returns immediately. Returns 400 when monitoring is already in progress for this signal.",
     security: PROTECTED_SECURITY,
     request: { params: SignalSlugParamsSchema },
     responses: openApiResponses({ status: 202, schema: MonitorResponseSchema, description: "Monitor job enqueued" }),
@@ -701,13 +702,13 @@ const monitorSignal = signalEndpoint({
         const project = yield* projectRepo.findBySlug(projectSlug)
 
         const signalRepo = yield* SignalRepository
-        const issue = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
+        const signal = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
 
         return yield* monitorSignalUseCase({
           organizationId: OrganizationId(organizationId as string),
           projectId: ProjectId(project.id as string),
-          signalId: SignalId(issue.id as string),
-          isAutomaticallyMonitored: issue.source === "flagger",
+          signalId: SignalId(signal.id as string),
+          isAutomaticallyMonitored: signal.source === "flagger",
           ...(actorUserId !== undefined ? { actorUserId } : {}),
         })
       }).pipe(
@@ -733,9 +734,9 @@ const unmonitorSignal = signalEndpoint({
     name: "unmonitorSignal",
     tags: ["Signals"],
     ...signalsFernGroup("unmonitor"),
-    summary: "Unmonitor issue",
+    summary: "Unmonitor signal",
     description:
-      "Stops monitoring the issue. Idempotent — issues that aren't being monitored return 204 without changing anything.",
+      "Stops monitoring the signal. Idempotent — signals that aren't being monitored return 204 without changing anything.",
     security: PROTECTED_SECURITY,
     request: { params: SignalSlugParamsSchema },
     responses: { 204: { description: "Signal unmonitored" } },
@@ -750,11 +751,11 @@ const unmonitorSignal = signalEndpoint({
         const project = yield* projectRepo.findBySlug(projectSlug)
 
         const signalRepo = yield* SignalRepository
-        const issue = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
+        const signal = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
 
         yield* unmonitorSignalUseCase({
           projectId: ProjectId(project.id as string),
-          signalId: SignalId(issue.id as string),
+          signalId: SignalId(signal.id as string),
         })
       }).pipe(
         withPostgres(

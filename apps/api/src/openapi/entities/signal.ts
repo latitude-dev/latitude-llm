@@ -37,11 +37,11 @@ const SignalMonitoringStateSchema = z
   .discriminatedUnion("kind", [
     z
       .object({ kind: z.literal("automatic") })
-      .describe("The issue is automatically monitored by the system and does not need an evaluation."),
-    z.object({ kind: z.literal("idle") }).describe("The issue is not currently being monitored."),
+      .describe("The signal is automatically monitored by the system and does not need an evaluation."),
+    z.object({ kind: z.literal("idle") }).describe("The signal is not currently being monitored."),
     z
       .object({ kind: z.literal("generating") })
-      .describe("An evaluation is being generated for this issue. The issue has no active evaluation yet."),
+      .describe("An evaluation is being generated for this signal. The signal has no active evaluation yet."),
     z
       .object({
         kind: z.literal("realigning"),
@@ -53,22 +53,22 @@ const SignalMonitoringStateSchema = z
 
 // Fields shared by the list-row (`Signal`) and the detail (`SignalDetail`) shapes.
 const signalCoreFields = {
-  id: cuidSchema.describe("Stable issue identifier."),
-  organizationId: cuidSchema.describe("Organization that owns this issue."),
-  projectId: cuidSchema.describe("Project this issue belongs to."),
+  id: cuidSchema.describe("Stable signal identifier."),
+  organizationId: cuidSchema.describe("Organization that owns this signal."),
+  projectId: cuidSchema.describe("Project this signal belongs to."),
   slug: z.string().describe("URL-safe slug derived from `name`. Unique within the project."),
   name: z.string().describe("Human-readable name."),
-  description: z.string().describe("Description of the issue."),
-  source: z.enum(SIGNAL_SOURCES).describe("Where the issue originated from."),
+  description: z.string().describe("Description of the signal."),
+  source: z.enum(SIGNAL_SOURCES).describe("Where the signal originated from."),
   states: z
     .array(z.enum(SIGNAL_STATES))
-    .describe("Active lifecycle states. An issue may carry multiple states at once (e.g. `escalating` + `ongoing`)."),
-  resolvedAt: z.string().nullable().describe("ISO-8601 timestamp at which the issue was resolved, or `null`."),
-  ignoredAt: z.string().nullable().describe("ISO-8601 timestamp at which the issue was ignored, or `null`."),
+    .describe("Active lifecycle states. An signal may carry multiple states at once (e.g. `escalating` + `ongoing`)."),
+  resolvedAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was resolved, or `null`."),
+  ignoredAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was ignored, or `null`."),
   createdAt: z.string().describe("ISO-8601 timestamp of creation."),
   updatedAt: z.string().describe("ISO-8601 timestamp of the last update."),
   trend: z.array(TrendBucketSchema).describe("Daily occurrence counts over the past 14 days."),
-  tags: z.array(z.string()).describe("Tags seen on the issue's occurrences."),
+  tags: z.array(z.string()).describe("Tags seen on the signal's occurrences."),
 } as const
 
 // Fields scoped to the list endpoint: time-windowed activity stats for the
@@ -82,7 +82,7 @@ const signalListFields = {
     .number()
     .min(0)
     .max(1)
-    .describe("Fraction of project traces affected by this issue in the time window, in `[0, 1]`."),
+    .describe("Fraction of project traces affected by this signal in the time window, in `[0, 1]`."),
 } as const
 
 // Detail-endpoint fields: full-history versions of every list stat plus
@@ -93,22 +93,22 @@ const signalDetailFields = {
   firstSeenAt: z
     .string()
     .nullable()
-    .describe("ISO-8601 timestamp of the earliest occurrence over the issue's lifetime, or `null` if none yet."),
+    .describe("ISO-8601 timestamp of the earliest occurrence over the signal's lifetime, or `null` if none yet."),
   lastSeenAt: z
     .string()
     .nullable()
-    .describe("ISO-8601 timestamp of the latest occurrence over the issue's lifetime, or `null` if none yet."),
+    .describe("ISO-8601 timestamp of the latest occurrence over the signal's lifetime, or `null` if none yet."),
   occurrences: z.number().int().nonnegative().describe("Lifetime occurrence count."),
   affectedTracesPercent: z
     .number()
     .min(0)
     .max(1)
-    .describe("Lifetime fraction of project traces affected by this issue, in `[0, 1]`."),
+    .describe("Lifetime fraction of project traces affected by this signal, in `[0, 1]`."),
   evaluations: z
     .array(EvaluationSchema)
-    .describe("Active evaluations monitoring the issue. Archived and deleted evaluations are excluded."),
+    .describe("Active evaluations monitoring the signal. Archived and deleted evaluations are excluded."),
   monitoringState: SignalMonitoringStateSchema.describe(
-    "Whether the issue is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`.",
+    "Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`.",
   ),
 } as const
 

@@ -8,7 +8,7 @@ from ..core.pydantic_utilities import UniversalBaseModel
 
 class SignalMonitoringStateGenerating(UniversalBaseModel):
     """
-    An evaluation is being generated for this issue. The issue has no active evaluation yet.
+    An evaluation is being generated for this signal. The signal has no active evaluation yet.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

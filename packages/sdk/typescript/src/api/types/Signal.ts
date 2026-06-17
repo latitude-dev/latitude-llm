@@ -3,25 +3,25 @@
 import type * as LatitudeApi from "../index.js";
 
 export interface Signal {
-    /** Stable issue identifier. */
+    /** Stable signal identifier. */
     id: string;
-    /** Organization that owns this issue. */
+    /** Organization that owns this signal. */
     organizationId: string;
-    /** Project this issue belongs to. */
+    /** Project this signal belongs to. */
     projectId: string;
     /** URL-safe slug derived from `name`. Unique within the project. */
     slug: string;
     /** Human-readable name. */
     name: string;
-    /** Description of the issue. */
+    /** Description of the signal. */
     description: string;
-    /** Where the issue originated from. */
+    /** Where the signal originated from. */
     source: Signal.Source;
-    /** Active lifecycle states. An issue may carry multiple states at once (e.g. `escalating` + `ongoing`). */
+    /** Active lifecycle states. An signal may carry multiple states at once (e.g. `escalating` + `ongoing`). */
     states: Signal.States.Item[];
-    /** ISO-8601 timestamp at which the issue was resolved, or `null`. */
+    /** ISO-8601 timestamp at which the signal was resolved, or `null`. */
     resolvedAt?: string | undefined;
-    /** ISO-8601 timestamp at which the issue was ignored, or `null`. */
+    /** ISO-8601 timestamp at which the signal was ignored, or `null`. */
     ignoredAt?: string | undefined;
     /** ISO-8601 timestamp of creation. */
     createdAt: string;
@@ -29,7 +29,7 @@ export interface Signal {
     updatedAt: string;
     /** Daily occurrence counts over the past 14 days. */
     trend: LatitudeApi.SignalTrendBucket[];
-    /** Tags seen on the issue's occurrences. */
+    /** Tags seen on the signal's occurrences. */
     tags: string[];
     /** ISO-8601 timestamp of the earliest occurrence in the time window. */
     firstSeenAt: string;
@@ -37,12 +37,12 @@ export interface Signal {
     lastSeenAt: string;
     /** Number of occurrences in the time window. */
     occurrences: number;
-    /** Fraction of project traces affected by this issue in the time window, in `[0, 1]`. */
+    /** Fraction of project traces affected by this signal in the time window, in `[0, 1]`. */
     affectedTracesPercent: number;
 }
 
 export namespace Signal {
-    /** Where the issue originated from. */
+    /** Where the signal originated from. */
     export const Source = {
         Annotation: "annotation",
         Flagger: "flagger",

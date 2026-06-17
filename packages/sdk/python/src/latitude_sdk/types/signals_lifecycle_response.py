@@ -10,7 +10,7 @@ from .signal_lifecycle_item import SignalLifecycleItem
 class SignalsLifecycleResponse(UniversalBaseModel):
     items: typing.List[SignalLifecycleItem] = pydantic.Field()
     """
-    Per-issue result, in the order requested.
+    Per-signal result, in the order requested.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

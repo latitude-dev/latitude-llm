@@ -9,6 +9,6 @@ import type * as LatitudeApi from "../../../../index.js";
  *     }
  */
 export interface ResolveSignalsBody extends LatitudeApi.SignalsLifecycleBody {
-    /** When `true`, monitoring continues after the issues are resolved. When `false`, monitoring stops. Defaults to the project setting. */
+    /** When `true`, monitoring continues after the signals are resolved. When `false`, monitoring stops. Defaults to the project setting. */
     keepMonitoring?: boolean;
 }

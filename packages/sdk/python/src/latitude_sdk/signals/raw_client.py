@@ -51,7 +51,7 @@ class RawSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[PaginatedSignals]:
         """
-        Returns a cursor-paginated page of issues in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `trend`, and `tags`.
+        Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `trend`, and `tags`.
 
         Parameters
         ----------
@@ -65,10 +65,10 @@ class RawSignalsClient:
             Page size. Defaults to 50; max 200.
 
         query : typing.Optional[str]
-            Free-text semantic search across the issues' names and descriptions.
+            Free-text semantic search across the signals' names and descriptions.
 
         lifecycle_group : typing.Optional[SignalsListRequestLifecycleGroup]
-            `"active"` for unresolved/unignored issues; `"archived"` for the rest. Omit to include both.
+            `"active"` for unresolved/unignored signals; `"archived"` for the rest. Omit to include both.
 
         sort_by : typing.Optional[SignalsListRequestSortBy]
             Sort field. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority.
@@ -88,7 +88,7 @@ class RawSignalsClient:
         Returns
         -------
         HttpResponse[PaginatedSignals]
-            Page of issues
+            Page of signals
         """
         _response = self._client_wrapper.httpx_client.request(
             f"v1/projects/{jsonable_encoder(project_slug)}/signals",
@@ -162,7 +162,7 @@ class RawSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[SignalAnalyticsResponse]:
         """
-        Returns issue analytics for the project: counts of ongoing, new, escalating, regressed, and resolved issues, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
+        Returns signal analytics for the project: counts of ongoing, new, escalating, regressed, and resolved signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
 
         Parameters
         ----------
@@ -244,7 +244,7 @@ class RawSignalsClient:
         self, project_slug: str, signal_slug: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> HttpResponse[SignalDetail]:
         """
-        Returns the full-history detail view of one issue: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.
+        Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.
 
         Parameters
         ----------
@@ -325,7 +325,7 @@ class RawSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[SignalHistogram]:
         """
-        Returns the occurrence histogram for one issue over `[fromIso, toIso]`. The default range is the trailing 14 days. Buckets are 12-hour wide and UTC-aligned.
+        Returns the occurrence histogram for one signal over `[fromIso, toIso]`. The default range is the trailing 14 days. Buckets are 12-hour wide and UTC-aligned.
 
         Parameters
         ----------
@@ -416,7 +416,7 @@ class RawSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[PaginatedTraces]:
         """
-        Returns the page of distinct traces that contributed at least one occurrence of the issue, ordered by most recent activity first.
+        Returns the page of distinct traces that contributed at least one occurrence of the signal, ordered by most recent activity first.
 
         Parameters
         ----------
@@ -506,7 +506,7 @@ class RawSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[SignalsLifecycleResponse]:
         """
-        Marks each issue in `signalIds` as resolved. When `keepMonitoring` is `false`, monitoring is also stopped for each resolved issue; when omitted, the project's default applies.
+        Marks each signal in `signalIds` as resolved. When `keepMonitoring` is `false`, monitoring is also stopped for each resolved signal; when omitted, the project's default applies.
 
         Parameters
         ----------
@@ -514,10 +514,10 @@ class RawSignalsClient:
             Project slug (human-readable identifier)
 
         signal_ids : typing.Sequence[str]
-            Non-empty list of issue ids. Operations are idempotent — already-applied issues are unchanged.
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
 
         keep_monitoring : typing.Optional[bool]
-            When `true`, monitoring continues after the issues are resolved. When `false`, monitoring stops. Defaults to the project setting.
+            When `true`, monitoring continues after the signals are resolved. When `false`, monitoring stops. Defaults to the project setting.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -525,7 +525,7 @@ class RawSignalsClient:
         Returns
         -------
         HttpResponse[SignalsLifecycleResponse]
-            Per-issue result
+            Per-signal result
         """
         _response = self._client_wrapper.httpx_client.request(
             f"v1/projects/{jsonable_encoder(project_slug)}/signals/resolve",
@@ -596,7 +596,7 @@ class RawSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[SignalsLifecycleResponse]:
         """
-        Reverts each issue in `signalIds` to the unresolved state.
+        Reverts each signal in `signalIds` to the unresolved state.
 
         Parameters
         ----------
@@ -604,7 +604,7 @@ class RawSignalsClient:
             Project slug (human-readable identifier)
 
         signal_ids : typing.Sequence[str]
-            Non-empty list of issue ids. Operations are idempotent — already-applied issues are unchanged.
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -612,7 +612,7 @@ class RawSignalsClient:
         Returns
         -------
         HttpResponse[SignalsLifecycleResponse]
-            Per-issue result
+            Per-signal result
         """
         _response = self._client_wrapper.httpx_client.request(
             f"v1/projects/{jsonable_encoder(project_slug)}/signals/unresolve",
@@ -682,7 +682,7 @@ class RawSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[SignalsLifecycleResponse]:
         """
-        Marks each issue in `signalIds` as ignored. Monitoring is also stopped for each ignored issue.
+        Marks each signal in `signalIds` as ignored. Monitoring is also stopped for each ignored signal.
 
         Parameters
         ----------
@@ -690,7 +690,7 @@ class RawSignalsClient:
             Project slug (human-readable identifier)
 
         signal_ids : typing.Sequence[str]
-            Non-empty list of issue ids. Operations are idempotent — already-applied issues are unchanged.
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -698,7 +698,7 @@ class RawSignalsClient:
         Returns
         -------
         HttpResponse[SignalsLifecycleResponse]
-            Per-issue result
+            Per-signal result
         """
         _response = self._client_wrapper.httpx_client.request(
             f"v1/projects/{jsonable_encoder(project_slug)}/signals/ignore",
@@ -768,7 +768,7 @@ class RawSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[SignalsLifecycleResponse]:
         """
-        Reverts each issue in `signalIds` to a non-ignored state.
+        Reverts each signal in `signalIds` to a non-ignored state.
 
         Parameters
         ----------
@@ -776,7 +776,7 @@ class RawSignalsClient:
             Project slug (human-readable identifier)
 
         signal_ids : typing.Sequence[str]
-            Non-empty list of issue ids. Operations are idempotent — already-applied issues are unchanged.
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -784,7 +784,7 @@ class RawSignalsClient:
         Returns
         -------
         HttpResponse[SignalsLifecycleResponse]
-            Per-issue result
+            Per-signal result
         """
         _response = self._client_wrapper.httpx_client.request(
             f"v1/projects/{jsonable_encoder(project_slug)}/signals/unignore",
@@ -850,7 +850,7 @@ class RawSignalsClient:
         self, project_slug: str, signal_slug: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> HttpResponse[MonitorSignalResponse]:
         """
-        Starts (or realigns) monitoring for the issue. When the issue has no active evaluation, a new one is generated. When an active evaluation exists, the call realigns it. The work runs asynchronously and the response returns immediately. Returns 400 when monitoring is already in progress for this issue.
+        Starts (or realigns) monitoring for the signal. When the signal has no active evaluation, a new one is generated. When an active evaluation exists, the call realigns it. The work runs asynchronously and the response returns immediately. Returns 400 when monitoring is already in progress for this signal.
 
         Parameters
         ----------
@@ -925,7 +925,7 @@ class RawSignalsClient:
         self, project_slug: str, signal_slug: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> HttpResponse[None]:
         """
-        Stops monitoring the issue. Idempotent — issues that aren't being monitored return 204 without changing anything.
+        Stops monitoring the signal. Idempotent — signals that aren't being monitored return 204 without changing anything.
 
         Parameters
         ----------
@@ -976,10 +976,10 @@ class RawSignalsClient:
             Email address the download link is sent to. Must belong to a member of the requesting organization.
 
         signal_ids : typing.Optional[typing.Sequence[str]]
-            Restrict the export to this subset of issues. Omit to export every issue in the project.
+            Restrict the export to this subset of signals. Omit to export every signal in the project.
 
         lifecycle_group : typing.Optional[ExportSignalsBodyLifecycleGroup]
-            `"active"` for unresolved/unignored issues; `"archived"` for the rest. Omit to include both.
+            `"active"` for unresolved/unignored signals; `"archived"` for the rest. Omit to include both.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -1071,7 +1071,7 @@ class AsyncRawSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[PaginatedSignals]:
         """
-        Returns a cursor-paginated page of issues in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `trend`, and `tags`.
+        Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `trend`, and `tags`.
 
         Parameters
         ----------
@@ -1085,10 +1085,10 @@ class AsyncRawSignalsClient:
             Page size. Defaults to 50; max 200.
 
         query : typing.Optional[str]
-            Free-text semantic search across the issues' names and descriptions.
+            Free-text semantic search across the signals' names and descriptions.
 
         lifecycle_group : typing.Optional[SignalsListRequestLifecycleGroup]
-            `"active"` for unresolved/unignored issues; `"archived"` for the rest. Omit to include both.
+            `"active"` for unresolved/unignored signals; `"archived"` for the rest. Omit to include both.
 
         sort_by : typing.Optional[SignalsListRequestSortBy]
             Sort field. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority.
@@ -1108,7 +1108,7 @@ class AsyncRawSignalsClient:
         Returns
         -------
         AsyncHttpResponse[PaginatedSignals]
-            Page of issues
+            Page of signals
         """
         _response = await self._client_wrapper.httpx_client.request(
             f"v1/projects/{jsonable_encoder(project_slug)}/signals",
@@ -1182,7 +1182,7 @@ class AsyncRawSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[SignalAnalyticsResponse]:
         """
-        Returns issue analytics for the project: counts of ongoing, new, escalating, regressed, and resolved issues, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
+        Returns signal analytics for the project: counts of ongoing, new, escalating, regressed, and resolved signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
 
         Parameters
         ----------
@@ -1264,7 +1264,7 @@ class AsyncRawSignalsClient:
         self, project_slug: str, signal_slug: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> AsyncHttpResponse[SignalDetail]:
         """
-        Returns the full-history detail view of one issue: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.
+        Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.
 
         Parameters
         ----------
@@ -1345,7 +1345,7 @@ class AsyncRawSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[SignalHistogram]:
         """
-        Returns the occurrence histogram for one issue over `[fromIso, toIso]`. The default range is the trailing 14 days. Buckets are 12-hour wide and UTC-aligned.
+        Returns the occurrence histogram for one signal over `[fromIso, toIso]`. The default range is the trailing 14 days. Buckets are 12-hour wide and UTC-aligned.
 
         Parameters
         ----------
@@ -1436,7 +1436,7 @@ class AsyncRawSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[PaginatedTraces]:
         """
-        Returns the page of distinct traces that contributed at least one occurrence of the issue, ordered by most recent activity first.
+        Returns the page of distinct traces that contributed at least one occurrence of the signal, ordered by most recent activity first.
 
         Parameters
         ----------
@@ -1526,7 +1526,7 @@ class AsyncRawSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[SignalsLifecycleResponse]:
         """
-        Marks each issue in `signalIds` as resolved. When `keepMonitoring` is `false`, monitoring is also stopped for each resolved issue; when omitted, the project's default applies.
+        Marks each signal in `signalIds` as resolved. When `keepMonitoring` is `false`, monitoring is also stopped for each resolved signal; when omitted, the project's default applies.
 
         Parameters
         ----------
@@ -1534,10 +1534,10 @@ class AsyncRawSignalsClient:
             Project slug (human-readable identifier)
 
         signal_ids : typing.Sequence[str]
-            Non-empty list of issue ids. Operations are idempotent — already-applied issues are unchanged.
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
 
         keep_monitoring : typing.Optional[bool]
-            When `true`, monitoring continues after the issues are resolved. When `false`, monitoring stops. Defaults to the project setting.
+            When `true`, monitoring continues after the signals are resolved. When `false`, monitoring stops. Defaults to the project setting.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -1545,7 +1545,7 @@ class AsyncRawSignalsClient:
         Returns
         -------
         AsyncHttpResponse[SignalsLifecycleResponse]
-            Per-issue result
+            Per-signal result
         """
         _response = await self._client_wrapper.httpx_client.request(
             f"v1/projects/{jsonable_encoder(project_slug)}/signals/resolve",
@@ -1616,7 +1616,7 @@ class AsyncRawSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[SignalsLifecycleResponse]:
         """
-        Reverts each issue in `signalIds` to the unresolved state.
+        Reverts each signal in `signalIds` to the unresolved state.
 
         Parameters
         ----------
@@ -1624,7 +1624,7 @@ class AsyncRawSignalsClient:
             Project slug (human-readable identifier)
 
         signal_ids : typing.Sequence[str]
-            Non-empty list of issue ids. Operations are idempotent — already-applied issues are unchanged.
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -1632,7 +1632,7 @@ class AsyncRawSignalsClient:
         Returns
         -------
         AsyncHttpResponse[SignalsLifecycleResponse]
-            Per-issue result
+            Per-signal result
         """
         _response = await self._client_wrapper.httpx_client.request(
             f"v1/projects/{jsonable_encoder(project_slug)}/signals/unresolve",
@@ -1702,7 +1702,7 @@ class AsyncRawSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[SignalsLifecycleResponse]:
         """
-        Marks each issue in `signalIds` as ignored. Monitoring is also stopped for each ignored issue.
+        Marks each signal in `signalIds` as ignored. Monitoring is also stopped for each ignored signal.
 
         Parameters
         ----------
@@ -1710,7 +1710,7 @@ class AsyncRawSignalsClient:
             Project slug (human-readable identifier)
 
         signal_ids : typing.Sequence[str]
-            Non-empty list of issue ids. Operations are idempotent — already-applied issues are unchanged.
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -1718,7 +1718,7 @@ class AsyncRawSignalsClient:
         Returns
         -------
         AsyncHttpResponse[SignalsLifecycleResponse]
-            Per-issue result
+            Per-signal result
         """
         _response = await self._client_wrapper.httpx_client.request(
             f"v1/projects/{jsonable_encoder(project_slug)}/signals/ignore",
@@ -1788,7 +1788,7 @@ class AsyncRawSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[SignalsLifecycleResponse]:
         """
-        Reverts each issue in `signalIds` to a non-ignored state.
+        Reverts each signal in `signalIds` to a non-ignored state.
 
         Parameters
         ----------
@@ -1796,7 +1796,7 @@ class AsyncRawSignalsClient:
             Project slug (human-readable identifier)
 
         signal_ids : typing.Sequence[str]
-            Non-empty list of issue ids. Operations are idempotent — already-applied issues are unchanged.
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -1804,7 +1804,7 @@ class AsyncRawSignalsClient:
         Returns
         -------
         AsyncHttpResponse[SignalsLifecycleResponse]
-            Per-issue result
+            Per-signal result
         """
         _response = await self._client_wrapper.httpx_client.request(
             f"v1/projects/{jsonable_encoder(project_slug)}/signals/unignore",
@@ -1870,7 +1870,7 @@ class AsyncRawSignalsClient:
         self, project_slug: str, signal_slug: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> AsyncHttpResponse[MonitorSignalResponse]:
         """
-        Starts (or realigns) monitoring for the issue. When the issue has no active evaluation, a new one is generated. When an active evaluation exists, the call realigns it. The work runs asynchronously and the response returns immediately. Returns 400 when monitoring is already in progress for this issue.
+        Starts (or realigns) monitoring for the signal. When the signal has no active evaluation, a new one is generated. When an active evaluation exists, the call realigns it. The work runs asynchronously and the response returns immediately. Returns 400 when monitoring is already in progress for this signal.
 
         Parameters
         ----------
@@ -1945,7 +1945,7 @@ class AsyncRawSignalsClient:
         self, project_slug: str, signal_slug: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> AsyncHttpResponse[None]:
         """
-        Stops monitoring the issue. Idempotent — issues that aren't being monitored return 204 without changing anything.
+        Stops monitoring the signal. Idempotent — signals that aren't being monitored return 204 without changing anything.
 
         Parameters
         ----------
@@ -1996,10 +1996,10 @@ class AsyncRawSignalsClient:
             Email address the download link is sent to. Must belong to a member of the requesting organization.
 
         signal_ids : typing.Optional[typing.Sequence[str]]
-            Restrict the export to this subset of issues. Omit to export every issue in the project.
+            Restrict the export to this subset of signals. Omit to export every signal in the project.
 
         lifecycle_group : typing.Optional[ExportSignalsBodyLifecycleGroup]
-            `"active"` for unresolved/unignored issues; `"archived"` for the rest. Omit to include both.
+            `"active"` for unresolved/unignored signals; `"archived"` for the rest. Omit to include both.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.

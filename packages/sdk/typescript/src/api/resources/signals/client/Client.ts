@@ -23,7 +23,7 @@ export class SignalsClient {
     }
 
     /**
-     * Returns a cursor-paginated page of issues in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `trend`, and `tags`.
+     * Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `trend`, and `tags`.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {LatitudeApi.SignalsListRequest} request
@@ -135,7 +135,7 @@ export class SignalsClient {
     }
 
     /**
-     * Returns issue analytics for the project: counts of ongoing, new, escalating, regressed, and resolved issues, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
+     * Returns signal analytics for the project: counts of ongoing, new, escalating, regressed, and resolved signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {LatitudeApi.SignalsAnalyticsRequest} request
@@ -235,7 +235,7 @@ export class SignalsClient {
     }
 
     /**
-     * Returns the full-history detail view of one issue: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.
+     * Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} signalSlug - Signal slug.
@@ -322,7 +322,7 @@ export class SignalsClient {
     }
 
     /**
-     * Returns the occurrence histogram for one issue over `[fromIso, toIso]`. The default range is the trailing 14 days. Buckets are 12-hour wide and UTC-aligned.
+     * Returns the occurrence histogram for one signal over `[fromIso, toIso]`. The default range is the trailing 14 days. Buckets are 12-hour wide and UTC-aligned.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} signalSlug - Signal slug.
@@ -425,7 +425,7 @@ export class SignalsClient {
     }
 
     /**
-     * Returns the page of distinct traces that contributed at least one occurrence of the issue, ordered by most recent activity first.
+     * Returns the page of distinct traces that contributed at least one occurrence of the signal, ordered by most recent activity first.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} signalSlug - Signal slug.
@@ -530,7 +530,7 @@ export class SignalsClient {
     }
 
     /**
-     * Marks each issue in `signalIds` as resolved. When `keepMonitoring` is `false`, monitoring is also stopped for each resolved issue; when omitted, the project's default applies.
+     * Marks each signal in `signalIds` as resolved. When `keepMonitoring` is `false`, monitoring is also stopped for each resolved signal; when omitted, the project's default applies.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {LatitudeApi.ResolveSignalsBody} request
@@ -622,7 +622,7 @@ export class SignalsClient {
     }
 
     /**
-     * Reverts each issue in `signalIds` to the unresolved state.
+     * Reverts each signal in `signalIds` to the unresolved state.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {LatitudeApi.SignalsLifecycleBody} request
@@ -714,7 +714,7 @@ export class SignalsClient {
     }
 
     /**
-     * Marks each issue in `signalIds` as ignored. Monitoring is also stopped for each ignored issue.
+     * Marks each signal in `signalIds` as ignored. Monitoring is also stopped for each ignored signal.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {LatitudeApi.SignalsLifecycleBody} request
@@ -806,7 +806,7 @@ export class SignalsClient {
     }
 
     /**
-     * Reverts each issue in `signalIds` to a non-ignored state.
+     * Reverts each signal in `signalIds` to a non-ignored state.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {LatitudeApi.SignalsLifecycleBody} request
@@ -898,7 +898,7 @@ export class SignalsClient {
     }
 
     /**
-     * Starts (or realigns) monitoring for the issue. When the issue has no active evaluation, a new one is generated. When an active evaluation exists, the call realigns it. The work runs asynchronously and the response returns immediately. Returns 400 when monitoring is already in progress for this issue.
+     * Starts (or realigns) monitoring for the signal. When the signal has no active evaluation, a new one is generated. When an active evaluation exists, the call realigns it. The work runs asynchronously and the response returns immediately. Returns 400 when monitoring is already in progress for this signal.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} signalSlug - Signal slug.
@@ -985,7 +985,7 @@ export class SignalsClient {
     }
 
     /**
-     * Stops monitoring the issue. Idempotent — issues that aren't being monitored return 204 without changing anything.
+     * Stops monitoring the signal. Idempotent — signals that aren't being monitored return 204 without changing anything.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} signalSlug - Signal slug.

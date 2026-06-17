@@ -16,17 +16,17 @@ from .signal_trend_bucket import SignalTrendBucket
 class SignalDetail(UniversalBaseModel):
     id: str = pydantic.Field()
     """
-    Stable issue identifier.
+    Stable signal identifier.
     """
 
     organization_id: typing_extensions.Annotated[str, FieldMetadata(alias="organizationId")] = pydantic.Field()
     """
-    Organization that owns this issue.
+    Organization that owns this signal.
     """
 
     project_id: typing_extensions.Annotated[str, FieldMetadata(alias="projectId")] = pydantic.Field()
     """
-    Project this issue belongs to.
+    Project this signal belongs to.
     """
 
     slug: str = pydantic.Field()
@@ -41,31 +41,31 @@ class SignalDetail(UniversalBaseModel):
 
     description: str = pydantic.Field()
     """
-    Description of the issue.
+    Description of the signal.
     """
 
     source: SignalDetailSource = pydantic.Field()
     """
-    Where the issue originated from.
+    Where the signal originated from.
     """
 
     states: typing.List[SignalDetailStatesItem] = pydantic.Field()
     """
-    Active lifecycle states. An issue may carry multiple states at once (e.g. `escalating` + `ongoing`).
+    Active lifecycle states. An signal may carry multiple states at once (e.g. `escalating` + `ongoing`).
     """
 
     resolved_at: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="resolvedAt")] = pydantic.Field(
         default=None
     )
     """
-    ISO-8601 timestamp at which the issue was resolved, or `null`.
+    ISO-8601 timestamp at which the signal was resolved, or `null`.
     """
 
     ignored_at: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="ignoredAt")] = pydantic.Field(
         default=None
     )
     """
-    ISO-8601 timestamp at which the issue was ignored, or `null`.
+    ISO-8601 timestamp at which the signal was ignored, or `null`.
     """
 
     created_at: typing_extensions.Annotated[str, FieldMetadata(alias="createdAt")] = pydantic.Field()
@@ -85,21 +85,21 @@ class SignalDetail(UniversalBaseModel):
 
     tags: typing.List[str] = pydantic.Field()
     """
-    Tags seen on the issue's occurrences.
+    Tags seen on the signal's occurrences.
     """
 
     first_seen_at: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="firstSeenAt")] = (
         pydantic.Field(default=None)
     )
     """
-    ISO-8601 timestamp of the earliest occurrence over the issue's lifetime, or `null` if none yet.
+    ISO-8601 timestamp of the earliest occurrence over the signal's lifetime, or `null` if none yet.
     """
 
     last_seen_at: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="lastSeenAt")] = pydantic.Field(
         default=None
     )
     """
-    ISO-8601 timestamp of the latest occurrence over the issue's lifetime, or `null` if none yet.
+    ISO-8601 timestamp of the latest occurrence over the signal's lifetime, or `null` if none yet.
     """
 
     occurrences: int = pydantic.Field()
@@ -111,12 +111,12 @@ class SignalDetail(UniversalBaseModel):
         pydantic.Field()
     )
     """
-    Lifetime fraction of project traces affected by this issue, in `[0, 1]`.
+    Lifetime fraction of project traces affected by this signal, in `[0, 1]`.
     """
 
     evaluations: typing.List[Evaluation] = pydantic.Field()
     """
-    Active evaluations monitoring the issue. Archived and deleted evaluations are excluded.
+    Active evaluations monitoring the signal. Archived and deleted evaluations are excluded.
     """
 
     monitoring_state: typing_extensions.Annotated[SignalMonitoringState, FieldMetadata(alias="monitoringState")]

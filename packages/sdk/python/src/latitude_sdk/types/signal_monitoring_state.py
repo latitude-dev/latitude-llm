@@ -12,7 +12,7 @@ from ..core.serialization import FieldMetadata
 
 class SignalMonitoringState_Automatic(UniversalBaseModel):
     """
-    Whether the issue is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`.
+    Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`.
     """
 
     kind: typing.Literal["automatic"] = "automatic"
@@ -22,7 +22,7 @@ class SignalMonitoringState_Automatic(UniversalBaseModel):
 
 class SignalMonitoringState_Idle(UniversalBaseModel):
     """
-    Whether the issue is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`.
+    Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`.
     """
 
     kind: typing.Literal["idle"] = "idle"
@@ -32,7 +32,7 @@ class SignalMonitoringState_Idle(UniversalBaseModel):
 
 class SignalMonitoringState_Generating(UniversalBaseModel):
     """
-    Whether the issue is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`.
+    Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`.
     """
 
     kind: typing.Literal["generating"] = "generating"
@@ -42,7 +42,7 @@ class SignalMonitoringState_Generating(UniversalBaseModel):
 
 class SignalMonitoringState_Realigning(UniversalBaseModel):
     """
-    Whether the issue is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`.
+    Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`.
     """
 
     kind: typing.Literal["realigning"] = "realigning"

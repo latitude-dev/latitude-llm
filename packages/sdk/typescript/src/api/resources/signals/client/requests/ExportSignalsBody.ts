@@ -9,14 +9,14 @@
 export interface ExportSignalsBody {
     /** Email address the download link is sent to. Must belong to a member of the requesting organization. */
     recipient: string;
-    /** Restrict the export to this subset of issues. Omit to export every issue in the project. */
+    /** Restrict the export to this subset of signals. Omit to export every signal in the project. */
     signalIds?: string[];
-    /** `"active"` for unresolved/unignored issues; `"archived"` for the rest. Omit to include both. */
+    /** `"active"` for unresolved/unignored signals; `"archived"` for the rest. Omit to include both. */
     lifecycleGroup?: ExportSignalsBody.LifecycleGroup;
 }
 
 export namespace ExportSignalsBody {
-    /** `"active"` for unresolved/unignored issues; `"archived"` for the rest. Omit to include both. */
+    /** `"active"` for unresolved/unignored signals; `"archived"` for the rest. Omit to include both. */
     export const LifecycleGroup = {
         Active: "active",
         Archived: "archived",

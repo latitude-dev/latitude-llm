@@ -3,6 +3,6 @@
 import type * as LatitudeApi from "../index.js";
 
 export interface SignalsLifecycleResponse {
-    /** Per-issue result, in the order requested. */
+    /** Per-signal result, in the order requested. */
     items: LatitudeApi.SignalLifecycleItem[];
 }

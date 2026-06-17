@@ -8,7 +8,7 @@ from ..core.pydantic_utilities import UniversalBaseModel
 
 class SignalMonitoringStateIdle(UniversalBaseModel):
     """
-    The issue is not currently being monitored.
+    The signal is not currently being monitored.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
