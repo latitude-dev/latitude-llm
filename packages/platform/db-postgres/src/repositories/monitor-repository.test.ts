@@ -269,7 +269,7 @@ describe("MonitorRepositoryLive", () => {
       const result = await Effect.runPromise(
         Effect.gen(function* () {
           const repository = yield* MonitorRepository
-          return yield* repository.list({ projectId, limit: 50, offset: 0, searchQuery: "ISSUES" })
+          return yield* repository.list({ projectId, limit: 50, offset: 0, searchQuery: "SIGNALS" })
         }).pipe(provideRls(database, organizationId)),
       )
 
