@@ -1,4 +1,4 @@
-import type { OrganizationId, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
+import { type OrganizationId, type ProjectId, type RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { DestinationRepository } from "../ports/destination-repository.ts"
 import { DestinationSourceStateRepository } from "../ports/destination-source-state-repository.ts"
@@ -24,19 +24,24 @@ export const deleteProjectDestinationsUseCase = (input: DeleteProjectDestination
     yield* Effect.annotateCurrentSpan("projectId", input.projectId)
 
     const destinations = yield* DestinationRepository
-    const deletedIds = yield* destinations.deleteByProjectId(input.projectId)
-
-    if (deletedIds.length === 0) {
-      return { deleted: 0 }
-    }
-
     const syncRuns = yield* DestinationSyncRunRepository
-    yield* syncRuns.deleteByDestinationIds(deletedIds)
-
     const cursors = yield* DestinationSourceStateRepository
-    yield* Effect.forEach(deletedIds, (id) => cursors.deleteByDestinationId(id), { discard: true })
+    const sqlClient = yield* SqlClient
 
-    return { deleted: deletedIds.length }
+    // Atomic cascade: the destination rows and their sync-run/source-state rows
+    // are removed all-or-nothing, so a mid-way failure can't leave the project
+    // partially exporting or with orphaned per-source rows.
+    const deleted = yield* sqlClient.transaction(
+      Effect.gen(function* () {
+        const deletedIds = yield* destinations.deleteByProjectId(input.projectId)
+        if (deletedIds.length === 0) return 0
+        yield* syncRuns.deleteByDestinationIds(deletedIds)
+        yield* Effect.forEach(deletedIds, (id) => cursors.deleteByDestinationId(id), { discard: true })
+        return deletedIds.length
+      }),
+    )
+
+    return { deleted }
   }).pipe(Effect.withSpan("destinations.deleteProjectDestinations")) as Effect.Effect<
     { readonly deleted: number },
     DeleteProjectDestinationsError,
