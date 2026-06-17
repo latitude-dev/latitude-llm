@@ -55,4 +55,4 @@ Analytics dashboards use the same [filter system](../observability/filters) as t
 
 - [Scores Overview](./overview): How the score model works
 - [Evaluations](../evaluations/overview): How automated evaluations produce scores
-- [Issues](../issues/overview): How failure patterns are discovered from scores
+- [Issues](../signals/overview): How failure patterns are discovered from scores

@@ -58,7 +58,7 @@ Some failure categories are common enough that Latitude detects them for you. Ev
 - **Output Schema Validation**: Structured output didn't conform to the declared schema
 - **Empty Response**: The assistant returned an empty or degenerate response
 
-When a flagger matches, it writes an annotation directly on the trace. That annotation feeds into [issue discovery](../issues/overview), [scores analytics](../scores/analytics), and [evaluation alignment](../evaluations/alignment) the same way a human annotation would. You can adjust which flaggers are enabled and how aggressively they sample under **Project Settings**. See [Flaggers](../annotations/flaggers) for the full list.
+When a flagger matches, it writes an annotation directly on the trace. That annotation feeds into [issue discovery](../signals/overview), [scores analytics](../scores/analytics), and [evaluation alignment](../evaluations/alignment) the same way a human annotation would. You can adjust which flaggers are enabled and how aggressively they sample under **Project Settings**. See [Flaggers](../annotations/flaggers) for the full list.
 
 ## Reviewing Traces
 
@@ -118,5 +118,5 @@ Scores appear throughout the product: on traces, in evaluation dashboards, in is
 - [Flaggers](../annotations/flaggers): Built-in automatic annotators for common failures
 - [Scores](../scores/overview): Deep dive into how scores work
 - [Annotations](../annotations/overview): Human review workflows
-- [Issues](../issues/overview): Learn about issue lifecycle and management
+- [Issues](../signals/overview): Learn about issue lifecycle and management
 - [Evaluations](../evaluations/overview): Understand automated monitoring

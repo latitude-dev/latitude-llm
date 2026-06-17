@@ -49,7 +49,7 @@ Once a trace is complete, Latitude can:
 - make the conversation available in [Search](../search/overview)
 - run matching [Evaluations](../evaluations/overview)
 - apply enabled [Flaggers](../annotations/flaggers)
-- update related [Scores](../scores/overview) and [Issues](../issues/overview)
+- update related [Scores](../scores/overview) and [Issues](../signals/overview)
 
 ## Next steps
 
