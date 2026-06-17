@@ -78,6 +78,20 @@ export type PosthogDestinationConfig = z.infer<typeof posthogDestinationConfigSc
 export const destinationConfigSchema = z.discriminatedUnion("kind", [posthogDestinationConfigSchema])
 export type DestinationConfig = z.infer<typeof destinationConfigSchema>
 
+/**
+ * Partial config for updates: discriminant `kind` required, every other field
+ * optional with **no defaults**. The update use case merges this onto the stored
+ * config, so a field the caller omits (e.g. `intervalMs`, which has no UI) is
+ * preserved instead of being reset to the create-time default.
+ */
+const posthogDestinationConfigPatchSchema = z.object({
+  kind: z.literal("posthog"),
+  host: destinationHostSchema.optional(),
+  intervalMs: z.number().int().min(DESTINATION_INTERVAL_MS_MIN).max(DESTINATION_INTERVAL_MS_MAX).optional(),
+})
+export const destinationConfigPatchSchema = z.discriminatedUnion("kind", [posthogDestinationConfigPatchSchema])
+export type DestinationConfigPatch = z.infer<typeof destinationConfigPatchSchema>
+
 export const posthogDestinationCredentialsSchema = z.object({
   kind: z.literal("posthog"),
   apiKey: z.string().min(1),

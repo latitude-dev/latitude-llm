@@ -9,8 +9,8 @@ import {
   ValidationError,
 } from "@domain/shared"
 import { Effect } from "effect"
-import type { Destination, DestinationConfig, DestinationCredentials } from "../entities/destination.ts"
-import { destinationSchema } from "../entities/destination.ts"
+import type { Destination, DestinationConfigPatch, DestinationCredentials } from "../entities/destination.ts"
+import { destinationConfigSchema, destinationSchema } from "../entities/destination.ts"
 import type { DestinationSourceConfig } from "../entities/destination-source.ts"
 import { DestinationRepository } from "../ports/destination-repository.ts"
 import { DestinationSourceStateRepository } from "../ports/destination-source-state-repository.ts"
@@ -20,7 +20,8 @@ export interface UpdateDestinationInput {
   readonly projectId: ProjectId
   readonly destinationId: DestinationId
   readonly name?: string | undefined
-  readonly config?: DestinationConfig | undefined
+  /** Partial config merged onto the stored config — omitted fields (e.g. intervalMs) are preserved, not reset. */
+  readonly config?: DestinationConfigPatch | undefined
   readonly credentials?: DestinationCredentials | undefined
   /** Per-source config edits applied in the same transaction as the destination update. */
   readonly sourceConfigs?: readonly DestinationSourceConfig[] | undefined
@@ -58,7 +59,10 @@ export const updateDestinationUseCase = (input: UpdateDestinationInput) =>
       return yield* Effect.fail(new NotFoundError({ entity: "Destination", id: input.destinationId }))
     }
 
-    const nextConfig = input.config ?? current.config
+    // Merge the patch onto the stored config so omitted fields (e.g. intervalMs, which has no UI) are preserved.
+    const nextConfig = input.config
+      ? destinationConfigSchema.parse({ ...current.config, ...input.config })
+      : current.config
     const nextCredentials = input.credentials ?? current.credentials
     if (nextConfig.kind !== current.kind || nextCredentials.kind !== current.kind) {
       return yield* Effect.fail(new ValidationError({ field: "kind", message: "Destination kind cannot be changed" }))

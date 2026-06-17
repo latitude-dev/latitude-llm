@@ -27,6 +27,7 @@ export { previewCredentials } from "./credentials-preview.ts"
 export type {
   Destination,
   DestinationConfig,
+  DestinationConfigPatch,
   DestinationCredentials,
   DestinationKind,
   DestinationKindMeta,
@@ -39,6 +40,7 @@ export {
   DESTINATION_KIND_META,
   DESTINATION_KINDS,
   DESTINATION_STATUSES,
+  destinationConfigPatchSchema,
   destinationConfigSchema,
   destinationCredentialsSchema,
   destinationHostSchema,

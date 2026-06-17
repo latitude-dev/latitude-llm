@@ -25,6 +25,7 @@ import {
   DestinationSyncRunRepository,
   type DestinationSyncRunStatus,
   deleteDestinationUseCase,
+  destinationConfigPatchSchema,
   destinationConfigSchema,
   destinationCredentialsSchema,
   destinationSourceConfigSchema,
@@ -172,7 +173,7 @@ const updateDestinationSchema = z.object({
   projectId: z.string(),
   destinationId: z.string(),
   name: z.string().min(1).max(256).optional(),
-  config: destinationConfigSchema.optional(),
+  config: destinationConfigPatchSchema.optional(),
   credentials: destinationCredentialsSchema.optional(),
   sourceConfigs: z.array(destinationSourceConfigSchema).optional(),
 })

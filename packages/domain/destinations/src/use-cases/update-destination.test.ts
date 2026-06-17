@@ -126,6 +126,27 @@ describe("updateDestinationUseCase", () => {
     expect(updated.config.intervalMs).toBe(60_000)
   })
 
+  it("preserves config fields omitted from the patch (intervalMs is not reset)", async () => {
+    const { rows, layer } = setup({
+      ...baseDestination(),
+      config: { kind: "posthog", host: POSTHOG_US_INGESTION_HOST, intervalMs: 60_000 },
+    })
+
+    const updated = await Effect.runPromise(
+      updateDestinationUseCase({
+        organizationId: orgId,
+        projectId,
+        destinationId,
+        // Patch carries only the host — intervalMs has no UI and must survive the save.
+        config: { kind: "posthog", host: POSTHOG_EU_INGESTION_HOST },
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(updated.config.host).toBe(POSTHOG_EU_INGESTION_HOST)
+    expect(updated.config.intervalMs).toBe(60_000)
+    expect(rows[0]?.config.intervalMs).toBe(60_000)
+  })
+
   it("re-submitting identical credentials does not reset the counter", async () => {
     const { layer } = setup(quarantined())
 
