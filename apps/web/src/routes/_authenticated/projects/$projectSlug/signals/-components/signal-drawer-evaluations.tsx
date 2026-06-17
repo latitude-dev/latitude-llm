@@ -520,8 +520,8 @@ export function SignalDrawerEvaluations({
                   }
                 >
                   <Text.H6 color="foregroundMuted">
-                    Click to change. We evaluate this signal on {formatPercent(primaryEvaluation.trigger.sampling / 100)}{" "}
-                    of the incoming traces.
+                    Click to change. We evaluate this signal on{" "}
+                    {formatPercent(primaryEvaluation.trigger.sampling / 100)} of the incoming traces.
                   </Text.H6>
                 </Tooltip>
               }
