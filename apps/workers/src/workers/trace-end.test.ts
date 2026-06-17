@@ -13,7 +13,7 @@ import type { FilterSet } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
 import { annotationQueueItems, annotationQueues } from "@platform/db-postgres/schema/annotation-queues"
 import { evaluations } from "@platform/db-postgres/schema/evaluations"
-import { issues } from "@platform/db-postgres/schema/issues"
+import { signals } from "@platform/db-postgres/schema/signals"
 import { scores } from "@platform/db-postgres/schema/scores"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect } from "effect"
@@ -386,7 +386,7 @@ describe("runTraceEndJob", () => {
 describe("runTraceEndJob", () => {
   it("selects and applies live evaluations, live queues, and enqueues deterministic flaggers", async () => {
     await insertTraceRows([makeTraceRow()])
-    await pg.db.insert(issues).values([makeSignalRow()])
+    await pg.db.insert(signals).values([makeSignalRow()])
     await pg.db.insert(evaluations).values([
       makeEvaluationRow({
         id: "e".repeat(24),
@@ -556,7 +556,7 @@ describe("createRunHandler", () => {
         sessionId,
       }),
     ])
-    await pg.db.insert(issues).values([
+    await pg.db.insert(signals).values([
       makeSignalRow({
         id: signalId,
         projectId,
