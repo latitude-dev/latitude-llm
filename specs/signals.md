@@ -6,7 +6,7 @@
 >
 > **Supersedes (conceptually)** — `specs/monitors.md` and `specs/alerts.md`. Those specs still accurately describe what is *currently built*; this spec defines the model that replaces their framing. Do not retire them until the migration phases are underway.
 >
-> **Origin** — LAT-664 ("Consolidate monitor situation"), extended through spec review. This revision folds membership detection into **polymorphic evaluations** (superseding an interim *trackers* model — see [Decisions](#decisions)) and reverses two stances of the original spec (no automatic discovery, separate occurrence ledger).
+> **Origin** — LAT-664 ("Consolidate monitor situation"). The foundational choices (a signal's occurrences are its scores; membership is materialized at write time) are argued under [Why membership is materialized at write time](#why-membership-is-materialized-at-write-time).
 
 ## Contents
 
@@ -250,7 +250,7 @@ frontend polls getSignalAlignmentState (Temporal workflow.describe())           
 
 ## Data model
 
-**No new tables.** Every entity evolves a table that already exists: `issues` → `signals` (rename + columns), `scores` (rename + split source), `evaluations` (rename + a `settings` column — the detector now lives here, always as a script), `monitors` (one target column), and the ClickHouse `scores` analytics table (one column). The original spec's `signal_occurrences` table is gone — "occurrences are scores". The unified `event.*`/`metric.*` alert model, `MonitorMetric`, and the `monitors.target_*` columns are **already built** (only `event.regressed` is genuinely new). `legend: ▸NEW ▸CHANGED ▸KEPT ▸DROPPED` is per-line below.
+**No new tables.** Every entity evolves a table that already exists: `issues` → `signals` (rename + columns), `scores` (rename + split source), `evaluations` (rename + a `settings` column — the detector now lives here, always as a script), `monitors` (one target column), and the ClickHouse `scores` analytics table (one column). Occurrences are scores — there is no separate occurrence table. The unified `event.*`/`metric.*` alert model, `MonitorMetric`, and the `monitors.target_*` columns are **already built** (only `event.regressed` is genuinely new). `legend: ▸NEW ▸CHANGED ▸KEPT ▸DROPPED` is per-line below.
 
 ### Shared contracts (`@domain/shared`, `@domain/scores`)
 
@@ -280,8 +280,8 @@ export type EvaluationSettings =
 //  semantic detector is added as a host function the script can call.)
 
 // CHANGED (@domain/scores): renames SCORE_SOURCES `source`→`source_type` and splits annotation→flagger/user.
-// `evaluation` is KEPT (every detector — judge, semantic, script — is an evaluation), so there is no
-// evaluation↔tracker remap and no historical-score backfill.
+// `evaluation` is KEPT (a signal's detector is an evaluation), so existing evaluation-sourced scores need
+// no remap or backfill.
 export const SCORE_SOURCE_TYPES = ["evaluation", "flagger", "user", "custom"] as const
 export type ScoreSourceType = (typeof SCORE_SOURCE_TYPES)[number]
 //   evaluation — written by the signal's evaluation at ingest   (source_id = evaluation id)
@@ -367,7 +367,7 @@ evaluations
   -- name, description, trigger (filter/turn/debounce/sampling), archived_at, deleted_at, timestamps  ▸KEPT
   index evaluations_signal_lookup_idx (organization_id, project_id, signal_id, deleted_at)            ▸CHANGED (rename)
   partial unique (signal_id) WHERE deleted_at IS NULL AND archived_at IS NULL                          ▸NEW  -- one ACTIVE detector per signal
-  btree  (organization_id, project_id, signal_id) WHERE deleted_at IS NULL AND archived_at IS NULL     ▸NEW  -- "list active detectors" (matching pipeline; replaces the dropped signals.tracker index)
+  btree  (organization_id, project_id, signal_id) WHERE deleted_at IS NULL AND archived_at IS NULL     ▸NEW  -- "list active detectors" for the matching pipeline
 ```
 
 No `type` or `capability` column: every evaluation is a script, and `pure`/`llm` is detected from the script (does it call `llm()`?). Invariants: `script` is always present; `settings` is optional (compiles to `script` when set); `alignment`/`aligned_at` are set only for aligned judge scripts (those that call `llm()`), NULL otherwise. The active-detector partial-unique index requires a one-time migration that **dedupes today's multiple-evaluations-per-issue rows** (keep the most-recently-aligned as active, archive the rest) before it can be created.
@@ -466,12 +466,6 @@ Signals are exposed as a public REST surface under `/v1/projects/{projectSlug}/s
 
 ## Decisions
 
-### What this revision changed (vs the original LAT-664 spec)
-
-- **Detection model: an evaluation is always a script, no `Tracker` concept.** The interim *trackers* model (a `signals.tracker` jsonb union of `semantic_similarity`/`script`/`llm_as_judge`) is dropped: a signal's detector is a row in the existing `evaluations` table whose `script` runs on the QuickJS sandbox — one engine, no detector taxonomy. A judge is just a script that calls `llm()`; semantic similarity is a future capability (a host function the script can call), not an MVP type. *(Supersedes the trackers revision; the original LAT-664 spec had neither concept.)* Detail: [Evaluation](#evaluation-the-detector).
-- **Two ledgers → one.** "Occurrences are scores"; the separate `signal_occurrences` table is removed. *(Reverses the original spec's two-ledger decision 6.)* Rationale: [Why membership is materialized at write time](#why-membership-is-materialized-at-write-time).
-- **"No automatic discovery" → discovery kept**, reframed as sink signals (`origin = 'system'`, no evaluation) produced by the unchanged flagger + discovery machinery; centroid/embedding columns stay. *(Reverses the original spec's "no automatic discovery" decision 2.)* Detail: [Discovery](#discovery-sinks-and-promotion).
-
 ### Settled choices (each is detailed in the linked section)
 
 1. **Membership is materialized at write time** — forced by the cost model. → [Why](#why-membership-is-materialized-at-write-time)
@@ -516,7 +510,7 @@ Signals are exposed as a public REST surface under `/v1/projects/{projectSlug}/s
 **Safe because:** it's additive schema + new code behind the `signals` flag; the sandbox runtime is already built (`sandbox-runtime.md` Phases 0–1); discovery/monitors untouched.
 
 - [ ] **P2-a** Contracts (`@domain/shared`, `@domain/scores`): `SIGNAL_ORIGINS`, `EvaluationSettings` (the optional declarative config that compiles to `script`) zod; rename score `source`→`source_type` and split `annotation`→`flagger`/`user` (the `evaluation` value is **kept** — no remap). No `type`/`capability` enums on the row — capability is detected from the script.
-- [ ] **P2-b** PG migration (additive): on `signals` — `filters jsonb null`, `origin varchar(16)` (backfill existing → `'system'`), `deleted_at` + partial-unique slug; make `centroid`/`clustered_at` nullable. On `evaluations` — add `settings jsonb null`; relax `alignment`/`aligned_at` to nullable (judge-only); `script` stays NOT NULL; add the active-detector partial-unique index `(signal_id) WHERE deleted_at IS NULL AND archived_at IS NULL` + its lookup btree (replaces the dropped `signals.tracker` index). **Pre-migration:** dedupe multiple-evaluations-per-issue rows (keep most-recently-aligned active, archive the rest) before creating the unique index.
+- [ ] **P2-b** PG migration (additive): on `signals` — `filters jsonb null`, `origin varchar(16)` (backfill existing → `'system'`), `deleted_at` + partial-unique slug; make `centroid`/`clustered_at` nullable. On `evaluations` — add `settings jsonb null`; relax `alignment`/`aligned_at` to nullable (judge-only); `script` stays NOT NULL; add the active-detector partial-unique index `(signal_id) WHERE deleted_at IS NULL AND archived_at IS NULL` + its lookup btree. **Pre-migration:** dedupe multiple-evaluations-per-issue rows (keep most-recently-aligned active, archive the rest) before creating the unique index.
 - [ ] **P2-c** Scores write path (`@domain/scores`): an evaluation-score writer that stores the script's reported `passed` verdict; for a **deterministic** script (no `llm()` — detected capability) it **inserts straight to CH analytics, skipping the canonical Postgres row** (the one genuinely new write path); reuse `syncScoreAnalyticsUseCase`'s CH insert + at-most-once-by-id guard; idempotent per `(evaluation, trace)`.
 - [ ] **P2-d** Matching pipeline skeleton (`@domain/signals` + a `signals:match` worker off `TracesIngested` via the domain-events dispatcher): `matchTracesToSignalsUseCase`, `listActiveDetectors(projectId)` (signals join active evaluations) Redis-cached (org-prefixed), shared `filters` pre-gate reusing row-local `FilterSet` evaluation, then the **sandbox runner** executes the evaluation's `script`. Generalized from `EvaluationTrigger`.
 - [ ] **P2-e** Settings → script codegen (`@domain/sandbox`/`@domain/signals`): consume the sandbox-runtime *SignalRule* codegen so a `settings` form compiles deterministically to a stored `script` + content hash; compile-on-save validation (`ScriptCompileError` rejects at save time).
