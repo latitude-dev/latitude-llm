@@ -11,5 +11,5 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/")({
 
 function SessionsPage() {
   const { projectSlug } = Route.useParams()
-  return <ProjectExplorer projectSlug={projectSlug} mode="sessions" />
+  return <ProjectExplorer projectSlug={projectSlug} />
 }

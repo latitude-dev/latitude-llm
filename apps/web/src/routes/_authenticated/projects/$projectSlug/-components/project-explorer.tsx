@@ -1,8 +1,7 @@
 import type { FilterSet } from "@domain/shared"
-import { Button, Icon, type InfiniteTableSorting, type SortDirection, Tooltip, toast } from "@repo/ui"
+import { Button, Icon, type InfiniteTableSorting, type SortDirection, Tabs, Tooltip, toast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { useNavigate } from "@tanstack/react-router"
 import { DatabaseIcon, DownloadIcon, FilterIcon, FilterXIcon, MessagesSquareIcon, TextIcon, XIcon } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRegisterCommands } from "../../../../../components/command-palette/command-palette-provider.tsx"
@@ -55,22 +54,18 @@ import { TracesView } from "./traces-view.tsx"
 
 export type ExplorerMode = "traces" | "sessions"
 
-/**
- * The shared Sessions / Traces explorer surface (search bar, filters, stats
- * panel, table, detail drawer, export). `mode` is fixed by the route that
- * mounts it — `/projects/$slug` renders Sessions, `/projects/$slug/traces`
- * renders Traces — so there is no in-page tab toggle.
- */
-export function ProjectExplorer({ projectSlug, mode }: { readonly projectSlug: string; readonly mode: ExplorerMode }) {
+export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string }) {
   const routeProject = useRouteProject()
-  const navigate = useNavigate()
   const { data: project } = useProjectsCollection(
     (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
     [projectSlug],
   )
   const { data: allProjects = [] } = useProjectsCollection()
   const currentProject = project ?? routeProject
-  const isSessions = mode === "sessions"
+  const [activeTab, setActiveTab] = useParamState("tab", "sessions", {
+    validate: (v): v is ExplorerMode => v === "traces" || v === "sessions",
+  })
+  const isSessions = activeTab === "sessions"
   const [filtersOpen, setFiltersOpen] = useParamState("filtersOpen", false)
   const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
   const [activeSessionId, setActiveSessionId] = useParamState("sessionId", "")
@@ -79,6 +74,16 @@ export function ProjectExplorer({ projectSlug, mode }: { readonly projectSlug: s
   const [query, setQuery] = useParamState("query", "")
   const [savedSearchSlug, setSavedSearchSlug] = useParamState("savedSearch", "")
   const [saveModalOpen, setSaveModalOpen] = useState(false)
+  const switchTab = useCallback(
+    (tab: ExplorerMode) => {
+      if (tab === activeTab) return
+      setActiveTab(tab)
+      setActiveSessionId("")
+      setActiveTraceId("")
+      setSelectedSpanId("")
+    },
+    [activeTab, setActiveTab, setActiveSessionId, setActiveTraceId, setSelectedSpanId],
+  )
   const hasSearchQuery = query.length > 0
   const { data: loadedSavedSearch } = useSavedSearchBySlug(currentProject.id, savedSearchSlug || null)
 
@@ -100,7 +105,7 @@ export function ProjectExplorer({ projectSlug, mode }: { readonly projectSlug: s
     if (serialized) setRawFilters(serialized)
   }, [loadedSavedSearch, query, rawFilters, setQuery, setRawFilters])
 
-  // Contribute page-level navigation (jump to the sibling surface) + filter actions to the palette.
+  // Contribute page-level tab switching + filter actions to the palette.
   const paletteCommands = useMemo<readonly PaletteCommand[]>(() => {
     const commands: PaletteCommand[] = []
     if (!isSessions) {
@@ -111,7 +116,7 @@ export function ProjectExplorer({ projectSlug, mode }: { readonly projectSlug: s
         section: "context",
         group: "Traces",
         keywords: "sessions switch",
-        perform: () => void navigate({ to: "/projects/$projectSlug", params: { projectSlug } }),
+        perform: () => switchTab("sessions"),
       })
     }
     if (isSessions) {
@@ -122,7 +127,7 @@ export function ProjectExplorer({ projectSlug, mode }: { readonly projectSlug: s
         section: "context",
         group: "Traces",
         keywords: "traces switch",
-        perform: () => void navigate({ to: "/projects/$projectSlug/traces", params: { projectSlug } }),
+        perform: () => switchTab("traces"),
       })
     }
     commands.push({
@@ -146,7 +151,7 @@ export function ProjectExplorer({ projectSlug, mode }: { readonly projectSlug: s
       })
     }
     return commands
-  }, [isSessions, navigate, projectSlug, filtersOpen, rawFilters, setFiltersOpen, setRawFilters])
+  }, [isSessions, filtersOpen, rawFilters, switchTab, setFiltersOpen, setRawFilters])
 
   useRegisterCommands(paletteCommands)
 
@@ -357,6 +362,16 @@ export function ProjectExplorer({ projectSlug, mode }: { readonly projectSlug: s
   useHotkeys([
     { hotkey: "F", callback: () => setFiltersOpen((prev) => !prev) },
     {
+      hotkey: "1",
+      callback: () => switchTab("sessions"),
+      options: { enabled: !activeTraceId && !activeSessionId },
+    },
+    {
+      hotkey: "2",
+      callback: () => switchTab("traces"),
+      options: { enabled: !activeTraceId && !activeSessionId },
+    },
+    {
       hotkey: "Escape",
       callback: closeTraceDrawer,
       options: { enabled: !!activeTraceId && !activeSessionId, ignoreInputs: true, conflictBehavior: "allow" },
@@ -490,6 +505,24 @@ export function ProjectExplorer({ projectSlug, mode }: { readonly projectSlug: s
                 onOrderChange={(nextColumnIds) => traceColumnSettings.setColumnIds(nextColumnIds as TraceColumnId[])}
               />
             )}
+            <Tabs
+              variant="bordered"
+              size="sm"
+              options={[
+                {
+                  id: "sessions",
+                  label: "Sessions",
+                  icon: <MessagesSquareIcon className="h-4 w-4" />,
+                },
+                {
+                  id: "traces",
+                  label: "Traces",
+                  icon: <TextIcon className="h-4 w-4" />,
+                },
+              ]}
+              active={activeTab}
+              onSelect={(id) => switchTab(id as ExplorerMode)}
+            />
           </Layout.ActionRowItem>
         </Layout.ActionsRow>
         <Layout.ActionsRow className="justify-stretch">
@@ -540,7 +573,7 @@ export function ProjectExplorer({ projectSlug, mode }: { readonly projectSlug: s
           projectId={currentProject.id}
           projectSlug={currentProject.slug}
           filters={filters}
-          mode={mode}
+          mode={activeTab}
           onTimeRangeSelect={onTimeRangeSelect}
         />
       </div>
