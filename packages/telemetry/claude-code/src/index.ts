@@ -139,6 +139,7 @@ async function main(): Promise<void> {
       context,
       conversationHistory,
       requestsByMessageId,
+      redact: config.redact,
     })
 
     // Long agentic turns produce payloads far beyond what a single POST can deliver,

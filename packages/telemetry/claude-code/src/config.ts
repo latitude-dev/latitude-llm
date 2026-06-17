@@ -1,9 +1,12 @@
+import { parseRedactEnv, type RedactConfig } from "./redaction.ts"
+
 interface Config {
   apiKey: string
   baseUrl: string
   project: string
   enabled: boolean
   debug: boolean
+  redact: RedactConfig | undefined
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -12,5 +15,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const project = env.LATITUDE_PROJECT ?? ""
   const enabled = (env.LATITUDE_CLAUDE_CODE_ENABLED ?? "1") !== "0" && apiKey !== "" && project !== ""
   const debug = env.LATITUDE_DEBUG === "1"
-  return { apiKey, baseUrl, project, enabled, debug }
+  const redact = parseRedactEnv(env)
+  return { apiKey, baseUrl, project, enabled, debug, redact }
 }

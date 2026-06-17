@@ -230,6 +230,7 @@ function applyInstall({
     enabled: true,
     debug: existingConfig.debug ?? false,
     allowConversationAccess,
+    ...(existingConfig.redact ? { redact: existingConfig.redact } : {}),
     tags: existingConfig.tags ?? ["pi"],
     metadata: existingConfig.metadata ?? {},
   }

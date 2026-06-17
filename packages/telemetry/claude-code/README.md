@@ -96,6 +96,8 @@ Everything the installer writes. Edit `~/.claude/settings.json` directly if you 
 | `BUN_OPTIONS` | written when `launchctl` isn't used (all non-macOS platforms, or macOS with `--no-launchctl`) | — | `--preload=<absolute-path-to-intercept.js>`. See "how it works" above. |
 | `LATITUDE_CLAUDE_CODE_ENABLED` | no | `1` | Set to `0` to pause the hook without uninstalling. |
 | `LATITUDE_DEBUG` | no | — | Set to `1` to log diagnostics to stderr. |
+| `LATITUDE_REDACT_ATTRIBUTES` | no | — | JSON array or comma-separated custom attribute patterns to mask before export. |
+| `LATITUDE_REDACT_MASK` | no | `******` | Mask value for custom redaction. |
 
 ### `hooks.Stop`
 
@@ -148,6 +150,14 @@ If that's not what you want, either:
 - Don't install the hook.
 - Set `LATITUDE_CLAUDE_CODE_ENABLED=0` in your shell before starting a sensitive session.
 - Run `uninstall`.
+
+For field-level PII controls while keeping the hook enabled, set `LATITUDE_REDACT_ATTRIBUTES` and optionally `LATITUDE_REDACT_MASK`. Patterns are exact strings, regex source strings, or `/pattern/flags` strings, and redaction happens before export.
+
+```bash
+LATITUDE_REDACT_ATTRIBUTES='["/^gen_ai\\.(input|output)\\.messages$/", "user_prompt", "/^gen_ai\\.tool\\.call\\.(arguments|result)$/"]' \
+LATITUDE_REDACT_MASK='[]' \
+claude
+```
 
 ## Supported surfaces
 

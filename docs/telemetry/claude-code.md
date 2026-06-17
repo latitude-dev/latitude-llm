@@ -86,7 +86,7 @@ Restart Claude Code after saving.
 Treat this as full-fidelity telemetry. Latitude receives the content needed to reconstruct Claude Code turns, including prompts, responses, tool input/output, and system context when available.
 
 - Telemetry runs for each turn until disabled or uninstalled.
-- Latitude does not redact secrets from captured content.
+- Use `LATITUDE_REDACT_ATTRIBUTES` and `LATITUDE_REDACT_MASK` for custom local attribute masking before export.
 - Disable telemetry before working with sensitive material you do not want sent to Latitude.
 
 ## Troubleshooting

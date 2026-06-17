@@ -102,8 +102,8 @@ Set `config.allowConversationAccess` to `false` for structural-only telemetry wh
 By default, Latitude receives the content needed to reconstruct OpenClaw runs, including prompts, responses, system instructions, tool input/output, model metadata, and token usage.
 
 - Use `--no-content` when you only want structural telemetry.
+- Use `config.redact` for custom local attribute masking before export.
 - Telemetry runs for each agent run until disabled or uninstalled.
-- Latitude does not redact secrets from captured content.
 - Disable telemetry before working with sensitive material you do not want sent to Latitude.
 
 ## Troubleshooting

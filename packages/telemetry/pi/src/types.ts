@@ -1,3 +1,5 @@
+import type { RedactConfig } from "./redaction.ts"
+
 // OTLP wire types. We hand-roll the small JSON subset Latitude needs instead
 // of depending on the OpenTelemetry SDK inside the pi extension runtime.
 
@@ -108,6 +110,7 @@ export interface RuntimeConfig {
   enabled: boolean
   debug: boolean
   allowConversationAccess: boolean
+  redact?: RedactConfig | undefined
   tags: string[]
   metadata: Record<string, string>
   configSource: "env" | "file" | "none"

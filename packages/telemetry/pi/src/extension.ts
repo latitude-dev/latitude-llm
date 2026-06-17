@@ -87,6 +87,7 @@ export default function latitudePiTelemetry(pi: PiExtensionAPI): void {
     const payload = buildOtlpRequest(result, {
       allowConversationAccess: config.allowConversationAccess,
       identity,
+      redact: config.redact,
     })
 
     const exportPromise = postTraces({

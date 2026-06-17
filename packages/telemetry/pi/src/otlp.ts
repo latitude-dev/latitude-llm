@@ -1,4 +1,5 @@
 import { arch, hostname, platform, release } from "node:os"
+import { type RedactConfig, redactAttributes } from "./redaction.ts"
 import type {
   AttrValue,
   BuildResult,
@@ -15,10 +16,11 @@ const scopeName = "@latitude-data/pi-telemetry"
 interface BuildOptions {
   allowConversationAccess: boolean
   identity: UserIdentity
+  redact?: RedactConfig | undefined
 }
 
 export function buildOtlpRequest(result: BuildResult, options: BuildOptions): OtlpExportRequest {
-  const spans = result.spans.map((span) => toOtlpSpan(span, options.allowConversationAccess))
+  const spans = result.spans.map((span) => toOtlpSpan(span, options))
   const rs: OtlpResourceSpans = {
     resource: { attributes: resourceAttrs(options.identity) },
     scopeSpans: [{ scope: { name: scopeName, version: packageVersion }, spans }],
@@ -26,18 +28,19 @@ export function buildOtlpRequest(result: BuildResult, options: BuildOptions): Ot
   return { resourceSpans: [rs] }
 }
 
-function toOtlpSpan(span: BuildResult["spans"][number], allowConversationAccess: boolean): OtlpSpan {
+function toOtlpSpan(span: BuildResult["spans"][number], options: BuildOptions): OtlpSpan {
   const attrs: OtlpKeyValue[] = []
   for (const [rawKey, value] of Object.entries(span.attrs)) {
     if (value === undefined || value === null) continue
     const isGated = rawKey.endsWith(":gated")
-    if (isGated && !allowConversationAccess) continue
+    if (isGated && !options.allowConversationAccess) continue
     const key = isGated ? rawKey.slice(0, -":gated".length) : rawKey
     const encoded = encodeAttr(key, value)
     if (encoded) attrs.push(encoded)
   }
-  attrs.push(bool("latitude.captured.content", allowConversationAccess))
+  attrs.push(bool("latitude.captured.content", options.allowConversationAccess))
   if (span.endMs !== undefined) attrs.push(int("pi.duration_ms.computed", Math.max(0, span.endMs - span.startMs)))
+  const redactedAttrs = redactAttributes(attrs, options.redact)
 
   const statusCode = span.outcome === "error" ? 2 : 1
   return {
@@ -48,7 +51,7 @@ function toOtlpSpan(span: BuildResult["spans"][number], allowConversationAccess:
     kind: 1,
     startTimeUnixNano: msToNs(span.startMs),
     endTimeUnixNano: msToNs(span.endMs ?? span.startMs),
-    attributes: attrs,
+    attributes: redactedAttrs,
     status: span.errorMessage ? { code: statusCode, message: span.errorMessage } : { code: statusCode },
   }
 }

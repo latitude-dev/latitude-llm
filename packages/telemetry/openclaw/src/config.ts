@@ -1,3 +1,5 @@
+import { parseRedactConfig, type RedactConfig } from "./redaction.ts"
+
 export interface Config {
   apiKey: string
   baseUrl: string
@@ -11,6 +13,7 @@ export interface Config {
    * names, agent ids, and timings are unaffected.
    */
   allowConversationAccess: boolean
+  redact?: RedactConfig | undefined
 }
 
 const DEFAULT_BASE_URL = "https://ingest.latitude.so"
@@ -53,6 +56,7 @@ export function loadConfig(pluginConfig: Record<string, unknown> | undefined = u
     project,
     debug,
     allowConversationAccess,
+    redact: parseRedactConfig(fromOpts.redact),
     enabled: hasCreds && !explicitlyDisabled,
   }
 }

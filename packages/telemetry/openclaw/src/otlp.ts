@@ -1,4 +1,5 @@
 import { arch, hostname, platform, release } from "node:os"
+import { type RedactConfig, redactAttributes } from "./redaction.ts"
 import type { AttrValue, BuildResult, SpanRecord } from "./span-builder.ts"
 import type { OtlpExportRequest, OtlpKeyValue, OtlpResourceSpans, OtlpSpan } from "./types.ts"
 
@@ -41,6 +42,7 @@ interface BuildOptions {
    * `latitude.captured.content` boolean are always emitted.
    */
   allowConversationAccess: boolean
+  redact?: RedactConfig | undefined
 }
 
 /** Build an OTLP export request for a single completed agent run. */
@@ -76,6 +78,7 @@ function toOtlpSpan(span: SpanRecord, options: BuildOptions): OtlpSpan {
   if (span.endMs !== undefined) {
     attrs.push(int("openclaw.duration_ms.computed", Math.max(0, span.endMs - span.startMs)))
   }
+  const redactedAttrs = redactAttributes(attrs, options.redact)
 
   const statusCode = span.outcome === "error" ? 2 : 1
   return {
@@ -89,7 +92,7 @@ function toOtlpSpan(span: SpanRecord, options: BuildOptions): OtlpSpan {
     kind: 1,
     startTimeUnixNano: startNs,
     endTimeUnixNano: endNs,
-    attributes: attrs,
+    attributes: redactedAttrs,
     status: { code: statusCode },
   }
 }

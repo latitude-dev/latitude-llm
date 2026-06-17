@@ -60,6 +60,16 @@ describe("loadConfig", () => {
     expect(loadConfig({ apiKey: "k", project: "p", debug: true }).debug).toBe(true)
   })
 
+  it("reads custom redaction config from pluginConfig", () => {
+    const config = loadConfig({
+      apiKey: "k",
+      project: "p",
+      redact: { attributes: ["gen_ai.input.messages"], mask: "[]" },
+    })
+
+    expect(config.redact).toEqual({ attributes: ["gen_ai.input.messages"], mask: "[]" })
+  })
+
   // Regression guard against the OpenClaw 2026.4.25 `env-harvesting` security
   // rule: any source containing both `process.env` and a network-send call
   // (we have `fetch(` in postTraces) is flagged as potential credential
