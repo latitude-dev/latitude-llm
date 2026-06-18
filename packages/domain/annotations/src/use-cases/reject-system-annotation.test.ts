@@ -24,7 +24,7 @@ function buildSystemDraftAnnotation(overrides: Partial<Score> = {}): Score {
     source: "annotation",
     sourceId: queueId,
     simulationId: null,
-    issueId: null,
+    signalId: null,
     value: 0,
     passed: false,
     feedback: "Draft feedback from the system annotator",

@@ -1,4 +1,4 @@
 import type { Score } from "./entities/score.ts"
 
 export const isImmutableScore = (score: Score): boolean =>
-  score.draftedAt === null && (score.passed || score.errored || score.issueId !== null)
+  score.draftedAt === null && (score.passed || score.errored || score.signalId !== null)

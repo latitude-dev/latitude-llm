@@ -66,7 +66,7 @@ describe("buildScoreRollupSubquery", () => {
 
   it("builds a session_id subquery", () => {
     const scoreFilters: FilterSet = {
-      "score.issueId": [{ op: "neq", value: "" }],
+      "score.signalId": [{ op: "neq", value: "" }],
     }
 
     const { subquery } = buildScoreRollupSubquery("session_id", scoreFilters, false)

@@ -5,13 +5,13 @@ import { AnnotationsClient } from "./api/resources/annotations/client/Client.js"
 import { ApiKeysClient } from "./api/resources/apiKeys/client/Client.js";
 import { DatasetsClient } from "./api/resources/datasets/client/Client.js";
 import { IncidentsClient } from "./api/resources/incidents/client/Client.js";
-import { IssuesClient } from "./api/resources/issues/client/Client.js";
 import { MembersClient } from "./api/resources/members/client/Client.js";
 import { MonitorsClient } from "./api/resources/monitors/client/Client.js";
 import { OauthKeysClient } from "./api/resources/oauthKeys/client/Client.js";
 import { ProjectsClient } from "./api/resources/projects/client/Client.js";
 import { SavedSearchesClient } from "./api/resources/savedSearches/client/Client.js";
 import { ScoresClient } from "./api/resources/scores/client/Client.js";
+import { SignalsClient } from "./api/resources/signals/client/Client.js";
 import { ToolsClient } from "./api/resources/tools/client/Client.js";
 import { TracesClient } from "./api/resources/traces/client/Client.js";
 import type { BaseClientOptions, BaseRequestOptions } from "./BaseClient.js";
@@ -32,7 +32,7 @@ export class LatitudeApiClient {
     protected _traces: TracesClient | undefined;
     protected _tools: ToolsClient | undefined;
     protected _savedSearches: SavedSearchesClient | undefined;
-    protected _issues: IssuesClient | undefined;
+    protected _signals: SignalsClient | undefined;
     protected _incidents: IncidentsClient | undefined;
     protected _datasets: DatasetsClient | undefined;
     protected _apiKeys: ApiKeysClient | undefined;
@@ -69,8 +69,8 @@ export class LatitudeApiClient {
         return (this._savedSearches ??= new SavedSearchesClient(this._options));
     }
 
-    public get issues(): IssuesClient {
-        return (this._issues ??= new IssuesClient(this._options));
+    public get signals(): SignalsClient {
+        return (this._signals ??= new SignalsClient(this._options));
     }
 
     public get incidents(): IncidentsClient {

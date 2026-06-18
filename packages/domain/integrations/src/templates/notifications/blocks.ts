@@ -1,6 +1,6 @@
-import type { IssuePriority } from "@domain/issues"
 import { formatHumanReadableAlert } from "@domain/monitors"
 import { type AlertIncidentCondition, type AlertIncidentKind, SEVERITY_COLOR } from "@domain/shared"
+import type { SignalPriority } from "@domain/signals"
 import type { ActionsBlock, HeaderBlock, KnownBlock, SectionBlock } from "@slack/web-api"
 
 export const header = (text: string): HeaderBlock => ({
@@ -31,7 +31,7 @@ export const contextLine = (text: string): KnownBlock => ({
 })
 
 /** Emoji per manual issue priority for the context-line suffix. */
-const PRIORITY_EMOJI: Record<IssuePriority, string> = {
+const PRIORITY_EMOJI: Record<SignalPriority, string> = {
   urgent: "\u{1F534}", // red circle
   high: "\u{1F7E0}", // orange circle
   medium: "\u{1F7E1}", // yellow circle
@@ -44,7 +44,7 @@ const PRIORITY_EMOJI: Record<IssuePriority, string> = {
  * savedSearch sources) so the line renders exactly as before.
  */
 export const triageContextSuffix = (input: {
-  readonly priority: IssuePriority | null | undefined
+  readonly priority: SignalPriority | null | undefined
   readonly assigneeName: string | null | undefined
 }): string => {
   const parts: string[] = []

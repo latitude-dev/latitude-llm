@@ -5,7 +5,7 @@ import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import type { AlertIncident } from "../entities/alert-incident.ts"
 import { AlertIncidentRepository } from "../ports/alert-incident-repository.ts"
-import { createAlertIncidentFromIssueEventUseCase } from "./create-alert-incident-from-issue-event.ts"
+import { createAlertIncidentFromSignalEventUseCase } from "./create-alert-incident-from-issue-event.ts"
 
 const cuid = (seed: string) => seed.padEnd(24, "0")
 
@@ -55,17 +55,17 @@ function createTestLayers() {
   }
 }
 
-describe("createAlertIncidentFromIssueEventUseCase", () => {
+describe("createAlertIncidentFromSignalEventUseCase", () => {
   it("inserts an alert_incidents row and writes IncidentCreated when kind is issue.new", async () => {
     const { events, inserted, layer } = createTestLayers()
     const occurredAt = new Date("2026-05-06T10:00:00Z")
 
     const incident = await Effect.runPromise(
-      createAlertIncidentFromIssueEventUseCase({
+      createAlertIncidentFromSignalEventUseCase({
         kind: "issue.new",
         organizationId: cuid("o"),
         projectId: cuid("p"),
-        issueId: cuid("i"),
+        signalId: cuid("i"),
         occurredAt,
       }).pipe(Effect.provide(layer)),
     )
@@ -103,11 +103,11 @@ describe("createAlertIncidentFromIssueEventUseCase", () => {
     const occurredAt = new Date("2026-05-06T11:00:00Z")
 
     await Effect.runPromise(
-      createAlertIncidentFromIssueEventUseCase({
+      createAlertIncidentFromSignalEventUseCase({
         kind: "issue.regressed",
         organizationId: cuid("o"),
         projectId: cuid("p"),
-        issueId: cuid("i"),
+        signalId: cuid("i"),
         occurredAt,
       }).pipe(Effect.provide(layer)),
     )
@@ -123,11 +123,11 @@ describe("createAlertIncidentFromIssueEventUseCase", () => {
     const occurredAt = new Date("2026-05-06T12:00:00Z")
 
     await Effect.runPromise(
-      createAlertIncidentFromIssueEventUseCase({
+      createAlertIncidentFromSignalEventUseCase({
         kind: "issue.escalating",
         organizationId: cuid("o"),
         projectId: cuid("p"),
-        issueId: cuid("i"),
+        signalId: cuid("i"),
         occurredAt,
       }).pipe(Effect.provide(layer)),
     )
@@ -140,11 +140,11 @@ describe("createAlertIncidentFromIssueEventUseCase", () => {
   it("defaults monitorAlertId and condition to null on the legacy/flag-off path", async () => {
     const { inserted, layer } = createTestLayers()
     await Effect.runPromise(
-      createAlertIncidentFromIssueEventUseCase({
+      createAlertIncidentFromSignalEventUseCase({
         kind: "issue.new",
         organizationId: cuid("o"),
         projectId: cuid("p"),
-        issueId: cuid("i"),
+        signalId: cuid("i"),
         occurredAt: new Date("2026-05-06T10:00:00Z"),
       }).pipe(Effect.provide(layer)),
     )
@@ -156,11 +156,11 @@ describe("createAlertIncidentFromIssueEventUseCase", () => {
     const { inserted, layer } = createTestLayers()
     const monitorAlertId = MonitorAlertId(cuid("ma"))
     await Effect.runPromise(
-      createAlertIncidentFromIssueEventUseCase({
+      createAlertIncidentFromSignalEventUseCase({
         kind: "issue.escalating",
         organizationId: cuid("o"),
         projectId: cuid("p"),
-        issueId: cuid("i"),
+        signalId: cuid("i"),
         occurredAt: new Date("2026-05-06T12:00:00Z"),
         monitorAlertId,
         condition: { kind: "issue.escalating", sensitivity: 4 },

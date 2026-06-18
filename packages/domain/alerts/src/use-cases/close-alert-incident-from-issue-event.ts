@@ -4,28 +4,28 @@ import { Effect } from "effect"
 import type { AlertIncidentKind } from "../entities/alert-incident.ts"
 import { AlertIncidentRepository } from "../ports/alert-incident-repository.ts"
 
-export interface CloseAlertIncidentFromIssueEventInput {
+export interface CloseAlertIncidentFromSignalEventInput {
   readonly kind: Extract<AlertIncidentKind, "issue.escalating">
   readonly organizationId: string
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly endedAt: Date
   /**
    * Forwarded to the `IncidentClosed` outbox event so downstream consumers
    * (notifications copy, dashboards) can tell whether the band exit, the
    * absolute-rate backstop, the 72h timeout, or a manual resolve/ignore
-   * closed the incident. Optional because legacy `IssueEscalationEnded`
+   * closed the incident. Optional because legacy `SignalEscalationEnded`
    * events emitted before the seasonal detector landed don't carry a reason.
    */
   readonly reason?: "threshold" | "absolute-rate-drop" | "timeout" | "resolved" | "ignored"
 }
 
-export type CloseAlertIncidentFromIssueEventError = RepositoryError
+export type CloseAlertIncidentFromSignalEventError = RepositoryError
 
-export const closeAlertIncidentFromIssueEventUseCase = (input: CloseAlertIncidentFromIssueEventInput) =>
+export const closeAlertIncidentFromSignalEventUseCase = (input: CloseAlertIncidentFromSignalEventInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("alertIncident.kind", input.kind)
-    yield* Effect.annotateCurrentSpan("alertIncident.issueId", input.issueId)
+    yield* Effect.annotateCurrentSpan("alertIncident.signalId", input.signalId)
 
     const sqlClient = yield* SqlClient
 
@@ -36,7 +36,7 @@ export const closeAlertIncidentFromIssueEventUseCase = (input: CloseAlertInciden
 
         const closedId = yield* alertIncidentRepository.closeOpen({
           sourceType: "issue",
-          sourceId: input.issueId,
+          sourceId: input.signalId,
           kind: input.kind,
           endedAt: input.endedAt,
         })
@@ -57,7 +57,7 @@ export const closeAlertIncidentFromIssueEventUseCase = (input: CloseAlertInciden
             alertIncidentId: closedId,
             kind: input.kind,
             sourceType: "issue",
-            sourceId: input.issueId,
+            sourceId: input.signalId,
             // Omit when undefined: `exactOptionalPropertyTypes` rejects
             // `{ reason: undefined }` against the optional `reason?:` field.
             ...(input.reason !== undefined ? { reason: input.reason } : {}),
@@ -65,8 +65,8 @@ export const closeAlertIncidentFromIssueEventUseCase = (input: CloseAlertInciden
         })
       }),
     )
-  }).pipe(Effect.withSpan("alerts.closeAlertIncidentFromIssueEvent")) as Effect.Effect<
+  }).pipe(Effect.withSpan("alerts.closeAlertIncidentFromSignalEvent")) as Effect.Effect<
     void,
-    CloseAlertIncidentFromIssueEventError,
+    CloseAlertIncidentFromSignalEventError,
     SqlClient | AlertIncidentRepository | OutboxEventWriter
   >

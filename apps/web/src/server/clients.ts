@@ -209,7 +209,7 @@ export const getBetterAuth = () => {
         ),
       extraPlugins: [
         // OAuth2/OIDC authorization server for MCP clients (Claude Code,
-        // Cursor, …). Issues opaque random access + refresh tokens that the
+        // Cursor, …). Signals opaque random access + refresh tokens that the
         // API resource server validates via `@platform/oauth-token-auth`.
         // The consent page binds the issued token to a specific organization;
         // until that route ships, the default BA consent UI renders and

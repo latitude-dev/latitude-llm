@@ -5,7 +5,7 @@
  * Human-facing catalog of each feature (purpose, tags, call sites): `dev-docs/ai-generation-features.md`.
  */
 export const AI_GENERATE_TELEMETRY_TAGS = {
-  issueDetails: ["issue:details"],
+  signalDetails: ["issue:details"],
   annotationEnrichPublication: ["annotation:enrichment"],
   flaggerClassify: ["flagger:classify"],
   // The LLM call that summarizes the flagged agent's system prompt into a bounded
@@ -27,7 +27,7 @@ export const AI_GENERATE_TELEMETRY_TAGS = {
 } as const satisfies Record<string, readonly string[]>
 
 export const AI_GENERATE_TELEMETRY_SPAN_NAMES = {
-  issueDetails: "issue.details",
+  signalDetails: "issue.details",
   annotationEnrichPublication: "annotation.enrich.publication",
   flaggerClassify: "flagger.classify",
   flaggerExtractInstructions: "flagger.extract-instructions",

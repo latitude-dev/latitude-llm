@@ -39,27 +39,27 @@ const _registry = {
   refreshEvaluationAlignmentWorkflow: input<{
     readonly organizationId: string
     readonly projectId: string
-    readonly issueId: string
+    readonly signalId: string
     readonly evaluationId: string
   }>(),
   optimizeEvaluationWorkflow: input<{
     readonly organizationId: string
     readonly projectId: string
-    readonly issueId: string
+    readonly signalId: string
     readonly evaluationId: string | null
     readonly jobId: string
     readonly billingOperationId: string
   }>(),
-  issueDiscoveryWorkflow: input<{
+  signalDiscoveryWorkflow: input<{
     readonly organizationId: string
     readonly projectId: string
     readonly scoreId: string
   }>(),
-  assignScoreToKnownIssueWorkflow: input<{
+  assignScoreToKnownSignalWorkflow: input<{
     readonly organizationId: string
     readonly projectId: string
     readonly scoreId: string
-    readonly issueId: string
+    readonly signalId: string
   }>(),
   publishAnnotationWorkflow: input<{
     readonly organizationId: string

@@ -15,7 +15,7 @@ function buildAnnotationInput() {
     traceId,
     spanId,
     simulationId: null,
-    issueId: null,
+    signalId: null,
     source: "annotation" as const,
     sourceId: "API",
     value: 0.92,

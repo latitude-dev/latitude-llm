@@ -11,8 +11,8 @@ import type { SlackNotificationRenderer } from "./types.ts"
  * must make an explicit Slack decision). Renders a minimal generic message
  * if a future change ever routes it anyway.
  */
-export const issueAssignedRenderer: SlackNotificationRenderer<"issue.assigned"> = (_payload, ctx) =>
+export const signalAssignedRenderer: SlackNotificationRenderer<"issue.assigned"> = (_payload, ctx) =>
   Effect.succeed({
-    text: `An issue was assigned in ${ctx.project?.name ?? ctx.organization.name}.`,
-    blocks: [sectionMarkdown("An issue was assigned.")],
+    text: `A signal was assigned in ${ctx.project?.name ?? ctx.organization.name}.`,
+    blocks: [sectionMarkdown("A signal was assigned.")],
   })

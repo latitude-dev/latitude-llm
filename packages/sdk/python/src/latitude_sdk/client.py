@@ -14,13 +14,13 @@ if typing.TYPE_CHECKING:
     from .api_keys.client import ApiKeysClient, AsyncApiKeysClient
     from .datasets.client import AsyncDatasetsClient, DatasetsClient
     from .incidents.client import AsyncIncidentsClient, IncidentsClient
-    from .issues.client import AsyncIssuesClient, IssuesClient
     from .members.client import AsyncMembersClient, MembersClient
     from .monitors.client import AsyncMonitorsClient, MonitorsClient
     from .oauth_keys.client import AsyncOauthKeysClient, OauthKeysClient
     from .projects.client import AsyncProjectsClient, ProjectsClient
     from .saved_searches.client import AsyncSavedSearchesClient, SavedSearchesClient
     from .scores.client import AsyncScoresClient, ScoresClient
+    from .signals.client import AsyncSignalsClient, SignalsClient
     from .tools.client import AsyncToolsClient, ToolsClient
     from .traces.client import AsyncTracesClient, TracesClient
 
@@ -96,7 +96,7 @@ class LatitudeApiClient:
         self._traces: typing.Optional[TracesClient] = None
         self._tools: typing.Optional[ToolsClient] = None
         self._saved_searches: typing.Optional[SavedSearchesClient] = None
-        self._issues: typing.Optional[IssuesClient] = None
+        self._signals: typing.Optional[SignalsClient] = None
         self._incidents: typing.Optional[IncidentsClient] = None
         self._datasets: typing.Optional[DatasetsClient] = None
         self._api_keys: typing.Optional[ApiKeysClient] = None
@@ -154,12 +154,12 @@ class LatitudeApiClient:
         return self._saved_searches
 
     @property
-    def issues(self):
-        if self._issues is None:
-            from .issues.client import IssuesClient  # noqa: E402
+    def signals(self):
+        if self._signals is None:
+            from .signals.client import SignalsClient  # noqa: E402
 
-            self._issues = IssuesClient(client_wrapper=self._client_wrapper)
-        return self._issues
+            self._signals = SignalsClient(client_wrapper=self._client_wrapper)
+        return self._signals
 
     @property
     def incidents(self):
@@ -289,7 +289,7 @@ class AsyncLatitudeApiClient:
         self._traces: typing.Optional[AsyncTracesClient] = None
         self._tools: typing.Optional[AsyncToolsClient] = None
         self._saved_searches: typing.Optional[AsyncSavedSearchesClient] = None
-        self._issues: typing.Optional[AsyncIssuesClient] = None
+        self._signals: typing.Optional[AsyncSignalsClient] = None
         self._incidents: typing.Optional[AsyncIncidentsClient] = None
         self._datasets: typing.Optional[AsyncDatasetsClient] = None
         self._api_keys: typing.Optional[AsyncApiKeysClient] = None
@@ -347,12 +347,12 @@ class AsyncLatitudeApiClient:
         return self._saved_searches
 
     @property
-    def issues(self):
-        if self._issues is None:
-            from .issues.client import AsyncIssuesClient  # noqa: E402
+    def signals(self):
+        if self._signals is None:
+            from .signals.client import AsyncSignalsClient  # noqa: E402
 
-            self._issues = AsyncIssuesClient(client_wrapper=self._client_wrapper)
-        return self._issues
+            self._signals = AsyncSignalsClient(client_wrapper=self._client_wrapper)
+        return self._signals
 
     @property
     def incidents(self):

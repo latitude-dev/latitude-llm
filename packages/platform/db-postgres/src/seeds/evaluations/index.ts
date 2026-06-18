@@ -1,5 +1,5 @@
 import type { EvaluationAlignment, EvaluationTrigger } from "@domain/evaluations"
-import { EvaluationId, IssueId } from "@domain/shared"
+import { EvaluationId, SignalId } from "@domain/shared"
 import {
   SEED_ACCESS_EVALUATION_HASH,
   SEED_COMBINATION_EVALUATION_HASH,
@@ -18,7 +18,7 @@ const rubric = ${JSON.stringify(instructions)}
 const result = await llm(
   \`\${rubric}
 
-Issue: \${issue.name}
+Signal: \${issue.name}
 Description: \${issue.description}
 
 Conversation JSON:
@@ -182,7 +182,7 @@ const buildEvaluationRows = (scope: SeedScope) => {
       id: EvaluationId(scope.cuid("evaluation:warranty-active")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
-      issueId: IssueId(scope.cuid("issue:warranty-fab")),
+      signalId: SignalId(scope.cuid("issue:warranty-fab")),
       name: "Warranty Coverage Fabrication Monitor",
       description:
         "Detects when the support agent invents warranty coverage, waivers, or reimbursement promises for " +
@@ -200,7 +200,7 @@ const buildEvaluationRows = (scope: SeedScope) => {
       id: EvaluationId(scope.cuid("evaluation:warranty-archived")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
-      issueId: IssueId(scope.cuid("issue:warranty-fab")),
+      signalId: SignalId(scope.cuid("issue:warranty-fab")),
       name: "Terrain Warranty Promise Detector",
       description:
         "Earlier, narrower monitor that focused on guaranteed coverage for cliff and canyon incidents. It is " +
@@ -218,7 +218,7 @@ const buildEvaluationRows = (scope: SeedScope) => {
       id: EvaluationId(scope.cuid("evaluation:combination")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
-      issueId: IssueId(scope.cuid("issue:combination")),
+      signalId: SignalId(scope.cuid("issue:combination")),
       name: "Dangerous Combination Guardrail Monitor",
       description:
         "Detects when the support agent recommends unsafe product combinations or fabricates authorization for " +
@@ -236,7 +236,7 @@ const buildEvaluationRows = (scope: SeedScope) => {
       id: EvaluationId(scope.cuid("evaluation:returns")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
-      issueId: IssueId(scope.cuid("issue:returns")),
+      signalId: SignalId(scope.cuid("issue:returns")),
       name: "Instant Returns Eligibility Monitor",
       description:
         "Detects when the support agent promises refunds, pickups, or fee waivers that still require inspection, " +
@@ -254,7 +254,7 @@ const buildEvaluationRows = (scope: SeedScope) => {
       id: EvaluationId(scope.cuid("evaluation:access")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
-      issueId: IssueId(scope.cuid("issue:access")),
+      signalId: SignalId(scope.cuid("issue:access")),
       name: "Account Recovery Verification Monitor",
       description:
         "Detects when the support agent weakens account-recovery verification by exposing sensitive data, disabling MFA, " +

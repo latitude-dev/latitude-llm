@@ -22,11 +22,11 @@ import {
 } from "@domain/scores"
 import {
   EvaluationId,
-  IssueId,
   OrganizationId,
   ProjectId,
   type RepositoryError,
   type SettingsReader,
+  SignalId,
   type SqlClient,
   TraceId,
 } from "@domain/shared"
@@ -34,13 +34,13 @@ import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { Cause, Effect, Exit } from "effect"
 import type { Evaluation } from "../../entities/evaluation.ts"
 import { getLiveEvaluationEligibility } from "../../helpers.ts"
-import { EvaluationIssueRepository } from "../../ports/evaluation-issue-repository.ts"
+import { EvaluationSignalRepository } from "../../ports/evaluation-issue-repository.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
 import { buildEvaluationJudgeLiveTelemetryCapture } from "../../runtime/ai-telemetry.ts"
 import {
   executeLiveEvaluationUseCase,
   type LiveEvaluationExecutionResult,
-  type LiveEvaluationIssueContext,
+  type LiveEvaluationSignalContext,
 } from "./execute-live-evaluation.ts"
 
 export interface RunLiveEvaluationInput {
@@ -52,7 +52,7 @@ export interface RunLiveEvaluationInput {
 
 export interface RunLiveEvaluationPersistedSummary {
   readonly evaluationId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly traceId: string
   readonly sessionId: string | null
   readonly scoreId: string
@@ -61,7 +61,7 @@ export interface RunLiveEvaluationPersistedSummary {
 export interface RunLiveEvaluationPersistedContext {
   readonly evaluation: Evaluation
   readonly traceDetail: TraceDetail
-  readonly issue: LiveEvaluationIssueContext
+  readonly issue: LiveEvaluationSignalContext
   readonly execution: RunLiveEvaluationPersistedExecution
   readonly score: EvaluationScore
 }
@@ -199,9 +199,9 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       } satisfies RunLiveEvaluationResult
     }
 
-    const issueRepository = yield* EvaluationIssueRepository
-    const issue = yield* issueRepository
-      .findById(IssueId(evaluation.issueId))
+    const signalRepository = yield* EvaluationSignalRepository
+    const issue = yield* signalRepository
+      .findById(SignalId(evaluation.signalId))
       .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
 
     if (issue === null || issue.projectId !== input.projectId) {
@@ -213,10 +213,10 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       } satisfies RunLiveEvaluationResult
     }
 
-    const issueContext = {
+    const signalContext = {
       name: issue.name,
       description: issue.description,
-    } satisfies LiveEvaluationIssueContext
+    } satisfies LiveEvaluationSignalContext
 
     const billingOrganizationId = OrganizationId(input.organizationId)
     const idempotencyKey = buildBillingIdempotencyKey("live-eval-scan", [
@@ -246,14 +246,14 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     const execution = yield* executeLiveEvaluationUseCase({
       evaluationId: evaluation.id,
       script: evaluation.script,
-      issue: issueContext,
+      issue: signalContext,
       conversation: traceDetail.allMessages,
       runtime: sandboxRuntimeEnabled ? "sandbox" : "legacy",
       telemetry: buildEvaluationJudgeLiveTelemetryCapture({
         organizationId: input.organizationId,
         projectId: input.projectId,
         evaluationId: evaluation.id,
-        issueId: String(evaluation.issueId),
+        signalId: String(evaluation.signalId),
         traceId: input.traceId,
       }),
     }).pipe(
@@ -325,8 +325,8 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         .pipe(Effect.catch(() => Effect.void))
     }
 
-    const persistedIssueId =
-      execution.kind === "completed" && execution.result.passed === false ? evaluation.issueId : null
+    const persistedSignalId =
+      execution.kind === "completed" && execution.result.passed === false ? evaluation.signalId : null
     const scoreWriteExit = yield* Effect.exit(
       writeScoreUseCase({
         projectId: input.projectId,
@@ -336,7 +336,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         traceId: traceDetail.traceId,
         spanId: traceDetail.rootSpanId || null,
         simulationId: traceDetail.simulationId || null,
-        issueId: persistedIssueId,
+        signalId: persistedSignalId,
         value: execution.kind === "completed" ? execution.result.value : 0,
         passed: execution.kind === "completed" ? execution.result.passed : false,
         feedback: execution.kind === "completed" ? execution.result.feedback : execution.error,
@@ -388,7 +388,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       action: "persisted",
       summary: {
         evaluationId: evaluation.id,
-        issueId: evaluation.issueId,
+        signalId: evaluation.signalId,
         traceId: traceDetail.traceId,
         sessionId: traceDetail.sessionId ?? null,
         scoreId: score.id,
@@ -396,7 +396,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       context: {
         evaluation,
         traceDetail,
-        issue: issueContext,
+        issue: signalContext,
         execution,
         score,
       },
@@ -408,7 +408,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     | BillingUsagePeriodRepository
     | BillingUsageEventRepository
     | DetectorHealthTracker
-    | EvaluationIssueRepository
+    | EvaluationSignalRepository
     | EvaluationRepository
     | FeatureFlagRepository
     | OutboxEventWriter

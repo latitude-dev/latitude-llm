@@ -2,28 +2,28 @@ import {
   deriveEvaluationAlignmentMetrics,
   type Evaluation,
   EvaluationRepository,
-  getIssueAlignmentStateUseCase,
-  type IssueAlignmentState,
-  monitorIssueUseCase,
-  unmonitorIssueUseCase,
+  getSignalAlignmentStateUseCase,
+  monitorSignalUseCase,
+  type SignalAlignmentState,
+  unmonitorSignalUseCase,
   updateEvaluationSampling,
   updateEvaluationTriggerFilter,
 } from "@domain/evaluations"
-import { IssueRepository } from "@domain/issues"
 import { WorkflowQuerier, WorkflowStarter } from "@domain/queue"
 import {
   BadRequestError,
   EvaluationId,
   filterSetSchema,
-  IssueId,
   OrganizationId,
   ProjectId,
+  SignalId,
   UserId,
 } from "@domain/shared"
+import { SignalRepository } from "@domain/signals"
 import {
   EvaluationRepositoryLive,
-  IssueRepositoryLive,
   OutboxEventWriterLive,
+  SignalRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
@@ -33,28 +33,28 @@ import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient, getWorkflowQuerier, getWorkflowStarter } from "../../server/clients.ts"
 
-const issueOpInputSchema = z.object({
+const signalOpInputSchema = z.object({
   projectId: z.string(),
-  issueId: z.string(),
+  signalId: z.string(),
 })
 
 const updateEvaluationSamplingInputSchema = z.object({
   projectId: z.string(),
-  issueId: z.string(),
+  signalId: z.string(),
   evaluationId: z.string(),
   sampling: z.number().int().min(0).max(100),
 })
 
 const updateEvaluationTriggerFilterInputSchema = z.object({
   projectId: z.string(),
-  issueId: z.string(),
+  signalId: z.string(),
   evaluationId: z.string(),
   filter: filterSetSchema,
 })
 
-export type IssueAlignmentStateRecord = IssueAlignmentState
+export type SignalAlignmentStateRecord = SignalAlignmentState
 
-interface MonitorIssueResponse {
+interface MonitorSignalResponse {
   /** Identifier for the monitor job. */
   readonly jobId: string
   /** Realigned evaluation id, or `null` when a new evaluation is being generated. */
@@ -63,7 +63,7 @@ interface MonitorIssueResponse {
 
 export const toEvaluationSummaryRecord = (evaluation: Evaluation) => ({
   id: evaluation.id,
-  issueId: evaluation.issueId,
+  signalId: evaluation.signalId,
   name: evaluation.name,
   description: evaluation.description,
   alignedAt: evaluation.alignedAt.toISOString(),
@@ -83,42 +83,42 @@ export type EvaluationSummaryRecord = ReturnType<typeof toEvaluationSummaryRecor
 
 /**
  * Starts (or realigns) monitoring for an issue. Mirrors the public API's
- * `POST /v1/projects/{projectSlug}/issues/{issueSlug}/monitor`: when the
+ * `POST /v1/projects/{projectSlug}/signals/{signalSlug}/monitor`: when the
  * issue has no active evaluation a new one is generated; when one already
  * exists, the use-case realigns it.
  */
-export const monitorIssue = createServerFn({ method: "POST" })
-  .inputValidator(issueOpInputSchema)
-  .handler(async ({ data }): Promise<MonitorIssueResponse> => {
+export const monitorSignal = createServerFn({ method: "POST" })
+  .inputValidator(signalOpInputSchema)
+  .handler(async ({ data }): Promise<MonitorSignalResponse> => {
     const { organizationId, userId } = await requireSession()
     const client = getPostgresClient()
     const workflowStarter = await getWorkflowStarter()
     const workflowQuerier = await getWorkflowQuerier()
     const orgId = OrganizationId(organizationId)
     const projectId = ProjectId(data.projectId)
-    const issueId = IssueId(data.issueId)
+    const signalId = SignalId(data.signalId)
 
     const result = await Effect.runPromise(
       Effect.gen(function* () {
-        const issueRepository = yield* IssueRepository
-        const issue = yield* issueRepository.findById(issueId)
+        const signalRepository = yield* SignalRepository
+        const issue = yield* signalRepository.findById(signalId)
 
         if (issue.projectId !== projectId) {
           return yield* new BadRequestError({
-            message: `Issue ${issue.id} does not belong to project ${projectId}`,
+            message: `Signal ${issue.id} does not belong to project ${projectId}`,
           })
         }
 
-        return yield* monitorIssueUseCase({
+        return yield* monitorSignalUseCase({
           organizationId: orgId,
           projectId,
-          issueId,
+          signalId,
           actorUserId: UserId(userId),
           isAutomaticallyMonitored: issue.source === "flagger",
         })
       }).pipe(
         withPostgres(
-          Layer.mergeAll(IssueRepositoryLive, EvaluationRepositoryLive, OutboxEventWriterLive),
+          Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive, OutboxEventWriterLive),
           client,
           orgId,
         ),
@@ -133,43 +133,43 @@ export const monitorIssue = createServerFn({ method: "POST" })
 
 /**
  * Stops monitoring an issue by soft-deleting every active evaluation linked
- * to it. Mirrors the API's `POST /v1/projects/{projectSlug}/issues/{issueSlug}/unmonitor`.
+ * to it. Mirrors the API's `POST /v1/projects/{projectSlug}/signals/{signalSlug}/unmonitor`.
  */
-export const unmonitorIssue = createServerFn({ method: "POST" })
-  .inputValidator(issueOpInputSchema)
+export const unmonitorSignal = createServerFn({ method: "POST" })
+  .inputValidator(signalOpInputSchema)
   .handler(async ({ data }): Promise<void> => {
     const { organizationId } = await requireSession()
     const client = getPostgresClient()
 
     await Effect.runPromise(
-      unmonitorIssueUseCase({
+      unmonitorSignalUseCase({
         projectId: ProjectId(data.projectId),
-        issueId: IssueId(data.issueId),
+        signalId: SignalId(data.signalId),
       }).pipe(withPostgres(EvaluationRepositoryLive, client, OrganizationId(organizationId)), withTracing),
     )
   })
 
-export const getIssueAlignmentState = createServerFn({ method: "GET" })
-  .inputValidator(issueOpInputSchema)
-  .handler(async ({ data }): Promise<IssueAlignmentStateRecord> => {
+export const getSignalAlignmentState = createServerFn({ method: "GET" })
+  .inputValidator(signalOpInputSchema)
+  .handler(async ({ data }): Promise<SignalAlignmentStateRecord> => {
     const { organizationId } = await requireSession()
     const client = getPostgresClient()
     const workflowQuerier = await getWorkflowQuerier()
     const projectId = ProjectId(data.projectId)
-    const issueId = IssueId(data.issueId)
+    const signalId = SignalId(data.signalId)
 
     return Effect.runPromise(
       Effect.gen(function* () {
-        const issueRepository = yield* IssueRepository
-        const issue = yield* issueRepository.findById(issueId)
-        return yield* getIssueAlignmentStateUseCase({
+        const signalRepository = yield* SignalRepository
+        const issue = yield* signalRepository.findById(signalId)
+        return yield* getSignalAlignmentStateUseCase({
           projectId,
-          issueId,
+          signalId,
           isAutomaticallyMonitored: issue.source === "flagger",
         })
       }).pipe(
         withPostgres(
-          Layer.mergeAll(IssueRepositoryLive, EvaluationRepositoryLive),
+          Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive),
           client,
           OrganizationId(organizationId),
         ),
@@ -179,20 +179,20 @@ export const getIssueAlignmentState = createServerFn({ method: "GET" })
     )
   })
 
-export const updateIssueEvaluationSampling = createServerFn({ method: "POST" })
+export const updateSignalEvaluationSampling = createServerFn({ method: "POST" })
   .inputValidator(updateEvaluationSamplingInputSchema)
   .handler(async ({ data }): Promise<EvaluationSummaryRecord> => {
     const { organizationId } = await requireSession()
     const client = getPostgresClient()
     const projectId = ProjectId(data.projectId)
-    const issueId = IssueId(data.issueId)
+    const signalId = SignalId(data.signalId)
 
     return Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* EvaluationRepository
         const evaluation = yield* repository.findById(EvaluationId(data.evaluationId))
 
-        if (evaluation.projectId !== projectId || evaluation.issueId !== issueId) {
+        if (evaluation.projectId !== projectId || evaluation.signalId !== signalId) {
           return yield* new BadRequestError({
             message: `Evaluation ${evaluation.id} does not match the requested issue or project`,
           })
@@ -206,20 +206,20 @@ export const updateIssueEvaluationSampling = createServerFn({ method: "POST" })
     )
   })
 
-export const updateIssueEvaluationTriggerFilter = createServerFn({ method: "POST" })
+export const updateSignalEvaluationTriggerFilter = createServerFn({ method: "POST" })
   .inputValidator(updateEvaluationTriggerFilterInputSchema)
   .handler(async ({ data }): Promise<EvaluationSummaryRecord> => {
     const { organizationId } = await requireSession()
     const client = getPostgresClient()
     const projectId = ProjectId(data.projectId)
-    const issueId = IssueId(data.issueId)
+    const signalId = SignalId(data.signalId)
 
     return Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* EvaluationRepository
         const evaluation = yield* repository.findById(EvaluationId(data.evaluationId))
 
-        if (evaluation.projectId !== projectId || evaluation.issueId !== issueId) {
+        if (evaluation.projectId !== projectId || evaluation.signalId !== signalId) {
           return yield* new BadRequestError({
             message: `Evaluation ${evaluation.id} does not match the requested issue or project`,
           })

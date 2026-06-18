@@ -13,7 +13,7 @@ export const mergeEnrichmentIntoAnnotationScoreForPublication = (
   enrichment: AnnotationPublicationEnrichmentFields,
 ): AnnotationScore => ({
   ...annotationScore,
-  issueId: null,
+  signalId: null,
   sessionId: enrichment.resolvedSessionId === null ? null : SessionId(enrichment.resolvedSessionId),
   spanId: enrichment.resolvedSpanId === null ? null : SpanId(enrichment.resolvedSpanId),
   feedback: enrichment.enrichedFeedback,

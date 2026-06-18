@@ -58,4 +58,4 @@ Message-level and text-range annotations leave highlights in the conversation vi
 - [Annotations Overview](./overview): How the annotation system works
 - [Flaggers](./flaggers): Automatic annotators for common failure categories
 - [Search](../search/overview): Find traces to annotate
-- [Issues](../issues/overview): How annotations connect to issue tracking
+- [Issues](../signals/overview): How annotations connect to issue tracking

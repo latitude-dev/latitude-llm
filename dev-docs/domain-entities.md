@@ -49,5 +49,5 @@ Packages without an `entities/` tree (e.g. `shared`, `queue`, `events`) are not 
 ## Related documentation
 
 - [ADR 0001: Domain entity schema style](./adr/0001-domain-entity-schema-style.md) — decision to standardize on Zod for domain entities.
-- [Domain errors reference pattern](./issues.md#domain-errors-domainissues-reference-pattern) — orthogonal; entities vs errors.
+- [Domain errors reference pattern](./signals.md#domain-errors-domainissues-reference-pattern) — orthogonal; entities vs errors.
 - `AGENTS.md` — module layout and canonical entity location.

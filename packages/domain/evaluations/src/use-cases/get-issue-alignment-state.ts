@@ -1,5 +1,5 @@
 import { WorkflowQuerier } from "@domain/queue"
-import type { IssueId, ProjectId, RepositoryError } from "@domain/shared"
+import type { ProjectId, RepositoryError, SignalId } from "@domain/shared"
 import { Effect } from "effect"
 import { type Evaluation, isActiveEvaluation } from "../entities/evaluation.ts"
 import { EvaluationRepository } from "../ports/evaluation-repository.ts"
@@ -18,13 +18,13 @@ import { EvaluationRepository } from "../ports/evaluation-repository.ts"
  * - `realigning` — a refresh-alignment or full-reoptimization workflow is
  *   running for one of the issue's active evaluations.
  */
-export type IssueAlignmentState =
+export type SignalAlignmentState =
   | { readonly kind: "automatic" }
   | { readonly kind: "idle" }
   | { readonly kind: "generating" }
   | { readonly kind: "realigning"; readonly evaluationId: string }
 
-const buildGenerateWorkflowId = (issueId: string) => `evaluations:generate:${issueId}`
+const buildGenerateWorkflowId = (signalId: string) => `evaluations:generate:${signalId}`
 const buildOptimizeWorkflowId = (evaluationId: string) => `evaluations:optimize:${evaluationId}`
 const buildRefreshAlignmentWorkflowId = (evaluationId: string) => `evaluations:refreshAlignment:${evaluationId}`
 
@@ -40,21 +40,21 @@ const buildRefreshAlignmentWorkflowId = (evaluationId: string) => `evaluations:r
  * evaluation exists, the regular generating/realigning/idle states take over
  * so callers can still realign or unmonitor.
  */
-export const deriveIssueAlignmentState = (input: {
-  readonly issueId: IssueId
+export const deriveSignalAlignmentState = (input: {
+  readonly signalId: SignalId
   readonly activeEvaluations: readonly Evaluation[]
   readonly isAutomaticallyMonitored?: boolean
-}): Effect.Effect<IssueAlignmentState, never, WorkflowQuerier> =>
+}): Effect.Effect<SignalAlignmentState, never, WorkflowQuerier> =>
   Effect.gen(function* () {
     if (input.isAutomaticallyMonitored && input.activeEvaluations.length === 0) {
-      return { kind: "automatic" } satisfies IssueAlignmentState
+      return { kind: "automatic" } satisfies SignalAlignmentState
     }
 
     const workflowQuerier = yield* WorkflowQuerier
 
-    const generation = yield* workflowQuerier.describe(buildGenerateWorkflowId(input.issueId))
+    const generation = yield* workflowQuerier.describe(buildGenerateWorkflowId(input.signalId))
     if (generation?.status === "running") {
-      return { kind: "generating" } satisfies IssueAlignmentState
+      return { kind: "generating" } satisfies SignalAlignmentState
     }
 
     for (const evaluation of input.activeEvaluations) {
@@ -66,41 +66,41 @@ export const deriveIssueAlignmentState = (input: {
         { concurrency: 2 },
       )
       if (descriptions.some((description) => description?.status === "running")) {
-        return { kind: "realigning", evaluationId: evaluation.id } satisfies IssueAlignmentState
+        return { kind: "realigning", evaluationId: evaluation.id } satisfies SignalAlignmentState
       }
     }
 
-    return { kind: "idle" } satisfies IssueAlignmentState
+    return { kind: "idle" } satisfies SignalAlignmentState
   })
 
-export interface GetIssueAlignmentStateInput {
+export interface GetSignalAlignmentStateInput {
   readonly projectId: ProjectId
-  readonly issueId: IssueId
+  readonly signalId: SignalId
   readonly isAutomaticallyMonitored?: boolean
 }
 
-export type GetIssueAlignmentStateError = RepositoryError
+export type GetSignalAlignmentStateError = RepositoryError
 
 /**
  * Loads the issue's active evaluations and derives the current alignment
  * state. Use this from callers that don't already have the evaluations
  * loaded (e.g. the web fn powering the issue drawer); aggregating use-cases
- * that already hold the evaluations should call `deriveIssueAlignmentState`
+ * that already hold the evaluations should call `deriveSignalAlignmentState`
  * directly.
  */
-export const getIssueAlignmentStateUseCase = Effect.fn("evaluations.getIssueAlignmentState")(function* (
-  input: GetIssueAlignmentStateInput,
+export const getSignalAlignmentStateUseCase = Effect.fn("evaluations.getSignalAlignmentState")(function* (
+  input: GetSignalAlignmentStateInput,
 ) {
   yield* Effect.annotateCurrentSpan("projectId", input.projectId)
-  yield* Effect.annotateCurrentSpan("issueId", input.issueId)
+  yield* Effect.annotateCurrentSpan("signalId", input.signalId)
 
   const evaluationRepository = yield* EvaluationRepository
   const activeEvaluations = yield* evaluationRepository
-    .listByIssueId({ projectId: input.projectId, issueId: input.issueId, options: { lifecycle: "active" } })
+    .listBySignalId({ projectId: input.projectId, signalId: input.signalId, options: { lifecycle: "active" } })
     .pipe(Effect.map((page) => page.items.filter(isActiveEvaluation)))
 
-  return yield* deriveIssueAlignmentState({
-    issueId: input.issueId,
+  return yield* deriveSignalAlignmentState({
+    signalId: input.signalId,
     activeEvaluations,
     ...(input.isAutomaticallyMonitored !== undefined
       ? { isAutomaticallyMonitored: input.isAutomaticallyMonitored }

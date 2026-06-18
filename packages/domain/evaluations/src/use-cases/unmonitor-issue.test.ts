@@ -1,41 +1,41 @@
-import { IssueId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { OrganizationId, ProjectId, SignalId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { EvaluationRepository, type EvaluationRepositoryShape } from "../ports/evaluation-repository.ts"
-import { unmonitorIssueUseCase } from "./unmonitor-issue.ts"
+import { unmonitorSignalUseCase } from "./unmonitor-issue.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
-const issueId = IssueId("i".repeat(24))
+const signalId = SignalId("i".repeat(24))
 
 const createEvaluationRepository = () => {
-  const softDeleteCalls: Array<{ projectId: ProjectId; issueId: IssueId }> = []
+  const softDeleteCalls: Array<{ projectId: ProjectId; signalId: SignalId }> = []
 
   const repository: EvaluationRepositoryShape = {
     findById: () => Effect.die("Unexpected findById"),
     save: () => Effect.die("Unexpected save"),
     listByProjectId: () => Effect.die("Unexpected listByProjectId"),
-    listByIssueId: () => Effect.die("Unexpected listByIssueId"),
-    listByIssueIds: () => Effect.die("Unexpected listByIssueIds"),
+    listBySignalId: () => Effect.die("Unexpected listBySignalId"),
+    listBySignalIds: () => Effect.die("Unexpected listBySignalIds"),
     archive: () => Effect.die("Unexpected archive"),
     unarchive: () => Effect.die("Unexpected unarchive"),
     softDelete: () => Effect.die("Unexpected softDelete"),
-    softDeleteByIssueId: (input) =>
+    softDeleteBySignalId: (input) =>
       Effect.sync(() => {
-        softDeleteCalls.push({ projectId: input.projectId, issueId: input.issueId })
+        softDeleteCalls.push({ projectId: input.projectId, signalId: input.signalId })
       }),
   }
 
   return { repository, softDeleteCalls }
 }
 
-describe("unmonitorIssueUseCase", () => {
+describe("unmonitorSignalUseCase", () => {
   it("soft-deletes every active evaluation linked to the issue", async () => {
     const { repository, softDeleteCalls } = createEvaluationRepository()
 
     await Effect.runPromise(
-      unmonitorIssueUseCase({ projectId, issueId }).pipe(
+      unmonitorSignalUseCase({ projectId, signalId }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(EvaluationRepository, repository),
@@ -45,7 +45,7 @@ describe("unmonitorIssueUseCase", () => {
       ),
     )
 
-    expect(softDeleteCalls).toEqual([{ projectId, issueId }])
+    expect(softDeleteCalls).toEqual([{ projectId, signalId }])
   })
 
   it("is idempotent — succeeds even when the repository deletes zero rows", async () => {
@@ -53,7 +53,7 @@ describe("unmonitorIssueUseCase", () => {
 
     await expect(
       Effect.runPromise(
-        unmonitorIssueUseCase({ projectId, issueId }).pipe(
+        unmonitorSignalUseCase({ projectId, signalId }).pipe(
           Effect.provide(
             Layer.mergeAll(
               Layer.succeed(EvaluationRepository, repository),

@@ -1,7 +1,7 @@
 import {
   type AlertIncidentKind,
-  closeAlertIncidentFromIssueEventUseCase,
-  createAlertIncidentFromIssueEventUseCase,
+  closeAlertIncidentFromSignalEventUseCase,
+  createAlertIncidentFromSignalEventUseCase,
   type EntrySignalsSnapshot,
 } from "@domain/alerts"
 import { resolveMonitorAlertsForSourceEventUseCase } from "@domain/monitors"
@@ -30,7 +30,7 @@ const createIncidentFor = (
   payload: {
     readonly organizationId: string
     readonly projectId: string
-    readonly issueId: string
+    readonly signalId: string
     readonly occurredAt: Date
     readonly entrySignals?: EntrySignalsSnapshot | null
   },
@@ -41,7 +41,7 @@ const createIncidentFor = (
     const alerts = yield* resolveMonitorAlertsForSourceEventUseCase({
       projectId: ProjectId(payload.projectId),
       kind,
-      sourceId: payload.issueId,
+      sourceId: payload.signalId,
     })
 
     // One incident per matching alert. No match (for example, a project predating
@@ -52,11 +52,11 @@ const createIncidentFor = (
         : [{ monitorAlertId: null, condition: null }]
 
     for (const target of targets) {
-      const incident = yield* createAlertIncidentFromIssueEventUseCase({
+      const incident = yield* createAlertIncidentFromSignalEventUseCase({
         kind,
         organizationId: payload.organizationId,
         projectId: payload.projectId,
-        issueId: payload.issueId,
+        signalId: payload.signalId,
         occurredAt: payload.occurredAt,
         entrySignals: payload.entrySignals ?? null,
         monitorAlertId: target.monitorAlertId,
@@ -64,14 +64,16 @@ const createIncidentFor = (
       })
       yield* Effect.sync(() =>
         logger.info(
-          `alert_incident created kind=${incident.kind} issueId=${payload.issueId} id=${incident.id} monitorAlertId=${target.monitorAlertId ?? "none"}`,
+          `alert_incident created kind=${incident.kind} signalId=${payload.signalId} id=${incident.id} monitorAlertId=${target.monitorAlertId ?? "none"}`,
         ),
       )
     }
   }).pipe(
     withPostgres(repoLayer, pgClient, OrganizationId(payload.organizationId)),
     Effect.tapError((error) =>
-      Effect.sync(() => logger.error(`alert_incident creation failed kind=${kind} issueId=${payload.issueId}`, error)),
+      Effect.sync(() =>
+        logger.error(`alert_incident creation failed kind=${kind} signalId=${payload.signalId}`, error),
+      ),
     ),
     Effect.asVoid,
     withTracing,
@@ -83,27 +85,27 @@ const closeIncidentFor = (
   payload: {
     readonly organizationId: string
     readonly projectId: string
-    readonly issueId: string
+    readonly signalId: string
     readonly endedAt: Date
     readonly reason?: "threshold" | "absolute-rate-drop" | "timeout" | "resolved" | "ignored"
   },
 ) => {
   const pgClient = getPostgresClient()
 
-  return closeAlertIncidentFromIssueEventUseCase({
+  return closeAlertIncidentFromSignalEventUseCase({
     kind,
     organizationId: payload.organizationId,
     projectId: payload.projectId,
-    issueId: payload.issueId,
+    signalId: payload.signalId,
     endedAt: payload.endedAt,
     // Omit when undefined: `exactOptionalPropertyTypes` rejects
     // `{ reason: undefined }` against the optional `reason?:` field.
     ...(payload.reason !== undefined ? { reason: payload.reason } : {}),
   }).pipe(
     withPostgres(repoLayer, pgClient, OrganizationId(payload.organizationId)),
-    Effect.tap(() => Effect.sync(() => logger.info(`alert_incident closed kind=${kind} issueId=${payload.issueId}`))),
+    Effect.tap(() => Effect.sync(() => logger.info(`alert_incident closed kind=${kind} signalId=${payload.signalId}`))),
     Effect.tapError((error) =>
-      Effect.sync(() => logger.error(`alert_incident close failed kind=${kind} issueId=${payload.issueId}`, error)),
+      Effect.sync(() => logger.error(`alert_incident close failed kind=${kind} signalId=${payload.signalId}`, error)),
     ),
     Effect.asVoid,
     withTracing,
@@ -116,7 +118,7 @@ export const createAlertIncidentsWorker = ({ consumer }: AlertIncidentsDeps) => 
       createIncidentFor("issue.new", {
         organizationId: payload.organizationId,
         projectId: payload.projectId,
-        issueId: payload.issueId,
+        signalId: payload.signalId,
         occurredAt: new Date(payload.createdAt),
       }),
 
@@ -124,7 +126,7 @@ export const createAlertIncidentsWorker = ({ consumer }: AlertIncidentsDeps) => 
       createIncidentFor("issue.regressed", {
         organizationId: payload.organizationId,
         projectId: payload.projectId,
-        issueId: payload.issueId,
+        signalId: payload.signalId,
         occurredAt: new Date(payload.regressedAt),
       }),
 
@@ -132,7 +134,7 @@ export const createAlertIncidentsWorker = ({ consumer }: AlertIncidentsDeps) => 
       createIncidentFor("issue.escalating", {
         organizationId: payload.organizationId,
         projectId: payload.projectId,
-        issueId: payload.issueId,
+        signalId: payload.signalId,
         occurredAt: new Date(payload.escalatedAt),
         entrySignals: payload.entrySignals,
       }),
@@ -141,7 +143,7 @@ export const createAlertIncidentsWorker = ({ consumer }: AlertIncidentsDeps) => 
       closeIncidentFor("issue.escalating", {
         organizationId: payload.organizationId,
         projectId: payload.projectId,
-        issueId: payload.issueId,
+        signalId: payload.signalId,
         endedAt: new Date(payload.endedAt),
         reason: payload.reason,
       }),

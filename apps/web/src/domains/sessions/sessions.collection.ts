@@ -13,7 +13,7 @@ import {
   getSessionDistribution,
   getSessionMetricsByProject,
   getSessionTimeHistogramByProject,
-  listSessionIssues,
+  listSessionSignals,
   listSessionsByProject,
   type SessionDetailRecord,
   type SessionRecord,
@@ -215,11 +215,11 @@ export function useSessionDetail({
 }
 
 /**
- * Issues scored across a session's traces — drives the panel's Issues tab.
+ * Signals scored across a session's traces — drives the panel's Signals tab.
  * Scoped by `traceIds` (the session's authoritative trace set) so orphan
  * sessions still surface their issues.
  */
-export function useSessionIssues({
+export function useSessionSignals({
   projectId,
   traceIds,
   enabled = true,
@@ -231,7 +231,7 @@ export function useSessionIssues({
   const scope = use(TraceScopeContext)
   return useQuery({
     queryKey: [...traceScopeKey(scope), "session-issues", projectId, [...traceIds].sort()],
-    queryFn: () => listSessionIssues({ data: { ...traceScopeData(scope), projectId, traceIds: [...traceIds] } }),
+    queryFn: () => listSessionSignals({ data: { ...traceScopeData(scope), projectId, traceIds: [...traceIds] } }),
     enabled: enabled && projectId.length > 0 && traceIds.length > 0,
     staleTime: 30_000,
   })

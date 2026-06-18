@@ -23,7 +23,7 @@
     "@domain/evaluations": "workspace:*",
     "@domain/exports": "workspace:*",
     "@domain/flaggers": "workspace:*",
-    "@domain/issues": "workspace:*",
+    "@domain/signals": "workspace:*",
     "@domain/monitors": "workspace:*",
     "@domain/oauth-keys": "workspace:*",
     "@domain/organizations": "workspace:*",

@@ -1,16 +1,16 @@
-import { IssueId, ScoreId } from "@domain/shared"
+import { ScoreId, SignalId } from "@domain/shared"
 import {
   classifyTau2SeedTrajectory,
-  TAU2_SEED_ISSUE_FAMILIES,
+  TAU2_SEED_SIGNAL_FAMILIES,
   TAU2_SEED_TRAJECTORIES,
   type Tau2SeedTrajectory,
 } from "@domain/shared/seed-content/tau2-trajectories"
-import { SEED_ISSUE_FIXTURES, type SeedScope } from "@domain/shared/seeding"
+import { SEED_SIGNAL_FIXTURES, type SeedScope } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { scores } from "../../schema/scores.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 
-const NAMED_ISSUE_KEYS = [
+const NAMED_SIGNAL_KEYS = [
   "warranty-fab",
   "combination",
   "logistics",
@@ -21,23 +21,23 @@ const NAMED_ISSUE_KEYS = [
   "flagger",
 ] as const
 
-function scopedIssueIdByFixtureIndex(scope: SeedScope, index: number): string {
-  const key = NAMED_ISSUE_KEYS[index]
+function scopedSignalIdByFixtureIndex(scope: SeedScope, index: number): string {
+  const key = NAMED_SIGNAL_KEYS[index]
   return key === undefined
-    ? IssueId(scope.cuid(`issue:extra:${index - NAMED_ISSUE_KEYS.length}`))
-    : IssueId(scope.cuid(`issue:${key}`))
+    ? SignalId(scope.cuid(`issue:extra:${index - NAMED_SIGNAL_KEYS.length}`))
+    : SignalId(scope.cuid(`issue:${key}`))
 }
 
-function createdAtForTau2Issue(scope: SeedScope, issueIndex: number, occurrenceIndex: number): Date {
+function createdAtForTau2Signal(scope: SeedScope, signalIndex: number, occurrenceIndex: number): Date {
   return scope.dateDaysAgo(
-    (issueIndex * 3 + occurrenceIndex * 5) % 14,
-    (issueIndex * 7 + occurrenceIndex * 11) % 24,
-    (issueIndex * 13 + occurrenceIndex * 17) % 60,
+    (signalIndex * 3 + occurrenceIndex * 5) % 14,
+    (signalIndex * 7 + occurrenceIndex * 11) % 24,
+    (signalIndex * 13 + occurrenceIndex * 17) % 60,
   )
 }
 
 function buildFailedTrajectoryIndexesByFamily() {
-  const byFamily = new Map<(typeof TAU2_SEED_ISSUE_FAMILIES)[number]["key"], number[]>()
+  const byFamily = new Map<(typeof TAU2_SEED_SIGNAL_FAMILIES)[number]["key"], number[]>()
 
   TAU2_SEED_TRAJECTORIES.forEach((trajectory, trajectoryIndex) => {
     const family = classifyTau2SeedTrajectory(trajectory)
@@ -51,34 +51,34 @@ function buildFailedTrajectoryIndexesByFamily() {
   return byFamily
 }
 
-function buildTau2Feedback(issueName: string, trajectory: Tau2SeedTrajectory): string {
+function buildTau2Feedback(signalName: string, trajectory: Tau2SeedTrajectory): string {
   return (
-    `${issueName}: tau2 ${trajectory.domain} task ${trajectory.taskId} failed benchmark reward ${trajectory.reward}. ` +
+    `${signalName}: tau2 ${trajectory.domain} task ${trajectory.taskId} failed benchmark reward ${trajectory.reward}. ` +
     `Customer goal: ${trajectory.reasonForCall.slice(0, 360)}`
   )
 }
 
-function buildTau2IssueScoreRows(scope: SeedScope) {
+function buildTau2SignalScoreRows(scope: SeedScope) {
   const orgId = scope.organizationId
   const projectId = scope.projectId
-  const familyKeys = TAU2_SEED_ISSUE_FAMILIES.map((family) => family.key)
+  const familyKeys = TAU2_SEED_SIGNAL_FAMILIES.map((family) => family.key)
   const failedByFamily = buildFailedTrajectoryIndexesByFamily()
   const allFailedTrajectoryIndexes = TAU2_SEED_TRAJECTORIES.flatMap((trajectory, index) =>
     trajectory.outcome === "failure" || trajectory.reward < 1 ? [index] : [],
   )
 
-  return SEED_ISSUE_FIXTURES.flatMap((issue, issueIndex) => {
-    const family = familyKeys[issueIndex % familyKeys.length]!
+  return SEED_SIGNAL_FIXTURES.flatMap((issue, signalIndex) => {
+    const family = familyKeys[signalIndex % familyKeys.length]!
     const candidateIndexes = failedByFamily.get(family) ?? allFailedTrajectoryIndexes
-    const occurrenceCount = issueIndex < 8 ? 12 : 3
+    const occurrenceCount = signalIndex < 8 ? 12 : 3
 
     return Array.from({ length: occurrenceCount }, (_, occurrenceIndex) => {
-      const trajectoryIndex = candidateIndexes[(issueIndex + occurrenceIndex) % candidateIndexes.length] ?? 0
+      const trajectoryIndex = candidateIndexes[(signalIndex + occurrenceIndex) % candidateIndexes.length] ?? 0
       const trajectory = TAU2_SEED_TRAJECTORIES[trajectoryIndex]!
-      const createdAt = createdAtForTau2Issue(scope, issueIndex, occurrenceIndex)
+      const createdAt = createdAtForTau2Signal(scope, signalIndex, occurrenceIndex)
 
       return {
-        id: ScoreId(scope.cuid(`score:tau2-issue:${issueIndex}:${occurrenceIndex}`)),
+        id: ScoreId(scope.cuid(`score:tau2-issue:${signalIndex}:${occurrenceIndex}`)),
         organizationId: orgId,
         projectId,
         sessionId: null,
@@ -87,7 +87,7 @@ function buildTau2IssueScoreRows(scope: SeedScope) {
         source: "custom" as const,
         sourceId: "tau2-seed-classifier",
         simulationId: null,
-        issueId: scopedIssueIdByFixtureIndex(scope, issueIndex),
+        signalId: scopedSignalIdByFixtureIndex(scope, signalIndex),
         value: 0.05 + (occurrenceIndex % 4) * 0.03,
         passed: false,
         feedback: buildTau2Feedback(issue.name, trajectory),
@@ -98,7 +98,7 @@ function buildTau2IssueScoreRows(scope: SeedScope) {
           taskId: trajectory.taskId,
           outcome: trajectory.outcome,
           reward: String(trajectory.reward),
-          issueFamily: family,
+          signalFamily: family,
           trajectoryIndex: String(trajectoryIndex),
         },
         error: null,
@@ -135,7 +135,7 @@ function buildTau2ControlScoreRows(scope: SeedScope) {
       source: "custom" as const,
       sourceId: "tau2-seed-classifier",
       simulationId: null,
-      issueId: null,
+      signalId: null,
       value: 0.97,
       passed: true,
       feedback: `Tau2 ${trajectory.domain} task ${trajectory.taskId} completed successfully with benchmark reward ${trajectory.reward}.`,
@@ -162,23 +162,23 @@ function buildTau2ControlScoreRows(scope: SeedScope) {
 
 function buildAllScoreRows(scope: SeedScope) {
   const tau2ControlScoreRows = buildTau2ControlScoreRows(scope)
-  const tau2IssueScoreRows = buildTau2IssueScoreRows(scope)
+  const tau2SignalScoreRows = buildTau2SignalScoreRows(scope)
 
   return {
     tau2ControlScoreRows,
-    tau2IssueScoreRows,
-    all: [...tau2ControlScoreRows, ...tau2IssueScoreRows],
+    tau2SignalScoreRows,
+    all: [...tau2ControlScoreRows, ...tau2SignalScoreRows],
   }
 }
 
 /**
  * The subset of seeded score rows that are linked to an issue and not in
- * draft state — consumed by the issues seeder to derive issue centroids
+ * draft state — consumed by the signals seeder to derive issue centroids
  * from feedback embeddings.
  */
-export const buildIssueLinkedScoreSeedRows = (scope: SeedScope) =>
-  buildAllScoreRows(scope).tau2IssueScoreRows.filter(
-    (row): row is typeof row & { issueId: string } => row.issueId !== null && row.draftedAt === null,
+export const buildSignalLinkedScoreSeedRows = (scope: SeedScope) =>
+  buildAllScoreRows(scope).tau2SignalScoreRows.filter(
+    (row): row is typeof row & { signalId: string } => row.signalId !== null && row.draftedAt === null,
   )
 
 const seedScores: Seeder = {
@@ -197,7 +197,7 @@ const seedScores: Seeder = {
         }
 
         console.log(
-          `  -> scores: ${allScoreRows.length} total (${built.tau2IssueScoreRows.length} tau2 issue-linked, ${built.tau2ControlScoreRows.length} tau2 controls)`,
+          `  -> scores: ${allScoreRows.length} total (${built.tau2SignalScoreRows.length} tau2 issue-linked, ${built.tau2ControlScoreRows.length} tau2 controls)`,
         )
       },
       catch: (error) => new SeedError({ reason: "Failed to seed scores", cause: error }),

@@ -17,21 +17,21 @@ class IncidentNotificationsSetting(UniversalBaseModel):
         default=None
     )
     """
-    Send a notification when a new issue is discovered. Defaults to `true` when omitted.
+    Send a notification when a new signal is discovered. Defaults to `true` when omitted.
     """
 
     issue_regressed: typing_extensions.Annotated[typing.Optional[bool], FieldMetadata(alias="issue.regressed")] = (
         pydantic.Field(default=None)
     )
     """
-    Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted.
+    Send a notification when a previously-resolved signal regresses. Defaults to `true` when omitted.
     """
 
     issue_escalating: typing_extensions.Annotated[typing.Optional[bool], FieldMetadata(alias="issue.escalating")] = (
         pydantic.Field(default=None)
     )
     """
-    Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.
+    Send a notification when an active signal is escalating in volume or severity. Defaults to `true` when omitted.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

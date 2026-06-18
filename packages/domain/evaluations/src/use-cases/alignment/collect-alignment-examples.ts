@@ -1,5 +1,5 @@
 import { formatGenAIConversation } from "@domain/ai"
-import { BadRequestError, IssueId, OrganizationId, ProjectId } from "@domain/shared"
+import { BadRequestError, OrganizationId, ProjectId, SignalId } from "@domain/shared"
 import { TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import type { CollectedEvaluationAlignmentExamples, HydratedEvaluationAlignmentExample } from "../../alignment/types.ts"
@@ -8,7 +8,7 @@ import {
   DEFAULT_ALIGNMENT_EXAMPLE_LIMIT,
   EvaluationAlignmentExamplesRepository,
 } from "../../ports/evaluation-alignment-examples-repository.ts"
-import { EvaluationIssueRepository } from "../../ports/evaluation-issue-repository.ts"
+import { EvaluationSignalRepository } from "../../ports/evaluation-issue-repository.ts"
 import {
   type EvaluationConversationMessage,
   toEvaluationConversationMessages,
@@ -17,24 +17,24 @@ import {
 export const collectAlignmentExamplesUseCase = Effect.fn("evaluations.collectAlignmentExamples")(function* (input: {
   readonly organizationId: string
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly createdAfter?: string | null
   readonly requirePositiveExamples?: boolean
 }) {
   yield* Effect.annotateCurrentSpan("evaluation.organizationId", input.organizationId)
   yield* Effect.annotateCurrentSpan("evaluation.projectId", input.projectId)
-  yield* Effect.annotateCurrentSpan("evaluation.issueId", input.issueId)
+  yield* Effect.annotateCurrentSpan("evaluation.signalId", input.signalId)
 
-  const issueRepository = yield* EvaluationIssueRepository
+  const signalRepository = yield* EvaluationSignalRepository
   const exampleRepository = yield* EvaluationAlignmentExamplesRepository
   const traceRepository = yield* TraceRepository
-  const issueId = IssueId(input.issueId)
+  const signalId = SignalId(input.signalId)
   const projectId = ProjectId(input.projectId)
-  const issue = yield* issueRepository.findById(issueId)
+  const issue = yield* signalRepository.findById(signalId)
 
   if (issue.projectId !== projectId) {
     return yield* new BadRequestError({
-      message: `Issue ${input.issueId} does not belong to project ${input.projectId}`,
+      message: `Signal ${input.signalId} does not belong to project ${input.projectId}`,
     })
   }
 
@@ -47,20 +47,20 @@ export const collectAlignmentExamplesUseCase = Effect.fn("evaluations.collectAli
 
   let positiveExamples = yield* exampleRepository.listPositiveExamples({
     projectId,
-    issueId,
+    signalId,
     limit: balancedHalf,
     ...createdAfter,
   })
 
   if (positiveExamples.length === 0 && input.requirePositiveExamples !== false) {
     return yield* new BadRequestError({
-      message: `Issue ${input.issueId} has no positive alignment examples yet`,
+      message: `Signal ${input.signalId} has no positive alignment examples yet`,
     })
   }
 
   let negativeExamples = yield* exampleRepository.listNegativeExamples({
     projectId,
-    issueId,
+    signalId,
     excludeTraceIds: positiveExamples.map((example) => example.traceId),
     limit: balancedHalf,
     ...createdAfter,
@@ -76,7 +76,7 @@ export const collectAlignmentExamplesUseCase = Effect.fn("evaluations.collectAli
       const need = Math.min(remaining, balancedHalf - positiveExamples.length)
       const extended = yield* exampleRepository.listNegativeExamples({
         projectId,
-        issueId,
+        signalId,
         excludeTraceIds: positiveExamples.map((example) => example.traceId),
         limit: negativeExamples.length + need,
         ...createdAfter,
@@ -96,7 +96,7 @@ export const collectAlignmentExamplesUseCase = Effect.fn("evaluations.collectAli
       const need = Math.min(remaining, balancedHalf - negativeExamples.length)
       const extended = yield* exampleRepository.listPositiveExamples({
         projectId,
-        issueId,
+        signalId,
         limit: positiveExamples.length + need,
         ...createdAfter,
       })
@@ -115,7 +115,7 @@ export const collectAlignmentExamplesUseCase = Effect.fn("evaluations.collectAli
       const need = remaining
       const extendedNeg = yield* exampleRepository.listNegativeExamples({
         projectId,
-        issueId,
+        signalId,
         excludeTraceIds: positiveExamples.map((example) => example.traceId),
         limit: negativeExamples.length + need,
         ...createdAfter,
@@ -132,7 +132,7 @@ export const collectAlignmentExamplesUseCase = Effect.fn("evaluations.collectAli
 
       const extendedPos = yield* exampleRepository.listPositiveExamples({
         projectId,
-        issueId,
+        signalId,
         limit: positiveExamples.length + remaining,
         ...createdAfter,
       })
@@ -152,9 +152,9 @@ export const collectAlignmentExamplesUseCase = Effect.fn("evaluations.collectAli
 
   if (positiveExamples.length === 0 && negativeExamples.length === 0) {
     return {
-      issueId: issue.id,
-      issueName: issue.name,
-      issueDescription: issue.description,
+      signalId: issue.id,
+      signalName: issue.name,
+      signalDescription: issue.description,
       positiveExamples: [],
       negativeExamples: [],
     } satisfies CollectedEvaluationAlignmentExamples
@@ -187,9 +187,9 @@ export const collectAlignmentExamplesUseCase = Effect.fn("evaluations.collectAli
   }
 
   return {
-    issueId: issue.id,
-    issueName: issue.name,
-    issueDescription: issue.description,
+    signalId: issue.id,
+    signalName: issue.name,
+    signalDescription: issue.description,
     positiveExamples: positiveExamples.map(hydrateExample),
     negativeExamples: negativeExamples.map(hydrateExample),
   } satisfies CollectedEvaluationAlignmentExamples

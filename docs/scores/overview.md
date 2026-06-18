@@ -46,7 +46,7 @@ Once finalized, a score becomes part of Latitude's reliability workflows.
 
 Finalized scores feed into:
 
-1. **Issue discovery**: Failed scores can become named, trackable [issues](../issues/overview).
+1. **Issue discovery**: Failed scores can become named, trackable [issues](../signals/overview).
 2. **Evaluation generation**: Issues can generate monitors that produce more scores on live traffic.
 3. **Alignment**: Annotation scores are compared with evaluation scores on the same traces.
 4. **Analytics**: Score dashboards show quality trends across your project.
@@ -55,6 +55,6 @@ Finalized scores feed into:
 
 - [Annotations](../annotations/overview): How human reviewers create scores
 - [Evaluations](../evaluations/overview): How automated monitors create scores
-- [Issues](../issues/overview): How failed scores become trackable failure patterns
+- [Issues](../signals/overview): How failed scores become trackable failure patterns
 - [Analytics](./analytics): Visualize score trends
 - [Scores API](./api): Submit custom scores programmatically

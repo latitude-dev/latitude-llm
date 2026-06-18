@@ -1,6 +1,6 @@
-import { IssueRepository } from "@domain/issues"
 import { SavedSearchRepository } from "@domain/saved-searches"
-import { IssueId, SavedSearchId, UserId } from "@domain/shared"
+import { SavedSearchId, SignalId, UserId } from "@domain/shared"
+import { SignalRepository } from "@domain/signals"
 import { UserRepository } from "@domain/users"
 import { Effect } from "effect"
 
@@ -29,8 +29,8 @@ export const resolveIncidentSource = (input: { readonly sourceType: string; read
         Effect.catchTag("RepositoryError", (cause) => Effect.fail(loadError(cause))),
       )
     }
-    const repo = yield* IssueRepository
-    return yield* repo.findById(IssueId(input.sourceId)).pipe(
+    const repo = yield* SignalRepository
+    return yield* repo.findById(SignalId(input.sourceId)).pipe(
       Effect.map((i): ResolvedIncidentSource => ({ name: i.name, description: i.description ?? null })),
       Effect.catchTag("NotFoundError", () => Effect.succeed(MISSING)),
       Effect.catchTag("RepositoryError", (cause) => Effect.fail(loadError(cause))),

@@ -1,16 +1,16 @@
 import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
 import { WorkflowQuerier, type WorkflowQuerierShape, WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
-import { BadRequestError, EvaluationId, IssueId, OrganizationId, ProjectId, SqlClient, UserId } from "@domain/shared"
+import { BadRequestError, EvaluationId, OrganizationId, ProjectId, SignalId, SqlClient, UserId } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { defaultEvaluationTrigger, type Evaluation, emptyEvaluationAlignment } from "../entities/evaluation.ts"
 import { EvaluationRepository, type EvaluationRepositoryShape } from "../ports/evaluation-repository.ts"
-import { monitorIssueUseCase } from "./monitor-issue.ts"
+import { monitorSignalUseCase } from "./monitor-issue.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
-const issueId = IssueId("i".repeat(24))
+const signalId = SignalId("i".repeat(24))
 const actorUserId = UserId("u".repeat(24))
 
 const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation =>
@@ -18,7 +18,7 @@ const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation =>
     id: EvaluationId("e".repeat(24)),
     organizationId,
     projectId,
-    issueId,
+    signalId,
     name: "Eval",
     description: "Generated description",
     script: "return { passed: false }",
@@ -36,18 +36,18 @@ const createEvaluationRepository = (activeEvaluations: readonly Evaluation[]): E
   findById: () => Effect.die("Unexpected findById"),
   save: () => Effect.die("Unexpected save"),
   listByProjectId: () => Effect.die("Unexpected listByProjectId"),
-  listByIssueId: () =>
+  listBySignalId: () =>
     Effect.succeed({
       items: activeEvaluations,
       hasMore: false,
       limit: activeEvaluations.length,
       offset: 0,
     }),
-  listByIssueIds: () => Effect.die("Unexpected listByIssueIds"),
+  listBySignalIds: () => Effect.die("Unexpected listBySignalIds"),
   archive: () => Effect.die("Unexpected archive"),
   unarchive: () => Effect.die("Unexpected unarchive"),
   softDelete: () => Effect.die("Unexpected softDelete"),
-  softDeleteByIssueId: () => Effect.die("Unexpected softDeleteByIssueId"),
+  softDeleteBySignalId: () => Effect.die("Unexpected softDeleteBySignalId"),
 })
 
 interface StartedWorkflow {
@@ -120,43 +120,43 @@ const buildLayer = (input: {
   }
 }
 
-describe("monitorIssueUseCase", () => {
+describe("monitorSignalUseCase", () => {
   describe("start path (no active evaluation)", () => {
     it("kicks off the generation workflow and emits `EvaluationCreated`", async () => {
       const { started, events, layer } = buildLayer({})
 
       const result = await Effect.runPromise(
-        monitorIssueUseCase({ organizationId, projectId, issueId, actorUserId }).pipe(Effect.provide(layer)),
+        monitorSignalUseCase({ organizationId, projectId, signalId, actorUserId }).pipe(Effect.provide(layer)),
       )
 
       expect(result.evaluationId).toBeNull()
       expect(started).toHaveLength(1)
       expect(started[0]?.workflow).toBe("optimizeEvaluationWorkflow")
-      expect(started[0]?.workflowId).toBe(`evaluations:generate:${issueId}`)
+      expect(started[0]?.workflowId).toBe(`evaluations:generate:${signalId}`)
       expect(events).toHaveLength(1)
       expect(events[0]).toMatchObject({
         eventName: "EvaluationCreated",
         aggregateType: "evaluation",
         organizationId,
-        payload: { actorUserId, projectId, issueId },
+        payload: { actorUserId, projectId, signalId },
       })
     })
 
     it("records a blank `actorUserId` on the outbox event when omitted (API-key callers)", async () => {
       const { events, layer } = buildLayer({})
 
-      await Effect.runPromise(monitorIssueUseCase({ organizationId, projectId, issueId }).pipe(Effect.provide(layer)))
+      await Effect.runPromise(monitorSignalUseCase({ organizationId, projectId, signalId }).pipe(Effect.provide(layer)))
 
       expect(events[0]?.payload).toMatchObject({ actorUserId: "" })
     })
 
     it("fails with BadRequestError when a generation workflow is already running", async () => {
       const { started, events, layer } = buildLayer({
-        runningWorkflows: new Set([`evaluations:generate:${issueId}`]),
+        runningWorkflows: new Set([`evaluations:generate:${signalId}`]),
       })
 
       const error = await Effect.runPromise(
-        monitorIssueUseCase({ organizationId, projectId, issueId, actorUserId }).pipe(
+        monitorSignalUseCase({ organizationId, projectId, signalId, actorUserId }).pipe(
           Effect.flip,
           Effect.provide(layer),
         ),
@@ -172,10 +172,10 @@ describe("monitorIssueUseCase", () => {
       const { started, events, describeCalls, layer } = buildLayer({})
 
       const error = await Effect.runPromise(
-        monitorIssueUseCase({
+        monitorSignalUseCase({
           organizationId,
           projectId,
-          issueId,
+          signalId,
           actorUserId,
           isAutomaticallyMonitored: true,
         }).pipe(Effect.flip, Effect.provide(layer)),
@@ -197,7 +197,7 @@ describe("monitorIssueUseCase", () => {
       const { started, events, layer } = buildLayer({ activeEvaluations: [existing] })
 
       const result = await Effect.runPromise(
-        monitorIssueUseCase({ organizationId, projectId, issueId, actorUserId }).pipe(Effect.provide(layer)),
+        monitorSignalUseCase({ organizationId, projectId, signalId, actorUserId }).pipe(Effect.provide(layer)),
       )
 
       expect(result.evaluationId).toBe(existing.id)
@@ -208,7 +208,7 @@ describe("monitorIssueUseCase", () => {
         eventName: "EvaluationAligned",
         aggregateType: "evaluation",
         aggregateId: existing.id,
-        payload: { evaluationId: existing.id, issueId },
+        payload: { evaluationId: existing.id, signalId },
       })
     })
 
@@ -216,10 +216,10 @@ describe("monitorIssueUseCase", () => {
       const { started, events, layer } = buildLayer({ activeEvaluations: [existing] })
 
       const result = await Effect.runPromise(
-        monitorIssueUseCase({
+        monitorSignalUseCase({
           organizationId,
           projectId,
-          issueId,
+          signalId,
           actorUserId,
           isAutomaticallyMonitored: true,
         }).pipe(Effect.provide(layer)),
@@ -242,7 +242,7 @@ describe("monitorIssueUseCase", () => {
       const { started, layer } = buildLayer({ activeEvaluations: [older, newer] })
 
       const result = await Effect.runPromise(
-        monitorIssueUseCase({ organizationId, projectId, issueId, actorUserId }).pipe(Effect.provide(layer)),
+        monitorSignalUseCase({ organizationId, projectId, signalId, actorUserId }).pipe(Effect.provide(layer)),
       )
 
       expect(result.evaluationId).toBe(newer.id)
@@ -256,7 +256,7 @@ describe("monitorIssueUseCase", () => {
       })
 
       const error = await Effect.runPromise(
-        monitorIssueUseCase({ organizationId, projectId, issueId, actorUserId }).pipe(
+        monitorSignalUseCase({ organizationId, projectId, signalId, actorUserId }).pipe(
           Effect.flip,
           Effect.provide(layer),
         ),

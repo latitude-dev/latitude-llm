@@ -89,14 +89,14 @@ interface ProjectMetricsActivityPointDto {
   annotationsFailed: number
 }
 
-interface ProjectIssueLifecyclePointDto {
+interface ProjectSignalLifecyclePointDto {
   bucketStart: string
   untracked: number
   tracked: number
   resolved: number
 }
 
-interface ProjectTopIssueDto {
+interface ProjectTopSignalDto {
   id: string
   name: string
   occurrences: number
@@ -108,8 +108,8 @@ export interface AdminProjectMetricsDto {
   windowEnd: string
   windowDays: number
   activity: ProjectMetricsActivityPointDto[]
-  issuesLifecycle: ProjectIssueLifecyclePointDto[]
-  topIssues: ProjectTopIssueDto[]
+  signalsLifecycle: ProjectSignalLifecyclePointDto[]
+  topSignals: ProjectTopSignalDto[]
 }
 
 const toMetricsDto = (metrics: ProjectMetrics): AdminProjectMetricsDto => ({
@@ -121,13 +121,13 @@ const toMetricsDto = (metrics: ProjectMetrics): AdminProjectMetricsDto => ({
     annotationsPassed: p.annotationsPassed,
     annotationsFailed: p.annotationsFailed,
   })),
-  issuesLifecycle: metrics.issuesLifecycle.map((p) => ({
+  signalsLifecycle: metrics.signalsLifecycle.map((p) => ({
     bucketStart: p.bucketStart,
     untracked: p.untracked,
     tracked: p.tracked,
     resolved: p.resolved,
   })),
-  topIssues: metrics.topIssues.map((i) => ({
+  topSignals: metrics.topSignals.map((i) => ({
     id: i.id,
     name: i.name,
     occurrences: i.occurrences,

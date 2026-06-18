@@ -1,6 +1,5 @@
 import type { RenderedEmail } from "@domain/email"
 import { NOTIFICATION_EMAIL_RENDERERS, type NotificationEmailRenderContext, sendEmail } from "@domain/email"
-import type { IssueRepository } from "@domain/issues"
 import {
   type NotificationEmailRenderer,
   type NotificationEmailSender,
@@ -10,14 +9,15 @@ import {
 } from "@domain/notifications"
 import type { QueueConsumer } from "@domain/queue"
 import { NotificationId, OrganizationId, type SqlClient } from "@domain/shared"
+import type { SignalRepository } from "@domain/signals"
 import type { WrappedReportRepository } from "@domain/spans"
 import type { UserRepository } from "@domain/users"
 import {
-  IssueRepositoryLive,
   NotificationRepositoryLive,
   OrganizationRepositoryLive,
   ProjectRepositoryLive,
   SavedSearchRepositoryLive,
+  SignalRepositoryLive,
   UserRepositoryLive,
   WrappedReportRepositoryLive,
   withPostgres,
@@ -54,7 +54,7 @@ const repoLayer = Layer.mergeAll(
  * new repo for server-side rendering.
  */
 const rendererLayer = Layer.mergeAll(
-  IssueRepositoryLive,
+  SignalRepositoryLive,
   SavedSearchRepositoryLive,
   UserRepositoryLive,
   WrappedReportRepositoryLive,
@@ -86,12 +86,12 @@ export const createNotificationEmailerWorker = ({ consumer }: NotificationEmaile
   // `WrappedReportRepository.findById`); we provide those services
   // locally so the use case's R channel stays minimal.
   // Per-kind renderers in the registry have heterogeneous R channels
-  // (incident kinds need `IssueRepository`, wrapped needs
+  // (incident kinds need `SignalRepository`, wrapped needs
   // `WrappedReportRepository`). The union doesn't unify through
   // `Effect.suspend` for TS's call-signature narrowing, so widen the
   // dispatch result to the layer's superset and let `Effect.provide`
   // strip everything except `SqlClient` (the boundary contract).
-  type RendererSupersetR = IssueRepository | UserRepository | WrappedReportRepository | SqlClient
+  type RendererSupersetR = SignalRepository | UserRepository | WrappedReportRepository | SqlClient
   const renderEmailAdapter: NotificationEmailRenderer = ({
     notificationId,
     notificationCreatedAt,

@@ -19,7 +19,7 @@
     "@domain/conversation-intelligence": "workspace:*",
     "@domain/evaluations": "workspace:*",
     "@domain/flaggers": "workspace:*",
-    "@domain/issues": "workspace:*",
+    "@domain/signals": "workspace:*",
     "@domain/optimizations": "workspace:*",
     "@domain/queue": "workspace:*",
     "@domain/scores": "workspace:*",

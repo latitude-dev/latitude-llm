@@ -7,8 +7,8 @@ import type {
   ProjectUsersPageRecord,
   UserActivityRecord,
   UserBehaviourRecord,
-  UserIssueRecord,
   UserProfileRecord,
+  UserSignalRecord,
   UsersOverviewRecord,
   UserUsageSliceRecord,
 } from "./end-users.functions.ts"
@@ -19,7 +19,7 @@ import {
   getUserUsage,
   listProjectUsers,
   listUserBehaviours,
-  listUserIssues,
+  listUserSignals,
 } from "./end-users.functions.ts"
 
 const DEFAULT_USERS_BATCH_SIZE = 50
@@ -234,7 +234,7 @@ export function useUserUsage({
   })
 }
 
-export function useUserIssues({
+export function useUserSignals({
   projectId,
   userId,
   enabled = true,
@@ -245,7 +245,7 @@ export function useUserIssues({
 }) {
   return useQuery({
     queryKey: ["end-user-issues", projectId, userId],
-    queryFn: (): Promise<readonly UserIssueRecord[]> => listUserIssues({ data: { projectId, userId } }),
+    queryFn: (): Promise<readonly UserSignalRecord[]> => listUserSignals({ data: { projectId, userId } }),
     staleTime: USERS_QUERY_STALE_TIME_MS,
     enabled: enabled && projectId.length > 0 && userId.length > 0,
   })

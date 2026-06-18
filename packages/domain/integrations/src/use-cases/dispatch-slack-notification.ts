@@ -1,8 +1,8 @@
-import type { IssueRepository } from "@domain/issues"
 import { NOTIFICATION_KIND_META, type NotificationKind } from "@domain/notifications"
 import { isSandbox, OrganizationRepository } from "@domain/organizations"
 import type { SavedSearchRepository } from "@domain/saved-searches"
 import type { NotFoundError, RepositoryError, SlackIntegrationId, SqlClient } from "@domain/shared"
+import type { SignalRepository } from "@domain/signals"
 import type { UserRepository } from "@domain/users"
 import { Data, Effect } from "effect"
 import { SlackDeliveryRepository } from "../ports/slack-delivery-repository.ts"
@@ -74,7 +74,7 @@ export const dispatchSlackNotificationUseCase = (
   DispatchSlackNotificationError,
   | SqlClient
   | SlackDeliveryRepository
-  | IssueRepository
+  | SignalRepository
   | SavedSearchRepository
   | OrganizationRepository
   | UserRepository

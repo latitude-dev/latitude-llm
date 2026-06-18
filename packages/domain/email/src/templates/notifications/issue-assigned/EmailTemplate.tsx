@@ -10,79 +10,79 @@ import { emailDesignTokens } from "../../../tokens/design-system.ts"
 import {
   EmailMetadataTable,
   formatScope,
-  IssueIdFooter,
-  IssueTimestamp,
   SectionHeader,
+  SignalIdFooter,
+  SignalTimestamp,
 } from "../-incident-components.tsx"
 
-interface IssueAssignedEmailProps {
-  readonly issueId: string
+interface SignalAssignedEmailProps {
+  readonly signalId: string
   /** Live-resolved issue display name; falls back to neutral copy when the row is gone. */
-  readonly issueName: string
+  readonly signalName: string
   readonly description: string | undefined
   /** Live-resolved display name of the user who made the assignment. */
   readonly actorName: string
-  readonly issueUrl: string | undefined
+  readonly signalUrl: string | undefined
   readonly notificationCreatedAt: Date
   readonly organizationName: string
   readonly projectName: string | undefined
   readonly webAppUrl: string
 }
 
-export function IssueAssignedEmail({
-  issueId,
-  issueName,
+export function SignalAssignedEmail({
+  signalId,
+  signalName,
   description,
   actorName,
-  issueUrl,
+  signalUrl,
   notificationCreatedAt,
   organizationName,
   projectName,
   webAppUrl,
-}: IssueAssignedEmailProps) {
+}: SignalAssignedEmailProps) {
   const scope = formatScope(organizationName, projectName)
 
   return (
     <ContainerLayout
-      previewText={`You were assigned to ${issueName}`}
+      previewText={`You were assigned to ${signalName}`}
       footer={<EmailFooter unsubscribe={{ webAppUrl, group: "personal" }} />}
     >
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>
-        You were assigned to an issue
+        You were assigned to a signal
       </EmailText>
-      <EmailText variant="body">{`${actorName} assigned you to this issue in ${scope}.`}</EmailText>
+      <EmailText variant="body">{`${actorName} assigned you to this signal in ${scope}.`}</EmailText>
 
-      <SectionHeader label="Issue" />
-      <EmailText variant="heading">{issueName}</EmailText>
+      <SectionHeader label="Signal" />
+      <EmailText variant="heading">{signalName}</EmailText>
       {description ? (
         <EmailText variant="bodySmall" className="text-muted-foreground">
           {description}
         </EmailText>
       ) : null}
 
-      <IssueTimestamp timestamp={notificationCreatedAt} />
+      <SignalTimestamp timestamp={notificationCreatedAt} />
 
       <EmailMetadataTable rows={[{ label: "Project", value: scope }]} />
 
-      <IssueIdFooter issueId={issueId} />
+      <SignalIdFooter signalId={signalId} />
 
-      {issueUrl ? (
+      {signalUrl ? (
         <Section className={emailDesignTokens.spacing.buttonTop}>
-          <EmailButton href={issueUrl} label="View issue" />
+          <EmailButton href={signalUrl} label="View signal" />
         </Section>
       ) : null}
     </ContainerLayout>
   )
 }
 
-IssueAssignedEmail.PreviewProps = {
-  issueId: "dds0rt8sqgpuku4u4wabze9r",
-  issueName: "Token leakage in responses",
+SignalAssignedEmail.PreviewProps = {
+  signalId: "dds0rt8sqgpuku4u4wabze9r",
+  signalName: "Token leakage in responses",
   description: "Agent occasionally echoes API keys or PII back to the user when summarising prior tool outputs.",
   actorName: "Carlos Sansón",
-  issueUrl: "https://console.latitude.so/projects/sample-project/issues/preview-issue",
+  signalUrl: "https://console.latitude.so/projects/sample-project/issues/preview-issue",
   notificationCreatedAt: new Date("2026-03-18T10:05:00Z"),
   organizationName: "Acme Inc.",
   projectName: "Support agent",
   webAppUrl: "http://localhost:3000",
-} satisfies IssueAssignedEmailProps
+} satisfies SignalAssignedEmailProps

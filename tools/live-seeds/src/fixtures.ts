@@ -6,7 +6,7 @@ import { offServiceLiveQueueOutFixture } from "./fixtures/off-service-live-queue
 import { outputSchemaFixture } from "./fixtures/output-schema.ts"
 import { sessionSearchQaFixture } from "./fixtures/session-search-qa.ts"
 import { supportEvalsOutFixture } from "./fixtures/support-evals-out.ts"
-import { systemSignalsIssueProbeFixture } from "./fixtures/system-signals-issue-probe.ts"
+import { systemSignalsSignalProbeFixture } from "./fixtures/system-signals-issue-probe.ts"
 import { toolCallErrorFixture } from "./fixtures/tool-call-error.ts"
 import { warrantyEvalInFixture } from "./fixtures/warranty-eval-in.ts"
 
@@ -20,7 +20,7 @@ export const liveSeedFixtures = [
   toolCallErrorFixture,
   emptyResponseFixture,
   outputSchemaFixture,
-  systemSignalsIssueProbeFixture,
+  systemSignalsSignalProbeFixture,
   sessionSearchQaFixture,
 ] as const
 

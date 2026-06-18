@@ -14,7 +14,7 @@ interface UseShowIncidentsOverlayResult {
 }
 
 /**
- * Single source of truth for the "incidents overlay" toggle shared by the Traces and Issues
+ * Single source of truth for the "incidents overlay" toggle shared by the Traces and Signals
  * histograms. The preference is stored in localStorage (per-tab; no cross-tab sync, but the
  * default is `true` so a fresh tab still surfaces the overlay).
  *

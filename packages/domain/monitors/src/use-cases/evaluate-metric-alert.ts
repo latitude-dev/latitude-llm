@@ -1,9 +1,3 @@
-import {
-  DEFAULT_ESCALATION_SENSITIVITY_K,
-  MIN_SEASONAL_SAMPLES,
-  SEASONAL_HISTORY_WEEKS,
-  seasonalAnomalyThreshold,
-} from "@domain/issues"
 import type {
   AlertIncidentMetricEscalatingCondition,
   AlertIncidentMetricThresholdCondition,
@@ -15,6 +9,12 @@ import type {
   ProjectId,
   RepositoryError,
 } from "@domain/shared"
+import {
+  DEFAULT_ESCALATION_SENSITIVITY_K,
+  MIN_SEASONAL_SAMPLES,
+  SEASONAL_HISTORY_WEEKS,
+  seasonalAnomalyThreshold,
+} from "@domain/signals"
 import { Effect } from "effect"
 import { pickEscalatingBucketMs, SAVED_SEARCH_CURRENT_WINDOW_MS } from "../constants.ts"
 import { MetricSeriesReader, type MetricSeriesTarget } from "../ports/metric-series-reader.ts"

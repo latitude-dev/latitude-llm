@@ -72,7 +72,7 @@ const _registry = {
       readonly datasetId?: string
       // Traces-specific fields - uses FilterSet shape
       readonly filters?: Readonly<Record<string, readonly { readonly op: string; readonly value: unknown }[]>>
-      // Issues-specific fields
+      // Signals-specific fields
       readonly lifecycleGroup?: "active" | "archived"
       readonly searchQuery?: string
       readonly timeRange?: {
@@ -114,7 +114,7 @@ const _registry = {
     }
     /**
      * Producer step for issue assignments. Fired by the domain-events
-     * router on `IssueAssigneeChanged` (cleared assignments and
+     * router on `SignalAssigneeChanged` (cleared assignments and
      * self-assignments are filtered before publish). The consumer
      * re-checks those rules, re-fetches the issue for the project anchor,
      * and emits exactly one `create-notification` task targeting the new
@@ -122,7 +122,7 @@ const _registry = {
      */
     "request-issue-assigned-notifications": {
       readonly organizationId: string
-      readonly issueId: string
+      readonly signalId: string
       readonly assigneeId: string
       readonly actorUserId: string
       /** ISO timestamp frozen by the triage transaction; idempotency anchor. */
@@ -209,20 +209,20 @@ const _registry = {
     "issue-created": {
       readonly organizationId: string
       readonly projectId: string
-      readonly issueId: string
+      readonly signalId: string
       readonly createdAt: string
     }
     "issue-regressed": {
       readonly organizationId: string
       readonly projectId: string
-      readonly issueId: string
+      readonly signalId: string
       readonly regressedAt: string
       readonly triggerScoreId: string
     }
     "issue-escalated": {
       readonly organizationId: string
       readonly projectId: string
-      readonly issueId: string
+      readonly signalId: string
       readonly escalatedAt: string
       readonly entrySignals: {
         readonly expected1h: number
@@ -239,7 +239,7 @@ const _registry = {
     "issue-escalation-ended": {
       readonly organizationId: string
       readonly projectId: string
-      readonly issueId: string
+      readonly signalId: string
       readonly endedAt: string
       readonly reason: "threshold" | "absolute-rate-drop" | "timeout" | "resolved" | "ignored"
     }
@@ -250,17 +250,17 @@ const _registry = {
       readonly organizationId: string
       readonly projectId: string
       readonly scoreId: string
-      readonly issueId: string | null
+      readonly signalId: string | null
     }
     refresh: {
       readonly organizationId: string
       readonly projectId: string
-      readonly issueId: string
+      readonly signalId: string
     }
     checkEscalation: {
       readonly organizationId: string
       readonly projectId: string
-      readonly issueId: string
+      readonly signalId: string
     }
     /**
      * Fired by the hourly cron — finds every open `issue.escalating` incident
@@ -273,7 +273,7 @@ const _registry = {
       readonly organizationId: string
       readonly projectId: string
       readonly scoreId: string
-      readonly issueId: string | null
+      readonly signalId: string | null
       readonly draftedAt: string | null
       readonly feedback: string
       readonly source: string
@@ -310,13 +310,13 @@ const _registry = {
     automaticRefreshAlignment: {
       readonly organizationId: string
       readonly projectId: string
-      readonly issueId: string
+      readonly signalId: string
       readonly evaluationId: string
     }
     automaticOptimization: {
       readonly organizationId: string
       readonly projectId: string
-      readonly issueId: string
+      readonly signalId: string
       readonly evaluationId: string
     }
   }>(),

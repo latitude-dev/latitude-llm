@@ -1,4 +1,4 @@
-import type { IssueId, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
+import type { OrganizationId, ProjectId, RepositoryError, SignalId } from "@domain/shared"
 import { Context, type Effect } from "effect"
 
 /**
@@ -23,8 +23,8 @@ export interface ProjectAnnotationBucket {
   readonly failedCount: number
 }
 
-export interface ProjectTopIssueOccurrence {
-  readonly issueId: IssueId
+export interface ProjectTopSignalOccurrence {
+  readonly signalId: SignalId
   readonly occurrences: number
   readonly lastSeenAt: Date
 }
@@ -37,7 +37,7 @@ export interface ProjectMetricHistogramInput {
   readonly bucketSeconds: number
 }
 
-export interface ProjectTopIssuesInput {
+export interface ProjectTopSignalsInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly since: Date
@@ -79,10 +79,10 @@ export class AdminProjectMetricsRepository extends Context.Service<
     /**
      * Top-N issues by occurrences in the window. "Occurrence" = score row
      * with non-empty `issue_id` matching this issue, same definition the
-     * user-facing Issues page uses.
+     * user-facing Signals page uses.
      */
-    getTopIssuesByOccurrences(
-      input: ProjectTopIssuesInput,
-    ): Effect.Effect<readonly ProjectTopIssueOccurrence[], RepositoryError>
+    getTopSignalsByOccurrences(
+      input: ProjectTopSignalsInput,
+    ): Effect.Effect<readonly ProjectTopSignalOccurrence[], RepositoryError>
   }
 >()("@domain/admin/AdminProjectMetricsRepository") {}

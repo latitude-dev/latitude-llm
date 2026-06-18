@@ -34,19 +34,19 @@ export interface SystemMonitorDefinition {
 export const SYSTEM_MONITOR_DEFINITIONS: readonly SystemMonitorDefinition[] = [
   {
     slug: "issue-discovered",
-    name: "Issue discovered",
+    name: "Signal discovered",
     description: "Notifies each time a new issue is detected.",
     alerts: [{ kind: "issue.new", source: { type: "issue", id: null }, condition: null }],
   },
   {
     slug: "issue-regressed",
-    name: "Issue regressed",
+    name: "Signal regressed",
     description: "Notifies each time a resolved issue is detected again.",
     alerts: [{ kind: "issue.regressed", source: { type: "issue", id: null }, condition: null }],
   },
   {
     slug: "issue-escalating",
-    name: "Issue escalating",
+    name: "Signal escalating",
     description: "Notifies when an ongoing issue is being detected more than expected.",
     alerts: [
       {

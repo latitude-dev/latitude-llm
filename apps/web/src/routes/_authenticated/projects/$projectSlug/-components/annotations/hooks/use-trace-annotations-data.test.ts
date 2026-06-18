@@ -108,7 +108,7 @@ describe("useTraceAnnotationsData", () => {
         result.current.createAnnotation({
           passed: true,
           comment: "Great job",
-          issueId: null,
+          signalId: null,
           anchor: { messageIndex: 2 },
         })
       })
@@ -133,7 +133,7 @@ describe("useTraceAnnotationsData", () => {
         result.current.createAnnotation({
           passed: false,
           comment: "Needs work",
-          issueId: "issue-1",
+          signalId: "issue-1",
           anchor: { messageIndex: 1 },
           spanId: "span-123",
         })
@@ -144,7 +144,7 @@ describe("useTraceAnnotationsData", () => {
           value: 0,
           passed: false,
           feedback: "Needs work",
-          issueId: "issue-1",
+          signalId: "issue-1",
           spanId: "span-123",
           anchor: { messageIndex: 1 },
         }),
@@ -159,7 +159,7 @@ describe("useTraceAnnotationsData", () => {
         result.current.createAnnotation({
           passed: true,
           comment: "   ",
-          issueId: null,
+          signalId: null,
         })
       })
 
@@ -176,7 +176,7 @@ describe("useTraceAnnotationsData", () => {
       const { result } = renderHook(() => useTraceAnnotationsData({ projectId: "proj-1", traceId: "trace-1" }))
 
       act(() => {
-        result.current.createAnnotation({ passed: true, comment: "Good", issueId: null }, { onSuccess })
+        result.current.createAnnotation({ passed: true, comment: "Good", signalId: null }, { onSuccess })
       })
 
       expect(mockMutate).toHaveBeenCalledWith(expect.anything(), { onSuccess })
@@ -191,7 +191,7 @@ describe("useTraceAnnotationsData", () => {
         result.current.updateAnnotation("ann-1", {
           passed: false,
           comment: "Changed my mind",
-          issueId: "issue-2",
+          signalId: "issue-2",
         })
       })
 
@@ -203,7 +203,7 @@ describe("useTraceAnnotationsData", () => {
           value: 0,
           passed: false,
           feedback: "Changed my mind",
-          issueId: "issue-2",
+          signalId: "issue-2",
         }),
         undefined,
       )

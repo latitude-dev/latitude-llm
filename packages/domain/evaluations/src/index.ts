@@ -47,8 +47,8 @@ export {
 } from "./errors.ts"
 export {
   addConfusionMatrixObservation,
-  applyIssueIgnoreToEvaluation,
-  applyIssueResolutionToEvaluation,
+  applySignalIgnoreToEvaluation,
+  applySignalResolutionToEvaluation,
   archiveEvaluation,
   buildLiveEvaluationExecutePublication,
   buildLiveEvaluationExecuteScopeDedupeKey,
@@ -99,8 +99,8 @@ export {
   type ListNegativeEvaluationAlignmentExamplesInput,
 } from "./ports/evaluation-alignment-examples-repository.ts"
 export {
-  type EvaluationIssue,
-  EvaluationIssueRepository,
+  type EvaluationSignal,
+  EvaluationSignalRepository,
 } from "./ports/evaluation-issue-repository.ts"
 export {
   type EvaluationListLifecycle,
@@ -130,15 +130,15 @@ export {
   type EvaluationConversationMessage,
   type EvaluationExecutionResult,
   type EvaluationExecutionResultPayload,
-  type EvaluationIssueContext,
   type EvaluationScriptExecution,
   type EvaluationScriptSchema,
+  type EvaluationSignalContext,
   type ExecuteEvaluationScriptWithAIError,
   estimateEvaluationScriptCostMicrocents,
   evaluationExecutionResultPayloadSchema,
   evaluationExecutionResultSchema,
-  evaluationIssueContextSchema,
   evaluationRuntimeZod,
+  evaluationSignalContextSchema,
   executeEvaluationScript,
   executeEvaluationScriptWithAI,
   extractPromptFromEvaluationScript,
@@ -161,11 +161,11 @@ export {
 } from "./use-cases/alignment/load-alignment-state-or-inactive.ts"
 export { persistAlignmentResultUseCase } from "./use-cases/alignment/persist-alignment-result.ts"
 export {
-  deriveIssueAlignmentState,
-  type GetIssueAlignmentStateError,
-  type GetIssueAlignmentStateInput,
-  getIssueAlignmentStateUseCase,
-  type IssueAlignmentState,
+  deriveSignalAlignmentState,
+  type GetSignalAlignmentStateError,
+  type GetSignalAlignmentStateInput,
+  getSignalAlignmentStateUseCase,
+  type SignalAlignmentState,
 } from "./use-cases/get-issue-alignment-state.ts"
 export {
   buildLiveTraceEndEvaluationSelectionKey,
@@ -177,15 +177,15 @@ export {
   type LiveEvaluationConversationInput,
   type LiveEvaluationExecutionInput,
   type LiveEvaluationExecutionResult,
-  type LiveEvaluationIssueContext,
   type LiveEvaluationResultPayload,
   type LiveEvaluationRuntime,
+  type LiveEvaluationSignalContext,
   liveEvaluationConversationInputSchema,
   liveEvaluationExecutionInputSchema,
   liveEvaluationExecutionResultSchema,
-  liveEvaluationIssueContextSchema,
   liveEvaluationResultPayloadSchema,
   liveEvaluationRuntimeSchema,
+  liveEvaluationSignalContextSchema,
 } from "./use-cases/live/execute-live-evaluation.ts"
 export { listAllActiveEvaluations } from "./use-cases/live/list-all-active-evaluations.ts"
 export { orchestrateTraceEndLiveEvaluationExecutesUseCase } from "./use-cases/live/orchestrate-trace-end-live-evaluation-executes.ts"
@@ -205,13 +205,13 @@ export {
   runLiveEvaluationUseCase,
 } from "./use-cases/live/run-live-evaluation.ts"
 export {
-  type MonitorIssueError,
-  type MonitorIssueInput,
-  monitorIssueUseCase,
+  type MonitorSignalError,
+  type MonitorSignalInput,
+  monitorSignalUseCase,
 } from "./use-cases/monitor-issue.ts"
 export { evaluateOptimizationCandidate } from "./use-cases/optimization/evaluate-optimization-candidate.ts"
 export {
-  type UnmonitorIssueError,
-  type UnmonitorIssueInput,
-  unmonitorIssueUseCase,
+  type UnmonitorSignalError,
+  type UnmonitorSignalInput,
+  unmonitorSignalUseCase,
 } from "./use-cases/unmonitor-issue.ts"

@@ -2,9 +2,9 @@ import type { Evaluation, EvaluationAlignment, EvaluationListOptions, Evaluation
 import { EvaluationRepository, evaluationSchema } from "@domain/evaluations"
 import {
   type EvaluationId,
-  type IssueId,
   NotFoundError,
   type ProjectId,
+  type SignalId,
   SqlClient,
   type SqlClientShape,
 } from "@domain/shared"
@@ -18,7 +18,7 @@ const toDomainEvaluation = (row: typeof evaluations.$inferSelect): Evaluation =>
     id: row.id,
     organizationId: row.organizationId,
     projectId: row.projectId,
-    issueId: row.issueId,
+    signalId: row.signalId,
     name: row.name,
     description: row.description,
     script: row.script,
@@ -35,7 +35,7 @@ const toInsertRow = (evaluation: Evaluation): typeof evaluations.$inferInsert =>
   id: evaluation.id,
   organizationId: evaluation.organizationId,
   projectId: evaluation.projectId,
-  issueId: evaluation.issueId,
+  signalId: evaluation.signalId,
   name: evaluation.name,
   description: evaluation.description,
   script: evaluation.script,
@@ -134,7 +134,7 @@ export const EvaluationRepositoryLive = Layer.effect(
               .onConflictDoUpdate({
                 target: evaluations.id,
                 set: {
-                  issueId: row.issueId,
+                  signalId: row.signalId,
                   name: row.name,
                   description: row.description,
                   script: row.script,
@@ -161,32 +161,32 @@ export const EvaluationRepositoryLive = Layer.effect(
           options,
         }),
 
-      listByIssueId: ({
+      listBySignalId: ({
         projectId,
-        issueId,
+        signalId,
         options,
       }: {
         readonly projectId: ProjectId
-        readonly issueId: IssueId
+        readonly signalId: SignalId
         readonly options?: EvaluationListOptions
       }) =>
         list({
           baseWhere:
-            and(eq(evaluations.projectId, projectId), eq(evaluations.issueId, issueId)) ??
+            and(eq(evaluations.projectId, projectId), eq(evaluations.signalId, signalId)) ??
             eq(evaluations.projectId, projectId),
           options,
         }),
 
-      listByIssueIds: ({
+      listBySignalIds: ({
         projectId,
-        issueIds,
+        signalIds,
         options,
       }: {
         readonly projectId: ProjectId
-        readonly issueIds: readonly IssueId[]
+        readonly signalIds: readonly SignalId[]
         readonly options?: EvaluationListOptions
       }) => {
-        if (issueIds.length === 0) {
+        if (signalIds.length === 0) {
           return Effect.succeed({
             items: [],
             hasMore: false,
@@ -197,8 +197,10 @@ export const EvaluationRepositoryLive = Layer.effect(
 
         return list({
           baseWhere:
-            and(eq(evaluations.projectId, projectId), inArray(evaluations.issueId, issueIds as unknown as string[])) ??
-            eq(evaluations.projectId, projectId),
+            and(
+              eq(evaluations.projectId, projectId),
+              inArray(evaluations.signalId, signalIds as unknown as string[]),
+            ) ?? eq(evaluations.projectId, projectId),
           options,
         })
       },
@@ -260,7 +262,7 @@ export const EvaluationRepositoryLive = Layer.effect(
             .pipe(Effect.asVoid)
         }),
 
-      softDeleteByIssueId: ({ projectId, issueId }: { readonly projectId: ProjectId; readonly issueId: IssueId }) =>
+      softDeleteBySignalId: ({ projectId, signalId }: { readonly projectId: ProjectId; readonly signalId: SignalId }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           return yield* sqlClient
@@ -272,7 +274,7 @@ export const EvaluationRepositoryLive = Layer.effect(
                   and(
                     eq(evaluations.organizationId, organizationId),
                     eq(evaluations.projectId, projectId),
-                    eq(evaluations.issueId, issueId),
+                    eq(evaluations.signalId, signalId),
                     isNull(evaluations.deletedAt),
                   ),
                 ),

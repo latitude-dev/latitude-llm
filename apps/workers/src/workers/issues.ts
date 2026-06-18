@@ -1,11 +1,3 @@
-import {
-  checkIssueEscalationUseCase,
-  type DiscoverIssueResult,
-  discoverIssueUseCase,
-  refreshIssueDetailsUseCase,
-  removeScoreFromIssueUseCase,
-  sweepEscalatingIssuesUseCase,
-} from "@domain/issues"
 import { resolveMonitorAlertsForSourceEventUseCase } from "@domain/monitors"
 import {
   type QueueConsumer,
@@ -16,6 +8,14 @@ import {
 } from "@domain/queue"
 import type { ScoreSource } from "@domain/scores"
 import { OrganizationId, ProjectId } from "@domain/shared"
+import {
+  checkSignalEscalationUseCase,
+  type DiscoverSignalResult,
+  discoverSignalUseCase,
+  refreshSignalDetailsUseCase,
+  removeScoreFromSignalUseCase,
+  sweepEscalatingSignalsUseCase,
+} from "@domain/signals"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import type { RedisClient } from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
@@ -23,12 +23,12 @@ import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-click
 import {
   AlertIncidentRepositoryLive,
   EvaluationRepositoryLive,
-  IssueRepositoryLive,
   MonitorRepositoryLive,
   OutboxEventWriterLive,
   type PostgresClient,
   ScoreRepositoryLive,
   SettingsReaderLive,
+  SignalRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
@@ -37,18 +37,18 @@ import { getAdminPostgresClient, getClickhouseClient, getPostgresClient, getRedi
 
 const logger = createLogger("issues")
 
-const formatDiscoveryOutcome = (outcome: DiscoverIssueResult) => {
+const formatDiscoveryOutcome = (outcome: DiscoverSignalResult) => {
   switch (outcome.action) {
     case "workflow-started":
       return `${outcome.action}:${outcome.workflow}`
     case "skipped":
       return `${outcome.action}:${outcome.reason}`
     case "already-assigned":
-      return `${outcome.action}:${outcome.issueId}`
+      return `${outcome.action}:${outcome.signalId}`
   }
 }
 
-interface IssuesDeps {
+interface SignalsDeps {
   consumer: QueueConsumer
   publisher: QueuePublisherShape
   workflowStarter: WorkflowStarterShape
@@ -63,7 +63,7 @@ interface IssuesDeps {
   redisClient?: RedisClient
 }
 
-export const createIssuesWorker = async ({
+export const createSignalsWorker = async ({
   consumer,
   publisher,
   workflowStarter,
@@ -71,7 +71,7 @@ export const createIssuesWorker = async ({
   adminPostgresClient,
   clickhouseClient,
   redisClient,
-}: IssuesDeps) => {
+}: SignalsDeps) => {
   const pgClient = postgresClient ?? getPostgresClient()
   const adminPgClient = adminPostgresClient ?? getAdminPostgresClient()
   const chClient = clickhouseClient ?? getClickhouseClient()
@@ -79,7 +79,7 @@ export const createIssuesWorker = async ({
 
   consumer.subscribe("issues", {
     discovery: (payload) =>
-      discoverIssueUseCase(payload).pipe(
+      discoverSignalUseCase(payload).pipe(
         Effect.tap((outcome) =>
           Effect.sync(() => {
             logger.info(
@@ -88,10 +88,10 @@ export const createIssuesWorker = async ({
           }),
         ),
         Effect.tapError((error) =>
-          Effect.sync(() => logger.error(`Issue discovery failed for ${payload.projectId}/${payload.scoreId}`, error)),
+          Effect.sync(() => logger.error(`Signal discovery failed for ${payload.projectId}/${payload.scoreId}`, error)),
         ),
         withPostgres(
-          Layer.mergeAll(EvaluationRepositoryLive, IssueRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive),
+          Layer.mergeAll(EvaluationRepositoryLive, SignalRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive),
           pgClient,
           OrganizationId(payload.organizationId),
         ),
@@ -102,9 +102,9 @@ export const createIssuesWorker = async ({
         Effect.asVoid,
       ),
     refresh: (payload) =>
-      refreshIssueDetailsUseCase(payload).pipe(
+      refreshSignalDetailsUseCase(payload).pipe(
         withPostgres(
-          Layer.mergeAll(EvaluationRepositoryLive, IssueRepositoryLive, ScoreRepositoryLive),
+          Layer.mergeAll(EvaluationRepositoryLive, SignalRepositoryLive, ScoreRepositoryLive),
           pgClient,
           OrganizationId(payload.organizationId),
         ),
@@ -112,10 +112,10 @@ export const createIssuesWorker = async ({
         withTracing,
         Effect.provide(Layer.succeed(QueuePublisher, publisher)),
         Effect.tap(() =>
-          Effect.sync(() => logger.info(`Refreshed issue details for ${payload.projectId}/${payload.issueId}`)),
+          Effect.sync(() => logger.info(`Refreshed issue details for ${payload.projectId}/${payload.signalId}`)),
         ),
         Effect.tapError((error) =>
-          Effect.sync(() => logger.error(`Issue refresh failed for ${payload.projectId}/${payload.issueId}`, error)),
+          Effect.sync(() => logger.error(`Signal refresh failed for ${payload.projectId}/${payload.signalId}`, error)),
         ),
         Effect.asVoid,
       ),
@@ -124,9 +124,9 @@ export const createIssuesWorker = async ({
     // matching transition event. The use case does not write the issue —
     // the open/closed `alert_incidents` row is the stored truth. The
     // alert-incidents worker inserts/closes that row in response to
-    // `IssueEscalated` / `IssueEscalationEnded`. Triggered by two paths:
+    // `SignalEscalated` / `SignalEscalationEnded`. Triggered by two paths:
     // the throttled `issues:check-escalation` publish from
-    // `ScoreAssignedToIssue` (entry + active-burst exit detection), and the
+    // `ScoreAssignedToSignal` (entry + active-burst exit detection), and the
     // hourly `sweepEscalating` cron below (exit detection on quiet issues
     // plus cold-start recovery for already-stuck rows).
     checkEscalation: (payload) =>
@@ -134,18 +134,18 @@ export const createIssuesWorker = async ({
         const alerts = yield* resolveMonitorAlertsForSourceEventUseCase({
           projectId: ProjectId(payload.projectId),
           kind: "issue.escalating",
-          sourceId: payload.issueId,
+          sourceId: payload.signalId,
         })
         const condition = alerts[0]?.condition
         const escalationSensitivity = condition?.kind === "issue.escalating" ? condition.sensitivity : undefined
-        return yield* checkIssueEscalationUseCase({
+        return yield* checkSignalEscalationUseCase({
           ...payload,
           ...(escalationSensitivity !== undefined ? { escalationSensitivity } : {}),
         })
       }).pipe(
         withPostgres(
           Layer.mergeAll(
-            IssueRepositoryLive,
+            SignalRepositoryLive,
             OutboxEventWriterLive,
             AlertIncidentRepositoryLive,
             SettingsReaderLive,
@@ -158,12 +158,14 @@ export const createIssuesWorker = async ({
         Effect.tap((result) =>
           Effect.sync(() =>
             logger.info(
-              `Escalation check for ${payload.projectId}/${payload.issueId}: transition=${result.transition} currentlyEscalating=${result.currentlyEscalating}`,
+              `Escalation check for ${payload.projectId}/${payload.signalId}: transition=${result.transition} currentlyEscalating=${result.currentlyEscalating}`,
             ),
           ),
         ),
         Effect.tapError((error) =>
-          Effect.sync(() => logger.error(`Escalation check failed for ${payload.projectId}/${payload.issueId}`, error)),
+          Effect.sync(() =>
+            logger.error(`Escalation check failed for ${payload.projectId}/${payload.signalId}`, error),
+          ),
         ),
         withTracing,
         Effect.asVoid,
@@ -174,10 +176,10 @@ export const createIssuesWorker = async ({
     // pending throttled job's jobId doesn't shadow the sweep publish — the
     // BullMQ dedup uses dedupeKey as the jobId.
     sweepEscalating: () =>
-      sweepEscalatingIssuesUseCase({
+      sweepEscalatingSignalsUseCase({
         publish: (payload) =>
           publisher.publish("issues", "checkEscalation", payload, {
-            dedupeKey: `issues:check-escalation-sweep:${payload.issueId}`,
+            dedupeKey: `issues:check-escalation-sweep:${payload.signalId}`,
           }),
       }).pipe(
         withPostgres(AlertIncidentRepositoryLive, adminPgClient),
@@ -193,30 +195,30 @@ export const createIssuesWorker = async ({
         Effect.asVoid,
       ),
     removeScore: (payload) =>
-      removeScoreFromIssueUseCase({
+      removeScoreFromSignalUseCase({
         organizationId: payload.organizationId,
         projectId: payload.projectId,
-        issueId: payload.issueId,
+        signalId: payload.signalId,
         draftedAt: payload.draftedAt ? new Date(payload.draftedAt) : null,
         feedback: payload.feedback,
         source: payload.source as ScoreSource,
         createdAt: new Date(payload.createdAt),
       }).pipe(
-        withPostgres(IssueRepositoryLive, pgClient, OrganizationId(payload.organizationId)),
+        withPostgres(SignalRepositoryLive, pgClient, OrganizationId(payload.organizationId)),
         withAi(AIEmbedLive, rdClient),
         withTracing,
         Effect.tap((result) =>
           Effect.sync(() => {
             if (result.action === "removed") {
-              logger.info(`Removed score contribution from issue centroid for ${payload.projectId}/${payload.issueId}`)
+              logger.info(`Removed score contribution from issue centroid for ${payload.projectId}/${payload.signalId}`)
             } else if (result.action === "issue-not-found") {
-              logger.info(`Issue ${payload.issueId} not found when removing score contribution`)
+              logger.info(`Signal ${payload.signalId} not found when removing score contribution`)
             }
           }),
         ),
         Effect.tapError((error) =>
           Effect.sync(() =>
-            logger.error(`Failed to remove score from issue ${payload.projectId}/${payload.issueId}`, error),
+            logger.error(`Failed to remove score from issue ${payload.projectId}/${payload.signalId}`, error),
           ),
         ),
         Effect.asVoid,

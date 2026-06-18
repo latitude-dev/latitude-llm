@@ -1,11 +1,11 @@
 import {
   ChSqlClient,
   ExternalUserId,
-  IssueId,
   OrganizationId,
   ProjectId,
   ScoreId,
   SessionId,
+  SignalId,
   SimulationId,
   SpanId,
   SqlClient,
@@ -24,12 +24,12 @@ import {
   DEFAULT_ALIGNMENT_EXAMPLE_LIMIT,
   EvaluationAlignmentExamplesRepository,
 } from "../../ports/evaluation-alignment-examples-repository.ts"
-import { type EvaluationIssue, EvaluationIssueRepository } from "../../ports/evaluation-issue-repository.ts"
+import { type EvaluationSignal, EvaluationSignalRepository } from "../../ports/evaluation-issue-repository.ts"
 import { collectAlignmentExamplesUseCase } from "./collect-alignment-examples.ts"
 
 const ORGANIZATION_ID = OrganizationId("o".repeat(24))
 const PROJECT_ID = ProjectId("p".repeat(24))
-const ISSUE_ID = IssueId("i".repeat(24))
+const SIGNAL_ID = SignalId("i".repeat(24))
 
 const balancedHalf = Math.floor(DEFAULT_ALIGNMENT_EXAMPLE_LIMIT / 2)
 
@@ -98,10 +98,10 @@ function makeNegativeExample(index: number): EvaluationAlignmentExample {
 }
 
 function runCollect(exampleRepository: EvaluationAlignmentExamplesRepositoryShape) {
-  const issue: EvaluationIssue = {
-    id: ISSUE_ID,
+  const issue: EvaluationSignal = {
+    id: SIGNAL_ID,
     projectId: PROJECT_ID as string,
-    name: "Issue",
+    name: "Signal",
     description: "Desc",
   }
 
@@ -113,12 +113,12 @@ function runCollect(exampleRepository: EvaluationAlignmentExamplesRepositoryShap
     collectAlignmentExamplesUseCase({
       organizationId: ORGANIZATION_ID as string,
       projectId: PROJECT_ID as string,
-      issueId: ISSUE_ID as string,
+      signalId: SIGNAL_ID as string,
       requirePositiveExamples: false,
     }).pipe(
       Effect.provide(
         Layer.mergeAll(
-          Layer.succeed(EvaluationIssueRepository, {
+          Layer.succeed(EvaluationSignalRepository, {
             findById: () => Effect.succeed(issue),
           }),
           Layer.succeed(EvaluationAlignmentExamplesRepository, exampleRepository),

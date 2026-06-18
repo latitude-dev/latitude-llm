@@ -68,5 +68,5 @@ Your annotations feed into issue discovery and evaluation alignment alongside th
 - [Annotations](../annotations/overview): Build human review workflows
 - [Flaggers](../annotations/flaggers): Automatic annotators for common failure categories
 - [Evaluations](../evaluations/overview): Set up automated monitoring
-- [Issues](../issues/overview): Understand how failure patterns are discovered
+- [Issues](../signals/overview): Understand how failure patterns are discovered
 - [Simulations](../simulations/overview): Test your agent before shipping

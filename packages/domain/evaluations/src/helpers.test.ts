@@ -3,8 +3,8 @@ import { type ConfusionMatrix, evaluationSchema, evaluationTriggerSchema } from 
 import { EvaluationDeletedError } from "./errors.ts"
 import {
   addConfusionMatrixObservation,
-  applyIssueIgnoreToEvaluation,
-  applyIssueResolutionToEvaluation,
+  applySignalIgnoreToEvaluation,
+  applySignalResolutionToEvaluation,
   archiveEvaluation,
   buildLiveEvaluationExecuteScopeDedupeKey,
   buildLiveEvaluationExecuteTraceDedupeKey,
@@ -43,7 +43,7 @@ const makeEvaluation = (overrides: Partial<ReturnType<typeof evaluationSchema.pa
     id: "e".repeat(24),
     organizationId: "o".repeat(24),
     projectId: "p".repeat(24),
-    issueId: "i".repeat(24),
+    signalId: "i".repeat(24),
     name: "Secret Leakage Monitor",
     description: "Detects when the agent leaks secrets.",
     script: wrapPromptAsEvaluationScript("Check for secret leakage in the conversation."),
@@ -112,7 +112,7 @@ describe("evaluation lifecycle helpers", () => {
     const evaluation = makeEvaluation()
 
     expect(
-      applyIssueResolutionToEvaluation({
+      applySignalResolutionToEvaluation({
         evaluation,
         keepMonitoring: true,
       }),
@@ -121,7 +121,7 @@ describe("evaluation lifecycle helpers", () => {
 
   it("applies keepMonitoring=false by soft deleting the evaluation", () => {
     const deletedAt = new Date("2026-04-05T00:00:00.000Z")
-    const deleted = applyIssueResolutionToEvaluation({
+    const deleted = applySignalResolutionToEvaluation({
       evaluation: makeEvaluation(),
       keepMonitoring: false,
       deletedAt,
@@ -133,7 +133,7 @@ describe("evaluation lifecycle helpers", () => {
 
   it("soft deletes linked evaluations when an issue is ignored", () => {
     const deletedAt = new Date("2026-04-06T00:00:00.000Z")
-    const deleted = applyIssueIgnoreToEvaluation({
+    const deleted = applySignalIgnoreToEvaluation({
       evaluation: makeEvaluation(),
       deletedAt,
     })

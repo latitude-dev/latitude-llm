@@ -20,11 +20,11 @@ import {
   BillingUsagePeriodRepositoryLive,
   EvaluationRepositoryLive,
   FeatureFlagRepositoryLive,
-  IssueRepositoryLive,
   OutboxEventWriterLive,
   type PostgresClient,
   ScoreRepositoryLive,
   SettingsReaderLive,
+  SignalRepositoryLive,
   StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
@@ -69,8 +69,8 @@ const getExecuteResultKind = (score: EvaluationScore) => {
   return "failed" as const
 }
 
-const getIssueAssignmentPath = (score: EvaluationScore) => {
-  if (score.issueId !== null) return "direct" as const
+const getSignalAssignmentPath = (score: EvaluationScore) => {
+  if (score.signalId !== null) return "direct" as const
   if (score.errored || score.passed) return "none" as const
   return "deferred" as const
 }
@@ -87,7 +87,7 @@ const buildExecutePersistedLogContext = (
   outcome: result.action,
   resultKind: getExecuteResultKind(result.context.score),
   scoreId: result.summary.scoreId,
-  issueAssignmentPath: getIssueAssignmentPath(result.context.score),
+  signalAssignmentPath: getSignalAssignmentPath(result.context.score),
   tokens: result.context.score.tokens,
   cost: result.context.score.cost,
   duration: result.context.score.duration,
@@ -145,7 +145,7 @@ export const createLiveEvaluationsWorker = ({
         Layer.mergeAll(
           EvaluationRepositoryLive,
           FeatureFlagRepositoryLive,
-          IssueRepositoryLive,
+          SignalRepositoryLive,
           OutboxEventWriterLive,
           ScoreRepositoryLive,
           BillingOverrideRepositoryLive,

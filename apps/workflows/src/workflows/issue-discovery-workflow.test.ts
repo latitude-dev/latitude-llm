@@ -7,7 +7,7 @@ const { callOrder, mockActivities, mockSleep } = vi.hoisted(() => {
     | { readonly status: "skipped"; readonly reason: "PassedScoreNotEligibleForDiscoveryError" }
   type MockAssignmentResult = {
     readonly action: "created" | "assigned" | "already-assigned"
-    readonly issueId: string
+    readonly signalId: string
   }
   type MockAssignOrCreateResult =
     | { readonly status: "serialized"; readonly assignment: MockAssignmentResult }
@@ -27,13 +27,13 @@ const { callOrder, mockActivities, mockSleep } = vi.hoisted(() => {
         normalizedEmbedding: [0.6, 0.8],
       }
     }),
-    assignOrCreateIssue: vi.fn<() => Promise<MockAssignOrCreateResult>>(async () => {
-      callOrder.push("assignOrCreateIssue")
+    assignOrCreateSignal: vi.fn<() => Promise<MockAssignOrCreateResult>>(async () => {
+      callOrder.push("assignOrCreateSignal")
       return {
         status: "serialized" as const,
         assignment: {
           action: "created" as const,
-          issueId: "issue-new",
+          signalId: "issue-new",
         },
       }
     }),
@@ -54,35 +54,35 @@ vi.mock("@temporalio/workflow", () => ({
   sleep: mockSleep,
 }))
 
-import { issueDiscoveryWorkflow } from "./issue-discovery-workflow.ts"
+import { signalDiscoveryWorkflow } from "./issue-discovery-workflow.ts"
 
-describe("issueDiscoveryWorkflow", () => {
+describe("signalDiscoveryWorkflow", () => {
   beforeEach(() => {
     callOrder.length = 0
     vi.clearAllMocks()
   })
 
   it("embeds feedback, assigns or creates an issue, and syncs analytics", async () => {
-    mockActivities.assignOrCreateIssue.mockImplementationOnce(async () => {
-      callOrder.push("assignOrCreateIssue")
+    mockActivities.assignOrCreateSignal.mockImplementationOnce(async () => {
+      callOrder.push("assignOrCreateSignal")
       return {
         status: "serialized" as const,
         assignment: {
           action: "assigned" as const,
-          issueId: "issue-1",
+          signalId: "issue-1",
         },
       }
     })
 
-    const result = await issueDiscoveryWorkflow({
+    const result = await signalDiscoveryWorkflow({
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-1",
     })
 
-    expect(result).toEqual({ action: "assigned", issueId: "issue-1" })
-    expect(callOrder).toEqual(["checkEligibility", "embedScoreFeedback", "assignOrCreateIssue", "syncScoreAnalytics"])
-    expect(mockActivities.assignOrCreateIssue).toHaveBeenCalledWith({
+    expect(result).toEqual({ action: "assigned", signalId: "issue-1" })
+    expect(callOrder).toEqual(["checkEligibility", "embedScoreFeedback", "assignOrCreateSignal", "syncScoreAnalytics"])
+    expect(mockActivities.assignOrCreateSignal).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-1",
@@ -101,7 +101,7 @@ describe("issueDiscoveryWorkflow", () => {
       reason: "PassedScoreNotEligibleForDiscoveryError" as const,
     })
 
-    const result = await issueDiscoveryWorkflow({
+    const result = await signalDiscoveryWorkflow({
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-1",
@@ -112,17 +112,17 @@ describe("issueDiscoveryWorkflow", () => {
       reason: "PassedScoreNotEligibleForDiscoveryError",
     })
     expect(mockActivities.embedScoreFeedback).not.toHaveBeenCalled()
-    expect(mockActivities.assignOrCreateIssue).not.toHaveBeenCalled()
+    expect(mockActivities.assignOrCreateSignal).not.toHaveBeenCalled()
     expect(mockActivities.syncScoreAnalytics).not.toHaveBeenCalled()
   })
 
   it("returns skipped assignment results without syncing analytics", async () => {
-    mockActivities.assignOrCreateIssue.mockImplementationOnce(async () => {
-      callOrder.push("assignOrCreateIssue")
+    mockActivities.assignOrCreateSignal.mockImplementationOnce(async () => {
+      callOrder.push("assignOrCreateSignal")
       return { status: "skipped" as const, reason: "ScoreNotFoundForDiscoveryError" }
     })
 
-    const result = await issueDiscoveryWorkflow({
+    const result = await signalDiscoveryWorkflow({
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-1",
@@ -135,41 +135,41 @@ describe("issueDiscoveryWorkflow", () => {
   it("retries assignment lock contention with workflow sleeps", async () => {
     const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0)
     try {
-      mockActivities.assignOrCreateIssue
+      mockActivities.assignOrCreateSignal
         .mockImplementationOnce(async () => {
-          callOrder.push("assignOrCreateIssue")
+          callOrder.push("assignOrCreateSignal")
           return { status: "lock-unavailable" as const }
         })
         .mockImplementationOnce(async () => {
-          callOrder.push("assignOrCreateIssue")
+          callOrder.push("assignOrCreateSignal")
           return { status: "lock-unavailable" as const }
         })
         .mockImplementationOnce(async () => {
-          callOrder.push("assignOrCreateIssue")
+          callOrder.push("assignOrCreateSignal")
           return {
             status: "serialized" as const,
             assignment: {
               action: "assigned" as const,
-              issueId: "issue-1",
+              signalId: "issue-1",
             },
           }
         })
 
-      const result = await issueDiscoveryWorkflow({
+      const result = await signalDiscoveryWorkflow({
         organizationId: "org-1",
         projectId: "proj-1",
         scoreId: "score-1",
       })
 
-      expect(result).toEqual({ action: "assigned", issueId: "issue-1" })
+      expect(result).toEqual({ action: "assigned", signalId: "issue-1" })
       expect(callOrder).toEqual([
         "checkEligibility",
         "embedScoreFeedback",
-        "assignOrCreateIssue",
+        "assignOrCreateSignal",
         "sleep:2000",
-        "assignOrCreateIssue",
+        "assignOrCreateSignal",
         "sleep:3000",
-        "assignOrCreateIssue",
+        "assignOrCreateSignal",
         "syncScoreAnalytics",
       ])
       expect(mockSleep).toHaveBeenCalledTimes(2)
@@ -181,20 +181,20 @@ describe("issueDiscoveryWorkflow", () => {
   it("fails the workflow after exhausting lock-retry attempts", async () => {
     const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0)
     try {
-      mockActivities.assignOrCreateIssue.mockImplementation(async () => {
-        callOrder.push("assignOrCreateIssue")
+      mockActivities.assignOrCreateSignal.mockImplementation(async () => {
+        callOrder.push("assignOrCreateSignal")
         return { status: "lock-unavailable" as const }
       })
 
       await expect(
-        issueDiscoveryWorkflow({
+        signalDiscoveryWorkflow({
           organizationId: "org-1",
           projectId: "proj-1",
           scoreId: "score-1",
         }),
       ).rejects.toThrow(/Lock remained unavailable after 18 workflow retries/)
 
-      expect(mockActivities.assignOrCreateIssue).toHaveBeenCalledTimes(18)
+      expect(mockActivities.assignOrCreateSignal).toHaveBeenCalledTimes(18)
       expect(mockSleep).toHaveBeenCalledTimes(17)
       expect(mockActivities.syncScoreAnalytics).not.toHaveBeenCalled()
     } finally {

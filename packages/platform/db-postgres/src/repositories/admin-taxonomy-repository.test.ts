@@ -69,7 +69,7 @@ describe("AdminTaxonomyRepositoryLive.getProjectTaxonomy", () => {
         id: CATEGORY,
         organizationId: ORG,
         projectId: PROJECT,
-        name: "Checkout issues",
+        name: "Checkout signals",
         description: "Problems during checkout.",
         centroid,
         observationCount: 3,

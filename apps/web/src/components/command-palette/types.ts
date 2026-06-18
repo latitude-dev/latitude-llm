@@ -19,7 +19,7 @@ interface BasePaletteCommand {
   readonly titleNode?: ReactNode
   readonly icon: LucideIcon
   readonly section: CommandSection
-  /** Sub-heading for contextual commands (e.g. "Issue", "Trace"). */
+  /** Sub-heading for contextual commands (e.g. "Signal", "Trace"). */
   readonly group?: string
   /** Custom leading visual that overrides `icon` (e.g. a project emoji). */
   readonly leading?: ReactNode

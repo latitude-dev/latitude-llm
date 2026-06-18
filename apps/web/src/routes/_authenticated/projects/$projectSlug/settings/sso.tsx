@@ -279,7 +279,7 @@ function OidcRegisterForm({ onRegistered }: { onRegistered: (record: SsoDomainVe
           <Input
             type="text"
             name={field.name}
-            label="Issuer URL"
+            label="Signalr URL"
             description="OIDC discovery is fetched from <issuer>/.well-known/openid-configuration."
             value={field.state.value}
             onChange={(e) => field.handleChange(e.target.value)}
@@ -361,7 +361,7 @@ function ProviderCard({
                 <Badge variant="warningMuted">Domain unverified</Badge>
               )}
             </div>
-            <Text.H6 color="foregroundMuted">Issuer: {provider.issuer}</Text.H6>
+            <Text.H6 color="foregroundMuted">Signalr: {provider.issuer}</Text.H6>
           </div>
         </div>
 

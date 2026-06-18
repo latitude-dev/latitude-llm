@@ -1,5 +1,5 @@
 /**
- * Additional alignment fixture descriptions for Issue 2 (dangerous combinations).
+ * Additional alignment fixture descriptions for Signal 2 (dangerous combinations).
  * These extend the annotation traces in section 7.3 with broader evaluation tuning data.
  *
  * All are negative examples (passed=true, no issue link) — they show the agent
@@ -18,7 +18,7 @@ export type AlignmentFixture = {
   readonly feedback: string
 }
 
-export const ISSUE_2_ADDITIONAL_NEGATIVES: readonly AlignmentFixture[] = [
+export const SIGNAL_2_ADDITIONAL_NEGATIVES: readonly AlignmentFixture[] = [
   // -- Section 9.3: Easy negatives (7) --
   {
     userMessage: "Can I change the shipping address on my order ACM-82910?",

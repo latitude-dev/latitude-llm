@@ -1,7 +1,7 @@
 /**
  * Shared running-decayed-sum centroid math.
  *
- * Lifted from `@domain/issues/src/helpers.ts` so both `@domain/issues` and
+ * Lifted from `@domain/signals/src/helpers.ts` so both `@domain/signals` and
  * `@domain/taxonomy` import the same primitives. Pure functions over a
  * generic `Centroid` shape — callers parameterize the model + weight scheme
  * via their own constants and a `weightForContribution` callback.

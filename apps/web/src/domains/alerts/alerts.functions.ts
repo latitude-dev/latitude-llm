@@ -5,16 +5,16 @@ import {
   AlertIncidentRepository,
   type AlertSeverity,
 } from "@domain/alerts"
-import { IssueRepository, type IssueWithLifecycle } from "@domain/issues"
 import { formatHumanReadableAlert } from "@domain/monitors"
 import { type IncidentMonitorInfo, IncidentMonitorReader } from "@domain/notifications"
 import { SavedSearchRepository } from "@domain/saved-searches"
-import { IssueId, OrganizationId, ProjectId, SavedSearchId } from "@domain/shared"
+import { OrganizationId, ProjectId, SavedSearchId, SignalId } from "@domain/shared"
+import { SignalRepository, type SignalWithLifecycle } from "@domain/signals"
 import {
   AlertIncidentRepositoryLive,
   IncidentMonitorReaderLive,
-  IssueRepositoryLive,
   SavedSearchRepositoryLive,
+  SignalRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
@@ -43,7 +43,7 @@ export interface AlertIncidentRecord {
   readonly startedAt: string
   readonly endedAt: string | null
   /** Resolved name of the issue tied to the incident; `null` if not found (e.g., deleted). */
-  readonly issueName: string | null
+  readonly signalName: string | null
   /** Resolved name of the saved search tied to the incident (the source); `null` on issue rows or when deleted. */
   readonly savedSearchName: string | null
   /** Owning monitor name + slug for the attribution line + deep link; `null` on legacy or issue rows. */
@@ -55,7 +55,7 @@ export interface AlertIncidentRecord {
 
 const toRecord = (
   incident: AlertIncident,
-  issue: IssueWithLifecycle | undefined,
+  issue: SignalWithLifecycle | undefined,
   savedSearchName: string | undefined,
   monitor: IncidentMonitorInfo | undefined,
 ): AlertIncidentRecord => ({
@@ -67,7 +67,7 @@ const toRecord = (
   sourceId: incident.sourceId,
   startedAt: incident.startedAt.toISOString(),
   endedAt: incident.endedAt?.toISOString() ?? null,
-  issueName: issue?.name ?? null,
+  signalName: issue?.name ?? null,
   savedSearchName: savedSearchName ?? null,
   monitorName: monitor?.name ?? null,
   monitorSlug: monitor?.slug ?? null,
@@ -79,8 +79,8 @@ const toRecord = (
 /**
  * Returns incidents for the project whose lifetime overlaps `[fromIso, toIso]`,
  * enriched with the issue's name/uuid so the histogram tooltip can show a human label
- * without a follow-up request per incident. Issue lookup is best-effort — incidents
- * whose source issue has been deleted still come back, with `issueName: null`.
+ * without a follow-up request per incident. Signal lookup is best-effort — incidents
+ * whose source issue has been deleted still come back, with `signalName: null`.
  */
 export const listProjectAlertIncidentsInRange = createServerFn({
   method: "GET",
@@ -95,7 +95,7 @@ export const listProjectAlertIncidentsInRange = createServerFn({
     const items = await Effect.runPromise(
       Effect.gen(function* () {
         const incidentRepo = yield* AlertIncidentRepository
-        const issueRepo = yield* IssueRepository
+        const signalRepo = yield* SignalRepository
         const savedSearchRepo = yield* SavedSearchRepository
         const monitorReader = yield* IncidentMonitorReader
 
@@ -108,15 +108,15 @@ export const listProjectAlertIncidentsInRange = createServerFn({
           ...(data.sourceId ? { sourceId: data.sourceId } : {}),
         })
 
-        const issueIds = Array.from(
+        const signalIds = Array.from(
           new Set(incidents.flatMap((i) => (i.sourceType === "issue" && i.sourceId !== null ? [i.sourceId] : []))),
-        ).map(IssueId)
+        ).map(SignalId)
 
         const issues =
-          issueIds.length > 0
-            ? yield* issueRepo.findByIds({ projectId, issueIds })
-            : ([] as readonly IssueWithLifecycle[])
-        const issueById = new Map(issues.map((issue) => [issue.id, issue] as const))
+          signalIds.length > 0
+            ? yield* signalRepo.findByIds({ projectId, signalIds })
+            : ([] as readonly SignalWithLifecycle[])
+        const signalById = new Map(issues.map((issue) => [issue.id, issue] as const))
 
         // Saved-search names are the source label for `savedSearch.*` rows (mirrors the issue name).
         const savedSearchIds = Array.from(
@@ -146,7 +146,7 @@ export const listProjectAlertIncidentsInRange = createServerFn({
           toRecord(
             incident,
             incident.sourceType === "issue" && incident.sourceId !== null
-              ? issueById.get(IssueId(incident.sourceId))
+              ? signalById.get(SignalId(incident.sourceId))
               : undefined,
             incident.sourceId !== null ? savedSearchNameById.get(incident.sourceId) : undefined,
             incident.monitorAlertId ? monitorByAlertId.get(incident.monitorAlertId) : undefined,
@@ -156,7 +156,7 @@ export const listProjectAlertIncidentsInRange = createServerFn({
         withPostgres(
           Layer.mergeAll(
             AlertIncidentRepositoryLive,
-            IssueRepositoryLive,
+            SignalRepositoryLive,
             SavedSearchRepositoryLive,
             IncidentMonitorReaderLive,
           ),

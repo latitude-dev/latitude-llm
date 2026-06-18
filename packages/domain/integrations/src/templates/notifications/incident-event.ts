@@ -18,8 +18,8 @@ export const incidentEventRenderer: SlackNotificationRenderer<"incident.event"> 
     const name = ALERT_INCIDENT_KIND_LABEL[payload.incidentKind] ?? "Incident"
     const color = severityColor(payload.severity)
     const isSavedSearch = payload.sourceType === "savedSearch"
-    const issueUrl = ctx.project
-      ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues/${payload.sourceId}`
+    const signalUrl = ctx.project
+      ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals/${payload.sourceId}`
       : ctx.webAppUrl
     const monitorUrl =
       monitorDeepLink({ webAppUrl: ctx.webAppUrl, projectSlug: ctx.project?.slug, monitorSlug: payload.monitorSlug }) ??
@@ -59,13 +59,15 @@ export const incidentEventRenderer: SlackNotificationRenderer<"incident.event"> 
       text: `${name} in ${ctx.project?.name ?? ctx.organization.name}${sourceName ? `: ${sourceName}` : ""}`,
       color,
       blocks: [
-        ...(sourceName ? [sectionMarkdown(`*<${issueUrl}|${sourceName}>*`)] : []),
-        sectionMarkdown(sourceName ? `A new <${issueUrl}|issue> has been detected.` : `A new issue has been detected.`),
+        ...(sourceName ? [sectionMarkdown(`*<${signalUrl}|${sourceName}>*`)] : []),
+        sectionMarkdown(
+          sourceName ? `A new <${signalUrl}|signal> has been detected.` : `A new signal has been detected.`,
+        ),
         ...(payload.sampleExcerpt?.text ? [sectionMarkdown(`\`\`\`\n${payload.sampleExcerpt.text}\n\`\`\``)] : []),
         ...(tags.length > 0 ? [sectionMarkdown(tags.map((t) => `\`${t}\``).join("  "))] : []),
         ...attribution,
         context,
-        actionsLink("View issue", issueUrl),
+        actionsLink("View signal", signalUrl),
       ],
     }
   })

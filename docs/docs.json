@@ -1,5 +1,8 @@
 {
   "$schema": "https://mintlify.com/schema.json",
+  "redirects": [
+    { "source": "/issues/:slug*", "destination": "/signals/:slug*" }
+  ],
   "theme": "mint",
   "name": "Latitude Docs",
   "favicon": "/favicon.svg",
@@ -163,12 +166,12 @@
         ]
       },
       {
-        "group": "Issues",
+        "group": "Signals",
         "pages": [
-          "issues/overview",
-          "issues/management",
+          "signals/overview",
+          "signals/management",
           {
-            "group": "Signals",
+            "group": "Annotations",
             "pages": [
               "annotations/overview",
               "annotations/inline-annotations",

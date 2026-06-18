@@ -1,9 +1,3 @@
-import {
-  DEFAULT_ESCALATION_SENSITIVITY_K,
-  MIN_SEASONAL_SAMPLES,
-  SEASONAL_HISTORY_WEEKS,
-  seasonalAnomalyThreshold,
-} from "@domain/issues"
 import type {
   AlertBaseline,
   AlertDuration,
@@ -13,6 +7,12 @@ import type {
   ProjectId,
   RepositoryError,
 } from "@domain/shared"
+import {
+  DEFAULT_ESCALATION_SENSITIVITY_K,
+  MIN_SEASONAL_SAMPLES,
+  SEASONAL_HISTORY_WEEKS,
+  seasonalAnomalyThreshold,
+} from "@domain/signals"
 import { Effect } from "effect"
 import { pickEscalatingBucketMs, SAVED_SEARCH_CURRENT_WINDOW_MS } from "../constants.ts"
 import type { MonitorAlert } from "../entities/monitor.ts"
@@ -128,7 +128,7 @@ export const evaluateSavedSearchAlert = (
       isMet = count > 0 && count >= thresholdValue
     } else {
       // `expected`: σ-band over the same-time-of-week window across the last N weeks
-      // (detector math shared from `@domain/issues`).
+      // (detector math shared from `@domain/signals`).
       const sensitivity = threshold.sensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K
       const historical = yield* Effect.all(
         Array.from({ length: SEASONAL_HISTORY_WEEKS }, (_unused, index) => {

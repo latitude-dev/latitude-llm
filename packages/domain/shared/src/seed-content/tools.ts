@@ -296,7 +296,7 @@ export const SAFETY_REVIEWER_TOOLS: readonly ToolConfig[] = [
     sampleArgs: { incident_id: "IR-2026-0847", context: "12 similar incidents in 90 days" },
     sampleResult: {
       risk_level: "HIGH",
-      recommendation: "Issue recall for lots RSK-001-2026-02 through RSK-001-2026-04",
+      recommendation: "Signal recall for lots RSK-001-2026-02 through RSK-001-2026-04",
       corrective_action: "Replace ignition switch with dual-trigger mechanism",
     },
   },

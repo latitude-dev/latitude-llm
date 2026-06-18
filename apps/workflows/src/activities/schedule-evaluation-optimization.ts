@@ -27,7 +27,7 @@ export const buildOptimizationDedupeKey = (evaluationId: string) => `evaluations
 export const scheduleEvaluationOptimization = async (input: {
   readonly organizationId: string
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly evaluationId: string
 }): Promise<void> => {
   const publisher = await getQueuePublisher()
@@ -40,7 +40,7 @@ export const scheduleEvaluationOptimization = async (input: {
         {
           organizationId: input.organizationId,
           projectId: input.projectId,
-          issueId: input.issueId,
+          signalId: input.signalId,
           evaluationId: input.evaluationId,
         },
         {

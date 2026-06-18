@@ -6,9 +6,9 @@ import { EllipsisIcon, GlobeIcon, ShieldAlertIcon, ThumbsDownIcon, ThumbsUpIcon 
 import { useMemo, useState } from "react"
 import { useDeleteAnnotation } from "../../../../../../domains/annotations/annotations.collection.ts"
 import type { AnnotationRecord } from "../../../../../../domains/annotations/annotations.functions.ts"
-import { useIssue } from "../../../../../../domains/issues/issues.collection.ts"
 import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
 import { pickUserFromMembersMap } from "../../../../../../domains/members/pick-users-from-members.ts"
+import { useSignal } from "../../../../../../domains/signals/signals.collection.ts"
 import { FlaggerBadge } from "../flaggers/flagger-badge.tsx"
 import { AnnotationApprovalPopover } from "./annotation-approval-popover.tsx"
 import { AnnotationInput } from "./annotation-input.tsx"
@@ -19,7 +19,7 @@ interface AnnotationCardProps {
   readonly projectId: string
   readonly isGlobal?: boolean
   readonly isUpdateLoading?: boolean
-  readonly onUpdate: (data: { passed: boolean; comment: string; issueId: string | null }) => void
+  readonly onUpdate: (data: { passed: boolean; comment: string; signalId: string | null }) => void
   readonly onDelete?: (() => void) | undefined
 }
 
@@ -36,14 +36,14 @@ export function AnnotationCard({
   const memberByUserId = useMemberByUserIdMap()
   const annotator = pickUserFromMembersMap(memberByUserId, annotation.annotatorId)
   const deleteMutation = useDeleteAnnotation()
-  const { data: linkedIssue } = useIssue({
+  const { data: linkedSignal } = useSignal({
     projectId,
-    issueId: annotation.issueId ?? "",
-    enabled: annotation.issueId !== null,
+    signalId: annotation.signalId ?? "",
+    enabled: annotation.signalId !== null,
   })
 
-  const linkedIssueName = linkedIssue?.name ?? null
-  const linkedIssueDescription = linkedIssue?.description?.trim()
+  const linkedSignalName = linkedSignal?.name ?? null
+  const linkedSignalDescription = linkedSignal?.description?.trim()
   const provenance = getAnnotationProvenance(annotation)
   const flaggerSlug = (annotation.metadata as { flaggerSlug?: string })?.flaggerSlug?.trim() || undefined
   const isEditable = canUpdateAnnotation(annotation)
@@ -67,7 +67,7 @@ export function AnnotationCard({
     [annotation.id, projectId, deleteMutation, onDelete, isEditable],
   )
 
-  function handleSave(data: { passed: boolean; comment: string; issueId: string | null }) {
+  function handleSave(data: { passed: boolean; comment: string; signalId: string | null }) {
     onUpdate(data)
     setIsEditing(false)
   }
@@ -80,7 +80,7 @@ export function AnnotationCard({
           isLoading={isUpdateLoading}
           initialPassed={annotation.passed}
           initialComment={annotation.feedback ?? ""}
-          initialIssueId={annotation.issueId}
+          initialSignalId={annotation.signalId}
           onSave={handleSave}
           cancellable
           autoFocus
@@ -168,11 +168,11 @@ export function AnnotationCard({
 
       {humanFeedback && <Text.H5 className="whitespace-pre-wrap">{humanFeedback}</Text.H5>}
 
-      {(linkedIssueName || isAgentDraft) && (
+      {(linkedSignalName || isAgentDraft) && (
         <div className="flex items-center gap-2 pt-1">
-          {linkedIssueName &&
+          {linkedSignalName &&
             (() => {
-              const isNavigable = Boolean(projectSlug && annotation.issueId)
+              const isNavigable = Boolean(projectSlug && annotation.signalId)
               const badge = (
                 <Badge
                   variant="outline"
@@ -186,16 +186,16 @@ export function AnnotationCard({
                     className: "stroke-[2.5]",
                   }}
                 >
-                  {linkedIssueName}
+                  {linkedSignalName}
                 </Badge>
               )
               const trigger =
-                projectSlug && annotation.issueId ? (
+                projectSlug && annotation.signalId ? (
                   <Link
                     data-no-navigate
-                    to="/projects/$projectSlug/issues/$issueId"
-                    params={{ projectSlug, issueId: annotation.issueId }}
-                    aria-label={`Open issue ${linkedIssueName}`}
+                    to="/projects/$projectSlug/signals/$signalId"
+                    params={{ projectSlug, signalId: annotation.signalId }}
+                    aria-label={`Open issue ${linkedSignalName}`}
                     onClick={(event) => event.stopPropagation()}
                     className="inline-flex min-w-0"
                   >
@@ -204,9 +204,9 @@ export function AnnotationCard({
                 ) : (
                   badge
                 )
-              return linkedIssueDescription ? (
+              return linkedSignalDescription ? (
                 <Tooltip asChild trigger={trigger}>
-                  <span className="block max-w-xs whitespace-pre-wrap text-left">{linkedIssueDescription}</span>
+                  <span className="block max-w-xs whitespace-pre-wrap text-left">{linkedSignalDescription}</span>
                 </Tooltip>
               ) : (
                 trigger

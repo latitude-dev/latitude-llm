@@ -43,7 +43,7 @@ function makeScore(overrides: Partial<Score> = {}): Score {
     source: "annotation",
     sourceId: "UI",
     simulationId: null,
-    issueId: null,
+    signalId: null,
     value: 1,
     passed: true,
     feedback: "Good",

@@ -14,7 +14,7 @@ export const SCORE_FIELD_REGISTRY: ChFieldRegistry = {
   "score.value": { column: "value", chType: "Float32" },
   "score.source": { column: "source", chType: "FixedString(32)" },
   "score.sourceId": { column: "source_id", chType: "FixedString(128)" },
-  "score.issueId": { column: "issue_id", chType: "FixedString(24)" },
+  "score.signalId": { column: "signal_id", chType: "FixedString(24)" },
   "score.simulationId": { column: "simulation_id", chType: "FixedString(24)" },
 }
 

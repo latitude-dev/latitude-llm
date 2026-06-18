@@ -68,7 +68,7 @@ if typing.TYPE_CHECKING:
     from .export_dataset_rows_queued_response import ExportDatasetRowsQueuedResponse
     from .export_dataset_rows_ready_response import ExportDatasetRowsReadyResponse
     from .export_dataset_rows_too_large_response import ExportDatasetRowsTooLargeResponse
-    from .export_issues_response import ExportIssuesResponse
+    from .export_signals_response import ExportSignalsResponse
     from .export_traces_response import ExportTracesResponse
     from .filter_condition import FilterCondition
     from .filter_condition_op import FilterConditionOp
@@ -89,37 +89,6 @@ if typing.TYPE_CHECKING:
     from .insert_dataset_rows_response import InsertDatasetRowsResponse
     from .invited_member import InvitedMember
     from .invited_member_role import InvitedMemberRole
-    from .issue import Issue
-    from .issue_analytics_bucket import IssueAnalyticsBucket
-    from .issue_analytics_escalating import IssueAnalyticsEscalating
-    from .issue_analytics_new import IssueAnalyticsNew
-    from .issue_analytics_occurrences import IssueAnalyticsOccurrences
-    from .issue_analytics_ongoing import IssueAnalyticsOngoing
-    from .issue_analytics_regressed import IssueAnalyticsRegressed
-    from .issue_analytics_resolved import IssueAnalyticsResolved
-    from .issue_analytics_response import IssueAnalyticsResponse
-    from .issue_detail import IssueDetail
-    from .issue_detail_source import IssueDetailSource
-    from .issue_detail_states_item import IssueDetailStatesItem
-    from .issue_histogram import IssueHistogram
-    from .issue_histogram_bucket import IssueHistogramBucket
-    from .issue_lifecycle_item import IssueLifecycleItem
-    from .issue_monitoring_state import (
-        IssueMonitoringState,
-        IssueMonitoringState_Automatic,
-        IssueMonitoringState_Generating,
-        IssueMonitoringState_Idle,
-        IssueMonitoringState_Realigning,
-    )
-    from .issue_monitoring_state_automatic import IssueMonitoringStateAutomatic
-    from .issue_monitoring_state_generating import IssueMonitoringStateGenerating
-    from .issue_monitoring_state_idle import IssueMonitoringStateIdle
-    from .issue_monitoring_state_realigning import IssueMonitoringStateRealigning
-    from .issue_source import IssueSource
-    from .issue_states_item import IssueStatesItem
-    from .issue_trend_bucket import IssueTrendBucket
-    from .issues_lifecycle_body import IssuesLifecycleBody
-    from .issues_lifecycle_response import IssuesLifecycleResponse
     from .list_incidents_response import ListIncidentsResponse
     from .member import Member, Member_Active, Member_Invited
     from .member_list import MemberList
@@ -134,18 +103,18 @@ if typing.TYPE_CHECKING:
     from .monitor_incident_kind import MonitorIncidentKind
     from .monitor_incident_severity import MonitorIncidentSeverity
     from .monitor_incident_source_type import MonitorIncidentSourceType
-    from .monitor_issue_response import MonitorIssueResponse
+    from .monitor_signal_response import MonitorSignalResponse
     from .notifications_setting import NotificationsSetting
     from .o_auth_key import OAuthKey
     from .o_auth_key_list import OAuthKeyList
     from .o_auth_protected_resource_metadata import OAuthProtectedResourceMetadata
     from .paginated_dataset_rows import PaginatedDatasetRows
     from .paginated_datasets import PaginatedDatasets
-    from .paginated_issues import PaginatedIssues
     from .paginated_monitor_incidents import PaginatedMonitorIncidents
     from .paginated_monitors import PaginatedMonitors
     from .paginated_projects import PaginatedProjects
     from .paginated_saved_searches import PaginatedSavedSearches
+    from .paginated_signals import PaginatedSignals
     from .paginated_tool_calls import PaginatedToolCalls
     from .paginated_trace_annotations import PaginatedTraceAnnotations
     from .paginated_traces import PaginatedTraces
@@ -155,6 +124,37 @@ if typing.TYPE_CHECKING:
     from .recent_tool_call_status_code import RecentToolCallStatusCode
     from .saved_search import SavedSearch
     from .score_response import ScoreResponse, ScoreResponse_Custom, ScoreResponse_Evaluation
+    from .signal import Signal
+    from .signal_analytics_bucket import SignalAnalyticsBucket
+    from .signal_analytics_escalating import SignalAnalyticsEscalating
+    from .signal_analytics_new import SignalAnalyticsNew
+    from .signal_analytics_occurrences import SignalAnalyticsOccurrences
+    from .signal_analytics_ongoing import SignalAnalyticsOngoing
+    from .signal_analytics_regressed import SignalAnalyticsRegressed
+    from .signal_analytics_resolved import SignalAnalyticsResolved
+    from .signal_analytics_response import SignalAnalyticsResponse
+    from .signal_detail import SignalDetail
+    from .signal_detail_source import SignalDetailSource
+    from .signal_detail_states_item import SignalDetailStatesItem
+    from .signal_histogram import SignalHistogram
+    from .signal_histogram_bucket import SignalHistogramBucket
+    from .signal_lifecycle_item import SignalLifecycleItem
+    from .signal_monitoring_state import (
+        SignalMonitoringState,
+        SignalMonitoringState_Automatic,
+        SignalMonitoringState_Generating,
+        SignalMonitoringState_Idle,
+        SignalMonitoringState_Realigning,
+    )
+    from .signal_monitoring_state_automatic import SignalMonitoringStateAutomatic
+    from .signal_monitoring_state_generating import SignalMonitoringStateGenerating
+    from .signal_monitoring_state_idle import SignalMonitoringStateIdle
+    from .signal_monitoring_state_realigning import SignalMonitoringStateRealigning
+    from .signal_source import SignalSource
+    from .signal_states_item import SignalStatesItem
+    from .signal_trend_bucket import SignalTrendBucket
+    from .signals_lifecycle_body import SignalsLifecycleBody
+    from .signals_lifecycle_response import SignalsLifecycleResponse
     from .span import Span
     from .span_detail import SpanDetail
     from .span_detail_kind import SpanDetailKind
@@ -260,7 +260,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "ExportDatasetRowsQueuedResponse": ".export_dataset_rows_queued_response",
     "ExportDatasetRowsReadyResponse": ".export_dataset_rows_ready_response",
     "ExportDatasetRowsTooLargeResponse": ".export_dataset_rows_too_large_response",
-    "ExportIssuesResponse": ".export_issues_response",
+    "ExportSignalsResponse": ".export_signals_response",
     "ExportTracesResponse": ".export_traces_response",
     "FilterCondition": ".filter_condition",
     "FilterConditionOp": ".filter_condition_op",
@@ -281,35 +281,6 @@ _dynamic_imports: typing.Dict[str, str] = {
     "InsertDatasetRowsResponse": ".insert_dataset_rows_response",
     "InvitedMember": ".invited_member",
     "InvitedMemberRole": ".invited_member_role",
-    "Issue": ".issue",
-    "IssueAnalyticsBucket": ".issue_analytics_bucket",
-    "IssueAnalyticsEscalating": ".issue_analytics_escalating",
-    "IssueAnalyticsNew": ".issue_analytics_new",
-    "IssueAnalyticsOccurrences": ".issue_analytics_occurrences",
-    "IssueAnalyticsOngoing": ".issue_analytics_ongoing",
-    "IssueAnalyticsRegressed": ".issue_analytics_regressed",
-    "IssueAnalyticsResolved": ".issue_analytics_resolved",
-    "IssueAnalyticsResponse": ".issue_analytics_response",
-    "IssueDetail": ".issue_detail",
-    "IssueDetailSource": ".issue_detail_source",
-    "IssueDetailStatesItem": ".issue_detail_states_item",
-    "IssueHistogram": ".issue_histogram",
-    "IssueHistogramBucket": ".issue_histogram_bucket",
-    "IssueLifecycleItem": ".issue_lifecycle_item",
-    "IssueMonitoringState": ".issue_monitoring_state",
-    "IssueMonitoringStateAutomatic": ".issue_monitoring_state_automatic",
-    "IssueMonitoringStateGenerating": ".issue_monitoring_state_generating",
-    "IssueMonitoringStateIdle": ".issue_monitoring_state_idle",
-    "IssueMonitoringStateRealigning": ".issue_monitoring_state_realigning",
-    "IssueMonitoringState_Automatic": ".issue_monitoring_state",
-    "IssueMonitoringState_Generating": ".issue_monitoring_state",
-    "IssueMonitoringState_Idle": ".issue_monitoring_state",
-    "IssueMonitoringState_Realigning": ".issue_monitoring_state",
-    "IssueSource": ".issue_source",
-    "IssueStatesItem": ".issue_states_item",
-    "IssueTrendBucket": ".issue_trend_bucket",
-    "IssuesLifecycleBody": ".issues_lifecycle_body",
-    "IssuesLifecycleResponse": ".issues_lifecycle_response",
     "ListIncidentsResponse": ".list_incidents_response",
     "Member": ".member",
     "MemberList": ".member_list",
@@ -326,18 +297,18 @@ _dynamic_imports: typing.Dict[str, str] = {
     "MonitorIncidentKind": ".monitor_incident_kind",
     "MonitorIncidentSeverity": ".monitor_incident_severity",
     "MonitorIncidentSourceType": ".monitor_incident_source_type",
-    "MonitorIssueResponse": ".monitor_issue_response",
+    "MonitorSignalResponse": ".monitor_signal_response",
     "NotificationsSetting": ".notifications_setting",
     "OAuthKey": ".o_auth_key",
     "OAuthKeyList": ".o_auth_key_list",
     "OAuthProtectedResourceMetadata": ".o_auth_protected_resource_metadata",
     "PaginatedDatasetRows": ".paginated_dataset_rows",
     "PaginatedDatasets": ".paginated_datasets",
-    "PaginatedIssues": ".paginated_issues",
     "PaginatedMonitorIncidents": ".paginated_monitor_incidents",
     "PaginatedMonitors": ".paginated_monitors",
     "PaginatedProjects": ".paginated_projects",
     "PaginatedSavedSearches": ".paginated_saved_searches",
+    "PaginatedSignals": ".paginated_signals",
     "PaginatedToolCalls": ".paginated_tool_calls",
     "PaginatedTraceAnnotations": ".paginated_trace_annotations",
     "PaginatedTraces": ".paginated_traces",
@@ -349,6 +320,35 @@ _dynamic_imports: typing.Dict[str, str] = {
     "ScoreResponse": ".score_response",
     "ScoreResponse_Custom": ".score_response",
     "ScoreResponse_Evaluation": ".score_response",
+    "Signal": ".signal",
+    "SignalAnalyticsBucket": ".signal_analytics_bucket",
+    "SignalAnalyticsEscalating": ".signal_analytics_escalating",
+    "SignalAnalyticsNew": ".signal_analytics_new",
+    "SignalAnalyticsOccurrences": ".signal_analytics_occurrences",
+    "SignalAnalyticsOngoing": ".signal_analytics_ongoing",
+    "SignalAnalyticsRegressed": ".signal_analytics_regressed",
+    "SignalAnalyticsResolved": ".signal_analytics_resolved",
+    "SignalAnalyticsResponse": ".signal_analytics_response",
+    "SignalDetail": ".signal_detail",
+    "SignalDetailSource": ".signal_detail_source",
+    "SignalDetailStatesItem": ".signal_detail_states_item",
+    "SignalHistogram": ".signal_histogram",
+    "SignalHistogramBucket": ".signal_histogram_bucket",
+    "SignalLifecycleItem": ".signal_lifecycle_item",
+    "SignalMonitoringState": ".signal_monitoring_state",
+    "SignalMonitoringStateAutomatic": ".signal_monitoring_state_automatic",
+    "SignalMonitoringStateGenerating": ".signal_monitoring_state_generating",
+    "SignalMonitoringStateIdle": ".signal_monitoring_state_idle",
+    "SignalMonitoringStateRealigning": ".signal_monitoring_state_realigning",
+    "SignalMonitoringState_Automatic": ".signal_monitoring_state",
+    "SignalMonitoringState_Generating": ".signal_monitoring_state",
+    "SignalMonitoringState_Idle": ".signal_monitoring_state",
+    "SignalMonitoringState_Realigning": ".signal_monitoring_state",
+    "SignalSource": ".signal_source",
+    "SignalStatesItem": ".signal_states_item",
+    "SignalTrendBucket": ".signal_trend_bucket",
+    "SignalsLifecycleBody": ".signals_lifecycle_body",
+    "SignalsLifecycleResponse": ".signals_lifecycle_response",
     "Span": ".span",
     "SpanDetail": ".span_detail",
     "SpanDetailKind": ".span_detail_kind",
@@ -482,7 +482,7 @@ __all__ = [
     "ExportDatasetRowsQueuedResponse",
     "ExportDatasetRowsReadyResponse",
     "ExportDatasetRowsTooLargeResponse",
-    "ExportIssuesResponse",
+    "ExportSignalsResponse",
     "ExportTracesResponse",
     "FilterCondition",
     "FilterConditionOp",
@@ -503,35 +503,6 @@ __all__ = [
     "InsertDatasetRowsResponse",
     "InvitedMember",
     "InvitedMemberRole",
-    "Issue",
-    "IssueAnalyticsBucket",
-    "IssueAnalyticsEscalating",
-    "IssueAnalyticsNew",
-    "IssueAnalyticsOccurrences",
-    "IssueAnalyticsOngoing",
-    "IssueAnalyticsRegressed",
-    "IssueAnalyticsResolved",
-    "IssueAnalyticsResponse",
-    "IssueDetail",
-    "IssueDetailSource",
-    "IssueDetailStatesItem",
-    "IssueHistogram",
-    "IssueHistogramBucket",
-    "IssueLifecycleItem",
-    "IssueMonitoringState",
-    "IssueMonitoringStateAutomatic",
-    "IssueMonitoringStateGenerating",
-    "IssueMonitoringStateIdle",
-    "IssueMonitoringStateRealigning",
-    "IssueMonitoringState_Automatic",
-    "IssueMonitoringState_Generating",
-    "IssueMonitoringState_Idle",
-    "IssueMonitoringState_Realigning",
-    "IssueSource",
-    "IssueStatesItem",
-    "IssueTrendBucket",
-    "IssuesLifecycleBody",
-    "IssuesLifecycleResponse",
     "ListIncidentsResponse",
     "Member",
     "MemberList",
@@ -548,18 +519,18 @@ __all__ = [
     "MonitorIncidentKind",
     "MonitorIncidentSeverity",
     "MonitorIncidentSourceType",
-    "MonitorIssueResponse",
+    "MonitorSignalResponse",
     "NotificationsSetting",
     "OAuthKey",
     "OAuthKeyList",
     "OAuthProtectedResourceMetadata",
     "PaginatedDatasetRows",
     "PaginatedDatasets",
-    "PaginatedIssues",
     "PaginatedMonitorIncidents",
     "PaginatedMonitors",
     "PaginatedProjects",
     "PaginatedSavedSearches",
+    "PaginatedSignals",
     "PaginatedToolCalls",
     "PaginatedTraceAnnotations",
     "PaginatedTraces",
@@ -571,6 +542,35 @@ __all__ = [
     "ScoreResponse",
     "ScoreResponse_Custom",
     "ScoreResponse_Evaluation",
+    "Signal",
+    "SignalAnalyticsBucket",
+    "SignalAnalyticsEscalating",
+    "SignalAnalyticsNew",
+    "SignalAnalyticsOccurrences",
+    "SignalAnalyticsOngoing",
+    "SignalAnalyticsRegressed",
+    "SignalAnalyticsResolved",
+    "SignalAnalyticsResponse",
+    "SignalDetail",
+    "SignalDetailSource",
+    "SignalDetailStatesItem",
+    "SignalHistogram",
+    "SignalHistogramBucket",
+    "SignalLifecycleItem",
+    "SignalMonitoringState",
+    "SignalMonitoringStateAutomatic",
+    "SignalMonitoringStateGenerating",
+    "SignalMonitoringStateIdle",
+    "SignalMonitoringStateRealigning",
+    "SignalMonitoringState_Automatic",
+    "SignalMonitoringState_Generating",
+    "SignalMonitoringState_Idle",
+    "SignalMonitoringState_Realigning",
+    "SignalSource",
+    "SignalStatesItem",
+    "SignalTrendBucket",
+    "SignalsLifecycleBody",
+    "SignalsLifecycleResponse",
     "Span",
     "SpanDetail",
     "SpanDetailKind",

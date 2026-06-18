@@ -39,7 +39,7 @@ const toInsertRow = (event: BillingUsageEvent): typeof billingUsageEvents.$infer
  * `billing_usage_events_period_idempotency_key_idx` unique index — and return
  * them in a deterministic order keyed on that same tuple.
  *
- * The ordering matters for concurrency, not just tidiness. `insertMany` issues
+ * The ordering matters for concurrency, not just tidiness. `insertMany` signals
  * a single multi-row `INSERT ... ON CONFLICT DO NOTHING`, and Postgres acquires
  * the unique-index locks row-by-row in the order rows are supplied. Trace usage
  * is flushed by an in-memory batcher that only dedupes within one worker

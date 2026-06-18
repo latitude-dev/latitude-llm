@@ -9,7 +9,7 @@ import { LATITUDE_TELEMETRY_PROJECT_SLUGS } from "@domain/shared"
 
 /** Org/project + issue/evaluation context shared by alignment, optimization, and GEPA activities. */
 export type EvaluationAlignmentJudgeTelemetryScope = ProjectScopedAiIds & {
-  readonly issueId: string
+  readonly signalId: string
   readonly evaluationId: string | null
   readonly jobId?: string | null
 }
@@ -24,7 +24,7 @@ export const buildEvaluationAlignmentJudgeTelemetryCapture = (input: {
   readonly traceId: string
   readonly exampleLabel: "positive" | "negative"
 }): GenerateTelemetryCapture => {
-  const { organizationId, projectId, issueId, evaluationId, jobId } = input.scope
+  const { organizationId, projectId, signalId, evaluationId, jobId } = input.scope
   return {
     spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.evaluationJudgeAlignment,
     project: LATITUDE_TELEMETRY_PROJECT_SLUGS.evaluations,
@@ -32,7 +32,7 @@ export const buildEvaluationAlignmentJudgeTelemetryCapture = (input: {
     metadata: buildProjectScopedAiMetadata(
       { organizationId, projectId },
       {
-        issueId,
+        signalId,
         evaluationId,
         traceId: input.traceId,
         exampleLabel: input.exampleLabel,
@@ -47,7 +47,7 @@ export const buildEvaluationOptimizationJudgeTelemetryCapture = (input: {
   readonly candidateHash: string
   readonly exampleTraceId: string
 }): GenerateTelemetryCapture => {
-  const { organizationId, projectId, issueId, evaluationId, jobId } = input.scope
+  const { organizationId, projectId, signalId, evaluationId, jobId } = input.scope
   return {
     spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.evaluationJudgeOptimization,
     project: LATITUDE_TELEMETRY_PROJECT_SLUGS.evaluations,
@@ -55,7 +55,7 @@ export const buildEvaluationOptimizationJudgeTelemetryCapture = (input: {
     metadata: buildProjectScopedAiMetadata(
       { organizationId, projectId },
       {
-        issueId,
+        signalId,
         evaluationId,
         candidateHash: input.candidateHash,
         exampleTraceId: input.exampleTraceId,
@@ -69,7 +69,7 @@ export const buildEvaluationJudgeLiveTelemetryCapture = (input: {
   readonly organizationId: string
   readonly projectId: string
   readonly evaluationId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly traceId: string
 }): GenerateTelemetryCapture => ({
   spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.evaluationJudgeLive,
@@ -79,7 +79,7 @@ export const buildEvaluationJudgeLiveTelemetryCapture = (input: {
     { organizationId: input.organizationId, projectId: input.projectId },
     {
       evaluationId: input.evaluationId,
-      issueId: input.issueId,
+      signalId: input.signalId,
       traceId: input.traceId,
     },
   ),
@@ -91,7 +91,7 @@ export const buildEvaluationGepaProposeTelemetryCapture = (
     readonly candidateHash: string
   },
 ): GenerateTelemetryCapture => {
-  const { organizationId, projectId, issueId, evaluationId, jobId, evaluationHash, candidateHash } = scope
+  const { organizationId, projectId, signalId, evaluationId, jobId, evaluationHash, candidateHash } = scope
   return {
     spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.evaluationProposeOptimization,
     project: LATITUDE_TELEMETRY_PROJECT_SLUGS.optimizations,
@@ -99,7 +99,7 @@ export const buildEvaluationGepaProposeTelemetryCapture = (
     metadata: buildProjectScopedAiMetadata(
       { organizationId, projectId },
       {
-        issueId,
+        signalId,
         evaluationId,
         evaluationHash,
         candidateHash,

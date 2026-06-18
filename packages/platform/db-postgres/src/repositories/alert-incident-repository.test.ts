@@ -50,7 +50,7 @@ const makeAlertRow = (
 })
 
 // Admin client — `listOpenByKind` deliberately reads across orgs (sweep job)
-// so RLS is bypassed. Matches the production wiring in `issues.ts`.
+// so RLS is bypassed. Matches the production wiring in `signals.ts`.
 const makeProvider = (database: InMemoryPostgres) =>
   withPostgres(AlertIncidentRepositoryLive, database.adminPostgresClient)
 

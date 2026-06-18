@@ -41,7 +41,7 @@
     "@domain/organizations": "workspace:*",
     "@domain/product-feedback": "workspace:*",
     "@domain/projects": "workspace:*",
-    "@domain/issues": "workspace:*",
+    "@domain/signals": "workspace:*",
     "@domain/marketing": "workspace:*",
     "@domain/monitors": "workspace:*",
     "@domain/notifications": "workspace:*",

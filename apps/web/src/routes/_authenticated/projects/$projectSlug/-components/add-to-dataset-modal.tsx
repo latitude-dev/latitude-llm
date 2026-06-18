@@ -22,15 +22,15 @@ interface AddToDatasetModalProps {
    * When set, "all" / "allExcept" selections resolve only against traces linked
    * to this issue (via score analytics). Omit on the project-wide traces page.
    */
-  issueId?: string
+  signalId?: string
   /**
    * Saved-search query that scopes "all" / "allExcept" selections. Ignored when
-   * `issueId` is set. Omit outside the search page.
+   * `signalId` is set. Omit outside the search page.
    */
   searchQuery?: string
   /**
    * Active table filters that scope "all" / "allExcept" selections to the
-   * same set the user sees. Ignored when `issueId` is set. Omit when no
+   * same set the user sees. Ignored when `signalId` is set. Omit when no
    * filters are active.
    */
   filters?: FilterSet
@@ -43,7 +43,7 @@ export function AddToDatasetModal({
   open,
   onOpenChange,
   projectId,
-  issueId,
+  signalId,
   searchQuery,
   filters,
   selection,
@@ -84,7 +84,7 @@ export function AddToDatasetModal({
             projectId,
             name: newDatasetName.trim(),
             selection,
-            ...(issueId ? { issueId } : {}),
+            ...(signalId ? { signalId } : {}),
             ...(searchQuery ? { searchQuery } : {}),
             ...(filters ? { filters } : {}),
           },
@@ -107,7 +107,7 @@ export function AddToDatasetModal({
             projectId,
             datasetId: selectedDatasetId,
             selection,
-            ...(issueId ? { issueId } : {}),
+            ...(signalId ? { signalId } : {}),
             ...(searchQuery ? { searchQuery } : {}),
             ...(filters ? { filters } : {}),
           },
@@ -136,7 +136,7 @@ export function AddToDatasetModal({
     selectedDatasetId,
     newDatasetName,
     projectId,
-    issueId,
+    signalId,
     searchQuery,
     filters,
     selection,

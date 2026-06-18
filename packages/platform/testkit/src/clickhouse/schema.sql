@@ -33,6 +33,7 @@ CREATE TABLE scores
     `source_id` FixedString(128) CODEC(ZSTD(1)),
     `simulation_id` FixedString(24) DEFAULT '' CODEC(ZSTD(1)),
     `issue_id` FixedString(24) DEFAULT '' CODEC(ZSTD(1)),
+    `signal_id` FixedString(24) DEFAULT '' CODEC(ZSTD(1)),
     `value` Float32 CODEC(Gorilla(4), ZSTD(1)),
     `passed` Bool CODEC(T64, LZ4),
     `errored` Bool CODEC(T64, LZ4),
@@ -43,6 +44,7 @@ CREATE TABLE scores
     INDEX idx_source source TYPE set(3) GRANULARITY 4,
     INDEX idx_source_id source_id TYPE bloom_filter(0.01) GRANULARITY 2,
     INDEX idx_issue_id issue_id TYPE bloom_filter(0.01) GRANULARITY 2,
+    INDEX idx_signal_id signal_id TYPE bloom_filter(0.01) GRANULARITY 2,
     INDEX idx_simulation_id simulation_id TYPE bloom_filter(0.01) GRANULARITY 2,
     INDEX idx_trace_id trace_id TYPE bloom_filter(0.01) GRANULARITY 1,
     INDEX idx_session_id session_id TYPE bloom_filter(0.01) GRANULARITY 2,
@@ -60,36 +62,36 @@ CREATE TABLE scores_hourly_buckets
 (
     `organization_id` LowCardinality(FixedString(24)) CODEC(ZSTD(1)),
     `project_id` LowCardinality(FixedString(24)) CODEC(ZSTD(1)),
-    `issue_id` FixedString(24) CODEC(ZSTD(1)),
+    `signal_id` FixedString(24) CODEC(ZSTD(1)),
     `ts_hour` DateTime('UTC') CODEC(Delta(4), ZSTD(1)),
     `count` SimpleAggregateFunction(sum, UInt64) CODEC(T64, ZSTD(1))
 )
 ENGINE = AggregatingMergeTree
 PARTITION BY toYYYYMM(ts_hour)
-PRIMARY KEY (organization_id, project_id, issue_id)
-ORDER BY (organization_id, project_id, issue_id, ts_hour)
+PRIMARY KEY (organization_id, project_id, signal_id)
+ORDER BY (organization_id, project_id, signal_id, ts_hour)
 SETTINGS index_granularity = 8192;
 
 CREATE MATERIALIZED VIEW scores_hourly_buckets_mv TO scores_hourly_buckets
 (
     `organization_id` LowCardinality(FixedString(24)),
     `project_id` LowCardinality(FixedString(24)),
-    `issue_id` FixedString(24),
+    `signal_id` FixedString(24),
     `ts_hour` DateTime('UTC'),
     `count` UInt64
 )
 AS SELECT
     organization_id,
     project_id,
-    issue_id,
+    signal_id,
     toStartOfHour(created_at) AS ts_hour,
     count() AS count
 FROM scores
-WHERE issue_id != ''
+WHERE signal_id != ''
 GROUP BY
     organization_id,
     project_id,
-    issue_id,
+    signal_id,
     ts_hour;
 
 CREATE TABLE session_analyses

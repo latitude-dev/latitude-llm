@@ -93,7 +93,7 @@ describe("createWorkflowStarter", () => {
     const exit = await Effect.runPromise(
       Effect.exit(
         starter.start(
-          "issueDiscoveryWorkflow",
+          "signalDiscoveryWorkflow",
           {
             organizationId: "org-1",
             projectId: "proj-1",
@@ -112,14 +112,14 @@ describe("createWorkflowStarter", () => {
         expect(errOpt.value).toBeInstanceOf(WorkflowAlreadyStartedError)
         expect(errOpt.value).toMatchObject({
           _tag: "WorkflowAlreadyStartedError",
-          workflow: "issueDiscoveryWorkflow",
+          workflow: "signalDiscoveryWorkflow",
           workflowId: "issue-discovery:org-1:proj-1:score-1",
         })
       }
     }
     expect(start).toHaveBeenCalledTimes(1)
     expect(start).toHaveBeenCalledWith(
-      "issueDiscoveryWorkflow",
+      "signalDiscoveryWorkflow",
       expect.objectContaining({
         workflowId: "issue-discovery:org-1:proj-1:score-1",
         workflowIdConflictPolicy: "FAIL",
@@ -195,7 +195,7 @@ describe("createWorkflowStarter", () => {
     await expect(
       Effect.runPromise(
         starter.start(
-          "issueDiscoveryWorkflow",
+          "signalDiscoveryWorkflow",
           {
             organizationId: "org-1",
             projectId: "proj-1",
@@ -206,7 +206,7 @@ describe("createWorkflowStarter", () => {
       ),
     ).resolves.toBeUndefined()
     expect(start).toHaveBeenCalledWith(
-      "issueDiscoveryWorkflow",
+      "signalDiscoveryWorkflow",
       expect.objectContaining({
         startDelay: 12_000,
       }),
@@ -230,7 +230,7 @@ describe("createWorkflowStarter", () => {
     await expect(
       Effect.runPromise(
         starter.start(
-          "issueDiscoveryWorkflow",
+          "signalDiscoveryWorkflow",
           {
             organizationId: "org-1",
             projectId: "proj-1",
@@ -242,7 +242,7 @@ describe("createWorkflowStarter", () => {
     ).resolves.toBeUndefined()
     expect(start).toHaveBeenCalledTimes(1)
     expect(start).toHaveBeenCalledWith(
-      "issueDiscoveryWorkflow",
+      "signalDiscoveryWorkflow",
       expect.objectContaining({
         workflowIdConflictPolicy: "FAIL",
         workflowIdReusePolicy: "ALLOW_DUPLICATE",

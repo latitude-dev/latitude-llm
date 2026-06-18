@@ -15,11 +15,11 @@ import { ChevronLeftIcon, Loader2Icon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useCommandPalette, useCommandPaletteState } from "./command-palette-provider.tsx"
 import { useGlobalCommands } from "./commands/use-global-commands.tsx"
-import { useIssueSearchCommands } from "./commands/use-issue-search-commands.ts"
 import { useMonitorSearchCommands } from "./commands/use-monitor-search-commands.ts"
 import { useNavigationCommands } from "./commands/use-navigation-commands.ts"
 import { useProjectCommands } from "./commands/use-project-commands.tsx"
 import { useProjectSearchCommands } from "./commands/use-project-search-commands.tsx"
+import { useSignalSearchCommands } from "./commands/use-signal-search-commands.ts"
 import { COMMAND_SECTION_LABELS, COMMAND_SECTION_ORDER, type PaletteCommand, type ParentCommand } from "./types.ts"
 
 /**
@@ -80,7 +80,7 @@ export function CommandPalette() {
   const navigationCommands = useNavigationCommands()
   const projectCommands = useProjectCommands()
   const globalCommands = useGlobalCommands()
-  const { commands: issueResults, isLoading: issuesLoading } = useIssueSearchCommands(search)
+  const { commands: signalResults, isLoading: signalsLoading } = useSignalSearchCommands(search)
   const monitorResults = useMonitorSearchCommands(search)
   const {
     datasets: datasetResults,
@@ -101,10 +101,10 @@ export function CommandPalette() {
     const contextGroups = buildContextGroups(registeredCommands.filter(matches))
 
     // Org-wide search results (every project in the organization, each row tagged with its
-    // project). Issues are already curated and ranked by the hook (lexical + semantic), so they
+    // project). Signals are already curated and ranked by the hook (lexical + semantic), so they
     // render as-is; datasets/saved searches/monitors get a secondary client-side token filter.
     const entityGroups: CommandGroupView[] = []
-    if (issueResults.length > 0) entityGroups.push({ key: "issues", label: "Issues", commands: issueResults })
+    if (signalResults.length > 0) entityGroups.push({ key: "issues", label: "Signals", commands: signalResults })
     const monitors = monitorResults.filter(matches)
     if (monitors.length > 0) entityGroups.push({ key: "monitors", label: "Monitors", commands: monitors })
     const datasets = datasetResults.filter(matches)
@@ -128,7 +128,7 @@ export function CommandPalette() {
     search,
     currentPage,
     registeredCommands,
-    issueResults,
+    signalResults,
     monitorResults,
     datasetResults,
     savedSearchResults,
@@ -220,7 +220,7 @@ export function CommandPalette() {
         onValueChange={setSearch}
       />
       <CommandList>
-        {issuesLoading ? (
+        {signalsLoading ? (
           <CommandLoading>
             <Loader2Icon className="size-3.5 animate-spin" />
             Searching issues…

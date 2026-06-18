@@ -17,8 +17,8 @@ export {
   alertSeveritySchema,
   entrySignalsSnapshotSchema,
   incidentEntrySignalsSchema,
-  isIssueEscalationEntrySignals,
   isSavedSearchEntrySignals,
+  isSignalEscalationEntrySignals,
   SEVERITY_FOR_KIND,
   savedSearchEntrySignalsSchema,
 } from "./entities/alert-incident.ts"
@@ -37,14 +37,14 @@ export type {
 } from "./ports/alert-incident-repository.ts"
 export { AlertIncidentRepository } from "./ports/alert-incident-repository.ts"
 export type {
-  CloseAlertIncidentFromIssueEventError,
-  CloseAlertIncidentFromIssueEventInput,
+  CloseAlertIncidentFromSignalEventError,
+  CloseAlertIncidentFromSignalEventInput,
 } from "./use-cases/close-alert-incident-from-issue-event.ts"
-export { closeAlertIncidentFromIssueEventUseCase } from "./use-cases/close-alert-incident-from-issue-event.ts"
+export { closeAlertIncidentFromSignalEventUseCase } from "./use-cases/close-alert-incident-from-issue-event.ts"
 export type {
-  CreateAlertIncidentFromIssueEventError,
-  CreateAlertIncidentFromIssueEventInput,
+  CreateAlertIncidentFromSignalEventError,
+  CreateAlertIncidentFromSignalEventInput,
 } from "./use-cases/create-alert-incident-from-issue-event.ts"
-export { createAlertIncidentFromIssueEventUseCase } from "./use-cases/create-alert-incident-from-issue-event.ts"
+export { createAlertIncidentFromSignalEventUseCase } from "./use-cases/create-alert-incident-from-issue-event.ts"
 export type { ResolveAlertIncidentError, ResolveAlertIncidentInput } from "./use-cases/resolve-alert-incident.ts"
 export { resolveAlertIncidentUseCase } from "./use-cases/resolve-alert-incident.ts"

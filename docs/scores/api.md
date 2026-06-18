@@ -87,4 +87,4 @@ Custom scores and annotations are first-class citizens. They appear alongside ev
 
 - [Scores Overview](./overview): How the score model works
 - [Annotations](../annotations/overview): How the annotation workflow works
-- [Issues](../issues/overview): How failed scores become trackable issues
+- [Issues](../signals/overview): How failed scores become trackable issues

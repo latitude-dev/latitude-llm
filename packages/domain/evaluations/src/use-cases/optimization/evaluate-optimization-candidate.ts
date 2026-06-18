@@ -12,8 +12,8 @@ import { executeEvaluationScriptWithAI } from "../../runtime/evaluation-executio
 export const evaluateOptimizationCandidate = Effect.fn("evaluations.evaluateOptimizationCandidate")(function* (input: {
   readonly candidate: OptimizationCandidate
   readonly example: HydratedEvaluationAlignmentExample
-  readonly issueName: string
-  readonly issueDescription: string
+  readonly signalName: string
+  readonly signalDescription: string
   readonly judgeTelemetry: EvaluationOptimizationJudgeTelemetryScope
 }) {
   yield* Effect.annotateCurrentSpan("evaluation.candidateHash", input.candidate.hash)
@@ -23,8 +23,8 @@ export const evaluateOptimizationCandidate = Effect.fn("evaluations.evaluateOpti
     script: input.candidate.text,
     conversation: input.example.conversation,
     issue: {
-      name: input.issueName,
-      description: input.issueDescription,
+      name: input.signalName,
+      description: input.signalDescription,
     },
     telemetry: buildEvaluationOptimizationJudgeTelemetryCapture({
       scope: input.judgeTelemetry,

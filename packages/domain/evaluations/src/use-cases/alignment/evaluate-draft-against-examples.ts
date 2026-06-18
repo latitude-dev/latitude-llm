@@ -15,8 +15,8 @@ import { executeEvaluationScriptWithAI } from "../../runtime/evaluation-executio
 // this function delegates to it and its structure won't change.
 export const evaluateDraftAgainstExamplesUseCase = Effect.fn("evaluations.evaluateDraftAgainstExamples")(
   function* (input: {
-    readonly issueName: string
-    readonly issueDescription: string
+    readonly signalName: string
+    readonly signalDescription: string
     readonly script: string
     readonly positiveExamples: readonly HydratedEvaluationAlignmentExample[]
     readonly negativeExamples: readonly HydratedEvaluationAlignmentExample[]
@@ -31,8 +31,8 @@ export const evaluateDraftAgainstExamplesUseCase = Effect.fn("evaluations.evalua
         script: input.script,
         conversation: example.conversation,
         issue: {
-          name: input.issueName,
-          description: input.issueDescription,
+          name: input.signalName,
+          description: input.signalDescription,
         },
         telemetry: buildEvaluationAlignmentJudgeTelemetryCapture({
           scope: input.judgeTelemetry,

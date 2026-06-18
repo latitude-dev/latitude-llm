@@ -1,21 +1,21 @@
-import { IssueRepository } from "@domain/issues"
 import {
   generateId,
-  type IssueId,
   NotificationId,
   type OrganizationId,
   type ProjectId,
   type RepositoryError,
+  type SignalId,
   type SqlClient,
   UserId,
 } from "@domain/shared"
+import { SignalRepository } from "@domain/signals"
 import { Effect } from "effect"
-import type { IssueAssignedPayload } from "../entities/notification.ts"
+import type { SignalAssignedPayload } from "../entities/notification.ts"
 import { buildIdempotencyKey } from "../helpers/idempotency-key.ts"
 
-export interface RequestIssueAssignedNotificationsInput {
+export interface RequestSignalAssignedNotificationsInput {
   readonly organizationId: OrganizationId
-  readonly issueId: IssueId
+  readonly signalId: SignalId
   /** New assignee — the single recipient. */
   readonly assigneeId: string
   readonly actorUserId: string
@@ -23,22 +23,22 @@ export interface RequestIssueAssignedNotificationsInput {
   readonly assignedAt: string
 }
 
-export interface IssueAssignedNotificationRequest {
+export interface SignalAssignedNotificationRequest {
   readonly organizationId: OrganizationId
   readonly userId: UserId
   readonly kind: "issue.assigned"
   readonly idempotencyKey: string
-  readonly payload: IssueAssignedPayload
+  readonly payload: SignalAssignedPayload
   readonly notificationId: NotificationId
   /** Project anchor for cascade-delete on `ProjectDeleted`. */
   readonly projectId: ProjectId
 }
 
-export type RequestIssueAssignedNotificationsResult =
+export type RequestSignalAssignedNotificationsResult =
   | { readonly status: "skipped"; readonly reason: "self-assignment" | "issue-not-found" }
-  | { readonly status: "ok"; readonly requests: readonly IssueAssignedNotificationRequest[] }
+  | { readonly status: "ok"; readonly requests: readonly SignalAssignedNotificationRequest[] }
 
-export type RequestIssueAssignedNotificationsError = RepositoryError
+export type RequestSignalAssignedNotificationsError = RepositoryError
 
 /**
  * Producer step for `issue.assigned` notifications. Unlike incident kinds
@@ -49,9 +49,9 @@ export type RequestIssueAssignedNotificationsError = RepositoryError
  * self-assignments; both are re-checked here so the rule lives in one
  * testable place.
  */
-export const requestIssueAssignedNotificationsUseCase = (input: RequestIssueAssignedNotificationsInput) =>
+export const requestSignalAssignedNotificationsUseCase = (input: RequestSignalAssignedNotificationsInput) =>
   Effect.gen(function* () {
-    yield* Effect.annotateCurrentSpan("issueId", input.issueId)
+    yield* Effect.annotateCurrentSpan("signalId", input.signalId)
 
     if (input.assigneeId === input.actorUserId) {
       yield* Effect.annotateCurrentSpan("skipped", "self-assignment")
@@ -61,23 +61,23 @@ export const requestIssueAssignedNotificationsUseCase = (input: RequestIssueAssi
     // Re-fetch the authoritative issue row: it anchors the notification to
     // its project (cascade delete) and a deleted issue means there is
     // nothing left to notify about.
-    const issues = yield* IssueRepository
+    const issues = yield* SignalRepository
     const issue = yield* issues
-      .findById(input.issueId)
+      .findById(input.signalId)
       .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
     if (issue === null) {
       yield* Effect.annotateCurrentSpan("skipped", "issue-not-found")
       return { status: "skipped", reason: "issue-not-found" } as const
     }
 
-    const payload: IssueAssignedPayload = {
-      issueId: input.issueId,
+    const payload: SignalAssignedPayload = {
+      signalId: input.signalId,
       actorUserId: input.actorUserId,
       assignedAt: input.assignedAt,
     }
     const idempotencyKey = buildIdempotencyKey({ kind: "issue.assigned", payload })
 
-    const requests: IssueAssignedNotificationRequest[] = [
+    const requests: SignalAssignedNotificationRequest[] = [
       {
         organizationId: input.organizationId,
         userId: UserId(input.assigneeId),
@@ -90,8 +90,8 @@ export const requestIssueAssignedNotificationsUseCase = (input: RequestIssueAssi
     ]
 
     return { status: "ok", requests } as const
-  }).pipe(Effect.withSpan("notifications.requestIssueAssignedNotifications")) as Effect.Effect<
-    RequestIssueAssignedNotificationsResult,
-    RequestIssueAssignedNotificationsError,
-    SqlClient | IssueRepository
+  }).pipe(Effect.withSpan("notifications.requestSignalAssignedNotifications")) as Effect.Effect<
+    RequestSignalAssignedNotificationsResult,
+    RequestSignalAssignedNotificationsError,
+    SqlClient | SignalRepository
   >

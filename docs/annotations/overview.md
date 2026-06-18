@@ -47,7 +47,7 @@ Annotations are the foundation of Latitude's reliability loop. They help you:
 | Feature | Relationship |
 | --- | --- |
 | **[Scores](../scores/overview)** | Each finalized annotation becomes a score for analytics and dashboards. |
-| **[Issues](../issues/overview)** | Failed annotations can cluster into trackable issues. |
+| **[Issues](../signals/overview)** | Failed annotations can cluster into trackable issues. |
 | **[Evaluations](../evaluations/overview)** | Annotations provide ground truth for measuring evaluation accuracy. |
 | **[Search](../search/overview)** | Search and saved searches help you find trace cohorts to review. |
 | **[Flaggers](./flaggers)** | Flaggers create automatic annotations for common failure categories. |

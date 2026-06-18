@@ -37,7 +37,7 @@ describe("writeAnnotation", () => {
       writeAnnotation(
         {
           ...baseInput,
-          feedback: "Issue with refund policy",
+          feedback: "Signal with refund policy",
           anchor: {
             messageIndex: 2,
             partIndex: 0,
@@ -53,7 +53,7 @@ describe("writeAnnotation", () => {
     expect(score.metadata.partIndex).toBe(0)
     expect(score.metadata.startOffset).toBe(10)
     expect(score.metadata.endOffset).toBe(25)
-    expect(score.metadata.rawFeedback).toBe("Issue with refund policy")
+    expect(score.metadata.rawFeedback).toBe("Signal with refund policy")
   })
 
   it("when updating by id, ignores conflicting anchor and preserves stored anchor metadata", async () => {
@@ -69,7 +69,7 @@ describe("writeAnnotation", () => {
       writeAnnotation(
         {
           ...baseInput,
-          feedback: "Issue with refund policy",
+          feedback: "Signal with refund policy",
           anchor: {
             messageIndex: 2,
             partIndex: 0,

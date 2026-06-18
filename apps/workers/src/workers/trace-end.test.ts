@@ -5,16 +5,16 @@ import {
   emptyEvaluationAlignment,
   evaluationSchema,
 } from "@domain/evaluations"
-import { createIssueCentroid } from "@domain/issues"
 import type { WorkflowStarterShape } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { evaluationScoreSchema } from "@domain/scores"
 import type { FilterSet } from "@domain/shared"
+import { createSignalCentroid } from "@domain/signals"
 import type { RedisClient } from "@platform/cache-redis"
 import { annotationQueueItems, annotationQueues } from "@platform/db-postgres/schema/annotation-queues"
 import { evaluations } from "@platform/db-postgres/schema/evaluations"
-import { issues } from "@platform/db-postgres/schema/issues"
 import { scores } from "@platform/db-postgres/schema/scores"
+import { signals } from "@platform/db-postgres/schema/signals"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect } from "effect"
 import { describe, expect, it, vi } from "vitest"
@@ -55,7 +55,7 @@ const PROJECT_ID = "p".repeat(24)
 const TRACE_ID = "t".repeat(32)
 const SESSION_ID = "session-1"
 const API_KEY_ID = "k".repeat(24)
-const ISSUE_ID = "i".repeat(24)
+const SIGNAL_ID = "i".repeat(24)
 const TIMESTAMP = new Date("2026-04-15T12:00:00.000Z")
 
 const toClickHouseTimestamp = (value: Date) => value.toISOString().replace("T", " ").replace("Z", "000")
@@ -147,16 +147,16 @@ const makeTraceRow = (input?: {
   scope_version: "1.0.0",
 })
 
-const makeIssueRow = (input?: { readonly id?: string; readonly projectId?: string; readonly uuid?: string }) => ({
-  id: input?.id ?? ISSUE_ID,
+const makeSignalRow = (input?: { readonly id?: string; readonly projectId?: string; readonly uuid?: string }) => ({
+  id: input?.id ?? SIGNAL_ID,
   uuid: input?.uuid ?? "11111111-1111-4111-8111-111111111111",
   organizationId: ORGANIZATION_ID,
   projectId: input?.projectId ?? PROJECT_ID,
-  slug: `trace-end-worker-issue-${(input?.id ?? ISSUE_ID).slice(-6)}`,
+  slug: `trace-end-worker-issue-${(input?.id ?? SIGNAL_ID).slice(-6)}`,
   name: "Trace-end worker issue",
-  description: "Issue context for trace-end worker tests",
+  description: "Signal context for trace-end worker tests",
   source: "annotation" as const,
-  centroid: createIssueCentroid(),
+  centroid: createSignalCentroid(),
   clusteredAt: TIMESTAMP,
   escalatedAt: null,
   resolvedAt: null,
@@ -171,13 +171,13 @@ const makeEvaluationRow = (input: {
   readonly sampling?: number
   readonly turn?: EvaluationTurn
   readonly projectId?: string
-  readonly issueId?: string
+  readonly signalId?: string
 }) =>
   evaluationSchema.parse({
     id: input.id,
     organizationId: ORGANIZATION_ID,
     projectId: input.projectId ?? PROJECT_ID,
-    issueId: input.issueId ?? ISSUE_ID,
+    signalId: input.signalId ?? SIGNAL_ID,
     name: `evaluation-${input.id.slice(0, 6)}`,
     description: "Trace-end worker live evaluation",
     script: "export default async function evaluate() { return { value: 1 } }",
@@ -202,7 +202,7 @@ const makeScoreRow = (input: {
   readonly projectId?: string
   readonly traceId?: string
   readonly sessionId?: string
-  readonly issueId?: string
+  readonly signalId?: string
 }) =>
   evaluationScoreSchema.parse({
     id: input.id,
@@ -214,7 +214,7 @@ const makeScoreRow = (input: {
     source: "evaluation",
     sourceId: input.evaluationId,
     simulationId: null,
-    issueId: input.issueId ?? ISSUE_ID,
+    signalId: input.signalId ?? SIGNAL_ID,
     value: 1,
     passed: true,
     feedback: "already scored",
@@ -386,7 +386,7 @@ describe("runTraceEndJob", () => {
 describe("runTraceEndJob", () => {
   it("selects and applies live evaluations, live queues, and enqueues deterministic flaggers", async () => {
     await insertTraceRows([makeTraceRow()])
-    await pg.db.insert(issues).values([makeIssueRow()])
+    await pg.db.insert(signals).values([makeSignalRow()])
     await pg.db.insert(evaluations).values([
       makeEvaluationRow({
         id: "e".repeat(24),
@@ -546,7 +546,7 @@ describe("createRunHandler", () => {
   it("logs the completed runtime summary", async () => {
     const projectId = "x".repeat(24)
     const traceId = "v".repeat(32)
-    const issueId = "j".repeat(24)
+    const signalId = "j".repeat(24)
     const sessionId = "session-2"
 
     await insertTraceRows([
@@ -556,9 +556,9 @@ describe("createRunHandler", () => {
         sessionId,
       }),
     ])
-    await pg.db.insert(issues).values([
-      makeIssueRow({
-        id: issueId,
+    await pg.db.insert(signals).values([
+      makeSignalRow({
+        id: signalId,
         projectId,
         uuid: "22222222-2222-4222-8222-222222222222",
       }),
@@ -568,7 +568,7 @@ describe("createRunHandler", () => {
         id: "h".repeat(24),
         filter: { tags: [{ op: "in", value: ["lifecycle"] }] },
         projectId,
-        issueId,
+        signalId,
       }),
     ])
     await pg.db.insert(annotationQueues).values([

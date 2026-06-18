@@ -1,20 +1,20 @@
-import type { IssueId, NotFoundError, RepositoryError, SqlClient } from "@domain/shared"
+import type { NotFoundError, RepositoryError, SignalId, SqlClient } from "@domain/shared"
 import { Context, type Effect } from "effect"
 
 // Tiny read-only view of the issues domain so evaluations can depend on the
-// data it needs without importing `@domain/issues` directly and creating a
+// data it needs without importing `@domain/signals` directly and creating a
 // cyclic workspace dependency.
 
-export interface EvaluationIssue {
-  readonly id: IssueId
+export interface EvaluationSignal {
+  readonly id: SignalId
   readonly projectId: string
   readonly name: string
   readonly description: string
 }
 
-export class EvaluationIssueRepository extends Context.Service<
-  EvaluationIssueRepository,
+export class EvaluationSignalRepository extends Context.Service<
+  EvaluationSignalRepository,
   {
-    findById(id: IssueId): Effect.Effect<EvaluationIssue, NotFoundError | RepositoryError, SqlClient>
+    findById(id: SignalId): Effect.Effect<EvaluationSignal, NotFoundError | RepositoryError, SqlClient>
   }
->()("@domain/evaluations/EvaluationIssueRepository") {}
+>()("@domain/evaluations/EvaluationSignalRepository") {}

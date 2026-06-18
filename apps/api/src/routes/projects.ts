@@ -33,7 +33,7 @@ import type { OrganizationScopedEnv } from "../types.ts"
 // SDK resource namespace (`client.projects.*`) and method names independently
 // of the OpenAPI `tag` and `operationId`. Without these explicit overrides Fern
 // falls back to deriving SDK names from the (multi-word) tag, which produces
-// awkward `projectsList`-style methods and case-sensitivity issues on CI.
+// awkward `projectsList`-style methods and case-sensitivity signals on CI.
 const projectsFernGroup = (methodName: string) =>
   ({
     "x-fern-sdk-group-name": "projects",
@@ -50,16 +50,16 @@ const IncidentNotificationsSettingSchema = z
     "issue.new": z
       .boolean()
       .optional()
-      .describe("Send a notification when a new issue is discovered. Defaults to `true` when omitted."),
+      .describe("Send a notification when a new signal is discovered. Defaults to `true` when omitted."),
     "issue.regressed": z
       .boolean()
       .optional()
-      .describe("Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted."),
+      .describe("Send a notification when a previously-resolved signal regresses. Defaults to `true` when omitted."),
     "issue.escalating": z
       .boolean()
       .optional()
       .describe(
-        "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.",
+        "Send a notification when an active signal is escalating in volume or severity. Defaults to `true` when omitted.",
       ),
   })
   .openapi("IncidentNotificationsSetting")
@@ -67,8 +67,8 @@ const IncidentNotificationsSettingSchema = z
 // Compile-time check that this per-project toggle covers every `issue.*` kind.
 // Saved-search kinds are scoped to monitors, not this settings block.
 // TODO: Remove this after releasing monitors for everybody (replaced by per-monitor mute).
-type _IssueAlertKind = Extract<(typeof ALERT_INCIDENT_KINDS)[number], `issue.${string}`>
-type _AlertKindsCovered = Exclude<_IssueAlertKind, keyof z.infer<typeof IncidentNotificationsSettingSchema>>
+type _SignalAlertKind = Extract<(typeof ALERT_INCIDENT_KINDS)[number], `issue.${string}`>
+type _AlertKindsCovered = Exclude<_SignalAlertKind, keyof z.infer<typeof IncidentNotificationsSettingSchema>>
 const _alertKindsAreCovered: _AlertKindsCovered extends never ? true : false = true
 void _alertKindsAreCovered
 
@@ -100,7 +100,7 @@ const ProjectSettingsSchema = z
       .boolean()
       .optional()
       .describe(
-        "When `true`, the evaluation linked to an issue keeps running after the issue is resolved. When `false`, resolving the issue stops the evaluation. Defaults to `true` when omitted.",
+        "When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
       ),
     notifications: NotificationsSettingSchema.optional().describe(
       "Per-group project-level notification toggles. Today only `incidents` exists; future groups (wrapped reports, etc.) slot in alongside.",

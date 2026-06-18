@@ -59,12 +59,12 @@ const PROJECT_SECTIONS: readonly ProjectSection[] = [
     isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/tools`),
   },
   {
-    key: "issues",
-    label: "Issues",
+    key: "signals",
+    label: "Signals",
     icon: ShieldAlertIcon,
     group: "understand",
-    path: (slug) => `/projects/${slug}/issues`,
-    isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/issues`),
+    path: (slug) => `/projects/${slug}/signals`,
+    isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/signals`),
   },
   {
     key: "behaviours",
@@ -138,10 +138,10 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
         path: (slug) => `/projects/${slug}/settings/general`,
       },
       {
-        key: "settings-issues",
-        label: "Issues",
+        key: "settings-signals",
+        label: "Signals",
         icon: ShieldAlertIcon,
-        path: (slug) => `/projects/${slug}/settings/issues`,
+        path: (slug) => `/projects/${slug}/settings/signals`,
       },
       {
         key: "flaggers",

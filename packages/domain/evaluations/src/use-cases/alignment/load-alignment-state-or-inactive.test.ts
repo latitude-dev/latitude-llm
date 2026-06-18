@@ -1,17 +1,17 @@
 import { hashOptimizationCandidateText } from "@domain/optimizations"
-import { EvaluationId, IssueId, NotFoundError, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { EvaluationId, NotFoundError, OrganizationId, ProjectId, SignalId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import type { Evaluation } from "../../entities/evaluation.ts"
 import { defaultEvaluationTrigger, emptyEvaluationAlignment } from "../../entities/evaluation.ts"
-import { EvaluationIssueRepository } from "../../ports/evaluation-issue-repository.ts"
+import { EvaluationSignalRepository } from "../../ports/evaluation-issue-repository.ts"
 import { EvaluationRepository, type EvaluationRepositoryShape } from "../../ports/evaluation-repository.ts"
 import { loadAlignmentStateOrInactiveUseCase } from "./load-alignment-state-or-inactive.ts"
 
 const organizationId = "o".repeat(24)
 const projectId = "p".repeat(24)
-const issueId = "i".repeat(24)
+const signalId = "i".repeat(24)
 const evaluationId = "e".repeat(24)
 
 const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation =>
@@ -19,7 +19,7 @@ const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation =>
     id: EvaluationId(evaluationId),
     organizationId,
     projectId: ProjectId(projectId),
-    issueId: IssueId(issueId),
+    signalId: SignalId(signalId),
     name: "Eval",
     description: "Desc",
     script: "return { passed: true }",
@@ -40,17 +40,17 @@ const makeRepositoryReturning = (evaluation: Evaluation | null): EvaluationRepos
       : Effect.succeed(evaluation),
   save: () => Effect.die("unused"),
   listByProjectId: () => Effect.die("unused"),
-  listByIssueId: () => Effect.die("unused"),
-  listByIssueIds: () => Effect.die("unused"),
+  listBySignalId: () => Effect.die("unused"),
+  listBySignalIds: () => Effect.die("unused"),
   archive: () => Effect.die("unused"),
   unarchive: () => Effect.die("unused"),
   softDelete: () => Effect.die("unused"),
-  softDeleteByIssueId: () => Effect.die("unused"),
+  softDeleteBySignalId: () => Effect.die("unused"),
 })
 
-const issueRepository = {
-  findById: (id: ReturnType<typeof IssueId>) =>
-    Effect.succeed({ id, projectId, name: "Issue", description: "Issue description" }),
+const signalRepository = {
+  findById: (id: ReturnType<typeof SignalId>) =>
+    Effect.succeed({ id, projectId, name: "Signal", description: "Signal description" }),
 }
 
 const run = (repository: EvaluationRepositoryShape) =>
@@ -58,11 +58,11 @@ const run = (repository: EvaluationRepositoryShape) =>
     loadAlignmentStateOrInactiveUseCase({
       organizationId,
       projectId,
-      issueId,
+      signalId,
       evaluationId,
     }).pipe(
       Effect.provideService(EvaluationRepository, repository),
-      Effect.provideService(EvaluationIssueRepository, issueRepository),
+      Effect.provideService(EvaluationSignalRepository, signalRepository),
       Effect.provideService(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(organizationId) })),
     ),
   )

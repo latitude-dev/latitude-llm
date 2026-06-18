@@ -5,7 +5,7 @@ import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import type { CloseOpenAlertIncidentInput } from "../ports/alert-incident-repository.ts"
 import { AlertIncidentRepository } from "../ports/alert-incident-repository.ts"
-import { closeAlertIncidentFromIssueEventUseCase } from "./close-alert-incident-from-issue-event.ts"
+import { closeAlertIncidentFromSignalEventUseCase } from "./close-alert-incident-from-issue-event.ts"
 
 const cuid = (seed: string) => seed.padEnd(24, "0")
 
@@ -56,17 +56,17 @@ function createTestLayers(opts: { closedId: string | null }) {
   }
 }
 
-describe("closeAlertIncidentFromIssueEventUseCase", () => {
+describe("closeAlertIncidentFromSignalEventUseCase", () => {
   it("calls closeOpen with the issue source pointer and emits IncidentClosed with the closed id", async () => {
     const { closed, events, layer } = createTestLayers({ closedId: cuid("c") })
     const endedAt = new Date("2026-05-07T10:00:00Z")
 
     await Effect.runPromise(
-      closeAlertIncidentFromIssueEventUseCase({
+      closeAlertIncidentFromSignalEventUseCase({
         kind: "issue.escalating",
         organizationId: cuid("o"),
         projectId: cuid("p"),
-        issueId: cuid("i"),
+        signalId: cuid("i"),
         endedAt,
       }).pipe(Effect.provide(layer)),
     )
@@ -100,11 +100,11 @@ describe("closeAlertIncidentFromIssueEventUseCase", () => {
     const { closed, events, layer } = createTestLayers({ closedId: null })
 
     await Effect.runPromise(
-      closeAlertIncidentFromIssueEventUseCase({
+      closeAlertIncidentFromSignalEventUseCase({
         kind: "issue.escalating",
         organizationId: cuid("o"),
         projectId: cuid("p"),
-        issueId: cuid("i"),
+        signalId: cuid("i"),
         endedAt: new Date("2026-05-07T10:00:00Z"),
       }).pipe(Effect.provide(layer)),
     )

@@ -14,14 +14,14 @@ import { listAllActiveEvaluations } from "./list-all-active-evaluations.ts"
 const PAGE_SIZE = 100
 const PROJECT_ID = ProjectId("p".repeat(24))
 const ORG_ID = OrganizationId("o".repeat(24))
-const ISSUE_ID = "i".repeat(24)
+const SIGNAL_ID = "i".repeat(24)
 
 const makeEvaluation = (id: string): Evaluation =>
   evaluationSchema.parse({
     id: EvaluationId(id),
     organizationId: ORG_ID,
     projectId: PROJECT_ID,
-    issueId: ISSUE_ID,
+    signalId: SIGNAL_ID,
     name: "Test evaluation",
     description: "",
     script: "true",
@@ -38,12 +38,12 @@ const unusedRepo = (): EvaluationRepositoryShape => ({
   findById: () => Effect.die("unexpected findById"),
   save: () => Effect.die("unexpected save"),
   listByProjectId: () => Effect.die("unexpected listByProjectId"),
-  listByIssueId: () => Effect.die("unexpected listByIssueId"),
-  listByIssueIds: () => Effect.die("unexpected listByIssueIds"),
+  listBySignalId: () => Effect.die("unexpected listBySignalId"),
+  listBySignalIds: () => Effect.die("unexpected listBySignalIds"),
   archive: () => Effect.die("unexpected archive"),
   unarchive: () => Effect.die("unexpected unarchive"),
   softDelete: () => Effect.die("unexpected softDelete"),
-  softDeleteByIssueId: () => Effect.die("unexpected softDeleteByIssueId"),
+  softDeleteBySignalId: () => Effect.die("unexpected softDeleteBySignalId"),
 })
 
 describe("listAllActiveEvaluations", () => {

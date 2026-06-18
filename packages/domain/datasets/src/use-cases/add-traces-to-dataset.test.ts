@@ -1,7 +1,7 @@
 import { OutboxEventWriter } from "@domain/events"
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
-import { ChSqlClient, type FilterSet, IssueId, OrganizationId, SqlClient, type TraceId } from "@domain/shared"
+import { ChSqlClient, type FilterSet, OrganizationId, SignalId, SqlClient, type TraceId } from "@domain/shared"
 import { createFakeChSqlClient } from "@domain/shared/testing"
 import { TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
@@ -143,7 +143,7 @@ describe("addTracesToDataset", () => {
 
   it("does not forward filters or searchQuery when source is an issue (issue-source ignores both)", async () => {
     const listByProjectIdCalls: number[] = []
-    const issueRepoCalls: Array<Record<string, unknown>> = []
+    const signalRepoCalls: Array<Record<string, unknown>> = []
     const { repository: traceRepo } = createFakeTraceRepository({
       listByProjectId: () => {
         listByProjectIdCalls.push(1)
@@ -151,8 +151,8 @@ describe("addTracesToDataset", () => {
       },
     })
     const { repository: scoreAnalyticsRepo } = createFakeScoreAnalyticsRepository({
-      listTracesByIssue: (args) => {
-        issueRepoCalls.push({ ...args })
+      listTracesBySignal: (args) => {
+        signalRepoCalls.push({ ...args })
         return Effect.succeed({ items: [], hasMore: false, limit: 1_000, offset: 0 })
       },
     })
@@ -162,7 +162,7 @@ describe("addTracesToDataset", () => {
         addTracesToDataset({
           projectId,
           datasetId,
-          source: { kind: "issue", issueId: IssueId("i".repeat(24)) },
+          source: { kind: "issue", signalId: SignalId("i".repeat(24)) },
           selection: { mode: "all" },
           searchQuery: "ignored on issue source",
           filters: baseFilters,
@@ -171,9 +171,9 @@ describe("addTracesToDataset", () => {
     )
 
     expect(listByProjectIdCalls).toEqual([])
-    expect(issueRepoCalls).toHaveLength(1)
-    expect(issueRepoCalls[0]).not.toHaveProperty("filters")
-    expect(issueRepoCalls[0]).not.toHaveProperty("searchQuery")
+    expect(signalRepoCalls).toHaveLength(1)
+    expect(signalRepoCalls[0]).not.toHaveProperty("filters")
+    expect(signalRepoCalls[0]).not.toHaveProperty("searchQuery")
   })
 })
 

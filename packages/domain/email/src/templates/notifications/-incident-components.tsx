@@ -1,4 +1,3 @@
-import type { IssuePriority } from "@domain/issues"
 import { formatHumanReadableAlert } from "@domain/monitors"
 import type { IncidentSampleAuthor, IncidentSampleExcerpt } from "@domain/notifications"
 import {
@@ -7,6 +6,7 @@ import {
   type AlertSeverity,
   SEVERITY_BADGE_COLOR,
 } from "@domain/shared"
+import type { SignalPriority } from "@domain/signals"
 import { Img, Link, Section, Text } from "@react-email/components"
 import type { CSSProperties, ReactNode } from "react"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
@@ -160,7 +160,7 @@ export function SeverityBadge({ severity }: { readonly severity: AlertSeverity }
   )
 }
 
-const PRIORITY_PALETTE: Record<IssuePriority, { readonly bg: string; readonly fg: string }> = {
+const PRIORITY_PALETTE: Record<SignalPriority, { readonly bg: string; readonly fg: string }> = {
   urgent: { bg: "#FEE2E2", fg: "#991B1B" },
   high: { bg: "#FEF3C7", fg: "#92400E" },
   medium: { bg: "#DBEAFE", fg: "#1E40AF" },
@@ -173,7 +173,7 @@ const PRIORITY_PALETTE: Record<IssuePriority, { readonly bg: string; readonly fg
  * Only rendered when the incident payload snapshotted a non-null
  * priority.
  */
-export function PriorityBadge({ priority }: { readonly priority: IssuePriority }) {
+export function PriorityBadge({ priority }: { readonly priority: SignalPriority }) {
   const palette = PRIORITY_PALETTE[priority]
   return (
     <span
@@ -472,7 +472,7 @@ export function IncidentTrendChartImage({ src }: { readonly src: string }) {
  * pairs this with an issue id in a two-column row; we surface the full
  * id separately at the card footer so it doesn't get truncated.
  */
-export function IssueTimestamp({ timestamp }: { readonly timestamp: Date }) {
+export function SignalTimestamp({ timestamp }: { readonly timestamp: Date }) {
   return <Text style={{ margin: "8px 0 0 0", color: "#64748B", fontSize: 12 }}>{formatEmailTimestamp(timestamp)}</Text>
 }
 
@@ -482,7 +482,7 @@ export function IssueTimestamp({ timestamp }: { readonly timestamp: Date }) {
  * Sits below the per-kind content so the rest of the card stays
  * scannable.
  */
-export function IssueIdFooter({ issueId }: { readonly issueId: string }) {
+export function SignalIdFooter({ signalId }: { readonly signalId: string }) {
   return (
     <Text
       style={{
@@ -493,7 +493,7 @@ export function IssueIdFooter({ issueId }: { readonly issueId: string }) {
         wordBreak: "break-all",
       }}
     >
-      Issue ID: {issueId}
+      Signal ID: {signalId}
     </Text>
   )
 }

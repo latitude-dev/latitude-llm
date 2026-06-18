@@ -42,7 +42,7 @@ export const deleteAnnotationUseCase = Effect.fn("annotations.deleteAnnotation")
           organizationId: score.organizationId,
           projectId: score.projectId,
           scoreId: score.id,
-          issueId: score.issueId,
+          signalId: score.signalId,
           draftedAt: score.draftedAt?.toISOString() ?? null,
           feedback: score.feedback,
           source: score.source,

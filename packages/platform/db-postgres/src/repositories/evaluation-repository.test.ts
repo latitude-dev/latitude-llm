@@ -1,5 +1,5 @@
 import { EvaluationRepository, evaluationSchema, wrapPromptAsEvaluationScript } from "@domain/evaluations"
-import { EvaluationId, IssueId, OrganizationId, ProjectId } from "@domain/shared"
+import { EvaluationId, OrganizationId, ProjectId, SignalId } from "@domain/shared"
 import { and, eq } from "drizzle-orm"
 import { Effect } from "effect"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
@@ -10,8 +10,8 @@ import { EvaluationRepositoryLive } from "./evaluation-repository.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
-const issueId = IssueId("i".repeat(24))
-const otherIssueId = IssueId("j".repeat(24))
+const signalId = SignalId("i".repeat(24))
+const otherSignalId = SignalId("j".repeat(24))
 const evaluationId = EvaluationId("e".repeat(24))
 const archivedEvaluationId = EvaluationId("a".repeat(24))
 const deletedEvaluationId = EvaluationId("d".repeat(24))
@@ -23,7 +23,7 @@ const makeEvaluation = (
     id: evaluationId,
     organizationId: organizationId as string,
     projectId: projectId as string,
-    issueId: issueId as string,
+    signalId: signalId as string,
     name: "Secret Leakage Monitor",
     description: "Detects when the agent leaks secrets.",
     script: wrapPromptAsEvaluationScript("Check for secret leakage in the conversation."),
@@ -98,26 +98,26 @@ describe("EvaluationRepositoryLive", () => {
           projectId,
           options: { lifecycle: "archived" },
         })
-        const allPage = yield* repository.listByIssueId({
+        const allPage = yield* repository.listBySignalId({
           projectId,
-          issueId,
+          signalId,
           options: { lifecycle: "all" },
         })
-        const byIssueIdsPage = yield* repository.listByIssueIds({
+        const bySignalIdsPage = yield* repository.listBySignalIds({
           projectId,
-          issueIds: [issueId, otherIssueId],
+          signalIds: [signalId, otherSignalId],
           options: { lifecycle: "all" },
         })
 
         expect(activePage.items.map((item) => item.id)).toEqual([active.id])
         expect(archivedPage.items.map((item) => item.id)).toEqual([archived.id])
         expect(allPage.items.map((item) => item.id).sort()).toEqual([active.id, archived.id].sort())
-        expect(byIssueIdsPage.items.map((item) => item.id).sort()).toEqual([active.id, archived.id].sort())
+        expect(bySignalIdsPage.items.map((item) => item.id).sort()).toEqual([active.id, archived.id].sort())
       }).pipe(makeProvider(database)),
     )
   })
 
-  it("applies archive, unarchive, soft-delete, and softDeleteByIssueId lifecycle operations", async () => {
+  it("applies archive, unarchive, soft-delete, and softDeleteBySignalId lifecycle operations", async () => {
     const first = makeEvaluation({
       id: EvaluationId("f".repeat(24)),
       name: "First lifecycle evaluation",
@@ -126,9 +126,9 @@ describe("EvaluationRepositoryLive", () => {
       id: EvaluationId("g".repeat(24)),
       name: "Second lifecycle evaluation",
     })
-    const otherIssueEvaluation = makeEvaluation({
+    const otherSignalEvaluation = makeEvaluation({
       id: EvaluationId("h".repeat(24)),
-      issueId: otherIssueId as string,
+      signalId: otherSignalId as string,
       name: "Other issue evaluation",
     })
 
@@ -137,11 +137,11 @@ describe("EvaluationRepositoryLive", () => {
         const repository = yield* EvaluationRepository
         yield* repository.save(first)
         yield* repository.save(second)
-        yield* repository.save(otherIssueEvaluation)
+        yield* repository.save(otherSignalEvaluation)
         yield* repository.archive(first.id)
         yield* repository.unarchive(first.id)
         yield* repository.softDelete(first.id)
-        yield* repository.softDeleteByIssueId({ projectId, issueId })
+        yield* repository.softDeleteBySignalId({ projectId, signalId })
       }).pipe(makeProvider(database)),
     )
 
@@ -154,7 +154,7 @@ describe("EvaluationRepositoryLive", () => {
 
     const deletedRow = rows.find((row) => row.id === first.id)
     const secondDeletedRow = rows.find((row) => row.id === second.id)
-    const untouchedRow = rows.find((row) => row.id === otherIssueEvaluation.id)
+    const untouchedRow = rows.find((row) => row.id === otherSignalEvaluation.id)
 
     expect(deletedRow?.deletedAt).not.toBeNull()
     expect(secondDeletedRow?.deletedAt).not.toBeNull()

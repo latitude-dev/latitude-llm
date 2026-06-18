@@ -25,14 +25,14 @@ describe("monitorAttributionBlocks", () => {
     const blocks = monitorAttributionBlocks({
       webAppUrl: "https://app.latitude.so/",
       projectSlug: "acme",
-      monitorName: "Issue discovered",
+      monitorName: "Signal discovered",
       monitorSlug: "issue-discovered",
       incidentKind: "issue.new",
       condition: null,
     })
     expect(blocks).toHaveLength(1)
     expect(textOf(blocks[0])).toBe(
-      "Created by monitor <https://app.latitude.so/projects/acme/monitors?monitorSlug=issue-discovered|Issue discovered>",
+      "Created by monitor <https://app.latitude.so/projects/acme/monitors?monitorSlug=issue-discovered|Signal discovered>",
     )
   })
 
@@ -40,12 +40,12 @@ describe("monitorAttributionBlocks", () => {
     const blocks = monitorAttributionBlocks({
       webAppUrl: "https://app.latitude.so",
       projectSlug: undefined,
-      monitorName: "Issue discovered",
+      monitorName: "Signal discovered",
       monitorSlug: "issue-discovered",
       incidentKind: "issue.new",
       condition: null,
     })
-    expect(textOf(blocks[0])).toBe("Created by monitor *Issue discovered*")
+    expect(textOf(blocks[0])).toBe("Created by monitor *Signal discovered*")
   })
 
   it("appends a humanised condition line when a condition is present", () => {

@@ -31,7 +31,7 @@ function createAnnotationRecord(): AnnotationRecord {
     source: "annotation",
     sourceId: "UI",
     simulationId: null,
-    issueId: null,
+    signalId: null,
     value: 1,
     passed: true,
     feedback: "Looks good",

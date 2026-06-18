@@ -11,7 +11,7 @@ export type AlertDuration = z.infer<typeof alertDurationSchema>
 /** Seasonal-detector sensitivity `k` (σ multiplier). 1–6, lower = noisier. Shared with `issue.escalating`. */
 export const escalationSensitivitySchema = z.number().int().min(1).max(6)
 
-/** Provisioned default for `sensitivity`. Single source of truth — `@domain/issues` re-exports it as `DEFAULT_ESCALATION_SENSITIVITY_K`. */
+/** Provisioned default for `sensitivity`. Single source of truth — `@domain/signals` re-exports it as `DEFAULT_ESCALATION_SENSITIVITY_K`. */
 export const DEFAULT_ESCALATION_SENSITIVITY = 3
 
 /**
@@ -66,11 +66,11 @@ export type AlertIncidentSavedSearchEscalatingCondition = z.infer<
 >
 
 /** Sensitivity travels with the monitor (not project settings); system monitor provisions a default. */
-export const alertIncidentIssueEscalatingConditionSchema = z.object({
+export const alertIncidentSignalEscalatingConditionSchema = z.object({
   kind: z.literal("issue.escalating"),
   sensitivity: escalationSensitivitySchema.optional(),
 })
-export type AlertIncidentIssueEscalatingCondition = z.infer<typeof alertIncidentIssueEscalatingConditionSchema>
+export type AlertIncidentSignalEscalatingCondition = z.infer<typeof alertIncidentSignalEscalatingConditionSchema>
 
 /**
  * What a query-time monitor measures over its target's matched rows. `count`
@@ -132,7 +132,7 @@ export type AlertIncidentMetricEscalatingCondition = z.infer<typeof alertInciden
 export const alertIncidentConditionSchema = z.discriminatedUnion("kind", [
   alertIncidentSavedSearchThresholdConditionSchema,
   alertIncidentSavedSearchEscalatingConditionSchema,
-  alertIncidentIssueEscalatingConditionSchema,
+  alertIncidentSignalEscalatingConditionSchema,
   alertIncidentMetricThresholdConditionSchema,
   alertIncidentMetricEscalatingConditionSchema,
 ])

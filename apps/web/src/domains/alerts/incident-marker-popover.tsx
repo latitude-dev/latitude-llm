@@ -7,8 +7,8 @@ import type { AlertIncidentRecord } from "./alerts.functions.ts"
 import { formatIncidentKindLabel, SEVERITY_LABELS } from "./incident-markers.ts"
 
 /**
- * Popover anchored at a chart-bucket point, listing every incident touching that bucket. Issue
- * rows link to the issue page (`/issues/<id>`); saved-search rows link to their monitor
+ * Popover anchored at a chart-bucket point, listing every incident touching that bucket. Signal
+ * rows link to the issue page (`/signals/<id>`); saved-search rows link to their monitor
  * (`?monitorSlug=…`). The popover is consumer-owned — the chart surfaces the bucket anchor; this
  * component renders the list and the navigation links.
  */
@@ -46,7 +46,7 @@ function formatTiming(incident: AlertIncidentRecord): string {
 const ROW_CLASS = "flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-accent focus-visible:bg-accent outline-none"
 
 /**
- * One incident row. Issue incidents link to the issue page; saved-search incidents link to their
+ * One incident row. Signal incidents link to the issue page; saved-search incidents link to their
  * monitor (and fall back to a non-interactive row when the monitor alert was deleted). The primary
  * label is the issue name for issues and the saved search name for saved searches, followed (saved
  * search only) by the humanised condition and the "Created by monitor X" attribution.
@@ -60,13 +60,13 @@ function IncidentRow({
   readonly projectSlug: string
   readonly onNavigate: () => void
 }) {
-  // Issues link to the issue; everything else with a monitor (saved-search AND
+  // Signals link to the issue; everything else with a monitor (saved-search AND
   // unified target-on-monitor incidents) links to that monitor's page.
-  const isIssue = incident.sourceType === "issue"
-  const issueTarget = isIssue && incident.sourceId !== null ? incident.sourceId : null
-  const monitorTarget = !isIssue && incident.monitorSlug !== null ? incident.monitorSlug : null
-  const primaryLabel = isIssue ? incident.issueName : incident.savedSearchName
-  const navigable = issueTarget !== null || monitorTarget !== null
+  const isSignal = incident.sourceType === "issue"
+  const signalTarget = isSignal && incident.sourceId !== null ? incident.sourceId : null
+  const monitorTarget = !isSignal && incident.monitorSlug !== null ? incident.monitorSlug : null
+  const primaryLabel = isSignal ? incident.signalName : incident.savedSearchName
+  const navigable = signalTarget !== null || monitorTarget !== null
 
   const body = (
     <>
@@ -87,12 +87,12 @@ function IncidentRow({
               {primaryLabel}
             </Text.H6>
           ) : null}
-          {!isIssue && incident.conditionSummary ? (
+          {!isSignal && incident.conditionSummary ? (
             <Text.H6 color="foregroundMuted" className="min-w-0 truncate">
               {incident.conditionSummary}
             </Text.H6>
           ) : null}
-          {!isIssue && incident.monitorName ? (
+          {!isSignal && incident.monitorName ? (
             <Text.H6 color="foregroundMuted" className="min-w-0 truncate">
               Created by monitor <b>{incident.monitorName}</b>
             </Text.H6>
@@ -106,11 +106,11 @@ function IncidentRow({
     </>
   )
 
-  if (issueTarget !== null) {
+  if (signalTarget !== null) {
     return (
       <Link
-        to="/projects/$projectSlug/issues/$issueId"
-        params={{ projectSlug, issueId: issueTarget }}
+        to="/projects/$projectSlug/signals/$signalId"
+        params={{ projectSlug, signalId: signalTarget }}
         onClick={onNavigate}
         className={ROW_CLASS}
       >

@@ -10,10 +10,10 @@ import {
 import { Text } from "@repo/ui"
 import type { NotificationRecord } from "../../../../../../domains/notifications/notifications.functions.ts"
 import { BaseNotification } from "../../base-notification.tsx"
-import { IssueEscalatingNotification } from "./issue-escalating.tsx"
-import { IssueNewNotification } from "./issue-new.tsx"
-import { IssueRegressedNotification } from "./issue-regressed.tsx"
 import { SavedSearchIncidentNotification } from "./saved-search.tsx"
+import { SignalEscalatingNotification } from "./signal-escalating.tsx"
+import { SignalNewNotification } from "./signal-new.tsx"
+import { SignalRegressedNotification } from "./signal-regressed.tsx"
 
 /**
  * Notification kinds map to lifecycle events:
@@ -42,9 +42,9 @@ const Unsupported = ({ notification }: { readonly notification: NotificationReco
 const renderEvent = (notification: NotificationRecord, payload: IncidentEventPayload) => {
   switch (payload.incidentKind) {
     case "issue.new":
-      return <IssueNewNotification notification={notification} payload={payload} event="event" />
+      return <SignalNewNotification notification={notification} payload={payload} event="event" />
     case "issue.regressed":
-      return <IssueRegressedNotification notification={notification} payload={payload} event="event" />
+      return <SignalRegressedNotification notification={notification} payload={payload} event="event" />
     case "savedSearch.match":
     case "savedSearch.threshold":
       return <SavedSearchIncidentNotification notification={notification} payload={payload} event="event" />
@@ -57,7 +57,7 @@ const renderEvent = (notification: NotificationRecord, payload: IncidentEventPay
 
 const renderOpened = (notification: NotificationRecord, payload: IncidentOpenedPayload) => {
   if (payload.incidentKind === "issue.escalating") {
-    return <IssueEscalatingNotification notification={notification} payload={payload} event="opened" />
+    return <SignalEscalatingNotification notification={notification} payload={payload} event="opened" />
   }
   // savedSearch.threshold in `multiplier`/`expected` mode is sustained (opens with `endedAt = null`),
   // so it lands here alongside savedSearch.escalating. (`absolute` mode is one-shot → incident.event.)
@@ -70,7 +70,7 @@ const renderOpened = (notification: NotificationRecord, payload: IncidentOpenedP
 
 const renderClosed = (notification: NotificationRecord, payload: IncidentClosedPayload) => {
   if (payload.incidentKind === "issue.escalating") {
-    return <IssueEscalatingNotification notification={notification} payload={payload} event="closed" />
+    return <SignalEscalatingNotification notification={notification} payload={payload} event="closed" />
   }
   // savedSearch.threshold in `multiplier`/`expected` mode is sustained, so its close lands here too.
   if (payload.incidentKind === "savedSearch.escalating" || payload.incidentKind === "savedSearch.threshold") {

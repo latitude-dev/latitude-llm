@@ -25,13 +25,13 @@ import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@
 import {
   CacheError,
   ExternalUserId,
-  IssueId,
   NotFoundError,
   OrganizationId,
   ProjectId,
   RepositoryError,
   SessionId,
   SettingsReader,
+  SignalId,
   SimulationId,
   SpanId,
   SqlClient,
@@ -48,7 +48,7 @@ import {
   emptyEvaluationAlignment,
   evaluationSchema,
 } from "../../entities/evaluation.ts"
-import { type EvaluationIssue, EvaluationIssueRepository } from "../../ports/evaluation-issue-repository.ts"
+import { type EvaluationSignal, EvaluationSignalRepository } from "../../ports/evaluation-issue-repository.ts"
 import { EvaluationRepository, type EvaluationRepositoryShape } from "../../ports/evaluation-repository.ts"
 import {
   EVALUATION_CONVERSATION_PLACEHOLDER,
@@ -128,7 +128,7 @@ function makeEvaluation(
   overrides?: Partial<
     Pick<
       Evaluation,
-      "id" | "organizationId" | "projectId" | "issueId" | "script" | "trigger" | "archivedAt" | "deletedAt"
+      "id" | "organizationId" | "projectId" | "signalId" | "script" | "trigger" | "archivedAt" | "deletedAt"
     >
   >,
 ) {
@@ -136,7 +136,7 @@ function makeEvaluation(
     id: overrides?.id ?? INPUT.evaluationId,
     organizationId: overrides?.organizationId ?? INPUT.organizationId,
     projectId: overrides?.projectId ?? INPUT.projectId,
-    issueId: overrides?.issueId ?? "i".repeat(24),
+    signalId: overrides?.signalId ?? "i".repeat(24),
     name: "Live evaluation",
     description: "Detects the linked issue on live traces.",
     script: overrides?.script ?? "const result = true",
@@ -150,13 +150,13 @@ function makeEvaluation(
   })
 }
 
-function makeIssue(overrides?: Partial<Pick<EvaluationIssue, "id" | "projectId" | "name" | "description">>) {
+function makeSignal(overrides?: Partial<Pick<EvaluationSignal, "id" | "projectId" | "name" | "description">>) {
   return {
-    id: overrides?.id ?? IssueId("i".repeat(24)),
+    id: overrides?.id ?? SignalId("i".repeat(24)),
     projectId: overrides?.projectId ?? INPUT.projectId,
     name: overrides?.name ?? "Deployment checklist omission",
     description: overrides?.description ?? "The assistant fails to mention key deployment steps.",
-  } satisfies EvaluationIssue
+  } satisfies EvaluationSignal
 }
 
 function createEvaluationRepository(findById: EvaluationRepositoryShape["findById"]): EvaluationRepositoryShape {
@@ -164,17 +164,17 @@ function createEvaluationRepository(findById: EvaluationRepositoryShape["findByI
     findById,
     save: () => Effect.die("Unexpected call to save"),
     listByProjectId: () => Effect.die("Unexpected call to listByProjectId"),
-    listByIssueId: () => Effect.die("Unexpected call to listByIssueId"),
-    listByIssueIds: () => Effect.die("Unexpected call to listByIssueIds"),
+    listBySignalId: () => Effect.die("Unexpected call to listBySignalId"),
+    listBySignalIds: () => Effect.die("Unexpected call to listBySignalIds"),
     archive: () => Effect.die("Unexpected call to archive"),
     unarchive: () => Effect.die("Unexpected call to unarchive"),
     softDelete: () => Effect.die("Unexpected call to softDelete"),
-    softDeleteByIssueId: () => Effect.die("Unexpected call to softDeleteByIssueId"),
+    softDeleteBySignalId: () => Effect.die("Unexpected call to softDeleteBySignalId"),
   }
 }
 
-function createIssueRepository(
-  findById: (id: ReturnType<typeof IssueId>) => Effect.Effect<EvaluationIssue, NotFoundError>,
+function createSignalRepository(
+  findById: (id: ReturnType<typeof SignalId>) => Effect.Effect<EvaluationSignal, NotFoundError>,
 ) {
   return {
     findById,
@@ -244,7 +244,7 @@ function createUseCaseLayer(input: {
   readonly evaluationRepository: EvaluationRepositoryShape
   readonly scoreRepository?: ReturnType<typeof createFakeScoreRepository>["repository"] | undefined
   readonly scoreWriteLayer?: ReturnType<typeof createScoreWriteLayer> | undefined
-  readonly issueRepository?: ReturnType<typeof createIssueRepository> | undefined
+  readonly signalRepository?: ReturnType<typeof createSignalRepository> | undefined
   readonly aiLayer?: ReturnType<typeof createFakeAI>["layer"] | undefined
   readonly billingLayer?: ReturnType<typeof createBillingLayer> | undefined
   readonly featureFlagRepository?: ReturnType<typeof createFakeFeatureFlagRepository>["repository"] | undefined
@@ -257,7 +257,7 @@ function createUseCaseLayer(input: {
   | BillingUsageEventRepository
   | BillingUsagePeriodRepository
   | DetectorHealthTracker
-  | EvaluationIssueRepository
+  | EvaluationSignalRepository
   | EvaluationRepository
   | FeatureFlagRepository
   | ScoreAnalyticsRepository
@@ -276,8 +276,9 @@ function createUseCaseLayer(input: {
     Layer.succeed(EvaluationRepository, input.evaluationRepository),
     input.scoreWriteLayer ?? createScoreWriteLayer({ scoreRepository: input.scoreRepository }),
     Layer.succeed(
-      EvaluationIssueRepository,
-      input.issueRepository ?? createIssueRepository(() => Effect.die("Issue should not be loaded in this scenario")),
+      EvaluationSignalRepository,
+      input.signalRepository ??
+        createSignalRepository(() => Effect.die("Signal should not be loaded in this scenario")),
     ),
     input.aiLayer ?? createFakeAI().layer,
     input.billingLayer ?? createBillingLayer(),
@@ -534,7 +535,7 @@ describe("runLiveEvaluationUseCase", () => {
   it("skips when a canonical result already exists for the evaluation and trace", async () => {
     let traceLoadCalls = 0
     let duplicateCheckCalls = 0
-    let issueLoadCalls = 0
+    let signalLoadCalls = 0
     const { repository: traceRepository } = createFakeTraceRepository({
       findByTraceId: () => {
         traceLoadCalls += 1
@@ -543,9 +544,9 @@ describe("runLiveEvaluationUseCase", () => {
     })
     const evaluation = makeEvaluation()
     const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
-    const issueRepository = createIssueRepository(() => {
-      issueLoadCalls += 1
-      return Effect.die("Issue should not be loaded when a canonical result already exists")
+    const signalRepository = createSignalRepository(() => {
+      signalLoadCalls += 1
+      return Effect.die("Signal should not be loaded when a canonical result already exists")
     })
     const operations: string[] = []
     const duplicateFixture = createFakeScoreRepository({
@@ -598,7 +599,7 @@ describe("runLiveEvaluationUseCase", () => {
             traceRepository,
             evaluationRepository,
             scoreWriteLayer,
-            issueRepository,
+            signalRepository,
             aiLayer,
           }),
         ),
@@ -613,7 +614,7 @@ describe("runLiveEvaluationUseCase", () => {
     })
     expect(duplicateCheckCalls).toBe(1)
     expect(traceLoadCalls).toBe(0)
-    expect(issueLoadCalls).toBe(0)
+    expect(signalLoadCalls).toBe(0)
     expect(calls.generate).toHaveLength(0)
     expect(operations).toEqual([])
   })
@@ -624,16 +625,16 @@ describe("runLiveEvaluationUseCase", () => {
     const evaluation = makeEvaluation({
       script: VALID_SCRIPT,
     })
-    const issue = makeIssue({
-      id: IssueId(evaluation.issueId),
+    const issue = makeSignal({
+      id: SignalId(evaluation.signalId),
     })
     const traceDetail = makeTraceDetail()
     const { repository: traceRepository } = createFakeTraceRepository({
       findByTraceId: () => Effect.succeed(traceDetail),
     })
     const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
-    const issueRepository = createIssueRepository((issueId) => {
-      expect(issueId).toEqual(IssueId(evaluation.issueId))
+    const signalRepository = createSignalRepository((signalId) => {
+      expect(signalId).toEqual(SignalId(evaluation.signalId))
       return Effect.succeed(issue)
     })
     const operations: string[] = []
@@ -715,7 +716,7 @@ describe("runLiveEvaluationUseCase", () => {
             traceRepository,
             evaluationRepository,
             scoreWriteLayer,
-            issueRepository,
+            signalRepository,
             aiLayer,
           }),
         ),
@@ -767,8 +768,8 @@ describe("runLiveEvaluationUseCase", () => {
       findByTraceId: () => Effect.succeed(traceDetail),
     })
     const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
-    const issueRepository = createIssueRepository(() =>
-      Effect.fail(new NotFoundError({ entity: "Issue", id: evaluation.issueId })),
+    const signalRepository = createSignalRepository(() =>
+      Effect.fail(new NotFoundError({ entity: "Signal", id: evaluation.signalId })),
     )
 
     const result = await Effect.runPromise(
@@ -777,7 +778,7 @@ describe("runLiveEvaluationUseCase", () => {
           createUseCaseLayer({
             traceRepository,
             evaluationRepository,
-            issueRepository,
+            signalRepository,
           }),
         ),
       ),
@@ -793,13 +794,13 @@ describe("runLiveEvaluationUseCase", () => {
 
   it("skips before AI execution when billing blocks the live evaluation", async () => {
     const evaluation = makeEvaluation({ script: VALID_SCRIPT })
-    const issue = makeIssue({ id: IssueId(evaluation.issueId) })
+    const issue = makeSignal({ id: SignalId(evaluation.signalId) })
     const traceDetail = makeTraceDetail()
     const { repository: traceRepository } = createFakeTraceRepository({
       findByTraceId: () => Effect.succeed(traceDetail),
     })
     const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
-    const issueRepository = createIssueRepository(() => Effect.succeed(issue))
+    const signalRepository = createSignalRepository(() => Effect.succeed(issue))
     const { repository: billingUsagePeriodRepository } = createFakeBillingUsagePeriodRepository()
     const now = new Date()
     const currentPeriodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
@@ -833,7 +834,7 @@ describe("runLiveEvaluationUseCase", () => {
           createUseCaseLayer({
             traceRepository,
             evaluationRepository,
-            issueRepository,
+            signalRepository,
             aiLayer,
             billingLayer: createBillingLayer({ billingUsagePeriodRepository }),
           }),
@@ -852,13 +853,13 @@ describe("runLiveEvaluationUseCase", () => {
 
   it("records billing after hosted AI execution completes", async () => {
     const evaluation = makeEvaluation({ script: VALID_SCRIPT })
-    const issue = makeIssue({ id: IssueId(evaluation.issueId) })
+    const issue = makeSignal({ id: SignalId(evaluation.signalId) })
     const traceDetail = makeTraceDetail()
     const { repository: traceRepository } = createFakeTraceRepository({
       findByTraceId: () => Effect.succeed(traceDetail),
     })
     const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
-    const issueRepository = createIssueRepository(() => Effect.succeed(issue))
+    const signalRepository = createSignalRepository(() => Effect.succeed(issue))
     const operations: string[] = []
     const { layer: aiLayer, calls } = createFakeAI({
       generate: <T>(input: GenerateInput<T>) =>
@@ -891,7 +892,7 @@ describe("runLiveEvaluationUseCase", () => {
           createUseCaseLayer({
             traceRepository,
             evaluationRepository,
-            issueRepository,
+            signalRepository,
             aiLayer,
             billingLayer: createBillingLayer(),
             scoreWriteLayer,
@@ -909,16 +910,16 @@ describe("runLiveEvaluationUseCase", () => {
     const evaluation = makeEvaluation({
       script: VALID_SCRIPT,
     })
-    const issue = makeIssue({
-      id: IssueId(evaluation.issueId),
+    const issue = makeSignal({
+      id: SignalId(evaluation.signalId),
     })
     const traceDetail = makeTraceDetail()
     const { repository: traceRepository } = createFakeTraceRepository({
       findByTraceId: () => Effect.succeed(traceDetail),
     })
     const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
-    const issueRepository = createIssueRepository((issueId) => {
-      expect(issueId).toEqual(IssueId(evaluation.issueId))
+    const signalRepository = createSignalRepository((signalId) => {
+      expect(signalId).toEqual(SignalId(evaluation.signalId))
       return Effect.succeed(issue)
     })
     const { operations, persistedScores, inserted, outboxEvents, scoreWriteLayer } = createTrackedScoreWriteFixture()
@@ -949,7 +950,7 @@ describe("runLiveEvaluationUseCase", () => {
             traceRepository,
             evaluationRepository,
             scoreWriteLayer,
-            issueRepository,
+            signalRepository,
             aiLayer,
           }),
         ),
@@ -961,7 +962,7 @@ describe("runLiveEvaluationUseCase", () => {
 
     expect(result.summary).toEqual({
       evaluationId: evaluation.id,
-      issueId: evaluation.issueId,
+      signalId: evaluation.signalId,
       traceId: traceDetail.traceId,
       sessionId: traceDetail.sessionId,
       scoreId: result.context.score.id,
@@ -996,7 +997,7 @@ describe("runLiveEvaluationUseCase", () => {
         simulationId: null,
         source: "evaluation",
         sourceId: evaluation.id,
-        issueId: null,
+        signalId: null,
         value: 1,
         passed: true,
         feedback: "The conversation does not exhibit the linked issue.",
@@ -1030,7 +1031,7 @@ describe("runLiveEvaluationUseCase", () => {
         organizationId: INPUT.organizationId,
         projectId: INPUT.projectId,
         evaluationId: INPUT.evaluationId,
-        issueId: "i".repeat(24),
+        signalId: "i".repeat(24),
         traceId: INPUT.traceId,
       },
     })
@@ -1040,16 +1041,16 @@ describe("runLiveEvaluationUseCase", () => {
     const evaluation = makeEvaluation({
       script: VALID_SCRIPT,
     })
-    const issue = makeIssue({
-      id: IssueId(evaluation.issueId),
+    const issue = makeSignal({
+      id: SignalId(evaluation.signalId),
     })
     const traceDetail = makeTraceDetail()
     const { repository: traceRepository } = createFakeTraceRepository({
       findByTraceId: () => Effect.succeed(traceDetail),
     })
     const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
-    const issueRepository = createIssueRepository((issueId) => {
-      expect(issueId).toEqual(IssueId(evaluation.issueId))
+    const signalRepository = createSignalRepository((signalId) => {
+      expect(signalId).toEqual(SignalId(evaluation.signalId))
       return Effect.succeed(issue)
     })
     const { operations, persistedScores, inserted, outboxEvents, scoreWriteLayer } = createTrackedScoreWriteFixture()
@@ -1080,7 +1081,7 @@ describe("runLiveEvaluationUseCase", () => {
             traceRepository,
             evaluationRepository,
             scoreWriteLayer,
-            issueRepository,
+            signalRepository,
             aiLayer,
           }),
         ),
@@ -1099,7 +1100,7 @@ describe("runLiveEvaluationUseCase", () => {
       simulationId: null,
       source: "evaluation",
       sourceId: evaluation.id,
-      issueId: evaluation.issueId,
+      signalId: evaluation.signalId,
       value: 0,
       passed: false,
       feedback: "The conversation exhibits the linked issue.",
@@ -1144,16 +1145,16 @@ describe("runLiveEvaluationUseCase", () => {
     const evaluation = makeEvaluation({
       script: VALID_SCRIPT,
     })
-    const issue = makeIssue({
-      id: IssueId(evaluation.issueId),
+    const issue = makeSignal({
+      id: SignalId(evaluation.signalId),
     })
     const traceDetail = makeTraceDetail()
     const { repository: traceRepository } = createFakeTraceRepository({
       findByTraceId: () => Effect.succeed(traceDetail),
     })
     const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
-    const issueRepository = createIssueRepository((issueId) => {
-      expect(issueId).toEqual(IssueId(evaluation.issueId))
+    const signalRepository = createSignalRepository((signalId) => {
+      expect(signalId).toEqual(SignalId(evaluation.signalId))
       return Effect.succeed(issue)
     })
     const { operations, persistedScores, inserted, outboxEvents, scoreWriteLayer } = createTrackedScoreWriteFixture()
@@ -1173,7 +1174,7 @@ describe("runLiveEvaluationUseCase", () => {
             traceRepository,
             evaluationRepository,
             scoreWriteLayer,
-            issueRepository,
+            signalRepository,
             aiLayer,
           }),
         ),
@@ -1203,7 +1204,7 @@ describe("runLiveEvaluationUseCase", () => {
       simulationId: null,
       source: "evaluation",
       sourceId: evaluation.id,
-      issueId: null,
+      signalId: null,
       value: 0,
       passed: false,
       feedback: "AI generation failed (openai/gpt-5.4): upstream timeout",
@@ -1233,15 +1234,15 @@ describe("runLiveEvaluationUseCase", () => {
       // Not a template script: only executable by the sandbox runtime.
       script: "return Passed(1, 'no exhibition')",
     })
-    const issue = makeIssue({
-      id: IssueId(evaluation.issueId),
+    const issue = makeSignal({
+      id: SignalId(evaluation.signalId),
     })
     const traceDetail = makeTraceDetail()
     const { repository: traceRepository } = createFakeTraceRepository({
       findByTraceId: () => Effect.succeed(traceDetail),
     })
     const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
-    const issueRepository = createIssueRepository(() => Effect.succeed(issue))
+    const signalRepository = createSignalRepository(() => Effect.succeed(issue))
     const featureFlagFixture = createFakeFeatureFlagRepository()
     featureFlagFixture.featureFlags.set(
       "evaluation-sandbox-runtime",
@@ -1258,7 +1259,7 @@ describe("runLiveEvaluationUseCase", () => {
           createUseCaseLayer({
             traceRepository,
             evaluationRepository,
-            issueRepository,
+            signalRepository,
             aiLayer,
             featureFlagRepository: featureFlagFixture.repository,
             scriptRuntimeLayer: scriptRuntime.layer,
@@ -1285,15 +1286,15 @@ describe("runLiveEvaluationUseCase", () => {
     const evaluation = makeEvaluation({
       script: VALID_SCRIPT,
     })
-    const issue = makeIssue({
-      id: IssueId(evaluation.issueId),
+    const issue = makeSignal({
+      id: SignalId(evaluation.signalId),
     })
     const traceDetail = makeTraceDetail()
     const { repository: traceRepository } = createFakeTraceRepository({
       findByTraceId: () => Effect.succeed(traceDetail),
     })
     const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
-    const issueRepository = createIssueRepository(() => Effect.succeed(issue))
+    const signalRepository = createSignalRepository(() => Effect.succeed(issue))
     const { outboxEvents, scoreWriteLayer } = createTrackedScoreWriteFixture()
     const detectorHealth = createFakeDetectorHealthTracker({
       recordRun: () => Effect.succeed({ runs: 20, errors: 11, degraded: true, newlyDegraded: true }),
@@ -1314,7 +1315,7 @@ describe("runLiveEvaluationUseCase", () => {
             traceRepository,
             evaluationRepository,
             scoreWriteLayer,
-            issueRepository,
+            signalRepository,
             aiLayer,
             detectorHealthLayer: detectorHealth.layer,
           }),
@@ -1357,15 +1358,15 @@ describe("runLiveEvaluationUseCase", () => {
     const evaluation = makeEvaluation({
       script: VALID_SCRIPT,
     })
-    const issue = makeIssue({
-      id: IssueId(evaluation.issueId),
+    const issue = makeSignal({
+      id: SignalId(evaluation.signalId),
     })
     const traceDetail = makeTraceDetail()
     const { repository: traceRepository } = createFakeTraceRepository({
       findByTraceId: () => Effect.succeed(traceDetail),
     })
     const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
-    const issueRepository = createIssueRepository(() => Effect.succeed(issue))
+    const signalRepository = createSignalRepository(() => Effect.succeed(issue))
     const detectorHealth = createFakeDetectorHealthTracker({
       recordRun: () => Effect.fail(new CacheError({ message: "redis unavailable" })),
     })
@@ -1386,7 +1387,7 @@ describe("runLiveEvaluationUseCase", () => {
           createUseCaseLayer({
             traceRepository,
             evaluationRepository,
-            issueRepository,
+            signalRepository,
             aiLayer,
             detectorHealthLayer: detectorHealth.layer,
           }),

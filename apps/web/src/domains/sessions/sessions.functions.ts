@@ -1,4 +1,3 @@
-import { deriveIssueLifecycleStates, IssueRepository } from "@domain/issues"
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import {
   type FilterSet,
@@ -11,6 +10,7 @@ import {
   TaxonomyClusterId,
   TraceId,
 } from "@domain/shared"
+import { deriveSignalLifecycleStates, SignalRepository } from "@domain/signals"
 import type {
   CohortSummary,
   Session,
@@ -36,7 +36,7 @@ import {
   SpanRepositoryLive,
   withClickHouse,
 } from "@platform/db-clickhouse"
-import { IssueRepositoryLive, TaxonomyClusterRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { SignalRepositoryLive, TaxonomyClusterRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
@@ -372,12 +372,12 @@ export const getSessionDetail = createServerFn({ method: "GET" })
 /**
  * One row per issue that has at least one score across the session's traces,
  * with occurrence counts, first/last seen, and the affected traces — all
- * scoped to those traces. Issue names/descriptions/lifecycle come from PG
- * (`findByIds`); the rollup comes from CH (`listIssuesByTraceIds`). Scoped by
+ * scoped to those traces. Signal names/descriptions/lifecycle come from PG
+ * (`findByIds`); the rollup comes from CH (`listSignalsByTraceIds`). Scoped by
  * `traceIds` (not `session_id`) so orphan sessions still surface their issues.
  * Ordered by last-seen descending (the CH query's order).
  */
-export interface SessionIssueRecord {
+export interface SessionSignalRecord {
   readonly id: string
   readonly name: string
   readonly description: string
@@ -389,7 +389,7 @@ export interface SessionIssueRecord {
   readonly traceIds: readonly string[]
 }
 
-export const listSessionIssues = createServerFn({ method: "GET" })
+export const listSessionSignals = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       sandboxOrgId: z.string().optional(),
@@ -397,7 +397,7 @@ export const listSessionIssues = createServerFn({ method: "GET" })
       traceIds: z.array(z.string().length(32)).max(500),
     }),
   )
-  .handler(async ({ data }): Promise<readonly SessionIssueRecord[]> => {
+  .handler(async ({ data }): Promise<readonly SessionSignalRecord[]> => {
     if (data.traceIds.length === 0) return []
 
     const orgId = await resolveOrgScope(data)
@@ -407,27 +407,27 @@ export const listSessionIssues = createServerFn({ method: "GET" })
     return Effect.runPromise(
       Effect.gen(function* () {
         const analytics = yield* ScoreAnalyticsRepository
-        const issueRepository = yield* IssueRepository
+        const signalRepository = yield* SignalRepository
 
-        const rollups = yield* analytics.listIssuesByTraceIds({
+        const rollups = yield* analytics.listSignalsByTraceIds({
           organizationId: orgId,
           projectId,
           traceIds: data.traceIds.map(TraceId),
         })
         if (rollups.length === 0) return []
 
-        const issues = yield* issueRepository.findByIds({
+        const issues = yield* signalRepository.findByIds({
           projectId,
-          issueIds: rollups.map((rollup) => rollup.issueId),
+          signalIds: rollups.map((rollup) => rollup.signalId),
         })
-        const issuesById = new Map(issues.map((issue) => [issue.id, issue]))
+        const signalsById = new Map(issues.map((issue) => [issue.id, issue]))
 
         // Preserve the CH last-seen ordering; drop any rollup whose issue was
         // hard-deleted in PG but still has lingering score rows in CH.
-        return rollups.flatMap((rollup): SessionIssueRecord[] => {
-          const issue = issuesById.get(rollup.issueId)
+        return rollups.flatMap((rollup): SessionSignalRecord[] => {
+          const issue = signalsById.get(rollup.signalId)
           if (!issue) return []
-          const states = deriveIssueLifecycleStates({
+          const states = deriveSignalLifecycleStates({
             issue,
             isEscalating: issue.lifecycle.isEscalating,
             isRegressed: issue.lifecycle.isRegressed,
@@ -448,7 +448,7 @@ export const listSessionIssues = createServerFn({ method: "GET" })
           ]
         })
       }).pipe(
-        withPostgres(IssueRepositoryLive, getPostgresClient(), orgId),
+        withPostgres(SignalRepositoryLive, getPostgresClient(), orgId),
         withClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), orgId),
         withTracing,
       ),

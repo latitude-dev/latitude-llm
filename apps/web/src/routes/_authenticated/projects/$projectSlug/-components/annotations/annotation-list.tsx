@@ -5,7 +5,7 @@ import { AnnotationCard } from "./annotation-card.tsx"
 import { AnnotationInput } from "./annotation-input.tsx"
 import { isGlobalAnnotation } from "./hooks/use-annotation-navigation.ts"
 
-export type AnnotationSaveData = { passed: boolean; comment: string; issueId: string | null }
+export type AnnotationSaveData = { passed: boolean; comment: string; signalId: string | null }
 
 /**
  * Presentational annotation surface shared by the trace drawer

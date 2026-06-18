@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { type AdminProjectMetricsDto, adminGetProjectMetrics } from "../../../../domains/admin/projects.functions.ts"
 import { DashboardSection, DashboardSplit } from "../../-components/dashboard/index.ts"
-import { TopIssuesTable } from "./top-issues-table.tsx"
+import { TopSignalsTable } from "./top-issues-table.tsx"
 
 const CHART_HEIGHT = 200
 
@@ -13,7 +13,7 @@ const CHART_HEIGHT = 200
 const TRACE_LINE_COLOR = "hsl(217 91% 60%)"
 const ANNOTATION_PASSED_COLOR = "hsl(142 60% 45%)"
 const ANNOTATION_FAILED_COLOR = "hsl(0 70% 55%)"
-const ISSUE_LAYER_COLORS = {
+const SIGNAL_LAYER_COLORS = {
   resolved: "hsl(142 60% 45%)",
   tracked: "hsl(217 91% 60%)",
   untracked: "hsl(25 90% 55%)",
@@ -64,7 +64,7 @@ export function MetricsSection({ projectId }: MetricsSectionProps) {
             </DashboardSection>
           }
           secondary={
-            <DashboardSection title="Issues over time">
+            <DashboardSection title="Signals over time">
               <HistogramSkeleton height={CHART_HEIGHT} />
             </DashboardSection>
           }
@@ -81,13 +81,13 @@ export function MetricsSection({ projectId }: MetricsSectionProps) {
       <DashboardSplit
         ratio="wide-primary"
         primary={
-          <DashboardSection title="Top issues" count={data.topIssues.length}>
-            <TopIssuesTable issues={data.topIssues} />
+          <DashboardSection title="Top issues" count={data.topSignals.length}>
+            <TopSignalsTable issues={data.topSignals} />
           </DashboardSection>
         }
         secondary={
-          <DashboardSection title="Issues over time">
-            <IssuesLifecycleChart points={data.issuesLifecycle} />
+          <DashboardSection title="Signals over time">
+            <SignalsLifecycleChart points={data.signalsLifecycle} />
           </DashboardSection>
         }
       />
@@ -157,7 +157,7 @@ function ActivityChart({ activity }: { readonly activity: AdminProjectMetricsDto
   )
 }
 
-function IssuesLifecycleChart({ points }: { readonly points: AdminProjectMetricsDto["issuesLifecycle"] }) {
+function SignalsLifecycleChart({ points }: { readonly points: AdminProjectMetricsDto["signalsLifecycle"] }) {
   const categories = useMemo(() => points.map((p) => formatBucketLabel(p.bucketStart)), [points])
 
   const series = useMemo<ChartSeries[]>(
@@ -169,7 +169,7 @@ function IssuesLifecycleChart({ points }: { readonly points: AdminProjectMetrics
         kind: "line",
         name: "Resolved",
         values: points.map((p) => p.resolved),
-        color: ISSUE_LAYER_COLORS.resolved,
+        color: SIGNAL_LAYER_COLORS.resolved,
         area: true,
         stack: "issues",
       },
@@ -177,7 +177,7 @@ function IssuesLifecycleChart({ points }: { readonly points: AdminProjectMetrics
         kind: "line",
         name: "Tracked",
         values: points.map((p) => p.tracked),
-        color: ISSUE_LAYER_COLORS.tracked,
+        color: SIGNAL_LAYER_COLORS.tracked,
         area: true,
         stack: "issues",
       },
@@ -185,7 +185,7 @@ function IssuesLifecycleChart({ points }: { readonly points: AdminProjectMetrics
         kind: "line",
         name: "Untracked",
         values: points.map((p) => p.untracked),
-        color: ISSUE_LAYER_COLORS.untracked,
+        color: SIGNAL_LAYER_COLORS.untracked,
         area: true,
         stack: "issues",
       },
@@ -216,7 +216,7 @@ function IssuesLifecycleChart({ points }: { readonly points: AdminProjectMetrics
       series={series}
       height={CHART_HEIGHT}
       tooltipTitle={tooltipTitle}
-      ariaLabel="Issues lifecycle over the last 30 days"
+      ariaLabel="Signals lifecycle over the last 30 days"
     />
   )
 }

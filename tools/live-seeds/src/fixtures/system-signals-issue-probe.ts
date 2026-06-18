@@ -15,7 +15,7 @@ import { toolCallErrorFixture } from "./tool-call-error.ts"
  */
 const DETECTOR_FIXTURES = [toolCallErrorFixture, outputSchemaFixture, emptyResponseFixture] as const
 
-export const systemSignalsIssueProbeFixture: LiveSeedFixtureDefinition = {
+export const systemSignalsSignalProbeFixture: LiveSeedFixtureDefinition = {
   key: "system-signals-issue-probe",
   description:
     "Probe all three deterministic system-signal detectors (tool-call-errors, output-schema-validation, empty-response) end-to-end to verify that inline matches at trace-end become issues via issues:discovery.",

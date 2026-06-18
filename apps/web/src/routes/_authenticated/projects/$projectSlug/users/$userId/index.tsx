@@ -33,7 +33,7 @@ import {
   userDisplayName,
 } from "../-components/user-formatters.ts"
 import { UserBehavioursSection } from "./-components/user-behaviours-section.tsx"
-import { UserIssuesSection } from "./-components/user-issues-section.tsx"
+import { UserSignalsSection } from "./-components/user-issues-section.tsx"
 import { UserNeighborNav } from "./-components/user-neighbor-nav.tsx"
 import { UserSessionsTable } from "./-components/user-sessions-table.tsx"
 import { UserStatStrip } from "./-components/user-stat-strip.tsx"
@@ -277,8 +277,8 @@ function UserDetailPage() {
 
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
                 <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
-                  <Text.H6 color="foregroundMuted">Issues affecting this user</Text.H6>
-                  <UserIssuesSection projectId={project.id} projectSlug={projectSlug} userId={userId} />
+                  <Text.H6 color="foregroundMuted">Signals affecting this user</Text.H6>
+                  <UserSignalsSection projectId={project.id} projectSlug={projectSlug} userId={userId} />
                 </div>
                 <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
                   <Text.H6 color="foregroundMuted">Behaviors</Text.H6>

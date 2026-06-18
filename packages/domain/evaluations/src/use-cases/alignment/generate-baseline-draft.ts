@@ -8,10 +8,10 @@ import { wrapPromptAsEvaluationScript } from "../../runtime/evaluation-execution
 // TODO(eval-sandbox): restore LLM-based baseline generation for arbitrary scripts when sandbox
 // is available.
 export const generateBaselineDraftUseCase = Effect.fn("evaluations.generateBaselineDraft")(function* (input: {
-  readonly issueName: string
-  readonly issueDescription: string
+  readonly signalName: string
+  readonly signalDescription: string
 }) {
-  const promptText = generateBaselinePromptText(input.issueName, input.issueDescription)
+  const promptText = generateBaselinePromptText(input.signalName, input.signalDescription)
   const script = wrapPromptAsEvaluationScript(promptText)
 
   return {

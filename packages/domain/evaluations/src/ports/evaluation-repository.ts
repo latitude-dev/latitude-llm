@@ -1,4 +1,4 @@
-import type { EvaluationId, IssueId, NotFoundError, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
+import type { EvaluationId, NotFoundError, ProjectId, RepositoryError, SignalId, SqlClient } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import { z } from "zod"
 import type { Evaluation } from "../entities/evaluation.ts"
@@ -26,22 +26,22 @@ export interface EvaluationRepositoryShape {
     readonly projectId: ProjectId
     readonly options?: EvaluationListOptions
   }): Effect.Effect<EvaluationListPage, RepositoryError, SqlClient>
-  listByIssueId(input: {
+  listBySignalId(input: {
     readonly projectId: ProjectId
-    readonly issueId: IssueId
+    readonly signalId: SignalId
     readonly options?: EvaluationListOptions
   }): Effect.Effect<EvaluationListPage, RepositoryError, SqlClient>
-  listByIssueIds(input: {
+  listBySignalIds(input: {
     readonly projectId: ProjectId
-    readonly issueIds: readonly IssueId[]
+    readonly signalIds: readonly SignalId[]
     readonly options?: EvaluationListOptions
   }): Effect.Effect<EvaluationListPage, RepositoryError, SqlClient>
   archive(id: EvaluationId): Effect.Effect<void, RepositoryError, SqlClient>
   unarchive(id: EvaluationId): Effect.Effect<void, RepositoryError, SqlClient>
   softDelete(id: EvaluationId): Effect.Effect<void, RepositoryError, SqlClient>
-  softDeleteByIssueId(input: {
+  softDeleteBySignalId(input: {
     readonly projectId: ProjectId
-    readonly issueId: IssueId
+    readonly signalId: SignalId
   }): Effect.Effect<void, RepositoryError, SqlClient>
 }
 

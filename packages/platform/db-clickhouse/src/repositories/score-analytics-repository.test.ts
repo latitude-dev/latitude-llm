@@ -1,6 +1,6 @@
 import type { ScoreAnalyticsOptions, ScoreAnalyticsRepositoryShape } from "@domain/scores"
 import { ScoreAnalyticsRepository } from "@domain/scores"
-import { type ChSqlClient, IssueId, OrganizationId, ProjectId, type ScoreId, SessionId, TraceId } from "@domain/shared"
+import { type ChSqlClient, OrganizationId, ProjectId, type ScoreId, SessionId, SignalId, TraceId } from "@domain/shared"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"
@@ -58,7 +58,7 @@ function makeScoreRow(overrides: Partial<Record<string, unknown>> = {}) {
     source: (overrides.source as string) ?? "evaluation",
     source_id: (overrides.source_id as string) ?? "eval_src_000000000000",
     simulation_id: (overrides.simulation_id as string) ?? "",
-    issue_id: (overrides.issue_id as string) ?? "",
+    signal_id: (overrides.signal_id as string) ?? "",
     value: (overrides.value as number) ?? 0.8,
     passed: overrides.passed !== undefined ? overrides.passed : true,
     errored: overrides.errored !== undefined ? overrides.errored : false,
@@ -376,7 +376,7 @@ describe("ScoreAnalyticsRepository", () => {
           errored: false,
           value: 0.2,
           source: "custom",
-          issue_id: "iiiiiiiiiiiiiiiiiiiiiiii",
+          signal_id: "iiiiiiiiiiiiiiiiiiiiiiii",
         }),
         makeScoreRow({ trace_id: traceB, passed: false, errored: true, value: 0.0, source: "evaluation" }),
       ])
@@ -397,7 +397,7 @@ describe("ScoreAnalyticsRepository", () => {
       expect(rollupA?.totalScores).toBe(2)
       expect(rollupA?.passedCount).toBe(1)
       expect(rollupA?.failedCount).toBe(1)
-      expect(rollupA?.hasIssue).toBe(true)
+      expect(rollupA?.hasSignal).toBe(true)
       expect(rollupA?.sources).toContain("evaluation")
       expect(rollupA?.sources).toContain("custom")
 
@@ -405,7 +405,7 @@ describe("ScoreAnalyticsRepository", () => {
       expect(rollupB).toBeDefined()
       expect(rollupB?.totalScores).toBe(1)
       expect(rollupB?.erroredCount).toBe(1)
-      expect(rollupB?.hasIssue).toBe(false)
+      expect(rollupB?.hasSignal).toBe(false)
     })
 
     it("returns empty for no trace ids", async () => {
@@ -421,59 +421,59 @@ describe("ScoreAnalyticsRepository", () => {
   })
 
   // ------------------------------------------------------------------
-  // listIssuesByTraceIds
+  // listSignalsByTraceIds
   // ------------------------------------------------------------------
 
-  describe("listIssuesByTraceIds", () => {
+  describe("listSignalsByTraceIds", () => {
     const fixture = setupFixture()
     const traceA = "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
     const traceB = "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
     const traceOther = "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"
-    const issueA = "issue_a_".padEnd(24, "0")
-    const issueB = "issue_b_".padEnd(24, "0")
-    const issueOther = "issue_x_".padEnd(24, "0")
+    const signalA = "issue_a_".padEnd(24, "0")
+    const signalB = "issue_b_".padEnd(24, "0")
+    const signalOther = "issue_x_".padEnd(24, "0")
 
     beforeEach(async () => {
       await fixture.insertScores([
-        // issueA seen on traceA twice (occurrences = 2) + once on traceB.
-        makeScoreRow({ trace_id: traceA, issue_id: issueA, created_at: "2026-03-20 10:00:00.000" }),
-        makeScoreRow({ trace_id: traceA, issue_id: issueA, created_at: "2026-03-25 10:00:00.000" }),
-        makeScoreRow({ trace_id: traceB, issue_id: issueA, created_at: "2026-03-22 10:00:00.000" }),
-        // issueB only on traceB, more recent than issueA's last-seen.
-        makeScoreRow({ trace_id: traceB, issue_id: issueB, created_at: "2026-03-28 10:00:00.000" }),
+        // signalA seen on traceA twice (occurrences = 2) + once on traceB.
+        makeScoreRow({ trace_id: traceA, signal_id: signalA, created_at: "2026-03-20 10:00:00.000" }),
+        makeScoreRow({ trace_id: traceA, signal_id: signalA, created_at: "2026-03-25 10:00:00.000" }),
+        makeScoreRow({ trace_id: traceB, signal_id: signalA, created_at: "2026-03-22 10:00:00.000" }),
+        // signalB only on traceB, more recent than signalA's last-seen.
+        makeScoreRow({ trace_id: traceB, signal_id: signalB, created_at: "2026-03-28 10:00:00.000" }),
         // No-issue score on traceA and an issue on a trace outside the session.
-        makeScoreRow({ trace_id: traceA, issue_id: "" }),
-        makeScoreRow({ trace_id: traceOther, issue_id: issueOther }),
+        makeScoreRow({ trace_id: traceA, signal_id: "" }),
+        makeScoreRow({ trace_id: traceOther, signal_id: signalOther }),
       ])
     })
 
     it("rolls up issues across the given traces, ordered by last seen desc", async () => {
       const rollups = await fixture.runCh(
-        fixture.repo.listIssuesByTraceIds({
+        fixture.repo.listSignalsByTraceIds({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
           traceIds: [TraceId(traceA), TraceId(traceB)],
         }),
       )
 
-      // issueB (last seen 03-28) before issueA (last seen 03-25); the
+      // signalB (last seen 03-28) before signalA (last seen 03-25); the
       // outside-the-session issue is excluded.
-      expect(rollups.map((r) => r.issueId as string)).toEqual([issueB, issueA])
+      expect(rollups.map((r) => r.signalId as string)).toEqual([signalB, signalA])
 
-      const rollupA = rollups.find((r) => (r.issueId as string) === issueA)
+      const rollupA = rollups.find((r) => (r.signalId as string) === signalA)
       expect(rollupA?.occurrences).toBe(3)
       expect([...(rollupA?.traceIds ?? [])].sort()).toEqual([traceA, traceB].sort())
       expect(rollupA?.firstSeenAt).toEqual(new Date("2026-03-20T10:00:00.000Z"))
       expect(rollupA?.lastSeenAt).toEqual(new Date("2026-03-25T10:00:00.000Z"))
 
-      const rollupB = rollups.find((r) => (r.issueId as string) === issueB)
+      const rollupB = rollups.find((r) => (r.signalId as string) === signalB)
       expect(rollupB?.occurrences).toBe(1)
       expect([...(rollupB?.traceIds ?? [])]).toEqual([traceB])
     })
 
     it("returns empty for no trace ids", async () => {
       const rollups = await fixture.runCh(
-        fixture.repo.listIssuesByTraceIds({
+        fixture.repo.listSignalsByTraceIds({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
           traceIds: [],
@@ -513,34 +513,34 @@ describe("ScoreAnalyticsRepository", () => {
   })
 
   // ------------------------------------------------------------------
-  // aggregateByIssues
+  // aggregateBySignals
   // ------------------------------------------------------------------
 
-  describe("aggregateByIssues", () => {
+  describe("aggregateBySignals", () => {
     const fixture = setupFixture()
-    const issueA = "issue_aaaaaaaaaaaaaaaaaa"
-    const issueB = "issue_bbbbbbbbbbbbbbbbbb"
+    const signalA = "issue_aaaaaaaaaaaaaaaaaa"
+    const signalB = "issue_bbbbbbbbbbbbbbbbbb"
 
     beforeEach(async () => {
       await fixture.insertScores([
-        makeScoreRow({ issue_id: issueA, created_at: "2026-03-25 10:00:00.000" }),
-        makeScoreRow({ issue_id: issueA, created_at: "2026-03-20 10:00:00.000" }),
-        makeScoreRow({ issue_id: issueA, created_at: "2026-03-10 10:00:00.000" }),
-        makeScoreRow({ issue_id: issueB, created_at: "2026-03-25 10:00:00.000" }),
+        makeScoreRow({ signal_id: signalA, created_at: "2026-03-25 10:00:00.000" }),
+        makeScoreRow({ signal_id: signalA, created_at: "2026-03-20 10:00:00.000" }),
+        makeScoreRow({ signal_id: signalA, created_at: "2026-03-10 10:00:00.000" }),
+        makeScoreRow({ signal_id: signalB, created_at: "2026-03-25 10:00:00.000" }),
       ])
     })
 
     it("returns per-issue occurrence aggregates", async () => {
       const aggs = await fixture.runCh(
-        fixture.repo.aggregateByIssues({
+        fixture.repo.aggregateBySignals({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueIds: [IssueId(issueA), IssueId(issueB)],
+          signalIds: [SignalId(signalA), SignalId(signalB)],
         }),
       )
       expect(aggs).toHaveLength(2)
 
-      const aggA = aggs.find((a) => (a.issueId as string) === issueA)
+      const aggA = aggs.find((a) => (a.signalId as string) === signalA)
       expect(aggA).toBeDefined()
       expect(aggA?.totalOccurrences).toBe(3)
       expect(aggA?.firstSeenAt.toISOString()).toBe("2026-03-10T10:00:00.000Z")
@@ -549,10 +549,10 @@ describe("ScoreAnalyticsRepository", () => {
 
     it("returns empty for no issue ids", async () => {
       const aggs = await fixture.runCh(
-        fixture.repo.aggregateByIssues({
+        fixture.repo.aggregateBySignals({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueIds: [],
+          signalIds: [],
         }),
       )
       expect(aggs).toHaveLength(0)
@@ -560,13 +560,13 @@ describe("ScoreAnalyticsRepository", () => {
   })
 
   // ------------------------------------------------------------------
-  // aggregateImpactByIssue
+  // aggregateImpactBySignal
   // ------------------------------------------------------------------
 
-  describe("aggregateImpactByIssue", () => {
+  describe("aggregateImpactBySignal", () => {
     const fixture = setupFixture()
-    const issueI = "issue_impactiiiiiiiii"
-    const issueOther = "issue_impactother0000"
+    const signalI = "issue_impactiiiiiiiii"
+    const signalOther = "issue_impactother0000"
     const traceI1 = "a".repeat(32)
     const traceI2 = "b".repeat(32)
     const traceOther = "c".repeat(32)
@@ -596,7 +596,7 @@ describe("ScoreAnalyticsRepository", () => {
           tokens_output: 40,
           cost_total_microcents: 50,
         },
-        // Belongs to another issue — must not contribute to issueI's impact.
+        // Belongs to another issue — must not contribute to signalI's impact.
         {
           ...makeSpanRow({ traceId: traceOther, spanId: `i3${"a".repeat(14)}`, tags: [] }),
           session_id: sessionOther,
@@ -609,22 +609,22 @@ describe("ScoreAnalyticsRepository", () => {
 
       await fixture.insertScores([
         // Two occurrences on the same trace/session → distinct counts must dedupe.
-        makeScoreRow({ issue_id: issueI, trace_id: traceI1, session_id: sessionI1 }),
-        makeScoreRow({ issue_id: issueI, trace_id: traceI1, session_id: sessionI1 }),
-        makeScoreRow({ issue_id: issueI, trace_id: traceI2, session_id: sessionI2 }),
+        makeScoreRow({ signal_id: signalI, trace_id: traceI1, session_id: sessionI1 }),
+        makeScoreRow({ signal_id: signalI, trace_id: traceI1, session_id: sessionI1 }),
+        makeScoreRow({ signal_id: signalI, trace_id: traceI2, session_id: sessionI2 }),
         // Occurrence with no trace/session: counts toward occurrences only.
-        makeScoreRow({ issue_id: issueI, trace_id: "", session_id: "" }),
+        makeScoreRow({ signal_id: signalI, trace_id: "", session_id: "" }),
         // Another issue's occurrence — excluded.
-        makeScoreRow({ issue_id: issueOther, trace_id: traceOther, session_id: sessionOther }),
+        makeScoreRow({ signal_id: signalOther, trace_id: traceOther, session_id: sessionOther }),
       ])
     })
 
     it("rolls up occurrences, reach, cost and tokens for one issue", async () => {
       const impact = await fixture.runCh(
-        fixture.repo.aggregateImpactByIssue({
+        fixture.repo.aggregateImpactBySignal({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueId: IssueId(issueI),
+          signalId: SignalId(signalI),
         }),
       )
 
@@ -638,15 +638,15 @@ describe("ScoreAnalyticsRepository", () => {
 
     it("returns zeroes for an issue with no occurrences", async () => {
       const impact = await fixture.runCh(
-        fixture.repo.aggregateImpactByIssue({
+        fixture.repo.aggregateImpactBySignal({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueId: IssueId("issue_impactemptyyyyy"),
+          signalId: SignalId("issue_impactemptyyyyy"),
         }),
       )
 
       expect(impact).toEqual({
-        issueId: "issue_impactemptyyyyy",
+        signalId: "issue_impactemptyyyyy",
         occurrences: 0,
         affectedTraces: 0,
         affectedSessions: 0,
@@ -658,16 +658,16 @@ describe("ScoreAnalyticsRepository", () => {
   })
 
   // ------------------------------------------------------------------
-  // coOccurrenceByIssue
+  // coOccurrenceBySignal
   // ------------------------------------------------------------------
 
-  describe("coOccurrenceByIssue", () => {
+  describe("coOccurrenceBySignal", () => {
     const fixture = setupFixture()
-    const issueSource = "issue_cooccurrencesrc"
-    const issueHeavy = "issue_cooccurrencehvy" // shares 3 sessions
-    const issueLight = "issue_cooccurrencelgt" // shares 1 session
-    const issueDisjoint = "issue_cooccurrencedsj" // shares nothing
-    const issueStale = "issue_cooccurrenceold" // shares only outside the range
+    const signalSource = "issue_cooccurrencesrc"
+    const signalHeavy = "issue_cooccurrencehvy" // shares 3 sessions
+    const signalLight = "issue_cooccurrencelgt" // shares 1 session
+    const signalDisjoint = "issue_cooccurrencedsj" // shares nothing
+    const signalStale = "issue_cooccurrenceold" // shares only outside the range
 
     const inRange = "2026-03-15 12:00:00.000"
     const outOfRange = "2026-01-01 12:00:00.000"
@@ -682,35 +682,35 @@ describe("ScoreAnalyticsRepository", () => {
       await fixture.insertScores([
         // Source issue: sessions 1-4. Session 1 carries TWO source occurrences
         // so distinct session counting is exercised.
-        makeScoreRow({ issue_id: issueSource, session_id: session(1), created_at: inRange }),
-        makeScoreRow({ issue_id: issueSource, session_id: session(1), created_at: inRange }),
-        makeScoreRow({ issue_id: issueSource, session_id: session(2), created_at: inRange }),
-        makeScoreRow({ issue_id: issueSource, session_id: session(3), created_at: inRange }),
-        makeScoreRow({ issue_id: issueSource, session_id: session(4), created_at: inRange }),
+        makeScoreRow({ signal_id: signalSource, session_id: session(1), created_at: inRange }),
+        makeScoreRow({ signal_id: signalSource, session_id: session(1), created_at: inRange }),
+        makeScoreRow({ signal_id: signalSource, session_id: session(2), created_at: inRange }),
+        makeScoreRow({ signal_id: signalSource, session_id: session(3), created_at: inRange }),
+        makeScoreRow({ signal_id: signalSource, session_id: session(4), created_at: inRange }),
         // Sessionless source occurrence: ignored by session co-occurrence.
-        makeScoreRow({ issue_id: issueSource, session_id: "", created_at: inRange }),
+        makeScoreRow({ signal_id: signalSource, session_id: "", created_at: inRange }),
         // Heavy co-occurrer: shares sessions 1-3, plus its own sessions 5-6.
-        makeScoreRow({ issue_id: issueHeavy, session_id: session(1), created_at: inRange }),
-        makeScoreRow({ issue_id: issueHeavy, session_id: session(2), created_at: inRange }),
-        makeScoreRow({ issue_id: issueHeavy, session_id: session(3), created_at: inRange }),
-        makeScoreRow({ issue_id: issueHeavy, session_id: session(5), created_at: inRange }),
-        makeScoreRow({ issue_id: issueHeavy, session_id: session(6), created_at: inRange }),
+        makeScoreRow({ signal_id: signalHeavy, session_id: session(1), created_at: inRange }),
+        makeScoreRow({ signal_id: signalHeavy, session_id: session(2), created_at: inRange }),
+        makeScoreRow({ signal_id: signalHeavy, session_id: session(3), created_at: inRange }),
+        makeScoreRow({ signal_id: signalHeavy, session_id: session(5), created_at: inRange }),
+        makeScoreRow({ signal_id: signalHeavy, session_id: session(6), created_at: inRange }),
         // Light co-occurrer: shares session 1 only, plus its own session 7.
-        makeScoreRow({ issue_id: issueLight, session_id: session(1), created_at: inRange }),
-        makeScoreRow({ issue_id: issueLight, session_id: session(7), created_at: inRange }),
+        makeScoreRow({ signal_id: signalLight, session_id: session(1), created_at: inRange }),
+        makeScoreRow({ signal_id: signalLight, session_id: session(7), created_at: inRange }),
         // Disjoint issue: session 8 only — must not appear as a candidate.
-        makeScoreRow({ issue_id: issueDisjoint, session_id: session(8), created_at: inRange }),
+        makeScoreRow({ signal_id: signalDisjoint, session_id: session(8), created_at: inRange }),
         // Stale co-occurrer: shares session 1 but outside the window.
-        makeScoreRow({ issue_id: issueStale, session_id: session(1), created_at: outOfRange }),
+        makeScoreRow({ signal_id: signalStale, session_id: session(1), created_at: outOfRange }),
       ])
     })
 
     it("counts shared and total sessions per candidate, self-excluded, windowed", async () => {
       const aggregate = await fixture.runCh(
-        fixture.repo.coOccurrenceByIssue({
+        fixture.repo.coOccurrenceBySignal({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueId: IssueId(issueSource),
+          signalId: SignalId(signalSource),
           timeRange,
         }),
       )
@@ -720,23 +720,23 @@ describe("ScoreAnalyticsRepository", () => {
       // Universe: sessions 1-8 carry at least one in-range issue occurrence.
       expect(aggregate.totalSessions).toBe(8)
       expect(aggregate.candidates).toEqual([
-        { issueId: issueHeavy, sharedSessions: 3, theirSessions: 5 },
-        { issueId: issueLight, sharedSessions: 1, theirSessions: 2 },
+        { signalId: signalHeavy, sharedSessions: 3, theirSessions: 5 },
+        { signalId: signalLight, sharedSessions: 1, theirSessions: 2 },
       ])
     })
 
     it("respects the candidate limit (trimmed by shared sessions)", async () => {
       const aggregate = await fixture.runCh(
-        fixture.repo.coOccurrenceByIssue({
+        fixture.repo.coOccurrenceBySignal({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueId: IssueId(issueSource),
+          signalId: SignalId(signalSource),
           timeRange,
           limit: 1,
         }),
       )
 
-      expect(aggregate.candidates.map((candidate) => candidate.issueId)).toEqual([issueHeavy])
+      expect(aggregate.candidates.map((candidate) => candidate.signalId)).toEqual([signalHeavy])
       // Totals are unaffected by the candidate cap.
       expect(aggregate.mySessions).toBe(4)
       expect(aggregate.totalSessions).toBe(8)
@@ -744,10 +744,10 @@ describe("ScoreAnalyticsRepository", () => {
 
     it("returns empty counts for an issue with no in-range sessions", async () => {
       const aggregate = await fixture.runCh(
-        fixture.repo.coOccurrenceByIssue({
+        fixture.repo.coOccurrenceBySignal({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueId: IssueId(issueStale),
+          signalId: SignalId(signalStale),
           timeRange,
         }),
       )
@@ -758,13 +758,13 @@ describe("ScoreAnalyticsRepository", () => {
   })
 
   // ------------------------------------------------------------------
-  // aggregateDimensionByIssue
+  // aggregateDimensionBySignal
   // ------------------------------------------------------------------
 
-  describe("aggregateDimensionByIssue", () => {
+  describe("aggregateDimensionBySignal", () => {
     const fixture = setupFixture()
-    const issueDim = "issue_dimensioniiiiii"
-    const issueOther = "issue_dimensionother0"
+    const signalDim = "issue_dimensioniiiiii"
+    const signalOther = "issue_dimensionother0"
     const traceD1 = "d".repeat(32) // in issue
     const traceD2 = "e".repeat(32) // in issue
     const traceD3 = "1".repeat(32) // project trace, NOT in any issue (exercises reverse conditioning)
@@ -838,10 +838,10 @@ describe("ScoreAnalyticsRepository", () => {
       ])
 
       await fixture.insertScores([
-        makeScoreRow({ issue_id: issueDim, trace_id: traceD1 }),
-        makeScoreRow({ issue_id: issueDim, trace_id: traceD2 }),
+        makeScoreRow({ signal_id: signalDim, trace_id: traceD1 }),
+        makeScoreRow({ signal_id: signalDim, trace_id: traceD2 }),
         // traceD3 has no occurrence — it is a pure project (baseline) trace.
-        makeScoreRow({ issue_id: issueOther, trace_id: traceOther }),
+        makeScoreRow({ signal_id: signalOther, trace_id: traceOther }),
       ])
     })
 
@@ -850,10 +850,10 @@ describe("ScoreAnalyticsRepository", () => {
 
     const aggregate = (dimension: "model" | "provider" | "tool" | "tag" | "finishReason") =>
       fixture.runCh(
-        fixture.repo.aggregateDimensionByIssue({
+        fixture.repo.aggregateDimensionBySignal({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueId: IssueId(issueDim),
+          signalId: SignalId(signalDim),
           dimension,
         }),
       )
@@ -865,7 +865,7 @@ describe("ScoreAnalyticsRepository", () => {
       // Base rate: 2 of 4 project traces (D1, D2 in issue; D3, Other not) are in the issue.
       const models = await aggregate("model")
       expect(models.dimension).toBe("model")
-      expect(models.issueAffectedTraces).toBe(2)
+      expect(models.signalAffectedTraces).toBe(2)
       expect(models.baseRate).toBeCloseTo(0.5, 5)
       // Most-associated first: opus and sonnet both have 1 affected trace, opus has more support.
       expect(models.values.map((v) => v.value)).toEqual(["claude-opus", "claude-sonnet", "gpt-4o"])
@@ -913,13 +913,13 @@ describe("ScoreAnalyticsRepository", () => {
   })
 
   // ------------------------------------------------------------------
-  // aggregateTagsByIssues
+  // aggregateTagsBySignals
   // ------------------------------------------------------------------
 
-  describe("aggregateTagsByIssues", () => {
+  describe("aggregateTagsBySignals", () => {
     const fixture = setupFixture()
-    const issueA = "issue_tagsaaaaaaaaaaaa"
-    const issueB = "issue_tagsbbbbbbbbbbbb"
+    const signalA = "issue_tagsaaaaaaaaaaaa"
+    const signalB = "issue_tagsbbbbbbbbbbbb"
     const traceA1 = `${"a".repeat(31)}1`
     const traceA2 = `${"a".repeat(31)}2`
     const traceB1 = `${"b".repeat(31)}1`
@@ -940,13 +940,13 @@ describe("ScoreAnalyticsRepository", () => {
       ])
 
       await fixture.insertScores([
-        makeScoreRow({ issue_id: issueA, trace_id: traceA1 }),
-        makeScoreRow({ issue_id: issueA, trace_id: traceA2 }),
-        makeScoreRow({ issue_id: issueB, trace_id: traceB1 }),
+        makeScoreRow({ signal_id: signalA, trace_id: traceA1 }),
+        makeScoreRow({ signal_id: signalA, trace_id: traceA2 }),
+        makeScoreRow({ signal_id: signalB, trace_id: traceB1 }),
         // Score linked to the cross-org trace under a foreign org id.
         makeScoreRow({
           organization_id: "other_orgggggggggggggggg",
-          issue_id: issueA,
+          signal_id: signalA,
           trace_id: otherOrgTrace,
         }),
       ])
@@ -961,26 +961,26 @@ describe("ScoreAnalyticsRepository", () => {
 
     it("returns the union of trace-level tags grouped by issue, scoped to org/project", async () => {
       const result = await fixture.runCh(
-        fixture.repo.aggregateTagsByIssues({
+        fixture.repo.aggregateTagsBySignals({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueIds: [IssueId(issueA), IssueId(issueB)],
+          signalIds: [SignalId(signalA), SignalId(signalB)],
           timeRange: seedWindow,
         }),
       )
 
-      const tagsByIssue = new Map(result.map((entry) => [entry.issueId as string, [...entry.tags].sort()] as const))
-      expect(tagsByIssue.get(issueA)).toEqual(["auth", "billing", "checkout", "search"])
-      expect(tagsByIssue.get(issueB)).toEqual(["onboarding"])
-      expect(tagsByIssue.get(issueA)).not.toContain("leaked")
+      const tagsBySignal = new Map(result.map((entry) => [entry.signalId as string, [...entry.tags].sort()] as const))
+      expect(tagsBySignal.get(signalA)).toEqual(["auth", "billing", "checkout", "search"])
+      expect(tagsBySignal.get(signalB)).toEqual(["onboarding"])
+      expect(tagsBySignal.get(signalA)).not.toContain("leaked")
     })
 
     it("returns empty for no issue ids", async () => {
       const result = await fixture.runCh(
-        fixture.repo.aggregateTagsByIssues({
+        fixture.repo.aggregateTagsBySignals({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueIds: [],
+          signalIds: [],
           timeRange: seedWindow,
         }),
       )
@@ -990,10 +990,10 @@ describe("ScoreAnalyticsRepository", () => {
     it("excludes scores and traces outside the configured time range", async () => {
       // Tighten the window to skip the seeded mid-March data entirely.
       const result = await fixture.runCh(
-        fixture.repo.aggregateTagsByIssues({
+        fixture.repo.aggregateTagsBySignals({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueIds: [IssueId(issueA), IssueId(issueB)],
+          signalIds: [SignalId(signalA), SignalId(signalB)],
           timeRange: {
             from: new Date("2026-04-01T00:00:00.000Z"),
             to: new Date("2026-04-30T00:00:00.000Z"),
@@ -1006,27 +1006,27 @@ describe("ScoreAnalyticsRepository", () => {
   })
 
   // ------------------------------------------------------------------
-  // trendByIssue
+  // trendBySignal
   // ------------------------------------------------------------------
 
-  describe("trendByIssue", () => {
+  describe("trendBySignal", () => {
     const fixture = setupFixture()
-    const issueId = "trend_issue_aaaaaaaaaaaa"
+    const signalId = "trend_issue_aaaaaaaaaaaa"
 
     beforeEach(async () => {
       await fixture.insertScores([
-        makeScoreRow({ issue_id: issueId, created_at: daysAgoDateTime(2, 10) }),
-        makeScoreRow({ issue_id: issueId, created_at: daysAgoDateTime(2, 18) }),
-        makeScoreRow({ issue_id: issueId, created_at: daysAgoDateTime(1, 8) }),
+        makeScoreRow({ signal_id: signalId, created_at: daysAgoDateTime(2, 10) }),
+        makeScoreRow({ signal_id: signalId, created_at: daysAgoDateTime(2, 18) }),
+        makeScoreRow({ signal_id: signalId, created_at: daysAgoDateTime(1, 8) }),
       ])
     })
 
     it("returns occurrence buckets at the requested interval", async () => {
       const trend = await fixture.runCh(
-        fixture.repo.trendByIssue({
+        fixture.repo.trendBySignal({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueId: IssueId(issueId),
+          signalId: SignalId(signalId),
           days: 30,
           bucketSeconds: 24 * 60 * 60,
         }),
@@ -1046,8 +1046,8 @@ describe("ScoreAnalyticsRepository", () => {
 
   describe("issue page analytics reads", () => {
     const fixture = setupFixture()
-    const issueA = "aaaaaaaaaaaaaaaaaaaaaaaa"
-    const issueB = "bbbbbbbbbbbbbbbbbbbbbbbb"
+    const signalA = "aaaaaaaaaaaaaaaaaaaaaaaa"
+    const signalB = "bbbbbbbbbbbbbbbbbbbbbbbb"
     const traceA = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     const traceB = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     const from = new Date("2026-04-08T00:00:00.000Z")
@@ -1056,28 +1056,28 @@ describe("ScoreAnalyticsRepository", () => {
     beforeEach(async () => {
       await fixture.insertScores([
         makeScoreRow({
-          issue_id: issueA,
+          signal_id: signalA,
           trace_id: traceA,
           source: "evaluation",
           source_id: "eval_source_a",
           created_at: "2026-04-08 10:00:00.000",
         }),
         makeScoreRow({
-          issue_id: issueA,
+          signal_id: signalA,
           trace_id: traceA,
           source: "evaluation",
           source_id: "eval_source_a",
           created_at: "2026-04-09 10:00:00.000",
         }),
         makeScoreRow({
-          issue_id: issueB,
+          signal_id: signalB,
           trace_id: traceB,
           source: "custom",
           source_id: "custom_source_b",
           created_at: "2026-04-10 09:00:00.000",
         }),
         makeScoreRow({
-          issue_id: issueB,
+          signal_id: signalB,
           trace_id: traceB,
           source: "custom",
           source_id: "custom_source_b",
@@ -1088,7 +1088,7 @@ describe("ScoreAnalyticsRepository", () => {
 
     it("lists issue window metrics within the selected range and score filters", async () => {
       const metrics = await fixture.runCh(
-        fixture.repo.listIssueWindowMetrics({
+        fixture.repo.listSignalWindowMetrics({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
           filters: {
@@ -1100,7 +1100,7 @@ describe("ScoreAnalyticsRepository", () => {
 
       expect(metrics).toEqual([
         {
-          issueId: IssueId(issueA),
+          signalId: SignalId(signalA),
           occurrences: 2,
           firstSeenAt: new Date("2026-04-08T10:00:00.000Z"),
           lastSeenAt: new Date("2026-04-09T10:00:00.000Z"),
@@ -1110,25 +1110,25 @@ describe("ScoreAnalyticsRepository", () => {
 
     it("builds grouped histogram and per-issue trends for the requested issue ids", async () => {
       const histogram = await fixture.runCh(
-        fixture.repo.histogramByIssues({
+        fixture.repo.histogramBySignals({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueIds: [IssueId(issueA), IssueId(issueB)],
+          signalIds: [SignalId(signalA), SignalId(signalB)],
           timeRange: { from, to },
           bucketSeconds: 24 * 60 * 60,
         }),
       )
       const trend = await fixture.runCh(
-        fixture.repo.trendByIssues({
+        fixture.repo.trendBySignals({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueIds: [IssueId(issueA), IssueId(issueB)],
+          signalIds: [SignalId(signalA), SignalId(signalB)],
           timeRange: { from, to },
         }),
       )
 
-      // `histogramByIssues` now emits ISO timestamps for the bucket key regardless of interval,
-      // while `trendByIssues` (used by the row-level mini-bar) keeps the legacy `YYYY-MM-DD` shape.
+      // `histogramBySignals` now emits ISO timestamps for the bucket key regardless of interval,
+      // while `trendBySignals` (used by the row-level mini-bar) keeps the legacy `YYYY-MM-DD` shape.
       expect(histogram).toEqual([
         { bucket: "2026-04-08T00:00:00.000Z", count: 1 },
         { bucket: "2026-04-09T00:00:00.000Z", count: 1 },
@@ -1136,14 +1136,14 @@ describe("ScoreAnalyticsRepository", () => {
       ])
       expect(trend).toEqual([
         {
-          issueId: IssueId(issueA),
+          signalId: SignalId(signalA),
           buckets: [
             { bucket: "2026-04-08", count: 1 },
             { bucket: "2026-04-09", count: 1 },
           ],
         },
         {
-          issueId: IssueId(issueB),
+          signalId: SignalId(signalB),
           buckets: [{ bucket: "2026-04-10", count: 1 }],
         },
       ])
@@ -1163,10 +1163,10 @@ describe("ScoreAnalyticsRepository", () => {
 
     it("lists distinct traces for one issue newest-first with pagination", async () => {
       const page = await fixture.runCh(
-        fixture.repo.listTracesByIssue({
+        fixture.repo.listTracesBySignal({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueId: IssueId(issueA),
+          signalId: SignalId(signalA),
           limit: 1,
           offset: 0,
         }),
@@ -1185,10 +1185,10 @@ describe("ScoreAnalyticsRepository", () => {
 
     it("counts distinct traces linked to one issue", async () => {
       const total = await fixture.runCh(
-        fixture.repo.countTracesByIssue({
+        fixture.repo.countTracesBySignal({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueId: IssueId(issueA),
+          signalId: SignalId(signalA),
         }),
       )
 
@@ -1266,14 +1266,14 @@ describe("ScoreAnalyticsRepository", () => {
   })
 
   // ------------------------------------------------------------------
-  // escalationSignalsByIssues — feeds the seasonal anomaly detector with
+  // escalationSignalsBySignals — feeds the seasonal anomaly detector with
   // sliding-recent counts plus pooled (dow, hour ± 1) × prior 4 weeks
   // expected/stddev from the scores_hourly_buckets MV.
   // ------------------------------------------------------------------
 
-  describe("escalationSignalsByIssues", () => {
+  describe("escalationSignalsBySignals", () => {
     const fixture = setupFixture()
-    const issueId = "esc_signals_aaaaaaaaaaaa"
+    const signalId = "esc_signals_aaaaaaaaaaaa"
     // Pick a fixed `now` so anchor arithmetic doesn't depend on the wall clock.
     // 2026-04-29T12:00:00Z is a Wednesday at noon UTC — anchors for `now - week*7d`
     // hit the same (dow, hour) bin on Wed at 12:00 four weeks running.
@@ -1286,17 +1286,17 @@ describe("ScoreAnalyticsRepository", () => {
 
     it("returns zero-filled signals when the issue has no scores", async () => {
       const signals = await fixture.runCh(
-        fixture.repo.escalationSignalsByIssues({
+        fixture.repo.escalationSignalsBySignals({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueIds: [IssueId(issueId)],
+          signalIds: [SignalId(signalId)],
           now: NOW,
         }),
       )
 
       expect(signals).toHaveLength(1)
       expect(signals[0]).toMatchObject({
-        issueId,
+        signalId,
         recent1h: 0,
         recent6h: 0,
         recent24h: 0,
@@ -1315,18 +1315,18 @@ describe("ScoreAnalyticsRepository", () => {
       // recent_6h = 2 (t-30m, t-2h)
       // recent_24h = 4 (t-30m, t-2h, t-7h, t-20h) — t-26h is outside
       await fixture.insertScores([
-        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(30 * 60 * 1000)) }),
-        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(2 * HOUR)) }),
-        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(7 * HOUR)) }),
-        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(20 * HOUR)) }),
-        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(26 * HOUR)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(30 * 60 * 1000)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(2 * HOUR)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(7 * HOUR)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(20 * HOUR)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(26 * HOUR)) }),
       ])
 
       const signals = await fixture.runCh(
-        fixture.repo.escalationSignalsByIssues({
+        fixture.repo.escalationSignalsBySignals({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueIds: [IssueId(issueId)],
+          signalIds: [SignalId(signalId)],
           now: NOW,
         }),
       )
@@ -1338,16 +1338,16 @@ describe("ScoreAnalyticsRepository", () => {
       // Plant one row at the center anchor for each of weeks 1, 2, 3 (skip week 4)
       // so the pool gathers samples from 3 distinct prior weeks.
       await fixture.insertScores([
-        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(1 * WEEK)) }),
-        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(2 * WEEK)) }),
-        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(3 * WEEK)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(1 * WEEK)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(2 * WEEK)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(3 * WEEK)) }),
       ])
 
       const signals = await fixture.runCh(
-        fixture.repo.escalationSignalsByIssues({
+        fixture.repo.escalationSignalsBySignals({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueIds: [IssueId(issueId)],
+          signalIds: [SignalId(signalId)],
           now: NOW,
         }),
       )
@@ -1359,17 +1359,17 @@ describe("ScoreAnalyticsRepository", () => {
       // Plant 1 event per week at the center anchor (week N · 7d before NOW)
       // across all 4 prior weeks. With a constant count of 1, mean = 1 and stddev = 0.
       await fixture.insertScores([
-        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(1 * WEEK)) }),
-        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(2 * WEEK)) }),
-        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(3 * WEEK)) }),
-        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(4 * WEEK)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(1 * WEEK)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(2 * WEEK)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(3 * WEEK)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(4 * WEEK)) }),
       ])
 
       const signals = await fixture.runCh(
-        fixture.repo.escalationSignalsByIssues({
+        fixture.repo.escalationSignalsBySignals({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueIds: [IssueId(issueId)],
+          signalIds: [SignalId(signalId)],
           now: NOW,
         }),
       )
@@ -1383,44 +1383,44 @@ describe("ScoreAnalyticsRepository", () => {
     })
 
     it("returns one signals row per requested issue", async () => {
-      const otherIssue = "esc_signals_bbbbbbbbbbbb"
+      const otherSignal = "esc_signals_bbbbbbbbbbbb"
       await fixture.insertScores([
-        makeScoreRow({ issue_id: issueId, created_at: fmt(minus(30 * 60 * 1000)) }),
-        makeScoreRow({ issue_id: otherIssue, created_at: fmt(minus(30 * 60 * 1000)) }),
-        makeScoreRow({ issue_id: otherIssue, created_at: fmt(minus(30 * 60 * 1000)) }),
+        makeScoreRow({ signal_id: signalId, created_at: fmt(minus(30 * 60 * 1000)) }),
+        makeScoreRow({ signal_id: otherSignal, created_at: fmt(minus(30 * 60 * 1000)) }),
+        makeScoreRow({ signal_id: otherSignal, created_at: fmt(minus(30 * 60 * 1000)) }),
       ])
 
       const signals = await fixture.runCh(
-        fixture.repo.escalationSignalsByIssues({
+        fixture.repo.escalationSignalsBySignals({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueIds: [IssueId(issueId), IssueId(otherIssue)],
+          signalIds: [SignalId(signalId), SignalId(otherSignal)],
           now: NOW,
         }),
       )
 
       expect(signals).toHaveLength(2)
-      const byId = Object.fromEntries(signals.map((s) => [s.issueId, s.recent1h]))
-      expect(byId[issueId]).toBe(1)
-      expect(byId[otherIssue]).toBe(2)
+      const byId = Object.fromEntries(signals.map((s) => [s.signalId, s.recent1h]))
+      expect(byId[signalId]).toBe(1)
+      expect(byId[otherSignal]).toBe(2)
     })
   })
 
   // ------------------------------------------------------------------
-  // escalationThresholdHistogramByIssues — projects the entry band across
+  // escalationThresholdHistogramBySignals — projects the entry band across
   // a histogram's buckets so the trend chart can draw the dashed line.
   // ------------------------------------------------------------------
 
-  describe("escalationThresholdHistogramByIssues", () => {
+  describe("escalationThresholdHistogramBySignals", () => {
     const fixture = setupFixture()
-    const issueId = "esc_thresh_aaaaaaaaaaaaa"
+    const signalId = "esc_thresh_aaaaaaaaaaaaa"
 
     it("returns an empty array when no issue ids are passed", async () => {
       const series = await fixture.runCh(
-        fixture.repo.escalationThresholdHistogramByIssues({
+        fixture.repo.escalationThresholdHistogramBySignals({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueIds: [],
+          signalIds: [],
           timeRange: { from: new Date("2026-04-01"), to: new Date("2026-04-08") },
           bucketSeconds: 12 * 60 * 60,
           kShort: 3,
@@ -1431,10 +1431,10 @@ describe("ScoreAnalyticsRepository", () => {
 
     it("returns an empty array when bucketSeconds < 1h (sub-hour buckets unsupported)", async () => {
       const series = await fixture.runCh(
-        fixture.repo.escalationThresholdHistogramByIssues({
+        fixture.repo.escalationThresholdHistogramBySignals({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueIds: [IssueId(issueId)],
+          signalIds: [SignalId(signalId)],
           timeRange: { from: new Date("2026-04-01"), to: new Date("2026-04-08") },
           bucketSeconds: 30 * 60,
           kShort: 3,
@@ -1448,10 +1448,10 @@ describe("ScoreAnalyticsRepository", () => {
       const trendTo = new Date("2026-04-29T00:00:00.000Z")
 
       const series = await fixture.runCh(
-        fixture.repo.escalationThresholdHistogramByIssues({
+        fixture.repo.escalationThresholdHistogramBySignals({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueIds: [IssueId(issueId)],
+          signalIds: [SignalId(signalId)],
           timeRange: { from: trendFrom, to: trendTo },
           bucketSeconds: 12 * 60 * 60,
           kShort: 3,
@@ -1471,16 +1471,16 @@ describe("ScoreAnalyticsRepository", () => {
       // Seed history inside the prior window [trendEnd − 4w, trendEnd) so the
       // pool has data to fold into expected / σ.
       await fixture.insertScores([
-        makeScoreRow({ issue_id: issueId, created_at: "2026-04-08 10:00:00.000" }),
-        makeScoreRow({ issue_id: issueId, created_at: "2026-04-08 11:00:00.000" }),
-        makeScoreRow({ issue_id: issueId, created_at: "2026-04-15 10:00:00.000" }),
+        makeScoreRow({ signal_id: signalId, created_at: "2026-04-08 10:00:00.000" }),
+        makeScoreRow({ signal_id: signalId, created_at: "2026-04-08 11:00:00.000" }),
+        makeScoreRow({ signal_id: signalId, created_at: "2026-04-15 10:00:00.000" }),
       ])
 
       const series = await fixture.runCh(
-        fixture.repo.escalationThresholdHistogramByIssues({
+        fixture.repo.escalationThresholdHistogramBySignals({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          issueIds: [IssueId(issueId)],
+          signalIds: [SignalId(signalId)],
           timeRange: { from: trendFrom, to: trendTo },
           bucketSeconds: 12 * 60 * 60,
           kShort: 3,
@@ -1505,26 +1505,26 @@ describe("ScoreAnalyticsRepository", () => {
       const trendFrom = new Date("2026-04-22T00:00:00.000Z")
       const trendTo = new Date("2026-04-29T00:00:00.000Z")
       await fixture.insertScores([
-        makeScoreRow({ issue_id: issueId, created_at: "2026-04-08 10:00:00.000" }),
-        makeScoreRow({ issue_id: issueId, created_at: "2026-04-15 10:00:00.000" }),
+        makeScoreRow({ signal_id: signalId, created_at: "2026-04-08 10:00:00.000" }),
+        makeScoreRow({ signal_id: signalId, created_at: "2026-04-15 10:00:00.000" }),
       ])
 
       const [low, high] = await Promise.all([
         fixture.runCh(
-          fixture.repo.escalationThresholdHistogramByIssues({
+          fixture.repo.escalationThresholdHistogramBySignals({
             organizationId: ORG_ID,
             projectId: PROJECT_ID,
-            issueIds: [IssueId(issueId)],
+            signalIds: [SignalId(signalId)],
             timeRange: { from: trendFrom, to: trendTo },
             bucketSeconds: 12 * 60 * 60,
             kShort: 3,
           }),
         ),
         fixture.runCh(
-          fixture.repo.escalationThresholdHistogramByIssues({
+          fixture.repo.escalationThresholdHistogramBySignals({
             organizationId: ORG_ID,
             projectId: PROJECT_ID,
-            issueIds: [IssueId(issueId)],
+            signalIds: [SignalId(signalId)],
             timeRange: { from: trendFrom, to: trendTo },
             bucketSeconds: 12 * 60 * 60,
             kShort: 6,

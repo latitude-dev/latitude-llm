@@ -1,23 +1,23 @@
-import {
-  type AssignOrCreateIssueInput,
-  type AssignScoreToIssueInput,
-  assignOrCreateIssueUseCase,
-  assignScoreToIssueUseCase,
-  type CheckEligibilityInput,
-  type CreateIssueFromScoreInput,
-  checkEligibilityUseCase,
-  createIssueFromScoreUseCase,
-  type EmbedScoreFeedbackInput,
-  embedScoreFeedbackUseCase,
-  IssueDiscoveryLockUnavailableError,
-  isEligibilityError,
-} from "@domain/issues"
 import { type SyncScoreAnalyticsInput, syncScoreAnalyticsUseCase } from "@domain/scores"
 import { OrganizationId } from "@domain/shared"
+import {
+  type AssignOrCreateSignalInput,
+  type AssignScoreToSignalInput,
+  assignOrCreateSignalUseCase,
+  assignScoreToSignalUseCase,
+  type CheckEligibilityInput,
+  type CreateSignalFromScoreInput,
+  checkEligibilityUseCase,
+  createSignalFromScoreUseCase,
+  type EmbedScoreFeedbackInput,
+  embedScoreFeedbackUseCase,
+  isEligibilityError,
+  SignalDiscoveryLockUnavailableError,
+} from "@domain/signals"
 import { AIEmbedLive, AIGenerateLive, AIRerankLive, withAi } from "@platform/ai"
 import { RedisDistributedLockRepositoryLive } from "@platform/cache-redis"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
-import { IssueRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { OutboxEventWriterLive, ScoreRepositoryLive, SignalRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
@@ -44,7 +44,7 @@ export const checkEligibility = async (input: CheckEligibilityInput) => {
       }
     }
 
-    logger.error("Issue discovery eligibility check failed", {
+    logger.error("Signal discovery eligibility check failed", {
       scoreId: input.scoreId,
       error,
     })
@@ -61,11 +61,11 @@ export const embedScoreFeedback = async (input: EmbedScoreFeedbackInput) =>
     ),
   )
 
-export const createIssueFromScore = async (input: CreateIssueFromScoreInput) =>
+export const createSignalFromScore = async (input: CreateSignalFromScoreInput) =>
   Effect.runPromise(
-    createIssueFromScoreUseCase(input).pipe(
+    createSignalFromScoreUseCase(input).pipe(
       withPostgres(
-        Layer.mergeAll(ScoreRepositoryLive, IssueRepositoryLive),
+        Layer.mergeAll(ScoreRepositoryLive, SignalRepositoryLive),
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),
@@ -74,22 +74,22 @@ export const createIssueFromScore = async (input: CreateIssueFromScoreInput) =>
     ),
   )
 
-export const assignOrCreateIssue = async (input: AssignOrCreateIssueInput) =>
+export const assignOrCreateSignal = async (input: AssignOrCreateSignalInput) =>
   Effect.runPromise(
-    assignOrCreateIssueUseCase(input).pipe(
+    assignOrCreateSignalUseCase(input).pipe(
       withPostgres(
-        Layer.mergeAll(ScoreRepositoryLive, IssueRepositoryLive, OutboxEventWriterLive),
+        Layer.mergeAll(ScoreRepositoryLive, SignalRepositoryLive, OutboxEventWriterLive),
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),
       Effect.provide(RedisDistributedLockRepositoryLive(getRedisClient())),
-      // TODO(issue-discovery-rerank): drop AIRerankLive when assignOrCreateIssue
+      // TODO(issue-discovery-rerank): drop AIRerankLive when assignOrCreateSignal
       // relies on Postgres pgvector hybrid search directly.
       withAi(Layer.mergeAll(AIGenerateLive, AIRerankLive), getRedisClient()),
       withTracing,
       Effect.match({
         onFailure: (error) => {
-          if (error instanceof IssueDiscoveryLockUnavailableError) {
+          if (error instanceof SignalDiscoveryLockUnavailableError) {
             return { status: "lock-unavailable" as const }
           }
 
@@ -103,11 +103,11 @@ export const assignOrCreateIssue = async (input: AssignOrCreateIssueInput) =>
     ),
   )
 
-export const assignScoreToIssue = async (input: AssignScoreToIssueInput) =>
+export const assignScoreToSignal = async (input: AssignScoreToSignalInput) =>
   Effect.runPromise(
-    assignScoreToIssueUseCase(input).pipe(
+    assignScoreToSignalUseCase(input).pipe(
       withPostgres(
-        Layer.mergeAll(ScoreRepositoryLive, IssueRepositoryLive, OutboxEventWriterLive),
+        Layer.mergeAll(ScoreRepositoryLive, SignalRepositoryLive, OutboxEventWriterLive),
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),
@@ -115,7 +115,7 @@ export const assignScoreToIssue = async (input: AssignScoreToIssueInput) =>
       withTracing,
       Effect.match({
         onFailure: (error) => {
-          if (error instanceof IssueDiscoveryLockUnavailableError) {
+          if (error instanceof SignalDiscoveryLockUnavailableError) {
             return { status: "lock-unavailable" as const }
           }
 

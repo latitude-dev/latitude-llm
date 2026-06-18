@@ -6,7 +6,7 @@ import { useHotkeys } from "@tanstack/react-hotkeys"
 import { GroupIcon, ListTreeIcon, MessageSquareIcon, MessagesSquareIcon, ShieldAlertIcon } from "lucide-react"
 import { use, useEffect, useMemo, useState } from "react"
 import { useAnnotationsBySession } from "../../../../../../domains/annotations/annotations.collection.ts"
-import { deriveSessionStatus, useSessionIssues } from "../../../../../../domains/sessions/sessions.collection.ts"
+import { deriveSessionStatus, useSessionSignals } from "../../../../../../domains/sessions/sessions.collection.ts"
 import type { SessionDetailRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
 import { TraceScopeContext } from "../../../../../../domains/traces/trace-scope.tsx"
 import type { TraceRecord } from "../../../../../../domains/traces/traces.functions.ts"
@@ -16,9 +16,9 @@ import { useSpanFilters } from "../trace-detail-drawer/tabs/spans-tab/use-span-f
 import { SpansTab } from "../trace-detail-drawer/tabs/spans-tab.tsx"
 import { AnnotationsTab } from "./annotations-tab.tsx"
 import { ConversationTab } from "./conversation-tab.tsx"
-import { IssuesTab } from "./issues-tab.tsx"
 import { MetadataTab } from "./metadata-tab.tsx"
 import { SessionStatusPill } from "./session-status-pill.tsx"
+import { SignalsTab } from "./signals-tab.tsx"
 
 export type SessionTabId = "session" | "conversation" | "spans" | "annotations" | "issues"
 
@@ -49,7 +49,7 @@ export function SessionSlot({
   onActiveTabChange,
   isActive,
   onOpenTrace,
-  onOpenIssue,
+  onOpenSignal,
   onOpenInConversation,
   searchQuery,
   filters,
@@ -66,7 +66,7 @@ export function SessionSlot({
   /** False while a trace/issue slot is shown — suppresses the H/L tab hotkeys so they don't fight the trace slot. */
   readonly isActive: boolean
   readonly onOpenTrace: (traceId: string, options?: OpenTraceOptions) => void
-  readonly onOpenIssue: (issueId: string) => void
+  readonly onOpenSignal: (signalId: string) => void
   readonly onOpenInConversation: (annotationId: string) => void
   readonly searchQuery?: string
   readonly filters?: FilterSet | undefined
@@ -82,7 +82,7 @@ export function SessionSlot({
   // produce — both off under a sandbox scope: hide the tabs and skip the fetches.
   const isSandbox = !!use(TraceScopeContext)
   const annotationsEnabled = !isSandbox
-  const issuesEnabled = !isSandbox
+  const signalsEnabled = !isSandbox
   // A single-trace session can surface its spans inline
   const singleTrace = traces.length === 1 ? traces[0] : undefined
   const [selectedSpanId, setSelectedSpanId] = useParamState("spanId", "")
@@ -90,7 +90,7 @@ export function SessionSlot({
   const requestedTab: SessionTabId = activeTab === "spans" && !singleTrace ? "session" : activeTab
   // A deep-linked tab for a feature that's off (sandbox) falls back to Session.
   const effectiveActiveTab: SessionTabId =
-    (requestedTab === "annotations" && !annotationsEnabled) || (requestedTab === "issues" && !issuesEnabled)
+    (requestedTab === "annotations" && !annotationsEnabled) || (requestedTab === "issues" && !signalsEnabled)
       ? "session"
       : requestedTab
   const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<SessionTabId>>(() => new Set([effectiveActiveTab]))
@@ -132,9 +132,9 @@ export function SessionSlot({
     traceIds,
     enabled: annotationsEnabled,
   })
-  const { data: issues } = useSessionIssues({ projectId, traceIds, enabled: issuesEnabled })
+  const { data: issues } = useSessionSignals({ projectId, traceIds, enabled: signalsEnabled })
   const annotationCount = annotationsData?.items.length ?? 0
-  const issueCount = issues?.length ?? 0
+  const signalCount = issues?.length ?? 0
 
   const traceNumberById = useMemo(() => {
     const map = new Map<string, number>()
@@ -176,16 +176,16 @@ export function SessionSlot({
         suffix: countSuffix(annotationCount),
       })
     }
-    if (issuesEnabled) {
+    if (signalsEnabled) {
       all.push({
         id: "issues",
-        label: "Issues",
+        label: "Signals",
         icon: <Icon icon={ShieldAlertIcon} size="sm" />,
-        suffix: countSuffix(issueCount),
+        suffix: countSuffix(signalCount),
       })
     }
     return all
-  }, [annotationsEnabled, issuesEnabled, annotationCount, issueCount, singleTrace])
+  }, [annotationsEnabled, signalsEnabled, annotationCount, signalCount, singleTrace])
 
   // H/L cycle the session tabs (wrapping), matching the trace drawer. Disabled
   // while a trace/issue slot is shown so they don't collide with the trace slot.
@@ -322,9 +322,9 @@ export function SessionSlot({
             />
           </div>
         )}
-        {issuesEnabled && visitedTabs.has("issues") && (
+        {signalsEnabled && visitedTabs.has("issues") && (
           <div className={effectiveActiveTab === "issues" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
-            <IssuesTab projectId={projectId} traceIds={traceIds} onOpenIssue={onOpenIssue} />
+            <SignalsTab projectId={projectId} traceIds={traceIds} onOpenSignal={onOpenSignal} />
           </div>
         )}
       </div>

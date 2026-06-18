@@ -4,10 +4,10 @@ export {
   analyzeSessionWorkflow,
 } from "./analyze-session-workflow.ts"
 export { publishAnnotationWorkflow } from "./annotation-publication-workflow.ts"
-export { assignScoreToKnownIssueWorkflow } from "./assign-score-to-known-issue-workflow.ts"
+export { assignScoreToKnownSignalWorkflow } from "./assign-score-to-known-issue-workflow.ts"
 export { type BillingOverageWorkflowInput, billingOverageWorkflow } from "./billing-overage-workflow.ts"
 export { flaggerWorkflow } from "./flagger-workflow.ts"
-export { issueDiscoveryWorkflow } from "./issue-discovery-workflow.ts"
+export { signalDiscoveryWorkflow } from "./issue-discovery-workflow.ts"
 export {
   type OptimizeEvaluationWorkflowResult,
   optimizeEvaluationWorkflow,

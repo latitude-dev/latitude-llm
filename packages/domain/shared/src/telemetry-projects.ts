@@ -12,7 +12,7 @@
  * every tracked internal generation maps to one of these projects.
  */
 export const LATITUDE_TELEMETRY_PROJECT_SLUGS = {
-  issueDiscovery: "latitude-issue-discovery",
+  signalDiscovery: "latitude-issue-discovery",
   annotationEnrichment: "latitude-annotation-enrichment",
   flaggers: "latitude-flaggers",
   evaluations: "latitude-evaluations",

@@ -18,17 +18,17 @@ import {
 } from "../entities/alert-incident.ts"
 import { AlertIncidentRepository } from "../ports/alert-incident-repository.ts"
 
-export interface CreateAlertIncidentFromIssueEventInput {
+export interface CreateAlertIncidentFromSignalEventInput {
   readonly kind: AlertIncidentKind
   readonly organizationId: string
   readonly projectId: string
-  readonly issueId: string
+  readonly signalId: string
   readonly occurredAt: Date
   /**
    * Snapshot of the seasonal-anomaly signals at the moment of entry. Carried
    * on `issue.escalating` incidents so the close-side detector can reference
    * the conditions that tripped open. `null` for kinds that don't escalate
-   * and (during the rollout) for legacy `IssueEscalated` events emitted
+   * and (during the rollout) for legacy `SignalEscalated` events emitted
    * before the seasonal detector started snapshotting.
    */
   readonly entrySignals?: EntrySignalsSnapshot | null
@@ -36,12 +36,12 @@ export interface CreateAlertIncidentFromIssueEventInput {
   readonly condition?: AlertIncidentCondition | null
 }
 
-export type CreateAlertIncidentFromIssueEventError = RepositoryError
+export type CreateAlertIncidentFromSignalEventError = RepositoryError
 
-export const createAlertIncidentFromIssueEventUseCase = (input: CreateAlertIncidentFromIssueEventInput) =>
+export const createAlertIncidentFromSignalEventUseCase = (input: CreateAlertIncidentFromSignalEventInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("alertIncident.kind", input.kind)
-    yield* Effect.annotateCurrentSpan("alertIncident.issueId", input.issueId)
+    yield* Effect.annotateCurrentSpan("alertIncident.signalId", input.signalId)
     yield* Effect.annotateCurrentSpan("alertIncident.projectId", input.projectId)
 
     const sqlClient = yield* SqlClient
@@ -53,7 +53,7 @@ export const createAlertIncidentFromIssueEventUseCase = (input: CreateAlertIncid
 
         const now = new Date()
         // `issue.escalating` opens with `endedAt: null` and is closed later by
-        // `closeAlertIncidentFromIssueEventUseCase`. Eventful kinds have no
+        // `closeAlertIncidentFromSignalEventUseCase`. Eventful kinds have no
         // close step — collapse them to a point in time by setting `endedAt`
         // equal to `startedAt` so the rendering layer can decide point-vs-range
         // purely from timestamps.
@@ -63,7 +63,7 @@ export const createAlertIncidentFromIssueEventUseCase = (input: CreateAlertIncid
           organizationId: OrganizationId(input.organizationId),
           projectId: ProjectId(input.projectId),
           sourceType: "issue",
-          sourceId: input.issueId,
+          sourceId: input.signalId,
           kind: input.kind,
           severity: SEVERITY_FOR_KIND[input.kind],
           startedAt: input.occurredAt,
@@ -89,15 +89,15 @@ export const createAlertIncidentFromIssueEventUseCase = (input: CreateAlertIncid
             kind: incident.kind,
             // Always set on the issue path — read from the inputs, not the now-nullable entity field.
             sourceType: "issue",
-            sourceId: input.issueId,
+            sourceId: input.signalId,
           },
         })
 
         return incident
       }),
     )
-  }).pipe(Effect.withSpan("alerts.createAlertIncidentFromIssueEvent")) as Effect.Effect<
+  }).pipe(Effect.withSpan("alerts.createAlertIncidentFromSignalEvent")) as Effect.Effect<
     AlertIncident,
-    CreateAlertIncidentFromIssueEventError,
+    CreateAlertIncidentFromSignalEventError,
     SqlClient | AlertIncidentRepository | OutboxEventWriter
   >

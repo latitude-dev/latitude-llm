@@ -12,7 +12,7 @@ import { IncidentStatus } from "./incident-status.tsx"
 
 /** Human-readable, lowercased source-type labels for the deleted-source fallback. */
 const SOURCE_TYPE_LABEL: Record<"issue" | "savedSearch", string> = {
-  issue: "issue",
+  issue: "signal",
   savedSearch: "saved search",
 }
 
@@ -125,8 +125,8 @@ export function MonitorIncidentsTable({
       if (incident.sourceType === "issue" && incident.sourceName) {
         return (
           <Link
-            to="/projects/$projectSlug/issues/$issueId"
-            params={{ projectSlug, issueId: incident.sourceId }}
+            to="/projects/$projectSlug/signals/$signalId"
+            params={{ projectSlug, signalId: incident.sourceId }}
             aria-label={`Open issue ${incident.sourceName}`}
             {...props}
           />

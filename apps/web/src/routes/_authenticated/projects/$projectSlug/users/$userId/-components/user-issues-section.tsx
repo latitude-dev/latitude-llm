@@ -1,12 +1,12 @@
 import { Skeleton, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
-import { IssueLifecycleStatuses } from "../../../../../../../components/issues/issue-lifecycle-statuses.tsx"
-import { getPrimaryLifecycleState } from "../../../../../../../components/issues/lifecycle-formatters.ts"
-import { useUserIssues } from "../../../../../../../domains/end-users/end-users.collection.ts"
+import { getPrimaryLifecycleState } from "../../../../../../../components/signals/lifecycle-formatters.ts"
+import { SignalLifecycleStatuses } from "../../../../../../../components/signals/signal-lifecycle-statuses.tsx"
+import { useUserSignals } from "../../../../../../../domains/end-users/end-users.collection.ts"
 import { formatAgoLabel } from "../../-components/user-formatters.ts"
 
-export function UserIssuesSection({
+export function UserSignalsSection({
   projectId,
   projectSlug,
   userId,
@@ -15,7 +15,7 @@ export function UserIssuesSection({
   readonly projectSlug: string
   readonly userId: string
 }) {
-  const { data: issues, isLoading } = useUserIssues({ projectId, userId })
+  const { data: issues, isLoading } = useUserSignals({ projectId, userId })
 
   if (isLoading) {
     return (
@@ -29,7 +29,7 @@ export function UserIssuesSection({
   if (!issues || issues.length === 0) {
     return (
       <div className="flex min-h-16 items-center">
-        <Text.H6 color="foregroundMuted">No issues have been seen on this user's traces.</Text.H6>
+        <Text.H6 color="foregroundMuted">No signals have been seen on this user's traces.</Text.H6>
       </div>
     )
   }
@@ -40,9 +40,9 @@ export function UserIssuesSection({
         const primaryState = getPrimaryLifecycleState(issue.states)
         return (
           <Link
-            key={issue.issueId}
-            to="/projects/$projectSlug/issues/$issueId"
-            params={{ projectSlug, issueId: issue.issueId }}
+            key={issue.signalId}
+            to="/projects/$projectSlug/signals/$signalId"
+            params={{ projectSlug, signalId: issue.signalId }}
             aria-label={`Open issue ${issue.name}`}
             className="-mx-2 flex items-center gap-3 rounded-md px-2 py-2.5 transition-colors hover:bg-background"
           >
@@ -57,7 +57,7 @@ export function UserIssuesSection({
               ) : null}
             </div>
             <div className="flex shrink-0 items-center gap-3">
-              <IssueLifecycleStatuses states={primaryState ? [primaryState] : []} wrap={false} />
+              <SignalLifecycleStatuses states={primaryState ? [primaryState] : []} wrap={false} />
               <div className="flex w-24 flex-col items-end gap-0.5">
                 <Text.H5 className="tabular-nums">{formatCount(issue.occurrences)}</Text.H5>
                 <Text.H6 color="foregroundMuted">occurrences</Text.H6>

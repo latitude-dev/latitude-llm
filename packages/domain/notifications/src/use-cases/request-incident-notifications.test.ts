@@ -5,22 +5,19 @@ import {
   alertIncidentSchema,
 } from "@domain/alerts"
 import { type Evaluation, EvaluationRepository } from "@domain/evaluations"
-import { createIssueCentroid, type Issue, type IssuePriority, IssueRepository } from "@domain/issues"
-import { createFakeIssueRepository } from "@domain/issues/testing"
 import { type Membership, MembershipRepository, type MembershipRole, type MemberWithUser } from "@domain/organizations"
 import type { AnnotationScore, EvaluationScore } from "@domain/scores"
 import {
-  type IssueEscalationThresholdSeries,
-  type IssueOccurrenceBucket,
-  type IssueTagsAggregate,
   ScoreAnalyticsRepository,
   ScoreRepository,
+  type SignalEscalationThresholdSeries,
+  type SignalOccurrenceBucket,
+  type SignalTagsAggregate,
 } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
 import {
   AlertIncidentId,
   ChSqlClient,
-  IssueId,
   MonitorAlertId,
   NotFoundError,
   OrganizationId,
@@ -28,10 +25,13 @@ import {
   ProjectId as ProjectIdConst,
   type ProjectSettings,
   SettingsReader,
+  SignalId,
   SqlClient,
   UserId,
 } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
+import { createSignalCentroid, type Signal, type SignalPriority, SignalRepository } from "@domain/signals"
+import { createFakeSignalRepository } from "@domain/signals/testing"
 import { type User, UserRepository } from "@domain/users"
 import { createFakeUserRepository } from "@domain/users/testing"
 import { Effect, Layer } from "effect"
@@ -48,7 +48,7 @@ interface SetupOpts {
   readonly memberUserIds?: readonly string[]
   readonly projectSettings?: ProjectSettings | null
   readonly thresholdBuckets?: readonly { bucket: string; thresholdCount: number }[]
-  readonly occurrenceBuckets?: readonly IssueOccurrenceBucket[]
+  readonly occurrenceBuckets?: readonly SignalOccurrenceBucket[]
   readonly tags?: readonly string[]
   readonly latestAnnotation?: AnnotationScore | null
   readonly latestEvaluation?: EvaluationScore | null
@@ -63,7 +63,7 @@ interface SetupOpts {
    * `"missing"` to simulate the issue being deleted between the incident
    * and the producer run.
    */
-  readonly issueTriage?: { assigneeId: string | null; priority: IssuePriority | null } | "missing"
+  readonly signalTriage?: { assigneeId: string | null; priority: SignalPriority | null } | "missing"
 }
 
 function setup(opts: SetupOpts = {}) {
@@ -164,15 +164,15 @@ function setup(opts: SetupOpts = {}) {
   // Stub only the methods the producer calls; the rest stay as the
   // default `Effect.die` placeholders from the fake factory.
   const { repository: analytics } = createFakeScoreAnalyticsRepository({
-    histogramByIssues: () => Effect.succeed(occurrenceBuckets),
-    escalationThresholdHistogramByIssues: () =>
+    histogramBySignals: () => Effect.succeed(occurrenceBuckets),
+    escalationThresholdHistogramBySignals: () =>
       Effect.succeed([
-        { issueId: incident.sourceId as IssueEscalationThresholdSeries["issueId"], buckets: thresholdBuckets },
+        { signalId: incident.sourceId as SignalEscalationThresholdSeries["signalId"], buckets: thresholdBuckets },
       ]),
-    aggregateTagsByIssues: () =>
+    aggregateTagsBySignals: () =>
       Effect.succeed([
         {
-          issueId: incident.sourceId as IssueTagsAggregate["issueId"],
+          signalId: incident.sourceId as SignalTagsAggregate["signalId"],
           tags: opts.tags ?? [],
         },
       ]),
@@ -181,7 +181,7 @@ function setup(opts: SetupOpts = {}) {
   const annotation = opts.latestAnnotation
   const evaluation = opts.latestEvaluation
   const { repository: scoreRepository } = createFakeScoreRepository({
-    listByIssueId: ({ source }) => {
+    listBySignalId: ({ source }) => {
       const pick = source === "annotation" ? annotation : source === "evaluation" ? evaluation : null
       return Effect.succeed({
         items: pick ? [pick] : [],
@@ -205,21 +205,21 @@ function setup(opts: SetupOpts = {}) {
     },
     save: () => Effect.die("not used"),
     listByProjectId: () => Effect.die("not used"),
-    listByIssueId: () => Effect.die("not used"),
-    listByIssueIds: () => Effect.die("not used"),
+    listBySignalId: () => Effect.die("not used"),
+    listBySignalIds: () => Effect.die("not used"),
     archive: () => Effect.die("not used"),
     unarchive: () => Effect.die("not used"),
     softDelete: () => Effect.die("not used"),
-    softDeleteByIssueId: () => Effect.die("not used"),
+    softDeleteBySignalId: () => Effect.die("not used"),
   })
 
-  const triage = opts.issueTriage ?? { assigneeId: null, priority: null }
-  const issueSeed: Issue[] =
+  const triage = opts.signalTriage ?? { assigneeId: null, priority: null }
+  const signalSeed: Signal[] =
     triage === "missing"
       ? []
       : [
           {
-            id: IssueId(incident.sourceId ?? cuid("i")),
+            id: SignalId(incident.sourceId ?? cuid("i")),
             organizationId: orgId as string,
             projectId: projectId as string,
             slug: "seeded-issue",
@@ -228,16 +228,16 @@ function setup(opts: SetupOpts = {}) {
             source: "annotation",
             assigneeId: triage.assigneeId,
             priority: triage.priority,
-            centroid: createIssueCentroid(),
+            centroid: createSignalCentroid(),
             clusteredAt: new Date("2026-05-01T00:00:00Z"),
             escalatedAt: null,
             resolvedAt: null,
             ignoredAt: null,
             createdAt: new Date("2026-05-01T00:00:00Z"),
             updatedAt: new Date("2026-05-01T00:00:00Z"),
-          } satisfies Issue,
+          } satisfies Signal,
         ]
-  const { repository: issueRepository } = createFakeIssueRepository(issueSeed)
+  const { repository: signalRepository } = createFakeSignalRepository(signalSeed)
 
   const monitorSeed = new Map<string, IncidentMonitorInfo>()
   if (incident.monitorAlertId !== null && opts.monitor) monitorSeed.set(incident.monitorAlertId, opts.monitor)
@@ -247,7 +247,7 @@ function setup(opts: SetupOpts = {}) {
     Layer.succeed(AlertIncidentRepository, incidentRepo),
     Layer.succeed(EvaluationRepository, evaluationRepository),
     Layer.succeed(IncidentMonitorReader, monitorReader),
-    Layer.succeed(IssueRepository, issueRepository),
+    Layer.succeed(SignalRepository, signalRepository),
     Layer.succeed(MembershipRepository, memberships),
     Layer.succeed(ScoreAnalyticsRepository, analytics),
     Layer.succeed(ScoreRepository, scoreRepository),
@@ -461,7 +461,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       traceId: null,
       spanId: null,
       simulationId: null,
-      issueId: cuid("i"),
+      signalId: cuid("i"),
       value: 0,
       passed: false,
       feedback: "clusterable",
@@ -527,7 +527,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       traceId: null,
       spanId: null,
       simulationId: null,
-      issueId: cuid("i"),
+      signalId: cuid("i"),
       value: 0,
       passed: false,
       feedback: "clusterable",
@@ -572,7 +572,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       traceId: null,
       spanId: null,
       simulationId: null,
-      issueId: cuid("i"),
+      signalId: cuid("i"),
       value: 0,
       passed: false,
       feedback: "Output mentioned the customer's competitor.",
@@ -595,7 +595,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       id: evaluationId,
       organizationId: cuid("o"),
       projectId: cuid("p"),
-      issueId: cuid("i"),
+      signalId: cuid("i"),
       name: "warranty-judge",
       description: "",
       script: "noop",
@@ -641,7 +641,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       traceId: null,
       spanId: null,
       simulationId: null,
-      issueId: cuid("i"),
+      signalId: cuid("i"),
       value: 0,
       passed: false,
       feedback: "f",
@@ -725,7 +725,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       traceId: null,
       spanId: null,
       simulationId: null,
-      issueId: cuid("i"),
+      signalId: cuid("i"),
       value: 0,
       passed: false,
       feedback: "f",
@@ -775,7 +775,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       traceId: null,
       spanId: null,
       simulationId: null,
-      issueId: cuid("i"),
+      signalId: cuid("i"),
       value: 0,
       passed: false,
       feedback: "f",
@@ -844,7 +844,7 @@ describe("requestIncidentNotificationsUseCase", () => {
     const startedAt = new Date("2026-05-07T10:00:00Z")
     const { incidentId, layer } = setup({
       incident: { kind: "issue.new", startedAt, endedAt: startedAt, monitorAlertId: MonitorAlertId(cuid("ma")) },
-      monitor: { monitorId: cuid("mon"), slug: "issue-discovered", name: "Issue discovered", mutedAt: new Date() },
+      monitor: { monitorId: cuid("mon"), slug: "issue-discovered", name: "Signal discovered", mutedAt: new Date() },
       memberUserIds: [cuid("ua")],
     })
 
@@ -863,7 +863,7 @@ describe("requestIncidentNotificationsUseCase", () => {
     const startedAt = new Date("2026-05-07T10:00:00Z")
     const { incidentId, layer } = setup({
       incident: { kind: "issue.new", startedAt, endedAt: startedAt, monitorAlertId: MonitorAlertId(cuid("ma")) },
-      monitor: { monitorId: cuid("mon"), slug: "issue-discovered", name: "Issue discovered", mutedAt: null },
+      monitor: { monitorId: cuid("mon"), slug: "issue-discovered", name: "Signal discovered", mutedAt: null },
       memberUserIds: [cuid("ua")],
     })
 
@@ -881,7 +881,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       monitorSlug?: string
     }
     expect(payload.monitorId).toBe(cuid("mon"))
-    expect(payload.monitorName).toBe("Issue discovered")
+    expect(payload.monitorName).toBe("Signal discovered")
     expect(payload.monitorSlug).toBe("issue-discovered")
   })
 
@@ -896,7 +896,7 @@ describe("requestIncidentNotificationsUseCase", () => {
         monitorAlertId: MonitorAlertId(cuid("ma")),
         condition: { kind: "issue.escalating", sensitivity: 4 },
       },
-      monitor: { monitorId: cuid("mon"), slug: "issue-escalating", name: "Issue escalating", mutedAt: null },
+      monitor: { monitorId: cuid("mon"), slug: "issue-escalating", name: "Signal escalating", mutedAt: null },
       memberUserIds: [cuid("ua")],
     })
 
@@ -909,7 +909,7 @@ describe("requestIncidentNotificationsUseCase", () => {
     expect(result.status).toBe("ok")
     if (result.status !== "ok") throw new Error("unreachable")
     const payload = result.requests[0]?.payload as { monitorName?: string; condition?: unknown }
-    expect(payload.monitorName).toBe("Issue escalating")
+    expect(payload.monitorName).toBe("Signal escalating")
     expect(payload.condition).toEqual({ kind: "issue.escalating", sensitivity: 4 })
   })
 
@@ -937,7 +937,7 @@ describe("requestIncidentNotificationsUseCase", () => {
     const { incidentId, layer } = setup({
       incident: { kind: "issue.new", startedAt, endedAt: startedAt },
       memberUserIds: [cuid("ua")],
-      issueTriage: { assigneeId: cuid("ua"), priority: "urgent" },
+      signalTriage: { assigneeId: cuid("ua"), priority: "urgent" },
     })
 
     const result = await Effect.runPromise(
@@ -957,7 +957,7 @@ describe("requestIncidentNotificationsUseCase", () => {
     const { incidentId, layer } = setup({
       incident: { kind: "issue.new", startedAt, endedAt: startedAt },
       memberUserIds: [cuid("ua")],
-      issueTriage: { assigneeId: null, priority: null },
+      signalTriage: { assigneeId: null, priority: null },
     })
 
     const result = await Effect.runPromise(
@@ -978,7 +978,7 @@ describe("requestIncidentNotificationsUseCase", () => {
     const { incidentId, layer } = setup({
       incident: { kind: "issue.escalating", startedAt, endedAt },
       memberUserIds: [cuid("ua")],
-      issueTriage: { assigneeId: cuid("ua"), priority: "high" },
+      signalTriage: { assigneeId: cuid("ua"), priority: "high" },
     })
 
     const result = await Effect.runPromise(
@@ -999,7 +999,7 @@ describe("requestIncidentNotificationsUseCase", () => {
     const { incidentId, layer } = setup({
       incident: { kind: "issue.new", startedAt, endedAt: startedAt },
       memberUserIds: [cuid("ua")],
-      issueTriage: "missing",
+      signalTriage: "missing",
     })
 
     const result = await Effect.runPromise(
@@ -1025,7 +1025,7 @@ describe("requestIncidentNotificationsUseCase", () => {
         endedAt: startedAt,
       },
       memberUserIds: [cuid("ua")],
-      issueTriage: { assigneeId: cuid("ua"), priority: "urgent" },
+      signalTriage: { assigneeId: cuid("ua"), priority: "urgent" },
     })
 
     const result = await Effect.runPromise(

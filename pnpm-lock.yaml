@@ -199,9 +199,6 @@ importers:
       '@domain/flaggers':
         specifier: workspace:*
         version: link:../../packages/domain/flaggers
-      '@domain/issues':
-        specifier: workspace:*
-        version: link:../../packages/domain/issues
       '@domain/monitors':
         specifier: workspace:*
         version: link:../../packages/domain/monitors
@@ -226,6 +223,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../../packages/domain/shared
+      '@domain/signals':
+        specifier: workspace:*
+        version: link:../../packages/domain/signals
       '@domain/spans':
         specifier: workspace:*
         version: link:../../packages/domain/spans
@@ -423,9 +423,6 @@ importers:
       '@domain/integrations':
         specifier: workspace:*
         version: link:../../packages/domain/integrations
-      '@domain/issues':
-        specifier: workspace:*
-        version: link:../../packages/domain/issues
       '@domain/marketing':
         specifier: workspace:*
         version: link:../../packages/domain/marketing
@@ -459,6 +456,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../../packages/domain/shared
+      '@domain/signals':
+        specifier: workspace:*
+        version: link:../../packages/domain/signals
       '@domain/spans':
         specifier: workspace:*
         version: link:../../packages/domain/spans
@@ -685,9 +685,6 @@ importers:
       '@domain/integrations':
         specifier: workspace:*
         version: link:../../packages/domain/integrations
-      '@domain/issues':
-        specifier: workspace:*
-        version: link:../../packages/domain/issues
       '@domain/marketing':
         specifier: workspace:*
         version: link:../../packages/domain/marketing
@@ -718,6 +715,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../../packages/domain/shared
+      '@domain/signals':
+        specifier: workspace:*
+        version: link:../../packages/domain/signals
       '@domain/spans':
         specifier: workspace:*
         version: link:../../packages/domain/spans
@@ -830,9 +830,6 @@ importers:
       '@domain/flaggers':
         specifier: workspace:*
         version: link:../../packages/domain/flaggers
-      '@domain/issues':
-        specifier: workspace:*
-        version: link:../../packages/domain/issues
       '@domain/optimizations':
         specifier: workspace:*
         version: link:../../packages/domain/optimizations
@@ -845,6 +842,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../../packages/domain/shared
+      '@domain/signals':
+        specifier: workspace:*
+        version: link:../../packages/domain/signals
       '@domain/spans':
         specifier: workspace:*
         version: link:../../packages/domain/spans
@@ -1203,9 +1203,6 @@ importers:
 
   packages/domain/email:
     dependencies:
-      '@domain/issues':
-        specifier: workspace:*
-        version: link:../issues
       '@domain/monitors':
         specifier: workspace:*
         version: link:../monitors
@@ -1218,6 +1215,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
+      '@domain/signals':
+        specifier: workspace:*
+        version: link:../signals
       '@domain/spans':
         specifier: workspace:*
         version: link:../spans
@@ -1370,9 +1370,6 @@ importers:
 
   packages/domain/integrations:
     dependencies:
-      '@domain/issues':
-        specifier: workspace:*
-        version: link:../issues
       '@domain/monitors':
         specifier: workspace:*
         version: link:../monitors
@@ -1388,6 +1385,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
+      '@domain/signals':
+        specifier: workspace:*
+        version: link:../signals
       '@domain/users':
         specifier: workspace:*
         version: link:../users
@@ -1404,52 +1404,6 @@ importers:
       '@repo/vitest-config':
         specifier: workspace:*
         version: link:../../vitest-config
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@25.9.3)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))
-
-  packages/domain/issues:
-    dependencies:
-      '@domain/ai':
-        specifier: workspace:*
-        version: link:../ai
-      '@domain/alerts':
-        specifier: workspace:*
-        version: link:../alerts
-      '@domain/evaluations':
-        specifier: workspace:*
-        version: link:../evaluations
-      '@domain/events':
-        specifier: workspace:*
-        version: link:../events
-      '@domain/exports':
-        specifier: workspace:*
-        version: link:../exports
-      '@domain/organizations':
-        specifier: workspace:*
-        version: link:../organizations
-      '@domain/queue':
-        specifier: workspace:*
-        version: link:../queue
-      '@domain/scores':
-        specifier: workspace:*
-        version: link:../scores
-      '@domain/shared':
-        specifier: workspace:*
-        version: link:../shared
-      '@domain/spans':
-        specifier: workspace:*
-        version: link:../spans
-      '@repo/utils':
-        specifier: workspace:*
-        version: link:../../utils
-      effect:
-        specifier: 'catalog:'
-        version: 4.0.0-beta.57
-      zod:
-        specifier: 'catalog:'
-        version: 4.3.6
-    devDependencies:
       vitest:
         specifier: 'catalog:'
         version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@25.9.3)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))
@@ -1492,9 +1446,6 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../events
-      '@domain/issues':
-        specifier: workspace:*
-        version: link:../issues
       '@domain/notifications':
         specifier: workspace:*
         version: link:../notifications
@@ -1507,6 +1458,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
+      '@domain/signals':
+        specifier: workspace:*
+        version: link:../signals
       '@domain/spans':
         specifier: workspace:*
         version: link:../spans
@@ -1529,9 +1483,6 @@ importers:
       '@domain/evaluations':
         specifier: workspace:*
         version: link:../evaluations
-      '@domain/issues':
-        specifier: workspace:*
-        version: link:../issues
       '@domain/organizations':
         specifier: workspace:*
         version: link:../organizations
@@ -1544,6 +1495,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
+      '@domain/signals':
+        specifier: workspace:*
+        version: link:../signals
       '@domain/users':
         specifier: workspace:*
         version: link:../users
@@ -1730,6 +1684,52 @@ importers:
       zod:
         specifier: 'catalog:'
         version: 4.3.6
+
+  packages/domain/signals:
+    dependencies:
+      '@domain/ai':
+        specifier: workspace:*
+        version: link:../ai
+      '@domain/alerts':
+        specifier: workspace:*
+        version: link:../alerts
+      '@domain/evaluations':
+        specifier: workspace:*
+        version: link:../evaluations
+      '@domain/events':
+        specifier: workspace:*
+        version: link:../events
+      '@domain/exports':
+        specifier: workspace:*
+        version: link:../exports
+      '@domain/organizations':
+        specifier: workspace:*
+        version: link:../organizations
+      '@domain/queue':
+        specifier: workspace:*
+        version: link:../queue
+      '@domain/scores':
+        specifier: workspace:*
+        version: link:../scores
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@domain/spans':
+        specifier: workspace:*
+        version: link:../spans
+      '@repo/utils':
+        specifier: workspace:*
+        version: link:../../utils
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.57
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
+    devDependencies:
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@25.9.3)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))
 
   packages/domain/simulations:
     dependencies:
@@ -2212,9 +2212,6 @@ importers:
       '@domain/integrations':
         specifier: workspace:*
         version: link:../../domain/integrations
-      '@domain/issues':
-        specifier: workspace:*
-        version: link:../../domain/issues
       '@domain/monitors':
         specifier: workspace:*
         version: link:../../domain/monitors
@@ -2242,6 +2239,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../../domain/shared
+      '@domain/signals':
+        specifier: workspace:*
+        version: link:../../domain/signals
       '@domain/simulations':
         specifier: workspace:*
         version: link:../../domain/simulations

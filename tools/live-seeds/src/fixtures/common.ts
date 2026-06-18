@@ -1,9 +1,9 @@
 import {
-  ISSUE_1_NEGATIVE_TRACES,
-  ISSUE_2_POSITIVE_TRACES,
   KNOWLEDGE_ASSISTANT_SYSTEM_PROMPT,
   ORDER_ROUTER_SYSTEM_PROMPT,
   QA_CLASSIFIER_SYSTEM_PROMPT,
+  SIGNAL_1_NEGATIVE_TRACES,
+  SIGNAL_2_POSITIVE_TRACES,
 } from "@domain/shared/seeding"
 import type { SeedChatSpanDefinition, SeedMessage, SeedSpanDefinition, SeedSystemPart } from "../otlp.ts"
 import type { SeededRng } from "../random.ts"
@@ -219,8 +219,8 @@ function createCaseIdentity(
   return { sessionId, userId }
 }
 
-export const WARRANTY_SAFE_EXAMPLES = ISSUE_1_NEGATIVE_TRACES
-export const COMBINATION_RISK_EXAMPLES = ISSUE_2_POSITIVE_TRACES
+export const WARRANTY_SAFE_EXAMPLES = SIGNAL_1_NEGATIVE_TRACES
+export const COMBINATION_RISK_EXAMPLES = SIGNAL_2_POSITIVE_TRACES
 
 type GeneratedCaseTraceInput = {
   readonly key: string

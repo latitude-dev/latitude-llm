@@ -4,7 +4,7 @@ const { callOrder, mockActivities, mockSleep } = vi.hoisted(() => {
   const callOrder: string[] = []
   type MockAssignmentResult = {
     action: "assigned" | "already-assigned" | "created"
-    issueId: string
+    signalId: string
   }
   type MockAssignResult =
     | {
@@ -24,13 +24,13 @@ const { callOrder, mockActivities, mockSleep } = vi.hoisted(() => {
         normalizedEmbedding: [0.6, 0.8],
       }
     }),
-    assignScoreToIssue: vi.fn(async (): Promise<MockAssignResult> => {
-      callOrder.push("assignScoreToIssue")
+    assignScoreToSignal: vi.fn(async (): Promise<MockAssignResult> => {
+      callOrder.push("assignScoreToSignal")
       return {
         status: "assigned" as const,
         assignment: {
           action: "assigned",
-          issueId: "issue-known",
+          signalId: "issue-known",
         },
       }
     }),
@@ -51,39 +51,39 @@ vi.mock("@temporalio/workflow", () => ({
   sleep: mockSleep,
 }))
 
-import { assignScoreToKnownIssueWorkflow } from "./assign-score-to-known-issue-workflow.ts"
+import { assignScoreToKnownSignalWorkflow } from "./assign-score-to-known-issue-workflow.ts"
 
-describe("assignScoreToKnownIssueWorkflow", () => {
+describe("assignScoreToKnownSignalWorkflow", () => {
   beforeEach(() => {
     callOrder.length = 0
     vi.clearAllMocks()
   })
 
   it("runs embed, assign, and sync activities in order", async () => {
-    const result = await assignScoreToKnownIssueWorkflow({
+    const result = await assignScoreToKnownSignalWorkflow({
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-1",
-      issueId: "issue-known",
+      signalId: "issue-known",
     })
 
     expect(result).toEqual({
       action: "assigned",
-      issueId: "issue-known",
+      signalId: "issue-known",
     })
 
-    expect(callOrder).toEqual(["embedScoreFeedback", "assignScoreToIssue", "syncScoreAnalytics"])
+    expect(callOrder).toEqual(["embedScoreFeedback", "assignScoreToSignal", "syncScoreAnalytics"])
 
     expect(mockActivities.embedScoreFeedback).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-1",
     })
-    expect(mockActivities.assignScoreToIssue).toHaveBeenCalledWith({
+    expect(mockActivities.assignScoreToSignal).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-1",
-      issueId: "issue-known",
+      signalId: "issue-known",
       normalizedEmbedding: [0.6, 0.8],
     })
     expect(mockActivities.syncScoreAnalytics).toHaveBeenCalledWith({

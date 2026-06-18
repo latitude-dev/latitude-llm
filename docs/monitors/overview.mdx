@@ -1,6 +1,6 @@
 ---
 title: Monitors Overview
-description: Watch your issues and saved searches, and get alerted when something needs your attention.
+description: Watch your signals and saved searches, and get alerted when something needs your attention.
 ---
 
 # Monitors
@@ -17,7 +17,7 @@ Monitors live on the **Monitors** page of each project. Open it from the project
 
 There are two kinds of monitors:
 
-- **System monitors** are set up automatically for every project. They watch your [issues](../issues/overview) and are marked with a **System** badge. You can't create, rename, or delete them, and you can't change what they watch, but you _can_ mute them.
+- **System monitors** are set up automatically for every project. They watch your [signals](../signals/overview) and are marked with a **System** badge. You can't create, rename, or delete them, and you can't change what they watch, but you _can_ mute them.
 - **Your monitors** are the ones you create. Today they watch [saved searches](../search/saved-searches). You have full control: edit the alert, rename, mute, and delete.
 
 <Frame caption="System monitors have a System badge next to their name.">
@@ -37,16 +37,16 @@ Click any row to open its details panel, where you can see the alert, the full i
 
 ## The three system monitors
 
-Every project comes with three monitors that watch the issue lifecycle. Each one notifies you about a different moment:
+Every project comes with three monitors that watch the signal lifecycle. Each one notifies you about a different moment:
 
-- **Issue discovered**: fires each time a brand-new issue is detected in your traffic.
-- **Issue regressed**: fires each time an issue you had resolved is detected again.
-- **Issue escalating**: fires when an ongoing issue is being detected _more than expected_ for this time of day and week. This is the one monitor with a tunable knob: its **sensitivity** (a value from 1 to 6) controls how large a deviation from the normal pattern is needed before it fires. Open the monitor and edit the alert to change it.
+- **Signal discovered**: fires each time a brand-new signal is detected in your traffic.
+- **Signal regressed**: fires each time a signal you had resolved is detected again.
+- **Signal escalating**: fires when an ongoing signal is being detected _more than expected_ for this time of day and week. This is the one monitor with a tunable knob: its **sensitivity** (a value from 1 to 6) controls how large a deviation from the normal pattern is needed before it fires. Open the monitor and edit the alert to change it.
 
-System monitors **can't be deleted**: they're part of how Latitude keeps you informed about issues. If you don't want to be notified by one, **mute** it (see [Mute](#mute) below).
+System monitors **can't be deleted**: they're part of how Latitude keeps you informed about signals. If you don't want to be notified by one, **mute** it (see [Mute](#mute) below).
 
 <Tip>
-  The three system monitors replace the old per-project issue-notification checkboxes. Tuning who gets notified, and on which channel, still happens in your notification preferences. See [How notifications work](#how-notifications-work).
+  The three system monitors replace the old per-project signal-notification checkboxes. Tuning who gets notified, and on which channel, still happens in your notification preferences. See [How notifications work](#how-notifications-work).
 </Tip>
 
 ## Creating a monitor for a saved search
@@ -151,7 +151,7 @@ Alerts when traces matching 'Production 5xx' are detected 3 times more than expe
 Choose **expected** when your traffic swings a lot depending on the time of day or day of week (busy weekday mornings, quiet weekends). A single average blurs those swings together; expected accounts for them.
 
 <Info>
-  **How "expected" works.** From your trace history, Latitude builds a profile of normal volume for each slot in the week (every hour-of-day × day-of-week pair) together with a tolerance band for how much that volume naturally varies. On each check it compares the current window's count against the expectation for *that* slot and fires when the count breaks above the band. **Sensitivity** sets how wide the band is: a higher value tightens it, so smaller deviations trip the alert. It's the same seasonal detector that powers the **Issue escalating** system monitor.
+  **How "expected" works.** From your trace history, Latitude builds a profile of normal volume for each slot in the week (every hour-of-day × day-of-week pair) together with a tolerance band for how much that volume naturally varies. On each check it compares the current window's count against the expectation for *that* slot and fires when the count breaks above the band. **Sensitivity** sets how wide the band is: a higher value tightens it, so smaller deviations trip the alert. It's the same seasonal detector that powers the **Signal escalating** system monitor.
 </Info>
 
 ### Escalating: alert only when a spike sticks around
@@ -204,10 +204,10 @@ What's editable depends on the monitor type:
 | Mute / unmute | ✅ | ✅ |
 | Rename / edit description | ✅ | ❌ |
 | Change an alert's kind, source, or severity | ✅ | ❌ |
-| Edit a condition value | ✅ | Only the **Issue escalating** sensitivity |
+| Edit a condition value | ✅ | Only the **Signal escalating** sensitivity |
 | Delete the monitor | ✅ | ❌ |
 
-System monitors are **locked**: you can't change their name, alert, or severity. The single tunable value is the **Issue escalating** sensitivity.
+System monitors are **locked**: you can't change their name, alert, or severity. The single tunable value is the **Signal escalating** sensitivity.
 
 ## How notifications work
 
@@ -216,12 +216,12 @@ When a monitor fires, the incident goes through Latitude's normal notification s
 - **Who** gets notified and **on which channel** is controlled by your per-user and per-project notification preferences, not by the monitor.
 - A monitor's only effect on delivery is its **mute** state: a muted monitor still records incidents but stops the notifications from going out.
 
-Incidents can be delivered by email and to **Slack**. Email is toggled per person in notification preferences. Slack is connected once per organization at **Settings → Integrations**: after you connect a workspace, you route the **Incidents** group (the Issue discovered, regressed, and escalating notifications, plus monitor incidents) to the Slack channels you choose.
+Incidents can be delivered by email and to **Slack**. Email is toggled per person in notification preferences. Slack is connected once per organization at **Settings → Integrations**: after you connect a workspace, you route the **Incidents** group (the Signal discovered, regressed, and escalating notifications, plus monitor incidents) to the Slack channels you choose.
 
 To change channel routing or per-user preferences, use your notification settings rather than the monitor.
 
 ## Next steps
 
-- [Issues overview](../issues/overview): what the system monitors watch
+- [Signals overview](../signals/overview): what the system monitors watch
 - [Saved searches](../search/saved-searches): the basis for your own monitors
 - [Search overview](../search/overview): building the queries your monitors watch

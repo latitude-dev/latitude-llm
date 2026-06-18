@@ -17,12 +17,12 @@ import {
   type ChSqlClient,
   DatasetId,
   ExternalUserId,
-  IssueId,
   OrganizationId,
   ProjectId,
   RepositoryError,
   SEED_API_KEY_ID,
   SessionId,
+  SignalId,
   SimulationId,
   SpanId,
   TraceId,
@@ -364,12 +364,12 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
     ).rejects.toBeInstanceOf(DatasetNotFoundError)
   })
 
-  it("addTracesToDataset resolves traces from issue source via listTracesByIssue", async () => {
+  it("addTracesToDataset resolves traces from issue source via listTracesBySignal", async () => {
     expect(seededTraceIds.length).toBeGreaterThanOrEqual(1)
-    const issueId = IssueId("issue-link-all")
+    const signalId = SignalId("issue-link-all")
 
-    const issueScoreRepo = createFakeScoreAnalyticsRepository({
-      listTracesByIssue: ({ limit = 25, offset = 0 }) =>
+    const signalScoreRepo = createFakeScoreAnalyticsRepository({
+      listTracesBySignal: ({ limit = 25, offset = 0 }) =>
         Effect.succeed({
           items: seededTraceIds.map((traceId) => ({ traceId, lastSeenAt: new Date() })),
           hasMore: false,
@@ -382,10 +382,10 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
       addTracesToDataset({
         projectId: PROJECT_ID,
         datasetId: DATASET_ID,
-        source: { kind: "issue", issueId },
+        source: { kind: "issue", signalId },
         selection: { mode: "all" },
       }),
-      issueScoreRepo,
+      signalScoreRepo,
     )
 
     expect(result.rowIds.length).toBe(seededTraceIds.length)
@@ -404,11 +404,11 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
   // even when the seed deduper produces a single distinct trace.
   it("addTracesToDataset honors allExcept when source is an issue", async () => {
     expect(seededTraceIds.length).toBeGreaterThanOrEqual(1)
-    const issueId = IssueId("issue-link-except")
+    const signalId = SignalId("issue-link-except")
     const fabricatedExcluded = TraceId("fabricated-excluded-trace")
 
-    const issueScoreRepo = createFakeScoreAnalyticsRepository({
-      listTracesByIssue: ({ limit = 25, offset = 0 }) =>
+    const signalScoreRepo = createFakeScoreAnalyticsRepository({
+      listTracesBySignal: ({ limit = 25, offset = 0 }) =>
         Effect.succeed({
           items: [
             ...seededTraceIds.map((traceId) => ({ traceId, lastSeenAt: new Date() })),
@@ -424,10 +424,10 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
       addTracesToDataset({
         projectId: PROJECT_ID,
         datasetId: DATASET_ID,
-        source: { kind: "issue", issueId },
+        source: { kind: "issue", signalId },
         selection: { mode: "allExcept", traceIds: [fabricatedExcluded] },
       }),
-      issueScoreRepo,
+      signalScoreRepo,
     )
 
     expect(result.rowIds.length).toBe(seededTraceIds.length)

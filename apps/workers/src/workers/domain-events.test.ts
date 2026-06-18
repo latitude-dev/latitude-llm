@@ -1,8 +1,8 @@
 import { BILLING_OVERAGE_SYNC_THROTTLE_MS } from "@domain/billing"
 import type { EventEnvelope } from "@domain/events"
-import { ESCALATION_CHECK_THROTTLE_MS, ISSUE_REFRESH_THROTTLE_MS } from "@domain/issues"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
+import { ESCALATION_CHECK_THROTTLE_MS, SIGNAL_REFRESH_THROTTLE_MS } from "@domain/signals"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 
 import { hash } from "@repo/utils"
@@ -268,13 +268,13 @@ describe("domain-events dispatcher", () => {
     }
   })
 
-  it("fans ScoreAssignedToIssue out to refresh + throttled and debounced escalation checks", async () => {
+  it("fans ScoreAssignedToSignal out to refresh + throttled and debounced escalation checks", async () => {
     const { consumer, published } = setupDispatcher()
 
-    const envelope = makeEnvelope("ScoreAssignedToIssue", {
+    const envelope = makeEnvelope("ScoreAssignedToSignal", {
       organizationId: "org-1",
       projectId: "proj-1",
-      issueId: "issue-42",
+      signalId: "issue-42",
     })
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
@@ -286,10 +286,10 @@ describe("domain-events dispatcher", () => {
     expect(refresh?.payload).toEqual({
       organizationId: "org-1",
       projectId: "proj-1",
-      issueId: "issue-42",
+      signalId: "issue-42",
     })
     expect(refresh?.options?.dedupeKey).toBe("issues:refresh:issue-42")
-    expect(refresh?.options?.throttleMs).toBe(ISSUE_REFRESH_THROTTLE_MS)
+    expect(refresh?.options?.throttleMs).toBe(SIGNAL_REFRESH_THROTTLE_MS)
     expect(refresh?.options?.debounceMs).toBeUndefined()
 
     const escalationChecks = published.filter((p) => p.task === "checkEscalation")
@@ -345,13 +345,13 @@ describe("domain-events dispatcher", () => {
     expect(job?.options?.dedupeKey).toBe("notifications:request-incident-closed:ai-1")
   })
 
-  it("routes IssueAssigneeChanged to notifications:request-issue-assigned-notifications", async () => {
+  it("routes SignalAssigneeChanged to notifications:request-issue-assigned-notifications", async () => {
     const { consumer, published } = setupDispatcher()
 
-    const envelope = makeEnvelope("IssueAssigneeChanged", {
+    const envelope = makeEnvelope("SignalAssigneeChanged", {
       organizationId: "org-1",
       projectId: "proj-1",
-      issueId: "issue-1",
+      signalId: "issue-1",
       assigneeId: "user-b",
       previousAssigneeId: "user-a",
       actorUserId: "user-a",
@@ -366,7 +366,7 @@ describe("domain-events dispatcher", () => {
     expect(job?.task).toBe("request-issue-assigned-notifications")
     expect(job?.payload).toEqual({
       organizationId: "org-1",
-      issueId: "issue-1",
+      signalId: "issue-1",
       assigneeId: "user-b",
       actorUserId: "user-a",
       assignedAt: "2026-05-07T10:00:00.000Z",
@@ -374,17 +374,17 @@ describe("domain-events dispatcher", () => {
     expect(job?.options?.dedupeKey).toBe("notifications:request-issue-assigned:issue-1:2026-05-07T10:00:00.000Z")
   })
 
-  it("skips IssueAssigneeChanged for cleared assignments and self-assignments", async () => {
+  it("skips SignalAssigneeChanged for cleared assignments and self-assignments", async () => {
     const { consumer, published } = setupDispatcher()
 
     await consumer.dispatchTask(
       "domain-events",
       "dispatch",
       envelopeToDispatchPayload(
-        makeEnvelope("IssueAssigneeChanged", {
+        makeEnvelope("SignalAssigneeChanged", {
           organizationId: "org-1",
           projectId: "proj-1",
-          issueId: "issue-1",
+          signalId: "issue-1",
           assigneeId: null,
           previousAssigneeId: "user-a",
           actorUserId: "user-b",
@@ -396,10 +396,10 @@ describe("domain-events dispatcher", () => {
       "domain-events",
       "dispatch",
       envelopeToDispatchPayload(
-        makeEnvelope("IssueAssigneeChanged", {
+        makeEnvelope("SignalAssigneeChanged", {
           organizationId: "org-1",
           projectId: "proj-1",
-          issueId: "issue-1",
+          signalId: "issue-1",
           assigneeId: "user-a",
           previousAssigneeId: null,
           actorUserId: "user-a",
@@ -526,7 +526,7 @@ describe("domain-events dispatcher", () => {
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-3",
-      issueId: null,
+      signalId: null,
       status: "published",
     })
 
@@ -558,7 +558,7 @@ describe("domain-events dispatcher", () => {
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-3",
-      issueId: null,
+      signalId: null,
       status: "draft",
     })
 
@@ -566,7 +566,7 @@ describe("domain-events dispatcher", () => {
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-3",
-      issueId: null,
+      signalId: null,
       status: "published",
     })
 

@@ -1,5 +1,5 @@
 import { ScoreAnalyticsRepository } from "@domain/scores"
-import type { DatasetId, FilterSet, IssueId, OrganizationId, ProjectId, TraceId } from "@domain/shared"
+import type { DatasetId, FilterSet, OrganizationId, ProjectId, SignalId, TraceId } from "@domain/shared"
 import { ChSqlClient } from "@domain/shared"
 import type { TraceDetail, TraceListCursor } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"
@@ -16,7 +16,7 @@ export type TraceSelection =
   | { readonly mode: "all" }
   | { readonly mode: "allExcept"; readonly traceIds: readonly TraceId[] }
 
-export type TraceSource = { readonly kind: "project" } | { readonly kind: "issue"; readonly issueId: IssueId }
+export type TraceSource = { readonly kind: "project" } | { readonly kind: "issue"; readonly signalId: SignalId }
 
 function mapTraceToRow(t: TraceDetail) {
   return {
@@ -44,7 +44,7 @@ function mapTraceToRow(t: TraceDetail) {
 }
 
 const PAGE_SIZE = 1_000
-const ISSUE_TRACE_PAGE_SIZE = 1_000
+const SIGNAL_TRACE_PAGE_SIZE = 1_000
 
 function collectAllProjectTraceIds(args: {
   readonly organizationId: OrganizationId
@@ -80,10 +80,10 @@ function collectAllProjectTraceIds(args: {
   })
 }
 
-function collectAllIssueTraceIds(args: {
+function collectAllSignalTraceIds(args: {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
-  readonly issueId: IssueId
+  readonly signalId: SignalId
 }) {
   return Effect.gen(function* () {
     const repo = yield* ScoreAnalyticsRepository
@@ -92,11 +92,11 @@ function collectAllIssueTraceIds(args: {
 
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      const page = yield* repo.listTracesByIssue({
+      const page = yield* repo.listTracesBySignal({
         organizationId: args.organizationId,
         projectId: args.projectId,
-        issueId: args.issueId,
-        limit: ISSUE_TRACE_PAGE_SIZE,
+        signalId: args.signalId,
+        limit: SIGNAL_TRACE_PAGE_SIZE,
         offset,
       })
       for (const item of page.items) {
@@ -118,10 +118,10 @@ function collectAllTraceIds(args: {
   readonly filters?: FilterSet
 }) {
   if (args.source.kind === "issue") {
-    return collectAllIssueTraceIds({
+    return collectAllSignalTraceIds({
       organizationId: args.organizationId,
       projectId: args.projectId,
-      issueId: args.source.issueId,
+      signalId: args.source.signalId,
     })
   }
   return collectAllProjectTraceIds({

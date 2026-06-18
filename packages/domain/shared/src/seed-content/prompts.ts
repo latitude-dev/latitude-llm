@@ -62,7 +62,7 @@ export const SAFETY_REVIEWER_PROMPTS: readonly string[] = [
 ]
 
 export const SAFETY_REVIEWER_RESPONSES: readonly string[] = [
-  "RISK ASSESSMENT — IR-2026-0847: Severity 3 (Unintended Activation). Similar incidents: 12 in the past 90 days for the RSK-001 product line. Root cause: faulty ignition switch in lots manufactured after Feb 2026. Recommendation: Issue recall for lots RSK-001-2026-02 through RSK-001-2026-04. Corrective action: Replace ignition switch with dual-trigger mechanism.",
+  "RISK ASSESSMENT — IR-2026-0847: Severity 3 (Unintended Activation). Similar incidents: 12 in the past 90 days for the RSK-001 product line. Root cause: faulty ignition switch in lots manufactured after Feb 2026. Recommendation: Signal recall for lots RSK-001-2026-02 through RSK-001-2026-04. Corrective action: Replace ignition switch with dual-trigger mechanism.",
   "RISK ASSESSMENT — IR-2026-0955: Severity 4 (Physics Anomaly). No prior incidents combining PHL-002 and ITP-005. Outcome: localized spatial distortion, self-resolving within 48 hours. Recommendation: Add explicit 'DO NOT COMBINE' warning to both products. Flag for the Theoretical Physics Review Board.",
   "RISK ASSESSMENT — IR-2026-1003: Severity 5 (Infrastructure Impact). Similar incidents: 3, all involving the GMG-006 model in the 'Industrial' configuration. Effective radius exceeded rated specifications by 400%. Recommendation: Immediate product suspension pending recalibration of magnetic field limiters.",
 ]

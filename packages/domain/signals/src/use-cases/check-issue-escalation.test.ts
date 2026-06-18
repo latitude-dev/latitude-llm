@@ -1,0 +1,601 @@
+import {
+  type AlertIncident,
+  AlertIncidentRepository,
+  type AlertIncidentRepositoryShape,
+  type EntrySignalsSnapshot,
+  type UpdateAlertIncidentExitDwellInput,
+} from "@domain/alerts"
+import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
+import { ScoreAnalyticsRepository, type SignalEscalationSignals } from "@domain/scores"
+import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
+import {
+  AlertIncidentId,
+  ChSqlClient,
+  OrganizationId,
+  ProjectId as ProjectIdValue,
+  type ProjectSettings,
+  SettingsReader,
+  SignalId,
+  SqlClient,
+  type SqlClientShape,
+} from "@domain/shared"
+import { createFakeChSqlClient } from "@domain/shared/testing"
+import { Effect } from "effect"
+import { describe, expect, it } from "vitest"
+import { ESCALATION_EXIT_DWELL_MS, ESCALATION_MAX_DURATION_MS } from "../constants.ts"
+import type { Signal } from "../entities/issue.ts"
+import { createSignalCentroid } from "../helpers.ts"
+import { SignalRepository } from "../ports/issue-repository.ts"
+import { createFakeSignalRepository } from "../testing/fake-issue-repository.ts"
+import { checkSignalEscalationUseCase } from "./check-issue-escalation.ts"
+
+const organizationId = "oooooooooooooooooooooooo"
+const projectId = "pppppppppppppppppppppppp"
+const signalId = "iiiiiiiiiiiiiiiiiiiiiiii"
+
+const makeSignal = (overrides?: Partial<Signal>): Signal => ({
+  id: SignalId(signalId),
+  slug: "test-issue",
+  organizationId,
+  projectId,
+  name: "Token leakage in responses",
+  description: "The assistant leaks API tokens in its response.",
+  source: "annotation",
+  assigneeId: null,
+  priority: null,
+  centroid: createSignalCentroid(),
+  clusteredAt: new Date("2026-04-29T10:00:00.000Z"),
+  escalatedAt: null,
+  resolvedAt: null,
+  ignoredAt: null,
+  createdAt: new Date("2026-04-29T10:00:00.000Z"),
+  updatedAt: new Date("2026-04-29T10:00:00.000Z"),
+  ...overrides,
+})
+
+const makeSignals = (overrides: Partial<SignalEscalationSignals> = {}): SignalEscalationSignals => ({
+  signalId: SignalId(signalId),
+  recent1h: 0,
+  recent6h: 0,
+  recent24h: 0,
+  expected1h: 10,
+  expected6hPerHour: 10,
+  stddev1h: 2,
+  stddev6hPerHour: 2,
+  samplesCount: 4,
+  ...overrides,
+})
+
+const makeOpenIncident = (overrides: Partial<AlertIncident> = {}): AlertIncident => ({
+  id: AlertIncidentId("aaaaaaaaaaaaaaaaaaaaaaaa"),
+  organizationId: OrganizationId(organizationId),
+  projectId: ProjectIdValue(projectId),
+  sourceType: "issue",
+  sourceId: signalId,
+  kind: "issue.escalating",
+  severity: "high",
+  startedAt: new Date("2026-05-07T10:00:00.000Z"),
+  endedAt: null,
+  createdAt: new Date("2026-05-07T10:00:00.000Z"),
+  entrySignals: null,
+  exitEligibleSince: null,
+  monitorAlertId: null,
+  condition: null,
+  ...overrides,
+})
+
+const createPassthroughSqlClient = (id: string): SqlClientShape => {
+  const sqlClient: SqlClientShape = {
+    organizationId: OrganizationId(id),
+    transaction: (effect) => effect.pipe(Effect.provideService(SqlClient, sqlClient)),
+    query: () => Effect.die("Unexpected direct SQL query in unit test"),
+  }
+  return sqlClient
+}
+
+const provideTestLayers = (params: {
+  readonly issue: Signal
+  readonly isEscalating?: boolean
+  readonly signals: SignalEscalationSignals
+  readonly events: OutboxWriteEvent[]
+  readonly openIncident?: AlertIncident | null
+  readonly dwellWrites?: UpdateAlertIncidentExitDwellInput[]
+  readonly projectSettings?: ProjectSettings | null
+  /** Per-bucket occurrence counts + seasonal thresholds for the `startedAt` backtrack on the enter transition. */
+  readonly occurrenceBuckets?: readonly { bucket: string; count: number }[]
+  readonly thresholdBuckets?: readonly { bucket: string; thresholdCount: number }[]
+  readonly escalationSensitivity?: number
+}) => {
+  const { repository: signalRepository, issues } = createFakeSignalRepository([params.issue], undefined, {
+    lifecycle: new Map([[params.issue.id, { isEscalating: params.isEscalating ?? false, isRegressed: false }]]),
+  })
+  const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
+    escalationSignalsBySignals: () => Effect.succeed([params.signals]),
+    histogramBySignals: () => Effect.succeed(params.occurrenceBuckets ?? []),
+    escalationThresholdHistogramBySignals: () =>
+      Effect.succeed([{ signalId: SignalId(signalId), buckets: params.thresholdBuckets ?? [] }]),
+  })
+
+  const dwellWrites = params.dwellWrites ?? []
+  const alertIncidentRepository: AlertIncidentRepositoryShape = {
+    insert: () => Effect.die("insert not used"),
+    findById: () => Effect.die("findById not used"),
+    findOpen: () => Effect.succeed(params.openIncident ?? null),
+    closeOpen: () => Effect.die("closeOpen not used"),
+    listByProjectId: () => Effect.die("listByProjectId not used"),
+    listOpenByKind: () => Effect.die("listOpenByKind not used"),
+    listByMonitorId: () => Effect.die("listByMonitorId not used"),
+    statsByMonitorId: () => Effect.die("statsByMonitorId not used"),
+    listByMonitorAlertId: () => Effect.die("listByMonitorAlertId not used"),
+    updateExitDwell: (input) =>
+      Effect.sync(() => {
+        dwellWrites.push(input)
+      }),
+    findOpenByMonitorAlertId: () => Effect.die("findOpenByMonitorAlertId not used"),
+    existsByMonitorAlertId: () => Effect.die("existsByMonitorAlertId not used"),
+    setEndedAt: () => Effect.die("setEndedAt not used"),
+    closeById: () => Effect.die("closeById not used"),
+  }
+
+  return {
+    dwellWrites,
+    issues,
+    apply: <A, E>(
+      effect: Effect.Effect<
+        A,
+        E,
+        | ScoreAnalyticsRepository
+        | SignalRepository
+        | OutboxEventWriter
+        | SqlClient
+        | ChSqlClient
+        | AlertIncidentRepository
+        | SettingsReader
+      >,
+    ) =>
+      effect.pipe(
+        Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+        Effect.provideService(SignalRepository, signalRepository),
+        Effect.provideService(AlertIncidentRepository, alertIncidentRepository),
+        Effect.provideService(SettingsReader, {
+          getOrganizationSettings: () => Effect.succeed(null),
+          getProjectSettings: () => Effect.succeed(params.projectSettings ?? null),
+        }),
+        Effect.provideService(OutboxEventWriter, {
+          write: (event) =>
+            Effect.sync(() => {
+              params.events.push(event)
+            }),
+        }),
+        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+        Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(organizationId) })),
+      ),
+  }
+}
+
+describe("checkSignalEscalationUseCase", () => {
+  it("emits SignalEscalated with the entry snapshot when both windows cross their bands", async () => {
+    const issue = makeSignal({ createdAt: new Date("2026-04-01T10:00:00.000Z") })
+    const events: OutboxWriteEvent[] = []
+    const { apply } = provideTestLayers({
+      issue,
+      isEscalating: false,
+      signals: makeSignals({ recent1h: 25, recent6h: 150, recent24h: 600 }),
+      events,
+    })
+
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
+
+    expect(result.transition).toBe("entered")
+    expect(result.currentlyEscalating).toBe(true)
+    expect(events).toHaveLength(1)
+    expect(events[0]).toMatchObject({
+      eventName: "SignalEscalated",
+      aggregateType: "issue",
+      aggregateId: signalId,
+      payload: { organizationId, projectId, signalId },
+    })
+    const escalated = events[0]?.payload as { entrySignals: EntrySignalsSnapshot | null }
+    expect(escalated.entrySignals).toMatchObject({ entryCount24h: 600, kShort: 3, kLong: 2 })
+  })
+
+  it("clears resolvedAt when a resolved issue enters escalation", async () => {
+    const resolvedAt = new Date("2026-05-01T10:00:00.000Z")
+    const issue = makeSignal({
+      createdAt: new Date("2026-04-01T10:00:00.000Z"),
+      resolvedAt,
+    })
+    const events: OutboxWriteEvent[] = []
+    const { apply, issues } = provideTestLayers({
+      issue,
+      isEscalating: false,
+      signals: makeSignals({ recent1h: 25, recent6h: 150, recent24h: 600 }),
+      events,
+    })
+
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
+
+    expect(result.transition).toBe("entered")
+    expect(issues.get(issue.id)?.resolvedAt).toBeNull()
+    expect(issues.get(issue.id)?.updatedAt.getTime()).toBeGreaterThan(resolvedAt.getTime())
+    expect(events).toHaveLength(1)
+    expect(events[0]?.eventName).toBe("SignalEscalated")
+  })
+
+  it("backtracks escalatedAt to the first bucket that crossed the seasonal threshold", async () => {
+    const issue = makeSignal({ createdAt: new Date("2026-04-01T10:00:00.000Z") })
+    const events: OutboxWriteEvent[] = []
+    const { apply } = provideTestLayers({
+      issue,
+      isEscalating: false,
+      signals: makeSignals({ recent1h: 25, recent6h: 150, recent24h: 600 }),
+      events,
+      occurrenceBuckets: [
+        { bucket: "2026-05-07T07:00:00.000Z", count: 2 }, // below threshold
+        { bucket: "2026-05-07T08:00:00.000Z", count: 9 }, // first crossing
+        { bucket: "2026-05-07T09:00:00.000Z", count: 12 },
+      ],
+      thresholdBuckets: [
+        { bucket: "2026-05-07T07:00:00.000Z", thresholdCount: 5 },
+        { bucket: "2026-05-07T08:00:00.000Z", thresholdCount: 5 },
+        { bucket: "2026-05-07T09:00:00.000Z", thresholdCount: 5 },
+      ],
+    })
+
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
+
+    expect(result.transition).toBe("entered")
+    const payload = events[0]?.payload as { escalatedAt: string }
+    expect(payload.escalatedAt).toBe("2026-05-07T08:00:00.000Z")
+  })
+
+  it("falls back to the event time when no bucket crossed the threshold", async () => {
+    const issue = makeSignal({ createdAt: new Date("2026-04-01T10:00:00.000Z") })
+    const events: OutboxWriteEvent[] = []
+    const before = Date.now()
+    const { apply } = provideTestLayers({
+      issue,
+      isEscalating: false,
+      signals: makeSignals({ recent1h: 25, recent6h: 150, recent24h: 600 }),
+      events,
+      occurrenceBuckets: [
+        { bucket: "2026-05-07T08:00:00.000Z", count: 2 },
+        { bucket: "2026-05-07T09:00:00.000Z", count: 3 },
+      ],
+      thresholdBuckets: [
+        { bucket: "2026-05-07T08:00:00.000Z", thresholdCount: 5 },
+        { bucket: "2026-05-07T09:00:00.000Z", thresholdCount: 5 },
+      ],
+    })
+
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
+
+    expect(result.transition).toBe("entered")
+    const payload = events[0]?.payload as { escalatedAt: string }
+    // No crossing → the detection time (now), well after the historical buckets.
+    expect(new Date(payload.escalatedAt).getTime()).toBeGreaterThanOrEqual(before)
+  })
+
+  it("uses the supplied escalationSensitivity (system-monitor override) for the entry snapshot", async () => {
+    const issue = makeSignal({ createdAt: new Date("2026-04-01T10:00:00.000Z") })
+    const events: OutboxWriteEvent[] = []
+    const { apply } = provideTestLayers({
+      issue,
+      isEscalating: false,
+      // Strong, mature signal so it clears the band even at the wider k=5 sensitivity.
+      signals: makeSignals({ recent1h: 100, recent6h: 600, recent24h: 2000, samplesCount: 50 }),
+      events,
+    })
+
+    await Effect.runPromise(
+      apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId, escalationSensitivity: 5 })),
+    )
+
+    const escalated = events[0]?.payload as { entrySignals: EntrySignalsSnapshot | null }
+    expect(escalated.entrySignals).toMatchObject({ kShort: 5, kLong: 4 })
+  })
+
+  it("does not transition ignored issues into escalation", async () => {
+    const ignoredAt = new Date("2026-05-01T10:00:00.000Z")
+    const issue = makeSignal({
+      createdAt: new Date("2026-04-01T10:00:00.000Z"),
+      ignoredAt,
+    })
+    const events: OutboxWriteEvent[] = []
+    const { apply, issues } = provideTestLayers({
+      issue,
+      isEscalating: false,
+      signals: makeSignals({ recent1h: 100, recent6h: 600, recent24h: 2400 }),
+      events,
+    })
+
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
+
+    expect(result.transition).toBe("none")
+    expect(result.currentlyEscalating).toBe(false)
+    expect(issues.get(issue.id)?.ignoredAt?.getTime()).toBe(ignoredAt.getTime())
+    expect(events).toHaveLength(0)
+  })
+
+  it("does not emit SignalEscalated while the issue is still new", async () => {
+    const issue = makeSignal({ createdAt: new Date(Date.now() - 60 * 60 * 1000) })
+    const events: OutboxWriteEvent[] = []
+    const { apply } = provideTestLayers({
+      issue,
+      isEscalating: false,
+      signals: makeSignals({ recent1h: 100, recent6h: 600, recent24h: 2400 }),
+      events,
+    })
+
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
+
+    expect(result.transition).toBe("none")
+    expect(result.currentlyEscalating).toBe(false)
+    expect(events).toHaveLength(0)
+  })
+
+  it("starts the dwell tracker and writes it on no-op when the exit shape first holds", async () => {
+    const issue = makeSignal()
+    const events: OutboxWriteEvent[] = []
+    const openIncident = makeOpenIncident({
+      entrySignals: {
+        expected1h: 10,
+        expected6hPerHour: 10,
+        stddev1h: 2,
+        stddev6hPerHour: 2,
+        kShort: 3,
+        kLong: 2,
+        entryThreshold1h: 16,
+        entryThreshold6hPerHour: 14,
+        entryCount24h: 600,
+      },
+      startedAt: new Date(Date.now() - 60 * 60 * 1000),
+      exitEligibleSince: null,
+    })
+    const { apply, dwellWrites } = provideTestLayers({
+      issue,
+      isEscalating: true,
+      signals: makeSignals({ recent1h: 5, recent6h: 30, recent24h: 400 }),
+      events,
+      openIncident,
+    })
+
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
+
+    expect(result.transition).toBe("none")
+    expect(events).toHaveLength(0)
+    expect(dwellWrites).toHaveLength(1)
+    expect(dwellWrites[0]?.exitEligibleSince).toBeInstanceOf(Date)
+  })
+
+  it("emits SignalEscalationEnded with reason='threshold' once the dwell duration is met", async () => {
+    const issue = makeSignal()
+    const events: OutboxWriteEvent[] = []
+    const dwellStart = new Date(Date.now() - ESCALATION_EXIT_DWELL_MS - 1000)
+    const openIncident = makeOpenIncident({
+      entrySignals: {
+        expected1h: 10,
+        expected6hPerHour: 10,
+        stddev1h: 2,
+        stddev6hPerHour: 2,
+        kShort: 3,
+        kLong: 2,
+        entryThreshold1h: 16,
+        entryThreshold6hPerHour: 14,
+        entryCount24h: 600,
+      },
+      startedAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
+      exitEligibleSince: dwellStart,
+    })
+    const { apply } = provideTestLayers({
+      issue,
+      isEscalating: true,
+      signals: makeSignals({ recent1h: 5, recent6h: 30, recent24h: 400 }),
+      events,
+      openIncident,
+    })
+
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
+
+    expect(result.transition).toBe("exited")
+    expect(events).toHaveLength(1)
+    expect(events[0]).toMatchObject({
+      eventName: "SignalEscalationEnded",
+      payload: { reason: "threshold" },
+    })
+  })
+
+  it("backtracks SignalEscalationEnded.endedAt to the last bucket still above the threshold", async () => {
+    const issue = makeSignal()
+    const events: OutboxWriteEvent[] = []
+    const dwellStart = new Date(Date.now() - ESCALATION_EXIT_DWELL_MS - 1000)
+    const openIncident = makeOpenIncident({
+      entrySignals: {
+        expected1h: 10,
+        expected6hPerHour: 10,
+        stddev1h: 2,
+        stddev6hPerHour: 2,
+        kShort: 3,
+        kLong: 2,
+        entryThreshold1h: 16,
+        entryThreshold6hPerHour: 14,
+        entryCount24h: 600,
+      },
+      startedAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
+      exitEligibleSince: dwellStart,
+    })
+    const { apply } = provideTestLayers({
+      issue,
+      isEscalating: true,
+      signals: makeSignals({ recent1h: 5, recent6h: 30, recent24h: 400 }),
+      events,
+      openIncident,
+      occurrenceBuckets: [
+        { bucket: "2026-05-07T07:00:00.000Z", count: 12 }, // crossing
+        { bucket: "2026-05-07T08:00:00.000Z", count: 9 }, // last crossing — escalation subsided after this
+        { bucket: "2026-05-07T09:00:00.000Z", count: 2 }, // below threshold
+      ],
+      thresholdBuckets: [
+        { bucket: "2026-05-07T07:00:00.000Z", thresholdCount: 5 },
+        { bucket: "2026-05-07T08:00:00.000Z", thresholdCount: 5 },
+        { bucket: "2026-05-07T09:00:00.000Z", thresholdCount: 5 },
+      ],
+    })
+
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
+
+    expect(result.transition).toBe("exited")
+    const payload = events[0]?.payload as { endedAt: string }
+    expect(payload.endedAt).toBe("2026-05-07T08:00:00.000Z") // last crossing bucket, NOT the detection time (now)
+  })
+
+  it("falls back to the event time for endedAt when no bucket crossed in the window", async () => {
+    const issue = makeSignal()
+    const events: OutboxWriteEvent[] = []
+    const before = Date.now()
+    const openIncident = makeOpenIncident({
+      entrySignals: {
+        expected1h: 10,
+        expected6hPerHour: 10,
+        stddev1h: 2,
+        stddev6hPerHour: 2,
+        kShort: 3,
+        kLong: 2,
+        entryThreshold1h: 16,
+        entryThreshold6hPerHour: 14,
+        entryCount24h: 600,
+      },
+      startedAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
+      exitEligibleSince: new Date(Date.now() - ESCALATION_EXIT_DWELL_MS - 1000),
+    })
+    const { apply } = provideTestLayers({
+      issue,
+      isEscalating: true,
+      signals: makeSignals({ recent1h: 5, recent6h: 30, recent24h: 400 }),
+      events,
+      openIncident,
+      occurrenceBuckets: [
+        { bucket: "2026-05-07T08:00:00.000Z", count: 2 },
+        { bucket: "2026-05-07T09:00:00.000Z", count: 3 },
+      ],
+      thresholdBuckets: [
+        { bucket: "2026-05-07T08:00:00.000Z", thresholdCount: 5 },
+        { bucket: "2026-05-07T09:00:00.000Z", thresholdCount: 5 },
+      ],
+    })
+
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
+
+    expect(result.transition).toBe("exited")
+    const payload = events[0]?.payload as { endedAt: string }
+    expect(new Date(payload.endedAt).getTime()).toBeGreaterThanOrEqual(before)
+  })
+
+  it("forwards reason='absolute-rate-drop' when the 24h backstop trips", async () => {
+    const issue = makeSignal()
+    const events: OutboxWriteEvent[] = []
+    const openIncident = makeOpenIncident({
+      entrySignals: {
+        expected1h: 10,
+        expected6hPerHour: 10,
+        stddev1h: 2,
+        stddev6hPerHour: 2,
+        kShort: 3,
+        kLong: 2,
+        entryThreshold1h: 16,
+        entryThreshold6hPerHour: 14,
+        entryCount24h: 600,
+      },
+      startedAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
+    })
+    const { apply } = provideTestLayers({
+      issue,
+      isEscalating: true,
+      // 24h count well below entryCount24h * 0.5 = 300; bands still elevated.
+      signals: makeSignals({ recent1h: 20, recent6h: 120, recent24h: 100 }),
+      events,
+      openIncident,
+    })
+
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
+
+    expect(result.transition).toBe("exited")
+    expect(events[0]).toMatchObject({
+      eventName: "SignalEscalationEnded",
+      payload: { reason: "absolute-rate-drop" },
+    })
+  })
+
+  it("forwards reason='timeout' once the 72h ceiling is reached", async () => {
+    const issue = makeSignal()
+    const events: OutboxWriteEvent[] = []
+    const openIncident = makeOpenIncident({
+      startedAt: new Date(Date.now() - ESCALATION_MAX_DURATION_MS - 60 * 1000),
+    })
+    const { apply } = provideTestLayers({
+      issue,
+      isEscalating: true,
+      signals: makeSignals({ recent1h: 100, recent6h: 600, recent24h: 2400 }),
+      events,
+      openIncident,
+    })
+
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
+
+    expect(result.transition).toBe("exited")
+    expect(events[0]).toMatchObject({
+      eventName: "SignalEscalationEnded",
+      payload: { reason: "timeout" },
+    })
+  })
+
+  it("uses projectSettings.escalation.sensitivity to widen the band", async () => {
+    // Signals trip the default k=3 (band1h ≈ 19.5) but should not trip k=6 (band1h ≈ 29).
+    const issue = makeSignal({ createdAt: new Date("2026-04-01T10:00:00.000Z") })
+    const events: OutboxWriteEvent[] = []
+    const { apply } = provideTestLayers({
+      issue,
+      isEscalating: false,
+      signals: makeSignals({ recent1h: 25, recent6h: 120, recent24h: 240 }),
+      events,
+      projectSettings: { escalation: { sensitivity: 6 } },
+    })
+
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
+
+    expect(result.transition).toBe("none")
+    expect(events).toHaveLength(0)
+  })
+
+  it("does not re-emit SignalEscalated when already escalating and bands are still crossed", async () => {
+    const issue = makeSignal()
+    const events: OutboxWriteEvent[] = []
+    const openIncident = makeOpenIncident({
+      entrySignals: {
+        expected1h: 10,
+        expected6hPerHour: 10,
+        stddev1h: 2,
+        stddev6hPerHour: 2,
+        kShort: 3,
+        kLong: 2,
+        entryThreshold1h: 16,
+        entryThreshold6hPerHour: 14,
+        entryCount24h: 600,
+      },
+      startedAt: new Date(Date.now() - 60 * 60 * 1000),
+    })
+    const { apply } = provideTestLayers({
+      issue,
+      isEscalating: true,
+      signals: makeSignals({ recent1h: 25, recent6h: 150, recent24h: 600 }),
+      events,
+      openIncident,
+    })
+
+    const result = await Effect.runPromise(apply(checkSignalEscalationUseCase({ organizationId, projectId, signalId })))
+
+    expect(result.transition).toBe("none")
+    expect(result.currentlyEscalating).toBe(true)
+    expect(events).toHaveLength(0)
+  })
+})

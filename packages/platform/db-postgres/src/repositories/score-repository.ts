@@ -1,11 +1,11 @@
 import type { Score, ScoreListOptions, ScoreSource, TraceAnnotationCounts } from "@domain/scores"
-import { ISSUE_FLAGGER_SLUG_SAMPLE_LIMIT, ScoreRepository, scoreSchema } from "@domain/scores"
+import { ScoreRepository, SIGNAL_FLAGGER_SLUG_SAMPLE_LIMIT, scoreSchema } from "@domain/scores"
 import {
-  type IssueId,
   NotFoundError,
   type ProjectId,
   type ScoreId,
   type SessionId,
+  type SignalId,
   type SpanId,
   SqlClient,
   type SqlClientShape,
@@ -44,7 +44,7 @@ const toDomainScore = (row: typeof scores.$inferSelect): Score =>
     source: row.source,
     sourceId: row.sourceId,
     simulationId: row.simulationId,
-    issueId: row.issueId,
+    signalId: row.signalId,
     value: row.value,
     passed: row.passed,
     feedback: row.feedback,
@@ -70,7 +70,7 @@ const toInsertRow = (score: Score): typeof scores.$inferInsert => ({
   source: score.source,
   sourceId: score.sourceId,
   simulationId: score.simulationId,
-  issueId: score.issueId,
+  signalId: score.signalId,
   value: score.value,
   passed: score.passed,
   feedback: score.feedback,
@@ -241,7 +241,7 @@ export const ScoreRepositoryLive = Layer.effect(
                     traceId: row.traceId,
                     spanId: row.spanId,
                     simulationId: row.simulationId,
-                    issueId: row.issueId,
+                    signalId: row.signalId,
                     value: row.value,
                     passed: row.passed,
                     feedback: row.feedback,
@@ -276,7 +276,7 @@ export const ScoreRepositoryLive = Layer.effect(
           })
         }),
 
-      assignIssueIfUnowned: ({ scoreId, issueId, updatedAt }) =>
+      assignSignalIfUnowned: ({ scoreId, signalId, updatedAt }) =>
         Effect.gen(function* () {
           const sqlClient = yield* resolveSqlClient()
           return yield* sqlClient
@@ -284,10 +284,10 @@ export const ScoreRepositoryLive = Layer.effect(
               db
                 .update(scores)
                 .set({
-                  issueId,
+                  signalId,
                   updatedAt,
                 })
-                .where(and(eq(scores.organizationId, organizationId), eq(scores.id, scoreId), isNull(scores.issueId)))
+                .where(and(eq(scores.organizationId, organizationId), eq(scores.id, scoreId), isNull(scores.signalId)))
                 .returning({ id: scores.id }),
             )
             .pipe(Effect.map((rows) => rows.length > 0))
@@ -476,24 +476,24 @@ export const ScoreRepositoryLive = Layer.effect(
           options,
         }),
 
-      listByIssueId: ({
+      listBySignalId: ({
         projectId,
-        issueId,
+        signalId,
         source,
         options,
       }: {
         readonly projectId: ProjectId
-        readonly issueId: IssueId
+        readonly signalId: SignalId
         readonly source?: ScoreSource
         readonly options?: ScoreListOptions
       }) => {
-        const filters: SQL[] = [eq(scores.projectId, projectId), eq(scores.issueId, issueId as string)]
+        const filters: SQL[] = [eq(scores.projectId, projectId), eq(scores.signalId, signalId as string)]
         if (source !== undefined) filters.push(eq(scores.source, source))
         // `filters` always carries the project + issue conditions, so
         // `and(...)` never returns undefined here — assert for the
         // narrower drizzle signature on `baseWhere`.
         const baseWhere = and(...filters)
-        if (baseWhere === undefined) throw new Error("unreachable: listByIssueId built no filters")
+        if (baseWhere === undefined) throw new Error("unreachable: listBySignalId built no filters")
         return list({ baseWhere, options })
       },
 
@@ -529,12 +529,12 @@ export const ScoreRepositoryLive = Layer.effect(
             .pipe(Effect.map((rows) => (rows[0] ? toDomainScore(rows[0]) : null)))
         }),
 
-      listFlaggerSlugsByIssueId: ({
+      listFlaggerSlugsBySignalId: ({
         projectId,
-        issueId,
+        signalId,
       }: {
         readonly projectId: ProjectId
-        readonly issueId: IssueId
+        readonly signalId: SignalId
       }) =>
         Effect.gen(function* () {
           const sqlClient = yield* resolveSqlClient()
@@ -542,7 +542,7 @@ export const ScoreRepositoryLive = Layer.effect(
             .query((db, organizationId) => {
               // Recent-N sample of the issue's published SYSTEM annotation occurrences that
               // carry a `flaggerSlug` in their metadata. Bounded by the domain-level
-              // `ISSUE_FLAGGER_SLUG_SAMPLE_LIMIT` so the fake repo applies the same cap.
+              // `SIGNAL_FLAGGER_SLUG_SAMPLE_LIMIT` so the fake repo applies the same cap.
               const recent = db
                 .select({
                   slug: sql<string>`${scores.metadata}->>'flaggerSlug'`.as("slug"),
@@ -553,7 +553,7 @@ export const ScoreRepositoryLive = Layer.effect(
                   and(
                     eq(scores.organizationId, organizationId),
                     eq(scores.projectId, projectId),
-                    eq(scores.issueId, issueId as string),
+                    eq(scores.signalId, signalId as string),
                     eq(scores.source, "annotation"),
                     eq(scores.sourceId, "SYSTEM"),
                     isNull(scores.draftedAt),
@@ -561,7 +561,7 @@ export const ScoreRepositoryLive = Layer.effect(
                   ),
                 )
                 .orderBy(desc(scores.createdAt))
-                .limit(ISSUE_FLAGGER_SLUG_SAMPLE_LIMIT)
+                .limit(SIGNAL_FLAGGER_SLUG_SAMPLE_LIMIT)
                 .as("recent")
 
               // Collapse to distinct slugs, ordered by most-recently-firing flagger first.

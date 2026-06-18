@@ -36,7 +36,7 @@ export interface UpdateTaxonomyCentroidInput {
 
 /**
  * Apply a single observation contribution to a cluster centroid. Same running
- * decayed-sum math as `updateIssueCentroid`, delegated through the shared
+ * decayed-sum math as `updateSignalCentroid`, delegated through the shared
  * `@domain/shared/centroid` primitive.
  */
 export const updateTaxonomyCentroid = ({

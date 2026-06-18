@@ -1,9 +1,9 @@
 import { hashOptimizationCandidateText } from "@domain/optimizations"
-import { EvaluationId, IssueId, ProjectId } from "@domain/shared"
+import { EvaluationId, ProjectId, SignalId } from "@domain/shared"
 import { Effect } from "effect"
 import type { LoadedEvaluationAlignmentState } from "../../alignment/types.ts"
 import { isArchivedEvaluation, isDeletedEvaluation } from "../../helpers.ts"
-import { EvaluationIssueRepository } from "../../ports/evaluation-issue-repository.ts"
+import { EvaluationSignalRepository } from "../../ports/evaluation-issue-repository.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
 
 export type LoadAlignmentStateOrInactiveResult =
@@ -46,15 +46,15 @@ export const loadAlignmentStateOrInactiveUseCase = Effect.fn("evaluations.loadAl
   function* (input: {
     readonly organizationId: string
     readonly projectId: string
-    readonly issueId: string
+    readonly signalId: string
     readonly evaluationId: string
   }) {
     yield* Effect.annotateCurrentSpan("evaluation.id", input.evaluationId)
     yield* Effect.annotateCurrentSpan("evaluation.projectId", input.projectId)
-    yield* Effect.annotateCurrentSpan("evaluation.issueId", input.issueId)
+    yield* Effect.annotateCurrentSpan("evaluation.signalId", input.signalId)
 
     const evaluationRepository = yield* EvaluationRepository
-    const issueRepository = yield* EvaluationIssueRepository
+    const signalRepository = yield* EvaluationSignalRepository
     const evaluation = yield* evaluationRepository
       .findById(EvaluationId(input.evaluationId))
       .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
@@ -67,20 +67,20 @@ export const loadAlignmentStateOrInactiveUseCase = Effect.fn("evaluations.loadAl
       return { status: "inactive" } as LoadAlignmentStateOrInactiveResult
     }
 
-    if (evaluation.projectId !== ProjectId(input.projectId) || evaluation.issueId !== IssueId(input.issueId)) {
+    if (evaluation.projectId !== ProjectId(input.projectId) || evaluation.signalId !== SignalId(input.signalId)) {
       return { status: "inactive" } as LoadAlignmentStateOrInactiveResult
     }
 
-    const issue = yield* issueRepository.findById(IssueId(input.issueId))
+    const issue = yield* signalRepository.findById(SignalId(input.signalId))
     const currentScriptHash = yield* Effect.tryPromise(() => hashOptimizationCandidateText(evaluation.script))
 
     return {
       status: "active",
       state: {
         evaluationId: evaluation.id,
-        issueId: evaluation.issueId,
-        issueName: issue.name,
-        issueDescription: issue.description,
+        signalId: evaluation.signalId,
+        signalName: issue.name,
+        signalDescription: issue.description,
         name: evaluation.name,
         description: evaluation.description,
         alignedAt: evaluation.alignedAt.toISOString(),

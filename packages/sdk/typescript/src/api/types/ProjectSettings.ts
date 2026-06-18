@@ -6,7 +6,7 @@ import type * as LatitudeApi from "../index.js";
  * Per-project settings overrides. `null` means inherit from the organization.
  */
 export interface ProjectSettings {
-    /** When `true`, the evaluation linked to an issue keeps running after the issue is resolved. When `false`, resolving the issue stops the evaluation. Defaults to `true` when omitted. */
+    /** When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted. */
     keepMonitoring?: boolean | undefined;
     notifications?: LatitudeApi.NotificationsSetting | undefined;
     escalation?: LatitudeApi.EscalationSetting | undefined;

@@ -1,10 +1,10 @@
 import type {
-  IssueId,
   NotFoundError,
   ProjectId,
   RepositoryError,
   ScoreId,
   SessionId,
+  SignalId,
   SpanId,
   SqlClient,
   TraceId,
@@ -38,9 +38,9 @@ export interface TraceAnnotationCounts {
 export interface ScoreRepositoryShape {
   findById(id: ScoreId): Effect.Effect<Score, NotFoundError | RepositoryError, SqlClient>
   save(score: Score): Effect.Effect<void, RepositoryError, SqlClient>
-  assignIssueIfUnowned(input: {
+  assignSignalIfUnowned(input: {
     readonly scoreId: ScoreId
-    readonly issueId: IssueId
+    readonly signalId: SignalId
     readonly updatedAt: Date
   }): Effect.Effect<boolean, RepositoryError, SqlClient>
   delete(id: ScoreId): Effect.Effect<void, RepositoryError, SqlClient>
@@ -107,9 +107,9 @@ export interface ScoreRepositoryShape {
     readonly spanId: SpanId
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
-  listByIssueId(input: {
+  listBySignalId(input: {
     readonly projectId: ProjectId
-    readonly issueId: IssueId
+    readonly signalId: SignalId
     /** Optional filter by score source (e.g. `annotation` or `evaluation`). */
     readonly source?: ScoreSource
     readonly options?: ScoreListOptions
@@ -126,14 +126,14 @@ export interface ScoreRepositoryShape {
    * the most-recently-firing flagger first.
    *
    * Implementations sample the most-recent
-   * `ISSUE_FLAGGER_SLUG_SAMPLE_LIMIT` annotation occurrences on the issue
+   * `SIGNAL_FLAGGER_SLUG_SAMPLE_LIMIT` annotation occurrences on the issue
    * before collapsing to distinct slugs — slug variety converges fast, so
    * this keeps the scan cheap for noisy issues (same sampling rationale as
-   * `aggregateTagsByIssues` in the CH analytics path).
+   * `aggregateTagsBySignals` in the CH analytics path).
    */
-  listFlaggerSlugsByIssueId(input: {
+  listFlaggerSlugsBySignalId(input: {
     readonly projectId: ProjectId
-    readonly issueId: IssueId
+    readonly signalId: SignalId
   }): Effect.Effect<readonly string[], RepositoryError, SqlClient>
 }
 

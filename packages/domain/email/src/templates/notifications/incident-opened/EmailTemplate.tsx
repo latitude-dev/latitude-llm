@@ -1,4 +1,3 @@
-import type { IssuePriority } from "@domain/issues"
 import type { IncidentBreach, IncidentSampleExcerpt } from "@domain/notifications"
 import {
   ALERT_INCIDENT_KIND_LABEL,
@@ -6,6 +5,7 @@ import {
   type AlertIncidentKind,
   type AlertSeverity,
 } from "@domain/shared"
+import type { SignalPriority } from "@domain/signals"
 import { Section } from "@react-email/components"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
@@ -20,14 +20,14 @@ import {
   formatRatePerHour,
   formatScope,
   IncidentTrendChartImage,
-  IssueIdFooter,
-  IssueTimestamp,
   MonitorAttribution,
   type MonitorAttributionInfo,
   PriorityBadge,
   SampleExcerptCard,
   SectionHeader,
   SeverityBadge,
+  SignalIdFooter,
+  SignalTimestamp,
   TagsChips,
 } from "../-incident-components.tsx"
 
@@ -37,13 +37,13 @@ interface IncidentOpenedEmailProps {
   readonly sourceId: string
   readonly sourceName: string
   readonly description: string | undefined
-  readonly issueUrl: string | undefined
+  readonly signalUrl: string | undefined
   readonly chartUrl: string
   readonly notificationCreatedAt: Date
   readonly organizationName: string
   readonly projectName: string | undefined
-  /** Issue triage snapshot at incident time; absent on legacy payloads and saved-search sources. */
-  readonly priority: IssuePriority | undefined
+  /** Signal triage snapshot at incident time; absent on legacy payloads and saved-search sources. */
+  readonly priority: SignalPriority | undefined
   /** Live-resolved assignee display name; absent when unassigned or unresolvable. */
   readonly assigneeName: string | undefined
   readonly tags: readonly string[] | undefined
@@ -71,7 +71,7 @@ export function IncidentOpenedEmail({
   sourceId,
   sourceName,
   description,
-  issueUrl,
+  signalUrl,
   chartUrl,
   notificationCreatedAt,
   organizationName,
@@ -88,10 +88,10 @@ export function IncidentOpenedEmail({
   const heading = ALERT_INCIDENT_KIND_LABEL[incidentKind]
   const subtitle = isSavedSearch
     ? "We notified everyone watching this project — traces matching the search stayed above the threshold for the configured window."
-    : "We notified everyone watching this project — an ongoing issue is being detected more than expected."
+    : "We notified everyone watching this project — an ongoing signal is being detected more than expected."
   const scope = formatScope(organizationName, projectName)
   const breachLine = buildBreachLine(breach)
-  const ctaHref = isSavedSearch ? monitor?.url : issueUrl
+  const ctaHref = isSavedSearch ? monitor?.url : signalUrl
 
   const metadataRows = [
     { label: "Project", value: scope },
@@ -113,7 +113,7 @@ export function IncidentOpenedEmail({
 
       <MonitorAttribution monitor={monitor} />
 
-      <SectionHeader label={isSavedSearch ? "Saved search" : "Issue"} />
+      <SectionHeader label={isSavedSearch ? "Saved search" : "Signal"} />
       <EmailText variant="heading">{sourceName}</EmailText>
       {description ? (
         <EmailText variant="bodySmall" className="text-muted-foreground">
@@ -121,7 +121,7 @@ export function IncidentOpenedEmail({
         </EmailText>
       ) : null}
 
-      <IssueTimestamp timestamp={notificationCreatedAt} />
+      <SignalTimestamp timestamp={notificationCreatedAt} />
 
       <EmailMetadataTable rows={metadataRows} />
 
@@ -135,13 +135,13 @@ export function IncidentOpenedEmail({
           ) : null}
           <IncidentTrendChartImage src={chartUrl} />
           {sampleExcerpt ? <SampleExcerptCard excerpt={sampleExcerpt} /> : null}
-          <IssueIdFooter issueId={sourceId} />
+          <SignalIdFooter signalId={sourceId} />
         </>
       )}
 
       {ctaHref ? (
         <Section className={emailDesignTokens.spacing.buttonTop}>
-          <EmailButton href={ctaHref} label={isSavedSearch ? "View monitor" : "View issue"} />
+          <EmailButton href={ctaHref} label={isSavedSearch ? "View monitor" : "View signal"} />
         </Section>
       ) : null}
     </ContainerLayout>
@@ -154,7 +154,7 @@ IncidentOpenedEmail.PreviewProps = {
   sourceId: "dds0rt8sqgpuku4u4wabze9r",
   sourceName: "Token leakage in responses",
   description: "Agent occasionally echoes API keys or PII back to the user when summarising prior tool outputs.",
-  issueUrl: "https://console.latitude.so/projects/sample-project/issues/preview-issue",
+  signalUrl: "https://console.latitude.so/projects/sample-project/issues/preview-issue",
   chartUrl: "https://placehold.co/600x200/dbe5ff/3b5bff?text=Trend+chart",
   notificationCreatedAt: new Date("2026-03-18T10:05:00Z"),
   organizationName: "Acme Inc.",
@@ -169,9 +169,9 @@ IncidentOpenedEmail.PreviewProps = {
     author: { kind: "evaluation", name: "warranty-judge" },
   },
   monitor: {
-    name: "Issue escalating",
+    name: "Signal escalating",
     url: "https://console.latitude.so/projects/sample-project/monitors?monitorSlug=issue-escalating",
-    conditionSummary: "Opens an incident when an ongoing issue is being detected more than expected.",
+    conditionSummary: "Opens an incident when an ongoing signal is being detected more than expected.",
   },
   webAppUrl: "http://localhost:3000",
 } satisfies IncidentOpenedEmailProps

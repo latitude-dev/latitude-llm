@@ -124,7 +124,7 @@ describe("MonitorRepositoryLive", () => {
         makeMonitorRow({
           id: systemId,
           slug: "issue-discovered",
-          name: "Issue discovered",
+          name: "Signal discovered",
           system: true,
           createdAt: new Date("2026-05-27T10:00:00.000Z"),
         }),
@@ -150,7 +150,7 @@ describe("MonitorRepositoryLive", () => {
       const olderAlertId = generateId()
 
       await database.db.insert(monitorsTable).values([
-        makeMonitorRow({ id: systemId, slug: "issue-discovered", name: "Issue discovered", system: true }),
+        makeMonitorRow({ id: systemId, slug: "issue-discovered", name: "Signal discovered", system: true }),
         makeMonitorRow({
           id: noIncidentId,
           slug: "no-incident",
@@ -261,19 +261,19 @@ describe("MonitorRepositoryLive", () => {
       await database.db
         .insert(monitorsTable)
         .values([
-          makeMonitorRow({ id: generateId(), slug: "production-issues", name: "Production issues" }),
+          makeMonitorRow({ id: generateId(), slug: "production-signals", name: "Production signals" }),
           makeMonitorRow({ id: generateId(), slug: "5xx-spikes", name: "5xx spikes" }),
-          makeMonitorRow({ id: generateId(), slug: "low-issues", name: "Login issues" }),
+          makeMonitorRow({ id: generateId(), slug: "low-signals", name: "Login signals" }),
         ])
 
       const result = await Effect.runPromise(
         Effect.gen(function* () {
           const repository = yield* MonitorRepository
-          return yield* repository.list({ projectId, limit: 50, offset: 0, searchQuery: "ISSUES" })
+          return yield* repository.list({ projectId, limit: 50, offset: 0, searchQuery: "SIGNALS" })
         }).pipe(provideRls(database, organizationId)),
       )
 
-      expect(result.items.map((m) => m.name).sort()).toEqual(["Login issues", "Production issues"])
+      expect(result.items.map((m) => m.name).sort()).toEqual(["Login signals", "Production signals"])
       expect(result.totalCount).toBe(2)
     })
 
@@ -285,7 +285,7 @@ describe("MonitorRepositoryLive", () => {
         .insert(monitorsTable)
         .values([
           makeMonitorRow({ id: userId, slug: "user-monitor", name: "User monitor" }),
-          makeMonitorRow({ id: systemId, slug: "issue-discovered", name: "Issue discovered", system: true }),
+          makeMonitorRow({ id: systemId, slug: "issue-discovered", name: "Signal discovered", system: true }),
         ])
 
       const result = await Effect.runPromise(
@@ -445,7 +445,7 @@ describe("MonitorRepositoryLive", () => {
       const monitorId = generateId()
       await database.db
         .insert(monitorsTable)
-        .values(makeMonitorRow({ id: monitorId, slug: "issue-discovered", name: "Issue discovered" }))
+        .values(makeMonitorRow({ id: monitorId, slug: "issue-discovered", name: "Signal discovered" }))
       await database.db
         .insert(monitorAlertsTable)
         .values([makeAlertRow({ id: generateId(), monitorId, kind: "issue.new", sourceType: "issue", sourceId: null })])
@@ -550,17 +550,17 @@ describe("MonitorRepositoryLive", () => {
 
     // Mirrors SYSTEM_MONITOR_DEFINITIONS materialised by the provision use-case.
     const systemMonitors = (): Monitor[] => [
-      makeSystemMonitor("issue-discovered", "Issue discovered", {
+      makeSystemMonitor("issue-discovered", "Signal discovered", {
         kind: "issue.new",
         severity: "medium",
         condition: null,
       }),
-      makeSystemMonitor("issue-regressed", "Issue regressed", {
+      makeSystemMonitor("issue-regressed", "Signal regressed", {
         kind: "issue.regressed",
         severity: "high",
         condition: null,
       }),
-      makeSystemMonitor("issue-escalating", "Issue escalating", {
+      makeSystemMonitor("issue-escalating", "Signal escalating", {
         kind: "issue.escalating",
         severity: "high",
         condition: { kind: "issue.escalating", sensitivity: 3 },
@@ -647,12 +647,12 @@ describe("MonitorRepositoryLive", () => {
     }
 
     const systemMonitors = (target: ProjectId = projectId): Monitor[] => [
-      makeSystemMonitor(target, "issue-discovered", "Issue discovered", {
+      makeSystemMonitor(target, "issue-discovered", "Signal discovered", {
         kind: "issue.new",
         severity: "medium",
         condition: null,
       }),
-      makeSystemMonitor(target, "issue-escalating", "Issue escalating", {
+      makeSystemMonitor(target, "issue-escalating", "Signal escalating", {
         kind: "issue.escalating",
         severity: "high",
         condition: { kind: "issue.escalating", sensitivity: 3 },
@@ -710,8 +710,8 @@ describe("MonitorRepositoryLive", () => {
       expect(after.totalCount).toBe(2)
       const resetEscalating = after.items.find((m) => m.slug === "issue-escalating")
       expect(resetEscalating?.id).toBe(escalating?.id) // upsert keeps the existing row
-      expect(resetEscalating?.name).toBe("Issue escalating")
-      expect(resetEscalating?.description).toBe("Issue escalating description")
+      expect(resetEscalating?.name).toBe("Signal escalating")
+      expect(resetEscalating?.description).toBe("Signal escalating description")
       expect(resetEscalating?.alerts.length).toBe(1) // old alert soft-deleted, fresh one inserted
       expect(resetEscalating?.alerts[0]).toMatchObject({ condition: { kind: "issue.escalating", sensitivity: 3 } })
     })
@@ -1012,7 +1012,7 @@ describe("MonitorRepositoryLive", () => {
   })
 
   describe("listActiveAlertsForSourceEvent", () => {
-    const issueId = "i".repeat(24)
+    const signalId = "i".repeat(24)
 
     const resolve = (input: { kind: MonitorAlert["kind"]; sourceId: string }) =>
       Effect.runPromise(
@@ -1055,7 +1055,7 @@ describe("MonitorRepositoryLive", () => {
         }),
       )
 
-      const result = await resolve({ kind: "issue.new", sourceId: issueId })
+      const result = await resolve({ kind: "issue.new", sourceId: signalId })
       expect(result).toHaveLength(1)
       expect(result[0]?.kind).toBe("issue.new")
       expect(result[0]?.source).toEqual({ type: "issue", id: null })
@@ -1085,7 +1085,7 @@ describe("MonitorRepositoryLive", () => {
           makeAlertRow({ id: generateId(), monitorId: gone, kind: "issue.new", sourceType: "issue", sourceId: null }),
         )
 
-      expect(await resolve({ kind: "issue.new", sourceId: issueId })).toEqual([])
+      expect(await resolve({ kind: "issue.new", sourceId: signalId })).toEqual([])
     })
 
     it("matches a named-source alert only for its own source id", async () => {
@@ -1097,11 +1097,11 @@ describe("MonitorRepositoryLive", () => {
           monitorId: monitor,
           kind: "issue.new",
           sourceType: "issue",
-          sourceId: issueId,
+          sourceId: signalId,
         }),
       )
 
-      expect(await resolve({ kind: "issue.new", sourceId: issueId })).toHaveLength(1)
+      expect(await resolve({ kind: "issue.new", sourceId: signalId })).toHaveLength(1)
       expect(await resolve({ kind: "issue.new", sourceId: "z".repeat(24) })).toEqual([])
     })
   })

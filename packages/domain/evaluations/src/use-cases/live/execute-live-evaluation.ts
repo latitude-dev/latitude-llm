@@ -8,10 +8,10 @@ import { LiveEvaluationExecutionError } from "../../errors.ts"
 import {
   type EvaluationExecutionResult,
   type EvaluationExecutionResultPayload,
-  type EvaluationIssueContext,
+  type EvaluationSignalContext,
   evaluationExecutionResultPayloadSchema,
   evaluationExecutionResultSchema,
-  evaluationIssueContextSchema,
+  evaluationSignalContextSchema,
   executeEvaluationScriptWithAI,
   toEvaluationConversationMessages,
   toEvaluationExecutionResult,
@@ -24,8 +24,8 @@ export type ExecuteLiveEvaluationError = AIError | AICredentialError | LiveEvalu
 const INVALID_LIVE_EVALUATION_SCRIPT_MESSAGE =
   "Stored evaluation script is not executable by the MVP live evaluation runtime"
 
-export const liveEvaluationIssueContextSchema = evaluationIssueContextSchema
-export type LiveEvaluationIssueContext = EvaluationIssueContext
+export const liveEvaluationSignalContextSchema = evaluationSignalContextSchema
+export type LiveEvaluationSignalContext = EvaluationSignalContext
 
 export const liveEvaluationConversationInputSchema = traceDetailSchema.shape.allMessages
 export type LiveEvaluationConversationInput = TraceDetail["allMessages"]
@@ -50,7 +50,7 @@ export type LiveEvaluationRuntime = z.infer<typeof liveEvaluationRuntimeSchema>
 export const liveEvaluationExecutionInputSchema = z.object({
   evaluationId: evaluationSchema.shape.id,
   script: evaluationSchema.shape.script,
-  issue: liveEvaluationIssueContextSchema,
+  issue: liveEvaluationSignalContextSchema,
   conversation: liveEvaluationConversationInputSchema,
   telemetry: liveEvaluationExecutionTelemetrySchema.optional(),
   runtime: liveEvaluationRuntimeSchema.optional(),

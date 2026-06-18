@@ -3,14 +3,14 @@ import type * as activities from "../activities/index.ts"
 import { runWithLockRetry } from "./lock-retry.ts"
 import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 
-const { checkEligibility, embedScoreFeedback, assignOrCreateIssue, syncScoreAnalytics } = proxyActivities<
+const { checkEligibility, embedScoreFeedback, assignOrCreateSignal, syncScoreAnalytics } = proxyActivities<
   typeof activities
 >({
   startToCloseTimeout: "5 minutes",
   retry: defaultActivityRetryPolicy,
 })
 
-export const issueDiscoveryWorkflow = async (input: {
+export const signalDiscoveryWorkflow = async (input: {
   readonly organizationId: string
   readonly projectId: string
   readonly scoreId: string
@@ -23,7 +23,7 @@ export const issueDiscoveryWorkflow = async (input: {
   const embeddedScoreFeedback = await embedScoreFeedback(input)
 
   const result = await runWithLockRetry(() =>
-    assignOrCreateIssue({
+    assignOrCreateSignal({
       organizationId: input.organizationId,
       projectId: input.projectId,
       scoreId: input.scoreId,
@@ -49,6 +49,6 @@ export const issueDiscoveryWorkflow = async (input: {
 
   return {
     action: result.assignment.action,
-    issueId: result.assignment.issueId,
+    signalId: result.assignment.signalId,
   }
 }
