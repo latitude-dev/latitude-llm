@@ -1216,7 +1216,7 @@
             "minLength": 24,
             "maxLength": 24,
             "default": null,
-            "description": "Pre-selected issue this annotation belongs to. Leave `null` (default) to let the automatic issue-discovery pipeline route the annotation."
+            "description": "Pre-selected signal this annotation belongs to. Leave `null` (default) to let the automatic signal-discovery pipeline route the annotation."
           },
           "value": {
             "type": "number",
@@ -3551,7 +3551,7 @@
                 "ignored"
               ]
             },
-            "description": "Active lifecycle states. An signal may carry multiple states at once (e.g. `escalating` + `ongoing`)."
+            "description": "Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`)."
           },
           "resolvedAt": {
             "type": [
@@ -3838,7 +3838,7 @@
                 "ignored"
               ]
             },
-            "description": "Active lifecycle states. An signal may carry multiple states at once (e.g. `escalating` + `ongoing`)."
+            "description": "Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`)."
           },
           "resolvedAt": {
             "type": [
@@ -4359,7 +4359,7 @@
               "issue",
               "savedSearch"
             ],
-            "description": "Kind of entity that triggered the incident. `issue` for issue-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a search."
+            "description": "Kind of entity that triggered the incident. `issue` for signal-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a search."
           },
           "sourceId": {
             "type": "string",
@@ -4380,7 +4380,7 @@
               "metric.threshold",
               "metric.escalating"
             ],
-            "description": "Reason the incident opened. `issue.new` fires when a new issue is discovered; `issue.regressed` when a resolved issue is detected again; `issue.escalating` when an ongoing issue is being detected more than expected. The `savedSearch.*` kinds are raised by monitors watching a search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when matching traces are detected above a configured threshold, and `savedSearch.escalating` when they stay above the threshold for a sustained window."
+            "description": "Reason the incident opened. `issue.new` fires when a new signal is discovered; `issue.regressed` when a resolved signal is detected again; `issue.escalating` when an ongoing signal is being detected more than expected. The `savedSearch.*` kinds are raised by monitors watching a search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when matching traces are detected above a configured threshold, and `savedSearch.escalating` when they stay above the threshold for a sustained window."
           },
           "severity": {
             "type": "string",
@@ -4497,7 +4497,7 @@
                 "enum": [
                   "issue.escalating"
                 ],
-                "description": "System issue-escalation alert; only `sensitivity` is tunable."
+                "description": "System signal-escalation alert; only `sensitivity` is tunable."
               },
               "sensitivity": {
                 "type": "integer",
@@ -6250,7 +6250,7 @@
                     "enum": [
                       "issue.escalating"
                     ],
-                    "description": "System issue-escalation alert; only `sensitivity` is tunable."
+                    "description": "System signal-escalation alert; only `sensitivity` is tunable."
                   },
                   "sensitivity": {
                     "type": "integer",
@@ -6414,7 +6414,7 @@
                     "enum": [
                       "issue.escalating"
                     ],
-                    "description": "System issue-escalation alert; only `sensitivity` is tunable."
+                    "description": "System signal-escalation alert; only `sensitivity` is tunable."
                   },
                   "sensitivity": {
                     "type": "integer",
@@ -6431,7 +6431,7 @@
                 "type": "null"
               }
             ],
-            "description": "Replace the alert's configuration. On system monitors this is the only editable field (e.g. issue-escalation `sensitivity`)."
+            "description": "Replace the alert's configuration. On system monitors this is the only editable field (e.g. signal-escalation `sensitivity`)."
           },
           "severity": {
             "type": "string",
@@ -6499,7 +6499,7 @@
               "issue",
               "savedSearch"
             ],
-            "description": "Kind of entity that triggered the incident. `issue` for issue-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a search."
+            "description": "Kind of entity that triggered the incident. `issue` for signal-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a search."
           },
           "sourceId": {
             "type": "string",
@@ -6520,7 +6520,7 @@
               "metric.threshold",
               "metric.escalating"
             ],
-            "description": "Reason the incident opened. `issue.new` fires when a new issue is discovered; `issue.regressed` when a resolved issue is detected again; `issue.escalating` when an ongoing issue is being detected more than expected. The `savedSearch.*` kinds are raised by monitors watching a search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when matching traces are detected above a configured threshold, and `savedSearch.escalating` when they stay above the threshold for a sustained window."
+            "description": "Reason the incident opened. `issue.new` fires when a new signal is discovered; `issue.regressed` when a resolved signal is detected again; `issue.escalating` when an ongoing signal is being detected more than expected. The `savedSearch.*` kinds are raised by monitors watching a search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when matching traces are detected above a configured threshold, and `savedSearch.escalating` when they stay above the threshold for a sustained window."
           },
           "severity": {
             "type": "string",

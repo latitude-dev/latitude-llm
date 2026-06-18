@@ -32,7 +32,7 @@ class MonitorIncident(UniversalBaseModel):
         pydantic.Field()
     )
     """
-    Kind of entity that triggered the incident. `issue` for issue-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a search.
+    Kind of entity that triggered the incident. `issue` for signal-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a search.
     """
 
     source_id: typing_extensions.Annotated[str, FieldMetadata(alias="sourceId")] = pydantic.Field()
@@ -42,7 +42,7 @@ class MonitorIncident(UniversalBaseModel):
 
     kind: MonitorIncidentKind = pydantic.Field()
     """
-    Reason the incident opened. `issue.new` fires when a new issue is discovered; `issue.regressed` when a resolved issue is detected again; `issue.escalating` when an ongoing issue is being detected more than expected. The `savedSearch.*` kinds are raised by monitors watching a search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when matching traces are detected above a configured threshold, and `savedSearch.escalating` when they stay above the threshold for a sustained window.
+    Reason the incident opened. `issue.new` fires when a new signal is discovered; `issue.regressed` when a resolved signal is detected again; `issue.escalating` when an ongoing signal is being detected more than expected. The `savedSearch.*` kinds are raised by monitors watching a search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when matching traces are detected above a configured threshold, and `savedSearch.escalating` when they stay above the threshold for a sustained window.
     """
 
     severity: MonitorIncidentSeverity = pydantic.Field()

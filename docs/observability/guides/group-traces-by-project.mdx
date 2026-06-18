@@ -7,9 +7,9 @@ description: Keep issue detection scoped to the right agent by routing traces in
 
 Latitude runs issue detection across all traces inside a project. That is the right default when one project represents one agent, application, or product surface.
 
-If the same workspace receives traces from multiple unrelated agents, their failure modes can mix together. For example, a customer-support agent and a code-review agent should usually not share issue discovery, because frustration, tool failures, refusals, or hallucinations mean different things in each context.
+If the same workspace receives traces from multiple unrelated agents, their failure modes can mix together. For example, a customer-support agent and a code-review agent should usually not share signal discovery, because frustration, tool failures, refusals, or hallucinations mean different things in each context.
 
-The best way to keep issue discovery clean is to **create one Latitude project per agent or product surface** and route each trace to the right project.
+The best way to keep signal discovery clean is to **create one Latitude project per agent or product surface** and route each trace to the right project.
 
 ## When to split traces into different projects
 
@@ -21,7 +21,7 @@ Use separate projects when agents have different:
 - owners or triage workflows
 - issue detection and evaluation needs
 
-Keep traces in the same project when they belong to the same agent experience and should share issue discovery, search, scores, evaluations, and issue trends.
+Keep traces in the same project when they belong to the same agent experience and should share signal discovery, search, scores, evaluations, and issue trends.
 
 ## How Latitude resolves the project
 
@@ -156,4 +156,4 @@ span.SetAttributes(
 
 Start with one Latitude project per production agent. If one runtime hosts several agents, keep one exporter but set `latitude.project` per agent run through the SDK `capture()` option or an OTEL span attribute.
 
-That keeps search, scores, evaluations, and issue discovery focused on the traces that belong together.
+That keeps search, scores, evaluations, and signal discovery focused on the traces that belong together.

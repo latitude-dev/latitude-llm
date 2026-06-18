@@ -110,8 +110,8 @@ export type {
   RequestSignalAssignedNotificationsInput,
   RequestSignalAssignedNotificationsResult,
   SignalAssignedNotificationRequest,
-} from "./use-cases/request-issue-assigned-notifications.ts"
-export { requestSignalAssignedNotificationsUseCase } from "./use-cases/request-issue-assigned-notifications.ts"
+} from "./use-cases/request-signal-assigned-notifications.ts"
+export { requestSignalAssignedNotificationsUseCase } from "./use-cases/request-signal-assigned-notifications.ts"
 export type {
   RequestWrappedReportNotificationsError,
   RequestWrappedReportNotificationsInput,

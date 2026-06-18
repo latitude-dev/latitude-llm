@@ -25,7 +25,7 @@ Source domain event (IncidentCreated / IncidentClosed / WrappedReady / ...)
   → routed by apps/workers/src/workers/domain-events.ts
      (incidents: forwards a transition hint — "created" / "closed" —
       not a hardcoded notification kind)
-notifications:request-{incident,wrapped-report,issue-assigned}-notifications
+notifications:request-{incident,wrapped-report,signal-assigned}-notifications
   → apps/workers/src/workers/notifications.ts
      – incidents: derive kind from incident.endedAt
        (endedAt = startedAt → incident.event;
@@ -33,7 +33,7 @@ notifications:request-{incident,wrapped-report,issue-assigned}-notifications
         endedAt > startedAt → incident.closed)
      – gate (incidents only): projectSettings.notifications.incidents[alertKind]
      – resolveRecipients (today: all org members)
-     – issue-assigned: single recipient (the new assignee); router +
+     – signal-assigned: single recipient (the new assignee); router +
        producer both skip cleared assignments and self-assignments
      – snapshot trend window (sustained kinds: 3h ending at the
        transition, 18 buckets × 10min, both occurrence counts and

@@ -110,7 +110,7 @@ const getSignalOccurrencesQueryKey = (projectId: string, signalId: string) =>
   ["issue-occurrences", projectId, signalId] as const
 
 const getRelatedSignalsQueryKey = (projectId: string, signalId: string) =>
-  ["related-issues", projectId, signalId] as const
+  ["related-signals", projectId, signalId] as const
 
 const getSignalTracesQueryKey = (projectId: string, signalId: string) => ["issue-traces", projectId, signalId] as const
 

@@ -253,7 +253,7 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
         withTracing,
       ),
 
-    "request-issue-assigned-notifications": (payload) =>
+    "request-signal-assigned-notifications": (payload) =>
       requestSignalAssignedNotificationsUseCase({
         organizationId: OrganizationId(payload.organizationId),
         signalId: SignalId(payload.signalId),
@@ -264,7 +264,7 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
         Effect.flatMap((result) => {
           if (result.status === "skipped") {
             logger.info(
-              `notifications.request-issue-assigned skipped signalId=${payload.signalId} reason=${result.reason}`,
+              `notifications.request-signal-assigned skipped signalId=${payload.signalId} reason=${result.reason}`,
             )
             return Effect.void
           }
@@ -291,7 +291,7 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
         }),
         Effect.tapError((error) =>
           Effect.sync(() =>
-            logger.error(`notifications.request-issue-assigned failed signalId=${payload.signalId}`, error),
+            logger.error(`notifications.request-signal-assigned failed signalId=${payload.signalId}`, error),
           ),
         ),
         withPostgres(requestLayer, pgClient, OrganizationId(payload.organizationId)),

@@ -77,8 +77,8 @@ const formatWindowMinutes = (minutes: number): string => {
 
 const signalSentenceForKind: Record<Extract<AlertIncidentKind, `issue.${string}`>, string> = {
   "issue.new": "Opens an incident each time a new issue is detected.",
-  "issue.regressed": "Opens an incident each time a resolved issue is detected again.",
-  "issue.escalating": "Opens an incident when an ongoing issue is being detected more than expected.",
+  "issue.regressed": "Opens an incident each time a resolved signal is detected again.",
+  "issue.escalating": "Opens an incident when an ongoing signal is being detected more than expected.",
 }
 
 /** The thing being detected is a trace; the saved search (humanised by the caller) scopes which. */

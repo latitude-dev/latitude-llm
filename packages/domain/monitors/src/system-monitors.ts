@@ -25,7 +25,7 @@ export interface SystemMonitorDefinition {
 }
 
 /**
- * The three issue-lifecycle monitors every project is provisioned with. Slug,
+ * The three signal-lifecycle monitors every project is provisioned with. Slug,
  * name and alert structure are fixed (system monitors are structurally locked);
  * only `mutedAt` and the predefined alerts' `condition` values are user-editable.
  * Source-type-agnostic by construction — future system monitors of any source
@@ -41,13 +41,13 @@ export const SYSTEM_MONITOR_DEFINITIONS: readonly SystemMonitorDefinition[] = [
   {
     slug: "issue-regressed",
     name: "Signal regressed",
-    description: "Notifies each time a resolved issue is detected again.",
+    description: "Notifies each time a resolved signal is detected again.",
     alerts: [{ kind: "issue.regressed", source: { type: "issue", id: null }, condition: null }],
   },
   {
     slug: "issue-escalating",
     name: "Signal escalating",
-    description: "Notifies when an ongoing issue is being detected more than expected.",
+    description: "Notifies when an ongoing signal is being detected more than expected.",
     alerts: [
       {
         kind: "issue.escalating",

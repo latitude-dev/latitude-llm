@@ -286,7 +286,7 @@ IncidentCreated outbox event → domain-events worker → notifications:request-
 #### Trigger paths
 
 1. **Trace-end-driven, leading-edge throttle.** Trace-end publishes `monitors:checkSavedSearchMonitors` for the org with the queue layer's `leadingThrottleMs` option (`SAVED_SEARCH_MONITORS_THROTTLE_MS`, 5 min). The **first** publish in a window runs **immediately**, then at most one per project per 5 minutes. Leading-edge matters: the trailing evaluation window must still cover the burst that triggered it — a trailing `throttleMs` delay would slide that window 5 minutes past the burst. The handler iterates every active saved-search-source alert and runs the evaluator for each.
-2. **Periodic sweep cron, 5-minute interval** (`sweepSavedSearchMonitorsUseCase`, mirrors `sweep-escalating-issues.ts`). Scans all sustained saved-search incidents with `endedAt IS NULL` plus active threshold/match alerts and runs the same handler. This catches closes for low-traffic orgs where no trace-end retriggers the throttled task, and is the safety net for opens. 5 minutes = the minimum escalating `window`; a coarser cadence would delay close transitions.
+2. **Periodic sweep cron, 5-minute interval** (`sweepSavedSearchMonitorsUseCase`, mirrors `sweep-escalating-signals.ts`). Scans all sustained saved-search incidents with `endedAt IS NULL` plus active threshold/match alerts and runs the same handler. This catches closes for low-traffic orgs where no trace-end retriggers the throttled task, and is the safety net for opens. 5 minutes = the minimum escalating `window`; a coarser cadence would delay close transitions.
 
 #### Shared evaluator
 
@@ -362,7 +362,7 @@ Monitor surfaces follow the repository product pattern: human-facing pages in `a
 | Alert | Output |
 | --- | --- |
 | `issue.new`, source `all` | "Alerts each time a new issue is detected." |
-| `issue.escalating`, source `all` | "Alerts when an ongoing issue is being detected more than expected." |
+| `issue.escalating`, source `all` | "Alerts when an ongoing signal is being detected more than expected." |
 | `savedSearch.match`, search `"5xx"` | "Alerts each time a new trace matching '5xx' is detected." |
 | `savedSearch.threshold`, abs 100 | "Alerts when traces matching '5xx' are detected 100 times." |
 | `savedSearch.threshold`, mult 3× avg / 7 days | "Alerts when traces matching '5xx' are detected 3 times more than the average of the last 7 days." |

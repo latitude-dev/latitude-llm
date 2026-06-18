@@ -3,8 +3,8 @@ import { EvaluationId, ProjectId, SignalId } from "@domain/shared"
 import { Effect } from "effect"
 import type { LoadedEvaluationAlignmentState } from "../../alignment/types.ts"
 import { isArchivedEvaluation, isDeletedEvaluation } from "../../helpers.ts"
-import { EvaluationSignalRepository } from "../../ports/evaluation-issue-repository.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
+import { EvaluationSignalRepository } from "../../ports/evaluation-signal-repository.ts"
 
 export type LoadAlignmentStateOrInactiveResult =
   | {

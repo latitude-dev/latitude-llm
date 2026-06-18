@@ -62,7 +62,7 @@ const signalCoreFields = {
   source: z.enum(SIGNAL_SOURCES).describe("Where the signal originated from."),
   states: z
     .array(z.enum(SIGNAL_STATES))
-    .describe("Active lifecycle states. An signal may carry multiple states at once (e.g. `escalating` + `ongoing`)."),
+    .describe("Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`)."),
   resolvedAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was resolved, or `null`."),
   ignoredAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was ignored, or `null`."),
   createdAt: z.string().describe("ISO-8601 timestamp of creation."),

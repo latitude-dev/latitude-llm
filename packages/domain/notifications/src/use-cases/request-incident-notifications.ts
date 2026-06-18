@@ -91,7 +91,7 @@ export type RequestIncidentNotificationsError = RepositoryError | NotFoundError
  * way the drawer aligns to "now".
  */
 /**
- * A source-based incident (issue/savedSearch), narrowed so the issue-analytics
+ * A source-based incident (issue/savedSearch), narrowed so the signal-analytics
  * snapshots + payload read `sourceId`/`sourceType` without a null check. The
  * use-case early-returns for sourceless (unified) incidents before any of these run.
  */
@@ -120,7 +120,7 @@ const toUtcDayEnd = (value: Date): Date =>
 const SAMPLE_EXCERPT_MAX_CHARS = 200
 /** Top-N tags surfaced in the email body. Sorted alphabetically (matches `SignalTagsAggregate` UI rendering). */
 const TAGS_TOP_N = 5
-/** History window for tag aggregation. Matches the issue-list/drawer convention. */
+/** History window for tag aggregation. Matches the signal-list/drawer convention. */
 const TAGS_LOOKBACK_DAYS = 30
 
 const resolveKind = (incident: AlertIncident, transition: IncidentTransition): IncidentNotificationKind => {
@@ -136,7 +136,7 @@ const resolveKind = (incident: AlertIncident, transition: IncidentTransition): I
 
 /**
  * Snapshot the 14d/12h trend window for sustained kinds, frozen at the relevant transition
- * timestamp and UTC-day-aligned exactly like the issue-detail drawer. Zero-fills the window so
+ * timestamp and UTC-day-aligned exactly like the signal-detail drawer. Zero-fills the window so
  * empty buckets render as gaps, zips in the per-bucket seasonal threshold, and carries the
  * triggering incident as a `marker` for the chart's severity band + start dot. Returns `null`
  * for `incident.event` (one-shot kinds have nothing to trend at notification time).
@@ -226,7 +226,7 @@ const snapshotTriggerRatePerHour = (incident: SourcedIncident) =>
   })
 
 /**
- * Snapshot the top-N tags from the issue's recent traces. Sorted
+ * Snapshot the top-N tags from the signal's recent traces. Sorted
  * alphabetically (matches the `SignalTagsAggregate` UI rendering) and
  * sliced so the email body stays compact. Returns `undefined` when
  * there are no tags so the template can skip the chips block.
@@ -351,9 +351,9 @@ interface SignalTriageSnapshot {
 }
 
 /**
- * Snapshot the issue's triage fields (assignee + priority) so renderers can
- * show who owns the issue and how urgent it was deemed when the incident
- * fired. Only meaningful for issue-sourced incidents; a missing issue row
+ * Snapshot the signal's triage fields (assignee + priority) so renderers can
+ * show who owns the signal and how urgent it was deemed when the incident
+ * fired. Only meaningful for issue-sourced incidents; a missing signal row
  * (deleted between the incident and this producer) degrades to `null` so the
  * payload simply omits the fields, like legacy rows.
  */
@@ -421,8 +421,8 @@ const buildPayload = (input: {
     ...(incident.condition !== null ? { condition: incident.condition } : {}),
   }
   // Signal triage snapshot, spread into every variant (incl. closed — the
-  // recovery email still shows who owns the issue); absent for savedSearch
-  // sources and when the issue row vanished.
+  // recovery email still shows who owns the signal); absent for savedSearch
+  // sources and when the signal row vanished.
   const triageFields = triage ? { assigneeId: triage.assigneeId, priority: triage.priority } : {}
 
   const mutableTags = tags ? [...tags] : undefined
@@ -489,7 +489,7 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
     const incident = yield* incidentRepo.findById(AlertIncidentId(input.alertIncidentId))
 
     // Unified (target-on-monitor) incidents are sourceless; their notification copy is wired
-    // separately. Narrowing to `SourcedIncident` lets the issue-analytics snapshots + payload
+    // separately. Narrowing to `SourcedIncident` lets the signal-analytics snapshots + payload
     // read source without a null check.
     if (!isSourcedIncident(incident)) {
       yield* Effect.annotateCurrentSpan("skipped", "sourceless-incident")
@@ -521,7 +521,7 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
     const snapshotSensitivity =
       incident.condition?.kind === "issue.escalating" ? incident.condition.sensitivity : undefined
     const kShort = snapshotSensitivity ?? projectSettings?.escalation?.sensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K
-    // Trend / tags / sample-excerpt are all issue-analytics keyed on the issue id,
+    // Trend / tags / sample-excerpt are all issue-analytics keyed on the signal id,
     // so they only apply to `issue`-sourced incidents. Saved-search incidents skip
     // them (the templates render from the kind + monitor attribution + condition).
     // Closed kind also skips tags/excerpt: the recovery copy focuses on the descent.

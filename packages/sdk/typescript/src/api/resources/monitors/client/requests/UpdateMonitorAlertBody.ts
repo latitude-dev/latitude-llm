@@ -11,7 +11,7 @@ export interface UpdateMonitorAlertBody {
     kind?: UpdateMonitorAlertBody.Kind;
     /** Replace the watched saved search. Not allowed on system monitors. */
     source?: UpdateMonitorAlertBody.Source;
-    /** Replace the alert's configuration. On system monitors this is the only editable field (e.g. issue-escalation `sensitivity`). */
+    /** Replace the alert's configuration. On system monitors this is the only editable field (e.g. signal-escalation `sensitivity`). */
     condition?: UpdateMonitorAlertBody.Condition;
     /** Replace the severity. Not allowed on system monitors. */
     severity?: UpdateMonitorAlertBody.Severity;
@@ -46,7 +46,7 @@ export namespace UpdateMonitorAlertBody {
     }
 
     /**
-     * Replace the alert's configuration. On system monitors this is the only editable field (e.g. issue-escalation `sensitivity`).
+     * Replace the alert's configuration. On system monitors this is the only editable field (e.g. signal-escalation `sensitivity`).
      */
     export type Condition =
         | {

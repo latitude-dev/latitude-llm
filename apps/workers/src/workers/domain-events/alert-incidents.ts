@@ -114,7 +114,7 @@ const closeIncidentFor = (
 
 export const createAlertIncidentsWorker = ({ consumer }: AlertIncidentsDeps) => {
   consumer.subscribe("alert-incidents", {
-    "issue-created": (payload) =>
+    "signal-created": (payload) =>
       createIncidentFor("issue.new", {
         organizationId: payload.organizationId,
         projectId: payload.projectId,
@@ -122,7 +122,7 @@ export const createAlertIncidentsWorker = ({ consumer }: AlertIncidentsDeps) => 
         occurredAt: new Date(payload.createdAt),
       }),
 
-    "issue-regressed": (payload) =>
+    "signal-regressed": (payload) =>
       createIncidentFor("issue.regressed", {
         organizationId: payload.organizationId,
         projectId: payload.projectId,
@@ -130,7 +130,7 @@ export const createAlertIncidentsWorker = ({ consumer }: AlertIncidentsDeps) => 
         occurredAt: new Date(payload.regressedAt),
       }),
 
-    "issue-escalated": (payload) =>
+    "signal-escalated": (payload) =>
       createIncidentFor("issue.escalating", {
         organizationId: payload.organizationId,
         projectId: payload.projectId,
@@ -139,7 +139,7 @@ export const createAlertIncidentsWorker = ({ consumer }: AlertIncidentsDeps) => 
         entrySignals: payload.entrySignals,
       }),
 
-    "issue-escalation-ended": (payload) =>
+    "signal-escalation-ended": (payload) =>
       closeIncidentFor("issue.escalating", {
         organizationId: payload.organizationId,
         projectId: payload.projectId,

@@ -3,7 +3,7 @@ import { destinationQuarantinedRenderer } from "./destination-quarantined/index.
 import { incidentClosedRenderer } from "./incident-closed/index.tsx"
 import { incidentEventRenderer } from "./incident-event/index.tsx"
 import { incidentOpenedRenderer } from "./incident-opened/index.tsx"
-import { signalAssignedRenderer } from "./issue-assigned/index.tsx"
+import { signalAssignedRenderer } from "./signal-assigned/index.tsx"
 import type { NotificationEmailRendererRegistry } from "./types.ts"
 import { wrappedReportRenderer } from "./wrapped-report/index.tsx"
 

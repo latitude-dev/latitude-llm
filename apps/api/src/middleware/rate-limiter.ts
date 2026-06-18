@@ -110,7 +110,7 @@ const TIER_LIMITS: Record<RateLimitTier, { readonly maxRequests: number; readonl
  * - `low` ............ 100 req / min — list/get reads, the cheap stuff
  * - `medium` (default) 60 req / min — most mutations and single-row writes
  * - `high` ............ 15 req / min — bulk reads with filter/search/semantic load
- * - `critical` ......... 3 req / min — bulk imports, exports, monitor-issue (workflow-kicking)
+ * - `critical` ......... 3 req / min — bulk imports, exports, monitor-signal (workflow-kicking)
  *
  * Apply at the routing site, before the matching subrouter is mounted, e.g.
  * `routes.use("/projects/:projectSlug/traces", createTierRateLimiter("high"))`.

@@ -49,7 +49,7 @@ class Signal(UniversalBaseModel):
 
     states: typing.List[SignalStatesItem] = pydantic.Field()
     """
-    Active lifecycle states. An signal may carry multiple states at once (e.g. `escalating` + `ongoing`).
+    Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`).
     """
 
     resolved_at: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="resolvedAt")] = pydantic.Field(

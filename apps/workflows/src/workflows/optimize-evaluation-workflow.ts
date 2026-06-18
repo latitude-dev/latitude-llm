@@ -64,7 +64,7 @@ const { evaluateBaselineEvaluationDraft } = proxyActivities<typeof activities>({
 
 // Linear full-optimization pipeline. Serves three entry points with the same
 // body:
-//   - initial generation from an issue (`evaluationId === null`)
+//   - initial generation from a signal (`evaluationId === null`)
 //   - manual realignment of an existing evaluation
 //   - automatic re-optimization triggered by the throttled
 //     `evaluations:automaticOptimization` queue task (8h, first-publish-wins)

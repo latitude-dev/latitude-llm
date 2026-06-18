@@ -168,7 +168,7 @@ Initial reliability async contracts:
 
 - domain events: `TracesIngested`, `ScoreCreated`, `ScoreAssignedToIssue`
 - topic tasks: `annotation-scores:publishHumanAnnotation`, `issues:discovery`, `issues:refresh`, `trace-end:run`, `live-evaluations:execute`, `evaluations:automaticRefreshAlignment`, `evaluations:automaticOptimization`
-- workflows: `issue-discovery`, `refresh-evaluation-alignment`, `optimize-evaluation`, `annotation-publication`, `system-queue-flagger`
+- workflows: `signal-discovery`, `refresh-evaluation-alignment`, `optimize-evaluation`, `annotation-publication`, `system-queue-flagger`
 
 These workflow names map to concrete Temporal workflows registered in the existing `apps/workflows` service.
 
@@ -198,7 +198,7 @@ For the initial reliability events, `TracesIngested` publishes directly through 
 - ClickHouse only receives immutable score analytics rows after the score lifecycle is ready for analytics save
 - every score write records `ScoreCreated` transactionally with the row; the `domain-events` dispatcher publishes a deduped `issues:discovery` task keyed by score id, and the `issues:discovery` worker runs centralized issue handling only when the loaded score is eligible (non-draft, failed, non-errored, not already linked to an issue)
 - immutable-score analytics sync runs directly after the owning Postgres transaction commits through the shared `syncScoreAnalyticsUseCase`, which re-checks current Postgres immutability and dedupes by score id
-- annotation-originated feedback can be enriched before issue discovery through the `annotation-publication` workflow, which runs after the debounced `annotation-scores:publishHumanAnnotation` task coalesces rapid draft edits
+- annotation-originated feedback can be enriched before signal discovery through the `annotation-publication` workflow, which runs after the debounced `annotation-scores:publishHumanAnnotation` task coalesces rapid draft edits
 - draft annotations use the same annotation score model, but stay drafts through `draftedAt` instead of a fake error value
 - the canonical `feedback` text must stay human/LLM-friendly and intentionally clusterable, because discovery uses it for the primary embedding and lexical matching pass; annotation scores also preserve `metadata.rawFeedback` so discovery can run a raw-feedback fallback pass before creating a new issue
 - scores can optionally attach to spans, traces, sessions, simulations, and issues
@@ -214,19 +214,19 @@ For the initial reliability events, `TracesIngested` publishes directly through 
 - newly created live annotation queues initialize `settings.sampling` from a named constant, with an initial default of `10%`
 - queue review is the focused in-product annotation workflow for fast human feedback
 
-### Issue discovery
+### Signal discovery
 
 - failed non-errored scores are embedded and searched against issue centroids/text
 - drafted scores stay out of discovery until `draftedAt` is cleared
 - eligible non-draft failed non-errored scores are reached when `issues:discovery` runs after `ScoreCreated`; draft rows still skip discovery because the worker re-checks eligibility against canonical Postgres state instead of running issue routing inline in request paths
-- the `issues:discovery` task rechecks canonical eligibility and centralizes three branches: selected annotation issue intent (including a `ScoreCreated` payload `issueId` captured while drafting when the published row no longer stores that link), issue-linked evaluation routing for evaluation-originated failed scores that still arrive unowned, or the fallback Temporal `issue-discovery` workflow when similarity search is still needed
+- the `issues:discovery` task rechecks canonical eligibility and centralizes three branches: selected annotation issue intent (including a `ScoreCreated` payload `issueId` captured while drafting when the published row no longer stores that link), issue-linked evaluation routing for evaluation-originated failed scores that still arrive unowned, or the fallback Temporal `signal-discovery` workflow when similarity search is still needed
 - annotations are primary, but unlinked failed evaluation scores and failed custom scores may also create new issues
 - when discovery creates a brand-new issue, the workflow goes through a dedicated create-from-score step that generates issue details from the initial occurrence before the first issue row is persisted
 - issue name/description regeneration for existing issues runs through the throttled `issues:refresh` task keyed by the canonical issue id (at most once per 8h per issue; first publish wins)
 - new issues are named from occurrences; users can later generate evaluations from those issues when they want active monitoring
 - ignoring an issue archives its linked evaluations immediately, while resolution still uses `keepMonitoring`
 - issue search uses canonical Postgres issue rows: `centroid_embedding vector(2048)` for exact cosine relevance plus generated full-text `search_document` for a bounded lexical boost, then Voyage reranking
-- in the `issue-discovery` workflow, feedback embedding/normalization runs first and the search/rerank/create-or-assign decision runs inside locked serialization; annotation scores search with enriched canonical feedback first and raw annotation feedback second when the enriched pass has no match
+- in the `signal-discovery` workflow, feedback embedding/normalization runs first and the search/rerank/create-or-assign decision runs inside locked serialization; annotation scores search with enriched canonical feedback first and raw annotation feedback second when the enriched pass has no match
 - the shared issue-details generation use case serves both paths: synchronous first-details generation before a new issue is persisted, and later debounced refresh generation for existing issues from the last `25` assigned occurrences plus the current details as the stabilization baseline
 - rerank candidates carry canonical issue ids from Postgres search, so no projection UUID resolution step is needed before assignment
 - the create-from-score and assign-to-issue activities re-check canonical Postgres state, conditionally claim `scores.issue_id`, and persist the canonical issue row, centroid update, and derived pgvector state; after commit the workflow runs direct `syncScoreAnalyticsUseCase` so immutable scores reach ClickHouse; only assignments into an existing issue write `ScoreAssignedToIssue` transactionally for later debounced issue-details regeneration
@@ -239,7 +239,7 @@ For the initial reliability events, `TracesIngested` publishes directly through 
 
 - annotation-derived ground truth is split into positive and negative examples
 - drafts and errored scores are excluded from evaluation alignment entirely
-- evaluations generated from issues are created from the issue surfaces when the user asks for them, rather than as an automatic issue-discovery side effect
+- evaluations generated from issues are created from the issue surfaces when the user asks for them, rather than as an automatic signal-discovery side effect
 - issue-generated evaluation creation starts the `optimize-evaluation` Temporal workflow under a deterministic `evaluations:generate:${issueId}` id (initial generation) or `evaluations:optimize:${evaluationId}` id (manual realignment) and returns immediately; the frontend polls a status endpoint that asks Temporal directly via `workflow.describe()` on the three relevant workflow ids (generate + optimize + refreshAlignment), with no Redis-backed status mirror
 - issues may have several linked evaluations; explicit generation is not limited to a single linked monitor
 - live evaluation triggering is incremental on debounced `TracesIngested`; the `domain-events` dispatcher publishes one `trace-end:run` per deduped trace id, that runtime checks active evaluations project-wide, applies deterministic sampling first, batches the remaining shared `FilterSet` checks together with live queues, then applies evaluation turn/debounce rules and publishes `live-evaluations:execute` tasks for matches; the downstream execute path persists passed, failed, and errored evaluation-originated scores through the canonical score writer

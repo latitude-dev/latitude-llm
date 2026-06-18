@@ -5,7 +5,7 @@ description: "Understand Latitude's core concepts: projects, spans, traces, sess
 
 # Core Concepts
 
-Latitude is organized around a small set of concepts that connect production telemetry to issue discovery. A project receives agent activity as spans, traces, and sessions; search helps you find relevant traces; scores record judgments about trace quality; evaluations monitor known behaviours; and issues group repeated failures into trackable problems.
+Latitude is organized around a small set of concepts that connect production telemetry to signal discovery. A project receives agent activity as spans, traces, and sessions; search helps you find relevant traces; scores record judgments about trace quality; evaluations monitor known behaviours; and issues group repeated failures into trackable problems.
 
 ```text
 Project
@@ -63,7 +63,7 @@ Traces are the main unit used across Latitude:
 - flaggers run on completed traces
 - issues group related failed trace signals
 
-Latitude waits for a trace to stop receiving new spans before treating it as complete. Downstream workflows such as search indexing, flaggers, evaluations, scores, and issue discovery run on completed traces so they do not act on partial executions.
+Latitude waits for a trace to stop receiving new spans before treating it as complete. Downstream workflows such as search indexing, flaggers, evaluations, scores, and signal discovery run on completed traces so they do not act on partial executions.
 
 ## Sessions
 
@@ -101,9 +101,9 @@ Scores answer questions such as:
 - Did this trace pass or fail a quality check?
 - What feedback explains the verdict?
 - Which signal source produced the verdict?
-- Should this failure contribute to issue discovery?
+- Should this failure contribute to signal discovery?
 
-Failed, eligible scores are the primary input for issue discovery. Scores also power analytics and help teams compare automated judgments with human feedback.
+Failed, eligible scores are the primary input for signal discovery. Scores also power analytics and help teams compare automated judgments with human feedback.
 
 ## Issues
 
@@ -121,7 +121,7 @@ Issue states include **new**, **escalating**, **resolved**, **regressed**, and *
 
 ## Evaluations
 
-An **evaluation** is an automated monitor that checks traces for a specific behaviour or quality criterion. Evaluations run on completed traces and produce scores, so their results feed the same analytics and issue discovery workflows as annotations, flaggers, and custom checks.
+An **evaluation** is an automated monitor that checks traces for a specific behaviour or quality criterion. Evaluations run on completed traces and produce scores, so their results feed the same analytics and signal discovery workflows as annotations, flaggers, and custom checks.
 
 Evaluations help teams:
 
@@ -150,4 +150,4 @@ Latitude can generate evaluations from issues, then use human feedback to keep t
 - [Observability](../observability/overview): inspect traces, sessions, and telemetry metadata.
 - [Search](../search/overview): find traces by meaning, exact text, and filters.
 - [Evaluations](../evaluations/overview): monitor known behaviours and issue patterns.
-- [Issue Discovery](../signals/overview): understand how failed scores become issues.
+- [Signal Discovery](../signals/overview): understand how failed scores become issues.

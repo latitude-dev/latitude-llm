@@ -8,7 +8,7 @@ import {
   DEFAULT_ALIGNMENT_EXAMPLE_LIMIT,
   EvaluationAlignmentExamplesRepository,
 } from "../../ports/evaluation-alignment-examples-repository.ts"
-import { EvaluationSignalRepository } from "../../ports/evaluation-issue-repository.ts"
+import { EvaluationSignalRepository } from "../../ports/evaluation-signal-repository.ts"
 import {
   type EvaluationConversationMessage,
   toEvaluationConversationMessages,

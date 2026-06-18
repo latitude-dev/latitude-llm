@@ -99,10 +99,6 @@ export {
   type ListNegativeEvaluationAlignmentExamplesInput,
 } from "./ports/evaluation-alignment-examples-repository.ts"
 export {
-  type EvaluationSignal,
-  EvaluationSignalRepository,
-} from "./ports/evaluation-issue-repository.ts"
-export {
   type EvaluationListLifecycle,
   type EvaluationListOptions,
   type EvaluationListPage,
@@ -110,6 +106,10 @@ export {
   type EvaluationRepositoryShape,
   evaluationListLifecycleSchema,
 } from "./ports/evaluation-repository.ts"
+export {
+  type EvaluationSignal,
+  EvaluationSignalRepository,
+} from "./ports/evaluation-signal-repository.ts"
 export {
   LiveEvaluationQueuePublisher,
   type LiveEvaluationQueuePublisherShape,
@@ -166,7 +166,7 @@ export {
   type GetSignalAlignmentStateInput,
   getSignalAlignmentStateUseCase,
   type SignalAlignmentState,
-} from "./use-cases/get-issue-alignment-state.ts"
+} from "./use-cases/get-signal-alignment-state.ts"
 export {
   buildLiveTraceEndEvaluationSelectionKey,
   buildTraceEndEvaluationSelectionInputs,
@@ -208,10 +208,10 @@ export {
   type MonitorSignalError,
   type MonitorSignalInput,
   monitorSignalUseCase,
-} from "./use-cases/monitor-issue.ts"
+} from "./use-cases/monitor-signal.ts"
 export { evaluateOptimizationCandidate } from "./use-cases/optimization/evaluate-optimization-candidate.ts"
 export {
   type UnmonitorSignalError,
   type UnmonitorSignalInput,
   unmonitorSignalUseCase,
-} from "./use-cases/unmonitor-issue.ts"
+} from "./use-cases/unmonitor-signal.ts"

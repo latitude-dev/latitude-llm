@@ -5,8 +5,8 @@ import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import type { Evaluation } from "../../entities/evaluation.ts"
 import { defaultEvaluationTrigger, emptyEvaluationAlignment } from "../../entities/evaluation.ts"
-import { EvaluationSignalRepository } from "../../ports/evaluation-issue-repository.ts"
 import { EvaluationRepository, type EvaluationRepositoryShape } from "../../ports/evaluation-repository.ts"
+import { EvaluationSignalRepository } from "../../ports/evaluation-signal-repository.ts"
 import { loadAlignmentStateOrInactiveUseCase } from "./load-alignment-state-or-inactive.ts"
 
 const organizationId = "o".repeat(24)

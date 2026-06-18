@@ -48,10 +48,6 @@ export {
   type ListNegativeEvaluationAlignmentExamplesInput,
 } from "./ports/evaluation-alignment-examples-repository.ts"
 export {
-  type EvaluationSignal,
-  EvaluationSignalRepository,
-} from "./ports/evaluation-issue-repository.ts"
-export {
   type EvaluationListLifecycle,
   type EvaluationListOptions,
   type EvaluationListPage,
@@ -60,6 +56,10 @@ export {
   evaluationListLifecycleSchema,
 } from "./ports/evaluation-repository.ts"
 export {
+  type EvaluationSignal,
+  EvaluationSignalRepository,
+} from "./ports/evaluation-signal-repository.ts"
+export {
   deriveSignalAlignmentState,
   type SignalAlignmentState,
-} from "./use-cases/get-issue-alignment-state.ts"
+} from "./use-cases/get-signal-alignment-state.ts"

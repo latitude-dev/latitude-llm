@@ -10,7 +10,7 @@ Each feature is dogfooded into its own Latitude project (one project per AI feat
 
 | Feature | Project slug |
 | --- | --- |
-| Issue Discovery Details | `latitude-issue-discovery` |
+| Signal Discovery Details | `latitude-signal-discovery` |
 | Annotation Enrichment | `latitude-annotation-enrichment` |
 | Flagger Instruction Extraction / Classification / Drafting | `latitude-flaggers` |
 | Evaluation Judge (live / alignment / optimization) | `latitude-evaluations` |
@@ -19,9 +19,9 @@ Each feature is dogfooded into its own Latitude project (one project per AI feat
 
 ## Issues
 
-> **Issue Discovery Details**  
-> Generates a stable issue title and description from recent occurrences (or from supplied occurrence text before an issue row exists).  
-> **Tags:** `issue:details`  
+> **Signal Discovery Details**
+> Generates a stable issue title and description from recent occurrences (or from supplied occurrence text before an issue row exists).
+> **Tags:** `issue:details`
 > **Metadata:**
 >
 > ```json
@@ -35,15 +35,15 @@ Each feature is dogfooded into its own Latitude project (one project per AI feat
 >
 > **Called from:**
 >
-> - `packages/domain/issues/src/use-cases/generate-issue-details.ts`
-> - `packages/domain/issues/src/use-cases/create-issue-from-score.ts`
-> - `packages/domain/issues/src/use-cases/refresh-issue-details.ts`
+> - `packages/domain/issues/src/use-cases/generate-signal-details.ts`
+> - `packages/domain/issues/src/use-cases/create-signal-from-score.ts`
+> - `packages/domain/issues/src/use-cases/refresh-signal-details.ts`
 
 ## Annotations
 
-> **Annotation Enrichment**  
-> Turns raw publication feedback plus optional trace context into a single clusterable sentence before the score is published.  
-> **Tags:** `annotation:enrichment`  
+> **Annotation Enrichment**
+> Turns raw publication feedback plus optional trace context into a single clusterable sentence before the score is published.
+> **Tags:** `annotation:enrichment`
 > **Metadata:**
 >
 > ```json
@@ -55,7 +55,7 @@ Each feature is dogfooded into its own Latitude project (one project per AI feat
 > }
 > ```
 >
-> Optional `sessionId` on the telemetry capture object (sibling of `metadata`), when a session is resolved from the trace.  
+> Optional `sessionId` on the telemetry capture object (sibling of `metadata`), when a session is resolved from the trace.
 > **Called from:**
 >
 > - `packages/domain/annotations/src/use-cases/enrich-annotation-for-publication.ts`
@@ -63,9 +63,9 @@ Each feature is dogfooded into its own Latitude project (one project per AI feat
 
 ## Flaggers
 
-> **Flagger Instruction Extraction**  
-> Summarizes the flagged agent's system prompt into a bounded instruction set before classification, so the classifier judges behavior against the agent's actual instructions. Cached per (org, system prompt) hash; falls back to a truncated prompt rendering on failure.  
-> **Tags:** `flagger:extract-instructions`  
+> **Flagger Instruction Extraction**
+> Summarizes the flagged agent's system prompt into a bounded instruction set before classification, so the classifier judges behavior against the agent's actual instructions. Cached per (org, system prompt) hash; falls back to a truncated prompt rendering on failure.
+> **Tags:** `flagger:extract-instructions`
 > **Metadata:**
 >
 > ```json
@@ -83,9 +83,9 @@ Each feature is dogfooded into its own Latitude project (one project per AI feat
 > - `packages/domain/flaggers/src/use-cases/run-flagger.ts`
 > - `apps/workflows/src/activities/flagger-activities.ts`
 
-> **Flagger Classification**  
-> Classifies whether a trace matches a flagger strategy (e.g. jailbreaking), then runs an annotation-review pass on a match.  
-> **Tags:** `flagger:classify` (`flagger:no-reflag` appended when the trace being flagged is itself flagger-generated)  
+> **Flagger Classification**
+> Classifies whether a trace matches a flagger strategy (e.g. jailbreaking), then runs an annotation-review pass on a match.
+> **Tags:** `flagger:classify` (`flagger:no-reflag` appended when the trace being flagged is itself flagger-generated)
 > **Metadata:**
 >
 > ```json
@@ -103,9 +103,9 @@ Each feature is dogfooded into its own Latitude project (one project per AI feat
 > - `packages/domain/flaggers/src/use-cases/run-flagger.ts`
 > - `apps/workflows/src/activities/flagger-activities.ts`
 
-> **Flagger Drafting**  
-> Drafts review-ready feedback text after a flagger has matched a trace.  
-> **Tags:** `flagger:draft` (`flagger:no-reflag` appended for flagger-generated traces)  
+> **Flagger Drafting**
+> Drafts review-ready feedback text after a flagger has matched a trace.
+> **Tags:** `flagger:draft` (`flagger:no-reflag` appended for flagger-generated traces)
 > **Metadata:**
 >
 > ```json
@@ -124,9 +124,9 @@ Each feature is dogfooded into its own Latitude project (one project per AI feat
 
 ## Evaluations
 
-> **Evaluation Judge (Live)**  
-> Runs the current persisted evaluation script on real production traces when a live evaluation executes.  
-> **Tags:** `eval:execute`, `live`  
+> **Evaluation Judge (Live)**
+> Runs the current persisted evaluation script on real production traces when a live evaluation executes.
+> **Tags:** `eval:execute`, `live`
 > **Metadata:**
 >
 > ```json
@@ -145,9 +145,9 @@ Each feature is dogfooded into its own Latitude project (one project per AI feat
 > - `packages/domain/evaluations/src/use-cases/live/execute-live-evaluation.ts`
 > - `apps/workers/src/workers/live-evaluations.ts`
 
-> **Evaluation Judge (Alignment)**  
-> Runs the script on curated positive/negative examples to refresh alignment metrics (confusion matrix and derived scores).  
-> **Tags:** `eval:execute`, `alignment`  
+> **Evaluation Judge (Alignment)**
+> Runs the script on curated positive/negative examples to refresh alignment metrics (confusion matrix and derived scores).
+> **Tags:** `eval:execute`, `alignment`
 > **Metadata:**
 >
 > ```json
@@ -169,9 +169,9 @@ Each feature is dogfooded into its own Latitude project (one project per AI feat
 > - `packages/domain/evaluations/src/use-cases/alignment/evaluate-incremental-draft.ts`
 > - `apps/workflows/src/activities/evaluation-alignment-activities.ts`
 
-> **Evaluation Judge (Optimization)**  
-> Runs candidate evaluation scripts on examples inside the GEPA loop to score proposals.  
-> **Tags:** `eval:execute`, `optimization`  
+> **Evaluation Judge (Optimization)**
+> Runs candidate evaluation scripts on examples inside the GEPA loop to score proposals.
+> **Tags:** `eval:execute`, `optimization`
 > **Metadata:**
 >
 > ```json
@@ -193,9 +193,9 @@ Each feature is dogfooded into its own Latitude project (one project per AI feat
 
 ## GEPA / optimization
 
-> **Optimization Proposal**  
-> Proposes the next candidate evaluation script from trajectories during GEPA search.  
-> **Tags:** `gepa:propose`  
+> **Optimization Proposal**
+> Proposes the next candidate evaluation script from trajectories during GEPA search.
+> **Tags:** `gepa:propose`
 > **Metadata:**
 >
 > ```json
@@ -218,9 +218,9 @@ Each feature is dogfooded into its own Latitude project (one project per AI feat
 
 Two LLM calls name a taxonomy cluster; both route to `latitude-taxonomy`. The behavior-summary embedding (`embed-behavior-summary.ts`) is an `AI.embed` call and is intentionally not captured.
 
-> **Propose Themes**  
-> Proposes concise candidate conversation topic themes for a cluster from sampled member summaries (or child topics).  
-> **Tags:** `taxonomy:propose-themes`  
+> **Propose Themes**
+> Proposes concise candidate conversation topic themes for a cluster from sampled member summaries (or child topics).
+> **Tags:** `taxonomy:propose-themes`
 > **Metadata:**
 >
 > ```json
@@ -236,9 +236,9 @@ Two LLM calls name a taxonomy cluster; both route to `latitude-taxonomy`. The be
 >
 > - `packages/domain/taxonomy/src/use-cases/name-taxonomy.ts` (`generateClusterName`)
 
-> **Name Cluster**  
-> Collapses the candidate themes into one cluster topic name (2–5 words) and a one-sentence description.  
-> **Tags:** `taxonomy:name-cluster`  
+> **Name Cluster**
+> Collapses the candidate themes into one cluster topic name (2–5 words) and a one-sentence description.
+> **Tags:** `taxonomy:name-cluster`
 > **Metadata:**
 >
 > ```json
