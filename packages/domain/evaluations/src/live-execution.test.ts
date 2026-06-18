@@ -210,10 +210,18 @@ describe("executeLiveEvaluationUseCase", () => {
     expect(calls.generate).toHaveLength(0)
   })
 
-  it("routes sandbox-runtime executions through the script runtime and derives passed from the threshold", async () => {
+  it("routes sandbox-runtime executions through the script runtime and returns the script's passed verdict", async () => {
     const { layer: aiLayer, calls: aiCalls } = createFakeAI()
     const fakeRuntime = createFakeScriptRuntime({
-      run: () => Effect.succeed({ value: 0.2, feedback: "exhibits the issue", duration: 5_000, tokens: 12, cost: 3 }),
+      run: () =>
+        Effect.succeed({
+          value: 0.2,
+          passed: false,
+          feedback: "exhibits the issue",
+          duration: 5_000,
+          tokens: 12,
+          cost: 3,
+        }),
     })
 
     const result = await Effect.runPromise(
