@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v0.3.10 - 2026-06-18
+
+### Infrastructure
+
+- Kept production ALB target groups associated during maintenance redirects so ECS can roll every public service while traffic is redirected to the status page.
+
 ## v0.3.9 - 2026-06-18
 
 ### Maintenance windows

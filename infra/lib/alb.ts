@@ -147,6 +147,31 @@ export function createAlb(
         ],
       })
     }
+
+    if (enableMaintenanceRedirect) {
+      const associationRules = [
+        { ruleName: "web-target-group-association", targetGroup: targetGroups.web },
+        { ruleName: "api-target-group-association", targetGroup: targetGroups.api },
+        { ruleName: "ingest-target-group-association", targetGroup: targetGroups.ingest },
+        { ruleName: "bull-board-target-group-association", targetGroup: targetGroups.bullBoard },
+      ]
+
+      for (let i = 0; i < associationRules.length; i++) {
+        const rule = associationRules[i]
+        new aws.lb.ListenerRule(`${name}-${rule.ruleName}-rule`, {
+          listenerArn: httpsListener.arn,
+          priority: 200 + i,
+          actions: createForwardActions(rule.targetGroup),
+          conditions: [
+            {
+              hostHeader: {
+                values: [`${rule.ruleName}.maintenance.local`],
+              },
+            },
+          ],
+        })
+      }
+    }
   }
 
   return {
