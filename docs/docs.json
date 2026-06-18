@@ -255,6 +255,10 @@
   "integrations": {
     "gtm": {
       "tagId": "GTM-5NWGV24H"
+    },
+    "posthog": {
+      "apiKey": "phc_BWYPiCdzp7A2mGD3PsrXamcxmemNNctkLYMNDHmmYJJb",
+      "sessionRecording": true
     }
   }
 }
