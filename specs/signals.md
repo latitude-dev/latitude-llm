@@ -88,7 +88,7 @@ Constraints:
 
 **A signal's membership detector is an `evaluations` row**, linked 1:1 via `evaluations.signal_id` — exactly one active evaluation per signal. **An evaluation is always a script** that runs in the shared QuickJS sandbox (`specs/sandbox-runtime.md`); there is no detector taxonomy and no second engine. Its shape is defined once in [Data model → Shared contracts](#shared-contracts-domainshared-domainscores).
 
-- **One engine, three ways to author the same script.** Every evaluation produces one `script` artifact, and that is exactly what executes: write it from a declarative **`settings`** object (compiled **deterministically** — the sandbox-runtime *SignalRule* codegen; the option shapes are defined as the builder grows), generate and align it with **GEPA** (`optimize-evaluation`), or hand-write a **raw** script (advanced). `settings` is optional (NULL for a raw or GEPA-generated script); `script` is always present.
+- **One engine, three ways to author the same script.** Every evaluation produces one `script` artifact, and that is exactly what executes: write it from a declarative **`settings`** object (compiled **deterministically** by a settings→script compiler **built in Phase 2/PR2** — no such codegen pre-exists; the option shapes are defined as the builder grows), generate and align it with **GEPA** (`optimize-evaluation`), or hand-write a **raw** script (advanced). `settings` is optional (NULL for a raw or GEPA-generated script); `script` is always present.
 - **A judge is just a script that calls `llm()`.** "LLM-as-judge" is not a distinct type — it is the common case of a generated script whose body calls `llm()` (`const result = await llm(\`…\`, { schema }); return result.passed ? Passed() : Failed()`), running on the sandbox behind the `evaluation-sandbox-runtime` flag exactly as today. The `optimize-evaluation` workflow and alignment state (`alignment`/`aligned_at`) apply to these judge scripts; both arise when a user authors a judge directly (criteria → generated/aligned script) and via the discovery → tracking path ([Discovery](#discovery-and-tracking)), and are NULL for scripts that never call `llm()`.
 - **The script returns a score, a verdict, and optional reasoning.** Each run yields `value` (a normalized score ∈ [0,1], for sort/confidence/display), `passed` (the membership verdict — the script decides it; there is no host-side threshold), and optional `feedback`. Definition edits (script or settings) apply **forward only** — a definition-changed marker appears on charts, and existing scores are never re-evaluated.
 - **Type is a property of the `settings`, not the script.** A script can mix `llm()`, deterministic checks, and (later) semantic similarity, so an arbitrary script has no single type. The type lives in the **`settings`** of templated evaluations and drives the builder form; raw and GEPA-generated scripts are simply custom. "How many evaluations use `llm()` / semantic / code" is a separate, **multi-valued capability** question — answered by inspecting what the script does, not by a single type label (post-MVP analytics).
@@ -100,7 +100,7 @@ Constraints:
 
 **A signal's occurrences are its scores.** Every membership-bearing event writes a `scores` row carrying `signal_id`; nothing else records membership. A score's `source_type` is one of `evaluation`, `flagger`, `user`, or `custom` (enum in [Data model](#shared-contracts-domainshared-domainscores)).
 
-- **Membership is the matched subset.** A trace is a member of a signal when it has a score for that signal with `passed = true`. (A judge "exhibits" the behavior at `passed:false` under today's problem-detector polarity; this is normalized to exhibition at migration.) The signal's occurrence count is exactly that subset, counted as **distinct `trace_id`** per signal — so a trace touched by successive evaluation generations (after the signal is re-tracked or re-optimized into a new evaluation id) counts once, matching the per-`(signal, trace)` monotone-membership guarantee in `specs/sandbox-runtime.md`.
+- **Membership is the matched subset.** A trace is a member of a signal when it has a score for that signal with `passed = true`. (This polarity is **inverted** from the original problem-detector convention, where `passed = false` meant "exhibits": Phase 2's engine cutover flipped membership to `passed = true` = *behavior present* for every source — judge, flagger, annotation — flipped historical scores once, and inverts un-regenerated judges at the execution boundary via `evaluations.legacy_polarity`. See [Tasks → Phase 2](#phase-2--evaluation-substrate--script-evaluations-mvp).) The signal's occurrence count is exactly that subset, counted as **distinct `trace_id`** per signal — so a trace touched by successive evaluation generations (after the signal is re-tracked or re-optimized into a new evaluation id) counts once, matching the per-`(signal, trace)` monotone-membership guarantee in `specs/sandbox-runtime.md`.
 - **Non-matches are written too**, consistent with how evaluations already persist both `passed:true` *and* `passed:false`: an evaluation writes a score on **every** run, matched or not. The matched rows are occurrences; the non-matched rows give exact pass-rate, denominators, and dashboards without read-time estimation.
 - **Every score is stored the same way** — written to Postgres (the canonical, mutable source of truth) and synced to ClickHouse (the analytics mirror monitors count over), reusing the existing scores pipeline (`dev-docs/scores.md`). There is **no per-type or per-capability storage split**: judge scores, deterministic-script scores, and annotations all persist identically. The only nuance is the existing draft lifecycle — a *mutable* score (a drafted annotation) stays Postgres-only until published, then syncs; an evaluation run (or a confirmed annotation) is immutable and is written + synced on arrival.
 
@@ -227,8 +227,9 @@ triggers: monitors:evaluate (leading-edge throttle) + 5-min sweep cron          
 ```
 [Resolve] → resolveSignalUseCase: signal.resolved_at = now; close open sustained incidents (silent)
 [Ignore]  → ignoreSignalUseCase:  signal.ignored_at = now (scores keep recording; nothing notifies)
-[Delete]  → deleteSignalUseCase:  soft-delete signal + its monitors; archive its evaluation;
-              enqueue CH score cleanup for the signal
+[Delete]  → deleteSignalUseCase:  soft-delete signal (deleted_at) + its monitors; archive its
+              evaluation (auto write-stop via the active-detector scan). No CH cleanup —
+              deleted-signal scores linger and are excluded read-side via the PG lifecycle.
 regression → flow D, event.regressed branch
 ```
 
@@ -459,7 +460,7 @@ Signals are exposed as a public REST surface under `/v1/projects/{projectSlug}/s
 
 ## Migration
 
-- **Issues → signals, in place.** Rename `issues` → `signals` (keep rows, centroid, embeddings); existing issues become `origin = 'system'` (auto-generated, annotation-assignable as today) — those with no linked evaluation keep none, those with a generated evaluation keep it; either way `origin` stays `system`. Issue-linked evaluations stay as they are (they are already judge scripts that call `llm()`): set `evaluations.signal_id` and **dedupe to one active per signal** (keep the most-recently-aligned active, archive the rest) so the active-detector unique index can be created. `scores.issue_id` → `signal_id`; `source` → `source_type` (rename only — `evaluation` is kept; `annotation` splits into `flagger`/`user`).
+- **Issues → signals, in place.** Rename `issues` → `signals` (keep rows, centroid, embeddings); existing issues become `origin = 'system'` (auto-generated, annotation-assignable as today) — those with no linked evaluation keep none, those with a generated evaluation keep it; either way `origin` stays `system`. Issue-linked evaluations stay as they are (they are already judge scripts that call `llm()`): set `evaluations.signal_id` and **dedupe to one active per signal** (keep the most-recently-aligned active, archive the rest) so the active-detector unique index can be created. `scores.issue_id` → `signal_id` (Phase 1); `source` → `source_type` (Phase 2/PR1, PG only — the CH column stays `source`; `evaluation` is kept; `annotation` splits into `flagger`/`user` in Phase 6).
 - **System monitors** become signal monitors (the three `issue.*` system monitors remap to the new `ALERT_KINDS` over signal targets).
 - **Flaggers** stay as the trace-end auto-annotation engine feeding system-created signals (flow C), unchanged.
 - **Semantic moments** stay as the conversation-intelligence anchor matching they are today; folding them into signal evaluations (and consolidating overlapping flaggers) is deferred to [Phase 7](#phase-7--semantic-similarity-evaluations-future), once semantic detection is added.
@@ -476,7 +477,7 @@ Signals are exposed as a public REST surface under `/v1/projects/{projectSlug}/s
 6. **Users cannot create evaluation-less signals** — only `system`-origin signals may have no evaluation, which removes the pure-filter write-amplification footgun; `filters` is only an evaluation pre-gate; plain filter tracking stays saved searches + monitors. → [Signal](#signal)
 7. **Lifecycle stays on the signal row** for the MVP (resolve/ignore/escalating carried over from issues), not relocated onto the default monitor. → [Signal](#signal)
 8. **Script evaluations are the MVP detector; the judge is a generated script that calls `llm()`.** Both arise from the builder (settings → script, or raw script) and from the discovery → tracking path. **There is no tunable threshold**: the script returns `Passed`/`Failed`, so the cutoff is written into the script; `value` is only confidence/sort. **Semantic similarity is a future capability** ([Phase 7](#phase-7--semantic-similarity-evaluations-future)) — likely a `similarity()`/`embedding()` host function the script can call (with a possible native batch-runner optimization), shape deferred. **Custom-source scores** (`/scores` accepting `signal_id`) are POST-MVP.
-9. **Signals per project are capped** per plan — bounds evaluation matching cost and score write volume.
+9. **No per-project signal cap.** Evaluation matching cost and score write volume are bounded by the shared selection pre-gate (sampling / turn / filter) and the single `signals:match` pipeline, not by an arbitrary count limit.
 
 ## Tasks
 
@@ -484,7 +485,7 @@ Signals are exposed as a public REST surface under `/v1/projects/{projectSlug}/s
 >
 > Each phase is an **independently shippable, behavior-preserving deploy**: production keeps working after every phase. Parallelism lives *within* a phase (tasks sharing dependencies run concurrently); phases themselves are mostly sequential, which is the deliberate price of safe incremental rollout. **MVP = Phases 1–4.** Every phase updates the relevant `dev-docs/*` as part of its definition of done (the "remember docs" requirement).
 >
-> **Incremental-schema note.** The data-model end state above is reached over several phases, not at once. `source_type` is a one-step rename (`source`→`source_type`); the `evaluation` value is **kept** (no remap), and `annotation` splits into `flagger`/`user` in Phase 6 — there is no add-then-collapse round trip. Monitoring unifies similarly — discovery-born signals keep the existing issue-event escalation path until Phase 5/6, while custom signals get the new signal-score path in Phase 4. Running two paths temporarily is intentional and non-breaking.
+> **Incremental-schema note.** The data-model end state above is reached over several phases, not at once. `source_type` is a one-step rename (`source`→`source_type`, PG only — the CH column stays `source`); the `evaluation` value is **kept** (no remap), and `annotation` splits into `flagger`/`user` in Phase 6 — there is no add-then-collapse round trip. Monitoring unifies similarly — discovery-born signals keep the existing issue-event escalation path until Phase 5/6, while custom signals get the new signal-score path in Phase 4. Running two paths temporarily is intentional and non-breaking. **The exception is Phase 2's engine cutover** ([below](#phase-2--evaluation-substrate--script-evaluations-mvp)): the membership-polarity inversion is a one-time breaking flip (no feature flag, brief accepted downtime), not an incremental additive step.
 
 ### Phase 1 — Rename Issues → Signals `[MVP]`
 
@@ -513,20 +514,36 @@ Signals are exposed as a public REST surface under `/v1/projects/{projectSlug}/s
 
 ### Phase 2 — Evaluation substrate + script evaluations `[MVP]`
 
+> **Revised to a big-bang cutover (no feature flag).** The original flag-gated, additive framing was superseded during implementation. The core of Phase 2 is a **membership-polarity inversion + always-stamp `signal_id`**, which is not cleanly flag-gatable per row, so it ships as one coordinated deploy with brief accepted downtime (same model as Phase 1's in-place `RENAME`). Phase 2 is delivered as **three self-contained PRs**: **PR1 — engine cutover** (the semantic change; complete), **PR2 — user-created signals** (CRUD API + MCP + codegen + backfill), **PR3 — builder UI**. Phase 5 (unify judge execution onto the matching pipeline) is **folded into PR1**.
+
 **Deps:** P1.
-**Ships:** user-created **script** evaluations (raw script, or a `settings` form compiled to a script) that run on the QuickJS sandbox; write-time matching populates the signal; the signal page shows matched traces + occurrence trend. (Alerting on custom signals arrives in P4.)
-**Safe because:** it's additive schema + new code behind the `signals` flag; the sandbox runtime is already built (`sandbox-runtime.md` Phases 0–1); discovery/monitors untouched.
 
-- [ ] **P2-a** Contracts (`@domain/shared`, `@domain/scores`): `SIGNAL_ORIGINS`, `EvaluationSettings` (the optional declarative config that compiles to `script`) zod; rename score `source`→`source_type` and split `annotation`→`flagger`/`user` (the `evaluation` value is **kept** — no remap). No `type`/`capability` columns on the row — type lives in `settings`; what a script does is detected from it when needed.
-- [ ] **P2-b** PG migration (additive): on `signals` — `filters jsonb null`, `origin varchar(16)` (backfill existing → `'system'`), `deleted_at` + partial-unique slug; make `centroid`/`clustered_at` nullable. On `evaluations` — add `settings jsonb null`; relax `alignment`/`aligned_at` to nullable (judge-only); `script` stays NOT NULL; add the active-detector partial-unique index `(signal_id) WHERE deleted_at IS NULL AND archived_at IS NULL` + its lookup btree. **Pre-migration:** dedupe multiple-evaluations-per-issue rows (keep most-recently-aligned active, archive the rest) before creating the unique index.
-- [ ] **P2-c** Scores write path (`@domain/scores`): an evaluation-score writer that stores the script's returned `value`/`passed`/`feedback`, written Postgres-canonical and synced to ClickHouse like any score (reuse the existing scores write + `syncScoreAnalyticsUseCase`); idempotent per `(evaluation, trace)`.
-- [ ] **P2-d** Matching pipeline skeleton (`@domain/signals` + a `signals:match` worker off `TracesIngested` via the domain-events dispatcher): `matchTracesToSignalsUseCase`, `listActiveDetectors(projectId)` (signals join active evaluations) Redis-cached (org-prefixed), shared `filters` pre-gate reusing row-local `FilterSet` evaluation, then the **sandbox runner** executes the evaluation's `script`. Generalized from `EvaluationTrigger`.
-- [ ] **P2-e** Settings → script codegen (`@domain/sandbox`/`@domain/signals`): consume the sandbox-runtime *SignalRule* codegen so a `settings` form compiles deterministically to a stored `script` + content hash; compile-on-save validation (`ScriptCompileError` rejects at save time).
-- [ ] **P2-f** Backfill (`signals:backfill {signalId, window}`): `backfillSignalScoresUseCase` runs the script over historical traces in batches → scores (Postgres + ClickHouse); enqueued for cheap deterministic scripts (backfilling an llm judge is a costed operation — judges collect forward).
-- [ ] **P2-g** Builder UI (script): `apps/web` signals `-components` — `filters` + a raw-script editor and/or the `settings` form; **live preview** = sandbox dry-run harness against sample traces. Entry points: "New signal", "Create signal from this search".
-- [ ] **P2-h** Signal CRUD API + MCP: `createSignal`/`updateSignal`/`deleteSignal` (reject evaluation-less create for `origin=user`); MCP/SDK regen. Reuse the monitors route template.
+**Membership polarity is INVERTED at the cutover.** A signal's occurrences are its matching scores, where **`passed = true` means the signal's behavior is PRESENT in the trace** (an occurrence) — the opposite of the old problem-detector polarity (`passed = false` = exhibits). This holds for **every** source: judge, flagger, human annotation. The sandbox script decides `passed` directly — the `isScoreMatch` host threshold is removed. Every evaluation run stamps `signal_id` (matched or not); occurrence reads gate `passed = true`. Pre-cutover judge scripts embed the old-polarity prompt; rather than regenerate them, an `evaluations.legacy_polarity` flag inverts their verdict at the execution boundary (self-draining: re-optimization stores a new-polarity script with the flag cleared). A one-time migration flips `passed` on historical `evaluation` + `annotation` scores (errored rows excluded).
 
-**Exit gate:** create a script signal → new in-scope traces produce evaluation scores (Postgres + ClickHouse) → visible on the signal page; backfill works; existing signals/discovery unaffected.
+#### PR1 — Engine cutover `[x] complete`
+
+- [x] **Sandbox `passed` contract**: required `passed: boolean` on the script-score / run-result contract; `Passed()`/`Failed()` set it and the script decides membership; `isScoreMatch` + `DEFAULT_SCRIPT_SCORE_THRESHOLD` removed.
+- [x] **Polarity inversion**: baseline judge prompt (`baseline-prompt.ts`) + GEPA proposer + alignment/optimization scoring flipped to `passed = true` = present; flagger/annotation write paths + discovery eligibility (`check-eligibility`) + the alignment-examples positive/negative selection unified on present = `passed = true`.
+- [x] **`legacy_polarity`**: `evaluations.legacy_polarity` column (existing rows backfilled `true`); the execution boundary inverts a legacy judge's verdict; new / re-optimized evals are `false`. TODO to remove once all legacy evals re-optimize.
+- [x] **`signals:match` replaces `run-live-evaluation`'s scheduling** for ALL origins: a new `signals:match` worker off `TracesIngested` (gated `!isSandbox`, debounced like trace-end) owns evaluation selection (sampling/turn/filter) and re-feeds the existing `live-evaluations:execute` queue. `trace-end` drops its evaluation fan-out (keeps live-queues / flaggers / saved-search / trace-search / conversation-intelligence). The writer always stamps `signal_id`; membership = the `passed = true` subset.
+- [x] **`scores.source` → `source_type`**: real in-place PG `RENAME COLUMN` + domain field + every DB query. **ClickHouse column stays `source`** (it is in the sort key — a rename means a full table rebuild; the `score.source` filter-DSL key, a saved-search contract, also stays). **Public `/scores` wire key stays `source`** (mapped to `source_type` at the API boundary — no SDK break). Value `annotation` is kept (the `flagger`/`user` split is Phase 6).
+- [x] **Read-side `passed = true` gating**: every per-signal occurrence/trace ClickHouse read; the `scores_signal_discovery_work_idx` predicate flipped to `passed = true`.
+- [x] **Cutover migration**: PG `UPDATE` + CH `ALTER UPDATE` flip `passed` on historical `evaluation` + `annotation` scores (`errored` excluded, since the entity forbids `passed = true` on an errored row); the `scores_hourly_buckets` MV is rebuilt to count only `passed = true` (the flip is made synchronous so the rebuild backfills flipped rows). Seed occurrence scores updated to the new polarity.
+
+#### PR2 — User-created signals (API + MCP + backfill) `[ ] pending`
+
+- [ ] Contracts: `SIGNAL_ORIGINS`, `EvaluationSettings` zod (`@domain/shared`).
+- [ ] Additive PG migration: `signals` — `origin` (backfill `'system'`), `filters`, `deleted_at`, nullable `centroid`/`clustered_at`, partial-unique slug; `evaluations` — `settings`, nullable `alignment`/`aligned_at`, dedupe-then-active-detector partial-unique index `(signal_id) WHERE deleted_at IS NULL AND archived_at IS NULL` + lookup btree. Make `toCentroidEmbedding` + the API evaluation response mapper null-safe; handle the un-renamed `issues_centroid_embedding_consistency_check` constraint (survived Phase 1's rename, untracked by Drizzle).
+- [ ] **Settings → script codegen** (`@domain/sandbox`, **net-new**): the original "consume the existing sandbox-runtime *SignalRule* codegen" claim is **refuted** — no such codegen exists yet; PR2 **builds** `compileSettingsToScript` + compile-on-save validation (`ScriptCompileError` → 422), single-sourcing the judge template so capability detection (`llm(`) and parity hold.
+- [ ] **`evaluations.script_hash`** column, filled for all evaluations — the writer reads it for the score's `metadata.evaluationHash` instead of the now-nullable `alignment.evaluationHash` (moved here from PR1: only needed once `alignment` becomes nullable).
+- [ ] `createSignal`/`updateSignal`/`deleteSignal` use-cases + API routes (monitors template) + MCP/SDK regen; reject evaluation-less `origin=user`. `deleteSignal` = PG **soft-delete** + archive the linked evaluation (auto write-stop via the active-detector scan); **no CH cleanup** — deleted-signal scores are excluded read-side via PG lifecycle. **No per-project signal cap.** Default-monitor provisioning stays Phase 4.
+- [ ] `signals:backfill` worker + `backfillSignalScoresUseCase`: deterministic scripts only (judges collect forward); sandbox traces excluded; `windowStartIso` resolved once; idempotent per `(evaluation, trace)`.
+
+#### PR3 — Builder UI `[ ] pending`
+
+- [ ] `apps/web` create-signal modal: name/description + `filters` editor + raw-script editor (judge form is Phase 3) + a **live dry-run preview** (compile + run a script against sample traces, **no persist**). Entry points: "New signal" (signals list), "Create signal from this search" (saved-search surface).
+
+**Exit gate (PR1):** existing evaluations run through `signals:match` with correct inverted, `passed`-based membership; occurrence reads count the `passed = true` distinct-trace subset; discovery + monitors still work; whole-workspace typecheck green. **Exit gate (PR2/PR3):** users create/manage script & judge signals via API/MCP/UI; new in-scope traces produce evaluation scores visible on the signal page; backfill works.
 
 ### Phase 3 — User-created LLM-as-judge signals `[MVP]`
 
@@ -559,17 +576,11 @@ Signals are exposed as a public REST surface under `/v1/projects/{projectSlug}/s
 
 > **— MVP line: Phases 1–4 —**
 
-### Phase 5 — Unify judge execution onto the evaluation matching pipeline `[POST-MVP · internal]`
+### Phase 5 — Unify judge execution onto the evaluation matching pipeline `[FOLDED INTO PR1 · complete]`
 
-**Deps:** P2, P3.
-**Ships:** judge execution moved from the standalone `EvaluationTrigger` path into the Phase-2 matching pipeline (shared `filters` pre-gate, one sandbox runner). No user-facing change.
-**Safe because:** parity-tested behind a flag, then cut over; retires the temporary two-path state. **Shrinks** — judges already execute on the sandbox today, so P5-a/P5-b are largely verification; the genuinely-remaining work is **P5-c** (retire the standalone `EvaluationTrigger` *scheduling* path so all detectors share one pipeline).
+> **Folded into Phase 2 / PR1.** The big-bang cutover pulled this unification forward: the new `signals:match` worker (PR1·1e) is the single trigger for ALL evaluation execution, replacing both `trace-end`'s evaluation fan-out and the standalone `run-live-evaluation` scheduling. The proven `live-evaluations:execute → runLiveEvaluationUseCase` body is re-fed unchanged (so the original P5-a/P5-b "run judges through a new runner + parity suite" mechanism is moot — only the *trigger* moved, not the execution path); P5-c (retire the standalone scheduling path) is what shipped.
 
-- [ ] **P5-a** Run judges through `matchTracesToSignalsUseCase`'s sandbox runner.
-- [ ] **P5-b** Parity suite (every stored judge: old path vs pipeline → identical scores).
-- [ ] **P5-c** Cut over; remove the standalone trigger path.
-
-**Exit gate:** parity suite green; standalone trigger path removed; no behavioral diff.
+- [x] **P5-c** One trigger (`signals:match`) feeds all evaluation execution; the standalone `EvaluationTrigger` *scheduling* path is retired. (~~P5-a/P5-b~~ moot — execution path unchanged.)
 
 ### Phase 6 — Taxonomy cleanup + legacy retirement `[POST-MVP]`
 
