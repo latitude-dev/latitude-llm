@@ -248,6 +248,27 @@ describe("executeLiveEvaluationUseCase", () => {
     expect(aiCalls.generate).toHaveLength(0)
   })
 
+  it("inverts the verdict for a legacy-polarity evaluation so present becomes passed=true", async () => {
+    const { layer: aiLayer } = createFakeAI()
+    // A pre-cutover judge emits passed=true (value 1) when the behavior is ABSENT.
+    const fakeRuntime = createFakeScriptRuntime({
+      run: () =>
+        Effect.succeed({ value: 1, passed: true, feedback: "does not exhibit", duration: 5_000, tokens: 0, cost: 0 }),
+    })
+
+    const result = await Effect.runPromise(
+      executeLiveEvaluationUseCase({
+        ...validInput,
+        script: "return Passed(1, 'does not exhibit')",
+        runtime: "sandbox",
+        legacyPolarity: true,
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, fakeRuntime.layer))),
+    )
+
+    // Inverted to the new convention: behavior absent => not an occurrence (passed=false, value 0).
+    expect(result.result).toEqual({ passed: false, value: 0, feedback: "does not exhibit" })
+  })
+
   it("maps sandbox runtime failures to LiveEvaluationExecutionError", async () => {
     const { layer: aiLayer } = createFakeAI()
     const fakeRuntime = createFakeScriptRuntime({

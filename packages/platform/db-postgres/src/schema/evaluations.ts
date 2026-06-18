@@ -1,5 +1,5 @@
 import type { EvaluationAlignment, EvaluationTrigger } from "@domain/evaluations"
-import { index, jsonb, text, unique, varchar } from "drizzle-orm/pg-core"
+import { boolean, index, jsonb, text, unique, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
 export const evaluations = latitudeSchema.table(
@@ -12,6 +12,7 @@ export const evaluations = latitudeSchema.table(
     name: varchar("name", { length: 128 }).notNull(), // unique name within the project among non-deleted rows
     description: text("description").notNull(), // generated from the resulting script after alignment
     script: text("script").notNull(), // javascript-like evaluation script that runs inside a sandbox/runtime wrapper
+    legacyPolarity: boolean("legacy_polarity").notNull().default(false), // pre-cutover judges emit passed=true for ABSENCE; the execution boundary inverts their verdict
     trigger: jsonb("trigger").$type<EvaluationTrigger>().notNull(), // controls when the evaluation runs on live traffic
     alignment: jsonb("alignment").$type<EvaluationAlignment>().notNull(), // persisted confusion matrix and script hash
     alignedAt: tzTimestamp("aligned_at").notNull(), // last time the evaluation was realigned

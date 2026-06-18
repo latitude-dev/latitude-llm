@@ -54,6 +54,9 @@ export const liveEvaluationExecutionInputSchema = z.object({
   conversation: liveEvaluationConversationInputSchema,
   telemetry: liveEvaluationExecutionTelemetrySchema.optional(),
   runtime: liveEvaluationRuntimeSchema.optional(),
+  // Scripts generated before the passed-polarity inversion emit passed=true for the behavior's
+  // ABSENCE; invert their verdict so stored membership is uniformly passed=true = behavior present.
+  legacyPolarity: z.boolean().optional(),
 })
 export type LiveEvaluationExecutionInput = z.infer<typeof liveEvaluationExecutionInputSchema>
 
@@ -112,8 +115,20 @@ export const executeLiveEvaluationUseCase = (input: LiveEvaluationExecutionInput
       ),
     )
 
+    const normalizedExecution =
+      input.legacyPolarity === true
+        ? {
+            ...execution,
+            result: {
+              passed: !execution.result.passed,
+              value: 1 - execution.result.value,
+              feedback: execution.result.feedback,
+            },
+          }
+        : execution
+
     return yield* Effect.try({
-      try: () => toEvaluationExecutionResult(execution),
+      try: () => toEvaluationExecutionResult(normalizedExecution),
       catch: (error) =>
         new LiveEvaluationExecutionError({
           evaluationId: input.evaluationId,

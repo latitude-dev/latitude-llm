@@ -249,6 +249,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       issue: signalContext,
       conversation: traceDetail.allMessages,
       runtime: sandboxRuntimeEnabled ? "sandbox" : "legacy",
+      legacyPolarity: evaluation.legacyPolarity,
       telemetry: buildEvaluationJudgeLiveTelemetryCapture({
         organizationId: input.organizationId,
         projectId: input.projectId,
