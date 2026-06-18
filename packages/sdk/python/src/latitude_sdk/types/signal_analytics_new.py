@@ -9,7 +9,7 @@ from ..core.pydantic_utilities import UniversalBaseModel
 class SignalAnalyticsNew(UniversalBaseModel):
     total: int = pydantic.Field()
     """
-    Number of new issues.
+    Number of new signals.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

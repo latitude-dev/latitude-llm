@@ -9,7 +9,7 @@ from ..core.pydantic_utilities import UniversalBaseModel
 class SignalAnalyticsEscalating(UniversalBaseModel):
     total: int = pydantic.Field()
     """
-    Number of escalating issues.
+    Number of escalating signals.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

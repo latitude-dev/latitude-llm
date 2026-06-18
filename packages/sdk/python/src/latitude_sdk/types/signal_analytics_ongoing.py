@@ -9,7 +9,7 @@ from ..core.pydantic_utilities import UniversalBaseModel
 class SignalAnalyticsOngoing(UniversalBaseModel):
     total: int = pydantic.Field()
     """
-    Number of ongoing issues.
+    Number of ongoing signals.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

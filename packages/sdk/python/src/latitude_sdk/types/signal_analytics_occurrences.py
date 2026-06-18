@@ -10,12 +10,12 @@ from .signal_analytics_bucket import SignalAnalyticsBucket
 class SignalAnalyticsOccurrences(UniversalBaseModel):
     total: int = pydantic.Field()
     """
-    Number of issue occurrences in the range.
+    Number of signal occurrences in the range.
     """
 
     buckets: typing.List[SignalAnalyticsBucket] = pydantic.Field()
     """
-    Number of issue occurrences per bucket.
+    Number of signal occurrences per bucket.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

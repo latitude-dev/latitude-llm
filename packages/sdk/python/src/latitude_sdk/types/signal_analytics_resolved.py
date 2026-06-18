@@ -9,7 +9,7 @@ from ..core.pydantic_utilities import UniversalBaseModel
 class SignalAnalyticsResolved(UniversalBaseModel):
     total: int = pydantic.Field()
     """
-    Number of resolved issues.
+    Number of resolved signals.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
