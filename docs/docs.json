@@ -110,6 +110,7 @@
               "telemetry/frameworks/llamaindex",
               "telemetry/frameworks/mastra",
               "telemetry/frameworks/eve",
+              "telemetry/frameworks/flue",
               "telemetry/frameworks/strands",
               "telemetry/frameworks/livekit"
             ]

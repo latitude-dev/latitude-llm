@@ -89,8 +89,8 @@ export function isGenAiOrLlmAttributeSpan(span: ReadableSpan): boolean {
     if (key === OPENINFERENCE_KIND || key.startsWith("openinference.")) return true
     // Vercel AI SDK uses ai.* prefix
     if (key.startsWith("ai.")) return true
-    // Eve framework grouping spans carry only eve.* attributes
-    if (key.startsWith("eve.")) return true
+    // Eve and Flue framework grouping spans carry framework-specific attributes
+    if (key.startsWith("eve.") || key.startsWith("flue.")) return true
     // Latitude context attributes
     if (key.startsWith("latitude.")) return true
   }

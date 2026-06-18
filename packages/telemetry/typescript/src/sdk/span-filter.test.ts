@@ -30,6 +30,7 @@ describe("isGenAiOrLlmAttributeSpan", () => {
     expect(isGenAiOrLlmAttributeSpan(mockSpan({ attributes: { "llm.model_name": "x" } }))).toBe(true)
     expect(isGenAiOrLlmAttributeSpan(mockSpan({ attributes: { "openinference.span.kind": "CHAIN" } }))).toBe(true)
     expect(isGenAiOrLlmAttributeSpan(mockSpan({ attributes: { "eve.session.id": "sess-1" } }))).toBe(true)
+    expect(isGenAiOrLlmAttributeSpan(mockSpan({ attributes: { "flue.run.id": "run-1" } }))).toBe(true)
     expect(isGenAiOrLlmAttributeSpan(mockSpan({ attributes: { "http.route": "/api" } }))).toBe(false)
   })
 })

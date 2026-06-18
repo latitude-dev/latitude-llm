@@ -128,7 +128,7 @@ const response = await client.chat.completions.create({
 Latitude Telemetry is built entirely on OpenTelemetry standards. When you're ready to add other observability tools (Datadog, Sentry, Jaeger, etc.), you can use them alongside Latitude without conflicts:
 
 - **Standard span processors** — `LatitudeSpanProcessor` works with any `NodeSDK` or `NodeTracerProvider`
-- **Smart filtering** — Only LLM-relevant spans are exported to Latitude (spans with `gen_ai.*`, `llm.*`, `openinference.*`, or `ai.*` attributes, plus known LLM instrumentation scopes)
+- **Smart filtering** — Only LLM-relevant spans are exported to Latitude (spans with `gen_ai.*`, `llm.*`, `openinference.*`, `ai.*`, supported framework attributes such as `eve.*` / `flue.*`, plus known LLM instrumentation scopes)
 - **Compatible with existing instrumentations** — Works alongside HTTP, DB, and other OTel instrumentations
 - **No vendor lock-in** — Standard OTLP export, no proprietary wire format
 

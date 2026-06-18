@@ -1,0 +1,185 @@
+---
+title: Flue
+description: Connect your Flue workflows and agents to Latitude for observability.
+---
+
+## Overview
+
+This guide shows you how to send traces from **[Flue](https://flueframework.com)** to Latitude.
+
+Flue exposes an OpenTelemetry observer through `@flue/opentelemetry`. The observer converts Flue workflow runs, operations, model turns, tool calls, delegated tasks, compactions, and logs into standard OpenTelemetry spans. Latitude ingests those spans directly and understands Flue's `flue.*` attributes and OpenTelemetry GenAI `gen_ai.*` model metadata.
+
+<Check>
+  You'll keep building Flue workflows exactly as you do today. Latitude only adds
+  an OpenTelemetry export path for the spans Flue already emits.
+</Check>
+
+<Note>
+  Flue support is **TypeScript only**.
+</Note>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A Flue project that uses `@flue/runtime`
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    Install Latitude Telemetry and Flue's OpenTelemetry observer:
+
+    <CodeGroup>
+      ```bash npm
+      npm install @latitude-data/telemetry @flue/opentelemetry @opentelemetry/api
+      ```
+
+      ```bash pnpm
+      pnpm add @latitude-data/telemetry @flue/opentelemetry @opentelemetry/api
+      ```
+
+      ```bash yarn
+      yarn add @latitude-data/telemetry @flue/opentelemetry @opentelemetry/api
+      ```
+
+      ```bash bun
+      bun add @latitude-data/telemetry @flue/opentelemetry @opentelemetry/api
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Initialize Latitude">
+    Initialize Latitude once in your application entrypoint, before the first Flue workflow or operation runs. You do not need a provider-specific `instrumentations` entry for Flue, because Flue emits OpenTelemetry spans itself.
+
+    ```ts
+    import { Latitude } from "@latitude-data/telemetry"
+
+    export const latitude = new Latitude({
+      apiKey: process.env.LATITUDE_API_KEY!,
+      project: process.env.LATITUDE_PROJECT_SLUG!,
+      serviceName: "flue-app",
+    })
+
+    await latitude.ready
+    ```
+
+    <Note>
+      If your app already initializes Sentry, Datadog, New Relic, Honeycomb, or a
+      custom OpenTelemetry SDK, initialize that first and then construct
+      `new Latitude(...)`. Latitude will attach its span processor to the existing
+      provider when possible.
+    </Note>
+  </Step>
+
+  <Step title="Register Flue's observer">
+    Register Flue's OpenTelemetry observer once, after the OpenTelemetry SDK is configured by Latitude:
+
+    ```ts
+    import { createOpenTelemetryObserver } from "@flue/opentelemetry"
+    import { observe } from "@flue/runtime"
+    import { latitude } from "./latitude"
+
+    await latitude.ready
+
+    observe(createOpenTelemetryObserver())
+    ```
+
+    Flue model-turn spans include `gen_ai.*` attributes for model, provider, token usage, and finish metadata. Flue workflow, operation, tool, task, compaction, and log spans include `flue.*` correlation attributes so the full hierarchy appears in Latitude.
+  </Step>
+
+  <Step title="Add request context (optional)">
+    Wrap the request, job, or agent-turn boundary with `capture()` when you have user, session, tag, or metadata context to attach to every Flue span created inside the callback.
+
+    ```ts
+    import { capture } from "@latitude-data/telemetry"
+
+    await capture(
+      "flue-support-workflow",
+      async () => {
+        return runSupportWorkflow({ message })
+      },
+      {
+        userId: user.id,
+        sessionId: conversation.id,
+        tags: ["flue", "support"],
+        metadata: { workflowName: "support" },
+      },
+    )
+    ```
+  </Step>
+
+</Steps>
+
+---
+
+## Export content safely
+
+Flue's OpenTelemetry observer omits sensitive content by default. Workflow payloads and results, detailed errors, model input and output, tool values, task content, and log content are not exported unless you explicitly opt in with `exportContent()`.
+
+Use `exportContent()` only after sanitizing the fields you want Latitude to receive:
+
+```ts
+import { createOpenTelemetryObserver } from "@flue/opentelemetry"
+import { observe } from "@flue/runtime"
+
+const redactLogMessage = (message: string) => message.replace(/[\w.-]+@[\w.-]+/g, "[REDACTED_EMAIL]")
+const redactLogAttributes = (attributes: Record<string, unknown> | undefined) =>
+  Object.fromEntries(Object.entries(attributes ?? {}).filter(([key]) => !key.toLowerCase().includes("secret")))
+
+observe(
+  createOpenTelemetryObserver({
+    exportContent(event) {
+      if (event.type !== "log") return undefined
+
+      return {
+        ...event,
+        message: redactLogMessage(event.message),
+        attributes: redactLogAttributes(event.attributes),
+      }
+    },
+  }),
+)
+```
+
+<Warning>
+  Returning the original event from `exportContent()` can send prompts,
+  completions, tool arguments, tool results, logs, and application-owned values
+  to Latitude. Only enable content export for data your organization is allowed
+  to store in your observability backend.
+</Warning>
+
+---
+
+## Cloudflare and generic OpenTelemetry runtimes
+
+For runtimes where the TypeScript SDK's Node OpenTelemetry stack is not appropriate, configure your runtime's OTLP HTTP exporter directly and still register Flue's observer:
+
+```bash
+export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="https://ingest.latitude.so/v1/traces"
+export OTEL_EXPORTER_OTLP_TRACES_HEADERS="Authorization=Bearer YOUR_API_KEY,X-Latitude-Project=YOUR_PROJECT_SLUG"
+```
+
+```ts
+import { createOpenTelemetryObserver } from "@flue/opentelemetry"
+import { observe } from "@flue/runtime"
+
+observe(createOpenTelemetryObserver())
+```
+
+Make sure your OpenTelemetry SDK, exporter, sampling, and shutdown or flush behavior are compatible with the deployed runtime.
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Run a Flue workflow with at least one model turn or tool call
+3. Confirm the workflow, operation, model turn, tool, task, and compaction spans appear with Flue correlation attributes, model metadata, token usage, latency, and errors

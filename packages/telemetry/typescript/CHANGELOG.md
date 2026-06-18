@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.1] - 2026-06-18
+
+### Added
+
+- Smart filtering now exports Flue framework spans that carry `flue.*` attributes, preserving workflow, operation, tool, task, compaction, and log spans alongside GenAI model turns.
+
 ## [3.1.0] - 2026-06-12
 
 ### Added
