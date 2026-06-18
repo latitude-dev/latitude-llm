@@ -129,7 +129,16 @@ GROUP BY
 -- Replicated* target propagates the inserted parts to the other replicas
 -- (single shard — same pattern as 00027 / 00034). The ALIAS columns
 -- (duration_ns, time_to_first_token_ns) are excluded by `*` on both sides.
-INSERT INTO traces SELECT * FROM traces_legacy;
+INSERT INTO traces
+SELECT *
+FROM traces_legacy
+SETTINGS
+    max_threads = 1,
+    max_insert_threads = 1,
+    max_streams_to_max_threads_ratio = 1,
+    max_block_size = 1024,
+    min_insert_block_size_rows = 0,
+    min_insert_block_size_bytes = 0;
 
 DROP TABLE IF EXISTS traces_legacy ON CLUSTER default;
 
@@ -241,6 +250,15 @@ GROUP BY
     project_id,
     trace_id;
 
-INSERT INTO traces SELECT * FROM traces_legacy;
+INSERT INTO traces
+SELECT *
+FROM traces_legacy
+SETTINGS
+    max_threads = 1,
+    max_insert_threads = 1,
+    max_streams_to_max_threads_ratio = 1,
+    max_block_size = 1024,
+    min_insert_block_size_rows = 0,
+    min_insert_block_size_bytes = 0;
 
 DROP TABLE IF EXISTS traces_legacy ON CLUSTER default;
