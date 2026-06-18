@@ -5,6 +5,7 @@ import {
   createPosthogMapper,
   DESTINATION_SYNC_MAX_ATTEMPTS,
   DESTINATION_SYNC_RETRY_BACKOFF_MS,
+  type DeliveryErrorReason,
   type DestinationDelivererRegistry,
   DestinationDeliverers,
   type DestinationMapperRegistry,
@@ -14,6 +15,7 @@ import {
   type DestinationSource,
   DestinationSourceStateRepository,
   deleteProjectDestinationsUseCase,
+  isDeliveryErrorReason,
   pruneDestinationSyncRunsUseCase,
   recordBackfillFailureUseCase,
   recordDestinationSyncFailureUseCase,
@@ -112,11 +114,18 @@ const spanUrlBuilder =
 
 /** Sanitized to status + our taxonomy; delivery errors never carry upstream response bodies. */
 const finalFailureMessage = (error: Error): string => {
-  const e = error as { reason?: unknown; upstreamStatus?: unknown }
-  if (typeof e.reason === "string") {
-    return typeof e.upstreamStatus === "number" ? `[${e.upstreamStatus}] ${e.reason}` : e.reason
+  const e = error as { reason?: unknown; detail?: unknown; upstreamStatus?: unknown }
+  const code = typeof e.detail === "string" ? e.detail : typeof e.reason === "string" ? e.reason : undefined
+  if (code !== undefined) {
+    return typeof e.upstreamStatus === "number" ? `[${e.upstreamStatus}] ${code}` : code
   }
   return "delivery retries exhausted"
+}
+
+/** Typed reason off the exhausted delivery error, so the engine can throttle (429) instead of quarantining. */
+const deliveryReason = (error: Error): DeliveryErrorReason | undefined => {
+  const reason = (error as { reason?: unknown }).reason
+  return isDeliveryErrorReason(reason) ? reason : undefined
 }
 
 export const createDestinationsWorker = ({
@@ -410,12 +419,14 @@ export const createDestinationsWorker = ({
     },
     {
       onFinalFailure: {
-        runSync: (payload, error) =>
-          recordDestinationSyncFailureUseCase({
+        runSync: (payload, error) => {
+          const reason = deliveryReason(error)
+          return recordDestinationSyncFailureUseCase({
             destinationId: DestinationId(payload.destinationId),
             source: payload.source as DestinationSource,
             now: new Date(),
             message: finalFailureMessage(error),
+            ...(reason === undefined ? {} : { reason }),
           }).pipe(
             withPostgres(recordFailureLayer, pgClient, OrganizationId(payload.organizationId)),
             Effect.tap((result) =>
@@ -438,7 +449,8 @@ export const createDestinationsWorker = ({
             ),
             withTracing,
             Effect.asVoid,
-          ),
+          )
+        },
       },
     },
   )

@@ -345,7 +345,12 @@ describe("runDestinationSyncUseCase", () => {
     const nextCursor: SourceCursor = { watermark: CURSOR_AT, id: "aaaaaaaaaaaaaaa1" }
     const { destinationRows, cursorRows, syncRunRows, layer } = setup({
       window: { records, nextCursor },
-      deliveryFailure: new RetryableDeliveryError({ kind: "posthog", reason: "upstream_5xx", upstreamStatus: 503 }),
+      deliveryFailure: new RetryableDeliveryError({
+        kind: "posthog",
+        reason: "server_error",
+        detail: "upstream_server_error",
+        upstreamStatus: 503,
+      }),
     })
 
     const error = await Effect.runPromise(
@@ -371,7 +376,8 @@ describe("runDestinationSyncUseCase", () => {
       window: { records, nextCursor },
       deliveryFailure: new NonRetryableDeliveryError({
         kind: "posthog",
-        reason: "invalid_api_key",
+        reason: "auth",
+        detail: "invalid_api_key",
         upstreamStatus: 401,
       }),
     })
@@ -413,7 +419,8 @@ describe("runDestinationSyncUseCase", () => {
       window: { records, nextCursor },
       deliveryFailure: new NonRetryableDeliveryError({
         kind: "posthog",
-        reason: "invalid_api_key",
+        reason: "auth",
+        detail: "invalid_api_key",
         upstreamStatus: 401,
       }),
     })
@@ -428,6 +435,33 @@ describe("runDestinationSyncUseCase", () => {
     expect(res.quarantineEvent).toBeNull()
     expect(destinationRows[0]?.status).toBe("active")
     expect(destinationRows[0]?.consecutiveFailures).toBe(2)
+  })
+
+  it("fails the window on a rate_limited terminal failure without counting toward quarantine", async () => {
+    const records = [stubSpan("aaaaaaaaaaaaaaa1", CURSOR_AT)]
+    const nextCursor: SourceCursor = { watermark: CURSOR_AT, id: "aaaaaaaaaaaaaaa1" }
+    const { destinationRows, cursorRows, syncRunRows, layer } = setup({
+      seed: makeDestination({ consecutiveFailures: 4 }),
+      window: { records, nextCursor },
+      // A second adapter could surface a throttle as terminal; the engine still must not quarantine on it.
+      deliveryFailure: new NonRetryableDeliveryError({ kind: "posthog", reason: "rate_limited", upstreamStatus: 429 }),
+    })
+
+    const res = await Effect.runPromise(
+      runDestinationSyncUseCase({ destinationId: DESTINATION_ID, source: SOURCE, now: NOW }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(res.outcome).toBe("failed")
+    expect(res.quarantined).toBe(false)
+    expect(res.quarantineEvent).toBeNull()
+    expect(destinationRows[0]?.status).toBe("active")
+    expect(destinationRows[0]?.consecutiveFailures).toBe(4) // unchanged at the threshold boundary
+    // Cursor untouched, last_run_at bumped, and the failure is still recorded in run history.
+    expect(cursorRows[0]?.watermarkId).toBe("")
+    expect(cursorRows[0]?.lastRunAt).toEqual(NOW)
+    expect(syncRunRows[0]?.status).toBe("failed")
   })
 
   it("aborts without bookkeeping when the optimistic cursor write is stale", async () => {

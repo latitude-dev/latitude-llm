@@ -571,7 +571,8 @@ describe("runBackfillWindowUseCase (full drain)", () => {
       destination: makeDestination({ consecutiveFailures: 4 }),
       deliveryFailure: new NonRetryableDeliveryError({
         kind: "posthog",
-        reason: "invalid_api_key",
+        reason: "auth",
+        detail: "invalid_api_key",
         upstreamStatus: 401,
       }),
     })
@@ -599,7 +600,12 @@ describe("runBackfillWindowUseCase (full drain)", () => {
       records: [stubSpan("a1", new Date("2026-05-01T01:00:00.000Z"))],
       state: makeState(1_000, { backfillStartedAt: NOW }), // in-flight chain (initiator already ran)
       destination: makeDestination({ consecutiveFailures: 4 }),
-      deliveryFailure: new RetryableDeliveryError({ kind: "posthog", reason: "upstream_5xx", upstreamStatus: 503 }),
+      deliveryFailure: new RetryableDeliveryError({
+        kind: "posthog",
+        reason: "server_error",
+        detail: "upstream_server_error",
+        upstreamStatus: 503,
+      }),
     })
 
     const error = await Effect.runPromise(

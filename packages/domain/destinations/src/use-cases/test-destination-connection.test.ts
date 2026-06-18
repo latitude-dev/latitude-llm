@@ -35,10 +35,18 @@ describe("testDestinationConnectionUseCase", () => {
 
   it("reports a non-retryable failure for an invalid key (401)", async () => {
     const { fake, run } = setup()
-    fake.failWith(new NonRetryableDeliveryError({ kind: "posthog", reason: "invalid_api_key", upstreamStatus: 401 }))
+    fake.failWith(
+      new NonRetryableDeliveryError({
+        kind: "posthog",
+        reason: "auth",
+        detail: "invalid_api_key",
+        upstreamStatus: 401,
+      }),
+    )
 
     const result = await run()
 
+    // The result surfaces the adapter's specific detail, not the generic category.
     expect(result).toEqual({
       status: "failed",
       retryable: false,
@@ -49,7 +57,7 @@ describe("testDestinationConnectionUseCase", () => {
 
   it("reports a retryable failure for a transport error", async () => {
     const { fake, run } = setup()
-    fake.failWith(new RetryableDeliveryError({ kind: "posthog", reason: "transport_error" }))
+    fake.failWith(new RetryableDeliveryError({ kind: "posthog", reason: "transport", detail: "transport_error" }))
 
     const result = await run()
 

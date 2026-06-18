@@ -13,7 +13,12 @@ import type { Destination, DestinationKind } from "../entities/destination.ts"
 import type { DestinationSource } from "../entities/destination-source.ts"
 import type { DestinationSourceState } from "../entities/destination-source-state.ts"
 import { createDestinationSyncRun } from "../entities/destination-sync-run.ts"
-import { type DeliveryError, isRetryableDeliveryError, type RetryableDeliveryError } from "../errors.ts"
+import {
+  type DeliveryError,
+  isRetryableDeliveryError,
+  isThrottlingDeliveryReason,
+  type RetryableDeliveryError,
+} from "../errors.ts"
 import { type DeliveryWindow, DestinationDeliverers } from "../ports/destination-deliverer.ts"
 import { DestinationMappers } from "../ports/destination-mapper.ts"
 import { DestinationRepository } from "../ports/destination-repository.ts"
@@ -76,8 +81,10 @@ type Requirements =
   | DestinationDeliverers
   | DestinationMappers
 
-const sanitizedFailureMessage = (error: DeliveryError): string =>
-  error.upstreamStatus === undefined ? error.reason : `[${error.upstreamStatus}] ${error.reason}`
+const sanitizedFailureMessage = (error: DeliveryError): string => {
+  const detail = error.detail ?? error.reason
+  return error.upstreamStatus === undefined ? detail : `[${error.upstreamStatus}] ${detail}`
+}
 
 const isForward = (next: SourceCursor, current: SourceCursor): boolean =>
   next.watermark.getTime() > current.watermark.getTime() ||
@@ -188,6 +195,9 @@ const handleEmptyWindow = (params: {
  * at the threshold, bump `last_run_at` (not the cursor — the window wasn't
  * delivered), and write a `failed` sync-run. Emits the {@link
  * DestinationQuarantineEvent} only on the exact run that flips to quarantined.
+ * A throttle reason (`rate_limited`) is an exception: the destination is healthy
+ * and the upstream is just throttling, so the run fails its window but the
+ * failure does not count toward quarantine — the sweep re-enqueues next interval.
  */
 const handleDeliveryFailure = (params: {
   readonly destination: Destination
@@ -207,8 +217,9 @@ const handleDeliveryFailure = (params: {
     const sourceStates = yield* DestinationSourceStateRepository
     const syncRuns = yield* DestinationSyncRunRepository
 
-    const consecutiveFailures = destination.consecutiveFailures + 1
-    const quarantined = consecutiveFailures >= DESTINATION_QUARANTINE_FAILURE_THRESHOLD
+    const throttled = isThrottlingDeliveryReason(error.reason)
+    const consecutiveFailures = throttled ? destination.consecutiveFailures : destination.consecutiveFailures + 1
+    const quarantined = !throttled && consecutiveFailures >= DESTINATION_QUARANTINE_FAILURE_THRESHOLD
     const message = sanitizedFailureMessage(error)
 
     yield* destinations.updateQuarantineState({

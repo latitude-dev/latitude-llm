@@ -16,3 +16,14 @@ export const POSTHOG_EVENT_MAX_BYTES = 1024 * 1024
 
 /** PostHog requires `historical_migration` event timestamps to be at least 48h old. */
 export const POSTHOG_HISTORICAL_MIGRATION_MIN_WINDOW_AGE_MS = 48 * 60 * 60 * 1000
+
+/**
+ * In-transport 429 handling: honor PostHog's `Retry-After` and re-POST the same
+ * chunk a few times before deferring to BullMQ, so a brief throttle doesn't fail
+ * the whole window. Past the retry budget the chunk surfaces a retryable
+ * `rate_limited` error — the engine backs off without quarantining the (healthy)
+ * destination.
+ */
+export const POSTHOG_RATE_LIMIT_MAX_RETRIES = 3
+export const POSTHOG_RATE_LIMIT_DEFAULT_BACKOFF_MS = 1_000
+export const POSTHOG_RATE_LIMIT_MAX_BACKOFF_MS = 30_000
