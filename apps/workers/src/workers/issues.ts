@@ -6,7 +6,7 @@ import {
   WorkflowStarter,
   type WorkflowStarterShape,
 } from "@domain/queue"
-import type { ScoreSource } from "@domain/scores"
+import type { ScoreSourceType } from "@domain/scores"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import {
   checkSignalEscalationUseCase,
@@ -201,7 +201,7 @@ export const createSignalsWorker = async ({
         signalId: payload.signalId,
         draftedAt: payload.draftedAt ? new Date(payload.draftedAt) : null,
         feedback: payload.feedback,
-        source: payload.source as ScoreSource,
+        source_type: payload.source as ScoreSourceType,
         createdAt: new Date(payload.createdAt),
       }).pipe(
         withPostgres(SignalRepositoryLive, pgClient, OrganizationId(payload.organizationId)),

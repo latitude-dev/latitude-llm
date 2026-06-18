@@ -88,6 +88,7 @@ const makeEvaluation = (id: string, signalId: string): Evaluation =>
     name: `Evaluation ${id}`,
     description: `Description ${id}`,
     script: "return { passed: false }",
+    legacyPolarity: false,
     trigger: defaultEvaluationTrigger(),
     alignment: emptyEvaluationAlignment("hash-1"),
     alignedAt: new Date("2026-03-31T10:00:00.000Z"),

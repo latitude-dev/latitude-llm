@@ -15,9 +15,9 @@ export const loadAnnotationScoreForPublicationMutation = (scoreId: ScoreId) =>
         ),
       )
 
-    if (score.source !== "annotation") {
+    if (score.source_type !== "annotation") {
       return yield* new BadRequestError({
-        message: `Score ${scoreId} is not an annotation (source: ${score.source})`,
+        message: `Score ${scoreId} is not an annotation (source: ${score.source_type})`,
       })
     }
 

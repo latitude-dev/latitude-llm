@@ -56,7 +56,7 @@ describe("removeScoreFromSignalUseCase", () => {
         signalId,
         draftedAt: new Date("2026-03-30T10:00:00.000Z"),
         feedback: "Some feedback",
-        source: "annotation",
+        source_type: "annotation",
         createdAt: new Date("2026-03-30T10:00:00.000Z"),
       }),
     )
@@ -72,7 +72,7 @@ describe("removeScoreFromSignalUseCase", () => {
         signalId: null,
         draftedAt: null,
         feedback: "Some feedback",
-        source: "annotation",
+        source_type: "annotation",
         createdAt: new Date("2026-03-30T10:00:00.000Z"),
       }),
     )
@@ -97,7 +97,7 @@ describe("removeScoreFromSignalUseCase", () => {
         signalId,
         draftedAt: null,
         feedback: "The assistant leaks API tokens.",
-        source: "annotation",
+        source_type: "annotation",
         createdAt: new Date("2026-03-30T10:00:00.000Z"),
       }).pipe(Effect.provide(layer)),
     )
@@ -117,7 +117,7 @@ describe("removeScoreFromSignalUseCase", () => {
         },
         score: {
           embedding,
-          source: "annotation",
+          source_type: "annotation",
           createdAt: scoreCreatedAt,
         },
         operation: "add",
@@ -145,7 +145,7 @@ describe("removeScoreFromSignalUseCase", () => {
         signalId,
         draftedAt: null,
         feedback: "The assistant leaks API tokens.",
-        source: "annotation",
+        source_type: "annotation",
         createdAt: scoreCreatedAt,
       }).pipe(Effect.provide(layer)),
     )
@@ -165,13 +165,13 @@ describe("removeScoreFromSignalUseCase", () => {
 
     let centroid = updateSignalCentroid({
       centroid: { ...createSignalCentroid(), clusteredAt: new Date("2026-03-29T10:00:00.000Z") },
-      score: { embedding: embedding1, source: "annotation", createdAt: scoreCreatedAt1 },
+      score: { embedding: embedding1, source_type: "annotation", createdAt: scoreCreatedAt1 },
       operation: "add",
       timestamp: scoreCreatedAt1,
     })
     centroid = updateSignalCentroid({
       centroid,
-      score: { embedding: embedding2, source: "annotation", createdAt: scoreCreatedAt2 },
+      score: { embedding: embedding2, source_type: "annotation", createdAt: scoreCreatedAt2 },
       operation: "add",
       timestamp: scoreCreatedAt2,
     })
@@ -195,7 +195,7 @@ describe("removeScoreFromSignalUseCase", () => {
         signalId,
         draftedAt: null,
         feedback: "First feedback",
-        source: "annotation",
+        source_type: "annotation",
         createdAt: scoreCreatedAt1,
       }).pipe(Effect.provide(layer)),
     )

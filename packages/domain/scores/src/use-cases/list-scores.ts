@@ -2,7 +2,7 @@ import { BadRequestError, cuidSchema, ProjectId, type RepositoryError } from "@d
 import { Effect } from "effect"
 import { z } from "zod"
 import { SCORE_SOURCE_ID_MAX_LENGTH } from "../constants.ts"
-import { scoreSourceSchema } from "../entities/score.ts"
+import { scoreSourceTypeSchema } from "../entities/score.ts"
 import { ScoreRepository, scoreDraftModeSchema } from "../ports/score-repository.ts"
 
 export const baseListScoresInputSchema = z.object({
@@ -16,7 +16,7 @@ export const listProjectScoresInputSchema = baseListScoresInputSchema.extend({})
 export type ListProjectScoresInput = z.input<typeof listProjectScoresInputSchema>
 
 export const listSourceScoresInputSchema = baseListScoresInputSchema.extend({
-  source: scoreSourceSchema,
+  source: scoreSourceTypeSchema,
   sourceId: z.string().min(1).max(SCORE_SOURCE_ID_MAX_LENGTH),
 })
 export type ListSourceScoresInput = z.input<typeof listSourceScoresInputSchema>

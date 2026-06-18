@@ -39,19 +39,19 @@ export const baseWriteScoreInputSchema = baseWritableScoreSchema.extend({
 })
 export type BaseWriteScoreInput = z.input<typeof baseWriteScoreInputSchema>
 
-export const writeScoreInputSchema = z.discriminatedUnion("source", [
+export const writeScoreInputSchema = z.discriminatedUnion("source_type", [
   baseWriteScoreInputSchema.extend({
-    source: evaluationScoreSchema.shape.source,
+    source_type: evaluationScoreSchema.shape.source_type,
     sourceId: evaluationScoreSchema.shape.sourceId,
     metadata: evaluationScoreSchema.shape.metadata,
   }),
   baseWriteScoreInputSchema.extend({
-    source: annotationScoreSchema.shape.source,
+    source_type: annotationScoreSchema.shape.source_type,
     sourceId: annotationScoreSchema.shape.sourceId,
     metadata: annotationScoreSchema.shape.metadata,
   }),
   baseWriteScoreInputSchema.extend({
-    source: customScoreSchema.shape.source,
+    source_type: customScoreSchema.shape.source_type,
     sourceId: customScoreSchema.shape.sourceId,
     metadata: customScoreSchema.shape.metadata,
   }),
@@ -77,8 +77,8 @@ const validateDraftUpdate = (existingScore: Score, input: ParsedWriteScoreInput)
     return new ScoreDraftUpdateConflictError({ scoreId: existingScore.id, field: "projectId" })
   }
 
-  if (existingScore.source !== input.source) {
-    return new ScoreDraftUpdateConflictError({ scoreId: existingScore.id, field: "source" })
+  if (existingScore.source_type !== input.source_type) {
+    return new ScoreDraftUpdateConflictError({ scoreId: existingScore.id, field: "source_type" })
   }
 
   if (existingScore.sourceId !== input.sourceId) {
@@ -120,7 +120,7 @@ const buildScore = ({
       sessionId: input.sessionId,
       traceId: input.traceId,
       spanId: input.spanId,
-      source: input.source,
+      source_type: input.source_type,
       sourceId: input.sourceId,
       simulationId: input.simulationId,
       signalId: input.signalId,
@@ -147,7 +147,7 @@ export const writeScoreUseCase = Effect.fn("scores.writeScore")(function* (input
   const sqlClient = yield* SqlClient
 
   yield* Effect.annotateCurrentSpan("score.projectId", parsedInput.projectId)
-  yield* Effect.annotateCurrentSpan("score.source", parsedInput.source)
+  yield* Effect.annotateCurrentSpan("score.sourceType", parsedInput.source_type)
   yield* Effect.annotateCurrentSpan("score.sqlClientOrganizationId", sqlClient.organizationId)
 
   const score = yield* sqlClient.transaction(

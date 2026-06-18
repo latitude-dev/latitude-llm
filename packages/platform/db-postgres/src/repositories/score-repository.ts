@@ -1,4 +1,4 @@
-import type { Score, ScoreListOptions, ScoreSource, TraceAnnotationCounts } from "@domain/scores"
+import type { Score, ScoreListOptions, ScoreSourceType, TraceAnnotationCounts } from "@domain/scores"
 import { ScoreRepository, SIGNAL_FLAGGER_SLUG_SAMPLE_LIMIT, scoreSchema } from "@domain/scores"
 import {
   NotFoundError,
@@ -41,7 +41,7 @@ const toDomainScore = (row: typeof scores.$inferSelect): Score =>
     sessionId: row.sessionId,
     traceId: row.traceId,
     spanId: row.spanId,
-    source: row.source,
+    source_type: row.sourceType,
     sourceId: row.sourceId,
     simulationId: row.simulationId,
     signalId: row.signalId,
@@ -67,7 +67,7 @@ const toInsertRow = (score: Score): typeof scores.$inferInsert => ({
   sessionId: score.sessionId,
   traceId: score.traceId,
   spanId: score.spanId,
-  source: score.source,
+  sourceType: score.source_type,
   sourceId: score.sourceId,
   simulationId: score.simulationId,
   signalId: score.signalId,
@@ -173,7 +173,7 @@ export const ScoreRepositoryLive = Layer.effect(
                 and(
                   eq(scores.organizationId, organizationId),
                   eq(scores.projectId, input.projectId),
-                  eq(scores.source, "evaluation"),
+                  eq(scores.sourceType, "evaluation"),
                   eq(scores.sourceId, input.evaluationId),
                   isNull(scores.draftedAt),
                   input.whereClause,
@@ -218,7 +218,7 @@ export const ScoreRepositoryLive = Layer.effect(
                 scoreId: row.id,
                 projectId: row.projectId,
                 traceId: row.traceId,
-                source: row.source,
+                source: row.sourceType,
                 sourceId: row.sourceId,
                 rowOrganizationId: row.organizationId,
                 sqlClientOrganizationId: organizationId,
@@ -262,7 +262,7 @@ export const ScoreRepositoryLive = Layer.effect(
                   scoreId: row.id,
                   projectId: row.projectId,
                   traceId: row.traceId,
-                  source: row.source,
+                  source: row.sourceType,
                   sourceId: row.sourceId,
                   rowOrganizationId: row.organizationId,
                   sqlClientOrganizationId: organizationId,
@@ -334,14 +334,14 @@ export const ScoreRepositoryLive = Layer.effect(
         options,
       }: {
         readonly projectId: ProjectId
-        readonly source: ScoreSource
+        readonly source: ScoreSourceType
         readonly sourceId?: string
         readonly options?: ScoreListOptions
       }) => {
         const combined =
           sourceId !== undefined
-            ? and(eq(scores.projectId, projectId), eq(scores.source, source), eq(scores.sourceId, sourceId))
-            : and(eq(scores.projectId, projectId), eq(scores.source, source))
+            ? and(eq(scores.projectId, projectId), eq(scores.sourceType, source), eq(scores.sourceId, sourceId))
+            : and(eq(scores.projectId, projectId), eq(scores.sourceType, source))
         return list({
           baseWhere: combined ?? eq(scores.projectId, projectId),
           options,
@@ -356,12 +356,12 @@ export const ScoreRepositoryLive = Layer.effect(
       }: {
         readonly projectId: ProjectId
         readonly traceId: TraceId
-        readonly source?: ScoreSource
+        readonly source?: ScoreSourceType
         readonly options?: ScoreListOptions
       }) => {
         const combined =
           source !== undefined
-            ? and(eq(scores.projectId, projectId), eq(scores.traceId, traceId as string), eq(scores.source, source))
+            ? and(eq(scores.projectId, projectId), eq(scores.traceId, traceId as string), eq(scores.sourceType, source))
             : and(eq(scores.projectId, projectId), eq(scores.traceId, traceId as string))
         return list({
           baseWhere: combined ?? eq(scores.projectId, projectId),
@@ -378,7 +378,7 @@ export const ScoreRepositoryLive = Layer.effect(
           const traceIdValues = traceIds.map((traceId) => String(traceId))
           const baseWhere = and(
             eq(scores.projectId, projectId),
-            eq(scores.source, "annotation"),
+            eq(scores.sourceType, "annotation"),
             inArray(scores.traceId, traceIdValues),
           )
           const whereClause = draftClause
@@ -422,7 +422,7 @@ export const ScoreRepositoryLive = Layer.effect(
       }: {
         readonly projectId: ProjectId
         readonly traceIds: readonly TraceId[]
-        readonly source?: ScoreSource
+        readonly source?: ScoreSourceType
         readonly options?: ScoreListOptions
       }) => {
         if (traceIds.length === 0) {
@@ -436,7 +436,11 @@ export const ScoreRepositoryLive = Layer.effect(
         const traceIdValues = traceIds.map((traceId) => String(traceId))
         const combined =
           source !== undefined
-            ? and(eq(scores.projectId, projectId), inArray(scores.traceId, traceIdValues), eq(scores.source, source))
+            ? and(
+                eq(scores.projectId, projectId),
+                inArray(scores.traceId, traceIdValues),
+                eq(scores.sourceType, source),
+              )
             : and(eq(scores.projectId, projectId), inArray(scores.traceId, traceIdValues))
         return list({
           baseWhere: combined ?? eq(scores.projectId, projectId),
@@ -484,11 +488,11 @@ export const ScoreRepositoryLive = Layer.effect(
       }: {
         readonly projectId: ProjectId
         readonly signalId: SignalId
-        readonly source?: ScoreSource
+        readonly source?: ScoreSourceType
         readonly options?: ScoreListOptions
       }) => {
         const filters: SQL[] = [eq(scores.projectId, projectId), eq(scores.signalId, signalId as string)]
-        if (source !== undefined) filters.push(eq(scores.source, source))
+        if (source !== undefined) filters.push(eq(scores.sourceType, source))
         // `filters` always carries the project + issue conditions, so
         // `and(...)` never returns undefined here — assert for the
         // narrower drizzle signature on `baseWhere`.
@@ -517,7 +521,7 @@ export const ScoreRepositoryLive = Layer.effect(
                   and(
                     eq(scores.organizationId, organizationId),
                     eq(scores.projectId, projectId),
-                    eq(scores.source, "annotation"),
+                    eq(scores.sourceType, "annotation"),
                     eq(scores.sourceId, "SYSTEM"),
                     eq(scores.traceId, traceId as string),
                     eq(scores.feedback, feedback),
@@ -554,7 +558,7 @@ export const ScoreRepositoryLive = Layer.effect(
                     eq(scores.organizationId, organizationId),
                     eq(scores.projectId, projectId),
                     eq(scores.signalId, signalId as string),
-                    eq(scores.source, "annotation"),
+                    eq(scores.sourceType, "annotation"),
                     eq(scores.sourceId, "SYSTEM"),
                     isNull(scores.draftedAt),
                     sql`${scores.metadata} ? 'flaggerSlug'`,

@@ -21,7 +21,7 @@ function buildSystemDraftAnnotation(overrides: Partial<Score> = {}): Score {
     sessionId: null,
     traceId: null,
     spanId: null,
-    source: "annotation",
+    source_type: "annotation",
     sourceId: queueId,
     simulationId: null,
     signalId: null,

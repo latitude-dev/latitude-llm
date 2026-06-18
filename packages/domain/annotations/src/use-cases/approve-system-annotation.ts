@@ -55,9 +55,9 @@ export const approveSystemAnnotationUseCase = Effect.fn("annotations.approveSyst
     return { action: "already-published" } satisfies ApproveSystemAnnotationResult
   }
 
-  if (score.source !== "annotation") {
+  if (score.source_type !== "annotation") {
     return yield* new BadRequestError({
-      message: `Score ${input.scoreId} is not an annotation (source: ${score.source})`,
+      message: `Score ${input.scoreId} is not an annotation (source: ${score.source_type})`,
     })
   }
 

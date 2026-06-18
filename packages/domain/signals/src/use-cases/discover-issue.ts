@@ -52,7 +52,7 @@ const resolveKnownSignalId = ({ signalId, projectId }: { readonly signalId: stri
 
 const resolveLinkedSignalId = (score: Score) =>
   Effect.gen(function* () {
-    if (score.source !== "evaluation") {
+    if (score.source_type !== "evaluation") {
       return null
     }
 

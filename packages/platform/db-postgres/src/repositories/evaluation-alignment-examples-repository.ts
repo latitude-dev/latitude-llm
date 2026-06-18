@@ -18,7 +18,7 @@ import { scores } from "../schema/scores.ts"
 
 type AlignmentScoreRow = Pick<
   typeof scores.$inferSelect,
-  "id" | "traceId" | "sessionId" | "signalId" | "source" | "passed" | "feedback" | "createdAt"
+  "id" | "traceId" | "sessionId" | "signalId" | "sourceType" | "passed" | "feedback" | "createdAt"
 >
 
 const sortRows = (rows: readonly AlignmentScoreRow[]): readonly AlignmentScoreRow[] =>
@@ -89,14 +89,14 @@ const hasTargetSignalScore = (rows: readonly AlignmentScoreRow[], signalId: Sign
 // means it is ABSENT. A positive alignment example is a trace a human annotated as exhibiting THIS
 // signal (present); a negative is a trace annotated as not exhibiting it (absent).
 const isPositiveGroup = (rows: readonly AlignmentScoreRow[], signalId: SignalId): boolean =>
-  rows.some((row) => row.source === "annotation" && row.signalId === signalId && row.passed === true)
+  rows.some((row) => row.sourceType === "annotation" && row.signalId === signalId && row.passed === true)
 
 const hasPresentScore = (rows: readonly AlignmentScoreRow[]): boolean => rows.some((row) => row.passed === true)
 
 const hasAbsentScore = (rows: readonly AlignmentScoreRow[]): boolean => rows.some((row) => row.passed === false)
 
 const hasAbsentAnnotation = (rows: readonly AlignmentScoreRow[]): boolean =>
-  rows.some((row) => row.source === "annotation" && row.passed === false)
+  rows.some((row) => row.sourceType === "annotation" && row.passed === false)
 
 export const EvaluationAlignmentExamplesRepositoryLive = Layer.effect(
   EvaluationAlignmentExamplesRepository,
@@ -111,7 +111,7 @@ export const EvaluationAlignmentExamplesRepositoryLive = Layer.effect(
               traceId: scores.traceId,
               sessionId: scores.sessionId,
               signalId: scores.signalId,
-              source: scores.source,
+              sourceType: scores.sourceType,
               passed: scores.passed,
               feedback: scores.feedback,
               createdAt: scores.createdAt,
@@ -142,7 +142,7 @@ export const EvaluationAlignmentExamplesRepositoryLive = Layer.effect(
 
             const buildEvidence = (group: readonly AlignmentScoreRow[]) =>
               group.filter(
-                (row) => row.source === "annotation" && row.signalId === input.signalId && row.passed === true,
+                (row) => row.sourceType === "annotation" && row.signalId === input.signalId && row.passed === true,
               )
 
             return [
@@ -185,7 +185,7 @@ export const EvaluationAlignmentExamplesRepositoryLive = Layer.effect(
             const absentAnnotationUnrelatedPresent = candidates.filter((group) => hasPresentScore(group))
 
             const buildEvidence = (group: readonly AlignmentScoreRow[]) =>
-              group.filter((row) => row.source === "annotation" && row.passed === false)
+              group.filter((row) => row.sourceType === "annotation" && row.passed === false)
 
             return [
               ...absentAnnotationNoPresent.map((group) =>

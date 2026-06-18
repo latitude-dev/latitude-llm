@@ -2,7 +2,7 @@ export {
   ANNOTATION_SCORE_PARTIAL_SOURCE_IDS,
   SCORE_PUBLICATION_DEBOUNCE,
   SCORE_SOURCE_ID_MAX_LENGTH,
-  SCORE_SOURCES,
+  SCORE_SOURCE_TYPES,
   SEASONAL_BUCKET_POOLING_HOURS,
   SEASONAL_HISTORY_WEEKS,
   SIGNAL_FLAGGER_SLUG_SAMPLE_LIMIT,
@@ -32,10 +32,10 @@ export {
   evaluationScoreSchema,
   type Score,
   type ScoreMetadata,
-  type ScoreSource,
+  type ScoreSourceType,
   scoreMetadataSchemas,
   scoreSchema,
-  scoreSourceSchema,
+  scoreSourceTypeSchema,
   scoreValueSchema,
 } from "./entities/score.ts"
 export { ScoreDraftClosedError, ScoreDraftUpdateConflictError } from "./errors.ts"

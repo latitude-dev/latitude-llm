@@ -11,7 +11,7 @@ import type {
 } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import { z } from "zod"
-import type { Score, ScoreSource } from "../entities/score.ts"
+import type { Score, ScoreSourceType } from "../entities/score.ts"
 
 export const scoreDraftModeSchema = z.enum(["exclude", "include", "only"])
 export type ScoreDraftMode = z.infer<typeof scoreDraftModeSchema>
@@ -71,14 +71,14 @@ export interface ScoreRepositoryShape {
   /** When `sourceId` is omitted, lists all scores for the project with the given `source` (e.g. every annotation). */
   listBySourceId(input: {
     readonly projectId: ProjectId
-    readonly source: ScoreSource
+    readonly source: ScoreSourceType
     readonly sourceId?: string
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
   listByTraceId(input: {
     readonly projectId: ProjectId
     readonly traceId: TraceId
-    readonly source?: ScoreSource
+    readonly source?: ScoreSourceType
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
   /**
@@ -89,7 +89,7 @@ export interface ScoreRepositoryShape {
   listByTraceIds(input: {
     readonly projectId: ProjectId
     readonly traceIds: readonly TraceId[]
-    readonly source?: ScoreSource
+    readonly source?: ScoreSourceType
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
   countAnnotationsByTraceIds(input: {
@@ -111,7 +111,7 @@ export interface ScoreRepositoryShape {
     readonly projectId: ProjectId
     readonly signalId: SignalId
     /** Optional filter by score source (e.g. `annotation` or `evaluation`). */
-    readonly source?: ScoreSource
+    readonly source?: ScoreSourceType
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
   findPublishedSystemAnnotationByTraceAndFeedback(input: {

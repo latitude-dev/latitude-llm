@@ -54,7 +54,7 @@ export const embedScoreFeedbackUseCase = Effect.fn("issues.embedScoreFeedback")(
     })
 
   const embedding = yield* embed(score.feedback, "enriched")
-  const rawFeedback = score.source === "annotation" ? score.metadata.rawFeedback.trim() : ""
+  const rawFeedback = score.source_type === "annotation" ? score.metadata.rawFeedback.trim() : ""
   const shouldEmbedRawFeedback = rawFeedback.length > 0 && rawFeedback !== score.feedback.trim()
   const rawEmbedding = shouldEmbedRawFeedback ? yield* embed(rawFeedback, "raw") : undefined
 

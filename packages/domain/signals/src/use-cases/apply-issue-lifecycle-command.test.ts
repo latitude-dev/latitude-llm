@@ -47,6 +47,7 @@ const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation => ({
   name: "Monitor the issue",
   description: "Generated evaluation",
   script: "return { passed: false }",
+  legacyPolarity: false,
   trigger: defaultEvaluationTrigger(),
   alignment: emptyEvaluationAlignment("hash-v1"),
   alignedAt: new Date("2026-03-20T10:00:00.000Z"),

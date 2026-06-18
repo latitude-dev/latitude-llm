@@ -900,7 +900,7 @@ export const getSignalOccurrences = createServerFn({ method: "GET" })
     const items = page.items.flatMap((score): SignalOccurrenceRecord[] => {
       // Only annotation scores carry message anchors; skip occurrences without a
       // trace to render or without a pinpointed message.
-      if (score.source !== "annotation" || score.traceId === null || score.metadata.messageIndex === undefined) {
+      if (score.source_type !== "annotation" || score.traceId === null || score.metadata.messageIndex === undefined) {
         return []
       }
       const { messageIndex, partIndex, startOffset, endOffset, textFormat, flaggerSlug } = score.metadata

@@ -211,7 +211,7 @@ const toResponse = (score: ApiScore) => {
     updatedAt: score.updatedAt.toISOString(),
   }
 
-  if (score.source === "evaluation") {
+  if (score.source_type === "evaluation") {
     return {
       ...baseResponse,
       source: "evaluation" as const,

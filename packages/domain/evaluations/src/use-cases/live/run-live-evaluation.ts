@@ -331,7 +331,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     const scoreWriteExit = yield* Effect.exit(
       writeScoreUseCase({
         projectId: input.projectId,
-        source: "evaluation",
+        source_type: "evaluation",
         sourceId: evaluation.id,
         sessionId: traceDetail.sessionId ?? null,
         traceId: traceDetail.traceId,

@@ -49,7 +49,7 @@ const makeScore = (overrides: Partial<Score> = {}): Score =>
     sessionId: null,
     traceId: null,
     spanId: null,
-    source: "annotation",
+    source_type: "annotation",
     sourceId: "UI",
     simulationId: null,
     signalId: null,
@@ -99,6 +99,7 @@ const makeEvaluation = (signalId: string, overrides: Partial<Evaluation> = {}): 
     name: "Token leakage evaluation",
     description: "Flags token leakage",
     script: "return { passed: false }",
+    legacyPolarity: false,
     trigger: defaultEvaluationTrigger(),
     alignment: emptyEvaluationAlignment("abc123"),
     alignedAt: new Date("2026-03-29T08:00:00.000Z"),
@@ -229,7 +230,7 @@ describe("discoverSignalUseCase", () => {
       ScoreId("tttttttttttttttttttttttt"),
       makeScore({
         id: ScoreId("tttttttttttttttttttttttt"),
-        source: "evaluation",
+        source_type: "evaluation",
         sourceId: linkedEvaluation.id,
         metadata: {
           evaluationHash: "eval-hash-v1",
@@ -407,7 +408,7 @@ describe("discoverSignalUseCase", () => {
     const { workflowStarter, startedWorkflows } = createWorkflowStarter()
     const score = makeScore({
       id: ScoreId("vvvvvvvvvvvvvvvvvvvvvvvv"),
-      source: "evaluation",
+      source_type: "evaluation",
       sourceId: foreignEvaluation.id,
       metadata: {
         evaluationHash: "eval-hash-v2",

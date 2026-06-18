@@ -42,7 +42,7 @@ export const upsertFlaggerAnnotationScore = (input: UpsertFlaggerAnnotationScore
     const written = yield* writeScoreUseCase({
       ...(input.id !== undefined ? { id: input.id } : {}),
       projectId: input.projectId,
-      source: "annotation",
+      source_type: "annotation",
       sourceId: "SYSTEM",
       sessionId: input.sessionId,
       traceId: input.traceId,

@@ -48,7 +48,7 @@ function createTestLayers() {
 function buildEvaluationScoreInput(overrides?: Record<string, unknown>) {
   return {
     projectId: projectCuid,
-    source: "evaluation" as const,
+    source_type: "evaluation" as const,
     sourceId: evaluationCuid,
     sessionId: SessionId("session-1"),
     traceId,

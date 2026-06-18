@@ -47,14 +47,16 @@ export const baseSubmitApiScoreSchema = baseWriteScoreInputSchema
     trace: traceRefSchema,
   })
 
+// The public `/scores` wire key stays `source` (the internal field is `source_type`); the use-case
+// maps it when delegating to writeScoreUseCase, so renaming the internal field is not an SDK break.
 export const submitApiScoreInputSchema = z.discriminatedUnion("source", [
   baseSubmitApiScoreSchema.extend({
-    source: evaluationScoreSchema.shape.source,
+    source: evaluationScoreSchema.shape.source_type,
     sourceId: evaluationScoreSchema.shape.sourceId,
     metadata: evaluationScoreSchema.shape.metadata,
   }),
   baseSubmitApiScoreSchema.extend({
-    source: customScoreSchema.shape.source,
+    source: customScoreSchema.shape.source_type,
     sourceId: customScoreSchema.shape.sourceId,
     metadata: customScoreSchema.shape.metadata.default({}),
   }),
@@ -115,8 +117,8 @@ export const submitApiScoreUseCase = Effect.fn("scores.submitApiScore")(function
 
   const writeInput: WriteScoreInput =
     parsed.source === "evaluation"
-      ? { ...sharedWriteInput, source: "evaluation", sourceId: parsed.sourceId, metadata: parsed.metadata }
-      : { ...sharedWriteInput, source: "custom", sourceId: parsed.sourceId, metadata: parsed.metadata }
+      ? { ...sharedWriteInput, source_type: "evaluation", sourceId: parsed.sourceId, metadata: parsed.metadata }
+      : { ...sharedWriteInput, source_type: "custom", sourceId: parsed.sourceId, metadata: parsed.metadata }
 
   return yield* writeScoreUseCase(writeInput)
 })

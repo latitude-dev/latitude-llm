@@ -25,9 +25,9 @@ export const deleteAnnotationUseCase = Effect.fn("annotations.deleteAnnotation")
       ),
     )
 
-  if (score.source !== "annotation") {
+  if (score.source_type !== "annotation") {
     return yield* new BadRequestError({
-      message: `Score ${input.scoreId} is not an annotation (source: ${score.source})`,
+      message: `Score ${input.scoreId} is not an annotation (source: ${score.source_type})`,
     })
   }
 
@@ -45,7 +45,7 @@ export const deleteAnnotationUseCase = Effect.fn("annotations.deleteAnnotation")
           signalId: score.signalId,
           draftedAt: score.draftedAt?.toISOString() ?? null,
           feedback: score.feedback,
-          source: score.source,
+          source: score.source_type,
           createdAt: score.createdAt.toISOString(),
         },
       })

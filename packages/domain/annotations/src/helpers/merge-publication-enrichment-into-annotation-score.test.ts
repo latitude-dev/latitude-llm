@@ -10,7 +10,7 @@ const baseScore = {
   sessionId: null,
   traceId: null,
   spanId: null,
-  source: "annotation",
+  source_type: "annotation",
   sourceId: "UI",
   simulationId: null,
   signalId: "i".repeat(24),

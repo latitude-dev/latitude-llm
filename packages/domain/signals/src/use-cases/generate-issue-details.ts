@@ -7,7 +7,7 @@ import {
   buildProjectScopedAiMetadata,
   resolveGenerationConfig,
 } from "@domain/ai"
-import { ScoreRepository, type ScoreSource } from "@domain/scores"
+import { ScoreRepository, type ScoreSourceType } from "@domain/scores"
 import { LATITUDE_TELEMETRY_PROJECT_SLUGS, ProjectId, type RepositoryError, SignalId } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
@@ -48,7 +48,7 @@ const signalDetailsSchema = z.object({
 })
 
 export interface SignalOccurrenceInput {
-  readonly source: ScoreSource
+  readonly source_type: ScoreSourceType
   readonly feedback: string
 }
 
@@ -74,7 +74,8 @@ export type GenerateSignalDetailsError =
 const buildOccurrenceBlock = (occurrences: readonly SignalOccurrenceInput[]) =>
   occurrences
     .map(
-      (occurrence, index) => `${index + 1}. [source=${occurrence.source}] ${collapseWhitespace(occurrence.feedback)}`,
+      (occurrence, index) =>
+        `${index + 1}. [source=${occurrence.source_type}] ${collapseWhitespace(occurrence.feedback)}`,
     )
     .join("\n")
 
@@ -158,7 +159,7 @@ export const generateSignalDetailsUseCase = (input: GenerateSignalDetailsInput) 
 
       occurrences = recentScores.items
         .map((score) => ({
-          source: score.source,
+          source_type: score.source_type,
           feedback: score.feedback,
         }))
         .filter((occurrence) => collapseWhitespace(occurrence.feedback).length > 0)
@@ -172,7 +173,7 @@ export const generateSignalDetailsUseCase = (input: GenerateSignalDetailsInput) 
     } else {
       occurrences = occurrences
         .map((occurrence) => ({
-          source: occurrence.source,
+          source_type: occurrence.source_type,
           feedback: collapseWhitespace(occurrence.feedback),
         }))
         .filter((occurrence) => occurrence.feedback.length > 0)

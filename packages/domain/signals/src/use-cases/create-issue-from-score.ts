@@ -87,7 +87,7 @@ const buildNewSignalFromScore = ({
     },
     score: {
       embedding: normalizedEmbedding,
-      source: score.source,
+      source_type: score.source_type,
       createdAt: score.createdAt,
     },
     operation: "add",
@@ -95,7 +95,7 @@ const buildNewSignalFromScore = ({
   })
 
   const source: SignalSource =
-    score.source === "annotation" ? (score.sourceId === "SYSTEM" ? "flagger" : "annotation") : "custom"
+    score.source_type === "annotation" ? (score.sourceId === "SYSTEM" ? "flagger" : "annotation") : "custom"
 
   return {
     id: generateId<"SignalId">(),
@@ -135,7 +135,7 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
       projectId: input.projectId,
       occurrences: [
         {
-          source: initialScoreResult.score.source,
+          source_type: initialScoreResult.score.source_type,
           feedback: initialScoreResult.score.feedback,
         },
       ],
