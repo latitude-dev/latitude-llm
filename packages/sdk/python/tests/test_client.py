@@ -17,7 +17,7 @@ RESOURCES = [
     "oauth_keys",
     "traces",
     "saved_searches",
-    "issues",
+    "signals",
     "incidents",
     "monitors",
     "datasets",
