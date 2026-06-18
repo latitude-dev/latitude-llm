@@ -1,6 +1,4 @@
-import { Text } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
-import { useHasFeatureFlag } from "../../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { useRouteProject } from "../../-route-data.ts"
 import { DestinationsSection } from "../-components/destinations-section.tsx"
 import { SettingsPage } from "../-components/settings-page.tsx"
@@ -15,15 +13,6 @@ const PAGE_DESCRIPTION =
 
 function DataDestinationsSettingsPage() {
   const project = useRouteProject()
-  const destinationsEnabled = useHasFeatureFlag("destinations")
-
-  if (!destinationsEnabled) {
-    return (
-      <SettingsPage title={PAGE_TITLE} description={PAGE_DESCRIPTION}>
-        <Text.H6 color="foregroundMuted">Data destinations aren't enabled for this organization yet.</Text.H6>
-      </SettingsPage>
-    )
-  }
 
   return (
     <SettingsPage title={PAGE_TITLE} description={PAGE_DESCRIPTION} fillHeight>

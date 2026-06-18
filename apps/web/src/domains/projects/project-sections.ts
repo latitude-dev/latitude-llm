@@ -20,7 +20,6 @@ import {
   WrenchIcon,
 } from "lucide-react"
 import { useMemo } from "react"
-import { useHasFeatureFlag } from "../feature-flags/feature-flags.collection.ts"
 
 type SectionGroupKey = "observe" | "understand" | "refine"
 
@@ -112,14 +111,11 @@ export const PROJECT_SETTINGS_SECTION: Omit<ProjectSection, "group"> = {
   isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/settings`),
 }
 
-type SettingsFlag = "destinations"
-
 interface ProjectSettingsItem {
   readonly key: string
   readonly label: string
   readonly icon: LucideIcon
   readonly path: (projectSlug: string) => string
-  readonly flag?: SettingsFlag
 }
 
 interface ProjectSettingsGroup {
@@ -189,7 +185,6 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
         label: "Data destinations",
         icon: Share2Icon,
         path: (slug) => `/projects/${slug}/settings/data-destinations`,
-        flag: "destinations",
       },
       {
         key: "sso",
@@ -234,16 +229,7 @@ export function useVisibleProjectSectionGroups(): readonly VisibleProjectSection
   )
 }
 
-/** Settings groups with flag-gated items removed (empty groups are dropped). */
+/** Settings groups in sidebar order. */
 export function useVisibleProjectSettingsGroups(): readonly ProjectSettingsGroup[] {
-  const destinations = useHasFeatureFlag("destinations")
-
-  return useMemo(
-    () =>
-      PROJECT_SETTINGS_GROUPS.map((group) => ({
-        ...group,
-        items: group.items.filter((item) => !item.flag || destinations),
-      })).filter((group) => group.items.length > 0),
-    [destinations],
-  )
+  return PROJECT_SETTINGS_GROUPS
 }
