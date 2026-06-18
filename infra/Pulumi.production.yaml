@@ -8,6 +8,8 @@ config:
   # Datadog Slack notification handle for the Slack #alerts channel.
   latitude-infra:datadogSlackAlertHandle: "@slack-alerts"
   latitude-infra:enableDatadogSynthetics: "true"
+  # Uncomment during planned console maintenance to redirect console.latitude.so to https://status.latitude.so/.
+  # latitude-infra:enableWebMaintenanceRedirect: "true"
   # Pinned to avoid automatic bastion replacement when AWS publishes newer AL2023 AMIs.
   latitude-infra:bastionAmiId: ami-00b105a12aa2a60eb
   # Temporal Cloud (workflows ECS task)
