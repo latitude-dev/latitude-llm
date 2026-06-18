@@ -5,7 +5,6 @@ import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
-import type { GenAIMessage } from "rosetta-ai"
 import { z } from "zod"
 import { getClickhouseClient } from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
@@ -204,8 +203,8 @@ export interface SpanMessagesRecord {
   readonly toolCallId: string
   readonly toolName: string
   readonly toolInput: string
-  readonly inputMessages: readonly GenAIMessage[]
-  readonly outputMessages: readonly GenAIMessage[]
+  readonly inputMessages: readonly object[]
+  readonly outputMessages: readonly object[]
 }
 
 const serializeSpanMessages = (span: SpanMessagesData): SpanMessagesRecord => ({

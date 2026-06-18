@@ -233,7 +233,12 @@ export function useConversationSpanMaps({
     queryKey: ["conversationSpanMaps", scope?.sandboxOrgId, projectId, traceId],
     queryFn: async () => {
       const spans = await listConversationMessageSpans({
-        data: { ...(scope ? { sandboxOrgId: scope.sandboxOrgId } : {}), projectId, traceId, startTime: startTime ?? "" },
+        data: {
+          ...(scope ? { sandboxOrgId: scope.sandboxOrgId } : {}),
+          projectId,
+          traceId,
+          startTime: startTime ?? "",
+        },
       })
       return buildConversationSpanMaps(allMessages ?? [], asMessageSpans(spans))
     },
