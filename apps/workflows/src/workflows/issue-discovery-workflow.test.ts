@@ -4,7 +4,7 @@ const { callOrder, mockActivities, mockSleep } = vi.hoisted(() => {
   const callOrder: string[] = []
   type MockEligibilityResult =
     | { readonly status: "eligible" }
-    | { readonly status: "skipped"; readonly reason: "PassedScoreNotEligibleForDiscoveryError" }
+    | { readonly status: "skipped"; readonly reason: "UnmatchedScoreNotEligibleForDiscoveryError" }
   type MockAssignmentResult = {
     readonly action: "created" | "assigned" | "already-assigned"
     readonly signalId: string
@@ -98,7 +98,7 @@ describe("signalDiscoveryWorkflow", () => {
   it("skips embedding and assignment for known eligibility errors", async () => {
     mockActivities.checkEligibility.mockResolvedValueOnce({
       status: "skipped" as const,
-      reason: "PassedScoreNotEligibleForDiscoveryError" as const,
+      reason: "UnmatchedScoreNotEligibleForDiscoveryError" as const,
     })
 
     const result = await signalDiscoveryWorkflow({
@@ -109,7 +109,7 @@ describe("signalDiscoveryWorkflow", () => {
 
     expect(result).toEqual({
       action: "skipped",
-      reason: "PassedScoreNotEligibleForDiscoveryError",
+      reason: "UnmatchedScoreNotEligibleForDiscoveryError",
     })
     expect(mockActivities.embedScoreFeedback).not.toHaveBeenCalled()
     expect(mockActivities.assignOrCreateSignal).not.toHaveBeenCalled()

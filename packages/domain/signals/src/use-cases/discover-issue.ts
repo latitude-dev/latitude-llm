@@ -149,8 +149,8 @@ export const discoverSignalUseCase = Effect.fn("issues.discoverSignal")(function
       asSkipped("ErroredScoreNotEligibleForDiscoveryError"),
     ),
     Effect.catchTag("MissingScoreFeedbackForDiscoveryError", () => asSkipped("MissingScoreFeedbackForDiscoveryError")),
-    Effect.catchTag("PassedScoreNotEligibleForDiscoveryError", () =>
-      asSkipped("PassedScoreNotEligibleForDiscoveryError"),
+    Effect.catchTag("UnmatchedScoreNotEligibleForDiscoveryError", () =>
+      asSkipped("UnmatchedScoreNotEligibleForDiscoveryError"),
     ),
   )
 

@@ -15,6 +15,9 @@ import { ALIGNMENT_CURATED_DATASET_MAX_ROWS } from "../constants.ts"
 export const evaluationAlignmentExampleLabelSchema = z.enum(["positive", "negative"])
 export type EvaluationAlignmentExampleLabel = z.infer<typeof evaluationAlignmentExampleLabelSchema>
 
+// Legacy value strings predate the passed-polarity inversion: under the current model a positive
+// example is a PRESENT (passed=true) annotation, and "no-passes"/"with-passes" mean "no/with an
+// opposite-polarity (absent) score". Kept verbatim to avoid churning the wire-level priority tags.
 export const evaluationAlignmentPositivePrioritySchema = z.enum([
   "failed-annotation-no-passes",
   "failed-annotation-with-passes",

@@ -63,7 +63,6 @@ export {
   isEligibilityError,
   MissingScoreFeedbackForDiscoveryError,
   MissingSignalOccurrencesForDetailsGenerationError,
-  PassedScoreNotEligibleForDiscoveryError,
   ScoreAlreadyOwnedBySignalError,
   ScoreDiscoveryOrganizationMismatchError,
   ScoreDiscoveryProjectMismatchError,
@@ -72,6 +71,7 @@ export {
   SignalNotFoundForAssignmentError,
   SignalNotFoundForDetailsGenerationError,
   SignalNotFoundForEscalationCheckError,
+  UnmatchedScoreNotEligibleForDiscoveryError,
 } from "./errors.ts"
 export {
   createSignalCentroid,
