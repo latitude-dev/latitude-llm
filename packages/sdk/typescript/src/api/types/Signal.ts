@@ -17,7 +17,7 @@ export interface Signal {
     description: string;
     /** Where the signal originated from. */
     source: Signal.Source;
-    /** Active lifecycle states. An signal may carry multiple states at once (e.g. `escalating` + `ongoing`). */
+    /** Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`). */
     states: Signal.States.Item[];
     /** ISO-8601 timestamp at which the signal was resolved, or `null`. */
     resolvedAt?: string | undefined;
