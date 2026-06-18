@@ -104,9 +104,14 @@ describe("domain-events dispatcher", () => {
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual(["projects:checkFirstTrace", "trace-end:run"])
+    expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual([
+      "projects:checkFirstTrace",
+      "signals:match",
+      "trace-end:run",
+    ])
 
     const traceEnd = published.find((p) => p.queue === "trace-end")
+    const signalsMatch = published.find((p) => p.queue === "signals")
     const firstTrace = published.find((p) => p.task === "checkFirstTrace")
 
     expect(traceEnd?.payload).toEqual({
@@ -117,6 +122,16 @@ describe("domain-events dispatcher", () => {
     })
     expect(traceEnd?.options).toEqual({
       dedupeKey: "trace-end:run:org-1:proj-1:trace-abc",
+      debounceMs: TRACE_END_DEBOUNCE_MS,
+    })
+    expect(signalsMatch?.payload).toEqual({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      traceId: "trace-abc",
+      isSandbox: false,
+    })
+    expect(signalsMatch?.options).toEqual({
+      dedupeKey: "signals:match:org-1:proj-1:trace-abc",
       debounceMs: TRACE_END_DEBOUNCE_MS,
     })
     expect(firstTrace?.options?.dedupeKey).toBe("projects:first-trace:proj-1")
@@ -150,6 +165,8 @@ describe("domain-events dispatcher", () => {
     expect((traceEnd?.payload as { isSandbox?: boolean }).isSandbox).toBe(true)
     expect((billing?.payload as { isSandbox?: boolean }).isSandbox).toBe(true)
     expect(published.map((p) => `${p.queue}:${p.task}`)).toContain("projects:checkFirstTrace")
+    // signals:match is gated on !isSandbox — sandbox traces never enter the matching pipeline.
+    expect(published.find((p) => p.queue === "signals")).toBeUndefined()
   })
 
   it("routes TracesIngested billing snapshots to billing:recordTraceUsageBatch", async () => {

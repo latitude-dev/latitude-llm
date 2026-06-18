@@ -4,11 +4,6 @@ import {
   orchestrateTraceEndLiveQueueMaterializationUseCase,
 } from "@domain/annotation-queues"
 import { CONVERSATION_INTELLIGENCE_ANALYSIS_DEBOUNCE_MS } from "@domain/conversation-intelligence"
-import {
-  buildTraceEndEvaluationSelectionInputs,
-  listAllActiveEvaluations,
-  orchestrateTraceEndLiveEvaluationExecutesUseCase,
-} from "@domain/evaluations"
 import { SAVED_SEARCH_MONITORS_THROTTLE_MS, savedSearchMonitorsCheckDedupeKey } from "@domain/monitors"
 import type { QueueConsumer, QueuePublisherShape, WorkflowStarterShape } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
@@ -19,19 +14,12 @@ import {
   type TraceEndItemDecisionCounts,
 } from "@domain/spans"
 import { RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
-import {
-  type ClickHouseClient,
-  ScoreAnalyticsRepositoryLive,
-  TraceRepositoryLive,
-  withClickHouse,
-} from "@platform/db-clickhouse"
+import { type ClickHouseClient, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   AnnotationQueueItemRepositoryLive,
   AnnotationQueueRepositoryLive,
-  EvaluationRepositoryLive,
   OutboxEventWriterLive,
   type PostgresClient,
-  ScoreRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
@@ -70,13 +58,6 @@ interface RunTraceEndDeps {
   readonly workflowStarter: WorkflowStarterShape
 }
 
-type EvaluationSummary = TraceEndItemDecisionCounts & {
-  readonly activeEvaluationsScanned: number
-  readonly skippedIneligibleCount: number
-  readonly skippedTurnCount: number
-  readonly publishedExecuteCount: number
-}
-
 type LiveQueueSummary = TraceEndItemDecisionCounts & {
   readonly liveQueuesScanned: number
   readonly insertedItemCount: number
@@ -85,7 +66,6 @@ type LiveQueueSummary = TraceEndItemDecisionCounts & {
 type TraceEndRunSummary = {
   readonly traceId: string
   readonly sessionId: string | null
-  readonly evaluations: EvaluationSummary
   readonly liveQueues: LiveQueueSummary
   readonly deterministicFlaggersEnqueued: boolean
 }
@@ -129,71 +109,28 @@ export const runTraceEndJob =
 
       const traceDetail = loaded.traceDetail
 
-      const [activeEvaluations, liveQueues] = yield* Effect.all(
-        [
-          listAllActiveEvaluations({
-            projectId: traceDetail.projectId,
-          }),
-          Effect.gen(function* () {
-            const queueRepository = yield* AnnotationQueueRepository
-            return yield* queueRepository.listLiveQueuesByProject({
-              projectId: traceDetail.projectId,
-            })
-          }),
-        ],
-        { concurrency: "unbounded" },
-      )
+      // Evaluation selection + execution moved to the signals:match worker. trace-end now owns only
+      // live-queue materialization, flaggers, saved-search monitors, trace-search, and conversation
+      // intelligence.
+      const liveQueues = yield* Effect.gen(function* () {
+        const queueRepository = yield* AnnotationQueueRepository
+        return yield* queueRepository.listLiveQueuesByProject({ projectId: traceDetail.projectId })
+      })
 
-      const evalBuilt = buildTraceEndEvaluationSelectionInputs(activeEvaluations)
       const liveBuilt = buildTraceEndLiveQueueSelectionInputs(liveQueues)
-
-      const items = {
-        ...evalBuilt.items,
-        ...liveBuilt.items,
-      }
 
       const decisions = yield* selectTraceEndItemsUseCase({
         organizationId: payload.organizationId,
         projectId: payload.projectId,
         traceId: payload.traceId,
-        items,
+        items: liveBuilt.items,
       })
 
-      const evaluationDecisionCounts = summarizeTraceEndItemDecisions([...evalBuilt.evaluationByKey.keys()], decisions)
       const liveQueueDecisionCounts = summarizeTraceEndItemDecisions([...liveBuilt.liveQueueIdByKey.keys()], decisions)
 
-      const selectedEvaluations = [...evalBuilt.evaluationByKey.entries()]
-        .filter(([key]) => decisions[key]?.selected === true)
-        .map(([, evaluation]) => evaluation)
       const selectedLiveQueueIds = [...liveBuilt.liveQueueIdByKey.entries()]
         .filter(([key]) => decisions[key]?.selected === true)
         .map(([, queueId]) => queueId)
-
-      const { skippedTurnCount, publishedExecuteCount } = yield* orchestrateTraceEndLiveEvaluationExecutesUseCase({
-        publishExecute: (pubInput) =>
-          publisher.publish(
-            "live-evaluations",
-            "execute",
-            {
-              organizationId: pubInput.organizationId,
-              projectId: pubInput.projectId,
-              evaluationId: pubInput.evaluationId,
-              traceId: pubInput.traceId,
-            },
-            {
-              ...(pubInput.dedupeKey !== undefined ? { dedupeKey: pubInput.dedupeKey } : {}),
-              ...(pubInput.debounceMs !== undefined ? { debounceMs: pubInput.debounceMs } : {}),
-            },
-          ),
-      })({
-        organizationId: payload.organizationId,
-        projectId: payload.projectId,
-        traceId: payload.traceId,
-        traceProjectId: traceDetail.projectId,
-        traceRowId: traceDetail.traceId,
-        sessionId: traceDetail.sessionId ?? null,
-        selectedEvaluations,
-      })
 
       const { insertedItemCount } = yield* orchestrateTraceEndLiveQueueMaterializationUseCase({
         traceProjectId: traceDetail.projectId,
@@ -303,13 +240,6 @@ export const runTraceEndJob =
         summary: {
           traceId: traceDetail.traceId,
           sessionId: traceDetail.sessionId ?? null,
-          evaluations: {
-            ...evaluationDecisionCounts,
-            activeEvaluationsScanned: activeEvaluations.length,
-            skippedIneligibleCount: evalBuilt.skippedIneligibleCount,
-            skippedTurnCount,
-            publishedExecuteCount,
-          },
           liveQueues: {
             ...liveQueueDecisionCounts,
             liveQueuesScanned: liveQueues.length,
@@ -320,21 +250,11 @@ export const runTraceEndJob =
       } satisfies TraceEndRunResult
     }).pipe(
       withPostgres(
-        Layer.mergeAll(
-          AnnotationQueueItemRepositoryLive,
-          AnnotationQueueRepositoryLive,
-          EvaluationRepositoryLive,
-          OutboxEventWriterLive,
-          ScoreRepositoryLive,
-        ),
+        Layer.mergeAll(AnnotationQueueItemRepositoryLive, AnnotationQueueRepositoryLive, OutboxEventWriterLive),
         postgresClient,
         OrganizationId(payload.organizationId),
       ),
-      withClickHouse(
-        Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),
-        clickhouseClient,
-        OrganizationId(payload.organizationId),
-      ),
+      withClickHouse(TraceRepositoryLive, clickhouseClient, OrganizationId(payload.organizationId)),
       Effect.provide(RedisCacheStoreLive(redisClient)),
       withTracing,
     )
@@ -358,7 +278,6 @@ export const createRunHandler =
             ...buildRunLogContext(payload),
             outcome: result.action,
             sessionId: result.summary.sessionId,
-            evaluations: result.summary.evaluations,
             liveQueues: result.summary.liveQueues,
             deterministicFlaggersEnqueued: result.summary.deterministicFlaggersEnqueued,
           })

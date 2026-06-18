@@ -70,6 +70,7 @@ import { createProductFeedbackWorker } from "./workers/product-feedback.ts"
 import { createProjectsWorker } from "./workers/projects.ts"
 import { createSandboxesWorker } from "./workers/sandboxes.ts"
 import { createScoresWorker } from "./workers/scores.ts"
+import { createSignalsMatchWorker } from "./workers/signals-match.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 import { createStartFlaggerWorkflowWorker } from "./workers/start-flagger-workflow.ts"
 import { createTaxonomyWorker } from "./workers/taxonomy.ts"
@@ -219,6 +220,7 @@ const bootstrap = async () => {
     createLiveEvaluationsWorker(ctx)
     createAnnotationQueuesWorker(ctx)
     createTraceEndWorker(ctx)
+    createSignalsMatchWorker(ctx)
     createDeterministicFlaggersWorker(ctx)
     createStartFlaggerWorkflowWorker(ctx)
     createProjectsWorker(ctx)

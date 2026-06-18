@@ -1,39 +1,23 @@
-import type { WorkflowStarterShape } from "@domain/queue"
+import {
+  buildLiveEvaluationExecuteTraceDedupeKey,
+  defaultEvaluationTrigger,
+  type EvaluationTurn,
+  emptyEvaluationAlignment,
+  evaluationSchema,
+} from "@domain/evaluations"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
-import type { FilterSet } from "@domain/shared"
+import { evaluationScoreSchema } from "@domain/scores"
+import { createSignalCentroid } from "@domain/signals"
 import type { RedisClient } from "@platform/cache-redis"
-import { annotationQueueItems, annotationQueues } from "@platform/db-postgres/schema/annotation-queues"
+import { evaluations } from "@platform/db-postgres/schema/evaluations"
+import { scores } from "@platform/db-postgres/schema/scores"
+import { signals } from "@platform/db-postgres/schema/signals"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect } from "effect"
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 
 import { createMockLogger, TestQueueConsumer } from "../testing/index.ts"
-
-// vi.hoisted runs before imports, so we can't reference a constant here;
-// the literal 2048 matches TRACE_SEARCH_EMBEDDING_DIMENSIONS (voyage-4-large).
-const { mockAi } = vi.hoisted(() => ({
-  mockAi: {
-    generate: vi.fn(),
-    embed: vi.fn().mockReturnValue({ embedding: new Array(2048).fill(0.1) }),
-    rerank: vi.fn(),
-  },
-}))
-
-vi.mock("@platform/ai", async () => {
-  const { AI } = (await vi.importActual("@domain/ai")) as typeof import("@domain/ai")
-  const { Effect: Eff, Layer } = (await vi.importActual("effect")) as typeof import("effect")
-
-  // Matches the real signature: returning `Effect.provide(...)` directly
-  // removes `AI` from the requirement channel, so call sites don't need casts.
-  return {
-    AIEmbedLive: {},
-    AIGenerateLive: {},
-    AIRerankLive: {},
-    withAi: (_layer?: unknown, _redisClient?: unknown) => Eff.provide(Layer.succeed(AI, mockAi)),
-  }
-})
-
-import { createRunHandler, createTraceEndWorker, runTraceEndJob } from "./trace-end.ts"
+import { createRunHandler, createSignalsMatchWorker, runSignalsMatchJob } from "./signals-match.ts"
 
 const pg = setupTestPostgres()
 const ch = setupTestClickHouse()
@@ -43,6 +27,7 @@ const PROJECT_ID = "p".repeat(24)
 const TRACE_ID = "t".repeat(32)
 const SESSION_ID = "session-1"
 const API_KEY_ID = "k".repeat(24)
+const SIGNAL_ID = "i".repeat(24)
 const TIMESTAMP = new Date("2026-04-15T12:00:00.000Z")
 
 const toClickHouseTimestamp = (value: Date) => value.toISOString().replace("T", " ").replace("Z", "000")
@@ -51,26 +36,6 @@ const toMessageJson = (role: "user" | "assistant", content: string) =>
   JSON.stringify([{ role, parts: [{ type: "text", content }] }])
 
 const toSystemJson = (content: string) => JSON.stringify([{ type: "text", content }])
-
-const createFakeWorkflowStarter = () => {
-  const started: Array<{
-    readonly workflow: string
-    readonly input: unknown
-    readonly options: unknown
-    readonly mode: "start" | "signalWithStart"
-  }> = []
-  const workflowStarter: WorkflowStarterShape = {
-    start: (workflow, input, options) =>
-      Effect.sync(() => {
-        started.push({ workflow, input, options, mode: "start" })
-      }) as never,
-    signalWithStart: (workflow, input, options) =>
-      Effect.sync(() => {
-        started.push({ workflow, input, options, mode: "signalWithStart" })
-      }),
-  }
-  return { workflowStarter, started }
-}
 
 const makeTraceRow = (input?: {
   readonly traceId?: string
@@ -90,7 +55,7 @@ const makeTraceRow = (input?: {
   start_time: toClickHouseTimestamp(TIMESTAMP),
   end_time: toClickHouseTimestamp(new Date(TIMESTAMP.getTime() + 4_000)),
   name: "chat gpt-5.4",
-  service_name: "trace-end-test",
+  service_name: "signals-match-test",
   kind: 1,
   status_code: 1,
   status_message: "",
@@ -98,7 +63,7 @@ const makeTraceRow = (input?: {
   tags: input?.tags ?? ["lifecycle"],
   metadata: {
     environment: "test",
-    story: "trace-end-worker",
+    story: "signals-match-worker",
   },
   operation: "chat",
   provider: "openai",
@@ -129,38 +94,93 @@ const makeTraceRow = (input?: {
   attr_int: {},
   attr_float: {},
   attr_bool: {},
-  resource_string: { "service.name": "trace-end-test" },
+  resource_string: { "service.name": "signals-match-test" },
   scope_name: "openai-instrumentation",
   scope_version: "1.0.0",
 })
 
-const makeQueueRow = (input: {
-  readonly id: string
-  readonly slug: string
-  readonly system: boolean
-  readonly filter?: FilterSet
-  readonly sampling?: number
-  readonly projectId?: string
-}): typeof annotationQueues.$inferInsert => ({
-  id: input.id,
+const makeSignalRow = (input?: { readonly id?: string; readonly projectId?: string; readonly uuid?: string }) => ({
+  id: input?.id ?? SIGNAL_ID,
+  uuid: input?.uuid ?? "11111111-1111-4111-8111-111111111111",
   organizationId: ORGANIZATION_ID,
-  projectId: input.projectId ?? PROJECT_ID,
-  system: input.system,
-  name: `queue-${input.slug}`,
-  slug: input.slug,
-  description: "Trace-end worker queue",
-  instructions: "Review traces",
-  settings: {
-    ...(input.filter ? { filter: input.filter } : {}),
-    ...(input.sampling !== undefined ? { sampling: input.sampling } : {}),
-  },
-  assignees: [],
-  totalItems: 0,
-  completedItems: 0,
-  deletedAt: null,
+  projectId: input?.projectId ?? PROJECT_ID,
+  slug: `signals-match-worker-issue-${(input?.id ?? SIGNAL_ID).slice(-6)}`,
+  name: "Signals match worker issue",
+  description: "Signal context for signals-match worker tests",
+  source: "annotation" as const,
+  centroid: createSignalCentroid(),
+  clusteredAt: TIMESTAMP,
+  escalatedAt: null,
+  resolvedAt: null,
+  ignoredAt: null,
   createdAt: TIMESTAMP,
   updatedAt: TIMESTAMP,
 })
+
+const makeEvaluationRow = (input: {
+  readonly id: string
+  readonly filter?: Record<string, unknown>
+  readonly sampling?: number
+  readonly turn?: EvaluationTurn
+  readonly projectId?: string
+  readonly signalId?: string
+}) =>
+  evaluationSchema.parse({
+    id: input.id,
+    organizationId: ORGANIZATION_ID,
+    projectId: input.projectId ?? PROJECT_ID,
+    signalId: input.signalId ?? SIGNAL_ID,
+    name: `evaluation-${input.id.slice(0, 6)}`,
+    description: "Signals match worker live evaluation",
+    script: "export default async function evaluate() { return { value: 1 } }",
+    trigger: {
+      ...defaultEvaluationTrigger(),
+      filter: input.filter ?? {},
+      sampling: input.sampling ?? 100,
+      turn: input.turn ?? "every",
+      debounce: 0,
+    },
+    alignment: emptyEvaluationAlignment("signals-match-worker-hash"),
+    alignedAt: TIMESTAMP,
+    archivedAt: null,
+    deletedAt: null,
+    createdAt: TIMESTAMP,
+    updatedAt: TIMESTAMP,
+  })
+
+const makeScoreRow = (input: {
+  readonly id: string
+  readonly evaluationId: string
+  readonly projectId?: string
+  readonly traceId?: string
+  readonly sessionId?: string
+  readonly signalId?: string
+}) =>
+  evaluationScoreSchema.parse({
+    id: input.id,
+    organizationId: ORGANIZATION_ID,
+    projectId: input.projectId ?? PROJECT_ID,
+    sessionId: input.sessionId ?? SESSION_ID,
+    traceId: input.traceId ?? TRACE_ID,
+    spanId: null,
+    source_type: "evaluation",
+    sourceId: input.evaluationId,
+    simulationId: null,
+    signalId: input.signalId ?? SIGNAL_ID,
+    value: 1,
+    passed: true,
+    feedback: "already scored",
+    metadata: { evaluationHash: "signals-match-worker-hash" },
+    error: null,
+    errored: false,
+    duration: 1_000_000,
+    tokens: 100,
+    cost: 50,
+    draftedAt: null,
+    annotatorId: null,
+    createdAt: TIMESTAMP,
+    updatedAt: TIMESTAMP,
+  })
 
 const insertTraceRows = async (rows: Array<Record<string, unknown>>) => {
   await ch.client.insert({
@@ -213,39 +233,35 @@ const createFakeRedisClient = (): RedisClient => {
   } as unknown as RedisClient
 }
 
-describe("createTraceEndWorker", () => {
-  it("registers the trace-end run task", () => {
+describe("createSignalsMatchWorker", () => {
+  it("registers the signals match task", () => {
     const consumer = new TestQueueConsumer()
     const { publisher } = createFakeQueuePublisher()
     const redisClient = createFakeRedisClient()
-    const { workflowStarter } = createFakeWorkflowStarter()
 
-    createTraceEndWorker({
+    createSignalsMatchWorker({
       consumer,
       publisher,
       postgresClient: pg.appPostgresClient,
       clickhouseClient: ch.client,
       redisClient,
-      workflowStarter,
     })
 
-    expect(consumer.getRegisteredTasks("trace-end")).toEqual(["run"])
+    expect(consumer.getRegisteredTasks("signals")).toEqual(["match"])
   })
 })
 
-describe("runTraceEndJob", () => {
+describe("runSignalsMatchJob", () => {
   it("skips when the trace no longer exists", async () => {
     const { publisher, published } = createFakeQueuePublisher()
     const redisClient = createFakeRedisClient()
-    const { workflowStarter } = createFakeWorkflowStarter()
 
     const result = await Effect.runPromise(
-      runTraceEndJob({
+      runSignalsMatchJob({
         publisher,
         postgresClient: pg.appPostgresClient,
         clickhouseClient: ch.client,
         redisClient,
-        workflowStarter,
       })({
         organizationId: ORGANIZATION_ID,
         projectId: PROJECT_ID,
@@ -261,18 +277,16 @@ describe("runTraceEndJob", () => {
     expect(published).toEqual([])
   })
 
-  it("skips all LLM work for sandbox traces (before loading the trace)", async () => {
+  it("skips evaluation work for sandbox traces (before loading the trace)", async () => {
     const { publisher, published } = createFakeQueuePublisher()
     const redisClient = createFakeRedisClient()
-    const { workflowStarter, started } = createFakeWorkflowStarter()
 
     const result = await Effect.runPromise(
-      runTraceEndJob({
+      runSignalsMatchJob({
         publisher,
         postgresClient: pg.appPostgresClient,
         clickhouseClient: ch.client,
         redisClient,
-        workflowStarter,
       })({
         organizationId: ORGANIZATION_ID,
         projectId: PROJECT_ID,
@@ -283,41 +297,41 @@ describe("runTraceEndJob", () => {
 
     expect(result).toEqual({ action: "skipped", reason: "sandbox", traceId: TRACE_ID })
     expect(published).toEqual([])
-    expect(started).toEqual([])
   })
 })
 
-describe("runTraceEndJob", () => {
-  it("materializes live queues and enqueues deterministic flaggers", async () => {
+describe("runSignalsMatchJob", () => {
+  it("selects active evaluations and publishes execute jobs for survivors", async () => {
     await insertTraceRows([makeTraceRow()])
-    await pg.db.insert(annotationQueues).values([
-      makeQueueRow({
-        id: "q".repeat(24),
-        slug: "live-selected",
-        system: false,
+    await pg.db.insert(signals).values([makeSignalRow()])
+    await pg.db.insert(evaluations).values([
+      makeEvaluationRow({
+        id: "e".repeat(24),
         filter: { tags: [{ op: "in", value: ["lifecycle"] }] },
-        sampling: 100,
       }),
-      makeQueueRow({
-        id: "r".repeat(24),
-        slug: "live-miss",
-        system: false,
-        filter: { tags: [{ op: "in", value: ["annotation"] }] },
-        sampling: 100,
+      makeEvaluationRow({
+        id: "f".repeat(24),
+        filter: { tags: [{ op: "in", value: ["lifecycle"] }] },
+        turn: "first",
+      }),
+      makeEvaluationRow({
+        id: "g".repeat(24),
+        filter: { tags: [{ op: "in", value: ["lifecycle"] }] },
+        sampling: 0,
       }),
     ])
+    const { source_type, ...scoreRow } = makeScoreRow({ id: "z".repeat(24), evaluationId: "f".repeat(24) })
+    await pg.db.insert(scores).values([{ ...scoreRow, sourceType: source_type }])
 
     const { publisher, published } = createFakeQueuePublisher()
     const redisClient = createFakeRedisClient()
-    const { workflowStarter, started } = createFakeWorkflowStarter()
 
     const result = await Effect.runPromise(
-      runTraceEndJob({
+      runSignalsMatchJob({
         publisher,
         postgresClient: pg.appPostgresClient,
         clickhouseClient: ch.client,
         redisClient,
-        workflowStarter,
       })({
         organizationId: ORGANIZATION_ID,
         projectId: PROJECT_ID,
@@ -330,74 +344,41 @@ describe("runTraceEndJob", () => {
       summary: {
         traceId: TRACE_ID,
         sessionId: SESSION_ID,
-        liveQueues: {
-          liveQueuesScanned: 2,
-          selectedCount: 1,
-          sampledOutCount: 0,
-          filterMissCount: 1,
-          insertedItemCount: 1,
-        },
-        deterministicFlaggersEnqueued: true,
+        selectedCount: 2,
+        sampledOutCount: 0,
+        filterMissCount: 0,
+        activeEvaluationsScanned: 3,
+        skippedIneligibleCount: 1,
+        skippedTurnCount: 1,
+        publishedExecuteCount: 1,
       },
     })
 
     expect(published).toEqual(
       expect.arrayContaining([
         {
-          queue: "deterministic-flaggers",
-          task: "run",
+          queue: "live-evaluations",
+          task: "execute",
           payload: {
             organizationId: ORGANIZATION_ID,
             projectId: PROJECT_ID,
+            evaluationId: "e".repeat(24),
             traceId: TRACE_ID,
           },
           options: {
-            dedupeKey: `deterministic-flaggers:${TRACE_ID}`,
+            dedupeKey: buildLiveEvaluationExecuteTraceDedupeKey({
+              organizationId: ORGANIZATION_ID,
+              projectId: PROJECT_ID,
+              evaluationId: "e".repeat(24),
+              traceId: TRACE_ID,
+            }),
           },
         },
       ]),
     )
 
-    expect(started).toEqual([
-      {
-        workflow: "analyzeSessionWorkflow",
-        mode: "signalWithStart",
-        input: {
-          organizationId: ORGANIZATION_ID,
-          projectId: PROJECT_ID,
-          sessionId: SESSION_ID,
-          triggeringTraceId: TRACE_ID,
-          triggeringStartTime: TIMESTAMP.toISOString(),
-          reason: "trace_completed",
-          debounceMs: 5 * 60_000,
-        },
-        options: {
-          workflowId: `org:${ORGANIZATION_ID}:conversation-intelligence:analyzeSession:${PROJECT_ID}:${SESSION_ID}`,
-          signal: "traceCompleted",
-          signalArgs: [{ debounceMs: 5 * 60_000 }],
-        },
-      },
-    ])
-
-    const queueItems = await pg.db.select().from(annotationQueueItems)
-    expect(queueItems).toHaveLength(1)
-    expect(queueItems[0]?.queueId).toBe("q".repeat(24))
-    expect(queueItems[0]?.traceId).toBe(TRACE_ID)
-
-    const persistedQueues = await pg.db.select().from(annotationQueues)
-    const selectedQueue = persistedQueues.find((queue) => queue.id === "q".repeat(24))
-    const missedQueue = persistedQueues.find((queue) => queue.id === "r".repeat(24))
-    expect(selectedQueue?.totalItems).toBe(1)
-    expect(missedQueue?.totalItems).toBe(0)
-
-    // Verify trace-search refresh task was published
-    const traceSearchPublish = published.find((p) => p.queue === "trace-search")
-    expect(traceSearchPublish?.task).toBe("refreshTrace")
-    expect(traceSearchPublish?.payload).toMatchObject({
-      organizationId: ORGANIZATION_ID,
-      projectId: PROJECT_ID,
-      traceId: TRACE_ID,
-    })
+    const executePublishes = published.filter((p) => p.queue === "live-evaluations" && p.task === "execute")
+    expect(executePublishes).toHaveLength(1)
   })
 })
 
@@ -405,6 +386,7 @@ describe("createRunHandler", () => {
   it("logs the completed runtime summary", async () => {
     const projectId = "x".repeat(24)
     const traceId = "v".repeat(32)
+    const signalId = "j".repeat(24)
     const sessionId = "session-2"
 
     await insertTraceRows([
@@ -414,20 +396,24 @@ describe("createRunHandler", () => {
         sessionId,
       }),
     ])
-    await pg.db.insert(annotationQueues).values([
-      makeQueueRow({
-        id: "m".repeat(24),
-        slug: "live-selected",
-        system: false,
-        filter: { tags: [{ op: "in", value: ["lifecycle"] }] },
-        sampling: 100,
+    await pg.db.insert(signals).values([
+      makeSignalRow({
+        id: signalId,
         projectId,
+        uuid: "22222222-2222-4222-8222-222222222222",
+      }),
+    ])
+    await pg.db.insert(evaluations).values([
+      makeEvaluationRow({
+        id: "h".repeat(24),
+        filter: { tags: [{ op: "in", value: ["lifecycle"] }] },
+        projectId,
+        signalId,
       }),
     ])
 
     const { publisher } = createFakeQueuePublisher()
     const redisClient = createFakeRedisClient()
-    const { workflowStarter } = createFakeWorkflowStarter()
     const log = createMockLogger()
 
     await Effect.runPromise(
@@ -437,7 +423,6 @@ describe("createRunHandler", () => {
         postgresClient: pg.appPostgresClient,
         clickhouseClient: ch.client,
         redisClient,
-        workflowStarter,
       })({
         organizationId: ORGANIZATION_ID,
         projectId,
@@ -445,22 +430,18 @@ describe("createRunHandler", () => {
       }),
     )
 
-    expect(log.info).toHaveBeenCalledWith("Trace-end runtime completed", {
-      queue: "trace-end",
-      task: "run",
+    expect(log.info).toHaveBeenCalledWith("Signals match completed", {
+      queue: "signals",
+      task: "match",
       organizationId: ORGANIZATION_ID,
       projectId,
       traceId,
       outcome: "completed",
       sessionId,
-      liveQueues: {
-        liveQueuesScanned: 1,
-        selectedCount: 1,
-        sampledOutCount: 0,
-        filterMissCount: 0,
-        insertedItemCount: 1,
-      },
-      deterministicFlaggersEnqueued: true,
+      activeEvaluationsScanned: 1,
+      skippedIneligibleCount: 0,
+      skippedTurnCount: 0,
+      publishedExecuteCount: 1,
     })
   })
 })

@@ -359,6 +359,18 @@ const _registry = {
     }
   }>(),
 
+  // The unified evaluation matching pipeline: runs a project's active evaluations against an
+  // ingested trace (sampling/turn/filter selection) and fans out live-evaluations:execute jobs.
+  // Replaces trace-end's evaluation fan-out for all signals. Never enqueued for sandbox traces.
+  signals: payloads<{
+    match: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly traceId: string
+      readonly isSandbox?: boolean
+    }
+  }>(),
+
   // Runs the deterministic portion of every registered flagger strategy against
   // a trace. Matched strategies write a SYSTEM-authored score directly; strategies
   // that return `no-match` are sampled and, if selected, routed to the LLM
