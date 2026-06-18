@@ -3,6 +3,7 @@ import type { ToolDefinition } from "../../entities/span.ts"
 import { stringAttr } from "../attributes.ts"
 import type { OtlpKeyValue } from "../types.ts"
 import { parseClaudeCode } from "./claude-code.ts"
+import { parseFlue } from "./flue.ts"
 import { parseGenAICurrent } from "./genai.ts"
 import { parseGenAIDeprecated } from "./genai_deprecated.ts"
 import { parseLiveKit } from "./livekit.ts"
@@ -69,6 +70,10 @@ const PARSERS: readonly ContentParser[] = [
       hasKey(attrs, "lk.response.function_calls") ||
       hasKey(attrs, "lk.function_tools"),
     parse: parseLiveKit,
+  },
+  {
+    canHandle: (attrs) => hasKey(attrs, "flue.turn.input") || hasKey(attrs, "flue.turn.output"),
+    parse: parseFlue,
   },
   {
     canHandle: (attrs) => hasKey(attrs, "user_prompt"), // Claude Code

@@ -1,0 +1,38 @@
+{
+  "name": "eve-app",
+  "version": "0.0.0",
+  "type": "module",
+  "imports": {
+    "#*": "./agent/*",
+    "#evals/*": "./evals/*"
+  },
+  "scripts": {
+    "build": "eve build",
+    "dev": "eve dev",
+    "start": "eve start",
+    "typecheck": "tsgo"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "4.0.0-beta.74",
+    "@opentelemetry/api": "1.9.1",
+    "@opentelemetry/exporter-trace-otlp-http": "0.213.0",
+    "@vercel/connect": "0.2.2",
+    "@vercel/otel": "2.1.3",
+    "ai": "7.0.0-beta.178",
+    "eve": "^0.11.5",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "24.x",
+    "@typescript/native-preview": "7.0.0-dev.20260523.1"
+  },
+  "overrides": {
+    "ai": "7.0.0-beta.178"
+  },
+  "resolutions": {
+    "ai": "7.0.0-beta.178"
+  },
+  "engines": {
+    "node": "24.x"
+  }
+}
