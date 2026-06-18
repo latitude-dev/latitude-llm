@@ -16,7 +16,6 @@ const latitude = new Latitude({
   instrumentations: { openai: OpenAI }, // Pass the LLM SDK module you use in app code.
 })
 
-await latitude.ready
 const client = new OpenAI()
 
 await capture(

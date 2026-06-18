@@ -26,9 +26,6 @@ const latitude = new Latitude({
   instrumentations: { openai: OpenAI }, // Pass the LLM SDK module you use in app code.
 });
 
-// Optionally wait for instrumentations to be ready
-await latitude.ready;
-
 // Your LLM calls will now be traced and sent to Latitude
 const response = await client.chat.completions.create({
   model: "gpt-4",
@@ -51,7 +48,6 @@ await latitude.shutdown();
 `new Latitude()` returns **immediately** — no top-level await needed. Instrumentation registration happens in the background. This avoids top-level await issues in CommonJS environments while still supporting ESM.
 
 - **Fire-and-forget**: Start using your LLM clients right away. Early spans will be captured once instrumentations finish registering.
-- **Optional `await latitude.ready`**: If you want to ensure instrumentations are fully registered before making LLM calls, await the `ready` promise.
 
 **When to use this:** Most applications should start here. If you already initialize Sentry or another tracing SDK, initialize it first and construct `new Latitude()` second. Latitude will reuse the existing tracing pipeline when possible, and `latitude.shutdown()` only shuts down Latitude-owned processing.
 
@@ -79,8 +75,6 @@ const latitude = new Latitude({
   project: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: { openai: OpenAI },
 });
-
-await latitude.ready;
 
 // LLM spans are exported to both Sentry (via its provider) and Latitude.
 await latitude.flush();
@@ -165,9 +159,6 @@ const latitude = new Latitude({
   instrumentations: { openai: OpenAI },
 });
 
-// Optional: wait for instrumentations before starting
-await latitude.ready;
-
 // Wrap a request or agent run to add context
 await capture(
   "handle-user-request",
@@ -242,7 +233,6 @@ type LatitudeOptions = {
 class Latitude {
   constructor(options: LatitudeOptions);
   provider: TracerProvider; // Existing provider when detected, otherwise Latitude's NodeTracerProvider
-  ready: Promise<void>; // Resolves when instrumentations are registered
   flush(): Promise<void>;
   shutdown(): Promise<void>;
 }
@@ -360,8 +350,6 @@ const latitude = new Latitude({
   instrumentations: { openai: OpenAI },
 });
 
-await latitude.ready;
-
 // LLM calls are now traced and sent to both Datadog and Latitude.
 await latitude.flush();
 await latitude.shutdown(); // Does not shut down Datadog.
@@ -388,8 +376,6 @@ const latitude = new Latitude({
   project: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: { openai: OpenAI },
 });
-
-await latitude.ready;
 
 // LLM calls are now traced and sent to both Sentry and Latitude.
 await latitude.flush();
