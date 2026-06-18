@@ -34,8 +34,8 @@ import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { Cause, Effect, Exit } from "effect"
 import type { Evaluation } from "../../entities/evaluation.ts"
 import { getLiveEvaluationEligibility } from "../../helpers.ts"
-import { EvaluationSignalRepository } from "../../ports/evaluation-issue-repository.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
+import { EvaluationSignalRepository } from "../../ports/evaluation-signal-repository.ts"
 import { buildEvaluationJudgeLiveTelemetryCapture } from "../../runtime/ai-telemetry.ts"
 import {
   executeLiveEvaluationUseCase,

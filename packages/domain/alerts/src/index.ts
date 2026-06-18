@@ -39,12 +39,12 @@ export { AlertIncidentRepository } from "./ports/alert-incident-repository.ts"
 export type {
   CloseAlertIncidentFromSignalEventError,
   CloseAlertIncidentFromSignalEventInput,
-} from "./use-cases/close-alert-incident-from-issue-event.ts"
-export { closeAlertIncidentFromSignalEventUseCase } from "./use-cases/close-alert-incident-from-issue-event.ts"
+} from "./use-cases/close-alert-incident-from-signal-event.ts"
+export { closeAlertIncidentFromSignalEventUseCase } from "./use-cases/close-alert-incident-from-signal-event.ts"
 export type {
   CreateAlertIncidentFromSignalEventError,
   CreateAlertIncidentFromSignalEventInput,
-} from "./use-cases/create-alert-incident-from-issue-event.ts"
-export { createAlertIncidentFromSignalEventUseCase } from "./use-cases/create-alert-incident-from-issue-event.ts"
+} from "./use-cases/create-alert-incident-from-signal-event.ts"
+export { createAlertIncidentFromSignalEventUseCase } from "./use-cases/create-alert-incident-from-signal-event.ts"
 export type { ResolveAlertIncidentError, ResolveAlertIncidentInput } from "./use-cases/resolve-alert-incident.ts"
 export { resolveAlertIncidentUseCase } from "./use-cases/resolve-alert-incident.ts"

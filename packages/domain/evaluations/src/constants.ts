@@ -2,7 +2,7 @@
 // Evaluation trigger defaults
 // ---------------------------------------------------------------------------
 
-/** Default sampling percentage for new issue-linked evaluations. */
+/** Default sampling percentage for new signal-linked evaluations. */
 export const DEFAULT_EVALUATION_SAMPLING = 10
 
 // ---------------------------------------------------------------------------

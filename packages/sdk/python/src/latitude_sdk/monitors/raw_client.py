@@ -652,7 +652,7 @@ class RawMonitorsClient:
             Replace the watched saved search. Not allowed on system monitors.
 
         condition : typing.Optional[UpdateMonitorAlertBodyCondition]
-            Replace the alert's configuration. On system monitors this is the only editable field (e.g. issue-escalation `sensitivity`).
+            Replace the alert's configuration. On system monitors this is the only editable field (e.g. signal-escalation `sensitivity`).
 
         severity : typing.Optional[UpdateMonitorAlertBodySeverity]
             Replace the severity. Not allowed on system monitors.
@@ -1607,7 +1607,7 @@ class AsyncRawMonitorsClient:
             Replace the watched saved search. Not allowed on system monitors.
 
         condition : typing.Optional[UpdateMonitorAlertBodyCondition]
-            Replace the alert's configuration. On system monitors this is the only editable field (e.g. issue-escalation `sensitivity`).
+            Replace the alert's configuration. On system monitors this is the only editable field (e.g. signal-escalation `sensitivity`).
 
         severity : typing.Optional[UpdateMonitorAlertBodySeverity]
             Replace the severity. Not allowed on system monitors.

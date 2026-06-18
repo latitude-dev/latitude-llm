@@ -27,13 +27,13 @@ describe("formatHumanReadableAlert", () => {
 
   it("renders the issue.regressed system alert", () => {
     expect(formatHumanReadableAlert(makeAlert({ kind: "issue.regressed" }))).toBe(
-      "Opens an incident each time a resolved issue is detected again.",
+      "Opens an incident each time a resolved signal is detected again.",
     )
   })
 
   it("renders the issue.escalating system alert", () => {
     expect(formatHumanReadableAlert(makeAlert({ kind: "issue.escalating" }))).toBe(
-      "Opens an incident when an ongoing issue is being detected more than expected.",
+      "Opens an incident when an ongoing signal is being detected more than expected.",
     )
   })
 

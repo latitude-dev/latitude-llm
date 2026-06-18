@@ -74,7 +74,7 @@ Use this when an evaluation only makes sense at the start or end of a conversati
 
 ## Triggers, Search, and Annotations
 
-Triggers scope automated monitoring. Search and annotations cover human review: use search to inspect relevant traces, then add annotations when you need human judgment for alignment or issue discovery.
+Triggers scope automated monitoring. Search and annotations cover human review: use search to inspect relevant traces, then add annotations when you need human judgment for alignment or signal discovery.
 
 [Flaggers](../annotations/flaggers) provide automatic signal for a fixed list of common categories.
 

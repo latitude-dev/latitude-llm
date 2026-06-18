@@ -165,7 +165,7 @@ export const UpdateMonitorAlertBodySchema = z
       .optional()
       .describe("Replace the watched saved search. Not allowed on system monitors."),
     condition: AlertConditionSchema.nullish().describe(
-      "Replace the alert's configuration. On system monitors this is the only editable field (e.g. issue-escalation `sensitivity`).",
+      "Replace the alert's configuration. On system monitors this is the only editable field (e.g. signal-escalation `sensitivity`).",
     ),
     severity: z.enum(ALERT_SEVERITIES).optional().describe("Replace the severity. Not allowed on system monitors."),
   })

@@ -84,7 +84,7 @@ Public routes are bodyless metadata documents — never product data. Everything
 | `low` | 100 | Default. ID-keyed CRUD, simple lookups, account/settings reads. |
 | `medium` | 60 | Mutations with non-trivial side effects (email, fan-out writes). |
 | `high` | 15 | Bulk reads with filter/search/vector load. |
-| `critical` | 3 | Imports, exports, monitor-issue — anything that enqueues a heavy job or sends email. |
+| `critical` | 3 | Imports, exports, monitor-signal — anything that enqueues a heavy job or sends email. |
 
 Default to `low`. Pick a tighter tier only when an endpoint genuinely warrants it.
 

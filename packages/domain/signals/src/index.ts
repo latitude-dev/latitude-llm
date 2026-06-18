@@ -55,7 +55,7 @@ export {
   signalSchema,
   signalSourceSchema,
   signalStateSchema,
-} from "./entities/issue.ts"
+} from "./entities/signal.ts"
 export {
   type CheckEligibilityError,
   DraftScoreNotEligibleForDiscoveryError,
@@ -103,7 +103,7 @@ export {
   type SignalRepositoryShape,
   type SignalSearchCandidate,
   type SignalWithLifecycle,
-} from "./ports/issue-repository.ts"
+} from "./ports/signal-repository.ts"
 export {
   type CoOccurrenceScoreInput,
   combinedRelatedness,
@@ -112,7 +112,7 @@ export {
   type RelatedSignalSignals,
   rankRelatedSignals,
   semanticRelatednessScore,
-} from "./related-issues.ts"
+} from "./related-signals.ts"
 export {
   type ApplySignalLifecycleCommandError,
   type ApplySignalLifecycleCommandInput,
@@ -121,24 +121,24 @@ export {
   type SignalLifecycleCommand,
   type SignalLifecycleCommandItem,
   signalLifecycleCommandSchema,
-} from "./use-cases/apply-issue-lifecycle-command.ts"
+} from "./use-cases/apply-signal-lifecycle-command.ts"
 export {
   type AssignOrCreateSignalError,
   type AssignOrCreateSignalInput,
   type AssignOrCreateSignalResult,
   assignOrCreateSignalUseCase,
-} from "./use-cases/assign-or-create-issue-from-score.ts"
+} from "./use-cases/assign-or-create-signal-from-score.ts"
 export {
   type AssignScoreToSignalError,
   type AssignScoreToSignalInput,
   type AssignScoreToSignalResult,
   assignScoreToSignalUseCase,
-} from "./use-cases/assign-score-to-issue.ts"
+} from "./use-cases/assign-score-to-signal.ts"
 export {
   type BuildSignalsExportInput,
   type BuildSignalsExportResult,
   buildSignalsExportUseCase,
-} from "./use-cases/build-issues-export.ts"
+} from "./use-cases/build-signals-export.ts"
 export { type CheckEligibilityInput, checkEligibilityUseCase } from "./use-cases/check-eligibility.ts"
 export {
   type CheckSignalEscalationError,
@@ -146,37 +146,43 @@ export {
   type CheckSignalEscalationResult,
   type CheckSignalEscalationTransition,
   checkSignalEscalationUseCase,
-} from "./use-cases/check-issue-escalation.ts"
+} from "./use-cases/check-signal-escalation.ts"
 export {
   type CreateSignalFromScoreError,
   type CreateSignalFromScoreInput,
   type CreateSignalFromScoreResult,
   createSignalFromScoreUseCase,
-} from "./use-cases/create-issue-from-score.ts"
+} from "./use-cases/create-signal-from-score.ts"
 export {
   type DiscoverSignalError,
   type DiscoverSignalInput,
   type DiscoverSignalResult,
   type DiscoverSignalStartedWorkflow,
   discoverSignalUseCase,
-} from "./use-cases/discover-issue.ts"
-export {
-  type EmbedSignalSearchQueryInput,
-  type EmbedSignalSearchQueryResult,
-  embedSignalSearchQueryUseCase,
-} from "./use-cases/embed-issue-search-query.ts"
+} from "./use-cases/discover-signal.ts"
 export {
   type EmbeddedScoreFeedback,
   type EmbedScoreFeedbackInput,
   embedScoreFeedbackUseCase,
 } from "./use-cases/embed-score-feedback.ts"
 export {
+  type EmbedSignalSearchQueryInput,
+  type EmbedSignalSearchQueryResult,
+  embedSignalSearchQueryUseCase,
+} from "./use-cases/embed-signal-search-query.ts"
+export {
   type GeneratedSignalDetails,
   type GenerateSignalDetailsError,
   type GenerateSignalDetailsInput,
   generateSignalDetailsUseCase,
   type SignalOccurrenceInput,
-} from "./use-cases/generate-issue-details.ts"
+} from "./use-cases/generate-signal-details.ts"
+export {
+  type GetRelatedSignalsError,
+  type GetRelatedSignalsInput,
+  getRelatedSignalsUseCase,
+  type RelatedSignal,
+} from "./use-cases/get-related-signals.ts"
 export {
   type GetSignalAnalyticsError,
   type GetSignalAnalyticsInput,
@@ -185,31 +191,25 @@ export {
   type SignalAnalyticsBucket,
   type SignalAnalyticsCountMetric,
   type SignalAnalyticsOccurrencesMetric,
-} from "./use-cases/get-issue-analytics.ts"
+} from "./use-cases/get-signal-analytics.ts"
 export {
   type GetSignalDetailsError,
   type GetSignalDetailsInput,
   getSignalDetailsUseCase,
   type SignalDetails,
-} from "./use-cases/get-issue-details.ts"
+} from "./use-cases/get-signal-details.ts"
 export {
   type GetSignalTrendError,
   type GetSignalTrendInput,
   type GetSignalTrendResult,
   getSignalTrendUseCase,
-} from "./use-cases/get-issue-trend.ts"
-export {
-  type GetRelatedSignalsError,
-  type GetRelatedSignalsInput,
-  getRelatedSignalsUseCase,
-  type RelatedSignal,
-} from "./use-cases/get-related-issues.ts"
+} from "./use-cases/get-signal-trend.ts"
 export {
   type ListSignalTracesError,
   type ListSignalTracesInput,
   type ListSignalTracesResult,
   listSignalTracesUseCase,
-} from "./use-cases/list-issue-traces.ts"
+} from "./use-cases/list-signal-traces.ts"
 export {
   type ListSignalsError,
   type ListSignalsInput,
@@ -231,43 +231,43 @@ export {
   signalsTimeRangeSchema,
   TAG_AGGREGATION_FALLBACK_DAYS,
   UNASSIGNED_FILTER,
-} from "./use-cases/list-issues.ts"
+} from "./use-cases/list-signals.ts"
 export {
   type ListUserSignalsError,
   type ListUserSignalsInput,
   listUserSignalsUseCase,
   type UserSignalItem,
-} from "./use-cases/list-user-issues.ts"
+} from "./use-cases/list-user-signals.ts"
 export {
   type RefreshSignalDetailsError,
   type RefreshSignalDetailsInput,
   type RefreshSignalDetailsResult,
   refreshSignalDetailsUseCase,
-} from "./use-cases/refresh-issue-details.ts"
+} from "./use-cases/refresh-signal-details.ts"
 export {
   type RemoveScoreFromSignalError,
   type RemoveScoreFromSignalInput,
   type RemoveScoreFromSignalResult,
   removeScoreFromSignalUseCase,
-} from "./use-cases/remove-score-from-issue.ts"
+} from "./use-cases/remove-score-from-signal.ts"
 export {
   type RerankSignalCandidatesInput,
   type RetrievalResult,
   rerankSignalCandidatesUseCase,
-} from "./use-cases/rerank-issue-candidates.ts"
+} from "./use-cases/rerank-signal-candidates.ts"
 export {
   type OrgSignalSearchItem,
   type SearchOrgSignalsInput,
   searchOrgSignalsUseCase,
-} from "./use-cases/search-org-issues.ts"
+} from "./use-cases/search-org-signals.ts"
 export {
   type SweepEscalatingSignalsPublish,
   type SweepEscalatingSignalsResult,
   sweepEscalatingSignalsUseCase,
-} from "./use-cases/sweep-escalating-issues.ts"
+} from "./use-cases/sweep-escalating-signals.ts"
 export {
   type UpdateSignalTriageError,
   type UpdateSignalTriageInput,
   type UpdateSignalTriageResult,
   updateSignalTriageUseCase,
-} from "./use-cases/update-issue-triage.ts"
+} from "./use-cases/update-signal-triage.ts"

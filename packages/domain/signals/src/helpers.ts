@@ -25,7 +25,7 @@ import {
   type SignalCentroid,
   SignalState,
   type SignalState as SignalStateValue,
-} from "./entities/issue.ts"
+} from "./entities/signal.ts"
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
 

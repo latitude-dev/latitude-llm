@@ -3,8 +3,8 @@ import { Effect } from "effect"
 import type { PersistEvaluationAlignmentResult } from "../../alignment/types.ts"
 import { type ConfusionMatrix, type EvaluationTrigger, evaluationSchema } from "../../entities/evaluation.ts"
 import { isDeletedEvaluation } from "../../helpers.ts"
-import { EvaluationSignalRepository } from "../../ports/evaluation-issue-repository.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
+import { EvaluationSignalRepository } from "../../ports/evaluation-signal-repository.ts"
 
 export const persistAlignmentResultUseCase = Effect.fn("evaluations.persistAlignmentResult")(function* (input: {
   readonly organizationId: string

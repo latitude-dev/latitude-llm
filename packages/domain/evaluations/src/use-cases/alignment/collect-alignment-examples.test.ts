@@ -24,7 +24,7 @@ import {
   DEFAULT_ALIGNMENT_EXAMPLE_LIMIT,
   EvaluationAlignmentExamplesRepository,
 } from "../../ports/evaluation-alignment-examples-repository.ts"
-import { type EvaluationSignal, EvaluationSignalRepository } from "../../ports/evaluation-issue-repository.ts"
+import { type EvaluationSignal, EvaluationSignalRepository } from "../../ports/evaluation-signal-repository.ts"
 import { collectAlignmentExamplesUseCase } from "./collect-alignment-examples.ts"
 
 const ORGANIZATION_ID = OrganizationId("o".repeat(24))

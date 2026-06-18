@@ -2,8 +2,8 @@ import { BadRequestError, EvaluationId, ProjectId, SignalId } from "@domain/shar
 import { Effect } from "effect"
 import type { LoadedEvaluationAlignmentState } from "../../alignment/types.ts"
 import { isDeletedEvaluation } from "../../helpers.ts"
-import { EvaluationSignalRepository } from "../../ports/evaluation-issue-repository.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
+import { EvaluationSignalRepository } from "../../ports/evaluation-signal-repository.ts"
 
 export const loadAlignmentStateUseCase = Effect.fn("evaluations.loadAlignmentState")(function* (input: {
   readonly organizationId: string

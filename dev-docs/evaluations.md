@@ -133,7 +133,7 @@ Required Postgres indexes:
 
 Evaluations generated from issues (by user demand) are the mainline flow:
 
-- issue discovery and issue creation do not automatically create evaluations
+- signal discovery and issue creation do not automatically create evaluations
 - the issue list and issue details modal/page expose `Generate evaluation`
 - issues may have several linked evaluations, and each trigger starts the same initial generation/alignment flow described below as a background job
 - after creation, throttled automatic realignment still runs as new annotations arrive for each linked evaluation

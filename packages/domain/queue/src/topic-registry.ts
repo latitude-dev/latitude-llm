@@ -120,7 +120,7 @@ const _registry = {
      * and emits exactly one `create-notification` task targeting the new
      * assignee. Never fans out to Slack — `personal` is not slack-routable.
      */
-    "request-issue-assigned-notifications": {
+    "request-signal-assigned-notifications": {
       readonly organizationId: string
       readonly signalId: string
       readonly assigneeId: string
@@ -225,20 +225,20 @@ const _registry = {
   }>(),
 
   "alert-incidents": payloads<{
-    "issue-created": {
+    "signal-created": {
       readonly organizationId: string
       readonly projectId: string
       readonly signalId: string
       readonly createdAt: string
     }
-    "issue-regressed": {
+    "signal-regressed": {
       readonly organizationId: string
       readonly projectId: string
       readonly signalId: string
       readonly regressedAt: string
       readonly triggerScoreId: string
     }
-    "issue-escalated": {
+    "signal-escalated": {
       readonly organizationId: string
       readonly projectId: string
       readonly signalId: string
@@ -255,7 +255,7 @@ const _registry = {
         readonly entryCount24h: number
       } | null
     }
-    "issue-escalation-ended": {
+    "signal-escalation-ended": {
       readonly organizationId: string
       readonly projectId: string
       readonly signalId: string

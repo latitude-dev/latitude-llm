@@ -18,7 +18,7 @@ import { z } from "zod"
  * `threshold` is `null` for buckets with no historical data (the seasonal
  * grid had no samples for that day-of-week × hour-of-day cell); both the
  * bell sparkline and the email chart break the dashed line across these
- * gaps. Counts are integers from the issue's occurrence histogram.
+ * gaps. Counts are integers from the signal's occurrence histogram.
  */
 export const incidentTrendPointSchema = z.object({
   t: z.iso.datetime(),
@@ -42,7 +42,7 @@ export type IncidentTrendMarker = z.infer<typeof incidentTrendMarkerSchema>
 
 /**
  * Bucketed trend window snapshotted at incident-transition time, frozen so the immutable PNG
- * matches what the issue-detail drawer showed at that moment. Window is 14 days of UTC-aligned
+ * matches what the signal-detail drawer showed at that moment. Window is 14 days of UTC-aligned
  * 12h buckets (~28 points) anchored at `startedAt` (`incident.opened`) or `endedAt`
  * (`incident.closed`) — the same range + granularity the drawer renders. `bucketDurationMs` is
  * carried so consumers don't hardcode it (older payloads still carry their 10-min value).
@@ -87,7 +87,7 @@ const incidentBasePayloadShape = {
 }
 
 /**
- * Top-N tag chips snapshotted from the issue's recent traces. Sorted
+ * Top-N tag chips snapshotted from the signal's recent traces. Sorted
  * alphabetically and capped so the email body stays compact. The
  * producer slices to 5 entries; the schema enforces the cap.
  */

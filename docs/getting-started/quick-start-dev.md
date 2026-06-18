@@ -45,7 +45,7 @@ Scores come from three sources:
 2. **Annotations**: human review verdicts from your team
 3. **Custom**: scores you submit from your own code via the API
 
-Your project starts with default [flaggers](../annotations/flaggers) that automatically annotate traces for common problems like jailbreaking, refusals, frustration, and tool call errors. Flagger annotations are written directly on matching traces and feed straight into issue discovery, so you'll see issues forming from your live traffic without configuring anything.
+Your project starts with default [flaggers](../annotations/flaggers) that automatically annotate traces for common problems like jailbreaking, refusals, frustration, and tool call errors. Flagger annotations are written directly on matching traces and feed straight into signal discovery, so you'll see issues forming from your live traffic without configuring anything.
 
 ## Step 5: Explore with Search and Annotate
 
@@ -58,7 +58,7 @@ Open the **Traces** page in your project. The search bar at the top is where you
 
 When a search becomes a regular part of your workflow, click **Save search** to bookmark it. Saved searches are available from the **Saved searches** dropdown next to the search bar; reopening one restores its query and filters. See [Saved Searches](../search/saved-searches) for the full lifecycle.
 
-Your annotations feed into issue discovery and evaluation alignment alongside the annotations that flaggers create automatically.
+Your annotations feed into signal discovery and evaluation alignment alongside the annotations that flaggers create automatically.
 
 ## What's Next
 

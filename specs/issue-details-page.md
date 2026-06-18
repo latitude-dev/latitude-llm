@@ -46,7 +46,7 @@ The drawer is intentionally **not** the design baseline. We build the page first
 - **Lift**: `conditionalRate / baseRate` (equivalently `P(v | issue) / P(v)` — the two are algebraically identical). Lift > 1 means over-represented. Kept as a concept; the UI shows the rate pair + rate-elevation rather than the raw multiplier, which is unstable for rare values.
 - **Semantic similarity**: cosine similarity between two issues' centroid embeddings (`issues.centroid_embedding`) — "these two issues *mean* the same failure". Lives in Postgres/pgvector, maintained by the clustering pipeline.
 - **Co-occurrence**: two issues having occurrences in the same **sessions** — "these two issues *travel together*". Measured over the session sets in ClickHouse `scores`.
-- **NPMI** (normalized pointwise mutual information): bounded `[-1, 1]` measure of co-occurrence above chance — `ln(P(A,B) / (P(A)·P(B))) / −ln(P(A,B))`. The numerator is log-lift; the denominator normalizes by the rarity of the joint event, which kills both the rare-pair lift inflation and the big-neighbor chance overlap. Clamped at 0 for the related-issues score.
+- **NPMI** (normalized pointwise mutual information): bounded `[-1, 1]` measure of co-occurrence above chance — `ln(P(A,B) / (P(A)·P(B))) / −ln(P(A,B))`. The numerator is log-lift; the denominator normalizes by the rarity of the joint event, which kills both the rare-pair lift inflation and the big-neighbor chance overlap. Clamped at 0 for the related-signals score.
 - **Relatedness**: the merged ranking score for the Related-issues list — noisy-OR of the normalized semantic and co-occurrence scores: `1 − (1 − semScore)(1 − coocScore)`. Sort-order only; never displayed raw.
 
 ## Conceptual model
@@ -79,7 +79,7 @@ Add two nullable columns to `latitudeSchema.issues` (see `packages/platform/db-p
 - `priority` — `varchar(16)`, nullable, `$type<IssuePriority>()`. Literal union, no DB enum.
 
 ```typescript
-// packages/domain/issues/src/entities/issue.ts (additions)
+// packages/domain/issues/src/entities/signal.ts (additions)
 export const IssuePriority = {
   Low: "low",
   Medium: "medium",
@@ -99,7 +99,7 @@ The `Issue` entity, `IssueWithLifecycle`, `IssueDetails`, and `IssueListItem` sh
 ### Postgres — new use-cases (`@domain/issues`)
 
 - `updateIssueTriageUseCase({ issueId, assigneeId?, priority? })` — single use-case that patches assignee and/or priority. Validates the assignee is a member of the issue's organization. Emits no domain event beyond the standard issue update.
-- Read paths (`get-issue-details`, `list-issues`) include the two new fields.
+- Read paths (`get-signal-details`, `list-signals`) include the two new fields.
 
 ### Postgres — semantic neighbors (`IssueRepository.findSimilarByCentroid`)
 
@@ -275,7 +275,7 @@ Extend `issues.functions.ts` with serializable wrappers, fetched by dedicated Re
 
 ## Web UI
 
-New route: `apps/web/src/routes/_authenticated/projects/$projectSlug/issues/$issueId/index.tsx` (TanStack Start nested route). The route reads `issueId` from the path (bookmarkable/shareable), unlike the drawer's `?issueId=` query param.
+New route: `apps/web/src/routes/_authenticated/projects/$projectSlug/signals/$signalId/index.tsx` (TanStack Start nested route). The route reads `issueId` from the path (bookmarkable/shareable), unlike the drawer's `?issueId=` query param.
 
 The page is composed from **new presentational components** (built from scratch under `issues/$issueId/-components/`). Where an existing piece is already correct and reusable — the trend bar, the evaluations section, the traces table, the conversation renderer, annotation navigation — it is reused as a building block, but the page layout is not derived from the drawer.
 
@@ -367,7 +367,7 @@ A sticky header, a scrollable main column, and a sticky right metadata/triage ra
    - For each occurrence, the embedded conversation **scrolls to and highlights the exact message/part** using the score's `metadata.messageIndex` / `partIndex` / `startOffset`/`endOffset` (via existing `data-message-index` / `data-part-index` attributes and box-shadow highlight).
    - The originating **feedback/reason** renders inline as a card anchored under the message (`messageTrailingSlot`), so the *why* sits next to the failing text.
    - **Degradation:** occurrences without message-level anchors (evaluation/custom) highlight at span/trace level instead. A counter (`3 / 47`) shows position in the set.
-   - A "Copy link to this example" action produces a shareable URL (`…/issues/$issueId?example=<scoreId>`), enabled by the page route.
+   - A "Copy link to this example" action produces a shareable URL (`…/signals/$signalId?example=<scoreId>`), enabled by the page route.
 
 9. **Occurrences.** The existing paginated traces table (`ProjectTracesTable`, infinite scroll, columns startTime/name/tags/duration), retained as-is, with row click opening the trace detail (as a sub-route `?traceId=` on the page rather than the drawer's local Sheet).
 
@@ -384,8 +384,8 @@ A sticky header, a scrollable main column, and a sticky right metadata/triage ra
 
 The drawer is **removed**, not graduated. Once the page reaches feature parity (Phase 3.5: prev/next, tags, copyable slug), Phase 3.6:
 
-- makes the issues-table **row click navigate to `/projects/$slug/issues/$issueId`** instead of opening the drawer via `?issueId=`;
-- **repoints every issue link** — annotation cards, in-app notifications (`useIssueUrl`), incident-marker popover, monitor-incidents table, and the issue URLs built in **email** (`@domain/email`) and **Slack** (`@domain/integrations`) incident templates — from `…/issues?issueId=<id>` to the path route `…/issues/<id>`;
+- makes the issues-table **row click navigate to `/projects/$slug/signals/$signalId`** instead of opening the drawer via `?issueId=`;
+- **repoints every issue link** — annotation cards, in-app notifications (`useSignalUrl`), incident-marker popover, monitor-incidents table, and the issue URLs built in **email** (`@domain/email`) and **Slack** (`@domain/integrations`) incident templates — from `…/issues?issueId=<id>` to the path route `…/issues/<id>`;
 - adds a **backwards-compat redirect**: the issues list route redirects any incoming `?issueId=<id>` to `/issues/<id>` (preserving `?example=`), because already-sent emails/Slack messages carry the legacy URL and are immutable;
 - **deletes the `IssueDetailDrawer` chrome** (the close / prev-next / open-full-page wrapper). The shared `IssueDetailBody` **stays** — both the issue page and the session-detail panel's issue slot render it, the latter still in **drawer** mode, so its `variant` prop is **retained** (not collapsed);
 - **retires the `issue-page` flag** so the page renders unconditionally.
@@ -402,7 +402,7 @@ Backend only (no frontend tests), per repo convention:
 
 - Use-case tests for `updateIssueTriageUseCase` (assignee org-membership validation, priority set/clear, idempotency).
 - Repository tests (chdb testkit) for each new analytics method: `aggregateImpactByIssue` (distinct-trace cost dedupe, affected-users), `aggregateDimensionByIssue` (trace-level conditional-rate + coverage math + support gate), `coOccurringIssues` (shared sets + self-exclusion + lift), `failurePositionBySession` (window ranking, single-interaction handling, overflow bucket), `issueBenchmark` (percentile ranking).
-- Read-path tests that `get-issue-details` / `list-issues` surface `assigneeId` + `priority`.
+- Read-path tests that `get-signal-details` / `list-signals` surface `assigneeId` + `priority`.
 
 ## Tasks
 
@@ -460,7 +460,7 @@ Bring the drawer's remaining affordances onto the page (drawer left intact as th
 
 The page becomes the single issue surface; the drawer and flag are removed. Absorbs old Phase 7's docs + flag-removal.
 
-- [x] **P3.6-1**: Issues-table rows navigate to `/issues/$issueId` as **real anchors** via `InfiniteTable`'s `renderRowLink` (per the web-frontend skill — cmd/middle-click works; not `onRowClick` + `useNavigate`); repoint web issue links (`annotation-card`, `useIssueUrl` notification helper, `incident-marker-popover`, `monitor-incidents-table`, and the "Copy issue link" palette command in `issue-lifecycle-actions`) to the path route. *(Also removed the now-obsolete `preserveSearchParams` prop from `IncidentMarkerPopover` — search-merge was only meaningful for the same-route drawer.)*
+- [x] **P3.6-1**: Signals-table rows navigate to `/signals/$signalId` as **real anchors** via `InfiniteTable`'s `renderRowLink` (per the web-frontend skill — cmd/middle-click works; not `onRowClick` + `useNavigate`); repoint web signal links (`annotation-card`, `useSignalUrl` notification helper, `incident-marker-popover`, `monitor-incidents-table`, and the "Copy signal link" palette command in `signal-lifecycle-actions`) to the path route. *(Also removed the now-obsolete `preserveSearchParams` prop from `IncidentMarkerPopover` — search-merge was only meaningful for the same-route drawer.)*
 - [x] **P3.6-2**: Backwards-compat redirect in the issues list route `beforeLoad`: `?issueId=<id>` → `/issues/<id>` (preserves `?example=`). Uses an identity-passthrough `validateSearch` so the list's other URL params (`useParamState`) are untouched.
 - [x] **P3.6-3**: Repoint issue URLs in the email (`@domain/email`) and Slack (`@domain/integrations`) incident-opened/closed/event templates (+ their preview URLs) to the path route.
 - [x] **P3.6-4**: Remove the `IssueDetailDrawer` **chrome** + the list's use of it (drawer render, `?issueId=` param state, list J/K cycling). **`IssueDetailBody` and its `variant` prop are kept** — the session-detail panel's issue slot still renders it in drawer mode (the plan's "collapse the variant prop" was wrong).
@@ -475,9 +475,9 @@ Related issues redesigned before build (no v1 shipped): one merged list combinin
 
 - [x] **P4-1**: `IssueRepository.findSimilarByCentroid` (pgvector exact cosine scan, project-scoped, resolved/ignored included, empty when no embedding) + PGlite test.
 - [x] **P4-2**: `coOccurrenceByIssue` ClickHouse method (session co-occurrence counts + probability universe, self-exclusion, 30d window) + chdb tests.
-- [x] **P4-3**: Pure related-issues scorer in `@domain/issues` (semScore band rescale, NPMI with shared-session floor, noisy-OR merge, min-relatedness gate, top N) + unit tests; named constants (`ISSUE_RELATED_*`). *(As built: the scorer is fronted by `getRelatedIssuesUseCase` in `@domain/issues`, which runs the two reads in parallel and hydrates rows — the web fn stays thin.)*
+- [x] **P4-3**: Pure related-signals scorer in `@domain/issues` (semScore band rescale, NPMI with shared-session floor, noisy-OR merge, min-relatedness gate, top N) + unit tests; named constants (`ISSUE_RELATED_*`). *(As built: the scorer is fronted by `getRelatedIssuesUseCase` in `@domain/issues`, which runs the two reads in parallel and hydrates rows — the web fn stays thin.)*
 - [x] **P4-4**: `getRelatedIssues` web function (parallel reads → scorer → Postgres hydration) + hook + Related-issues section (merged list, lifecycle badges, reason chips, empty state), linking to other issue pages.
-- [ ] **P4-5**: `issueBenchmark` method (occurrence + user-reach percentile) + tests; benchmark chips (rail + section). *(Unchanged from the original design; not part of the related-issues build.)*
+- [ ] **P4-5**: `issueBenchmark` method (occurrence + user-reach percentile) + tests; benchmark chips (rail + section). *(Unchanged from the original design; not part of the related-signals build.)*
 
 **Exit gate**: the page shows one ranked list of related issues — semantically similar and/or co-occurring — with reason chips, plus (separately) a project benchmark rank.
 

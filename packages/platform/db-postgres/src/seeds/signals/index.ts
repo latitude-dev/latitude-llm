@@ -212,7 +212,7 @@ function buildSignalRow(input: {
   // `Regressed` derived state requires `resolvedAt IS NULL` plus an
   // `issue.regressed` alert_incident, which the alert-incidents seeder
   // inserts for these ids. Production behavior is the same — when
-  // `assign-score-to-issue` reifies a regression it clears `resolvedAt`.
+  // `assign-score-to-signal` reifies a regression it clears `resolvedAt`.
   const isRegressedDemo = SEED_REGRESSED_SIGNAL_IDS.includes(input.signalId)
   const resolvedAt = isRegressedDemo ? null : fixtureDates.resolvedAt
 

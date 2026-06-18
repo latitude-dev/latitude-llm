@@ -9,7 +9,7 @@ import {
   ESCALATION_EXIT_DWELL_MS,
   ESCALATION_MAX_DURATION_MS,
 } from "./constants.ts"
-import { type Signal, type SignalCentroid, SignalState } from "./entities/issue.ts"
+import { type Signal, type SignalCentroid, SignalState } from "./entities/signal.ts"
 import {
   createSignalCentroid,
   deriveSignalLifecycleStates,

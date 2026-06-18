@@ -1,11 +1,11 @@
 ---
 title: Annotate traces effectively
-description: Practical habits for human annotation that keep issue discovery and evaluation alignment accurate.
+description: Practical habits for human annotation that keep signal discovery and evaluation alignment accurate.
 ---
 
 # Annotate traces effectively
 
-Annotations feed [issue discovery](../../signals/overview), [evaluation alignment](../../evaluations/alignment), and the rest of what Latitude does with your feedback. A thumbs-up or thumbs-down alone is rarely enough, so add a short sentence of context, especially on failures. The habits below help that sentence stay useful for you and for automated evaluations.
+Annotations feed [signal discovery](../../signals/overview), [evaluation alignment](../../evaluations/alignment), and the rest of what Latitude does with your feedback. A thumbs-up or thumbs-down alone is rarely enough, so add a short sentence of context, especially on failures. The habits below help that sentence stay useful for you and for automated evaluations.
 
 For how annotations work, see [Annotations Overview](../overview). For automatic annotations, see [Flaggers](../flaggers). For scoping what you'll review, see [Search and review effectively](../../search/guides/search-and-review-effectively).
 
@@ -70,9 +70,9 @@ A [saved search](../../search/saved-searches) is a query plus filters that defin
 - **Raise sampling when missing real cases.** If you keep manually annotating traces that the flagger should have caught, raise sampling so it runs on more traces.
 - **Disable temporarily, never permanently.** If a flagger is wrong for your product right now (e.g. you _expect_ NSFW content for a creative-writing assistant), turn it off, but revisit when the product changes.
 
-Flagger annotations feed [issue discovery](../../signals/overview) and [alignment](../../evaluations/alignment) the same way yours do. If a flagger already annotated a trace, you can usually skip it.
+Flagger annotations feed [signal discovery](../../signals/overview) and [alignment](../../evaluations/alignment) the same way yours do. If a flagger already annotated a trace, you can usually skip it.
 
-## When to link an issue manually
+## When to link a signal manually
 
 You can let Latitude pick the issue for an annotation, or link it yourself. Usually, let Latitude decide.
 
