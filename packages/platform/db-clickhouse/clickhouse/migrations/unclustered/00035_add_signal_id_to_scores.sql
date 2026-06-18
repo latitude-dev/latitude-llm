@@ -13,5 +13,7 @@ ALTER TABLE scores
 ALTER TABLE scores UPDATE signal_id = issue_id WHERE issue_id != '';
 
 -- +goose Down
-ALTER TABLE scores DROP INDEX IF EXISTS idx_signal_id;
-ALTER TABLE scores DROP COLUMN IF EXISTS signal_id;
+-- Single ALTER to match the clustered variant (avoids the rollback metadata race).
+ALTER TABLE scores
+  DROP INDEX IF EXISTS idx_signal_id,
+  DROP COLUMN IF EXISTS signal_id;

@@ -15,5 +15,8 @@ ALTER TABLE scores ON CLUSTER default
 ALTER TABLE scores ON CLUSTER default UPDATE signal_id = issue_id WHERE issue_id != '';
 
 -- +goose Down
-ALTER TABLE scores ON CLUSTER default DROP INDEX IF EXISTS idx_signal_id;
-ALTER TABLE scores ON CLUSTER default DROP COLUMN IF EXISTS signal_id;
+-- Single ALTER for the same reason as Up: two sequential DROPs would race the
+-- replicated metadata version (code 517) on rollback.
+ALTER TABLE scores ON CLUSTER default
+  DROP INDEX IF EXISTS idx_signal_id,
+  DROP COLUMN IF EXISTS signal_id;
