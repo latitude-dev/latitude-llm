@@ -71,13 +71,10 @@ export const useSpansByTraceCollection = ({
 }) => {
   const scope = use(TraceScopeContext)
   const collection = getSpansByTraceCollection(projectId, traceId, startTimeFrom, startTimeTo, scope?.sandboxOrgId)
-  return useLiveQuery((q) => q.from({ span: collection }), [
-    projectId,
-    traceId,
-    startTimeFrom,
-    startTimeTo,
-    scope?.sandboxOrgId,
-  ])
+  return useLiveQuery(
+    (q) => q.from({ span: collection }),
+    [projectId, traceId, startTimeFrom, startTimeTo, scope?.sandboxOrgId],
+  )
 }
 
 const makeSpansBySessionCollection = (
@@ -135,13 +132,10 @@ export const useSpansBySessionCollection = ({
 }) => {
   const scope = use(TraceScopeContext)
   const collection = getSpansBySessionCollection(projectId, sessionId, startTimeFrom, startTimeTo, scope?.sandboxOrgId)
-  return useLiveQuery((q) => q.from({ span: collection }), [
-    projectId,
-    sessionId,
-    startTimeFrom,
-    startTimeTo,
-    scope?.sandboxOrgId,
-  ])
+  return useLiveQuery(
+    (q) => q.from({ span: collection }),
+    [projectId, sessionId, startTimeFrom, startTimeTo, scope?.sandboxOrgId],
+  )
 }
 
 export const useSpanDetail = ({
