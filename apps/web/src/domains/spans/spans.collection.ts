@@ -210,8 +210,7 @@ export function useSessionConversationSpanMaps({
       })
       return buildConversationSpanMaps(allMessages ?? [], asMessageSpans(spans))
     },
-    enabled:
-      enabled && projectId.length > 0 && sessionId.length > 0 && latestTraceId.length > 0 && allMessages !== undefined,
+    enabled: enabled && projectId.length > 0 && sessionId.length > 0 && allMessages !== undefined,
   })
 }
 
