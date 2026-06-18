@@ -3,7 +3,7 @@ import { index, integer, jsonb, text, uniqueIndex, varchar } from "drizzle-orm/p
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps } from "../schemaHelpers.ts"
 
 /**
- * Outbound data destinations (spec: `specs/data-destinations.md`). One row per
+ * Outbound data destinations (docs: `dev-docs/data-destinations.md`). One row per
  * connected destination, project-scoped, unique on `(project_id, kind)` in v1.
  *
  * - `config` is the kind-discriminated non-secret shape (host, payload

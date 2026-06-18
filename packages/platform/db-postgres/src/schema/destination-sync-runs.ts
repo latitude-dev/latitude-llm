@@ -3,7 +3,7 @@ import { index, integer, text, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
 /**
- * Audit row per destination sync run (spec: `specs/data-destinations.md`).
+ * Audit row per destination sync run (docs: `dev-docs/data-destinations.md`).
  * Powers the settings UI ("last synced 3 min ago · 1,240 events") and
  * debugging; pruned after 30 days by the sweep. `organization_id` is
  * denormalized for RLS; `error` is sanitized (status + taxonomy, never

@@ -17,12 +17,6 @@ export const FEATURE_FLAGS = {
     description:
       "Lets org owners/admins configure SAML or OIDC single sign-on and (optionally) enforce it for their verified email domain.",
   },
-  destinations: {
-    emoji: "📤",
-    name: "Data destinations",
-    description:
-      "Outbound sync of project telemetry into customer-owned systems (v1: PostHog). Gates the destinations settings UI and the sync sweep's destination selection.",
-  },
   "evaluation-sandbox-runtime": {
     emoji: "🧰",
     name: "Sandboxed evaluation runtime",

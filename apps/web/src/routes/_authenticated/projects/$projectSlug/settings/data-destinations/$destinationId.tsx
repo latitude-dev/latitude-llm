@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { ArrowLeft } from "lucide-react"
 import { listDestinations } from "../../../../../../domains/destinations/destinations.functions.ts"
-import { useHasFeatureFlag } from "../../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { useRouteProject } from "../../-route-data.ts"
 import { DestinationCard } from "../-components/destination-card.tsx"
 import { DestinationRunsTable } from "../-components/destination-runs-table.tsx"
@@ -29,25 +28,19 @@ function BackLink({ projectSlug }: { readonly projectSlug: string }) {
 function DestinationDetailPage() {
   const { projectSlug, destinationId } = Route.useParams()
   const project = useRouteProject()
-  const destinationsEnabled = useHasFeatureFlag("destinations")
 
   const { data: destinations, isLoading } = useQuery({
     queryKey: destinationsQueryKey(project.id),
     queryFn: () => listDestinations({ data: { projectId: project.id } }),
-    enabled: destinationsEnabled,
   })
 
   const destination = destinations?.find((candidate) => candidate.id === destinationId)
 
-  if (!destinationsEnabled || (!isLoading && !destination)) {
+  if (!isLoading && !destination) {
     return (
       <div className="flex flex-col gap-4">
         <BackLink projectSlug={projectSlug} />
-        <Text.H6 color="foregroundMuted">
-          {destinationsEnabled
-            ? "This destination no longer exists."
-            : "Data destinations aren't enabled for this organization yet."}
-        </Text.H6>
+        <Text.H6 color="foregroundMuted">This destination no longer exists.</Text.H6>
       </div>
     )
   }
