@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## v0.3.9 - 2026-06-18
+
+### Maintenance windows
+
+- Expanded production maintenance redirects to cover every public service hostname, including console, API, ingest, and bull-board, so planned maintenance consistently sends traffic to the status page (ref: 863e46b).
+
+### ClickHouse
+
+- Throttled the `traces` primary-key migration backfill to reduce load while rebuilding trace rollups with `trace_id` in the primary key (ref: 6654694).
+
 ## v0.3.8 - 2026-06-18
 
 ### Signals
