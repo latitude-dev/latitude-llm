@@ -26,6 +26,17 @@ export interface DeliveryResult {
 }
 
 export interface DestinationDeliverer {
+  /**
+   * Coarse age (ms) past which this destination needs distinct
+   * historical-ingestion semantics. Surfaced to the backfill scheduler so it
+   * never builds a window straddling `now − historicalBoundaryMs` — each
+   * delivered window lands cleanly on one side, since the adapter still derives
+   * its own per-window flag from `context.window`. PostHog returns its 48h rule;
+   * a destination with no special mechanism leaves this `undefined`, and backfill
+   * chunks for size only. The boundary value lives in the adapter — the engine
+   * reads it generically and never hardcodes it.
+   */
+  readonly historicalBoundaryMs?: number
   deliver(
     events: readonly DestinationEvent[],
     config: DestinationConfig,

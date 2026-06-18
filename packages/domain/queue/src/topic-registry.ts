@@ -626,6 +626,45 @@ const _registry = {
       readonly projectId: string
     }
   }>(),
+
+  // Separate queue from `destinations` so backfill runs in a capped, low-concurrency
+  // lane (subscribed with its own `concurrency`) and can never starve live sync.
+  "destinations-backfill": payloads<{
+    /**
+     * Initiates a user-requested backfill for one `(destination, source)` pair.
+     * The handler resolves the org's retention window, clamps `since` to it,
+     * computes the historical / live segments, and enqueues the first
+     * `runBackfillWindow`. `since` is ISO; omit for "as far back as retained".
+     */
+    backfill: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly destinationId: string
+      readonly source: string
+      readonly since?: string
+      /** Upper bound (ISO); where existing coverage begins. Omit ⇒ the use case declines to backfill (never runs unbounded to `now`). */
+      readonly until?: string
+    }
+    /**
+     * One bounded backfill window. The handler delivers it through the same
+     * read→map→deliver path as `runSync`, writes a `backfill`-tagged sync run,
+     * and re-enqueues the next window until the range is exhausted — a paced,
+     * resumable, idempotent chain. All dates are ISO; `remainingSegments` is the
+     * queue of slices still to process after the current one.
+     */
+    runBackfillWindow: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly destinationId: string
+      readonly source: string
+      readonly cursorWatermark: string
+      readonly cursorId: string
+      readonly segmentEnd: string
+      readonly remainingSegments: readonly { readonly start: string; readonly end: string }[]
+      /** The chain's lower bound (ISO); coverage extends to it once the chain drains. */
+      readonly coverageFloor: string
+    }
+  }>(),
 }
 
 export type TopicRegistry = typeof _registry

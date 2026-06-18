@@ -296,6 +296,28 @@ describe("DestinationSourceStateRepositoryLive", () => {
     })
   })
 
+  describe("setWatermark", () => {
+    it("sets the watermark unconditionally (the re-enable cursor jump)", async () => {
+      await seedOrganizations()
+      const destination = makeDestination()
+      await saveDestination(destination)
+      const cursor = makeCursor(destination)
+      await createCursor(cursor, ORG_A)
+
+      const jumped = { watermark: new Date("2026-06-13T00:00:00.000Z"), id: "" }
+      await withCursorRepo(
+        Effect.gen(function* () {
+          const repo = yield* DestinationSourceStateRepository
+          yield* repo.setWatermark({ destinationId: destination.id, source: SOURCE, watermark: jumped })
+        }),
+      )
+
+      const [row] = await pg.db.select().from(destinationSources)
+      expect(row?.watermark).toEqual(jumped.watermark)
+      expect(row?.watermarkId).toBe("")
+    })
+  })
+
   describe("updateRunState", () => {
     it("persists idle-backoff bookkeeping without touching the watermark", async () => {
       await seedOrganizations()

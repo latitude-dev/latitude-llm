@@ -1,10 +1,10 @@
 {
-  "id": "9b561fa4-224f-4e5f-beb5-3c9dc134f20f",
-  "prevIds": [
-    "1379420e-0815-4020-8437-719be7db7191"
-  ],
   "version": "8",
   "dialect": "postgres",
+  "id": "52eff890-c03b-4462-9f37-4f2450b5e7b2",
+  "prevIds": [
+    "9b561fa4-224f-4e5f-beb5-3c9dc134f20f"
+  ],
   "ddl": [
     {
       "isRlsEnabled": true,
@@ -182,12 +182,6 @@
     },
     {
       "isRlsEnabled": true,
-      "name": "signals",
-      "entityType": "tables",
-      "schema": "latitude"
-    },
-    {
-      "isRlsEnabled": true,
       "name": "monitor_alerts",
       "entityType": "tables",
       "schema": "latitude"
@@ -231,6 +225,12 @@
     {
       "isRlsEnabled": true,
       "name": "scores",
+      "entityType": "tables",
+      "schema": "latitude"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "signals",
       "entityType": "tables",
       "schema": "latitude"
     },
@@ -3334,6 +3334,45 @@
     {
       "type": "timestamp with time zone",
       "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "coverage_start_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_sources"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "backfill_started_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_sources"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "backfill_progress_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_sources"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
       "notNull": false,
       "dimensions": 0,
       "default": null,
@@ -3431,6 +3470,19 @@
       "generated": null,
       "identity": null,
       "name": "source",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_sync_runs"
+    },
+    {
+      "type": "varchar(16)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'live'",
+      "generated": null,
+      "identity": null,
+      "name": "trigger",
       "entityType": "columns",
       "schema": "latitude",
       "table": "destination_sync_runs"
@@ -4279,256 +4331,6 @@
       "entityType": "columns",
       "schema": "latitude",
       "table": "integrations"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "gen_random_uuid()",
-      "generated": null,
-      "identity": null,
-      "name": "uuid",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "organization_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "project_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "type": "varchar(128)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "slug",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "type": "varchar(128)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "name",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "description",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "type": "varchar(32)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "source",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "assignee_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "type": "varchar(16)",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "priority",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "type": "jsonb",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "centroid",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "type": "vector(2048)",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "centroid_embedding",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "type": "tsvector",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": {
-        "as": "\n          setweight(to_tsvector('english', coalesce(name, '')), 'A') ||\n          setweight(to_tsvector('english', coalesce(description, '')), 'B')\n        ",
-        "type": "stored"
-      },
-      "identity": null,
-      "name": "search_document",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "clustered_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "escalated_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "resolved_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "ignored_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "signals"
     },
     {
       "type": "varchar(24)",
@@ -5803,6 +5605,256 @@
       "entityType": "columns",
       "schema": "latitude",
       "table": "scores"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "uuid",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "organization_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "type": "varchar(128)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "slug",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "type": "varchar(128)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "name",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "description",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "type": "varchar(32)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "source",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "assignee_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "type": "varchar(16)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "priority",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "centroid",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "type": "vector(2048)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "centroid_embedding",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "type": "tsvector",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": {
+        "as": "\n          setweight(to_tsvector('english', coalesce(name, '')), 'A') ||\n          setweight(to_tsvector('english', coalesce(description, '')), 'B')\n        ",
+        "type": "stored"
+      },
+      "identity": null,
+      "name": "search_document",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "clustered_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "escalated_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "resolved_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "ignored_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "signals"
     },
     {
       "type": "varchar(24)",
@@ -8309,76 +8361,6 @@
       "nameExplicit": true,
       "columns": [
         {
-          "value": "organization_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "project_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "ignored_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "resolved_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "created_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "signals_project_lifecycle_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "search_document",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "gin",
-      "concurrently": false,
-      "name": "signals_search_document_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
           "value": "monitor_id",
           "isExpression": false,
           "asc": true,
@@ -9254,6 +9236,76 @@
           "opclass": null
         },
         {
+          "value": "ignored_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "resolved_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "created_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "signals_project_lifecycle_idx",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "search_document",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "gin",
+      "concurrently": false,
+      "name": "signals_search_document_idx",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "signals"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "organization_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "project_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
           "value": "created_at",
           "isExpression": false,
           "asc": true,
@@ -10065,16 +10117,6 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "signals_pkey",
-      "schema": "latitude",
-      "table": "signals",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
       "name": "monitor_alerts_pkey",
       "schema": "latitude",
       "table": "monitor_alerts",
@@ -10148,6 +10190,16 @@
       "name": "scores_pkey",
       "schema": "latitude",
       "table": "scores",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "signals_pkey",
+      "schema": "latitude",
+      "table": "signals",
       "entityType": "pks"
     },
     {
@@ -10333,19 +10385,6 @@
       "nameExplicit": true,
       "columns": [
         "organization_id",
-        "project_id",
-        "slug"
-      ],
-      "nullsNotDistinct": false,
-      "name": "signals_unique_slug_per_project_idx",
-      "entityType": "uniques",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        "organization_id",
         "slug",
         "deleted_at"
       ],
@@ -10368,6 +10407,19 @@
       "entityType": "uniques",
       "schema": "latitude",
       "table": "saved_searches"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "organization_id",
+        "project_id",
+        "slug"
+      ],
+      "nullsNotDistinct": false,
+      "name": "signals_unique_slug_per_project_idx",
+      "entityType": "uniques",
+      "schema": "latitude",
+      "table": "signals"
     },
     {
       "nameExplicit": false,
@@ -10471,23 +10523,23 @@
     {
       "nameExplicit": false,
       "columns": [
-        "uuid"
-      ],
-      "nullsNotDistinct": false,
-      "name": "signals_uuid_key",
-      "schema": "latitude",
-      "table": "signals",
-      "entityType": "uniques"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
         "organization_id"
       ],
       "nullsNotDistinct": false,
       "name": "sandboxes_organization_id_key",
       "schema": "latitude",
       "table": "sandboxes",
+      "entityType": "uniques"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "uuid"
+      ],
+      "nullsNotDistinct": false,
+      "name": "signals_uuid_key",
+      "schema": "latitude",
+      "table": "signals",
       "entityType": "uniques"
     },
     {
@@ -10771,19 +10823,6 @@
       ],
       "using": "organization_id = get_current_organization_id()",
       "withCheck": "organization_id = get_current_organization_id()",
-      "name": "signals_organization_policy",
-      "entityType": "policies",
-      "schema": "latitude",
-      "table": "signals"
-    },
-    {
-      "as": "PERMISSIVE",
-      "for": "ALL",
-      "roles": [
-        "public"
-      ],
-      "using": "organization_id = get_current_organization_id()",
-      "withCheck": "organization_id = get_current_organization_id()",
       "name": "monitor_alerts_organization_policy",
       "entityType": "policies",
       "schema": "latitude",
@@ -10866,6 +10905,19 @@
       "entityType": "policies",
       "schema": "latitude",
       "table": "scores"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "ALL",
+      "roles": [
+        "public"
+      ],
+      "using": "organization_id = get_current_organization_id()",
+      "withCheck": "organization_id = get_current_organization_id()",
+      "name": "signals_organization_policy",
+      "entityType": "policies",
+      "schema": "latitude",
+      "table": "signals"
     },
     {
       "as": "PERMISSIVE",

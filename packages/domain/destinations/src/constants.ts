@@ -17,6 +17,13 @@ export const DESTINATION_SWEEPER_PATTERN = "* * * * *"
 export const DESTINATION_SYNC_RUN_RETENTION_MS = 30 * 24 * 60 * 60 * 1000
 
 /**
+ * A running backfill heartbeats (`backfill_started_at`/`updated_at`) every window
+ * (~45s). If `backfill_started_at` is set but the heartbeat is older than this, the
+ * chain wedged (lost job / crash) — treat it as not running so the UI frees up.
+ */
+export const DESTINATION_BACKFILL_STALE_MS = 5 * 60_000
+
+/**
  * Nightly prune of aged-out `destination_sync_runs`. Retention is coarse (30d),
  * so this runs once a day off-peak rather than on the every-minute sweep.
  */

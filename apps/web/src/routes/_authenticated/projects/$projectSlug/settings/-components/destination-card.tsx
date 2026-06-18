@@ -3,9 +3,10 @@ import { Alert, Badge, Button, Icon, Text, useToast } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { ChevronDown, Pause, Play, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { ChevronDown, History, Pause, Play, Trash2 } from "lucide-react"
+import { useRef, useState } from "react"
 import {
+  cancelDestinationBackfill,
   type DestinationRecord,
   type DestinationSyncRunRecord,
   getDestinationFreshness,
@@ -14,6 +15,7 @@ import {
   resumeDestination,
 } from "../../../../../../domains/destinations/destinations.functions.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
+import { BackfillDestinationModal } from "./backfill-destination-modal.tsx"
 import { DeleteDestinationModal } from "./delete-destination-modal.tsx"
 import { DESTINATION_HEALTH_BADGE, DESTINATION_KIND_LABEL, formatLag } from "./destination-display.ts"
 import { DestinationFormModal } from "./destination-form-modal.tsx"
@@ -58,6 +60,10 @@ export function DestinationCard({
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [showSources, setShowSources] = useState(false)
+  const [backfillOpen, setBackfillOpen] = useState(false)
+  // Until this instant, poll freshness even before the worker flips it in-progress, so a
+  // just-triggered backfill is picked up within a tick or two instead of after staleTime.
+  const pollUntil = useRef(0)
 
   const { data: latestRun } = useQuery({
     queryKey: ["destination-sync-run", destination.id],
@@ -72,6 +78,10 @@ export function DestinationCard({
     enabled: destination.status === "active",
     staleTime: 60_000,
     refetchOnWindowFocus: false,
+    // While a backfill runs the % advances server-side; poll so the bar tracks it and the
+    // button frees the moment the chain finishes (or wedges → freshness reports not-in-progress).
+    refetchInterval: (query) =>
+      query.state.data?.backfillInProgress || Date.now() < pollUntil.current ? 3_000 : false,
   })
 
   const sourceFreshness = freshness?.sources ?? []
@@ -93,10 +103,29 @@ export function DestinationCard({
   })
   const resume = useMutation({
     mutationFn: () => resumeDestination({ data: { projectId, destinationId: destination.id } }),
-    onSuccess: () =>
-      void queryClient.invalidateQueries({
-        queryKey: destinationsQueryKey(projectId),
-      }),
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({ queryKey: destinationsQueryKey(projectId) })
+      if (result.backfillsFailed > 0) {
+        toast({
+          variant: "destructive",
+          description: "Resumed, but the gap backfill couldn't start for every source — retry from Backfill.",
+        })
+      } else if (result.backfillsStarted > 0) {
+        toast({ description: "Resumed. Backfilling the window it missed while paused." })
+      } else {
+        toast({ description: "Destination resumed." })
+      }
+    },
+    onError: (error) => toast({ variant: "destructive", description: toUserMessage(error) }),
+  })
+
+  const cancelBackfill = useMutation({
+    mutationFn: () => cancelDestinationBackfill({ data: { projectId, destinationId: destination.id } }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: destinationsQueryKey(projectId) })
+      void queryClient.invalidateQueries({ queryKey: ["destination-freshness", destination.id] })
+      toast({ description: "Backfill cancelled." })
+    },
     onError: (error) => toast({ variant: "destructive", description: toUserMessage(error) }),
   })
 
@@ -203,6 +232,31 @@ export function DestinationCard({
           <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
             Edit
           </Button>
+          {!linkToDetail && destination.status === "active" ? (
+            freshness?.backfillInProgress ? (
+              <>
+                <Button variant="outline" size="sm" disabled>
+                  <Icon icon={History} size="sm" />
+                  {freshness?.backfillProgress != null
+                    ? `Backfilling… ${Math.round(freshness.backfillProgress * 100)}%`
+                    : "Backfilling…"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={cancelBackfill.isPending}
+                  onClick={() => cancelBackfill.mutate()}
+                >
+                  Cancel
+                </Button>
+              </>
+            ) : freshness?.backfillAvailable ? (
+              <Button variant="outline" size="sm" onClick={() => setBackfillOpen(true)}>
+                <Icon icon={History} size="sm" />
+                Backfill
+              </Button>
+            ) : null
+          ) : null}
           {destination.status === "paused" ? (
             <Button variant="outline" size="sm" disabled={togglePending} onClick={() => resume.mutate()}>
               <Icon icon={Play} size="sm" />
@@ -243,6 +297,17 @@ export function DestinationCard({
       ) : null}
       {deleting ? (
         <DeleteDestinationModal projectId={projectId} destination={destination} onClose={() => setDeleting(false)} />
+      ) : null}
+      {backfillOpen ? (
+        <BackfillDestinationModal
+          projectId={projectId}
+          destination={destination}
+          onClose={() => setBackfillOpen(false)}
+          onStarted={() => {
+            pollUntil.current = Date.now() + 60_000
+            void queryClient.invalidateQueries({ queryKey: ["destination-freshness", destination.id] })
+          }}
+        />
       ) : null}
     </div>
   )

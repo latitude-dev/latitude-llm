@@ -1,4 +1,4 @@
-import type { DestinationSource, DestinationSyncRunStatus } from "@domain/destinations"
+import type { DestinationSource, DestinationSyncRunStatus, DestinationSyncRunTrigger } from "@domain/destinations"
 import { index, integer, text, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
@@ -16,6 +16,8 @@ export const destinationSyncRuns = latitudeSchema.table(
     organizationId: cuid("organization_id").notNull(),
     destinationId: cuid("destination_id", { default: false }).notNull(),
     source: varchar("source", { length: 32 }).notNull().$type<DestinationSource>(),
+    // Live sweep vs. user-initiated backfill; existing rows default to 'live'.
+    trigger: varchar("trigger", { length: 16 }).notNull().default("live").$type<DestinationSyncRunTrigger>(),
     windowStart: tzTimestamp("window_start").notNull(),
     windowEnd: tzTimestamp("window_end").notNull(),
     status: varchar("status", { length: 16 }).notNull().$type<DestinationSyncRunStatus>(),

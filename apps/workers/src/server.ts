@@ -196,6 +196,7 @@ const bootstrap = async () => {
     createDestinationsWorker({
       consumer: ctx.consumer,
       publisher: ctx.publisher,
+      redisClient: ctx.redisClient,
       postgresClient: ctx.postgresClient,
       adminPostgresClient: getAdminPostgresClient(),
       clickhouseClient: ctx.clickhouseClient,
