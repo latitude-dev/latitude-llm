@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3] - 2026-06-18
+
+### Added
+
+- Local custom attribute redaction before OTLP export. Configure exact names, regex source strings, or `/pattern/flags` strings via `redact.attributes` / `LATITUDE_REDACT_ATTRIBUTES`, with an optional `redact.mask` / `LATITUDE_REDACT_MASK`, to mask selected span attributes while leaving content capture enabled.
+- The installer persists the redaction settings in Pi's package config so future sessions apply the same masks.
+
 ## [0.0.2] - 2026-05-21
 
 ### Fixed

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.9] - 2026-06-18
+
+### Added
+
+- Local custom attribute redaction before OTLP export. Configure exact names, regex source strings, or `/pattern/flags` strings through `config.redact.attributes`, with an optional `config.redact.mask`, to mask selected span attributes while keeping conversation capture enabled.
+
 ## [0.0.8] - 2026-06-08
 
 Unblocks install, upgrade, and re-keying on OpenClaw 2026.5+. Lockstep release with `@latitude-data/openclaw-telemetry-cli` 0.0.8.
