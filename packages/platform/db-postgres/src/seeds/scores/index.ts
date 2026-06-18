@@ -89,7 +89,8 @@ function buildTau2SignalScoreRows(scope: SeedScope) {
         simulationId: null,
         signalId: scopedSignalIdByFixtureIndex(scope, signalIndex),
         value: 0.05 + (occurrenceIndex % 4) * 0.03,
-        passed: false,
+        // Occurrence = the signal's behavior is present in the trace: passed=true under the cutover convention.
+        passed: true,
         feedback: buildTau2Feedback(issue.name, trajectory),
         metadata: {
           dataset: "tau2-bench",
