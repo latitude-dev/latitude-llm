@@ -44,6 +44,7 @@ export function useSessionTimeline({
     latestTraceId,
     sessionStartTime: session.startTime,
     sessionEndTime: session.endTime,
+    allMessages: traceDetail?.allMessages,
   })
   const { data: annotationsData } = useAnnotationsBySession({
     projectId,

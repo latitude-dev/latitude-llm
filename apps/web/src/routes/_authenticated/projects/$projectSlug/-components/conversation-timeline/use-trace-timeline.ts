@@ -25,7 +25,12 @@ export function useTraceTimeline({
   readonly spans: readonly SpanRecord[] | undefined
   readonly annotationsEnabled: boolean
 }): ConversationTimeline | null {
-  const { data: spanMaps } = useConversationSpanMaps({ projectId, traceId })
+  const { data: spanMaps } = useConversationSpanMaps({
+    projectId,
+    traceId,
+    startTime: traceDetail?.startTime,
+    allMessages: traceDetail?.allMessages,
+  })
   const { data: annotationsData } = useAnnotationsByTrace({
     projectId,
     traceId,

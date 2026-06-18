@@ -1,13 +1,13 @@
 import { ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
-import type { Operation, Span, SpanDetail, SpanKind, SpanStatusCode } from "@domain/spans"
-import { buildConversationSpanMaps, SpanRepository, TraceRepository } from "@domain/spans"
-import { AIEmbedLive, withAi } from "@platform/ai"
-import { SpanRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import type { Operation, Span, SpanDetail, SpanKind, SpanMessagesData, SpanStatusCode } from "@domain/spans"
+import { SpanRepository } from "@domain/spans"
+import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
-import { Effect, Layer } from "effect"
+import { Effect } from "effect"
+import type { GenAIMessage } from "rosetta-ai"
 import { z } from "zod"
-import { getClickhouseClient, getRedisClient } from "../../server/clients.ts"
+import { getClickhouseClient } from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 
 const dateTimeParamSchema = z
@@ -198,89 +198,82 @@ export const listSpansBySession = createServerFn({ method: "GET" })
     return spans.map(serializeSpan)
   })
 
-export const mapConversationToSpans = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ sandboxOrgId: z.string().optional(), projectId: z.string(), traceId: z.string() }))
-  .handler(
-    async ({ data }): Promise<{ messageSpanMap: Record<number, string>; toolCallSpanMap: Record<string, string> }> => {
-      const orgId = await resolveOrgScope(data)
-      const traceId = TraceId(data.traceId)
+export interface SpanMessagesRecord {
+  readonly spanId: string
+  readonly operation: Operation
+  readonly toolCallId: string
+  readonly toolName: string
+  readonly toolInput: string
+  readonly inputMessages: readonly GenAIMessage[]
+  readonly outputMessages: readonly GenAIMessage[]
+}
 
-      return Effect.runPromise(
-        Effect.gen(function* () {
-          const traceRepo = yield* TraceRepository
-          const spanRepo = yield* SpanRepository
+const serializeSpanMessages = (span: SpanMessagesData): SpanMessagesRecord => ({
+  spanId: span.spanId as string,
+  operation: span.operation,
+  toolCallId: span.toolCallId,
+  toolName: span.toolName,
+  toolInput: span.toolInput,
+  inputMessages: span.inputMessages,
+  outputMessages: span.outputMessages,
+})
 
-          const projectId = ProjectId(data.projectId)
-          const traceDetail = yield* traceRepo
-            .findByTraceId({ organizationId: orgId, projectId, traceId })
-            .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-
-          if (!traceDetail) return { messageSpanMap: {}, toolCallSpanMap: {} }
-
-          const startTimeFrom = new Date(traceDetail.startTime.getTime() - 60 * 1000)
-          const startTimeTo = new Date(traceDetail.startTime.getTime() + 24 * 60 * 60 * 1000)
-          const spans = yield* spanRepo.findMessagesForTrace({
-            organizationId: orgId,
-            projectId,
-            traceId,
-            startTimeFrom,
-            startTimeTo,
-          })
-
-          return buildConversationSpanMaps(traceDetail.allMessages, spans)
-        }).pipe(
-          withClickHouse(Layer.merge(TraceRepositoryLive, SpanRepositoryLive), getClickhouseClient(), orgId),
-          withAi(AIEmbedLive, getRedisClient()),
-          withTracing,
-        ),
-      )
-    },
+// Returns the message-bearing spans for a trace. The caller pairs these with the
+// conversation it already holds (traceDetail.allMessages) via buildConversationSpanMaps,
+// so no redundant trace fetch happens here. `startTime` bounds the span scan on the
+// time-keyed spans table.
+export const listConversationMessageSpans = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      sandboxOrgId: z.string().optional(),
+      projectId: z.string(),
+      traceId: z.string(),
+      startTime: dateTimeParamSchema,
+    }),
   )
+  .handler(async ({ data }): Promise<SpanMessagesRecord[]> => {
+    const orgId = await resolveOrgScope(data)
+    const spans = await Effect.runPromise(
+      Effect.gen(function* () {
+        const spanRepo = yield* SpanRepository
+        return yield* spanRepo.findMessagesForTrace({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          traceId: TraceId(data.traceId),
+          startTimeFrom: new Date(data.startTime.getTime() - 60 * 1000),
+          startTimeTo: new Date(data.startTime.getTime() + 24 * 60 * 60 * 1000),
+        })
+      }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+    return spans.map(serializeSpanMessages)
+  })
 
-export const mapSessionConversationToSpans = createServerFn({ method: "GET" })
+export const listSessionConversationMessageSpans = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       sessionId: z.string(),
-      latestTraceId: z.string(),
       sessionStartTime: dateTimeParamSchema,
       sessionEndTime: dateTimeParamSchema,
     }),
   )
-  .handler(
-    async ({ data }): Promise<{ messageSpanMap: Record<number, string>; toolCallSpanMap: Record<string, string> }> => {
-      const orgId = await resolveOrgScope(data)
-
-      return Effect.runPromise(
-        Effect.gen(function* () {
-          const traceRepo = yield* TraceRepository
-          const spanRepo = yield* SpanRepository
-
-          const projectId = ProjectId(data.projectId)
-          const traceDetail = yield* traceRepo
-            .findByTraceId({ organizationId: orgId, projectId, traceId: TraceId(data.latestTraceId) })
-            .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-
-          if (!traceDetail) return { messageSpanMap: {}, toolCallSpanMap: {} }
-
-          const spans = yield* spanRepo.findMessagesForSession({
-            organizationId: orgId,
-            projectId,
-            sessionId: SessionId(data.sessionId),
-            startTimeFrom: new Date(data.sessionStartTime.getTime() - 60 * 1000),
-            startTimeTo: new Date(data.sessionEndTime.getTime() + 24 * 60 * 60 * 1000),
-          })
-
-          return buildConversationSpanMaps(traceDetail.allMessages, spans)
-        }).pipe(
-          withClickHouse(Layer.merge(TraceRepositoryLive, SpanRepositoryLive), getClickhouseClient(), orgId),
-          withAi(AIEmbedLive, getRedisClient()),
-          withTracing,
-        ),
-      )
-    },
-  )
+  .handler(async ({ data }): Promise<SpanMessagesRecord[]> => {
+    const orgId = await resolveOrgScope(data)
+    const spans = await Effect.runPromise(
+      Effect.gen(function* () {
+        const spanRepo = yield* SpanRepository
+        return yield* spanRepo.findMessagesForSession({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          sessionId: SessionId(data.sessionId),
+          startTimeFrom: new Date(data.sessionStartTime.getTime() - 60 * 1000),
+          startTimeTo: new Date(data.sessionEndTime.getTime() + 24 * 60 * 60 * 1000),
+        })
+      }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+    return spans.map(serializeSpanMessages)
+  })
 
 export const getSpanDetail = createServerFn({ method: "GET" })
   .inputValidator(

@@ -119,6 +119,8 @@ function ConversationContent({
   const { data: spanMaps } = useConversationSpanMaps({
     projectId,
     traceId: traceDetail.traceId,
+    startTime: traceDetail.startTime,
+    allMessages: traceDetail.allMessages,
   })
 
   const band = useViewportBand({ scrollRef, timeline: timeline ?? null, isActive })
