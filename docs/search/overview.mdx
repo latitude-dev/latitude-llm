@@ -33,6 +33,10 @@ Examples:
 
 Semantic search works even when a trace does not contain those exact words. For example, _user is frustrated_ can find traces where the user says _"this is the third time I've explained this"_ or _"you're not helping"_.
 
+<Info>
+  Semantic search is an **exploration** tool. It returns a ranked sample of the most relevant traces, not every match, so it cannot be saved, counted, or alerted on. To revisit or monitor a behaviour, capture it with filters or exact text and save that.
+</Info>
+
 ### Exact text search
 
 Use quotes around words or phrases that must appear exactly in the trace.
@@ -67,7 +71,9 @@ When you search by meaning, results are ordered by relevance. When you only use 
 
 ## Saving a search
 
-When a query, filters, or both become useful enough to revisit, click **Save search** and give it a clear name, such as _Failed payments_ or _Tool loops in production_.
+When filters, an exact-text search, or both become useful enough to revisit, click **Save search** and give it a clear name, such as _Failed payments_ or _Tool loops in production_.
+
+A saved search captures your **filters and exact-text query**. It does not save a semantic, natural-language query: semantic search returns a ranked sample for exploration, not every match, so it is not something you can save or monitor. To keep a behaviour you found by meaning, express it with filters or exact text (a tag, a metadata field, an error string) and save that.
 
 Saved searches then appear in the **Saved searches** dropdown next to the search bar. See [Saved Searches](./saved-searches) for the full lifecycle.
 

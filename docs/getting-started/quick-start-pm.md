@@ -41,7 +41,7 @@ Search lives right on the **Traces** page. Type a plain-English query into the s
 
 Filters work alongside the query, so you can scope to a time range, a specific model, traces with errors, or any custom metadata your application sends.
 
-When a search is one you'll come back to, click **Save search** and give it a name. Saved searches are then a click away from the **Saved searches** dropdown next to the search bar, each showing its name, query, and filter count. Reopening one restores its query and filters so you, or a teammate, can pick the cohort back up. See [Saved Searches](../search/saved-searches) for details.
+When a cohort is worth coming back to, narrow it with filters or exact-text terms and click **Save search**. A saved search keeps your filters and exact text, not the semantic query, so reopening it restores the same cohort. Saved searches are a click away from the **Saved searches** dropdown next to the search bar, each showing its name, query, and filter count. See [Saved Searches](../search/saved-searches) for details.
 
 ## Automatic Detection with Flaggers
 

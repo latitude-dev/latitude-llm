@@ -56,7 +56,7 @@ Open the **Traces** page in your project. The search bar at the top is where you
 3. Click into any matching trace to read the conversation.
 4. Use the annotation panel on the right to leave human feedback. Pick conversation-level, message-level, or text-range scope, give a thumbs-up or thumbs-down verdict, and add a short explanation.
 
-When a search becomes a regular part of your workflow, click **Save search** to bookmark it. Saved searches are available from the **Saved searches** dropdown next to the search bar; reopening one restores its query and filters. See [Saved Searches](../search/saved-searches) for the full lifecycle.
+When a cohort becomes a regular part of your workflow, click **Save search** to bookmark its filters and exact-text terms. Semantic search is for exploration and is not saved, so reopening a saved search restores its filters and exact-text query. Saved searches are available from the **Saved searches** dropdown next to the search bar. See [Saved Searches](../search/saved-searches) for the full lifecycle.
 
 Your annotations feed into issue discovery and evaluation alignment alongside the annotations that flaggers create automatically.
 

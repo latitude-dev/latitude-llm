@@ -103,8 +103,8 @@ Reconciles the original three-axis proposal with the current nav. This is the **
 | Group | Pages | Diátaxis |
 | --- | --- | --- |
 | **Overview** | introduction, how-to-use-latitude | Explanation |
-| **Getting Started** | start-tracing, **+ end-to-end tutorial (new)** | Tutorial / How-to |
-| **Observability** | start-tracing, SDKs, Providers, Frameworks, Agent harnesses, Features, Guides | Reference |
+| **Getting Started** *(set up and send your data)* | start-tracing, **end-to-end tutorial (new)**, **SDKs (moved in)**, **Providers (moved in)**, **Frameworks (moved in)**, **Agent harnesses (moved in)** | Tutorial / How-to + Reference |
+| **Observability** *(the LLM observability building blocks)* | **overview (becomes the group landing)**, traces, sessions, **spans (new)**, **tool calls (new)**, Features (duration, token and cost tracking, metadata, tags, environments, user tracking, log levels, trace ids and urls, filters, sampling, releases and versioning, percentile cohorts), Guides | Reference + Explanation |
 | **Discovery** *(rename/group existing)* | search/overview, search/saved-searches, **taxonomy (new)**, flaggers, scores, guides | How-to + Reference |
 | **Issues** *(today's auto-discovery surface)* | issues/overview, management, annotations (inline annotations, flaggers), Evaluations (overview, triggers, alignment) | Explanation + How-to |
 | **Monitors** *(one concept, many targets)* | overview, **monitor a saved search** (how-to), **monitor an issue** (how-to), notifications and Slack | How-to + Reference |
@@ -114,6 +114,9 @@ Reconciles the original three-axis proposal with the current nav. This is the **
 
 Notes on the changes from the previous draft:
 
+- **Instrumentation moves out of Observability into Getting Started.** SDKs, Providers, Frameworks, and Agent harnesses are all "how do I get telemetry flowing," which is setup, not observability. Moving them decongests Observability and gives Getting Started one clear job: get set up and send your data. (See the open question on whether they stay under Getting Started or get their own "Instrumentation" group.)
+- **Observability becomes the building-blocks reference:** traces, sessions, spans, and tool calls as first-class pages, then the data and metadata features, then guides. `observability/overview` stops being buried inside "Features" and becomes the group landing.
+- **Two building-block pages are missing and must be created:** there is no dedicated **spans** page and no dedicated **tool calls** page today, even though both are core observability concepts. See P0.
 - **Monitors is one group, not two siloed "Monitor a X" pages.** A monitor is a single concept that watches a target. Today the targets are saved searches and issues; the how-tos are examples of the same concept, not separate features. This framing is true now and matches where Signals takes monitors (targets become signal, saved search, tool, or raw stream). The cross-links from Discovery (saved searches) and Issues point into this one Monitors group.
 - **"scores" replaces the old "signals (scores)" label** in Discovery, and the Issues group lists the real pages (annotations, inline annotations, flaggers, evaluations) instead of grouping them under the word "signals." Scores are the verdict ledger, not a tracked entity.
 - **Evaluations stay under Issues** for now because today an evaluation is linked to an issue. Under Signals an evaluation becomes one *type* of signal matcher; that reframing is phase B.
@@ -129,6 +132,9 @@ Notes on the changes from the previous draft:
 - [ ] **Promote MCP** out of "More" into Test and Fix as "Connect your agent harness."
 - [ ] **Wire in or delete the 8 orphans** (table below). No page should exist on disk but be unreachable.
 - [ ] **Name the Discovery group** and add a **taxonomy** page. **Media needed:** screenshot or GIF of the taxonomy view.
+- [ ] **Move instrumentation into Getting Started** (start-tracing, SDKs, Providers, Frameworks, Agent harnesses) and remove the duplicate `start-tracing` that currently sits in both Getting Started and Observability.
+- [ ] **Write the two missing Observability building-block pages:** `observability/spans` (what a span is, the span tree inside a trace, span kinds) and `observability/tool-calls` (tool-call spans, their inputs and outputs, errors). **Media needed:** screenshot or GIF of the span tree inside a trace; screenshot of a tool-call span showing its input and output.
+- [ ] **Make `observability/overview` the Observability landing page**, leading with traces, sessions, spans, and tool calls before the feature pages.
 - [ ] **Unify the Monitors group**: one overview that explains target, metric, alerts, and incidents; the two how-tos become examples. **Media needed:** GIF of creating a monitor from a saved search; GIF of creating a monitor on an issue.
 - [ ] **Add the exploration-vs-tracking explainer** to Search overview and Saved searches. **Media needed:** GIF of the semantic-search ranked-sample banner.
 - [ ] **Stable slugs and a redirect map.** Lock the slugs that will survive the Issues to Signals rename, and pre-write the `issues/* → signals/*` redirect map so the later migration is a config change, not a link break.
@@ -196,6 +202,7 @@ These changes only make sense once `specs/signals.md` ships. Hold them until the
 ---
 
 ## Open questions and blockers
+- **Instrumentation placement.** Put SDKs, Providers, Frameworks, and Agent harnesses under Getting Started (one larger group), or split them into a dedicated "Instrumentation" group so Getting Started stays a short funnel? The plan currently folds them into Getting Started, matching the intent that "getting started" means "get your data in." *(Decision needed.)*
 - **Overhaul timing.** Does this ship before Signals (apply "now", hold phase B) or alongside Signals (do everything, merge only when the feature does)? This governs how much of phase B is in scope. *(Decision needed.)*
 - **Signals depends on the sandbox runtime.** `specs/signals.md` requires `specs/sandbox-runtime.md`, which is not built. `rule` and `script` signal types cannot be documented as shipped until that lands. Confirm the timeline before scheduling B3 and B5. *(Blocked on the dependency.)*
 - **Tool analytics surface.** The spec assumes a tool metrics reader for tool monitors. Tool analytics exist at the API and MCP layer, but the exact repository the spec names should be verified before writing the tool-monitor how-to. *(Verify.)*

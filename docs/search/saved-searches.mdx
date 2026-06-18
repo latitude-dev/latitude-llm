@@ -5,7 +5,7 @@ description: Bookmark useful search queries and filter sets, then reopen them fr
 
 # Saved Searches
 
-A saved search is a reusable search query, filter set, or both. Save it once, then return to the same cohort from the **Saved searches** dropdown on the Traces page.
+A saved search is a reusable filter set, exact-text query, or both. Save it once, then return to the same cohort from the **Saved searches** dropdown on the Traces page. Semantic, natural-language search is for exploration and is not part of a saved search (see [What a Saved Search Stores](#what-a-saved-search-stores)).
 
 <Frame>
   <img src="/images/search/saved-searches-list.png" alt="The Saved searches dropdown on the Traces page, listing saved searches by name, query, and filter count" />
@@ -15,11 +15,11 @@ A saved search is a reusable search query, filter set, or both. Save it once, th
 
 Each saved search stores:
 
-- **A query**: The text from the search bar, if any
+- **A query**: the exact-text search from the search bar (terms in `"quotes"`), if any. Semantic, natural-language search is for exploration and is not saved.
 - **A filter set**: The filters active when you saved, if any
 - **A name**: A human-readable label
 
-A saved search must include a query, filters, or both. _"All errors in production this week"_ might use only filters; _"jailbreak attempts"_ might use only a query.
+A saved search must include a query, filters, or both. _"All errors in production this week"_ might use only filters; a search for the exact term `"timeout"` might use only a query.
 
 Saved searches are project-scoped. Two projects can have saved searches with the same name; they're independent.
 
