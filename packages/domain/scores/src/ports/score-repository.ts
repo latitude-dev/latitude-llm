@@ -112,6 +112,12 @@ export interface ScoreRepositoryShape {
     readonly signalId: SignalId
     /** Optional filter by score source (e.g. `annotation` or `evaluation`). */
     readonly source?: ScoreSourceType
+    /**
+     * Optional membership filter. Every score now carries `signalId` (matched or
+     * not), so a caller that wants only the signal's *occurrences* must pass
+     * `passed: true` — `passed = true` means the behavior is present in the trace.
+     */
+    readonly passed?: boolean
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
   findPublishedSystemAnnotationByTraceAndFeedback(input: {

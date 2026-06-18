@@ -627,6 +627,73 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(customSourcePage.items[0]?.sourceId).toBe("api-source")
   })
 
+  it("listBySignalId filters to occurrences (passed = true) when passed is set", async () => {
+    const organizationId = "ssssssssssssssssssssssss"
+    const projectId = ProjectId("rrrrrrrrrrrrrrrrrrrrrrrr")
+    const signalId = SignalId("s".repeat(24))
+
+    const baseRow = {
+      organizationId,
+      projectId,
+      sessionId: null,
+      spanId: null,
+      source_type: "evaluation" as const,
+      sourceId: "e".repeat(24),
+      simulationId: null,
+      signalId,
+      annotatorId: null,
+      error: null,
+      errored: false,
+      duration: 0,
+      tokens: 0,
+      cost: 0,
+      draftedAt: null,
+      metadata: { evaluationHash: "abc" },
+      createdAt: new Date("2026-05-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-05-01T00:00:00.000Z"),
+    }
+
+    const occurrence = scoreSchema.parse({
+      ...baseRow,
+      id: ScoreId("o".repeat(24)),
+      traceId: TraceId("a".repeat(32)),
+      value: 1,
+      passed: true,
+      feedback: "Behavior present",
+    })
+    const nonOccurrence = scoreSchema.parse({
+      ...baseRow,
+      id: ScoreId("n".repeat(24)),
+      traceId: TraceId("b".repeat(32)),
+      value: 0,
+      passed: false,
+      feedback: "Behavior absent",
+    })
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        yield* repository.save(occurrence)
+        yield* repository.save(nonOccurrence)
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    const { occurrencesOnly, allScores } = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return {
+          occurrencesOnly: yield* repository.listBySignalId({ projectId, signalId, passed: true }),
+          allScores: yield* repository.listBySignalId({ projectId, signalId }),
+        }
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(allScores.items).toHaveLength(2)
+    expect(occurrencesOnly.items).toHaveLength(1)
+    expect(occurrencesOnly.items[0]?.passed).toBe(true)
+    expect(occurrencesOnly.items[0]?.feedback).toBe("Behavior present")
+  })
+
   it("counts annotation scores by trace and sentiment", async () => {
     const organizationId = "cccccccccccccccccccccccc"
     const positiveTraceId = TraceId("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
@@ -869,8 +936,8 @@ describe("ScoreRepositoryLive + score use cases", () => {
           source_type: "annotation",
           sourceId: "SYSTEM",
           signalId: signalA,
-          value: 0,
-          passed: false,
+          value: 1,
+          passed: true,
           feedback: "old alpha occurrence",
           metadata: { rawFeedback: "old alpha occurrence", flaggerSlug: "alpha" },
           draftedAt: null,
@@ -880,8 +947,8 @@ describe("ScoreRepositoryLive + score use cases", () => {
           source_type: "annotation",
           sourceId: "SYSTEM",
           signalId: signalA,
-          value: 0,
-          passed: false,
+          value: 1,
+          passed: true,
           feedback: "newer alpha occurrence",
           metadata: { rawFeedback: "newer alpha occurrence", flaggerSlug: "alpha" },
           draftedAt: null,
@@ -891,10 +958,23 @@ describe("ScoreRepositoryLive + score use cases", () => {
           source_type: "annotation",
           sourceId: "SYSTEM",
           signalId: signalA,
-          value: 0,
-          passed: false,
+          value: 1,
+          passed: true,
           feedback: "newest beta occurrence",
           metadata: { rawFeedback: "newest beta occurrence", flaggerSlug: "beta" },
+          draftedAt: null,
+        })
+        // A non-occurrence (passed=false) that is otherwise a SYSTEM, slug-bearing,
+        // non-drafted annotation on signalA — excluded solely by the passed filter.
+        yield* writeScoreUseCase({
+          projectId: annotationProjectId,
+          source_type: "annotation",
+          sourceId: "SYSTEM",
+          signalId: signalA,
+          value: 0,
+          passed: false,
+          feedback: "non-occurrence delta",
+          metadata: { rawFeedback: "non-occurrence delta", flaggerSlug: "delta" },
           draftedAt: null,
         })
         const gammaDraft = yield* writeScoreUseCase({
@@ -902,8 +982,8 @@ describe("ScoreRepositoryLive + score use cases", () => {
           source_type: "annotation",
           sourceId: "SYSTEM",
           signalId: signalA,
-          value: 0,
-          passed: false,
+          value: 1,
+          passed: true,
           feedback: "drafted gamma occurrence",
           metadata: { rawFeedback: "drafted gamma occurrence", flaggerSlug: "gamma" },
           draftedAt: new Date("2026-04-01T00:00:00.000Z"),
@@ -913,8 +993,8 @@ describe("ScoreRepositoryLive + score use cases", () => {
           source_type: "annotation",
           sourceId: "UI",
           signalId: signalA,
-          value: 0,
-          passed: false,
+          value: 1,
+          passed: true,
           feedback: "human-authored",
           metadata: { rawFeedback: "human-authored" },
           draftedAt: null,
@@ -924,8 +1004,8 @@ describe("ScoreRepositoryLive + score use cases", () => {
           source_type: "annotation",
           sourceId: "SYSTEM",
           signalId: signalA,
-          value: 0,
-          passed: false,
+          value: 1,
+          passed: true,
           feedback: "system without slug",
           metadata: { rawFeedback: "system without slug" },
           draftedAt: null,
@@ -935,8 +1015,8 @@ describe("ScoreRepositoryLive + score use cases", () => {
           source_type: "annotation",
           sourceId: "SYSTEM",
           signalId: signalB,
-          value: 0,
-          passed: false,
+          value: 1,
+          passed: true,
           feedback: "different issue",
           metadata: { rawFeedback: "different issue", flaggerSlug: "should-be-ignored" },
           draftedAt: null,

@@ -892,6 +892,7 @@ export const getSignalOccurrences = createServerFn({ method: "GET" })
           projectId,
           signalId,
           source: "annotation",
+          passed: true,
           options: { limit: SIGNAL_EXAMPLES_LIMIT, draftMode: "exclude" },
         })
       }).pipe(withPostgres(ScoreRepositoryLive, pgClient, orgId), withTracing),

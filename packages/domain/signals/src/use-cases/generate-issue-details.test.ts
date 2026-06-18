@@ -153,6 +153,7 @@ describe("generateSignalDetailsUseCase", () => {
       {
         projectId: ProjectId(projectId),
         signalId: existingSignal.id,
+        passed: true,
         options: {
           limit: SIGNAL_DETAILS_MAX_OCCURRENCES,
         },

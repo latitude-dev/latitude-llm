@@ -96,6 +96,7 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
                 score.signalId === signalId &&
                 score.source_type === "annotation" &&
                 score.sourceId === "SYSTEM" &&
+                score.passed === true &&
                 score.draftedAt === null,
             )
             .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
