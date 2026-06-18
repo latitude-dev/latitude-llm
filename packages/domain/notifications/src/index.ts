@@ -2,6 +2,7 @@
 
 export type {
   CustomMessagePayload,
+  DestinationQuarantinedPayload,
   IncidentBreach,
   IncidentClosedPayload,
   IncidentEventPayload,
@@ -18,6 +19,7 @@ export type {
 } from "./entities/notification.ts"
 export {
   customMessagePayloadSchema,
+  destinationQuarantinedPayloadSchema,
   groupOf,
   incidentBreachSchema,
   incidentClosedPayloadSchema,
@@ -87,6 +89,13 @@ export type {
   MarkNotificationSeenInput,
 } from "./use-cases/mark-notification-seen.ts"
 export { markNotificationSeenUseCase } from "./use-cases/mark-notification-seen.ts"
+export type {
+  DestinationQuarantinedNotificationRequest,
+  RequestDestinationQuarantinedNotificationsError,
+  RequestDestinationQuarantinedNotificationsInput,
+  RequestDestinationQuarantinedNotificationsResult,
+} from "./use-cases/request-destination-quarantined-notifications.ts"
+export { requestDestinationQuarantinedNotificationsUseCase } from "./use-cases/request-destination-quarantined-notifications.ts"
 export type {
   IncidentNotificationKind,
   IncidentNotificationRequest,

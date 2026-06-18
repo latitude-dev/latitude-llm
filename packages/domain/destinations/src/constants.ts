@@ -42,6 +42,20 @@ export const DESTINATION_IDLE_BACKOFF_MAX_MS = 3_600_000
  */
 export const DESTINATION_SAFETY_LAG_MS = 300_000
 
+/**
+ * Lag threshold (now − cursor watermark) past which a destination is "behind"
+ * rather than merely covering the safety lag. Two consumers:
+ *   - the customer card flips its health badge `healthy → lagging`;
+ *   - ops alarm P3-3 #1 ("destination stuck > X behind") fires off the per-run
+ *     `lagMs` worker metric.
+ * Set above the idle-backoff ceiling (60 min) + safety lag (5 min) so an
+ * up-to-date but idle destination — whose empty runs keep its watermark at
+ * `now − safetyLag` but whose cadence stretches to hourly — never trips it.
+ * Only a genuine backlog (volume above the sustained-rate ceiling) drifts a
+ * watermark past this and stays there.
+ */
+export const DESTINATION_LAG_WARNING_MS = 90 * 60_000
+
 export const POSTHOG_US_INGESTION_HOST = "https://us.i.posthog.com"
 export const POSTHOG_EU_INGESTION_HOST = "https://eu.i.posthog.com"
 

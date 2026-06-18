@@ -6,6 +6,7 @@ import {
   DestinationDeliverers,
   type DestinationMapperRegistry,
   DestinationMappers,
+  type DestinationQuarantineEvent,
   type DestinationSource,
   deleteProjectDestinationsUseCase,
   pruneDestinationSyncRunsUseCase,
@@ -108,6 +109,42 @@ export const createDestinationsWorker = ({
     posthog: createPosthogDeliverer(),
   }
 
+  /**
+   * Best-effort fan-out of the customer-facing quarantine notification. Fired
+   * exactly once per quarantine episode (the use case only emits the event on
+   * the active→quarantined transition; later failures skip). Publish failure is
+   * logged, not propagated — a lost notification must not re-fail the sync job.
+   */
+  const publishQuarantineNotification = (event: DestinationQuarantineEvent) =>
+    publisher
+      .publish(
+        "notifications",
+        "request-destination-quarantined-notifications",
+        {
+          organizationId: event.organizationId,
+          projectId: event.projectId,
+          destinationId: event.destinationId,
+          destinationName: event.destinationName,
+          destinationKind: event.destinationKind,
+          quarantinedAt: event.quarantinedAt.toISOString(),
+          failureMessage: event.failureMessage,
+        },
+        {
+          dedupeKey: `notifications:request-destination-quarantined:${event.destinationId}:${event.quarantinedAt.toISOString()}`,
+        },
+      )
+      .pipe(
+        Effect.tapError((error) =>
+          Effect.sync(() =>
+            logger.error(
+              `destinations.quarantine notification publish failed destinationId=${event.destinationId}`,
+              error,
+            ),
+          ),
+        ),
+        Effect.orElseSucceed(() => undefined),
+      )
+
   consumer.subscribe(
     "destinations",
     {
@@ -193,9 +230,15 @@ export const createDestinationsWorker = ({
             Effect.provide(Layer.succeed(DestinationMappers, mapperRegistry)),
           )
 
+          // Per-run ops metric (P3-3): spans read, events sent/dropped, and lag
+          // (now − cursor watermark). Datadog alarms parse this line.
           logger.info(
-            `destinations.runSync destinationId=${destinationId} source=${source} outcome=${result.outcome} recordsRead=${result.recordsRead} eventsSent=${result.eventsSent} eventsDropped=${result.eventsDropped} quarantined=${result.quarantined}`,
+            `destinations.runSync destinationId=${destinationId} source=${source} outcome=${result.outcome} recordsRead=${result.recordsRead} eventsSent=${result.eventsSent} eventsDropped=${result.eventsDropped} lagMs=${result.lagMs} quarantined=${result.quarantined}`,
           )
+
+          if (result.quarantineEvent) {
+            yield* publishQuarantineNotification(result.quarantineEvent)
+          }
         }).pipe(
           withPostgres(runSyncLayer, pgClient, organizationId),
           // Retryable delivery failures propagate so BullMQ retries with the cursor
@@ -245,6 +288,9 @@ export const createDestinationsWorker = ({
                   `destinations.runSync exhausted retries destinationId=${payload.destinationId} outcome=${result.outcome} consecutiveFailures=${result.consecutiveFailures}`,
                 ),
               ),
+            ),
+            Effect.tap((result) =>
+              result.quarantineEvent ? publishQuarantineNotification(result.quarantineEvent) : Effect.void,
             ),
             Effect.tapError((failure) =>
               Effect.sync(() =>

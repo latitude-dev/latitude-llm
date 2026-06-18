@@ -20,6 +20,7 @@ export * from "./CustomScoreResponse.js";
 export * from "./Dataset.js";
 export * from "./DatasetRow.js";
 export * from "./DeleteDatasetRowsResponse.js";
+export * from "./DestinationNotificationsSetting.js";
 export * from "./Error_.js";
 export * from "./EscalationSetting.js";
 export * from "./Evaluation.js";

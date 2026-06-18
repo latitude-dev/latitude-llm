@@ -31,6 +31,7 @@ import {
   destinationSourceConfigPatchSchema,
   destinationSourceConfigSchema,
   destinationSourceSchema,
+  getDestinationFreshnessUseCase,
   pauseDestinationUseCase,
   previewCredentials,
   previewDestinationDeliveryUseCase,
@@ -51,7 +52,7 @@ import {
   OrganizationRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
-import { parseEnv } from "@platform/env"
+import { parseEnv, parseEnvOptional } from "@platform/env"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
@@ -96,7 +97,11 @@ const toRecord = (destination: Destination, sources: readonly DestinationSourceS
   status: destination.status,
   consecutiveFailures: destination.consecutiveFailures,
   lastFailureMessage: destination.lastFailureMessage,
-  sources: sources.map((s) => ({ source: s.source, status: s.status, config: s.config })),
+  sources: sources.map((s) => ({
+    source: s.source,
+    status: s.status,
+    config: s.config,
+  })),
   createdAt: destination.createdAt.toISOString(),
   updatedAt: destination.updatedAt.toISOString(),
 })
@@ -315,7 +320,12 @@ export interface DestinationConnectionTestResult {
 const toConnectionTestResult = (result: TestDestinationConnectionResult): DestinationConnectionTestResult =>
   result.status === "ok"
     ? { ok: true, retryable: false, reason: null, upstreamStatus: null }
-    : { ok: false, retryable: result.retryable, reason: result.reason, upstreamStatus: result.upstreamStatus ?? null }
+    : {
+        ok: false,
+        retryable: result.retryable,
+        reason: result.reason,
+        upstreamStatus: result.upstreamStatus ?? null,
+      }
 
 const destinationDeliverers: DestinationDelivererRegistry = {
   posthog: createPosthogDeliverer(),
@@ -351,7 +361,9 @@ const testExistingDestinationConnectionSchema = z.object({
  * so the edit form can verify the connection without re-entering the secret.
  * The edited `config` from the form is used; the key comes from storage.
  */
-export const testExistingDestinationConnection = createServerFn({ method: "POST" })
+export const testExistingDestinationConnection = createServerFn({
+  method: "POST",
+})
   .inputValidator(testExistingDestinationConnectionSchema)
   .handler(async ({ data }): Promise<DestinationConnectionTestResult> => {
     const { organizationId } = await requireSession()
@@ -398,6 +410,64 @@ const toSyncRunRecord = (run: DestinationSyncRun): DestinationSyncRunRecord => (
   startedAt: run.startedAt.toISOString(),
   finishedAt: run.finishedAt.toISOString(),
 })
+
+/**
+ * Dev-only safety-lag override (mirrors the workers' sweep) so the card's
+ * freshness window matches what the engine actually treats as deliverable.
+ * Production always uses the load-bearing default.
+ */
+const resolveDevSafetyLagMs = (): number | undefined => {
+  const isProduction = Effect.runSync(parseEnv("NODE_ENV", "string", "development")) === "production"
+  if (isProduction) return undefined
+  return Effect.runSync(parseEnvOptional("LAT_DEV_DESTINATIONS_SAFETY_LAG_MS", "number"))
+}
+
+interface DestinationSourceFreshnessRecord {
+  readonly source: DestinationSource
+  readonly lagMs: number | null
+}
+
+export const getDestinationFreshness = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), destinationId: z.string() }))
+  .handler(
+    async ({
+      data,
+    }): Promise<{
+      readonly sources: readonly DestinationSourceFreshnessRecord[]
+    }> => {
+      const { organizationId } = await requireSession()
+      const devSafetyLagMs = resolveDevSafetyLagMs()
+
+      const freshness = await Effect.runPromise(
+        getDestinationFreshnessUseCase({
+          organizationId,
+          projectId: ProjectId(data.projectId),
+          destinationId: DestinationId(data.destinationId),
+          now: new Date(),
+          ...(devSafetyLagMs === undefined ? {} : { safetyLagMs: devSafetyLagMs }),
+        }).pipe(
+          withPostgres(
+            Layer.mergeAll(DestinationRepositoryLive, DestinationSourceStateRepositoryLive),
+            getPostgresClient(),
+            organizationId,
+          ),
+          withClickHouse(
+            SpansSourceReadersLive.pipe(Layer.provide(SpanRepositoryLive)),
+            getClickhouseClient(),
+            organizationId,
+          ),
+          withTracing,
+        ),
+      )
+
+      return {
+        sources: freshness.sources.map((s) => ({
+          source: s.source,
+          lagMs: s.lagMs,
+        })),
+      }
+    },
+  )
 
 export const getLatestDestinationSyncRun = createServerFn({ method: "GET" })
   .inputValidator(z.object({ destinationId: z.string() }))
@@ -522,7 +592,10 @@ export const previewDestinationDelivery = createServerFn({ method: "GET" })
       hasData: result.hasData,
       recordsSampled: result.recordsSampled,
       eventsJson: JSON.stringify(
-        result.events.map((e) => ({ ...e, timestamp: e.timestamp.toISOString() })),
+        result.events.map((e) => ({
+          ...e,
+          timestamp: e.timestamp.toISOString(),
+        })),
         null,
         2,
       ),

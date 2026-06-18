@@ -32,6 +32,16 @@ export const incidentNotificationsSettingSchema = z.object(incidentNotifications
 export type IncidentNotificationsSetting = z.infer<typeof incidentNotificationsSettingSchema>
 
 /**
+ * Project-level gate for the `destinations` notification group. A single
+ * boolean today (`quarantine`) — the only destinations kind that fans out to
+ * org members. Missing → `true` (on by default; opt out per project).
+ */
+export const destinationNotificationsSettingSchema = z.object({
+  quarantine: z.boolean().optional(),
+})
+export type DestinationNotificationsSetting = z.infer<typeof destinationNotificationsSettingSchema>
+
+/**
  * Project-level "should this notification be requested at all" settings,
  * keyed by `NotificationGroup`. Mirrors the user-prefs structure
  * (`users.notification_preferences.<group>`); the per-group inner shape
@@ -43,6 +53,7 @@ export type IncidentNotificationsSetting = z.infer<typeof incidentNotificationsS
  */
 export const notificationsSettingSchema = z.object({
   incidents: incidentNotificationsSettingSchema.optional(),
+  destinations: destinationNotificationsSettingSchema.optional(),
 })
 export type NotificationsSetting = z.infer<typeof notificationsSettingSchema>
 
@@ -84,6 +95,10 @@ export const isIncidentNotificationEnabled = (
   settings: ProjectSettings | null | undefined,
   kind: AlertIncidentKind,
 ): boolean => settings?.notifications?.incidents?.[kind] ?? true
+
+/** Project-level gate for `destination.quarantined` notifications. On by default. */
+export const isDestinationNotificationEnabled = (settings: ProjectSettings | null | undefined): boolean =>
+  settings?.notifications?.destinations?.quarantine ?? true
 
 export type OrganizationSettings = z.infer<typeof organizationSettingsSchema>
 

@@ -1,4 +1,5 @@
 import { customMessageRenderer } from "./custom-message/index.tsx"
+import { destinationQuarantinedRenderer } from "./destination-quarantined/index.tsx"
 import { incidentClosedRenderer } from "./incident-closed/index.tsx"
 import { incidentEventRenderer } from "./incident-event/index.tsx"
 import { incidentOpenedRenderer } from "./incident-opened/index.tsx"
@@ -18,4 +19,5 @@ export const NOTIFICATION_EMAIL_RENDERERS: NotificationEmailRendererRegistry = {
   "wrapped.report": wrappedReportRenderer,
   "custom.message": customMessageRenderer,
   "issue.assigned": signalAssignedRenderer,
+  "destination.quarantined": destinationQuarantinedRenderer,
 }

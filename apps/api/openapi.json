@@ -145,9 +145,12 @@
         "properties": {
           "incidents": {
             "$ref": "#/components/schemas/IncidentNotificationsSetting"
+          },
+          "destinations": {
+            "$ref": "#/components/schemas/DestinationNotificationsSetting"
           }
         },
-        "description": "Per-group project-level notification toggles. Today only `incidents` exists; future groups (wrapped reports, etc.) slot in alongside."
+        "description": "Per-group project-level notification toggles (`incidents`, `destinations`)."
       },
       "IncidentNotificationsSetting": {
         "type": "object",
@@ -166,6 +169,16 @@
           }
         },
         "description": "Per-alert-kind opt-out for incident notifications."
+      },
+      "DestinationNotificationsSetting": {
+        "type": "object",
+        "properties": {
+          "quarantine": {
+            "type": "boolean",
+            "description": "Notify org members when a data destination is quarantined after repeated sync failures. Defaults to `true` when omitted."
+          }
+        },
+        "description": "Project-level opt-out for data-destination notifications."
       },
       "EscalationSetting": {
         "type": "object",

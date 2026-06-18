@@ -4,14 +4,16 @@ import typing
 
 import pydantic
 from ..core.pydantic_utilities import UniversalBaseModel
+from .destination_notifications_setting import DestinationNotificationsSetting
 from .incident_notifications_setting import IncidentNotificationsSetting
 
 
 class NotificationsSetting(UniversalBaseModel):
     """
-    Per-group project-level notification toggles. Today only `incidents` exists; future groups (wrapped reports, etc.) slot in alongside.
+    Per-group project-level notification toggles (`incidents`, `destinations`).
     """
 
     incidents: typing.Optional[IncidentNotificationsSetting] = None
+    destinations: typing.Optional[DestinationNotificationsSetting] = None
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

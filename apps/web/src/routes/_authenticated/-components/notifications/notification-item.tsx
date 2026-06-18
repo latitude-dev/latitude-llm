@@ -2,6 +2,7 @@ import type { NotificationKind } from "@domain/notifications"
 import type { ComponentType } from "react"
 import type { NotificationRecord } from "../../../../domains/notifications/notifications.functions.ts"
 import { CustomMessageNotification } from "./renderers/custom-message-notification.tsx"
+import { DestinationQuarantinedNotification } from "./renderers/destination-quarantined-notification.tsx"
 import { IncidentNotification } from "./renderers/incident/index.tsx"
 import { SignalAssignedNotification } from "./renderers/signal-assigned-notification.tsx"
 import { WrappedReportNotification } from "./renderers/wrapped-report-notification.tsx"
@@ -13,6 +14,7 @@ const RENDERERS: Record<NotificationKind, ComponentType<{ readonly notification:
   "wrapped.report": WrappedReportNotification,
   "custom.message": CustomMessageNotification,
   "issue.assigned": SignalAssignedNotification,
+  "destination.quarantined": DestinationQuarantinedNotification,
 }
 
 export function NotificationItem({ notification }: { readonly notification: NotificationRecord }) {

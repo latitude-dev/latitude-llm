@@ -4,6 +4,7 @@ import { DESTINATION_QUARANTINE_FAILURE_THRESHOLD } from "../constants.ts"
 import type { DestinationSource } from "../entities/destination-source.ts"
 import { DestinationRepository } from "../ports/destination-repository.ts"
 import { DestinationSourceStateRepository } from "../ports/destination-source-state-repository.ts"
+import type { DestinationQuarantineEvent } from "./run-destination-sync.ts"
 
 export interface RecordDestinationSyncFailureInput {
   readonly destinationId: DestinationId
@@ -17,6 +18,8 @@ export interface RecordDestinationSyncFailureInput {
 export interface RecordDestinationSyncFailureResult {
   readonly outcome: "recorded" | "quarantined" | "skipped"
   readonly consecutiveFailures: number
+  /** Set only on the call that flips the destination to quarantined; null otherwise. */
+  readonly quarantineEvent: DestinationQuarantineEvent | null
 }
 
 /**
@@ -44,7 +47,11 @@ export const recordDestinationSyncFailureUseCase = (
       .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
 
     if (!destination || destination.status !== "active") {
-      return { outcome: "skipped", consecutiveFailures: destination?.consecutiveFailures ?? 0 } as const
+      return {
+        outcome: "skipped",
+        consecutiveFailures: destination?.consecutiveFailures ?? 0,
+        quarantineEvent: null,
+      } as const
     }
 
     const consecutiveFailures = destination.consecutiveFailures + 1
@@ -71,5 +78,19 @@ export const recordDestinationSyncFailureUseCase = (
       })
     }
 
-    return { outcome: quarantined ? "quarantined" : "recorded", consecutiveFailures } as const
+    return {
+      outcome: quarantined ? "quarantined" : "recorded",
+      consecutiveFailures,
+      quarantineEvent: quarantined
+        ? {
+            organizationId: destination.organizationId,
+            projectId: destination.projectId,
+            destinationId: destination.id,
+            destinationName: destination.name,
+            destinationKind: destination.kind,
+            failureMessage: input.message,
+            quarantinedAt: input.now,
+          }
+        : null,
+    } as const
   }).pipe(Effect.withSpan("destinations.recordSyncFailure"))
