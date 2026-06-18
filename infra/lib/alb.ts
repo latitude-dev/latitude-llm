@@ -18,7 +18,7 @@ export function createAlb(
   publicSubnets: Ec2Subnet[],
   securityGroup: Ec2SecurityGroup,
   certificateArn?: Output<string>,
-  enableWebMaintenanceRedirect = false,
+  enableMaintenanceRedirect = false,
 ): AlbOutput {
   const alb = new aws.lb.LoadBalancer(`${name}-alb`, {
     name: `${name}-alb`,
@@ -101,32 +101,23 @@ export function createAlb(
   let httpsListener: LbListener | undefined
 
   if (certificateArn) {
-    const defaultActions = enableWebMaintenanceRedirect
-      ? [
-          {
-            type: "redirect" as const,
-            redirect: createRedirectAction(STATUS_PAGE_URL),
-          },
-        ]
-      : [
-          {
-            type: "forward" as const,
-            targetGroupArn: targetGroups.web.arn,
-          },
-        ]
+    const createServiceActions = (targetGroup: LbTargetGroup) =>
+      enableMaintenanceRedirect ? createStatusPageRedirectActions() : createForwardActions(targetGroup)
+
+    const defaultActions = createServiceActions(targetGroups.web)
 
     const rules = [
       {
         hostname: config.domains.api,
-        targetGroup: targetGroups.api,
+        actions: createServiceActions(targetGroups.api),
       },
       {
         hostname: config.domains.ingest,
-        targetGroup: targetGroups.ingest,
+        actions: createServiceActions(targetGroups.ingest),
       },
       {
         hostname: config.domains.bullBoard,
-        targetGroup: targetGroups.bullBoard,
+        actions: createServiceActions(targetGroups.bullBoard),
       },
     ]
 
@@ -146,12 +137,7 @@ export function createAlb(
       new aws.lb.ListenerRule(`${name}-${ruleName}-rule`, {
         listenerArn: httpsListener.arn,
         priority: 100 + i,
-        actions: [
-          {
-            type: "forward",
-            targetGroupArn: rule.targetGroup.arn,
-          },
-        ],
+        actions: rule.actions,
         conditions: [
           {
             hostHeader: {
@@ -169,6 +155,24 @@ export function createAlb(
     httpListener,
     httpsListener,
   }
+}
+
+function createForwardActions(targetGroup: LbTargetGroup) {
+  return [
+    {
+      type: "forward" as const,
+      targetGroupArn: targetGroup.arn,
+    },
+  ]
+}
+
+function createStatusPageRedirectActions() {
+  return [
+    {
+      type: "redirect" as const,
+      redirect: createRedirectAction(STATUS_PAGE_URL),
+    },
+  ]
 }
 
 function createRedirectAction(url: string) {
