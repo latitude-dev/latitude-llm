@@ -1,3 +1,4 @@
+import { SpanId } from "@domain/shared"
 import type { SpanMessagesData } from "@domain/spans"
 import { buildConversationSpanMaps } from "@domain/spans"
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
@@ -168,7 +169,12 @@ export const useSpanDetail = ({
 }
 
 const asMessageSpans = (records: readonly SpanMessagesRecord[]): readonly SpanMessagesData[] =>
-  records as unknown as readonly SpanMessagesData[]
+  records.map((record) => ({
+    ...record,
+    spanId: SpanId(record.spanId),
+    inputMessages: record.inputMessages as readonly GenAIMessage[],
+    outputMessages: record.outputMessages as readonly GenAIMessage[],
+  }))
 
 export function useSessionConversationSpanMaps({
   projectId,
@@ -210,7 +216,8 @@ export function useSessionConversationSpanMaps({
       })
       return buildConversationSpanMaps(allMessages ?? [], asMessageSpans(spans))
     },
-    enabled: enabled && projectId.length > 0 && sessionId.length > 0 && allMessages !== undefined,
+    enabled:
+      enabled && projectId.length > 0 && sessionId.length > 0 && latestTraceId.length > 0 && allMessages !== undefined,
   })
 }
 
