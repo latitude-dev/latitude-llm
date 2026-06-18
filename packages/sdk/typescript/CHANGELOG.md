@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `ProjectSettings.notifications.destinations.quarantine` (`DestinationNotificationsSetting`) — project-level toggle for data-destination notifications. Members are notified (in-app + email) when a destination is quarantined after repeated sync failures; set `quarantine: false` to opt the project out. Defaults to `true`.
+- `client.signals`, signal request/response types, and signal exports, replacing the former issues resource name.
 
 ## [6.0.0] - 2026-06-12
 

@@ -3685,7 +3685,7 @@
           "total": {
             "type": "integer",
             "minimum": 0,
-            "description": "Number of ongoing issues."
+            "description": "Number of ongoing signals."
           }
         },
         "required": [
@@ -3698,7 +3698,7 @@
           "total": {
             "type": "integer",
             "minimum": 0,
-            "description": "Number of new issues."
+            "description": "Number of new signals."
           }
         },
         "required": [
@@ -3711,7 +3711,7 @@
           "total": {
             "type": "integer",
             "minimum": 0,
-            "description": "Number of escalating issues."
+            "description": "Number of escalating signals."
           }
         },
         "required": [
@@ -3724,7 +3724,7 @@
           "total": {
             "type": "integer",
             "minimum": 0,
-            "description": "Number of regressed issues."
+            "description": "Number of regressed signals."
           }
         },
         "required": [
@@ -3737,7 +3737,7 @@
           "total": {
             "type": "integer",
             "minimum": 0,
-            "description": "Number of resolved issues."
+            "description": "Number of resolved signals."
           }
         },
         "required": [
@@ -3750,14 +3750,14 @@
           "total": {
             "type": "integer",
             "minimum": 0,
-            "description": "Number of issue occurrences in the range."
+            "description": "Number of signal occurrences in the range."
           },
           "buckets": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SignalAnalyticsBucket"
             },
-            "description": "Number of issue occurrences per bucket."
+            "description": "Number of signal occurrences per bucket."
           }
         },
         "required": [

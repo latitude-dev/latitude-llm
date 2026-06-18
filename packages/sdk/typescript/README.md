@@ -1,6 +1,6 @@
 # Latitude TypeScript SDK
 
-Official TypeScript client for the [Latitude](https://latitude.so) public API. Type-safe access to projects, scores, annotations, and API keys.
+Official TypeScript client for the [Latitude](https://latitude.so) public API. Type-safe access to projects, traces, signals, scores, annotations, and API keys.
 
 The SDK is generated from our OpenAPI spec and follows [Semantic Versioning](https://semver.org) — breaking changes only land with a major version bump. See [`CHANGELOG.md`](./CHANGELOG.md).
 
@@ -29,7 +29,7 @@ const annotation = await client.annotations.create("my-project", {
 });
 ```
 
-The client is constructed once and reused — each resource (`client.projects`, `client.traces`, `client.issues`, `client.scores`, `client.annotations`, …) is lazily instantiated on first access.
+The client is constructed once and reused — each resource (`client.projects`, `client.traces`, `client.signals`, `client.scores`, `client.annotations`, …) is lazily instantiated on first access.
 
 ## Authentication
 

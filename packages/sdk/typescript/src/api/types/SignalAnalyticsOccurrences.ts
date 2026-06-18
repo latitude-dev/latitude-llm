@@ -3,8 +3,8 @@
 import type * as LatitudeApi from "../index.js";
 
 export interface SignalAnalyticsOccurrences {
-    /** Number of issue occurrences in the range. */
+    /** Number of signal occurrences in the range. */
     total: number;
-    /** Number of issue occurrences per bucket. */
+    /** Number of signal occurrences per bucket. */
     buckets: LatitudeApi.SignalAnalyticsBucket[];
 }

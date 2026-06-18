@@ -6953,7 +6953,7 @@
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 9007199254740991,
-                "description": "Number of ongoing issues."
+                "description": "Number of ongoing signals."
               }
             },
             "required": [
@@ -6968,7 +6968,7 @@
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 9007199254740991,
-                "description": "Number of new issues."
+                "description": "Number of new signals."
               }
             },
             "required": [
@@ -6983,7 +6983,7 @@
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 9007199254740991,
-                "description": "Number of escalating issues."
+                "description": "Number of escalating signals."
               }
             },
             "required": [
@@ -6998,7 +6998,7 @@
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 9007199254740991,
-                "description": "Number of regressed issues."
+                "description": "Number of regressed signals."
               }
             },
             "required": [
@@ -7013,7 +7013,7 @@
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 9007199254740991,
-                "description": "Number of resolved issues."
+                "description": "Number of resolved signals."
               }
             },
             "required": [
@@ -7028,7 +7028,7 @@
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 9007199254740991,
-                "description": "Number of issue occurrences in the range."
+                "description": "Number of signal occurrences in the range."
               },
               "buckets": {
                 "type": "array",
@@ -7052,7 +7052,7 @@
                   ],
                   "additionalProperties": false
                 },
-                "description": "Number of issue occurrences per bucket."
+                "description": "Number of signal occurrences per bucket."
               }
             },
             "required": [
