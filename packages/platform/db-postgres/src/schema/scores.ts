@@ -62,7 +62,7 @@ export const scores = latitudeSchema.table(
       .where(sql`${t.spanId} IS NOT NULL`),
     index("scores_signal_discovery_work_idx")
       .on(t.organizationId, t.projectId, t.createdAt, t.id)
-      .where(sql`${t.draftedAt} IS NULL AND ${t.errored} = false AND ${t.passed} = false AND ${t.signalId} IS NULL`),
+      .where(sql`${t.draftedAt} IS NULL AND ${t.errored} = false AND ${t.passed} = true AND ${t.signalId} IS NULL`),
     index("scores_draft_finalization_idx").on(t.updatedAt, t.id).where(sql`${t.draftedAt} IS NOT NULL`),
   ],
 )

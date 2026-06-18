@@ -1,0 +1,2 @@
+DROP INDEX "latitude"."scores_signal_discovery_work_idx";--> statement-breakpoint
+CREATE INDEX "scores_signal_discovery_work_idx" ON "latitude"."scores" ("organization_id","project_id","created_at","id") WHERE "drafted_at" IS NULL AND "errored" = false AND "passed" = true AND "signal_id" IS NULL;
