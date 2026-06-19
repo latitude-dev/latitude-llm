@@ -15,7 +15,7 @@ import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testi
 import type { SpanDetail } from "@domain/spans"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { POSTHOG_US_INGESTION_HOST } from "../constants.ts"
+import { DESTINATION_READ_PAGE_MAX, POSTHOG_US_INGESTION_HOST } from "../constants.ts"
 import { createDestination, type Destination } from "../entities/destination.ts"
 import { defaultSourceConfig, type SpansSourceConfig } from "../entities/destination-source.ts"
 import { createDestinationSourceState, type DestinationSourceState } from "../entities/destination-source-state.ts"
@@ -184,6 +184,8 @@ interface SetupOpts {
   readonly deliveryFailure?: NonRetryableDeliveryError | RetryableDeliveryError
   /** Cap floor the reader reports — simulates "the most-recent-N records start here". */
   readonly recentLimitFloor?: Date | null
+  /** Override the source reader (e.g. to capture the `limit` each window read is called with). */
+  readonly reader?: DestinationSourceReader<SpanDetail>
 }
 
 const setup = (opts: SetupOpts) => {
@@ -199,7 +201,7 @@ const setup = (opts: SetupOpts) => {
   )
   if (opts.deliveryFailure) failWith(opts.deliveryFailure)
   const { mapper } = createFakeDestinationMapper()
-  const reader = readerFromRecords(opts.records, opts.recentLimitFloor ?? null)
+  const reader = opts.reader ?? readerFromRecords(opts.records, opts.recentLimitFloor ?? null)
 
   const layer = Layer.mergeAll(
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORG_ID })),
@@ -568,6 +570,26 @@ describe("runBackfillWindowUseCase (full drain)", () => {
 
     expect(stateRows[0]?.coverageStartAt).toEqual(start) // moved back to the chain's floor
     expect(stateRows[0]?.backfillStartedAt).toBeNull() // in-flight marker cleared on completion
+  })
+
+  it("clamps each window read to DESTINATION_READ_PAGE_MAX even when the config allows more", async () => {
+    const seenLimits: number[] = []
+    const base = readerFromRecords([stubSpan("a1", new Date("2026-05-20T00:00:00.000Z"))])
+    const reader: DestinationSourceReader<SpanDetail> = {
+      ...base,
+      listWindow: (input) => {
+        seenLimits.push(input.limit)
+        return base.listWindow(input)
+      },
+    }
+    // 50k is the legacy stored default; a single page that large blew ClickHouse's
+    // formatter past the server memory limit, so the read must page far smaller.
+    const { layer } = setup({ records: [], maxRecordsPerRun: 50_000, reader })
+
+    await drainBackfill(layer, new Date("2026-05-15T00:00:00.000Z"))
+
+    expect(seenLimits.length).toBeGreaterThan(0)
+    expect(Math.max(...seenLimits)).toBe(DESTINATION_READ_PAGE_MAX)
   })
 
   it("splits at the historical boundary so no delivered window straddles it", async () => {

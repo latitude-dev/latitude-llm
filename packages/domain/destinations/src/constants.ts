@@ -4,7 +4,20 @@ export const DESTINATION_INTERVAL_MS_DEFAULT = 300_000
 
 export const DESTINATION_MAX_RECORDS_PER_RUN_MIN = 1_000
 export const DESTINATION_MAX_RECORDS_PER_RUN_MAX = 50_000
-export const DESTINATION_MAX_RECORDS_PER_RUN_DEFAULT = 50_000
+export const DESTINATION_MAX_RECORDS_PER_RUN_DEFAULT = 5_000
+
+/**
+ * Hard ceiling on a single source read page, independent of (and clamping) the
+ * configured `maxRecordsPerRun`. A window read serializes its whole page to
+ * JSONEachRow in one ClickHouse response; span rows carry KB–MB payloads, so a
+ * large page balloons `ParallelFormattingOutputFormat` — a 35k-row page cost
+ * 4.2 GiB and 16s in production, tripping the server-wide OvercommitTracker and
+ * resetting the client socket. Clamping the read page keeps every run bounded
+ * regardless of a destination's stored config (legacy rows hold the old 50k
+ * default). Cursor pagination already chains the rest, so smaller pages just
+ * mean more, cheaper windows.
+ */
+export const DESTINATION_READ_PAGE_MAX = 5_000
 
 /**
  * Hard cap on records imported by a single backfill. A destination connected to
@@ -14,7 +27,7 @@ export const DESTINATION_MAX_RECORDS_PER_RUN_DEFAULT = 50_000
  * window holds at most this many, newest first). Deliberately an operational/
  * product bound on backfill duration + ClickHouse read volume — NOT a
  * PostHog-derived limit: PostHog exposes no rate limit on `/batch/` capture, so
- * there's no published throughput to size against. 1M ≈ 20 live-sync windows.
+ * there's no published throughput to size against. 1M ≈ 200 read pages.
  */
 export const DESTINATION_MAX_RECORDS_PER_BACKFILL = 1_000_000
 
