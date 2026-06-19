@@ -591,7 +591,9 @@ export const SpanRepositoryLive = Layer.effect(
           return yield* chSqlClient
             .query(async (client) => {
               // The (limit+1)-th most recent deduped span: skip the newest `limit`, take the next.
-              // Empty when ≤ limit spans exist → no cap.
+              // Empty when ≤ limit spans exist → no cap. The OFFSET runs after the dedup subquery,
+              // so on a 1M+ span project this is a one-shot full dedup scan — acceptable because it
+              // runs once at backfill initiation, never per window.
               const result = await client.query({
                 query: `SELECT ingested_at
                       FROM (

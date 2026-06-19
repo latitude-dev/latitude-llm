@@ -630,12 +630,11 @@ describe("runBackfillWindowUseCase (full drain)", () => {
     expect(syncRunRows.length).toBe(runsAfterFirst * 2)
   })
 
-  it("never quarantines the destination when a window fails", async () => {
-    // On the live path a non-retryable failure at consecutiveFailures=4 would tip
-    // the destination to quarantined (threshold 5). Backfill must not: it propagates
-    // the error (so BullMQ retries the window / the chain stops), with no quarantine
-    // accounting and no sync-run row — a heavy backfill never takes down live sync.
-    const { destinationRows, syncRunRows, layer } = setup({
+  it("records a non-retryable window failure inline and stops the chain, without quarantining", async () => {
+    // A non-retryable failure (bad key/config) can never succeed, so the window records a `failed`
+    // run + clears the in-flight marker immediately instead of burning BullMQ retries (mirrors the
+    // live path). Still no quarantine accounting — a heavy backfill never takes down live sync.
+    const { destinationRows, syncRunRows, stateRows, layer } = setup({
       records: [stubSpan("a1", new Date("2026-05-01T01:00:00.000Z"))],
       state: makeState(1_000, { backfillStartedAt: NOW }), // in-flight chain (initiator already ran)
       destination: makeDestination({ consecutiveFailures: 4 }),
@@ -647,7 +646,7 @@ describe("runBackfillWindowUseCase (full drain)", () => {
       }),
     })
 
-    const error = await Effect.runPromise(
+    const res = await Effect.runPromise(
       runBackfillWindowUseCase({
         destinationId: DESTINATION_ID,
         source: SOURCE,
@@ -656,13 +655,21 @@ describe("runBackfillWindowUseCase (full drain)", () => {
         remainingSegments: [],
         coverageFloor: new Date("2026-05-01T00:00:00.000Z"),
         now: NOW,
-      }).pipe(Effect.provide(layer), Effect.flip),
+      }).pipe(Effect.provide(layer)),
     )
 
-    expect(error._tag).toBe("NonRetryableDeliveryError")
-    expect(destinationRows[0]?.consecutiveFailures).toBe(4) // untouched — no quarantine accounting
+    expect(res.outcome).toBe("failed")
+    expect(res.next).toBeNull() // chain stops
+    // A failed backfill run row surfaces in history (like a live failure).
+    expect(syncRunRows).toHaveLength(1)
+    expect(syncRunRows[0]?.status).toBe("failed")
+    expect(syncRunRows[0]?.trigger).toBe("backfill")
+    expect(syncRunRows[0]?.error).toBe("[401] invalid_api_key")
+    // In-flight marker cleared so the UI stops showing "Backfilling…".
+    expect(stateRows[0]?.backfillStartedAt).toBeNull()
+    // No quarantine accounting.
+    expect(destinationRows[0]?.consecutiveFailures).toBe(4)
     expect(destinationRows[0]?.status).toBe("active")
-    expect(syncRunRows).toHaveLength(0)
   })
 
   it("propagates a retryable window failure without quarantining either", async () => {

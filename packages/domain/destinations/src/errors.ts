@@ -65,3 +65,9 @@ export type DeliveryError = RetryableDeliveryError | NonRetryableDeliveryError
 
 export const isRetryableDeliveryError = (error: DeliveryError): error is RetryableDeliveryError =>
   error._tag === "RetryableDeliveryError"
+
+/** Stored/UI failure string: `[status] detail`, falling back to the generic reason. Sanitized — never an upstream body. */
+export const sanitizedDeliveryFailureMessage = (error: DeliveryError): string => {
+  const detail = error.detail ?? error.reason
+  return error.upstreamStatus === undefined ? detail : `[${error.upstreamStatus}] ${detail}`
+}

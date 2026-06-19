@@ -98,6 +98,7 @@ export {
   NonRetryableDeliveryError,
   RetryableDeliveryError,
   SandboxOrganizationDestinationError,
+  sanitizedDeliveryFailureMessage,
 } from "./errors.ts"
 export type {
   DeriveDestinationHealthInput,

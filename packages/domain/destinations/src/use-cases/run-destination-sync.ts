@@ -22,6 +22,7 @@ import {
   isRetryableDeliveryError,
   isThrottlingDeliveryReason,
   type RetryableDeliveryError,
+  sanitizedDeliveryFailureMessage,
 } from "../errors.ts"
 import { type DeliveryWindow, DestinationDeliverers } from "../ports/destination-deliverer.ts"
 import { DestinationMappers } from "../ports/destination-mapper.ts"
@@ -84,11 +85,6 @@ type Requirements =
   | DestinationSyncRunRepository
   | DestinationDeliverers
   | DestinationMappers
-
-const sanitizedFailureMessage = (error: DeliveryError): string => {
-  const detail = error.detail ?? error.reason
-  return error.upstreamStatus === undefined ? detail : `[${error.upstreamStatus}] ${detail}`
-}
 
 const isForward = (next: SourceCursor, current: SourceCursor): boolean =>
   next.watermark.getTime() > current.watermark.getTime() ||
@@ -236,7 +232,7 @@ const handleDeliveryFailure = (params: {
     const throttled = isThrottlingDeliveryReason(error.reason)
     const consecutiveFailures = throttled ? destination.consecutiveFailures : destination.consecutiveFailures + 1
     const quarantined = !throttled && consecutiveFailures >= DESTINATION_QUARANTINE_FAILURE_THRESHOLD
-    const message = sanitizedFailureMessage(error)
+    const message = sanitizedDeliveryFailureMessage(error)
 
     yield* destinations.updateQuarantineState({
       id: destination.id,
