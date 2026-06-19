@@ -1,0 +1,56 @@
+---
+title: Tools
+description: See every tool your agents define and call, with usage, failure, and latency metrics across your traffic.
+---
+
+# Tools
+
+The **Tools** page is an inventory of every tool your agents define and call, with usage, error, and latency metrics rolled up across all your traffic. Use it to see which tools are heavily used, which are failing, and which are never called.
+
+Tools are discovered from your telemetry: each tool a trace reports appears here automatically, addressed by name. There is nothing to configure.
+
+<Frame caption="The Tools page: summary metrics, a calls chart, and a per-tool table with call volume, share of traces, error rate, and latency.">
+  <img src="/images/tools/tools-page.png" alt="The Tools page showing summary metrics, a successful-versus-failed calls chart, and a table of tools with calls, error rate, and duration" />
+</Frame>
+
+## What the Tools list shows
+
+Across the top, summary metrics cover your selected time range: total tools, total tool calls, overall error rate, and how many traces and sessions used tools. A chart breaks calls into successful and failed, with the error rate overlaid.
+
+Each row in the table is one tool, with:
+
+- a **trend** sparkline of recent calls
+- **calls**: how many times the tool was called
+- **% of traces**: the share of traces that used it
+- how often it was **offered** to the model versus actually called
+- **error rate**
+- **duration**
+
+Filter by time range, and narrow the list to **All**, **Unused**, or **Failing** tools to focus on what needs attention. Use **Search tools** to find one by name.
+
+## Inspect a tool
+
+Open any tool to see its detail view: a description of what it does, plus usage, reliability, and latency over time.
+
+<Frame caption="A tool's detail view: usage and error metrics, calls and latency over time, common parameters, and the tools it is most often used with.">
+  <img src="/images/tools/tool-detail.png" alt="A tool detail view with usage metrics, calls-over-time and latency-over-time charts, common parameters, and co-occurring tools" />
+</Frame>
+
+The detail view shows:
+
+- **Usage**: calls, traces and sessions using the tool, error rate, duration, and when it was last called
+- **Calls over time** and **Latency over time** charts, with an **Error view** to focus on failures
+- **Parameters**: the most common argument values the tool was called with
+- **Where it's used**: the other tools this one is most often used alongside
+
+From here, **View traces** opens the traces that used the tool, and **Add monitor** lets you watch it (see [Monitors](../monitors/overview)).
+
+## Monitor tools
+
+Tool metrics make good monitoring targets: alert when a tool's error rate climbs or its latency degrades. Use **Add monitor** on a tool, or **Monitor all tools** from the Tools page, to start watching. See [Monitors](../monitors/overview).
+
+## Next steps
+
+- [Tool calls](./tool-calls): the individual tool-call spans inside a single trace
+- [Traces](./traces): the full interactions your tools run inside
+- [Monitors](../monitors/overview): alert on tool error rate or latency

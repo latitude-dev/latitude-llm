@@ -117,9 +117,11 @@
         "pages": [
           "observability/overview",
           "observability/sessions",
+          "observability/users",
           "observability/traces",
           "observability/spans",
           "observability/tool-calls",
+          "observability/tools",
           {
             "group": "Search",
             "pages": [

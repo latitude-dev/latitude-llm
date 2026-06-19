@@ -1,0 +1,49 @@
+---
+title: Users
+description: See the people behind your traffic, with per-user sessions, errors, cost, and the signals and behaviours affecting them.
+---
+
+# Users
+
+The **Users** page shows the people behind your traffic. When your telemetry includes a user id, Latitude groups that user's sessions and traces together, so you can see who is affected by problems, who is most active, and how reliable their experience is.
+
+To populate it, send a `userId` with your telemetry. See [User tracking](./features/user-tracking).
+
+<Frame caption="The Users page: summary metrics and a per-user table of sessions and errors, above a chart of successful versus errored sessions.">
+  <img src="/images/users/users-page.png" alt="The Users page showing unique users, new users, and a table of users with email, last seen, sessions, and error rate" />
+</Frame>
+
+## What the Users list shows
+
+Summary metrics across the top cover your selected time range: unique users, new users, identified sessions, and sessions per user, with a chart of successful versus errored sessions and the error rate.
+
+Each row is one user, with:
+
+- **email**, when provided
+- **seen at**: when they were first and last seen
+- a **trend** sparkline of recent activity
+- **sessions**: how many sessions they had
+- **errors**: their error rate and count
+
+## Inspect a user
+
+Open any user to see their detail view.
+
+<Frame caption="A user's detail view: lifetime usage and cost, activity over the last 30 days, the signals affecting them, and the behaviours they show.">
+  <img src="/images/users/user-detail.png" alt="A user detail view with traces, sessions, errored sessions, cost, tokens, an activity chart, the signals affecting the user, and behaviours" />
+</Frame>
+
+The detail view shows:
+
+- **Usage and reliability**: traces, sessions, errored sessions, total cost, tokens, average trace duration, active days, and when the user was first and last seen
+- **Activity** over the last 30 days, with an **Error view** to focus on failures
+- **Signals affecting this user**: the tracked problems this user has run into, with status and how often (these are today's [issues](../issues/overview))
+- **Behaviours**: the topics observed for this user. See [Behaviours](../search/behaviours)
+
+Use **Add monitor** to watch a user, for example to be alerted when their error rate climbs. See [Monitors](../monitors/overview).
+
+## Next steps
+
+- [User tracking](./features/user-tracking): send a user id so traces and sessions are grouped by user
+- [Sessions](./sessions): the conversations that make up a user's activity
+- [Issue Discovery](../issues/overview): the problems affecting your users
