@@ -251,6 +251,16 @@
     0px 1px 2px -1px hsl(var(--background-shadow) / 0.1),
     0px 0px 6px 0px hsl(var(--background-shadow) / 0.04);
   --scrollbar: 217.9 11.92% 64.26%;
+  --viz-blue: 210 65% 60%;
+  --viz-blue-soft: 198 45% 70%;
+  --viz-gold: 44 78% 62%;
+  --viz-gold-soft: 46 60% 73%;
+  --viz-gold-faint: 48 50% 83%;
+  --viz-green: 148 40% 56%;
+  --viz-red: 8 58% 65%;
+  --viz-violet: 270 44% 64%;
+  --viz-gray: 220 10% 60%;
+  --viz-idle: 220 13% 80%;
 }
 
 .dark {
@@ -307,6 +317,16 @@
     0px 1px 3px -1px hsl(var(--background-shadow) / 0.3),
     0px 0px 8px 0px hsl(var(--background-shadow) / 0.2);
   --scrollbar: 217.9 11.92% 64.26%;
+  --viz-blue: 210 50% 52%;
+  --viz-blue-soft: 202 34% 54%;
+  --viz-gold: 42 54% 52%;
+  --viz-gold-soft: 42 42% 58%;
+  --viz-gold-faint: 44 34% 66%;
+  --viz-green: 147 36% 50%;
+  --viz-red: 8 50% 55%;
+  --viz-violet: 268 36% 58%;
+  --viz-gray: 220 10% 55%;
+  --viz-idle: 220 12% 42%;
 }
 
 /* Base styles */

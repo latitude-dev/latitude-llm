@@ -43,7 +43,8 @@ export interface MarkerHover {
 
 const ACTIVITY_LABELS: Readonly<Record<ActivityCategory, string>> = {
   generation: "Generating",
-  tool: "Running tools",
+  toolOk: "Running tools",
+  toolError: "Failed tools",
   retrieval: "Retrieving",
   other: "Working",
   idle: "Waiting",

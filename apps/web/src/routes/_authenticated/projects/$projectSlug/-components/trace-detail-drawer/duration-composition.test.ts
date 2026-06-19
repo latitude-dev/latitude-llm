@@ -14,12 +14,14 @@ function span(partial: {
   operation: string
   start: number
   end: number
+  status?: string
 }): SpanRecord {
   return {
     spanId: partial.spanId,
     parentSpanId: partial.parentSpanId ?? "",
     traceId: partial.traceId ?? "t",
     operation: partial.operation,
+    statusCode: partial.status ?? "unset",
     startTime: new Date(partial.start).toISOString(),
     endTime: new Date(partial.end).toISOString(),
   } as unknown as SpanRecord
@@ -51,7 +53,16 @@ describe("computeDurationBreakdown", () => {
       span({ spanId: "b", operation: "execute_tool", start: 1500, end: 2000 }),
     ])
     expect(wallClockMs).toBe(2000)
-    expect(ms(segments)).toEqual({ generation: 1000, tool: 500, idle: 500 })
+    expect(ms(segments)).toEqual({ generation: 1000, toolOk: 500, idle: 500 })
+  })
+
+  it("splits tool time by status: failed tool calls are their own category", () => {
+    // tool ok [0,500] → failed tool [500,900], serial, no idle.
+    const { segments } = computeDurationBreakdown([
+      span({ spanId: "a", operation: "execute_tool", start: 0, end: 500 }),
+      span({ spanId: "b", operation: "execute_tool", start: 500, end: 900, status: "error" }),
+    ])
+    expect(ms(segments)).toEqual({ toolOk: 500, toolError: 400 })
   })
 
   it("does not double-count parallel siblings (priority resolves overlap)", () => {
@@ -116,7 +127,7 @@ describe("computeSessionDurationBreakdown", () => {
       span({ spanId: "b1", traceId: "B", operation: "chat", start: 10000, end: 11000 }),
     ])
     expect(wallClockMs).toBe(3000)
-    expect(ms(segments)).toEqual({ generation: 2000, tool: 500, idle: 500 })
+    expect(ms(segments)).toEqual({ generation: 2000, toolOk: 500, idle: 500 })
   })
 
   it("returns empty for no spans", () => {

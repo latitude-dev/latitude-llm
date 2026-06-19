@@ -17,7 +17,7 @@ import type { SpanRecord } from "../../../../../../domains/spans/spans.functions
  * serialization). That is plenty for trace-level durations.
  */
 
-export type DurationCategory = "generation" | "tool" | "retrieval" | "other" | "idle"
+export type DurationCategory = "generation" | "toolOk" | "toolError" | "retrieval" | "other" | "idle"
 type WorkCategory = Exclude<DurationCategory, "idle">
 
 export interface DurationSegment {
@@ -29,37 +29,40 @@ export interface DurationSegment {
   readonly hollow?: boolean
 }
 
-// Green is "generation/output" (matches completion + output cost). The other
-// work categories use warm tones (orange/amber) deliberately distinct from the
-// blue/purple of the token & cost bars, so the two never get confused. Other is
-// neutral slate; idle stays a hatched gray.
+// Blue = the model's own work (generation), the one hue shared with
+// completion/output in the token & cost bars. Tool time is split by outcome —
+// green for succeeded calls, red for failed — so the status colors are accurate
+// rather than decorative. Retrieval is violet; idle stays a hatched gray.
 export const DURATION_COLORS: Readonly<Record<DurationCategory, string>> = {
-  generation: "#4ade80",
-  tool: "#f97316",
-  retrieval: "#f59e0b",
-  other: "#94a3b8",
-  idle: "#cbd5e1",
+  generation: "hsl(var(--viz-blue))",
+  toolOk: "hsl(var(--viz-green))",
+  toolError: "hsl(var(--viz-red))",
+  retrieval: "hsl(var(--viz-violet))",
+  other: "hsl(var(--viz-gray))",
+  idle: "hsl(var(--viz-idle))",
 }
 
 const CATEGORY_LABELS: Readonly<Record<DurationCategory, string>> = {
   generation: "Generation",
-  tool: "Tools",
+  toolOk: "Tools",
+  toolError: "Failed tools",
   retrieval: "Retrieval",
   other: "Other",
   idle: "Idle",
 }
 
-// Canonical render order (also the overlap-resolution priority for work categories).
-const WORK_PRIORITY: readonly WorkCategory[] = ["generation", "tool", "retrieval", "other"]
-const SEGMENT_ORDER: readonly DurationCategory[] = ["generation", "tool", "retrieval", "other", "idle"]
+// Canonical render order (also the overlap-resolution priority for work
+// categories). Failed tool time outranks succeeded so failures always surface.
+const WORK_PRIORITY: readonly WorkCategory[] = ["generation", "toolError", "toolOk", "retrieval", "other"]
+const SEGMENT_ORDER: readonly DurationCategory[] = ["generation", "toolOk", "toolError", "retrieval", "other", "idle"]
 
-function categoryFor(operation: string): WorkCategory {
+function categoryFor(operation: string, statusCode: string): WorkCategory {
   switch (operation) {
     case "chat":
     case "text_completion":
       return "generation"
     case "execute_tool":
-      return "tool"
+      return statusCode === "error" ? "toolError" : "toolOk"
     case "retrieval":
     case "reranker":
       return "retrieval"
@@ -96,11 +99,12 @@ export function computeDurationBreakdown(spans: readonly SpanRecord[]): {
   const parentIds = new Set(spans.map((s) => s.parentSpanId).filter((id) => id !== ""))
   const intervals: Interval[] = timed
     .filter(({ span }) => !parentIds.has(span.spanId))
-    .map(({ span, startMs, endMs }) => ({ startMs, endMs, category: categoryFor(span.operation) }))
+    .map(({ span, startMs, endMs }) => ({ startMs, endMs, category: categoryFor(span.operation, span.statusCode) }))
 
   const totals: Record<DurationCategory, number> = {
     generation: 0,
-    tool: 0,
+    toolOk: 0,
+    toolError: 0,
     retrieval: 0,
     other: 0,
     idle: 0,
@@ -116,7 +120,7 @@ export function computeDurationBreakdown(spans: readonly SpanRecord[]): {
     ])
     .sort((a, b) => a.t - b.t)
 
-  const active: Record<WorkCategory, number> = { generation: 0, tool: 0, retrieval: 0, other: 0 }
+  const active: Record<WorkCategory, number> = { generation: 0, toolOk: 0, toolError: 0, retrieval: 0, other: 0 }
   const dominant = (): DurationCategory => WORK_PRIORITY.find((c) => active[c] > 0) ?? "idle"
 
   let cursor = wallStart
@@ -155,7 +159,14 @@ export function computeSessionDurationBreakdown(spans: readonly SpanRecord[]): {
     else byTrace.set(span.traceId, [span])
   }
 
-  const totals: Record<DurationCategory, number> = { generation: 0, tool: 0, retrieval: 0, other: 0, idle: 0 }
+  const totals: Record<DurationCategory, number> = {
+    generation: 0,
+    toolOk: 0,
+    toolError: 0,
+    retrieval: 0,
+    other: 0,
+    idle: 0,
+  }
   let wallClockMs = 0
   for (const traceSpans of byTrace.values()) {
     const breakdown = computeDurationBreakdown(traceSpans)
