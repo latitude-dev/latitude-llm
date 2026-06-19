@@ -174,6 +174,19 @@ export const DestinationRepositoryLive = Layer.effect(
             .pipe(Effect.mapError((e) => toRepositoryError(e, "updateDestinationQuarantineState")))
         }),
 
+      updateStatus: ({ id, status }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .update(destinations)
+                .set({ status, updatedAt: new Date() })
+                .where(and(eq(destinations.id, id), eq(destinations.organizationId, organizationId))),
+            )
+            .pipe(Effect.mapError((e) => toRepositoryError(e, "updateDestinationStatus")))
+        }),
+
       deleteByProjectId: (projectId) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

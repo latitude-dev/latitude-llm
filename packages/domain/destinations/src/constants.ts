@@ -42,6 +42,17 @@ export const DESTINATION_SYNC_RETRY_BACKOFF_MS = 30_000
 export const DESTINATION_IDLE_BACKOFF_MAX_MS = 3_600_000
 
 /**
+ * Auto-pause threshold: after this many consecutive empty runs, the source's
+ * destination is paused (`status = 'paused'`) so the sweep stops probing an
+ * abandoned project forever. Idle backoff caps cadence at 1h after ~4 empty
+ * runs, so 168 ≈ **7 days of continuous inactivity** regardless of the
+ * configured interval. Resuming the destination grants a fresh idle budget (the
+ * counter resets on pause), and resume's gap-backfill recovers anything within
+ * retention — so no data is lost, it just needs a manual resume to flow again.
+ */
+export const DESTINATION_IDLE_PAUSE_AFTER_EMPTY_RUNS = 168
+
+/**
  * Window-end safety lag (5 min): the window ends at `now − SAFETY_LAG` so reads
  * see settled rows. Must cover both ReplacingMergeTree merge settling and
  * ingest-queue lag — a span that becomes visible behind the watermark is lost

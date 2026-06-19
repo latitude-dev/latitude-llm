@@ -8,7 +8,11 @@ import type {
   SqlClient,
 } from "@domain/shared"
 import { Effect } from "effect"
-import { DESTINATION_QUARANTINE_FAILURE_THRESHOLD, DESTINATION_SAFETY_LAG_MS } from "../constants.ts"
+import {
+  DESTINATION_IDLE_PAUSE_AFTER_EMPTY_RUNS,
+  DESTINATION_QUARANTINE_FAILURE_THRESHOLD,
+  DESTINATION_SAFETY_LAG_MS,
+} from "../constants.ts"
 import type { Destination, DestinationKind } from "../entities/destination.ts"
 import type { DestinationSource } from "../entities/destination-source.ts"
 import type { DestinationSourceState } from "../entities/destination-source-state.ts"
@@ -140,7 +144,11 @@ const loadRunContext = (destinationId: DestinationId, source: DestinationSource)
  * Empty window: advance the per-source cursor to window-end (so an idle source
  * doesn't re-scan the same gap) and grow idle backoff. No delivery, no
  * sync-run row. A lost CAS race means another run already advanced — report
- * `stale`.
+ * `stale`. Once the empty streak reaches {@link DESTINATION_IDLE_PAUSE_AFTER_EMPTY_RUNS}
+ * (~7 days) the destination is auto-paused so the sweep stops probing an
+ * abandoned project forever; the counter resets so a manual resume gets a fresh
+ * idle budget. (v1 has one source per destination — a multi-source destination
+ * would need an all-sources-idle check before pausing.)
  */
 const handleEmptyWindow = (params: {
   readonly destination: Destination
@@ -173,12 +181,20 @@ const handleEmptyWindow = (params: {
       }
     }
 
+    const nextEmptyRuns = sourceState.consecutiveEmptyRuns + 1
+    const idlePaused = nextEmptyRuns >= DESTINATION_IDLE_PAUSE_AFTER_EMPTY_RUNS
+
     yield* sourceStates.updateRunState({
       destinationId: destination.id,
       source,
-      consecutiveEmptyRuns: sourceState.consecutiveEmptyRuns + 1,
+      consecutiveEmptyRuns: idlePaused ? 0 : nextEmptyRuns,
       lastRunAt: now,
     })
+    if (idlePaused) {
+      yield* Effect.annotateCurrentSpan("destination.idlePaused", true)
+      const destinations = yield* DestinationRepository
+      yield* destinations.updateStatus({ id: destination.id, status: "paused" })
+    }
 
     const emptyWatermark = advances ? emptyTarget.watermark : startCursor.watermark
     return result({

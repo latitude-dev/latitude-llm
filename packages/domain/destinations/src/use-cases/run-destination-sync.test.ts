@@ -15,7 +15,7 @@ import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testi
 import type { SpanDetail } from "@domain/spans"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { POSTHOG_US_INGESTION_HOST } from "../constants.ts"
+import { DESTINATION_IDLE_PAUSE_AFTER_EMPTY_RUNS, POSTHOG_US_INGESTION_HOST } from "../constants.ts"
 import type { Destination } from "../entities/destination.ts"
 import { createDestination } from "../entities/destination.ts"
 import { defaultSourceConfig } from "../entities/destination-source.ts"
@@ -284,7 +284,44 @@ describe("runDestinationSyncUseCase", () => {
     expect(cursorRows[0]?.lastRunAt).toEqual(NOW)
     // Empty runs never touch destination quarantine bookkeeping.
     expect(destinationRows[0]?.consecutiveFailures).toBe(0)
+    expect(destinationRows[0]?.status).toBe("active")
     expect(syncRunRows).toHaveLength(0)
+  })
+
+  it("auto-pauses the destination once the idle threshold of empty runs is reached and resets the counter", async () => {
+    const { destinationRows, cursorRows, layer } = setup({
+      cursor: makeCursor({ consecutiveEmptyRuns: DESTINATION_IDLE_PAUSE_AFTER_EMPTY_RUNS - 1 }),
+    })
+
+    const res = await Effect.runPromise(
+      runDestinationSyncUseCase({ destinationId: DESTINATION_ID, source: SOURCE, now: NOW }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    // The window was still empty; auto-pause is a side effect, not a distinct outcome.
+    expect(res.outcome).toBe("empty")
+    expect(destinationRows[0]?.status).toBe("paused")
+    // Counter resets so a manual resume grants a fresh idle budget (no immediate re-pause).
+    expect(cursorRows[0]?.consecutiveEmptyRuns).toBe(0)
+    expect(cursorRows[0]?.lastRunAt).toEqual(NOW)
+    // Idle never counts toward quarantine.
+    expect(destinationRows[0]?.consecutiveFailures).toBe(0)
+  })
+
+  it("does not pause one empty run before the idle threshold", async () => {
+    const { destinationRows, cursorRows, layer } = setup({
+      cursor: makeCursor({ consecutiveEmptyRuns: DESTINATION_IDLE_PAUSE_AFTER_EMPTY_RUNS - 2 }),
+    })
+
+    await Effect.runPromise(
+      runDestinationSyncUseCase({ destinationId: DESTINATION_ID, source: SOURCE, now: NOW }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(destinationRows[0]?.status).toBe("active")
+    expect(cursorRows[0]?.consecutiveEmptyRuns).toBe(DESTINATION_IDLE_PAUSE_AFTER_EMPTY_RUNS - 1)
   })
 
   it("delivers a window, advances the compound cursor, and resets idle backoff", async () => {
