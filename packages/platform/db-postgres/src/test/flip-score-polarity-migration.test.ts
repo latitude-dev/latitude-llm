@@ -7,7 +7,7 @@ import { closeInMemoryPostgres, createInMemoryPostgres, type InMemoryPostgres } 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
 
-// Mirrors drizzle/20260618140517_signals-flip-historical-score-polarity/migration.sql: the one-time
+// Mirrors the passed-flip in drizzle/20260619101126_signals-engine-cutover/migration.sql: the one-time
 // cutover that converts existing evaluation + annotation scores from the old problem-detector
 // polarity to passed=true = behavior present. custom (user-pushed) and errored rows are excluded.
 const FLIP_SQL = sql`

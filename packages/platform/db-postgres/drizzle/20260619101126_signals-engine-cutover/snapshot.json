@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "10466535-a13d-4535-8aab-2340f4ab4f6f",
+  "id": "af53faa7-419b-4dbe-a1d0-c685af6706fb",
   "prevIds": [
-    "d1269323-048a-47f9-970d-49e42512864e"
+    "52eff890-c03b-4462-9f37-4f2450b5e7b2"
   ],
   "ddl": [
     {
@@ -3334,6 +3334,45 @@
     {
       "type": "timestamp with time zone",
       "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "coverage_start_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_sources"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "backfill_started_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_sources"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "backfill_progress_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_sources"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
       "notNull": false,
       "dimensions": 0,
       "default": null,
@@ -3431,6 +3470,19 @@
       "generated": null,
       "identity": null,
       "name": "source",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "destination_sync_runs"
+    },
+    {
+      "type": "varchar(16)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'live'",
+      "generated": null,
+      "identity": null,
+      "name": "trigger",
       "entityType": "columns",
       "schema": "latitude",
       "table": "destination_sync_runs"
@@ -5354,7 +5406,7 @@
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "source",
+      "name": "source_type",
       "entityType": "columns",
       "schema": "latitude",
       "table": "scores"
@@ -8833,7 +8885,7 @@
           "opclass": null
         },
         {
-          "value": "source",
+          "value": "source_type",
           "isExpression": false,
           "asc": true,
           "nullsFirst": false,
@@ -8904,7 +8956,7 @@
         }
       ],
       "isUnique": true,
-      "where": "\"source\" = 'evaluation' AND \"drafted_at\" IS NULL AND \"trace_id\" IS NOT NULL",
+      "where": "\"source_type\" = 'evaluation' AND \"drafted_at\" IS NULL AND \"trace_id\" IS NOT NULL",
       "with": "",
       "method": "btree",
       "concurrently": false,
@@ -10972,5 +11024,7 @@
       "table": "wrapped_reports"
     }
   ],
-  "renames": []
+  "renames": [
+    "latitude.scores.source->latitude.scores.source_type"
+  ]
 }
