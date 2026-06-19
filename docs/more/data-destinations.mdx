@@ -18,9 +18,9 @@ Destinations are **bring-your-own**: you point Latitude at your own PostHog proj
 | Destination | Sources | Status |
 | --- | --- | --- |
 | PostHog (LLM Analytics) | Spans | Implemented |
-| Object storage / data warehouse (S3, BigQuery, …) | Spans | *Not implemented* |
-| Mixpanel | Spans | *Not implemented* |
-| Generic webhook | Spans | *Not implemented* |
+| Object storage / data warehouse (S3, BigQuery, …) | Spans | *comming soon* |
+| Mixpanel | Spans | *comming soon* |
+| Generic webhook | Spans | *comming soon* |
 
 <Note>
 The destinations below PostHog are **examples of where this is headed**, not a commitment or a timeline. The engine is built to grow into more destinations — tell us which one you need.
@@ -33,10 +33,10 @@ A **source** is the kind of telemetry a destination receives. Today every destin
 | Source | What it is | Status |
 | --- | --- | --- |
 | Spans | The individual steps inside a trace — each LLM call, tool call, or retrieval | Implemented |
-| Traces | A full end-to-end request, from first step to last | *Not implemented* |
-| Sessions | Multiple traces grouped into one conversation or user journey | *Not implemented* |
-| Signals | Recurring failure patterns Latitude detects in your traffic | *Not implemented* |
-| Scopes | Named segments of your telemetry you define and track | *Not implemented* |
+| Traces | A full end-to-end request, from first step to last | *comming soon* |
+| Sessions | Multiple traces grouped into one conversation or user journey | *comming soon* |
+| Signals | Recurring failure patterns Latitude detects in your traffic | *comming soon* |
+| Scopes | Named segments of your telemetry you define and track | *comming soon* |
 
 With PostHog, traces and sessions don't need their own source: each span carries its trace and session identifiers, so PostHog reconstructs the full trace and session views for you automatically.
 
