@@ -3303,6 +3303,503 @@
         ],
         "description": "Latest definition seen for the tool. `null` when never offered in the range."
       },
+      "UserListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectUser"
+            },
+            "description": "Page of users, in the requested sort order."
+          },
+          "totalCount": {
+            "type": "integer",
+            "description": "Total users matching the filters across every page."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "`true` when there is at least one more page after this one."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size used for this response."
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Zero-based offset of the first item in this page."
+          },
+          "costRollup": {
+            "$ref": "#/components/schemas/UserCostRollup"
+          }
+        },
+        "required": [
+          "items",
+          "totalCount",
+          "hasMore",
+          "limit",
+          "offset",
+          "costRollup"
+        ]
+      },
+      "ProjectUser": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "The end-user's identifier, as reported on their traces' `user_id`."
+          },
+          "userEmail": {
+            "type": "string",
+            "description": "Latest non-empty email seen on the user's traces. Empty when never reported."
+          },
+          "firstSeenAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the user's first trace in the range."
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the user's most recent trace in the range."
+          },
+          "traceCount": {
+            "type": "integer",
+            "description": "Traces attributed to the user in the range."
+          },
+          "sessionCount": {
+            "type": "integer",
+            "description": "Distinct sessions in which the user produced at least one trace."
+          },
+          "errorSessionCount": {
+            "type": "integer",
+            "description": "Of `sessionCount`, sessions with at least one errored trace."
+          },
+          "tokensTotal": {
+            "type": "integer",
+            "description": "Total tokens across the user's traces."
+          },
+          "costTotalMicrocents": {
+            "type": "number",
+            "description": "Total cost across the user's traces, in microcents."
+          },
+          "costAvgMicrocents": {
+            "type": "number",
+            "description": "Mean per-trace cost across the user's traces, in microcents."
+          },
+          "costMedianMicrocents": {
+            "type": "number",
+            "description": "Median (p50) per-trace cost across the user's traces, in microcents."
+          }
+        },
+        "required": [
+          "userId",
+          "userEmail",
+          "firstSeenAt",
+          "lastSeenAt",
+          "traceCount",
+          "sessionCount",
+          "errorSessionCount",
+          "tokensTotal",
+          "costTotalMicrocents",
+          "costAvgMicrocents",
+          "costMedianMicrocents"
+        ]
+      },
+      "UserCostRollup": {
+        "type": "object",
+        "properties": {
+          "sum": {
+            "type": "number",
+            "description": "Sum of every matching user's total cost, in microcents."
+          },
+          "avg": {
+            "type": "number",
+            "description": "Mean of every matching user's mean per-trace cost, in microcents."
+          },
+          "median": {
+            "type": "number",
+            "description": "Median of every matching user's median per-trace cost, in microcents."
+          }
+        },
+        "required": [
+          "sum",
+          "avg",
+          "median"
+        ],
+        "description": "Cost aggregates across every matching user, not just this page."
+      },
+      "UsersOverviewResponse": {
+        "type": "object",
+        "properties": {
+          "uniqueUsers": {
+            "type": "integer",
+            "description": "Distinct identified users with at least one trace in the range."
+          },
+          "newUsers": {
+            "type": "integer",
+            "description": "Users whose first trace ever falls inside the range."
+          },
+          "identifiedTraces": {
+            "type": "integer",
+            "description": "Traces in the range carrying a non-empty `user_id`."
+          },
+          "totalTraces": {
+            "type": "integer",
+            "description": "All traces in the range, identified or not."
+          },
+          "identifiedSessions": {
+            "type": "integer",
+            "description": "Distinct sessions in the range carrying a non-empty `user_id`."
+          },
+          "totalSessions": {
+            "type": "integer",
+            "description": "All distinct sessions in the range, identified or not."
+          },
+          "histogram": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsersOverviewBucket"
+            },
+            "description": "Per-bucket activity across the range, oldest first."
+          },
+          "bucketSeconds": {
+            "type": "integer",
+            "description": "Bucket width the histogram was computed with, in seconds."
+          },
+          "fromIso": {
+            "type": "string",
+            "description": "ISO-8601 lower bound of the resolved range."
+          },
+          "toIso": {
+            "type": "string",
+            "description": "ISO-8601 upper bound of the resolved range."
+          }
+        },
+        "required": [
+          "uniqueUsers",
+          "newUsers",
+          "identifiedTraces",
+          "totalTraces",
+          "identifiedSessions",
+          "totalSessions",
+          "histogram",
+          "bucketSeconds",
+          "fromIso",
+          "toIso"
+        ]
+      },
+      "UsersOverviewBucket": {
+        "type": "object",
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "description": "ISO-8601 UTC timestamp of the bucket's start."
+          },
+          "activeUsers": {
+            "type": "integer",
+            "description": "Distinct identified users active in the bucket."
+          },
+          "traceCount": {
+            "type": "integer",
+            "description": "Identified traces in the bucket."
+          },
+          "sessionCount": {
+            "type": "integer",
+            "description": "Distinct user-attributed sessions starting in the bucket."
+          },
+          "errorSessionCount": {
+            "type": "integer",
+            "description": "Of `sessionCount`, those with at least one errored trace."
+          }
+        },
+        "required": [
+          "bucket",
+          "activeUsers",
+          "traceCount",
+          "sessionCount",
+          "errorSessionCount"
+        ]
+      },
+      "UserActivityResponse": {
+        "type": "object",
+        "properties": {
+          "buckets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserActivityBucket"
+            },
+            "description": "Per-bucket session activity across the range, oldest first."
+          },
+          "bucketSeconds": {
+            "type": "integer",
+            "description": "Bucket width the buckets were computed with, in seconds."
+          },
+          "fromIso": {
+            "type": "string",
+            "description": "ISO-8601 lower bound of the resolved range."
+          },
+          "toIso": {
+            "type": "string",
+            "description": "ISO-8601 upper bound of the resolved range."
+          }
+        },
+        "required": [
+          "buckets",
+          "bucketSeconds",
+          "fromIso",
+          "toIso"
+        ]
+      },
+      "UserActivityBucket": {
+        "type": "object",
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "description": "ISO-8601 UTC timestamp of the bucket's start."
+          },
+          "count": {
+            "type": "integer",
+            "description": "Distinct user-attributed sessions starting in the bucket."
+          },
+          "errorCount": {
+            "type": "integer",
+            "description": "Of `count`, sessions with at least one errored trace."
+          }
+        },
+        "required": [
+          "bucket",
+          "count",
+          "errorCount"
+        ]
+      },
+      "UserUsageResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserUsageSlice"
+            },
+            "description": "Top dimension values, by distinct trace count, most used first."
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "UserUsageSlice": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "A value of the requested dimension (a model, provider, or tool name)."
+          },
+          "traceCount": {
+            "type": "integer",
+            "description": "Distinct traces of the user carrying this value."
+          }
+        },
+        "required": [
+          "value",
+          "traceCount"
+        ]
+      },
+      "UserSignalsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserSignal"
+            },
+            "description": "Signals seen on the user's traces, most recent occurrence first."
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "UserSignal": {
+        "type": "object",
+        "properties": {
+          "signalId": {
+            "type": "string",
+            "description": "Stable identifier of the signal."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable signal name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Signal description."
+          },
+          "states": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Lifecycle states currently applying to the signal."
+          },
+          "priority": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Signal priority. `null` when unset."
+          },
+          "occurrences": {
+            "type": "integer",
+            "description": "Occurrences on the user's traces."
+          },
+          "affectedTraces": {
+            "type": "integer",
+            "description": "Distinct traces of the user that contributed an occurrence."
+          },
+          "firstSeenAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the first occurrence on the user's traces."
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the most recent occurrence on the user's traces."
+          }
+        },
+        "required": [
+          "signalId",
+          "name",
+          "description",
+          "states",
+          "priority",
+          "occurrences",
+          "affectedTraces",
+          "firstSeenAt",
+          "lastSeenAt"
+        ]
+      },
+      "UserBehavioursResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserBehaviour"
+            },
+            "description": "Behaviour clusters observed on the user's sessions, most frequent first."
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "UserBehaviour": {
+        "type": "object",
+        "properties": {
+          "clusterId": {
+            "type": "string",
+            "description": "Stable identifier of the behaviour cluster."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable behaviour name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Behaviour description."
+          },
+          "observationCount": {
+            "type": "integer",
+            "description": "Observations of this behaviour on the user's sessions."
+          },
+          "firstObservedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp the behaviour was first observed for the user."
+          },
+          "lastObservedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp the behaviour was last observed for the user."
+          }
+        },
+        "required": [
+          "clusterId",
+          "name",
+          "description",
+          "observationCount",
+          "firstObservedAt",
+          "lastObservedAt"
+        ]
+      },
+      "UserProfileResponse": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "The end-user's identifier, as reported on their traces' `user_id`."
+          },
+          "userEmail": {
+            "type": "string",
+            "description": "Latest non-empty email seen on the user's traces. Empty when never reported."
+          },
+          "firstSeenAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the user's first trace ever."
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the user's most recent trace ever."
+          },
+          "traceCount": {
+            "type": "integer",
+            "description": "Lifetime traces attributed to the user."
+          },
+          "sessionCount": {
+            "type": "integer",
+            "description": "Distinct sessions in which the user produced at least one trace."
+          },
+          "errorSessionCount": {
+            "type": "integer",
+            "description": "Of `sessionCount`, sessions with at least one errored trace."
+          },
+          "tokensTotal": {
+            "type": "integer",
+            "description": "Total tokens across the user's traces."
+          },
+          "tokensInput": {
+            "type": "integer",
+            "description": "Input (prompt) tokens across the user's traces."
+          },
+          "tokensOutput": {
+            "type": "integer",
+            "description": "Output (completion) tokens across the user's traces."
+          },
+          "costTotalMicrocents": {
+            "type": "number",
+            "description": "Total cost across the user's traces, in microcents."
+          },
+          "avgDurationNs": {
+            "type": "number",
+            "description": "Mean per-trace duration, in nanoseconds."
+          },
+          "activeDays": {
+            "type": "integer",
+            "description": "Distinct UTC days with at least one trace."
+          }
+        },
+        "required": [
+          "userId",
+          "userEmail",
+          "firstSeenAt",
+          "lastSeenAt",
+          "traceCount",
+          "sessionCount",
+          "errorSessionCount",
+          "tokensTotal",
+          "tokensInput",
+          "tokensOutput",
+          "costTotalMicrocents",
+          "avgDurationNs",
+          "activeDays"
+        ]
+      },
       "PaginatedSavedSearches": {
         "type": "object",
         "properties": {
@@ -8820,6 +9317,794 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ToolDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/users": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "x-fern-sdk-group-name": "users",
+        "x-fern-sdk-method-name": "list",
+        "summary": "List project end-users with usage metrics",
+        "description": "Returns a page of the project's identified end-users over the range, each with trace, session, token, and cost metrics, plus cost aggregates across every matching user. The range defaults to the trailing 30 days.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listUsers",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Lower bound (inclusive) of the time range. Defaults to 30 days before `toIso`."
+            },
+            "required": false,
+            "description": "Lower bound (inclusive) of the time range. Defaults to 30 days before `toIso`.",
+            "name": "fromIso",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Upper bound (inclusive) of the time range. Defaults to now."
+            },
+            "required": false,
+            "description": "Upper bound (inclusive) of the time range. Defaults to now.",
+            "name": "toIso",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Page size. Max 100."
+            },
+            "required": false,
+            "description": "Page size. Max 100.",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "description": "Zero-based offset of the first user to return."
+            },
+            "required": false,
+            "description": "Zero-based offset of the first user to return.",
+            "name": "offset",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "lastSeen",
+                "firstSeen",
+                "traces",
+                "sessions",
+                "errors",
+                "tokens",
+                "cost",
+                "costAvg",
+                "costMedian"
+              ],
+              "description": "Field to sort by. Defaults to most recently seen."
+            },
+            "required": false,
+            "description": "Field to sort by. Defaults to most recently seen.",
+            "name": "sortBy",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "description": "Sort direction. Defaults to descending."
+            },
+            "required": false,
+            "description": "Sort direction. Defaults to descending.",
+            "name": "sortDirection",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 500,
+              "description": "Case-insensitive substring match on the user's id or email."
+            },
+            "required": false,
+            "description": "Case-insensitive substring match on the user's id or email.",
+            "name": "searchQuery",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page of end-users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/users/overview": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "x-fern-sdk-group-name": "users",
+        "x-fern-sdk-method-name": "overview",
+        "summary": "Get project end-user overview",
+        "description": "Returns project-wide end-user aggregates over the range — unique and new users, identified vs total traces and sessions — plus a per-bucket activity histogram. The range defaults to the trailing 30 days.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getUsersOverview",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Lower bound (inclusive) of the time range. Defaults to 30 days before `toIso`."
+            },
+            "required": false,
+            "description": "Lower bound (inclusive) of the time range. Defaults to 30 days before `toIso`.",
+            "name": "fromIso",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Upper bound (inclusive) of the time range. Defaults to now."
+            },
+            "required": false,
+            "description": "Upper bound (inclusive) of the time range. Defaults to now.",
+            "name": "toIso",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Users overview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsersOverviewResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/users/{userId}/activity": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "x-fern-sdk-group-name": "users",
+        "x-fern-sdk-method-name": "activity",
+        "summary": "Get end-user activity histogram",
+        "description": "Returns the end-user's per-bucket session activity across the range, oldest first. The range defaults to the trailing 30 days.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getUserActivity",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "description": "End-user identifier. URL-encode values containing special characters."
+            },
+            "required": true,
+            "description": "End-user identifier. URL-encode values containing special characters.",
+            "name": "userId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Lower bound (inclusive) of the time range. Defaults to 30 days before `toIso`."
+            },
+            "required": false,
+            "description": "Lower bound (inclusive) of the time range. Defaults to 30 days before `toIso`.",
+            "name": "fromIso",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Upper bound (inclusive) of the time range. Defaults to now."
+            },
+            "required": false,
+            "description": "Upper bound (inclusive) of the time range. Defaults to now.",
+            "name": "toIso",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "When `true`, scope every aggregate to errored traces only."
+            },
+            "required": false,
+            "description": "When `true`, scope every aggregate to errored traces only.",
+            "name": "errorsOnly",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Activity histogram",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserActivityResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/users/{userId}/usage": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "x-fern-sdk-group-name": "users",
+        "x-fern-sdk-method-name": "usage",
+        "summary": "Get end-user usage breakdown",
+        "description": "Returns the end-user's top values of a usage dimension — `model`, `provider`, or `tool` — ranked by distinct trace count.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getUserUsage",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "description": "End-user identifier. URL-encode values containing special characters."
+            },
+            "required": true,
+            "description": "End-user identifier. URL-encode values containing special characters.",
+            "name": "userId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "model",
+                "provider",
+                "tool"
+              ],
+              "description": "Dimension to break the usage down by."
+            },
+            "required": true,
+            "description": "Dimension to break the usage down by.",
+            "name": "dimension",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "Maximum number of values to return."
+            },
+            "required": false,
+            "description": "Maximum number of values to return.",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "When `true`, scope every aggregate to errored traces only."
+            },
+            "required": false,
+            "description": "When `true`, scope every aggregate to errored traces only.",
+            "name": "errorsOnly",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usage breakdown",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserUsageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/users/{userId}/signals": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "x-fern-sdk-group-name": "users",
+        "x-fern-sdk-method-name": "signals",
+        "summary": "List signals on an end-user's traces",
+        "description": "Returns the signals that occurred on the end-user's traces, most recent occurrence first. Occurrence counts are scoped to the user; signal identity and lifecycle states are the project's.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listUserSignals",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "description": "End-user identifier. URL-encode values containing special characters."
+            },
+            "required": true,
+            "description": "End-user identifier. URL-encode values containing special characters.",
+            "name": "userId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Maximum number of signals to return."
+            },
+            "required": false,
+            "description": "Maximum number of signals to return.",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User signals",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSignalsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/users/{userId}/behaviours": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "x-fern-sdk-group-name": "users",
+        "x-fern-sdk-method-name": "behaviours",
+        "summary": "List behaviours observed for an end-user",
+        "description": "Returns the behaviour clusters observed on the end-user's sessions, most frequent first. Counts are scoped to the user; cluster identity comes from the project taxonomy.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listUserBehaviours",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "description": "End-user identifier. URL-encode values containing special characters."
+            },
+            "required": true,
+            "description": "End-user identifier. URL-encode values containing special characters.",
+            "name": "userId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Maximum number of behaviours to return."
+            },
+            "required": false,
+            "description": "Maximum number of behaviours to return.",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User behaviours",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserBehavioursResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/users/{userId}": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "x-fern-sdk-group-name": "users",
+        "x-fern-sdk-method-name": "get",
+        "summary": "Get end-user profile",
+        "description": "Returns the lifetime profile of one end-user — trace, session, token, cost, and activity rollups across all of the user's traces (not range-bound).",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getUser",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "description": "End-user identifier. URL-encode values containing special characters."
+            },
+            "required": true,
+            "description": "End-user identifier. URL-encode values containing special characters.",
+            "name": "userId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "When `true`, scope every aggregate to errored traces only."
+            },
+            "required": false,
+            "description": "When `true`, scope every aggregate to errored traces only.",
+            "name": "errorsOnly",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileResponse"
                 }
               }
             }
