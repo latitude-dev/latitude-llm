@@ -76,7 +76,7 @@ const toAnalyticsRow = (score: Score) => ({
   session_id: score.sessionId ?? "",
   trace_id: score.traceId ?? "",
   span_id: score.spanId ?? "",
-  source: score.source_type,
+  source: score.sourceType,
   source_id: score.sourceId,
   simulation_id: score.simulationId ?? "",
   signal_id: score.signalId ?? "",

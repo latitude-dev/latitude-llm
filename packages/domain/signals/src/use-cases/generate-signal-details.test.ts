@@ -43,7 +43,7 @@ const makeScore = (feedback: string) =>
     sessionId: null,
     traceId: null,
     spanId: null,
-    source_type: "annotation",
+    sourceType: "annotation",
     sourceId: "UI",
     simulationId: null,
     signalId: SignalId("iiiiiiiiiiiiiiiiiiiiiiii"),
@@ -93,7 +93,7 @@ describe("generateSignalDetailsUseCase", () => {
         projectId,
         occurrences: [
           {
-            source_type: "annotation",
+            sourceType: "annotation",
             feedback: "The assistant leaked a production API key in the reply.",
           },
         ],

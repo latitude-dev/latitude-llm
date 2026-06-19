@@ -47,7 +47,7 @@ export interface UpdateSignalCentroidInput {
   readonly centroid: SignalCentroid & { clusteredAt: Date }
   readonly score: {
     readonly embedding: readonly number[]
-    readonly source_type: ScoreSourceType
+    readonly sourceType: ScoreSourceType
     readonly createdAt: Date
   }
   readonly operation: "add" | "remove"
@@ -68,7 +68,7 @@ export const updateSignalCentroid = ({
   if (centroid.base.length !== score.embedding.length) {
     throw new Error(`Dimension mismatch: centroid has ${centroid.base.length}, score has ${score.embedding.length}`)
   }
-  const contributionWeight = centroid.weights[score.source_type] ?? 1
+  const contributionWeight = centroid.weights[score.sourceType] ?? 1
   return updateCentroid({
     centroid,
     contribution: { embedding: score.embedding, createdAt: score.createdAt },

@@ -29,7 +29,7 @@ describe("persistDraftAnnotation", () => {
       }).pipe(Effect.provide(layer)),
     )
 
-    expect(score.source_type).toBe("annotation")
+    expect(score.sourceType).toBe("annotation")
     expect(score.sourceId).toBe(queueId)
     expect(score.draftedAt).toBeInstanceOf(Date)
     expect(score.feedback).toBe("AI-generated feedback for system queue draft")
@@ -207,7 +207,7 @@ describe("persistDraftAnnotation", () => {
       }).pipe(Effect.provide(layer)),
     )
 
-    expect(score.source_type).toBe("annotation")
+    expect(score.sourceType).toBe("annotation")
     expect(score.sourceId).toBe(queueId)
     expect(score.draftedAt).not.toBeNull()
     expect(store.size).toBe(1)

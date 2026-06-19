@@ -87,7 +87,7 @@ const buildSignalWithAssignedScore = ({
     },
     score: {
       embedding: normalizedEmbedding,
-      source_type: score.source_type,
+      sourceType: score.sourceType,
       createdAt: score.createdAt,
     },
     operation: "add",

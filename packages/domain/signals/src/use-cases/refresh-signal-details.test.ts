@@ -60,7 +60,7 @@ const makeScore = (feedback: string) =>
     sessionId: null,
     traceId: null,
     spanId: null,
-    source_type: "annotation",
+    sourceType: "annotation",
     sourceId: "UI",
     simulationId: null,
     signalId: SignalId("iiiiiiiiiiiiiiiiiiiiiiii"),

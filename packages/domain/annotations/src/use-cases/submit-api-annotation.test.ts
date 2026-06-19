@@ -344,7 +344,7 @@ describe("submitApiAnnotationUseCase", () => {
       )
 
       const persisted = Array.from(store.values())[0]
-      expect(persisted?.source_type).toBe("annotation")
+      expect(persisted?.sourceType).toBe("annotation")
       expect(persisted?.sourceId).toBe("API")
     })
   })

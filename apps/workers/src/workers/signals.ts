@@ -201,7 +201,7 @@ export const createSignalsWorker = async ({
         signalId: payload.signalId,
         draftedAt: payload.draftedAt ? new Date(payload.draftedAt) : null,
         feedback: payload.feedback,
-        source_type: payload.source as ScoreSourceType,
+        sourceType: payload.source as ScoreSourceType,
         createdAt: new Date(payload.createdAt),
       }).pipe(
         withPostgres(SignalRepositoryLive, pgClient, OrganizationId(payload.organizationId)),

@@ -207,7 +207,7 @@ describe("processFlaggersUseCase", () => {
       action: "matched-issue",
     })
     const annotationScores = [...scores.values()].filter(
-      (score) => score.source_type === "annotation" && score.metadata?.flaggerSlug === "empty-response",
+      (score) => score.sourceType === "annotation" && score.metadata?.flaggerSlug === "empty-response",
     )
     expect(annotationScores).toHaveLength(1)
     expect(annotationScores[0]?.sourceId).toBe("SYSTEM")
@@ -221,7 +221,7 @@ describe("processFlaggersUseCase", () => {
     const emptyResponseFlagger = makeFlagger("empty-response", 0)
 
     const first = await runUseCase(trace, [emptyResponseFlagger], deps)
-    const before = [...first.scores.values()].filter((s) => s.source_type === "annotation").length
+    const before = [...first.scores.values()].filter((s) => s.sourceType === "annotation").length
 
     // Reuse the same fake repos via a second run that shares the score map.
     // We can't reuse `runUseCase` directly because it instantiates fresh
@@ -258,7 +258,7 @@ describe("processFlaggersUseCase", () => {
       slug: "empty-response",
       action: "matched-issue",
     })
-    const after = [...scores.values()].filter((s) => s.source_type === "annotation").length
+    const after = [...scores.values()].filter((s) => s.sourceType === "annotation").length
     expect(after).toBe(before)
   })
 

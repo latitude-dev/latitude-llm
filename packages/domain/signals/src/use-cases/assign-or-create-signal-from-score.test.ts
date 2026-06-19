@@ -39,7 +39,7 @@ const makeScore = (overrides: Partial<Score> = {}): Score =>
     sessionId: null,
     traceId: null,
     spanId: null,
-    source_type: "annotation",
+    sourceType: "annotation",
     sourceId: "UI",
     simulationId: null,
     signalId: null,

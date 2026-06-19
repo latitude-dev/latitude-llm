@@ -21,7 +21,7 @@ const makeScore = (overrides: Partial<Score> = {}): Score =>
     spanId: null,
     simulationId: null,
     signalId: null,
-    source_type: "annotation",
+    sourceType: "annotation",
     sourceId: "UI",
     value: 0.2,
     passed: false,
@@ -89,7 +89,7 @@ describe("deleteAnnotationUseCase", () => {
           signalId,
           draftedAt: null,
           feedback: score.feedback,
-          source: score.source_type,
+          source: score.sourceType,
           createdAt: score.createdAt.toISOString(),
         },
       }),
@@ -163,7 +163,7 @@ describe("deleteAnnotationUseCase", () => {
   it("fails when trying to delete a non-annotation score", async () => {
     const evaluationScore = scoreSchema.parse({
       ...makeScore(),
-      source_type: "evaluation",
+      sourceType: "evaluation",
       sourceId: "e".repeat(24),
       metadata: { evaluationHash: "abc123" },
     })

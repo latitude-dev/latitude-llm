@@ -87,7 +87,7 @@ describe("issue centroid helpers", () => {
           [0, 3],
           [1, 4],
         ]),
-        source_type: "evaluation",
+        sourceType: "evaluation",
         createdAt: new Date(timestamp.getTime() + halfLifeMilliseconds),
       },
       operation: "add",
@@ -114,7 +114,7 @@ describe("issue centroid helpers", () => {
       },
       score: {
         embedding: makeVector([[1, 3]]),
-        source_type: "annotation",
+        sourceType: "annotation",
         createdAt: clusteredAt,
       },
       operation: "add",
@@ -139,7 +139,7 @@ describe("issue centroid helpers", () => {
       },
       score: {
         embedding: makeVector([[0, 1]]),
-        source_type: "annotation",
+        sourceType: "annotation",
         createdAt: timestamp,
       },
       operation: "remove",
@@ -186,7 +186,7 @@ describe("issue centroid helpers", () => {
         },
         score: {
           embedding: [1, 0],
-          source_type: "annotation",
+          sourceType: "annotation",
           createdAt: timestamp,
         },
         operation: "add",

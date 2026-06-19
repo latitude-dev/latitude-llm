@@ -11,7 +11,7 @@ export interface RemoveScoreFromSignalInput {
   readonly signalId: string | null
   readonly draftedAt: Date | null
   readonly feedback: string
-  readonly source_type: ScoreSourceType
+  readonly sourceType: ScoreSourceType
   readonly createdAt: Date
 }
 
@@ -79,7 +79,7 @@ export const removeScoreFromSignalUseCase = (input: RemoveScoreFromSignalInput) 
           },
           score: {
             embedding: normalizedEmbedding,
-            source_type: input.source_type,
+            sourceType: input.sourceType,
             createdAt: input.createdAt,
           },
           operation: "remove",

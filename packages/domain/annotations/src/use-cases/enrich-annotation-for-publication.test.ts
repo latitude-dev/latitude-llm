@@ -92,7 +92,7 @@ function buildDraftAnnotationScore(): Score {
     sessionId: null,
     traceId,
     spanId: null,
-    source_type: "annotation",
+    sourceType: "annotation",
     sourceId: "UI" as const,
     simulationId: null,
     signalId: null,

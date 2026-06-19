@@ -25,7 +25,7 @@ export const markReviewStartedUseCase = Effect.fn("annotationQueues.markReviewSt
 
   const { score } = input
 
-  if (score.source_type !== "annotation") return 0
+  if (score.sourceType !== "annotation") return 0
   if (!score.traceId) return 0
 
   const projectId = ProjectId(score.projectId)

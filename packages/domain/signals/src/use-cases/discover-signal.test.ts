@@ -49,7 +49,7 @@ const makeScore = (overrides: Partial<Score> = {}): Score =>
     sessionId: null,
     traceId: null,
     spanId: null,
-    source_type: "annotation",
+    sourceType: "annotation",
     sourceId: "UI",
     simulationId: null,
     signalId: null,
@@ -230,7 +230,7 @@ describe("discoverSignalUseCase", () => {
       ScoreId("tttttttttttttttttttttttt"),
       makeScore({
         id: ScoreId("tttttttttttttttttttttttt"),
-        source_type: "evaluation",
+        sourceType: "evaluation",
         sourceId: linkedEvaluation.id,
         metadata: {
           evaluationHash: "eval-hash-v1",
@@ -408,7 +408,7 @@ describe("discoverSignalUseCase", () => {
     const { workflowStarter, startedWorkflows } = createWorkflowStarter()
     const score = makeScore({
       id: ScoreId("vvvvvvvvvvvvvvvvvvvvvvvv"),
-      source_type: "evaluation",
+      sourceType: "evaluation",
       sourceId: foreignEvaluation.id,
       metadata: {
         evaluationHash: "eval-hash-v2",

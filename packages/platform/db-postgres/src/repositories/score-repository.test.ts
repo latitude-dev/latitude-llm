@@ -67,7 +67,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     const result = await Effect.runPromiseExit(
       writeScoreUseCase({
         projectId: customProjectId,
-        source_type: "evaluation",
+        sourceType: "evaluation",
         sourceId: evaluationSourceId,
         value: 0.7,
         passed: true,
@@ -98,7 +98,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
       sessionId: SessionId("session-rls-mismatch"),
       traceId: TraceId("n".repeat(32)),
       spanId: null,
-      source_type: "annotation",
+      sourceType: "annotation",
       sourceId: "UI",
       simulationId: null,
       signalId: null,
@@ -145,7 +145,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
       writeScoreUseCase({
         id: ScoreId(scoreId),
         projectId: annotationProjectId,
-        source_type: "annotation",
+        sourceType: "annotation",
         sourceId: "UI",
         value: 0.2,
         passed: false,
@@ -173,7 +173,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
       writeScoreUseCase({
         id: draftedScore.id,
         projectId: annotationProjectId,
-        source_type: "annotation",
+        sourceType: "annotation",
         sourceId: "UI",
         value: 0.95,
         passed: true,
@@ -215,7 +215,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     const score = await Effect.runPromise(
       writeScoreUseCase({
         projectId: customProjectId,
-        source_type: "custom",
+        sourceType: "custom",
         sourceId: "api-source",
         value: 0.1,
         passed: false,
@@ -246,7 +246,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     const score = await Effect.runPromise(
       writeScoreUseCase({
         projectId: customProjectId,
-        source_type: "custom",
+        sourceType: "custom",
         sourceId: "api-source",
         signalId: SignalId("iiiiiiiiiiiiiiiiiiiiiiii"),
         value: 0.1,
@@ -270,7 +270,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     const score = await Effect.runPromise(
       writeScoreUseCase({
         projectId: customProjectId,
-        source_type: "custom",
+        sourceType: "custom",
         sourceId: "api-source",
         value: 0.12,
         passed: false,
@@ -332,7 +332,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     await Effect.runPromise(
       writeScoreUseCase({
         projectId: customProjectId,
-        source_type: "evaluation",
+        sourceType: "evaluation",
         sourceId: evaluationSourceId,
         sessionId,
         traceId: storedTraceId,
@@ -378,7 +378,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     await Effect.runPromise(
       writeScoreUseCase({
         projectId: customProjectId,
-        source_type: "evaluation",
+        sourceType: "evaluation",
         sourceId: evaluationSourceId,
         traceId,
         value: 0.74,
@@ -422,7 +422,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     await Effect.runPromise(
       writeScoreUseCase({
         projectId: customProjectId,
-        source_type: "custom",
+        sourceType: "custom",
         sourceId: evaluationSourceId,
         traceId: matchingTraceId,
         value: 0.32,
@@ -435,7 +435,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     await Effect.runPromise(
       writeScoreUseCase({
         projectId: customProjectId,
-        source_type: "evaluation",
+        sourceType: "evaluation",
         sourceId: evaluationSourceId,
         traceId: draftOnlyTraceId,
         value: 0.48,
@@ -449,7 +449,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     await Effect.runPromise(
       writeScoreUseCase({
         projectId: customProjectId,
-        source_type: "evaluation",
+        sourceType: "evaluation",
         sourceId: evaluationSourceId,
         traceId: matchingTraceId,
         value: 0.95,
@@ -504,7 +504,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     await Effect.runPromise(
       writeScoreUseCase({
         projectId: customProjectId,
-        source_type: "evaluation",
+        sourceType: "evaluation",
         sourceId: evaluationSourceId,
         traceId: matchingTraceId,
         value: 0.95,
@@ -518,7 +518,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
       Effect.runPromise(
         writeScoreUseCase({
           projectId: customProjectId,
-          source_type: "evaluation",
+          sourceType: "evaluation",
           sourceId: evaluationSourceId,
           traceId: matchingTraceId,
           value: 0.12,
@@ -554,7 +554,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
       writeScoreUseCase({
         id: ScoreId("tttttttttttttttttttttttt"),
         projectId: customProjectId,
-        source_type: "annotation",
+        sourceType: "annotation",
         sourceId: "UI",
         value: 0.15,
         passed: false,
@@ -567,7 +567,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     await Effect.runPromise(
       writeScoreUseCase({
         projectId: customProjectId,
-        source_type: "custom",
+        sourceType: "custom",
         sourceId: "api-source",
         value: 0.88,
         passed: true,
@@ -579,7 +579,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     await Effect.runPromise(
       writeScoreUseCase({
         projectId: customProjectId,
-        source_type: "evaluation",
+        sourceType: "evaluation",
         sourceId: evaluationSourceId,
         value: 0.61,
         passed: true,
@@ -623,7 +623,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     )
 
     expect(customSourcePage.items).toHaveLength(1)
-    expect(customSourcePage.items[0]?.source_type).toBe("custom")
+    expect(customSourcePage.items[0]?.sourceType).toBe("custom")
     expect(customSourcePage.items[0]?.sourceId).toBe("api-source")
   })
 
@@ -637,7 +637,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
       projectId,
       sessionId: null,
       spanId: null,
-      source_type: "evaluation" as const,
+      sourceType: "evaluation" as const,
       sourceId: "e".repeat(24),
       simulationId: null,
       signalId,
@@ -702,7 +702,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     await Effect.runPromise(
       writeScoreUseCase({
         projectId: annotationProjectId,
-        source_type: "annotation",
+        sourceType: "annotation",
         sourceId: "UI",
         traceId: positiveTraceId,
         value: 0.9,
@@ -715,7 +715,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     await Effect.runPromise(
       writeScoreUseCase({
         projectId: annotationProjectId,
-        source_type: "annotation",
+        sourceType: "annotation",
         sourceId: "UI",
         traceId: mixedTraceId,
         value: 0.1,
@@ -728,7 +728,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     await Effect.runPromise(
       writeScoreUseCase({
         projectId: annotationProjectId,
-        source_type: "annotation",
+        sourceType: "annotation",
         sourceId: "UI",
         traceId: mixedTraceId,
         value: 0.8,
@@ -742,7 +742,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     await Effect.runPromise(
       writeScoreUseCase({
         projectId: annotationProjectId,
-        source_type: "custom",
+        sourceType: "custom",
         sourceId: "api-source",
         traceId: mixedTraceId,
         value: 0.99,
@@ -777,7 +777,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     const publishedScore = await Effect.runPromise(
       writeScoreUseCase({
         projectId: annotationProjectId,
-        source_type: "annotation",
+        sourceType: "annotation",
         sourceId: "SYSTEM",
         traceId: traceId,
         value: 0,
@@ -801,7 +801,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
 
     expect(found).not.toBeNull()
     expect(found?.id).toBe(publishedScore.id)
-    expect(found?.source_type).toBe("annotation")
+    expect(found?.sourceType).toBe("annotation")
     expect(found?.sourceId).toBe("SYSTEM")
     expect(found?.traceId).toBe(traceId)
     expect(found?.draftedAt).toBeNull()
@@ -832,7 +832,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     await Effect.runPromise(
       writeScoreUseCase({
         projectId: annotationProjectId,
-        source_type: "annotation",
+        sourceType: "annotation",
         sourceId: "SYSTEM",
         traceId: traceId,
         value: 0,
@@ -865,7 +865,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     const target = await Effect.runPromise(
       writeScoreUseCase({
         projectId: annotationProjectId,
-        source_type: "annotation",
+        sourceType: "annotation",
         sourceId: "SYSTEM",
         traceId: traceId1,
         value: 0,
@@ -879,7 +879,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     await Effect.runPromise(
       writeScoreUseCase({
         projectId: annotationProjectId,
-        source_type: "annotation",
+        sourceType: "annotation",
         sourceId: "SYSTEM",
         traceId: traceId2,
         value: 0,
@@ -893,7 +893,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     await Effect.runPromise(
       writeScoreUseCase({
         projectId: annotationProjectId,
-        source_type: "annotation",
+        sourceType: "annotation",
         sourceId: "SYSTEM",
         traceId: traceId1,
         value: 0,
@@ -933,7 +933,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
       Effect.gen(function* () {
         const alphaOld = yield* writeScoreUseCase({
           projectId: annotationProjectId,
-          source_type: "annotation",
+          sourceType: "annotation",
           sourceId: "SYSTEM",
           signalId: signalA,
           value: 1,
@@ -944,7 +944,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
         })
         const alphaMid = yield* writeScoreUseCase({
           projectId: annotationProjectId,
-          source_type: "annotation",
+          sourceType: "annotation",
           sourceId: "SYSTEM",
           signalId: signalA,
           value: 1,
@@ -955,7 +955,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
         })
         const betaNewest = yield* writeScoreUseCase({
           projectId: annotationProjectId,
-          source_type: "annotation",
+          sourceType: "annotation",
           sourceId: "SYSTEM",
           signalId: signalA,
           value: 1,
@@ -968,7 +968,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
         // non-drafted annotation on signalA — excluded solely by the passed filter.
         yield* writeScoreUseCase({
           projectId: annotationProjectId,
-          source_type: "annotation",
+          sourceType: "annotation",
           sourceId: "SYSTEM",
           signalId: signalA,
           value: 0,
@@ -979,7 +979,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
         })
         const gammaDraft = yield* writeScoreUseCase({
           projectId: annotationProjectId,
-          source_type: "annotation",
+          sourceType: "annotation",
           sourceId: "SYSTEM",
           signalId: signalA,
           value: 1,
@@ -990,7 +990,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
         })
         const uiNotSystem = yield* writeScoreUseCase({
           projectId: annotationProjectId,
-          source_type: "annotation",
+          sourceType: "annotation",
           sourceId: "UI",
           signalId: signalA,
           value: 1,
@@ -1001,7 +1001,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
         })
         const systemNoSlug = yield* writeScoreUseCase({
           projectId: annotationProjectId,
-          source_type: "annotation",
+          sourceType: "annotation",
           sourceId: "SYSTEM",
           signalId: signalA,
           value: 1,
@@ -1012,7 +1012,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
         })
         const otherSignal = yield* writeScoreUseCase({
           projectId: annotationProjectId,
-          source_type: "annotation",
+          sourceType: "annotation",
           sourceId: "SYSTEM",
           signalId: signalB,
           value: 1,

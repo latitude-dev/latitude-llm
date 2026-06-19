@@ -146,7 +146,7 @@ function buildCentroidFromEmbeddings(
       centroid,
       score: {
         embedding: row.embedding,
-        source_type: row.sourceType,
+        sourceType: row.sourceType,
         createdAt: row.createdAt,
       },
       operation: "add",

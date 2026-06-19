@@ -43,7 +43,7 @@ describe("scoreSchema", () => {
   it("parses a valid evaluation-backed score", () => {
     const result = evaluationScoreSchema.safeParse({
       ...buildBaseScoreInput(),
-      source_type: "evaluation",
+      sourceType: "evaluation",
       sourceId: thirdCuid,
       metadata: { evaluationHash: "sha256:future-proof-hash" },
     })
@@ -54,7 +54,7 @@ describe("scoreSchema", () => {
   it("rejects a passed score with an error", () => {
     const result = scoreSchema.safeParse({
       ...buildBaseScoreInput(),
-      source_type: "evaluation",
+      sourceType: "evaluation",
       sourceId: thirdCuid,
       metadata: { evaluationHash: "sha256:future-proof-hash" },
       error: "execution failed",
@@ -67,7 +67,7 @@ describe("scoreSchema", () => {
   it("rejects mismatched errored and error fields", () => {
     const result = scoreSchema.safeParse({
       ...buildBaseScoreInput(),
-      source_type: "custom",
+      sourceType: "custom",
       sourceId: "manual-source",
       metadata: { reviewer: "user" },
       passed: false,
@@ -89,7 +89,7 @@ describe("annotationScoreSchema", () => {
   it("accepts the UI sentinel source id", () => {
     const result = annotationScoreSchema.safeParse({
       ...buildBaseScoreInput(),
-      source_type: "annotation",
+      sourceType: "annotation",
       sourceId: "UI",
       metadata: {
         rawFeedback: "Highlight the unsafe claim.",
@@ -106,7 +106,7 @@ describe("annotationScoreSchema", () => {
   it("accepts the API sentinel source id for conversation-level annotations", () => {
     const result = annotationScoreSchema.safeParse({
       ...buildBaseScoreInput(),
-      source_type: "annotation",
+      sourceType: "annotation",
       sourceId: "API",
       metadata: {
         rawFeedback: "This whole conversation handled the request correctly.",
@@ -119,7 +119,7 @@ describe("annotationScoreSchema", () => {
   it("accepts message anchor metadata without persisting resolved text (coordinates only)", () => {
     const result = annotationScoreSchema.safeParse({
       ...buildBaseScoreInput(),
-      source_type: "annotation",
+      sourceType: "annotation",
       sourceId: "UI",
       metadata: {
         rawFeedback: "Bad tone",
@@ -134,7 +134,7 @@ describe("annotationScoreSchema", () => {
   it("accepts an annotation queue cuid source id", () => {
     const result = annotationScoreSchema.safeParse({
       ...buildBaseScoreInput(),
-      source_type: "annotation",
+      sourceType: "annotation",
       sourceId: thirdCuid,
       metadata: {
         rawFeedback: "Queue-backed annotation.",
@@ -148,7 +148,7 @@ describe("annotationScoreSchema", () => {
   it("rejects incomplete text offsets", () => {
     const result = annotationScoreSchema.safeParse({
       ...buildBaseScoreInput(),
-      source_type: "annotation",
+      sourceType: "annotation",
       sourceId: thirdCuid,
       metadata: {
         rawFeedback: "Missing end offset",
@@ -163,7 +163,7 @@ describe("annotationScoreSchema", () => {
   it("rejects part-level anchors without a message index", () => {
     const result = annotationScoreSchema.safeParse({
       ...buildBaseScoreInput(),
-      source_type: "annotation",
+      sourceType: "annotation",
       sourceId: "UI",
       metadata: {
         rawFeedback: "Missing message index",
@@ -177,7 +177,7 @@ describe("annotationScoreSchema", () => {
   it("rejects text offsets without a part index", () => {
     const result = annotationScoreSchema.safeParse({
       ...buildBaseScoreInput(),
-      source_type: "annotation",
+      sourceType: "annotation",
       sourceId: thirdCuid,
       metadata: {
         rawFeedback: "Offsets need a part index",
@@ -219,7 +219,7 @@ describe("customScoreSchema", () => {
   it("keeps arbitrary custom metadata", () => {
     const result = customScoreSchema.safeParse({
       ...buildBaseScoreInput(),
-      source_type: "custom",
+      sourceType: "custom",
       sourceId: "batch-import",
       metadata: {
         rubric: "release-check",

@@ -4,7 +4,7 @@ import { anchorFromExistingAnnotationScore } from "./anchor-from-existing-annota
 
 /** Minimal stub — the helper only reads `metadata`. */
 function annotationScoreWithMetadata(metadata: Record<string, unknown> & { rawFeedback: string }): AnnotationScore {
-  return { source_type: "annotation", metadata } as AnnotationScore
+  return { sourceType: "annotation", metadata } as AnnotationScore
 }
 
 describe("anchorFromExistingAnnotationScore", () => {

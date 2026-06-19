@@ -48,7 +48,7 @@ const signalDetailsSchema = z.object({
 })
 
 export interface SignalOccurrenceInput {
-  readonly source_type: ScoreSourceType
+  readonly sourceType: ScoreSourceType
   readonly feedback: string
 }
 
@@ -75,7 +75,7 @@ const buildOccurrenceBlock = (occurrences: readonly SignalOccurrenceInput[]) =>
   occurrences
     .map(
       (occurrence, index) =>
-        `${index + 1}. [source=${occurrence.source_type}] ${collapseWhitespace(occurrence.feedback)}`,
+        `${index + 1}. [source=${occurrence.sourceType}] ${collapseWhitespace(occurrence.feedback)}`,
     )
     .join("\n")
 
@@ -160,7 +160,7 @@ export const generateSignalDetailsUseCase = (input: GenerateSignalDetailsInput) 
 
       occurrences = recentScores.items
         .map((score) => ({
-          source_type: score.source_type,
+          sourceType: score.sourceType,
           feedback: score.feedback,
         }))
         .filter((occurrence) => collapseWhitespace(occurrence.feedback).length > 0)
@@ -174,7 +174,7 @@ export const generateSignalDetailsUseCase = (input: GenerateSignalDetailsInput) 
     } else {
       occurrences = occurrences
         .map((occurrence) => ({
-          source_type: occurrence.source_type,
+          sourceType: occurrence.sourceType,
           feedback: collapseWhitespace(occurrence.feedback),
         }))
         .filter((occurrence) => occurrence.feedback.length > 0)

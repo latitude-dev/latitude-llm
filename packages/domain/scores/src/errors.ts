@@ -9,7 +9,7 @@ export class ScoreDraftClosedError extends Data.TaggedError("ScoreDraftClosedErr
 
 export class ScoreDraftUpdateConflictError extends Data.TaggedError("ScoreDraftUpdateConflictError")<{
   readonly scoreId: string
-  readonly field: "projectId" | "source_type" | "sourceId"
+  readonly field: "projectId" | "sourceType" | "sourceId"
 }> {
   readonly httpStatus = 409
   get httpMessage() {

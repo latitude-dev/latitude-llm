@@ -26,7 +26,7 @@ export const writeAnnotation = (
       const existing: Score | null = yield* scoreRepository
         .findById(parsed.id)
         .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-      if (existing?.source_type === "annotation") {
+      if (existing?.sourceType === "annotation") {
         anchor = anchorFromExistingAnnotationScore(existing)
       }
     } else {
@@ -47,7 +47,7 @@ export const writeAnnotation = (
     const score = yield* writeScoreUseCase({
       id: parsed.id,
       projectId: parsed.projectId,
-      source_type: "annotation",
+      sourceType: "annotation",
       sourceId: parsed.sourceId,
       sessionId,
       traceId: parsed.traceId,

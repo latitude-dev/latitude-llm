@@ -119,7 +119,7 @@ export const toAnnotationResponse = (score: AnnotationScore) => ({
   sessionId: score.sessionId,
   traceId: score.traceId,
   spanId: score.spanId,
-  source: score.source_type,
+  source: score.sourceType,
   sourceId: score.sourceId,
   simulationId: score.simulationId,
   signalId: score.signalId,

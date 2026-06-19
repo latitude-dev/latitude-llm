@@ -163,7 +163,7 @@ const makeScoreRow = (input: {
     sessionId: input.sessionId ?? SESSION_ID,
     traceId: input.traceId ?? TRACE_ID,
     spanId: null,
-    source_type: "evaluation",
+    sourceType: "evaluation",
     sourceId: input.evaluationId,
     simulationId: null,
     signalId: input.signalId ?? SIGNAL_ID,
@@ -320,8 +320,8 @@ describe("runSignalsMatchJob", () => {
         sampling: 0,
       }),
     ])
-    const { source_type, ...scoreRow } = makeScoreRow({ id: "z".repeat(24), evaluationId: "f".repeat(24) })
-    await pg.db.insert(scores).values([{ ...scoreRow, sourceType: source_type }])
+    const { sourceType, ...scoreRow } = makeScoreRow({ id: "z".repeat(24), evaluationId: "f".repeat(24) })
+    await pg.db.insert(scores).values([{ ...scoreRow, sourceType: sourceType }])
 
     const { publisher, published } = createFakeQueuePublisher()
     const redisClient = createFakeRedisClient()

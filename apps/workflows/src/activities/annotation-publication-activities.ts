@@ -50,9 +50,9 @@ const writePublishedAnnotationScoreEffect = Effect.fn("workflows.writePublishedA
       ),
     )
 
-  if (score.source_type !== "annotation") {
+  if (score.sourceType !== "annotation") {
     return yield* new BadRequestError({
-      message: `Score ${input.scoreId} is not an annotation (source: ${score.source_type})`,
+      message: `Score ${input.scoreId} is not an annotation (source: ${score.sourceType})`,
     })
   }
 
