@@ -1,10 +1,19 @@
-import { Button, cn, Icon, Popover, PopoverTrigger } from "@repo/ui"
+import { Button, cn, Icon, Popover, PopoverTrigger, useMountEffect } from "@repo/ui"
 import { CircleHelpIcon, SearchIcon, XIcon } from "lucide-react"
 import { useState } from "react"
 import { useSearchSegments } from "../../../../../lib/hooks/useSearchSegments.ts"
 import { SearchSyntaxLegendContent } from "./search-syntax-legend.tsx"
 
 export const SEARCH_QUERY_MAX_LENGTH = 500
+
+const PLACEHOLDER_ROTATION_MS = 4000
+const SEMANTIC_SEARCH_PLACEHOLDERS = [
+  "Try: users asking for refunds after failed payments",
+  "Try: tool calls timing out during checkout",
+  "Try: frustrated users stuck in onboarding",
+  "Try: the assistant repeats itself without solving the issue",
+  "Try: customers confused about pricing or plans",
+] as const
 
 /**
  * Segmented search box (semantic words + literal/phrase pills) shared by the project
@@ -30,7 +39,21 @@ export function SearchInput({
   } = useSearchSegments(initialValue, onSubmit, SEARCH_QUERY_MAX_LENGTH)
 
   const [legendOpen, setLegendOpen] = useState(false)
+  const [placeholderIndex, setPlaceholderIndex] = useState(0)
   const active = segments.some((segment) => segment.text.length > 0) || legendOpen
+  const semanticPlaceholder = SEMANTIC_SEARCH_PLACEHOLDERS[placeholderIndex] ?? SEMANTIC_SEARCH_PLACEHOLDERS[0]
+
+  useMountEffect(() => {
+    if (typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return
+    }
+
+    const interval = window.setInterval(() => {
+      setPlaceholderIndex((current) => (current + 1) % SEMANTIC_SEARCH_PLACEHOLDERS.length)
+    }, PLACEHOLDER_ROTATION_MS)
+
+    return () => window.clearInterval(interval)
+  })
 
   return (
     <div
@@ -67,8 +90,7 @@ export function SearchInput({
         {segments.map((segment, index) => {
           const isSemantic = segment.kind === "semantic"
           const label = segment.kind === "literal" ? "Literal" : "Phrase"
-          const placeholder =
-            isSemantic && index === 0 ? 'Search by meaning, "literal text" or `ordered token phrase`' : ""
+          const placeholder = isSemantic && index === 0 ? semanticPlaceholder : ""
           return (
             <span
               key={segment.id}
