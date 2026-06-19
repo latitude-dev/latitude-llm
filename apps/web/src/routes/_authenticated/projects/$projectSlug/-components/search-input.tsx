@@ -9,10 +9,10 @@ export const SEARCH_QUERY_MAX_LENGTH = 500
 const PLACEHOLDER_ROTATION_MS = 4000
 const SEMANTIC_SEARCH_PLACEHOLDERS = [
   "Try: users asking for refunds after failed payments",
-  "Try: tool calls timing out during checkout",
-  "Try: frustrated users stuck in onboarding",
-  "Try: the assistant repeats itself without solving the issue",
   "Try: customers confused about pricing or plans",
+  "Try: users reporting login problems",
+  "Try: customers asking to cancel their subscription",
+  "Try: users asking how to reset their password",
 ] as const
 
 /**
