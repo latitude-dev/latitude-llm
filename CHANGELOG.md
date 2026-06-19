@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v0.3.13 - 2026-06-19
+
+### Data destinations
+
+- Fixed destination backfill/sync stalling under payload-heavy projects: the window read now late-materializes wide payload columns so memory is bounded by the page instead of the whole dedup window (~3.5 GiB peak → ~250 MiB), clearing the ClickHouse 4 GiB cap that tripped the chain, and restores the 5k read page (ref: #3629).
+
 ## v0.3.12 - 2026-06-19
 
 ### Data destinations
