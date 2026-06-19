@@ -121,6 +121,7 @@ if typing.TYPE_CHECKING:
     from .paginated_traces import PaginatedTraces
     from .project import Project
     from .project_settings import ProjectSettings
+    from .project_user import ProjectUser
     from .recent_tool_call import RecentToolCall
     from .recent_tool_call_status_code import RecentToolCallStatusCode
     from .saved_search import SavedSearch
@@ -198,6 +199,19 @@ if typing.TYPE_CHECKING:
     from .traces_ref import TracesRef, TracesRef_Filters, TracesRef_Ids
     from .traces_ref_filters import TracesRefFilters
     from .traces_ref_ids import TracesRefIds
+    from .user_activity_bucket import UserActivityBucket
+    from .user_activity_response import UserActivityResponse
+    from .user_behaviour import UserBehaviour
+    from .user_behaviours_response import UserBehavioursResponse
+    from .user_cost_rollup import UserCostRollup
+    from .user_list_response import UserListResponse
+    from .user_profile_response import UserProfileResponse
+    from .user_signal import UserSignal
+    from .user_signals_response import UserSignalsResponse
+    from .user_usage_response import UserUsageResponse
+    from .user_usage_slice import UserUsageSlice
+    from .users_overview_bucket import UsersOverviewBucket
+    from .users_overview_response import UsersOverviewResponse
 _dynamic_imports: typing.Dict[str, str] = {
     "AccountOrganization": ".account_organization",
     "AccountResponse": ".account_response",
@@ -316,6 +330,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "PaginatedTraces": ".paginated_traces",
     "Project": ".project",
     "ProjectSettings": ".project_settings",
+    "ProjectUser": ".project_user",
     "RecentToolCall": ".recent_tool_call",
     "RecentToolCallStatusCode": ".recent_tool_call_status_code",
     "SavedSearch": ".saved_search",
@@ -397,6 +412,19 @@ _dynamic_imports: typing.Dict[str, str] = {
     "TracesRefIds": ".traces_ref_ids",
     "TracesRef_Filters": ".traces_ref",
     "TracesRef_Ids": ".traces_ref",
+    "UserActivityBucket": ".user_activity_bucket",
+    "UserActivityResponse": ".user_activity_response",
+    "UserBehaviour": ".user_behaviour",
+    "UserBehavioursResponse": ".user_behaviours_response",
+    "UserCostRollup": ".user_cost_rollup",
+    "UserListResponse": ".user_list_response",
+    "UserProfileResponse": ".user_profile_response",
+    "UserSignal": ".user_signal",
+    "UserSignalsResponse": ".user_signals_response",
+    "UserUsageResponse": ".user_usage_response",
+    "UserUsageSlice": ".user_usage_slice",
+    "UsersOverviewBucket": ".users_overview_bucket",
+    "UsersOverviewResponse": ".users_overview_response",
 }
 
 
@@ -539,6 +567,7 @@ __all__ = [
     "PaginatedTraces",
     "Project",
     "ProjectSettings",
+    "ProjectUser",
     "RecentToolCall",
     "RecentToolCallStatusCode",
     "SavedSearch",
@@ -620,4 +649,17 @@ __all__ = [
     "TracesRefIds",
     "TracesRef_Filters",
     "TracesRef_Ids",
+    "UserActivityBucket",
+    "UserActivityResponse",
+    "UserBehaviour",
+    "UserBehavioursResponse",
+    "UserCostRollup",
+    "UserListResponse",
+    "UserProfileResponse",
+    "UserSignal",
+    "UserSignalsResponse",
+    "UserUsageResponse",
+    "UserUsageSlice",
+    "UsersOverviewBucket",
+    "UsersOverviewResponse",
 ]

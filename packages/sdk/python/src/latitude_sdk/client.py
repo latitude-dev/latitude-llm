@@ -23,6 +23,7 @@ if typing.TYPE_CHECKING:
     from .signals.client import AsyncSignalsClient, SignalsClient
     from .tools.client import AsyncToolsClient, ToolsClient
     from .traces.client import AsyncTracesClient, TracesClient
+    from .users.client import AsyncUsersClient, UsersClient
 
 
 class LatitudeApiClient:
@@ -95,6 +96,7 @@ class LatitudeApiClient:
         self._annotations: typing.Optional[AnnotationsClient] = None
         self._traces: typing.Optional[TracesClient] = None
         self._tools: typing.Optional[ToolsClient] = None
+        self._users: typing.Optional[UsersClient] = None
         self._saved_searches: typing.Optional[SavedSearchesClient] = None
         self._signals: typing.Optional[SignalsClient] = None
         self._incidents: typing.Optional[IncidentsClient] = None
@@ -144,6 +146,14 @@ class LatitudeApiClient:
 
             self._tools = ToolsClient(client_wrapper=self._client_wrapper)
         return self._tools
+
+    @property
+    def users(self):
+        if self._users is None:
+            from .users.client import UsersClient  # noqa: E402
+
+            self._users = UsersClient(client_wrapper=self._client_wrapper)
+        return self._users
 
     @property
     def saved_searches(self):
@@ -288,6 +298,7 @@ class AsyncLatitudeApiClient:
         self._annotations: typing.Optional[AsyncAnnotationsClient] = None
         self._traces: typing.Optional[AsyncTracesClient] = None
         self._tools: typing.Optional[AsyncToolsClient] = None
+        self._users: typing.Optional[AsyncUsersClient] = None
         self._saved_searches: typing.Optional[AsyncSavedSearchesClient] = None
         self._signals: typing.Optional[AsyncSignalsClient] = None
         self._incidents: typing.Optional[AsyncIncidentsClient] = None
@@ -337,6 +348,14 @@ class AsyncLatitudeApiClient:
 
             self._tools = AsyncToolsClient(client_wrapper=self._client_wrapper)
         return self._tools
+
+    @property
+    def users(self):
+        if self._users is None:
+            from .users.client import AsyncUsersClient  # noqa: E402
+
+            self._users = AsyncUsersClient(client_wrapper=self._client_wrapper)
+        return self._users
 
     @property
     def saved_searches(self):
