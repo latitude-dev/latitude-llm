@@ -44,6 +44,7 @@ export interface DestinationSourceReader<TRecord> {
     readonly cursor: SourceCursor
     readonly windowEnd: Date
     readonly limit: number
+    readonly excludePayloads?: boolean
   }): Effect.Effect<SourceWindow<TRecord>, RepositoryError, ChSqlClient>
   /**
    * The most recent `limit` records of this source for a project, newest first —

@@ -1,7 +1,11 @@
 import type { QueuePublishError } from "@domain/queue"
 import type { ChSqlClient, DestinationId, DestinationSyncRunId, RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
-import { DESTINATION_BACKFILL_STALE_MS, DESTINATION_MAX_RECORDS_PER_BACKFILL } from "../constants.ts"
+import {
+  DESTINATION_BACKFILL_STALE_MS,
+  DESTINATION_MAX_RECORDS_PER_BACKFILL,
+  DESTINATION_READ_PAGE_MAX,
+} from "../constants.ts"
 import type { DestinationSource } from "../entities/destination-source.ts"
 import { createDestinationSyncRun } from "../entities/destination-sync-run.ts"
 import { type DeliveryError, isRetryableDeliveryError, sanitizedDeliveryFailureMessage } from "../errors.ts"
@@ -305,13 +309,14 @@ export const runBackfillWindowUseCase = (input: RunBackfillWindowInput) =>
     const deliverer = (yield* DestinationDeliverers)[destination.kind]
     const syncRuns = yield* DestinationSyncRunRepository
 
-    const limit = sourceState.config.maxRecordsPerRun
+    const limit = Math.min(sourceState.config.maxRecordsPerRun, DESTINATION_READ_PAGE_MAX)
     const window = yield* reader.listWindow({
       organizationId: destination.organizationId,
       projectId: destination.projectId,
       cursor,
       windowEnd: segmentEnd,
       limit,
+      excludePayloads: sourceState.config.excludePayloads,
     })
 
     if (window.records.length === 0) {
