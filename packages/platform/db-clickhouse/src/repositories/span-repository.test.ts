@@ -288,6 +288,46 @@ describe("SpanRepository", () => {
       })
     })
 
+    it("pages multiple spans by latest ingested_at, surfacing a re-ingested span at its newest version", async () => {
+      // Exercises late materialization end-to-end: the lean keyset picks the page's span_ids
+      // (deduped to newest ingested_at, ordered, limited), then the detail re-dedups them.
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({ span_id: "aaaaaaaaaaaaaaaa", ingested_at: "2026-01-01 00:10:00.000" }),
+          makeSpanRow({ span_id: "bbbbbbbbbbbbbbbb", ingested_at: "2026-01-01 00:20:00.000" }),
+          makeSpanRow({ span_id: "cccccccccccccccc", name: "c-old", ingested_at: "2026-01-01 00:15:00.000" }),
+          makeSpanRow({ span_id: "cccccccccccccccc", name: "c-new", ingested_at: "2026-01-01 00:30:00.000" }),
+          makeSpanRow({ span_id: "dddddddddddddddd", ingested_at: "2026-01-01 00:25:00.000" }),
+        ]),
+      )
+
+      const page1 = await listWindow(startCursor, 2)
+      expect(page1.spans.map((span) => span.spanId)).toEqual(["aaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbb"])
+      expect(page1.nextCursor).toEqual({
+        ingestedAt: new Date("2026-01-01T00:20:00.000Z"),
+        spanId: "bbbbbbbbbbbbbbbb",
+      })
+
+      // Resume: D (00:25) then C — which sorts last by its *newest* version (00:30), not 00:15.
+      const page2 = await listWindow(
+        { ingestedAt: new Date("2026-01-01T00:20:00.000Z"), spanId: SpanId("bbbbbbbbbbbbbbbb") },
+        2,
+      )
+      expect(page2.spans.map((span) => span.spanId)).toEqual(["dddddddddddddddd", "cccccccccccccccc"])
+      expect(page2.spans.find((span) => span.spanId === "cccccccccccccccc")?.name).toBe("c-new")
+      expect(page2.nextCursor).toEqual({
+        ingestedAt: new Date("2026-01-01T00:30:00.000Z"),
+        spanId: "cccccccccccccccc",
+      })
+
+      const page3 = await listWindow(
+        { ingestedAt: new Date("2026-01-01T00:30:00.000Z"), spanId: SpanId("cccccccccccccccc") },
+        2,
+      )
+      expect(page3.spans).toHaveLength(0)
+      expect(page3.nextCursor).toBeNull()
+    })
+
     it("includes rows up to windowEnd, excludes rows past it, and scopes by org and project", async () => {
       await runCh(
         insertJsonEachRow(ch.client, "spans", [

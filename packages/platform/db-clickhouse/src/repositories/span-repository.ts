@@ -498,25 +498,47 @@ export const SpanRepositoryLive = Layer.effect(
         return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
+              // Late materialization: the inner `IN` subquery dedups the *whole* window
+              // (`ingested_at` isn't in the sort key, so the cursor can't prune — it scans
+              // every row for the org/project) but reads only `span_id`/`ingested_at`, so
+              // that sort stays in the low MiB. The outer query then reads the wide payload
+              // columns for just the ≤`limit` winning spans. Selecting the payloads inside
+              // the dedup instead made a single window peak multi-GiB and trip the per-query
+              // memory cap on payload-heavy projects (read bytes scaled with the window, not
+              // the page). Keep the two levels: the `IN` set must be deduped to latest-per-
+              // span before the page `LIMIT`, then the detail re-dedups the same rows.
               query: `SELECT ${columns}
                     FROM (
                       SELECT ${columns}
                       FROM spans
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
-                        AND (
-                          ingested_at > {cursorIngestedAt:DateTime64(3, 'UTC')}
-                          OR (
-                            ingested_at = {cursorIngestedAt:DateTime64(3, 'UTC')}
-                            AND span_id > toFixedString({cursorSpanId:String}, 16)
+                        AND span_id IN (
+                          SELECT span_id
+                          FROM (
+                            SELECT span_id, ingested_at
+                            FROM spans
+                            WHERE organization_id = {organizationId:String}
+                              AND project_id = {projectId:String}
+                              AND (
+                                ingested_at > {cursorIngestedAt:DateTime64(3, 'UTC')}
+                                OR (
+                                  ingested_at = {cursorIngestedAt:DateTime64(3, 'UTC')}
+                                  AND span_id > toFixedString({cursorSpanId:String}, 16)
+                                )
+                              )
+                              AND ingested_at <= {windowEnd:DateTime64(3, 'UTC')}
+                            ORDER BY span_id, ingested_at DESC
+                            LIMIT 1 BY span_id
                           )
+                          ORDER BY ingested_at ASC, span_id ASC
+                          LIMIT {limit:UInt32}
                         )
                         AND ingested_at <= {windowEnd:DateTime64(3, 'UTC')}
                       ORDER BY span_id, ingested_at DESC
                       LIMIT 1 BY span_id
                     )
-                    ORDER BY ingested_at ASC, span_id ASC
-                    LIMIT {limit:UInt32}`,
+                    ORDER BY ingested_at ASC, span_id ASC`,
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
@@ -526,13 +548,11 @@ export const SpanRepositoryLive = Layer.effect(
                 limit,
               },
               format: "JSONEachRow",
-              // A page is serialized to JSON in one response; parallel formatting buffers
-              // per-thread blocks that ballooned a large page to multi-GiB in production.
-              // Single-threaded formatting + a per-query memory cap keep one window's read
-              // from tripping the server-wide OvercommitTracker (which kills unrelated
-              // tenants' queries). Far above the clamped page's expected peak, so it should
-              // never fire; if it does, the read fails as a retryable RepositoryError —
-              // BullMQ retries, then it's recorded as a failed sync run, not swallowed.
+              // Defense-in-depth: single-threaded formatting + a per-query memory cap so a
+              // pathological page fails its own job (retryable RepositoryError → BullMQ retry
+              // → recorded failed run) rather than tripping the server-wide OvercommitTracker
+              // and killing unrelated tenants' queries. With late materialization a window
+              // peaks well under this, so it should never fire.
               clickhouse_settings: {
                 output_format_parallel_formatting: 0,
                 max_memory_usage: "4000000000",
