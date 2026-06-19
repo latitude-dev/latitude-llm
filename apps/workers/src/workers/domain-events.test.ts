@@ -162,11 +162,12 @@ describe("domain-events dispatcher", () => {
 
     const traceEnd = published.find((p) => p.queue === "trace-end")
     const billing = published.find((p) => p.queue === "billing")
+    const signalsMatch = published.find((p) => p.queue === "signals")
     expect((traceEnd?.payload as { isSandbox?: boolean }).isSandbox).toBe(true)
     expect((billing?.payload as { isSandbox?: boolean }).isSandbox).toBe(true)
     expect(published.map((p) => `${p.queue}:${p.task}`)).toContain("projects:checkFirstTrace")
-    // signals:match is gated on !isSandbox — sandbox traces never enter the matching pipeline.
-    expect(published.find((p) => p.queue === "signals")).toBeUndefined()
+    // signals:match is fanned out unconditionally too; the signals-match worker owns the sandbox skip.
+    expect((signalsMatch?.payload as { isSandbox?: boolean }).isSandbox).toBe(true)
   })
 
   it("routes TracesIngested billing snapshots to billing:recordTraceUsageBatch", async () => {
