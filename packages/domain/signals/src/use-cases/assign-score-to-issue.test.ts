@@ -41,7 +41,7 @@ const makeScore = (overrides: Partial<AnnotationScore> = {}): AnnotationScore =>
   simulationId: null,
   signalId: null,
   value: 0.2,
-  passed: false,
+  passed: true,
   feedback: "The assistant leaks API tokens in its response.",
   metadata: {
     rawFeedback: "The assistant leaks API tokens in its response.",
