@@ -1,5 +1,5 @@
 import { deriveDestinationHealth } from "@domain/destinations"
-import { Alert, Badge, Button, Icon, Text, useToast } from "@repo/ui"
+import { Alert, Button, Icon, Status, Text, useToast } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
@@ -139,7 +139,7 @@ export function DestinationCard({
       <div className="flex min-w-0 flex-col gap-0.5">
         <div className="flex flex-row items-center gap-2">
           <Text.H5 weight="semibold">{destination.name}</Text.H5>
-          <Badge variant={healthBadge.variant}>{healthBadge.label}</Badge>
+          <Status variant={healthBadge.variant} label={healthBadge.label} />
         </div>
         <div className="flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
           <Text.H6 color="foregroundMuted">{DESTINATION_KIND_LABEL[destination.kind]}</Text.H6>

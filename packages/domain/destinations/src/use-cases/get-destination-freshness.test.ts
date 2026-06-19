@@ -24,7 +24,7 @@ const userId = UserId(cuid("u"))
 const now = new Date("2026-06-17T12:00:00.000Z")
 const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000 // retention floor = now − 30d
 
-const spansConfig: DestinationSourceConfig = { source: "spans", excludePayloads: false, maxRecordsPerRun: 50_000 }
+const spansConfig: DestinationSourceConfig = { source: "spans", excludePayloads: false }
 
 const destination = (overrides: Partial<Destination> = {}): Destination => ({
   ...createDestination({

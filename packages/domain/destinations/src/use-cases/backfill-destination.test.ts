@@ -15,9 +15,9 @@ import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testi
 import type { SpanDetail } from "@domain/spans"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { DESTINATION_READ_PAGE_MAX, POSTHOG_US_INGESTION_HOST } from "../constants.ts"
+import { POSTHOG_US_INGESTION_HOST } from "../constants.ts"
 import { createDestination, type Destination } from "../entities/destination.ts"
-import { defaultSourceConfig, type SpansSourceConfig } from "../entities/destination-source.ts"
+import { defaultSourceConfig } from "../entities/destination-source.ts"
 import { createDestinationSourceState, type DestinationSourceState } from "../entities/destination-source-state.ts"
 import { NonRetryableDeliveryError, RetryableDeliveryError } from "../errors.ts"
 import { DestinationDeliverers } from "../ports/destination-deliverer.ts"
@@ -74,23 +74,16 @@ const makeDestination = (overrides: Partial<Destination> = {}): Destination => (
   ...overrides,
 })
 
-const makeState = (
-  maxRecordsPerRun: number,
-  overrides: Partial<DestinationSourceState> = {},
-): DestinationSourceState => {
-  const config: SpansSourceConfig = { ...(defaultSourceConfig(SOURCE) as SpansSourceConfig), maxRecordsPerRun }
-  return {
-    ...createDestinationSourceState({
-      organizationId: ORG_ID,
-      destinationId: DESTINATION_ID,
-      source: SOURCE,
-      config: defaultSourceConfig(SOURCE),
-      watermark: new Date("2026-06-01T11:55:00.000Z"),
-    }),
-    config,
-    ...overrides,
-  }
-}
+const makeState = (overrides: Partial<DestinationSourceState> = {}): DestinationSourceState => ({
+  ...createDestinationSourceState({
+    organizationId: ORG_ID,
+    destinationId: DESTINATION_ID,
+    source: SOURCE,
+    config: defaultSourceConfig(SOURCE),
+    watermark: new Date("2026-06-01T11:55:00.000Z"),
+  }),
+  ...overrides,
+})
 
 const stubSpan = (spanId: string, ingestedAt: Date): SpanDetail => ({
   organizationId: ORG_ID,
@@ -177,22 +170,19 @@ const readerFromRecords = (
 
 interface SetupOpts {
   readonly records: readonly SpanDetail[]
-  readonly maxRecordsPerRun?: number
   readonly historicalBoundaryMs?: number
   readonly destination?: Destination
   readonly state?: DestinationSourceState
   readonly deliveryFailure?: NonRetryableDeliveryError | RetryableDeliveryError
   /** Cap floor the reader reports — simulates "the most-recent-N records start here". */
   readonly recentLimitFloor?: Date | null
-  /** Override the source reader (e.g. to capture the `limit` each window read is called with). */
-  readonly reader?: DestinationSourceReader<SpanDetail>
 }
 
 const setup = (opts: SetupOpts) => {
   const seed = opts.destination ?? makeDestination()
   const { repo: destinationRepo, rows: destinationRows } = createFakeDestinationRepository([seed])
   const { repo: stateRepo, rows: stateRows } = createFakeDestinationSourceStateRepository(
-    [opts.state ?? makeState(opts.maxRecordsPerRun ?? 50_000)],
+    [opts.state ?? makeState()],
     destinationRows,
   )
   const { repo: syncRunRepo, rows: syncRunRows } = createFakeDestinationSyncRunRepository()
@@ -201,7 +191,7 @@ const setup = (opts: SetupOpts) => {
   )
   if (opts.deliveryFailure) failWith(opts.deliveryFailure)
   const { mapper } = createFakeDestinationMapper()
-  const reader = opts.reader ?? readerFromRecords(opts.records, opts.recentLimitFloor ?? null)
+  const reader = readerFromRecords(opts.records, opts.recentLimitFloor ?? null)
 
   const layer = Layer.mergeAll(
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORG_ID })),
@@ -218,8 +208,12 @@ const setup = (opts: SetupOpts) => {
   return { destinationRows, syncRunRows, stateRows, deliveries, layer }
 }
 
-/** Drives the whole backfill the way the worker would: initiate, then re-run each `next` window to exhaustion. */
-const drainBackfill = async (layer: ReturnType<typeof setup>["layer"], start: Date) => {
+/**
+ * Drives the whole backfill the way the worker would: initiate, then re-run each
+ * `next` window to exhaustion. `testPageSize` forces a small read page so a chain
+ * spans multiple windows (production uses the hard-coded {@link DESTINATION_READ_PAGE_SIZE}).
+ */
+const drainBackfill = async (layer: ReturnType<typeof setup>["layer"], start: Date, testPageSize?: number) => {
   const jobs: BackfillWindowJob[] = []
   const init = await Effect.runPromise(
     backfillDestinationUseCase({
@@ -243,6 +237,7 @@ const drainBackfill = async (layer: ReturnType<typeof setup>["layer"], start: Da
         remainingSegments: job.remainingSegments,
         coverageFloor: job.coverageFloor,
         now: NOW,
+        ...(testPageSize === undefined ? {} : { testPageSize }),
       }).pipe(Effect.provide(layer)),
     )
     job = res.next
@@ -495,7 +490,7 @@ describe("backfillDestinationUseCase (initiator)", () => {
   it("declines a second backfill while one is already in flight (hard one-chain guard)", async () => {
     const { layer, stateRows } = setup({
       records: [],
-      state: makeState(50_000, { backfillStartedAt: NOW, updatedAt: NOW }), // fresh chain already running
+      state: makeState({ backfillStartedAt: NOW, updatedAt: NOW }), // fresh chain already running
     })
     const jobs: BackfillWindowJob[] = []
 
@@ -519,7 +514,7 @@ describe("backfillDestinationUseCase (initiator)", () => {
     const stale = new Date(NOW.getTime() - 10 * 60_000) // older than the 5-min stale threshold
     const { layer, stateRows } = setup({
       records: [],
-      state: makeState(50_000, { backfillStartedAt: stale, updatedAt: stale }),
+      state: makeState({ backfillStartedAt: stale, updatedAt: stale }),
     })
     const jobs: BackfillWindowJob[] = []
 
@@ -572,26 +567,6 @@ describe("runBackfillWindowUseCase (full drain)", () => {
     expect(stateRows[0]?.backfillStartedAt).toBeNull() // in-flight marker cleared on completion
   })
 
-  it("clamps each window read to DESTINATION_READ_PAGE_MAX even when the config allows more", async () => {
-    const seenLimits: number[] = []
-    const base = readerFromRecords([stubSpan("a1", new Date("2026-05-20T00:00:00.000Z"))])
-    const reader: DestinationSourceReader<SpanDetail> = {
-      ...base,
-      listWindow: (input) => {
-        seenLimits.push(input.limit)
-        return base.listWindow(input)
-      },
-    }
-    // 50k is the legacy stored default; a single page that large blew ClickHouse's
-    // formatter past the server memory limit, so the read must page far smaller.
-    const { layer } = setup({ records: [], maxRecordsPerRun: 50_000, reader })
-
-    await drainBackfill(layer, new Date("2026-05-15T00:00:00.000Z"))
-
-    expect(seenLimits.length).toBeGreaterThan(0)
-    expect(Math.max(...seenLimits)).toBe(DESTINATION_READ_PAGE_MAX)
-  })
-
   it("splits at the historical boundary so no delivered window straddles it", async () => {
     const records = [
       stubSpan("old1", new Date("2026-05-29T12:00:00.000Z")),
@@ -602,7 +577,6 @@ describe("runBackfillWindowUseCase (full drain)", () => {
     const { deliveries, syncRunRows, layer } = setup({
       records,
       historicalBoundaryMs: BOUNDARY_MS,
-      maxRecordsPerRun: 1_000,
     })
 
     await drainBackfill(layer, new Date("2026-05-28T00:00:00.000Z"))
@@ -624,7 +598,7 @@ describe("runBackfillWindowUseCase (full drain)", () => {
       stubSpan("tooOld", new Date("2026-03-01T00:00:00.000Z")),
       stubSpan("kept", new Date("2026-05-01T00:00:00.000Z")),
     ]
-    const { deliveries, layer } = setup({ records, maxRecordsPerRun: 1_000 })
+    const { deliveries, layer } = setup({ records })
 
     await drainBackfill(layer, new Date("2025-12-01T00:00:00.000Z"))
 
@@ -639,15 +613,15 @@ describe("runBackfillWindowUseCase (full drain)", () => {
       stubSpan("a2", new Date("2026-05-01T02:00:00.000Z")),
       stubSpan("a3", new Date("2026-05-01T03:00:00.000Z")),
     ]
-    const { deliveries, syncRunRows, layer } = setup({ records, maxRecordsPerRun: 2 })
+    const { deliveries, syncRunRows, layer } = setup({ records })
     const start = new Date("2026-05-01T00:00:00.000Z")
 
-    await drainBackfill(layer, start)
+    await drainBackfill(layer, start, 2)
     const afterFirst = distinctUuids(deliveries)
     expect(afterFirst).toEqual(new Set(["a1:event", "a2:event", "a3:event"]))
     const runsAfterFirst = syncRunRows.length
 
-    await drainBackfill(layer, start)
+    await drainBackfill(layer, start, 2)
     expect(distinctUuids(deliveries)).toEqual(afterFirst)
     expect(syncRunRows.length).toBe(runsAfterFirst * 2)
   })
@@ -658,7 +632,7 @@ describe("runBackfillWindowUseCase (full drain)", () => {
     // live path). Still no quarantine accounting — a heavy backfill never takes down live sync.
     const { destinationRows, syncRunRows, stateRows, layer } = setup({
       records: [stubSpan("a1", new Date("2026-05-01T01:00:00.000Z"))],
-      state: makeState(1_000, { backfillStartedAt: NOW }), // in-flight chain (initiator already ran)
+      state: makeState({ backfillStartedAt: NOW }), // in-flight chain (initiator already ran)
       destination: makeDestination({ consecutiveFailures: 4 }),
       deliveryFailure: new NonRetryableDeliveryError({
         kind: "posthog",
@@ -697,7 +671,7 @@ describe("runBackfillWindowUseCase (full drain)", () => {
   it("propagates a retryable window failure without quarantining either", async () => {
     const { destinationRows, layer } = setup({
       records: [stubSpan("a1", new Date("2026-05-01T01:00:00.000Z"))],
-      state: makeState(1_000, { backfillStartedAt: NOW }), // in-flight chain (initiator already ran)
+      state: makeState({ backfillStartedAt: NOW }), // in-flight chain (initiator already ran)
       destination: makeDestination({ consecutiveFailures: 4 }),
       deliveryFailure: new RetryableDeliveryError({
         kind: "posthog",
@@ -727,7 +701,7 @@ describe("runBackfillWindowUseCase (full drain)", () => {
   it("stops a cancelled chain (in-flight marker cleared) without delivering", async () => {
     const { deliveries, syncRunRows, layer } = setup({
       records: [stubSpan("a1", new Date("2026-05-20T00:00:00.000Z"))],
-      state: makeState(1_000), // backfillStartedAt = null → reads as cancelled
+      state: makeState(), // backfillStartedAt = null → reads as cancelled
     })
 
     const res = await Effect.runPromise(
@@ -752,7 +726,7 @@ describe("runBackfillWindowUseCase (full drain)", () => {
     const segmentEnd = new Date("2026-05-25T00:00:00.000Z")
     const { stateRows, layer } = setup({
       records: [stubSpan("a1", new Date("2026-05-20T00:00:00.000Z"))],
-      state: makeState(1_000, { backfillStartedAt: NOW }),
+      state: makeState({ backfillStartedAt: NOW }),
     })
 
     await Effect.runPromise(
@@ -773,9 +747,9 @@ describe("runBackfillWindowUseCase (full drain)", () => {
   it("with no boundary, chunks by size only into contiguous windows", async () => {
     const start = new Date("2026-05-01T00:00:00.000Z")
     const records = [1, 2, 3, 4, 5].map((n) => stubSpan(`s${n}`, new Date(`2026-05-01T0${n}:00:00.000Z`)))
-    const { deliveries, layer } = setup({ records, maxRecordsPerRun: 2 }) // no historicalBoundaryMs
+    const { deliveries, layer } = setup({ records }) // no historicalBoundaryMs
 
-    await drainBackfill(layer, start)
+    await drainBackfill(layer, start, 2)
 
     expect(deliveries).toHaveLength(3) // ceil(5 / 2), split for size only
     expect(deliveries.map((d) => d.events.length)).toEqual([2, 2, 1])

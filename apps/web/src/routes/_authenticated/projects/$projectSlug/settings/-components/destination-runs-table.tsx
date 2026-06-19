@@ -1,20 +1,20 @@
-import { Badge, type BadgeProps, InfiniteTable, type InfiniteTableColumn } from "@repo/ui"
+import { InfiniteTable, type InfiniteTableColumn, Status, type StatusProps } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { useDestinationSyncRuns } from "../../../../../../domains/destinations/destinations.collection.ts"
 import type { DestinationSyncRunRecord } from "../../../../../../domains/destinations/destinations.functions.ts"
 
-const RUN_STATUS_BADGE: Record<DestinationSyncRunRecord["status"], { label: string; variant: BadgeProps["variant"] }> =
+const RUN_STATUS_BADGE: Record<DestinationSyncRunRecord["status"], { label: string; variant: StatusProps["variant"] }> =
   {
-    succeeded: { label: "Succeeded", variant: "successMuted" },
-    failed: { label: "Failed", variant: "destructiveMuted" },
+    succeeded: { label: "Succeeded", variant: "success" },
+    failed: { label: "Failed", variant: "destructive" },
   }
 
 const RUN_TRIGGER_BADGE: Record<
   DestinationSyncRunRecord["trigger"],
-  { label: string; variant: BadgeProps["variant"] }
+  { label: string; variant: StatusProps["variant"] }
 > = {
-  live: { label: "Live", variant: "outlineMuted" },
-  backfill: { label: "Backfill", variant: "warningMuted" },
+  live: { label: "Live", variant: "neutral" },
+  backfill: { label: "Backfill", variant: "warning" },
 }
 
 const numberFormatter = new Intl.NumberFormat("en-US")
@@ -34,7 +34,9 @@ const columns: InfiniteTableColumn<DestinationSyncRunRecord>[] = [
     header: "Status",
     width: 110,
     minWidth: 90,
-    render: (run) => <Badge variant={RUN_STATUS_BADGE[run.status].variant}>{RUN_STATUS_BADGE[run.status].label}</Badge>,
+    render: (run) => (
+      <Status variant={RUN_STATUS_BADGE[run.status].variant} label={RUN_STATUS_BADGE[run.status].label} />
+    ),
   },
   {
     key: "source",
@@ -49,7 +51,7 @@ const columns: InfiniteTableColumn<DestinationSyncRunRecord>[] = [
     width: 100,
     minWidth: 80,
     render: (run) => (
-      <Badge variant={RUN_TRIGGER_BADGE[run.trigger].variant}>{RUN_TRIGGER_BADGE[run.trigger].label}</Badge>
+      <Status variant={RUN_TRIGGER_BADGE[run.trigger].variant} label={RUN_TRIGGER_BADGE[run.trigger].label} />
     ),
   },
   {

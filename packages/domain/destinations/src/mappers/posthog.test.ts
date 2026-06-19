@@ -85,7 +85,6 @@ const stubSpanDetail = (overrides: Partial<SpanDetail> = {}): SpanDetail => ({
 const baseConfig: SpansSourceConfig = {
   source: "spans",
   excludePayloads: false,
-  maxRecordsPerRun: 50_000,
 }
 
 const buildSpanUrl = (span: SpanDetail) =>
