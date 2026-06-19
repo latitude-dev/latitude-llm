@@ -7,6 +7,7 @@ import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
 from .monitor_alert import MonitorAlert
+from .monitor_target import MonitorTarget
 
 
 class Monitor(UniversalBaseModel):
@@ -50,6 +51,7 @@ class Monitor(UniversalBaseModel):
     The monitor's alerts. Always at least one.
     """
 
+    target: typing.Optional[MonitorTarget] = None
     muted_at: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="mutedAt")] = pydantic.Field(
         default=None
     )

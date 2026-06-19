@@ -8,6 +8,17 @@ import pydantic
 from ..core.pydantic_utilities import UniversalBaseModel
 
 
+class AlertDuration_Minutes(UniversalBaseModel):
+    """
+    Length of the window used to compute the baseline rate.
+    """
+
+    unit: typing.Literal["minutes"] = "minutes"
+    minutes: float
+
+    model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
+
+
 class AlertDuration_Hours(UniversalBaseModel):
     """
     Length of the window used to compute the baseline rate.
@@ -30,4 +41,4 @@ class AlertDuration_Days(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-AlertDuration = typing.Union[AlertDuration_Hours, AlertDuration_Days]
+AlertDuration = typing.Union[AlertDuration_Minutes, AlertDuration_Hours, AlertDuration_Days]

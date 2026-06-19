@@ -5,9 +5,18 @@ import type * as LatitudeApi from "../index.js";
 /**
  * Length of the window used to compute the baseline rate.
  */
-export type AlertDuration = LatitudeApi.AlertDuration.Hours | LatitudeApi.AlertDuration.Days;
+export type AlertDuration =
+    | LatitudeApi.AlertDuration.Minutes
+    | LatitudeApi.AlertDuration.Hours
+    | LatitudeApi.AlertDuration.Days;
 
 export namespace AlertDuration {
+    export interface Minutes {
+        unit: "minutes";
+        /** Number of minutes. */
+        minutes: number;
+    }
+
     export interface Hours {
         unit: "hours";
         /** Number of hours. */

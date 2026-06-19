@@ -9,17 +9,17 @@ from .update_monitor_alert_body_source_type import UpdateMonitorAlertBodySourceT
 
 class UpdateMonitorAlertBodySource(UniversalBaseModel):
     """
-    Replace the watched saved search. Not allowed on system monitors.
+    Replace the saved-search source, or set `null` for unified tool/user alerts. Not allowed on system monitors.
     """
 
     type: UpdateMonitorAlertBodySourceType = pydantic.Field()
     """
-    Must be `savedSearch`.
+    Entity the alert watches: `savedSearch` or `issue`.
     """
 
-    id: str = pydantic.Field()
+    id: typing.Optional[str] = pydantic.Field(default=None)
     """
-    Id of the saved search this alert watches.
+    Id of the watched entity, or `null` to watch all entities of its `type`.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

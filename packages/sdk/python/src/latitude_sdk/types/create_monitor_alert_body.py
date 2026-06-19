@@ -7,23 +7,19 @@ from ..core.pydantic_utilities import UniversalBaseModel
 from .create_monitor_alert_body_condition import CreateMonitorAlertBodyCondition
 from .create_monitor_alert_body_kind import CreateMonitorAlertBodyKind
 from .create_monitor_alert_body_severity import CreateMonitorAlertBodySeverity
-from .create_monitor_alert_body_source import CreateMonitorAlertBodySource
+from .monitor_alert_source import MonitorAlertSource
 
 
 class CreateMonitorAlertBody(UniversalBaseModel):
     kind: CreateMonitorAlertBodyKind = pydantic.Field()
     """
-    What the alert fires on. `savedSearch.threshold` and `savedSearch.escalating` need a matching `condition`.
+    What the alert fires on. `savedSearch.*` kinds require a saved-search `source`; `event.*` and `metric.*` kinds require `source: null` and a monitor `target`.
     """
 
-    source: CreateMonitorAlertBodySource = pydantic.Field()
-    """
-    The saved search this alert watches.
-    """
-
+    source: typing.Optional[MonitorAlertSource] = None
     condition: typing.Optional[CreateMonitorAlertBodyCondition] = pydantic.Field(default=None)
     """
-    Kind-specific configuration. Required for `savedSearch.threshold` and `savedSearch.escalating`; omit for `savedSearch.match`.
+    Kind-specific configuration. Required for threshold and escalating kinds; omit for match kinds.
     """
 
     severity: typing.Optional[CreateMonitorAlertBodySeverity] = pydantic.Field(default=None)

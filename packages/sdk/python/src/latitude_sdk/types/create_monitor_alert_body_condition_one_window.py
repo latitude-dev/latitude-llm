@@ -3,10 +3,10 @@
 import typing
 
 import pydantic
-from ...core.pydantic_utilities import UniversalBaseModel
+from ..core.pydantic_utilities import UniversalBaseModel
 
 
-class UpdateMonitorAlertBodyConditionWindowWindow(UniversalBaseModel):
+class CreateMonitorAlertBodyConditionOneWindow(UniversalBaseModel):
     """
     Sustained-condition window.
     """

@@ -7,11 +7,7 @@ import type * as LatitudeApi from "../../../../index.js";
  *     {
  *         name: "name",
  *         alerts: [{
- *                 kind: "savedSearch.match",
- *                 source: {
- *                     type: "issue",
- *                     id: "id"
- *                 }
+ *                 kind: "savedSearch.match"
  *             }]
  *     }
  */
@@ -22,4 +18,5 @@ export interface CreateMonitorBody {
     description?: string;
     /** The monitor's alert. Exactly one. */
     alerts: LatitudeApi.CreateMonitorAlertBody[];
+    target?: LatitudeApi.MonitorTarget;
 }

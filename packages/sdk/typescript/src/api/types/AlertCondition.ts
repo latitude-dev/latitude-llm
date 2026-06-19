@@ -20,4 +20,19 @@ export type AlertCondition =
     | {
           kind: "issue.escalating";
           sensitivity?: number | undefined;
+      }
+    | {
+          kind: "metric.threshold";
+          metric: LatitudeApi.MonitorMetric;
+          threshold: LatitudeApi.AlertMetricThreshold;
+          direction?: ("above" | "below") | undefined;
+      }
+    | {
+          kind: "metric.escalating";
+          metric: LatitudeApi.MonitorMetric;
+          threshold: LatitudeApi.AlertMetricThreshold;
+          direction?: ("above" | "below") | undefined;
+          window: {
+              minutes: number;
+          };
       };

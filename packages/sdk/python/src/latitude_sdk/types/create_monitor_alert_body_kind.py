@@ -3,5 +3,13 @@
 import typing
 
 CreateMonitorAlertBodyKind = typing.Union[
-    typing.Literal["savedSearch.match", "savedSearch.threshold", "savedSearch.escalating"], typing.Any
+    typing.Literal[
+        "savedSearch.match",
+        "savedSearch.threshold",
+        "savedSearch.escalating",
+        "event.matched",
+        "metric.threshold",
+        "metric.escalating",
+    ],
+    typing.Any,
 ]

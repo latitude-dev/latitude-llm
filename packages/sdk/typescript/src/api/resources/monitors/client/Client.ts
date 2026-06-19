@@ -125,7 +125,7 @@ export class MonitorsClient {
     }
 
     /**
-     * Creates a monitor with its saved-search alert. The slug is derived from `name`. The watched saved search must not contain a semantic component (unquoted free text) — monitors need an exact match rule, so only quoted literal and backtick phrase terms are allowed.
+     * Creates a monitor with one alert. Saved-search alerts use a saved-search source; tool and user alerts use `event.*` or `metric.*` kinds with `source: null` and a `target`. The slug is derived from `name`.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {LatitudeApi.CreateMonitorBody} request
@@ -139,11 +139,7 @@ export class MonitorsClient {
      *     await client.monitors.create("projectSlug", {
      *         name: "name",
      *         alerts: [{
-     *                 kind: "savedSearch.match",
-     *                 source: {
-     *                     type: "issue",
-     *                     id: "id"
-     *                 }
+     *                 kind: "savedSearch.match"
      *             }]
      *     })
      */
@@ -220,6 +216,98 @@ export class MonitorsClient {
             _response.rawResponse,
             "POST",
             "/v1/projects/{projectSlug}/monitors",
+        );
+    }
+
+    /**
+     * Returns live unified monitors whose target contains the supplied user or tool filter. Use `stream: traces` with a `userId` filter for users, or `stream: spans` with `operation = execute_tool` and `toolName` filters for tools.
+     *
+     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {LatitudeApi.ListMonitorsForTargetBody} request
+     * @param {MonitorsClient.RequestOptions} requestOptions - Request-specific configuration.
+     *
+     * @throws {@link LatitudeApi.BadRequestError}
+     * @throws {@link LatitudeApi.UnauthorizedError}
+     * @throws {@link LatitudeApi.NotFoundError}
+     *
+     * @example
+     *     await client.monitors.listForTarget("projectSlug", {
+     *         stream: "traces"
+     *     })
+     */
+    public listForTarget(
+        projectSlug: string,
+        request: LatitudeApi.ListMonitorsForTargetBody,
+        requestOptions?: MonitorsClient.RequestOptions,
+    ): core.HttpResponsePromise<LatitudeApi.MonitorList> {
+        return core.HttpResponsePromise.fromPromise(this.__listForTarget(projectSlug, request, requestOptions));
+    }
+
+    private async __listForTarget(
+        projectSlug: string,
+        request: LatitudeApi.ListMonitorsForTargetBody,
+        requestOptions?: MonitorsClient.RequestOptions,
+    ): Promise<core.WithRawResponse<LatitudeApi.MonitorList>> {
+        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
+        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
+            _authRequest.headers,
+            this._options?.headers,
+            requestOptions?.headers,
+        );
+        const _response = await core.fetcher({
+            url: core.url.join(
+                (await core.Supplier.get(this._options.baseUrl)) ??
+                    (await core.Supplier.get(this._options.environment)) ??
+                    environments.LatitudeApiEnvironment.Production,
+                `v1/projects/${core.url.encodePathParam(projectSlug)}/monitors/for-target`,
+            ),
+            method: "POST",
+            headers: _headers,
+            contentType: "application/json",
+            queryParameters: requestOptions?.queryParams,
+            requestType: "json",
+            body: request,
+            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
+            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
+            abortSignal: requestOptions?.abortSignal,
+            fetchFn: this._options?.fetch,
+            logging: this._options.logging,
+        });
+        if (_response.ok) {
+            return { data: _response.body as LatitudeApi.MonitorList, rawResponse: _response.rawResponse };
+        }
+
+        if (_response.error.reason === "status-code") {
+            switch (_response.error.statusCode) {
+                case 400:
+                    throw new LatitudeApi.BadRequestError(
+                        _response.error.body as LatitudeApi.Error_,
+                        _response.rawResponse,
+                    );
+                case 401:
+                    throw new LatitudeApi.UnauthorizedError(
+                        _response.error.body as LatitudeApi.Error_,
+                        _response.rawResponse,
+                    );
+                case 404:
+                    throw new LatitudeApi.NotFoundError(
+                        _response.error.body as LatitudeApi.Error_,
+                        _response.rawResponse,
+                    );
+                default:
+                    throw new errors.LatitudeApiError({
+                        statusCode: _response.error.statusCode,
+                        body: _response.error.body,
+                        rawResponse: _response.rawResponse,
+                    });
+            }
+        }
+
+        return handleNonStatusCodeError(
+            _response.error,
+            _response.rawResponse,
+            "POST",
+            "/v1/projects/{projectSlug}/monitors/for-target",
         );
     }
 
@@ -668,7 +756,7 @@ export class MonitorsClient {
     }
 
     /**
-     * Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may. Re-pointing the alert at a saved search containing a semantic component (unquoted free text) is rejected.
+     * Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may. Saved-search alerts use a source; tool and user alerts use `source: null` with the monitor target.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} monitorSlug - Monitor slug (human-readable identifier within the project).

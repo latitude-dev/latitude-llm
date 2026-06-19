@@ -3,46 +3,28 @@
 import type * as LatitudeApi from "../index.js";
 
 export interface CreateMonitorAlertBody {
-    /** What the alert fires on. `savedSearch.threshold` and `savedSearch.escalating` need a matching `condition`. */
+    /** What the alert fires on. `savedSearch.*` kinds require a saved-search `source`; `event.*` and `metric.*` kinds require `source: null` and a monitor `target`. */
     kind: CreateMonitorAlertBody.Kind;
-    /** The saved search this alert watches. */
-    source: CreateMonitorAlertBody.Source;
-    /** Kind-specific configuration. Required for `savedSearch.threshold` and `savedSearch.escalating`; omit for `savedSearch.match`. */
+    source?: LatitudeApi.MonitorAlertSource | undefined;
+    /** Kind-specific configuration. Required for threshold and escalating kinds; omit for match kinds. */
     condition?: CreateMonitorAlertBody.Condition | undefined;
     /** Severity of incidents this alert opens. Defaults per kind when omitted. */
     severity?: CreateMonitorAlertBody.Severity | undefined;
 }
 
 export namespace CreateMonitorAlertBody {
-    /** What the alert fires on. `savedSearch.threshold` and `savedSearch.escalating` need a matching `condition`. */
+    /** What the alert fires on. `savedSearch.*` kinds require a saved-search `source`; `event.*` and `metric.*` kinds require `source: null` and a monitor `target`. */
     export const Kind = {
         SavedSearchMatch: "savedSearch.match",
         SavedSearchThreshold: "savedSearch.threshold",
         SavedSearchEscalating: "savedSearch.escalating",
+        EventMatched: "event.matched",
+        MetricThreshold: "metric.threshold",
+        MetricEscalating: "metric.escalating",
     } as const;
     export type Kind = (typeof Kind)[keyof typeof Kind];
-
     /**
-     * The saved search this alert watches.
-     */
-    export interface Source {
-        /** Must be `savedSearch`. */
-        type: Source.Type;
-        /** Id of the saved search this alert watches. */
-        id: string;
-    }
-
-    export namespace Source {
-        /** Must be `savedSearch`. */
-        export const Type = {
-            Issue: "issue",
-            SavedSearch: "savedSearch",
-        } as const;
-        export type Type = (typeof Type)[keyof typeof Type];
-    }
-
-    /**
-     * Kind-specific configuration. Required for `savedSearch.threshold` and `savedSearch.escalating`; omit for `savedSearch.match`.
+     * Kind-specific configuration. Required for threshold and escalating kinds; omit for match kinds.
      */
     export type Condition =
         | {
@@ -59,6 +41,21 @@ export namespace CreateMonitorAlertBody {
         | {
               kind: "issue.escalating";
               sensitivity?: number | undefined;
+          }
+        | {
+              kind: "metric.threshold";
+              metric: LatitudeApi.MonitorMetric;
+              threshold: LatitudeApi.AlertMetricThreshold;
+              direction?: ("above" | "below") | undefined;
+          }
+        | {
+              kind: "metric.escalating";
+              metric: LatitudeApi.MonitorMetric;
+              threshold: LatitudeApi.AlertMetricThreshold;
+              direction?: ("above" | "below") | undefined;
+              window: {
+                  minutes: number;
+              };
           };
     /** Severity of incidents this alert opens. Defaults per kind when omitted. */
     export const Severity = {
