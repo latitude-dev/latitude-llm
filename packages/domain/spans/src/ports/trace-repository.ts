@@ -10,7 +10,7 @@ import type {
 } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { CohortBaselineData } from "../cohort-baselines.ts"
-import type { Trace, TraceDetail } from "../entities/trace.ts"
+import type { Trace, TraceConversationChunk, TraceDetail } from "../entities/trace.ts"
 
 /**
  * Repository port for traces (ClickHouse materialized view).
@@ -84,6 +84,20 @@ export interface TraceRepositoryShape {
     readonly projectId: ProjectId
     readonly traceId: TraceId
   }): Effect.Effect<TraceDetail, NotFoundError | RepositoryError, ChSqlClient>
+
+  findMetadataByTraceId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceId: TraceId
+  }): Effect.Effect<Trace, NotFoundError | RepositoryError, ChSqlClient>
+
+  findConversationChunk(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceId: TraceId
+    readonly offset: number
+    readonly limit: number
+  }): Effect.Effect<TraceConversationChunk, RepositoryError, ChSqlClient>
 
   matchesFiltersByTraceId(input: {
     readonly organizationId: OrganizationId

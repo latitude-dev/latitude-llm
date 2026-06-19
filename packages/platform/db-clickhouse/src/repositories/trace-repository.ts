@@ -24,6 +24,7 @@ import type {
   CohortBaselineData,
   MetricPercentiles,
   Trace,
+  TraceConversationChunk,
   TraceDetail,
   TraceDistribution,
   TraceListPage,
@@ -133,6 +134,12 @@ type TraceDetailRow = TraceListRow & {
   system_instructions: string
 }
 
+type TraceConversationChunkRow = {
+  total_messages: string | number
+  payload_bytes: string | number
+  messages: readonly string[]
+}
+
 /**
  * Per-bucket aggregations for the histogram, computed over the trace-deduped subquery
  * (`SELECT ${LIST_SELECT} ... GROUP BY trace_id`). One row per bucket; columns mirror the
@@ -165,6 +172,20 @@ const parseMessages = (json: string): GenAIMessage[] => {
   } catch {
     return []
   }
+}
+
+const parseMessage = (json: string): GenAIMessage | null => {
+  try {
+    const parsed = JSON.parse(json)
+    return parsed && typeof parsed === "object" ? (parsed as GenAIMessage) : null
+  } catch {
+    return null
+  }
+}
+
+const parseClickHouseNumber = (value: string | number | undefined): number => {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : 0
 }
 
 const parseSystem = (json: string): GenAISystem => {
@@ -1404,6 +1425,110 @@ export const TraceRepositoryLive = Layer.effect(
                 return Effect.succeed(toDomainTraceDetail(first))
               }),
               Effect.mapError((error) => (isNotFoundError(error) ? error : toRepositoryError(error, "findByTraceId"))),
+            )
+        }),
+
+      findMetadataByTraceId: ({ organizationId, projectId, traceId }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${LIST_SELECT}
+                      FROM traces
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND trace_id = {traceId:FixedString(32)}
+                      GROUP BY organization_id, project_id, trace_id
+                      LIMIT 1`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  traceId,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<TraceListRow>()
+            })
+            .pipe(
+              Effect.flatMap((rows) => {
+                const first = rows[0]
+                if (!first) {
+                  return Effect.fail(new NotFoundError({ entity: "Trace", id: traceId as string }))
+                }
+                return Effect.succeed(toBaseFields(first))
+              }),
+              Effect.mapError((error) =>
+                isNotFoundError(error) ? error : toRepositoryError(error, "findMetadataByTraceId"),
+              ),
+            )
+        }),
+
+      findConversationChunk: ({ organizationId, projectId, traceId, offset, limit }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
+                          length(all_messages) AS total_messages,
+                          arraySum(message -> length(message), all_messages) AS payload_bytes,
+                          arraySlice(all_messages, {offset:UInt64} + 1, {limit:UInt64}) AS messages
+                        FROM (
+                          SELECT arrayConcat(
+                            if(
+                              length(JSONExtractArrayRaw(system_instructions_json)) > 0,
+                              [concat('{"role":"system","parts":', system_instructions_json, '}')],
+                              []
+                            ),
+                            JSONExtractArrayRaw(last_input_messages_json),
+                            JSONExtractArrayRaw(output_messages_json)
+                          ) AS all_messages
+                          FROM (
+                            SELECT
+                              argMinIfMerge(system_instructions) AS system_instructions_json,
+                              argMaxIfMerge(last_input_messages) AS last_input_messages_json,
+                              argMaxIfMerge(output_messages) AS output_messages_json
+                            FROM traces
+                            WHERE organization_id = {organizationId:String}
+                              AND project_id = {projectId:String}
+                              AND trace_id = {traceId:FixedString(32)}
+                            GROUP BY organization_id, project_id, trace_id
+                            LIMIT 1
+                          )
+                        )`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  traceId,
+                  offset,
+                  limit,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<TraceConversationChunkRow>()
+            })
+            .pipe(
+              Effect.map((rows): TraceConversationChunk => {
+                const row = rows[0]
+                if (!row) return { messages: [], offset, limit, totalMessages: 0, hasMore: false, payloadBytes: 0 }
+
+                const totalMessages = parseClickHouseNumber(row.total_messages)
+                const messages = row.messages.flatMap((message) => {
+                  const parsed = parseMessage(message)
+                  return parsed ? [parsed] : []
+                })
+
+                return {
+                  messages,
+                  offset,
+                  limit,
+                  totalMessages,
+                  hasMore: offset + messages.length < totalMessages,
+                  payloadBytes: parseClickHouseNumber(row.payload_bytes),
+                }
+              }),
+              Effect.mapError((error) => toRepositoryError(error, "findConversationChunk")),
             )
         }),
 

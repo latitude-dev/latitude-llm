@@ -10,13 +10,17 @@ import {
   Skeleton,
   Text,
 } from "@repo/ui"
+import { formatBytes } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { DownloadIcon } from "lucide-react"
-import { type ReactNode, type RefObject, useCallback, useMemo, useRef, useState } from "react"
+import { type ReactNode, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
 import { useAuthSession } from "../../../../../../../domains/sessions/session.collection.ts"
 import { useConversationSpanMaps } from "../../../../../../../domains/spans/spans.collection.ts"
-import { useTraceSearchHighlights } from "../../../../../../../domains/traces/traces.collection.ts"
+import {
+  useTraceConversationMessages,
+  useTraceSearchHighlights,
+} from "../../../../../../../domains/traces/traces.collection.ts"
 import type { TraceDetailRecord } from "../../../../../../../domains/traces/traces.functions.ts"
 import type {
   ConversationTimeline,
@@ -39,6 +43,8 @@ import { TimelineBar } from "../../conversation-timeline/timeline-bar.tsx"
 import { useViewportBand } from "../../conversation-timeline/use-viewport-band.ts"
 import { useScrollToFirstHighlight } from "./use-scroll-to-first-highlight.ts"
 
+const LOAD_MORE_THRESHOLD_PX = 1200
+
 function toSearchHighlightRanges(result: TraceSearchHighlightsResult | undefined): readonly HighlightRange[] {
   if (!result || result.highlights.length === 0) return []
   return result.highlights.map((h) => ({
@@ -57,22 +63,28 @@ function toSearchHighlightRanges(result: TraceSearchHighlightsResult | undefined
  * `useAuthSession` (tree-agnostic), so it works the same in the sandbox tree,
  * which has no `_authenticated` match.
  */
-function StaffConversationDownloadButton({ traceDetail }: { readonly traceDetail: TraceDetailRecord }) {
+function StaffConversationDownloadButton({
+  traceId,
+  messages,
+}: {
+  readonly traceId: string
+  readonly messages: readonly unknown[]
+}) {
   const { isAdmin, isImpersonating } = useAuthSession()
   const isStaff = import.meta.env.DEV || isAdmin || isImpersonating
 
   const handleDownload = useCallback(() => {
-    const json = JSON.stringify(traceDetail.allMessages, null, 2)
+    const json = JSON.stringify(messages, null, 2)
     const blob = new Blob([json], { type: "application/json" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `trace-${traceDetail.traceId.slice(0, 7)}-conversation.json`
+    a.download = `trace-${traceId.slice(0, 7)}-conversation-loaded.json`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-  }, [traceDetail])
+  }, [messages, traceId])
 
   if (!isStaff) return null
   return (
@@ -84,6 +96,7 @@ function StaffConversationDownloadButton({ traceDetail }: { readonly traceDetail
 
 function ConversationContent({
   traceDetail,
+  messages,
   navigateToSpan,
   projectId,
   isActive,
@@ -94,8 +107,15 @@ function ConversationContent({
   searchQuery,
   messageTrailingSlot,
   timeline,
+  focusMessageIndex,
+  totalMessages,
+  payloadBytes,
+  hasMoreMessages,
+  isLoadingMoreMessages,
+  onLoadMoreMessages,
 }: {
   readonly traceDetail: TraceDetailRecord
+  readonly messages: TraceDetailRecord["allMessages"]
   readonly navigateToSpan?: ((spanId: string) => void) | undefined
   readonly projectId: string
   readonly isActive: boolean
@@ -109,18 +129,26 @@ function ConversationContent({
   readonly messageTrailingSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
   /** Timeline for the minimap bar: null while loading, undefined when the feature is off. */
   readonly timeline?: ConversationTimeline | null | undefined
+  readonly focusMessageIndex?: number | undefined
+  readonly totalMessages: number
+  readonly payloadBytes: number
+  readonly hasMoreMessages: boolean
+  readonly isLoadingMoreMessages: boolean
+  readonly onLoadMoreMessages: () => unknown
 }) {
   const internalScrollRef = useRef<HTMLDivElement>(null)
   const scrollRef = scrollContainerRef ?? internalScrollRef
   const navigatorRef = useRef<ScrollNavigatorHandle>(null)
   const navItemRefs = useRef<(HTMLDivElement | null)[]>([])
   const clearSelectionRef = useRef<(() => void) | null>(null)
+  const autoLoadingMoreRef = useRef(false)
 
   const { data: spanMaps } = useConversationSpanMaps({
     projectId,
     traceId: traceDetail.traceId,
     startTime: traceDetail.startTime,
-    allMessages: traceDetail.allMessages,
+    allMessages: messages,
+    enabled: messages.length > 0 && (annotationsEnabled || navigateToSpan !== undefined),
   })
 
   const band = useViewportBand({ scrollRef, timeline: timeline ?? null, isActive })
@@ -202,6 +230,27 @@ function ConversationContent({
     [timeline, dismissSelectionUi, scrollToMessageAnchor],
   )
 
+  const loadMoreMessages = useCallback(() => {
+    if (!hasMoreMessages || isLoadingMoreMessages || autoLoadingMoreRef.current) return
+
+    autoLoadingMoreRef.current = true
+    void Promise.resolve(onLoadMoreMessages())
+      .catch(() => undefined)
+      .finally(() => {
+        autoLoadingMoreRef.current = false
+      })
+  }, [hasMoreMessages, isLoadingMoreMessages, onLoadMoreMessages])
+
+  const maybeLoadMoreMessages = useCallback(() => {
+    const container = scrollRef.current
+    if (!container) return
+
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight
+    if (distanceFromBottom > LOAD_MORE_THRESHOLD_PX) return
+
+    loadMoreMessages()
+  }, [scrollRef, loadMoreMessages])
+
   const handleMarkerClick = useCallback(
     (marker: TimelineMarker) => {
       const container = scrollRef.current
@@ -278,11 +327,23 @@ function ConversationContent({
     return { messageIndex: first.messageIndex, partIndex: first.partIndex }
   }, [searchHighlightsData])
 
+  // TODO(frontend-use-effect-policy): loading search target pages is a query-side effect keyed by async highlight results.
+  useEffect(() => {
+    if (!firstMatchHint || firstMatchHint.messageIndex < messages.length) return
+    loadMoreMessages()
+  }, [firstMatchHint, messages.length, loadMoreMessages])
+
+  useEffect(() => {
+    if (focusMessageIndex === undefined || focusMessageIndex < messages.length) return
+    loadMoreMessages()
+  }, [focusMessageIndex, messages.length, loadMoreMessages])
+
   useScrollToFirstHighlight({
     scrollRef,
     traceId: traceDetail.traceId,
     searchQuery: effectiveSearchQuery,
     highlightsData: searchHighlightsData,
+    loadedMessageCount: messages.length,
   })
 
   if (textSelectionPopoverControlsRef) {
@@ -320,6 +381,7 @@ function ConversationContent({
       <div
         ref={scrollRef}
         className="flex min-w-0 flex-col py-8 px-4 overflow-y-auto overflow-x-hidden flex-1"
+        onScroll={maybeLoadMoreMessages}
         onPointerMove={(e) => {
           const anchor = e.target instanceof HTMLElement ? e.target.closest("[data-message-index]") : null
           const raw = anchor?.getAttribute("data-message-index")
@@ -329,7 +391,7 @@ function ConversationContent({
         onPointerLeave={() => setHoveredMessageIndex(null)}
       >
         <Conversation
-          messages={traceDetail.allMessages}
+          messages={messages}
           enableNavigator
           scrollContainerRef={scrollRef}
           navigatorRef={navigatorRef}
@@ -365,6 +427,14 @@ function ConversationContent({
           {...(toolCallActions ? { toolCallActions } : {})}
           {...(messageTrailingSlot ? { messageTrailingSlot } : {})}
         />
+        {hasMoreMessages ? (
+          <div className="flex flex-col items-center gap-2 py-6">
+            <Text.H6 color="foregroundMuted">
+              Showing {messages.length} of {totalMessages} messages ({formatBytes(payloadBytes)} total payload)
+            </Text.H6>
+            {isLoadingMoreMessages ? <Text.H6 color="foregroundMuted">Loading more messages…</Text.H6> : null}
+          </div>
+        ) : null}
         {annotationsEnabled ? (
           <AnnotationPopover
             position={textSelectionPopoverPosition}
@@ -387,7 +457,7 @@ function ConversationContent({
         ) : null}
       </div>
       <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-        <StaffConversationDownloadButton traceDetail={traceDetail} />
+        <StaffConversationDownloadButton traceId={traceDetail.traceId} messages={messages} />
         <ScrollNavigator
           ref={navigatorRef}
           scrollContainerRef={scrollRef}
@@ -435,6 +505,7 @@ export function ConversationTab({
   searchQuery,
   messageTrailingSlot,
   timeline,
+  focusMessageIndex,
 }: {
   readonly traceDetail: TraceDetailRecord | null | undefined
   readonly isDetailLoading: boolean
@@ -454,8 +525,15 @@ export function ConversationTab({
   readonly messageTrailingSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
   /** Timeline for the minimap bar: null while loading, undefined when the feature is off. */
   readonly timeline?: ConversationTimeline | null | undefined
+  readonly focusMessageIndex?: number | undefined
 }) {
-  if (isDetailLoading) {
+  const conversation = useTraceConversationMessages({
+    projectId,
+    traceId: traceDetail?.traceId ?? "",
+    enabled: traceDetail != null,
+  })
+
+  if (isDetailLoading || (traceDetail && conversation.isLoading)) {
     return (
       <div className="flex flex-col gap-4 py-8 px-4 flex-1">
         <Skeleton className="h-20 w-full" />
@@ -478,6 +556,7 @@ export function ConversationTab({
       isActive={isActive}
       annotationsEnabled={annotationsEnabled}
       traceDetail={traceDetail}
+      messages={conversation.messages}
       navigateToSpan={navigateToSpan}
       projectId={projectId}
       scrollContainerRef={scrollContainerRef}
@@ -486,6 +565,12 @@ export function ConversationTab({
       searchQuery={searchQuery}
       messageTrailingSlot={messageTrailingSlot}
       timeline={timeline}
+      focusMessageIndex={focusMessageIndex}
+      totalMessages={conversation.totalMessages}
+      payloadBytes={conversation.payloadBytes}
+      hasMoreMessages={conversation.hasNextPage}
+      isLoadingMoreMessages={conversation.isFetchingNextPage}
+      onLoadMoreMessages={() => conversation.fetchNextPage()}
     />
   )
 }

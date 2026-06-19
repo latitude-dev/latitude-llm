@@ -21,6 +21,9 @@ export const createFakeTraceRepository = (overrides?: Partial<TraceRepositorySha
     aggregateMetricsByProjectId: () => Effect.succeed(emptyTraceMetrics()),
     histogramByProjectId: () => Effect.succeed([]),
     findByTraceId: () => Effect.fail(new NotFoundError({ entity: "Trace", id: "" })),
+    findMetadataByTraceId: () => Effect.fail(new NotFoundError({ entity: "Trace", id: "" })),
+    findConversationChunk: () =>
+      Effect.succeed({ messages: [], offset: 0, limit: 0, totalMessages: 0, hasMore: false, payloadBytes: 0 }),
     matchesFiltersByTraceId: () => Effect.succeed(false),
     listMatchingFilterIdsByTraceId: () => Effect.succeed([]),
     listByTraceIds: () => Effect.succeed([]),

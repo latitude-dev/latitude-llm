@@ -43,13 +43,16 @@ export function useScrollToFirstHighlight({
   traceId,
   searchQuery,
   highlightsData,
+  loadedMessageCount,
 }: {
   readonly scrollRef: RefObject<HTMLDivElement | null>
   readonly traceId: string
   readonly searchQuery: string
   readonly highlightsData: TraceSearchHighlightsResult | undefined
+  readonly loadedMessageCount: number
 }): void {
   const lastScrolledKey = useRef<string | null>(null)
+  // TODO(frontend-use-effect-policy): observes rendered highlighted nodes after async search and chunk loading.
   useEffect(() => {
     if (!highlightsData || highlightsData.firstMatchIndex < 0) return
     if (!scrollRef.current) return
@@ -97,5 +100,5 @@ export function useScrollToFirstHighlight({
       observer.disconnect()
       window.clearTimeout(timeout)
     }
-  }, [highlightsData, scrollRef, traceId, searchQuery])
+  }, [highlightsData, scrollRef, traceId, searchQuery, loadedMessageCount])
 }

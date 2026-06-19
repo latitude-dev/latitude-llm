@@ -15,6 +15,7 @@ import {
   countTracesByProject,
   getSessionMomentIntelligence,
   getTraceCohortSummary,
+  getTraceConversationChunk,
   getTraceDetail,
   getTraceDistinctValues,
   getTraceDistribution,
@@ -23,6 +24,7 @@ import {
   getTraceTimeHistogramByProject,
   listTracesByProject,
   type SessionMomentIntelligenceRecord,
+  type TraceConversationChunkRecord,
   type TraceDetailRecord,
   type TraceRecord,
 } from "./traces.functions.ts"
@@ -32,6 +34,7 @@ const sessionMomentIntelligenceQueryKey = (projectId: string, sessionId: string)
   ["sessionMomentIntelligence", projectId, sessionId] as const
 
 const BATCH_SIZE = 50
+const CONVERSATION_CHUNK_SIZE = 25
 
 export function useTracesInfiniteScroll({
   projectId,
@@ -285,6 +288,43 @@ export function useTraceDetail({
     },
     enabled: enabled && projectId.length > 0 && traceId.length > 0,
   })
+}
+
+export function useTraceConversationMessages({
+  projectId,
+  traceId,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly traceId: string
+  readonly enabled?: boolean
+}) {
+  const scope = use(TraceScopeContext)
+  const query = useInfiniteQuery({
+    queryKey: [...traceScopeKey(scope), "traceConversation", projectId, traceId],
+    queryFn: async ({ pageParam }): Promise<TraceConversationChunkRecord> => {
+      const result = await getTraceConversationChunk({
+        data: {
+          ...traceScopeData(scope),
+          projectId,
+          traceId,
+          offset: pageParam,
+          limit: CONVERSATION_CHUNK_SIZE,
+        },
+      })
+      return result as TraceConversationChunkRecord
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.offset + lastPage.messages.length : undefined),
+    enabled: enabled && projectId.length > 0 && traceId.length > 0,
+  })
+
+  const messages = useMemo(() => query.data?.pages.flatMap((page) => page.messages) ?? [], [query.data])
+  // Every chunk carries whole-conversation metadata; page 0 is the stable header.
+  const totalMessages = query.data?.pages[0]?.totalMessages ?? 0
+  const payloadBytes = query.data?.pages[0]?.payloadBytes ?? 0
+
+  return { ...query, messages, totalMessages, payloadBytes }
 }
 
 export function useSessionMomentIntelligence({

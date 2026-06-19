@@ -74,3 +74,12 @@ export const traceDetailSchema = traceSchema.extend({
 })
 
 export type TraceDetail = z.infer<typeof traceDetailSchema>
+
+export interface TraceConversationChunk {
+  readonly messages: readonly GenAIMessage[]
+  readonly offset: number
+  readonly limit: number
+  readonly totalMessages: number
+  readonly hasMore: boolean
+  readonly payloadBytes: number
+}

@@ -10,7 +10,6 @@ import {
 import type {
   CohortSummary,
   Trace,
-  TraceDetail,
   TraceDistinctColumn,
   TraceDistribution,
   TraceMetrics,
@@ -19,6 +18,7 @@ import type {
 } from "@domain/spans"
 import {
   getTraceCohortSummaryUseCase,
+  getTraceConversationChunkUseCase,
   getTraceSearchHighlightsUseCase,
   mergeTraceHistogramTimeFilters,
   TraceRepository,
@@ -141,13 +141,22 @@ export interface TraceDetailRecord extends TraceRecord {
   readonly allMessages: readonly GenAIMessage[]
 }
 
-const serializeTraceDetail = (trace: TraceDetail): TraceDetailRecord => ({
+const serializeTraceMetadataDetail = (trace: Trace): TraceDetailRecord => ({
   ...toTraceRecord(trace),
-  systemInstructions: trace.systemInstructions,
-  inputMessages: trace.inputMessages,
-  outputMessages: trace.outputMessages,
-  allMessages: trace.allMessages,
+  systemInstructions: [],
+  inputMessages: [],
+  outputMessages: [],
+  allMessages: [],
 })
+
+export interface TraceConversationChunkRecord {
+  readonly messages: readonly GenAIMessage[]
+  readonly offset: number
+  readonly limit: number
+  readonly totalMessages: number
+  readonly hasMore: boolean
+  readonly payloadBytes: number
+}
 
 const traceListCursorSchema = z.object({
   sortValue: z.string(),
@@ -429,14 +438,14 @@ export const getTraceDetail = createServerFn({ method: "GET" })
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* TraceRepository
-        const detail = yield* repo
-          .findByTraceId({
+        const trace = yield* repo
+          .findMetadataByTraceId({
             organizationId: orgId,
             projectId: ProjectId(data.projectId),
             traceId: TraceId(data.traceId),
           })
           .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-        return detail ? serializeTraceDetail(detail) : null
+        return trace ? serializeTraceMetadataDetail(trace) : null
       }).pipe(
         withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
         withAi(AIEmbedLive, getRedisClient()),
@@ -444,11 +453,34 @@ export const getTraceDetail = createServerFn({ method: "GET" })
       ),
     )
 
-    // rosetta-ai GenAI types use [x: string]: unknown index signatures, but
-    // TanStack Start's Serialize<T> transforms those to [x: string]: {}.
-    // Since unknown is not assignable to {}, the handler rejects the return type.
-    // The runtime values are correct — this is a type-only bridge across the
-    // serialization boundary. The consumer (useTraceDetail) casts back.
+    return result as never
+  })
+
+export const getTraceConversationChunk = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      sandboxOrgId: z.string().optional(),
+      projectId: z.string(),
+      traceId: z.string(),
+      offset: z.number().int().nonnegative().optional(),
+      limit: z.number().int().positive().max(100).optional(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    const orgId = await resolveOrgScope(data)
+    const offset = data.offset ?? 0
+    const limit = data.limit ?? 25
+
+    const result = await Effect.runPromise(
+      getTraceConversationChunkUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        traceId: TraceId(data.traceId),
+        offset,
+        limit,
+      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+
     return result as never
   })
 

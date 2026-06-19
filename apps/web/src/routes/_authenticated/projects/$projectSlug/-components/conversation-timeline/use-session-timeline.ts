@@ -6,7 +6,7 @@ import {
   useSessionConversationSpanMaps,
   useSpansBySessionCollection,
 } from "../../../../../../domains/spans/spans.collection.ts"
-import { useTraceDetail } from "../../../../../../domains/traces/traces.collection.ts"
+import { useTraceConversationMessages, useTraceDetail } from "../../../../../../domains/traces/traces.collection.ts"
 import type { TraceRecord } from "../../../../../../domains/traces/traces.functions.ts"
 import {
   buildConversationTimeline,
@@ -32,6 +32,11 @@ export function useSessionTimeline({
   readonly moments: readonly TimelineMomentInput[]
 }): ConversationTimeline | null {
   const { data: traceDetail } = useTraceDetail({ projectId, traceId: latestTraceId })
+  const conversation = useTraceConversationMessages({
+    projectId,
+    traceId: latestTraceId,
+    enabled: traceDetail != null,
+  })
   const { data: spans } = useSpansBySessionCollection({
     projectId,
     sessionId: session.sessionId,
@@ -44,7 +49,8 @@ export function useSessionTimeline({
     latestTraceId,
     sessionStartTime: session.startTime,
     sessionEndTime: session.endTime,
-    allMessages: traceDetail?.allMessages,
+    allMessages: conversation.messages,
+    enabled: conversation.messages.length > 0,
   })
   const { data: annotationsData } = useAnnotationsBySession({
     projectId,
@@ -54,9 +60,9 @@ export function useSessionTimeline({
   const memberByUserId = useMemberByUserIdMap()
 
   return useMemo(() => {
-    if (!traceDetail || !spanMaps) return null
+    if (!traceDetail || !spanMaps || conversation.messages.length === 0) return null
     return buildConversationTimeline({
-      messages: traceDetail.allMessages,
+      messages: conversation.messages,
       spans: (spans ?? []).map(toTimelineSpan),
       messageSpanMap: spanMaps.messageSpanMap,
       toolCallSpanMap: spanMaps.toolCallSpanMap,
@@ -66,5 +72,5 @@ export function useSessionTimeline({
       ),
       moments,
     })
-  }, [traceDetail, spans, spanMaps, traces, annotationsData, moments, memberByUserId])
+  }, [traceDetail, spans, spanMaps, traces, annotationsData, moments, memberByUserId, conversation.messages])
 }

@@ -35,7 +35,7 @@ export {
   spanStatusCodeSchema,
   toolDefinitionSchema,
 } from "./entities/span.ts"
-export type { Trace, TraceDetail } from "./entities/trace.ts"
+export type { Trace, TraceConversationChunk, TraceDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
 export { SpanDecodingError } from "./errors.ts"
 export {
@@ -129,6 +129,8 @@ export type { GetSessionCohortSummaryInput } from "./use-cases/get-session-cohor
 export { getSessionCohortSummaryUseCase } from "./use-cases/get-session-cohort-summary.ts"
 export type { GetTraceCohortSummaryInput } from "./use-cases/get-trace-cohort-summary.ts"
 export { getTraceCohortSummaryUseCase } from "./use-cases/get-trace-cohort-summary.ts"
+export type { GetTraceConversationChunkInput } from "./use-cases/get-trace-conversation-chunk.ts"
+export { getTraceConversationChunkUseCase } from "./use-cases/get-trace-conversation-chunk.ts"
 export type {
   LoadTraceForTraceEndFound,
   LoadTraceForTraceEndResult,
