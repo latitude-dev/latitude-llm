@@ -45,6 +45,7 @@
 Latitude shows you **what will break next** in your AI Agent and helps you fix it before users notice.
 
 - **[Issue-centric](https://docs.latitude.so/issues/overview#issues)**: failed traces grouped into tracked issues, with status, size, and trend.
+- **Behavior clusters**: agent interactions grouped by intent, to see what people actually ask for, how often, and where they hesitate, escalate, or churn.
 - **[Human-aligned evals](https://docs.latitude.so/evaluations/alignment#evaluation-alignment)**: evals built automatically from your team's judgments, with an alignment score that tracks drift from human judgment over time.
 - **[Agent-native traces](https://docs.latitude.so/observability/overview#observability-overview)**: multi-turn sessions, tool calls, and full execution paths in one view.
 - **[Semantic search](https://docs.latitude.so/search/overview#search)**: find any trace by meaning, exact matches, or roughly similar sentences. No sampling, 100% of traces are searchable.
