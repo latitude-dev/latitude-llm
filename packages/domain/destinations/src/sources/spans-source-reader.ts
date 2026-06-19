@@ -29,6 +29,8 @@ export const createSpansSourceReader = (spanRepo: SpanRepositoryShape): Destinat
       ),
   sampleLatest: ({ organizationId, projectId, limit }) =>
     spanRepo.listRecentDetailsByProjectId({ organizationId, projectId, limit }),
+  recentLimitFloor: ({ organizationId, projectId, end, limit }) =>
+    spanRepo.findIngestedAtFloorForRecentLimit({ organizationId, projectId, windowEnd: end, limit }),
 })
 
 /**

@@ -79,6 +79,7 @@ The binding concern for backfill is **resource footprint, not reach**: a single 
 - A **budgeted low-priority lane** (a separate queue at low concurrency) so backfill can never starve live sync or other orgs.
 - A **hard one-chain-per-source guard** (atomic claim) so racing triggers can't double-run.
 - **Failure is visible**: a terminal backfill failure writes an audit row and clears the in-flight marker, so a dead chain doesn't vanish silently.
+- A **hard cap of 1,000,000 records per backfill.** Both backfill triggers — connecting a destination to a project that already has months of history, and resuming one that was paused for months — can otherwise enqueue an unbounded import across a source's enabled history. This is a deliberate **operational/product bound** — how much history we auto-import and how long a single backfill may occupy the lane and read ClickHouse — **not** a PostHog rate-safety limit. PostHog exposes **no rate limit on the `/batch/` capture endpoint** ([docs](https://posthog.com/docs/api): *"for public POST-only endpoints like event capture … there are no rate limits"*; only a 20 MB body cap per batch), so there is no published throughput number to size against, and rate-safety is already handled by chunking + the 429 backoff. 1M is chosen as a round, defensible bound ≈ 20 live-sync windows (50k records each); it is not derived from a measured PostHog ceiling. The cap keeps the **most recent** records: the initiator asks the source reader for the `(cap+1)`-th most recent record's watermark at or before the coverage edge and raises the backfill's lower bound to it, so the existing oldest-first chain then runs over only that newest-1M slice. History older than the cap is **not** auto-imported — the assumption being that recent history is what matters for a freshly-connected or just-resumed destination.
 
 Processing is **oldest-first** and must outrun retention deletion; this only risks data loss for the extreme tier where ingest rate exceeds backfill throughput.
 
@@ -100,6 +101,7 @@ The read/cursor/scheduling half of multi-source is **done** (the engine runs per
 | Sync interval (default / min / max) | 5 min / 1 min / 60 min |
 | Safety lag | 5 min (window ends at `now − 5min`) |
 | Max records per run | 50k (range 1k–50k) |
+| Max records per backfill | 1,000,000 (operational cap, not PostHog-derived) |
 | Quarantine threshold | 5 consecutive terminal failures (destination-level) |
 | Run retries | 5 attempts, exponential backoff (exhausting them = one terminal failure) |
 | Idle backoff ceiling | 1 hour (per source) |
@@ -117,7 +119,6 @@ Destinations are created **only** through the project-settings UI — a delibera
 ## Open questions
 
 - **Backfill throughput constants.** The throughput model rests on an unmeasured per-delivery latency constant; re-measuring it against a high-volume project is the prerequisite to committing to further mitigation.
-- **Self-serve backfill cap.** What's the default volume above which a one-click backfill becomes paced-background or ops-gated rather than self-serve?
 - **Whale full-retention policy.** Is full-retention backfill for the largest enterprise tiers a product promise, or best-effort most-recent-N with clear messaging?
 - **Backfill concurrency.** Is concurrency a flat system budget or a product knob (enterprise buys more lane)?
 - **Silent credential revocation.** A key revoked *after* creation stops delivering silently (delivery is fire-and-forget and won't quarantine on a bad key). The deferred fix is a periodic connection-revalidation sweep.

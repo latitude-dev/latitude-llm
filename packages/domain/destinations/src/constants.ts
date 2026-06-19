@@ -6,6 +6,18 @@ export const DESTINATION_MAX_RECORDS_PER_RUN_MIN = 1_000
 export const DESTINATION_MAX_RECORDS_PER_RUN_MAX = 50_000
 export const DESTINATION_MAX_RECORDS_PER_RUN_DEFAULT = 50_000
 
+/**
+ * Hard cap on records imported by a single backfill. A destination connected to
+ * a months-old project (or resumed after months) could otherwise enqueue an
+ * unbounded historical import; instead we backfill only the **most recent**
+ * records up to this cap (the initiator raises the lower bound so the export
+ * window holds at most this many, newest first). Deliberately an operational/
+ * product bound on backfill duration + ClickHouse read volume — NOT a
+ * PostHog-derived limit: PostHog exposes no rate limit on `/batch/` capture, so
+ * there's no published throughput to size against. 1M ≈ 20 live-sync windows.
+ */
+export const DESTINATION_MAX_RECORDS_PER_BACKFILL = 1_000_000
+
 /** Consecutive terminal run failures before a destination is quarantined. */
 export const DESTINATION_QUARANTINE_FAILURE_THRESHOLD = 5
 

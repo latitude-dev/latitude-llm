@@ -479,6 +479,7 @@ export const createDestinationsWorker = ({
           publish: (job) => publishBackfillWindow(base, job),
         }).pipe(
           withPostgres(backfillLayer, pgClient, organizationId),
+          withClickHouse(sourceReadersLive, chClient, organizationId),
           Effect.provide(Layer.succeed(DestinationDeliverers, delivererRegistry)),
           Effect.provide(retentionPolicyLayer),
           Effect.tap((result) =>

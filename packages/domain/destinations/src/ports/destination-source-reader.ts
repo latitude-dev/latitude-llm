@@ -55,6 +55,19 @@ export interface DestinationSourceReader<TRecord> {
     readonly projectId: ProjectId
     readonly limit: number
   }): Effect.Effect<readonly TRecord[], RepositoryError, ChSqlClient>
+  /**
+   * The `end`-anchored **exclusive lower bound** that caps an export to the most
+   * recent `limit` records: the watermark of the (`limit`+1)-th most recent
+   * record at or before `end`. Used by the backfill initiator to import only the
+   * newest `limit` records of a long history. `null` when ≤ `limit` records
+   * exist at or before `end` (no cap needed — export the whole range).
+   */
+  recentLimitFloor(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly end: Date
+    readonly limit: number
+  }): Effect.Effect<Date | null, RepositoryError, ChSqlClient>
 }
 
 /** Per-source reader registry — each source's reader yields that source's record type. TS-enforced like the deliverer/mapper registries. */

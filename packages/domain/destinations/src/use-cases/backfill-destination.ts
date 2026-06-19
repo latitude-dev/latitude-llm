@@ -1,7 +1,7 @@
 import type { QueuePublishError } from "@domain/queue"
 import type { ChSqlClient, DestinationId, DestinationSyncRunId, RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
-import { DESTINATION_BACKFILL_STALE_MS } from "../constants.ts"
+import { DESTINATION_BACKFILL_STALE_MS, DESTINATION_MAX_RECORDS_PER_BACKFILL } from "../constants.ts"
 import type { DestinationSource } from "../entities/destination-source.ts"
 import { createDestinationSyncRun } from "../entities/destination-sync-run.ts"
 import type { DeliveryError } from "../errors.ts"
@@ -65,8 +65,10 @@ export type BackfillDestinationError = RepositoryError | QueuePublishError
 
 type InitiatorRequirements =
   | SqlClient
+  | ChSqlClient
   | DestinationRepository
   | DestinationSourceStateRepository
+  | DestinationSourceReaders
   | DestinationDeliverers
   | DestinationRetentionPolicy
 
@@ -148,7 +150,20 @@ export const backfillDestinationUseCase = (input: BackfillDestinationInput) =>
     // `start === null` means "as far back as retained", so the floor is the reach.
     const maxAgeMs = yield* (yield* DestinationRetentionPolicy).maxAgeMs(destination.organizationId)
     const floorMs = now.getTime() - maxAgeMs
-    const clampedStart = new Date(start === null ? floorMs : Math.max(start.getTime(), floorMs))
+    const retentionClampedStart = new Date(start === null ? floorMs : Math.max(start.getTime(), floorMs))
+
+    // Record cap: import only the most recent DESTINATION_MAX_RECORDS_PER_BACKFILL records.
+    // The reader gives the lower bound that holds at most the cap (newest first), or null when
+    // the whole range already fits; raise the start to it so we never run an unbounded import.
+    const reader = (yield* DestinationSourceReaders)[source]
+    const capFloor = yield* reader.recentLimitFloor({
+      organizationId: destination.organizationId,
+      projectId: destination.projectId,
+      end,
+      limit: DESTINATION_MAX_RECORDS_PER_BACKFILL,
+    })
+    const clampedStart =
+      capFloor && capFloor.getTime() > retentionClampedStart.getTime() ? capFloor : retentionClampedStart
 
     // Nothing before existing coverage → no work (e.g. a re-import of an already-covered range).
     if (clampedStart.getTime() >= end.getTime()) {

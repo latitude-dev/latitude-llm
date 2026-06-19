@@ -585,6 +585,45 @@ export const SpanRepositoryLive = Layer.effect(
             )
         }),
 
+      findIngestedAtFloorForRecentLimit: ({ organizationId, projectId, windowEnd, limit }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              // The (limit+1)-th most recent deduped span: skip the newest `limit`, take the next.
+              // Empty when ≤ limit spans exist → no cap.
+              const result = await client.query({
+                query: `SELECT ingested_at
+                      FROM (
+                        SELECT span_id, ingested_at
+                        FROM spans
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND ingested_at <= {windowEnd:DateTime64(3, 'UTC')}
+                        ORDER BY span_id, ingested_at DESC
+                        LIMIT 1 BY span_id
+                      )
+                      ORDER BY ingested_at DESC, span_id DESC
+                      LIMIT 1 OFFSET {limit:UInt32}`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  windowEnd: toClickhouseDateTime(windowEnd),
+                  limit,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<{ ingested_at: string }>()
+            })
+            .pipe(
+              Effect.map((rows) => {
+                const floor = rows.at(0)
+                return floor ? parseCHDate(floor.ingested_at) : null
+              }),
+              Effect.mapError((error) => toRepositoryError(error, "findIngestedAtFloorForRecentLimit")),
+            )
+        }),
+
       findBySpanId: ({ organizationId, projectId, traceId, spanId, startTimeFrom, startTimeTo }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
