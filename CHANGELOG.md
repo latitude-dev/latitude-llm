@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## v0.3.12 - 2026-06-19
+
+### Data destinations
+
+- Simplified the destination data model by dropping the stored max-runs concept, slimming the destination source entity, backfill, and sync use-cases (ref: #3625).
+- Lowered the destination runs read page cap to 2k and made the runs table fill the available viewport height (ref: #3628).
+
+### Traces
+
+- Recolored trace and session usage and duration bars for clearer composition of activity tracks, duration breakdowns, and span usage summaries (ref: #3626).
+
 ## v0.3.11 - 2026-06-19
 
 ### Signals
