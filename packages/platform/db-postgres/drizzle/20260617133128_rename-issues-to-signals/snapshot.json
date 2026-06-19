@@ -9010,7 +9010,7 @@
         }
       ],
       "isUnique": false,
-      "where": "\"issue_id\" IS NOT NULL AND \"drafted_at\" IS NULL",
+      "where": "\"signal_id\" IS NOT NULL AND \"drafted_at\" IS NULL",
       "with": "",
       "method": "btree",
       "concurrently": false,
@@ -9199,7 +9199,7 @@
         }
       ],
       "isUnique": false,
-      "where": "\"drafted_at\" IS NULL AND \"errored\" = false AND \"passed\" = false AND \"issue_id\" IS NULL",
+      "where": "\"drafted_at\" IS NULL AND \"errored\" = false AND \"passed\" = false AND \"signal_id\" IS NULL",
       "with": "",
       "method": "btree",
       "concurrently": false,

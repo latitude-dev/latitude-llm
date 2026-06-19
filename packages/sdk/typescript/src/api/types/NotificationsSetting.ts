@@ -3,8 +3,9 @@
 import type * as LatitudeApi from "../index.js";
 
 /**
- * Per-group project-level notification toggles. Today only `incidents` exists; future groups (wrapped reports, etc.) slot in alongside.
+ * Per-group project-level notification toggles (`incidents`, `destinations`).
  */
 export interface NotificationsSetting {
     incidents?: LatitudeApi.IncidentNotificationsSetting | undefined;
+    destinations?: LatitudeApi.DestinationNotificationsSetting | undefined;
 }

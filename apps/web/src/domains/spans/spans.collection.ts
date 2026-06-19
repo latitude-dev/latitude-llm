@@ -1,16 +1,21 @@
+import { SpanId } from "@domain/shared"
+import type { SpanMessagesData } from "@domain/spans"
+import { buildConversationSpanMaps } from "@domain/spans"
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import { createCollection, useLiveQuery } from "@tanstack/react-db"
 import { useQuery } from "@tanstack/react-query"
 import { use } from "react"
+import type { GenAIMessage } from "rosetta-ai"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import { TraceScopeContext } from "../traces/trace-scope.tsx"
 import {
   getSpanDetail,
+  listConversationMessageSpans,
+  listSessionConversationMessageSpans,
   listSpansBySession,
   listSpansByTrace,
-  mapConversationToSpans,
-  mapSessionConversationToSpans,
   type SpanDetailRecord,
+  type SpanMessagesRecord,
   type SpanRecord,
 } from "./spans.functions.ts"
 
@@ -71,7 +76,10 @@ export const useSpansByTraceCollection = ({
 }) => {
   const scope = use(TraceScopeContext)
   const collection = getSpansByTraceCollection(projectId, traceId, startTimeFrom, startTimeTo, scope?.sandboxOrgId)
-  return useLiveQuery((q) => q.from({ span: collection }))
+  return useLiveQuery(
+    (q) => q.from({ span: collection }),
+    [projectId, traceId, startTimeFrom, startTimeTo, scope?.sandboxOrgId],
+  )
 }
 
 const makeSpansBySessionCollection = (
@@ -129,7 +137,10 @@ export const useSpansBySessionCollection = ({
 }) => {
   const scope = use(TraceScopeContext)
   const collection = getSpansBySessionCollection(projectId, sessionId, startTimeFrom, startTimeTo, scope?.sandboxOrgId)
-  return useLiveQuery((q) => q.from({ span: collection }))
+  return useLiveQuery(
+    (q) => q.from({ span: collection }),
+    [projectId, sessionId, startTimeFrom, startTimeTo, scope?.sandboxOrgId],
+  )
 }
 
 export const useSpanDetail = ({
@@ -163,12 +174,21 @@ export const useSpanDetail = ({
   })
 }
 
+const asMessageSpans = (records: readonly SpanMessagesRecord[]): readonly SpanMessagesData[] =>
+  records.map((record) => ({
+    ...record,
+    spanId: SpanId(record.spanId),
+    inputMessages: record.inputMessages as readonly GenAIMessage[],
+    outputMessages: record.outputMessages as readonly GenAIMessage[],
+  }))
+
 export function useSessionConversationSpanMaps({
   projectId,
   sessionId,
   latestTraceId,
   sessionStartTime,
   sessionEndTime,
+  allMessages,
   enabled = true,
 }: {
   readonly projectId: string
@@ -176,6 +196,7 @@ export function useSessionConversationSpanMaps({
   readonly latestTraceId: string
   readonly sessionStartTime: string
   readonly sessionEndTime: string
+  readonly allMessages: readonly GenAIMessage[] | undefined
   readonly enabled?: boolean
 }) {
   const scope = use(TraceScopeContext)
@@ -189,35 +210,51 @@ export function useSessionConversationSpanMaps({
       sessionStartTime,
       sessionEndTime,
     ],
-    queryFn: () =>
-      mapSessionConversationToSpans({
+    queryFn: async () => {
+      const spans = await listSessionConversationMessageSpans({
         data: {
           ...(scope ? { sandboxOrgId: scope.sandboxOrgId } : {}),
           projectId,
           sessionId,
-          latestTraceId,
           sessionStartTime,
           sessionEndTime,
         },
-      }),
-    enabled: enabled && projectId.length > 0 && sessionId.length > 0 && latestTraceId.length > 0,
+      })
+      return buildConversationSpanMaps(allMessages ?? [], asMessageSpans(spans))
+    },
+    enabled:
+      enabled && projectId.length > 0 && sessionId.length > 0 && latestTraceId.length > 0 && allMessages !== undefined,
   })
 }
 
 export function useConversationSpanMaps({
   projectId,
   traceId,
+  startTime,
+  allMessages,
   enabled = true,
 }: {
   readonly projectId: string
   readonly traceId: string
+  readonly startTime: string | undefined
+  readonly allMessages: readonly GenAIMessage[] | undefined
   readonly enabled?: boolean
 }) {
   const scope = use(TraceScopeContext)
   return useQuery({
     queryKey: ["conversationSpanMaps", scope?.sandboxOrgId, projectId, traceId],
-    queryFn: () =>
-      mapConversationToSpans({ data: { ...(scope ? { sandboxOrgId: scope.sandboxOrgId } : {}), projectId, traceId } }),
-    enabled: enabled && projectId.length > 0 && traceId.length > 0,
+    queryFn: async () => {
+      const spans = await listConversationMessageSpans({
+        data: {
+          ...(scope ? { sandboxOrgId: scope.sandboxOrgId } : {}),
+          projectId,
+          traceId,
+          startTime: startTime ?? "",
+        },
+      })
+      return buildConversationSpanMaps(allMessages ?? [], asMessageSpans(spans))
+    },
+    enabled:
+      enabled && projectId.length > 0 && traceId.length > 0 && startTime !== undefined && allMessages !== undefined,
   })
 }

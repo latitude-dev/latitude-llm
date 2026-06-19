@@ -123,11 +123,11 @@
     },
     "packages/telemetry/typescript": {
       "entry": [
-        "examples/**/*.ts"
+        "examples/*.ts"
       ],
       "project": [
         "src/**/*.ts",
-        "examples/**/*.ts"
+        "examples/*.ts"
       ],
       "ignore": [
         "src/constants/**/*.ts"

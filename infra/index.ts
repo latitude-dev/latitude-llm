@@ -29,6 +29,7 @@ const bastionAmiId = config.require("bastionAmiId")
 const datadogSite = config.get("datadogSite") ?? "datadoghq.eu"
 const datadogSlackAlertHandle = config.get("datadogSlackAlertHandle") ?? "@slack-alerts"
 const enableDatadogSynthetics = config.getBoolean("enableDatadogSynthetics") ?? false
+const enableMaintenanceRedirect = config.getBoolean("enableWebMaintenanceRedirect") ?? false
 
 const temporalCloudAddress = config.get("temporalCloudAddress") ?? `${envConfig.region}.aws.api.temporal.io:7233`
 const temporalCloudNamespace = config.get("temporalCloudNamespace") ?? ""
@@ -72,6 +73,7 @@ const alb = createAlb(
   vpc.publicSubnets,
   securityGroups.alb,
   certificate.certificateValidation?.certificateArn ?? certificate.certificate.arn,
+  enableMaintenanceRedirect,
 )
 
 const _dns = createDnsRecords(name, envConfig, alb.alb, hostedZoneId)

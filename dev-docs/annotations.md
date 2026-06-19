@@ -6,7 +6,7 @@ Human-created annotations are the strongest human signal in the reliability syst
 
 They are used for:
 
-- issue discovery
+- signal discovery
 - evaluation alignment
 - reliability feedback loops in Latitude UI or in user-owned apps
 
@@ -49,7 +49,7 @@ Rules:
 - system-created queue drafts still use the queue CUID as `source_id`
 - they are created by the `systemQueueFlaggerWorkflow` started from the debounced `trace-end:run` runtime for that trace
 - system-created queue drafts do not use the automatic publication path; they wait for explicit human review
-- drafts do not participate in issue discovery, issue-centroid mutation, issue search-vector maintenance, ClickHouse analytics, or evaluation alignment until `draftedAt` is cleared
+- drafts do not participate in signal discovery, issue-centroid mutation, issue search-vector maintenance, ClickHouse analytics, or evaluation alignment until `draftedAt` is cleared
 - if a draft annotation carries `issueId`, that value is editable issue intent only until publication clears `draftedAt`
 - once a draft is published, it should no longer be edited; it may still be deleted later
 - drafts exist to support immediate managed review without relying on temporary browser-only or Redis-only state
@@ -67,7 +67,7 @@ Explicit link choices are human overrides:
 
 - while the annotation is still drafted, they store editable issue intent on the canonical score row
 - once published, they bypass similarity-based candidate selection for that annotation score
-- publication clears `draftedAt`, emits `ScoreCreated` with the selected `issueId`, and the centralized `issues:discovery` task performs the canonical ownership claim, centroid mutation (which transparently refreshes the derived `centroid_embedding` inside `IssueRepository.save`), refresh event write when needed, and ClickHouse analytics sync
+- publication clears `draftedAt`, emits `ScoreCreated` with the selected `issueId`, and the centralized `signals:discovery` task performs the canonical ownership claim, centroid mutation (which transparently refreshes the derived `centroid_embedding` inside `IssueRepository.save`), refresh event write when needed, and ClickHouse analytics sync
 - explicitly linked issues remain immediately visible only after publication
 
 ## Managed Queue Review
@@ -132,7 +132,7 @@ Do not store redundant quoted text when the selection can be reconstructed from 
 
 User annotations are often too short or vague to cluster well.
 
-Before issue discovery:
+Before signal discovery:
 
 - preserve the original human text in `metadata.rawFeedback`
 - enrich the canonical `feedback` field with surrounding context
@@ -157,11 +157,11 @@ Important v2 carry-forward:
 2. write or update the canonical Postgres score row, keeping `draftedAt` set while the annotation is still a draft
 3. preserve raw human text in metadata
 4. enrich the canonical feedback when needed
-5. while `draftedAt` is still set, keep the score out of issue discovery, issue-centroid mutation, issue search-vector maintenance, evaluation alignment, and ClickHouse analytics
+5. while `draftedAt` is still set, keep the score out of signal discovery, issue-centroid mutation, issue search-vector maintenance, evaluation alignment, and ClickHouse analytics
 6. if the annotator selected an existing issue while drafting, keep that `issue_id` only as editable draft intent
 7. when the human-editable draft becomes due, the `annotation-scores:publish` task clears `draftedAt`
 8. if the published annotation had a linked issue selected while drafted and is failed/non-errored, the emitted `ScoreCreated` payload carries that selected `issueId` for centralized direct assignment
-9. if the published annotation has no linked issue and is failed/non-errored, the emitted `ScoreCreated` payload carries `issueId = null` so centralized issue handling can choose between known-issue routing and full similarity discovery
+9. if the published annotation has no linked issue and is failed/non-errored, the emitted `ScoreCreated` payload carries `issueId = null` so centralized issue handling can choose between known-signal routing and full similarity discovery
 10. if the published annotation is now immutable and ready for analytics save without issue mutation, save it to ClickHouse analytics
 
 ## Relationship To Issues
@@ -174,7 +174,7 @@ Because of that:
 - explicitly linked annotations become issue-backed evidence immediately after publication
 - annotations should have the highest centroid weight
 - issues with linked annotations should always remain visible in the product
-- draft annotations do not create visible issues immediately because `draftedAt` keeps them out of issue discovery
+- draft annotations do not create visible issues immediately because `draftedAt` keeps them out of signal discovery
 
 ## Relationship To Queues
 

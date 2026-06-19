@@ -258,24 +258,6 @@ await capture(
 
 Avoid returning the stream from `capture()` and consuming it later. Once the callback has finished, the Latitude context is no longer active for the remaining stream consumption.
 
-### First request is missing after startup
-
-`await latitude.ready` is optional. Most applications do not need it.
-
-Use it only during startup if your app makes an LLM call immediately after constructing `Latitude` and that first call is missing from Latitude:
-
-```ts
-const latitude = new Latitude({
-  apiKey: process.env.LATITUDE_API_KEY!,
-  project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { openai: OpenAI },
-})
-
-await latitude.ready
-```
-
-After instrumentation is registered, you do not need to await `ready` around individual requests.
-
 ### No spans are created inside `capture()`
 
 `capture()` only attaches context. You still need a supported instrumentation, and the code inside the callback must make an instrumented LLM call.

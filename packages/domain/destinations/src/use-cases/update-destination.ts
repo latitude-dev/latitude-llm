@@ -42,8 +42,11 @@ const canonicalize = (value: unknown): string =>
 /**
  * Updates a destination's name, config, credentials, and per-source config in a
  * single transaction (the edit form saves both at once — never half-applied).
- * Editing the credentials or the delivery host resets the failure counter and
- * lifts quarantine (the reconnect path); the sync cursor is never touched.
+ * Editing the credentials or the delivery host is a **reconnect**: it resets the
+ * failure counter, lifts quarantine, and **re-opens backfill coverage** (resets
+ * `coverage_start_at` to creation) — prior deliveries may have gone to the old
+ * (wrong) target, so the history is re-importable. The live sync cursor (watermark)
+ * is never touched; live resumes forward from where it was.
  */
 export const updateDestinationUseCase = (input: UpdateDestinationInput) =>
   Effect.gen(function* () {
@@ -87,6 +90,11 @@ export const updateDestinationUseCase = (input: UpdateDestinationInput) =>
     yield* sqlClient.transaction(
       Effect.gen(function* () {
         yield* destinations.save(updated)
+        // Reconnect (new key/host) ⇒ re-open backfill coverage: prior deliveries may have
+        // gone to the old target, so don't treat that range as already imported.
+        if (resetsFailures) {
+          yield* sourceStates.resetCoverageStart(updated.id)
+        }
         if (input.sourceConfigs && input.sourceConfigs.length > 0) {
           const currentSources = yield* sourceStates.listByDestinationId(updated.id)
           for (const patch of input.sourceConfigs) {

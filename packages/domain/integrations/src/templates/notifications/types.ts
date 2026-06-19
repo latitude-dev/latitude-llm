@@ -83,6 +83,7 @@ export type SlackRenderDepsByKind = {
   readonly "wrapped.report": never
   readonly "custom.message": never
   readonly "issue.assigned": never
+  readonly "destination.quarantined": never
 }
 
 export type SlackRenderDepsFor<K extends NotificationKind> = SlackRenderDepsByKind[K]

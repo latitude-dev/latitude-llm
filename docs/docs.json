@@ -110,6 +110,7 @@
               "telemetry/frameworks/llamaindex",
               "telemetry/frameworks/mastra",
               "telemetry/frameworks/eve",
+              "telemetry/frameworks/flue",
               "telemetry/frameworks/strands",
               "telemetry/frameworks/livekit"
             ]
@@ -239,6 +240,7 @@
           "getting-started/concepts",
           "getting-started/mcp",
           "more/sandbox",
+          "more/data-destinations",
           "more/api-reference"
         ]
       }
@@ -253,6 +255,10 @@
   "integrations": {
     "gtm": {
       "tagId": "GTM-5NWGV24H"
+    },
+    "posthog": {
+      "apiKey": "phc_BWYPiCdzp7A2mGD3PsrXamcxmemNNctkLYMNDHmmYJJb",
+      "sessionRecording": true
     }
   }
 }

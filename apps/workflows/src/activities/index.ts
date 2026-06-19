@@ -32,14 +32,6 @@ export {
 } from "./evaluation-alignment-activities.ts"
 export { optimizeEvaluationDraft } from "./evaluation-optimization-activities.ts"
 export { draftAnnotate, runFlagger, saveAnnotation } from "./flagger-activities.ts"
-export {
-  assignOrCreateSignal,
-  assignScoreToSignal,
-  checkEligibility,
-  createSignalFromScore,
-  embedScoreFeedback,
-  syncScoreAnalytics,
-} from "./issue-discovery-activities.ts"
 export { buildOptimizationDedupeKey, scheduleEvaluationOptimization } from "./schedule-evaluation-optimization.ts"
 export {
   type SeedDemoProjectActivityInput,
@@ -63,6 +55,14 @@ export {
   type SessionIntelligenceBackfillActivityInput,
   waitForTaxonomyObservationStabilityActivity,
 } from "./session-intelligence-backfill-activities.ts"
+export {
+  assignOrCreateSignal,
+  assignScoreToSignal,
+  checkEligibility,
+  createSignalFromScore,
+  embedScoreFeedback,
+  syncScoreAnalytics,
+} from "./signal-discovery-activities.ts"
 export {
   assertGardenTaxonomyQualityActivity,
   buildHierarchicalGardenTaxonomyActivity,

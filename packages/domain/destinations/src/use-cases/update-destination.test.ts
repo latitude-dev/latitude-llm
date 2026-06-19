@@ -106,6 +106,63 @@ describe("updateDestinationUseCase", () => {
     expect(updated.config.host).toBe(POSTHOG_EU_INGESTION_HOST)
   })
 
+  // A source whose coverage was advanced to the floor by a prior backfill (coverage_start_at < created_at).
+  const backfilledSource = (createdAt: Date, coverageStartAt: Date) =>
+    createDestinationSourceState({
+      organizationId: orgId,
+      destinationId,
+      source: "spans",
+      config: { source: "spans", excludePayloads: false, maxRecordsPerRun: 50_000 },
+      watermark: coverageStartAt, // createDestinationSourceState seeds coverage_start_at = watermark
+      createdAt,
+    })
+
+  const setupWithSource = (source: ReturnType<typeof backfilledSource>) => {
+    const { repo, rows } = createFakeDestinationRepository([baseDestination()])
+    const { repo: sourceRepo, rows: sourceRows } = createFakeDestinationSourceStateRepository([source], rows)
+    const layer = Layer.mergeAll(
+      Layer.succeed(DestinationRepository, repo),
+      Layer.succeed(DestinationSourceStateRepository, sourceRepo),
+      Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: orgId })),
+    )
+    return { sourceRows, layer }
+  }
+
+  it("re-opens backfill coverage when credentials change (coverage_start_at reset to created_at)", async () => {
+    const createdAt = new Date("2026-06-10T00:00:00.000Z")
+    const floor = new Date("2026-05-19T00:00:00.000Z")
+    const { sourceRows, layer } = setupWithSource(backfilledSource(createdAt, floor))
+    expect(sourceRows[0]?.coverageStartAt).toEqual(floor) // prior backfill advanced it down to the floor
+
+    await Effect.runPromise(
+      updateDestinationUseCase({
+        organizationId: orgId,
+        projectId,
+        destinationId,
+        credentials: { kind: "posthog", apiKey: "phc_new" },
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(sourceRows[0]?.coverageStartAt).toEqual(createdAt) // re-opened so the history is re-importable
+  })
+
+  it("leaves backfill coverage untouched when only non-credential config changes", async () => {
+    const createdAt = new Date("2026-06-10T00:00:00.000Z")
+    const floor = new Date("2026-05-19T00:00:00.000Z")
+    const { sourceRows, layer } = setupWithSource(backfilledSource(createdAt, floor))
+
+    await Effect.runPromise(
+      updateDestinationUseCase({
+        organizationId: orgId,
+        projectId,
+        destinationId,
+        config: { kind: "posthog", host: POSTHOG_US_INGESTION_HOST, intervalMs: 60_000 },
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(sourceRows[0]?.coverageStartAt).toEqual(floor) // unchanged — not a reconnect
+  })
+
   it("does not reset failures when only non-credential config changes", async () => {
     const { layer } = setup(quarantined())
 

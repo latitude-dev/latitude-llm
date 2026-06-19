@@ -243,7 +243,7 @@ describe("Scores Routes Integration", () => {
     expect(analyticsRows[0]?.source_id).toBe(evaluationId)
   })
 
-  it<ApiTestContext>("queues centralized discovery for failed scores from issue-linked evaluations", async ({
+  it<ApiTestContext>("queues centralized discovery for failed scores from signal-linked evaluations", async ({
     app,
     database,
     clickhouse,
@@ -486,7 +486,7 @@ describe("Scores Routes Integration", () => {
     expect(analyticsRows).toHaveLength(1)
   })
 
-  it<ApiTestContext>("requests issue discovery for failed non-errored custom scores", async ({
+  it<ApiTestContext>("requests signal discovery for failed non-errored custom scores", async ({
     app,
     database,
     clickhouse,
@@ -509,7 +509,7 @@ describe("Scores Routes Integration", () => {
           trace: { by: "id", id: traceId },
           value: 0.12,
           passed: false,
-          feedback: "Needs follow-up issue discovery",
+          feedback: "Needs follow-up signal discovery",
           metadata: { import: "batch-42" },
         }),
       }),

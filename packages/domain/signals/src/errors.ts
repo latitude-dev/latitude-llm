@@ -4,7 +4,7 @@ export class ScoreNotFoundForDiscoveryError extends Data.TaggedError("ScoreNotFo
   readonly scoreId: string
 }> {
   readonly httpStatus = 404
-  readonly httpMessage = "Score not found for issue discovery"
+  readonly httpMessage = "Score not found for signal discovery"
 }
 
 export class ScoreDiscoveryOrganizationMismatchError extends Data.TaggedError(
@@ -13,21 +13,21 @@ export class ScoreDiscoveryOrganizationMismatchError extends Data.TaggedError(
   readonly scoreId: string
 }> {
   readonly httpStatus = 400
-  readonly httpMessage = "Score organization does not match issue discovery input"
+  readonly httpMessage = "Score organization does not match signal discovery input"
 }
 
 export class ScoreDiscoveryProjectMismatchError extends Data.TaggedError("ScoreDiscoveryProjectMismatchError")<{
   readonly scoreId: string
 }> {
   readonly httpStatus = 400
-  readonly httpMessage = "Score project does not match issue discovery input"
+  readonly httpMessage = "Score project does not match signal discovery input"
 }
 
 export class DraftScoreNotEligibleForDiscoveryError extends Data.TaggedError("DraftScoreNotEligibleForDiscoveryError")<{
   readonly scoreId: string
 }> {
   readonly httpStatus = 409
-  readonly httpMessage = "Draft scores are not eligible for issue discovery"
+  readonly httpMessage = "Draft scores are not eligible for signal discovery"
 }
 
 export class ErroredScoreNotEligibleForDiscoveryError extends Data.TaggedError(
@@ -36,7 +36,7 @@ export class ErroredScoreNotEligibleForDiscoveryError extends Data.TaggedError(
   readonly scoreId: string
 }> {
   readonly httpStatus = 409
-  readonly httpMessage = "Errored scores are not eligible for issue discovery"
+  readonly httpMessage = "Errored scores are not eligible for signal discovery"
 }
 
 export class ScoreAlreadyOwnedBySignalError extends Data.TaggedError("ScoreAlreadyOwnedBySignalError")<{
@@ -50,7 +50,7 @@ export class MissingScoreFeedbackForDiscoveryError extends Data.TaggedError("Mis
   readonly scoreId: string
 }> {
   readonly httpStatus = 400
-  readonly httpMessage = "Score feedback is required for issue discovery"
+  readonly httpMessage = "Score feedback is required for signal discovery"
 }
 
 export class UnmatchedScoreNotEligibleForDiscoveryError extends Data.TaggedError(

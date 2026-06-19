@@ -362,7 +362,7 @@ describe("domain-events dispatcher", () => {
     expect(job?.options?.dedupeKey).toBe("notifications:request-incident-closed:ai-1")
   })
 
-  it("routes SignalAssigneeChanged to notifications:request-issue-assigned-notifications", async () => {
+  it("routes SignalAssigneeChanged to notifications:request-signal-assigned-notifications", async () => {
     const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("SignalAssigneeChanged", {
@@ -380,7 +380,7 @@ describe("domain-events dispatcher", () => {
     expect(published).toHaveLength(1)
     const job = published[0]
     expect(job?.queue).toBe("notifications")
-    expect(job?.task).toBe("request-issue-assigned-notifications")
+    expect(job?.task).toBe("request-signal-assigned-notifications")
     expect(job?.payload).toEqual({
       organizationId: "org-1",
       signalId: "issue-1",
@@ -388,7 +388,7 @@ describe("domain-events dispatcher", () => {
       actorUserId: "user-a",
       assignedAt: "2026-05-07T10:00:00.000Z",
     })
-    expect(job?.options?.dedupeKey).toBe("notifications:request-issue-assigned:issue-1:2026-05-07T10:00:00.000Z")
+    expect(job?.options?.dedupeKey).toBe("notifications:request-signal-assigned:issue-1:2026-05-07T10:00:00.000Z")
   })
 
   it("skips SignalAssigneeChanged for cleared assignments and self-assignments", async () => {

@@ -143,7 +143,7 @@ const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation =>
     signalId,
     name: "Existing evaluation",
     description: "Existing evaluation description",
-    script: wrapPromptAsEvaluationScript("Evaluate the conversation for the issue."),
+    script: wrapPromptAsEvaluationScript("Evaluate the conversation for the signal."),
     trigger: defaultEvaluationTrigger(),
     alignment: {
       ...emptyEvaluationAlignment("hash-existing"),
@@ -412,7 +412,7 @@ describe("evaluation-alignment activities", () => {
       description: "Existing evaluation description",
       alignedAt: new Date("2026-04-01T00:00:00.000Z").toISOString(),
       draft: {
-        script: wrapPromptAsEvaluationScript("Evaluate the conversation for the issue."),
+        script: wrapPromptAsEvaluationScript("Evaluate the conversation for the signal."),
         evaluationHash: "hash-existing",
         trigger: defaultEvaluationTrigger(),
       },
@@ -430,7 +430,7 @@ describe("evaluation-alignment activities", () => {
         signalName: SIGNAL_NAME,
         signalDescription: SIGNAL_DESCRIPTION,
         draft: {
-          script: wrapPromptAsEvaluationScript("Evaluate the conversation for the issue."),
+          script: wrapPromptAsEvaluationScript("Evaluate the conversation for the signal."),
           evaluationHash: "hash-existing",
           trigger: defaultEvaluationTrigger(),
         },
@@ -700,7 +700,7 @@ describe("evaluation-alignment activities", () => {
     expect(mockOptimizer.optimize).toHaveBeenCalledTimes(1)
   })
 
-  it("persists the evaluated confusion matrix and inherits name/description from the issue", async () => {
+  it("persists the evaluated confusion matrix and inherits name/description from the signal", async () => {
     const { layer, stored } = makeEvaluationRepoLayer()
 
     const result = await Effect.runPromise(
@@ -727,7 +727,7 @@ describe("evaluation-alignment activities", () => {
     })
   })
 
-  it("overwrites an existing evaluation's name/description with the linked issue's current values", async () => {
+  it("overwrites an existing evaluation's name/description with the linked signal's current values", async () => {
     const { layer, stored } = makeEvaluationRepoLayer()
     stored.set(String(evaluationId), makeEvaluation())
 

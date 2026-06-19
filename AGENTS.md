@@ -26,7 +26,7 @@ At a glance: **`apps/*`** own HTTP boundaries (validation, authz, routing to use
 
 Detailed policies, command examples, and code samples live under **`.agents/skills/<skill-name>/SKILL.md`**. Load narrow skills instead of memorizing the entire monorepo at once.
 
-**Index coverage:** The glossary lists **every** skill in `.agents/skills/` (one row per `*/SKILL.md`, **25** total), ordered **alphabetically by folder name**. When you add or remove a skill folder, update this table in the same change.
+**Index coverage:** The glossary lists **every** skill in `.agents/skills/` (one row per `*/SKILL.md`, **27** total), ordered **alphabetically by folder name**. When you add or remove a skill folder, update this table in the same change.
 
 ## Skill glossary
 
@@ -50,6 +50,7 @@ Detailed policies, command examples, and code samples live under **`.agents/skil
 | **Environment configuration** | [.agents/skills/env-configuration/SKILL.md](.agents/skills/env-configuration/SKILL.md) | **`LAT_*` / `VITE_LAT_*`**, `.env.example`, **`parseEnv` / `parseEnvOptional`** |
 | **Fix Datadog issues** | [.agents/skills/fix-datadog-issues/SKILL.md](.agents/skills/fix-datadog-issues/SKILL.md) | Finding, triaging, and fixing production errors from **Datadog Error Tracking** (`plugin:datadog:mcp`); picking which issue to work (occurrence/trend/recency, v2-only, prod-only), root-causing in code, reproducing with tests, commenting on the issue, and opening a PR to `development` |
 | **GitHub issues** | [.agents/skills/gh-issue/SKILL.md](.agents/skills/gh-issue/SKILL.md) | Creating clear, actionable GitHub issues for bugs, features, and improvements, optimized for LLM/actionability |
+| **Managing maintenance windows** | [.agents/skills/managing-maintenance-windows/SKILL.md](.agents/skills/managing-maintenance-windows/SKILL.md) | Enabling, disabling, verifying, or preparing production maintenance mode, which redirects **`console.latitude.so`** to the Better Stack status page with the Pulumi `enableWebMaintenanceRedirect` switch |
 | **Mintlify docs preview** | [.agents/skills/mintlify-preview/SKILL.md](.agents/skills/mintlify-preview/SKILL.md) | Running the public **Mintlify** docs site (`docs/`) locally for live preview (`mint dev`); **Node <25 (nvm v22) requirement**, keeping the CLI current, non-default port, page-path mapping |
 | **Notifications** | [.agents/skills/notifications/SKILL.md](.agents/skills/notifications/SKILL.md) | Adding a notification **kind**, **group**, or **channel**; in-app + email delivery; `NOTIFICATION_KIND_META` / `NOTIFICATION_GROUPS`; per-user prefs (`users.notification_preferences`); project-level gates (`projects.settings.notifications`); idempotency + cascade-on-`ProjectDeleted` |
 | **Production release** | [.agents/skills/production-release/SKILL.md](.agents/skills/production-release/SKILL.md) | Preparing a production release, updating `CHANGELOG.md` from the production diff, and pushing `vX.Y.Z` release tags with `scripts/release.sh` |

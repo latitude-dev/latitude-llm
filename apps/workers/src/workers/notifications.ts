@@ -4,6 +4,7 @@ import {
   deleteNotificationsByProjectUseCase,
   NOTIFICATION_KIND_META,
   type NotificationKind,
+  requestDestinationQuarantinedNotificationsUseCase,
   requestIncidentNotificationsUseCase,
   requestSignalAssignedNotificationsUseCase,
   requestWrappedReportNotificationsUseCase,
@@ -252,7 +253,7 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
         withTracing,
       ),
 
-    "request-issue-assigned-notifications": (payload) =>
+    "request-signal-assigned-notifications": (payload) =>
       requestSignalAssignedNotificationsUseCase({
         organizationId: OrganizationId(payload.organizationId),
         signalId: SignalId(payload.signalId),
@@ -263,7 +264,7 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
         Effect.flatMap((result) => {
           if (result.status === "skipped") {
             logger.info(
-              `notifications.request-issue-assigned skipped signalId=${payload.signalId} reason=${result.reason}`,
+              `notifications.request-signal-assigned skipped signalId=${payload.signalId} reason=${result.reason}`,
             )
             return Effect.void
           }
@@ -290,7 +291,63 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
         }),
         Effect.tapError((error) =>
           Effect.sync(() =>
-            logger.error(`notifications.request-issue-assigned failed signalId=${payload.signalId}`, error),
+            logger.error(`notifications.request-signal-assigned failed signalId=${payload.signalId}`, error),
+          ),
+        ),
+        withPostgres(requestLayer, pgClient, OrganizationId(payload.organizationId)),
+        Effect.asVoid,
+        withTracing,
+      ),
+
+    "request-destination-quarantined-notifications": (payload) =>
+      requestDestinationQuarantinedNotificationsUseCase({
+        organizationId: OrganizationId(payload.organizationId),
+        projectId: ProjectId(payload.projectId),
+        destinationId: payload.destinationId,
+        destinationName: payload.destinationName,
+        destinationKind: payload.destinationKind,
+        quarantinedAt: payload.quarantinedAt,
+        failureMessage: payload.failureMessage,
+      }).pipe(
+        Effect.flatMap((result) => {
+          if (result.status === "skipped") {
+            logger.info(
+              `notifications.request-destination-quarantined skipped destinationId=${payload.destinationId} reason=${result.reason}`,
+            )
+            return Effect.void
+          }
+          return Effect.all(
+            [
+              Effect.all(
+                result.requests.map((req) =>
+                  publisher.publish(
+                    "notifications",
+                    "create-notification",
+                    {
+                      organizationId: req.organizationId,
+                      userId: req.userId,
+                      notificationId: req.notificationId,
+                      kind: req.kind,
+                      idempotencyKey: req.idempotencyKey,
+                      projectId: req.projectId,
+                      payload: req.payload,
+                    },
+                    { dedupeKey: `notifications:create:${req.idempotencyKey}:${req.userId}` },
+                  ),
+                ),
+                { concurrency: "unbounded" },
+              ),
+              fanOutSlackRoutes(result.requests, publisher),
+            ],
+            { concurrency: "unbounded" },
+          ).pipe(Effect.asVoid)
+        }),
+        Effect.tapError((error) =>
+          Effect.sync(() =>
+            logger.error(
+              `notifications.request-destination-quarantined failed destinationId=${payload.destinationId}`,
+              error,
+            ),
           ),
         ),
         withPostgres(requestLayer, pgClient, OrganizationId(payload.organizationId)),

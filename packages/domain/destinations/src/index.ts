@@ -5,6 +5,7 @@ export {
   DESTINATION_INTERVAL_MS_DEFAULT,
   DESTINATION_INTERVAL_MS_MAX,
   DESTINATION_INTERVAL_MS_MIN,
+  DESTINATION_LAG_WARNING_MS,
   DESTINATION_MAX_EVENT_BYTES_DEFAULT,
   DESTINATION_MAX_RECORDS_PER_RUN_DEFAULT,
   DESTINATION_MAX_RECORDS_PER_RUN_MAX,
@@ -77,12 +78,15 @@ export {
 export type {
   DestinationSyncRun,
   DestinationSyncRunStatus,
+  DestinationSyncRunTrigger,
 } from "./entities/destination-sync-run.ts"
 export {
   createDestinationSyncRun,
   DESTINATION_SYNC_RUN_STATUSES,
+  DESTINATION_SYNC_RUN_TRIGGERS,
   destinationSyncRunSchema,
   destinationSyncRunStatusSchema,
+  destinationSyncRunTriggerSchema,
 } from "./entities/destination-sync-run.ts"
 // Errors
 export type { DeliveryError } from "./errors.ts"
@@ -92,6 +96,12 @@ export {
   RetryableDeliveryError,
   SandboxOrganizationDestinationError,
 } from "./errors.ts"
+export type {
+  DeriveDestinationHealthInput,
+  DestinationHealth,
+  DestinationHealthBadge,
+} from "./health.ts"
+export { deriveDestinationHealth } from "./health.ts"
 export { uuidV5 } from "./helpers.ts"
 
 // Mappers
@@ -128,6 +138,8 @@ export type {
   UpdateDestinationQuarantineStateInput,
 } from "./ports/destination-repository.ts"
 export { DestinationRepository } from "./ports/destination-repository.ts"
+export type { DestinationRetentionPolicyShape } from "./ports/destination-retention-policy.ts"
+export { DestinationRetentionPolicy } from "./ports/destination-retention-policy.ts"
 export type {
   DestinationSourceReader,
   DestinationSourceReaderRegistry,
@@ -154,6 +166,23 @@ export { createSpansSourceReader, SpansSourceReadersLive } from "./sources/spans
 
 // Use cases
 export type {
+  BackfillDestinationError,
+  BackfillDestinationInput,
+  BackfillDestinationOutcome,
+  BackfillDestinationResult,
+  BackfillSegment,
+  BackfillWindowJob,
+  RunBackfillWindowError,
+  RunBackfillWindowInput,
+  RunBackfillWindowOutcome,
+  RunBackfillWindowResult,
+} from "./use-cases/backfill-destination.ts"
+export {
+  backfillDestinationUseCase,
+  backfillSegments,
+  runBackfillWindowUseCase,
+} from "./use-cases/backfill-destination.ts"
+export type {
   CreateDestinationError,
   CreateDestinationInput,
 } from "./use-cases/create-destination.ts"
@@ -168,6 +197,11 @@ export type {
   DeleteProjectDestinationsInput,
 } from "./use-cases/delete-project-destinations.ts"
 export { deleteProjectDestinationsUseCase } from "./use-cases/delete-project-destinations.ts"
+export {
+  type DestinationFreshness,
+  getDestinationFreshnessUseCase,
+  type SourceFreshness,
+} from "./use-cases/get-destination-freshness.ts"
 export type {
   PauseDestinationError,
   PauseDestinationInput,
@@ -180,17 +214,27 @@ export type {
 export { previewDestinationDeliveryUseCase } from "./use-cases/preview-destination-delivery.ts"
 export type { PruneDestinationSyncRunsResult } from "./use-cases/prune-destination-sync-runs.ts"
 export { pruneDestinationSyncRunsUseCase } from "./use-cases/prune-destination-sync-runs.ts"
+export type { RecordBackfillFailureInput } from "./use-cases/record-backfill-failure.ts"
+export { recordBackfillFailureUseCase } from "./use-cases/record-backfill-failure.ts"
 export type {
   RecordDestinationSyncFailureInput,
   RecordDestinationSyncFailureResult,
 } from "./use-cases/record-destination-sync-failure.ts"
 export { recordDestinationSyncFailureUseCase } from "./use-cases/record-destination-sync-failure.ts"
 export type {
+  RequestDestinationBackfillInput,
+  RequestDestinationBackfillPublish,
+  RequestDestinationBackfillResult,
+} from "./use-cases/request-destination-backfill.ts"
+export { requestDestinationBackfillUseCase } from "./use-cases/request-destination-backfill.ts"
+export type {
   ResumeDestinationError,
   ResumeDestinationInput,
+  ResumeDestinationResult,
 } from "./use-cases/resume-destination.ts"
 export { resumeDestinationUseCase } from "./use-cases/resume-destination.ts"
 export type {
+  DestinationQuarantineEvent,
   RunDestinationSyncError,
   RunDestinationSyncInput,
   RunDestinationSyncOutcome,

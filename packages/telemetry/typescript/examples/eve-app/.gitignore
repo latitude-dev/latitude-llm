@@ -1,0 +1,16 @@
+node_modules
+.env*
+.eve
+.vercel
+.workflow-data
+.next
+.output
+.nitro
+dist
+.DS_Store
+*.tsbuildinfo
+
+# example env is committed
+!.env.example
+# lockfile excluded; deps are pinned in package.json
+pnpm-lock.yaml

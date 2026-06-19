@@ -17,7 +17,7 @@ import type * as LatitudeApi from "../../../../index.js";
 export interface CreateAnnotationBody {
     /** Simulation this annotation is tied to, if any. `null` (default) when not part of a simulation. */
     simulationId?: string;
-    /** Pre-selected issue this annotation belongs to. Leave `null` (default) to let the automatic issue-discovery pipeline route the annotation. */
+    /** Pre-selected signal this annotation belongs to. Leave `null` (default) to let the automatic signal-discovery pipeline route the annotation. */
     signalId?: string;
     /** Normalized score value in [0, 1]. Higher = better. */
     value: number;

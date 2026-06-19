@@ -1,1 +1,1 @@
-export { createFakeSignalRepository } from "./fake-issue-repository.ts"
+export { createFakeSignalRepository } from "./fake-signal-repository.ts"

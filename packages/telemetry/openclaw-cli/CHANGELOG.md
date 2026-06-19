@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.9] - 2026-06-18
+
+Lockstep release with `@latitude-data/openclaw-telemetry` 0.0.9. `RUNTIME_VERSION` is bumped to `0.0.9` so `latitude-openclaw install` pins to the runtime that supports local custom attribute redaction.
+
+### Changed
+
+- The installer now installs `@latitude-data/openclaw-telemetry@0.0.9`, which supports `config.redact.attributes` and `config.redact.mask` for masking selected span attributes before OTLP export.
+
 ## [0.0.8] - 2026-06-08
 
 Lockstep release with `@latitude-data/openclaw-telemetry` 0.0.8, which drops the `apiKey` / `project` `required` constraint from the plugin's `configSchema`. `RUNTIME_VERSION` is bumped to `0.0.8` so `latitude-openclaw install` pins to the fixed runtime.

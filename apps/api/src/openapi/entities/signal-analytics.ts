@@ -15,15 +15,15 @@ const SignalAnalyticsCountMetricSchema = (totalDescription: string) =>
 
 export const SignalAnalyticsResponseSchema = z
   .object({
-    ongoing: SignalAnalyticsCountMetricSchema("Number of ongoing issues.").openapi("SignalAnalyticsOngoing"),
-    new: SignalAnalyticsCountMetricSchema("Number of new issues.").openapi("SignalAnalyticsNew"),
-    escalating: SignalAnalyticsCountMetricSchema("Number of escalating issues.").openapi("SignalAnalyticsEscalating"),
-    regressed: SignalAnalyticsCountMetricSchema("Number of regressed issues.").openapi("SignalAnalyticsRegressed"),
-    resolved: SignalAnalyticsCountMetricSchema("Number of resolved issues.").openapi("SignalAnalyticsResolved"),
+    ongoing: SignalAnalyticsCountMetricSchema("Number of ongoing signals.").openapi("SignalAnalyticsOngoing"),
+    new: SignalAnalyticsCountMetricSchema("Number of new signals.").openapi("SignalAnalyticsNew"),
+    escalating: SignalAnalyticsCountMetricSchema("Number of escalating signals.").openapi("SignalAnalyticsEscalating"),
+    regressed: SignalAnalyticsCountMetricSchema("Number of regressed signals.").openapi("SignalAnalyticsRegressed"),
+    resolved: SignalAnalyticsCountMetricSchema("Number of resolved signals.").openapi("SignalAnalyticsResolved"),
     occurrences: z
       .object({
-        total: z.number().int().nonnegative().describe("Number of issue occurrences in the range."),
-        buckets: z.array(SignalAnalyticsBucketSchema).describe("Number of issue occurrences per bucket."),
+        total: z.number().int().nonnegative().describe("Number of signal occurrences in the range."),
+        buckets: z.array(SignalAnalyticsBucketSchema).describe("Number of signal occurrences per bucket."),
       })
       .openapi("SignalAnalyticsOccurrences"),
   })

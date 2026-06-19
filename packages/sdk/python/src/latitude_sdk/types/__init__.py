@@ -59,6 +59,7 @@ if typing.TYPE_CHECKING:
     from .dataset_row_metadata import DatasetRowMetadata
     from .dataset_row_output import DatasetRowOutput
     from .delete_dataset_rows_response import DeleteDatasetRowsResponse
+    from .destination_notifications_setting import DestinationNotificationsSetting
     from .error import Error
     from .escalation_setting import EscalationSetting
     from .evaluation import Evaluation
@@ -251,6 +252,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "DatasetRowMetadata": ".dataset_row_metadata",
     "DatasetRowOutput": ".dataset_row_output",
     "DeleteDatasetRowsResponse": ".delete_dataset_rows_response",
+    "DestinationNotificationsSetting": ".destination_notifications_setting",
     "Error": ".error",
     "EscalationSetting": ".escalation_setting",
     "Evaluation": ".evaluation",
@@ -473,6 +475,7 @@ __all__ = [
     "DatasetRowMetadata",
     "DatasetRowOutput",
     "DeleteDatasetRowsResponse",
+    "DestinationNotificationsSetting",
     "Error",
     "EscalationSetting",
     "Evaluation",

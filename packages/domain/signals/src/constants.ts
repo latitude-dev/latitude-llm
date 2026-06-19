@@ -215,10 +215,10 @@ export const ESCALATION_SWEEPER_PATTERN = "0 * * * *"
 // ---------------------------------------------------------------------------
 
 /**
- * Critical issue-discovery configuration.
+ * Critical signal-discovery configuration.
  *
  * These values define the persisted `SignalCentroid` space and the query vectors
- * matched against it during issue discovery. Do not change them directly in
+ * matched against it during signal discovery. Do not change them directly in
  * place: changing model, dimensions, decay semantics, or source weights
  * requires explicit support for old and new embedding spaces plus a centroid
  * rebuild/migration strategy, otherwise historical and new contributions become
@@ -259,7 +259,7 @@ export const SIGNAL_DISCOVERY_SEARCH_CANDIDATES = 1000
 // Discovery thresholds (rerank)
 // ---------------------------------------------------------------------------
 
-// TODO(issue-discovery-rerank): remove these constants with the temporary
+// TODO(signal-discovery-rerank): remove these constants with the temporary
 // third-party rerank stage once pgvector-only matching is calibrated.
 
 /** Maximum candidates sent into the reranking stage. */
@@ -344,7 +344,7 @@ export const SIGNAL_DISCOVERY_FEEDBACK_LOCK_KEY = (hash: string) => `feedback:${
 // ---------------------------------------------------------------------------
 
 /**
- * Per-issue serialization lock key. Wraps the assign-score-to-issue Postgres
+ * Per-issue serialization lock key. Wraps the assign-score-to-signal Postgres
  * transaction (centroid recompute plus derived pgvector maintenance) so
  * concurrent writers to the same issue do not race on centroid state.
  */

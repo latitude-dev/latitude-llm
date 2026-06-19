@@ -2,6 +2,47 @@
 
 ## Unreleased
 
+## v0.3.10 - 2026-06-18
+
+### Infrastructure
+
+- Kept production ALB target groups associated during maintenance redirects so ECS can roll every public service while traffic is redirected to the status page.
+
+## v0.3.9 - 2026-06-18
+
+### Maintenance windows
+
+- Expanded production maintenance redirects to cover every public service hostname, including console, API, ingest, and bull-board, so planned maintenance consistently sends traffic to the status page (ref: 863e46b).
+
+### ClickHouse
+
+- Throttled the `traces` primary-key migration backfill to reduce load while rebuilding trace rollups with `trace_id` in the primary key (ref: 6654694).
+
+## v0.3.8 - 2026-06-18
+
+### Signals
+
+- Renamed Issues to Signals end-to-end across the web UI, API, SDKs, notifications, seeded data, and documentation while preserving the signal lifecycle and analytics flows (ref: #3608, #3610).
+- Updated signal scoring, discovery, lifecycle, evaluation alignment, incident, and monitor integrations to use the new signal model and regenerated the TypeScript and Python SDK surfaces (ref: #3608, typescript-sdk-6.1.0, python-sdk-6.1.0).
+
+### Data destinations
+
+- Added destination health tracking, quarantine notifications, per-run metrics, and delivery failure handling so unhealthy destinations are visible and operators are notified (ref: #3606).
+- Added destination backfills with historical-boundary support, freshness checks, queued backfill requests, sync-run tracking, and a web backfill modal (ref: #3607).
+- Published data-destination documentation, including the PostHog integration guide, and promoted the implementation spec into durable dev docs (ref: #3619).
+
+### Telemetry and SDKs
+
+- Added Flue framework telemetry mapping, filtering, documentation, and a runnable TypeScript example app, plus Eve example app updates (ref: #3617, typescript-telemetry-3.1.1).
+- Released agent telemetry redaction updates for Claude Code, OpenClaw, and Pi telemetry packages (ref: e74d119).
+
+### Performance and reliability
+
+- Promoted `trace_id` into the ClickHouse traces primary key for faster trace-specific queries (ref: #3611).
+- Reduced trace detail loading work by building conversation span maps client-side and fixed stale span trees when navigating between traces (ref: #3612, #3615).
+- Restored the QuickJS Emscripten runtime dependency in worker bundles (ref: #3613).
+- Added a production maintenance redirect toggle for planned maintenance windows (ref: #3616).
+
 ## v0.3.7 - 2026-06-17
 
 ### Workers

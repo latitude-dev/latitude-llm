@@ -9,6 +9,14 @@ const RUN_STATUS_BADGE: Record<DestinationSyncRunRecord["status"], { label: stri
     failed: { label: "Failed", variant: "destructiveMuted" },
   }
 
+const RUN_TRIGGER_BADGE: Record<
+  DestinationSyncRunRecord["trigger"],
+  { label: string; variant: BadgeProps["variant"] }
+> = {
+  live: { label: "Live", variant: "outlineMuted" },
+  backfill: { label: "Backfill", variant: "warningMuted" },
+}
+
 const numberFormatter = new Intl.NumberFormat("en-US")
 
 const columns: InfiniteTableColumn<DestinationSyncRunRecord>[] = [
@@ -34,6 +42,15 @@ const columns: InfiniteTableColumn<DestinationSyncRunRecord>[] = [
     width: 100,
     minWidth: 80,
     render: (run) => <span className="capitalize">{run.source}</span>,
+  },
+  {
+    key: "trigger",
+    header: "Type",
+    width: 100,
+    minWidth: 80,
+    render: (run) => (
+      <Badge variant={RUN_TRIGGER_BADGE[run.trigger].variant}>{RUN_TRIGGER_BADGE[run.trigger].label}</Badge>
+    ),
   },
   {
     key: "recordsRead",

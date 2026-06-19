@@ -9,7 +9,7 @@ from ..core.pydantic_utilities import UniversalBaseModel
 class CreateMonitorAlertBodyConditionKind(UniversalBaseModel):
     kind: typing.Literal["issue.escalating"] = pydantic.Field(default="issue.escalating")
     """
-    System issue-escalation alert; only `sensitivity` is tunable.
+    System signal-escalation alert; only `sensitivity` is tunable.
     """
 
     sensitivity: typing.Optional[int] = pydantic.Field(default=None)

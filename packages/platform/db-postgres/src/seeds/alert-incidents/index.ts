@@ -153,7 +153,7 @@ const seedAlertIncidents: Seeder = {
         // 3. Curated `issue.regressed` rows for the regression demo set.
         //    Signal ids designated by `SEED_REGRESSED_SIGNAL_IDS` have their
         //    `resolvedAt` cleared by the signals seeder (mirroring what the
-        //    production `assign-score-to-issue` regression detection does)
+        //    production `assign-score-to-signal` regression detection does)
         //    so the read path derives them as Regressed.
         const regressionStartedAt = ctx.scope.dateDaysAgo(2, 9, 0)
         for (const fixtureSignalId of SEED_REGRESSED_SIGNAL_IDS) {

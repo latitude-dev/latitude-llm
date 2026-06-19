@@ -1,6 +1,6 @@
 # Latitude Python SDK
 
-Official Python client for the [Latitude](https://latitude.so) public API. Typed access to projects, traces, issues, datasets, scores, annotations, and more.
+Official Python client for the [Latitude](https://latitude.so) public API. Typed access to projects, traces, signals, datasets, scores, annotations, and more.
 
 The SDK is generated from our OpenAPI spec and follows [Semantic Versioning](https://semver.org) — breaking changes only land with a major version bump. See [`CHANGELOG.md`](./CHANGELOG.md).
 
@@ -32,7 +32,7 @@ annotation = client.annotations.create(
 )
 ```
 
-The client is constructed once and reused — each resource (`client.projects`, `client.traces`, `client.issues`, `client.scores`, `client.annotations`, …) is lazily instantiated on first access.
+The client is constructed once and reused — each resource (`client.projects`, `client.traces`, `client.signals`, `client.scores`, `client.annotations`, …) is lazily instantiated on first access.
 
 ### Async
 

@@ -48,8 +48,8 @@ import {
   emptyEvaluationAlignment,
   evaluationSchema,
 } from "../../entities/evaluation.ts"
-import { type EvaluationSignal, EvaluationSignalRepository } from "../../ports/evaluation-issue-repository.ts"
 import { EvaluationRepository, type EvaluationRepositoryShape } from "../../ports/evaluation-repository.ts"
+import { type EvaluationSignal, EvaluationSignalRepository } from "../../ports/evaluation-signal-repository.ts"
 import {
   EVALUATION_CONVERSATION_PLACEHOLDER,
   estimateEvaluationScriptCostMicrocents,

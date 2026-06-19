@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.9] - 2026-06-18
+
+### Added
+
+- Local custom attribute redaction before OTLP export. Configure exact names, regex source strings, or `/pattern/flags` strings via `LATITUDE_REDACT_ATTRIBUTES`, with an optional `LATITUDE_REDACT_MASK`, to mask selected span attributes while keeping content capture enabled.
+
 ## [0.0.8] - 2026-06-11
 
 ### Fixed

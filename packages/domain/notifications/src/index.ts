@@ -2,6 +2,7 @@
 
 export type {
   CustomMessagePayload,
+  DestinationQuarantinedPayload,
   IncidentBreach,
   IncidentClosedPayload,
   IncidentEventPayload,
@@ -18,6 +19,7 @@ export type {
 } from "./entities/notification.ts"
 export {
   customMessagePayloadSchema,
+  destinationQuarantinedPayloadSchema,
   groupOf,
   incidentBreachSchema,
   incidentClosedPayloadSchema,
@@ -88,6 +90,13 @@ export type {
 } from "./use-cases/mark-notification-seen.ts"
 export { markNotificationSeenUseCase } from "./use-cases/mark-notification-seen.ts"
 export type {
+  DestinationQuarantinedNotificationRequest,
+  RequestDestinationQuarantinedNotificationsError,
+  RequestDestinationQuarantinedNotificationsInput,
+  RequestDestinationQuarantinedNotificationsResult,
+} from "./use-cases/request-destination-quarantined-notifications.ts"
+export { requestDestinationQuarantinedNotificationsUseCase } from "./use-cases/request-destination-quarantined-notifications.ts"
+export type {
   IncidentNotificationKind,
   IncidentNotificationRequest,
   IncidentTransition,
@@ -101,8 +110,8 @@ export type {
   RequestSignalAssignedNotificationsInput,
   RequestSignalAssignedNotificationsResult,
   SignalAssignedNotificationRequest,
-} from "./use-cases/request-issue-assigned-notifications.ts"
-export { requestSignalAssignedNotificationsUseCase } from "./use-cases/request-issue-assigned-notifications.ts"
+} from "./use-cases/request-signal-assigned-notifications.ts"
+export { requestSignalAssignedNotificationsUseCase } from "./use-cases/request-signal-assigned-notifications.ts"
 export type {
   RequestWrappedReportNotificationsError,
   RequestWrappedReportNotificationsInput,

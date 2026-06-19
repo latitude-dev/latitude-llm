@@ -37,7 +37,7 @@ Trace-end enqueues a single `deterministic-flaggers:run` job per trace. That wor
 
 Per-strategy outcomes:
 
-- `matched`: writes a published annotation score immediately with `source = "annotation"`, `sourceId = "SYSTEM"`, `draftedAt = null`, `annotatorId = null`, and strategy-supplied feedback; issue discovery receives the normal `ScoreCreated` fan-out
+- `matched`: writes a published annotation score immediately with `source = "annotation"`, `sourceId = "SYSTEM"`, `draftedAt = null`, `annotatorId = null`, and strategy-supplied feedback; signal discovery receives the normal `ScoreCreated` fan-out
 - `no-match`: LLM-capable strategies apply the provisioned flagger's `sampling`; sampled-in traces enqueue `start-flagger-workflow` with reason `sampled`
 - `ambiguous`: LLM-capable strategies check the per-org/slug Redis rate limit; traces under the limit enqueue `start-flagger-workflow` with reason `ambiguous`
 - `suppressed`: phase-2 strategies skip work when a listed phase-1 suppressor matched
@@ -56,7 +56,7 @@ Workflow shape:
 - `draftAnnotate`: generates the annotation feedback and forwards trace context including `sessionId` and `simulationId`
 - `saveAnnotation`: writes one published annotation score with `source = "annotation"`, `sourceId = "SYSTEM"`, `draftedAt = null`, and the forwarded session/simulation context
 
-The workflow does not create queue items, queue drafts, or annotation queue counters. Flagger outputs skip human draft review and enter issue discovery as normal published annotation scores.
+The workflow does not create queue items, queue drafts, or annotation queue counters. Flagger outputs skip human draft review and enter signal discovery as normal published annotation scores.
 
 ## Strategy Registry
 

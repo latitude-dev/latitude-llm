@@ -9,7 +9,7 @@ from ..core.pydantic_utilities import UniversalBaseModel
 class SignalAnalyticsRegressed(UniversalBaseModel):
     total: int = pydantic.Field()
     """
-    Number of regressed issues.
+    Number of regressed signals.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

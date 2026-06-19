@@ -30,6 +30,10 @@ export const destinationSourceStateSchema = z
     watermark: z.date(),
     /** Tie-breaker within one watermark value; `""` before the first advance. */
     watermarkId: z.string(),
+    /** Earliest instant this source has taken responsibility for (live start, extended leftward by backfills); the upper bound for a historical backfill. */
+    coverageStartAt: z.date(),
+    backfillStartedAt: z.date().nullable(),
+    backfillProgressAt: z.date().nullable(),
     lastRunAt: z.date().nullable(),
     consecutiveEmptyRuns: z.number().int().min(0),
     createdAt: z.date(),
@@ -58,6 +62,10 @@ export const createDestinationSourceState = (params: {
     config: params.config,
     watermark: params.watermark,
     watermarkId: "",
+    // Coverage begins where live begins; backfills extend it leftward.
+    coverageStartAt: params.watermark,
+    backfillStartedAt: null,
+    backfillProgressAt: null,
     lastRunAt: null,
     consecutiveEmptyRuns: 0,
     createdAt: now,

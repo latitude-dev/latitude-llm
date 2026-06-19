@@ -64,7 +64,7 @@ class AnnotationsClient:
             Simulation this annotation is tied to, if any. `null` (default) when not part of a simulation.
 
         signal_id : typing.Optional[str]
-            Pre-selected issue this annotation belongs to. Leave `null` (default) to let the automatic issue-discovery pipeline route the annotation.
+            Pre-selected signal this annotation belongs to. Leave `null` (default) to let the automatic signal-discovery pipeline route the annotation.
 
         anchor : typing.Optional[AnnotationAnchor]
 
@@ -158,7 +158,7 @@ class AsyncAnnotationsClient:
             Simulation this annotation is tied to, if any. `null` (default) when not part of a simulation.
 
         signal_id : typing.Optional[str]
-            Pre-selected issue this annotation belongs to. Leave `null` (default) to let the automatic issue-discovery pipeline route the annotation.
+            Pre-selected signal this annotation belongs to. Leave `null` (default) to let the automatic signal-discovery pipeline route the annotation.
 
         anchor : typing.Optional[AnnotationAnchor]
 

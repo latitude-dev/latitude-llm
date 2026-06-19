@@ -92,6 +92,22 @@ describe("DestinationSyncRunRepositoryLive", () => {
     expect(runs[1]?.error).toBe("posthog: HTTP 429 (retryable, retries exhausted)")
   })
 
+  it("round-trips the backfill trigger", async () => {
+    const live = makeRun({ startedAt: new Date("2026-06-12T11:00:00.000Z") })
+    const backfill = makeRun({ trigger: "backfill", startedAt: new Date("2026-06-12T12:00:00.000Z") })
+    await insert(live)
+    await insert(backfill)
+
+    const runs = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* DestinationSyncRunRepository
+        return yield* repo.listByDestinationId({ destinationId: DESTINATION_A, limit: 10 })
+      }),
+    )
+
+    expect(runs.map((r) => r.trigger)).toEqual(["backfill", "live"])
+  })
+
   it("keyset-paginates with a stable id tie-breaker across same-startedAt runs", async () => {
     // Three runs share one startedAt; one is older. (started_at DESC, id DESC)
     // must page through all four without skipping or repeating a sibling.

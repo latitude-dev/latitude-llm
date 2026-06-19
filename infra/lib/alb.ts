@@ -3,6 +3,8 @@ import type { Output } from "@pulumi/pulumi"
 import type { EnvironmentConfig } from "../config.ts"
 import type { Ec2SecurityGroup, Ec2Subnet, LbListener, LbLoadBalancer, LbTargetGroup } from "./types.ts"
 
+const STATUS_PAGE_URL = "https://status.latitude.so/"
+
 export interface AlbOutput {
   alb: LbLoadBalancer
   targetGroups: Record<string, LbTargetGroup>
@@ -16,6 +18,7 @@ export function createAlb(
   publicSubnets: Ec2Subnet[],
   securityGroup: Ec2SecurityGroup,
   certificateArn?: Output<string>,
+  enableMaintenanceRedirect = false,
 ): AlbOutput {
   const alb = new aws.lb.LoadBalancer(`${name}-alb`, {
     name: `${name}-alb`,
@@ -98,23 +101,23 @@ export function createAlb(
   let httpsListener: LbListener | undefined
 
   if (certificateArn) {
-    const defaultAction = {
-      type: "forward" as const,
-      targetGroupArn: targetGroups.web.arn,
-    }
+    const createServiceActions = (targetGroup: LbTargetGroup) =>
+      enableMaintenanceRedirect ? createStatusPageRedirectActions() : createForwardActions(targetGroup)
+
+    const defaultActions = createServiceActions(targetGroups.web)
 
     const rules = [
       {
         hostname: config.domains.api,
-        targetGroup: targetGroups.api,
+        actions: createServiceActions(targetGroups.api),
       },
       {
         hostname: config.domains.ingest,
-        targetGroup: targetGroups.ingest,
+        actions: createServiceActions(targetGroups.ingest),
       },
       {
         hostname: config.domains.bullBoard,
-        targetGroup: targetGroups.bullBoard,
+        actions: createServiceActions(targetGroups.bullBoard),
       },
     ]
 
@@ -124,7 +127,7 @@ export function createAlb(
       protocol: "HTTPS",
       sslPolicy: "ELBSecurityPolicy-TLS13-1-2-2021-06",
       certificateArn: certificateArn,
-      defaultActions: [defaultAction],
+      defaultActions,
     })
 
     const ruleNames = ["api", "ingest", "bull-board"] as const
@@ -134,12 +137,7 @@ export function createAlb(
       new aws.lb.ListenerRule(`${name}-${ruleName}-rule`, {
         listenerArn: httpsListener.arn,
         priority: 100 + i,
-        actions: [
-          {
-            type: "forward",
-            targetGroupArn: rule.targetGroup.arn,
-          },
-        ],
+        actions: rule.actions,
         conditions: [
           {
             hostHeader: {
@@ -149,6 +147,31 @@ export function createAlb(
         ],
       })
     }
+
+    if (enableMaintenanceRedirect) {
+      const associationRules = [
+        { ruleName: "web-target-group-association", targetGroup: targetGroups.web },
+        { ruleName: "api-target-group-association", targetGroup: targetGroups.api },
+        { ruleName: "ingest-target-group-association", targetGroup: targetGroups.ingest },
+        { ruleName: "bull-board-target-group-association", targetGroup: targetGroups.bullBoard },
+      ]
+
+      for (let i = 0; i < associationRules.length; i++) {
+        const rule = associationRules[i]
+        new aws.lb.ListenerRule(`${name}-${rule.ruleName}-rule`, {
+          listenerArn: httpsListener.arn,
+          priority: 200 + i,
+          actions: createForwardActions(rule.targetGroup),
+          conditions: [
+            {
+              hostHeader: {
+                values: [`${rule.ruleName}.maintenance.local`],
+              },
+            },
+          ],
+        })
+      }
+    }
   }
 
   return {
@@ -156,5 +179,36 @@ export function createAlb(
     targetGroups,
     httpListener,
     httpsListener,
+  }
+}
+
+function createForwardActions(targetGroup: LbTargetGroup) {
+  return [
+    {
+      type: "forward" as const,
+      targetGroupArn: targetGroup.arn,
+    },
+  ]
+}
+
+function createStatusPageRedirectActions() {
+  return [
+    {
+      type: "redirect" as const,
+      redirect: createRedirectAction(STATUS_PAGE_URL),
+    },
+  ]
+}
+
+function createRedirectAction(url: string) {
+  const target = new URL(url)
+
+  return {
+    protocol: target.protocol.replace(":", "").toUpperCase(),
+    host: target.hostname,
+    port: target.port || (target.protocol === "https:" ? "443" : "80"),
+    path: `/${target.pathname.replace(/^\//, "")}`,
+    query: target.search.replace(/^\?/, ""),
+    statusCode: "HTTP_302" as const,
   }
 }

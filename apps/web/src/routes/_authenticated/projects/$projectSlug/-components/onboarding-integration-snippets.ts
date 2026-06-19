@@ -280,8 +280,6 @@ const latitude = new Latitude({
   instrumentations: ["openai"],
 })
 
-await latitude.ready
-
 const openai = new OpenAI()
 
 await capture("generate-support-reply", async () => {
@@ -331,8 +329,6 @@ const latitude = new Latitude({
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["anthropic"],
 })
-
-await latitude.ready
 
 const client = new Anthropic()
 
@@ -388,8 +384,6 @@ const latitude = new Latitude({
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["bedrock"],
 })
-
-await latitude.ready
 
 const client = new BedrockRuntimeClient({ region: "eu-central-1" })
 
@@ -453,8 +447,6 @@ const latitude = new Latitude({
   instrumentations: ["cohere"],
 })
 
-await latitude.ready
-
 const client = new CohereClient({ token: process.env.COHERE_API_KEY! })
 
 await capture("generate-reply", async () => {
@@ -504,8 +496,6 @@ const latitude = new Latitude({
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["togetherai"],
 })
-
-await latitude.ready
 
 const client = new Together()
 
@@ -557,8 +547,6 @@ const latitude = new Latitude({
   instrumentations: ["vertexai"],
 })
 
-await latitude.ready
-
 const vertexAI = new VertexAI({
   project: process.env.GCP_PROJECT_ID!,
   location: "us-central1",
@@ -609,8 +597,6 @@ const latitude = new Latitude({
   instrumentations: ["aiplatform"],
 })
 
-await latitude.ready
-
 const client = new PredictionServiceClient()
 
 await capture("generate-prediction", async () => {
@@ -659,8 +645,6 @@ const latitude = new Latitude({
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["openai"],
 })
-
-await latitude.ready
 
 const client = new AzureOpenAI({
   endpoint: process.env.AZURE_OPENAI_ENDPOINT,
@@ -720,8 +704,6 @@ const latitude = new Latitude({
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
 })
 
-await latitude.ready
-
 await capture("generate-support-reply", async () => {
   const { text } = await generateText({
     model: openai("gpt-4o"),
@@ -747,8 +729,6 @@ const latitude = new Latitude({
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["langchain"],
 })
-
-await latitude.ready
 
 const llm = new ChatOpenAI({ modelName: "gpt-4o" })
 
@@ -796,8 +776,6 @@ const latitude = new Latitude({
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: ["llamaindex"],
 })
-
-await latitude.ready
 
 Settings.llm = openai({ model: "gpt-4o" })
 const myAgent = agent({ tools: [] })

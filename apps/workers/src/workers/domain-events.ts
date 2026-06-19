@@ -214,22 +214,22 @@ export const createDomainEventsWorker = ({
       ).pipe(Effect.asVoid),
 
     SignalCreated: (event) =>
-      pub.publish("alert-incidents", "issue-created", event.payload, {
+      pub.publish("alert-incidents", "signal-created", event.payload, {
         dedupeKey: `alert-incidents:issue.new:${event.payload.signalId}`,
       }),
 
     SignalRegressed: (event) =>
-      pub.publish("alert-incidents", "issue-regressed", event.payload, {
+      pub.publish("alert-incidents", "signal-regressed", event.payload, {
         dedupeKey: `alert-incidents:issue.regressed:${event.payload.signalId}:${event.payload.triggerScoreId}`,
       }),
 
     SignalEscalated: (event) =>
-      pub.publish("alert-incidents", "issue-escalated", event.payload, {
+      pub.publish("alert-incidents", "signal-escalated", event.payload, {
         dedupeKey: `alert-incidents:issue.escalating:${event.payload.signalId}:${event.payload.escalatedAt}`,
       }),
 
     SignalEscalationEnded: (event) =>
-      pub.publish("alert-incidents", "issue-escalation-ended", event.payload, {
+      pub.publish("alert-incidents", "signal-escalation-ended", event.payload, {
         dedupeKey: `alert-incidents:issue.escalation-ended:${event.payload.signalId}:${event.payload.endedAt}`,
       }),
 
@@ -271,7 +271,7 @@ export const createDomainEventsWorker = ({
         ? Effect.void
         : pub.publish(
             "notifications",
-            "request-issue-assigned-notifications",
+            "request-signal-assigned-notifications",
             {
               organizationId: event.payload.organizationId,
               signalId: event.payload.signalId,
@@ -280,7 +280,7 @@ export const createDomainEventsWorker = ({
               assignedAt: event.payload.assignedAt,
             },
             {
-              dedupeKey: `notifications:request-issue-assigned:${event.payload.signalId}:${event.payload.assignedAt}`,
+              dedupeKey: `notifications:request-signal-assigned:${event.payload.signalId}:${event.payload.assignedAt}`,
             },
           ),
 

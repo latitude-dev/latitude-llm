@@ -72,10 +72,24 @@ type _AlertKindsCovered = Exclude<_SignalAlertKind, keyof z.infer<typeof Inciden
 const _alertKindsAreCovered: _AlertKindsCovered extends never ? true : false = true
 void _alertKindsAreCovered
 
+const DestinationNotificationsSettingSchema = z
+  .object({
+    quarantine: z
+      .boolean()
+      .optional()
+      .describe(
+        "Notify org members when a data destination is quarantined after repeated sync failures. Defaults to `true` when omitted.",
+      ),
+  })
+  .openapi("DestinationNotificationsSetting")
+
 const NotificationsSettingSchema = z
   .object({
     incidents: IncidentNotificationsSettingSchema.optional().describe(
       "Per-alert-kind opt-out for incident notifications.",
+    ),
+    destinations: DestinationNotificationsSettingSchema.optional().describe(
+      "Project-level opt-out for data-destination notifications.",
     ),
   })
   .openapi("NotificationsSetting")
@@ -103,7 +117,7 @@ const ProjectSettingsSchema = z
         "When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
       ),
     notifications: NotificationsSettingSchema.optional().describe(
-      "Per-group project-level notification toggles. Today only `incidents` exists; future groups (wrapped reports, etc.) slot in alongside.",
+      "Per-group project-level notification toggles (`incidents`, `destinations`).",
     ),
     escalation: EscalationSettingSchema.optional().describe(
       "Tuning parameters for the escalation detector. Affects detector behaviour regardless of whether notifications are enabled.",

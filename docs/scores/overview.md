@@ -30,7 +30,7 @@ Automated monitors create evaluation scores when a trace matches an evaluation's
 
 ### Annotation Scores
 
-Human reviewers and built-in [flaggers](../annotations/flaggers) create annotation scores. They serve as ground truth for [evaluation alignment](../evaluations/alignment) and provide feedback for issue discovery.
+Human reviewers and built-in [flaggers](../annotations/flaggers) create annotation scores. They serve as ground truth for [evaluation alignment](../evaluations/alignment) and provide feedback for signal discovery.
 
 ### Custom Scores
 
@@ -38,7 +38,7 @@ Your own code can submit custom scores through the [Latitude API](./api). Use th
 
 ## Drafts and Finalized Scores
 
-Human annotations can start as drafts while you edit them. Drafts are visible in the trace's annotation panel but do not feed analytics, issue discovery, or alignment until they are finalized.
+Human annotations can start as drafts while you edit them. Drafts are visible in the trace's annotation panel but do not feed analytics, signal discovery, or alignment until they are finalized.
 
 Once finalized, a score becomes part of Latitude's reliability workflows.
 
@@ -46,7 +46,7 @@ Once finalized, a score becomes part of Latitude's reliability workflows.
 
 Finalized scores feed into:
 
-1. **Issue discovery**: Failed scores can become named, trackable [issues](../signals/overview).
+1. **Signal discovery**: Failed scores can become named, trackable [issues](../signals/overview).
 2. **Evaluation generation**: Issues can generate monitors that produce more scores on live traffic.
 3. **Alignment**: Annotation scores are compared with evaluation scores on the same traces.
 4. **Analytics**: Score dashboards show quality trends across your project.

@@ -69,6 +69,13 @@ export const createFakeDestinationSourceStateRepository = (
         if (!row) return
         rows[index] = { ...row, consecutiveEmptyRuns, lastRunAt, updatedAt: new Date() }
       }),
+    setWatermark: ({ destinationId, source, watermark }) =>
+      Effect.sync(() => {
+        const row = find(destinationId, source)
+        if (!row) return
+        ;(row as { watermark: Date }).watermark = watermark.watermark
+        ;(row as { watermarkId: string }).watermarkId = watermark.id
+      }),
     updateConfig: ({ destinationId, source, config, status }) =>
       Effect.sync(() => {
         const index = rows.findIndex((r) => r.destinationId === destinationId && r.source === source)
@@ -80,6 +87,44 @@ export const createFakeDestinationSourceStateRepository = (
           ...(config === undefined ? {} : { config }),
           ...(status === undefined ? {} : { status }),
           updatedAt: new Date(),
+        }
+      }),
+    extendCoverageStart: ({ destinationId, source, to }) =>
+      Effect.sync(() => {
+        const row = find(destinationId, source)
+        if (!row) return
+        if (to.getTime() < row.coverageStartAt.getTime()) {
+          ;(row as { coverageStartAt: Date }).coverageStartAt = to
+        }
+      }),
+    acquireBackfill: ({ destinationId, source, at, staleBefore }) =>
+      Effect.sync(() => {
+        const row = find(destinationId, source)
+        if (!row) return false
+        const inFlight = row.backfillStartedAt !== null && row.updatedAt.getTime() >= staleBefore.getTime()
+        if (inFlight) return false
+        ;(row as { backfillStartedAt: Date | null }).backfillStartedAt = at
+        ;(row as { updatedAt: Date }).updatedAt = at
+        return true
+      }),
+    setBackfillStartedAt: ({ destinationId, source, at }) =>
+      Effect.sync(() => {
+        const row = find(destinationId, source)
+        if (!row) return
+        ;(row as { backfillStartedAt: Date | null }).backfillStartedAt = at
+      }),
+    setBackfillProgress: ({ destinationId, source, at }) =>
+      Effect.sync(() => {
+        const row = find(destinationId, source)
+        if (!row) return
+        ;(row as { backfillProgressAt: Date | null }).backfillProgressAt = at
+      }),
+    resetCoverageStart: (destinationId) =>
+      Effect.sync(() => {
+        for (const row of rows) {
+          if (row.destinationId === destinationId) {
+            ;(row as { coverageStartAt: Date }).coverageStartAt = row.createdAt
+          }
         }
       }),
     deleteByDestinationId: (destinationId: DestinationId) =>

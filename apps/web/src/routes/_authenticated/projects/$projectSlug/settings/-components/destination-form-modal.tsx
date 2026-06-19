@@ -1,4 +1,4 @@
-import { Button, CloseTrigger, Icon, Input, Modal, Select, Text, useToast } from "@repo/ui"
+import { Button, CloseTrigger, Icon, Input, Modal, Select, SwitchInput, Text, useToast } from "@repo/ui"
 import { useForm } from "@tanstack/react-form"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { CircleAlert, CircleCheck, Loader2 } from "lucide-react"
@@ -54,6 +54,11 @@ export function DestinationFormModal({
   const [connectionTest, setConnectionTest] = useState<ConnectionTest>({ phase: "idle" })
   const testing = connectionTest.phase === "testing"
 
+  // Create-time "import history" option, off by default. `null` = off; a date string ("" = full
+  // retention) = on. Reach is the org's retention window — resolved and clamped on the backend.
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const [importSince, setImportSince] = useState<string | null>(null)
+
   const create = useMutation({ mutationFn: createDestination })
   const update = useMutation({ mutationFn: updateDestination })
 
@@ -82,14 +87,43 @@ export function DestinationFormModal({
         }
 
         return create.mutateAsync({
-          data: { projectId, name, config, sourceConfigs, credentials: formModule.buildCredentials(value) },
+          data: {
+            projectId,
+            name,
+            config,
+            sourceConfigs,
+            credentials: formModule.buildCredentials(value),
+            // The date picker's "since" is a UI-time instant; the server owns enqueuing the backfill.
+            // Parsed as UTC midnight — deliberate: as a backfill lower bound, a few hours of skew only widens coverage.
+            ...(importSince === null
+              ? {}
+              : {
+                  importHistory: true,
+                  ...(importSince ? { importSince: new Date(`${importSince}T00:00:00.000Z`).toISOString() } : {}),
+                }),
+          },
         })
       },
       {
         resetOnSuccess: !isEdit,
-        onSuccess: () => {
+        onSuccess: async (result) => {
           void queryClient.invalidateQueries({ queryKey: destinationsQueryKey(projectId) })
-          toast({ description: isEdit ? "Destination updated." : "Destination connected." })
+          const importStarted = "importStarted" in result && result.importStarted
+          if (!isEdit && importSince !== null && !importStarted) {
+            toast({
+              variant: "destructive",
+              description:
+                "Connected, but the history import couldn't start. You can start it later from the destination.",
+            })
+          } else {
+            toast({
+              description: importStarted
+                ? "Destination connected. Importing history in the background."
+                : isEdit
+                  ? "Destination updated."
+                  : "Destination connected.",
+            })
+          }
           onClose()
         },
         onError: (error) => toast({ variant: "destructive", description: toUserMessage(error) }),
@@ -185,6 +219,27 @@ export function DestinationFormModal({
         </form.Field>
 
         <Fields form={form} isEdit={isEdit} projectId={projectId} destination={destination} />
+
+        {isEdit ? null : (
+          <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
+            <SwitchInput
+              label="Import past traces"
+              description="Backfill your retained history after connecting (up to your plan's retention). Off by default — new destinations sync going forward."
+              checked={importSince !== null}
+              onCheckedChange={(checked) => setImportSince(checked ? "" : null)}
+            />
+            {importSince !== null ? (
+              <Input
+                type="date"
+                label="Import history since"
+                value={importSince}
+                max={todayStr}
+                description="Leave empty to import as far back as your plan retains."
+                onChange={(event) => setImportSince(event.target.value)}
+              />
+            ) : null}
+          </div>
+        )}
 
         {connectionTest.phase === "testing" ? (
           <div className="flex items-center gap-2">

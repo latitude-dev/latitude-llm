@@ -7,7 +7,7 @@ description: Review your agent's interactions and provide human feedback
 
 Annotations are verdicts on individual traces. A human reviewer, a Latitude flagger, or an external system can attach a thumbs-up or thumbs-down verdict with feedback to a conversation, message, or text range.
 
-Finalized annotations become scores. They feed analytics, issue discovery, and evaluation alignment the same way regardless of where they came from.
+Finalized annotations become scores. They feed analytics, signal discovery, and evaluation alignment the same way regardless of where they came from.
 
 ## How Annotations Get Created
 
@@ -24,7 +24,7 @@ Every annotation has a **verdict**, **feedback**, and an optional **issue link**
 1. **Choose a scope**: conversation, message, or text range.
 2. **Give a verdict**: thumbs up for good behavior, thumbs down when something went wrong.
 3. **Write feedback**: explain the reason in natural language.
-4. **Optionally link an issue**: choose a known issue, or let Latitude match it during issue discovery.
+4. **Optionally link a signal**: choose a known signal, or let Latitude match it during signal discovery.
 
 Human annotations save as drafts while you edit. Once finalized, they become part of the reliability loop.
 

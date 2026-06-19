@@ -200,7 +200,7 @@ a memoized `PaletteCommand[]` and call `useRegisterCommands(...)` from
 `"Trace"`, `"Search"`, `"Traces"`, …). Capture the entity id / page state and reuse the view's
 existing handlers (open the same confirmation modal where one exists; flip the same state the
 page's own buttons flip). Registration retracts automatically when the view/page unmounts.
-References: `issue-lifecycle-actions.tsx`, `trace-detail-drawer.tsx`, and the `search/index.tsx`
+References: `signal-lifecycle-actions.tsx`, `trace-detail-drawer.tsx`, and the `search/index.tsx`
 / project `index.tsx` page registrations.
 
 ### 4. New searchable entity type → new provider hook + wire it in

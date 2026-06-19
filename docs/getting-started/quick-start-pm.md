@@ -58,7 +58,7 @@ Some failure categories are common enough that Latitude detects them for you. Ev
 - **Output Schema Validation**: Structured output didn't conform to the declared schema
 - **Empty Response**: The assistant returned an empty or degenerate response
 
-When a flagger matches, it writes an annotation directly on the trace. That annotation feeds into [issue discovery](../signals/overview), [scores analytics](../scores/analytics), and [evaluation alignment](../evaluations/alignment) the same way a human annotation would. You can adjust which flaggers are enabled and how aggressively they sample under **Project Settings**. See [Flaggers](../annotations/flaggers) for the full list.
+When a flagger matches, it writes an annotation directly on the trace. That annotation feeds into [signal discovery](../signals/overview), [scores analytics](../scores/analytics), and [evaluation alignment](../evaluations/alignment) the same way a human annotation would. You can adjust which flaggers are enabled and how aggressively they sample under **Project Settings**. See [Flaggers](../annotations/flaggers) for the full list.
 
 ## Reviewing Traces
 

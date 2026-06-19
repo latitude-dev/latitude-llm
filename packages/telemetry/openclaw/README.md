@@ -14,7 +14,7 @@ OpenClaw plugin that streams every agent run to [Latitude](https://latitude.so) 
 The companion CLI handles every step (install, config, validate, restart) in one command:
 
 ```bash
-npx -y @latitude-data/openclaw-telemetry-cli@0.0.8 install
+npx -y @latitude-data/openclaw-telemetry-cli@0.0.9 install
 ```
 
 It prompts for your API key and project slug, runs `openclaw plugins install` for you, writes the plugin entry into `openclaw.json`, adds the plugin to `plugins.allow`, validates the result, and (on TTY) offers to restart the gateway. See the [CLI README](https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/openclaw-cli#readme) for the full flag matrix, dry-run mode, custom config dir, and CI usage.
@@ -26,7 +26,7 @@ If you'd rather not use the CLI, do exactly what it does, in four steps:
 #### 1. Install the runtime
 
 ```bash
-openclaw plugins install @latitude-data/openclaw-telemetry@0.0.8
+openclaw plugins install @latitude-data/openclaw-telemetry@0.0.9
 ```
 
 Pin to an exact version. OpenClaw's `security audit --deep` warns about unpinned install specs, so always include the `@<version>` suffix.
@@ -108,7 +108,7 @@ Merge with whatever else is in `openclaw.json`. Then run `openclaw config valida
 If you installed via the CLI:
 
 ```bash
-npx -y @latitude-data/openclaw-telemetry-cli@0.0.8 uninstall
+npx -y @latitude-data/openclaw-telemetry-cli@0.0.9 uninstall
 ```
 
 Manual uninstall:

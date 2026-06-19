@@ -35,7 +35,7 @@ const RequestSchema = z
       .nullable()
       .default(null)
       .describe(
-        "Pre-selected issue this annotation belongs to. Leave `null` (default) to let the automatic issue-discovery pipeline route the annotation.",
+        "Pre-selected signal this annotation belongs to. Leave `null` (default) to let the automatic signal-discovery pipeline route the annotation.",
       ),
     value: z.number().min(0).max(1).describe("Normalized score value in [0, 1]. Higher = better."),
     passed: z.boolean().describe("Whether the annotated output passes the reviewer's bar."),
