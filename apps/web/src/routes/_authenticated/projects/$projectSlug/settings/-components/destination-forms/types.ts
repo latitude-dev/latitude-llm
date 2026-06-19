@@ -16,7 +16,7 @@ import type { DestinationRecord } from "../../../../../../../domains/destination
  */
 export type DestinationConfigInput = z.input<typeof destinationConfigSchema>
 export type DestinationCredentialsInput = z.input<typeof destinationCredentialsSchema>
-/** Per-source config a builder emits; `maxRecordsPerRun` etc. default server-side. */
+/** Per-source config a builder emits; `excludePayloads` etc. default server-side. */
 export type DestinationSourceConfigInput = z.input<typeof destinationSourceConfigSchema>
 
 /** Shell-owned fields merged onto every kind's own form values. */

@@ -15,24 +15,16 @@ import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testi
 import type { SpanDetail } from "@domain/spans"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import {
-  DESTINATION_IDLE_PAUSE_AFTER_EMPTY_RUNS,
-  DESTINATION_READ_PAGE_MAX,
-  POSTHOG_US_INGESTION_HOST,
-} from "../constants.ts"
+import { DESTINATION_IDLE_PAUSE_AFTER_EMPTY_RUNS, POSTHOG_US_INGESTION_HOST } from "../constants.ts"
 import type { Destination } from "../entities/destination.ts"
 import { createDestination } from "../entities/destination.ts"
-import { defaultSourceConfig, type SpansSourceConfig } from "../entities/destination-source.ts"
+import { defaultSourceConfig } from "../entities/destination-source.ts"
 import { createDestinationSourceState, type DestinationSourceState } from "../entities/destination-source-state.ts"
 import { NonRetryableDeliveryError, RetryableDeliveryError } from "../errors.ts"
 import { DestinationDeliverers } from "../ports/destination-deliverer.ts"
 import { DestinationMappers } from "../ports/destination-mapper.ts"
 import { DestinationRepository } from "../ports/destination-repository.ts"
-import {
-  type DestinationSourceReader,
-  DestinationSourceReaders,
-  type SourceCursor,
-} from "../ports/destination-source-reader.ts"
+import { DestinationSourceReaders, type SourceCursor } from "../ports/destination-source-reader.ts"
 import { DestinationSourceStateRepository } from "../ports/destination-source-state-repository.ts"
 import { DestinationSyncRunRepository } from "../ports/destination-sync-run-repository.ts"
 import { createFakeDestinationDeliverer } from "../testing/fake-destination-deliverer.ts"
@@ -204,44 +196,6 @@ describe("runDestinationSyncUseCase", () => {
     expect(deliveries).toHaveLength(0)
     expect(syncRunRows).toHaveLength(0)
     expect(cursorRows[0]?.lastRunAt).toBeNull()
-  })
-
-  it("clamps the live window read to DESTINATION_READ_PAGE_MAX even when the config allows more", async () => {
-    const seenLimits: number[] = []
-    const base = staticSourceReader({ records: [], nextCursor: null })
-    const reader: DestinationSourceReader<SpanDetail> = {
-      ...base,
-      listWindow: (input) => {
-        seenLimits.push(input.limit)
-        return base.listWindow(input)
-      },
-    }
-    const { repo: destinationRepo, rows: destinationRows } = createFakeDestinationRepository([makeDestination()])
-    const cursor = makeCursor({
-      config: { ...(defaultSourceConfig(SOURCE) as SpansSourceConfig), maxRecordsPerRun: 50_000 },
-    })
-    const { repo: cursorRepo } = createFakeDestinationSourceStateRepository([cursor], destinationRows)
-    const { repo: syncRunRepo } = createFakeDestinationSyncRunRepository()
-    const { deliverer } = createFakeDestinationDeliverer()
-    const { mapper } = createFakeDestinationMapper()
-    const layer = Layer.mergeAll(
-      Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORG_ID })),
-      Layer.succeed(ChSqlClient, createFakeChSqlClient()),
-      Layer.succeed(DestinationSourceReaders, fakeSourceReaderRegistry(reader)),
-      Layer.succeed(DestinationRepository, destinationRepo),
-      Layer.succeed(DestinationSourceStateRepository, cursorRepo),
-      Layer.succeed(DestinationSyncRunRepository, syncRunRepo),
-      Layer.succeed(DestinationDeliverers, { posthog: deliverer }),
-      Layer.succeed(DestinationMappers, { posthog: { spans: mapper } }),
-    )
-
-    await Effect.runPromise(
-      runDestinationSyncUseCase({ destinationId: DESTINATION_ID, source: SOURCE, now: NOW }).pipe(
-        Effect.provide(layer),
-      ),
-    )
-
-    expect(seenLimits).toEqual([DESTINATION_READ_PAGE_MAX])
   })
 
   it("skips when the destination is missing", async () => {

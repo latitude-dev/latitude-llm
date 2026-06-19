@@ -1,5 +1,5 @@
 import type { DestinationHealthBadge } from "@domain/destinations"
-import type { BadgeProps } from "@repo/ui"
+import type { StatusProps } from "@repo/ui"
 import type { DestinationRecord } from "../../../../../../domains/destinations/destinations.functions.ts"
 
 export const DESTINATION_KIND_LABEL: Record<DestinationRecord["kind"], string> = { posthog: "PostHog" }
@@ -7,12 +7,12 @@ export const DESTINATION_KIND_LABEL: Record<DestinationRecord["kind"], string> =
 /** Customer-facing health badge — supersedes the raw status badge on the card. */
 export const DESTINATION_HEALTH_BADGE: Record<
   DestinationHealthBadge,
-  { label: string; variant: BadgeProps["variant"] }
+  { label: string; variant: StatusProps["variant"] }
 > = {
-  healthy: { label: "Healthy", variant: "successMuted" },
-  lagging: { label: "Lagging", variant: "warningMuted" },
-  paused: { label: "Paused", variant: "muted" },
-  quarantined: { label: "Quarantined", variant: "destructiveMuted" },
+  healthy: { label: "Healthy", variant: "success" },
+  lagging: { label: "Lagging", variant: "warning" },
+  paused: { label: "Paused", variant: "neutral" },
+  quarantined: { label: "Quarantined", variant: "destructive" },
 }
 
 const MINUTE_MS = 60_000

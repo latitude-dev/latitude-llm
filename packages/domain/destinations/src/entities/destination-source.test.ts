@@ -1,35 +1,16 @@
 import { describe, expect, it } from "vitest"
-import {
-  DESTINATION_MAX_RECORDS_PER_RUN_DEFAULT,
-  DESTINATION_MAX_RECORDS_PER_RUN_MAX,
-  DESTINATION_MAX_RECORDS_PER_RUN_MIN,
-} from "../constants.ts"
 import { DESTINATION_KIND_META, supportedSourcesForKind } from "./destination.ts"
 import { DESTINATION_SOURCES, defaultSourceConfig, destinationSourceConfigSchema } from "./destination-source.ts"
 
 describe("destinationSourceConfigSchema", () => {
-  it("applies defaults for excludePayloads and maxRecordsPerRun", () => {
+  it("applies the default for excludePayloads", () => {
     const parsed = destinationSourceConfigSchema.parse({ source: "spans" })
-    expect(parsed).toMatchObject({
-      source: "spans",
-      excludePayloads: false,
-      maxRecordsPerRun: DESTINATION_MAX_RECORDS_PER_RUN_DEFAULT,
-    })
+    expect(parsed).toMatchObject({ source: "spans", excludePayloads: false })
   })
 
-  it("bounds maxRecordsPerRun to 1k–50k", () => {
-    expect(
-      destinationSourceConfigSchema.safeParse({
-        source: "spans",
-        maxRecordsPerRun: DESTINATION_MAX_RECORDS_PER_RUN_MIN - 1,
-      }).success,
-    ).toBe(false)
-    expect(
-      destinationSourceConfigSchema.safeParse({
-        source: "spans",
-        maxRecordsPerRun: DESTINATION_MAX_RECORDS_PER_RUN_MAX + 1,
-      }).success,
-    ).toBe(false)
+  it("strips an unknown maxRecordsPerRun key (legacy stored configs parse cleanly)", () => {
+    const parsed = destinationSourceConfigSchema.parse({ source: "spans", maxRecordsPerRun: 50_000 })
+    expect(parsed).not.toHaveProperty("maxRecordsPerRun")
   })
 })
 

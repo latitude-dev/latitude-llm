@@ -4,7 +4,7 @@ import { Effect } from "effect"
 import {
   DESTINATION_BACKFILL_STALE_MS,
   DESTINATION_MAX_RECORDS_PER_BACKFILL,
-  DESTINATION_READ_PAGE_MAX,
+  DESTINATION_READ_PAGE_SIZE,
 } from "../constants.ts"
 import type { DestinationSource } from "../entities/destination-source.ts"
 import { createDestinationSyncRun } from "../entities/destination-sync-run.ts"
@@ -227,6 +227,8 @@ export interface RunBackfillWindowInput {
   /** The whole chain's lower bound; on drain, coverage extends to it. Carried verbatim through the chain. */
   readonly coverageFloor: Date
   readonly now: Date
+  /** Test-only override of the read page size; production always uses {@link DESTINATION_READ_PAGE_SIZE}. */
+  readonly testPageSize?: number
 }
 
 export type RunBackfillWindowOutcome = "delivered" | "drained" | "skipped" | "failed"
@@ -272,7 +274,7 @@ const advanceToNextSegment = (
  */
 export const runBackfillWindowUseCase = (input: RunBackfillWindowInput) =>
   Effect.gen(function* () {
-    const { destinationId, source, cursor, segmentEnd, remainingSegments, coverageFloor, now } = input
+    const { destinationId, source, cursor, segmentEnd, remainingSegments, coverageFloor, now, testPageSize } = input
     yield* Effect.annotateCurrentSpan("destination.id", destinationId)
     yield* Effect.annotateCurrentSpan("destination.source", source)
 
@@ -309,7 +311,7 @@ export const runBackfillWindowUseCase = (input: RunBackfillWindowInput) =>
     const deliverer = (yield* DestinationDeliverers)[destination.kind]
     const syncRuns = yield* DestinationSyncRunRepository
 
-    const limit = Math.min(sourceState.config.maxRecordsPerRun, DESTINATION_READ_PAGE_MAX)
+    const limit = testPageSize ?? DESTINATION_READ_PAGE_SIZE
     const window = yield* reader.listWindow({
       organizationId: destination.organizationId,
       projectId: destination.projectId,

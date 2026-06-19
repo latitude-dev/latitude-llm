@@ -100,7 +100,7 @@ export const updateDestinationUseCase = (input: UpdateDestinationInput) =>
           for (const patch of input.sourceConfigs) {
             const current = currentSources.find((s) => s.source === patch.source)
             if (!current) continue
-            // Merge onto the stored source config so omitted fields (e.g. maxRecordsPerRun, no UI) are preserved.
+            // Merge onto the stored source config so a field the patch omits is preserved.
             const config = destinationSourceConfigSchema.parse({ ...current.config, ...patch })
             yield* sourceStates.updateConfig({ destinationId: updated.id, source: patch.source, config })
           }

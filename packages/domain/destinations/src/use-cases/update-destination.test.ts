@@ -112,7 +112,7 @@ describe("updateDestinationUseCase", () => {
       organizationId: orgId,
       destinationId,
       source: "spans",
-      config: { source: "spans", excludePayloads: false, maxRecordsPerRun: 50_000 },
+      config: { source: "spans", excludePayloads: false },
       watermark: coverageStartAt, // createDestinationSourceState seeds coverage_start_at = watermark
       createdAt,
     })
@@ -205,13 +205,13 @@ describe("updateDestinationUseCase", () => {
     expect(rows[0]?.config.intervalMs).toBe(60_000)
   })
 
-  it("merges source-config patches onto the stored source config (maxRecordsPerRun preserved)", async () => {
+  it("merges source-config patches onto the stored source config (omitted fields preserved)", async () => {
     const { repo, rows } = createFakeDestinationRepository([baseDestination()])
     const sourceState = createDestinationSourceState({
       organizationId: orgId,
       destinationId,
       source: "spans",
-      config: { source: "spans", excludePayloads: false, maxRecordsPerRun: 30_000 },
+      config: { source: "spans", excludePayloads: true },
       watermark: new Date("2026-06-01T00:00:00Z"),
     })
     const { repo: sourceRepo, rows: sourceRows } = createFakeDestinationSourceStateRepository([sourceState], rows)
@@ -226,13 +226,13 @@ describe("updateDestinationUseCase", () => {
         organizationId: orgId,
         projectId,
         destinationId,
-        // Patch carries only excludePayloads — maxRecordsPerRun (no UI) must survive.
-        sourceConfigs: [{ source: "spans", excludePayloads: true }],
+        // Patch carries only the source discriminator — the stored excludePayloads must survive the merge.
+        sourceConfigs: [{ source: "spans" }],
       }).pipe(Effect.provide(layer)),
     )
 
     const spans = sourceRows.find((s) => s.source === "spans")
-    expect(spans?.config).toMatchObject({ source: "spans", excludePayloads: true, maxRecordsPerRun: 30_000 })
+    expect(spans?.config).toMatchObject({ source: "spans", excludePayloads: true })
   })
 
   it("re-submitting identical credentials does not reset the counter", async () => {

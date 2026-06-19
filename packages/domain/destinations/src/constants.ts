@@ -2,22 +2,17 @@ export const DESTINATION_INTERVAL_MS_MIN = 60_000
 export const DESTINATION_INTERVAL_MS_MAX = 3_600_000
 export const DESTINATION_INTERVAL_MS_DEFAULT = 300_000
 
-export const DESTINATION_MAX_RECORDS_PER_RUN_MIN = 1_000
-export const DESTINATION_MAX_RECORDS_PER_RUN_MAX = 50_000
-export const DESTINATION_MAX_RECORDS_PER_RUN_DEFAULT = 5_000
-
 /**
- * Hard ceiling on a single source read page, independent of (and clamping) the
- * configured `maxRecordsPerRun`. A window read serializes its whole page to
- * JSONEachRow in one ClickHouse response; span rows carry KB–MB payloads, so a
- * large page balloons `ParallelFormattingOutputFormat` — a 35k-row page cost
- * 4.2 GiB and 16s in production, tripping the server-wide OvercommitTracker and
- * resetting the client socket. Clamping the read page keeps every run bounded
- * regardless of a destination's stored config (legacy rows hold the old 50k
- * default). Cursor pagination already chains the rest, so smaller pages just
- * mean more, cheaper windows.
+ * Hard-coded source read page size — not user-configurable. A window read
+ * serializes its whole page to JSONEachRow in one ClickHouse response; span rows
+ * carry KB–MB payloads, so a large page balloons `ParallelFormattingOutputFormat`
+ * — a 35k-row page cost 4.2 GiB and 16s in production, tripping the server-wide
+ * OvercommitTracker and resetting the client socket. Sizing a ClickHouse read
+ * page isn't a product knob, so it lives here rather than in a destination's
+ * config. Cursor pagination chains the rest — a smaller page just means more,
+ * cheaper windows (the 1M-record backfill cap ≈ 200 pages).
  */
-export const DESTINATION_READ_PAGE_MAX = 5_000
+export const DESTINATION_READ_PAGE_SIZE = 5_000
 
 /**
  * Hard cap on records imported by a single backfill. A destination connected to

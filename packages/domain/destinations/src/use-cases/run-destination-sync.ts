@@ -11,7 +11,7 @@ import { Effect } from "effect"
 import {
   DESTINATION_IDLE_PAUSE_AFTER_EMPTY_RUNS,
   DESTINATION_QUARANTINE_FAILURE_THRESHOLD,
-  DESTINATION_READ_PAGE_MAX,
+  DESTINATION_READ_PAGE_SIZE,
   DESTINATION_SAFETY_LAG_MS,
 } from "../constants.ts"
 import type { Destination, DestinationKind } from "../entities/destination.ts"
@@ -406,7 +406,7 @@ export const runDestinationSyncUseCase = (input: RunDestinationSyncInput) =>
       projectId: destination.projectId,
       cursor: startCursor,
       windowEnd,
-      limit: Math.min(sourceState.config.maxRecordsPerRun, DESTINATION_READ_PAGE_MAX),
+      limit: DESTINATION_READ_PAGE_SIZE,
       excludePayloads: sourceState.config.excludePayloads,
     })
 
