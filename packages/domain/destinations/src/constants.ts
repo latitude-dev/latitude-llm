@@ -3,19 +3,17 @@ export const DESTINATION_INTERVAL_MS_MAX = 3_600_000
 export const DESTINATION_INTERVAL_MS_DEFAULT = 300_000
 
 /**
- * Hard ceiling on a single source read page, independent of (and clamping) the
- * configured `maxRecordsPerRun`. A window read serializes its whole page to
- * JSONEachRow in one ClickHouse response; span rows carry KB–MB payloads, so a
- * large page balloons `ParallelFormattingOutputFormat` — a 35k-row page cost
- * 4.2 GiB and 16s in production, tripping the server-wide OvercommitTracker and
- * resetting the client socket. Clamping the read page keeps every run bounded
- * regardless of a destination's stored config (legacy rows hold the old 50k
- * default). Cursor pagination already chains the rest, so smaller pages just
- * mean more, cheaper windows. Lowered to 2k after 5k still hit the per-query
- * 4 GiB `max_memory_usage` guard on destinations with large LLM payloads
- * (~785 KiB/row) — at 2k a window peaks ~1.5 GiB, well under the guard.
+ * Source read page: rows fetched (and delivered) per window. NOT a ClickHouse
+ * memory bound — `listByIngestedAtWindow` late-materializes, so the wide payload
+ * columns (KB–MB LLM messages) are read only for the spans on this page; a 5k
+ * page over a full window peaks ~250 MiB regardless of window size (the per-query
+ * 4 GiB `max_memory_usage` guard is just defense-in-depth). The real ceiling is
+ * worker heap — it holds a page of `SpanDetail` plus the mapped events — and the
+ * destination's delivery batch, so this is an operational size, not a safety
+ * limit. Cursor pagination chains the rest; a bigger page = fewer, larger
+ * windows. 1M backfill cap ≈ 200 pages.
  */
-export const DESTINATION_READ_PAGE_SIZE = 2_000
+export const DESTINATION_READ_PAGE_SIZE = 5_000
 
 /**
  * Hard cap on records imported by a single backfill. A destination connected to
@@ -25,7 +23,7 @@ export const DESTINATION_READ_PAGE_SIZE = 2_000
  * window holds at most this many, newest first). Deliberately an operational/
  * product bound on backfill duration + ClickHouse read volume — NOT a
  * PostHog-derived limit: PostHog exposes no rate limit on `/batch/` capture, so
- * there's no published throughput to size against. 1M ≈ 500 read pages.
+ * there's no published throughput to size against. 1M ≈ 200 read pages.
  */
 export const DESTINATION_MAX_RECORDS_PER_BACKFILL = 1_000_000
 
