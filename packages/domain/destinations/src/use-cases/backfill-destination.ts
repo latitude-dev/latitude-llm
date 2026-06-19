@@ -316,6 +316,7 @@ export const runBackfillWindowUseCase = (input: RunBackfillWindowInput) =>
       cursor,
       windowEnd: segmentEnd,
       limit,
+      excludePayloads: sourceState.config.excludePayloads,
     })
 
     if (window.records.length === 0) {

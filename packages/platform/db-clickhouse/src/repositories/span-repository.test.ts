@@ -322,6 +322,44 @@ describe("SpanRepository", () => {
       expect(exhausted.spans).toHaveLength(0)
       expect(exhausted.nextCursor).toBeNull()
     })
+
+    it("drops the heavy payload columns when excludePayloads is set, keeping the row shape", async () => {
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            span_id: "1111111111111111",
+            ingested_at: "2026-01-01 00:10:00.000",
+            input_messages: '[{"role":"user","content":"hi"}]',
+            output_messages: '[{"role":"assistant","content":"yo"}]',
+            tool_definitions: '[{"name":"t","description":"d","parameters":{}}]',
+            tool_input: "the-input",
+            tool_output: "the-output",
+          }),
+        ]),
+      )
+
+      const kept = await listWindow(startCursor, 10)
+      expect(kept.spans[0]?.inputMessages).toHaveLength(1)
+      expect(kept.spans[0]?.toolInput).toBe("the-input")
+
+      const stripped = await runCh(
+        repo.listByIngestedAtWindow({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          cursor: startCursor,
+          windowEnd: WINDOW_END,
+          limit: 10,
+          excludePayloads: true,
+        }),
+      )
+
+      expect(stripped.spans.map((span) => span.spanId)).toEqual(["1111111111111111"])
+      expect(stripped.spans[0]?.inputMessages).toEqual([])
+      expect(stripped.spans[0]?.outputMessages).toEqual([])
+      expect(stripped.spans[0]?.toolDefinitions).toEqual([])
+      expect(stripped.spans[0]?.toolInput).toBe("")
+      expect(stripped.spans[0]?.toolOutput).toBe("")
+    })
   })
 
   describe("findIngestedAtFloorForRecentLimit", () => {

@@ -136,6 +136,7 @@ export interface SpanRepositoryShape {
     readonly cursor: SpanIngestionCursor
     readonly windowEnd: Date
     readonly limit: number
+    readonly excludePayloads?: boolean
   }): Effect.Effect<SpanIngestedAtWindow, RepositoryError, ChSqlClient>
 
   /**

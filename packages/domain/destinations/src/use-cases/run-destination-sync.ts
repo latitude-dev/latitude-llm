@@ -407,6 +407,7 @@ export const runDestinationSyncUseCase = (input: RunDestinationSyncInput) =>
       cursor: startCursor,
       windowEnd,
       limit: Math.min(sourceState.config.maxRecordsPerRun, DESTINATION_READ_PAGE_MAX),
+      excludePayloads: sourceState.config.excludePayloads,
     })
 
     if (window.records.length === 0) {

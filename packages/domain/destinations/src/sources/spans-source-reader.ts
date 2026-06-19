@@ -10,7 +10,7 @@ import { type DestinationSourceReader, DestinationSourceReaders } from "../ports
  * spans→PostHog mapper; the source-agnostic engine never references it directly.
  */
 export const createSpansSourceReader = (spanRepo: SpanRepositoryShape): DestinationSourceReader<SpanDetail> => ({
-  listWindow: ({ organizationId, projectId, cursor, windowEnd, limit }) =>
+  listWindow: ({ organizationId, projectId, cursor, windowEnd, limit, excludePayloads }) =>
     spanRepo
       .listByIngestedAtWindow({
         organizationId,
@@ -18,6 +18,7 @@ export const createSpansSourceReader = (spanRepo: SpanRepositoryShape): Destinat
         cursor: { ingestedAt: cursor.watermark, spanId: SpanId(cursor.id) },
         windowEnd,
         limit,
+        excludePayloads: excludePayloads ?? false,
       })
       .pipe(
         Effect.map((window) => ({

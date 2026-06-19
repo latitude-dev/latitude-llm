@@ -82,6 +82,15 @@ const DETAIL_COLUMNS = `${LIST_COLUMNS},
   tool_definitions, tool_call_id, tool_input, tool_output
 `
 
+// Same row shape as `DETAIL_COLUMNS`, but the heavy payload columns are returned
+// as empty literals — ClickHouse never reads them from storage. For consumers
+// that drop content payloads anyway (a destination with `excludePayloads`), this
+// keeps a window read off the largest columns, where the formatter's memory goes.
+const DETAIL_COLUMNS_NO_PAYLOADS = `${LIST_COLUMNS},
+  '' AS input_messages, '' AS output_messages, '' AS system_instructions,
+  '' AS tool_definitions, '' AS tool_call_id, '' AS tool_input, '' AS tool_output
+`
+
 type SpanListRow = {
   organization_id: string
   project_id: string
@@ -481,15 +490,17 @@ export const SpanRepositoryLive = Layer.effect(
       cursor,
       windowEnd,
       limit,
+      excludePayloads,
     }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        const columns = excludePayloads ? DETAIL_COLUMNS_NO_PAYLOADS : DETAIL_COLUMNS
         return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
-              query: `SELECT ${DETAIL_COLUMNS}
+              query: `SELECT ${columns}
                     FROM (
-                      SELECT ${DETAIL_COLUMNS}
+                      SELECT ${columns}
                       FROM spans
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
@@ -518,7 +529,10 @@ export const SpanRepositoryLive = Layer.effect(
               // A page is serialized to JSON in one response; parallel formatting buffers
               // per-thread blocks that ballooned a large page to multi-GiB in production.
               // Single-threaded formatting + a per-query memory cap keep one window's read
-              // from tripping the server-wide OvercommitTracker — it fails its own job instead.
+              // from tripping the server-wide OvercommitTracker (which kills unrelated
+              // tenants' queries). Far above the clamped page's expected peak, so it should
+              // never fire; if it does, the read fails as a retryable RepositoryError —
+              // BullMQ retries, then it's recorded as a failed sync run, not swallowed.
               clickhouse_settings: {
                 output_format_parallel_formatting: 0,
                 max_memory_usage: "4000000000",
