@@ -5,9 +5,9 @@ description: Connect your Strands Agents application to Latitude for observabili
 
 ## Overview
 
-This guide shows you how to integrate **Latitude Telemetry** into an application that uses **Strands Agents** — AWS's open-source AI agents SDK.
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses **Strands Agents**: AWS's open-source AI agents SDK.
 
-Strands Agents has first-class OpenTelemetry support built in (`strands-agents[otel]`). It emits standard `gen_ai.*` spans for every agent run, LLM call, and tool execution, so you can point Strands' OTLP exporter directly at Latitude's ingestion endpoint — no Latitude SDK required.
+Strands Agents has first-class OpenTelemetry support built in (`strands-agents[otel]`). It emits standard `gen_ai.*` spans for every agent run, LLM call, and tool execution, so you can point Strands' OTLP exporter directly at Latitude's ingestion endpoint, no Latitude SDK required.
 
 <Check>
   You'll keep using Strands Agents exactly as you do today. The exporter simply
@@ -59,7 +59,7 @@ Strands Agents has first-class OpenTelemetry support built in (`strands-agents[o
     ```
 
     <Note>
-      `OTEL_EXPORTER_OTLP_ENDPOINT` is the **base URL** — the OTel SDK automatically appends `/v1/traces`. Do not include the path yourself or traces will fail to reach Latitude.
+      `OTEL_EXPORTER_OTLP_ENDPOINT` is the **base URL**: the OTel SDK automatically appends `/v1/traces`. Do not include the path yourself or traces will fail to reach Latitude.
     </Note>
 
     Then initialize telemetry before creating your agent:
@@ -98,10 +98,10 @@ Strands Agents has first-class OpenTelemetry support built in (`strands-agents[o
 
 Each agent run shows up as a trace with nested spans:
 
-- **Agent spans** — agent name, ID, description, user message, full response, total token usage
-- **Cycle spans** — one span per event-loop cycle with `event_loop.cycle_id`
-- **LLM spans** — model invocations with input/output messages, token counts (prompt, completion, cache), model parameters
-- **Tool spans** — tool name, input arguments, output result, and `tool.status`
+- **Agent spans**: agent name, ID, description, user message, full response, total token usage
+- **Cycle spans**: one span per event-loop cycle with `event_loop.cycle_id`
+- **LLM spans**: model invocations with input/output messages, token counts (prompt, completion, cache), model parameters
+- **Tool spans**: tool name, input arguments, output result, and `tool.status`
 
 ---
 

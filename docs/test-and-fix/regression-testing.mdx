@@ -9,7 +9,7 @@ description: Replay a dataset of real traces against your agent and check the re
   holds before and after you ship.
 </Info>
 
-A **regression test** replays a set of known inputs against your agent and checks the results, so a failure you already fixed cannot return unnoticed. In Latitude, the inputs come from a [Dataset](../datasets/overview) of real traces, and the checks reuse the same [evaluations](../evaluations/overview) that monitor production — so your test quality bar matches your production quality bar.
+A **regression test** replays a set of known inputs against your agent and checks the results, so a failure you already fixed cannot return unnoticed. In Latitude, the inputs come from a [Dataset](../datasets/overview) of real traces, and the checks reuse the same [evaluations](../evaluations/overview) that monitor production, so your test quality bar matches your production quality bar.
 
 ## The regression loop
 
@@ -34,8 +34,8 @@ A **regression test** replays a set of known inputs against your agent and check
 ## Run it in CI
 
 <Note>
-  **Coming soon.** The local-first **Simulations** runner — the Latitude CLI and
-  `@latitude-data/sdk` for replaying datasets and running evaluations in your own pipeline — is under
+  **Coming soon.** The local-first **Simulations** runner, the Latitude CLI and
+  `@latitude-data/sdk` for replaying datasets and running evaluations in your own pipeline, is under
   active development. The pages below describe the planned design.
 </Note>
 

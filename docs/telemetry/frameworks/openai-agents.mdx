@@ -142,12 +142,12 @@ Latitude includes dedicated instrumentation for the OpenAI Agents SDK, so agent 
 
 Each agent run shows up as a trace with nested spans:
 
-- **Agent spans** — agent name, configured tools, handoff targets, output type
-- **Generation / Response spans** — model, input/output messages, token usage, response id
-- **Function spans** — tool calls with input arguments and output
-- **Handoff spans** — `from_agent` → `to_agent`
-- **Guardrail spans** — guardrail name and whether it triggered
-- **MCP spans** — listed tools per server
+- **Agent spans**: agent name, configured tools, handoff targets, output type
+- **Generation / Response spans**: model, input/output messages, token usage, response id
+- **Function spans**: tool calls with input arguments and output
+- **Handoff spans**: `from_agent` → `to_agent`
+- **Guardrail spans**: guardrail name and whether it triggered
+- **MCP spans**: listed tools per server
 
 Wrap a request or job with `capture()` to attach a `userId`, `sessionId`, `tags`, or `metadata` to every span produced inside.
 

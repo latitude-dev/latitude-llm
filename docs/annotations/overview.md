@@ -30,7 +30,7 @@ Human annotations save as drafts while you edit. Once finalized, they become par
 
 ## Where to Annotate
 
-Open any trace detail view—from Traces, Search, Issues, or Sessions—and use the annotation panel on the right. For batch review, start with a [saved search](../search/saved-searches), then work through the matching traces one at a time.
+Open any trace detail view, from Traces, Search, Issues, or Sessions, and use the annotation panel on the right. For batch review, start with a [saved search](../search/saved-searches), then work through the matching traces one at a time.
 
 If you want automatic coverage for known failure categories, use [flaggers](./flaggers). If you are building your own feedback UI, submit annotations through the [Annotations API](../scores/api).
 

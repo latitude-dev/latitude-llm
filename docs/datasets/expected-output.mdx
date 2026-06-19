@@ -9,7 +9,7 @@ description: Record the correct answer for dataset rows so regression tests can 
   [Regression testing](../test-and-fix/regression-testing).
 </Info>
 
-**Expected output** is the correct or desired answer for a dataset row. It is what lets a test compare your agent's actual output against a known-good result, rather than only checking the output in isolation. Expected output is optional — many evaluations check a response on its own merits — but it is what makes a row a precise regression case.
+**Expected output** is the correct or desired answer for a dataset row. It is what lets a test compare your agent's actual output against a known-good result, rather than only checking the output in isolation. Expected output is optional, many evaluations check a response on its own merits, but it is what makes a row a precise regression case.
 
 ## Add expected output to a row
 
@@ -25,7 +25,7 @@ description: Record the correct answer for dataset rows so regression tests can 
 
 ## Where the expected answer comes from
 
-When you build a dataset from a failing [issue](../issues/overview), the agent's actual output was wrong — that is why the issue exists. The expected output is the response the agent *should* have produced. Common sources:
+When you build a dataset from a failing [issue](../issues/overview), the agent's actual output was wrong, that is why the issue exists. The expected output is the response the agent *should* have produced. Common sources:
 
 - the correct answer a human reviewer would give
 - the behaviour described in the issue or in an [annotation](../annotations/overview)

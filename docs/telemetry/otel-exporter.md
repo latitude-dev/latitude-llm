@@ -15,8 +15,8 @@ If your language has an OpenTelemetry SDK (Go, Java, Ruby, Rust, .NET, Elixir, P
 
 ## Prerequisites
 
-1. A **Latitude API key** — generate one from your project settings in the Latitude dashboard.
-2. Your **project slug** — visible in the project settings or URL.
+1. A **Latitude API key**: generate one from your project settings in the Latitude dashboard.
+2. Your **project slug**: visible in the project settings or URL.
 
 ## Endpoint and Headers
 
@@ -70,7 +70,7 @@ A `202` response with `{}` means the endpoint accepted your payload.
 
 ## Language Examples
 
-Every OpenTelemetry SDK lets you configure an OTLP HTTP exporter with a custom endpoint and headers. Below are the key configuration snippets — the rest of your OTel setup (tracer provider, instrumentations, etc.) stays the same as usual.
+Every OpenTelemetry SDK lets you configure an OTLP HTTP exporter with a custom endpoint and headers. Below are the key configuration snippets, the rest of your OTel setup (tracer provider, instrumentations, etc.) stays the same as usual.
 
 ### Go
 
@@ -179,7 +179,7 @@ span.SetAttributes(
 ## GenAI Span Attributes (LLM Metadata)
 
 <Warning>
-  Configuring the OTLP exporter (endpoint + headers) only ensures your spans **reach** Latitude. For Latitude to display LLM call details — model name, token counts, input/output messages — your spans must carry the [OpenTelemetry GenAI semantic convention](https://opentelemetry.io/docs/specs/semconv/gen-ai/) attributes described below.
+  Configuring the OTLP exporter (endpoint + headers) only ensures your spans **reach** Latitude. For Latitude to display LLM call details, model name, token counts, input/output messages, your spans must carry the [OpenTelemetry GenAI semantic convention](https://opentelemetry.io/docs/specs/semconv/gen-ai/) attributes described below.
 
   Without these attributes, traces will appear in the dashboard but show no model, token usage, or message content.
 </Warning>
@@ -304,29 +304,29 @@ For any observability platform that supports OpenTelemetry (Jaeger, Grafana Temp
 
 The `Authorization` header must use the `Bearer ` prefix (with a space). Double-check your API key is valid and not expired.
 
-### 400 Bad Request — missing project header
+### 400 Bad Request, missing project header
 
 The `X-Latitude-Project` header is required on every request. Ensure it is present and spelled correctly, and that the value matches a project slug in the organization associated with your API key.
 
 ### 202 but no traces visible
 
 - **Empty body:** An empty request body is accepted with `202` but produces no traces. Ensure your exporter is actually attaching span data.
-- **Smart filter (SDK only):** If you are using a Latitude SDK's `LatitudeSpanProcessor`, only LLM-relevant spans are exported by default. This does not apply when sending OTLP directly — all spans are ingested.
+- **Smart filter (SDK only):** If you are using a Latitude SDK's `LatitudeSpanProcessor`, only LLM-relevant spans are exported by default. This does not apply when sending OTLP directly, all spans are ingested.
 - **Flush before exit:** Make sure your tracer provider flushes pending spans before the process exits.
 
 ### Traces appear but show no model, tokens, or messages
 
 This is the most common issue when integrating via the generic OTLP exporter. Your exporter is configured correctly (you get `202` and traces appear), but the Latitude UI shows empty LLM metadata.
 
-**Cause:** Your spans are missing the `gen_ai.*` semantic convention attributes. Configuring the exporter only ensures spans reach Latitude — it does not add LLM metadata. You must explicitly set attributes like `gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`, `gen_ai.input.messages`, etc. on your spans.
+**Cause:** Your spans are missing the `gen_ai.*` semantic convention attributes. Configuring the exporter only ensures spans reach Latitude, it does not add LLM metadata. You must explicitly set attributes like `gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`, `gen_ai.input.messages`, etc. on your spans.
 
 **Fix:** See [GenAI Span Attributes (LLM Metadata)](#genai-span-attributes-llm-metadata) above for the full list of attributes and message format. At a minimum, set:
 
-1. `gen_ai.provider.name` — provider name (e.g. `"openai"`, `"anthropic"`)
-2. `gen_ai.request.model` — model name
-3. `gen_ai.operation.name` — set to `"chat"`
-4. `gen_ai.usage.input_tokens` and `gen_ai.usage.output_tokens` — token counts
-5. `gen_ai.input.messages` and `gen_ai.output.messages` — the actual conversation content
+1. `gen_ai.provider.name`, provider name (e.g. `"openai"`, `"anthropic"`)
+2. `gen_ai.request.model`, model name
+3. `gen_ai.operation.name`, set to `"chat"`
+4. `gen_ai.usage.input_tokens` and `gen_ai.usage.output_tokens`, token counts
+5. `gen_ai.input.messages` and `gen_ai.output.messages`, the actual conversation content
 
 <Note>
   If you use a Latitude SDK or an OpenTelemetry auto-instrumentation library (e.g. `opentelemetry-instrumentation-openai`), these attributes are set automatically. This section only applies when you manually create spans for LLM calls without auto-instrumentation.

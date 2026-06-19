@@ -113,13 +113,21 @@
         ]
       },
       {
-        "group": "Observability",
+        "group": "Observe",
         "pages": [
           "observability/overview",
-          "observability/traces",
           "observability/sessions",
+          "observability/traces",
           "observability/spans",
           "observability/tool-calls",
+          {
+            "group": "Search",
+            "pages": [
+              "search/overview",
+              "search/saved-searches",
+              "search/guides/search-and-review-effectively"
+            ]
+          },
           {
             "group": "Features",
             "pages": [
@@ -147,26 +155,13 @@
         ]
       },
       {
-        "group": "Discovery",
-        "pages": [
-          "search/overview",
-          "search/behaviours",
-          "search/saved-searches",
-          {
-            "group": "Guides",
-            "pages": [
-              "search/guides/search-and-review-effectively"
-            ]
-          }
-        ]
-      },
-      {
-        "group": "Issues",
+        "group": "Understand",
         "pages": [
           "issues/overview",
           "issues/management",
+          "search/behaviours",
           {
-            "group": "Signals",
+            "group": "Annotations and scores",
             "pages": [
               "annotations/overview",
               "annotations/inline-annotations",
@@ -192,16 +187,9 @@
         ]
       },
       {
-        "group": "Monitors",
+        "group": "Refine",
         "pages": [
-          "monitors/overview"
-        ]
-      },
-      {
-        "group": "Test and Fix",
-        "pages": [
-          "test-and-fix/overview",
-          "getting-started/mcp",
+          "monitors/overview",
           {
             "group": "Datasets",
             "pages": [
@@ -210,7 +198,9 @@
               "datasets/expected-output"
             ]
           },
+          "test-and-fix/overview",
           "test-and-fix/regression-testing",
+          "getting-started/mcp",
           {
             "group": "Simulations",
             "pages": [

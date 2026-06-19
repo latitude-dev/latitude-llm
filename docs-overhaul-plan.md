@@ -1,6 +1,6 @@
 # Docs Overhaul Plan
 
-> Rework the public docs (`docs/`, Mintlify) around a clear product funnel and the four-stage product loop, **Trace → Discover → Triage → Test & Fix**, applying the principles in [8 Rules for Better Docs](https://mattpalmer.io/posts/2025/10/8-rules-for-better-docs/). This refines the original "three axis" proposal with a concrete IA, a page-by-page disposition, a media shot-list, and a CI/agent workstream so the docs stop going stale.
+> Rework the public docs (`docs/`, Mintlify) so their top-level sections mirror the product sidebar's three sections, **Observe, Understand, Refine**, applying the principles in [8 Rules for Better Docs](https://mattpalmer.io/posts/2025/10/8-rules-for-better-docs/). This gives the docs a concrete IA, a page-by-page disposition, a media shot-list, and a CI/agent workstream so the docs stop going stale.
 
 ## How this plan relates to the Signals spec
 
@@ -32,25 +32,26 @@ So this is **not a teardown**. It is: (1) close the one genuinely missing axis, 
 
 ---
 
-## Cross-cutting: make the loop pervade every page
+## Cross-cutting: mirror the product's three sections
 
-The **Trace → Discover → Triage → Test & Fix** loop is the product's mental model, so it should be the docs' mental model too, not just a nav label. Every page locates itself in the loop, and the loop vocabulary stays controlled (same four verbs everywhere, no synonyms drifting in).
+The product sidebar groups everything into three sections: **Observe, Understand, Refine**. The docs use the same three sections, in the same order, so what a reader sees in the docs matches what they see in the app. Every page locates itself in one of the three, and the section vocabulary stays controlled (same three words everywhere, no synonyms drifting in).
 
-What each stage means today, and where Signals will move it later:
+What each section covers:
 
-- **Trace.** Instrument the app and send telemetry. Unchanged by Signals.
-- **Discover.** Find behaviors worth caring about. Today this is two things: you explore with search, and Latitude also discovers issues automatically. Under Signals, automatic discovery goes away and "discover" becomes "explore, then deliberately define a Signal to track." See phase B.
-- **Triage.** Decide what matters and route it. Today: issue priority, assignee, resolve, ignore. Under Signals this becomes signal priority and assignees, plus resolve, ignore, and mute that write to the signal's default monitor underneath.
-- **Test & Fix.** Turn what you found into datasets and regression tests. Unchanged by Signals.
+- **Observe.** See what your agent did: sessions, traces, spans, tool calls, users, and tools, plus search to find specific traffic. This is also where instrumentation feeds in from Getting Started.
+- **Understand.** Make sense of that traffic: issues (the Signals surface once it ships), behaviours, and the annotations, scores, and evaluations that produce them.
+- **Refine.** Act on what you learned: monitor for regressions and build datasets and regression tests.
 
-Concretely, the loop is enforced by a **shared page template**, not by ad-hoc prose:
+(The older four-verb loop, Trace then Discover then Triage then Test and Fix, can survive as a one-line mental model inside a page, but the sidebar and the docs sections both speak Observe, Understand, Refine.)
 
-- **Frontmatter** `title` and `description` that state what the page does and which loop stage it serves (descriptions already double as the answer an agent surfaces).
+Concretely, the sections are reinforced by a **shared page template**, not by ad-hoc prose:
+
+- **Frontmatter** `title` and `description` that state what the page does and which section it serves (descriptions already double as the answer an agent surfaces).
 - **One-line "where you are"** orienting sentence at the top of every section overview: which stage this is, what came before, what comes next. Kept to a sentence so it does not bloat the page.
-- **A standardized "Next step" block** at the foot of every page that points to the next loop stage (this is also the funnel's exit, per rule 2).
+- **A standardized "Next step" block** at the foot of every page that points to the next section (this is also the funnel's exit, per rule 2).
 - **Controlled vocabulary:** Trace, Span, Session, Saved search, Issue, Monitor, Alert, Incident, Dataset, Regression test. Defined once in `concepts`, used identically everywhere, linked on first use. Reserve **Signal** for the future entity in `specs/signals.md`; do not use it for scores or annotations. The Signals migration redefines this list (drops Issue, redefines Signal, adds Occurrence). See phase B.
 
-**Tension to manage (and the rule):** loop-framing must stay *tight*. One orienting sentence and one next-step block per page, never multi-paragraph "here is how this fits the journey" marketing. Answer-first content comes first on the page; the framing brackets it.
+**Tension to manage (and the rule):** section-framing must stay *tight*. One orienting sentence and one next-step block per page, never multi-paragraph "here is how this fits the journey" marketing. Answer-first content comes first on the page; the framing brackets it.
 
 ## Cross-cutting: exploration vs tracking
 
@@ -98,28 +99,28 @@ These apply to **every** page and become CI-checkable where possible (rule 6). T
 
 ## Target information architecture
 
-Reconciles the original three-axis proposal with the current nav. This is the **current-product** IA; the Signals migration reshapes the Discovery and Issues groups later (phase B). New or moved items are in **bold**.
+The docs' top-level sections mirror the product sidebar's three sections, in the same order: **Observe, then Understand, then Refine**. Docs-only onboarding sections (Overview, Getting Started) sit before them; reference and scaffolding sections (Security and Compliance, Development, More) sit after. Gaps and not-yet-built items are in **bold**.
 
-| Group | Pages | Diátaxis |
-| --- | --- | --- |
-| **Overview** | introduction, how-to-use-latitude | Explanation |
-| **Getting Started** *(set up and send your data)* | start-tracing, **end-to-end tutorial (new)**, **SDKs (moved in)**, **Providers (moved in)**, **Frameworks (moved in)**, **Agent harnesses (moved in)** | Tutorial / How-to + Reference |
-| **Observability** *(the LLM observability building blocks)* | **overview (becomes the group landing)**, traces, sessions, **spans (new)**, **tool calls (new)**, Features (duration, token and cost tracking, metadata, tags, environments, user tracking, log levels, trace ids and urls, filters, sampling, releases and versioning, percentile cohorts), Guides | Reference + Explanation |
-| **Discovery** *(rename/group existing)* | search/overview, search/saved-searches, **taxonomy (new)**, flaggers, scores, guides | How-to + Reference |
-| **Issues** *(today's auto-discovery surface)* | issues/overview, management, annotations (inline annotations, flaggers), Evaluations (overview, triggers, alignment) | Explanation + How-to |
-| **Monitors** *(one concept, many targets)* | overview, **monitor a saved search** (how-to), **monitor an issue** (how-to), notifications and Slack | How-to + Reference |
-| **Test and Fix** *(NEW group)* | **Overview**, getting-started/mcp (promoted), **integrate with your agent harness**, **Datasets** (overview, add traces to a dataset, add expected output), **Regression testing** (concepts, with SDKs, in CI), simulations/* (wired in) | How-to |
-| **Security & Compliance** | data-protection, pii-redaction, Compliance (soc2, iso-27001, gdpr) | Reference, *SOC 2 blocked on report* |
-| **More** | concepts, api-reference | Reference |
+| Group | Mirrors sidebar | Pages | Diátaxis |
+| --- | --- | --- | --- |
+| **Overview** | (docs onboarding) | introduction, how-to-use-latitude | Explanation |
+| **Getting Started** | (docs onboarding: set up and send data) | start-tracing, **end-to-end tutorial (new)**, SDKs, Providers, Frameworks, Agent harnesses | Tutorial / How-to + Reference |
+| **Observe** | OBSERVE (Sessions, Users, Tools) | overview (landing), sessions, traces, spans, tool calls, Search (overview, saved searches, guide), Features, Guides. **Gaps: Users page, Tools page.** | Reference + Explanation |
+| **Understand** | UNDERSTAND (Signals, Behaviors) | issues/overview, management, behaviours, Annotations and scores (overview, inline annotations, flaggers, scores, analytics), Evaluations (overview, triggers, alignment), Guides | Explanation + How-to |
+| **Refine** | REFINE (Monitors, Datasets) | monitors/overview, Datasets (overview, add traces, expected output), test-and-fix overview, regression testing, MCP, Simulations | How-to |
+| **Security and Compliance** | (scaffolding) | data-protection, pii-redaction, Compliance (soc2, iso-27001, gdpr) | Reference, *SOC 2 blocked on report* |
+| **Development** | (curated, no-touch) | setup, contributing | Reference |
+| **More** | (scaffolding) | concepts, sandbox, api-reference | Reference |
 
-Notes on the changes from the previous draft:
+Notes on the structure:
 
-- **Instrumentation moves out of Observability into Getting Started.** SDKs, Providers, Frameworks, and Agent harnesses are all "how do I get telemetry flowing," which is setup, not observability. Moving them decongests Observability and gives Getting Started one clear job: get set up and send your data. (See the open question on whether they stay under Getting Started or get their own "Instrumentation" group.)
-- **Observability becomes the building-blocks reference:** traces, sessions, spans, and tool calls as first-class pages, then the data and metadata features, then guides. `observability/overview` stops being buried inside "Features" and becomes the group landing.
-- **Two building-block pages are missing and must be created:** there is no dedicated **spans** page and no dedicated **tool calls** page today, even though both are core observability concepts. See P0.
-- **Monitors is one group, not two siloed "Monitor a X" pages.** A monitor is a single concept that watches a target. Today the targets are saved searches and issues; the how-tos are examples of the same concept, not separate features. This framing is true now and matches where Signals takes monitors (targets become signal, saved search, tool, or raw stream). The cross-links from Discovery (saved searches) and Issues point into this one Monitors group.
-- **"scores" replaces the old "signals (scores)" label** in Discovery, and the Issues group lists the real pages (annotations, inline annotations, flaggers, evaluations) instead of grouping them under the word "signals." Scores are the verdict ledger, not a tracked entity.
-- **Evaluations stay under Issues** for now because today an evaluation is linked to an issue. Under Signals an evaluation becomes one *type* of signal matcher; that reframing is phase B.
+- **The three middle sections match the product sidebar exactly, in order:** Observe, Understand, Refine. The old "Discovery" group is dissolved: search and saved searches move under Observe (search is the bar on the Sessions and Traces page), and Behaviours moves to Understand.
+- **The word "Signals" is reserved for the future entity.** The old nav subgroup named "Signals" (annotations and scores) is renamed "Annotations and scores" so it no longer collides with the product's Signal concept.
+- **Issues stands in for the sidebar's "Signals" item under Understand.** The sidebar's UNDERSTAND section leads with Signals; our content is still issue-based, so Issues sits there today and is renamed to Signals as part of the content migration (phase B), when the Signals pages are written. Behaviours follows it, matching the sidebar order.
+- **Monitors leads Refine, next to Datasets**, matching the sidebar. It stays one concept that watches a target (a saved search or issue today; a signal, tool, or raw stream later); per-target how-tos live on each target's page.
+- **Observe gaps to fill:** the sidebar has dedicated **Users** and **Tools** items, and neither has a docs page yet (only `features/user-tracking` and the `tool-calls` concept). Both are new pages to write.
+
+The four-stage loop (Trace, Discover, Triage, Test and Fix) is retired as the *navigation* principle in favour of the product's own three sections. It can survive as a one-line mental model inside pages, but the sidebar and the docs sections both speak Observe, Understand, Refine.
 
 ---
 
@@ -140,9 +141,9 @@ Notes on the changes from the previous draft:
 - [ ] **Stable slugs and a redirect map.** Lock the slugs that will survive the Issues to Signals rename, and pre-write the `issues/* → signals/*` redirect map so the later migration is a config change, not a link break.
 
 ### P1, content quality (Diátaxis and funnel polish)
-- [ ] **Define the shared page template** (frontmatter, "where you are" orienting line, "Next step" block) and apply it to every page so the loop pervades consistently.
+- [ ] **Define the shared page template** (frontmatter, "where you are" orienting line, "Next step" block) and apply it to every page so the section framing pervades consistently.
 - [ ] **End-to-end tutorial**: instrument a sample agent, see a trace, search, annotate, see an issue form, add a monitor, then add the traces to a dataset and write a regression test. One continuous narrative across the full loop. (Phase B swaps the "see an issue form automatically" beat for "create a signal"; see the migration section.) **Media needed:** a section-intro video for Getting Started, and a continuous screen recording of the full loop.
-- [ ] Add explicit **"Next step"** blocks to every section overview, each pointing to the next loop stage (funnel completion).
+- [ ] Add explicit **"Next step"** blocks to every section overview, each pointing to the next section (funnel completion).
 - [ ] **LLM-readability pass** on every page: answer-first ordering, no load-bearing media, self-contained, descriptive anchor text, complete runnable code.
 - [ ] PNG audit, ensure no screenshot is the *only* place a fact lives; add surrounding prose.
 - [ ] **Controlled-vocabulary sweep:** one canonical term per concept, defined in `concepts`, linked on first use. Enforce the "Signal is reserved" rule from this plan.
@@ -216,7 +217,7 @@ These changes only make sense once `specs/signals.md` ships. Hold them until the
 - Zero orphaned pages; zero broken links or images (enforced in CI).
 - "Test and Fix" axis exists with Datasets, regression testing, and MCP.
 - Every page tagged with a Diátaxis type; at least one true end-to-end tutorial.
-- **Every page locates itself in the loop** (orienting line and "Next step" to the next stage) using the controlled vocabulary.
+- **Every page locates itself in a section** (orienting line and "Next step" to the next section) using the controlled vocabulary.
 - **Every page passes the LLM-readability bar:** understandable when fetched in isolation (no load-bearing media), answer-first, one H1, descriptive frontmatter and anchor text, complete runnable code. The mechanizable subset is enforced in CI.
 - **The Signal/Issue terminology collision is resolved:** "Signal" is reserved for the future entity and never used for scores or annotations; the `issues/* → signals/*` redirect map exists and slugs are stable.
 - **Exploration vs tracking is explained** on the Search overview and Saved searches pages.

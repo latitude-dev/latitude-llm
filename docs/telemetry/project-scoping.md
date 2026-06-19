@@ -1,6 +1,6 @@
 ---
 title: Project scoping
-description: Route spans to the right Latitude project — one project per process, or many.
+description: Route spans to the right Latitude project, one project per process, or many.
 ---
 
 Latitude can route spans to different projects based on how each capture is configured. Most
@@ -26,7 +26,7 @@ For every span Latitude ingests, the server applies this order (highest priority
 <Note>
   The SDK option was renamed from `projectSlug` / `project_slug` to `project` in
   `@latitude-data/telemetry` ≥ `3.0.0-alpha.12` and `latitude-telemetry` ≥ `3.0.0a8`. The old
-  names still work but log a deprecation warning — see each SDK's CHANGELOG for the migration
+  names still work but log a deprecation warning, see each SDK's CHANGELOG for the migration
   diff. The `X-Latitude-Project` header name and the `latitude.project` span attribute are
   unchanged.
 </Note>
@@ -45,14 +45,14 @@ partial-success responses. Customers writing their own exporters can rely on the
 | Every span rejected                  | **400**     | `google.rpc.Status` shape: `{ code: 400, message: "..." }`      |
 | Malformed OTLP payload               | **400**     | `{ error: "..." }`                                              |
 
-Note: `partialSuccess` only appears on **2xx** responses — it means "some spans were
+Note: `partialSuccess` only appears on **2xx** responses, it means "some spans were
 persisted, here is a count of what we dropped". When **nothing** was persisted we return a
 plain `google.rpc.Status`-shaped error body so exporters don't mistakenly treat the rejection
 as a partial save.
 
 The `errorMessage` always points back to this page so an exporter that logs the response
 gives operators a single place to look. **Don't move this page** without coordinating a
-server-side update — the URL is hard-coded in the ingest error response.
+server-side update, the URL is hard-coded in the ingest error response.
 
 ## Patterns
 
@@ -63,7 +63,7 @@ Three runnable examples ship with each SDK. Start with the one that matches your
 For services that emit to exactly one Latitude project. The constructor `project` is sent on
 every export as `X-Latitude-Project`, and every `capture()` inherits it.
 
-**TypeScript** — see [`examples/test_project_scoping_single.ts`](https://github.com/latitude-dev/latitude-llm/blob/main/packages/telemetry/typescript/examples/test_project_scoping_single.ts):
+**TypeScript**: see [`examples/test_project_scoping_single.ts`](https://github.com/latitude-dev/latitude-llm/blob/main/packages/telemetry/typescript/examples/test_project_scoping_single.ts):
 
 ```ts
 import { capture, Latitude } from "@latitude-data/telemetry"
@@ -78,7 +78,7 @@ await capture("greet", async () => {
 })
 ```
 
-**Python** — see [`examples/test_project_scoping_single.py`](https://github.com/latitude-dev/latitude-llm/blob/main/packages/telemetry/python/examples/test_project_scoping_single.py):
+**Python**: see [`examples/test_project_scoping_single.py`](https://github.com/latitude-dev/latitude-llm/blob/main/packages/telemetry/python/examples/test_project_scoping_single.py):
 
 ```python
 from latitude_telemetry import Latitude, capture
@@ -95,10 +95,10 @@ def greet():
 
 ### 2. Multi-project from day 1 (no constructor default)
 
-For services that emit to multiple Latitude projects — e.g. one process that runs several
+For services that emit to multiple Latitude projects, e.g. one process that runs several
 agents. Skip the constructor `project` and set `project` on every `capture()`.
 
-**TypeScript** — see [`examples/test_project_scoping_multi.ts`](https://github.com/latitude-dev/latitude-llm/blob/main/packages/telemetry/typescript/examples/test_project_scoping_multi.ts):
+**TypeScript**: see [`examples/test_project_scoping_multi.ts`](https://github.com/latitude-dev/latitude-llm/blob/main/packages/telemetry/typescript/examples/test_project_scoping_multi.ts):
 
 ```ts
 import { capture, Latitude } from "@latitude-data/telemetry"
@@ -118,7 +118,7 @@ await capture(
 )
 ```
 
-**Python** — see [`examples/test_project_scoping_multi.py`](https://github.com/latitude-dev/latitude-llm/blob/main/packages/telemetry/python/examples/test_project_scoping_multi.py):
+**Python**: see [`examples/test_project_scoping_multi.py`](https://github.com/latitude-dev/latitude-llm/blob/main/packages/telemetry/python/examples/test_project_scoping_multi.py):
 
 ```python
 from latitude_telemetry import Latitude, capture
@@ -142,7 +142,7 @@ the spans are rejected with `partialSuccess`. Pick one of the two so every span 
 Most common when the default project comes from an env var but specific runs need to route
 elsewhere (e.g. shipping evaluation runs to a separate project).
 
-**TypeScript** — see [`examples/test_project_scoping_env.ts`](https://github.com/latitude-dev/latitude-llm/blob/main/packages/telemetry/typescript/examples/test_project_scoping_env.ts):
+**TypeScript**: see [`examples/test_project_scoping_env.ts`](https://github.com/latitude-dev/latitude-llm/blob/main/packages/telemetry/typescript/examples/test_project_scoping_env.ts):
 
 ```ts
 const latitude = new Latitude({
@@ -153,7 +153,7 @@ const latitude = new Latitude({
 // inherits the default
 await capture("default-route", async () => { /* ... */ })
 
-// per-capture override — wins over the constructor default
+// per-capture override, wins over the constructor default
 await capture(
   "evaluation-batch",
   async () => { /* ... */ },
@@ -161,7 +161,7 @@ await capture(
 )
 ```
 
-**Python** — see [`examples/test_project_scoping_env.py`](https://github.com/latitude-dev/latitude-llm/blob/main/packages/telemetry/python/examples/test_project_scoping_env.py):
+**Python**: see [`examples/test_project_scoping_env.py`](https://github.com/latitude-dev/latitude-llm/blob/main/packages/telemetry/python/examples/test_project_scoping_env.py):
 
 ```python
 latitude = Latitude(
@@ -188,5 +188,5 @@ common causes:
 - The resolved slug doesn't exist in your organization (typo, or a stale slug after the
   project was renamed).
 
-The fix is always to make sure each span has a way to resolve a project — either the span
+The fix is always to make sure each span has a way to resolve a project, either the span
 attribute, a resource attribute, or the header default.

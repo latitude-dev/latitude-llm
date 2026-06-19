@@ -1,10 +1,10 @@
 ---
 title: Test and Fix
-description: Take a triaged issue back into your code, fix the agent, and prove the fix holds with datasets and regression tests — the final stage of the Latitude loop.
+description: Take a triaged issue back into your code, fix the agent, and prove the fix holds with datasets and regression tests, the final stage of the Latitude loop.
 ---
 
 <Info>
-  **Where this fits:** This is the **Test and Fix** stage of the Latitude loop — after
+  **Where this fits:** This is the **Test and Fix** stage of the Latitude loop, after
   [Issue Discovery](../issues/overview), before the loop repeats with new production traffic.
   Here you act on what you found and make sure it stays fixed.
 </Info>
@@ -20,7 +20,7 @@ Once you have a tracked [issue](../getting-started/concepts), Test and Fix is wh
     in the same session.
   </Step>
   <Step title="Capture the failing traces as a dataset">
-    Turn the traces behind an issue into a [Dataset](../datasets/overview) — a versioned set of
+    Turn the traces behind an issue into a [Dataset](../datasets/overview), a versioned set of
     inputs you can replay. This is the seed of a regression test.
   </Step>
   <Step title="Add the expected behaviour">
@@ -54,7 +54,7 @@ Once you have a tracked [issue](../getting-started/concepts), Test and Fix is wh
 
 ## Why test against real traces
 
-Issues are discovered from real production failures, so the traces behind them are the most realistic test cases you have. Building datasets and regression tests directly from those traces means your tests cover the failure modes that actually happened — and the same evaluations that found the problem in production verify the fix.
+Issues are discovered from real production failures, so the traces behind them are the most realistic test cases you have. Building datasets and regression tests directly from those traces means your tests cover the failure modes that actually happened, and the same evaluations that found the problem in production verify the fix.
 
 ## Next step
 

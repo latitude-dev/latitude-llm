@@ -5,7 +5,7 @@ description: Understand how scores work as the universal measurement unit in Lat
 
 # Scores
 
-Scores are Latitude's common measurement unit. Every verdict on an agent interaction—from an evaluation, annotation, flagger, or your own code—is stored as a score. Issues, evaluation dashboards, annotation workflows, and analytics all build on this model.
+Scores are Latitude's common measurement unit. Every verdict on an agent interaction, from an evaluation, annotation, flagger, or your own code, is stored as a score. Issues, evaluation dashboards, annotation workflows, and analytics all build on this model.
 
 ## What Is a Score
 
