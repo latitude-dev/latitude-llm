@@ -3,9 +3,15 @@
 import typing
 
 from .create_monitor_alert_body_condition_kind import CreateMonitorAlertBodyConditionKind
-from .create_monitor_alert_body_condition_window import CreateMonitorAlertBodyConditionWindow
+from .create_monitor_alert_body_condition_one import CreateMonitorAlertBodyConditionOne
+from .create_monitor_alert_body_condition_sensitivity import CreateMonitorAlertBodyConditionSensitivity
+from .create_monitor_alert_body_condition_three import CreateMonitorAlertBodyConditionThree
 from .create_monitor_alert_body_condition_zero import CreateMonitorAlertBodyConditionZero
 
 CreateMonitorAlertBodyCondition = typing.Union[
-    CreateMonitorAlertBodyConditionZero, CreateMonitorAlertBodyConditionWindow, CreateMonitorAlertBodyConditionKind
+    CreateMonitorAlertBodyConditionZero,
+    CreateMonitorAlertBodyConditionOne,
+    CreateMonitorAlertBodyConditionSensitivity,
+    CreateMonitorAlertBodyConditionThree,
+    CreateMonitorAlertBodyConditionKind,
 ]

@@ -103,10 +103,11 @@ interface MonitorResponse {
   alerts: {
     id: string
     kind: string
-    source: { type: string; id: string | null }
+    source: { type: string; id: string | null } | null
     condition: unknown
     severity: string
   }[]
+  target: unknown | null
 }
 
 /** Creates a user monitor via the API and returns its parsed payload. */
@@ -160,6 +161,64 @@ describe("Monitors Routes Integration", () => {
     expect(monitor.alerts[0]?.kind).toBe("savedSearch.match")
     expect(monitor.alerts[0]?.source).toEqual({ type: "savedSearch", id: setup.savedSearchId })
     expect(monitor.alerts[0]?.condition).toBeNull()
+  })
+
+  it<ApiTestContext>("POST / creates a tool monitor and POST /for-target lists it", async ({ app, database }) => {
+    const setup = await setupUserMonitorTenant(database)
+    const headers = { ...createApiKeyAuthHeaders(setup.apiKeyToken), "Content-Type": "application/json" }
+    const target = {
+      stream: "spans",
+      filterSet: {
+        operation: [{ op: "eq", value: "execute_tool" }],
+        toolName: [{ op: "eq", value: "search_docs" }],
+      },
+      query: null,
+      savedSearchId: null,
+      metric: { kind: "errorRate" },
+    }
+
+    const created = await app.fetch(
+      new Request(`http://localhost/v1/projects/${setup.projectSlug}/monitors`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          name: "Tool failures",
+          alerts: [
+            {
+              kind: "metric.threshold",
+              source: null,
+              condition: {
+                kind: "metric.threshold",
+                metric: { kind: "errorRate" },
+                threshold: { mode: "absolute", value: 0.1 },
+              },
+            },
+          ],
+          target,
+        }),
+      }),
+    )
+    expect(created.status).toBe(201)
+    const monitor = (await created.json()) as MonitorResponse
+    expect(monitor.alerts[0]?.source).toBeNull()
+    expect(monitor.target).toEqual(target)
+
+    const listed = await app.fetch(
+      new Request(`http://localhost/v1/projects/${setup.projectSlug}/monitors/for-target`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          stream: "spans",
+          filterSetContains: {
+            operation: [{ op: "eq", value: "execute_tool" }],
+            toolName: [{ op: "eq", value: "search_docs" }],
+          },
+        }),
+      }),
+    )
+    expect(listed.status).toBe(200)
+    const body = (await listed.json()) as { items: MonitorResponse[] }
+    expect(body.items.map((item) => item.id)).toContain(monitor.id)
   })
 
   it<ApiTestContext>("semantic saved searches cannot be watched: create and re-point are 400", async ({

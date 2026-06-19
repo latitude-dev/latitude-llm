@@ -19,8 +19,12 @@ from ..types.error import Error
 from ..types.monitor import Monitor
 from ..types.monitor_alert import MonitorAlert
 from ..types.monitor_alert_list import MonitorAlertList
+from ..types.monitor_filter_set import MonitorFilterSet
+from ..types.monitor_list import MonitorList
+from ..types.monitor_target import MonitorTarget
 from ..types.paginated_monitor_incidents import PaginatedMonitorIncidents
 from ..types.paginated_monitors import PaginatedMonitors
+from .types.list_monitors_for_target_body_stream import ListMonitorsForTargetBodyStream
 from .types.update_monitor_alert_body_condition import UpdateMonitorAlertBodyCondition
 from .types.update_monitor_alert_body_kind import UpdateMonitorAlertBodyKind
 from .types.update_monitor_alert_body_severity import UpdateMonitorAlertBodySeverity
@@ -133,10 +137,11 @@ class RawMonitorsClient:
         name: str,
         alerts: typing.Sequence[CreateMonitorAlertBody],
         description: typing.Optional[str] = OMIT,
+        target: typing.Optional[MonitorTarget] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[Monitor]:
         """
-        Creates a monitor with its saved-search alert. The slug is derived from `name`. The watched saved search must not contain a semantic component (unquoted free text) — monitors need an exact match rule, so only quoted literal and backtick phrase terms are allowed.
+        Creates a monitor with one alert. Saved-search alerts use a saved-search source; tool and user alerts use `event.*` or `metric.*` kinds with `source: null` and a `target`. The slug is derived from `name`.
 
         Parameters
         ----------
@@ -151,6 +156,8 @@ class RawMonitorsClient:
 
         description : typing.Optional[str]
             Optional free-form description.
+
+        target : typing.Optional[MonitorTarget]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -169,6 +176,9 @@ class RawMonitorsClient:
                 "alerts": convert_and_respect_annotation_metadata(
                     object_=alerts, annotation=typing.Sequence[CreateMonitorAlertBody], direction="write"
                 ),
+                "target": convert_and_respect_annotation_metadata(
+                    object_=target, annotation=MonitorTarget, direction="write"
+                ),
             },
             headers={
                 "content-type": "application/json",
@@ -182,6 +192,98 @@ class RawMonitorsClient:
                     Monitor,
                     parse_obj_as(
                         type_=Monitor,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def list_for_target(
+        self,
+        project_slug: str,
+        *,
+        stream: ListMonitorsForTargetBodyStream,
+        filter_set_contains: typing.Optional[MonitorFilterSet] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[MonitorList]:
+        """
+        Returns live unified monitors whose target contains the supplied user or tool filter. Use `stream: traces` with a `userId` filter for users, or `stream: spans` with `operation = execute_tool` and `toolName` filters for tools.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        stream : ListMonitorsForTargetBodyStream
+            Telemetry stream to evaluate: `traces` for users, `spans` for tools, or `sessions` for session-level monitors.
+
+        filter_set_contains : typing.Optional[MonitorFilterSet]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[MonitorList]
+            Matching monitors
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/projects/{jsonable_encoder(project_slug)}/monitors/for-target",
+            method="POST",
+            json={
+                "stream": stream,
+                "filterSetContains": convert_and_respect_annotation_metadata(
+                    object_=filter_set_contains, annotation=MonitorFilterSet, direction="write"
+                ),
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    MonitorList,
+                    parse_obj_as(
+                        type_=MonitorList,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -632,7 +734,7 @@ class RawMonitorsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[Monitor]:
         """
-        Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may. Re-pointing the alert at a saved search containing a semantic component (unquoted free text) is rejected.
+        Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may. Saved-search alerts use a source; tool and user alerts use `source: null` with the monitor target.
 
         Parameters
         ----------
@@ -646,10 +748,10 @@ class RawMonitorsClient:
             Monitor-alert identifier.
 
         kind : typing.Optional[UpdateMonitorAlertBodyKind]
-            New alert kind. Not allowed on system monitors. Supply the matching `condition` when you change it.
+            New alert kind. Not allowed on system monitors. Supply the matching `source` and `condition` when you change it.
 
         source : typing.Optional[UpdateMonitorAlertBodySource]
-            Replace the watched saved search. Not allowed on system monitors.
+            Replace the saved-search source, or set `null` for unified tool/user alerts. Not allowed on system monitors.
 
         condition : typing.Optional[UpdateMonitorAlertBodyCondition]
             Replace the alert's configuration. On system monitors this is the only editable field (e.g. signal-escalation `sensitivity`).
@@ -1088,10 +1190,11 @@ class AsyncRawMonitorsClient:
         name: str,
         alerts: typing.Sequence[CreateMonitorAlertBody],
         description: typing.Optional[str] = OMIT,
+        target: typing.Optional[MonitorTarget] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[Monitor]:
         """
-        Creates a monitor with its saved-search alert. The slug is derived from `name`. The watched saved search must not contain a semantic component (unquoted free text) — monitors need an exact match rule, so only quoted literal and backtick phrase terms are allowed.
+        Creates a monitor with one alert. Saved-search alerts use a saved-search source; tool and user alerts use `event.*` or `metric.*` kinds with `source: null` and a `target`. The slug is derived from `name`.
 
         Parameters
         ----------
@@ -1106,6 +1209,8 @@ class AsyncRawMonitorsClient:
 
         description : typing.Optional[str]
             Optional free-form description.
+
+        target : typing.Optional[MonitorTarget]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -1124,6 +1229,9 @@ class AsyncRawMonitorsClient:
                 "alerts": convert_and_respect_annotation_metadata(
                     object_=alerts, annotation=typing.Sequence[CreateMonitorAlertBody], direction="write"
                 ),
+                "target": convert_and_respect_annotation_metadata(
+                    object_=target, annotation=MonitorTarget, direction="write"
+                ),
             },
             headers={
                 "content-type": "application/json",
@@ -1137,6 +1245,98 @@ class AsyncRawMonitorsClient:
                     Monitor,
                     parse_obj_as(
                         type_=Monitor,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def list_for_target(
+        self,
+        project_slug: str,
+        *,
+        stream: ListMonitorsForTargetBodyStream,
+        filter_set_contains: typing.Optional[MonitorFilterSet] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[MonitorList]:
+        """
+        Returns live unified monitors whose target contains the supplied user or tool filter. Use `stream: traces` with a `userId` filter for users, or `stream: spans` with `operation = execute_tool` and `toolName` filters for tools.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        stream : ListMonitorsForTargetBodyStream
+            Telemetry stream to evaluate: `traces` for users, `spans` for tools, or `sessions` for session-level monitors.
+
+        filter_set_contains : typing.Optional[MonitorFilterSet]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[MonitorList]
+            Matching monitors
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/projects/{jsonable_encoder(project_slug)}/monitors/for-target",
+            method="POST",
+            json={
+                "stream": stream,
+                "filterSetContains": convert_and_respect_annotation_metadata(
+                    object_=filter_set_contains, annotation=MonitorFilterSet, direction="write"
+                ),
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    MonitorList,
+                    parse_obj_as(
+                        type_=MonitorList,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -1587,7 +1787,7 @@ class AsyncRawMonitorsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[Monitor]:
         """
-        Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may. Re-pointing the alert at a saved search containing a semantic component (unquoted free text) is rejected.
+        Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may. Saved-search alerts use a source; tool and user alerts use `source: null` with the monitor target.
 
         Parameters
         ----------
@@ -1601,10 +1801,10 @@ class AsyncRawMonitorsClient:
             Monitor-alert identifier.
 
         kind : typing.Optional[UpdateMonitorAlertBodyKind]
-            New alert kind. Not allowed on system monitors. Supply the matching `condition` when you change it.
+            New alert kind. Not allowed on system monitors. Supply the matching `source` and `condition` when you change it.
 
         source : typing.Optional[UpdateMonitorAlertBodySource]
-            Replace the watched saved search. Not allowed on system monitors.
+            Replace the saved-search source, or set `null` for unified tool/user alerts. Not allowed on system monitors.
 
         condition : typing.Optional[UpdateMonitorAlertBodyCondition]
             Replace the alert's configuration. On system monitors this is the only editable field (e.g. signal-escalation `sensitivity`).

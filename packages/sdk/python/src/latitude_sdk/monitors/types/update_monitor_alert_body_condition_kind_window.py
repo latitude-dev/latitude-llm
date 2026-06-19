@@ -3,17 +3,17 @@
 import typing
 
 import pydantic
-from ..core.pydantic_utilities import UniversalBaseModel
+from ...core.pydantic_utilities import UniversalBaseModel
 
 
-class AlertConditionWindowWindow(UniversalBaseModel):
+class UpdateMonitorAlertBodyConditionKindWindow(UniversalBaseModel):
     """
     Sustained-condition window.
     """
 
     minutes: int = pydantic.Field()
     """
-    How long the threshold must stay crossed before the incident opens. The incident stays open while the threshold keeps holding over this window and closes once it no longer does. Minimum 5.
+    How long the threshold must stay crossed before the incident opens. Minimum 5.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

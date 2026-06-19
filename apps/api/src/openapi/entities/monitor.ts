@@ -1,11 +1,74 @@
 import { ALERT_INCIDENT_KINDS, ALERT_INCIDENT_SOURCE_TYPES, ALERT_SEVERITIES } from "@domain/alerts"
 import type { Monitor, MonitorAlert, MonitorIncidentItem } from "@domain/monitors"
 import type { AlertIncidentCondition } from "@domain/shared"
-import { cuidSchema } from "@domain/shared"
+import { cuidSchema, FILTER_OPERATORS, MONITOR_STREAMS } from "@domain/shared"
 import { z } from "@hono/zod-openapi"
 import { AlertConditionSchema, incidentFields, toIncidentResponse } from "./incident.ts"
 
 // --- Monitor + alert response schemas ---------------------------------------
+
+const FilterValueSchema = z
+  .union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.array(z.union([z.string(), z.number()])).describe("String or numeric values for `in` and `notIn` operators."),
+  ])
+  .openapi("FilterValue")
+
+const FilterConditionSchema = z
+  .object({
+    op: z.enum(FILTER_OPERATORS).describe("Comparison operator to apply to the field."),
+    value: FilterValueSchema.describe("Value to compare with the field."),
+  })
+  .openapi("FilterCondition")
+
+const FilterSetSchema = z
+  .record(z.string(), z.array(FilterConditionSchema))
+  .describe(
+    'Field-keyed filters. Use `userId: [{ op: "eq", value: "user-123" }]` for one user, and `operation: [{ op: "eq", value: "execute_tool" }]` plus `toolName` for one tool.',
+  )
+  .openapi("MonitorFilterSet")
+
+const MonitorMetricSchema = z
+  .discriminatedUnion("kind", [
+    z.object({ kind: z.literal("count").describe("Count matching events in each evaluation bucket.") }),
+    z.object({ kind: z.literal("errorRate").describe("Measure the fraction of matching events that errored.") }),
+    z.object({
+      kind: z.literal("avg").describe("Average a numeric field over matching events."),
+      field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
+    }),
+    z.object({
+      kind: z.literal("p95").describe("Compute the 95th percentile of a numeric field over matching events."),
+      field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
+    }),
+    z.object({
+      kind: z.literal("sum").describe("Sum a numeric field over matching events."),
+      field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
+    }),
+  ])
+  .openapi("MonitorMetric")
+
+export const MonitorTargetSchema = z
+  .object({
+    stream: z
+      .enum(MONITOR_STREAMS)
+      .describe(
+        "Telemetry stream to evaluate: `traces` for users, `spans` for tools, or `sessions` for session-level monitors.",
+      ),
+    filterSet: FilterSetSchema.nullable().describe(
+      "Filters that select the target rows. Use `{}` for all users; use `operation = execute_tool` for all tools.",
+    ),
+    query: z
+      .string()
+      .nullable()
+      .describe("Optional semantic query applied with the filters. Use `null` for user/tool monitors."),
+    savedSearchId: cuidSchema
+      .nullable()
+      .describe("Saved-search target id, or `null` when `filterSet` and `query` define the target inline."),
+    metric: MonitorMetricSchema.describe("Default metric measured by this monitor target."),
+  })
+  .openapi("MonitorTarget")
 
 const MonitorAlertSourceSchema = z
   .object({
@@ -43,6 +106,9 @@ const monitorFields = {
     .boolean()
     .describe("`true` for the auto-provisioned system monitors, which can't be deleted or edited; `false` otherwise."),
   alerts: z.array(MonitorAlertSchema).describe("The monitor's alerts. Always at least one."),
+  target: MonitorTargetSchema.nullable().describe(
+    "Unified query-time target for tool, user, and raw-stream monitors; `null` for legacy saved-search and system monitors.",
+  ),
   mutedAt: z.string().nullable().describe("ISO-8601 timestamp at which the monitor was muted, or `null` when active."),
   deletedAt: z.string().nullable().describe("ISO-8601 timestamp at which the monitor was deleted, or `null`."),
   createdAt: z.string().describe("ISO-8601 timestamp of creation."),
@@ -79,6 +145,7 @@ export const toMonitorResponse = (monitor: Monitor) => ({
   description: monitor.description,
   system: monitor.system,
   alerts: monitor.alerts.map(toMonitorAlertResponse),
+  target: monitor.target,
   mutedAt: monitor.mutedAt ? monitor.mutedAt.toISOString() : null,
   deletedAt: monitor.deletedAt ? monitor.deletedAt.toISOString() : null,
   createdAt: monitor.createdAt.toISOString(),
@@ -131,18 +198,22 @@ export const decodeMonitorIncidentCursor = (raw: string): { endedAt: Date | null
 export const CreateMonitorAlertBodySchema = z
   .object({
     kind: z
-      .enum(["savedSearch.match", "savedSearch.threshold", "savedSearch.escalating"])
+      .enum([
+        "savedSearch.match",
+        "savedSearch.threshold",
+        "savedSearch.escalating",
+        "event.matched",
+        "metric.threshold",
+        "metric.escalating",
+      ])
       .describe(
-        "What the alert fires on. `savedSearch.threshold` and `savedSearch.escalating` need a matching `condition`.",
+        "What the alert fires on. `savedSearch.*` kinds require a saved-search `source`; `event.*` and `metric.*` kinds require `source: null` and a monitor `target`.",
       ),
-    source: z
-      .object({
-        type: z.enum(ALERT_INCIDENT_SOURCE_TYPES).describe("Must be `savedSearch`."),
-        id: cuidSchema.describe("Id of the saved search this alert watches."),
-      })
-      .describe("The saved search this alert watches."),
+    source: MonitorAlertSourceSchema.nullable().describe(
+      "Saved-search source for `savedSearch.*` alerts, or `null` for tool/user alerts whose target lives on the monitor.",
+    ),
     condition: AlertConditionSchema.nullish().describe(
-      "Kind-specific configuration. Required for `savedSearch.threshold` and `savedSearch.escalating`; omit for `savedSearch.match`.",
+      "Kind-specific configuration. Required for threshold and escalating kinds; omit for match kinds.",
     ),
     severity: z
       .enum(ALERT_SEVERITIES)
@@ -154,16 +225,23 @@ export const CreateMonitorAlertBodySchema = z
 export const UpdateMonitorAlertBodySchema = z
   .object({
     kind: z
-      .enum(["savedSearch.match", "savedSearch.threshold", "savedSearch.escalating"])
+      .enum([
+        "savedSearch.match",
+        "savedSearch.threshold",
+        "savedSearch.escalating",
+        "event.matched",
+        "metric.threshold",
+        "metric.escalating",
+      ])
       .optional()
-      .describe("New alert kind. Not allowed on system monitors. Supply the matching `condition` when you change it."),
-    source: z
-      .object({
-        type: z.enum(ALERT_INCIDENT_SOURCE_TYPES).describe("Must be `savedSearch`."),
-        id: cuidSchema.describe("Id of the saved search this alert watches."),
-      })
+      .describe(
+        "New alert kind. Not allowed on system monitors. Supply the matching `source` and `condition` when you change it.",
+      ),
+    source: MonitorAlertSourceSchema.nullable()
       .optional()
-      .describe("Replace the watched saved search. Not allowed on system monitors."),
+      .describe(
+        "Replace the saved-search source, or set `null` for unified tool/user alerts. Not allowed on system monitors.",
+      ),
     condition: AlertConditionSchema.nullish().describe(
       "Replace the alert's configuration. On system monitors this is the only editable field (e.g. signal-escalation `sensitivity`).",
     ),

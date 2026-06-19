@@ -19,6 +19,7 @@ export interface Monitor {
     system: boolean;
     /** The monitor's alerts. Always at least one. */
     alerts: LatitudeApi.MonitorAlert[];
+    target?: LatitudeApi.MonitorTarget | undefined;
     /** ISO-8601 timestamp at which the monitor was muted, or `null` when active. */
     mutedAt?: string | undefined;
     /** ISO-8601 timestamp at which the monitor was deleted, or `null`. */

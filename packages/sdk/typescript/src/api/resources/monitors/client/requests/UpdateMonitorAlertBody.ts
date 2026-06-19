@@ -7,9 +7,9 @@ import type * as LatitudeApi from "../../../../index.js";
  *     {}
  */
 export interface UpdateMonitorAlertBody {
-    /** New alert kind. Not allowed on system monitors. Supply the matching `condition` when you change it. */
+    /** New alert kind. Not allowed on system monitors. Supply the matching `source` and `condition` when you change it. */
     kind?: UpdateMonitorAlertBody.Kind;
-    /** Replace the watched saved search. Not allowed on system monitors. */
+    /** Replace the saved-search source, or set `null` for unified tool/user alerts. Not allowed on system monitors. */
     source?: UpdateMonitorAlertBody.Source;
     /** Replace the alert's configuration. On system monitors this is the only editable field (e.g. signal-escalation `sensitivity`). */
     condition?: UpdateMonitorAlertBody.Condition;
@@ -18,26 +18,29 @@ export interface UpdateMonitorAlertBody {
 }
 
 export namespace UpdateMonitorAlertBody {
-    /** New alert kind. Not allowed on system monitors. Supply the matching `condition` when you change it. */
+    /** New alert kind. Not allowed on system monitors. Supply the matching `source` and `condition` when you change it. */
     export const Kind = {
         SavedSearchMatch: "savedSearch.match",
         SavedSearchThreshold: "savedSearch.threshold",
         SavedSearchEscalating: "savedSearch.escalating",
+        EventMatched: "event.matched",
+        MetricThreshold: "metric.threshold",
+        MetricEscalating: "metric.escalating",
     } as const;
     export type Kind = (typeof Kind)[keyof typeof Kind];
 
     /**
-     * Replace the watched saved search. Not allowed on system monitors.
+     * Replace the saved-search source, or set `null` for unified tool/user alerts. Not allowed on system monitors.
      */
     export interface Source {
-        /** Must be `savedSearch`. */
+        /** Entity the alert watches: `savedSearch` or `issue`. */
         type: Source.Type;
-        /** Id of the saved search this alert watches. */
-        id: string;
+        /** Id of the watched entity, or `null` to watch all entities of its `type`. */
+        id?: string | undefined;
     }
 
     export namespace Source {
-        /** Must be `savedSearch`. */
+        /** Entity the alert watches: `savedSearch` or `issue`. */
         export const Type = {
             Issue: "issue",
             SavedSearch: "savedSearch",
@@ -63,6 +66,21 @@ export namespace UpdateMonitorAlertBody {
         | {
               kind: "issue.escalating";
               sensitivity?: number | undefined;
+          }
+        | {
+              kind: "metric.threshold";
+              metric: LatitudeApi.MonitorMetric;
+              threshold: LatitudeApi.AlertMetricThreshold;
+              direction?: ("above" | "below") | undefined;
+          }
+        | {
+              kind: "metric.escalating";
+              metric: LatitudeApi.MonitorMetric;
+              threshold: LatitudeApi.AlertMetricThreshold;
+              direction?: ("above" | "below") | undefined;
+              window: {
+                  minutes: number;
+              };
           };
     /** Replace the severity. Not allowed on system monitors. */
     export const Severity = {

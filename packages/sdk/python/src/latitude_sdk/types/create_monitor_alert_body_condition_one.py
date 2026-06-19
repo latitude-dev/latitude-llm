@@ -3,19 +3,19 @@
 import typing
 
 import pydantic
-from ...core.pydantic_utilities import UniversalBaseModel
-from ...types.alert_count_threshold import AlertCountThreshold
-from .update_monitor_alert_body_condition_window_window import UpdateMonitorAlertBodyConditionWindowWindow
+from ..core.pydantic_utilities import UniversalBaseModel
+from .alert_count_threshold import AlertCountThreshold
+from .create_monitor_alert_body_condition_one_window import CreateMonitorAlertBodyConditionOneWindow
 
 
-class UpdateMonitorAlertBodyConditionWindow(UniversalBaseModel):
+class CreateMonitorAlertBodyConditionOne(UniversalBaseModel):
     kind: typing.Literal["savedSearch.escalating"] = pydantic.Field(default="savedSearch.escalating")
     """
     Sustained alert: opens only when the threshold stays crossed for the whole `window`.
     """
 
     threshold: AlertCountThreshold
-    window: UpdateMonitorAlertBodyConditionWindowWindow = pydantic.Field()
+    window: CreateMonitorAlertBodyConditionOneWindow = pydantic.Field()
     """
     Sustained-condition window.
     """

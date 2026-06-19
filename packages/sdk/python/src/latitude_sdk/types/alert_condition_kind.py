@@ -4,17 +4,28 @@ import typing
 
 import pydantic
 from ..core.pydantic_utilities import UniversalBaseModel
+from .alert_condition_kind_direction import AlertConditionKindDirection
+from .alert_condition_kind_window import AlertConditionKindWindow
+from .alert_metric_threshold import AlertMetricThreshold
+from .monitor_metric import MonitorMetric
 
 
 class AlertConditionKind(UniversalBaseModel):
-    kind: typing.Literal["issue.escalating"] = pydantic.Field(default="issue.escalating")
+    kind: typing.Literal["metric.escalating"] = pydantic.Field(default="metric.escalating")
     """
-    System signal-escalation alert; only `sensitivity` is tunable.
+    Sustained metric alert: opens when the target metric stays across threshold for the whole `window`.
     """
 
-    sensitivity: typing.Optional[int] = pydantic.Field(default=None)
+    metric: MonitorMetric
+    threshold: AlertMetricThreshold
+    direction: typing.Optional[AlertConditionKindDirection] = pydantic.Field(default=None)
     """
-    Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted.
+    Direction that opens the incident. Defaults to `above` when omitted.
+    """
+
+    window: AlertConditionKindWindow = pydantic.Field()
+    """
+    Sustained-condition window.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
