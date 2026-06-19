@@ -14,5 +14,8 @@ describe("magic link email copy", () => {
     expect(rendered.html).not.toContain("Welcome back")
     expect(rendered.html).not.toContain("signing up")
     expect(rendered.html).not.toContain("Sign In to Latitude")
+    expect(rendered.html).not.toContain("rgba(0,0,0,0.35)")
+    expect(rendered.html).not.toContain("rgb(7,107,213)")
+    expect(rendered.html).toContain("#0080FF")
   })
 })
