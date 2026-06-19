@@ -34,7 +34,7 @@ export const evaluateOptimizationCandidate = Effect.fn("evaluations.evaluateOpti
   })
 
   const expectedPositive = input.example.label === "positive"
-  const predictedPositive = execution.result.passed === false
+  const predictedPositive = execution.result.passed === true
   const score = expectedPositive === predictedPositive ? 1 : 0
 
   return {

@@ -1,4 +1,4 @@
-import type { ScoreSource } from "@domain/scores"
+import type { ScoreSourceType } from "@domain/scores"
 import { DEFAULT_ESCALATION_SENSITIVITY } from "@domain/shared"
 
 export const SIGNAL_NAME_MAX_LENGTH = 128
@@ -233,7 +233,7 @@ export const CENTROID_HALF_LIFE_SECONDS = 14 * 24 * 60 * 60
 // (2048), overridable with `LAT_AI_EMBEDDING_{PROVIDER,MODEL}`.
 
 /** Source weights applied when contributing a score embedding to the centroid. */
-export const CENTROID_SOURCE_WEIGHTS: Readonly<Record<ScoreSource, number>> = {
+export const CENTROID_SOURCE_WEIGHTS: Readonly<Record<ScoreSourceType, number>> = {
   annotation: 1.0,
   evaluation: 0.8,
   custom: 0.8,

@@ -29,7 +29,7 @@ export const getTraceAnnotationUseCase = Effect.fn("annotations.getTraceAnnotati
 
   if (
     !score ||
-    score.source !== "annotation" ||
+    score.sourceType !== "annotation" ||
     score.projectId !== input.projectId ||
     score.traceId !== input.traceId
   ) {

@@ -39,12 +39,12 @@ const makeScore = (overrides: Partial<AnnotationScore> = {}): AnnotationScore =>
   sessionId: null,
   traceId: null,
   spanId: null,
-  source: "annotation",
+  sourceType: "annotation",
   sourceId: "UI",
   simulationId: null,
   signalId: null,
   value: 0.2,
-  passed: false,
+  passed: true,
   feedback: "The assistant leaks API tokens in its response.",
   metadata: {
     rawFeedback: "The assistant leaks API tokens in its response.",
@@ -232,7 +232,7 @@ describe("createSignalFromScoreUseCase", () => {
     ]
 
     for (const { scoreSource, sourceId, expected } of cases) {
-      it(`derives issue.source = "${expected}" from score.source = "${scoreSource}"`, async () => {
+      it(`derives issue.source = "${expected}" from score.sourceType = "${scoreSource}"`, async () => {
         const { layer: aiLayer } = createFakeAI({
           generate: createGenerateSignalDetails("name", "description"),
         })
@@ -242,7 +242,7 @@ describe("createSignalFromScoreUseCase", () => {
         const baseScore = makeScore()
         const sourceScore = {
           ...baseScore,
-          source: scoreSource,
+          sourceType: scoreSource,
           sourceId,
           metadata: scoreSource === "custom" ? {} : { rawFeedback: baseScore.feedback },
         } as unknown as Score

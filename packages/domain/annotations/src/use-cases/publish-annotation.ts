@@ -45,9 +45,9 @@ export const publishHumanAnnotationUseCase = Effect.fn("annotations.publishHuman
     } satisfies PublishAnnotationResult
   }
 
-  if (score.source !== "annotation") {
+  if (score.sourceType !== "annotation") {
     return yield* new BadRequestError({
-      message: `Score ${input.scoreId} is not an annotation (source: ${score.source})`,
+      message: `Score ${input.scoreId} is not an annotation (source: ${score.sourceType})`,
     })
   }
 

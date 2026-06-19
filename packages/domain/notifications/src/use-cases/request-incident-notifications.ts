@@ -303,10 +303,11 @@ const snapshotSampleExcerpt = (incident: SourcedIncident) =>
       projectId: incident.projectId,
       signalId: SignalId(incident.sourceId),
       source: "annotation",
+      passed: true,
       options: { limit: 1 },
     })
     const latestAnnotation = annotations.items[0]
-    if (latestAnnotation && latestAnnotation.source === "annotation") {
+    if (latestAnnotation && latestAnnotation.sourceType === "annotation") {
       const raw = latestAnnotation.metadata.rawFeedback
       if (raw.trim().length > 0) {
         const author: IncidentSampleAuthor = yield* resolveAnnotationAuthor(latestAnnotation.annotatorId)
@@ -322,10 +323,15 @@ const snapshotSampleExcerpt = (incident: SourcedIncident) =>
       projectId: incident.projectId,
       signalId: SignalId(incident.sourceId),
       source: "evaluation",
+      passed: true,
       options: { limit: 1 },
     })
     const latestEvaluation = evaluations.items[0]
-    if (latestEvaluation && latestEvaluation.source === "evaluation" && latestEvaluation.feedback.trim().length > 0) {
+    if (
+      latestEvaluation &&
+      latestEvaluation.sourceType === "evaluation" &&
+      latestEvaluation.feedback.trim().length > 0
+    ) {
       const raw = latestEvaluation.feedback
       const author = yield* resolveEvaluationAuthor({
         projectId: incident.projectId,

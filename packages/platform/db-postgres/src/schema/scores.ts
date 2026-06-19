@@ -1,4 +1,4 @@
-import type { ScoreMetadata, ScoreSource } from "@domain/scores"
+import type { ScoreMetadata, ScoreSourceType } from "@domain/scores"
 import { sql } from "drizzle-orm"
 import { bigint, boolean, doublePrecision, index, jsonb, text, uniqueIndex, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
@@ -14,7 +14,7 @@ export const scores = latitudeSchema.table(
     traceId: varchar("trace_id", { length: 32 }), // optional trace id inherited from instrumentation
     spanId: varchar("span_id", { length: 16 }), // optional span id inherited from instrumentation
 
-    source: varchar("source", { length: 32 }).$type<ScoreSource>().notNull(),
+    sourceType: varchar("source_type", { length: 32 }).$type<ScoreSourceType>().notNull(),
     sourceId: varchar("source_id", { length: 128 }).notNull(),
 
     simulationId: cuid("simulation_id"), // optional simulation CUID link
@@ -43,11 +43,11 @@ export const scores = latitudeSchema.table(
       .on(t.organizationId, t.projectId, t.createdAt, t.id)
       .where(sql`${t.draftedAt} IS NULL`),
     index("scores_source_lookup_idx")
-      .on(t.organizationId, t.projectId, t.source, t.sourceId, t.createdAt, t.id)
+      .on(t.organizationId, t.projectId, t.sourceType, t.sourceId, t.createdAt, t.id)
       .where(sql`${t.draftedAt} IS NULL`),
     uniqueIndex("scores_canonical_evaluation_trace_idx")
       .on(t.organizationId, t.projectId, t.sourceId, t.traceId)
-      .where(sql`${t.source} = 'evaluation' AND ${t.draftedAt} IS NULL AND ${t.traceId} IS NOT NULL`),
+      .where(sql`${t.sourceType} = 'evaluation' AND ${t.draftedAt} IS NULL AND ${t.traceId} IS NOT NULL`),
     index("scores_signal_lookup_idx")
       .on(t.organizationId, t.projectId, t.signalId, t.createdAt, t.id)
       .where(sql`${t.signalId} IS NOT NULL AND ${t.draftedAt} IS NULL`),
@@ -62,7 +62,7 @@ export const scores = latitudeSchema.table(
       .where(sql`${t.spanId} IS NOT NULL`),
     index("scores_signal_discovery_work_idx")
       .on(t.organizationId, t.projectId, t.createdAt, t.id)
-      .where(sql`${t.draftedAt} IS NULL AND ${t.errored} = false AND ${t.passed} = false AND ${t.signalId} IS NULL`),
+      .where(sql`${t.draftedAt} IS NULL AND ${t.errored} = false AND ${t.passed} = true AND ${t.signalId} IS NULL`),
     index("scores_draft_finalization_idx").on(t.updatedAt, t.id).where(sql`${t.draftedAt} IS NOT NULL`),
   ],
 )

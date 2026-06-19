@@ -156,7 +156,7 @@ describe("Annotations Routes Integration", () => {
       .where(eq(scoresTable.organizationId, tenant.organizationId))
 
     expect(persistedScores).toHaveLength(1)
-    expect(persistedScores[0]?.source).toBe("annotation")
+    expect(persistedScores[0]?.sourceType).toBe("annotation")
     expect(persistedScores[0]?.sourceId).toBe("API")
     expect(persistedScores[0]?.draftedAt).toBeNull()
     expect(persistedScores[0]?.annotatorId).toBeNull()

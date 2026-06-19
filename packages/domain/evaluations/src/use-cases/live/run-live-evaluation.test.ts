@@ -995,9 +995,9 @@ describe("runLiveEvaluationUseCase", () => {
         traceId: traceDetail.traceId,
         spanId: traceDetail.rootSpanId,
         simulationId: null,
-        source: "evaluation",
+        sourceType: "evaluation",
         sourceId: evaluation.id,
-        signalId: null,
+        signalId: evaluation.signalId,
         value: 1,
         passed: true,
         feedback: "The conversation does not exhibit the linked issue.",
@@ -1098,7 +1098,7 @@ describe("runLiveEvaluationUseCase", () => {
       traceId: traceDetail.traceId,
       spanId: traceDetail.rootSpanId,
       simulationId: null,
-      source: "evaluation",
+      sourceType: "evaluation",
       sourceId: evaluation.id,
       signalId: evaluation.signalId,
       value: 0,
@@ -1202,9 +1202,9 @@ describe("runLiveEvaluationUseCase", () => {
       traceId: traceDetail.traceId,
       spanId: traceDetail.rootSpanId,
       simulationId: null,
-      source: "evaluation",
+      sourceType: "evaluation",
       sourceId: evaluation.id,
-      signalId: null,
+      signalId: evaluation.signalId,
       value: 0,
       passed: false,
       feedback: "AI generation failed (openai/gpt-5.4): upstream timeout",
@@ -1249,7 +1249,8 @@ describe("runLiveEvaluationUseCase", () => {
       createFeatureFlag({ identifier: "evaluation-sandbox-runtime", enabledForAll: true }),
     )
     const scriptRuntime = createFakeScriptRuntime({
-      run: () => Effect.succeed({ value: 1, feedback: "no exhibition", duration: 9_000, tokens: 0, cost: 0 }),
+      run: () =>
+        Effect.succeed({ value: 1, passed: true, feedback: "no exhibition", duration: 9_000, tokens: 0, cost: 0 }),
     })
     const { layer: aiLayer, calls } = createFakeAI()
 

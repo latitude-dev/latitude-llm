@@ -103,6 +103,10 @@ export const evaluationSchema = z.object({
   // it must conform to the fixed LLM-as-judge template enforced by validateEvaluationScript().
   script: z.string().min(1),
   trigger: evaluationTriggerSchema, // controls when the evaluation runs on live traffic
+  // TODO(signals-legacy-polarity): drop once all pre-cutover judges are re-optimized. Scripts generated
+  // before the passed-polarity inversion emit passed=true for the behavior's ABSENCE; for those rows the
+  // execution boundary inverts the verdict so stored membership stays passed=true = behavior present.
+  legacyPolarity: z.boolean().default(false),
   alignment: evaluationAlignmentSchema, // persisted confusion matrix and script hash
   alignedAt: z.date(), // last time the evaluation was realigned
   archivedAt: z.date().nullable(), // archived evaluations are still visible in read-only mode

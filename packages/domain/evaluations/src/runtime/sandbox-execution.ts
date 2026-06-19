@@ -1,5 +1,5 @@
 import { AI, AICredentialError, AIError, type GenerateTelemetryCapture, resolveGenerationConfig } from "@domain/ai"
-import { buildSchemaFromDescriptor, type HostLlmFunction, isScoreMatch, ScriptRuntime } from "@domain/sandbox"
+import { buildSchemaFromDescriptor, type HostLlmFunction, ScriptRuntime } from "@domain/sandbox"
 import { Effect } from "effect"
 import { EvaluationExecutionError } from "../errors.ts"
 import {
@@ -81,7 +81,7 @@ export const executeEvaluationScriptSandboxed = Effect.fn("evaluations.executeEv
 
     return {
       result: {
-        passed: isScoreMatch(runResult.value),
+        passed: runResult.passed,
         value: runResult.value,
         feedback: runResult.feedback ?? "",
       },

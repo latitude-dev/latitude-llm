@@ -35,6 +35,6 @@ export const FLAGGER_DEFAULT_ANNOTATOR_MODEL = {
 } as const
 
 export const FLAGGER_DRAFT_DEFAULTS = {
-  passed: false,
-  value: 0,
+  passed: true,
+  value: 1,
 } as const

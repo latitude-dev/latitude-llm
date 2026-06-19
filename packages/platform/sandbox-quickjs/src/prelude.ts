@@ -22,23 +22,32 @@ export const SANDBOX_PRELUDE = `;(() => {
   delete globalThis.__hostParse
   delete globalThis.__contextData
 
-  const toScore = (value, feedback) => {
+  const toScore = (value, passed, feedback) => {
     if (typeof value !== "number" || !Number.isFinite(value)) {
       throw new TypeError("Score value must be a finite number")
     }
     if (value < 0 || value > 1) {
       throw new RangeError("Score value must be between 0 and 1")
     }
+    if (typeof passed !== "boolean") {
+      throw new TypeError("Score passed must be a boolean")
+    }
     if (feedback !== undefined && typeof feedback !== "string") {
       throw new TypeError("Score feedback must be a string")
     }
-    const score = { __latitudeScore: true, value }
+    const score = { __latitudeScore: true, value, passed }
     if (feedback !== undefined) score.feedback = feedback
     return Object.freeze(score)
   }
-  globalThis.Score = (value, feedback) => toScore(value, feedback)
-  globalThis.Passed = (value, feedback) => toScore(value ?? 1, feedback)
-  globalThis.Failed = (value, feedback) => toScore(value ?? 0, feedback)
+  globalThis.Score = (value, passed, feedback) => {
+    if (typeof passed === "string" && feedback === undefined) {
+      feedback = passed
+      passed = undefined
+    }
+    return toScore(value, passed === undefined ? value >= 0.5 : passed, feedback)
+  }
+  globalThis.Passed = (value, feedback) => toScore(value ?? 1, true, feedback)
+  globalThis.Failed = (value, feedback) => toScore(value ?? 0, false, feedback)
 
   const strip = (value) => JSON.parse(JSON.stringify(value))
 

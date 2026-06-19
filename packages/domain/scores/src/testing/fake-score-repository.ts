@@ -9,7 +9,7 @@ const EMPTY_PAGE = { items: [], hasMore: false, limit: 50, offset: 0 } as const
 export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositoryShape>) => {
   const scores = new Map<string, Score>()
   const isCanonicalEvaluationScore = (score: Score, evaluationId: string) =>
-    score.source === "evaluation" && score.sourceId === evaluationId && score.draftedAt === null
+    score.sourceType === "evaluation" && score.sourceId === evaluationId && score.draftedAt === null
 
   const repository: ScoreRepositoryShape = {
     findById: (id) => {
@@ -74,7 +74,7 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
         [...scores.values()].find(
           (score) =>
             score.projectId === projectId &&
-            score.source === "annotation" &&
+            score.sourceType === "annotation" &&
             score.sourceId === "SYSTEM" &&
             score.traceId === traceId &&
             score.feedback === feedback &&
@@ -94,8 +94,9 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
               (score) =>
                 score.projectId === projectId &&
                 score.signalId === signalId &&
-                score.source === "annotation" &&
+                score.sourceType === "annotation" &&
                 score.sourceId === "SYSTEM" &&
+                score.passed === true &&
                 score.draftedAt === null,
             )
             .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())

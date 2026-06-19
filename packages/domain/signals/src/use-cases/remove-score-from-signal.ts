@@ -1,5 +1,5 @@
 import { AI, resolveEmbeddingConfig } from "@domain/ai"
-import type { ScoreSource } from "@domain/scores"
+import type { ScoreSourceType } from "@domain/scores"
 import { type RepositoryError, SignalId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { normalizeEmbedding, updateSignalCentroid } from "../helpers.ts"
@@ -11,7 +11,7 @@ export interface RemoveScoreFromSignalInput {
   readonly signalId: string | null
   readonly draftedAt: Date | null
   readonly feedback: string
-  readonly source: ScoreSource
+  readonly sourceType: ScoreSourceType
   readonly createdAt: Date
 }
 
@@ -79,7 +79,7 @@ export const removeScoreFromSignalUseCase = (input: RemoveScoreFromSignalInput) 
           },
           score: {
             embedding: normalizedEmbedding,
-            source: input.source,
+            sourceType: input.sourceType,
             createdAt: input.createdAt,
           },
           operation: "remove",

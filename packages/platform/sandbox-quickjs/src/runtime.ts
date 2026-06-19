@@ -322,18 +322,20 @@ export const createQuickJsScriptRuntime = (): ScriptRuntimeShape => {
 
       if (typeof returned !== "object" || returned === null || !("__latitudeScore" in returned)) {
         throw new ScriptRuntimeError({
-          message: "Script must return Score(value, feedback?) — or the Passed/Failed sugar",
+          message: "Script must return Score(value, passed, feedback?) — or the Passed/Failed sugar",
         })
       }
-      const raw = returned as { value?: unknown; feedback?: unknown }
+      const raw = returned as { value?: unknown; passed?: unknown; feedback?: unknown }
       const score = scriptScoreSchema.parse({
         value: raw.value,
+        passed: raw.passed,
         ...(raw.feedback !== undefined ? { feedback: raw.feedback } : {}),
       })
 
       const duration = Math.max(0, Math.round((performance.now() - startedAt) * 1_000_000))
       return runResultSchema.parse({
         value: score.value,
+        passed: score.passed,
         ...(score.feedback !== undefined ? { feedback: score.feedback } : {}),
         duration,
         tokens: Math.round(state.tokens),

@@ -40,7 +40,7 @@ function makeScore(overrides: Partial<Score> = {}): Score {
     sessionId: null,
     traceId: TRACE_ID,
     spanId: null,
-    source: "annotation",
+    sourceType: "annotation",
     sourceId: "UI",
     simulationId: null,
     signalId: null,
@@ -153,7 +153,7 @@ describe("markReviewStartedUseCase", () => {
 
     const count = await Effect.runPromise(
       markReviewStartedUseCase({
-        score: makeScore({ source: "evaluation" }),
+        score: makeScore({ sourceType: "evaluation" }),
       }).pipe(Effect.provide(layer)),
     )
 

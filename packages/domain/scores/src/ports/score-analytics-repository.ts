@@ -11,7 +11,7 @@ import type {
   TraceId,
 } from "@domain/shared"
 import { Context, type Effect } from "effect"
-import type { Score, ScoreSource } from "../entities/score.ts"
+import type { Score, ScoreSourceType } from "../entities/score.ts"
 
 // ---------------------------------------------------------------------------
 // Aggregate shapes returned by ClickHouse analytics queries
@@ -322,7 +322,7 @@ export interface ScoreAnalyticsRepositoryShape {
   aggregateBySource(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
-    readonly source: ScoreSource
+    readonly source: ScoreSourceType
     readonly sourceId: string
     readonly options?: ScoreAnalyticsOptions
   }): Effect.Effect<ScoreAggregate, RepositoryError, ChSqlClient>
@@ -331,7 +331,7 @@ export interface ScoreAnalyticsRepositoryShape {
   trendBySource(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
-    readonly source: ScoreSource
+    readonly source: ScoreSourceType
     readonly sourceId: string
     readonly days?: number // default 14
     readonly options?: ScoreAnalyticsOptions

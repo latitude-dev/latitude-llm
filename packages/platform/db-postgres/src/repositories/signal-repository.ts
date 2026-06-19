@@ -211,7 +211,7 @@ const signalRepositoryCoreLive = Layer.effect(
                 from ${scores}
                 where ${scores.signalId} = ${signals.id}
                   and ${scores.draftedAt} is null
-                  and ${scores.source} = 'annotation'
+                  and ${scores.sourceType} = 'annotation'
               )`
 
               const meetsVisibilityThreshold = sql<boolean>`(

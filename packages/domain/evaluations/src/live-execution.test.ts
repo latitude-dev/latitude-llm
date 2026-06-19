@@ -210,10 +210,18 @@ describe("executeLiveEvaluationUseCase", () => {
     expect(calls.generate).toHaveLength(0)
   })
 
-  it("routes sandbox-runtime executions through the script runtime and derives passed from the threshold", async () => {
+  it("routes sandbox-runtime executions through the script runtime and returns the script's passed verdict", async () => {
     const { layer: aiLayer, calls: aiCalls } = createFakeAI()
     const fakeRuntime = createFakeScriptRuntime({
-      run: () => Effect.succeed({ value: 0.2, feedback: "exhibits the issue", duration: 5_000, tokens: 12, cost: 3 }),
+      run: () =>
+        Effect.succeed({
+          value: 0.2,
+          passed: false,
+          feedback: "exhibits the issue",
+          duration: 5_000,
+          tokens: 12,
+          cost: 3,
+        }),
     })
 
     const result = await Effect.runPromise(
@@ -238,6 +246,27 @@ describe("executeLiveEvaluationUseCase", () => {
     expect(fakeRuntime.calls.run[0]?.context.conversation[0]?.role).toBe("user")
     expect(fakeRuntime.calls.run[0]?.context.issue?.name).toBe("Deployment checklist omission")
     expect(aiCalls.generate).toHaveLength(0)
+  })
+
+  it("inverts the verdict for a legacy-polarity evaluation so present becomes passed=true", async () => {
+    const { layer: aiLayer } = createFakeAI()
+    // A pre-cutover judge emits passed=true (value 1) when the behavior is ABSENT.
+    const fakeRuntime = createFakeScriptRuntime({
+      run: () =>
+        Effect.succeed({ value: 1, passed: true, feedback: "does not exhibit", duration: 5_000, tokens: 0, cost: 0 }),
+    })
+
+    const result = await Effect.runPromise(
+      executeLiveEvaluationUseCase({
+        ...validInput,
+        script: "return Passed(1, 'does not exhibit')",
+        runtime: "sandbox",
+        legacyPolarity: true,
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, fakeRuntime.layer))),
+    )
+
+    // Inverted to the new convention: behavior absent => not an occurrence (passed=false, value 0).
+    expect(result.result).toEqual({ passed: false, value: 0, feedback: "does not exhibit" })
   })
 
   it("maps sandbox runtime failures to LiveEvaluationExecutionError", async () => {

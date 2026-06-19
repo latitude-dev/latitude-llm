@@ -43,7 +43,7 @@ const makeScore = (feedback: string) =>
     sessionId: null,
     traceId: null,
     spanId: null,
-    source: "annotation",
+    sourceType: "annotation",
     sourceId: "UI",
     simulationId: null,
     signalId: SignalId("iiiiiiiiiiiiiiiiiiiiiiii"),
@@ -93,7 +93,7 @@ describe("generateSignalDetailsUseCase", () => {
         projectId,
         occurrences: [
           {
-            source: "annotation",
+            sourceType: "annotation",
             feedback: "The assistant leaked a production API key in the reply.",
           },
         ],
@@ -153,6 +153,7 @@ describe("generateSignalDetailsUseCase", () => {
       {
         projectId: ProjectId(projectId),
         signalId: existingSignal.id,
+        passed: true,
         options: {
           limit: SIGNAL_DETAILS_MAX_OCCURRENCES,
         },

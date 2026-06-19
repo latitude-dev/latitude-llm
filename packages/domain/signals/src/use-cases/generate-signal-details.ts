@@ -7,7 +7,7 @@ import {
   buildProjectScopedAiMetadata,
   resolveGenerationConfig,
 } from "@domain/ai"
-import { ScoreRepository, type ScoreSource } from "@domain/scores"
+import { ScoreRepository, type ScoreSourceType } from "@domain/scores"
 import { LATITUDE_TELEMETRY_PROJECT_SLUGS, ProjectId, type RepositoryError, SignalId } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
@@ -48,7 +48,7 @@ const signalDetailsSchema = z.object({
 })
 
 export interface SignalOccurrenceInput {
-  readonly source: ScoreSource
+  readonly sourceType: ScoreSourceType
   readonly feedback: string
 }
 
@@ -74,7 +74,8 @@ export type GenerateSignalDetailsError =
 const buildOccurrenceBlock = (occurrences: readonly SignalOccurrenceInput[]) =>
   occurrences
     .map(
-      (occurrence, index) => `${index + 1}. [source=${occurrence.source}] ${collapseWhitespace(occurrence.feedback)}`,
+      (occurrence, index) =>
+        `${index + 1}. [source=${occurrence.sourceType}] ${collapseWhitespace(occurrence.feedback)}`,
     )
     .join("\n")
 
@@ -151,6 +152,7 @@ export const generateSignalDetailsUseCase = (input: GenerateSignalDetailsInput) 
       const recentScores = yield* scoreRepository.listBySignalId({
         projectId: ProjectId(input.projectId),
         signalId: issue.id,
+        passed: true,
         options: {
           limit: SIGNAL_DETAILS_MAX_OCCURRENCES,
         },
@@ -158,7 +160,7 @@ export const generateSignalDetailsUseCase = (input: GenerateSignalDetailsInput) 
 
       occurrences = recentScores.items
         .map((score) => ({
-          source: score.source,
+          sourceType: score.sourceType,
           feedback: score.feedback,
         }))
         .filter((occurrence) => collapseWhitespace(occurrence.feedback).length > 0)
@@ -172,7 +174,7 @@ export const generateSignalDetailsUseCase = (input: GenerateSignalDetailsInput) 
     } else {
       occurrences = occurrences
         .map((occurrence) => ({
-          source: occurrence.source,
+          sourceType: occurrence.sourceType,
           feedback: collapseWhitespace(occurrence.feedback),
         }))
         .filter((occurrence) => occurrence.feedback.length > 0)

@@ -113,6 +113,29 @@ export const createDomainEventsWorker = ({
               },
             ),
           ),
+          // The signals matching pipeline runs every active evaluation against the trace. Published
+          // unconditionally with `isSandbox` in the payload (like trace-end); the consumer skips
+          // sandbox traces. Debounced like trace-end so evaluations fire on the settled trace.
+          ...event.payload.traceIds.map((traceId) =>
+            pub.publish(
+              "signals",
+              "match",
+              {
+                organizationId: event.payload.organizationId,
+                projectId: event.payload.projectId,
+                traceId,
+                isSandbox,
+              },
+              {
+                dedupeKey: buildTraceIngestedDedupeKey("signals:match", {
+                  organizationId: event.payload.organizationId,
+                  projectId: event.payload.projectId,
+                  traceId,
+                }),
+                debounceMs: TRACE_END_DEBOUNCE_MS,
+              },
+            ),
+          ),
           // Not gated on `isSandbox`: first-trace detection is onboarding/marketing
           // telemetry, not LLM work. Outbound marketing/notification suppression for
           // sandbox orgs is AGE-113's concern (handled downstream), not this PR's.

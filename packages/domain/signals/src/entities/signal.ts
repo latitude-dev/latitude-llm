@@ -1,4 +1,4 @@
-import { scoreSourceSchema } from "@domain/scores"
+import { scoreSourceTypeSchema } from "@domain/scores"
 import { cuidSchema, SLUG_MAX_LENGTH, signalIdSchema } from "@domain/shared"
 import { z } from "zod"
 import { SIGNAL_NAME_MAX_LENGTH, SIGNAL_PRIORITIES, SIGNAL_SOURCES, SIGNAL_STATES } from "../constants.ts"
@@ -41,7 +41,7 @@ export const signalCentroidSchema = z.object({
   mass: z.number(), // running scalar mass of the centroid
   model: z.string(), // embedding model used to compute the centroid
   decay: z.number().positive(), // half-life in seconds
-  weights: z.record(scoreSourceSchema, z.number().nonnegative()), // source weights used in centroid updates
+  weights: z.record(scoreSourceTypeSchema, z.number().nonnegative()), // source weights used in centroid updates
 })
 
 export type SignalCentroid = z.infer<typeof signalCentroidSchema>

@@ -217,7 +217,7 @@ describe("Scores Routes Integration", () => {
       .where(eq(scoresTable.organizationId, tenant.organizationId))
 
     expect(persistedScores).toHaveLength(1)
-    expect(persistedScores[0]?.source).toBe("evaluation")
+    expect(persistedScores[0]?.sourceType).toBe("evaluation")
     expect(persistedScores[0]?.sourceId).toBe(evaluationId)
     expect(persistedScores[0]?.metadata).toEqual({
       evaluationHash: "eval-hash-v1",

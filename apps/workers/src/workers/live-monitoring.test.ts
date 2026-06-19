@@ -15,6 +15,7 @@ import { beforeEach, describe, expect, it } from "vitest"
 
 import { TestQueueConsumer } from "../testing/index.ts"
 import { createDomainEventsWorker } from "./domain-events.ts"
+import { createSignalsMatchWorker } from "./signals-match.ts"
 import { createTraceEndWorker } from "./trace-end.ts"
 
 const pg = setupTestPostgres()
@@ -241,7 +242,7 @@ describe("live monitoring integration", () => {
     await pg.db.delete(evaluations)
   })
 
-  it("debounces TracesIngested into trace-end:run before publishing execute work", async () => {
+  it("debounces TracesIngested into signals:match before publishing execute work", async () => {
     await ch.client.insert({
       table: "spans",
       values: [makeTraceRow()],
@@ -262,6 +263,13 @@ describe("live monitoring integration", () => {
       clickhouseClient: ch.client,
       redisClient: createFakeRedisClient(),
       workflowStarter: createFakeWorkflowStarter(),
+    })
+    createSignalsMatchWorker({
+      consumer: harness.consumer,
+      publisher: harness.publisher,
+      postgresClient: pg.appPostgresClient,
+      clickhouseClient: ch.client,
+      redisClient: createFakeRedisClient(),
     })
 
     const envelope = makeEnvelope({
@@ -289,7 +297,25 @@ describe("live monitoring integration", () => {
       },
     ])
 
+    expect(harness.getDelayed("signals")).toEqual([
+      {
+        queue: "signals",
+        task: "match",
+        payload: {
+          organizationId: ORGANIZATION_ID,
+          projectId: PROJECT_ID,
+          traceId: TRACE_ID,
+          isSandbox: false,
+        },
+        options: {
+          dedupeKey: `signals:match:${ORGANIZATION_ID}:${PROJECT_ID}:${TRACE_ID}`,
+          debounceMs: TRACE_END_DEBOUNCE_MS,
+        },
+      },
+    ])
+
     await harness.flushDelayed("trace-end")
+    await harness.flushDelayed("signals")
 
     expect(harness.published).toContainEqual({
       queue: "projects",
@@ -323,7 +349,7 @@ describe("live monitoring integration", () => {
     })
   }, 15_000)
 
-  it("replaces debounced trace-end:run when TracesIngested is dispatched twice for the same trace", async () => {
+  it("replaces debounced signals:match when TracesIngested is dispatched twice for the same trace", async () => {
     await ch.client.insert({
       table: "spans",
       values: [makeTraceRow()],
@@ -344,6 +370,13 @@ describe("live monitoring integration", () => {
       clickhouseClient: ch.client,
       redisClient: createFakeRedisClient(),
       workflowStarter: createFakeWorkflowStarter(),
+    })
+    createSignalsMatchWorker({
+      consumer: harness.consumer,
+      publisher: harness.publisher,
+      postgresClient: pg.appPostgresClient,
+      clickhouseClient: ch.client,
+      redisClient: createFakeRedisClient(),
     })
 
     const envelope = makeEnvelope({
@@ -373,7 +406,24 @@ describe("live monitoring integration", () => {
       },
     })
 
-    await harness.flushDelayed("trace-end")
+    const delayedSignalsMatch = harness.getDelayed("signals")
+    expect(delayedSignalsMatch).toHaveLength(1)
+    expect(delayedSignalsMatch[0]).toEqual({
+      queue: "signals",
+      task: "match",
+      payload: {
+        organizationId: ORGANIZATION_ID,
+        projectId: PROJECT_ID,
+        traceId: TRACE_ID,
+        isSandbox: false,
+      },
+      options: {
+        dedupeKey: `signals:match:${ORGANIZATION_ID}:${PROJECT_ID}:${TRACE_ID}`,
+        debounceMs: TRACE_END_DEBOUNCE_MS,
+      },
+    })
+
+    await harness.flushDelayed("signals")
 
     const liveEvalExecutePublishes = harness.published.filter(
       (message) => message.queue === "live-evaluations" && message.task === "execute",
