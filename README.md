@@ -111,7 +111,7 @@ Python and any OpenTelemetry-compatible runtime are also supported. Full setup, 
 
 ## 🔌 Integrations
 
-Latitude is provider-agnostic. Telemetry works out of the box with most model providers and frameworks ([OpenAI](https://docs.latitude.so/telemetry/providers/openai), [Anthropic](https://docs.latitude.so/telemetry/providers/anthropic), [Bedrock](https://docs.latitude.so/telemetry/providers/amazon-bedrock), [Vercel AI SDK](https://docs.latitude.so/telemetry/frameworks/vercel-ai-sdk), [LangChain](https://docs.latitude.so/telemetry/frameworks/langchain), and more), plus any OTLP-compatible backend.
+Latitude is provider-agnostic. Telemetry works out of the box with most model providers and frameworks ([OpenAI](https://docs.latitude.so/telemetry/providers/openai), [Anthropic](https://docs.latitude.so/telemetry/providers/anthropic), [Bedrock](https://docs.latitude.so/telemetry/providers/amazon-bedrock), [Vercel AI SDK](https://docs.latitude.so/telemetry/frameworks/vercel-ai-sdk), [LangChain](https://docs.latitude.so/telemetry/frameworks/langchain), and more), plus any OTEL-compatible application.
 
 See the [full integration list](https://docs.latitude.so/telemetry/start-tracing) for setup instructions.
 
