@@ -20,6 +20,7 @@ import { createScoresRoutes, scoresPath } from "./scores.ts"
 import { createSignalsRoutes, signalsPath } from "./signals.ts"
 import { createToolsRoutes, toolsPath } from "./tools.ts"
 import { createTracesRoutes, tracesPath } from "./traces.ts"
+import { createUsersRoutes, usersPath } from "./users.ts"
 import { registerWellKnownRoutes } from "./well-known.ts"
 
 /**
@@ -59,6 +60,7 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
   routes.route(annotationsPath, createAnnotationsRoutes())
   routes.route(tracesPath, createTracesRoutes())
   routes.route(toolsPath, createToolsRoutes())
+  routes.route(usersPath, createUsersRoutes())
   routes.route(savedSearchesPath, createSavedSearchesRoutes())
   routes.route(signalsPath, createSignalsRoutes())
   routes.route(incidentsPath, createIncidentsRoutes())

@@ -137,6 +137,40 @@ describe("/v1/mcp", () => {
     expect(toolNames).toEqual(expect.arrayContaining(["listTools", "getTool", "getToolCallHistogram", "listToolCalls"]))
   })
 
+  it<ApiTestContext>("tools/list includes the user-analytics tools", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const res = await sendMcpRequest(app, tenant.apiKeyToken, { jsonrpc: "2.0", id: 22, method: "tools/list" })
+    expect(res.status).toBe(200)
+    const payload = (await readSseJsonRpc(res)) as { result?: { tools?: ReadonlyArray<{ name: string }> } }
+    const toolNames = payload.result?.tools?.map((t) => t.name) ?? []
+    expect(toolNames).toEqual(
+      expect.arrayContaining(["listUsers", "getUser", "getUsersOverview", "getUserActivity", "listUserSignals"]),
+    )
+  })
+
+  it<ApiTestContext>("tools/call dispatches listUsers with a path param through the inner request", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const project = await insertProject(database, tenant.organizationId)
+
+    const res = await sendMcpRequest(app, tenant.apiKeyToken, {
+      jsonrpc: "2.0",
+      id: 23,
+      method: "tools/call",
+      params: { name: "listUsers", arguments: { projectSlug: project.slug } },
+    })
+    expect(res.status).toBe(200)
+    const payload = (await readSseJsonRpc(res)) as {
+      result?: { content?: ReadonlyArray<{ type: string; text: string }>; isError?: boolean }
+    }
+    expect(payload.result?.isError).toBeFalsy()
+    const parsed = JSON.parse(payload.result?.content?.[0]?.text ?? "") as { items: unknown[]; totalCount: number }
+    expect(parsed.items).toEqual([])
+    expect(parsed.totalCount).toBe(0)
+  })
+
   it<ApiTestContext>("tools/call dispatches listTools with a path param through the inner request", async ({
     app,
     database,
