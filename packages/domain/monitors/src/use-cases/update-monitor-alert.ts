@@ -31,7 +31,7 @@ export interface UpdateMonitorAlertInput {
   readonly alertId: MonitorAlertId
   /** Omitted fields keep their current value; a supplied `kind` requires a matching `source`/`condition`. */
   readonly kind?: AlertIncidentKind
-  readonly source?: { readonly type: AlertIncidentSourceType; readonly id: string | null }
+  readonly source?: { readonly type: AlertIncidentSourceType; readonly id: string | null } | null
   readonly condition?: AlertIncidentCondition | null
   readonly severity?: AlertSeverity
 }
@@ -69,7 +69,7 @@ export const updateMonitorAlertUseCase = (
         const nextCondition = input.condition !== undefined ? input.condition : alert.condition
         const nextSeverity = input.severity ?? alert.severity
         const kindChanged = input.kind !== undefined && input.kind !== alert.kind
-        const sourceIdChanged = input.source !== undefined && input.source.id !== (alert.source?.id ?? null)
+        const sourceIdChanged = input.source !== undefined && (input.source?.id ?? null) !== (alert.source?.id ?? null)
 
         // Legacy kinds require their fixed source type; unified kinds carry no source (target on the monitor).
         const expectedSourceType = ALERT_INCIDENT_KIND_SOURCE_TYPE[nextKind]
@@ -91,11 +91,21 @@ export const updateMonitorAlertUseCase = (
             message: `Condition does not match alert kind "${nextKind}"`,
           })
         }
+        if (expectedSourceType === undefined && monitor.target === null) {
+          return yield* new ValidationError({ field: "target", message: "Unified alerts require a monitor target" })
+        }
+        if (expectedSourceType !== undefined && monitor.target !== null) {
+          return yield* new ValidationError({
+            field: "target",
+            message: "Saved-search alerts cannot use a monitor target",
+          })
+        }
 
         if (monitor.system) {
           const sourceChanged =
             input.source !== undefined &&
-            (input.source.type !== (alert.source?.type ?? null) || input.source.id !== (alert.source?.id ?? null))
+            ((input.source?.type ?? null) !== (alert.source?.type ?? null) ||
+              (input.source?.id ?? null) !== (alert.source?.id ?? null))
           const severityChanged = input.severity !== undefined && input.severity !== alert.severity
           const conditionOnNonConfigurable = input.condition !== undefined && alert.condition === null
           if (kindChanged || sourceChanged || severityChanged || conditionOnNonConfigurable) {

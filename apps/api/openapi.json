@@ -4511,6 +4511,83 @@
             ]
           },
           {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "metric.threshold"
+                ],
+                "description": "Metric alert: opens once the target metric crosses a threshold."
+              },
+              "metric": {
+                "$ref": "#/components/schemas/MonitorMetric"
+              },
+              "threshold": {
+                "$ref": "#/components/schemas/AlertMetricThreshold"
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "above",
+                  "below"
+                ],
+                "description": "Direction that opens the incident. Defaults to `above` when omitted."
+              }
+            },
+            "required": [
+              "kind",
+              "metric",
+              "threshold"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "metric.escalating"
+                ],
+                "description": "Sustained metric alert: opens when the target metric stays across threshold for the whole `window`."
+              },
+              "metric": {
+                "$ref": "#/components/schemas/MonitorMetric"
+              },
+              "threshold": {
+                "$ref": "#/components/schemas/AlertMetricThreshold"
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "above",
+                  "below"
+                ],
+                "description": "Direction that opens the incident. Defaults to `above` when omitted."
+              },
+              "window": {
+                "type": "object",
+                "properties": {
+                  "minutes": {
+                    "type": "integer",
+                    "minimum": 5,
+                    "description": "How long the threshold must stay crossed before the incident opens. Minimum 5."
+                  }
+                },
+                "required": [
+                  "minutes"
+                ],
+                "description": "Sustained-condition window."
+              }
+            },
+            "required": [
+              "kind",
+              "metric",
+              "threshold",
+              "window"
+            ]
+          },
+          {
             "type": "null"
           }
         ],
@@ -4617,6 +4694,27 @@
               "unit": {
                 "type": "string",
                 "enum": [
+                  "minutes"
+                ],
+                "description": "The duration is expressed in whole minutes; read `minutes`."
+              },
+              "minutes": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Number of minutes."
+              }
+            },
+            "required": [
+              "unit",
+              "minutes"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "unit": {
+                "type": "string",
+                "enum": [
                   "hours"
                 ],
                 "description": "The duration is expressed in whole hours; read `hours`."
@@ -4655,6 +4753,188 @@
           }
         ],
         "description": "Length of the window used to compute the baseline rate."
+      },
+      "MonitorMetric": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "count"
+                ],
+                "description": "Count matching events in each evaluation bucket."
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "errorRate"
+                ],
+                "description": "Measure the fraction of matching events that errored."
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "avg"
+                ],
+                "description": "Average a numeric field over matching events."
+              },
+              "field": {
+                "type": "string",
+                "enum": [
+                  "duration",
+                  "cost",
+                  "tokens"
+                ],
+                "description": "Numeric field to aggregate."
+              }
+            },
+            "required": [
+              "kind",
+              "field"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "p95"
+                ],
+                "description": "Compute the 95th percentile of a numeric field over matching events."
+              },
+              "field": {
+                "type": "string",
+                "enum": [
+                  "duration",
+                  "cost",
+                  "tokens"
+                ],
+                "description": "Numeric field to aggregate."
+              }
+            },
+            "required": [
+              "kind",
+              "field"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "sum"
+                ],
+                "description": "Sum a numeric field over matching events."
+              },
+              "field": {
+                "type": "string",
+                "enum": [
+                  "duration",
+                  "cost",
+                  "tokens"
+                ],
+                "description": "Numeric field to aggregate."
+              }
+            },
+            "required": [
+              "kind",
+              "field"
+            ]
+          }
+        ],
+        "description": "Metric measured over the monitor target."
+      },
+      "AlertMetricThreshold": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "absolute"
+                ],
+                "description": "Compare the metric against a fixed value; read `value`."
+              },
+              "value": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Metric value that opens the incident."
+              }
+            },
+            "required": [
+              "mode",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "multiplier"
+                ],
+                "description": "Compare the metric rate against `factor × baseline`; read `factor` and `baseline`."
+              },
+              "factor": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Multiple of the baseline rate that opens the incident (e.g. `3` = 3×)."
+              },
+              "baseline": {
+                "$ref": "#/components/schemas/AlertBaseline"
+              }
+            },
+            "required": [
+              "mode",
+              "factor",
+              "baseline"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "expected"
+                ],
+                "description": "Compare against the seasonally-learned expected value for this time of day/week."
+              },
+              "sensitivity": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 6,
+                "description": "Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted."
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          }
+        ],
+        "description": "How the metric is compared."
       },
       "PaginatedDatasets": {
         "type": "object",
@@ -5989,6 +6269,9 @@
             },
             "description": "The monitor's alerts. Always at least one."
           },
+          "target": {
+            "$ref": "#/components/schemas/MonitorTarget"
+          },
           "mutedAt": {
             "type": [
               "string",
@@ -6021,6 +6304,7 @@
           "description",
           "system",
           "alerts",
+          "target",
           "mutedAt",
           "deletedAt",
           "createdAt",
@@ -6124,6 +6408,73 @@
         ],
         "description": "The entity this alert watches, or `null` for unified alerts whose target lives on the monitor."
       },
+      "MonitorTarget": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "stream": {
+            "type": "string",
+            "enum": [
+              "traces",
+              "spans",
+              "sessions"
+            ],
+            "description": "Telemetry stream to evaluate: `traces` for users, `spans` for tools, or `sessions` for session-level monitors."
+          },
+          "filterSet": {
+            "$ref": "#/components/schemas/MonitorFilterSet"
+          },
+          "query": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional semantic query applied with the filters. Use `null` for user/tool monitors."
+          },
+          "savedSearchId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Saved-search target id, or `null` when `filterSet` and `query` define the target inline."
+          },
+          "metric": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MonitorMetric"
+              },
+              {
+                "description": "Default metric measured by this monitor target."
+              }
+            ]
+          }
+        },
+        "required": [
+          "stream",
+          "filterSet",
+          "query",
+          "savedSearchId",
+          "metric"
+        ],
+        "description": "Unified query-time target for tool, user, and raw-stream monitors; `null` for legacy saved-search and system monitors."
+      },
+      "MonitorFilterSet": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "additionalProperties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/FilterCondition"
+          }
+        },
+        "description": "Filters that select the target rows. Use `{}` for all users; use `operation = execute_tool` for all tools."
+      },
       "CreateMonitorBody": {
         "type": "object",
         "properties": {
@@ -6144,6 +6495,16 @@
               "$ref": "#/components/schemas/CreateMonitorAlertBody"
             },
             "description": "The monitor's alert. Exactly one."
+          },
+          "target": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MonitorTarget"
+              },
+              {
+                "description": "Target for tool/user monitors. Required for `event.*` and `metric.*` alerts; omit for saved-search alerts."
+              }
+            ]
           }
         },
         "required": [
@@ -6159,33 +6520,22 @@
             "enum": [
               "savedSearch.match",
               "savedSearch.threshold",
-              "savedSearch.escalating"
+              "savedSearch.escalating",
+              "event.matched",
+              "metric.threshold",
+              "metric.escalating"
             ],
-            "description": "What the alert fires on. `savedSearch.threshold` and `savedSearch.escalating` need a matching `condition`."
+            "description": "What the alert fires on. `savedSearch.*` kinds require a saved-search `source`; `event.*` and `metric.*` kinds require `source: null` and a monitor `target`."
           },
           "source": {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string",
-                "enum": [
-                  "issue",
-                  "savedSearch"
-                ],
-                "description": "Must be `savedSearch`."
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MonitorAlertSource"
               },
-              "id": {
-                "type": "string",
-                "minLength": 24,
-                "maxLength": 24,
-                "description": "Id of the saved search this alert watches."
+              {
+                "description": "Saved-search source for `savedSearch.*` alerts, or `null` for tool/user alerts whose target lives on the monitor."
               }
-            },
-            "required": [
-              "type",
-              "id"
-            ],
-            "description": "The saved search this alert watches."
+            ]
           },
           "condition": {
             "oneOf": [
@@ -6264,10 +6614,87 @@
                 ]
               },
               {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "metric.threshold"
+                    ],
+                    "description": "Metric alert: opens once the target metric crosses a threshold."
+                  },
+                  "metric": {
+                    "$ref": "#/components/schemas/MonitorMetric"
+                  },
+                  "threshold": {
+                    "$ref": "#/components/schemas/AlertMetricThreshold"
+                  },
+                  "direction": {
+                    "type": "string",
+                    "enum": [
+                      "above",
+                      "below"
+                    ],
+                    "description": "Direction that opens the incident. Defaults to `above` when omitted."
+                  }
+                },
+                "required": [
+                  "kind",
+                  "metric",
+                  "threshold"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "metric.escalating"
+                    ],
+                    "description": "Sustained metric alert: opens when the target metric stays across threshold for the whole `window`."
+                  },
+                  "metric": {
+                    "$ref": "#/components/schemas/MonitorMetric"
+                  },
+                  "threshold": {
+                    "$ref": "#/components/schemas/AlertMetricThreshold"
+                  },
+                  "direction": {
+                    "type": "string",
+                    "enum": [
+                      "above",
+                      "below"
+                    ],
+                    "description": "Direction that opens the incident. Defaults to `above` when omitted."
+                  },
+                  "window": {
+                    "type": "object",
+                    "properties": {
+                      "minutes": {
+                        "type": "integer",
+                        "minimum": 5,
+                        "description": "How long the threshold must stay crossed before the incident opens. Minimum 5."
+                      }
+                    },
+                    "required": [
+                      "minutes"
+                    ],
+                    "description": "Sustained-condition window."
+                  }
+                },
+                "required": [
+                  "kind",
+                  "metric",
+                  "threshold",
+                  "window"
+                ]
+              },
+              {
                 "type": "null"
               }
             ],
-            "description": "Kind-specific configuration. Required for `savedSearch.threshold` and `savedSearch.escalating`; omit for `savedSearch.match`."
+            "description": "Kind-specific configuration. Required for threshold and escalating kinds; omit for match kinds."
           },
           "severity": {
             "type": "string",
@@ -6282,6 +6709,49 @@
         "required": [
           "kind",
           "source"
+        ]
+      },
+      "MonitorList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Monitor"
+            },
+            "description": "Matching monitors."
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "ListMonitorsForTargetBody": {
+        "type": "object",
+        "properties": {
+          "stream": {
+            "type": "string",
+            "enum": [
+              "traces",
+              "spans",
+              "sessions"
+            ],
+            "description": "Telemetry stream to evaluate: `traces` for users, `spans` for tools, or `sessions` for session-level monitors."
+          },
+          "filterSetContains": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MonitorFilterSet"
+              },
+              {
+                "description": "Filter subset to match against monitor targets. For one user use `userId`; for one tool use `operation = execute_tool` and `toolName`."
+              }
+            ]
+          }
+        },
+        "required": [
+          "stream",
+          "filterSetContains"
         ]
       },
       "UpdateMonitorBody": {
@@ -6323,12 +6793,18 @@
             "enum": [
               "savedSearch.match",
               "savedSearch.threshold",
-              "savedSearch.escalating"
+              "savedSearch.escalating",
+              "event.matched",
+              "metric.threshold",
+              "metric.escalating"
             ],
-            "description": "New alert kind. Not allowed on system monitors. Supply the matching `condition` when you change it."
+            "description": "New alert kind. Not allowed on system monitors. Supply the matching `source` and `condition` when you change it."
           },
           "source": {
-            "type": "object",
+            "type": [
+              "object",
+              "null"
+            ],
             "properties": {
               "type": {
                 "type": "string",
@@ -6336,20 +6812,23 @@
                   "issue",
                   "savedSearch"
                 ],
-                "description": "Must be `savedSearch`."
+                "description": "Entity the alert watches: `savedSearch` or `issue`."
               },
               "id": {
-                "type": "string",
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "minLength": 24,
                 "maxLength": 24,
-                "description": "Id of the saved search this alert watches."
+                "description": "Id of the watched entity, or `null` to watch all entities of its `type`."
               }
             },
             "required": [
               "type",
               "id"
             ],
-            "description": "Replace the watched saved search. Not allowed on system monitors."
+            "description": "Replace the saved-search source, or set `null` for unified tool/user alerts. Not allowed on system monitors."
           },
           "condition": {
             "oneOf": [
@@ -6425,6 +6904,83 @@
                 },
                 "required": [
                   "kind"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "metric.threshold"
+                    ],
+                    "description": "Metric alert: opens once the target metric crosses a threshold."
+                  },
+                  "metric": {
+                    "$ref": "#/components/schemas/MonitorMetric"
+                  },
+                  "threshold": {
+                    "$ref": "#/components/schemas/AlertMetricThreshold"
+                  },
+                  "direction": {
+                    "type": "string",
+                    "enum": [
+                      "above",
+                      "below"
+                    ],
+                    "description": "Direction that opens the incident. Defaults to `above` when omitted."
+                  }
+                },
+                "required": [
+                  "kind",
+                  "metric",
+                  "threshold"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "metric.escalating"
+                    ],
+                    "description": "Sustained metric alert: opens when the target metric stays across threshold for the whole `window`."
+                  },
+                  "metric": {
+                    "$ref": "#/components/schemas/MonitorMetric"
+                  },
+                  "threshold": {
+                    "$ref": "#/components/schemas/AlertMetricThreshold"
+                  },
+                  "direction": {
+                    "type": "string",
+                    "enum": [
+                      "above",
+                      "below"
+                    ],
+                    "description": "Direction that opens the incident. Defaults to `above` when omitted."
+                  },
+                  "window": {
+                    "type": "object",
+                    "properties": {
+                      "minutes": {
+                        "type": "integer",
+                        "minimum": 5,
+                        "description": "How long the threshold must stay crossed before the incident opens. Minimum 5."
+                      }
+                    },
+                    "required": [
+                      "minutes"
+                    ],
+                    "description": "Sustained-condition window."
+                  }
+                },
+                "required": [
+                  "kind",
+                  "metric",
+                  "threshold",
+                  "window"
                 ]
               },
               {
@@ -12619,7 +13175,7 @@
         "x-fern-sdk-group-name": "monitors",
         "x-fern-sdk-method-name": "create",
         "summary": "Create monitor",
-        "description": "Creates a monitor with its saved-search alert. The slug is derived from `name`. The watched saved search must not contain a semantic component (unquoted free text) — monitors need an exact match rule, so only quoted literal and backtick phrase terms are allowed.",
+        "description": "Creates a monitor with one alert. Saved-search alerts use a saved-search source; tool and user alerts use `event.*` or `metric.*` kinds with `source: null` and a `target`. The slug is derived from `name`.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -12655,6 +13211,87 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Monitor"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/monitors/for-target": {
+      "post": {
+        "tags": [
+          "Monitors"
+        ],
+        "x-fern-sdk-group-name": "monitors",
+        "x-fern-sdk-method-name": "listForTarget",
+        "summary": "List monitors for target",
+        "description": "Returns live unified monitors whose target contains the supplied user or tool filter. Use `stream: traces` with a `userId` filter for users, or `stream: spans` with `operation = execute_tool` and `toolName` filters for tools.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listMonitorsForTarget",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListMonitorsForTargetBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Matching monitors",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonitorList"
                 }
               }
             }
@@ -13112,7 +13749,7 @@
         "x-fern-sdk-group-name": "monitors",
         "x-fern-sdk-method-name": "updateAlert",
         "summary": "Update monitor alert",
-        "description": "Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may. Re-pointing the alert at a saved search containing a semantic component (unquoted free text) is rejected.",
+        "description": "Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may. Saved-search alerts use a source; tool and user alerts use `source: null` with the monitor target.",
         "security": [
           {
             "ApiKeyAuth": []

@@ -3,6 +3,7 @@ import {
   deleteMonitorUseCase,
   getMonitorBySlugUseCase,
   getMonitorIncidentsUseCase,
+  listMonitorsForTargetUseCase,
   listMonitorsUseCase,
   type MonitorAlertInput,
   MonitorAlertNotFoundError,
@@ -36,6 +37,7 @@ import {
   MonitorAlertSchema,
   MonitorIncidentSchema,
   MonitorSchema,
+  MonitorTargetSchema,
   toMonitorAlertResponse,
   toMonitorIncidentResponse,
   toMonitorResponse,
@@ -73,6 +75,9 @@ const CreateMonitorBodySchema = z
     name: z.string().min(1).max(NAME_MAX_LENGTH).describe("Human-readable name. Used to derive the slug."),
     description: z.string().max(DESCRIPTION_MAX_LENGTH).optional().describe("Optional free-form description."),
     alerts: z.array(CreateMonitorAlertBodySchema).length(1).describe("The monitor's alert. Exactly one."),
+    target: MonitorTargetSchema.optional().describe(
+      "Target for tool/user monitors. Required for `event.*` and `metric.*` alerts; omit for saved-search alerts.",
+    ),
   })
   .openapi("CreateMonitorBody")
 
@@ -105,16 +110,31 @@ const ListMonitorIncidentsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50).describe("Page size. Defaults to 50; max 100."),
 })
 
+const ListMonitorsForTargetBodySchema = z
+  .object({
+    stream: MonitorTargetSchema.shape.stream,
+    filterSetContains: MonitorTargetSchema.shape.filterSet
+      .unwrap()
+      .describe(
+        "Filter subset to match against monitor targets. For one user use `userId`; for one tool use `operation = execute_tool` and `toolName`.",
+      ),
+  })
+  .openapi("ListMonitorsForTargetBody")
+
 const PaginatedMonitorsSchema = Paginated(MonitorSchema, "PaginatedMonitors")
 const PaginatedMonitorIncidentsSchema = Paginated(MonitorIncidentSchema, "PaginatedMonitorIncidents")
 const MonitorAlertListSchema = z
   .object({ items: z.array(MonitorAlertSchema).describe("The monitor's alerts.") })
   .openapi("MonitorAlertList")
 
+const MonitorListSchema = z
+  .object({ items: z.array(MonitorSchema).describe("Matching monitors.") })
+  .openapi("MonitorList")
+
 /** The validated alert body is structurally identical to the domain input; the condition is cast back to its branded union. */
 const toMonitorAlertInput = (body: z.infer<typeof CreateMonitorAlertBodySchema>): MonitorAlertInput => ({
   kind: body.kind,
-  source: { type: body.source.type, id: body.source.id },
+  source: body.source ? { type: body.source.type, id: body.source.id } : null,
   condition: (body.condition ?? null) as AlertIncidentCondition | null,
   ...(body.severity !== undefined ? { severity: body.severity } : {}),
 })
@@ -181,7 +201,7 @@ const createMonitor = monitorEndpoint({
     ...monitorsFernGroup("create"),
     summary: "Create monitor",
     description:
-      "Creates a monitor with its saved-search alert. The slug is derived from `name`. The watched saved search must not contain a semantic component (unquoted free text) — monitors need an exact match rule, so only quoted literal and backtick phrase terms are allowed.",
+      "Creates a monitor with one alert. Saved-search alerts use a saved-search source; tool and user alerts use `event.*` or `metric.*` kinds with `source: null` and a `target`. The slug is derived from `name`.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(CreateMonitorBodySchema) },
     responses: openApiResponses({ status: 201, schema: MonitorSchema, description: "Monitor created" }),
@@ -201,6 +221,7 @@ const createMonitor = monitorEndpoint({
           name: body.name,
           ...(body.description !== undefined ? { description: body.description } : {}),
           alerts: body.alerts.map(toMonitorAlertInput),
+          ...(body.target !== undefined ? { target: body.target } : {}),
         })
       }).pipe(
         withPostgres(
@@ -214,6 +235,48 @@ const createMonitor = monitorEndpoint({
     )
 
     return c.json(toMonitorResponse(monitor), 201)
+  },
+})
+
+const listMonitorsForTarget = monitorEndpoint({
+  route: createRoute({
+    method: "post",
+    path: "/for-target",
+    name: "listMonitorsForTarget",
+    tags: ["Monitors"],
+    ...monitorsFernGroup("listForTarget"),
+    summary: "List monitors for target",
+    description:
+      "Returns live unified monitors whose target contains the supplied user or tool filter. Use `stream: traces` with a `userId` filter for users, or `stream: spans` with `operation = execute_tool` and `toolName` filters for tools.",
+    security: PROTECTED_SECURITY,
+    request: { params: ProjectParamsSchema, body: jsonBody(ListMonitorsForTargetBodySchema) },
+    responses: openApiResponses({ status: 200, schema: MonitorListSchema, description: "Matching monitors" }),
+  }),
+  handler: async (c) => {
+    const { projectSlug } = c.req.valid("param")
+    const body = c.req.valid("json")
+    const organizationId = c.var.organization.id
+
+    const monitors = await Effect.runPromise(
+      Effect.gen(function* () {
+        const projectRepo = yield* ProjectRepository
+        const project = yield* projectRepo.findBySlug(projectSlug)
+        return yield* listMonitorsForTargetUseCase({
+          projectId: project.id,
+          stream: body.stream,
+          filterSetContains: body.filterSetContains,
+        })
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive),
+          c.var.postgresClient,
+          organizationId,
+        ),
+        withTracing,
+      ),
+    )
+
+    return c.json({ items: monitors.map(toMonitorResponse) }, 200)
   },
 })
 
@@ -421,7 +484,7 @@ const updateMonitorAlert = monitorEndpoint({
     ...monitorsFernGroup("updateAlert"),
     summary: "Update monitor alert",
     description:
-      "Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may. Re-pointing the alert at a saved search containing a semantic component (unquoted free text) is rejected.",
+      "Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may. Saved-search alerts use a source; tool and user alerts use `source: null` with the monitor target.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorAlertParamsSchema, body: jsonBody(UpdateMonitorAlertBodySchema) },
     responses: openApiResponses({
@@ -445,7 +508,9 @@ const updateMonitorAlert = monitorEndpoint({
           monitorId: current.id,
           alertId: MonitorAlertId(alertId),
           ...(body.kind !== undefined ? { kind: body.kind } : {}),
-          ...(body.source !== undefined ? { source: { type: body.source.type, id: body.source.id } } : {}),
+          ...(body.source !== undefined
+            ? { source: body.source === null ? null : { type: body.source.type, id: body.source.id } }
+            : {}),
           ...(body.condition !== undefined ? { condition: body.condition as AlertIncidentCondition | null } : {}),
           ...(body.severity !== undefined ? { severity: body.severity } : {}),
         })
@@ -608,6 +673,7 @@ export const createMonitorsRoutes = () => {
   const app = new OpenAPIHono<OrganizationScopedEnv>()
   listMonitors.mountHttp(app, createTierRateLimiter("low"))
   createMonitor.mountHttp(app, createTierRateLimiter("medium"))
+  listMonitorsForTarget.mountHttp(app, createTierRateLimiter("low"))
   getMonitor.mountHttp(app, createTierRateLimiter("low"))
   updateMonitor.mountHttp(app, createTierRateLimiter("medium"))
   deleteMonitor.mountHttp(app, createTierRateLimiter("medium"))

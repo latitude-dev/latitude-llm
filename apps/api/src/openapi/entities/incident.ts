@@ -18,6 +18,10 @@ export const INCIDENT_SEVERITIES = ALERT_SEVERITIES
 const AlertDurationSchema = z
   .discriminatedUnion("unit", [
     z.object({
+      unit: z.literal("minutes").describe("The duration is expressed in whole minutes; read `minutes`."),
+      minutes: z.number().positive().describe("Number of minutes."),
+    }),
+    z.object({
       unit: z.literal("hours").describe("The duration is expressed in whole hours; read `hours`."),
       hours: z.number().positive().describe("Number of hours."),
     }),
@@ -69,6 +73,53 @@ const AlertCountThresholdSchema = z
   ])
   .openapi("AlertCountThreshold")
 
+const MonitorMetricSchema = z
+  .discriminatedUnion("kind", [
+    z.object({ kind: z.literal("count").describe("Count matching events in each evaluation bucket.") }),
+    z.object({ kind: z.literal("errorRate").describe("Measure the fraction of matching events that errored.") }),
+    z.object({
+      kind: z.literal("avg").describe("Average a numeric field over matching events."),
+      field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
+    }),
+    z.object({
+      kind: z.literal("p95").describe("Compute the 95th percentile of a numeric field over matching events."),
+      field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
+    }),
+    z.object({
+      kind: z.literal("sum").describe("Sum a numeric field over matching events."),
+      field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
+    }),
+  ])
+  .openapi("MonitorMetric")
+
+const AlertMetricThresholdSchema = z
+  .discriminatedUnion("mode", [
+    z.object({
+      mode: z.literal("absolute").describe("Compare the metric against a fixed value; read `value`."),
+      value: z.number().positive().describe("Metric value that opens the incident."),
+    }),
+    z.object({
+      mode: z
+        .literal("multiplier")
+        .describe("Compare the metric rate against `factor × baseline`; read `factor` and `baseline`."),
+      factor: z.number().positive().describe("Multiple of the baseline rate that opens the incident (e.g. `3` = 3×)."),
+      baseline: AlertBaselineSchema.describe("Fixed-window baseline the current rate is compared against."),
+    }),
+    z.object({
+      mode: z
+        .literal("expected")
+        .describe("Compare against the seasonally-learned expected value for this time of day/week."),
+      sensitivity: z
+        .number()
+        .int()
+        .min(1)
+        .max(6)
+        .optional()
+        .describe("Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted."),
+    }),
+  ])
+  .openapi("AlertMetricThreshold")
+
 export const AlertConditionSchema = z
   .discriminatedUnion("kind", [
     z.object({
@@ -101,6 +152,37 @@ export const AlertConditionSchema = z
         .max(6)
         .optional()
         .describe("Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted."),
+    }),
+    z.object({
+      kind: z.literal("metric.threshold").describe("Metric alert: opens once the target metric crosses a threshold."),
+      metric: MonitorMetricSchema.describe("Metric measured over the monitor target."),
+      threshold: AlertMetricThresholdSchema.describe("How the metric is compared."),
+      direction: z
+        .enum(["above", "below"])
+        .optional()
+        .describe("Direction that opens the incident. Defaults to `above` when omitted."),
+    }),
+    z.object({
+      kind: z
+        .literal("metric.escalating")
+        .describe(
+          "Sustained metric alert: opens when the target metric stays across threshold for the whole `window`.",
+        ),
+      metric: MonitorMetricSchema.describe("Metric measured over the monitor target."),
+      threshold: AlertMetricThresholdSchema.describe("How the metric is compared."),
+      direction: z
+        .enum(["above", "below"])
+        .optional()
+        .describe("Direction that opens the incident. Defaults to `above` when omitted."),
+      window: z
+        .object({
+          minutes: z
+            .number()
+            .int()
+            .min(5)
+            .describe("How long the threshold must stay crossed before the incident opens. Minimum 5."),
+        })
+        .describe("Sustained-condition window."),
     }),
   ])
   .openapi("AlertCondition")
