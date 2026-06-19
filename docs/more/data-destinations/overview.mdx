@@ -1,5 +1,5 @@
 ---
-title: Data destinations
+title: Overview
 description: Continuously sync your Latitude data into the systems you already use.
 ---
 
@@ -7,17 +7,19 @@ description: Continuously sync your Latitude data into the systems you already u
 
 A **data destination** continuously syncs a Latitude project's data into a system **you own** — your analytics tool, your data warehouse, your object storage. Connect a destination once and new data keeps flowing to it within minutes, with no exports to schedule and no pipeline to maintain.
 
-The data Latitude can send grows over time. Today that's your **traces and spans**; the same engine is built to forward other entities Latitude generates — like [signals](../signals/overview) — as they become available.
+The data Latitude can send grows over time. Today that's your **traces and spans**; the same engine is built to forward other entities Latitude generates — like [signals](../../signals/overview) — as they become available.
 
-The first supported destination is **PostHog LLM Analytics**: your Latitude spans show up as native `$ai_*` events in your own PostHog project, so you can analyze cost, latency, and usage alongside the rest of your product data.
+Destinations are **bring-your-own**: you point Latitude at your own external system with your own credentials. Latitude never sends your data anywhere you didn't connect.
 
-Destinations are **bring-your-own**: you point Latitude at your own PostHog project with your own API key. Latitude never sends your data anywhere you didn't connect.
+<Card title="PostHog destination" icon="chart-line" href="./posthog">
+  Send Latitude spans to PostHog LLM Analytics as native `$ai_*` events.
+</Card>
 
 ## Supported destinations
 
 | Destination | Sources | Status |
 | --- | --- | --- |
-| PostHog (LLM Analytics) | Spans | Implemented |
+| [PostHog (LLM Analytics)](./posthog) | Spans | Implemented |
 | Object storage / data warehouse (S3, BigQuery, …) | Spans | *comming soon* |
 | Mixpanel | Spans | *comming soon* |
 | Generic webhook | Spans | *comming soon* |
@@ -38,33 +40,11 @@ A **source** is the kind of telemetry a destination receives. Today every destin
 | Signals | Recurring failure patterns Latitude detects in your traffic | *comming soon* |
 | Scopes | Named segments of your telemetry you define and track | *comming soon* |
 
-With PostHog, traces and sessions don't need their own source: each span carries its trace and session identifiers, so PostHog reconstructs the full trace and session views for you automatically.
-
 ## Connect a destination
 
-Open your project's **Settings → Data destinations** and create one. For PostHog you'll provide:
+Open your project's **Settings → Data destinations** and create one. Each destination asks for the credentials and configuration Latitude needs to deliver telemetry into that external system.
 
-- **Region / host** — PostHog US (`us.i.posthog.com`), PostHog EU (`eu.i.posthog.com`), or a custom host for self-hosted PostHog.
-- **Project API key** — your PostHog **project** key (`phc_…`).
-- **Name** — a label to recognize the destination by.
-- **Exclude payloads** — see [Excluding payloads](#excluding-payloads) below.
-
-Before saving, use **Test connection** to confirm Latitude can reach PostHog and your key is accepted.
-
-<Warning>
-PostHog `phc_` keys are **write-only**, so Test connection proves *reachability and key acceptance* — **not** that the key belongs to the project you think it does. A valid key for the *wrong* PostHog project will pass the test and silently send your data there. Double-check you copied the key from the right project. The test also sends a small **canary event**, which is visible in your PostHog.
-</Warning>
-
-## What lands in PostHog
-
-Each Latitude span becomes a native PostHog LLM Analytics event:
-
-- `$ai_generation` — an LLM call (with token counts and **cost in USD**)
-- `$ai_embedding` — an embedding call
-- `$ai_span` — any other step, such as a tool call or retrieval
-- `$ai_trace` — emitted for the root step, so the trace view is populated
-
-Events carry the trace, span, parent, and session identifiers (so PostHog groups them correctly), latency, model and provider, and cost. They also include `latitude_project_id` and `latitude_span_url` so you can jump from a PostHog event straight back into Latitude.
+Before saving, use **Test connection** to confirm Latitude can reach the destination and your credentials are accepted.
 
 ## Excluding payloads
 
@@ -76,7 +56,3 @@ Turn **Exclude payloads** on when you don't want prompt and completion content l
 - **No duplicates.** Delivery is at-least-once and idempotent: each event has a stable identity, so retries and overlapping windows never duplicate data in your destination.
 - **Pause and resume.** Pause a destination anytime; while paused nothing is sent. On resume, Latitude catches up the backlog it missed.
 - **Backfill.** When you connect a destination you can also import past traces, so your destination isn't limited to data created after you connected it. How far back you can reach is bounded by your plan's data retention.
-
-<Note>
-Backfilled events keep their **original** timestamps, so they land at their real historical date in PostHog — not the date you ran the backfill. If a backfill looks empty, widen PostHog's time filter to the historical range you imported.
-</Note>

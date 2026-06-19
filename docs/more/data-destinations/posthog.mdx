@@ -1,0 +1,54 @@
+---
+title: PostHog
+description: Send Latitude spans to PostHog LLM Analytics as native AI events.
+---
+
+# PostHog destination
+
+The PostHog destination sends your Latitude spans to **PostHog LLM Analytics** as native `$ai_*` events in your own PostHog project, so you can analyze cost, latency, and usage alongside the rest of your product data.
+
+PostHog destinations are **bring-your-own**: you point Latitude at your own PostHog project with your own API key. Latitude never sends your data to PostHog unless you connect this destination.
+
+## Connect PostHog
+
+Open your project's **Settings → Data destinations** and create a PostHog destination. You'll provide:
+
+- **Region / host** — PostHog US (`us.i.posthog.com`), PostHog EU (`eu.i.posthog.com`), or a custom host for self-hosted PostHog.
+- **Project API key** — your PostHog **project** key (`phc_…`).
+- **Name** — a label to recognize the destination by.
+- **Exclude payloads** — see [Excluding payloads](#excluding-payloads) below.
+
+Before saving, use **Test connection** to confirm Latitude can reach PostHog and your key is accepted.
+
+<Warning>
+PostHog `phc_` keys are **write-only**, so Test connection proves *reachability and key acceptance* — **not** that the key belongs to the project you think it does. A valid key for the *wrong* PostHog project will pass the test and silently send your data there. Double-check you copied the key from the right project. The test also sends a small **canary event**, which is visible in your PostHog.
+</Warning>
+
+## What lands in PostHog
+
+Each Latitude span becomes a native PostHog LLM Analytics event:
+
+- `$ai_generation` — an LLM call (with token counts and **cost in USD**)
+- `$ai_embedding` — an embedding call
+- `$ai_span` — any other step, such as a tool call or retrieval
+- `$ai_trace` — emitted for the root step, so the trace view is populated
+
+Events carry the trace, span, parent, and session identifiers (so PostHog groups them correctly), latency, model and provider, and cost. They also include `latitude_project_id` and `latitude_span_url` so you can jump from a PostHog event straight back into Latitude.
+
+With PostHog, traces and sessions don't need their own source: each span carries its trace and session identifiers, so PostHog reconstructs the full trace and session views for you automatically.
+
+## Excluding payloads
+
+Turn **Exclude payloads** on when you don't want prompt and completion content leaving Latitude. It nulls every content-bearing field — inputs, outputs, tool definitions, and error messages (replaced by an error type only). Everything non-sensitive still flows: token counts, cost, latency, model and provider, identifiers, and timing. This is useful when content is subject to compliance constraints but you still want the metrics.
+
+## Backfills in PostHog
+
+When you connect PostHog, you can also import past traces so PostHog isn't limited to data created after you connected it. How far back you can reach is bounded by your plan's data retention.
+
+<Note>
+Backfilled events keep their **original** timestamps, so they land at their real historical date in PostHog — not the date you ran the backfill. If a backfill looks empty, widen PostHog's time filter to the historical range you imported.
+</Note>
+
+<Card title="Data destinations overview" icon="arrow-left" href="./overview">
+  Review supported destinations, available sources, payload exclusion, and delivery behavior.
+</Card>

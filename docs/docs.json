@@ -1,7 +1,11 @@
 {
   "$schema": "https://mintlify.com/schema.json",
   "redirects": [
-    { "source": "/issues/:slug*", "destination": "/signals/:slug*" }
+    { "source": "/issues/:slug*", "destination": "/signals/:slug*" },
+    {
+      "source": "/more/data-destinations",
+      "destination": "/more/data-destinations/overview"
+    }
   ],
   "theme": "mint",
   "name": "Latitude Docs",
@@ -240,7 +244,13 @@
           "getting-started/concepts",
           "getting-started/mcp",
           "more/sandbox",
-          "more/data-destinations",
+          {
+            "group": "Data destinations",
+            "pages": [
+              "more/data-destinations/overview",
+              "more/data-destinations/posthog"
+            ]
+          },
           "more/api-reference"
         ]
       }
