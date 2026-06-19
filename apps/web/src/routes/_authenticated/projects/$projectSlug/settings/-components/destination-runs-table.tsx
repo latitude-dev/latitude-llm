@@ -110,15 +110,13 @@ export function DestinationRunsTable({ destinationId }: { readonly destinationId
   })
 
   return (
-    <div className="flex min-w-0 flex-col gap-2">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
       <InfiniteTable
         data={runs}
         isLoading={isLoading}
         columns={columns}
         getRowKey={(run) => run.id}
         infiniteScroll={infiniteScroll}
-        scrollAreaLayout="intrinsic"
-        className="max-h-[420px]"
         blankSlate="No data syncronization runs yet."
       />
     </div>
