@@ -40,7 +40,23 @@ The detail view shows:
 - **Signals affecting this user**: the tracked problems this user has run into, with status and how often (these are today's [issues](../issues/overview))
 - **Behaviours**: the topics observed for this user. See [Behaviours](../search/behaviours)
 
-Use **Add monitor** to watch a user, for example to be alerted when their error rate climbs. See [Monitors](../monitors/overview).
+## Monitor users
+
+Use **Add monitor** on a user to watch them, or **Monitor all users** from the Users page to watch your user base as a whole.
+
+**Monitor all users** opens a recommended set of aggregate monitors. Pick one, or switch to the **Advanced** tab to configure your own:
+
+- **Users are having errors**: opens an incident when failed traces for users stay higher than expected.
+- **Users are seeing slow responses**: opens an incident when p95 trace latency for users stays higher than expected.
+- **Activity spiked**: opens an incident when trace volume for users stays higher than expected.
+- **Activity dropped**: opens an incident when trace volume for users stays lower than expected.
+- **Cost spiked**: opens an incident when total cost for users stays higher than expected.
+
+<Frame caption="Monitor all users: pick a recommended aggregate monitor, or switch to the Advanced tab to configure your own.">
+  <img src="/images/users/monitor-all-users.png" alt="The New user monitor dialog with recommended options for user errors, slow responses, activity spikes and drops, and cost" />
+</Frame>
+
+See [Monitors](../monitors/overview) for how alerts and incidents work.
 
 ## Next steps
 

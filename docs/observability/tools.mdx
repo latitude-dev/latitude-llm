@@ -47,7 +47,21 @@ From here, **View traces** opens the traces that used the tool, and **Add monito
 
 ## Monitor tools
 
-Tool metrics make good monitoring targets: alert when a tool's error rate climbs or its latency degrades. Use **Add monitor** on a tool, or **Monitor all tools** from the Tools page, to start watching. See [Monitors](../monitors/overview).
+Tool metrics make good monitoring targets: alert when a tool's error rate climbs or its latency degrades. Use **Add monitor** on a tool, or **Monitor all tools** from the Tools page, to start watching.
+
+**Monitor all tools** opens a recommended set of aggregate monitors that watch every tool at once. Pick one, or switch to the **Advanced** tab to configure your own:
+
+- **Tool failures increased**: opens an incident when the overall tool error rate stays higher than expected.
+- **Tool latency increased**: opens an incident when p95 latency across tool calls stays higher than expected.
+- **Tool usage spiked**: opens an incident when total tool call volume stays higher than expected.
+- **Tool usage dropped**: opens an incident when total tool call volume stays lower than expected.
+- **Tool cost spiked**: opens an incident when total tool-call cost stays higher than expected.
+
+<Frame caption="Monitor all tools: pick a recommended aggregate monitor, or switch to the Advanced tab to configure your own.">
+  <img src="/images/tools/monitor-all-tools.png" alt="The New tool monitor dialog with recommended options for tool failures, latency, usage spikes and drops, and cost" />
+</Frame>
+
+See [Monitors](../monitors/overview) for how alerts and incidents work.
 
 ## Next steps
 
