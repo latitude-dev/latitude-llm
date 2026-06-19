@@ -4,11 +4,11 @@
 -- Signals cutover: scores_hourly_buckets (00036) counted every signal_id-bearing score. After the
 -- always-stamp-signal_id writer, that now includes non-matching evaluation runs, so the rollup
 -- over-counts occurrences. Rebuild it to count only occurrences (passed = true). The preceding flip
--- migration (00037) runs synchronously, so the backfill below re-aggregates already-flipped rows.
-DROP VIEW IF EXISTS scores_hourly_buckets_mv;
-DROP TABLE IF EXISTS scores_hourly_buckets;
+-- migration (00038) runs synchronously, so the backfill below re-aggregates already-flipped rows.
+DROP VIEW IF EXISTS scores_hourly_buckets_mv ON CLUSTER default;
+DROP TABLE IF EXISTS scores_hourly_buckets ON CLUSTER default;
 
-CREATE TABLE IF NOT EXISTS scores_hourly_buckets
+CREATE TABLE IF NOT EXISTS scores_hourly_buckets ON CLUSTER default
 (
     organization_id  LowCardinality(FixedString(24))                CODEC(ZSTD(1)),
     project_id       LowCardinality(FixedString(24))                CODEC(ZSTD(1)),
@@ -17,12 +17,12 @@ CREATE TABLE IF NOT EXISTS scores_hourly_buckets
 
     count            SimpleAggregateFunction(sum, UInt64)           CODEC(T64, ZSTD(1))
 )
-ENGINE = AggregatingMergeTree
+ENGINE = ReplicatedAggregatingMergeTree
 PARTITION BY toYYYYMM(ts_hour)
 PRIMARY KEY (organization_id, project_id, signal_id)
 ORDER BY (organization_id, project_id, signal_id, ts_hour);
 -- +goose StatementBegin
-CREATE MATERIALIZED VIEW IF NOT EXISTS scores_hourly_buckets_mv TO scores_hourly_buckets
+CREATE MATERIALIZED VIEW IF NOT EXISTS scores_hourly_buckets_mv ON CLUSTER default TO scores_hourly_buckets
 AS
 SELECT
     organization_id,
@@ -49,10 +49,10 @@ GROUP BY organization_id, project_id, signal_id, ts_hour;
 
 -- +goose Down
 -- Restore the pre-cutover rollup that counted all signal_id-bearing scores (no passed filter).
-DROP VIEW IF EXISTS scores_hourly_buckets_mv;
-DROP TABLE IF EXISTS scores_hourly_buckets;
+DROP VIEW IF EXISTS scores_hourly_buckets_mv ON CLUSTER default;
+DROP TABLE IF EXISTS scores_hourly_buckets ON CLUSTER default;
 
-CREATE TABLE IF NOT EXISTS scores_hourly_buckets
+CREATE TABLE IF NOT EXISTS scores_hourly_buckets ON CLUSTER default
 (
     organization_id  LowCardinality(FixedString(24))                CODEC(ZSTD(1)),
     project_id       LowCardinality(FixedString(24))                CODEC(ZSTD(1)),
@@ -61,12 +61,12 @@ CREATE TABLE IF NOT EXISTS scores_hourly_buckets
 
     count            SimpleAggregateFunction(sum, UInt64)           CODEC(T64, ZSTD(1))
 )
-ENGINE = AggregatingMergeTree
+ENGINE = ReplicatedAggregatingMergeTree
 PARTITION BY toYYYYMM(ts_hour)
 PRIMARY KEY (organization_id, project_id, signal_id)
 ORDER BY (organization_id, project_id, signal_id, ts_hour);
 -- +goose StatementBegin
-CREATE MATERIALIZED VIEW IF NOT EXISTS scores_hourly_buckets_mv TO scores_hourly_buckets
+CREATE MATERIALIZED VIEW IF NOT EXISTS scores_hourly_buckets_mv ON CLUSTER default TO scores_hourly_buckets
 AS
 SELECT
     organization_id,
