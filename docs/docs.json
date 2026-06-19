@@ -159,8 +159,8 @@
       {
         "group": "Understand",
         "pages": [
-          "issues/overview",
-          "issues/management",
+          "signals/overview",
+          "signals/management",
           "search/behaviours",
           {
             "group": "Annotations and scores",
@@ -245,6 +245,20 @@
       }
     ]
   },
+  "redirects": [
+    {
+      "source": "/issues/overview",
+      "destination": "/signals/overview"
+    },
+    {
+      "source": "/issues/management",
+      "destination": "/signals/management"
+    },
+    {
+      "source": "/issues/:slug*",
+      "destination": "/signals/overview"
+    }
+  ],
   "footer": {
     "socials": {
       "github": "https://github.com/latitude-dev/latitude-llm",

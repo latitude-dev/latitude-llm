@@ -27,7 +27,7 @@ Most evaluations are created from issues. When you generate an evaluation from a
 3. Matching evaluations analyze the trace.
 4. Each evaluation returns a pass/fail verdict with feedback.
 5. Latitude creates a score attached to the trace.
-6. Failed scores feed back into [issue discovery](../issues/overview).
+6. Failed scores feed back into [signal discovery](../signals/overview).
 
 ## Evaluation Strategies
 
@@ -43,7 +43,7 @@ Evaluations improve as more evidence arrives. New annotations, flagger matches, 
 
 ### From Issues
 
-Generate an evaluation from an [issue](../issues/overview) to monitor that failure pattern on future traces.
+Generate an evaluation from an [signal](../signals/overview) to monitor that failure pattern on future traces.
 
 ### From Known Requirements
 
@@ -60,4 +60,4 @@ You can also create evaluations for behaviors you already know you want to enfor
 
 - [Triggers](./triggers): Configure which traces an evaluation monitors
 - [Alignment](./alignment): Understand how evaluations stay calibrated to human judgment
-- [Issues](../issues/overview): How evaluation failures become trackable issues
+- [Signals](../signals/overview): How evaluation failures become trackable issues

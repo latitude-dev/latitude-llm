@@ -20,7 +20,7 @@ When viewing a trace:
 4. Add a thumbs-up or thumbs-down verdict and feedback.
 5. Optionally link the annotation to an issue.
 
-Annotations save as drafts while you edit. Once finalized, they feed analytics, issue discovery, and evaluation alignment alongside annotations from [flaggers](./flaggers) and the [API](../scores/api).
+Annotations save as drafts while you edit. Once finalized, they feed analytics, signal discovery, and evaluation alignment alongside annotations from [flaggers](./flaggers) and the [API](../scores/api).
 
 ## A Typical Review Workflow
 
@@ -47,7 +47,7 @@ If you want detection without human review for a fixed set of known failure cate
 
 ## Inline Annotations and Issues
 
-When creating an inline annotation, you can leave issue assignment automatic or link the annotation to an existing issue. After the annotation is finalized, failed annotations enter issue discovery automatically.
+When creating an inline annotation, you can leave issue assignment automatic or link the annotation to an existing issue. After the annotation is finalized, failed annotations enter signal discovery automatically.
 
 ## Persisted Highlights
 
@@ -58,4 +58,4 @@ Message-level and text-range annotations leave highlights in the conversation vi
 - [Annotations Overview](./overview): How the annotation system works
 - [Flaggers](./flaggers): Automatic annotators for common failure categories
 - [Search](../search/overview): Find traces to annotate
-- [Issues](../issues/overview): How annotations connect to issue tracking
+- [Signals](../signals/overview): How annotations connect to issue tracking

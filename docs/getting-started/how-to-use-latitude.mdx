@@ -1,6 +1,6 @@
 ---
 title: How to use Latitude
-description: The recommended workflow for finding, tracking, and fixing production issues in your AI agent.
+description: The recommended workflow for finding, tracking, and fixing production signals in your AI agent.
 ---
 
 Latitude works best as a continuous loop for production agents: observe real traffic, find failure modes, turn them into trackable issues, watch them, fix them, and keep checking for regressions.
@@ -24,10 +24,10 @@ Latitude works best as a continuous loop for production agents: observe real tra
     Latitude's [flaggers](../annotations/flaggers) also annotate common failure categories automatically, such as frustration, refusal, jailbreaking, tool errors, and empty responses.
   </Step>
   <Step title="Let Latitude cluster issues">
-    Failed annotations, flagger matches, evaluation failures, and custom scores become [scores](../scores/overview). Latitude groups similar failed scores into [issues](../issues/overview): recurring failure patterns with names, descriptions, examples, trends, and lifecycle states.
+    Failed annotations, flagger matches, evaluation failures, and custom scores become [scores](../scores/overview). Latitude groups similar failed scores into [signals](../signals/overview): recurring failure patterns with names, descriptions, examples, trends, and lifecycle states.
   </Step>
   <Step title="Triage and monitor">
-    Triage issues on the Issues page: inspect example traces, set priority, and resolve noise. Latitude watches the issue lifecycle for you with three built-in [monitors](../monitors/overview) that notify your team when an issue is discovered, when it regresses, and when it escalates. Notifications can go to in-app, email, or Slack.
+    Triage issues on the Signals page: inspect example traces, set priority, and resolve noise. Latitude watches the signal lifecycle for you with three built-in [monitors](../monitors/overview) that notify your team when an issue is discovered, when it regresses, and when it escalates. Notifications can go to in-app, email, or Slack.
 
     You can also generate [evaluations](../evaluations/overview) that score the behaviour on live traffic, and point your own monitors at a saved search to be alerted when matching traces start arriving or spike.
   </Step>
@@ -44,7 +44,7 @@ If you are setting up Latitude for the first time:
 2. Add `userId` and `sessionId` so traces can be grouped by user and conversation.
 3. On the Traces page, search for one failure mode your team already cares about.
 4. Annotate representative traces with specific feedback.
-5. Watch the Issues page for clustered patterns, and let the built-in monitors notify you.
+5. Watch the Signals page for clustered patterns, and let the built-in monitors notify you.
 6. Generate evaluations for the issues you want to score continuously.
 
 ## Why this works

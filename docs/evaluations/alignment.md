@@ -58,4 +58,4 @@ This process keeps automated monitoring grounded in human judgment.
 - [Annotations](../annotations/overview): How human review produces alignment signal
 - [Flaggers](../annotations/flaggers): Automatic annotators that contribute signal
 - [Search](../search/overview): Build cohorts of traces to annotate
-- [Issues](../issues/overview): How failed evaluations become trackable issues
+- [Signals](../signals/overview): How failed evaluations become trackable issues

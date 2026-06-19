@@ -1,11 +1,11 @@
 ---
 title: Core Concepts
-description: "Understand Latitude's core concepts: projects, spans, traces, sessions, search, scores, evaluations, and issues."
+description: "Understand Latitude's core concepts: projects, spans, traces, sessions, search, scores, evaluations, and signals."
 ---
 
 # Core Concepts
 
-Latitude is organized around a small set of concepts that connect production telemetry to issue discovery. A project receives agent activity as spans, traces, and sessions; search helps you find relevant traces; scores record judgments about trace quality; evaluations monitor known behaviours; and issues group repeated failures into trackable problems.
+Latitude is organized around a small set of concepts that connect production telemetry to signal discovery. A project receives agent activity as spans, traces, and sessions; search helps you find relevant traces; scores record judgments about trace quality; evaluations monitor known behaviours; and signals group repeated failures into trackable problems.
 
 ```text
 Project
@@ -15,7 +15,7 @@ Project
 ├─ Search over traces
 ├─ Scores attached to traces
 ├─ Evaluations monitoring traces
-└─ Issues grouped from failed scores
+└─ Signals grouped from failed scores
 ```
 
 ## Projects
@@ -27,12 +27,12 @@ Project-scoped data includes:
 - spans, traces, and sessions
 - search and saved searches
 - scores from annotations, evaluations, flaggers, and custom checks
-- issues discovered from failed scores
+- signals discovered from failed scores
 - evaluations and simulations
 - project settings such as monitoring behaviour
 
 <Frame>
-  <img src="/images/getting-started/projects.png" alt="Projects page showing a list of projects with issues, datasets, and trace counts" />
+  <img src="/images/getting-started/projects.png" alt="Projects page showing a list of projects with signals, datasets, and trace counts" />
 </Frame>
 
 Projects belong to organizations. Organization membership, API keys, and settings control who can access a project and how defaults cascade.
@@ -61,9 +61,9 @@ Traces are the main unit used across Latitude:
 - search returns matching traces
 - annotations, scores, and evaluations attach to traces
 - flaggers run on completed traces
-- issues group related failed trace signals
+- signals group related failed trace signals
 
-Latitude waits for a trace to stop receiving new spans before treating it as complete. Downstream workflows such as search indexing, flaggers, evaluations, scores, and issue discovery run on completed traces so they do not act on partial executions.
+Latitude waits for a trace to stop receiving new spans before treating it as complete. Downstream workflows such as search indexing, flaggers, evaluations, scores, and signal discovery run on completed traces so they do not act on partial executions.
 
 ## Sessions
 
@@ -101,15 +101,15 @@ Scores answer questions such as:
 - Did this trace pass or fail a quality check?
 - What feedback explains the verdict?
 - Which signal source produced the verdict?
-- Should this failure contribute to issue discovery?
+- Should this failure contribute to signal discovery?
 
-Failed, eligible scores are the primary input for issue discovery. Scores also power analytics and help teams compare automated judgments with human feedback.
+Failed, eligible scores are the primary input for signal discovery. Scores also power analytics and help teams compare automated judgments with human feedback.
 
-## Issues
+## Signals
 
-An **issue** is a recurring failure pattern discovered from failed scores. Instead of leaving failures as isolated examples, Latitude groups similar failures into named issues with examples, trends, affected users, lifecycle states, and linked evaluations.
+An **signal** is a recurring failure pattern discovered from failed scores. Instead of leaving failures as isolated examples, Latitude groups similar failures into named signals with examples, trends, affected users, lifecycle states, and linked evaluations.
 
-Issues help teams:
+Signals help teams:
 
 - triage new and escalating production problems
 - inspect representative traces for the failure pattern
@@ -117,21 +117,21 @@ Issues help teams:
 - generate evaluations that monitor the same failure mode on future traces
 - catch regressions after a fix ships
 
-Issue states include **new**, **escalating**, **resolved**, **regressed**, and **ignored**. An issue can have multiple states at once, such as new and escalating.
+Signal states include **new**, **escalating**, **resolved**, **regressed**, and **ignored**. An signal can have multiple states at once, such as new and escalating.
 
 ## Evaluations
 
-An **evaluation** is an automated monitor that checks traces for a specific behaviour or quality criterion. Evaluations run on completed traces and produce scores, so their results feed the same analytics and issue discovery workflows as annotations, flaggers, and custom checks.
+An **evaluation** is an automated monitor that checks traces for a specific behaviour or quality criterion. Evaluations run on completed traces and produce scores, so their results feed the same analytics and signal discovery workflows as annotations, flaggers, and custom checks.
 
 Evaluations help teams:
 
 - monitor known failure modes on live traffic
 - measure whether a fix reduced or eliminated a behaviour
-- catch regressions after an issue is resolved
-- turn important issues into ongoing monitors
+- catch regressions after an signal is resolved
+- turn important signals into ongoing monitors
 - compare automated judgments with human annotations through alignment metrics
 
-Latitude can generate evaluations from issues, then use human feedback to keep those evaluations aligned with the team's judgment.
+Latitude can generate evaluations from signals, then use human feedback to keep those evaluations aligned with the team's judgment.
 
 ## How the concepts fit together
 
@@ -141,13 +141,13 @@ Latitude can generate evaluations from issues, then use human feedback to keep t
 4. Related traces can be grouped into **sessions**.
 5. **Search** finds traces that match behaviours your team cares about.
 6. Annotations, flaggers, **evaluations**, and custom checks create **scores** on traces.
-7. **Evaluations** monitor known behaviours and can be generated from important issues.
-8. Failed scores cluster into **issues** that your team can triage, monitor, and fix.
+7. **Evaluations** monitor known behaviours and can be generated from important signals.
+8. Failed scores cluster into **signals** that your team can triage, monitor, and fix.
 
 ## Next steps
 
 - [Start tracing](../telemetry/start-tracing): send your first spans and traces to Latitude.
 - [Observability](../observability/overview): inspect traces, sessions, and telemetry metadata.
 - [Search](../search/overview): find traces by meaning, exact text, and filters.
-- [Evaluations](../evaluations/overview): monitor known behaviours and issue patterns.
-- [Issue Discovery](../issues/overview): understand how failed scores become issues.
+- [Evaluations](../evaluations/overview): monitor known behaviours and signal patterns.
+- [Signals](../signals/overview): understand how failed scores become signals.

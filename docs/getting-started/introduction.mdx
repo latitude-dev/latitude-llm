@@ -1,13 +1,13 @@
 ---
 title: Latitude Overview
-description: Understand what Latitude is, why teams use its MIT-licensed open-source platform, and how observability, search, and issues work together.
+description: Understand what Latitude is, why teams use its MIT-licensed open-source platform, and how observability, search, and signals work together.
 ---
 
 # Latitude Overview
 
-Latitude is an **open-source, MIT-licensed** platform for improving production AI agents. It helps teams capture real agent traffic, find important behaviours across that traffic, and turn repeated failures into trackable issues.
+Latitude is an **open-source, MIT-licensed** platform for improving production AI agents. It helps teams capture real agent traffic, find important behaviours across that traffic, and turn repeated failures into trackable signals.
 
-The core workflow is simple: **observe what happened, search for what matters, track recurring issues, and monitor whether fixes work**.
+The core workflow is simple: **observe what happened, search for what matters, track recurring signals, and monitor whether fixes work**.
 
 <Frame>
   <iframe
@@ -62,26 +62,26 @@ Use search to find cohorts such as:
 
 Learn more in [Search](../search/overview) and [Saved Searches](../search/saved-searches).
 
-## Issues
+## Signals
 
-Issues are recurring failure patterns discovered from failed signals. Human annotations, built-in flaggers, evaluations, and custom scores can all identify bad behaviour. Latitude groups similar failures into issues with examples, trends, affected users, lifecycle states, and linked monitors.
+Signals are recurring failure patterns discovered from failed scores. Human annotations, built-in flaggers, evaluations, and custom scores can all identify bad behaviour. Latitude groups similar failures into signals with examples, trends, affected users, lifecycle states, and linked monitors.
 
-Use issues to:
+Use signals to:
 
 - triage new and escalating production problems
 - inspect example traces that explain the failure pattern
 - distinguish noise from problems worth fixing
-- resolve or ignore issues as part of your team workflow
+- resolve or ignore signals as part of your team workflow
 - generate evaluations that keep monitoring for the same failure mode
 
 <Frame>
   <img
     src="/images/issues/issues-list.png"
-    alt="Latitude issues page showing recurring production failure patterns"
+    alt="Latitude signals page showing recurring production failure patterns"
   />
 </Frame>
 
-Learn more in [Issue Discovery](../issues/overview), [Issue Management](../issues/management), and [Evaluations](../evaluations/overview).
+Learn more in [Signals](../signals/overview), [Signal management](../signals/management), and [Evaluations](../evaluations/overview).
 
 ## Why Latitude?
 
@@ -91,30 +91,30 @@ Latitude is built around that loop:
 
 - **Agent-native telemetry**: inspect multi-step agent behaviour, not just isolated API calls.
 - **Semantic discovery**: search by meaning across production conversations.
-- **Issue-centric workflow**: turn failures into named, trackable problems instead of scattered examples.
+- **Signal-centric workflow**: turn failures into named, trackable problems instead of scattered examples.
 - **Human-aligned monitoring**: use annotations, evaluations, and scores together so automated monitoring stays connected to human judgment.
 - **Open source and MIT licensed**: run, inspect, self-host, fork, and contribute to the platform your team depends on.
 
 ## How Latitude is different
 
-Most LLM observability platforms focus on one narrow part of the production quality loop. Tools such as Langfuse, Datadog, Sentry, and PostHog are useful for visibility, evaluation, analytics, or feedback workflows, but they usually leave the work of turning scattered signals into trackable AI-agent issues to the team using them.
+Most LLM observability platforms focus on one narrow part of the production quality loop. Tools such as Langfuse, Datadog, Sentry, and PostHog are useful for visibility, evaluation, analytics, or feedback workflows, but they usually leave the work of turning scattered findings into trackable AI-agent signals to the team using them.
 
-Latitude is built around **LLM issue discovery**. Observability, semantic search, annotations, flaggers, scores, and evaluations are designed to work together automatically so teams can track production agent failures with minimal manual setup.
+Latitude is built around **LLM signal discovery**. Observability, semantic search, annotations, flaggers, scores, and evaluations are designed to work together automatically so teams can track production agent failures with minimal manual setup.
 
 The difference is the combined workflow:
 
 - **Flaggers** detect common failure categories automatically, such as frustration, refusal, jailbreaking, tool errors, and empty responses.
 - **Semantic search** helps teams find product-specific behaviours and failure modes across real conversations.
-- **Annotations** turn human review into structured signal that can create or refine issues.
-- **Automatically human-aligned evaluations** convert important issue patterns into monitors that stay connected to human judgment.
-- **Issues** bring those signals together into named, prioritized, lifecycle-managed production failure patterns.
+- **Annotations** turn human review into structured input that can create or refine signals.
+- **Automatically human-aligned evaluations** convert important signal patterns into monitors that stay connected to human judgment.
+- **Signals** bring those findings together into named, prioritized, lifecycle-managed production failure patterns.
 
-Instead of only showing traces, only running evaluations, or only collecting annotations, Latitude combines these primitives into an issue-centric workflow for finding, tracking, fixing, and monitoring AI agent failures in production.
+Instead of only showing traces, only running evaluations, or only collecting annotations, Latitude combines these primitives into a signal-centric workflow for finding, tracking, fixing, and monitoring AI agent failures in production.
 
 ## Getting started
 
 - [Start tracing](../telemetry/start-tracing): connect your agent and send your first traces to Latitude.
-- [How to use Latitude](./how-to-use-latitude): follow the recommended workflow for finding, tracking, and fixing production issues.
+- [How to use Latitude](./how-to-use-latitude): follow the recommended workflow for finding, tracking, and fixing production signals.
 
 ## Community & contact
 
