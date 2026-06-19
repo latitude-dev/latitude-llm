@@ -324,6 +324,52 @@ describe("SpanRepository", () => {
     })
   })
 
+  describe("findIngestedAtFloorForRecentLimit", () => {
+    const WINDOW_END = new Date("2026-01-01T02:00:00.000Z")
+
+    const insertFive = () =>
+      runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({ span_id: "1111111111111111", ingested_at: "2026-01-01 00:10:00.000" }),
+          makeSpanRow({ span_id: "2222222222222222", ingested_at: "2026-01-01 00:20:00.000" }),
+          makeSpanRow({ span_id: "3333333333333333", ingested_at: "2026-01-01 00:30:00.000" }),
+          makeSpanRow({ span_id: "4444444444444444", ingested_at: "2026-01-01 00:40:00.000" }),
+          makeSpanRow({ span_id: "5555555555555555", ingested_at: "2026-01-01 00:50:00.000" }),
+        ]),
+      )
+
+    it("returns the (limit+1)-th most recent ingested_at as the exclusive floor", async () => {
+      await insertFive()
+
+      const floor = await runCh(
+        repo.findIngestedAtFloorForRecentLimit({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          windowEnd: WINDOW_END,
+          limit: 2,
+        }),
+      )
+
+      // The 2 most recent are 00:50 and 00:40; the floor (3rd most recent) is 00:30.
+      expect(floor).toEqual(new Date("2026-01-01T00:30:00.000Z"))
+    })
+
+    it("returns null when there are no more than `limit` records (no cap needed)", async () => {
+      await insertFive()
+
+      const floor = await runCh(
+        repo.findIngestedAtFloorForRecentLimit({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          windowEnd: WINDOW_END,
+          limit: 5,
+        }),
+      )
+
+      expect(floor).toBeNull()
+    })
+  })
+
   describe("findMessagesForSession", () => {
     const SESSION_ID = SessionId("session-replay")
     const TRACE_A = TraceId("cccccccccccccccccccccccccccccccc")

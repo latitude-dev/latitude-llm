@@ -50,6 +50,14 @@ export const createFakeDestinationRepository = (seed: readonly Destination[] = [
         if (!row) return
         rows[index] = { ...row, status, consecutiveFailures, lastFailureMessage, updatedAt: new Date() }
       }),
+    updateStatus: ({ id, status }) =>
+      Effect.sync(() => {
+        const index = rows.findIndex((r) => r.id === id)
+        if (index < 0) return
+        const row = rows[index]
+        if (!row) return
+        rows[index] = { ...row, status, updatedAt: new Date() }
+      }),
     deleteByProjectId: (projectId: ProjectId) =>
       Effect.sync(() => {
         const deleted = rows.filter((r) => r.projectId === projectId).map((r) => r.id)

@@ -15,7 +15,7 @@ import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testi
 import type { SpanDetail } from "@domain/spans"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { POSTHOG_US_INGESTION_HOST } from "../constants.ts"
+import { DESTINATION_IDLE_PAUSE_AFTER_EMPTY_RUNS, POSTHOG_US_INGESTION_HOST } from "../constants.ts"
 import type { Destination } from "../entities/destination.ts"
 import { createDestination } from "../entities/destination.ts"
 import { defaultSourceConfig } from "../entities/destination-source.ts"
@@ -284,7 +284,44 @@ describe("runDestinationSyncUseCase", () => {
     expect(cursorRows[0]?.lastRunAt).toEqual(NOW)
     // Empty runs never touch destination quarantine bookkeeping.
     expect(destinationRows[0]?.consecutiveFailures).toBe(0)
+    expect(destinationRows[0]?.status).toBe("active")
     expect(syncRunRows).toHaveLength(0)
+  })
+
+  it("auto-pauses the destination once the idle threshold of empty runs is reached and resets the counter", async () => {
+    const { destinationRows, cursorRows, layer } = setup({
+      cursor: makeCursor({ consecutiveEmptyRuns: DESTINATION_IDLE_PAUSE_AFTER_EMPTY_RUNS - 1 }),
+    })
+
+    const res = await Effect.runPromise(
+      runDestinationSyncUseCase({ destinationId: DESTINATION_ID, source: SOURCE, now: NOW }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    // The window was still empty; auto-pause is a side effect, not a distinct outcome.
+    expect(res.outcome).toBe("empty")
+    expect(destinationRows[0]?.status).toBe("paused")
+    // Counter resets so a manual resume grants a fresh idle budget (no immediate re-pause).
+    expect(cursorRows[0]?.consecutiveEmptyRuns).toBe(0)
+    expect(cursorRows[0]?.lastRunAt).toEqual(NOW)
+    // Idle never counts toward quarantine.
+    expect(destinationRows[0]?.consecutiveFailures).toBe(0)
+  })
+
+  it("does not pause one empty run before the idle threshold", async () => {
+    const { destinationRows, cursorRows, layer } = setup({
+      cursor: makeCursor({ consecutiveEmptyRuns: DESTINATION_IDLE_PAUSE_AFTER_EMPTY_RUNS - 2 }),
+    })
+
+    await Effect.runPromise(
+      runDestinationSyncUseCase({ destinationId: DESTINATION_ID, source: SOURCE, now: NOW }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(destinationRows[0]?.status).toBe("active")
+    expect(cursorRows[0]?.consecutiveEmptyRuns).toBe(DESTINATION_IDLE_PAUSE_AFTER_EMPTY_RUNS - 1)
   })
 
   it("delivers a window, advances the compound cursor, and resets idle backoff", async () => {
@@ -345,7 +382,12 @@ describe("runDestinationSyncUseCase", () => {
     const nextCursor: SourceCursor = { watermark: CURSOR_AT, id: "aaaaaaaaaaaaaaa1" }
     const { destinationRows, cursorRows, syncRunRows, layer } = setup({
       window: { records, nextCursor },
-      deliveryFailure: new RetryableDeliveryError({ kind: "posthog", reason: "upstream_5xx", upstreamStatus: 503 }),
+      deliveryFailure: new RetryableDeliveryError({
+        kind: "posthog",
+        reason: "server_error",
+        detail: "upstream_server_error",
+        upstreamStatus: 503,
+      }),
     })
 
     const error = await Effect.runPromise(
@@ -371,7 +413,8 @@ describe("runDestinationSyncUseCase", () => {
       window: { records, nextCursor },
       deliveryFailure: new NonRetryableDeliveryError({
         kind: "posthog",
-        reason: "invalid_api_key",
+        reason: "auth",
+        detail: "invalid_api_key",
         upstreamStatus: 401,
       }),
     })
@@ -413,7 +456,8 @@ describe("runDestinationSyncUseCase", () => {
       window: { records, nextCursor },
       deliveryFailure: new NonRetryableDeliveryError({
         kind: "posthog",
-        reason: "invalid_api_key",
+        reason: "auth",
+        detail: "invalid_api_key",
         upstreamStatus: 401,
       }),
     })
@@ -428,6 +472,33 @@ describe("runDestinationSyncUseCase", () => {
     expect(res.quarantineEvent).toBeNull()
     expect(destinationRows[0]?.status).toBe("active")
     expect(destinationRows[0]?.consecutiveFailures).toBe(2)
+  })
+
+  it("fails the window on a rate_limited terminal failure without counting toward quarantine", async () => {
+    const records = [stubSpan("aaaaaaaaaaaaaaa1", CURSOR_AT)]
+    const nextCursor: SourceCursor = { watermark: CURSOR_AT, id: "aaaaaaaaaaaaaaa1" }
+    const { destinationRows, cursorRows, syncRunRows, layer } = setup({
+      seed: makeDestination({ consecutiveFailures: 4 }),
+      window: { records, nextCursor },
+      // A second adapter could surface a throttle as terminal; the engine still must not quarantine on it.
+      deliveryFailure: new NonRetryableDeliveryError({ kind: "posthog", reason: "rate_limited", upstreamStatus: 429 }),
+    })
+
+    const res = await Effect.runPromise(
+      runDestinationSyncUseCase({ destinationId: DESTINATION_ID, source: SOURCE, now: NOW }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(res.outcome).toBe("failed")
+    expect(res.quarantined).toBe(false)
+    expect(res.quarantineEvent).toBeNull()
+    expect(destinationRows[0]?.status).toBe("active")
+    expect(destinationRows[0]?.consecutiveFailures).toBe(4) // unchanged at the threshold boundary
+    // Cursor untouched, last_run_at bumped, and the failure is still recorded in run history.
+    expect(cursorRows[0]?.watermarkId).toBe("")
+    expect(cursorRows[0]?.lastRunAt).toEqual(NOW)
+    expect(syncRunRows[0]?.status).toBe("failed")
   })
 
   it("aborts without bookkeeping when the optimistic cursor write is stale", async () => {

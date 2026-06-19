@@ -22,9 +22,11 @@ export interface FakeSourceWindowInput {
 export const createFakeDestinationSourceReader = (
   windowFor: (input: FakeSourceWindowInput) => SourceWindow<SpanDetail>,
   sample: readonly SpanDetail[] = [],
+  recentLimitFloor: Date | null = null,
 ): DestinationSourceReader<SpanDetail> => ({
   listWindow: ({ cursor, windowEnd, limit }) => Effect.succeed(windowFor({ cursor, windowEnd, limit })),
   sampleLatest: ({ limit }) => Effect.succeed(sample.slice(0, limit)),
+  recentLimitFloor: () => Effect.succeed(recentLimitFloor),
 })
 
 /** Wraps a single reader into a registry; v1 has only the `spans` source. */
@@ -38,6 +40,8 @@ export const fakeSourceReaderRegistry = (
 export const staticSourceReader = (window: {
   records: readonly SpanDetail[]
   nextCursor: SourceCursor | null
-}): DestinationSourceReader<SpanDetail> => createFakeDestinationSourceReader(() => window, window.records)
+  recentLimitFloor?: Date | null
+}): DestinationSourceReader<SpanDetail> =>
+  createFakeDestinationSourceReader(() => window, window.records, window.recentLimitFloor ?? null)
 
 export const SPANS_SOURCE: DestinationSource = "spans"

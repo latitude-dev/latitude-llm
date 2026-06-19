@@ -2,6 +2,7 @@ import type { DestinationId, RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { DESTINATION_QUARANTINE_FAILURE_THRESHOLD } from "../constants.ts"
 import type { DestinationSource } from "../entities/destination-source.ts"
+import { type DeliveryErrorReason, isThrottlingDeliveryReason } from "../errors.ts"
 import { DestinationRepository } from "../ports/destination-repository.ts"
 import { DestinationSourceStateRepository } from "../ports/destination-source-state-repository.ts"
 import type { DestinationQuarantineEvent } from "./run-destination-sync.ts"
@@ -13,10 +14,12 @@ export interface RecordDestinationSyncFailureInput {
   readonly now: Date
   /** Sanitized failure message: HTTP status + our taxonomy, never upstream response bodies. */
   readonly message: string
+  /** Typed reason from the exhausted delivery error. `rate_limited` backs off instead of counting toward quarantine. */
+  readonly reason?: DeliveryErrorReason
 }
 
 export interface RecordDestinationSyncFailureResult {
-  readonly outcome: "recorded" | "quarantined" | "skipped"
+  readonly outcome: "recorded" | "quarantined" | "throttled" | "skipped"
   readonly consecutiveFailures: number
   /** Set only on the call that flips the destination to quarantined; null otherwise. */
   readonly quarantineEvent: DestinationQuarantineEvent | null
@@ -25,13 +28,15 @@ export interface RecordDestinationSyncFailureResult {
 /**
  * Terminal-failure accounting for a `runSync` job that exhausted its BullMQ
  * retries. Mirrors the non-retryable branch of {@link runDestinationSyncUseCase}:
- * one terminal failure of any kind increments the destination's
- * `consecutive_failures` and quarantines at the threshold, so a chronically
- * unreachable host stops being scheduled instead of retrying forever. The
- * cursor position is never touched, but the source's `last_run_at` is bumped so
- * the sweep doesn't immediately re-enqueue the just-failed pair. A destination
- * that is no longer active (paused, already quarantined, or deleted mid-retry)
- * is left untouched.
+ * one terminal failure increments the destination's `consecutive_failures` and
+ * quarantines at the threshold, so a chronically unreachable host stops being
+ * scheduled instead of retrying forever. A throttle reason (`rate_limited`) is
+ * the exception — the destination is healthy and the upstream is throttling, so
+ * the failure does not count toward quarantine; the run still fails its window
+ * and the sweep re-enqueues next interval. The cursor position is never touched,
+ * but the source's `last_run_at` is bumped so the sweep doesn't immediately
+ * re-enqueue the just-failed pair. A destination that is no longer active
+ * (paused, already quarantined, or deleted mid-retry) is left untouched.
  */
 export const recordDestinationSyncFailureUseCase = (
   input: RecordDestinationSyncFailureInput,
@@ -54,8 +59,9 @@ export const recordDestinationSyncFailureUseCase = (
       } as const
     }
 
-    const consecutiveFailures = destination.consecutiveFailures + 1
-    const quarantined = consecutiveFailures >= DESTINATION_QUARANTINE_FAILURE_THRESHOLD
+    const throttled = input.reason !== undefined && isThrottlingDeliveryReason(input.reason)
+    const consecutiveFailures = throttled ? destination.consecutiveFailures : destination.consecutiveFailures + 1
+    const quarantined = !throttled && consecutiveFailures >= DESTINATION_QUARANTINE_FAILURE_THRESHOLD
 
     yield* destinations.updateQuarantineState({
       id: destination.id,
@@ -79,7 +85,7 @@ export const recordDestinationSyncFailureUseCase = (
     }
 
     return {
-      outcome: quarantined ? "quarantined" : "recorded",
+      outcome: quarantined ? "quarantined" : throttled ? "throttled" : "recorded",
       consecutiveFailures,
       quarantineEvent: quarantined
         ? {

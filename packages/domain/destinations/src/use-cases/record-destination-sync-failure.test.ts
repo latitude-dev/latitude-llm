@@ -114,6 +114,67 @@ describe("recordDestinationSyncFailureUseCase", () => {
     })
   })
 
+  it("does not count a rate_limited exhaustion toward quarantine (healthy destination, just throttled)", async () => {
+    const { rows, cursorRows, layer } = setup(makeDestination({ consecutiveFailures: 3 }), { consecutiveEmptyRuns: 2 })
+
+    const result = await Effect.runPromise(
+      recordDestinationSyncFailureUseCase({
+        destinationId: DESTINATION_ID,
+        source: SOURCE,
+        now: NOW,
+        message: "[429] rate_limited",
+        reason: "rate_limited",
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(result.outcome).toBe("throttled")
+    expect(result.consecutiveFailures).toBe(3) // unchanged — no increment toward quarantine
+    expect(result.quarantineEvent).toBeNull()
+    expect(rows[0]?.status).toBe("active")
+    expect(rows[0]?.consecutiveFailures).toBe(3)
+    expect(cursorRows[0]?.lastRunAt).toEqual(NOW) // sweep re-enqueues next interval
+  })
+
+  it("does not quarantine on rate_limited even at the failure threshold boundary", async () => {
+    const { rows, layer } = setup(
+      makeDestination({ consecutiveFailures: DESTINATION_QUARANTINE_FAILURE_THRESHOLD - 1 }),
+    )
+
+    const result = await Effect.runPromise(
+      recordDestinationSyncFailureUseCase({
+        destinationId: DESTINATION_ID,
+        source: SOURCE,
+        now: NOW,
+        message: "[429] rate_limited",
+        reason: "rate_limited",
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(result.outcome).toBe("throttled")
+    expect(rows[0]?.status).toBe("active")
+    expect(rows[0]?.consecutiveFailures).toBe(DESTINATION_QUARANTINE_FAILURE_THRESHOLD - 1)
+  })
+
+  it("still quarantines a genuine fault (non-throttle reason) at the threshold", async () => {
+    const { rows, layer } = setup(
+      makeDestination({ consecutiveFailures: DESTINATION_QUARANTINE_FAILURE_THRESHOLD - 1 }),
+    )
+
+    const result = await Effect.runPromise(
+      recordDestinationSyncFailureUseCase({
+        destinationId: DESTINATION_ID,
+        source: SOURCE,
+        now: NOW,
+        message: "[401] invalid_api_key",
+        reason: "auth",
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(result.outcome).toBe("quarantined")
+    expect(rows[0]?.status).toBe("quarantined")
+    expect(result.consecutiveFailures).toBe(DESTINATION_QUARANTINE_FAILURE_THRESHOLD)
+  })
+
   it("leaves a non-active destination untouched", async () => {
     const { rows, layer } = setup(makeDestination({ status: "paused", consecutiveFailures: 2 }))
 

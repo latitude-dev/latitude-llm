@@ -20,7 +20,7 @@ export type TestDestinationConnectionResult =
       readonly status: "failed"
       /** Transient failure (transport, 5xx, 429): retrying may succeed. `false` means fix the config/key. */
       readonly retryable: boolean
-      /** Sanitized adapter taxonomy (e.g. `invalid_api_key`), never an upstream response body. */
+      /** Sanitized adapter detail (e.g. `invalid_api_key`), falling back to the generic category; never an upstream response body. */
       readonly reason: string
       readonly upstreamStatus?: number
     }
@@ -42,7 +42,7 @@ export const testDestinationConnectionUseCase = (input: TestDestinationConnectio
         onFailure: (error): TestDestinationConnectionResult => ({
           status: "failed",
           retryable: isRetryableDeliveryError(error),
-          reason: error.reason,
+          reason: error.detail ?? error.reason,
           ...(error.upstreamStatus === undefined ? {} : { upstreamStatus: error.upstreamStatus }),
         }),
       }),

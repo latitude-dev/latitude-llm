@@ -31,6 +31,10 @@ export interface DestinationRepositoryShape {
    * advance, so a stale run cannot drag a cursor while recording a failure.
    */
   updateQuarantineState(input: UpdateDestinationQuarantineStateInput): Effect.Effect<void, RepositoryError, SqlClient>
+  updateStatus(input: {
+    readonly id: DestinationId
+    readonly status: DestinationStatus
+  }): Effect.Effect<void, RepositoryError, SqlClient>
   deleteByProjectId(projectId: ProjectId): Effect.Effect<readonly DestinationId[], RepositoryError, SqlClient>
 }
 

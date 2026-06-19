@@ -64,7 +64,8 @@ Vendor mechanics that live in the PostHog adapter (not the engine): flagging old
 ## Reliability behaviors
 
 - **Quarantine on chronic failure.** A destination that accumulates consecutive terminal failures (default threshold: 5) is quarantined and stops being scheduled, so a decommissioned target doesn't retry forever. Editing credentials or host resets it. Quarantine and credentials are **destination-level** (shared across its sources); per-run faults like a mapping error are not grounds for quarantine.
-- **Idle backoff.** A source that reads zero records backs off exponentially toward an hourly ceiling, so a dormant project converges to one cheap probe per hour and snaps back when data returns.
+- **Throttle ≠ broken.** A rate-limited response (HTTP 429) means "slow down," not "broken," so it must not count toward quarantine. Delivery errors carry a generic, destination-agnostic reason **category** (`rate_limited | server_error | transport | auth | config`), with the vendor-specific code in a separate `detail` field for the message/UI. A terminal failure whose category is `rate_limited` fails its window (cursor untouched) and the sweep re-enqueues next interval, but never increments the failure counter — a healthy destination being throttled is retried until it catches up, not quarantined. The throttle-vs-quarantine decision lives in the **engine**, keyed off the category, so a second adapter inherits it by mapping its own 429s to `rate_limited`; the PostHog adapter additionally honors `Retry-After` and re-sends a throttled chunk in-transport a few times before deferring to the queue.
+- **Idle backoff.** A source that reads zero records backs off exponentially (`interval × 2^consecutive_empty_runs`, capped at an hourly ceiling), resetting to full cadence on the first non-empty run. The point is **cost**: a configured-but-dormant project (customer stopped sending traces but kept the destination) would otherwise cost an empty ClickHouse window-scan *every interval forever* — ~288/day at the 5-min default — just to re-confirm "still nothing." Backoff cuts a dead project to ~24/day (one probe/hour, a >10× reduction) while an active project, which never reads empty, pays nothing. The tradeoff is **wake-up latency**: when a dormant project resumes, its first new data waits up to the ceiling (plus safety lag) for the next scheduled probe to discover it — bounded by design. Forcing an immediate pickup means resetting `consecutive_empty_runs` to 0. A future `TracesIngested` consumer that resets the backoff the instant new data arrives would erase even that latency (see open questions).
 - **Payload exclusion.** A per-source toggle nulls *all* content-bearing fields (inputs, outputs, tool definitions, error messages → error type only) in one pass, while metrics, cost, ids, and timing always flow. Off by default (content is the product value); present from day one because it's a compliance blocker for some customers. This is field exclusion, not PII redaction.
 - **Oversized events.** An event over the per-event size limit has its content truncated (and is marked as such); if still too large it's dropped and counted. The cursor always advances — one giant record can never wedge a destination forever.
 - **Sandbox exclusion.** Sandbox/Test Mode organizations cannot create destinations and are filtered out of scheduling — sandbox data never leaves the platform.
@@ -78,6 +79,7 @@ The binding concern for backfill is **resource footprint, not reach**: a single 
 - A **budgeted low-priority lane** (a separate queue at low concurrency) so backfill can never starve live sync or other orgs.
 - A **hard one-chain-per-source guard** (atomic claim) so racing triggers can't double-run.
 - **Failure is visible**: a terminal backfill failure writes an audit row and clears the in-flight marker, so a dead chain doesn't vanish silently.
+- A **hard cap of 1,000,000 records per backfill.** Both backfill triggers — connecting a destination to a project that already has months of history, and resuming one that was paused for months — can otherwise enqueue an unbounded import across a source's enabled history. This is a deliberate **operational/product bound** — how much history we auto-import and how long a single backfill may occupy the lane and read ClickHouse — **not** a PostHog rate-safety limit. PostHog exposes **no rate limit on the `/batch/` capture endpoint** ([docs](https://posthog.com/docs/api): *"for public POST-only endpoints like event capture … there are no rate limits"*; only a 20 MB body cap per batch), so there is no published throughput number to size against, and rate-safety is already handled by chunking + the 429 backoff. 1M is chosen as a round, defensible bound ≈ 20 live-sync windows (50k records each); it is not derived from a measured PostHog ceiling. The cap keeps the **most recent** records: the initiator asks the source reader for the `(cap+1)`-th most recent record's watermark at or before the coverage edge and raises the backfill's lower bound to it, so the existing oldest-first chain then runs over only that newest-1M slice. History older than the cap is **not** auto-imported — the assumption being that recent history is what matters for a freshly-connected or just-resumed destination.
 
 Processing is **oldest-first** and must outrun retention deletion; this only risks data loss for the extreme tier where ingest rate exceeds backfill throughput.
 
@@ -99,9 +101,11 @@ The read/cursor/scheduling half of multi-source is **done** (the engine runs per
 | Sync interval (default / min / max) | 5 min / 1 min / 60 min |
 | Safety lag | 5 min (window ends at `now − 5min`) |
 | Max records per run | 50k (range 1k–50k) |
+| Max records per backfill | 1,000,000 (operational cap, not PostHog-derived) |
 | Quarantine threshold | 5 consecutive terminal failures (destination-level) |
 | Run retries | 5 attempts, exponential backoff (exhausting them = one terminal failure) |
 | Idle backoff ceiling | 1 hour (per source) |
+| Idle auto-pause | after 168 consecutive empty runs (≈ 7 days of inactivity) |
 | Sync-run retention | 30 days, pruned nightly |
 
 A dev-only override shortens the safety lag for fast local testing.
@@ -115,9 +119,8 @@ Destinations are created **only** through the project-settings UI — a delibera
 ## Open questions
 
 - **Backfill throughput constants.** The throughput model rests on an unmeasured per-delivery latency constant; re-measuring it against a high-volume project is the prerequisite to committing to further mitigation.
-- **Self-serve backfill cap.** What's the default volume above which a one-click backfill becomes paced-background or ops-gated rather than self-serve?
 - **Whale full-retention policy.** Is full-retention backfill for the largest enterprise tiers a product promise, or best-effort most-recent-N with clear messaging?
 - **Backfill concurrency.** Is concurrency a flat system budget or a product knob (enterprise buys more lane)?
-- **Rate-limiting vs. quarantine.** A throttled (rate-limited) destination is healthy, not broken, and should back off rather than count toward quarantine — the policy should live in the agnostic engine keyed off a typed error reason, not a vendor-specific branch. *(In progress.)*
 - **Silent credential revocation.** A key revoked *after* creation stops delivering silently (delivery is fire-and-forget and won't quarantine on a bad key). The deferred fix is a periodic connection-revalidation sweep.
 - **Ingest-lag alarm.** Records that become visible *behind* the watermark are lost to all destinations silently; this needs an alarm when ingestion-queue lag approaches the safety lag.
+- **Instant idle-backoff reset.** A dormant project's first new data waits up to the hourly ceiling for the next scheduled probe to discover it. A `TracesIngested` consumer that resets `consecutive_empty_runs` the instant new data arrives would erase that wake-up latency.

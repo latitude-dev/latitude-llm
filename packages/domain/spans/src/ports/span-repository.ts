@@ -148,6 +148,20 @@ export interface SpanRepositoryShape {
     readonly projectId: ProjectId
     readonly limit: number
   }): Effect.Effect<readonly SpanDetail[], RepositoryError, ChSqlClient>
+
+  /**
+   * `ingested_at` of the (`limit`+1)-th most recent deduped span at or before
+   * `windowEnd` — i.e. the exclusive lower bound that, fed as a window cursor,
+   * yields only the most recent `limit` spans. `null` when ≤ `limit` deduped
+   * spans exist at or before `windowEnd` (no cap needed). Powers the backfill
+   * record cap.
+   */
+  findIngestedAtFloorForRecentLimit(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly windowEnd: Date
+    readonly limit: number
+  }): Effect.Effect<Date | null, RepositoryError, ChSqlClient>
 }
 
 export interface SpanListOptions {

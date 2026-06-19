@@ -1,10 +1,10 @@
 import type { QueuePublishError } from "@domain/queue"
 import type { ChSqlClient, DestinationId, DestinationSyncRunId, RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
-import { DESTINATION_BACKFILL_STALE_MS } from "../constants.ts"
+import { DESTINATION_BACKFILL_STALE_MS, DESTINATION_MAX_RECORDS_PER_BACKFILL } from "../constants.ts"
 import type { DestinationSource } from "../entities/destination-source.ts"
 import { createDestinationSyncRun } from "../entities/destination-sync-run.ts"
-import type { DeliveryError } from "../errors.ts"
+import { type DeliveryError, isRetryableDeliveryError, sanitizedDeliveryFailureMessage } from "../errors.ts"
 import { type DeliveryWindow, DestinationDeliverers } from "../ports/destination-deliverer.ts"
 import { DestinationMappers } from "../ports/destination-mapper.ts"
 import { DestinationRepository } from "../ports/destination-repository.ts"
@@ -65,8 +65,10 @@ export type BackfillDestinationError = RepositoryError | QueuePublishError
 
 type InitiatorRequirements =
   | SqlClient
+  | ChSqlClient
   | DestinationRepository
   | DestinationSourceStateRepository
+  | DestinationSourceReaders
   | DestinationDeliverers
   | DestinationRetentionPolicy
 
@@ -148,7 +150,20 @@ export const backfillDestinationUseCase = (input: BackfillDestinationInput) =>
     // `start === null` means "as far back as retained", so the floor is the reach.
     const maxAgeMs = yield* (yield* DestinationRetentionPolicy).maxAgeMs(destination.organizationId)
     const floorMs = now.getTime() - maxAgeMs
-    const clampedStart = new Date(start === null ? floorMs : Math.max(start.getTime(), floorMs))
+    const retentionClampedStart = new Date(start === null ? floorMs : Math.max(start.getTime(), floorMs))
+
+    // Record cap: import only the most recent DESTINATION_MAX_RECORDS_PER_BACKFILL records.
+    // The reader gives the lower bound that holds at most the cap (newest first), or null when
+    // the whole range already fits; raise the start to it so we never run an unbounded import.
+    const reader = (yield* DestinationSourceReaders)[source]
+    const capFloor = yield* reader.recentLimitFloor({
+      organizationId: destination.organizationId,
+      projectId: destination.projectId,
+      end,
+      limit: DESTINATION_MAX_RECORDS_PER_BACKFILL,
+    })
+    const clampedStart =
+      capFloor && capFloor.getTime() > retentionClampedStart.getTime() ? capFloor : retentionClampedStart
 
     // Nothing before existing coverage → no work (e.g. a re-import of an already-covered range).
     if (clampedStart.getTime() >= end.getTime()) {
@@ -210,7 +225,7 @@ export interface RunBackfillWindowInput {
   readonly now: Date
 }
 
-export type RunBackfillWindowOutcome = "delivered" | "drained" | "skipped"
+export type RunBackfillWindowOutcome = "delivered" | "drained" | "skipped" | "failed"
 
 export interface RunBackfillWindowResult {
   readonly outcome: RunBackfillWindowOutcome
@@ -323,11 +338,50 @@ export const runBackfillWindowUseCase = (input: RunBackfillWindowInput) =>
     const deliveryWindow: DeliveryWindow = { start: cursor.watermark, end: next ? next.watermark : segmentEnd }
 
     const mapped = yield* mapper.toEvents(window.records, destination.id, sourceState.config)
-    const delivery = yield* deliverer.deliver(mapped.events, destination.config, destination.credentials, {
-      window: deliveryWindow,
-    })
+    const delivery = yield* deliverer
+      .deliver(mapped.events, destination.config, destination.credentials, { window: deliveryWindow })
+      .pipe(Effect.result)
 
-    const eventsDropped = mapped.dropped + delivery.dropped
+    if (delivery._tag === "Failure") {
+      const error = delivery.failure
+      // Retryable → propagate so BullMQ retries this window; exhausting retries records the
+      // failure and clears the marker via the worker's onFinalFailure hook.
+      if (isRetryableDeliveryError(error)) return yield* Effect.fail(error)
+
+      // Non-retryable (bad key/config) can never succeed — record a `failed` run and clear the
+      // in-flight marker now instead of burning DESTINATION_SYNC_MAX_ATTEMPTS retries. Mirrors the
+      // live path (runDestinationSyncUseCase). Coverage is left un-advanced; the chain stops.
+      const message = sanitizedDeliveryFailureMessage(error)
+      const failedRun = createDestinationSyncRun({
+        organizationId: destination.organizationId,
+        destinationId: destination.id,
+        source,
+        trigger: "backfill",
+        windowStart: deliveryWindow.start,
+        windowEnd: deliveryWindow.end,
+        status: "failed",
+        recordsRead: window.records.length,
+        eventsSent: 0,
+        eventsDropped: mapped.dropped,
+        error: message,
+        startedAt: now,
+        finishedAt: now,
+      })
+      yield* syncRuns.insert(failedRun)
+      yield* sourceStates.setBackfillStartedAt({ destinationId, source, at: null })
+      return {
+        outcome: "failed" as const,
+        destinationId: destination.id,
+        source,
+        recordsRead: window.records.length,
+        eventsSent: 0,
+        eventsDropped: mapped.dropped,
+        syncRunId: failedRun.id,
+        next: null,
+      }
+    }
+
+    const eventsDropped = mapped.dropped + delivery.success.dropped
     const run = createDestinationSyncRun({
       organizationId: destination.organizationId,
       destinationId: destination.id,
@@ -337,7 +391,7 @@ export const runBackfillWindowUseCase = (input: RunBackfillWindowInput) =>
       windowEnd: deliveryWindow.end,
       status: "succeeded",
       recordsRead: window.records.length,
-      eventsSent: delivery.delivered,
+      eventsSent: delivery.success.delivered,
       eventsDropped,
       error: null,
       startedAt: now,
@@ -366,7 +420,7 @@ export const runBackfillWindowUseCase = (input: RunBackfillWindowInput) =>
       destinationId: destination.id,
       source,
       recordsRead: window.records.length,
-      eventsSent: delivery.delivered,
+      eventsSent: delivery.success.delivered,
       eventsDropped,
       syncRunId: run.id,
       next: nextJob,

@@ -154,19 +154,26 @@ const stubSpan = (spanId: string, ingestedAt: Date): SpanDetail => ({
 })
 
 /** A reader that windows over a fixed record list exactly like the real spans reader (cursor exclusive, windowEnd inclusive). */
-const readerFromRecords = (records: readonly SpanDetail[]): DestinationSourceReader<SpanDetail> =>
-  createFakeDestinationSourceReader(({ cursor, windowEnd, limit }) => {
-    const page = records
-      .filter((r) => {
-        const w = r.ingestedAt.getTime()
-        const c = cursor.watermark.getTime()
-        return (w > c || (w === c && r.spanId > cursor.id)) && w <= windowEnd.getTime()
-      })
-      .sort((a, b) => a.ingestedAt.getTime() - b.ingestedAt.getTime() || (a.spanId < b.spanId ? -1 : 1))
-      .slice(0, limit)
-    const last = page[page.length - 1]
-    return { records: page, nextCursor: last ? { watermark: last.ingestedAt, id: last.spanId } : null }
-  }, records)
+const readerFromRecords = (
+  records: readonly SpanDetail[],
+  recentLimitFloor: Date | null = null,
+): DestinationSourceReader<SpanDetail> =>
+  createFakeDestinationSourceReader(
+    ({ cursor, windowEnd, limit }) => {
+      const page = records
+        .filter((r) => {
+          const w = r.ingestedAt.getTime()
+          const c = cursor.watermark.getTime()
+          return (w > c || (w === c && r.spanId > cursor.id)) && w <= windowEnd.getTime()
+        })
+        .sort((a, b) => a.ingestedAt.getTime() - b.ingestedAt.getTime() || (a.spanId < b.spanId ? -1 : 1))
+        .slice(0, limit)
+      const last = page[page.length - 1]
+      return { records: page, nextCursor: last ? { watermark: last.ingestedAt, id: last.spanId } : null }
+    },
+    records,
+    recentLimitFloor,
+  )
 
 interface SetupOpts {
   readonly records: readonly SpanDetail[]
@@ -175,6 +182,8 @@ interface SetupOpts {
   readonly destination?: Destination
   readonly state?: DestinationSourceState
   readonly deliveryFailure?: NonRetryableDeliveryError | RetryableDeliveryError
+  /** Cap floor the reader reports — simulates "the most-recent-N records start here". */
+  readonly recentLimitFloor?: Date | null
 }
 
 const setup = (opts: SetupOpts) => {
@@ -190,7 +199,7 @@ const setup = (opts: SetupOpts) => {
   )
   if (opts.deliveryFailure) failWith(opts.deliveryFailure)
   const { mapper } = createFakeDestinationMapper()
-  const reader = readerFromRecords(opts.records)
+  const reader = readerFromRecords(opts.records, opts.recentLimitFloor ?? null)
 
   const layer = Layer.mergeAll(
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORG_ID })),
@@ -339,6 +348,67 @@ describe("backfillDestinationUseCase (initiator)", () => {
     const floor = new Date(NOW.getTime() - 60 * 24 * 60 * 60 * 1000)
     expect(res.clampedStart).toEqual(floor)
     expect(jobs[0]?.cursor.watermark).toEqual(floor)
+  })
+
+  it("caps to the most recent records: raises the start to the reader's cap floor", async () => {
+    // Reader reports the most-recent-N records begin here — newer than the retention floor.
+    const capFloor = new Date(NOW.getTime() - 3 * 24 * 60 * 60 * 1000) // 3 days back
+    const { layer } = setup({ records: [], recentLimitFloor: capFloor })
+    const jobs: BackfillWindowJob[] = []
+
+    const res = await Effect.runPromise(
+      backfillDestinationUseCase({
+        destinationId: DESTINATION_ID,
+        source: SOURCE,
+        start: null, // would otherwise reach the retention floor (60 days)
+        end: NOW,
+        now: NOW,
+        publish: (job) => Effect.sync(() => jobs.push(job)),
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(res.outcome).toBe("enqueued")
+    expect(res.clampedStart).toEqual(capFloor) // capped to most-recent window, not the 60-day floor
+    expect(jobs[0]?.cursor.watermark).toEqual(capFloor)
+  })
+
+  it("does not raise the start when the history already fits under the cap (reader floor null)", async () => {
+    const { layer } = setup({ records: [], recentLimitFloor: null })
+    const jobs: BackfillWindowJob[] = []
+
+    const res = await Effect.runPromise(
+      backfillDestinationUseCase({
+        destinationId: DESTINATION_ID,
+        source: SOURCE,
+        start: null,
+        end: NOW,
+        now: NOW,
+        publish: (job) => Effect.sync(() => jobs.push(job)),
+      }).pipe(Effect.provide(layer)),
+    )
+
+    const retentionFloor = new Date(NOW.getTime() - 60 * 24 * 60 * 60 * 1000)
+    expect(res.clampedStart).toEqual(retentionFloor) // no cap → full retention reach
+  })
+
+  it("ignores a cap floor older than the retention floor (retention still wins)", async () => {
+    const olderThanRetention = new Date(NOW.getTime() - 200 * 24 * 60 * 60 * 1000)
+    const { layer } = setup({ records: [], recentLimitFloor: olderThanRetention })
+    const jobs: BackfillWindowJob[] = []
+
+    const res = await Effect.runPromise(
+      backfillDestinationUseCase({
+        destinationId: DESTINATION_ID,
+        source: SOURCE,
+        start: null,
+        end: NOW,
+        now: NOW,
+        publish: (job) => Effect.sync(() => jobs.push(job)),
+      }).pipe(Effect.provide(layer)),
+    )
+
+    const retentionFloor = new Date(NOW.getTime() - 60 * 24 * 60 * 60 * 1000)
+    expect(res.clampedStart).toEqual(retentionFloor)
   })
 
   it("declines to backfill when end is null (no upper bound)", async () => {
@@ -560,23 +630,23 @@ describe("runBackfillWindowUseCase (full drain)", () => {
     expect(syncRunRows.length).toBe(runsAfterFirst * 2)
   })
 
-  it("never quarantines the destination when a window fails", async () => {
-    // On the live path a non-retryable failure at consecutiveFailures=4 would tip
-    // the destination to quarantined (threshold 5). Backfill must not: it propagates
-    // the error (so BullMQ retries the window / the chain stops), with no quarantine
-    // accounting and no sync-run row — a heavy backfill never takes down live sync.
-    const { destinationRows, syncRunRows, layer } = setup({
+  it("records a non-retryable window failure inline and stops the chain, without quarantining", async () => {
+    // A non-retryable failure (bad key/config) can never succeed, so the window records a `failed`
+    // run + clears the in-flight marker immediately instead of burning BullMQ retries (mirrors the
+    // live path). Still no quarantine accounting — a heavy backfill never takes down live sync.
+    const { destinationRows, syncRunRows, stateRows, layer } = setup({
       records: [stubSpan("a1", new Date("2026-05-01T01:00:00.000Z"))],
       state: makeState(1_000, { backfillStartedAt: NOW }), // in-flight chain (initiator already ran)
       destination: makeDestination({ consecutiveFailures: 4 }),
       deliveryFailure: new NonRetryableDeliveryError({
         kind: "posthog",
-        reason: "invalid_api_key",
+        reason: "auth",
+        detail: "invalid_api_key",
         upstreamStatus: 401,
       }),
     })
 
-    const error = await Effect.runPromise(
+    const res = await Effect.runPromise(
       runBackfillWindowUseCase({
         destinationId: DESTINATION_ID,
         source: SOURCE,
@@ -585,13 +655,21 @@ describe("runBackfillWindowUseCase (full drain)", () => {
         remainingSegments: [],
         coverageFloor: new Date("2026-05-01T00:00:00.000Z"),
         now: NOW,
-      }).pipe(Effect.provide(layer), Effect.flip),
+      }).pipe(Effect.provide(layer)),
     )
 
-    expect(error._tag).toBe("NonRetryableDeliveryError")
-    expect(destinationRows[0]?.consecutiveFailures).toBe(4) // untouched — no quarantine accounting
+    expect(res.outcome).toBe("failed")
+    expect(res.next).toBeNull() // chain stops
+    // A failed backfill run row surfaces in history (like a live failure).
+    expect(syncRunRows).toHaveLength(1)
+    expect(syncRunRows[0]?.status).toBe("failed")
+    expect(syncRunRows[0]?.trigger).toBe("backfill")
+    expect(syncRunRows[0]?.error).toBe("[401] invalid_api_key")
+    // In-flight marker cleared so the UI stops showing "Backfilling…".
+    expect(stateRows[0]?.backfillStartedAt).toBeNull()
+    // No quarantine accounting.
+    expect(destinationRows[0]?.consecutiveFailures).toBe(4)
     expect(destinationRows[0]?.status).toBe("active")
-    expect(syncRunRows).toHaveLength(0)
   })
 
   it("propagates a retryable window failure without quarantining either", async () => {
@@ -599,7 +677,12 @@ describe("runBackfillWindowUseCase (full drain)", () => {
       records: [stubSpan("a1", new Date("2026-05-01T01:00:00.000Z"))],
       state: makeState(1_000, { backfillStartedAt: NOW }), // in-flight chain (initiator already ran)
       destination: makeDestination({ consecutiveFailures: 4 }),
-      deliveryFailure: new RetryableDeliveryError({ kind: "posthog", reason: "upstream_5xx", upstreamStatus: 503 }),
+      deliveryFailure: new RetryableDeliveryError({
+        kind: "posthog",
+        reason: "server_error",
+        detail: "upstream_server_error",
+        upstreamStatus: 503,
+      }),
     })
 
     const error = await Effect.runPromise(

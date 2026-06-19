@@ -6,6 +6,18 @@ export const DESTINATION_MAX_RECORDS_PER_RUN_MIN = 1_000
 export const DESTINATION_MAX_RECORDS_PER_RUN_MAX = 50_000
 export const DESTINATION_MAX_RECORDS_PER_RUN_DEFAULT = 50_000
 
+/**
+ * Hard cap on records imported by a single backfill. A destination connected to
+ * a months-old project (or resumed after months) could otherwise enqueue an
+ * unbounded historical import; instead we backfill only the **most recent**
+ * records up to this cap (the initiator raises the lower bound so the export
+ * window holds at most this many, newest first). Deliberately an operational/
+ * product bound on backfill duration + ClickHouse read volume — NOT a
+ * PostHog-derived limit: PostHog exposes no rate limit on `/batch/` capture, so
+ * there's no published throughput to size against. 1M ≈ 20 live-sync windows.
+ */
+export const DESTINATION_MAX_RECORDS_PER_BACKFILL = 1_000_000
+
 /** Consecutive terminal run failures before a destination is quarantined. */
 export const DESTINATION_QUARANTINE_FAILURE_THRESHOLD = 5
 
@@ -40,6 +52,17 @@ export const DESTINATION_SYNC_RETRY_BACKOFF_MS = 30_000
 
 /** Idle-backoff ceiling: a destination with only empty runs converges to one probe per hour. */
 export const DESTINATION_IDLE_BACKOFF_MAX_MS = 3_600_000
+
+/**
+ * Auto-pause threshold: after this many consecutive empty runs, the source's
+ * destination is paused (`status = 'paused'`) so the sweep stops probing an
+ * abandoned project forever. Idle backoff caps cadence at 1h after ~4 empty
+ * runs, so 168 ≈ **7 days of continuous inactivity** regardless of the
+ * configured interval. Resuming the destination grants a fresh idle budget (the
+ * counter resets on pause), and resume's gap-backfill recovers anything within
+ * retention — so no data is lost, it just needs a manual resume to flow again.
+ */
+export const DESTINATION_IDLE_PAUSE_AFTER_EMPTY_RUNS = 168
 
 /**
  * Window-end safety lag (5 min): the window ends at `now − SAFETY_LAG` so reads

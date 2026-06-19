@@ -89,12 +89,16 @@ export {
   destinationSyncRunTriggerSchema,
 } from "./entities/destination-sync-run.ts"
 // Errors
-export type { DeliveryError } from "./errors.ts"
+export type { DeliveryError, DeliveryErrorReason } from "./errors.ts"
 export {
+  DELIVERY_ERROR_REASONS,
+  isDeliveryErrorReason,
   isRetryableDeliveryError,
+  isThrottlingDeliveryReason,
   NonRetryableDeliveryError,
   RetryableDeliveryError,
   SandboxOrganizationDestinationError,
+  sanitizedDeliveryFailureMessage,
 } from "./errors.ts"
 export type {
   DeriveDestinationHealthInput,

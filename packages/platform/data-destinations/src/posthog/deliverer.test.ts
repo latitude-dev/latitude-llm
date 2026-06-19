@@ -9,7 +9,7 @@ import { POSTHOG_US_INGESTION_HOST } from "@domain/destinations"
 import { SpanId } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { POSTHOG_BATCH_MAX_BYTES } from "./constants.ts"
+import { POSTHOG_BATCH_MAX_BYTES, POSTHOG_RATE_LIMIT_MAX_RETRIES } from "./constants.ts"
 import { createPosthogDeliverer } from "./deliverer.ts"
 
 const HOUR_MS = 60 * 60 * 1000
@@ -61,6 +61,37 @@ const fakeFetch = (...outcomes: (number | Error)[]) => {
     return new Response(null, { status: outcome })
   }
   return { fetchFn, requests }
+}
+
+interface SeqOutcome {
+  readonly status: number
+  readonly retryAfter?: string
+}
+
+/** Like `fakeFetch` but each response can carry a `Retry-After` header, for exercising 429 backoff. */
+const fakeFetchSeq = (...outcomes: (SeqOutcome | Error)[]) => {
+  const requests: RecordedRequest[] = []
+  let index = 0
+  const fetchFn: typeof fetch = async (input, init) => {
+    requests.push({ url: String(input), init: init ?? {} })
+    const outcome = outcomes[Math.min(index, outcomes.length - 1)] ?? { status: 200 }
+    index += 1
+    if (outcome instanceof Error) throw outcome
+    const responseInit: ResponseInit = { status: outcome.status }
+    if (outcome.retryAfter) responseInit.headers = { "Retry-After": outcome.retryAfter }
+    return new Response(null, responseInit)
+  }
+  return { fetchFn, requests }
+}
+
+/** Captures backoff durations and never actually waits, so tests don't wall-clock sleep. */
+const recordingSleep = () => {
+  const slept: number[] = []
+  const sleep = (ms: number) =>
+    Effect.sync(() => {
+      slept.push(ms)
+    })
+  return { sleep, slept }
 }
 
 const fakeLookup = (addresses: readonly string[]) => {
@@ -147,19 +178,44 @@ describe("createPosthogDeliverer", () => {
     const error = await deliverFlip(deliverer, [makeEvent()])
 
     expect(error._tag).toBe("NonRetryableDeliveryError")
-    expect(error.reason).toBe("invalid_api_key")
+    expect(error.reason).toBe("auth")
+    expect(error.detail).toBe("invalid_api_key")
     expect(error.upstreamStatus).toBe(status)
   })
 
-  it("maps 429 to a retryable rate_limited error", async () => {
-    const { fetchFn } = fakeFetch(429)
-    const deliverer = createPosthogDeliverer({ fetchFn })
+  it("retries a sustained 429 up to the budget, then surfaces a retryable rate_limited error", async () => {
+    const { fetchFn, requests } = fakeFetch(429)
+    const { sleep } = recordingSleep()
+    const deliverer = createPosthogDeliverer({ fetchFn, sleep })
 
     const error = await deliverFlip(deliverer, [makeEvent()])
 
     expect(error._tag).toBe("RetryableDeliveryError")
     expect(error.reason).toBe("rate_limited")
     expect(error.upstreamStatus).toBe(429)
+    expect(requests).toHaveLength(POSTHOG_RATE_LIMIT_MAX_RETRIES + 1) // initial POST + in-transport retries
+  })
+
+  it("backs off and re-POSTs the chunk when a 429 clears within the budget", async () => {
+    const { fetchFn, requests } = fakeFetchSeq({ status: 429 }, { status: 200 })
+    const { sleep, slept } = recordingSleep()
+    const deliverer = createPosthogDeliverer({ fetchFn, sleep })
+
+    const result = await deliver(deliverer, [makeEvent()])
+
+    expect(result).toEqual({ delivered: 1, dropped: 0 })
+    expect(requests).toHaveLength(2)
+    expect(slept).toHaveLength(1)
+  })
+
+  it("honors the Retry-After header (delta-seconds) when backing off", async () => {
+    const { fetchFn } = fakeFetchSeq({ status: 429, retryAfter: "2" }, { status: 200 })
+    const { sleep, slept } = recordingSleep()
+    const deliverer = createPosthogDeliverer({ fetchFn, sleep })
+
+    await deliver(deliverer, [makeEvent()])
+
+    expect(slept).toEqual([2000])
   })
 
   it("maps 5xx to a retryable error", async () => {
@@ -169,7 +225,8 @@ describe("createPosthogDeliverer", () => {
     const error = await deliverFlip(deliverer, [makeEvent()])
 
     expect(error._tag).toBe("RetryableDeliveryError")
-    expect(error.reason).toBe("upstream_server_error")
+    expect(error.reason).toBe("server_error")
+    expect(error.detail).toBe("upstream_server_error")
     expect(error.upstreamStatus).toBe(503)
   })
 
@@ -180,7 +237,8 @@ describe("createPosthogDeliverer", () => {
     const error = await deliverFlip(deliverer, [makeEvent()])
 
     expect(error._tag).toBe("RetryableDeliveryError")
-    expect(error.reason).toBe("transport_error")
+    expect(error.reason).toBe("transport")
+    expect(error.detail).toBe("transport_error")
   })
 
   it("refuses redirects as a non-retryable error", async () => {
@@ -190,7 +248,8 @@ describe("createPosthogDeliverer", () => {
     const error = await deliverFlip(deliverer, [makeEvent()])
 
     expect(error._tag).toBe("NonRetryableDeliveryError")
-    expect(error.reason).toBe("redirect_refused")
+    expect(error.reason).toBe("config")
+    expect(error.detail).toBe("redirect_refused")
     expect(requests[0]?.init.redirect).toBe("manual")
   })
 
@@ -252,7 +311,8 @@ describe("createPosthogDeliverer", () => {
     })
 
     expect(error._tag).toBe("NonRetryableDeliveryError")
-    expect(error.reason).toBe("host_resolved_to_non_public_ip")
+    expect(error.reason).toBe("config")
+    expect(error.detail).toBe("host_resolved_to_non_public_ip")
     expect(requests).toHaveLength(0)
   })
 
@@ -264,7 +324,8 @@ describe("createPosthogDeliverer", () => {
     const error = await deliverFlip(deliverer, [makeEvent()], { config: posthogConfig("http://example.com") })
 
     expect(error._tag).toBe("NonRetryableDeliveryError")
-    expect(error.reason).toBe("host_not_https")
+    expect(error.reason).toBe("config")
+    expect(error.detail).toBe("host_not_https")
     expect(calls).toHaveLength(0)
     expect(requests).toHaveLength(0)
   })
@@ -281,7 +342,8 @@ describe("createPosthogDeliverer", () => {
     const error = await deliverFlip(deliverer, [makeEvent()], { config: posthogConfig("https://ph.example.com") })
 
     expect(error._tag).toBe("RetryableDeliveryError")
-    expect(error.reason).toBe("dns_resolution_failed")
+    expect(error.reason).toBe("transport")
+    expect(error.detail).toBe("dns_resolution_failed")
     expect(requests).toHaveLength(0)
   })
 
@@ -362,7 +424,8 @@ describe("createPosthogDeliverer.testConnection", () => {
     const error = await testConnectionFlip(deliverer)
 
     expect(error._tag).toBe("NonRetryableDeliveryError")
-    expect(error.reason).toBe("invalid_api_key")
+    expect(error.reason).toBe("auth")
+    expect(error.detail).toBe("invalid_api_key")
     expect(error.upstreamStatus).toBe(status)
   })
 
@@ -373,7 +436,8 @@ describe("createPosthogDeliverer.testConnection", () => {
     const error = await testConnectionFlip(deliverer)
 
     expect(error._tag).toBe("RetryableDeliveryError")
-    expect(error.reason).toBe("transport_error")
+    expect(error.reason).toBe("transport")
+    expect(error.detail).toBe("transport_error")
   })
 
   it("rejects a custom host that resolves to a private IP without calling fetch", async () => {
@@ -384,7 +448,8 @@ describe("createPosthogDeliverer.testConnection", () => {
     const error = await testConnectionFlip(deliverer, posthogConfig("https://posthog.internal.example"))
 
     expect(error._tag).toBe("NonRetryableDeliveryError")
-    expect(error.reason).toBe("host_resolved_to_non_public_ip")
+    expect(error.reason).toBe("config")
+    expect(error.detail).toBe("host_resolved_to_non_public_ip")
     expect(requests).toHaveLength(0)
   })
 })

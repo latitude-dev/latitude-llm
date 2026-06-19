@@ -214,6 +214,30 @@ describe("DestinationRepositoryLive", () => {
     })
   })
 
+  describe("updateStatus", () => {
+    it("flips status only, leaving the failure counter and message untouched", async () => {
+      await seedOrganizations()
+      const destination: Destination = {
+        ...makeDestination(),
+        consecutiveFailures: 3,
+        lastFailureMessage: "[502] server_error",
+      }
+      await save(destination)
+
+      await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* DestinationRepository
+          yield* repo.updateStatus({ id: destination.id, status: "paused" })
+        }),
+      )
+
+      const [row] = await pg.db.select().from(destinations)
+      expect(row?.status).toBe("paused")
+      expect(row?.consecutiveFailures).toBe(3)
+      expect(row?.lastFailureMessage).toBe("[502] server_error")
+    })
+  })
+
   describe("deleteByProjectId", () => {
     it("deletes the project's destinations in the RLS org and returns their ids", async () => {
       await seedOrganizations()

@@ -55,4 +55,5 @@ Turn **Exclude payloads** on when you don't want prompt and completion content l
 - **Near real-time.** New data is delivered continuously, on a short interval, so it shows up in your destination within minutes — not on a manual export.
 - **No duplicates.** Delivery is at-least-once and idempotent: each event has a stable identity, so retries and overlapping windows never duplicate data in your destination.
 - **Pause and resume.** Pause a destination anytime; while paused nothing is sent. On resume, Latitude catches up the backlog it missed.
+- **Auto-pause when idle.** If a project sends no new data for about a week, Latitude automatically pauses its destination so it isn't checked indefinitely. Nothing is lost — just resume the destination when you start sending data again, and it catches up the backlog within your retention window like any other resume.
 - **Backfill.** When you connect a destination you can also import past traces, so your destination isn't limited to data created after you connected it. How far back you can reach is bounded by your plan's data retention.

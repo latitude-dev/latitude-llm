@@ -12,7 +12,7 @@ import {
   POSTHOG_US_INGESTION_HOST,
   RetryableDeliveryError,
 } from "@domain/destinations"
-import { Effect } from "effect"
+import { Duration, Effect } from "effect"
 import {
   POSTHOG_BATCH_MAX_BYTES,
   POSTHOG_BATCH_MAX_EVENTS,
@@ -20,6 +20,9 @@ import {
   POSTHOG_EVENT_MAX_BYTES,
   POSTHOG_FLAGS_PATH,
   POSTHOG_HISTORICAL_MIGRATION_MIN_WINDOW_AGE_MS,
+  POSTHOG_RATE_LIMIT_DEFAULT_BACKOFF_MS,
+  POSTHOG_RATE_LIMIT_MAX_BACKOFF_MS,
+  POSTHOG_RATE_LIMIT_MAX_RETRIES,
 } from "./constants.ts"
 import { defaultHostLookup, type HostLookup, isPublicUnicastIp } from "./host-guard.ts"
 
@@ -36,6 +39,8 @@ const PRESET_ORIGINS: ReadonlySet<string> = new Set([
 export interface PosthogDelivererOptions {
   readonly fetchFn?: typeof fetch
   readonly lookupHost?: HostLookup
+  /** Injectable so tests don't wall-clock sleep through the in-transport 429 backoff; defaults to real sleep. */
+  readonly sleep?: (ms: number) => Effect.Effect<void>
 }
 
 interface SerializedEvent {
@@ -106,10 +111,10 @@ const resolveUrl = (host: string, path: string): Effect.Effect<URL, NonRetryable
     try {
       base = new URL(host)
     } catch {
-      return Effect.fail(new NonRetryableDeliveryError({ kind: KIND, reason: "invalid_host_url" }))
+      return Effect.fail(new NonRetryableDeliveryError({ kind: KIND, reason: "config", detail: "invalid_host_url" }))
     }
     if (base.protocol !== "https:") {
-      return Effect.fail(new NonRetryableDeliveryError({ kind: KIND, reason: "host_not_https" }))
+      return Effect.fail(new NonRetryableDeliveryError({ kind: KIND, reason: "config", detail: "host_not_https" }))
     }
     return Effect.succeed(new URL(base.pathname.replace(/\/$/, "") + path, base.origin))
   })
@@ -126,52 +131,132 @@ const assertPublicHost = (url: URL, lookupHost: HostLookup): Effect.Effect<void,
     if (PRESET_ORIGINS.has(url.origin)) return
     const addresses = yield* Effect.tryPromise({
       try: () => lookupHost(url.hostname),
-      catch: () => new RetryableDeliveryError({ kind: KIND, reason: "dns_resolution_failed" }),
+      catch: () => new RetryableDeliveryError({ kind: KIND, reason: "transport", detail: "dns_resolution_failed" }),
     })
     if (addresses.length === 0) {
-      return yield* new RetryableDeliveryError({ kind: KIND, reason: "dns_resolution_failed" })
+      return yield* new RetryableDeliveryError({ kind: KIND, reason: "transport", detail: "dns_resolution_failed" })
     }
     if (addresses.some((address) => !isPublicUnicastIp(address))) {
-      return yield* new NonRetryableDeliveryError({ kind: KIND, reason: "host_resolved_to_non_public_ip" })
+      return yield* new NonRetryableDeliveryError({
+        kind: KIND,
+        reason: "config",
+        detail: "host_resolved_to_non_public_ip",
+      })
     }
   })
 
 const responseError = (status: number): DeliveryError | null => {
   if (status >= 200 && status < 300) return null
   if (status >= 300 && status < 400) {
-    return new NonRetryableDeliveryError({ kind: KIND, reason: "redirect_refused", upstreamStatus: status })
+    return new NonRetryableDeliveryError({
+      kind: KIND,
+      reason: "config",
+      detail: "redirect_refused",
+      upstreamStatus: status,
+    })
   }
   if (status === 401 || status === 403) {
-    return new NonRetryableDeliveryError({ kind: KIND, reason: "invalid_api_key", upstreamStatus: status })
+    return new NonRetryableDeliveryError({
+      kind: KIND,
+      reason: "auth",
+      detail: "invalid_api_key",
+      upstreamStatus: status,
+    })
   }
   if (status === 429) {
     return new RetryableDeliveryError({ kind: KIND, reason: "rate_limited", upstreamStatus: status })
   }
   if (status >= 500) {
-    return new RetryableDeliveryError({ kind: KIND, reason: "upstream_server_error", upstreamStatus: status })
+    return new RetryableDeliveryError({
+      kind: KIND,
+      reason: "server_error",
+      detail: "upstream_server_error",
+      upstreamStatus: status,
+    })
   }
-  return new NonRetryableDeliveryError({ kind: KIND, reason: "request_rejected", upstreamStatus: status })
+  return new NonRetryableDeliveryError({
+    kind: KIND,
+    reason: "config",
+    detail: "request_rejected",
+    upstreamStatus: status,
+  })
 }
+
+const sendRequest = (params: {
+  url: URL
+  body: string
+  fetchFn: typeof fetch
+}): Effect.Effect<Response, DeliveryError> =>
+  Effect.tryPromise({
+    try: () =>
+      params.fetchFn(params.url.href, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: params.body,
+        redirect: "manual",
+      }),
+    catch: () => new RetryableDeliveryError({ kind: KIND, reason: "transport", detail: "transport_error" }),
+  })
 
 const postChunk = (params: { url: URL; body: string; fetchFn: typeof fetch }): Effect.Effect<void, DeliveryError> =>
   Effect.gen(function* () {
-    const response = yield* Effect.tryPromise({
-      try: () =>
-        params.fetchFn(params.url.href, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: params.body,
-          redirect: "manual",
-        }),
-      catch: () => new RetryableDeliveryError({ kind: KIND, reason: "transport_error" }),
-    })
+    const response = yield* sendRequest(params)
     const error = responseError(response.status)
     if (error) return yield* error
+  })
+
+const parseRetryAfterMs = (header: string | null): number | null => {
+  if (!header) return null
+  const seconds = Number(header)
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000)
+  const dateMs = Date.parse(header)
+  return Number.isNaN(dateMs) ? null : Math.max(0, dateMs - Date.now())
+}
+
+/** Honor `Retry-After` (delta-seconds or HTTP-date), falling back to exponential backoff, capped. */
+const retryAfterBackoffMs = (header: string | null, attempt: number): number => {
+  const base = parseRetryAfterMs(header) ?? POSTHOG_RATE_LIMIT_DEFAULT_BACKOFF_MS * 2 ** attempt
+  return Math.min(base, POSTHOG_RATE_LIMIT_MAX_BACKOFF_MS)
+}
+
+/**
+ * POST one chunk, re-resolving the host each attempt (SSRF guard). On 429 honor
+ * `Retry-After` and re-POST a bounded number of times; past the budget surface a
+ * retryable `rate_limited` so the engine backs off without quarantining.
+ */
+const deliverChunk = (params: {
+  url: URL
+  body: string
+  fetchFn: typeof fetch
+  lookupHost: HostLookup
+  sleep: (ms: number) => Effect.Effect<void>
+}): Effect.Effect<void, DeliveryError> =>
+  Effect.gen(function* () {
+    let retries = 0
+    while (true) {
+      yield* assertPublicHost(params.url, params.lookupHost)
+      const response = yield* sendRequest(params)
+      if (response.status !== 429) {
+        const error = responseError(response.status)
+        if (error) return yield* error
+        return
+      }
+      if (retries >= POSTHOG_RATE_LIMIT_MAX_RETRIES) {
+        return yield* new RetryableDeliveryError({
+          kind: KIND,
+          reason: "rate_limited",
+          upstreamStatus: response.status,
+        })
+      }
+      yield* params.sleep(retryAfterBackoffMs(response.headers.get("Retry-After"), retries))
+      retries += 1
+    }
   })
 
 export const createPosthogDeliverer = (options: PosthogDelivererOptions = {}): DestinationDeliverer => {
   const fetchFn = options.fetchFn ?? fetch
   const lookupHost = options.lookupHost ?? defaultHostLookup
+  const sleep = options.sleep ?? ((ms: number) => Effect.sleep(Duration.millis(ms)))
 
   return {
     // The 48h rule is PostHog's: events older than it must use `historical_migration`.
@@ -181,7 +266,11 @@ export const createPosthogDeliverer = (options: PosthogDelivererOptions = {}): D
     deliver: (events, config, credentials, context: DeliveryContext): Effect.Effect<DeliveryResult, DeliveryError> =>
       Effect.gen(function* () {
         if (config.kind !== KIND || credentials.kind !== KIND) {
-          return yield* new NonRetryableDeliveryError({ kind: KIND, reason: "destination_kind_mismatch" })
+          return yield* new NonRetryableDeliveryError({
+            kind: KIND,
+            reason: "config",
+            detail: "destination_kind_mismatch",
+          })
         }
 
         const serialized = events.map(serializeEvent)
@@ -199,11 +288,12 @@ export const createPosthogDeliverer = (options: PosthogDelivererOptions = {}): D
 
         let delivered = 0
         for (const chunk of chunks) {
-          yield* assertPublicHost(url, lookupHost)
-          yield* postChunk({
+          yield* deliverChunk({
             url,
             body: buildBody({ apiKey: credentials.apiKey, historicalMigration, chunk }),
             fetchFn,
+            lookupHost,
+            sleep,
           })
           delivered += chunk.length
         }
@@ -213,7 +303,11 @@ export const createPosthogDeliverer = (options: PosthogDelivererOptions = {}): D
     testConnection: (config, credentials): Effect.Effect<void, DeliveryError> =>
       Effect.gen(function* () {
         if (config.kind !== KIND || credentials.kind !== KIND) {
-          return yield* new NonRetryableDeliveryError({ kind: KIND, reason: "destination_kind_mismatch" })
+          return yield* new NonRetryableDeliveryError({
+            kind: KIND,
+            reason: "config",
+            detail: "destination_kind_mismatch",
+          })
         }
         const url = yield* resolveUrl(config.host, POSTHOG_FLAGS_PATH)
         yield* assertPublicHost(url, lookupHost)

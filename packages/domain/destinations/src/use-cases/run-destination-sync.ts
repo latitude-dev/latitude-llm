@@ -8,12 +8,22 @@ import type {
   SqlClient,
 } from "@domain/shared"
 import { Effect } from "effect"
-import { DESTINATION_QUARANTINE_FAILURE_THRESHOLD, DESTINATION_SAFETY_LAG_MS } from "../constants.ts"
+import {
+  DESTINATION_IDLE_PAUSE_AFTER_EMPTY_RUNS,
+  DESTINATION_QUARANTINE_FAILURE_THRESHOLD,
+  DESTINATION_SAFETY_LAG_MS,
+} from "../constants.ts"
 import type { Destination, DestinationKind } from "../entities/destination.ts"
 import type { DestinationSource } from "../entities/destination-source.ts"
 import type { DestinationSourceState } from "../entities/destination-source-state.ts"
 import { createDestinationSyncRun } from "../entities/destination-sync-run.ts"
-import { type DeliveryError, isRetryableDeliveryError, type RetryableDeliveryError } from "../errors.ts"
+import {
+  type DeliveryError,
+  isRetryableDeliveryError,
+  isThrottlingDeliveryReason,
+  type RetryableDeliveryError,
+  sanitizedDeliveryFailureMessage,
+} from "../errors.ts"
 import { type DeliveryWindow, DestinationDeliverers } from "../ports/destination-deliverer.ts"
 import { DestinationMappers } from "../ports/destination-mapper.ts"
 import { DestinationRepository } from "../ports/destination-repository.ts"
@@ -76,9 +86,6 @@ type Requirements =
   | DestinationDeliverers
   | DestinationMappers
 
-const sanitizedFailureMessage = (error: DeliveryError): string =>
-  error.upstreamStatus === undefined ? error.reason : `[${error.upstreamStatus}] ${error.reason}`
-
 const isForward = (next: SourceCursor, current: SourceCursor): boolean =>
   next.watermark.getTime() > current.watermark.getTime() ||
   (next.watermark.getTime() === current.watermark.getTime() && next.id > current.id)
@@ -133,7 +140,11 @@ const loadRunContext = (destinationId: DestinationId, source: DestinationSource)
  * Empty window: advance the per-source cursor to window-end (so an idle source
  * doesn't re-scan the same gap) and grow idle backoff. No delivery, no
  * sync-run row. A lost CAS race means another run already advanced — report
- * `stale`.
+ * `stale`. Once the empty streak reaches {@link DESTINATION_IDLE_PAUSE_AFTER_EMPTY_RUNS}
+ * (~7 days) the destination is auto-paused so the sweep stops probing an
+ * abandoned project forever; the counter resets so a manual resume gets a fresh
+ * idle budget. (v1 has one source per destination — a multi-source destination
+ * would need an all-sources-idle check before pausing.)
  */
 const handleEmptyWindow = (params: {
   readonly destination: Destination
@@ -166,12 +177,20 @@ const handleEmptyWindow = (params: {
       }
     }
 
+    const nextEmptyRuns = sourceState.consecutiveEmptyRuns + 1
+    const idlePaused = nextEmptyRuns >= DESTINATION_IDLE_PAUSE_AFTER_EMPTY_RUNS
+
     yield* sourceStates.updateRunState({
       destinationId: destination.id,
       source,
-      consecutiveEmptyRuns: sourceState.consecutiveEmptyRuns + 1,
+      consecutiveEmptyRuns: idlePaused ? 0 : nextEmptyRuns,
       lastRunAt: now,
     })
+    if (idlePaused) {
+      yield* Effect.annotateCurrentSpan("destination.idlePaused", true)
+      const destinations = yield* DestinationRepository
+      yield* destinations.updateStatus({ id: destination.id, status: "paused" })
+    }
 
     const emptyWatermark = advances ? emptyTarget.watermark : startCursor.watermark
     return result({
@@ -188,6 +207,9 @@ const handleEmptyWindow = (params: {
  * at the threshold, bump `last_run_at` (not the cursor — the window wasn't
  * delivered), and write a `failed` sync-run. Emits the {@link
  * DestinationQuarantineEvent} only on the exact run that flips to quarantined.
+ * A throttle reason (`rate_limited`) is an exception: the destination is healthy
+ * and the upstream is just throttling, so the run fails its window but the
+ * failure does not count toward quarantine — the sweep re-enqueues next interval.
  */
 const handleDeliveryFailure = (params: {
   readonly destination: Destination
@@ -207,9 +229,10 @@ const handleDeliveryFailure = (params: {
     const sourceStates = yield* DestinationSourceStateRepository
     const syncRuns = yield* DestinationSyncRunRepository
 
-    const consecutiveFailures = destination.consecutiveFailures + 1
-    const quarantined = consecutiveFailures >= DESTINATION_QUARANTINE_FAILURE_THRESHOLD
-    const message = sanitizedFailureMessage(error)
+    const throttled = isThrottlingDeliveryReason(error.reason)
+    const consecutiveFailures = throttled ? destination.consecutiveFailures : destination.consecutiveFailures + 1
+    const quarantined = !throttled && consecutiveFailures >= DESTINATION_QUARANTINE_FAILURE_THRESHOLD
+    const message = sanitizedDeliveryFailureMessage(error)
 
     yield* destinations.updateQuarantineState({
       id: destination.id,
