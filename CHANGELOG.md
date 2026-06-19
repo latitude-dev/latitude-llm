@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+## v0.3.11 - 2026-06-19
+
+### Signals
+
+- Cut over the signals evaluation engine (Phase 2): scoring scripts now decide membership directly with `passed=true` meaning the signal's behavior is present, the host no longer thresholds, and judge/GEPA/flagger/discovery polarity was unified on this convention. A `legacy_polarity` flag normalizes existing judges at the execution boundary and self-drains on re-optimization, and the score `source` field was renamed to `source_type` in Postgres and the domain layer while preserving the ClickHouse column, saved-search filter key, and public `/scores` wire key (ref: #3621).
+
+### Data destinations
+
+- Treated PostHog `429` responses as back-pressure rather than faults: deliveries now honor `Retry-After` and back off instead of quarantining otherwise-healthy destinations, with idle auto-pause and a backfill record cap added (ref: #3618).
+- Bounded backfill and live window reads to avoid ClickHouse OOM under wide-payload spans by clamping page size, projecting only needed columns, and adding a per-query memory guardrail so a pathological page fails its own job instead of the whole server (ref: #3623).
+- Split the data-destination documentation into separate pages and refined destination status wording.
+
+### Infrastructure
+
+- Increased web service redundancy to 2 replicas.
+- Disabled production maintenance mode.
+
+### Models
+
+- Updated the bundled `models.dev` data (ref: #3620).
+
 ## v0.3.10 - 2026-06-18
 
 ### Infrastructure
