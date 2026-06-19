@@ -343,6 +343,19 @@ export function ConversationTab({
     return map
   }, [moments])
 
+  const focusMessageIndex = useMemo(() => {
+    if (!moments) return undefined
+    if (focusMomentKind) {
+      return moments
+        .find((row) => row.labels.some((label) => label.kind === focusMomentKind))
+        ?.labels.find((label) => label.kind === focusMomentKind)?.lastMessageIndex
+    }
+    if (focusMomentId) {
+      return moments.find((row) => row.moment.momentId === focusMomentId)?.moment.firstMessageIndex
+    }
+    return undefined
+  }, [focusMomentId, focusMomentKind, moments])
+
   useScrollToFocusedMoment({
     scrollRef: scrollContainerRef,
     sessionId,
@@ -388,6 +401,7 @@ export function ConversationTab({
       scrollContainerRef={scrollContainerRef}
       textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
       timeline={timeline}
+      focusMessageIndex={focusMessageIndex}
       {...(navigateToSpan ? { navigateToSpan } : {})}
       {...(labelsByMessageIndex.size > 0 ? { messageTrailingSlot } : {})}
       {...(searchQuery ? { searchQuery } : {})}

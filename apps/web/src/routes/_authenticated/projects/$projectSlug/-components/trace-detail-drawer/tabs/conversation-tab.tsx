@@ -107,6 +107,7 @@ function ConversationContent({
   searchQuery,
   messageTrailingSlot,
   timeline,
+  focusMessageIndex,
   totalMessages,
   payloadBytes,
   hasMoreMessages,
@@ -128,6 +129,7 @@ function ConversationContent({
   readonly messageTrailingSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
   /** Timeline for the minimap bar: null while loading, undefined when the feature is off. */
   readonly timeline?: ConversationTimeline | null | undefined
+  readonly focusMessageIndex?: number | undefined
   readonly totalMessages: number
   readonly payloadBytes: number
   readonly hasMoreMessages: boolean
@@ -331,6 +333,11 @@ function ConversationContent({
     loadMoreMessages()
   }, [firstMatchHint, messages.length, loadMoreMessages])
 
+  useEffect(() => {
+    if (focusMessageIndex === undefined || focusMessageIndex < messages.length) return
+    loadMoreMessages()
+  }, [focusMessageIndex, messages.length, loadMoreMessages])
+
   useScrollToFirstHighlight({
     scrollRef,
     traceId: traceDetail.traceId,
@@ -498,6 +505,7 @@ export function ConversationTab({
   searchQuery,
   messageTrailingSlot,
   timeline,
+  focusMessageIndex,
 }: {
   readonly traceDetail: TraceDetailRecord | null | undefined
   readonly isDetailLoading: boolean
@@ -517,6 +525,7 @@ export function ConversationTab({
   readonly messageTrailingSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
   /** Timeline for the minimap bar: null while loading, undefined when the feature is off. */
   readonly timeline?: ConversationTimeline | null | undefined
+  readonly focusMessageIndex?: number | undefined
 }) {
   const conversation = useTraceConversationMessages({
     projectId,
@@ -556,6 +565,7 @@ export function ConversationTab({
       searchQuery={searchQuery}
       messageTrailingSlot={messageTrailingSlot}
       timeline={timeline}
+      focusMessageIndex={focusMessageIndex}
       totalMessages={conversation.totalMessages}
       payloadBytes={conversation.payloadBytes}
       hasMoreMessages={conversation.hasNextPage}
