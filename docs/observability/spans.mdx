@@ -1,0 +1,48 @@
+---
+title: Spans
+description: A span is the smallest unit of captured work inside a trace, such as an LLM call, a tool call, or a retrieval step.
+---
+
+# Spans
+
+A **span** is the smallest unit of captured work in Latitude. Each span represents one operation inside an agent run: an LLM call, a tool call, a retrieval step, an HTTP request, or any custom operation you instrument. One or more spans make up a [trace](./traces).
+
+{/* Media needed: screenshot or GIF of the span tree inside a trace detail view */}
+
+## What a span captures
+
+A span can record:
+
+- input and output content, when available
+- start time, end time, and duration
+- success or error status
+- tags and metadata
+- provider, model, token usage, and cost for LLM calls
+
+## Common span kinds
+
+- **LLM call**: a request to a model, with its prompt, response, token usage, and cost.
+- **Tool call**: a function or tool the agent invoked, with its input arguments and result. See [Tool calls](./tool-calls).
+- **Retrieval**: a lookup against a vector store, database, or search index.
+- **HTTP request**: an outbound call to an external service.
+- **Custom**: any operation you instrument yourself.
+
+## How spans form a trace
+
+Spans nest to show the execution path of a single interaction, and a trace groups them into one complete interaction:
+
+```text
+Trace: user turn
+├─ Span: retrieve context
+├─ Span: LLM call
+└─ Span: tool call
+```
+
+Open any trace to see its spans as a tree, then expand a span to inspect its input, output, timing, and status. Use spans when you need to understand exactly what happened inside a trace, such as where latency, cost, or an error came from.
+
+## Next steps
+
+- [Traces](./traces): the complete interaction a span belongs to
+- [Tool calls](./tool-calls): inspect the tools the agent called
+- [Sessions](./sessions): group related traces into a conversation
+- [Core Concepts](../getting-started/concepts): the full product vocabulary

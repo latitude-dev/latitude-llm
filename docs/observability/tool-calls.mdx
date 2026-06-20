@@ -1,0 +1,35 @@
+---
+title: Tool calls
+description: Inspect the tools your agent invoked, including their inputs, outputs, and errors, as spans inside a trace.
+---
+
+# Tool calls
+
+A **tool call** is a [span](./spans) that records a function or tool your agent invoked while handling a request. Tool-call spans let you see which tools ran, what arguments they received, what they returned, and whether they failed.
+
+{/* Media needed: screenshot of a tool-call span showing its input arguments and output */}
+
+## What a tool-call span captures
+
+- the **tool name** that was invoked
+- the **input** arguments the agent passed
+- the **output** the tool returned
+- **error status** when the call failed
+- timing and duration
+
+Latitude renders tool input and output as formatted JSON when it can, and as a plain code block otherwise, so you can read structured arguments and results directly.
+
+## Inspecting tool calls
+
+Open a trace and find the tool-call spans in its span tree. Expanding one shows the arguments the agent sent and the result it received. This is the fastest way to answer questions such as:
+
+- Did the agent call the right tool for the request?
+- Were the arguments well formed?
+- Did the tool return what the agent expected, or did it error?
+- Is the agent looping between tools instead of making progress?
+
+## Next steps
+
+- [Spans](./spans): the building block a tool call is recorded as
+- [Traces](./traces): the full interaction that contains the tool calls
+- [Search](../search/overview): find traces by tool behaviour and other signals
