@@ -82,22 +82,22 @@ describe("buildTokenSegments", () => {
     const segments = buildTokenSegments(data)
     const byLabel = Object.fromEntries(segments.map((s) => [s.label, s.value]))
 
-    expect(byLabel.Prompt).toBe(100)
-    expect(byLabel["Cache Read"]).toBe(30)
+    expect(byLabel.Input).toBe(100)
+    expect(byLabel["Cached Input"]).toBe(30)
     expect(byLabel["Cache Write"]).toBe(20)
-    expect(byLabel.Completion).toBe(50)
+    expect(byLabel.Output).toBe(50)
     expect(byLabel.Reasoning).toBe(10)
   })
 
   it("does not treat cache write as an output subcategory", () => {
-    // Regression: prior bug subtracted tokensCacheCreate from completion.
+    // Regression: prior bug subtracted tokensCacheCreate from output.
     const data = makeUsage({ tokensOutput: 80, tokensCacheCreate: 500 })
     const segments = buildTokenSegments(data)
-    const completion = segments.find((s) => s.label === "Completion")
-    expect(completion?.value).toBe(80)
+    const output = segments.find((s) => s.label === "Output")
+    expect(output?.value).toBe(80)
   })
 
-  it("emits segments in fixed order: Cache Read, Cache Write, Prompt, Reasoning, Completion", () => {
+  it("emits core categories in fixed order, reasoning before output when present", () => {
     const data = makeUsage({
       tokensInput: 1,
       tokensOutput: 1,
@@ -106,17 +106,28 @@ describe("buildTokenSegments", () => {
       tokensReasoning: 1,
     })
     const labels = buildTokenSegments(data).map((s) => s.label)
-    expect(labels).toEqual(["Cache Read", "Cache Write", "Prompt", "Reasoning", "Completion"])
+    expect(labels).toEqual(["Input", "Cached Input", "Cache Write", "Reasoning", "Output"])
   })
 
-  it("omits zero-value segments", () => {
+  it("always emits the four core categories even when cache is absent", () => {
+    // The whole point of the issue: a no-cache trace must still show cache
+    // categories (at 0) so it doesn't look like Latitude failed to capture them.
     const data = makeUsage({ tokensInput: 10, tokensOutput: 5 })
-    const labels = buildTokenSegments(data).map((s) => s.label)
-    expect(labels).toEqual(["Prompt", "Completion"])
+    const segments = buildTokenSegments(data)
+    expect(segments.map((s) => s.label)).toEqual(["Input", "Cached Input", "Cache Write", "Output"])
+    const byLabel = Object.fromEntries(segments.map((s) => [s.label, s.value]))
+    expect(byLabel["Cached Input"]).toBe(0)
+    expect(byLabel["Cache Write"]).toBe(0)
   })
 
-  it("returns no segments when usage is empty", () => {
-    expect(buildTokenSegments(makeUsage())).toEqual([])
+  it("omits reasoning when zero (model-dependent)", () => {
+    const data = makeUsage({ tokensInput: 10, tokensOutput: 5 })
+    expect(buildTokenSegments(data).some((s) => s.label === "Reasoning")).toBe(false)
+  })
+
+  it("still emits the four core categories (all zero) for empty usage", () => {
+    const labels = buildTokenSegments(makeUsage()).map((s) => s.label)
+    expect(labels).toEqual(["Input", "Cached Input", "Cache Write", "Output"])
   })
 
   it("segment sum equals computeTotalTokens", () => {

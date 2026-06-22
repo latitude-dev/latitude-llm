@@ -45,18 +45,19 @@ export function computeTotalTokens(data: UsageData): number {
 }
 
 export function buildTokenSegments(data: UsageData): SegmentBarItem[] {
-  const prompt = data.tokensInput
-  const cacheRead = data.tokensCacheRead
-  const cacheCreate = data.tokensCacheCreate
-  const completion = data.tokensOutput
-  const reasoning = data.tokensReasoning
-
-  const segments: SegmentBarItem[] = []
-  if (cacheRead > 0) segments.push({ label: "Cache Read", value: cacheRead, color: TOKEN_COLORS.cacheRead })
-  if (cacheCreate > 0) segments.push({ label: "Cache Write", value: cacheCreate, color: TOKEN_COLORS.cacheCreate })
-  if (prompt > 0) segments.push({ label: "Prompt", value: prompt, color: TOKEN_COLORS.prompt })
-  if (reasoning > 0) segments.push({ label: "Reasoning", value: reasoning, color: TOKEN_COLORS.reasoning })
-  if (completion > 0) segments.push({ label: "Completion", value: completion, color: TOKEN_COLORS.completion })
+  // Core categories are always emitted (even at 0) so a no-cache trace reads as
+  // "Cached Input: 0" rather than looking like Latitude failed to capture cache.
+  // The bar drops zero segments; the tooltip breakdown keeps them.
+  const segments: SegmentBarItem[] = [
+    { label: "Input", value: data.tokensInput, color: TOKEN_COLORS.prompt },
+    { label: "Cached Input", value: data.tokensCacheRead, color: TOKEN_COLORS.cacheRead },
+    { label: "Cache Write", value: data.tokensCacheCreate, color: TOKEN_COLORS.cacheCreate },
+  ]
+  // Reasoning is model-dependent, so it only appears when the model reports it.
+  if (data.tokensReasoning > 0) {
+    segments.push({ label: "Reasoning", value: data.tokensReasoning, color: TOKEN_COLORS.reasoning })
+  }
+  segments.push({ label: "Output", value: data.tokensOutput, color: TOKEN_COLORS.completion })
   return segments
 }
 
