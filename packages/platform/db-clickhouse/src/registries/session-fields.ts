@@ -1,5 +1,10 @@
 import type { ChFieldRegistry } from "../filter-builder.ts"
-import { buildHasLlmActivityClause, buildStatusClause, mapDateTime64UtcQueryParam } from "./helpers.ts"
+import {
+  buildCacheHitRateClause,
+  buildHasLlmActivityClause,
+  buildStatusClause,
+  mapDateTime64UtcQueryParam,
+} from "./helpers.ts"
 
 export const SESSION_FIELD_REGISTRY: ChFieldRegistry = {
   status: { kind: "synthetic", buildClause: buildStatusClause },
@@ -23,5 +28,6 @@ export const SESSION_FIELD_REGISTRY: ChFieldRegistry = {
   traceCount: { column: "trace_count", chType: "UInt64" },
   tokensInput: { column: "tokens_input", chType: "UInt64" },
   tokensOutput: { column: "tokens_output", chType: "UInt64" },
+  cacheHitRate: { kind: "synthetic", buildClause: buildCacheHitRateClause },
   startTime: { column: "start_time", chType: "DateTime64(9, 'UTC')", mapValue: mapDateTime64UtcQueryParam },
 }

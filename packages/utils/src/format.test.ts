@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest"
 import {
+  cacheHitRate,
   formatBytes,
   formatCount,
   formatDuration,
+  formatPercentage,
   formatPrice,
   isBlankCHString,
   normalizeCHString,
@@ -123,6 +125,33 @@ describe("formatPrice", () => {
     expect(formatPrice(0.0000075)).toBe("$0.0000075")
     expect(formatPrice(0.0001)).toBe("$0.0001")
     expect(formatPrice(0.0009)).toBe("$0.0009")
+  })
+})
+
+describe("formatPercentage", () => {
+  it("formats whole percentages without decimals", () => {
+    expect(formatPercentage(0.8)).toBe("80%")
+    expect(formatPercentage(1)).toBe("100%")
+    expect(formatPercentage(0)).toBe("0%")
+  })
+
+  it("shows up to one decimal for fractional percentages", () => {
+    expect(formatPercentage(0.3333)).toBe("33.3%")
+    expect(formatPercentage(0.9962)).toBe("99.6%")
+  })
+})
+
+describe("cacheHitRate", () => {
+  it("is cacheRead over total input (input + cacheRead + cacheCreate)", () => {
+    expect(cacheHitRate({ input: 10, cacheRead: 80, cacheCreate: 10 })).toBe(0.8)
+  })
+
+  it("returns null when there are no input-side tokens (undefined, not 0)", () => {
+    expect(cacheHitRate({ input: 0, cacheRead: 0, cacheCreate: 0 })).toBeNull()
+  })
+
+  it("is 0 when nothing was served from cache but input exists", () => {
+    expect(cacheHitRate({ input: 100, cacheRead: 0, cacheCreate: 0 })).toBe(0)
   })
 })
 

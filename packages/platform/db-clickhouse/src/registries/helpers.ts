@@ -56,6 +56,38 @@ export function buildStatusClause(
   }
 }
 
+const COMPARISON_SQL_OPS: Readonly<Record<string, string>> = {
+  eq: "=",
+  neq: "!=",
+  gt: ">",
+  gte: ">=",
+  lt: "<",
+  lte: "<=",
+}
+
+const CACHE_HIT_RATE_DENOM = "(tokens_input + tokens_cache_read + tokens_cache_create)"
+const CACHE_HIT_RATE_EXPR = `(tokens_cache_read / ${CACHE_HIT_RATE_DENOM})`
+
+/**
+ * Cache hit rate is a ratio of aggregated token sums, so it filters via HAVING
+ * against the SELECT aliases (`tokens_cache_read` etc. are `sum(...) AS ...`).
+ * Rows with no input-side tokens have an undefined rate and must not match any
+ * threshold, so the divide-by-zero is guarded explicitly. The wire value is an
+ * integer percentage (0–100), so it is divided by 100 to compare against the
+ * 0..1 ratio.
+ */
+export function buildCacheHitRateClause(
+  cond: FilterCondition,
+  paramPrefix: string,
+): { readonly clause: string; readonly params: Record<string, unknown> } {
+  const sqlOp = COMPARISON_SQL_OPS[cond.op]
+  if (!sqlOp) throw new Error(`Unsupported cacheHitRate filter operator: ${cond.op}`)
+  return {
+    clause: `(${CACHE_HIT_RATE_DENOM} > 0 AND ${CACHE_HIT_RATE_EXPR} ${sqlOp} {${paramPrefix}:Float64} / 100)`,
+    params: { [paramPrefix]: cond.value },
+  }
+}
+
 const HAS_LLM_ACTIVITY_FRAGMENT = "(tokens_total > 0 OR length(models) > 0)"
 
 export function buildHasLlmActivityClause(

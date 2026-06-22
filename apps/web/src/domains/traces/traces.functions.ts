@@ -35,6 +35,7 @@ import {
   withClickHouse,
 } from "@platform/db-clickhouse"
 import { withTracing } from "@repo/observability"
+import { cacheHitRate } from "@repo/utils"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
@@ -61,6 +62,7 @@ export interface TraceRecord {
   readonly tokensCacheCreate: number
   readonly tokensReasoning: number
   readonly tokensTotal: number
+  readonly cacheHitRate: number | null
   readonly costInputMicrocents: number
   readonly costOutputMicrocents: number
   readonly costTotalMicrocents: number
@@ -92,6 +94,11 @@ export const toTraceRecord = (trace: Trace): TraceRecord => ({
   tokensCacheCreate: trace.tokensCacheCreate,
   tokensReasoning: trace.tokensReasoning,
   tokensTotal: trace.tokensTotal,
+  cacheHitRate: cacheHitRate({
+    input: trace.tokensInput,
+    cacheRead: trace.tokensCacheRead,
+    cacheCreate: trace.tokensCacheCreate,
+  }),
   costInputMicrocents: trace.costInputMicrocents,
   costOutputMicrocents: trace.costOutputMicrocents,
   costTotalMicrocents: trace.costTotalMicrocents,

@@ -94,6 +94,16 @@ export const TRACE_FILTER_FIELDS = [
   { field: "errorCount", type: "numberRange", label: "Error Count" },
   { field: "tokensInput", type: "numberRange", label: "Tokens Input" },
   { field: "tokensOutput", type: "numberRange", label: "Tokens Output" },
+  {
+    // Wire value is an integer percentage (0–100), not a 0–1 ratio: the
+    // numberRange UI rounds wire values to integers, so a fractional scale
+    // would collapse small percentages to 0. The SQL divides by 100.
+    field: "cacheHitRate",
+    type: "numberRange",
+    label: "Cache Hit Rate (%)",
+    tooltip: "Share of input tokens served from cache. Low values on large sessions often signal broken caching.",
+    displayStep: 1,
+  },
 ] as const satisfies readonly TraceFilterField[]
 
 export type TraceFilterFieldName = (typeof TRACE_FILTER_FIELDS)[number]["field"]

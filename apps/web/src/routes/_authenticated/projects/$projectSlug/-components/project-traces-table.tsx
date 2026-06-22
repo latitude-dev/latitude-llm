@@ -9,7 +9,7 @@ import {
   TagList,
   Tooltip,
 } from "@repo/ui"
-import { formatCount, formatDuration, formatPrice, relativeTime } from "@repo/utils"
+import { formatCount, formatDuration, formatPercentage, formatPrice, relativeTime } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
 import { type MouseEvent, type ReactNode, useCallback, useMemo } from "react"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
@@ -28,6 +28,7 @@ export const TRACE_COLUMN_OPTIONS = [
   { id: "duration", label: "Duration" },
   { id: "ttft", label: "Time To First Token", defaultHidden: true },
   { id: "cost", label: "Cost" },
+  { id: "cacheHitRate", label: "Cache Hit Rate" },
   { id: "sessionId", label: "Session ID" },
   { id: "userId", label: "User ID" },
   { id: "models", label: "Models" },
@@ -259,6 +260,13 @@ export function ProjectTracesTable({
               ),
             }
           : {}),
+      },
+      {
+        key: "cacheHitRate",
+        header: "Cache Hit Rate",
+        align: "end",
+        width: 130,
+        render: (trace) => <span>{trace.cacheHitRate === null ? "-" : formatPercentage(trace.cacheHitRate)}</span>,
       },
       {
         key: "sessionId",
