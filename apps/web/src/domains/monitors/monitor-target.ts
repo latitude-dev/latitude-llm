@@ -158,7 +158,7 @@ export const metricThresholdUnitLabel = (metric: MonitorMetric, stream: MonitorS
   if (metric.kind === "count") return stream === "spans" ? "calls" : "sessions"
   switch (metric.field) {
     case "duration":
-      return "ms"
+      return "s"
     case "cost":
       return "$"
     case "tokens":
