@@ -1,5 +1,6 @@
-import { Container } from "@repo/ui"
+import { Container, cn } from "@repo/ui"
 import { createFileRoute, Outlet } from "@tanstack/react-router"
+import { useHasMatchStaticData } from "../../../../lib/hooks/use-router-selectors.ts"
 import { BreadcrumbText } from "../../-components/breadcrumb-ui.tsx"
 import { SettingsSubNav } from "./settings/-components/settings-sub-nav.tsx"
 
@@ -13,11 +14,16 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/sett
 
 function SettingsLayout() {
   const { projectSlug } = Route.useParams()
+  const fillHeight = useHasMatchStaticData((staticData) => staticData?.fillHeight === true)
   return (
     <div className="flex h-full min-w-0">
       <SettingsSubNav projectSlug={projectSlug} />
-      <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
-        <Container className="@container flex flex-1 min-h-0 flex-col gap-8 px-6 pt-6 overflow-y-auto">
+      <main className={cn("flex-1 min-w-0 flex flex-col", fillHeight ? "overflow-hidden" : "overflow-y-auto")}>
+        <Container
+          className={cn("@container flex flex-col gap-8 px-6 pt-6", {
+            "flex-1 min-h-0 overflow-hidden": fillHeight,
+          })}
+        >
           <Outlet />
         </Container>
       </main>
