@@ -13,6 +13,7 @@ export const FLAGGER_STRATEGY_SLUGS = [
   "tool-call-errors",
   "output-schema-validation",
   "empty-response",
+  "low-cache-hit-rate",
 ] as const
 
 export type FlaggerSlug = (typeof FLAGGER_STRATEGY_SLUGS)[number]

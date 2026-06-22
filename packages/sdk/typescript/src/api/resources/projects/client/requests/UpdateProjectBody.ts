@@ -29,5 +29,6 @@ export namespace UpdateProjectBody {
         "tool-call-errors"?: boolean | undefined;
         "output-schema-validation"?: boolean | undefined;
         "empty-response"?: boolean | undefined;
+        "low-cache-hit-rate"?: boolean | undefined;
     }
 }

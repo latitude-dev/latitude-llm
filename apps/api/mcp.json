@@ -600,7 +600,8 @@
                 "trashing",
                 "tool-call-errors",
                 "output-schema-validation",
-                "empty-response"
+                "empty-response",
+                "low-cache-hit-rate"
               ]
             },
             "additionalProperties": {

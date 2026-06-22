@@ -294,6 +294,9 @@
               },
               "empty-response": {
                 "type": "boolean"
+              },
+              "low-cache-hit-rate": {
+                "type": "boolean"
               }
             },
             "description": "Enable or disable specific flaggers for the project. Keys are flagger slugs; values are the new `enabled` state. Omitted slugs are left untouched."

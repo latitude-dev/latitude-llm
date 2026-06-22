@@ -1,4 +1,5 @@
 import type { TraceDetail } from "@domain/spans"
+import { cacheHitRate, formatCount, formatPercentage } from "@repo/utils"
 
 type TraceMessagesOnly = Pick<TraceDetail, "allMessages">
 
@@ -6,6 +7,19 @@ const TOOL_RESULT_ERROR_STATUSES = new Set(["error", "failed", "failure"])
 const EXPECTED_TOOL_HTTP_STATUS_MIN = 400
 const EXPECTED_TOOL_HTTP_STATUS_MAX = 499
 const ERROR_SNIPPET_MAX_LENGTH = 160
+
+// Below this fraction of input tokens served from cache, caching is essentially
+// not working: a healthy multi-turn agent re-reads the great majority of its
+// repeated context. Kept conservative (30%) so only clearly-broken caching is
+// flagged, not merely suboptimal hit rates.
+const LOW_CACHE_HIT_RATE_THRESHOLD = 0.3
+// Caching only matters at scale — providers require ~1k tokens per cache block,
+// and a low rate on a small prompt is not a meaningful overcharge.
+const MIN_TOTAL_INPUT_TOKENS = 20_000
+// Caching only pays off when earlier context is re-sent on a later turn; a
+// single-turn trace has nothing to read back, so cacheCreate>0 / cacheRead=0 is
+// expected there, not broken. Four messages guarantees at least one follow-up.
+const MIN_CACHEABLE_MESSAGES = 4
 
 export type DeterministicFlaggerMatch =
   | { readonly matched: true; readonly feedback: string; readonly messageIndex?: number | undefined }
@@ -256,4 +270,33 @@ export function detectEmptyResponseFlagger(trace: TraceDetail): DeterministicFla
   }
 
   return NO_MATCH
+}
+
+type CacheTrace = Pick<TraceDetail, "allMessages" | "tokensInput" | "tokensCacheRead" | "tokensCacheCreate">
+
+/**
+ * Flags large multi-turn traces where prompt caching is active but the hit rate
+ * is unexpectedly low — the signal a broken cache implementation produces (e.g.
+ * nondeterministic prompt/tool-payload ordering, session resets, or context
+ * compaction), which can multiply token cost. Guards against false positives:
+ * single-turn or tiny-input traces, and traces where no cache was ever written,
+ * never match. Never calls an LLM.
+ */
+export function detectLowCacheHitRateFlagger(trace: CacheTrace): DeterministicFlaggerMatch {
+  if (trace.allMessages.length < MIN_CACHEABLE_MESSAGES) return NO_MATCH
+  if (trace.tokensCacheCreate <= 0) return NO_MATCH
+
+  const totalInput = trace.tokensInput + trace.tokensCacheRead + trace.tokensCacheCreate
+  if (totalInput < MIN_TOTAL_INPUT_TOKENS) return NO_MATCH
+
+  const rate = cacheHitRate({
+    input: trace.tokensInput,
+    cacheRead: trace.tokensCacheRead,
+    cacheCreate: trace.tokensCacheCreate,
+  })
+  if (rate === null || rate >= LOW_CACHE_HIT_RATE_THRESHOLD) return NO_MATCH
+
+  return match(
+    `Low cache hit rate (${formatPercentage(rate)}) on a large multi-turn trace (${formatCount(totalInput)} input tokens): most context was re-sent uncached instead of read from cache. This usually means a broken cache implementation (nondeterministic prompt or tool-payload ordering, session resets, or context compaction) and can multiply token cost.`,
+  )
 }
