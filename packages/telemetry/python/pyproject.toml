@@ -50,7 +50,7 @@ dev = [
     "pyright==1.1.409",
     "ruff==0.14.14",
     "sh==2.2.2",
-    "openai==2.30.0",
+    "openai==2.41.1",
     # Host SDK for the openai-agents integration (example/tests only). The
     # instrumentor (openinference-instrumentation-openai-agents) is the runtime
     # dep; the agents SDK itself is the user's to install.
