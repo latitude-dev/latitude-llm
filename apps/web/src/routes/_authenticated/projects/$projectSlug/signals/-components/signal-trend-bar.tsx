@@ -320,7 +320,7 @@ export function SignalTrendBar({
 
   if (buckets.length === 0 || buckets.every((bucket) => bucket.count === 0)) {
     return (
-      <div className="flex min-h-10 items-center">
+      <div className="flex min-h-10 items-center justify-center">
         <Text.H6 color="foregroundMuted">{emptyLabel}</Text.H6>
       </div>
     )

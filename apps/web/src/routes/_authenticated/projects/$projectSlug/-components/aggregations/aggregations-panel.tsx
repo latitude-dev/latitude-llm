@@ -63,35 +63,37 @@ export function TraceAggregationsPanel({
           onMetricSelect={onMetricSelect}
           onCollapse={() => setCollapsed(true)}
         />
-        {incidentsFlagEnabled ? (
-          <div className="flex items-center justify-end gap-2 px-4 -mb-1">
-            <Tooltip
-              asChild
-              trigger={
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowIncidents((prev) => !prev)}
-                  aria-pressed={showIncidents}
-                >
-                  <Icon icon={showIncidents ? ShieldAlertIcon : ShieldOffIcon} size="sm" />
-                  Incidents
-                </Button>
-              }
-            >
-              Overlay incidents on the timeline
-            </Tooltip>
-          </div>
-        ) : null}
-        <Histogram
-          projectId={projectId}
-          projectSlug={projectSlug}
-          filters={filters}
-          mode={mode}
-          metric={selectedMetric}
-          showIncidents={incidentsFlagEnabled && showIncidents}
-          onRangeSelect={onTimeRangeSelect}
-        />
+        <div className="relative">
+          {incidentsFlagEnabled ? (
+            <div className="absolute right-2 top-2 z-10">
+              <Tooltip
+                asChild
+                trigger={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowIncidents((prev) => !prev)}
+                    aria-pressed={showIncidents}
+                  >
+                    <Icon icon={showIncidents ? ShieldAlertIcon : ShieldOffIcon} size="sm" />
+                    Incidents
+                  </Button>
+                }
+              >
+                Overlay incidents on the timeline
+              </Tooltip>
+            </div>
+          ) : null}
+          <Histogram
+            projectId={projectId}
+            projectSlug={projectSlug}
+            filters={filters}
+            mode={mode}
+            metric={selectedMetric}
+            showIncidents={incidentsFlagEnabled && showIncidents}
+            onRangeSelect={onTimeRangeSelect}
+          />
+        </div>
       </div>
     </div>
   )

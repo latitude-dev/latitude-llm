@@ -16,6 +16,7 @@ import type { ReactNode } from "react"
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
 import React from "react"
 import { emailDesignTokens, emailTailwindConfig } from "../tokens/design-system.js"
+import { EmailButton } from "./EmailButton.tsx"
 
 const LATITUDE_LOGO_URL = "https://console.latitude.so/latitude-logo.png"
 
@@ -42,12 +43,7 @@ export function ContainerLayout({ children, title, previewText, footer }: Contai
                   </Link>
                 </Column>
                 <Column align="right">
-                  <Link
-                    href="https://console.latitude.so"
-                    className="inline-block text-center font-medium rounded-lg no-underline text-sm leading-5 bg-white text-foreground border border-border py-[5px] px-3"
-                  >
-                    Open Latitude
-                  </Link>
+                  <EmailButton href="https://console.latitude.so" label="Open Latitude" variant="outline" />
                 </Column>
               </Row>
             </Section>
@@ -67,9 +63,13 @@ export function ContainerLayout({ children, title, previewText, footer }: Contai
               <div className="mb-1 text-center">
                 <span className="text-sm text-muted-foreground">The AI engineering platform for product teams.</span>
               </div>
-              <Link href="https://latitude.so">
-                <span className="text-sm text-primary text-center">latitude.so</span>
-              </Link>
+              <div className="text-center">
+                <Link href="https://latitude.so" style={{ textDecoration: "none" }}>
+                  <span className="text-sm" style={{ color: emailDesignTokens.colors.primary }}>
+                    latitude.so
+                  </span>
+                </Link>
+              </div>
             </Section>
           </Container>
         </Body>
