@@ -9,8 +9,8 @@ import { ScoreAnalyticsRepository, type SignalOccurrenceAggregate, type SignalWi
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
 import { ChSqlClient, EvaluationId, OrganizationId, ProjectId, SignalId, SqlClient } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
-import { TraceRepository } from "@domain/spans"
-import { createFakeTraceRepository } from "@domain/spans/testing"
+import { SessionRepository } from "@domain/spans"
+import { createFakeSessionRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { beforeEach, describe, expect, it } from "vitest"
 import { type Signal, SignalState } from "../entities/signal.ts"
@@ -63,6 +63,7 @@ const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation => ({
 const makeWindowMetric = (overrides: Partial<SignalWindowMetric> = {}): SignalWindowMetric => ({
   signalId: SignalId("i".repeat(24)),
   occurrences: 1,
+  affectedSessions: overrides.occurrences ?? 1,
   firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
   lastSeenAt: new Date("2026-04-01T00:00:00.000Z"),
   ...overrides,
@@ -126,11 +127,11 @@ const aggregateOccurrences =
   (seed: readonly SignalOccurrenceAggregate[]) => (input: { readonly signalIds: readonly string[] }) =>
     Effect.sync(() => seed.filter((occurrence) => input.signalIds.includes(occurrence.signalId)))
 
-let traceCount = 0
-const provideTraceRepository = Layer.succeed(
-  TraceRepository,
-  createFakeTraceRepository({
-    countByProjectId: () => Effect.sync(() => traceCount),
+let sessionCount = 0
+const provideSessionRepository = Layer.succeed(
+  SessionRepository,
+  createFakeSessionRepository({
+    countByProjectId: () => Effect.sync(() => ({ totalCount: sessionCount })),
   }).repository,
 )
 
@@ -162,7 +163,7 @@ const createSignalSearch = (
 
 describe("listSignalsUseCase", () => {
   beforeEach(() => {
-    traceCount = 0
+    sessionCount = 0
   })
 
   it("returns the empty issue shape without querying ClickHouse when the project has no issues", async () => {
@@ -189,12 +190,12 @@ describe("listSignalsUseCase", () => {
           return []
         }),
     })
-    let traceCountCalls = 0
-    const { repository: traceRepository } = createFakeTraceRepository({
+    let sessionCountCalls = 0
+    const { repository: sessionRepository } = createFakeSessionRepository({
       countByProjectId: () =>
         Effect.sync(() => {
-          traceCountCalls += 1
-          return 0
+          sessionCountCalls += 1
+          return { totalCount: 0 }
         }),
     })
 
@@ -205,7 +206,7 @@ describe("listSignalsUseCase", () => {
             Layer.succeed(SignalRepository, signalRepository),
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-            Layer.succeed(TraceRepository, traceRepository),
+            Layer.succeed(SessionRepository, sessionRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
           ),
@@ -218,12 +219,12 @@ describe("listSignalsUseCase", () => {
     expect(result.hasAnySignals).toBe(false)
     expect(result.priorityCounts).toEqual({ urgent: 0, high: 0, medium: 0, low: 0, none: 0 })
     expect(result.assigneeCounts).toEqual({})
-    expect(result.analytics.totalTraces).toBe(0)
+    expect(result.analytics.totalSessions).toBe(0)
     expect(result.analytics.histogram.length).toBeGreaterThan(0)
     expect(windowMetricInputs).toEqual([])
     expect(aggregateInputs).toEqual([])
     expect(histogramInputs).toEqual([])
-    expect(traceCountCalls).toBe(0)
+    expect(sessionCountCalls).toBe(0)
   })
 
   it("reports project issue existence when the selected lifecycle group has no visible rows", async () => {
@@ -270,7 +271,7 @@ describe("listSignalsUseCase", () => {
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-            provideTraceRepository,
+            provideSessionRepository,
           ),
         ),
       ),
@@ -384,7 +385,7 @@ describe("listSignalsUseCase", () => {
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-            provideTraceRepository,
+            provideSessionRepository,
           ),
         ),
       ),
@@ -543,7 +544,7 @@ describe("listSignalsUseCase", () => {
         }),
     })
     const { calls } = createSignalSearch([])
-    traceCount = 10
+    sessionCount = 10
 
     const result = await Effect.runPromise(
       listSignalsUseCase({
@@ -559,7 +560,7 @@ describe("listSignalsUseCase", () => {
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-            provideTraceRepository,
+            provideSessionRepository,
           ),
         ),
       ),
@@ -579,7 +580,7 @@ describe("listSignalsUseCase", () => {
     expect(result.items.map((item) => item.states)).toEqual([[SignalState.Ongoing]])
     expect(result.items.map((item) => item.id)).toEqual([activeSignal.id])
     expect(result.occurrencesSum).toBe(5)
-    expect(result.items[0]?.affectedTracesPercent).toBe(0.5)
+    expect(result.items[0]?.affectedSessionsPercent).toBe(0.5)
     expect(result.items[0]?.evaluations.map((evaluation) => evaluation.id)).toEqual([EvaluationId("1".repeat(24))])
     // Adaptive bucketing over 7 days picks 4h buckets → 6 bars/day × 7 days = 42.
     expect(result.analytics.histogram).toHaveLength(42)
@@ -640,7 +641,7 @@ describe("listSignalsUseCase", () => {
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-            provideTraceRepository,
+            provideSessionRepository,
           ),
         ),
       ),
@@ -697,7 +698,7 @@ describe("listSignalsUseCase", () => {
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-            provideTraceRepository,
+            provideSessionRepository,
           ),
         ),
       ),
@@ -827,7 +828,7 @@ describe("listSignalsUseCase", () => {
           }),
       })
       createSignalSearch([])
-      traceCount = 3
+      sessionCount = 3
 
       const result = await Effect.runPromise(
         listSignalsUseCase({
@@ -843,7 +844,7 @@ describe("listSignalsUseCase", () => {
               Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
               Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
               Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-              provideTraceRepository,
+              provideSessionRepository,
             ),
           ),
         ),
@@ -938,7 +939,7 @@ describe("listSignalsUseCase", () => {
         }),
     })
     const { calls } = signalSearch
-    traceCount = 20
+    sessionCount = 20
 
     const result = await Effect.runPromise(
       listSignalsUseCase({
@@ -957,7 +958,7 @@ describe("listSignalsUseCase", () => {
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-            provideTraceRepository,
+            provideSessionRepository,
           ),
         ),
       ),
@@ -1030,7 +1031,7 @@ describe("listSignalsUseCase", () => {
         ]),
     })
     createSignalSearch([])
-    traceCount = 5
+    sessionCount = 5
 
     const result = await Effect.runPromise(
       listSignalsUseCase({
@@ -1051,7 +1052,7 @@ describe("listSignalsUseCase", () => {
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-            provideTraceRepository,
+            provideSessionRepository,
           ),
         ),
       ),
@@ -1103,7 +1104,7 @@ describe("listSignalsUseCase", () => {
       ]),
     })
     createSignalSearch([])
-    traceCount = 4
+    sessionCount = 4
 
     const result = await Effect.runPromise(
       listSignalsUseCase({
@@ -1122,7 +1123,7 @@ describe("listSignalsUseCase", () => {
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-            provideTraceRepository,
+            provideSessionRepository,
           ),
         ),
       ),
@@ -1164,7 +1165,7 @@ describe("listSignalsUseCase", () => {
           input.seeded.map((entry) => makeOccurrence({ signalId: SignalId(entry.issue.id) })),
         ),
       })
-      traceCount = 10
+      sessionCount = 10
 
       return Effect.runPromise(
         listSignalsUseCase({ organizationId, projectId, now, ...input.options }).pipe(
@@ -1175,7 +1176,7 @@ describe("listSignalsUseCase", () => {
               Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
               Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
               Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-              provideTraceRepository,
+              provideSessionRepository,
             ),
           ),
         ),

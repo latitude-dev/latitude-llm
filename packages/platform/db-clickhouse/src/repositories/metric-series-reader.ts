@@ -62,10 +62,14 @@ const metricColumnsFor = (stream: MetricSeriesWindowInput["target"]["stream"]): 
  * Ratios/averages guard the empty group (`count() = 0`) so a metric over an empty
  * window/bucket reads `0`, not `nan` — densified empty buckets then stay numeric.
  */
-const metricAggregate = (metric: MonitorMetric, columns: MetricColumns): string => {
+const metricAggregate = (
+  metric: MonitorMetric,
+  columns: MetricColumns,
+  stream: MetricSeriesWindowInput["target"]["stream"],
+): string => {
   switch (metric.kind) {
     case "count":
-      return "count()"
+      return stream === "traces" ? "uniqExact(coalesce(nullIf(session_id, ''), toString(trace_id)))" : "count()"
     case "errorRate":
       return `if(count() = 0, 0, countIf(${columns.isError}) / count())`
     case "sum":
@@ -169,7 +173,7 @@ const make = (): MetricSeriesReaderShape => ({
     Effect.gen(function* () {
       const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
       const inner = yield* buildInnerQuery(input)
-      const aggregate = metricAggregate(input.target.metric, metricColumnsFor(input.target.stream))
+      const aggregate = metricAggregate(input.target.metric, metricColumnsFor(input.target.stream), input.target.stream)
       return yield* chSqlClient
         .query(async (client) => {
           const result = await client.query({
@@ -241,7 +245,7 @@ const make = (): MetricSeriesReaderShape => ({
     Effect.gen(function* () {
       const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
       const inner = yield* buildInnerQuery(input)
-      const aggregate = metricAggregate(input.target.metric, metricColumnsFor(input.target.stream))
+      const aggregate = metricAggregate(input.target.metric, metricColumnsFor(input.target.stream), input.target.stream)
       const bucketCount = Math.max(0, Math.floor((input.to.getTime() - input.from.getTime()) / input.bucketMs))
       // Bucket each matching trace by how far its `start_time` sits before `to`,
       // in `bucketNs` (= bucketMs) steps — index 0 is the bucket ending at `to`.

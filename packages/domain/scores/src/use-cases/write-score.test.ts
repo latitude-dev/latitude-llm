@@ -152,6 +152,27 @@ describe("writeScoreUseCase", () => {
     expect(score.annotatorId).toBe(annotatorId)
   })
 
+  it("uses traceId as sessionId when a traced score has no sessionId", async () => {
+    const { store, layer } = createTestLayers()
+
+    const nullSessionScore = await Effect.runPromise(
+      writeScoreUseCase({
+        ...buildEvaluationScoreInput(),
+        sessionId: null,
+      }).pipe(Effect.provide(layer)),
+    )
+    const emptySessionScore = await Effect.runPromise(
+      writeScoreUseCase({
+        ...buildEvaluationScoreInput(),
+        sessionId: "",
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(nullSessionScore.sessionId).toBe(traceId)
+    expect(emptySessionScore.sessionId).toBe(traceId)
+    expect(Array.from(store.values()).map((score) => score.sessionId)).toEqual([traceId, traceId])
+  })
+
   it("defaults annotatorId to null on create when not provided", async () => {
     const { layer } = createTestLayers()
 

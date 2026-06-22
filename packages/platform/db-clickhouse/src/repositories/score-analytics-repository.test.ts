@@ -1058,6 +1058,7 @@ describe("ScoreAnalyticsRepository", () => {
         makeScoreRow({
           signal_id: signalA,
           trace_id: traceA,
+          session_id: "session_window_a",
           source: "evaluation",
           source_id: "eval_source_a",
           created_at: "2026-04-08 10:00:00.000",
@@ -1065,6 +1066,7 @@ describe("ScoreAnalyticsRepository", () => {
         makeScoreRow({
           signal_id: signalA,
           trace_id: traceA,
+          session_id: "session_window_a",
           source: "evaluation",
           source_id: "eval_source_a",
           created_at: "2026-04-09 10:00:00.000",
@@ -1102,6 +1104,7 @@ describe("ScoreAnalyticsRepository", () => {
         {
           signalId: SignalId(signalA),
           occurrences: 2,
+          affectedSessions: 1,
           firstSeenAt: new Date("2026-04-08T10:00:00.000Z"),
           lastSeenAt: new Date("2026-04-09T10:00:00.000Z"),
         },

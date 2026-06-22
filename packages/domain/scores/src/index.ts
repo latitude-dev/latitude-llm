@@ -60,6 +60,8 @@ export {
   type SignalImpactAggregate,
   type SignalOccurrenceAggregate,
   type SignalOccurrenceBucket,
+  type SignalSessionPage,
+  type SignalSessionSummary,
   type SignalTagsAggregate,
   type SignalTagsTimeRange,
   type SignalTracePage,
