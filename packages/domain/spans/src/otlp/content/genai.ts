@@ -101,10 +101,31 @@ function normalizeSemconvMessage(msg: unknown): unknown {
   return { ...kept, parts }
 }
 
+// Tool results belong in a "tool" message in the unified model. Some providers (e.g. Anthropic)
+// nest the tool_result inside a "user" turn — sometimes alongside ordinary text. Hoist the
+// tool_call_response parts into their own "tool" message (so they pair with the originating
+// tool_call downstream, which keys off role === "tool") and leave any sibling parts under the
+// original role, rather than relabeling the whole turn.
+function hoistToolResults(messages: readonly GenAIMessage[]): GenAIMessage[] {
+  const out: GenAIMessage[] = []
+  for (const msg of messages) {
+    const parts = Array.isArray(msg.parts) ? msg.parts : []
+    if (msg.role === "tool" || !parts.some((p) => (p as RawPart)?.type === "tool_call_response")) {
+      out.push(msg)
+      continue
+    }
+    const toolParts = parts.filter((p) => (p as RawPart)?.type === "tool_call_response")
+    const otherParts = parts.filter((p) => (p as RawPart)?.type !== "tool_call_response")
+    out.push({ role: "tool", parts: toolParts } as GenAIMessage)
+    if (otherParts.length > 0) out.push({ ...msg, parts: otherParts })
+  }
+  return out
+}
+
 function parseMessages(attrs: readonly OtlpKeyValue[], key: string): GenAIMessage[] {
   const raw = extractJsonAttr(attrs, key)
   if (!Array.isArray(raw)) return []
-  return raw.map(normalizeSemconvMessage) as GenAIMessage[]
+  return hoistToolResults(raw.map(normalizeSemconvMessage) as GenAIMessage[])
 }
 
 export function parseGenAICurrent(attrs: readonly OtlpKeyValue[]): ParsedContent {

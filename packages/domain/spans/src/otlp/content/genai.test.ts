@@ -149,6 +149,51 @@ describe("parseContent (GenAI current — gen_ai.{input,output}.messages)", () =
       ])
     })
 
+    it("hoists a tool-result nested in a user turn (Anthropic) into its own tool message", () => {
+      const result = parseContent([
+        str(
+          "gen_ai.input.messages",
+          JSON.stringify([
+            {
+              role: "assistant",
+              parts: [{ type: "tool_call", id: "toolu_1", name: "get_weather", arguments: { city: "SF" } }],
+            },
+            { role: "user", parts: [{ type: "tool_call_response", id: "toolu_1", response: { tempC: 21 } }] },
+          ]),
+        ),
+      ])
+
+      expect(result.inputMessages).toEqual([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "toolu_1", name: "get_weather", arguments: { city: "SF" } }],
+        },
+        { role: "tool", parts: [{ type: "tool_call_response", id: "toolu_1", response: { tempC: 21 } }] },
+      ])
+    })
+
+    it("splits a mixed user turn into a tool message + a user message, keeping sibling text under user", () => {
+      const result = parseContent([
+        str(
+          "gen_ai.input.messages",
+          JSON.stringify([
+            {
+              role: "user",
+              parts: [
+                { type: "tool_call_response", id: "toolu_1", response: { tempC: 21 } },
+                { type: "text", content: "thanks, now in Celsius please" },
+              ],
+            },
+          ]),
+        ),
+      ])
+
+      expect(result.inputMessages).toEqual([
+        { role: "tool", parts: [{ type: "tool_call_response", id: "toolu_1", response: { tempC: 21 } }] },
+        { role: "user", parts: [{ type: "text", content: "thanks, now in Celsius please" }] },
+      ])
+    })
+
     it("passes unknown roles and unknown part types through verbatim", () => {
       const result = parseContent([
         str("gen_ai.input.messages", JSON.stringify([{ role: "weirdo", parts: [{ type: "mystery", foo: "bar" }] }])),
