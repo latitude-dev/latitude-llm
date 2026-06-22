@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## v0.3.15 - 2026-06-22
+
+### Telemetry
+
+- Landed span-ingestion fixes, upgraded to Vercel AI SDK v7, migrated instrumentors, and ran a full provider e2e audit (ref: #3627).
+
+### Observability
+
+- Preserved non-Error throw details instead of logging "[object Object]" (ref: #3639).
+
+### Data destinations
+
+- Fixed the destination runs table not scrolling or paginating — bounded the settings scroll container so older runs load within the viewport (follow-up to #3637).
+
+### Dependencies
+
+- Bumped protobufjs, framer-api, the OpenAI Python telemetry dependency, and CI actions (ref: #3580, #3452, #3443, #3635, #3636).
+
 ## v0.3.14 - 2026-06-22
 
 ### API & MCP
