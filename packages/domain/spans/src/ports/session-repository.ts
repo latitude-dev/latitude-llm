@@ -64,6 +64,12 @@ export interface SessionRepositoryShape {
     readonly sessionId: SessionId
   }): Effect.Effect<SessionDetail, NotFoundError | RepositoryError, ChSqlClient>
 
+  listBySessionIds(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly sessionIds: readonly SessionId[]
+  }): Effect.Effect<readonly Session[], RepositoryError, ChSqlClient>
+
   distinctFilterValues(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId

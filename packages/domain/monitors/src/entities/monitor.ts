@@ -21,7 +21,12 @@ import { z } from "zod"
  * otherwise the inline `filterSet`/`query` apply. A monitor's `target` is `null`
  * for legacy source-based alerts (target on the alert) and system issue monitors.
  */
+export const MONITOR_TARGET_KINDS = ["signal", "tool", "user", "session", "savedSearch"] as const
+export const monitorTargetKindSchema = z.enum(MONITOR_TARGET_KINDS)
+export type MonitorTargetKind = z.infer<typeof monitorTargetKindSchema>
+
 export const monitorTargetSchema = z.object({
+  kind: monitorTargetKindSchema,
   stream: monitorStreamSchema,
   filterSet: filterSetSchema.nullable(),
   query: z.string().nullable(),

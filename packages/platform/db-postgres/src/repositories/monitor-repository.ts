@@ -48,6 +48,16 @@ const toMonitorAlert = (row: typeof monitorAlerts.$inferSelect): MonitorAlert =>
   createdAt: row.createdAt,
 })
 
+const inferTargetKind = (row: {
+  readonly targetStream: typeof monitors.$inferSelect.targetStream
+  readonly targetSavedSearchId: typeof monitors.$inferSelect.targetSavedSearchId
+}): NonNullable<Monitor["target"]>["kind"] => {
+  if (row.targetSavedSearchId) return "savedSearch"
+  if (row.targetStream === "spans") return "tool"
+  if (row.targetStream === "sessions") return "session"
+  return "user"
+}
+
 const toMonitor = (row: typeof monitors.$inferSelect, alerts: readonly MonitorAlert[]): Monitor =>
   monitorSchema.parse({
     id: row.id,
@@ -60,6 +70,7 @@ const toMonitor = (row: typeof monitors.$inferSelect, alerts: readonly MonitorAl
     alerts,
     target: row.targetStream
       ? {
+          kind: inferTargetKind(row),
           stream: row.targetStream,
           filterSet: row.targetFilterSet ?? null,
           query: row.targetQuery ?? null,
@@ -631,6 +642,7 @@ export const MonitorRepositoryLive = Layer.effect(
                   {
                     alert: toMonitorAlert(row.alert),
                     target: {
+                      kind: inferTargetKind(row),
                       stream: row.targetStream,
                       filterSet: row.targetFilterSet ?? null,
                       query: row.targetQuery ?? null,

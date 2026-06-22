@@ -214,6 +214,7 @@ export const createSavedSearchFn = createServerFn({ method: "POST" })
                   ...(unified
                     ? {
                         target: {
+                          kind: "savedSearch",
                           stream: "sessions",
                           filterSet: search.filterSet,
                           query: search.query,

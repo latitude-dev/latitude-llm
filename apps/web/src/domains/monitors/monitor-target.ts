@@ -12,6 +12,7 @@ const firstEqValue = (conditions: readonly FilterCondition[] | undefined): strin
 }
 
 export const toolMonitorTarget = (toolName: string, metric: MonitorMetric = DEFAULT_METRIC): MonitorTarget => ({
+  kind: "tool",
   stream: "spans",
   filterSet: { operation: [{ op: "eq", value: EXECUTE_TOOL_OPERATION }], toolName: [{ op: "eq", value: toolName }] },
   query: null,
@@ -20,6 +21,7 @@ export const toolMonitorTarget = (toolName: string, metric: MonitorMetric = DEFA
 })
 
 export const allToolsMonitorTarget = (metric: MonitorMetric = DEFAULT_METRIC): MonitorTarget => ({
+  kind: "tool",
   stream: "spans",
   filterSet: { operation: [{ op: "eq", value: EXECUTE_TOOL_OPERATION }] },
   query: null,
@@ -28,6 +30,7 @@ export const allToolsMonitorTarget = (metric: MonitorMetric = DEFAULT_METRIC): M
 })
 
 export const userMonitorTarget = (userId: string, metric: MonitorMetric = DEFAULT_METRIC): MonitorTarget => ({
+  kind: "user",
   stream: "traces",
   filterSet: { userId: [{ op: "eq", value: userId }] },
   query: null,
@@ -36,6 +39,7 @@ export const userMonitorTarget = (userId: string, metric: MonitorMetric = DEFAUL
 })
 
 export const allUsersMonitorTarget = (metric: MonitorMetric = DEFAULT_METRIC): MonitorTarget => ({
+  kind: "user",
   stream: "traces",
   filterSet: {},
   query: null,
@@ -44,10 +48,23 @@ export const allUsersMonitorTarget = (metric: MonitorMetric = DEFAULT_METRIC): M
 })
 
 export const allSessionsMonitorTarget = (metric: MonitorMetric = DEFAULT_METRIC): MonitorTarget => ({
+  kind: "session",
   stream: "sessions",
   filterSet: {},
   query: null,
   savedSearchId: null,
+  metric,
+})
+
+export const savedSearchMonitorTarget = (
+  savedSearchId: string,
+  metric: MonitorMetric = DEFAULT_METRIC,
+): MonitorTarget => ({
+  kind: "savedSearch",
+  stream: "traces",
+  filterSet: null,
+  query: null,
+  savedSearchId,
   metric,
 })
 
@@ -61,17 +78,17 @@ interface TargetDescription {
 /** Humanise a persisted monitor target into a short chip label for the dashboard's Target column. */
 export const describeMonitorTarget = (target: MonitorTarget | null): TargetDescription | null => {
   if (!target) return null
-  if (target.savedSearchId) return { label: "Saved search", kind: "savedSearch" }
+  if (target.kind === "savedSearch") return { label: "Saved search", kind: "savedSearch" }
   const filterSet = target.filterSet ?? {}
-  if (target.stream === "spans") {
+  if (target.kind === "tool") {
     const tool = firstEqValue(filterSet.toolName)
     return tool ? { label: `Tool: ${tool}`, kind: "tool" } : { label: "All tools", kind: "allTools" }
   }
-  if (target.stream === "traces") {
+  if (target.kind === "user") {
     const user = firstEqValue(filterSet.userId)
     return user ? { label: `User: ${user}`, kind: "user" } : { label: "All users", kind: "allUsers" }
   }
-  if (target.stream === "sessions") return { label: "All sessions", kind: "allSessions" }
+  if (target.kind === "session") return { label: "All sessions", kind: "allSessions" }
   return { label: target.stream, kind: "stream" }
 }
 

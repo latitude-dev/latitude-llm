@@ -18,6 +18,14 @@ import { buildMonitorAlert, type MonitorAlertInput } from "./create-monitor-aler
 
 const NAME_MAX_LENGTH = 128
 
+const targetKindMatchesQueryPlan = (target: MonitorTarget): boolean => {
+  if (target.kind === "tool") return target.stream === "spans"
+  if (target.kind === "user") return target.stream === "traces"
+  if (target.kind === "session") return target.stream === "sessions"
+  if (target.kind === "savedSearch") return target.savedSearchId !== null
+  return false
+}
+
 export interface CreateMonitorInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
@@ -85,6 +93,12 @@ export const createMonitorUseCase = (
         }
         if (!unified && input.target != null) {
           return yield* new ValidationError({ field: "target", message: "A target is only valid for unified alerts" })
+        }
+        if (input.target && !targetKindMatchesQueryPlan(input.target)) {
+          return yield* new ValidationError({
+            field: "target",
+            message: "Monitor target kind does not match its query plan",
+          })
         }
 
         // A search with a semantic part has no exact match rule to count against.

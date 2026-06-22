@@ -46,7 +46,7 @@ import { buildSessionIntelligenceFilters } from "../session-intelligence-filters
 import { countSessionsBySearchQuery, type FetchFullSessions, listSessionsBySearchQuery } from "./search-by-project.ts"
 import { isActiveSearch } from "./search-plan.ts"
 
-const LIST_SELECT = `
+export const LIST_SELECT = `
   organization_id,
   project_id,
   session_id,
@@ -334,7 +334,7 @@ const SORT_COLUMNS: Record<string, SortColumn> = {
   traceCount: { expr: "trace_count", chType: "UInt64", rowKey: "trace_count" },
 }
 
-function buildSessionFilterClauses(filters: FilterSet | undefined): {
+export function buildSessionFilterClauses(filters: FilterSet | undefined): {
   havingClauses: string[]
   whereClauses: string[]
   params: Record<string, unknown>
@@ -434,7 +434,7 @@ function collectPercentileRequests(filters: FilterSet | undefined): {
   return { requests, cloned }
 }
 
-const resolvePercentileFilters = (
+export const resolvePercentileFilters = (
   organizationId: OrganizationId,
   projectId: ProjectId,
   filters: FilterSet | undefined,
@@ -945,6 +945,34 @@ export const SessionRepositoryLive = Layer.effect(
               Effect.mapError((error) =>
                 isNotFoundError(error) ? error : toRepositoryError(error, "findBySessionId"),
               ),
+            )
+        }),
+
+      listBySessionIds: ({ organizationId, projectId, sessionIds }) =>
+        Effect.gen(function* () {
+          if (sessionIds.length === 0) return []
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${LIST_SELECT}
+                      FROM sessions
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND session_id IN ({sessionIds:Array(String)})
+                      GROUP BY organization_id, project_id, session_id`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  sessionIds: sessionIds.map((sessionId) => sessionId as string),
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<SessionListRow>()
+            })
+            .pipe(
+              Effect.map((rows): readonly Session[] => rows.map(toDomainSession)),
+              Effect.mapError((error) => toRepositoryError(error, "listBySessionIds")),
             )
         }),
 

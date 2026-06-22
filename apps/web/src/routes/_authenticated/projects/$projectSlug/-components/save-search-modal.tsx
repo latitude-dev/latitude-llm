@@ -65,6 +65,7 @@ function CreateModal({ open, onClose, projectId, projectSlug, query, filterSet, 
   const [withMonitor, setWithMonitor] = useState(false)
   const [alertDraft, setAlertDraft] = useState<AlertDraft>(() =>
     targetAlertDraft({
+      kind: "savedSearch",
       stream: "sessions",
       filterSet,
       query,

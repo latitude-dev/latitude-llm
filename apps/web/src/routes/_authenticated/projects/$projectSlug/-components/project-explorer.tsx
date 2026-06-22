@@ -223,6 +223,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   const timeTo = getTimeFilterValue(filters, "lte")
   const sessionsMonitorTarget = useMemo<MonitorTarget>(
     () => ({
+      kind: "session",
       stream: "sessions",
       filterSet: filters,
       query: query || null,

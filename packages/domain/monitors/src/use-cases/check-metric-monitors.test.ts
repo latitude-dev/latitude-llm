@@ -19,6 +19,7 @@ const alertId = "a".repeat(24) as MonitorAlert["id"]
 const minutesAgo = (m: number) => new Date(Date.now() - m * 60 * 1000)
 
 const toolTarget: MonitorTarget = {
+  kind: "tool",
   stream: "spans",
   filterSet: { operation: [{ op: "eq", value: "execute_tool" }] },
   query: null,

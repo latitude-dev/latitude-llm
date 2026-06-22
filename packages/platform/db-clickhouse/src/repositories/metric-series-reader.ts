@@ -16,7 +16,16 @@ import { parseSearchQuery } from "@domain/spans"
 import { Effect, Layer } from "effect"
 import { buildSpanFilterClauses } from "../registries/span-fields.ts"
 import { isActiveSearch, planSearch } from "./search-plan.ts"
-import { buildTraceFilterClauses, LIST_SELECT, resolvePercentileFilters } from "./trace-repository.ts"
+import {
+  buildSessionFilterClauses,
+  resolvePercentileFilters as resolveSessionPercentileFilters,
+  LIST_SELECT as SESSION_LIST_SELECT,
+} from "./session-repository.ts"
+import {
+  buildTraceFilterClauses,
+  resolvePercentileFilters as resolveTracePercentileFilters,
+  LIST_SELECT as TRACE_LIST_SELECT,
+} from "./trace-repository.ts"
 
 /** ClickHouse `DateTime64` params take a space-separated, zone-naive string (UTC). */
 const toClickHouseDateTime64 = (value: Date): string => value.toISOString().replace("T", " ").replace("Z", "")
@@ -124,15 +133,55 @@ const buildSpanInnerQuery = (input: MetricSeriesWindowInput): InnerQuery => {
  * The grouped per-trace subquery the metric queries wrap, for the `traces`
  * stream. The window is a `HAVING` on the aggregated `start_time` (same as the
  * trace list/count), combined with the target's filters + semantic query.
- * Lifted from the saved-search match reader; `spans` is a sibling branch, sessions later.
+ * Lifted from the saved-search match reader; `spans` and `sessions` are sibling branches.
  */
+const buildSessionInnerQuery = (
+  input: MetricSeriesWindowInput,
+): Effect.Effect<InnerQuery, RepositoryError, ChSqlClient> =>
+  Effect.gen(function* () {
+    const filterSet = yield* resolveSessionPercentileFilters(
+      input.organizationId,
+      input.projectId,
+      input.target.filterSet,
+    )
+    const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(filterSet)
+    const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+    const having = [
+      "start_time >= toDateTime64({windowFrom:String}, 9, 'UTC')",
+      "start_time < toDateTime64({windowTo:String}, 9, 'UTC')",
+      ...havingClauses,
+    ].join(" AND ")
+
+    return {
+      sql: `SELECT ${SESSION_LIST_SELECT}
+            FROM sessions
+            WHERE organization_id = {organizationId:String}
+              AND project_id = {projectId:String}
+              ${extraWhere}
+            GROUP BY organization_id, project_id, session_id
+            HAVING ${having}`,
+      params: {
+        organizationId: input.organizationId as string,
+        projectId: input.projectId as string,
+        windowFrom: toClickHouseDateTime64(input.from),
+        windowTo: toClickHouseDateTime64(input.to),
+        ...filterParams,
+      },
+    }
+  })
+
 const buildInnerQuery = (input: MetricSeriesWindowInput): Effect.Effect<InnerQuery, RepositoryError, ChSqlClient> =>
   Effect.gen(function* () {
     if (input.target.stream === "spans") return buildSpanInnerQuery(input)
+    if (input.target.stream === "sessions") return yield* buildSessionInnerQuery(input)
     if (input.target.stream !== "traces") {
       return yield* Effect.die(`MetricSeriesReader: stream '${input.target.stream}' not implemented yet`)
     }
-    const filterSet = yield* resolvePercentileFilters(input.organizationId, input.projectId, input.target.filterSet)
+    const filterSet = yield* resolveTracePercentileFilters(
+      input.organizationId,
+      input.projectId,
+      input.target.filterSet,
+    )
     const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filterSet)
     const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
@@ -154,7 +203,7 @@ const buildInnerQuery = (input: MetricSeriesWindowInput): Effect.Effect<InnerQue
     ].join(" AND ")
 
     return {
-      sql: `SELECT ${LIST_SELECT}
+      sql: `SELECT ${TRACE_LIST_SELECT}
             FROM traces
             WHERE organization_id = {organizationId:String}
               AND project_id = {projectId:String}

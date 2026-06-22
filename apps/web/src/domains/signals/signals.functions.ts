@@ -677,13 +677,17 @@ export const listSignalSessions = createServerFn({ method: "GET" })
           ...(data.limit !== undefined ? { limit: data.limit } : {}),
           ...(data.offset !== undefined ? { offset: data.offset } : {}),
         })
-        const sessions = yield* Effect.forEach(sessionPage.items, (item) =>
-          sessionRepository
-            .findBySessionId({ organizationId: orgId, projectId, sessionId: item.sessionId })
-            .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
-        )
+        const sessions = yield* sessionRepository.listBySessionIds({
+          organizationId: orgId,
+          projectId,
+          sessionIds: sessionPage.items.map((item) => item.sessionId),
+        })
+        const sessionsById = new Map(sessions.map((session) => [session.sessionId, session]))
         return {
-          items: sessions.flatMap((session) => (session ? [serializeSession(session)] : [])),
+          items: sessionPage.items.flatMap((item) => {
+            const session = sessionsById.get(item.sessionId)
+            return session ? [serializeSession(session)] : []
+          }),
           hasMore: sessionPage.hasMore,
           limit: sessionPage.limit,
           offset: sessionPage.offset,

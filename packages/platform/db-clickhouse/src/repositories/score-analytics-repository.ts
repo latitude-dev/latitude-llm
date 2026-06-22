@@ -1768,7 +1768,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                         max(created_at) AS last_seen_at
                       FROM (
                         SELECT
-                          if(session_id = '', toString(trace_id), session_id) AS normalized_session_id,
+                          coalesce(nullIf(session_id, ''), toString(trace_id)) AS normalized_session_id,
                           created_at
                         FROM scores
                         WHERE ${scopeClause(options)}
@@ -1810,7 +1810,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           return yield* chSqlClient
             .query(async (client) => {
               const result = await client.query({
-                query: `SELECT uniqExact(if(session_id = '', toString(trace_id), session_id)) AS total
+                query: `SELECT uniqExact(coalesce(nullIf(session_id, ''), toString(trace_id))) AS total
                       FROM scores
                       WHERE ${scopeClause(options)}
                         AND signal_id = {signalId:FixedString(24)}

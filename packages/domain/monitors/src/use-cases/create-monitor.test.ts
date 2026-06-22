@@ -166,6 +166,7 @@ describe("createMonitorUseCase", () => {
   })
 
   const toolTarget = {
+    kind: "tool" as const,
     stream: "spans" as const,
     filterSet: { operation: [{ op: "eq" as const, value: "execute_tool" }] },
     query: null,

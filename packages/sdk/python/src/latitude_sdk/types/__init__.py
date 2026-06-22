@@ -142,6 +142,7 @@ if typing.TYPE_CHECKING:
     from .monitor_metric_sum_field import MonitorMetricSumField
     from .monitor_signal_response import MonitorSignalResponse
     from .monitor_target import MonitorTarget
+    from .monitor_target_kind import MonitorTargetKind
     from .monitor_target_stream import MonitorTargetStream
     from .notifications_setting import NotificationsSetting
     from .o_auth_key import OAuthKey
@@ -386,6 +387,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "MonitorMetric_Sum": ".monitor_metric",
     "MonitorSignalResponse": ".monitor_signal_response",
     "MonitorTarget": ".monitor_target",
+    "MonitorTargetKind": ".monitor_target_kind",
     "MonitorTargetStream": ".monitor_target_stream",
     "NotificationsSetting": ".notifications_setting",
     "OAuthKey": ".o_auth_key",
@@ -658,6 +660,7 @@ __all__ = [
     "MonitorMetric_Sum",
     "MonitorSignalResponse",
     "MonitorTarget",
+    "MonitorTargetKind",
     "MonitorTargetStream",
     "NotificationsSetting",
     "OAuthKey",

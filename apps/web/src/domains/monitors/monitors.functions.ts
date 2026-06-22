@@ -247,7 +247,7 @@ interface MonitorMetricSeriesRecord {
 /** Resolve a monitor's persisted target to the metric reader's `(stream, filterSet, query, metric)`. */
 const resolveMetricTarget = (target: NonNullable<Monitor["target"]>) =>
   Effect.gen(function* () {
-    if (target.savedSearchId !== null) {
+    if (target.kind === "savedSearch" && target.savedSearchId !== null) {
       const search = yield* (yield* SavedSearchRepository)
         .findById(SavedSearchId(target.savedSearchId))
         .pipe(Effect.catchTag("SavedSearchNotFoundError", () => Effect.succeed(null)))

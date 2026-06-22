@@ -6,7 +6,9 @@ import type * as LatitudeApi from "../index.js";
  * Unified query-time target for tool, user, and raw-stream monitors; `null` for legacy saved-search and system monitors.
  */
 export interface MonitorTarget {
-    /** Telemetry stream to evaluate: `traces` for users, `spans` for tools, or `sessions` for session-level monitors. */
+    /** Product target category: `tool`, `user`, `session`, `savedSearch`, or system `signal`. */
+    kind: MonitorTarget.Kind;
+    /** Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`. */
     stream: MonitorTarget.Stream;
     filterSet?: LatitudeApi.MonitorFilterSet | undefined;
     /** Optional semantic query applied with the filters. Use `null` for user/tool monitors. */
@@ -17,7 +19,16 @@ export interface MonitorTarget {
 }
 
 export namespace MonitorTarget {
-    /** Telemetry stream to evaluate: `traces` for users, `spans` for tools, or `sessions` for session-level monitors. */
+    /** Product target category: `tool`, `user`, `session`, `savedSearch`, or system `signal`. */
+    export const Kind = {
+        Signal: "signal",
+        Tool: "tool",
+        User: "user",
+        Session: "session",
+        SavedSearch: "savedSearch",
+    } as const;
+    export type Kind = (typeof Kind)[keyof typeof Kind];
+    /** Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`. */
     export const Stream = {
         Traces: "traces",
         Spans: "spans",

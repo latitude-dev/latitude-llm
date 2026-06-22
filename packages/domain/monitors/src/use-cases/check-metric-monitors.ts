@@ -27,7 +27,7 @@ export interface CheckMetricMonitorsResult {
 /** Resolve a persisted monitor target to the reader's `(stream, filterSet, query, metric)`: a saved-search reference loads its live predicate; otherwise the inline filterSet/query apply. */
 const resolveTarget = (target: MonitorTarget) =>
   Effect.gen(function* () {
-    if (target.savedSearchId !== null) {
+    if (target.kind === "savedSearch" && target.savedSearchId !== null) {
       const search = yield* (yield* SavedSearchRepository)
         .findById(SavedSearchId(target.savedSearchId))
         .pipe(Effect.catchTag("SavedSearchNotFoundError", () => Effect.succeed(null)))

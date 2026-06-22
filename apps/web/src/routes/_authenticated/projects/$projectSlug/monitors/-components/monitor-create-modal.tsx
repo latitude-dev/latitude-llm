@@ -6,6 +6,7 @@ import {
   allToolsMonitorTarget,
   allUsersMonitorTarget,
   monitorTargetName,
+  savedSearchMonitorTarget,
   toolMonitorTarget,
   userMonitorTarget,
 } from "../../../../../../domains/monitors/monitor-target.ts"
@@ -41,13 +42,13 @@ const SOURCE_OPTIONS: { label: string; value: MonitorSource }[] = [
 const userLabel = (user: { readonly userId: string; readonly userEmail?: string | null }) =>
   user.userEmail ?? user.userId
 
-const savedSearchMonitorTarget = (savedSearchId: string) => ({
-  stream: "traces" as const,
-  filterSet: null,
-  query: null,
-  savedSearchId,
-  metric: { kind: "count" as const },
-})
+const initialSourceFor = (initialAlert?: AlertDraft): MonitorSource => {
+  const kind = initialAlert?.target?.kind
+  if (kind === "tool") return "tools"
+  if (kind === "session") return "sessions"
+  if (kind === "user") return "users"
+  return "savedSearch"
+}
 
 /**
  * Create a monitor end-to-end: name + description + its alert. The UI
@@ -82,13 +83,7 @@ export function MonitorCreateModal({
         ? targetAlertDraft(savedSearchMonitorTarget(initialSavedSearchId))
         : (initialAlert ?? emptyAlertDraft()),
   )
-  const [source, setSource] = useState<MonitorSource>(
-    initialAlert?.target?.stream === "spans"
-      ? "tools"
-      : initialAlert?.target?.stream === "sessions"
-        ? "sessions"
-        : "savedSearch",
-  )
+  const [source, setSource] = useState<MonitorSource>(() => initialSourceFor(initialAlert))
   const [selectedSavedSearchId, setSelectedSavedSearchId] = useState(initialSavedSearchId)
   const [selectedToolName, setSelectedToolName] = useState("")
   const [selectedUserId, setSelectedUserId] = useState("")
