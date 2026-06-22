@@ -28,6 +28,8 @@ export interface HistogramMetricDefinition {
    * denominator is empty so it doesn't render a meaningless permanent 0.
    */
   readonly isAvailable?: (metrics: TraceMetrics | SessionMetrics | undefined) => boolean
+  /** Fixed value-axis upper bound (e.g. 1 for a 0..1 ratio); omit to auto-scale to the data max. */
+  readonly valueMax?: number
 }
 
 const microcentsToUSD = (microcents: number): string => formatPrice(microcents / 100_000_000)
@@ -96,6 +98,8 @@ export const HISTOGRAM_METRIC_DEFINITIONS: Readonly<Record<TraceHistogramMetric,
     selectMetricsValue: (m) => m.tokenAnalytics.cacheHitRate ?? 0,
     // Undefined (null) rate ⇒ no input-side tokens in view; hide rather than show 0%.
     isAvailable: (m) => !!m && m.tokenAnalytics.cacheHitRate !== null,
+    // Ratio metric: pin the axis to 0..100% so bar heights reflect the real rate.
+    valueMax: 1,
   },
   spans: {
     id: "spans",

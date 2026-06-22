@@ -54,6 +54,7 @@ export function buildBarChartOption(
   xAxisLabelFontSize = 11,
   overlay?: BarChartOverlay,
   formatYAxisLabel?: (value: number) => string,
+  yMax?: number,
 ): EChartsCoreOption {
   const categoryLabelInterval =
     categories.length <= maxCategoryAxisLabels
@@ -118,6 +119,9 @@ export function buildBarChartOption(
     yAxis: {
       type: "value",
       minInterval: 1,
+      // Pin the value axis (e.g. 0..1 for a ratio) so bar heights are proportional
+      // to the real value instead of auto-scaling to the data max.
+      ...(yMax !== undefined ? { min: 0, max: yMax } : {}),
       splitLine: { lineStyle: { color: splitLineColor, type: "dashed", opacity: splitLineOpacity } },
       axisLine: { show: false },
       ...(showYAxis ? {} : { axisTick: { show: false } }),

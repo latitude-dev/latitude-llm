@@ -44,6 +44,8 @@ export type BarChartProps = Omit<HTMLAttributes<HTMLDivElement>, "children" | "o
   readonly overlay?: BarChartOverlay
   /** Format the value-axis tick labels (e.g. raw nanoseconds → "500ms"). */
   readonly formatYAxisLabel?: (value: number) => string
+  /** Fixed upper bound for the value axis (min pinned to 0). Omit to auto-scale to the data max. */
+  readonly yMax?: number
   /**
    * Called when user selects a range via brush (e.g., drag on the histogram).
    * Receives the selected data range [startIndex, endIndex] or null if cleared.
@@ -114,6 +116,7 @@ function BarChart({
   xAxisLabelFontSize,
   overlay,
   formatYAxisLabel,
+  yMax,
   onSelect,
   onBucketAxisPointerChange,
   className,
@@ -152,6 +155,7 @@ function BarChart({
         xAxisLabelFontSize,
         overlay,
         formatYAxisLabel,
+        yMax,
       ),
     [
       categories,
@@ -164,6 +168,7 @@ function BarChart({
       xAxisLabelFontSize,
       overlay,
       formatYAxisLabel,
+      yMax,
     ],
   )
 

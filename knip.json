@@ -135,7 +135,6 @@
       "ignoreDependencies": [
         "@sentry/node",
         "dd-trace",
-        "langchain",
         "together-ai"
       ]
     },
