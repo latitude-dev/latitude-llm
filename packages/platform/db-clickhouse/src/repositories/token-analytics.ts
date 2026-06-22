@@ -9,7 +9,7 @@ export const TOKEN_ANALYTICS_SUM_SELECT = `
   sum(tokens_cache_create) AS tokens_cache_create_sum
 `
 
-export interface TokenAnalyticsSumRow {
+interface TokenAnalyticsSumRow {
   readonly tokens_input_sum: string
   readonly tokens_output_sum: string
   readonly tokens_cache_read_sum: string
