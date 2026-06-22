@@ -89,9 +89,11 @@ Do NOT use old models. Update each example's `MODEL` constant before running. La
 6. **On approval, BEFORE advancing: commit all changes and push to the working branch.**
 7. Only then advance to the next integration.
 
-**Working branch:** all this telemetry-integration polish / fixes lives on a dedicated branch off
-`development` (PR target: `development`). Created this session — see git. Commit per approved
-integration (conventional-commit messages), push each time.
+**Working branch:** `telemetry/integration-verification-fixes` (off `development`, PR target
+`development`). Commit per approved integration (conventional-commit messages), push each time.
+First push landed #1–#3 + the two fixes (3 commits). NOTE: an unrelated WIP edit to
+`apps/web/.../spans-tab/span-filters-bar.tsx` is in the working tree — left untouched, NOT ours,
+do not commit it into this branch.
 
 **Available provider API keys in this environment** (gates what we can actually run):
 | Provider | Key present? | Notes |
