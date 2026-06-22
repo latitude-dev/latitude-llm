@@ -15,7 +15,7 @@ type SpanFiltersBarProps = {
 }
 
 const filterButtonClass =
-  "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+  "inline-flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
 const ALL_MODELS_VALUE = "__all_models__"
 
 function FilterToggle({
@@ -84,7 +84,7 @@ export function SpanFiltersBar({
             onClick={onToggleTools}
             ariaLabel={filters.tools ? "Show all spans" : "Show only tool spans"}
           >
-            <Icon icon={WrenchIcon} size="xs" color={filters.tools ? "accent" : "foregroundMuted"} />
+            <Icon icon={WrenchIcon} size="xs" color={filters.tools ? "accentForeground" : "foregroundMuted"} />
             <span>Tools</span>
           </FilterToggle>
 

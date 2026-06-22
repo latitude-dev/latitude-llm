@@ -21,14 +21,14 @@ const latitude = new Latitude({
 })
 
 const PROVIDER = "anthropic"
-const MODEL = "claude-haiku-4-5-20251001"
+const MODEL = "claude-opus-4-8"
 const SESSION_ID = `${PROVIDER}-${randomUUID().slice(0, 8)}`
 
 const client = new Anthropic()
 
 function ctx(scenario: string, ...extraTags: string[]) {
   return {
-    tags: ["example", PROVIDER, ...extraTags],
+    tags: ["example", PROVIDER, "anthropic-ts", ...extraTags],
     sessionId: SESSION_ID,
     userId: "example-user",
     metadata: { scenario, environment: "local" },
@@ -100,8 +100,6 @@ async function toolConversation() {
 
 async function main() {
   await latitude.ready
-
-  await toolConversation()
 
   await capture("anthropic-chat-capture", chat, ctx("chat"))
   await capture("anthropic-stream-capture", stream, ctx("stream", "stream"))

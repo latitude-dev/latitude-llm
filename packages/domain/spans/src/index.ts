@@ -56,7 +56,7 @@ export {
   spanStatusCodeSchema,
   toolDefinitionSchema,
 } from "./entities/span.ts"
-export type { Trace, TraceConversationChunk, TraceDetail } from "./entities/trace.ts"
+export type { Trace, TraceConversationChunk, TraceDetail, TraceMetadataDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
 export { SpanDecodingError } from "./errors.ts"
 export {

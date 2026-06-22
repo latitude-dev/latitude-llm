@@ -21,12 +21,14 @@ const latitude = new Latitude({
 })
 
 const PROVIDER = "openai"
-const MODEL = "gpt-4o-mini"
+const MODEL = "gpt-5.5"
+// gpt-5.5 is a reasoning model: budget must cover reasoning + the visible answer (else finish_reason "length").
+const MAX_TOKENS = 2000
 const SESSION_ID = `${PROVIDER}-${randomUUID().slice(0, 8)}`
 
 function ctx(scenario: string, ...extraTags: string[]) {
   return {
-    tags: ["example", PROVIDER, ...extraTags],
+    tags: ["example", PROVIDER, "openai-ts", ...extraTags],
     sessionId: SESSION_ID,
     userId: "example-user",
     metadata: { scenario, environment: "local" },
@@ -38,7 +40,7 @@ async function chat() {
   const response = await client.chat.completions.create({
     model: MODEL,
     messages: [{ role: "user", content: "Say 'Hello from OpenAI!' in exactly 5 words." }],
-    max_tokens: 50,
+    max_completion_tokens: MAX_TOKENS,
   })
   return response.choices[0]?.message?.content
 }
@@ -48,7 +50,7 @@ async function stream() {
   const stream = await client.chat.completions.create({
     model: MODEL,
     messages: [{ role: "user", content: "Say 'Hello from OpenAI stream!' in exactly 6 words." }],
-    max_tokens: 50,
+    max_completion_tokens: MAX_TOKENS,
     stream: true,
     stream_options: { include_usage: true },
   })
@@ -84,7 +86,7 @@ async function toolConversation() {
     },
   ]
 
-  const first = await client.chat.completions.create({ model: MODEL, messages, tools, max_tokens: 200 })
+  const first = await client.chat.completions.create({ model: MODEL, messages, tools, max_completion_tokens: MAX_TOKENS })
   const toolCall = first.choices[0]?.message?.tool_calls?.[0]
   messages.push(first.choices[0]!.message)
   messages.push({
@@ -93,14 +95,12 @@ async function toolConversation() {
     content: JSON.stringify({ city: "San Francisco", temperatureC: 21, conditions: "sunny" }),
   })
 
-  const second = await client.chat.completions.create({ model: MODEL, messages, tools, max_tokens: 200 })
+  const second = await client.chat.completions.create({ model: MODEL, messages, tools, max_completion_tokens: MAX_TOKENS })
   return second.choices[0]?.message?.content
 }
 
 async function main() {
   await latitude.ready
-
-  await toolConversation()
 
   await capture("openai-chat-capture", chat, ctx("chat"))
   await capture("openai-stream-capture", stream, ctx("stream", "stream"))

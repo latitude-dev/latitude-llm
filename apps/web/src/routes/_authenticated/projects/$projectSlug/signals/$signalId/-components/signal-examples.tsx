@@ -11,18 +11,17 @@ import {
   Skeleton,
   Text,
   Tooltip,
-  useMountEffect,
 } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { useParams } from "@tanstack/react-router"
 import { ChevronLeftIcon, ChevronRightIcon, ListTreeIcon, Maximize2Icon, MessageSquareTextIcon } from "lucide-react"
-import { type RefObject, useMemo, useRef, useState } from "react"
+import { type RefObject, useEffect, useMemo, useRef, useState } from "react"
 import { useMemberByUserIdMap } from "../../../../../../../domains/members/members.collection.ts"
 import { pickUserFromMembersMap } from "../../../../../../../domains/members/pick-users-from-members.ts"
 import { useSignalOccurrences } from "../../../../../../../domains/signals/signals.collection.ts"
 import type { SignalOccurrenceRecord } from "../../../../../../../domains/signals/signals.functions.ts"
-import { useTraceDetail } from "../../../../../../../domains/traces/traces.collection.ts"
+import { useTraceConversationMessages } from "../../../../../../../domains/traces/traces.collection.ts"
 import { useParamState } from "../../../../../../../lib/hooks/useParamState.ts"
 import { FlaggerBadge } from "../../../-components/flaggers/flagger-badge.tsx"
 import { TraceDetailDrawer } from "../../../-components/trace-detail-drawer.tsx"
@@ -70,21 +69,26 @@ function findAnchorNode(container: HTMLElement, anchor: SignalOccurrenceRecord["
 }
 
 /**
- * Scrolls the conversation to the occurrence's anchor on mount. The viewer is
- * keyed by score id so switching examples remounts it and re-runs this. Waits
- * for the (async-rendered markdown) node via a MutationObserver, then centers it.
+ * Scrolls to the occurrence's anchor once its chunk has loaded (`ready`), waiting out the
+ * async markdown render via a MutationObserver. `scrolledRef` guards a single scroll.
  */
-function useScrollToAnchor(scrollRef: RefObject<HTMLDivElement | null>, anchor: SignalOccurrenceRecord["anchor"]) {
-  useMountEffect(() => {
+function useScrollToAnchor(
+  scrollRef: RefObject<HTMLDivElement | null>,
+  anchor: SignalOccurrenceRecord["anchor"],
+  ready: boolean,
+) {
+  const scrolledRef = useRef(false)
+  // Fire once the anchor's chunk has loaded — it arrives async, so the target may not exist on mount.
+  useEffect(() => {
+    if (!ready || scrolledRef.current) return
     const container = scrollRef.current
     if (!container) return
-    let done = false
     const attempt = () => {
-      if (done) return true
+      if (scrolledRef.current) return true
       const target = findAnchorNode(container, anchor)
       if (!target) return false
       centerVertically(container, target)
-      done = true
+      scrolledRef.current = true
       return true
     }
     if (attempt()) return
@@ -96,15 +100,14 @@ function useScrollToAnchor(scrollRef: RefObject<HTMLDivElement | null>, anchor: 
     })
     observer.observe(container, { childList: true, subtree: true })
     const timeout = window.setTimeout(() => {
-      done = true
+      scrolledRef.current = true
       observer.disconnect()
     }, SCROLL_OBSERVER_TIMEOUT_MS)
     return () => {
-      done = true
       observer.disconnect()
       window.clearTimeout(timeout)
     }
-  })
+  }, [ready, anchor, scrollRef])
 }
 
 function ExampleConversation({
@@ -115,9 +118,27 @@ function ExampleConversation({
   readonly occurrence: SignalOccurrenceRecord
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
-  const { data: traceDetail, isLoading } = useTraceDetail({ projectId, traceId: occurrence.traceId })
+  const conversation = useTraceConversationMessages({ projectId, traceId: occurrence.traceId })
+  const messages = conversation.messages
 
   const { anchor } = occurrence
+
+  // Stream chunks until the anchored message is loaded so its scroll/highlight target exists.
+  const autoLoadingRef = useRef(false)
+  useEffect(() => {
+    if (anchor.messageIndex < messages.length) return
+    if (!conversation.hasNextPage || conversation.isFetchingNextPage || autoLoadingRef.current) return
+    autoLoadingRef.current = true
+    void conversation.fetchNextPage().finally(() => {
+      autoLoadingRef.current = false
+    })
+  }, [
+    anchor.messageIndex,
+    messages.length,
+    conversation.hasNextPage,
+    conversation.isFetchingNextPage,
+    conversation.fetchNextPage,
+  ])
 
   // Frame the flagged message (region highlight, like semantic search) and,
   // when the annotation pinpointed a substring, also paint that exact text.
@@ -142,9 +163,9 @@ function ExampleConversation({
     [anchor],
   )
 
-  useScrollToAnchor(scrollRef, anchor)
+  useScrollToAnchor(scrollRef, anchor, anchor.messageIndex < messages.length)
 
-  if (isLoading) {
+  if (conversation.isLoading) {
     return (
       <div className="flex flex-col gap-3 p-4">
         <Skeleton className="h-16 w-full" />
@@ -154,7 +175,7 @@ function ExampleConversation({
     )
   }
 
-  if (!traceDetail) {
+  if (conversation.totalMessages === 0) {
     return (
       <div className="flex items-center justify-center p-6">
         <Text.H6 color="foregroundMuted">This example's conversation could not be loaded.</Text.H6>
@@ -168,7 +189,7 @@ function ExampleConversation({
       className="flex max-h-[32rem] min-w-0 flex-col overflow-y-auto overflow-x-hidden rounded-lg border bg-background px-4 py-6"
     >
       <Conversation
-        messages={traceDetail.allMessages}
+        messages={messages}
         scrollContainerRef={scrollRef}
         highlightRanges={highlightRanges}
         firstMatchHint={firstMatchHint}

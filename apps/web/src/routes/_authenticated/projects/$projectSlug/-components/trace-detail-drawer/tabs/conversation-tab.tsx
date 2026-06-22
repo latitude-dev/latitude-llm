@@ -14,6 +14,7 @@ import { formatBytes } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { DownloadIcon } from "lucide-react"
 import { type ReactNode, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import type { GenAIMessage } from "rosetta-ai"
 import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
 import { useAuthSession } from "../../../../../../../domains/sessions/session.collection.ts"
 import { useConversationSpanMaps } from "../../../../../../../domains/spans/spans.collection.ts"
@@ -115,7 +116,7 @@ function ConversationContent({
   onLoadMoreMessages,
 }: {
   readonly traceDetail: TraceDetailRecord
-  readonly messages: TraceDetailRecord["allMessages"]
+  readonly messages: readonly GenAIMessage[]
   readonly navigateToSpan?: ((spanId: string) => void) | undefined
   readonly projectId: string
   readonly isActive: boolean
