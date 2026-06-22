@@ -95,62 +95,19 @@ function LastIncidentCell({
   )
 }
 
-/**
- * The saved search(es) a monitor's alerts watch — states "monitor = saved
- * search + alerts" in the list, and round-trips to the traces page with the
- * search loaded.
- */
-function WatchingCell({
-  alerts,
-  onOpenSearch,
-}: {
-  readonly alerts: MonitorRecord["alerts"]
-  readonly onOpenSearch: (slug: string) => void
-}) {
+function savedSearchTargets(alerts: MonitorRecord["alerts"]): readonly [string, string][] {
   const watched = new Map<string, string>()
   for (const alert of alerts) {
-    if (alert.sourceSlug && alert.sourceName && !watched.has(alert.sourceSlug)) {
+    if (
+      alert.source?.type === "savedSearch" &&
+      alert.sourceSlug &&
+      alert.sourceName &&
+      !watched.has(alert.sourceSlug)
+    ) {
       watched.set(alert.sourceSlug, alert.sourceName)
     }
   }
-  const [first, ...rest] = [...watched.entries()]
-  if (!first) {
-    return (
-      <Text.H6 color="foregroundMuted" noWrap>
-        —
-      </Text.H6>
-    )
-  }
-  const [slug, name] = first
-  return (
-    <div className="flex min-w-0 items-center gap-2">
-      <Tooltip
-        asChild
-        trigger={
-          <button
-            type="button"
-            className="min-w-0 cursor-pointer"
-            aria-label={`Open saved search ${name} on the traces page`}
-            onClick={(event) => {
-              event.stopPropagation()
-              onOpenSearch(slug)
-            }}
-          >
-            <Badge variant="muted" ellipsis className="max-w-full">
-              {name}
-            </Badge>
-          </button>
-        }
-      >
-        View matching traces
-      </Tooltip>
-      {rest.length > 0 ? (
-        <Badge variant="noBorderMuted" className="shrink-0" aria-label={`${rest.length} more saved searches`}>
-          +{rest.length}
-        </Badge>
-      ) : null}
-    </div>
-  )
+  return [...watched.entries()]
 }
 
 function ConditionCell({ alerts }: { readonly alerts: MonitorRecord["alerts"] }) {
@@ -176,9 +133,49 @@ function ConditionCell({ alerts }: { readonly alerts: MonitorRecord["alerts"] })
   )
 }
 
-/** The unified monitor target (tool / user / all-X / raw stream); "—" for legacy saved-search and issue monitors. */
-function TargetCell({ target }: { readonly target: MonitorRecord["target"] }) {
-  const description = describeMonitorTarget(target)
+function TargetCell({
+  monitor,
+  onOpenSearch,
+}: {
+  readonly monitor: MonitorRecord
+  readonly onOpenSearch: (slug: string) => void
+}) {
+  const savedSearches = savedSearchTargets(monitor.alerts)
+  const [first, ...rest] = savedSearches
+  if (first) {
+    const [slug, name] = first
+    return (
+      <div className="flex min-w-0 items-center gap-2">
+        <Tooltip
+          asChild
+          trigger={
+            <button
+              type="button"
+              className="min-w-0 cursor-pointer"
+              aria-label={`Open saved search ${name} on the traces page`}
+              onClick={(event) => {
+                event.stopPropagation()
+                onOpenSearch(slug)
+              }}
+            >
+              <Badge variant="muted" ellipsis className="max-w-full">
+                {name}
+              </Badge>
+            </button>
+          }
+        >
+          View matching traces
+        </Tooltip>
+        {rest.length > 0 ? (
+          <Badge variant="noBorderMuted" className="shrink-0" aria-label={`${rest.length} more saved searches`}>
+            +{rest.length}
+          </Badge>
+        ) : null}
+      </div>
+    )
+  }
+
+  const description = describeMonitorTarget(monitor.target)
   if (!description) {
     return (
       <Text.H6 color="foregroundMuted" noWrap>
@@ -201,7 +198,6 @@ export function MonitorsView({
   onActiveMonitorChange,
   projectId,
   projectSlug,
-  showWatching = false,
   sorting,
   onSortChange,
   selection,
@@ -213,8 +209,6 @@ export function MonitorsView({
   readonly onActiveMonitorChange: (slug: string | undefined) => void
   readonly projectId: string
   readonly projectSlug: string
-  /** Show the "Watching" (saved search) column — on for the search-monitors tab only. */
-  readonly showWatching?: boolean
   readonly sorting: MonitorsTableSorting
   readonly onSortChange: (sorting: MonitorsTableSorting) => void
   readonly selection: InfiniteTableSelection
@@ -277,36 +271,24 @@ export function MonitorsView({
       minWidth: 153,
       render: (row) => <LastIncidentCell summary={row.lastIncident} onResolve={setResolveTarget} />,
     },
-    ...(showWatching
-      ? [
-          {
-            key: "watching",
-            header: "Watching",
-            width: 180,
-            minWidth: 120,
-            maxWidth: 220,
-            render: (row) => (
-              <WatchingCell
-                alerts={row.monitor.alerts}
-                onOpenSearch={(slug) =>
-                  void navigate({
-                    to: "/projects/$projectSlug",
-                    params: { projectSlug },
-                    search: { savedSearch: slug },
-                  })
-                }
-              />
-            ),
-          } satisfies InfiniteTableColumn<MonitorsTableRow>,
-        ]
-      : []),
     {
       key: "target",
       header: "Target",
-      width: 160,
+      width: 180,
       minWidth: 120,
-      maxWidth: 200,
-      render: (row) => <TargetCell target={row.monitor.target} />,
+      maxWidth: 220,
+      render: (row) => (
+        <TargetCell
+          monitor={row.monitor}
+          onOpenSearch={(slug) =>
+            void navigate({
+              to: "/projects/$projectSlug",
+              params: { projectSlug },
+              search: { savedSearch: slug },
+            })
+          }
+        />
+      ),
     },
     {
       key: "condition",

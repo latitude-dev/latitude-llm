@@ -17,6 +17,7 @@ export {
   MONITOR_TARGET_KINDS,
   monitorAlertSchema,
   monitorSchema,
+  monitorTargetKind,
   monitorTargetKindSchema,
   monitorTargetSchema,
 } from "./entities/monitor.ts"

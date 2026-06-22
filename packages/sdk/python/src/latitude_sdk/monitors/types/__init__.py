@@ -7,6 +7,7 @@ from importlib import import_module
 
 if typing.TYPE_CHECKING:
     from .list_monitors_for_target_body_stream import ListMonitorsForTargetBodyStream
+    from .list_monitors_for_target_body_target_kind import ListMonitorsForTargetBodyTargetKind
     from .update_monitor_alert_body_condition import UpdateMonitorAlertBodyCondition
     from .update_monitor_alert_body_condition_kind import UpdateMonitorAlertBodyConditionKind
     from .update_monitor_alert_body_condition_kind_direction import UpdateMonitorAlertBodyConditionKindDirection
@@ -23,6 +24,7 @@ if typing.TYPE_CHECKING:
     from .update_monitor_alert_body_source_type import UpdateMonitorAlertBodySourceType
 _dynamic_imports: typing.Dict[str, str] = {
     "ListMonitorsForTargetBodyStream": ".list_monitors_for_target_body_stream",
+    "ListMonitorsForTargetBodyTargetKind": ".list_monitors_for_target_body_target_kind",
     "UpdateMonitorAlertBodyCondition": ".update_monitor_alert_body_condition",
     "UpdateMonitorAlertBodyConditionKind": ".update_monitor_alert_body_condition_kind",
     "UpdateMonitorAlertBodyConditionKindDirection": ".update_monitor_alert_body_condition_kind_direction",
@@ -63,6 +65,7 @@ def __dir__():
 
 __all__ = [
     "ListMonitorsForTargetBodyStream",
+    "ListMonitorsForTargetBodyTargetKind",
     "UpdateMonitorAlertBodyCondition",
     "UpdateMonitorAlertBodyConditionKind",
     "UpdateMonitorAlertBodyConditionKindDirection",

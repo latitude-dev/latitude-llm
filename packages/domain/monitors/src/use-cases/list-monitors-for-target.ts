@@ -1,11 +1,12 @@
 import type { FilterSet, MonitorStream, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
-import type { Monitor } from "../entities/monitor.ts"
+import type { Monitor, MonitorTargetKind } from "../entities/monitor.ts"
 import { MonitorRepository } from "../ports/monitor-repository.ts"
 
 export interface ListMonitorsForTargetInput {
   readonly projectId: ProjectId
   readonly stream: MonitorStream
+  readonly targetKind?: MonitorTargetKind
   /** Predicate the monitor's target filter set must contain (e.g. `{toolName:[{op:"eq",value}]}`). */
   readonly filterSetContains: FilterSet
 }

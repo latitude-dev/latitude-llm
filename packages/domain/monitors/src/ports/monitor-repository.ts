@@ -14,7 +14,7 @@ import type {
   SqlClient,
 } from "@domain/shared"
 import { Context, type Effect } from "effect"
-import type { Monitor, MonitorAlert, MonitorTarget } from "../entities/monitor.ts"
+import type { Monitor, MonitorAlert, MonitorTarget, MonitorTargetKind } from "../entities/monitor.ts"
 
 /** An active unified (`event.*`/`metric.*`) alert paired with its owning monitor's target. */
 export interface MetricMonitorAlert {
@@ -183,15 +183,16 @@ export interface MonitorRepositoryShape {
     projectId: ProjectId,
   ): Effect.Effect<readonly MetricMonitorAlert[], RepositoryError, SqlClient>
   /**
-   * Live unified monitors in the project whose target is on `stream` and whose
-   * `target_filter_set` contains `filterSetContains` (jsonb `@>`). Powers the
-   * in-context "monitors for this tool/user" lists — pass the tool/user filter
-   * (`{toolName:[{op:"eq",value}]}` / `{userId:[…]}`) to match the specific
-   * target. Newest first.
+   * Live unified monitors in the project whose target is on `stream`, optionally
+   * belongs to `targetKind`, and whose target filter set contains `filterSetContains`
+   * (jsonb `@>`). Powers the in-context "monitors for this tool/user" lists — pass
+   * the tool/user filter (`{toolName:[{op:"eq",value}]}` / `{userId:[…]}`) to match
+   * the specific target. Newest first.
    */
   listMonitorsForTarget(input: {
     readonly projectId: ProjectId
     readonly stream: MonitorStream
+    readonly targetKind?: MonitorTargetKind
     readonly filterSetContains: FilterSet
   }): Effect.Effect<readonly Monitor[], RepositoryError, SqlClient>
   /**

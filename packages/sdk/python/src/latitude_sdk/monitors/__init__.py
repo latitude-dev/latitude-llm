@@ -8,6 +8,7 @@ from importlib import import_module
 if typing.TYPE_CHECKING:
     from .types import (
         ListMonitorsForTargetBodyStream,
+        ListMonitorsForTargetBodyTargetKind,
         UpdateMonitorAlertBodyCondition,
         UpdateMonitorAlertBodyConditionKind,
         UpdateMonitorAlertBodyConditionKindDirection,
@@ -25,6 +26,7 @@ if typing.TYPE_CHECKING:
     )
 _dynamic_imports: typing.Dict[str, str] = {
     "ListMonitorsForTargetBodyStream": ".types",
+    "ListMonitorsForTargetBodyTargetKind": ".types",
     "UpdateMonitorAlertBodyCondition": ".types",
     "UpdateMonitorAlertBodyConditionKind": ".types",
     "UpdateMonitorAlertBodyConditionKindDirection": ".types",
@@ -65,6 +67,7 @@ def __dir__():
 
 __all__ = [
     "ListMonitorsForTargetBodyStream",
+    "ListMonitorsForTargetBodyTargetKind",
     "UpdateMonitorAlertBodyCondition",
     "UpdateMonitorAlertBodyConditionKind",
     "UpdateMonitorAlertBodyConditionKindDirection",

@@ -1403,6 +1403,68 @@ describe("MonitorRepositoryLive", () => {
 
       expect(await listForTool("search")).toEqual([])
     })
+
+    it("can match all-user monitors by target kind without relying on identity filters", async () => {
+      await database.db.insert(monitorsTable).values([
+        makeMonitorRow({
+          id: generateId(),
+          slug: "user-errors",
+          name: "User errors",
+          targetStream: "traces",
+          targetFilterSet: { status: [{ op: "eq", value: "error" }] },
+          metric: { kind: "count" },
+        }),
+        makeMonitorRow({
+          id: generateId(),
+          slug: "sessions-errors",
+          name: "Session errors",
+          targetStream: "sessions",
+          targetFilterSet: { status: [{ op: "eq", value: "error" }] },
+          metric: { kind: "count" },
+        }),
+      ])
+
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* MonitorRepository
+          return yield* repository.listMonitorsForTarget({
+            projectId,
+            stream: "traces",
+            targetKind: "user",
+            filterSetContains: {},
+          })
+        }).pipe(provideRls(database, organizationId)),
+      )
+
+      expect(result.map((monitor) => monitor.slug)).toEqual(["user-errors"])
+    })
+
+    it("matches monitors whose target has no filter set when no filter subset is given", async () => {
+      await database.db.insert(monitorsTable).values([
+        makeMonitorRow({
+          id: generateId(),
+          slug: "all-users",
+          name: "All users",
+          targetStream: "traces",
+          targetFilterSet: null,
+          metric: { kind: "count" },
+        }),
+      ])
+
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* MonitorRepository
+          return yield* repository.listMonitorsForTarget({
+            projectId,
+            stream: "traces",
+            targetKind: "user",
+            filterSetContains: {},
+          })
+        }).pipe(provideRls(database, organizationId)),
+      )
+
+      expect(result.map((monitor) => monitor.slug)).toEqual(["all-users"])
+    })
   })
 })
 

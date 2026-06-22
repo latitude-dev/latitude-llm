@@ -17,8 +17,9 @@ Related docs:
 | **Monitor** | `monitors` table, `@domain/monitors` | A project-scoped entity owning one or more alerts. Mute prevents notifications; soft-delete hides it and stops it firing. |
 | **System monitor** | `system = true` | Auto-provisioned per project, not deletable, structurally locked (no add/remove alerts, fixed name/kind/source/severity). Editable surface: mute/unmute plus the configurable values of its predefined alerts (e.g. the `issue.escalating` alert's `sensitivity`). |
 | **Alert** (`MonitorAlert`) | `monitor_alerts` table | A `(kind, source, condition, severity)` tuple owned by a monitor. Firing any alert produces an incident. |
-| **Alert kind** | `ALERT_INCIDENT_KINDS` in `@domain/shared` | Discriminated enum identifying the watched signal: `issue.new`, `issue.regressed`, `issue.escalating`, `savedSearch.match`, `savedSearch.threshold`, `savedSearch.escalating`. Each kind has a fixed source type. |
-| **Alert source** | `source { type, id? }` | The entity the alert watches. `id = null` means "all of that type" in the project. |
+| **Alert kind** | `ALERT_INCIDENT_KINDS` in `@domain/shared` | Discriminated enum identifying the watched signal: legacy source-based `issue.*` / `savedSearch.*` kinds, plus unified `event.matched` / `metric.*` kinds whose watched target lives on the monitor. |
+| **Alert source** | `source { type, id? }` | The entity a legacy source-based alert watches. `id = null` means "all of that type" in the project. Unified alerts use `source = null`. |
+| **Monitor target** | `target { kind, stream, filterSet, query, savedSearchId, metric }` | The query-time target for unified alerts. `kind` is the product category (`tool`, `user`, `session`, `savedSearch`, future `signal`) and is the stable way UI/API callers classify monitors; filter-set conditions refine the metric but do not define whether a monitor is a user or tool monitor. |
 | **Alert condition** | `condition` jsonb | Polymorphic config parameterising the kind's evaluator. `null` for kinds that need no parameters. |
 | **Severity** | `ALERT_SEVERITIES` in `@domain/shared` | `low \| medium \| high`. Copied onto the incident; drives badge tone and email subject tone. |
 | **Incident** | `alert_incidents` table | A row linked to its firing alert via `monitor_alert_id` (and through that alert, to the owning monitor). Point-in-time kinds have `endedAt = startedAt`; sustained kinds leave `endedAt = null` until the condition clears. |
@@ -72,7 +73,7 @@ Monitors **do not own notification configuration**. Notification settings live w
 - Multiple alerts on a single monitor are allowed in any combination — both within the same kind and across kinds.
 - The data model places no restriction on which source types appear on system vs user-managed monitors. The two product rules below are enforced in code via constants, not schema:
   - **System monitors are structurally locked.** The create/update use-cases reject adding, removing, or replacing alerts and changing an alert's `kind`/`source`/`severity`, and reject deleting the monitor or editing name/description. What stays editable: `mutedAt`, and the *configurable values* of each predefined alert (its `condition` parameters — e.g. the `issue.escalating` alert's `sensitivity`; `issue.new`/`issue.regressed` carry `null` conditions, so nothing to tune). The data model is agnostic to source type — future system monitors of any source type are unblocked.
-  - **User-creatable monitors** are restricted by the `USER_CREATABLE_ALERT_KINDS` allowlist (today: the three `savedSearch.*` kinds). Opening more kinds is a one-constant edit, no migration.
+  - **User-creatable monitors** are restricted by the `USER_CREATABLE_ALERT_KINDS` allowlist (today: the three `savedSearch.*` kinds plus unified `event.matched`, `metric.threshold`, and `metric.escalating`). Opening more kinds is a one-constant edit, no migration.
 
 ### Lifecycle
 
@@ -177,6 +178,7 @@ export type Monitor = {
   description: string
   system: boolean
   alerts: readonly MonitorAlert[]
+  target: MonitorTarget | null
   mutedAt: Date | null
   deletedAt: Date | null
   createdAt: Date
@@ -382,13 +384,15 @@ Monitors are exposed as a public REST surface under `/v1/projects/{projectSlug}/
 | GET | `/{monitorSlug}/alerts` | `listMonitorAlerts` |
 | GET / PATCH | `/{monitorSlug}/alerts/{alertId}` | `getMonitorAlert` / `updateMonitorAlert` |
 | GET | `/{monitorSlug}/incidents` | `listMonitorIncidents` |
+| POST | `/for-target` | `listMonitorsForTarget` |
 | POST | `/{monitorSlug}/mute`, `/{monitorSlug}/unmute` | `muteMonitor` / `unmuteMonitor` |
 
 - **Alert reads are projections, not a domain read path.** The domain has no separate "read alert" use-case — monitors are always read with their alerts baked in (`getMonitorBySlugUseCase`). `listMonitorAlerts` / `getMonitorAlert` exist only at the API layer for SDK/MCP completeness; each reads the monitor and projects `.alerts` (404 on an `alertId` not present), adding no extra query and no new domain code.
 - **Monitor CRUD.** `createMonitor` takes metadata + exactly one alert and rejects `kind ∉ USER_CREATABLE_ALERT_KINDS`, `system: true`, saved-search alerts without a `source.id`, and saved searches whose query contains a semantic component (`savedSearchQueryIsMonitorable` / `assertMonitorableSavedSearch` in `@domain/monitors` — semantic search is a bounded, relevance-ranked retrieval, not an exact predicate, so there is no match set for an alert to count; `updateMonitorAlert` applies the same check when an alert's source changes). `updateMonitor` edits metadata only (name + description) and rejects `system === true`. `deleteMonitor` soft-deletes the monitor and cascades to its alerts; rejects `system`. `mute`/`unmute` are allowed on both modes.
 - **Monitor-alert updates.** Alerts only come into existence with their monitor and are never added or deleted individually (no `createAlert` / `deleteAlert` operations; alerts disappear with their monitor or watched saved search). `updateMonitorAlert` updates an alert's `kind` / `source` / `condition` / `severity` in place. On a **user** monitor the kind may change to another user-creatable kind; on **system** monitors it's the only permitted alert mutation, and only an existing alert's configurable condition values may change — for the system "Issue escalating" monitor this is how `sensitivity` is tuned.
+- **Target lookup.** `listMonitorsForTarget` accepts a `targetKind` in addition to `stream` and `filterSetContains`. Callers should use `targetKind` to classify user/tool/session/saved-search monitors, then use filter containment only for identity narrowing such as a specific `userId` or `toolName`. Extra metric predicates like `status = error` remain part of the monitor's target but do not make an all-users monitor disappear from the users monitor dropdown.
 
-Field descriptions on the OpenAPI schemas are rich enough to render meaningfully as MCP tool descriptions, and the same descriptions propagate to the TS SDK via codegen. Schema and description changes therefore drive the `openapi.json` / `mcp.json` / SDK regeneration (`pnpm openapi:emit`, `pnpm mcp:emit`, `pnpm --filter @latitude-data/sdk generate`).
+Field descriptions on the OpenAPI schemas are rich enough to render meaningfully as MCP tool descriptions, and the same descriptions propagate to the SDKs via codegen. Schema and description changes therefore drive the `openapi.json` / `mcp.json` / SDK regeneration (`pnpm openapi:emit`, `pnpm mcp:emit`, `pnpm generate:sdk`).
 
 ## Provisioning system monitors
 

@@ -151,6 +151,7 @@ export function useMonitorMetricSeries(input: {
 export function useMonitorsForTarget(input: {
   readonly projectId: string
   readonly stream: MonitorStream
+  readonly targetKind?: MonitorTarget["kind"]
   readonly filterSetContains: FilterSet
   readonly enabled?: boolean
 }) {
@@ -160,11 +161,17 @@ export function useMonitorsForTarget(input: {
       "for-target",
       input.projectId,
       input.stream,
+      input.targetKind ?? null,
       JSON.stringify(input.filterSetContains),
     ] as const,
     queryFn: () =>
       listMonitorsForTarget({
-        data: { projectId: input.projectId, stream: input.stream, filterSetContains: input.filterSetContains },
+        data: {
+          projectId: input.projectId,
+          stream: input.stream,
+          ...(input.targetKind !== undefined ? { targetKind: input.targetKind } : {}),
+          filterSetContains: input.filterSetContains,
+        },
       }),
     staleTime: MONITORS_QUERY_STALE_TIME_MS,
     enabled: (input.enabled ?? true) && input.projectId.length > 0,
