@@ -7,6 +7,29 @@
 ### Telemetry
 
 - Landed span-ingestion fixes, upgraded to Vercel AI SDK v7, migrated instrumentors, and ran a full provider e2e audit (ref: #3627).
+- Tightened trace and tool-call extraction from ingested spans, updated TypeScript telemetry examples and package metadata, and added a telemetry QA verification tracker (ref: #3655).
+- Added telemetry integration documentation and examples for CrewAI, DSPy, Haystack, LiteLLM, Gemini, Groq, Mistral, Ollama, Replicate, SageMaker, Transformers, WatsonX, and Vercel AI SDK v7.
+
+### Analytics and traces
+
+- Aggregated token analytics across the active session and trace filters and added cache hit-rate summaries to trace and session tables (ref: #3652).
+- Added cache hit rate as a session and trace field for filtering and table display (ref: #3651).
+- Standardized token analytics category labels and tooltip presentation in usage summaries (ref: #3649).
+
+### Signals and flaggers
+
+- Reverted the Phase 2 signal passed-polarity inversion, including historical ClickHouse/Postgres migrations, so scoring polarity stays compatible with existing signal behavior (ref: #3647).
+- Added a low-cache-hit-rate flagger preset and API/SDK schema support (ref: #3653).
+- Hid behaviour views when fewer than two clusters are available and removed the stale "First seen older" badge from the behaviour drawer (ref: #3642, #3640).
+
+### Sandbox
+
+- Woke archived sandboxes when users enter through the live toggle, reusing or creating an active sandbox as needed (ref: #3645).
+
+### Web and design
+
+- Refined changelog, aggregation, behaviour, signal detail, email, tabs, logo, and trend-bar UI styling (ref: #3644).
+- Added a typing animation to the semantic search placeholder (ref: #3643).
 
 ### Observability
 
@@ -18,7 +41,7 @@
 
 ### Dependencies
 
-- Bumped protobufjs, framer-api, the OpenAI Python telemetry dependency, and CI actions (ref: #3580, #3452, #3443, #3635, #3636).
+- Bumped protobufjs, framer-api, the OpenAI Python telemetry dependency, CI actions, and TypeScript telemetry dependencies (ref: #3580, #3452, #3443, #3635, #3636, #3655).
 
 ## v0.3.14 - 2026-06-22
 
