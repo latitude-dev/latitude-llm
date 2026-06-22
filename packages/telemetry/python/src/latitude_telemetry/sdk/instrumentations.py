@@ -161,18 +161,9 @@ def _is_plain_dict(value: object) -> bool:
 
 
 def _register_litellm_native_otel(litellm_module: object, tracer_provider: TracerProvider) -> None:
-    """
-    Register LiteLLM's built-in OpenTelemetry callback on our tracer provider.
-
-    Preferred over the OpenInference LiteLLM instrumentor, which emits no provider
-    (so cost never resolves). Env vars must be set before OpenTelemetryConfig()
-    reads them at construction; setdefault keeps any caller-set value.
-    """
+    """Register LiteLLM's built-in OpenTelemetry callback on our tracer provider."""
     from litellm.integrations.opentelemetry import OpenTelemetry, OpenTelemetryConfig
 
-    # USE_OTEL_LITELLM_REQUEST_SPAN forces a child span per completion; without it
-    # LiteLLM writes onto the active capture root, clobbering multi-call captures.
-    # The others opt into structured gen_ai messages + content capture (litellm >= 1.88).
     os.environ.setdefault("USE_OTEL_LITELLM_REQUEST_SPAN", "true")
     os.environ.setdefault("OTEL_SEMCONV_STABILITY_OPT_IN", "gen_ai_latest_experimental")
     os.environ.setdefault("OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT", "SPAN_ONLY")
