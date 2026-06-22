@@ -1,0 +1,87 @@
+---
+title: Aleph Alpha
+description: Connect your Aleph Alpha-powered application to Latitude for observability.
+---
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses the **Aleph Alpha** SDK (`aleph-alpha-client`).
+
+<Check>
+  You'll keep calling Aleph Alpha exactly as you do today. Telemetry simply
+  observes and enriches those calls.
+</Check>
+
+<Note>
+  Auto-instrumentation for Aleph Alpha is available in the **Python** SDK. For other
+  languages, send traces via the [OpenTelemetry exporter](/telemetry/otel-exporter).
+</Note>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A project that uses the **Aleph Alpha SDK** (`aleph-alpha-client`)
+- An **Aleph Alpha API token** (set as `ALEPH_ALPHA_API_KEY`)
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    <CodeGroup>
+      ```bash pip
+      pip install latitude-telemetry aleph-alpha-client
+      ```
+
+      ```bash uv
+      uv add latitude-telemetry aleph-alpha-client
+      ```
+
+      ```bash poetry
+      poetry add latitude-telemetry aleph-alpha-client
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Initialize and use">
+    ```python
+    import os
+
+    import aleph_alpha_client
+    from aleph_alpha_client import Client, CompletionRequest, Prompt
+
+    from latitude_telemetry import Latitude, capture
+
+    latitude = Latitude(
+        api_key="your-api-key",
+        project="your-project-slug",
+        instrumentations={"aleph_alpha": aleph_alpha_client},
+    )
+
+    def generate_reply():
+        client = Client(token=os.environ["ALEPH_ALPHA_API_KEY"])
+        request = CompletionRequest(prompt=Prompt.from_text("Hello:"), maximum_tokens=50)
+        response = client.complete(request, model="luminous-base")
+        return response.completions[0].completion
+
+    capture("generate-reply", generate_reply)
+
+    latitude.shutdown()
+    ```
+  </Step>
+
+</Steps>
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each execution shows input/output messages, model, token usage, latency, and errors

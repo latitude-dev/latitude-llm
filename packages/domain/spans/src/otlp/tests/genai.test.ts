@@ -793,3 +793,202 @@ describe("TravelPlanner trace — GenAI v1.37+ (current)", () => {
     })
   })
 })
+
+// ─── litellm native OTel: tool call in deprecated attrs, contentless output ──
+//
+// litellm 1.88+ (gen_ai-semconv opt-in) emits an assistant message with empty
+// parts in gen_ai.output.messages and stashes the tool call in the deprecated
+// gen_ai.completion.0.function_call.* attributes; tool definitions land in
+// flattened llm.request.functions.N.* rather than gen_ai.tool.definitions.
+
+const LITELLM_SPAN_ID = "11ad6b7169203399"
+
+function buildLiteLlmTrace(attributes: OtlpKeyValue[]): OtlpExportTraceServiceRequest {
+  return {
+    resourceSpans: [
+      {
+        resource: { attributes: [str("service.name", "latitude-telemetry-python")] },
+        scopeSpans: [
+          {
+            scope: { name: "litellm", version: "" },
+            spans: [
+              {
+                traceId: TRACE_ID,
+                spanId: LITELLM_SPAN_ID,
+                name: "raw_gen_ai_request",
+                kind: 3,
+                startTimeUnixNano: "1710590400000000000",
+                endTimeUnixNano: "1710590401000000000",
+                attributes,
+                status: { code: 1 },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }
+}
+
+const litellmSpan = (attributes: OtlpKeyValue[]): SpanDetail => {
+  const span = transformOtlpToSpans(buildLiteLlmTrace(attributes), CONTEXT).spans[0] as SpanDetail | undefined
+  if (!span) throw new Error("span not produced")
+  return span
+}
+
+const LITELLM_TOOL_CALL_ATTRS: OtlpKeyValue[] = [
+  str("gen_ai.operation.name", "chat"),
+  str("gen_ai.provider.name", "openai"),
+  str("gen_ai.request.model", "gpt-4o-mini"),
+  str("gen_ai.response.model", "gpt-4o-mini-2024-07-18"),
+  int("gen_ai.usage.input_tokens", 63),
+  int("gen_ai.usage.output_tokens", 15),
+  str(
+    "gen_ai.input.messages",
+    JSON.stringify([{ role: "user", parts: [{ type: "text", content: "What's the weather in San Francisco?" }] }]),
+  ),
+  str("gen_ai.output.messages", JSON.stringify([{ role: "assistant", parts: [], finish_reason: "tool_calls" }])),
+  str("gen_ai.completion.0.function_call.name", "get_weather"),
+  str("gen_ai.completion.0.function_call.arguments", '{"city":"San Francisco"}'),
+  str("llm.request.functions.0.name", "get_weather"),
+  str("llm.request.functions.0.description", "Get the current weather for a city"),
+  str(
+    "llm.request.functions.0.parameters",
+    '{"type": "object", "properties": {"city": {"type": "string"}}, "required": ["city"]}',
+  ),
+  str("llm.request.type", "completion"),
+]
+
+describe("litellm native OTel — tool call recovery from deprecated attributes", () => {
+  it("still parses the gen_ai.input.messages user turn", () => {
+    const s = litellmSpan(LITELLM_TOOL_CALL_ATTRS)
+    const user = s.inputMessages.find((m) => m.role === "user")
+    expect(user).toBeDefined()
+    const parts = (user as { parts: { type: string; content?: string }[] }).parts
+    expect((parts.find((p) => p.type === "text") as { content: string }).content).toContain("San Francisco")
+  })
+
+  it("recovers the tool call into the contentless assistant output message", () => {
+    const s = litellmSpan(LITELLM_TOOL_CALL_ATTRS)
+    const assistant = s.outputMessages.find((m) => m.role === "assistant")
+    expect(assistant).toBeDefined()
+    const parts = (assistant as { parts: { type: string; name?: string; arguments?: unknown }[] }).parts
+    const toolCall = parts.find((p) => p.type === "tool_call")
+    expect(toolCall).toBeDefined()
+    expect((toolCall as { name: string }).name).toBe("get_weather")
+    // rosetta parses the JSON-string arguments into an object.
+    expect((toolCall as { arguments: { city: string } }).arguments.city).toBe("San Francisco")
+  })
+
+  it("recovers tool definitions from indexed llm.request.functions.N.*", () => {
+    const s = litellmSpan(LITELLM_TOOL_CALL_ATTRS)
+    expect(s.toolDefinitions).toHaveLength(1)
+    const def = s.toolDefinitions[0]
+    expect(def?.name).toBe("get_weather")
+    expect(def?.description).toBe("Get the current weather for a city")
+    expect(def?.parameters).toEqual({
+      type: "object",
+      properties: { city: { type: "string" } },
+      required: ["city"],
+    })
+  })
+
+  it("recovers inputMessages + systemInstructions from deprecated gen_ai.prompt.N when input.messages is empty", () => {
+    const s = litellmSpan([
+      str("gen_ai.operation.name", "chat"),
+      str("gen_ai.provider.name", "openai"),
+      str("gen_ai.request.model", "gpt-4o-mini"),
+      // No gen_ai.input.messages — input only in the deprecated indexed form.
+      str("gen_ai.prompt.0.role", "system"),
+      str("gen_ai.prompt.0.content", "You are helpful."),
+      str("gen_ai.prompt.1.role", "user"),
+      str("gen_ai.prompt.1.content", "Hi there."),
+      str(
+        "gen_ai.output.messages",
+        JSON.stringify([{ role: "assistant", parts: [{ type: "text", content: "Hello!" }] }]),
+      ),
+    ])
+    const user = s.inputMessages.find((m) => m.role === "user")
+    expect(user).toBeDefined()
+    const parts = (user as { parts: { type: string; content?: string }[] }).parts
+    expect((parts.find((p) => p.type === "text") as { content: string }).content).toBe("Hi there.")
+    expect(s.systemInstructions.length).toBeGreaterThan(0)
+  })
+
+  it("normalizes litellm history hybrid (OpenAI tool_calls + tool_call_id) into GenAI parts", () => {
+    const s = litellmSpan([
+      str("gen_ai.operation.name", "chat"),
+      str("gen_ai.provider.name", "openai"),
+      str("gen_ai.request.model", "gpt-4o-mini"),
+      str(
+        "gen_ai.input.messages",
+        JSON.stringify([
+          { role: "user", parts: [{ type: "text", content: "What's the weather in San Francisco?" }] },
+          {
+            role: "assistant",
+            parts: [],
+            tool_calls: [
+              {
+                function: { arguments: '{"city":"San Francisco"}', name: "get_weather" },
+                id: "call_w8",
+                type: "function",
+              },
+            ],
+          },
+          {
+            role: "tool",
+            parts: [{ type: "text", content: '{"city": "San Francisco", "temperatureC": 21, "conditions": "sunny"}' }],
+            tool_call_id: "call_w8",
+          },
+        ]),
+      ),
+      str(
+        "gen_ai.output.messages",
+        JSON.stringify([
+          { role: "assistant", parts: [{ type: "text", content: "It is sunny, 21°C." }], finish_reason: "stop" },
+        ]),
+      ),
+    ])
+
+    const assistant = s.inputMessages.find((m) => m.role === "assistant")
+    expect(assistant).toBeDefined()
+    const aParts = (assistant as { parts: { type: string; name?: string; id?: string; arguments?: unknown }[] }).parts
+    const call = aParts.find((p) => p.type === "tool_call")
+    expect(call).toBeDefined()
+    expect((call as { name: string }).name).toBe("get_weather")
+    expect((call as { id: string }).id).toBe("call_w8")
+    expect((call as { arguments: { city: string } }).arguments.city).toBe("San Francisco")
+    // The raw OpenAI fields must not survive on the message.
+    expect((assistant as Record<string, unknown>).tool_calls).toBeUndefined()
+
+    const toolMsg = s.inputMessages.find((m) => m.role === "tool")
+    expect(toolMsg).toBeDefined()
+    const tParts = (toolMsg as { parts: { type: string; id?: string; response?: unknown }[] }).parts
+    const resp = tParts.find((p) => p.type === "tool_call_response")
+    expect(resp).toBeDefined()
+    expect((resp as { id: string }).id).toBe("call_w8")
+    expect((resp as { response: { temperatureC: number } }).response.temperatureC).toBe(21)
+    // No leftover text part nor top-level tool_call_id.
+    expect(tParts.some((p) => p.type === "text")).toBe(false)
+    expect((toolMsg as Record<string, unknown>).tool_call_id).toBeUndefined()
+  })
+
+  it("does not override a content-bearing gen_ai.output.messages", () => {
+    const s = litellmSpan([
+      str("gen_ai.operation.name", "chat"),
+      str("gen_ai.provider.name", "openai"),
+      str("gen_ai.request.model", "gpt-4o-mini"),
+      str(
+        "gen_ai.output.messages",
+        JSON.stringify([{ role: "assistant", parts: [{ type: "text", content: "It is sunny." }] }]),
+      ),
+      // Stale deprecated attrs that must be ignored when the semconv output has content.
+      str("gen_ai.completion.0.function_call.name", "get_weather"),
+      str("gen_ai.completion.0.function_call.arguments", '{"city":"SF"}'),
+    ])
+    const assistant = s.outputMessages.find((m) => m.role === "assistant")
+    const parts = (assistant as { parts: { type: string; content?: string }[] }).parts
+    expect(parts.some((p) => p.type === "tool_call")).toBe(false)
+    expect((parts.find((p) => p.type === "text") as { content: string }).content).toBe("It is sunny.")
+  })
+})

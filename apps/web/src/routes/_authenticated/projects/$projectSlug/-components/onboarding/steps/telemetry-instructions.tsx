@@ -1,6 +1,15 @@
 import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
-import { CodeBlock, CopyButton, ProviderIcon, Tabs, Text } from "@repo/ui"
-import { Bot, Braces, FileCode2, Radio, Terminal } from "lucide-react"
+import {
+  CodeBlock,
+  CopyButton,
+  OpentelemetryIcon,
+  ProviderIcon,
+  PythonIcon,
+  Tabs,
+  Text,
+  TypescriptIcon,
+} from "@repo/ui"
+import { Bot, Terminal } from "lucide-react"
 import type { ReactNode } from "react"
 import { useLayoutEffect, useMemo, useState } from "react"
 import { useApiKeysCollection } from "../../../../../../../domains/api-keys/api-keys.collection.ts"
@@ -85,15 +94,21 @@ const PROVIDER_ENTRIES: ReadonlyArray<ProviderEntry> = [
   { id: "ollama", name: "Ollama", icon: "llama" },
   { id: "cohere", name: "Cohere", icon: "cohere" },
   { id: "togetherai", name: "Together AI", icon: "togetherai" },
-  { id: "litellm", name: "LiteLLM", icon: "generic" },
-  { id: "replicate", name: "Replicate", icon: "generic" },
-  { id: "sagemaker", name: "SageMaker", icon: "amazon-bedrock" },
-  { id: "watsonx", name: "watsonx.ai", icon: "generic" },
-  { id: "aleph-alpha", name: "Aleph Alpha", icon: "generic" },
+  { id: "litellm", name: "LiteLLM", icon: "litellm" },
+  { id: "replicate", name: "Replicate", icon: "replicate" },
+  { id: "sagemaker", name: "SageMaker", icon: "amazon-sagemaker" },
+  { id: "watsonx", name: "Watsonx", icon: "watsonx" },
+  { id: "aleph-alpha", name: "Aleph Alpha", icon: "aleph-alpha" },
   { id: "transformers", name: "Transformers", icon: "huggingface" },
   { id: "vercel-ai-sdk", name: "Vercel AI SDK", icon: "vercel" },
-  { id: "langchain", name: "LangChain", icon: "generic" },
-  { id: "llamaindex", name: "LlamaIndex", icon: "generic" },
+  { id: "vercel-ai-sdk-v7", name: "Vercel AI SDK v7", icon: "vercel" },
+  { id: "langchain", name: "LangChain", icon: "langchain" },
+  { id: "llamaindex", name: "LlamaIndex", icon: "llamaindex" },
+  { id: "openai-agents", name: "OpenAI Agents", icon: "openai" },
+  { id: "google-adk", name: "Google ADK", icon: "google" },
+  { id: "crewai", name: "CrewAI", icon: "crewai" },
+  { id: "haystack", name: "Haystack", icon: "haystack" },
+  { id: "dspy", name: "DSPy", icon: "dspy" },
 ]
 
 function OtelExporterLanguageChips({
@@ -302,12 +317,12 @@ export function TelemetryInstructions({
     const cfg = ONBOARDING_PROVIDER_SNIPPET_CONFIG[selectedProvider.id]
     const opts: Array<{ id: IntegrationPanel; label: string; icon: ReactNode }> = []
     if (cfg.supportsTypescript) {
-      opts.push({ id: "typescript", label: "TypeScript", icon: <Braces className="w-4 h-4" /> })
+      opts.push({ id: "typescript", label: "TypeScript", icon: <TypescriptIcon className="w-4 h-4" /> })
     }
     if (cfg.supportsPython) {
-      opts.push({ id: "python", label: "Python", icon: <FileCode2 className="w-4 h-4" /> })
+      opts.push({ id: "python", label: "Python", icon: <PythonIcon className="w-4 h-4" /> })
     }
-    opts.push({ id: "opentelemetry", label: "OpenTelemetry", icon: <Radio className="w-4 h-4" /> })
+    opts.push({ id: "opentelemetry", label: "OpenTelemetry", icon: <OpentelemetryIcon className="w-4 h-4" /> })
     return opts
   }, [selectedProvider.id])
 

@@ -9,6 +9,12 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
 
 The Vercel AI SDK can emit OpenTelemetry spans through its `experimental_telemetry` flag. Latitude can ingest those spans without a provider-specific instrumentation entry.
 
+<Note>
+  This guide covers **Vercel AI SDK v6**. On **v7**, OpenTelemetry moved into the separate
+  `@ai-sdk/otel` package and became opt-out — see the
+  [Vercel AI SDK v7](/telemetry/frameworks/vercel-ai-sdk-v7) guide instead.
+</Note>
+
 <Check>
   You'll keep calling the Vercel AI SDK exactly as you do today. Telemetry simply
   observes and enriches those calls.

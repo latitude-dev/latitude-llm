@@ -151,12 +151,14 @@ When streaming, consume the stream inside `capture()` so the span covers the ful
   <Tab title="Python">
     ```python
     def stream_reply():
+        chunks = []
         for event in client.chat_stream(
             model="command-a-03-2025",
             message=input,
         ):
             if event.event_type == "text-generation":
-                yield event.text
+                chunks.append(event.text)
+        return "".join(chunks)
 
     capture("stream-reply", stream_reply)
     ```

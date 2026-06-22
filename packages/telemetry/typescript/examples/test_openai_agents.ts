@@ -1,5 +1,5 @@
 /**
- * Test OpenAI Agents SDK instrumentation against local Latitude instance.
+ * OpenAI Agents SDK — Latitude telemetry example.
  *
  * Required env vars:
  * - LATITUDE_API_KEY
@@ -9,8 +9,9 @@
  * Install: npm install @openai/agents zod
  */
 
-import { Agent, run, tool } from "@openai/agents"
+import { randomUUID } from "node:crypto"
 import * as OpenAIAgentsSDK from "@openai/agents"
+import { Agent, run, tool } from "@openai/agents"
 import { z } from "zod"
 import { capture, Latitude } from "../src"
 
@@ -21,35 +22,53 @@ const latitude = new Latitude({
   instrumentations: { "openai-agents": OpenAIAgentsSDK },
 })
 
+const PROVIDER = "openai-agents"
+const MODEL = "gpt-4o-mini"
+const SESSION_ID = `${PROVIDER}-${randomUUID().slice(0, 8)}`
+
+function ctx(scenario: string, ...extraTags: string[]) {
+  return {
+    tags: ["example", PROVIDER, ...extraTags],
+    sessionId: SESSION_ID,
+    userId: "example-user",
+    metadata: { scenario, environment: "local" },
+  }
+}
+
 const getWeather = tool({
   name: "get_weather",
-  description: "Returns the current weather for a city.",
+  description: "Get the current weather for a city.",
   parameters: z.object({ city: z.string() }),
-  execute: async ({ city }) => `The weather in ${city} is sunny and 22°C.`,
+  execute: async ({ city }) => `The weather in ${city} is sunny and 21°C.`,
 })
 
-async function main() {
-  await latitude.ready
+async function chat() {
+  const agent = new Agent({ name: "Greeter", instructions: "Answer concisely.", model: MODEL })
+  const result = await run(agent, "Say 'Hello from OpenAI Agents!' in exactly 5 words.")
+  return result.finalOutput
+}
 
+async function toolConversation() {
   const agent = new Agent({
     name: "Weather agent",
     instructions: "Answer weather questions concisely. Always call get_weather first.",
     tools: [getWeather],
-    model: "gpt-4o-mini",
+    model: MODEL,
   })
-
-  const output = await capture(
-    "weather-agent-run",
-    () => run(agent, "What's the weather in Barcelona?"),
-    {
-      tags: ["typescript", "openai-agents"],
-      userId: "Jon",
-      sessionId: "example",
-      metadata: { env: "local", version: "3.0.0" },
-    },
+  const result = await run(
+    agent,
+    "What's the weather in San Francisco? Use get_weather, then answer in one short sentence.",
   )
+  return result.finalOutput
+}
 
-  console.log("Final output:", output.finalOutput)
+async function main() {
+  await latitude.ready
+
+  await toolConversation()
+
+  await capture("openai-agents-chat-capture", chat, ctx("chat"))
+  await capture("openai-agents-tools-capture", toolConversation, ctx("tools", "tools"))
 
   await latitude.flush()
   await latitude.shutdown()

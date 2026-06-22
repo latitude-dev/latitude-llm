@@ -96,7 +96,7 @@ function makeSpanRow(overrides: {
     error_type: "",
     tags: [...overrides.tags],
     metadata: {},
-    operation: "",
+    operation: "chat",
     provider: "",
     model: "",
     response_model: "",

@@ -1,0 +1,99 @@
+---
+title: Haystack
+description: Connect your Haystack application to Latitude for observability.
+---
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an application built with **Haystack** (`haystack-ai`).
+
+Latitude includes dedicated instrumentation for Haystack, so pipeline runs, generator calls, and tool invocations appear as traces.
+
+<Check>
+  You'll keep building pipelines exactly as you do today. Telemetry observes
+  components, model calls, and tool calls as they happen.
+</Check>
+
+<Note>
+  Haystack instrumentation is available in the **Python** SDK only.
+</Note>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A project that uses **Haystack** (`haystack-ai`)
+- A model provider key — the example below uses **OpenAI** (`OPENAI_API_KEY`)
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    <CodeGroup>
+      ```bash pip
+      pip install latitude-telemetry haystack-ai
+      ```
+
+      ```bash uv
+      uv add latitude-telemetry haystack-ai
+      ```
+
+      ```bash poetry
+      poetry add latitude-telemetry haystack-ai
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Initialize and use">
+    ```python
+    import haystack
+    from haystack.components.generators.chat import OpenAIChatGenerator
+    from haystack.dataclasses import ChatMessage
+
+    from latitude_telemetry import Latitude, capture
+
+    latitude = Latitude(
+        api_key="your-api-key",
+        project="your-project-slug",
+        instrumentations={"haystack": haystack},
+    )
+
+    def chat():
+        generator = OpenAIChatGenerator(model="gpt-4o-mini")
+        result = generator.run(messages=[ChatMessage.from_user("Hello")])
+        return result["replies"][0].text
+
+    capture("haystack-chat", chat)
+
+    latitude.shutdown()
+    ```
+  </Step>
+
+</Steps>
+
+---
+
+## What you get
+
+Each pipeline run shows up as a trace with nested spans:
+
+- **Pipeline / component spans** — the components that ran and their configuration
+- **Generation spans** — model, input/output messages, and token usage
+- **Tool spans** — tool calls with input arguments and output
+
+Wrap a request or job with `capture()` to attach a `user_id`, `session_id`, `tags`, or `metadata` to every span produced inside.
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each run shows the full hierarchy of component → generation → tool calls
+3. Token usage and latency are aggregated at every level

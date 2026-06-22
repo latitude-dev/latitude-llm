@@ -1,0 +1,85 @@
+---
+title: Ollama
+description: Connect your Ollama-powered application to Latitude for observability.
+---
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses **Ollama** for local model inference.
+
+<Check>
+  You'll keep calling Ollama exactly as you do today. Telemetry simply
+  observes and enriches those calls.
+</Check>
+
+<Note>
+  Auto-instrumentation for Ollama is available in the **Python** SDK. For other
+  languages, send traces via the [OpenTelemetry exporter](/telemetry/otel-exporter).
+</Note>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A project that uses the **Ollama SDK** (`ollama`)
+- A running **Ollama** server (set `OLLAMA_HOST` if it is not the default `http://localhost:11434`)
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    <CodeGroup>
+      ```bash pip
+      pip install latitude-telemetry ollama
+      ```
+
+      ```bash uv
+      uv add latitude-telemetry ollama
+      ```
+
+      ```bash poetry
+      poetry add latitude-telemetry ollama
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Initialize and use">
+    ```python
+    import ollama
+
+    from latitude_telemetry import Latitude, capture
+
+    latitude = Latitude(
+        api_key="your-api-key",
+        project="your-project-slug",
+        instrumentations={"ollama": ollama},
+    )
+
+    def generate_reply():
+        response = ollama.chat(
+            model="llama3.2",
+            messages=[{"role": "user", "content": "Hello"}],
+        )
+        return response["message"]["content"]
+
+    capture("generate-reply", generate_reply)
+
+    latitude.shutdown()
+    ```
+  </Step>
+
+</Steps>
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each execution shows input/output messages, model, token usage, latency, and errors

@@ -1,0 +1,107 @@
+---
+title: CrewAI
+description: Connect your CrewAI multi-agent application to Latitude for observability.
+---
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an application built with **CrewAI** (`crewai`).
+
+Latitude includes dedicated instrumentation for CrewAI, so crew kickoffs, agent steps, model generations, and tool calls appear as traces.
+
+<Check>
+  You'll keep building crews exactly as you do today. Telemetry observes agent
+  steps, model calls, and tool calls as they happen.
+</Check>
+
+<Note>
+  CrewAI instrumentation is available in the **Python** SDK only.
+</Note>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A project that uses **CrewAI** (`crewai`)
+- A model provider key — CrewAI uses **OpenAI** by default (`OPENAI_API_KEY`)
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    <CodeGroup>
+      ```bash pip
+      pip install latitude-telemetry crewai
+      ```
+
+      ```bash uv
+      uv add latitude-telemetry crewai
+      ```
+
+      ```bash poetry
+      poetry add latitude-telemetry crewai
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Initialize and use">
+    ```python
+    import crewai
+    from crewai import Agent, Crew, Task
+
+    from latitude_telemetry import Latitude, capture
+
+    latitude = Latitude(
+        api_key="your-api-key",
+        project="your-project-slug",
+        instrumentations={"crewai": crewai},
+    )
+
+    def crew_run():
+        researcher = Agent(
+            role="Researcher",
+            goal="Summarize topics concisely",
+            backstory="You provide brief, accurate summaries.",
+            llm="gpt-4o-mini",
+        )
+        task = Task(
+            description="Explain what OpenTelemetry is in one sentence.",
+            expected_output="A single sentence.",
+            agent=researcher,
+        )
+        return Crew(agents=[researcher], tasks=[task]).kickoff().raw
+
+    capture("crew-run", crew_run)
+
+    latitude.shutdown()
+    ```
+  </Step>
+
+</Steps>
+
+---
+
+## What you get
+
+Each crew kickoff shows up as a trace with nested spans:
+
+- **Crew / agent spans** — agent roles, goals, and configured tools
+- **Generation spans** — model, input/output messages, and token usage
+- **Tool spans** — tool calls with input arguments and output
+
+Wrap a request or job with `capture()` to attach a `user_id`, `session_id`, `tags`, or `metadata` to every span produced inside.
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each crew run shows the full hierarchy of agent → generation → tool calls
+3. Token usage and latency are aggregated at every level

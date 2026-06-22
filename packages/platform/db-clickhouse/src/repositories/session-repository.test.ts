@@ -45,6 +45,7 @@ interface SpanOverrides {
   readonly inputMessages?: string
   readonly outputMessages?: string
   readonly systemInstructions?: string
+  readonly operation?: string
 }
 
 const makeSpanRow = (overrides: SpanOverrides): SpanRow => {
@@ -72,7 +73,7 @@ const makeSpanRow = (overrides: SpanOverrides): SpanRow => {
     error_type: "",
     tags: [],
     metadata: overrides.metadata ?? {},
-    operation: "",
+    operation: overrides.operation ?? "chat",
     provider: overrides.provider ?? "",
     model: overrides.model ?? "",
     response_model: "",
@@ -443,6 +444,7 @@ describe("SessionRepository", () => {
           sessionId: "",
           startTime: start,
           name: "http-handler",
+          operation: "unspecified",
         }),
       ])
 

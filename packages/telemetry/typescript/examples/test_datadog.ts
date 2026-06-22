@@ -41,10 +41,6 @@ provider.register()
 const openai = new OpenAI()
 
 async function main() {
-  // Datadog and Latitude share spans:
-  // - Datadog sees: all spans (HTTP, LLM, etc.)
-  // - Latitude sees: LLM spans with gen_ai.* attributes
-
   await capture(
     "datadog-chat",
     async () => {

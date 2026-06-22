@@ -32,6 +32,7 @@ function categoryFor(operation: string, isError: boolean): WorkCategory {
   switch (operation) {
     case "chat":
     case "text_completion":
+    case "generate_content":
       return "generation"
     case "execute_tool":
       return isError ? "toolError" : "toolOk"

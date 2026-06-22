@@ -1,5 +1,5 @@
 /**
- * Test OpenAI instrumentation against local Latitude instance.
+ * OpenAI — Latitude telemetry example.
  *
  * Required env vars:
  * - LATITUDE_API_KEY
@@ -9,6 +9,7 @@
  * Install: npm install openai
  */
 
+import { randomUUID } from "node:crypto"
 import OpenAI from "openai"
 import { capture, Latitude } from "../src"
 
@@ -19,54 +20,94 @@ const latitude = new Latitude({
   instrumentations: { openai: OpenAI },
 })
 
+const PROVIDER = "openai"
+const MODEL = "gpt-4o-mini"
+const SESSION_ID = `${PROVIDER}-${randomUUID().slice(0, 8)}`
+
+function ctx(scenario: string, ...extraTags: string[]) {
+  return {
+    tags: ["example", PROVIDER, ...extraTags],
+    sessionId: SESSION_ID,
+    userId: "example-user",
+    metadata: { scenario, environment: "local" },
+  }
+}
+
+async function chat() {
+  const client = new OpenAI()
+  const response = await client.chat.completions.create({
+    model: MODEL,
+    messages: [{ role: "user", content: "Say 'Hello from OpenAI!' in exactly 5 words." }],
+    max_tokens: 50,
+  })
+  return response.choices[0]?.message?.content
+}
+
+async function stream() {
+  const client = new OpenAI()
+  const stream = await client.chat.completions.create({
+    model: MODEL,
+    messages: [{ role: "user", content: "Say 'Hello from OpenAI stream!' in exactly 6 words." }],
+    max_tokens: 50,
+    stream: true,
+    stream_options: { include_usage: true },
+  })
+
+  const chunks: string[] = []
+  for await (const chunk of stream) {
+    const delta = chunk.choices[0]?.delta?.content
+    if (delta) chunks.push(delta)
+  }
+  return chunks.join("")
+}
+
+async function toolConversation() {
+  const client = new OpenAI()
+  const tools = [
+    {
+      type: "function" as const,
+      function: {
+        name: "get_weather",
+        description: "Get the current weather for a city",
+        parameters: {
+          type: "object",
+          properties: { city: { type: "string" } },
+          required: ["city"],
+        },
+      },
+    },
+  ]
+  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    {
+      role: "user",
+      content: "What's the weather in San Francisco? Use get_weather, then answer in one short sentence.",
+    },
+  ]
+
+  const first = await client.chat.completions.create({ model: MODEL, messages, tools, max_tokens: 200 })
+  const toolCall = first.choices[0]?.message?.tool_calls?.[0]
+  messages.push(first.choices[0]!.message)
+  messages.push({
+    role: "tool",
+    tool_call_id: toolCall!.id,
+    content: JSON.stringify({ city: "San Francisco", temperatureC: 21, conditions: "sunny" }),
+  })
+
+  const second = await client.chat.completions.create({ model: MODEL, messages, tools, max_tokens: 200 })
+  return second.choices[0]?.message?.content
+}
+
 async function main() {
-  // Wait for instrumentations to be ready
   await latitude.ready
 
-  const client = new OpenAI()
+  await toolConversation()
 
-  await capture(
-    "openai-chat",
-    async () => {
-      const response = await client.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: "Say 'Hello from OpenAI!' in exactly 5 words." }],
-        max_tokens: 50,
-      })
-
-      return response.choices[0]?.message?.content
-    },
-    { tags: ["test", "openai"], userId: "Jon", sessionId: "example", metadata: { env: "local", version: "3.0.0" } },
-  )
-
-  await capture(
-    "openai-stream",
-    async () => {
-      const stream = await client.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "user",
-            content: "Say 'Hello from OpenAI stream!' in exactly 6 words.",
-          },
-        ],
-        max_tokens: 50,
-        stream: true,
-        stream_options: { include_usage: true },
-      })
-
-      const chunks: string[] = []
-      for await (const chunk of stream) {
-        const delta = chunk.choices[0]?.delta?.content
-        if (delta) chunks.push(delta)
-      }
-
-      return chunks.join("")
-    },
-    { tags: ["test", "openai", "stream"], userId: "Jon", sessionId: "example" },
-  )
+  await capture("openai-chat-capture", chat, ctx("chat"))
+  await capture("openai-stream-capture", stream, ctx("stream", "stream"))
+  await capture("openai-tools-capture", toolConversation, ctx("tools", "tools"))
 
   await latitude.flush()
+  await latitude.shutdown()
 }
 
 main().catch(console.error)

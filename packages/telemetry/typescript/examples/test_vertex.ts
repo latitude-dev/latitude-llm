@@ -1,5 +1,5 @@
 /**
- * Test Vertex AI instrumentation against local Latitude instance.
+ * Vertex AI — Latitude telemetry example.
  *
  * Required env vars:
  * - LATITUDE_API_KEY
@@ -10,8 +10,9 @@
  * Install: npm install @google-cloud/vertexai
  */
 
-import { VertexAI } from "@google-cloud/vertexai"
+import { randomUUID } from "node:crypto"
 import * as VertexAISDK from "@google-cloud/vertexai"
+import { VertexAI } from "@google-cloud/vertexai"
 import { capture, Latitude } from "../src"
 
 const latitude = new Latitude({
@@ -21,30 +22,43 @@ const latitude = new Latitude({
   instrumentations: { vertexai: VertexAISDK },
 })
 
-async function main() {
-  // Wait for instrumentations to be ready
-  await latitude.ready
+const PROVIDER = "vertexai"
+const MODEL = "gemini-1.5-flash"
+const SESSION_ID = `${PROVIDER}-${randomUUID().slice(0, 8)}`
 
+function ctx(scenario: string, ...extraTags: string[]) {
+  return {
+    tags: ["example", PROVIDER, ...extraTags],
+    sessionId: SESSION_ID,
+    userId: "example-user",
+    metadata: { scenario, environment: "local" },
+  }
+}
+
+async function chat() {
   const vertexAI = new VertexAI({
     project: process.env.GOOGLE_CLOUD_PROJECT!,
     location: "us-central1",
   })
 
   const model = vertexAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
+    model: MODEL,
   })
 
-  await capture(
-    "vertex-chat",
-    async () => {
-      const response = await model.generateContent("Say 'Hello from Vertex!' in exactly 5 words.")
+  const response = await model.generateContent("Say 'Hello from Vertex!' in exactly 5 words.")
 
-      return response.response.candidates?.[0]?.content?.parts?.[0]?.text || ""
-    },
-    { tags: ["test", "vertex"], sessionId: "example" },
-  )
+  return response.response.candidates?.[0]?.content?.parts?.[0]?.text || ""
+}
+
+async function main() {
+  await latitude.ready
+
+  await chat()
+
+  await capture("vertexai-chat-capture", chat, ctx("chat"))
 
   await latitude.flush()
+  await latitude.shutdown()
 }
 
 main().catch(console.error)

@@ -1,0 +1,91 @@
+---
+title: Amazon SageMaker
+description: Connect your Amazon SageMaker-powered application to Latitude for observability.
+---
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an application that invokes models hosted on **Amazon SageMaker** through `boto3`.
+
+<Check>
+  You'll keep calling SageMaker exactly as you do today. Telemetry simply
+  observes and enriches those calls.
+</Check>
+
+<Note>
+  Auto-instrumentation for SageMaker is available in the **Python** SDK. For other
+  languages, send traces via the [OpenTelemetry exporter](/telemetry/otel-exporter).
+</Note>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A project that uses **boto3** with a deployed SageMaker endpoint
+- AWS credentials (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`) and a `SAGEMAKER_ENDPOINT_NAME`
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    <CodeGroup>
+      ```bash pip
+      pip install latitude-telemetry boto3
+      ```
+
+      ```bash uv
+      uv add latitude-telemetry boto3
+      ```
+
+      ```bash poetry
+      poetry add latitude-telemetry boto3
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Initialize and use">
+    ```python
+    import json
+    import os
+
+    import boto3
+
+    from latitude_telemetry import Latitude, capture
+
+    latitude = Latitude(
+        api_key="your-api-key",
+        project="your-project-slug",
+        instrumentations={"sagemaker": boto3},
+    )
+
+    client = boto3.client("sagemaker-runtime", region_name="eu-central-1")
+
+    def generate_reply():
+        response = client.invoke_endpoint(
+            EndpointName=os.environ["SAGEMAKER_ENDPOINT_NAME"],
+            ContentType="application/json",
+            Body=json.dumps({"inputs": "Hello", "parameters": {"max_new_tokens": 50}}),
+        )
+        return json.loads(response["Body"].read().decode())
+
+    capture("generate-reply", generate_reply)
+
+    latitude.shutdown()
+    ```
+  </Step>
+
+</Steps>
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each execution shows input/output messages, model, token usage, latency, and errors

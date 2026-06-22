@@ -1,0 +1,86 @@
+---
+title: LiteLLM
+description: Connect your LiteLLM-powered application to Latitude for observability.
+---
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses **LiteLLM** to call models across providers behind a single API.
+
+Latitude wires LiteLLM's built-in OpenTelemetry callback, so every `litellm.completion` call — whatever the underlying provider — is captured with messages, model, and token usage.
+
+<Check>
+  You'll keep calling LiteLLM exactly as you do today. Telemetry simply
+  observes and enriches those calls.
+</Check>
+
+<Note>
+  LiteLLM instrumentation is available in the **Python** SDK only.
+</Note>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A project that uses **LiteLLM** (`litellm`)
+- A key for whichever provider you route to (e.g. `OPENAI_API_KEY`)
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    <CodeGroup>
+      ```bash pip
+      pip install latitude-telemetry litellm
+      ```
+
+      ```bash uv
+      uv add latitude-telemetry litellm
+      ```
+
+      ```bash poetry
+      poetry add latitude-telemetry litellm
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Initialize and use">
+    ```python
+    import litellm
+
+    from latitude_telemetry import Latitude, capture
+
+    latitude = Latitude(
+        api_key="your-api-key",
+        project="your-project-slug",
+        instrumentations={"litellm": litellm},
+    )
+
+    def generate_reply():
+        response = litellm.completion(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": "Hello"}],
+        )
+        return response.choices[0].message.content
+
+    capture("generate-reply", generate_reply)
+
+    latitude.shutdown()
+    ```
+  </Step>
+
+</Steps>
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each execution shows input/output messages, model, token usage, latency, and errors

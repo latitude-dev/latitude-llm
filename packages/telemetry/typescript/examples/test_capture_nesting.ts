@@ -17,7 +17,6 @@
 import { capture, Latitude } from "../src"
 import OpenAI from "openai"
 
-// Initialize telemetry
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
@@ -27,7 +26,6 @@ const latitude = new Latitude({
 
 const openai = new OpenAI()
 
-// Outer capture with initial context
 const outerFunction = capture(
   {
     name: "outer-capture",
@@ -37,17 +35,14 @@ const outerFunction = capture(
     metadata: { outer_key: "outer_value", shared_key: "outer_shared" },
   },
   async () => {
-    // First LLM call in outer context
     const response1 = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: "Say 'First call' in exactly 2 words." }],
       max_tokens: 50,
     })
 
-    // Call inner function with nested capture
     const innerResult = await innerFunction()
 
-    // Second LLM call (should still have outer context)
     const response2 = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: "Say 'Second call' in exactly 2 words." }],
@@ -62,7 +57,6 @@ const outerFunction = capture(
   },
 )
 
-// Inner capture with context that should merge with outer
 const innerFunction = capture(
   {
     name: "inner-capture",
@@ -82,7 +76,6 @@ const innerFunction = capture(
   },
 )
 
-// Test deeply nested captures
 const deeplyNestedTest = capture(
   {
     name: "level-1",

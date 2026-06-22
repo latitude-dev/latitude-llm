@@ -187,10 +187,12 @@ When streaming, consume the stream inside `capture()` so the span covers the ful
                 "messages": [{"role": "user", "content": input}],
             }),
         )
+        chunks = []
         for event in response["body"]:
             chunk = json.loads(event["chunk"]["bytes"])
             if chunk.get("type") == "content_block_delta":
-                yield chunk["delta"]["text"]
+                chunks.append(chunk["delta"]["text"])
+        return "".join(chunks)
 
     capture("stream-reply", stream_reply)
     ```

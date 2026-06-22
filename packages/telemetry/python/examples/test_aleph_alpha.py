@@ -1,5 +1,5 @@
 """
-Test Aleph Alpha instrumentation against local Latitude instance.
+Aleph Alpha — Latitude telemetry example.
 
 Required env vars:
 - LATITUDE_API_KEY
@@ -10,13 +10,13 @@ Install: uv add aleph-alpha-client
 """
 
 import os
+import uuid
 
 import aleph_alpha_client
 from aleph_alpha_client import Client, CompletionRequest, Prompt
 
 from latitude_telemetry import Latitude, capture
 
-# Initialize telemetry pointing to local instance
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project=os.environ["LATITUDE_PROJECT_SLUG"],
@@ -24,9 +24,21 @@ latitude = Latitude(
     disable_batch=True,
 )
 
+PROVIDER = "aleph-alpha"
+MODEL = "luminous-base"
+SESSION_ID = f"{PROVIDER}-{uuid.uuid4().hex[:8]}"
 
-@capture("test-aleph-alpha-completion", {"tags": ["python", "test"], "session_id": "example"})
-def test_aleph_alpha_completion():
+
+def _ctx(scenario: str, *extra_tags: str) -> dict:
+    return {
+        "tags": ["example", PROVIDER, *extra_tags],
+        "session_id": SESSION_ID,
+        "user_id": "example-user",
+        "metadata": {"scenario": scenario, "environment": "local"},
+    }
+
+
+def chat() -> str:
     client = Client(token=os.environ["ALEPH_ALPHA_API_KEY"])
 
     request = CompletionRequest(
@@ -34,11 +46,14 @@ def test_aleph_alpha_completion():
         maximum_tokens=50,
     )
 
-    response = client.complete(request, model="luminous-base")
+    response = client.complete(request, model=MODEL)
 
     return response.completions[0].completion
 
 
 if __name__ == "__main__":
-    test_aleph_alpha_completion()
+    chat()
+
+    capture("aleph-alpha-chat-capture", chat, _ctx("chat"))
+
     latitude.flush()

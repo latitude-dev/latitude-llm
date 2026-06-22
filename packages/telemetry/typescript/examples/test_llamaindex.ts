@@ -1,16 +1,20 @@
 /**
- * Test LlamaIndex instrumentation against local Latitude instance.
+ * LlamaIndex — Latitude telemetry example.
  *
  * Required env vars:
  * - LATITUDE_API_KEY
  * - LATITUDE_PROJECT_SLUG
  * - OPENAI_API_KEY
  *
- * Install: npm install llamaindex
+ * Install: npm install llamaindex @llamaindex/openai @llamaindex/workflow zod
  */
 
-import { OpenAI } from "llamaindex"
+import { randomUUID } from "node:crypto"
+import { openai } from "@llamaindex/openai"
+import { agent } from "@llamaindex/workflow"
 import * as LlamaIndex from "llamaindex"
+import { tool } from "llamaindex"
+import { z } from "zod"
 import { capture, Latitude } from "../src"
 
 const latitude = new Latitude({
@@ -20,28 +24,66 @@ const latitude = new Latitude({
   instrumentations: { llamaindex: LlamaIndex },
 })
 
+const PROVIDER = "llamaindex"
+const MODEL = "gpt-4o-mini"
+const SESSION_ID = `${PROVIDER}-${randomUUID().slice(0, 8)}`
+
+function ctx(scenario: string, ...extraTags: string[]) {
+  return {
+    tags: ["example", PROVIDER, ...extraTags],
+    sessionId: SESSION_ID,
+    userId: "example-user",
+    metadata: { scenario, environment: "local" },
+  }
+}
+
+const getWeather = tool({
+  name: "get_weather",
+  description: "Get the current weather for a city",
+  parameters: z.object({ city: z.string() }),
+  execute: ({ city }) => JSON.stringify({ city, temperatureC: 21, conditions: "sunny" }),
+})
+
+async function chat() {
+  const llm = openai({ model: MODEL, maxTokens: 50 })
+  const response = await llm.complete({ prompt: "Say 'Hello from LlamaIndex!' in exactly 5 words." })
+  return response.text
+}
+
+async function stream() {
+  const llm = openai({ model: MODEL, maxTokens: 50 })
+  const chunks: string[] = []
+  const stream = await llm.complete({
+    prompt: "Say 'Hello from LlamaIndex stream!' in exactly 6 words.",
+    stream: true,
+  })
+  for await (const chunk of stream) chunks.push(chunk.text)
+  return chunks.join("")
+}
+
+async function toolConversation() {
+  const weatherAgent = agent({
+    tools: [getWeather],
+    llm: openai({ model: MODEL }),
+    systemPrompt: "You are a helpful assistant. Use the tools available to you.",
+  })
+  const result = await weatherAgent.run(
+    "What's the weather in San Francisco? Use get_weather, then answer in one short sentence.",
+  )
+  return String(result.data.result)
+}
+
 async function main() {
-  // Wait for instrumentations to be ready
   await latitude.ready
 
-  const llm = new OpenAI({
-    model: "gpt-4o-mini",
-    maxTokens: 50,
-  })
+  await toolConversation()
 
-  await capture(
-    "llamaindex-chat",
-    async () => {
-      const response = await llm.complete({
-        prompt: "Say 'Hello from LlamaIndex!' in exactly 5 words.",
-      })
-
-      return response.text
-    },
-    { tags: ["test", "llamaindex"], sessionId: "example" },
-  )
+  await capture("llamaindex-chat-capture", chat, ctx("chat"))
+  await capture("llamaindex-stream-capture", stream, ctx("stream", "stream"))
+  await capture("llamaindex-tools-capture", toolConversation, ctx("tools", "tools"))
 
   await latitude.flush()
+  await latitude.shutdown()
 }
 
 main().catch(console.error)

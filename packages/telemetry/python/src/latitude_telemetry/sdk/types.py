@@ -22,7 +22,6 @@ InstrumentationName = Literal[
     "aiplatform",
     "aleph_alpha",
     "crewai",
-    "dspy",
     "google_adk",
     "google_generativeai",
     "groq",

@@ -1,6 +1,6 @@
 [project]
 name = "latitude-telemetry"
-version = "3.2.0"
+version = "3.3.0"
 description = "Latitude Telemetry for Python"
 authors = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
 maintainers = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
@@ -20,18 +20,16 @@ dependencies = [
     "opentelemetry-instrumentation-anthropic==0.50.1",
     "opentelemetry-instrumentation-bedrock==0.50.1",
     "opentelemetry-instrumentation-cohere==0.50.1",
-    "opentelemetry-instrumentation-crewai==0.50.1",
-    "openinference-instrumentation-dspy==0.1.33",
+    "openinference-instrumentation-crewai==1.1.9",
     "openinference-instrumentation-google-adk==0.1.15",
-    "opentelemetry-instrumentation-google-generativeai==0.50.1",
+    "openinference-instrumentation-google-genai==1.1.0",
     "opentelemetry-instrumentation-groq==0.50.1",
-    "opentelemetry-instrumentation-haystack==0.50.1",
+    "openinference-instrumentation-haystack==0.1.34",
     "opentelemetry-instrumentation-langchain==0.50.1",
-    "openinference-instrumentation-litellm==0.1.6",
-    "opentelemetry-instrumentation-llamaindex==0.50.1",
+    "openinference-instrumentation-llama-index==4.4.2",
     "opentelemetry-instrumentation-mistralai==0.50.1",
     "opentelemetry-instrumentation-ollama==0.50.1",
-    "opentelemetry-instrumentation-openai==0.50.1",
+    "openinference-instrumentation-openai==0.1.52",
     "openinference-instrumentation-openai-agents==1.4.2",
     "opentelemetry-instrumentation-replicate==0.50.1",
     "opentelemetry-instrumentation-sagemaker==0.50.1",
@@ -42,7 +40,6 @@ dependencies = [
     "opentelemetry-instrumentation-watsonx==0.50.1",
     "pydantic==2.12.5",
     "typing-extensions==4.15.0",
-    "openai-agents==0.15.1",
 ]
 
 [dependency-groups]
@@ -54,10 +51,14 @@ dev = [
     "ruff==0.14.14",
     "sh==2.2.2",
     "openai==2.30.0",
+    # Host SDK for the openai-agents integration (example/tests only). The
+    # instrumentor (openinference-instrumentation-openai-agents) is the runtime
+    # dep; the agents SDK itself is the user's to install.
+    "openai-agents==0.15.1",
     # Note: 0.41.0 onwards made Prompt Caching generally available
     # which is not compatible with the instrumentation
     "anthropic==0.40.0",
-    "litellm[proxy]==1.83.7",
+    "litellm[proxy]==1.88.1",
 ]
 
 [tool.uv]

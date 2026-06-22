@@ -21,7 +21,6 @@ from openai import OpenAI
 
 from latitude_telemetry import Latitude, capture
 
-# Initialize telemetry pointing to local instance
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project=os.environ["LATITUDE_PROJECT_SLUG"],
@@ -43,17 +42,14 @@ def outer_function():
     """Outer capture with initial context."""
     client = OpenAI()
 
-    # First LLM call in outer context
     response1 = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": "Say 'First call' in exactly 2 words."}],
         max_tokens=50,
     )
 
-    # Call inner function with nested capture
     inner_result = inner_function()
 
-    # Second LLM call (should still have outer context)
     response2 = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": "Say 'Second call' in exactly 2 words."}],
@@ -104,7 +100,6 @@ def test_nested_capture_with_callback():
             )
             return response.choices[0].message.content
 
-        # Inner capture with callback pattern
         inner_result = capture(
             "callback-inner",
             inner_callback,

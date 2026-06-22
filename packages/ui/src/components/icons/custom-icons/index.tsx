@@ -1,4 +1,6 @@
+export { OpentelemetryIcon } from "./brands/icons/opentelemetry.tsx"
 export { SlackIcon } from "./brands/icons/slack.tsx"
 export { DatabaseAddIcon } from "./database-add.tsx"
+export * from "./languages/icons/index.tsx"
 export * from "./providers/icons/index.tsx"
 export { ProviderIcon, type ProviderIconProps } from "./providers/provider-icon.tsx"

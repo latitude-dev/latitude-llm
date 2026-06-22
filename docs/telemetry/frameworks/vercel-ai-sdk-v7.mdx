@@ -1,0 +1,128 @@
+---
+title: Vercel AI SDK v7
+description: Connect your Vercel AI SDK v7 powered application to Latitude for observability.
+---
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses **Vercel AI SDK v7**.
+
+<Note>
+  Using **Vercel AI SDK v6**? See the [Vercel AI SDK](/telemetry/frameworks/vercel-ai-sdk) guide
+  instead — its telemetry setup is different.
+</Note>
+
+In v7, OpenTelemetry collection **moved out of the `ai` package** into the separate **`@ai-sdk/otel`** package, and it is now **opt-out**: once you register a telemetry integration, every AI SDK call emits telemetry by default — there is no per-call `experimental_telemetry` flag anymore. Latitude ingests those spans without a provider-specific instrumentation entry.
+
+<Check>
+  You'll keep calling the Vercel AI SDK exactly as you do today. Telemetry simply
+  observes and enriches those calls.
+</Check>
+
+<Note>
+  The Vercel AI SDK integration is **TypeScript only**.
+</Note>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A Node.js project that uses **Vercel AI SDK v7** (`ai@7`) and the matching **`@ai-sdk/otel`**
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    Install Latitude Telemetry and the AI SDK v7 OpenTelemetry package.
+
+    <CodeGroup>
+      ```bash npm
+      npm install @latitude-data/telemetry @ai-sdk/otel
+      ```
+
+      ```bash pnpm
+      pnpm add @latitude-data/telemetry @ai-sdk/otel
+      ```
+
+      ```bash yarn
+      yarn add @latitude-data/telemetry @ai-sdk/otel
+      ```
+
+      ```bash bun
+      bun add @latitude-data/telemetry @ai-sdk/otel
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Initialize and use">
+    Initialize Latitude **without** an `instrumentations` array. Then register the AI SDK
+    `OpenTelemetry` integration **once**, after constructing `Latitude` — it uses the global tracer
+    provider that Latitude registered, so spans flow to Latitude automatically. No per-call flag is
+    needed.
+
+    ```ts
+    import { Latitude, capture } from "@latitude-data/telemetry"
+    import { generateText, registerTelemetry } from "ai"
+    import { OpenTelemetry } from "@ai-sdk/otel"
+    import { openai } from "@ai-sdk/openai"
+
+    const latitude = new Latitude({
+      apiKey: process.env.LATITUDE_API_KEY!,
+      project: process.env.LATITUDE_PROJECT_SLUG!,
+    })
+
+    // Register once, after Latitude. All AI SDK calls now emit telemetry (opt-out).
+    registerTelemetry(new OpenTelemetry())
+
+    await capture("generate-support-reply", async () => {
+      const { text } = await generateText({
+        model: openai("gpt-4o"),
+        prompt: "Hello",
+      })
+      return text
+    })
+
+    await latitude.shutdown()
+    ```
+
+    <Note>
+      The recommended integration is `OpenTelemetry`, which emits standard OpenTelemetry GenAI
+      semantic-convention spans. `@ai-sdk/otel` also exports `LegacyOpenTelemetry`, which emits the
+      older `ai.*` spans (same as v6). Latitude ingests both.
+    </Note>
+  </Step>
+
+</Steps>
+
+### Next.js
+
+Register the integration in your `instrumentation.ts`, alongside your OpenTelemetry provider setup:
+
+```ts instrumentation.ts
+import { registerOTel } from "@vercel/otel"
+import { registerTelemetry } from "ai"
+import { OpenTelemetry } from "@ai-sdk/otel"
+
+export function register() {
+  registerOTel({ serviceName: "my-ai-app" })
+  registerTelemetry(new OpenTelemetry())
+}
+```
+
+### Opting out
+
+Telemetry is opt-out. To disable it for a specific call, set `telemetry: { isEnabled: false }`. To disable it globally, don't register any telemetry integration.
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each execution shows input/output messages, model, token usage, latency, and errors

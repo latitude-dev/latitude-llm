@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-06-18
+
+### Added
+
+- **Vercel AI SDK v7 support.** Telemetry from `ai@7` is now captured end-to-end. v7 moved
+  OpenTelemetry into the separate `@ai-sdk/otel` package (opt-out, registered via
+  `registerTelemetry(new OpenTelemetry())`); its `OpenTelemetry` integration emits standard
+  OpenTelemetry GenAI semantic-convention spans (`gen_ai.*`), and `LegacyOpenTelemetry` emits the
+  older `ai.*` spans. Both are exported by Latitude's smart filter with no configuration. The README
+  now documents the v6 (`experimental_telemetry: { isEnabled: true }`) and v7 setups side by side, and
+  a runnable `examples/test_vercel_ai_v7.ts` is included.
+- v6 (`ai@6`) support is unchanged and fully maintained.
+
+> No runtime change to the published SDK — the span processor already exported `gen_ai.*` and `ai.*`
+> spans. This release adds documentation, a v7 example, and tests that lock in v7 span coverage.
+
 ## [3.1.1] - 2026-06-18
 
 ### Added

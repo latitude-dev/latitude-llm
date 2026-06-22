@@ -21,6 +21,22 @@ PRIMARY KEY (organization_id, dataset_id)
 ORDER BY (organization_id, dataset_id, row_id, xact_id)
 SETTINGS index_granularity = 8192;
 
+CREATE TABLE message_embeddings
+(
+    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `project_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `content_hash` String CODEC(ZSTD(1)),
+    `embedding` Array(Float32) CODEC(NONE),
+    `embedding_model` LowCardinality(String) CODEC(ZSTD(1)),
+    `inserted_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4),
+    `retention_days` UInt16 DEFAULT 90 CODEC(T64, ZSTD(1))
+)
+ENGINE = ReplacingMergeTree
+PARTITION BY (organization_id, project_id, embedding_model)
+PRIMARY KEY (organization_id, project_id, embedding_model, content_hash)
+ORDER BY (organization_id, project_id, embedding_model, content_hash)
+SETTINGS index_granularity = 8192;
+
 CREATE TABLE scores
 (
     `id` FixedString(24) CODEC(ZSTD(1)),
@@ -33,7 +49,6 @@ CREATE TABLE scores
     `source_id` FixedString(128) CODEC(ZSTD(1)),
     `simulation_id` FixedString(24) DEFAULT '' CODEC(ZSTD(1)),
     `issue_id` FixedString(24) DEFAULT '' CODEC(ZSTD(1)),
-    `signal_id` FixedString(24) DEFAULT '' CODEC(ZSTD(1)),
     `value` Float32 CODEC(Gorilla(4), ZSTD(1)),
     `passed` Bool CODEC(T64, LZ4),
     `errored` Bool CODEC(T64, LZ4),
@@ -41,16 +56,17 @@ CREATE TABLE scores
     `tokens` UInt64 DEFAULT 0 CODEC(T64, ZSTD(1)),
     `cost` UInt64 DEFAULT 0 CODEC(T64, ZSTD(1)),
     `created_at` DateTime64(3, 'UTC') CODEC(Delta(8), ZSTD(1)),
+    `signal_id` FixedString(24) DEFAULT '' CODEC(ZSTD(1)),
     INDEX idx_source source TYPE set(3) GRANULARITY 4,
     INDEX idx_source_id source_id TYPE bloom_filter(0.01) GRANULARITY 2,
     INDEX idx_issue_id issue_id TYPE bloom_filter(0.01) GRANULARITY 2,
-    INDEX idx_signal_id signal_id TYPE bloom_filter(0.01) GRANULARITY 2,
     INDEX idx_simulation_id simulation_id TYPE bloom_filter(0.01) GRANULARITY 2,
     INDEX idx_trace_id trace_id TYPE bloom_filter(0.01) GRANULARITY 1,
     INDEX idx_session_id session_id TYPE bloom_filter(0.01) GRANULARITY 2,
     INDEX idx_span_id span_id TYPE bloom_filter(0.01) GRANULARITY 1,
     INDEX idx_passed passed TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_errored errored TYPE bloom_filter(0.01) GRANULARITY 1
+    INDEX idx_errored errored TYPE bloom_filter(0.01) GRANULARITY 1,
+    INDEX idx_signal_id signal_id TYPE bloom_filter(0.01) GRANULARITY 2
 )
 ENGINE = MergeTree
 PARTITION BY toYYYYMM(created_at)
@@ -265,15 +281,15 @@ AS SELECT
     max(s.start_time) AS max_start_time,
     sum(if(((s.parent_span_id = '') OR (s.parent_span_id = '0000000000000000')) AND (s.end_time > s.start_time), reinterpretAsInt64(s.end_time) - reinterpretAsInt64(s.start_time), toInt64(0))) AS duration_ns,
     min(if(s.time_to_first_token_ns > 0, addNanoseconds(s.start_time, toInt64(s.time_to_first_token_ns)), toDateTime64('2261-01-01 00:00:00.000000000', 9, 'UTC'))) AS time_of_first_token,
-    sum(s.tokens_input) AS tokens_input,
-    sum(s.tokens_output) AS tokens_output,
-    sum(s.tokens_cache_read) AS tokens_cache_read,
-    sum(s.tokens_cache_create) AS tokens_cache_create,
-    sum(s.tokens_reasoning) AS tokens_reasoning,
-    sum(s.tokens_total) AS tokens_total,
-    sum(s.cost_input_microcents) AS cost_input_microcents,
-    sum(s.cost_output_microcents) AS cost_output_microcents,
-    sum(s.cost_total_microcents) AS cost_total_microcents,
+    sumIf(s.tokens_input, (s.operation IN ('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker'))) AS tokens_input,
+    sumIf(s.tokens_output, (s.operation IN ('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker'))) AS tokens_output,
+    sumIf(s.tokens_cache_read, (s.operation IN ('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker'))) AS tokens_cache_read,
+    sumIf(s.tokens_cache_create, (s.operation IN ('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker'))) AS tokens_cache_create,
+    sumIf(s.tokens_reasoning, (s.operation IN ('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker'))) AS tokens_reasoning,
+    sumIf(s.tokens_total, (s.operation IN ('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker'))) AS tokens_total,
+    sumIf(s.cost_input_microcents, (s.operation IN ('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker'))) AS cost_input_microcents,
+    sumIf(s.cost_output_microcents, (s.operation IN ('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker'))) AS cost_output_microcents,
+    sumIf(s.cost_total_microcents, (s.operation IN ('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker'))) AS cost_total_microcents,
     argMaxIfState(s.user_id, s.start_time, s.user_id != '') AS user_id,
     argMaxIfState(s.user_email, s.start_time, s.user_email != '') AS user_email,
     groupUniqArrayArray(s.tags) AS tags,
@@ -286,10 +302,10 @@ AS SELECT
     argMaxIfState(s.simulation_id, s.start_time, s.simulation_id != '') AS simulation_id,
     argMinIfState(s.span_id, s.start_time, (s.parent_span_id = '') OR (s.parent_span_id = '0000000000000000')) AS root_span_id,
     argMinIfState(s.name, s.start_time, (s.parent_span_id = '') OR (s.parent_span_id = '0000000000000000')) AS root_span_name,
-    argMinIfState(s.input_messages, s.start_time, s.input_messages != '') AS input_messages,
-    argMaxIfState(s.input_messages, s.end_time, s.output_messages != '') AS last_input_messages,
-    argMaxIfState(s.output_messages, s.end_time, s.output_messages != '') AS output_messages,
-    argMinIfState(s.system_instructions, s.start_time, s.system_instructions != '') AS system_instructions,
+    argMinIfState(s.input_messages, s.start_time, (s.input_messages != '') AND (s.operation IN ('chat', 'text_completion', 'generate_content'))) AS input_messages,
+    argMaxIfState(s.input_messages, s.end_time, (s.output_messages != '') AND (s.operation IN ('chat', 'text_completion', 'generate_content'))) AS last_input_messages,
+    argMaxIfState(s.output_messages, s.end_time, (s.output_messages != '') AND (s.operation IN ('chat', 'text_completion', 'generate_content'))) AS output_messages,
+    argMinIfState(s.system_instructions, s.start_time, (s.system_instructions != '') AND (s.operation IN ('chat', 'text_completion', 'generate_content'))) AS system_instructions,
     max(s.retention_days) AS retention_days
 FROM spans AS s
 GROUP BY
@@ -414,21 +430,46 @@ PRIMARY KEY (organization_id, project_id, observation_id)
 ORDER BY (organization_id, project_id, observation_id)
 SETTINGS index_granularity = 8192;
 
-CREATE TABLE message_embeddings
+CREATE TABLE trace_message_occurrences
 (
     `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
     `project_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `trace_id` FixedString(32) CODEC(ZSTD(1)),
+    `message_index` UInt16 CODEC(T64, ZSTD(1)),
     `content_hash` String CODEC(ZSTD(1)),
-    `embedding` Array(Float32) CODEC(ZSTD(1)),
-    `embedding_model` LowCardinality(String) CODEC(ZSTD(1)),
-    `inserted_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4),
-    `retention_days` UInt16 DEFAULT 90 CODEC(T64, ZSTD(1))
+    `session_id` String CODEC(ZSTD(1)),
+    `start_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
+    `role` LowCardinality(String) CODEC(ZSTD(1)),
+    `is_output` UInt8 CODEC(T64, ZSTD(1)),
+    `retention_days` UInt16 DEFAULT 30 CODEC(T64, ZSTD(1)),
+    `indexed_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4),
+    PROJECTION trace_message_occurrences_by_content_hash
+    (
+        SELECT
+            organization_id,
+            project_id,
+            trace_id,
+            message_index,
+            content_hash,
+            session_id,
+            start_time,
+            role,
+            is_output,
+            retention_days,
+            indexed_at
+        ORDER BY
+            organization_id,
+            project_id,
+            content_hash,
+            trace_id,
+            message_index
+    )
 )
-ENGINE = ReplacingMergeTree
-PARTITION BY (organization_id, project_id, embedding_model)
-PRIMARY KEY (organization_id, project_id, embedding_model, content_hash)
-ORDER BY (organization_id, project_id, embedding_model, content_hash)
-SETTINGS index_granularity = 8192;
+ENGINE = ReplacingMergeTree(indexed_at)
+PARTITION BY toYYYYMM(start_time)
+PRIMARY KEY (organization_id, project_id, trace_id, message_index)
+ORDER BY (organization_id, project_id, trace_id, message_index)
+SETTINGS deduplicate_merge_projection_mode = 'rebuild', index_granularity = 8192;
 
 CREATE TABLE trace_search_documents
 (
@@ -470,42 +511,6 @@ PARTITION BY toYYYYMM(start_time)
 PRIMARY KEY (organization_id, project_id, trace_id, chunk_index)
 ORDER BY (organization_id, project_id, trace_id, chunk_index)
 SETTINGS index_granularity = 8192;
-
-CREATE TABLE trace_message_occurrences
-(
-    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
-    `project_id` LowCardinality(String) CODEC(ZSTD(1)),
-    `trace_id` FixedString(32) CODEC(ZSTD(1)),
-    `message_index` UInt16 CODEC(T64, ZSTD(1)),
-    `content_hash` String CODEC(ZSTD(1)),
-    `session_id` String CODEC(ZSTD(1)),
-    `start_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
-    `role` LowCardinality(String) CODEC(ZSTD(1)),
-    `is_output` UInt8 CODEC(T64, ZSTD(1)),
-    `retention_days` UInt16 DEFAULT 30 CODEC(T64, ZSTD(1)),
-    `indexed_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4),
-    PROJECTION trace_message_occurrences_by_content_hash
-    (
-        SELECT
-            organization_id,
-            project_id,
-            trace_id,
-            message_index,
-            content_hash,
-            session_id,
-            start_time,
-            role,
-            is_output,
-            retention_days,
-            indexed_at
-        ORDER BY (organization_id, project_id, content_hash, trace_id, message_index)
-    )
-)
-ENGINE = ReplacingMergeTree(indexed_at)
-PARTITION BY toYYYYMM(start_time)
-PRIMARY KEY (organization_id, project_id, trace_id, message_index)
-ORDER BY (organization_id, project_id, trace_id, message_index)
-SETTINGS index_granularity = 8192, deduplicate_merge_projection_mode = 'rebuild';
 
 CREATE TABLE traces
 (
@@ -550,7 +555,7 @@ CREATE TABLE traces
 )
 ENGINE = AggregatingMergeTree
 PARTITION BY toYYYYMM(min_start_time)
-PRIMARY KEY (organization_id, project_id)
+PRIMARY KEY (organization_id, project_id, trace_id)
 ORDER BY (organization_id, project_id, trace_id)
 SETTINGS index_granularity = 8192;
 
@@ -601,15 +606,15 @@ AS SELECT
     min(start_time) AS min_start_time,
     max(end_time) AS max_end_time,
     min(if(time_to_first_token_ns > 0, addNanoseconds(start_time, toInt64(time_to_first_token_ns)), toDateTime64('2261-01-01 00:00:00.000000000', 9, 'UTC'))) AS time_of_first_token,
-    sum(tokens_input) AS tokens_input,
-    sum(tokens_output) AS tokens_output,
-    sum(tokens_cache_read) AS tokens_cache_read,
-    sum(tokens_cache_create) AS tokens_cache_create,
-    sum(tokens_reasoning) AS tokens_reasoning,
-    sum(tokens_total) AS tokens_total,
-    sum(cost_input_microcents) AS cost_input_microcents,
-    sum(cost_output_microcents) AS cost_output_microcents,
-    sum(cost_total_microcents) AS cost_total_microcents,
+    sumIf(tokens_input, (operation IN ('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker'))) AS tokens_input,
+    sumIf(tokens_output, (operation IN ('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker'))) AS tokens_output,
+    sumIf(tokens_cache_read, (operation IN ('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker'))) AS tokens_cache_read,
+    sumIf(tokens_cache_create, (operation IN ('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker'))) AS tokens_cache_create,
+    sumIf(tokens_reasoning, (operation IN ('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker'))) AS tokens_reasoning,
+    sumIf(tokens_total, (operation IN ('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker'))) AS tokens_total,
+    sumIf(cost_input_microcents, (operation IN ('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker'))) AS cost_input_microcents,
+    sumIf(cost_output_microcents, (operation IN ('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker'))) AS cost_output_microcents,
+    sumIf(cost_total_microcents, (operation IN ('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker'))) AS cost_total_microcents,
     argMaxIfState(session_id, start_time, session_id != '') AS session_id,
     argMaxIfState(user_id, start_time, user_id != '') AS user_id,
     argMaxIfState(user_email, start_time, user_email != '') AS user_email,
@@ -623,10 +628,10 @@ AS SELECT
     groupUniqArrayArray(arrayFilter(n -> (n != ''), tool_names)) AS defined_tools,
     argMinIfState(span_id, start_time, parent_span_id = '') AS root_span_id,
     argMinIfState(name, start_time, parent_span_id = '') AS root_span_name,
-    argMinIfState(spans.input_messages, start_time, spans.input_messages != '') AS input_messages,
-    argMaxIfState(spans.input_messages, end_time, spans.output_messages != '') AS last_input_messages,
-    argMaxIfState(spans.output_messages, end_time, spans.output_messages != '') AS output_messages,
-    argMinIfState(spans.system_instructions, start_time, spans.system_instructions != '') AS system_instructions,
+    argMinIfState(spans.input_messages, start_time, (spans.input_messages != '') AND (operation IN ('chat', 'text_completion', 'generate_content'))) AS input_messages,
+    argMaxIfState(spans.input_messages, end_time, (spans.output_messages != '') AND (operation IN ('chat', 'text_completion', 'generate_content'))) AS last_input_messages,
+    argMaxIfState(spans.output_messages, end_time, (spans.output_messages != '') AND (operation IN ('chat', 'text_completion', 'generate_content'))) AS output_messages,
+    argMinIfState(spans.system_instructions, start_time, (spans.system_instructions != '') AND (operation IN ('chat', 'text_completion', 'generate_content'))) AS system_instructions,
     max(retention_days) AS retention_days
 FROM spans
 GROUP BY

@@ -127,20 +127,26 @@ Set the integration key on `instrumentations` to the SDK module your app imports
 | OpenAI Agents SDK | `openai-agents` | `{"openai-agents": agents}` |
 | Anthropic | `anthropic` | `{"anthropic": anthropic}` |
 | Amazon Bedrock | `boto3` | `{"bedrock": boto3}` |
+| Amazon SageMaker | `boto3` | `{"sagemaker": boto3}` |
 | Cohere | `cohere` | `{"cohere": cohere}` |
 | LangChain | `langchain-core` | `{"langchain": langchain_core}` |
 | LlamaIndex | `llama-index` | `{"llamaindex": llama_index}` |
+| CrewAI | `crewai` | `{"crewai": crewai}` |
+| Haystack | `haystack-ai` | `{"haystack": haystack}` |
 | Together AI | `together` | `{"togetherai": together}` |
 | Vertex AI | `google-cloud-aiplatform` | `{"vertexai": vertexai}` |
 | Google AI Platform | `google-cloud-aiplatform` | `{"aiplatform": aiplatform}` |
 | Google ADK | `google-adk` | `{"google_adk": google.adk}` |
-| Google Generative AI | `google-generativeai` | `{"google_generativeai": genai}` |
+| Google Gemini | `google-genai` | `{"google_generativeai": genai}` |
 | Groq | `groq` | `{"groq": groq}` |
 | LiteLLM | `litellm` | `{"litellm": litellm}` |
 | Mistral AI | `mistralai` | `{"mistralai": mistralai}` |
 | Ollama | `ollama` | `{"ollama": ollama}` |
 | Replicate | `replicate` | `{"replicate": replicate}` |
+| IBM watsonx.ai | `ibm-watsonx-ai` | `{"watsonx": ibm_watsonx_ai}` |
+| Aleph Alpha | `aleph-alpha-client` | `{"aleph_alpha": aleph_alpha_client}` |
 | Transformers | `transformers` | `{"transformers": transformers}` |
+| DSPy | `dspy` | via litellm → `{"litellm": litellm}` |
 
 For provider-specific setup notes, use the provider and framework pages in the Observability sidebar.
 

@@ -1,5 +1,5 @@
 /**
- * Test Cohere instrumentation against local Latitude instance.
+ * Cohere — Latitude telemetry example.
  *
  * Required env vars:
  * - LATITUDE_API_KEY
@@ -9,8 +9,9 @@
  * Install: npm install cohere-ai
  */
 
-import { CohereClient } from "cohere-ai"
+import { randomUUID } from "node:crypto"
 import * as CohereSDK from "cohere-ai"
+import { CohereClient } from "cohere-ai"
 import { capture, Latitude } from "../src"
 
 const latitude = new Latitude({
@@ -20,29 +21,42 @@ const latitude = new Latitude({
   instrumentations: { cohere: CohereSDK },
 })
 
-async function main() {
-  // Wait for instrumentations to be ready
-  await latitude.ready
+const PROVIDER = "cohere"
+const MODEL = "command-r"
+const SESSION_ID = `${PROVIDER}-${randomUUID().slice(0, 8)}`
 
+function ctx(scenario: string, ...extraTags: string[]) {
+  return {
+    tags: ["example", PROVIDER, ...extraTags],
+    sessionId: SESSION_ID,
+    userId: "example-user",
+    metadata: { scenario, environment: "local" },
+  }
+}
+
+async function chat() {
   const client = new CohereClient({
     token: process.env.COHERE_API_KEY,
   })
 
-  await capture(
-    "cohere-chat",
-    async () => {
-      const response = await client.chat({
-        model: "command-r",
-        message: "Say 'Hello from Cohere!' in exactly 5 words.",
-        maxTokens: 50,
-      })
+  const response = await client.chat({
+    model: MODEL,
+    message: "Say 'Hello from Cohere!' in exactly 5 words.",
+    maxTokens: 50,
+  })
 
-      return response.text
-    },
-    { tags: ["test", "cohere"], sessionId: "example" },
-  )
+  return response.text
+}
+
+async function main() {
+  await latitude.ready
+
+  await chat()
+
+  await capture("cohere-chat-capture", chat, ctx("chat"))
 
   await latitude.flush()
+  await latitude.shutdown()
 }
 
 main().catch(console.error)

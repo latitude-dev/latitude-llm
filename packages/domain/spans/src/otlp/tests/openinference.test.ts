@@ -691,3 +691,132 @@ describe("OpenInference google-adk — tool call ↔ tool result pairing", () =>
     expect(resultId).toBe(callId)
   })
 })
+
+describe("Latitude openai-agents TS bridge — function span", () => {
+  // The TS `openai-agents` bridge tags the tool span with
+  // `latitude.span.kind: "agents.function"` and carries the tool data under
+  // `openai.agents.function.*` (no standard GenAI/OpenInference attrs).
+  function buildFunctionSpan(): OtlpSpan {
+    return {
+      traceId: "22222222222222222222222222222222",
+      spanId: "2222222222222222",
+      parentSpanId: "b7ad6b7169203331",
+      name: "function get_weather",
+      kind: 1,
+      startTimeUnixNano: "1710590400000000000",
+      endTimeUnixNano: "1710590400500000000",
+      attributes: [
+        str("latitude.span.kind", "agents.function"),
+        str("openai.agents.function.name", "get_weather"),
+        str("openai.agents.function.input", '{"city":"Barcelona"}'),
+        str("openai.agents.function.output", "The weather in Barcelona is sunny and 22°C."),
+      ],
+      status: { code: 1 },
+    }
+  }
+
+  const request: OtlpExportTraceServiceRequest = {
+    resourceSpans: [
+      {
+        resource: { attributes: [str("service.name", "agents")] },
+        scopeSpans: [
+          {
+            scope: { name: "@latitude-data/instrumentation-openai-agents", version: "1.0.0" },
+            spans: [buildFunctionSpan()],
+          },
+        ],
+      },
+    ],
+  }
+
+  it("resolves the function span to execute_tool with tool name/input/output populated", () => {
+    const span = transformOtlpToSpans(request, CONTEXT).spans[0]
+    if (!span) throw new Error("span not produced")
+
+    expect(span.operation).toBe("execute_tool")
+    expect(span.toolName).toBe("get_weather")
+    expect(span.toolInput).toBe('{"city":"Barcelona"}')
+    expect(span.toolOutput).toBe("The weather in Barcelona is sunny and 22°C.")
+  })
+})
+
+// ─── CrewAI: AGENT span carries the conversation in output.value (no LLM leaf) ──
+
+describe("CrewAI (OpenInference AGENT span)", () => {
+  const CREWAI_SCOPE = "openinference.instrumentation.crewai"
+  const CONVERSATION = [
+    { role: "system", content: "You are Weather Reporter." },
+    { role: "user", content: "What's the weather in San Francisco? Use the get_weather tool." },
+    {
+      role: "assistant",
+      content: "",
+      tool_calls: [
+        { id: "call_1", type: "function", function: { name: "get_weather", arguments: '{"city":"San Francisco"}' } },
+      ],
+    },
+    {
+      role: "tool",
+      content: '{"city": "San Francisco", "temperatureC": 21, "conditions": "sunny"}',
+      tool_call_id: "call_1",
+      name: "get_weather",
+    },
+    { role: "assistant", content: "The weather in San Francisco is sunny with a temperature of 21°C." },
+  ]
+
+  const crewaiTrace: OtlpExportTraceServiceRequest = {
+    resourceSpans: [
+      {
+        resource: { attributes: [str("service.name", "latitude-telemetry-python")] },
+        scopeSpans: [
+          {
+            scope: { name: CREWAI_SCOPE, version: "1.1.9" },
+            spans: [
+              {
+                traceId: TRACE_ID,
+                spanId: "c1c2c3c4c5c60009",
+                name: "Weather Reporter._execute_core",
+                kind: 1,
+                startTimeUnixNano: "1710590400000000000",
+                endTimeUnixNano: "1710590402000000000",
+                attributes: [
+                  str("openinference.span.kind", "AGENT"),
+                  str("input.value", JSON.stringify({ agent: { role: "Weather Reporter" }, tools: [] })),
+                  str("output.value", JSON.stringify({ raw: "...", messages: CONVERSATION })),
+                ],
+                status: { code: 1 },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }
+
+  let span: SpanDetail
+  beforeAll(() => {
+    const s = transformOtlpToSpans(crewaiTrace, CONTEXT).spans[0] as SpanDetail | undefined
+    if (!s) throw new Error("span not produced")
+    span = s
+  })
+
+  it("reclassifies the CrewAI AGENT span to `chat` so the rollup gates include it", () => {
+    expect(span.operation).toBe("chat")
+  })
+
+  it("extracts system instructions from the output.value conversation", () => {
+    expect(span.systemInstructions.length).toBeGreaterThan(0)
+  })
+
+  it("recovers the input turns (user + assistant tool_call + tool result)", () => {
+    const parts = span.inputMessages.flatMap((m) => (m as { parts: { type: string; name?: string }[] }).parts)
+    const toolCall = parts.find((p) => p.type === "tool_call")
+    expect((toolCall as { name: string }).name).toBe("get_weather")
+    expect(parts.some((p) => p.type === "tool_call_response")).toBe(true)
+  })
+
+  it("recovers the final assistant answer as output", () => {
+    const assistant = span.outputMessages.find((m) => m.role === "assistant")
+    const parts = (assistant as { parts: { type: string; content?: string }[] }).parts
+    expect((parts.find((p) => p.type === "text") as { content: string }).content).toContain("sunny")
+  })
+})

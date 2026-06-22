@@ -743,7 +743,7 @@ export const SpanRepositoryLive = Layer.effect(
                           AND start_time >= {startTimeFrom:DateTime64(9, 'UTC')}
                           AND start_time <= {startTimeTo:DateTime64(9, 'UTC')}
                           AND trace_id = {traceId:FixedString(32)}
-                          AND operation IN ('chat', 'text_completion', 'execute_tool')
+                          AND operation IN ('chat', 'text_completion', 'generate_content', 'execute_tool')
                         ORDER BY span_id, ingested_at DESC
                         LIMIT 1 BY span_id
                       )
@@ -780,7 +780,7 @@ export const SpanRepositoryLive = Layer.effect(
                           AND start_time >= {startTimeFrom:DateTime64(9, 'UTC')}
                           AND start_time <= {startTimeTo:DateTime64(9, 'UTC')}
                           AND coalesce(nullIf(session_id, ''), toString(trace_id)) = {sessionId:String}
-                          AND operation IN ('chat', 'text_completion', 'execute_tool')
+                          AND operation IN ('chat', 'text_completion', 'generate_content', 'execute_tool')
                         ORDER BY span_id, ingested_at DESC
                         LIMIT 1 BY span_id
                       )

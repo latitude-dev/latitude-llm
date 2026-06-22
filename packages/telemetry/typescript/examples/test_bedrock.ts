@@ -1,5 +1,5 @@
 /**
- * Test AWS Bedrock instrumentation against local Latitude instance.
+ * AWS Bedrock — Latitude telemetry example.
  *
  * Required env vars:
  * - LATITUDE_API_KEY
@@ -11,8 +11,9 @@
  * Install: npm install @aws-sdk/client-bedrock-runtime
  */
 
-import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime"
+import { randomUUID } from "node:crypto"
 import * as BedrockSDK from "@aws-sdk/client-bedrock-runtime"
+import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime"
 import { capture, Latitude } from "../src"
 
 const latitude = new Latitude({
@@ -22,44 +23,57 @@ const latitude = new Latitude({
   instrumentations: { bedrock: BedrockSDK },
 })
 
-async function main() {
-  // Wait for instrumentations to be ready
-  await latitude.ready
+const PROVIDER = "bedrock"
+const MODEL = "anthropic.claude-3-haiku-20240307-v1:0"
+const SESSION_ID = `${PROVIDER}-${randomUUID().slice(0, 8)}`
 
+function ctx(scenario: string, ...extraTags: string[]) {
+  return {
+    tags: ["example", PROVIDER, ...extraTags],
+    sessionId: SESSION_ID,
+    userId: "example-user",
+    metadata: { scenario, environment: "local" },
+  }
+}
+
+async function chat() {
   const client = new BedrockRuntimeClient({
     region: process.env.AWS_REGION || "us-east-1",
   })
 
-  await capture(
-    "bedrock-chat",
-    async () => {
-      const body = JSON.stringify({
-        anthropic_version: "bedrock-2023-05-31",
-        max_tokens: 50,
-        messages: [
-          {
-            role: "user",
-            content: "Say 'Hello from Bedrock!' in exactly 5 words.",
-          },
-        ],
-      })
+  const body = JSON.stringify({
+    anthropic_version: "bedrock-2023-05-31",
+    max_tokens: 50,
+    messages: [
+      {
+        role: "user",
+        content: "Say 'Hello from Bedrock!' in exactly 5 words.",
+      },
+    ],
+  })
 
-      const command = new InvokeModelCommand({
-        modelId: "anthropic.claude-3-haiku-20240307-v1:0",
-        body: body,
-        contentType: "application/json",
-        accept: "application/json",
-      })
+  const command = new InvokeModelCommand({
+    modelId: MODEL,
+    body: body,
+    contentType: "application/json",
+    accept: "application/json",
+  })
 
-      const response = await client.send(command)
-      const responseBody = JSON.parse(new TextDecoder().decode(response.body))
+  const response = await client.send(command)
+  const responseBody = JSON.parse(new TextDecoder().decode(response.body))
 
-      return responseBody.content[0].text
-    },
-    { tags: ["test", "bedrock"], sessionId: "example" },
-  )
+  return responseBody.content[0].text
+}
+
+async function main() {
+  await latitude.ready
+
+  await chat()
+
+  await capture("bedrock-chat-capture", chat, ctx("chat"))
 
   await latitude.flush()
+  await latitude.shutdown()
 }
 
 main().catch(console.error)

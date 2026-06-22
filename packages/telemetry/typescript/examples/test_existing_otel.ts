@@ -54,10 +54,6 @@ await registerLatitudeInstrumentations({
 const openai = new OpenAI()
 
 async function main() {
-  // This creates spans that go to BOTH backends:
-  // - Your existing OTel backend (Jaeger, etc.) — all spans
-  // - Latitude — LLM spans only (with smart filtering)
-
   await capture(
     "existing-otel-chat",
     async () => {

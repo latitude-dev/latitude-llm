@@ -130,10 +130,14 @@ function parseToolDefinitions(attrs: readonly OtlpKeyValue[]): ToolDefinition[] 
 }
 
 export function parseVercel(attrs: readonly OtlpKeyValue[]): ParsedContent {
-  // Try top-level first, fall back to call-level
+  // Fall back to call-level for messages, but keep a top-level system prompt (call-level carries none).
   let input = parseInputFromTopLevel(attrs)
   if (input.messages.length === 0) {
-    input = parseInputFromCallLevel(attrs)
+    const callLevel = parseInputFromCallLevel(attrs)
+    input = {
+      messages: callLevel.messages,
+      system: input.system.length > 0 ? input.system : callLevel.system,
+    }
   }
 
   const outputMessages = parseOutput(attrs)
