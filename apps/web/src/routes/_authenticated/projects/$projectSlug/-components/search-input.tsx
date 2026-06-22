@@ -7,6 +7,7 @@ import { SearchSyntaxLegendContent } from "./search-syntax-legend.tsx"
 export const SEARCH_QUERY_MAX_LENGTH = 500
 
 const PLACEHOLDER_ROTATION_MS = 4000
+const PLACEHOLDER_TYPEWRITER_STEP_MS = 18
 const SEMANTIC_SEARCH_PLACEHOLDERS = [
   "Try: users asking for refunds after failed payments",
   "Try: customers confused about pricing or plans",
@@ -39,20 +40,41 @@ export function SearchInput({
   } = useSearchSegments(initialValue, onSubmit, SEARCH_QUERY_MAX_LENGTH)
 
   const [legendOpen, setLegendOpen] = useState(false)
-  const [placeholderIndex, setPlaceholderIndex] = useState(0)
+  const [semanticPlaceholder, setSemanticPlaceholder] = useState<string>(SEMANTIC_SEARCH_PLACEHOLDERS[0])
   const active = segments.some((segment) => segment.text.length > 0) || legendOpen
-  const semanticPlaceholder = SEMANTIC_SEARCH_PLACEHOLDERS[placeholderIndex] ?? SEMANTIC_SEARCH_PLACEHOLDERS[0]
 
   useMountEffect(() => {
     if (typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       return
     }
 
-    const interval = window.setInterval(() => {
-      setPlaceholderIndex((current) => (current + 1) % SEMANTIC_SEARCH_PLACEHOLDERS.length)
-    }, PLACEHOLDER_ROTATION_MS)
+    let placeholderIndex = 0
+    let rotationTimeout: number | undefined
+    let typewriterInterval: number | undefined
 
-    return () => window.clearInterval(interval)
+    const showNextPlaceholder = () => {
+      placeholderIndex = (placeholderIndex + 1) % SEMANTIC_SEARCH_PLACEHOLDERS.length
+      const nextPlaceholder = SEMANTIC_SEARCH_PLACEHOLDERS[placeholderIndex] ?? SEMANTIC_SEARCH_PLACEHOLDERS[0]
+      let visibleCharacters = 0
+
+      setSemanticPlaceholder("")
+      typewriterInterval = window.setInterval(() => {
+        visibleCharacters += 1
+        setSemanticPlaceholder(nextPlaceholder.slice(0, visibleCharacters))
+
+        if (visibleCharacters >= nextPlaceholder.length) {
+          window.clearInterval(typewriterInterval)
+          rotationTimeout = window.setTimeout(showNextPlaceholder, PLACEHOLDER_ROTATION_MS)
+        }
+      }, PLACEHOLDER_TYPEWRITER_STEP_MS)
+    }
+
+    rotationTimeout = window.setTimeout(showNextPlaceholder, PLACEHOLDER_ROTATION_MS)
+
+    return () => {
+      window.clearTimeout(rotationTimeout)
+      window.clearInterval(typewriterInterval)
+    }
   })
 
   return (
