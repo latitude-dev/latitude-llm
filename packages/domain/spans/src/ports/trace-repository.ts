@@ -140,7 +140,7 @@ export interface TraceRepositoryShape {
   }): Effect.Effect<TraceDistribution, RepositoryError, ChSqlClient>
 }
 
-export type TraceDistinctColumn = "tags" | "models" | "providers" | "serviceNames" | "tools" | "definedTools"
+export type TraceDistinctColumn = "userId" | "tags" | "models" | "providers" | "serviceNames" | "tools" | "definedTools"
 
 export interface TraceFilterSetMatchCandidate {
   readonly filterId: string

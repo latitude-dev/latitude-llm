@@ -1594,6 +1594,7 @@ export const TraceRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           const COLUMN_EXPRS: Record<string, string> = {
+            userId: "argMaxIfMerge(user_id)",
             tags: "arrayJoin(groupUniqArrayArray(tags))",
             models: "arrayJoin(groupUniqArrayIfMerge(models))",
             providers: "arrayJoin(groupUniqArrayIfMerge(providers))",

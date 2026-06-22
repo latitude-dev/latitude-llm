@@ -522,6 +522,22 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
 
         {textFields.map(({ label, field, placeholder }) => {
           const value = getTextFilterValue(filters, field)
+          const selectedValues = getInValues(filters, field)
+          if (field === "userId") {
+            const selected = selectedValues.length > 0 ? selectedValues : value ? [value] : []
+            return (
+              <CollapsibleSection key={field} label={label} defaultOpen={selected.length > 0}>
+                <MultiSelectFilter
+                  mode={mode}
+                  projectId={projectId}
+                  column={field as DistinctColumn}
+                  selected={selected}
+                  onChange={(values) => setField(field, values.length > 0 ? [{ op: "in", value: values }] : [])}
+                  placeholder={placeholder}
+                />
+              </CollapsibleSection>
+            )
+          }
           return (
             <CollapsibleSection key={field} label={label} defaultOpen={!!value}>
               <DebouncedInput
