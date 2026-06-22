@@ -1,6 +1,30 @@
 import type { Span } from "@opentelemetry/api"
 
-const toError = (value: unknown): Error => (value instanceof Error ? value : new Error(String(value)))
+const safeStringify = (value: object): string => {
+  try {
+    const json = JSON.stringify(value)
+    if (json && json !== "{}") return json
+  } catch {
+    // circular or otherwise non-serializable — fall through to String()
+  }
+  return String(value)
+}
+
+// A thrown non-Error (e.g. a transport rejecting with `{ statusCode, response }`)
+// would otherwise stringify to the useless "[object Object]", erasing the real
+// cause before it reaches Datadog. Prefer the object's own `message`, then a
+// JSON dump, and carry its `name` so grouping survives.
+const toError = (value: unknown): Error => {
+  if (value instanceof Error) return value
+  if (value === null || typeof value !== "object") return new Error(String(value))
+
+  const record = value as { message?: unknown; name?: unknown }
+  const message =
+    typeof record.message === "string" && record.message.length > 0 ? record.message : safeStringify(value)
+  const error = new Error(message)
+  if (typeof record.name === "string" && record.name.length > 0) error.name = record.name
+  return error
+}
 
 /**
  * Strip `file://` protocol from stack traces so Datadog can match frames
