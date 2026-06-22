@@ -9,13 +9,14 @@ export {
   DEFAULT_LLM_SCRIPT_LIMITS,
   DEFAULT_PURE_SCRIPT_LIMITS,
   DEFAULT_SCRIPT_MEMORY_BYTES,
+  DEFAULT_SCRIPT_SCORE_THRESHOLD,
   DEFAULT_SCRIPT_STACK_SIZE_BYTES,
   DETECTOR_HEALTH_DEGRADED_ERROR_RATE,
   DETECTOR_HEALTH_MIN_RUNS,
   DETECTOR_HEALTH_WINDOW_SECONDS,
   type ScriptRunLimits,
 } from "./constants.ts"
-export { type RunResult, runResultSchema, type ScriptScore, scriptScoreSchema } from "./contract.ts"
+export { isScoreMatch, type RunResult, runResultSchema, type ScriptScore, scriptScoreSchema } from "./contract.ts"
 export {
   HostCallError,
   SCRIPT_LIMIT_KINDS,

@@ -43,6 +43,13 @@ export const DEFAULT_LLM_SCRIPT_LIMITS: ScriptRunLimits = {
   stackSizeBytes: DEFAULT_SCRIPT_STACK_SIZE_BYTES,
 }
 
+/**
+ * Default membership threshold: `matched = result.value >= threshold`.
+ * Per-signal rows override it (`signals.threshold`); evaluations use the
+ * default until the signals rollout introduces per-owner knobs.
+ */
+export const DEFAULT_SCRIPT_SCORE_THRESHOLD = 0.5
+
 /** Detector-health degradation window and thresholds (fixed window). */
 export const DETECTOR_HEALTH_WINDOW_SECONDS = 3_600
 export const DETECTOR_HEALTH_MIN_RUNS = 10
