@@ -9,13 +9,13 @@ import type * as LatitudeApi from "../../../../index.js";
  *     }
  */
 export interface ListMonitorsForTargetBody {
-    /** Telemetry stream to evaluate: `traces` for users, `spans` for tools, or `sessions` for session-level monitors. */
+    /** Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`. */
     stream: ListMonitorsForTargetBody.Stream;
     filterSetContains?: LatitudeApi.MonitorFilterSet | undefined;
 }
 
 export namespace ListMonitorsForTargetBody {
-    /** Telemetry stream to evaluate: `traces` for users, `spans` for tools, or `sessions` for session-level monitors. */
+    /** Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`. */
     export const Stream = {
         Traces: "traces",
         Spans: "spans",

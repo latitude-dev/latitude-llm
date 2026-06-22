@@ -20,7 +20,7 @@ import {
   type SqlClient,
   signalIdSchema,
 } from "@domain/shared"
-import { pickTraceHistogramBucketSeconds, TraceRepository } from "@domain/spans"
+import { pickTraceHistogramBucketSeconds, SessionRepository } from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
 import { SIGNAL_PRIORITY_GROUPS, SIGNAL_PRIORITY_ORDER } from "../constants.ts"
@@ -107,7 +107,7 @@ export interface SignalListAnalytics {
    * are ISO-8601 UTC timestamps (`YYYY-MM-DDTHH:MM:SS.000Z`).
    */
   readonly histogramBucketSeconds: number
-  readonly totalTraces: number
+  readonly totalSessions: number
 }
 
 export interface SignalListItem {
@@ -129,7 +129,7 @@ export interface SignalListItem {
   readonly lastSeenAt: Date
   readonly occurrences: number
   readonly similarityScore: number | null
-  readonly affectedTracesPercent: number
+  readonly affectedSessionsPercent: number
   readonly escalationOccurrenceThreshold: number | null
   readonly trend: readonly SignalOccurrenceBucket[]
   readonly evaluations: readonly Evaluation[]
@@ -465,7 +465,7 @@ export const listSignalsUseCase = (
 ): Effect.Effect<
   ListSignalsResult,
   ListSignalsError,
-  ChSqlClient | EvaluationRepository | SignalRepository | ScoreAnalyticsRepository | SqlClient | TraceRepository
+  ChSqlClient | EvaluationRepository | SignalRepository | ScoreAnalyticsRepository | SessionRepository | SqlClient
 > =>
   Effect.gen(function* () {
     const parsed = listSignalsInputSchema.parse(input)
@@ -510,7 +510,7 @@ export const listSignalsUseCase = (
             },
             histogram: fillBuckets({ scaffold: histogramScaffold, buckets: [] }),
             histogramBucketSeconds,
-            totalTraces: 0,
+            totalSessions: 0,
           },
           items: [],
           totalCount: 0,
@@ -527,7 +527,7 @@ export const listSignalsUseCase = (
 
     const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
     const evaluationRepository = yield* EvaluationRepository
-    const traceRepository = yield* TraceRepository
+    const sessionRepository = yield* SessionRepository
 
     const windowMetricsEffect = scoreAnalyticsRepository.listSignalWindowMetrics({
       organizationId: parsed.organizationId,
@@ -544,12 +544,12 @@ export const listSignalsUseCase = (
         })
       : Effect.succeed([] satisfies readonly SignalSearchCandidate[])
 
-    // The denominator for `affectedTracesPercent` must be counted against
-    // `traces.start_time` (not `scores.created_at`) so the percentage stays
-    // consistent with what the web table shows and with the totals other
-    // trace-side endpoints report. Async scoring can produce `scores` whose
-    // `created_at` falls outside the trace's `start_time` window, which would
-    // otherwise drift the numerator and denominator out of sync.
+    // The denominator for `affectedSessionsPercent` must be counted against
+    // `sessions.start_time` (not `scores.created_at`) so the percentage stays
+    // consistent with what the web table shows. Async scoring can produce
+    // `scores` whose `created_at` falls outside the session's `start_time`
+    // window, which would otherwise drift the numerator and denominator out of
+    // sync.
     const startTimeConditions: FilterCondition[] = []
     if (parsed.timeRange?.from) {
       startTimeConditions.push({ op: "gte", value: parsed.timeRange.from.toISOString() })
@@ -557,16 +557,16 @@ export const listSignalsUseCase = (
     if (parsed.timeRange?.to) {
       startTimeConditions.push({ op: "lte", value: parsed.timeRange.to.toISOString() })
     }
-    const traceCountFilters: FilterSet | undefined =
+    const sessionCountFilters: FilterSet | undefined =
       startTimeConditions.length > 0 ? { startTime: startTimeConditions } : undefined
 
-    const [windowMetrics, searchCandidates, totalTraces] = yield* Effect.all([
+    const [windowMetrics, searchCandidates, sessionCount] = yield* Effect.all([
       windowMetricsEffect,
       searchCandidatesEffect,
-      traceRepository.countByProjectId({
+      sessionRepository.countByProjectId({
         organizationId: parsed.organizationId,
         projectId: parsed.projectId,
-        ...(traceCountFilters ? { filters: traceCountFilters } : {}),
+        ...(sessionCountFilters ? { filters: sessionCountFilters } : {}),
       }),
     ])
 
@@ -613,7 +613,7 @@ export const listSignalsUseCase = (
           },
           histogram: fillBuckets({ scaffold: histogramScaffold, buckets: [] }),
           histogramBucketSeconds,
-          totalTraces,
+          totalSessions: sessionCount.totalCount,
         },
         items: [],
         totalCount: 0,
@@ -662,7 +662,13 @@ export const listSignalsUseCase = (
 
         return toCandidate({
           issue,
-          windowMetric: windowMetric ?? ({ signalId: issue.id, occurrences: 0 } as unknown as SignalWindowMetric),
+          windowMetric:
+            windowMetric ??
+            ({
+              signalId: issue.id,
+              occurrences: 0,
+              affectedSessions: 0,
+            } as unknown as SignalWindowMetric),
           occurrence: occurrencesBySignalId.get(issue.id) ?? null,
           similarityScore: searchScoresBySignalId.get(issue.id) ?? null,
           now,
@@ -768,7 +774,7 @@ export const listSignalsUseCase = (
           buckets: analyticsHistogram,
         }),
         histogramBucketSeconds,
-        totalTraces,
+        totalSessions: sessionCount.totalCount,
       },
       items: pageCandidates.map((candidate) => ({
         id: candidate.issue.id,
@@ -789,7 +795,10 @@ export const listSignalsUseCase = (
         lastSeenAt: candidate.lastSeenAt,
         occurrences: candidate.windowMetric.occurrences,
         similarityScore: candidate.similarityScore,
-        affectedTracesPercent: totalTraces === 0 ? 0 : Math.min(candidate.windowMetric.occurrences / totalTraces, 1),
+        affectedSessionsPercent:
+          sessionCount.totalCount === 0
+            ? 0
+            : Math.min(candidate.windowMetric.affectedSessions / sessionCount.totalCount, 1),
         escalationOccurrenceThreshold: candidate.escalationOccurrenceThreshold,
         trend: trendBySignalId.get(candidate.issue.id) ?? fillBuckets({ scaffold: trendScaffold, buckets: [] }),
         evaluations: evaluationsBySignalId.get(candidate.issue.id) ?? [],

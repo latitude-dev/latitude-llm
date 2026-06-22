@@ -12,6 +12,7 @@ const firstEqValue = (conditions: readonly FilterCondition[] | undefined): strin
 }
 
 export const toolMonitorTarget = (toolName: string, metric: MonitorMetric = DEFAULT_METRIC): MonitorTarget => ({
+  kind: "tool",
   stream: "spans",
   filterSet: { operation: [{ op: "eq", value: EXECUTE_TOOL_OPERATION }], toolName: [{ op: "eq", value: toolName }] },
   query: null,
@@ -20,6 +21,7 @@ export const toolMonitorTarget = (toolName: string, metric: MonitorMetric = DEFA
 })
 
 export const allToolsMonitorTarget = (metric: MonitorMetric = DEFAULT_METRIC): MonitorTarget => ({
+  kind: "tool",
   stream: "spans",
   filterSet: { operation: [{ op: "eq", value: EXECUTE_TOOL_OPERATION }] },
   query: null,
@@ -28,6 +30,7 @@ export const allToolsMonitorTarget = (metric: MonitorMetric = DEFAULT_METRIC): M
 })
 
 export const userMonitorTarget = (userId: string, metric: MonitorMetric = DEFAULT_METRIC): MonitorTarget => ({
+  kind: "user",
   stream: "traces",
   filterSet: { userId: [{ op: "eq", value: userId }] },
   query: null,
@@ -36,6 +39,7 @@ export const userMonitorTarget = (userId: string, metric: MonitorMetric = DEFAUL
 })
 
 export const allUsersMonitorTarget = (metric: MonitorMetric = DEFAULT_METRIC): MonitorTarget => ({
+  kind: "user",
   stream: "traces",
   filterSet: {},
   query: null,
@@ -43,7 +47,28 @@ export const allUsersMonitorTarget = (metric: MonitorMetric = DEFAULT_METRIC): M
   metric,
 })
 
-type TargetDescriptionKind = "tool" | "allTools" | "user" | "allUsers" | "savedSearch" | "stream"
+export const allSessionsMonitorTarget = (metric: MonitorMetric = DEFAULT_METRIC): MonitorTarget => ({
+  kind: "session",
+  stream: "sessions",
+  filterSet: {},
+  query: null,
+  savedSearchId: null,
+  metric,
+})
+
+export const savedSearchMonitorTarget = (
+  savedSearchId: string,
+  metric: MonitorMetric = DEFAULT_METRIC,
+): MonitorTarget => ({
+  kind: "savedSearch",
+  stream: "traces",
+  filterSet: null,
+  query: null,
+  savedSearchId,
+  metric,
+})
+
+type TargetDescriptionKind = "tool" | "allTools" | "user" | "allUsers" | "savedSearch" | "allSessions" | "stream"
 
 interface TargetDescription {
   readonly label: string
@@ -53,16 +78,17 @@ interface TargetDescription {
 /** Humanise a persisted monitor target into a short chip label for the dashboard's Target column. */
 export const describeMonitorTarget = (target: MonitorTarget | null): TargetDescription | null => {
   if (!target) return null
-  if (target.savedSearchId) return { label: "Saved search", kind: "savedSearch" }
+  if (target.kind === "savedSearch") return { label: "Saved search", kind: "savedSearch" }
   const filterSet = target.filterSet ?? {}
-  if (target.stream === "spans") {
+  if (target.kind === "tool") {
     const tool = firstEqValue(filterSet.toolName)
     return tool ? { label: `Tool: ${tool}`, kind: "tool" } : { label: "All tools", kind: "allTools" }
   }
-  if (target.stream === "traces") {
+  if (target.kind === "user") {
     const user = firstEqValue(filterSet.userId)
     return user ? { label: `User: ${user}`, kind: "user" } : { label: "All users", kind: "allUsers" }
   }
+  if (target.kind === "session") return { label: "All sessions", kind: "allSessions" }
   return { label: target.stream, kind: "stream" }
 }
 
@@ -79,6 +105,17 @@ export const metricOptionId = (metric: MonitorMetric): string =>
 const buildOptions = (options: readonly { label: string; metric: MonitorMetric }[]): readonly MonitorMetricOption[] =>
   options.map((option) => ({ id: metricOptionId(option.metric), ...option }))
 
+const numericMetricOptions = (
+  field: "duration" | "cost" | "tokens",
+  noun: string,
+): readonly { label: string; metric: MonitorMetric }[] => [
+  { label: `Total ${noun}`, metric: { kind: "sum", field } },
+  { label: `Minimum ${noun}`, metric: { kind: "min", field } },
+  { label: `Maximum ${noun}`, metric: { kind: "max", field } },
+  { label: `Average ${noun}`, metric: { kind: "avg", field } },
+  { label: `Median ${noun}`, metric: { kind: "median", field } },
+]
+
 /**
  * The metrics offered when creating a monitor over a target, tailored per stream
  * so the labels and units make sense (latency, not "average duration"; "calls"
@@ -88,20 +125,28 @@ export const targetMetricOptions = (stream: MonitorStream): readonly MonitorMetr
   if (stream === "spans") {
     return buildOptions([
       { label: "Error rate", metric: { kind: "errorRate" } },
-      { label: "Average latency", metric: { kind: "avg", field: "duration" } },
-      { label: "p95 latency", metric: { kind: "p95", field: "duration" } },
       { label: "Call volume", metric: { kind: "count" } },
-      { label: "Total cost", metric: { kind: "sum", field: "cost" } },
+      ...numericMetricOptions("duration", "latency"),
+      ...numericMetricOptions("cost", "cost"),
+      ...numericMetricOptions("tokens", "tokens"),
     ])
   }
   if (stream === "traces") {
     return buildOptions([
       { label: "Error rate", metric: { kind: "errorRate" } },
-      { label: "Trace volume", metric: { kind: "count" } },
-      { label: "Average latency", metric: { kind: "avg", field: "duration" } },
-      { label: "p95 latency", metric: { kind: "p95", field: "duration" } },
-      { label: "Total cost", metric: { kind: "sum", field: "cost" } },
-      { label: "Total tokens", metric: { kind: "sum", field: "tokens" } },
+      { label: "Session volume", metric: { kind: "count" } },
+      ...numericMetricOptions("duration", "latency"),
+      ...numericMetricOptions("cost", "cost"),
+      ...numericMetricOptions("tokens", "tokens"),
+    ])
+  }
+  if (stream === "sessions") {
+    return buildOptions([
+      { label: "Session volume", metric: { kind: "count" } },
+      { label: "Error rate", metric: { kind: "errorRate" } },
+      ...numericMetricOptions("duration", "latency"),
+      ...numericMetricOptions("cost", "cost"),
+      ...numericMetricOptions("tokens", "tokens"),
     ])
   }
   return buildOptions([{ label: "Count", metric: { kind: "count" } }])
@@ -110,10 +155,10 @@ export const targetMetricOptions = (stream: MonitorStream): readonly MonitorMetr
 /** The unit label shown next to an absolute threshold input for a metric. */
 export const metricThresholdUnitLabel = (metric: MonitorMetric, stream: MonitorStream): string => {
   if (metric.kind === "errorRate") return "%"
-  if (metric.kind === "count") return stream === "spans" ? "calls" : "traces"
+  if (metric.kind === "count") return stream === "spans" ? "calls" : "sessions"
   switch (metric.field) {
     case "duration":
-      return "ms"
+      return "s"
     case "cost":
       return "$"
     case "tokens":
@@ -121,20 +166,12 @@ export const metricThresholdUnitLabel = (metric: MonitorMetric, stream: MonitorS
   }
 }
 
-/**
- * Map a monitor target to a trace-page FilterSet (+ query) for the "matching
- * traces" preview and the "View all traces" deep-link. Traces targets pass their
- * filter through; span (tool) targets map `toolName` → the trace-level `tools`
- * field so the traces table can render them.
- */
-export const targetToTraceFilters = (target: MonitorTarget): { filters: FilterSet; query: string | null } => {
+export const targetToSessionFilters = (target: MonitorTarget): { filters: FilterSet; query: string | null } => {
   if (target.stream === "spans") {
     const filterSet = target.filterSet ?? {}
     const tool = firstEqValue(filterSet.toolName)
-    const user = firstEqValue(filterSet.userId)
     const filters: Record<string, readonly FilterCondition[]> = {}
     if (tool) filters.tools = [{ op: "in", value: [tool] }]
-    if (user) filters.userId = [{ op: "eq", value: user }]
     return { filters, query: null }
   }
   return { filters: target.filterSet ?? {}, query: target.query }
@@ -153,6 +190,8 @@ export const monitorTargetName = (target: MonitorTarget | null): string | undefi
       return `user ${description.label.slice("User: ".length)}`
     case "allUsers":
       return "all users"
+    case "allSessions":
+      return "all sessions"
     default:
       return description.label
   }

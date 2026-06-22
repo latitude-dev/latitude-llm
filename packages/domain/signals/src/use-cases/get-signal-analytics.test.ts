@@ -120,18 +120,21 @@ describe("getSignalAnalyticsUseCase", () => {
         {
           signalId: signalIdA,
           occurrences: 3,
+          affectedSessions: 3,
           firstSeenAt: new Date("2026-04-14T00:00:00.000Z"),
           lastSeenAt: new Date("2026-04-14T03:00:00.000Z"),
         },
         {
           signalId: signalIdB,
           occurrences: 5,
+          affectedSessions: 5,
           firstSeenAt: new Date("2026-04-13T00:00:00.000Z"),
           lastSeenAt: new Date("2026-04-15T00:00:00.000Z"),
         },
         {
           signalId: signalIdC,
           occurrences: 2,
+          affectedSessions: 2,
           firstSeenAt: new Date("2026-04-09T00:00:00.000Z"),
           lastSeenAt: new Date("2026-04-09T03:00:00.000Z"),
         },

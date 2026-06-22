@@ -3,8 +3,8 @@ import { ScoreAnalyticsRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
 import { ChSqlClient, OrganizationId, ProjectId, SignalId, SqlClient } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
-import { TraceRepository } from "@domain/spans"
-import { createFakeTraceRepository } from "@domain/spans/testing"
+import { SessionRepository } from "@domain/spans"
+import { createFakeSessionRepository } from "@domain/spans/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import type { Signal } from "../entities/signal.ts"
@@ -87,18 +87,21 @@ describe("buildSignalsExportUseCase", () => {
             {
               signalId: activeSignal.id,
               occurrences: 2,
+              affectedSessions: 2,
               firstSeenAt: new Date("2026-04-20T00:00:00.000Z"),
               lastSeenAt: new Date("2026-04-21T00:00:00.000Z"),
             },
             {
               signalId: archivedSignal.id,
               occurrences: 5,
+              affectedSessions: 5,
               firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
               lastSeenAt: new Date("2026-04-05T00:00:00.000Z"),
             },
             {
               signalId: secondArchivedSignal.id,
               occurrences: 1,
+              affectedSessions: 1,
               firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
               lastSeenAt: new Date("2026-04-04T00:00:00.000Z"),
             },
@@ -155,8 +158,8 @@ describe("buildSignalsExportUseCase", () => {
         Effect.provideService(SqlClient, createFakeSqlClient({ organizationId })),
         Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId })),
         Effect.provideService(
-          TraceRepository,
-          createFakeTraceRepository({ countByProjectId: () => Effect.succeed(10) }).repository,
+          SessionRepository,
+          createFakeSessionRepository({ countByProjectId: () => Effect.succeed({ totalCount: 10 }) }).repository,
         ),
       ),
     )
@@ -200,12 +203,14 @@ describe("buildSignalsExportUseCase", () => {
           {
             signalId: firstSignal.id,
             occurrences: 3,
+            affectedSessions: 3,
             firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
             lastSeenAt: new Date("2026-04-03T00:00:00.000Z"),
           },
           {
             signalId: secondSignal.id,
             occurrences: 4,
+            affectedSessions: 4,
             firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
             lastSeenAt: new Date("2026-04-04T00:00:00.000Z"),
           },
@@ -249,8 +254,8 @@ describe("buildSignalsExportUseCase", () => {
         Effect.provideService(SqlClient, createFakeSqlClient({ organizationId })),
         Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId })),
         Effect.provideService(
-          TraceRepository,
-          createFakeTraceRepository({ countByProjectId: () => Effect.succeed(10) }).repository,
+          SessionRepository,
+          createFakeSessionRepository({ countByProjectId: () => Effect.succeed({ totalCount: 10 }) }).repository,
         ),
       ),
     )
@@ -277,6 +282,7 @@ describe("buildSignalsExportUseCase", () => {
           [assignedSignal, unassignedSignal].map((issue) => ({
             signalId: SignalId(issue.id),
             occurrences: 2,
+            affectedSessions: 2,
             firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
             lastSeenAt: new Date("2026-04-03T00:00:00.000Z"),
           })),
@@ -309,8 +315,8 @@ describe("buildSignalsExportUseCase", () => {
         Effect.provideService(SqlClient, createFakeSqlClient({ organizationId })),
         Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId })),
         Effect.provideService(
-          TraceRepository,
-          createFakeTraceRepository({ countByProjectId: () => Effect.succeed(10) }).repository,
+          SessionRepository,
+          createFakeSessionRepository({ countByProjectId: () => Effect.succeed({ totalCount: 10 }) }).repository,
         ),
       ),
     )

@@ -24,6 +24,13 @@ export interface BarChartOverlayLine {
   readonly topSymbol?: { readonly shape: "circle" | "diamond" | "rect" | "triangle"; readonly size: number }
 }
 
+export interface BarChartOverlayHorizontalLine {
+  readonly value: number
+  readonly color: string
+  readonly dashed?: boolean
+  readonly label?: string
+}
+
 /** Inclusive area span between two category positions (indices), same rationale as the line. */
 export interface BarChartOverlayArea {
   readonly startCategoryIndex: number
@@ -34,6 +41,7 @@ export interface BarChartOverlayArea {
 
 export interface BarChartOverlay {
   readonly lines?: readonly BarChartOverlayLine[]
+  readonly horizontalLines?: readonly BarChartOverlayHorizontalLine[]
   readonly areas?: readonly BarChartOverlayArea[]
 }
 
@@ -62,6 +70,9 @@ export function buildBarChartOption(
   const capBarWidth = categories.length > barMaxWidthCategoryThreshold
   const splitLineColor = colors.isDark ? colors.mutedForeground : colors.border
   const splitLineOpacity = colors.isDark ? 0.3 : 0.6
+  const maxHorizontalLineValue = Math.max(...(overlay?.horizontalLines ?? []).map((line) => line.value))
+  const maxValue = Math.max(...values, Number.isFinite(maxHorizontalLineValue) ? maxHorizontalLineValue : 0)
+  const yAxisMax = maxValue > 0 ? maxValue * 1.1 : undefined
   const option: EChartsCoreOption = {
     backgroundColor: "transparent",
     grid: {
@@ -118,6 +129,7 @@ export function buildBarChartOption(
     yAxis: {
       type: "value",
       minInterval: 1,
+      ...(yAxisMax !== undefined ? { max: yAxisMax } : {}),
       splitLine: { lineStyle: { color: splitLineColor, type: "dashed", opacity: splitLineOpacity } },
       axisLine: { show: false },
       ...(showYAxis ? {} : { axisTick: { show: false } }),
@@ -202,28 +214,41 @@ function buildSeries({
   }
 
   const lines = overlay?.lines ?? []
+  const horizontalLines = overlay?.horizontalLines ?? []
   const areas = overlay?.areas ?? []
-  if (lines.length === 0 && areas.length === 0) return [barSeries]
+  if (lines.length === 0 && horizontalLines.length === 0 && areas.length === 0) return [barSeries]
 
   // Markers are paint-only — `silent: true` on both the overlay series and the markLine below,
   // no cursor, no per-shape mouse events. Hover affordance lives at the bucket level instead,
   // via the chart's `updateAxisPointer` event surfaced by `BarChart` as
   // `onBucketAxisPointerChange`.
-  const lineData = lines.map((line) => ({
-    xAxis: line.categoryIndex,
-    lineStyle: {
-      color: line.color,
-      type: line.dashed ? "dashed" : "solid",
-      width: 2,
-      opacity: 0.9,
-    },
-    ...(line.topSymbol
-      ? {
-          symbol: ["none", line.topSymbol.shape],
-          symbolSize: line.topSymbol.size,
-        }
-      : {}),
-  }))
+  const lineData = [
+    ...lines.map((line) => ({
+      xAxis: line.categoryIndex,
+      lineStyle: {
+        color: line.color,
+        type: line.dashed ? "dashed" : "solid",
+        width: 2,
+        opacity: 0.9,
+      },
+      ...(line.topSymbol
+        ? {
+            symbol: ["none", line.topSymbol.shape],
+            symbolSize: line.topSymbol.size,
+          }
+        : {}),
+    })),
+    ...horizontalLines.map((line) => ({
+      yAxis: line.value,
+      lineStyle: {
+        color: line.color,
+        type: line.dashed ? "dashed" : "solid",
+        width: 2,
+        opacity: 0.9,
+      },
+      label: line.label ? { show: true, formatter: line.label, color: line.color } : { show: false },
+    })),
+  ]
 
   const overlaySeries: SeriesEntry = {
     type: "line",
@@ -234,7 +259,7 @@ function buildSeries({
     // event, not by per-shape mouse events on the markers.
     silent: true,
     z: 5,
-    ...(lines.length > 0
+    ...(lineData.length > 0
       ? {
           markLine: {
             silent: true,

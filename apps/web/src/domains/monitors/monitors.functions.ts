@@ -9,7 +9,6 @@ import {
   type ListMonitorsResult,
   listMonitorsForTargetUseCase,
   listMonitorsUseCase,
-  listSavedSearchMonitorSummariesUseCase,
   MetricSeriesReader,
   type MetricSeriesTarget,
   type Monitor,
@@ -27,7 +26,6 @@ import {
 import { listSavedSearches, SavedSearchRepository } from "@domain/saved-searches"
 import {
   AlertIncidentId,
-  type AlertSeverity,
   alertIncidentConditionSchema,
   alertIncidentKindSchema,
   alertIncidentSourceTypeSchema,
@@ -95,6 +93,12 @@ const toMonitorRecord = (monitor: Monitor, savedSearchRefs: ReadonlyMap<string, 
   system: monitor.system,
   alerts: monitor.alerts.map((alert) => toMonitorAlertRecord(alert, savedSearchRefs)),
   target: monitor.target,
+  targetSavedSearchName: monitor.target?.savedSearchId
+    ? (savedSearchRefs.get(monitor.target.savedSearchId)?.name ?? null)
+    : null,
+  targetSavedSearchSlug: monitor.target?.savedSearchId
+    ? (savedSearchRefs.get(monitor.target.savedSearchId)?.slug ?? null)
+    : null,
   mutedAt: monitor.mutedAt?.toISOString() ?? null,
   deletedAt: monitor.deletedAt?.toISOString() ?? null,
   createdAt: monitor.createdAt.toISOString(),
@@ -114,8 +118,10 @@ const resolveSavedSearchRefs = async (
   projectId: ProjectId,
   monitors: readonly Monitor[],
 ): Promise<ReadonlyMap<string, SavedSearchRef>> => {
-  const referencesSavedSearch = monitors.some((monitor) =>
-    monitor.alerts.some((alert) => alert.source?.type === "savedSearch" && alert.source.id !== null),
+  const referencesSavedSearch = monitors.some(
+    (monitor) =>
+      monitor.target?.savedSearchId ||
+      monitor.alerts.some((alert) => alert.source?.type === "savedSearch" && alert.source.id !== null),
   )
   if (!referencesSavedSearch) return new Map()
   const page = await Effect.runPromise(
@@ -241,7 +247,7 @@ interface MonitorMetricSeriesRecord {
 /** Resolve a monitor's persisted target to the metric reader's `(stream, filterSet, query, metric)`. */
 const resolveMetricTarget = (target: NonNullable<Monitor["target"]>) =>
   Effect.gen(function* () {
-    if (target.savedSearchId !== null) {
+    if (target.kind === "savedSearch" && target.savedSearchId !== null) {
       const search = yield* (yield* SavedSearchRepository)
         .findById(SavedSearchId(target.savedSearchId))
         .pipe(Effect.catchTag("SavedSearchNotFoundError", () => Effect.succeed(null)))
@@ -299,49 +305,6 @@ export const getMonitorMetricSeries = createServerFn({ method: "GET" })
         withClickHouse(MetricSeriesReaderLive, getClickhouseClient(), orgId),
         withTracing,
       ),
-    )
-  })
-
-export interface SavedSearchMonitorSummaryRecord {
-  readonly monitorSlug: string
-  readonly monitorCount: number
-  readonly severities: readonly AlertSeverity[]
-  /** Each watching monitor, earliest first — drives the chip's picker. */
-  readonly monitors: readonly {
-    readonly slug: string
-    readonly name: string
-    readonly muted: boolean
-    readonly severities: readonly AlertSeverity[]
-  }[]
-}
-
-/**
- * Batched lookup powering the saved-search ↔ monitor linkage in the UI (selector rows, the
- * monitored-state chip): a map of `savedSearchId -> { monitorSlug, monitorCount, severities }`.
- */
-export const listSavedSearchMonitorSummaries = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string() }))
-  .handler(async ({ data }): Promise<Record<string, SavedSearchMonitorSummaryRecord>> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
-    const pgClient = getPostgresClient()
-
-    const rows = await Effect.runPromise(
-      listSavedSearchMonitorSummariesUseCase({ projectId: ProjectId(data.projectId) }).pipe(
-        withPostgres(MonitorRepositoryLive, pgClient, orgId),
-        withTracing,
-      ),
-    )
-    return Object.fromEntries(
-      rows.map((row) => [
-        row.savedSearchId,
-        {
-          monitorSlug: row.monitorSlug,
-          monitorCount: row.monitorCount,
-          severities: row.severities,
-          monitors: row.monitors,
-        },
-      ]),
     )
   })
 

@@ -173,7 +173,7 @@ class MonitorsClient:
             Project slug (human-readable identifier)
 
         stream : ListMonitorsForTargetBodyStream
-            Telemetry stream to evaluate: `traces` for users, `spans` for tools, or `sessions` for session-level monitors.
+            Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`.
 
         filter_set_contains : typing.Optional[MonitorFilterSet]
 
@@ -773,7 +773,7 @@ class AsyncMonitorsClient:
             Project slug (human-readable identifier)
 
         stream : ListMonitorsForTargetBodyStream
-            Telemetry stream to evaluate: `traces` for users, `spans` for tools, or `sessions` for session-level monitors.
+            Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`.
 
         filter_set_contains : typing.Optional[MonitorFilterSet]
 

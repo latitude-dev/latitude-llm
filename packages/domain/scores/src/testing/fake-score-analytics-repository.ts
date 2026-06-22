@@ -59,6 +59,14 @@ export const createFakeScoreAnalyticsRepository = (overrides?: Partial<ScoreAnal
         offset: 0,
       }),
     countTracesBySignal: () => Effect.succeed(0),
+    listSessionsBySignal: () =>
+      Effect.succeed({
+        items: [],
+        hasMore: false,
+        limit: 25,
+        offset: 0,
+      }),
+    countSessionsBySignal: () => Effect.succeed(0),
     listSignalsByTraceIds: () => Effect.succeed([]),
     listSignalsByUser: () => Effect.succeed([]),
     delete: (id) =>

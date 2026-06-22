@@ -45,6 +45,7 @@ export type {
   BarChartDataPoint,
   BarChartOverlay,
   BarChartOverlayArea,
+  BarChartOverlayHorizontalLine,
   BarChartOverlayLine,
   BarChartProps,
 } from "./components/charts/bar-chart.tsx"

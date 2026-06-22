@@ -1,5 +1,5 @@
 import { ALERT_INCIDENT_KINDS, ALERT_INCIDENT_SOURCE_TYPES, ALERT_SEVERITIES } from "@domain/alerts"
-import type { Monitor, MonitorAlert, MonitorIncidentItem } from "@domain/monitors"
+import { MONITOR_TARGET_KINDS, type Monitor, type MonitorAlert, type MonitorIncidentItem } from "@domain/monitors"
 import type { AlertIncidentCondition } from "@domain/shared"
 import { cuidSchema, FILTER_OPERATORS, MONITOR_STREAMS } from "@domain/shared"
 import { z } from "@hono/zod-openapi"
@@ -51,10 +51,13 @@ const MonitorMetricSchema = z
 
 export const MonitorTargetSchema = z
   .object({
+    kind: z
+      .enum(MONITOR_TARGET_KINDS)
+      .describe("Product target category: `tool`, `user`, `session`, `savedSearch`, or system `signal`."),
     stream: z
       .enum(MONITOR_STREAMS)
       .describe(
-        "Telemetry stream to evaluate: `traces` for users, `spans` for tools, or `sessions` for session-level monitors.",
+        "Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`.",
       ),
     filterSet: FilterSetSchema.nullable().describe(
       "Filters that select the target rows. Use `{}` for all users; use `operation = execute_tool` for all tools.",

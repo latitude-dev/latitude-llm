@@ -950,6 +950,7 @@ describe("MonitorRepositoryLive", () => {
       const monitor: Monitor = {
         ...buildUserMonitor("tool-monitor", 1),
         target: {
+          kind: "tool",
           stream: "spans",
           filterSet: {
             operation: [{ op: "eq" as const, value: "execute_tool" }],
@@ -986,7 +987,14 @@ describe("MonitorRepositoryLive", () => {
       const base = buildUserMonitor("unified-alert", 1)
       const monitor: Monitor = {
         ...base,
-        target: { stream: "spans", filterSet: {}, query: null, savedSearchId: null, metric: { kind: "count" } },
+        target: {
+          kind: "tool",
+          stream: "spans",
+          filterSet: {},
+          query: null,
+          savedSearchId: null,
+          metric: { kind: "count" },
+        },
         alerts: base.alerts.map((a) => ({
           ...a,
           kind: "metric.threshold" as const,

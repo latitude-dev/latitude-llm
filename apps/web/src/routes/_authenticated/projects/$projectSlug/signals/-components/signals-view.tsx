@@ -35,7 +35,7 @@ export const ISSUES_COLUMN_OPTIONS = [
   { id: "trend", label: "Trend" },
   { id: "seenAt", label: "Seen at" },
   { id: "occurrences", label: "Occurrences" },
-  { id: "affectedTraces", label: "Affected traces" },
+  { id: "affectedTraces", label: "Affected sessions" },
 ] as const
 
 export type SignalsColumnId = (typeof ISSUES_COLUMN_OPTIONS)[number]["id"]
@@ -275,16 +275,16 @@ export function SignalsView({
     },
     {
       key: "affectedTraces",
-      header: "Affected traces",
+      header: "Affected sessions",
       width: 76,
       minWidth: 76,
       align: "end",
-      // Affected traces % is `occurrences / totalTraces` with a constant
+      // Affected sessions % is `affectedSessions / totalSessions` with a constant
       // denominator across the page, so sorting by either column is the same
       // operation. Sharing the sort key lets clicks on either header drive the
       // same sort and lights up the indicator on both at once.
       sortKey: "occurrences",
-      render: (issue) => formatPercent(issue.affectedTracesPercent),
+      render: (issue) => formatPercent(issue.affectedSessionsPercent),
     },
   ]
 

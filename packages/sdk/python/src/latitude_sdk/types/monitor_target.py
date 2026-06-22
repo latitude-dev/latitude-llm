@@ -8,6 +8,7 @@ from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
 from .monitor_filter_set import MonitorFilterSet
 from .monitor_metric import MonitorMetric
+from .monitor_target_kind import MonitorTargetKind
 from .monitor_target_stream import MonitorTargetStream
 
 
@@ -16,9 +17,14 @@ class MonitorTarget(UniversalBaseModel):
     Unified query-time target for tool, user, and raw-stream monitors; `null` for legacy saved-search and system monitors.
     """
 
+    kind: MonitorTargetKind = pydantic.Field()
+    """
+    Product target category: `tool`, `user`, `session`, `savedSearch`, or system `signal`.
+    """
+
     stream: MonitorTargetStream = pydantic.Field()
     """
-    Telemetry stream to evaluate: `traces` for users, `spans` for tools, or `sessions` for session-level monitors.
+    Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`.
     """
 
     filter_set: typing_extensions.Annotated[typing.Optional[MonitorFilterSet], FieldMetadata(alias="filterSet")] = None

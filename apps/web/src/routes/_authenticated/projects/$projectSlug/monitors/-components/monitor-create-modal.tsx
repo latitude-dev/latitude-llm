@@ -1,7 +1,18 @@
-import { Button, CloseTrigger, Input, Modal, Textarea, useToast } from "@repo/ui"
+import { Button, CloseTrigger, Input, Modal, Select, Text, Textarea, useToast } from "@repo/ui"
 import { useState } from "react"
-import { monitorTargetName } from "../../../../../../domains/monitors/monitor-target.ts"
+import { useProjectUsers } from "../../../../../../domains/end-users/end-users.collection.ts"
+import {
+  allSessionsMonitorTarget,
+  allToolsMonitorTarget,
+  allUsersMonitorTarget,
+  monitorTargetName,
+  savedSearchMonitorTarget,
+  toolMonitorTarget,
+  userMonitorTarget,
+} from "../../../../../../domains/monitors/monitor-target.ts"
 import { useCreateMonitor } from "../../../../../../domains/monitors/monitors.collection.ts"
+import { useSavedSearchesList } from "../../../../../../domains/saved-searches/saved-searches.collection.ts"
+import { useProjectTools } from "../../../../../../domains/tools/tools.collection.ts"
 import { extractFieldErrors, toUserMessage } from "../../../../../../lib/errors.ts"
 import { AlertCardForm } from "./alert-card-form.tsx"
 import {
@@ -12,10 +23,35 @@ import {
   draftToTarget,
   emptyAlertDraft,
   hasAlertFieldErrors,
+  targetAlertDraft,
 } from "./alert-form-helpers.ts"
 
+type MonitorSource = "savedSearch" | "tools" | "users" | "sessions"
+
+const DAY_MS = 24 * 60 * 60 * 1000
+const TARGET_LOOKBACK_DAYS = 30
+const TARGET_TREND_BUCKET_SECONDS = 24 * 60 * 60
+
+const SOURCE_OPTIONS: { label: string; value: MonitorSource }[] = [
+  { label: "Saved search", value: "savedSearch" },
+  { label: "Tools", value: "tools" },
+  { label: "Users", value: "users" },
+  { label: "Sessions", value: "sessions" },
+]
+
+const userLabel = (user: { readonly userId: string; readonly userEmail?: string | null }) =>
+  user.userEmail ?? user.userId
+
+const initialSourceFor = (initialAlert?: AlertDraft): MonitorSource => {
+  const kind = initialAlert?.target?.kind
+  if (kind === "tool") return "tools"
+  if (kind === "session") return "sessions"
+  if (kind === "user") return "users"
+  return "savedSearch"
+}
+
 /**
- * Create a user monitor end-to-end: name + description + its alert. The UI
+ * Create a monitor end-to-end: name + description + its alert. The UI
  * treats a monitor as having exactly one alert (the data model still allows
  * more, but nothing promotes it). Mounted only while open (fresh state per
  * open). On success it closes and, when `onCreated` is given, hands the new
@@ -37,26 +73,97 @@ export function MonitorCreateModal({
 }) {
   const { toast } = useToast()
   const create = useCreateMonitor(projectId)
+  const initialSavedSearchId = initialAlert?.sourceId ?? initialAlert?.target?.savedSearchId ?? ""
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
-  const [alert, setAlert] = useState<AlertDraft>(initialAlert ?? emptyAlertDraft())
+  const [alert, setAlert] = useState<AlertDraft>(
+    initialAlert?.target
+      ? initialAlert
+      : initialSavedSearchId
+        ? targetAlertDraft(savedSearchMonitorTarget(initialSavedSearchId))
+        : (initialAlert ?? emptyAlertDraft()),
+  )
+  const [source, setSource] = useState<MonitorSource>(() => initialSourceFor(initialAlert))
+  const [selectedSavedSearchId, setSelectedSavedSearchId] = useState(initialSavedSearchId)
+  const [selectedToolName, setSelectedToolName] = useState("")
+  const [selectedUserId, setSelectedUserId] = useState("")
+  const [sourceError, setSourceError] = useState<string | undefined>(undefined)
   const [nameError, setNameError] = useState<string | undefined>(undefined)
   const [alertErrors, setAlertErrors] = useState<AlertFieldErrors>({})
+  const [targetRange] = useState(() => {
+    const toMs = Date.now()
+    return {
+      fromIso: new Date(toMs - TARGET_LOOKBACK_DAYS * DAY_MS).toISOString(),
+      toIso: new Date(toMs).toISOString(),
+    }
+  })
+  const { data: toolsData, isLoading: toolsLoading } = useProjectTools({
+    projectId,
+    range: targetRange,
+    trendBucketSeconds: TARGET_TREND_BUCKET_SECONDS,
+  })
+  const { data: savedSearches, isLoading: savedSearchesLoading } = useSavedSearchesList(projectId)
+  const { data: users, isLoading: usersLoading } = useProjectUsers({ projectId, limit: 50 })
 
+  const sourceLocked = Boolean(initialAlert?.target)
   const targetName = alert.target ? monitorTargetName(alert.target) : null
-  const modalDescription = targetName
-    ? `This monitor watches ${targetName} and opens an incident when its condition is met.`
+  const modalTargetName =
+    alert.target?.stream === "sessions" &&
+    (Object.keys(alert.target.filterSet ?? {}).length > 0 || alert.target.query || alert.target.savedSearchId)
+      ? "matching sessions"
+      : targetName
+  const modalDescription = modalTargetName
+    ? `This monitor watches ${modalTargetName} and opens an incident when its condition is met.`
     : "Monitors watch your saved searches and open incidents when their conditions are met."
 
   const onAlertChange = (next: AlertDraft) => {
     setAlert(next)
+    if (next.sourceId) setSelectedSavedSearchId(next.sourceId)
     setAlertErrors({})
+  }
+
+  const onSourceChange = (next: MonitorSource) => {
+    setSource(next)
+    setSourceError(undefined)
+    setAlertErrors({})
+    if (next === "savedSearch") {
+      setAlert(
+        selectedSavedSearchId ? targetAlertDraft(savedSearchMonitorTarget(selectedSavedSearchId)) : emptyAlertDraft(),
+      )
+    }
+    if (next === "tools") setAlert(targetAlertDraft(allToolsMonitorTarget()))
+    if (next === "users") setAlert(targetAlertDraft(allUsersMonitorTarget()))
+    if (next === "sessions") setAlert(targetAlertDraft(allSessionsMonitorTarget()))
+  }
+
+  const onSavedSearchChange = (savedSearchId: string) => {
+    setSelectedSavedSearchId(savedSearchId)
+    setSourceError(undefined)
+    setAlert(targetAlertDraft(savedSearchMonitorTarget(savedSearchId)))
+  }
+
+  const onToolChange = (toolName: string | undefined) => {
+    const nextToolName = toolName ?? ""
+    setSelectedToolName(nextToolName)
+    setSourceError(undefined)
+    setAlert(targetAlertDraft(nextToolName ? toolMonitorTarget(nextToolName) : allToolsMonitorTarget()))
+  }
+
+  const onUserChange = (userId: string | undefined) => {
+    const nextUserId = userId ?? ""
+    setSelectedUserId(nextUserId)
+    setSourceError(undefined)
+    setAlert(targetAlertDraft(nextUserId ? userMonitorTarget(nextUserId) : allUsersMonitorTarget()))
   }
 
   const onSubmit = async () => {
     const trimmedName = name.trim()
     if (trimmedName.length === 0) {
       setNameError("Name is required")
+      return
+    }
+    if (source === "savedSearch" && selectedSavedSearchId.length === 0) {
+      setSourceError("Select a saved search")
       return
     }
     if (alert.target === null && alert.sourceId === null) {
@@ -127,13 +234,81 @@ export function MonitorCreateModal({
           onChange={(event) => setDescription(event.target.value)}
           minRows={2}
         />
-        <AlertCardForm
-          value={alert}
-          onChange={onAlertChange}
-          projectId={projectId}
-          projectSlug={projectSlug}
-          errors={alertErrors}
-        />
+        {!sourceLocked ? (
+          <div className="flex flex-col gap-1.5">
+            <Text.H5M>Source</Text.H5M>
+            <Select<MonitorSource>
+              name="monitor-source"
+              width="auto"
+              options={SOURCE_OPTIONS}
+              value={source}
+              onChange={onSourceChange}
+            />
+          </div>
+        ) : null}
+        {!sourceLocked && source === "savedSearch" ? (
+          <div className="flex flex-col gap-1.5">
+            <Text.H5M>Saved search</Text.H5M>
+            <Select<string>
+              name="monitor-saved-search"
+              width="auto"
+              options={savedSearches.map((search) => ({ label: search.name, value: search.id }))}
+              value={selectedSavedSearchId}
+              placeholder="Select a saved search"
+              onChange={onSavedSearchChange}
+              searchable
+              searchPlaceholder="Search saved searches…"
+              searchableEmptyMessage="No saved searches found"
+              loading={savedSearchesLoading}
+            />
+            {sourceError ? <Text.H6 color="destructive">{sourceError}</Text.H6> : null}
+          </div>
+        ) : null}
+        {!sourceLocked && source === "tools" ? (
+          <div className="flex flex-col gap-1.5">
+            <Text.H5M>Tool</Text.H5M>
+            <Select<string>
+              name="monitor-tool"
+              width="auto"
+              options={(toolsData?.tools ?? []).map((tool) => ({ label: tool.name, value: tool.name }))}
+              value={selectedToolName || undefined}
+              placeholder="All tools"
+              onChange={onToolChange}
+              loading={toolsLoading}
+              removable
+              searchable
+              searchPlaceholder="Search tools…"
+              searchableEmptyMessage="No tools found"
+            />
+          </div>
+        ) : null}
+        {!sourceLocked && source === "users" ? (
+          <div className="flex flex-col gap-1.5">
+            <Text.H5M>User</Text.H5M>
+            <Select<string>
+              name="monitor-user"
+              width="auto"
+              options={users.map((user) => ({ label: userLabel(user), value: user.userId }))}
+              value={selectedUserId || undefined}
+              placeholder="All users"
+              onChange={onUserChange}
+              loading={usersLoading}
+              removable
+              searchable
+              searchPlaceholder="Search users…"
+              searchableEmptyMessage="No users found"
+            />
+          </div>
+        ) : null}
+        {source === "savedSearch" && selectedSavedSearchId.length === 0 ? null : (
+          <AlertCardForm
+            value={alert}
+            onChange={onAlertChange}
+            projectId={projectId}
+            projectSlug={projectSlug}
+            errors={alertErrors}
+          />
+        )}
       </div>
     </Modal>
   )

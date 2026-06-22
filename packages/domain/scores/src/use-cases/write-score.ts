@@ -110,6 +110,7 @@ const buildScore = ({
   readonly existingScore: Score | null
 }) => {
   const now = new Date()
+  const sessionId = input.sessionId || input.traceId
 
   return parseOrBadRequest(
     scoreSchema,
@@ -117,7 +118,7 @@ const buildScore = ({
       id: input.id ?? generateId<"ScoreId">(),
       organizationId,
       projectId: input.projectId,
-      sessionId: input.sessionId,
+      sessionId,
       traceId: input.traceId,
       spanId: input.spanId,
       sourceType: input.sourceType,

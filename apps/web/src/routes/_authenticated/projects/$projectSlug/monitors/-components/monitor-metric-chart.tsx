@@ -1,5 +1,5 @@
 import { formatMetricValue, type MonitorMetric } from "@domain/shared"
-import { BarChart, HistogramSkeleton, Text } from "@repo/ui"
+import { BarChart, type BarChartOverlay, HistogramSkeleton, Text } from "@repo/ui"
 import { useCallback, useMemo } from "react"
 import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alerts/alerts.collection.ts"
 import { IncidentMarkerPopover } from "../../../../../../domains/alerts/incident-marker-popover.tsx"
@@ -26,6 +26,36 @@ const formatBucketLabel = (startMs: number, bucketMs: number): string => {
 }
 
 const formatBucketTooltipLabel = (startMs: number): string => new Date(startMs).toLocaleString()
+
+const absoluteThresholdValue = (monitor: MonitorRecord, metric: MonitorMetric | null): number | null => {
+  if (!metric) return null
+  const condition = monitor.alerts[0]?.condition
+  if (!condition) return null
+  if (condition.kind === "metric.threshold" || condition.kind === "metric.escalating") {
+    return condition.threshold.mode === "absolute" ? condition.threshold.value : null
+  }
+  if (
+    metric.kind === "count" &&
+    (condition.kind === "savedSearch.threshold" || condition.kind === "savedSearch.escalating")
+  ) {
+    return condition.threshold.mode === "absolute" ? condition.threshold.count : null
+  }
+  return null
+}
+
+const mergeOverlays = (
+  incidentOverlay: BarChartOverlay | undefined,
+  thresholdValue: number | null,
+): BarChartOverlay | undefined => {
+  if (thresholdValue === null) return incidentOverlay
+  return {
+    ...incidentOverlay,
+    horizontalLines: [
+      ...(incidentOverlay?.horizontalLines ?? []),
+      { value: thresholdValue, color: "hsl(24 95% 53%)", dashed: true },
+    ],
+  }
+}
 
 /**
  * The monitor's tracked metric over the selected window, as a histogram with the
@@ -81,7 +111,7 @@ export function MonitorMetricChart({
     [series, bucketMs, fromMs],
   )
 
-  const { overlay, incidentsTouchingBucketIndex } = useMemo(() => {
+  const { overlay: incidentOverlay, incidentsTouchingBucketIndex } = useMemo(() => {
     if (!series || monitorIncidents.length === 0) {
       return { overlay: undefined, incidentsTouchingBucketIndex: new Map() }
     }
@@ -109,8 +139,11 @@ export function MonitorMetricChart({
     [metric],
   )
 
+  const thresholdValue = absoluteThresholdValue(monitor, metric)
+  const overlay = useMemo(() => mergeOverlays(incidentOverlay, thresholdValue), [incidentOverlay, thresholdValue])
   const latestValue = series && series.values.length > 0 ? series.values[series.values.length - 1] : null
-  const hasData = (series?.values ?? []).some((value) => value > 0) || monitorIncidents.length > 0
+  const hasData =
+    (series?.values ?? []).some((value) => value > 0) || monitorIncidents.length > 0 || thresholdValue !== null
 
   return (
     <section className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">

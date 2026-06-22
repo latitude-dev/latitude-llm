@@ -79,7 +79,7 @@ export interface TraceRecord {
   readonly rootSpanName: string
 }
 
-export const toTraceRecord = (trace: Trace): TraceRecord => ({
+const toTraceRecord = (trace: Trace): TraceRecord => ({
   organizationId: trace.organizationId,
   projectId: trace.projectId,
   traceId: trace.traceId,
@@ -490,7 +490,7 @@ export const getTraceConversationChunk = createServerFn({ method: "GET" })
     return result as never
   })
 
-const DISTINCT_COLUMNS = ["tags", "models", "providers", "serviceNames", "tools", "definedTools"] as const
+const DISTINCT_COLUMNS = ["userId", "tags", "models", "providers", "serviceNames", "tools", "definedTools"] as const
 
 interface EnqueuedExportResult {
   readonly type: "enqueued"

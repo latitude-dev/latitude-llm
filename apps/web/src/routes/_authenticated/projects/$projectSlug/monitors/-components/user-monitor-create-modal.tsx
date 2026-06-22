@@ -67,14 +67,14 @@ const userMonitorPresets = (target: MonitorTarget): readonly UserMonitorPreset[]
     {
       id: "activity-spike",
       name: "Activity spiked",
-      description: `Opens an incident when trace volume for ${subject} stays higher than expected.`,
+      description: `Opens an incident when session volume for ${subject} stays higher than expected.`,
       icon: TrendingUpIcon,
       draft: presetDraft(target, { metric: { kind: "count" }, severity: "medium" }),
     },
     {
       id: "activity-drop",
       name: "Activity dropped",
-      description: `Opens an incident when trace volume for ${subject} stays lower than expected.`,
+      description: `Opens an incident when session volume for ${subject} stays lower than expected.`,
       icon: TrendingDownIcon,
       draft: presetDraft(target, {
         metric: { kind: "count" },

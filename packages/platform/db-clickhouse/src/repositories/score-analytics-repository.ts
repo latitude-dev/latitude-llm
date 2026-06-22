@@ -17,6 +17,8 @@ import type {
   SignalImpactAggregate,
   SignalOccurrenceAggregate,
   SignalOccurrenceBucket,
+  SignalSessionPage,
+  SignalSessionSummary,
   SignalTagsAggregate,
   SignalTracePage,
   SignalTraceSummary,
@@ -245,6 +247,7 @@ type HourlyBucketRow = {
 type SignalWindowMetricRow = {
   signal_id: string
   occurrences: string
+  affected_sessions: string
   first_seen_at: string
   last_seen_at: string
 }
@@ -266,6 +269,11 @@ type CountRow = {
 
 type SignalTraceSummaryRow = {
   trace_id: string
+  last_seen_at: string
+}
+
+type SignalSessionSummaryRow = {
+  session_id: string
   last_seen_at: string
 }
 
@@ -443,6 +451,7 @@ const mergeEscalationSignals = (input: {
 const toSignalWindowMetric = (row: SignalWindowMetricRow): SignalWindowMetric => ({
   signalId: toSignalId(normalizeCHString(row.signal_id)),
   occurrences: Number(row.occurrences),
+  affectedSessions: Number(row.affected_sessions),
   firstSeenAt: parseCHDate(row.first_seen_at),
   lastSeenAt: parseCHDate(row.last_seen_at),
 })
@@ -588,6 +597,11 @@ const toSignalTagsAggregate = (row: SignalTagsRow): SignalTagsAggregate => ({
 
 const toSignalTraceSummary = (row: SignalTraceSummaryRow): SignalTraceSummary => ({
   traceId: toTraceId(normalizeCHString(row.trace_id)),
+  lastSeenAt: parseCHDate(row.last_seen_at),
+})
+
+const toSignalSessionSummary = (row: SignalSessionSummaryRow): SignalSessionSummary => ({
+  sessionId: toSessionId(normalizeCHString(row.session_id)),
   lastSeenAt: parseCHDate(row.last_seen_at),
 })
 
@@ -1460,9 +1474,10 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
               const result = await client.query({
                 query: `SELECT
                         signal_id,
-                        count()         AS occurrences,
-                        min(created_at) AS first_seen_at,
-                        max(created_at) AS last_seen_at
+                        count()                                      AS occurrences,
+                        uniqExactIf(session_id, session_id != '')    AS affected_sessions,
+                        min(created_at)                              AS first_seen_at,
+                        max(created_at)                              AS last_seen_at
                       FROM scores
                       WHERE ${scopeClause(options)}${extraWhere}
                       GROUP BY signal_id`,
@@ -1737,6 +1752,81 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
             .pipe(
               Effect.map((rows) => Number(rows[0]?.total ?? 0)),
               Effect.mapError((error) => toRepositoryError(error, "countTracesBySignal")),
+            )
+        }),
+      listSessionsBySignal: ({ organizationId, projectId, signalId, limit, offset, options }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const pageLimit = limit ?? 25
+          const pageOffset = offset ?? 0
+
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
+                        normalized_session_id AS session_id,
+                        max(created_at) AS last_seen_at
+                      FROM (
+                        SELECT
+                          coalesce(nullIf(session_id, ''), toString(trace_id)) AS normalized_session_id,
+                          created_at
+                        FROM scores
+                        WHERE ${scopeClause(options)}
+                          AND signal_id = {signalId:FixedString(24)}
+                          AND passed = true
+                          AND trace_id != ''
+                      )
+                      GROUP BY normalized_session_id
+                      ORDER BY last_seen_at DESC, normalized_session_id DESC
+                      LIMIT {limit:UInt32}
+                      OFFSET {offset:UInt32}`,
+                query_params: {
+                  ...scopeParams(organizationId, projectId),
+                  signalId: signalId as string,
+                  limit: pageLimit + 1,
+                  offset: pageOffset,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<SignalSessionSummaryRow>()
+            })
+            .pipe(
+              Effect.map((rows): SignalSessionPage => {
+                const items = rows.slice(0, pageLimit).map(toSignalSessionSummary)
+                return {
+                  items,
+                  hasMore: rows.length > pageLimit,
+                  limit: pageLimit,
+                  offset: pageOffset,
+                }
+              }),
+              Effect.mapError((error) => toRepositoryError(error, "listSessionsBySignal")),
+            )
+        }),
+      countSessionsBySignal: ({ organizationId, projectId, signalId, options }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT uniqExact(coalesce(nullIf(session_id, ''), toString(trace_id))) AS total
+                      FROM scores
+                      WHERE ${scopeClause(options)}
+                        AND signal_id = {signalId:FixedString(24)}
+                        AND passed = true
+                        AND trace_id != ''`,
+                query_params: {
+                  ...scopeParams(organizationId, projectId),
+                  signalId: signalId as string,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<CountRow>()
+            })
+            .pipe(
+              Effect.map((rows) => Number(rows[0]?.total ?? 0)),
+              Effect.mapError((error) => toRepositoryError(error, "countSessionsBySignal")),
             )
         }),
       listSignalsByTraceIds: ({ organizationId, projectId, traceIds, options }) =>

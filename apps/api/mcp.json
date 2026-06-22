@@ -15095,6 +15095,17 @@
                     {
                       "type": "object",
                       "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "signal",
+                            "tool",
+                            "user",
+                            "session",
+                            "savedSearch"
+                          ],
+                          "description": "Product target category: `tool`, `user`, `session`, `savedSearch`, or system `signal`."
+                        },
                         "stream": {
                           "type": "string",
                           "enum": [
@@ -15102,7 +15113,7 @@
                             "spans",
                             "sessions"
                           ],
-                          "description": "Telemetry stream to evaluate: `traces` for users, `spans` for tools, or `sessions` for session-level monitors."
+                          "description": "Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`."
                         },
                         "filterSet": {
                           "anyOf": [
@@ -15307,6 +15318,7 @@
                         }
                       },
                       "required": [
+                        "kind",
                         "stream",
                         "filterSet",
                         "query",
@@ -16454,6 +16466,17 @@
             "description": "Target for tool/user monitors. Required for `event.*` and `metric.*` alerts; omit for saved-search alerts.",
             "type": "object",
             "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "signal",
+                  "tool",
+                  "user",
+                  "session",
+                  "savedSearch"
+                ],
+                "description": "Product target category: `tool`, `user`, `session`, `savedSearch`, or system `signal`."
+              },
               "stream": {
                 "type": "string",
                 "enum": [
@@ -16461,7 +16484,7 @@
                   "spans",
                   "sessions"
                 ],
-                "description": "Telemetry stream to evaluate: `traces` for users, `spans` for tools, or `sessions` for session-level monitors."
+                "description": "Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`."
               },
               "filterSet": {
                 "anyOf": [
@@ -16666,6 +16689,7 @@
               }
             },
             "required": [
+              "kind",
               "stream",
               "filterSet",
               "query",
@@ -17779,6 +17803,17 @@
               {
                 "type": "object",
                 "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "signal",
+                      "tool",
+                      "user",
+                      "session",
+                      "savedSearch"
+                    ],
+                    "description": "Product target category: `tool`, `user`, `session`, `savedSearch`, or system `signal`."
+                  },
                   "stream": {
                     "type": "string",
                     "enum": [
@@ -17786,7 +17821,7 @@
                       "spans",
                       "sessions"
                     ],
-                    "description": "Telemetry stream to evaluate: `traces` for users, `spans` for tools, or `sessions` for session-level monitors."
+                    "description": "Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`."
                   },
                   "filterSet": {
                     "anyOf": [
@@ -17991,6 +18026,7 @@
                   }
                 },
                 "required": [
+                  "kind",
                   "stream",
                   "filterSet",
                   "query",
@@ -18073,7 +18109,7 @@
               "spans",
               "sessions"
             ],
-            "description": "Telemetry stream to evaluate: `traces` for users, `spans` for tools, or `sessions` for session-level monitors."
+            "description": "Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`."
           },
           "filterSetContains": {
             "type": "object",
@@ -19250,6 +19286,17 @@
                     {
                       "type": "object",
                       "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "signal",
+                            "tool",
+                            "user",
+                            "session",
+                            "savedSearch"
+                          ],
+                          "description": "Product target category: `tool`, `user`, `session`, `savedSearch`, or system `signal`."
+                        },
                         "stream": {
                           "type": "string",
                           "enum": [
@@ -19257,7 +19304,7 @@
                             "spans",
                             "sessions"
                           ],
-                          "description": "Telemetry stream to evaluate: `traces` for users, `spans` for tools, or `sessions` for session-level monitors."
+                          "description": "Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`."
                         },
                         "filterSet": {
                           "anyOf": [
@@ -19462,6 +19509,7 @@
                         }
                       },
                       "required": [
+                        "kind",
                         "stream",
                         "filterSet",
                         "query",
@@ -20653,6 +20701,17 @@
               {
                 "type": "object",
                 "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "signal",
+                      "tool",
+                      "user",
+                      "session",
+                      "savedSearch"
+                    ],
+                    "description": "Product target category: `tool`, `user`, `session`, `savedSearch`, or system `signal`."
+                  },
                   "stream": {
                     "type": "string",
                     "enum": [
@@ -20660,7 +20719,7 @@
                       "spans",
                       "sessions"
                     ],
-                    "description": "Telemetry stream to evaluate: `traces` for users, `spans` for tools, or `sessions` for session-level monitors."
+                    "description": "Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`."
                   },
                   "filterSet": {
                     "anyOf": [
@@ -20865,6 +20924,7 @@
                   }
                 },
                 "required": [
+                  "kind",
                   "stream",
                   "filterSet",
                   "query",
@@ -22059,6 +22119,17 @@
               {
                 "type": "object",
                 "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "signal",
+                      "tool",
+                      "user",
+                      "session",
+                      "savedSearch"
+                    ],
+                    "description": "Product target category: `tool`, `user`, `session`, `savedSearch`, or system `signal`."
+                  },
                   "stream": {
                     "type": "string",
                     "enum": [
@@ -22066,7 +22137,7 @@
                       "spans",
                       "sessions"
                     ],
-                    "description": "Telemetry stream to evaluate: `traces` for users, `spans` for tools, or `sessions` for session-level monitors."
+                    "description": "Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`."
                   },
                   "filterSet": {
                     "anyOf": [
@@ -22271,6 +22342,7 @@
                   }
                 },
                 "required": [
+                  "kind",
                   "stream",
                   "filterSet",
                   "query",
@@ -26667,6 +26739,17 @@
               {
                 "type": "object",
                 "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "signal",
+                      "tool",
+                      "user",
+                      "session",
+                      "savedSearch"
+                    ],
+                    "description": "Product target category: `tool`, `user`, `session`, `savedSearch`, or system `signal`."
+                  },
                   "stream": {
                     "type": "string",
                     "enum": [
@@ -26674,7 +26757,7 @@
                       "spans",
                       "sessions"
                     ],
-                    "description": "Telemetry stream to evaluate: `traces` for users, `spans` for tools, or `sessions` for session-level monitors."
+                    "description": "Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`."
                   },
                   "filterSet": {
                     "anyOf": [
@@ -26879,6 +26962,7 @@
                   }
                 },
                 "required": [
+                  "kind",
                   "stream",
                   "filterSet",
                   "query",
@@ -29198,6 +29282,17 @@
               {
                 "type": "object",
                 "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "signal",
+                      "tool",
+                      "user",
+                      "session",
+                      "savedSearch"
+                    ],
+                    "description": "Product target category: `tool`, `user`, `session`, `savedSearch`, or system `signal`."
+                  },
                   "stream": {
                     "type": "string",
                     "enum": [
@@ -29205,7 +29300,7 @@
                       "spans",
                       "sessions"
                     ],
-                    "description": "Telemetry stream to evaluate: `traces` for users, `spans` for tools, or `sessions` for session-level monitors."
+                    "description": "Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`."
                   },
                   "filterSet": {
                     "anyOf": [
@@ -29410,6 +29505,7 @@
                   }
                 },
                 "required": [
+                  "kind",
                   "stream",
                   "filterSet",
                   "query",
@@ -30593,6 +30689,17 @@
               {
                 "type": "object",
                 "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "signal",
+                      "tool",
+                      "user",
+                      "session",
+                      "savedSearch"
+                    ],
+                    "description": "Product target category: `tool`, `user`, `session`, `savedSearch`, or system `signal`."
+                  },
                   "stream": {
                     "type": "string",
                     "enum": [
@@ -30600,7 +30707,7 @@
                       "spans",
                       "sessions"
                     ],
-                    "description": "Telemetry stream to evaluate: `traces` for users, `spans` for tools, or `sessions` for session-level monitors."
+                    "description": "Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`."
                   },
                   "filterSet": {
                     "anyOf": [
@@ -30805,6 +30912,7 @@
                   }
                 },
                 "required": [
+                  "kind",
                   "stream",
                   "filterSet",
                   "query",

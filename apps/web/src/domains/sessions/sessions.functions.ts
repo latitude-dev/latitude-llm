@@ -46,7 +46,7 @@ import { z } from "zod"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 
-const serializeSession = (session: Session) => ({
+export const serializeSession = (session: Session) => ({
   organizationId: session.organizationId,
   projectId: session.projectId,
   sessionId: session.sessionId,
@@ -488,7 +488,7 @@ export const getSessionDistribution = createServerFn({ method: "GET" })
     )
   })
 
-const DISTINCT_COLUMNS = ["tags", "models", "providers", "serviceNames", "tools", "definedTools"] as const
+const DISTINCT_COLUMNS = ["userId", "tags", "models", "providers", "serviceNames", "tools", "definedTools"] as const
 
 export const getSessionDistinctValues = createServerFn({ method: "GET" })
   .inputValidator(

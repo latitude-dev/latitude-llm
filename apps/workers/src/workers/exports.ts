@@ -19,6 +19,7 @@ import type { ClickHouseClient } from "@platform/db-clickhouse"
 import {
   DatasetRowRepositoryLive,
   ScoreAnalyticsRepositoryLive,
+  SessionRepositoryLive,
   TraceRepositoryLive,
   withClickHouse,
 } from "@platform/db-clickhouse"
@@ -167,7 +168,7 @@ function generateSignalsExport(
     return buildSignalsExportUseCase(baseEffectInput).pipe(
       withPostgres(Layer.mergeAll(EvaluationRepositoryLive, SignalRepositoryLive), getPostgresClient(), organizationId),
       withClickHouse(
-        Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),
+        Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive, TraceRepositoryLive),
         getClickhouseClient(),
         organizationId,
       ),
@@ -189,7 +190,7 @@ function generateSignalsExport(
     }).pipe(
       withPostgres(Layer.mergeAll(EvaluationRepositoryLive, SignalRepositoryLive), getPostgresClient(), organizationId),
       withClickHouse(
-        Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),
+        Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive, TraceRepositoryLive),
         getClickhouseClient(),
         organizationId,
       ),

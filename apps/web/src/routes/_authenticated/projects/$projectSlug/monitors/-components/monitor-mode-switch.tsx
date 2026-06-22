@@ -1,4 +1,4 @@
-import { cn } from "@repo/ui"
+import { Tabs } from "@repo/ui"
 
 export type MonitorCreateMode = "recommended" | "advanced"
 
@@ -10,20 +10,15 @@ export function MonitorModeSwitch({
   readonly onModeChange: (mode: MonitorCreateMode) => void
 }) {
   return (
-    <div className="flex rounded-lg bg-muted p-1">
-      {(["recommended", "advanced"] as const).map((option) => (
-        <button
-          key={option}
-          type="button"
-          onClick={() => onModeChange(option)}
-          className={cn("flex-1 cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium transition-colors", {
-            "bg-background text-foreground shadow-sm": mode === option,
-            "text-muted-foreground hover:text-foreground": mode !== option,
-          })}
-        >
-          {option === "recommended" ? "Recommended" : "Advanced"}
-        </button>
-      ))}
-    </div>
+    <Tabs
+      variant="bordered"
+      size="sm"
+      options={[
+        { id: "recommended", label: "Recommended" },
+        { id: "advanced", label: "Advanced" },
+      ]}
+      active={mode}
+      onSelect={(next) => onModeChange(next as MonitorCreateMode)}
+    />
   )
 }

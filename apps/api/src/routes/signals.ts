@@ -16,7 +16,12 @@ import {
 } from "@domain/signals"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import { AIEmbedLive, withAi } from "@platform/ai"
-import { ScoreAnalyticsRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import {
+  ScoreAnalyticsRepositoryLive,
+  SessionRepositoryLive,
+  TraceRepositoryLive,
+  withClickHouse,
+} from "@platform/db-clickhouse"
 import {
   EvaluationRepositoryLive,
   MembershipRepositoryLive,
@@ -355,7 +360,7 @@ const listSignals = signalEndpoint({
           organizationId,
         ),
         withClickHouse(
-          Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),
+          Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive, TraceRepositoryLive),
           c.var.clickhouse,
           organizationId,
         ),

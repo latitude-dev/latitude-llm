@@ -11,22 +11,20 @@ import type {
   SignalImpactRecord,
   SignalOccurrenceRecord,
   SignalRecord,
+  SignalSessionPageRecord,
   SignalSummaryRecord,
   SignalsListResultRecord,
-  SignalTracePageRecord,
-  SignalTraceRecord,
   UpdateSignalTriageRecord,
 } from "./signals.functions.ts"
 import {
-  countSignalTraces,
   getRelatedSignals,
   getSignal,
   getSignalDetail,
   getSignalDimensions,
   getSignalImpact,
   getSignalOccurrences,
+  listSignalSessions,
   listSignals,
-  listSignalTraces,
   searchOrgSignals,
   updateSignalTriage,
 } from "./signals.functions.ts"
@@ -46,7 +44,7 @@ const EMPTY_ISSUES_ANALYTICS: SignalsListResultRecord["analytics"] = {
   },
   histogram: [],
   histogramBucketSeconds: 24 * 60 * 60,
-  totalTraces: 0,
+  totalSessions: 0,
 }
 const EMPTY_PRIORITY_COUNTS: SignalsListResultRecord["priorityCounts"] = {
   urgent: 0,
@@ -112,13 +110,14 @@ const getSignalOccurrencesQueryKey = (projectId: string, signalId: string) =>
 const getRelatedSignalsQueryKey = (projectId: string, signalId: string) =>
   ["related-signals", projectId, signalId] as const
 
-const getSignalTracesQueryKey = (projectId: string, signalId: string) => ["issue-traces", projectId, signalId] as const
+const getSignalSessionsQueryKey = (projectId: string, signalId: string) =>
+  ["issue-sessions", projectId, signalId] as const
 
-const getSignalTracesPageKey = (projectId: string, signalId: string, offset: number) =>
-  ["issue-traces-page", projectId, signalId, offset] as const
+const getSignalSessionsPageKey = (projectId: string, signalId: string, offset: number) =>
+  ["issue-sessions-page", projectId, signalId, offset] as const
 
-const getSignalTracesCountQueryKey = (projectId: string, signalId: string) =>
-  ["issue-traces-count", projectId, signalId] as const
+const getSignalSessionsCountQueryKey = (projectId: string, signalId: string) =>
+  ["issue-sessions-count", projectId, signalId] as const
 
 const buildListSignalsRequest = (input: SignalsKeyInput, offset: number) => ({
   projectId: input.projectId,
@@ -408,7 +407,7 @@ export function useUpdateSignalTriage(projectId: string, signalId: string) {
   })
 }
 
-export function useSignalTracesInfiniteScroll({
+export function useSignalSessionsInfiniteScroll({
   projectId,
   signalId,
   enabled = true,
@@ -424,13 +423,13 @@ export function useSignalTracesInfiniteScroll({
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: getSignalTracesQueryKey(projectId, signalId),
-    queryFn: async ({ pageParam }): Promise<SignalTracePageRecord> => {
-      const pageKey = getSignalTracesPageKey(projectId, signalId, pageParam)
+    queryKey: getSignalSessionsQueryKey(projectId, signalId),
+    queryFn: async ({ pageParam }): Promise<SignalSessionPageRecord> => {
+      const pageKey = getSignalSessionsPageKey(projectId, signalId, pageParam)
       const result = await queryClient.fetchQuery({
         queryKey: pageKey,
         queryFn: () =>
-          listSignalTraces({
+          listSignalSessions({
             data: {
               projectId,
               signalId,
@@ -444,9 +443,9 @@ export function useSignalTracesInfiniteScroll({
       if (result.hasMore) {
         const nextOffset = result.offset + result.limit
         void queryClient.prefetchQuery({
-          queryKey: getSignalTracesPageKey(projectId, signalId, nextOffset),
+          queryKey: getSignalSessionsPageKey(projectId, signalId, nextOffset),
           queryFn: () =>
-            listSignalTraces({
+            listSignalSessions({
               data: {
                 projectId,
                 signalId,
@@ -475,31 +474,9 @@ export function useSignalTracesInfiniteScroll({
     [fetchNextPage, hasNextPage, isFetchingNextPage],
   )
 
-  const data: readonly SignalTraceRecord[] = useMemo(
-    () => paginatedData?.pages.flatMap((page) => page.items) ?? [],
-    [paginatedData],
-  )
+  const data = useMemo(() => paginatedData?.pages.flatMap((page) => page.items) ?? [], [paginatedData])
 
   return { data, isLoading, infiniteScroll }
-}
-
-export function useSignalTracesCount({
-  projectId,
-  signalId,
-  enabled = true,
-}: {
-  readonly projectId: string
-  readonly signalId: string
-  readonly enabled?: boolean
-}) {
-  const { data } = useQuery({
-    queryKey: getSignalTracesCountQueryKey(projectId, signalId),
-    queryFn: () => countSignalTraces({ data: { projectId, signalId } }),
-    enabled: enabled && projectId.length > 0 && signalId.length > 0,
-    staleTime: ISSUES_QUERY_STALE_TIME_MS,
-  })
-
-  return data?.total ?? 0
 }
 
 const invalidateSignalDetailQueries = (projectId: string, signalId: string) =>
@@ -507,9 +484,9 @@ const invalidateSignalDetailQueries = (projectId: string, signalId: string) =>
     queryClient.invalidateQueries({ queryKey: getSignalQueryKey(projectId, signalId) }),
     queryClient.invalidateQueries({ queryKey: getSignalDetailQueryKey(projectId, signalId) }),
     queryClient.invalidateQueries({ queryKey: getSignalImpactQueryKey(projectId, signalId) }),
-    queryClient.invalidateQueries({ queryKey: getSignalTracesQueryKey(projectId, signalId) }),
-    queryClient.invalidateQueries({ queryKey: ["issue-traces-page", projectId, signalId] }),
-    queryClient.invalidateQueries({ queryKey: getSignalTracesCountQueryKey(projectId, signalId) }),
+    queryClient.invalidateQueries({ queryKey: getSignalSessionsQueryKey(projectId, signalId) }),
+    queryClient.invalidateQueries({ queryKey: ["issue-sessions-page", projectId, signalId] }),
+    queryClient.invalidateQueries({ queryKey: getSignalSessionsCountQueryKey(projectId, signalId) }),
   ])
 
 export const invalidateSignalQueries = (projectId: string, signalId?: string) =>

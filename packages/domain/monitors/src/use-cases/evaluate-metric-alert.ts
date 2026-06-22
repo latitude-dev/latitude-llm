@@ -22,8 +22,8 @@ import { baselineWindow, mean, sampleStddev, WEEK_MS } from "./evaluate-saved-se
 
 /**
  * `count`/`sum` accumulate over a window, so a `multiplier` baseline (and a
- * windowed absolute) must be normalised to the measurement window; `avg`/`p95`/
- * `errorRate` are already intensive (a rate/level), so they compare directly.
+ * windowed absolute) must be normalised to the measurement window; `min`/`max`/
+ * `avg`/`median`/`p95`/`errorRate` are already intensive (a rate/level), so they compare directly.
  */
 const isAccumulating = (metric: MonitorMetric): boolean => metric.kind === "count" || metric.kind === "sum"
 

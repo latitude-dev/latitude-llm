@@ -50,6 +50,11 @@ const formatBaseline = (baseline: AlertBaseline): string =>
     ? `the average of ${formatDuration(baseline.lookback)}`
     : formatPreviousPeriod(baseline.lookback)
 
+const formatMetricBaseline = (baseline: AlertBaseline): string =>
+  baseline.kind === "average"
+    ? `the same metric averaged over ${formatDuration(baseline.lookback)}`
+    : `the same metric during ${formatPreviousPeriod(baseline.lookback)}`
+
 const formatThreshold = (threshold: AlertCountThreshold): string => {
   if (threshold.mode === "absolute") {
     return `detected ${threshold.count} times`
@@ -86,7 +91,8 @@ const savedSearchTraceSubject = (context?: HumanReadableAlertContext): string =>
   context?.savedSearchName ? `traces matching '${context.savedSearchName}'` : "matching traces"
 
 /** Field rendered as a user-facing word: duration reads as "latency". */
-const metricFieldNoun = (field: "duration" | "cost" | "tokens"): string => (field === "duration" ? "latency" : field)
+const metricFieldNoun = (field: "duration" | "cost" | "tokens"): string =>
+  field === "duration" ? "latency" : field === "tokens" ? "token count" : "cost"
 
 /** How a unified monitor's metric reads as a noun phrase ("the error rate", "the p95 latency"). */
 const formatMetric = (metric: MonitorMetric): string => {
@@ -95,13 +101,39 @@ const formatMetric = (metric: MonitorMetric): string => {
       return "the volume"
     case "errorRate":
       return "the error rate"
-    case "avg":
-      return `the average ${metricFieldNoun(metric.field)}`
-    case "p95":
-      return `the p95 ${metricFieldNoun(metric.field)}`
     case "sum":
       return `the total ${metricFieldNoun(metric.field)}`
+    case "min":
+      return `the lowest observed ${metricFieldNoun(metric.field)}`
+    case "max":
+      return `the highest observed ${metricFieldNoun(metric.field)}`
+    case "avg":
+      return `the average ${metricFieldNoun(metric.field)}`
+    case "median":
+      return `the median ${metricFieldNoun(metric.field)}`
+    case "p95":
+      return `the p95 ${metricFieldNoun(metric.field)}`
   }
+}
+
+const matchingEntity = (target: string): string => (target.includes("tool") ? "matching tool call" : "matching session")
+
+const targetScope = (target: string): string => (target.startsWith("all ") ? `among ${target}` : `for ${target}`)
+
+const formatMetricSubject = (metric: MonitorMetric, context?: HumanReadableAlertContext): string => {
+  const target = targetSubject(context)
+  if (metric.kind === "min" || metric.kind === "max") {
+    const entity = matchingEntity(target)
+    const scope = target === "the target" ? "" : ` ${targetScope(target)}`
+    if (metric.field === "cost")
+      return metric.kind === "min" ? `the cheapest ${entity}${scope}` : `the most expensive ${entity}${scope}`
+    if (metric.field === "duration")
+      return metric.kind === "min" ? `the fastest ${entity}${scope}` : `the slowest ${entity}${scope}`
+    return metric.kind === "min"
+      ? `the ${entity} with the fewest tokens${scope}`
+      : `the ${entity} with the most tokens${scope}`
+  }
+  return `${formatMetric(metric)} for ${target}`
 }
 
 /** Threshold phrase for the unified `metric.*` kinds; absolute carries a stored float `value` rendered with its unit. */
@@ -114,7 +146,7 @@ const formatMetricThreshold = (
     return `${direction === "below" ? "under" : "over"} ${formatMetricValue(threshold.value, metric)}`
   }
   if (threshold.mode === "multiplier") {
-    return `${threshold.factor} times ${direction === "below" ? "less than" : "more than"} ${formatBaseline(threshold.baseline)}`
+    return `${threshold.factor} times ${direction === "below" ? "less than" : "more than"} ${formatMetricBaseline(threshold.baseline)}`
   }
   const comparator = direction === "below" ? "less than expected" : "more than expected"
   return threshold.sensitivity === undefined ? comparator : `${threshold.sensitivity} times ${comparator}`
@@ -152,11 +184,11 @@ export function formatHumanReadableAlert(alert: HumanReadableAlertInput, context
   }
 
   if (alert.kind === "metric.threshold" && alert.condition?.kind === "metric.threshold") {
-    return `Opens an incident when ${formatMetric(alert.condition.metric)} for ${targetSubject(context)} is ${formatMetricThreshold(alert.condition.threshold, alert.condition.metric, alert.condition.direction)}.`
+    return `Opens an incident when ${formatMetricSubject(alert.condition.metric, context)} is ${formatMetricThreshold(alert.condition.threshold, alert.condition.metric, alert.condition.direction)}.`
   }
 
   if (alert.kind === "metric.escalating" && alert.condition?.kind === "metric.escalating") {
-    return `Opens an incident when ${formatMetric(alert.condition.metric)} for ${targetSubject(context)} is ${formatMetricThreshold(
+    return `Opens an incident when ${formatMetricSubject(alert.condition.metric, context)} is ${formatMetricThreshold(
       alert.condition.threshold,
       alert.condition.metric,
       alert.condition.direction,

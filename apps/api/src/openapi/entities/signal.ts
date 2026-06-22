@@ -134,7 +134,7 @@ export const toSignalResponse = (item: SignalListItem, organizationId: string) =
   firstSeenAt: item.firstSeenAt.toISOString(),
   lastSeenAt: item.lastSeenAt.toISOString(),
   occurrences: item.occurrences,
-  affectedTracesPercent: item.affectedTracesPercent,
+  affectedTracesPercent: item.affectedSessionsPercent,
   trend: item.trend.map((bucket) => ({ bucket: bucket.bucket, count: bucket.count })),
   tags: [...item.tags],
 })

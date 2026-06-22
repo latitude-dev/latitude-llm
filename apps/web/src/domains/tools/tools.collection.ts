@@ -12,9 +12,7 @@ import {
   getToolParameterStats,
   listProjectTools,
   listRecentDefiningSpans,
-  listRecentToolCalls,
   type RecentDefiningSpanRecord,
-  type RecentToolCallRecord,
 } from "./tools.functions.ts"
 
 /** Inclusive time window shared by every tools query. */
@@ -239,62 +237,6 @@ export function useToolErrorBreakdown({
     staleTime: 30_000,
     enabled: enabled && projectId.length > 0 && toolName.length > 0,
   })
-}
-
-export function useRecentToolCalls({
-  projectId,
-  toolName,
-  range,
-  errorsOnly,
-  enabled = true,
-}: {
-  readonly projectId: string
-  readonly toolName: string
-  readonly range: ToolsTimeRange
-  readonly errorsOnly?: boolean
-  readonly enabled?: boolean
-}) {
-  const scope = use(TraceScopeContext)
-  const {
-    data: paginatedData,
-    isLoading,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useInfiniteQuery({
-    queryKey: [...traceScopeKey(scope), "tools-recent-calls", projectId, toolName, range, errorsOnly ?? false],
-    queryFn: async ({ pageParam }) =>
-      listRecentToolCalls({
-        data: {
-          ...traceScopeData(scope),
-          projectId,
-          toolName,
-          ...range,
-          limit: RECENT_CALLS_BATCH_SIZE,
-          ...(errorsOnly === undefined ? {} : { errorsOnly }),
-          ...(pageParam ? { cursor: pageParam } : {}),
-        },
-      }),
-    initialPageParam: undefined as { startTimeIso: string; spanId: string } | undefined,
-    getNextPageParam: (lastPage) => lastPage?.nextCursor,
-    enabled: enabled && projectId.length > 0 && toolName.length > 0,
-  })
-
-  const infiniteScroll: InfiniteTableInfiniteScroll = useMemo(
-    () => ({
-      hasMore: hasNextPage,
-      isLoadingMore: isFetchingNextPage,
-      onLoadMore: fetchNextPage,
-    }),
-    [hasNextPage, isFetchingNextPage, fetchNextPage],
-  )
-
-  const data: readonly RecentToolCallRecord[] = useMemo(
-    () => paginatedData?.pages.flatMap((p) => p?.items ?? []) ?? [],
-    [paginatedData],
-  )
-
-  return { data, isLoading, infiniteScroll }
 }
 
 export function useRecentDefiningSpans({

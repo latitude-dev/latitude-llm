@@ -47,7 +47,7 @@ import { countSessionsBySearchQuery, type FetchFullSessions, listSessionsBySearc
 import { isActiveSearch } from "./search-plan.ts"
 import { TOKEN_ANALYTICS_SUM_SELECT, toTokenAnalytics } from "./token-analytics.ts"
 
-const LIST_SELECT = `
+export const LIST_SELECT = `
   organization_id,
   project_id,
   session_id,
@@ -349,7 +349,7 @@ const SORT_COLUMNS: Record<string, SortColumn> = {
   traceCount: { expr: "trace_count", chType: "UInt64", rowKey: "trace_count" },
 }
 
-function buildSessionFilterClauses(filters: FilterSet | undefined): {
+export function buildSessionFilterClauses(filters: FilterSet | undefined): {
   havingClauses: string[]
   whereClauses: string[]
   params: Record<string, unknown>
@@ -449,7 +449,7 @@ function collectPercentileRequests(filters: FilterSet | undefined): {
   return { requests, cloned }
 }
 
-const resolvePercentileFilters = (
+export const resolvePercentileFilters = (
   organizationId: OrganizationId,
   projectId: ProjectId,
   filters: FilterSet | undefined,
@@ -964,6 +964,34 @@ export const SessionRepositoryLive = Layer.effect(
             )
         }),
 
+      listBySessionIds: ({ organizationId, projectId, sessionIds }) =>
+        Effect.gen(function* () {
+          if (sessionIds.length === 0) return []
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${LIST_SELECT}
+                      FROM sessions
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND session_id IN ({sessionIds:Array(String)})
+                      GROUP BY organization_id, project_id, session_id`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  sessionIds: sessionIds.map((sessionId) => sessionId as string),
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<SessionListRow>()
+            })
+            .pipe(
+              Effect.map((rows): readonly Session[] => rows.map(toDomainSession)),
+              Effect.mapError((error) => toRepositoryError(error, "listBySessionIds")),
+            )
+        }),
+
       getDistribution: ({ organizationId, projectId, field }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -1017,6 +1045,7 @@ export const SessionRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           const COLUMN_EXPRS: Record<string, string> = {
+            userId: "argMaxIfMerge(user_id)",
             tags: "arrayJoin(groupUniqArrayArray(tags))",
             models: "arrayJoin(groupUniqArrayIfMerge(models))",
             providers: "arrayJoin(groupUniqArrayIfMerge(providers))",

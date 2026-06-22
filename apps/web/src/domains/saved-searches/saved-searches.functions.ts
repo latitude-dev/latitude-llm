@@ -19,6 +19,7 @@ import {
   alertIncidentKindSchema,
   alertSeveritySchema,
   filterSetSchema,
+  monitorMetricSchema,
   OrganizationId,
   ProjectId,
   SavedSearchId,
@@ -147,15 +148,14 @@ export const getSavedSearchBySlugFn = createServerFn({ method: "GET" })
 const MONITOR_NAME_MAX_LENGTH = 128
 
 /**
- * Optional companion monitor created alongside a new saved search (the "Monitor
- * this search" section of the save-search modal). Mirrors the monitors-page
- * alert fields minus `source` — the source is the search being created, so
- * only the server can wire it up.
+ * Optional companion monitor created alongside a new saved search. It stores the
+ * saved-search id on the monitor target so edits keep flowing into the metric monitor.
  */
 const savedSearchMonitorSchema = z.object({
   kind: alertIncidentKindSchema,
   condition: alertIncidentConditionSchema.nullable(),
   severity: alertSeveritySchema,
+  metric: monitorMetricSchema.optional(),
 })
 
 export type SavedSearchMonitorInput = z.infer<typeof savedSearchMonitorSchema>
@@ -198,6 +198,7 @@ export const createSavedSearchFn = createServerFn({ method: "POST" })
             return yield* sqlClient.transaction(
               Effect.gen(function* () {
                 const search = yield* createSearch
+                const unified = monitorInput.kind.startsWith("event.") || monitorInput.kind.startsWith("metric.")
                 yield* createMonitorUseCase({
                   organizationId: orgId,
                   projectId: ProjectId(data.projectId),
@@ -205,11 +206,23 @@ export const createSavedSearchFn = createServerFn({ method: "POST" })
                   alerts: [
                     {
                       kind: monitorInput.kind,
-                      source: { type: "savedSearch", id: search.id },
+                      source: unified ? null : { type: "savedSearch", id: search.id },
                       condition: monitorInput.condition,
                       severity: monitorInput.severity,
                     },
                   ],
+                  ...(unified
+                    ? {
+                        target: {
+                          kind: "savedSearch",
+                          stream: "sessions",
+                          filterSet: search.filterSet,
+                          query: search.query,
+                          savedSearchId: search.id,
+                          metric: monitorInput.metric ?? { kind: "count" },
+                        },
+                      }
+                    : {}),
                 })
                 return search
               }),

@@ -1,12 +1,23 @@
+import type { MonitorTarget } from "@domain/monitors"
 import type { FilterSet } from "@domain/shared"
 import { Button, Icon, type InfiniteTableSorting, type SortDirection, Tabs, Tooltip, toast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { DatabaseIcon, DownloadIcon, FilterIcon, FilterXIcon, MessagesSquareIcon, TextIcon, XIcon } from "lucide-react"
+import {
+  BellPlusIcon,
+  DatabaseIcon,
+  DownloadIcon,
+  FilterIcon,
+  FilterXIcon,
+  MessagesSquareIcon,
+  TextIcon,
+  XIcon,
+} from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRegisterCommands } from "../../../../../components/command-palette/command-palette-provider.tsx"
 import type { PaletteCommand } from "../../../../../components/command-palette/types.ts"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
+import { useMonitors } from "../../../../../domains/monitors/monitors.collection.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { useSavedSearchBySlug } from "../../../../../domains/saved-searches/saved-searches.collection.ts"
 import type { SavedSearchRecord } from "../../../../../domains/saved-searches/saved-searches.functions.ts"
@@ -22,6 +33,7 @@ import {
   type SelectionState,
 } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { useRouteProject } from "../-route-data.ts"
+import { TargetMonitorsMenu } from "../monitors/-components/target-monitors-menu.tsx"
 import { AddToDatasetModal } from "./add-to-dataset-modal.tsx"
 import { TraceAggregationsPanel } from "./aggregations/aggregations-panel.tsx"
 import { ColumnsSelector } from "./columns-selector.tsx"
@@ -31,6 +43,7 @@ import { SaveSearchModal } from "./save-search-modal.tsx"
 import { SaveSearchSegment } from "./save-search-segment.tsx"
 import { SavedSearchSelector } from "./saved-search-selector.tsx"
 import { SearchInput } from "./search-input.tsx"
+import { searchHasSemanticPart } from "./semantic-monitor-notice.tsx"
 import { SessionDetailDrawer } from "./session-detail-drawer.tsx"
 import {
   DEFAULT_SESSION_SORTING,
@@ -85,7 +98,9 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
     [activeTab, setActiveTab, setActiveSessionId, setActiveTraceId, setSelectedSpanId],
   )
   const hasSearchQuery = query.length > 0
+  const hasSemanticSearchQuery = searchHasSemanticPart(query)
   const { data: loadedSavedSearch } = useSavedSearchBySlug(currentProject.id, savedSearchSlug || null)
+  const { monitors: projectMonitors } = useMonitors({ projectId: currentProject.id, limit: 100, system: false })
 
   // Hydrate a slug-only `?savedSearch=` deep-link (the monitor incidents table and the command
   // palette can't carry the filter state) with the saved search's query + filters, once per slug.
@@ -197,8 +212,28 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
     columns: getSessionColumnOptions(hasSearchQuery),
   })
   const hasActiveFilters = Object.keys(filters).length > 0
+  const hasSelectedSavedSearch = savedSearchSlug.length > 0
   const timeFrom = getTimeFilterValue(filters, "gte")
   const timeTo = getTimeFilterValue(filters, "lte")
+  const sessionsMonitorTarget = useMemo<MonitorTarget>(
+    () => ({
+      kind: "session",
+      stream: "sessions",
+      filterSet: filters,
+      query: query || null,
+      savedSearchId: loadedSavedSearch?.id ?? null,
+      metric: { kind: "count" },
+    }),
+    [filters, loadedSavedSearch?.id, query],
+  )
+  const savedSearchMonitors = useMemo(
+    () =>
+      projectMonitors.filter(
+        (monitor) =>
+          monitor.target?.savedSearchId || monitor.alerts.some((alert) => alert.source?.type === "savedSearch"),
+      ),
+    [projectMonitors],
+  )
   const sorting: InfiniteTableSorting = {
     column: sortBy || defaultSorting.column,
     direction: sortDirection || defaultSorting.direction,
@@ -457,6 +492,25 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
                 setRawFilters(serializeFilters(next) ?? "")
               }}
             />
+            {isSessions ? (
+              <ColumnsSelector
+                columns={sessionColumnSettings.columns}
+                selectedColumnIds={sessionColumnSettings.visibleColumnIds}
+                onChange={(nextColumnIds) =>
+                  sessionColumnSettings.setVisibleColumnIds(nextColumnIds as SessionColumnId[])
+                }
+                onOrderChange={(nextColumnIds) =>
+                  sessionColumnSettings.setColumnIds(nextColumnIds as SessionColumnId[])
+                }
+              />
+            ) : (
+              <ColumnsSelector
+                columns={traceColumnSettings.columns}
+                selectedColumnIds={traceColumnSettings.visibleColumnIds}
+                onChange={(nextColumnIds) => traceColumnSettings.setVisibleColumnIds(nextColumnIds as TraceColumnId[])}
+                onOrderChange={(nextColumnIds) => traceColumnSettings.setColumnIds(nextColumnIds as TraceColumnId[])}
+              />
+            )}
             <Tooltip
               asChild
               trigger={
@@ -478,7 +532,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
             >
               Toggle filters <HotkeyBadge hotkey="F" />
             </Tooltip>
-            {(hasActiveFilters || hasSearchQuery) && (
+            {(hasActiveFilters || hasSearchQuery || hasSelectedSavedSearch) && (
               <Button variant="ghost" size="sm" onClick={clearAll}>
                 <Icon icon={XIcon} size="sm" />
                 Clear all
@@ -487,24 +541,34 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
           </Layout.ActionRowItem>
           <Layout.ActionRowItem>
             {isSessions ? (
-              <ColumnsSelector
-                columns={sessionColumnSettings.columns}
-                selectedColumnIds={sessionColumnSettings.visibleColumnIds}
-                onChange={(nextColumnIds) =>
-                  sessionColumnSettings.setVisibleColumnIds(nextColumnIds as SessionColumnId[])
-                }
-                onOrderChange={(nextColumnIds) =>
-                  sessionColumnSettings.setColumnIds(nextColumnIds as SessionColumnId[])
-                }
-              />
-            ) : (
-              <ColumnsSelector
-                columns={traceColumnSettings.columns}
-                selectedColumnIds={traceColumnSettings.visibleColumnIds}
-                onChange={(nextColumnIds) => traceColumnSettings.setVisibleColumnIds(nextColumnIds as TraceColumnId[])}
-                onOrderChange={(nextColumnIds) => traceColumnSettings.setColumnIds(nextColumnIds as TraceColumnId[])}
-              />
-            )}
+              hasSemanticSearchQuery ? (
+                <Tooltip
+                  asChild
+                  trigger={
+                    <span className="inline-flex">
+                      <Button variant="outline" size="sm" className="h-8 w-auto" disabled>
+                        <Icon icon={BellPlusIcon} size="sm" />
+                        Monitor sessions
+                      </Button>
+                    </span>
+                  }
+                >
+                  Semantic searches can’t be monitored. Use exact text or filters to create a sessions monitor.
+                </Tooltip>
+              ) : (
+                <TargetMonitorsMenu
+                  projectId={currentProject.id}
+                  projectSlug={projectSlug}
+                  stream="sessions"
+                  filterSetContains={{}}
+                  createTarget={sessionsMonitorTarget}
+                  label="Monitor sessions"
+                  matchMode="exact"
+                  fallbackToAllMatches
+                  additionalMonitors={savedSearchMonitors}
+                />
+              )
+            ) : null}
             <Tabs
               variant="bordered"
               size="sm"
@@ -534,7 +598,6 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
             <div className="group/searchbar flex h-10 min-w-0 flex-1 items-center overflow-hidden rounded-lg border border-input transition-colors focus-within:ring-1 focus-within:ring-ring">
               <SavedSearchSelector
                 projectId={currentProject.id}
-                projectSlug={projectSlug}
                 selectedSlug={savedSearchSlug}
                 onSelect={applySavedSearch}
                 onSelectedSlugChange={setSavedSearchSlug}

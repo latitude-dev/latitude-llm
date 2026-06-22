@@ -332,7 +332,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         projectId: input.projectId,
         sourceType: "evaluation",
         sourceId: evaluation.id,
-        sessionId: traceDetail.sessionId ?? null,
+        sessionId: traceDetail.sessionId || null,
         traceId: traceDetail.traceId,
         spanId: traceDetail.rootSpanId || null,
         simulationId: traceDetail.simulationId || null,
@@ -390,7 +390,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         evaluationId: evaluation.id,
         signalId: evaluation.signalId,
         traceId: traceDetail.traceId,
-        sessionId: traceDetail.sessionId ?? null,
+        sessionId: score.sessionId,
         scoreId: score.id,
       },
       context: {

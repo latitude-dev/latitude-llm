@@ -239,6 +239,7 @@ export interface ScoreAnalyticsTimeRange {
 export interface SignalWindowMetric {
   readonly signalId: SignalId
   readonly occurrences: number
+  readonly affectedSessions: number
   readonly firstSeenAt: Date
   readonly lastSeenAt: Date
 }
@@ -274,6 +275,20 @@ export interface SignalTraceSummary {
 /** Paginated distinct traces for an issue. */
 export interface SignalTracePage {
   readonly items: readonly SignalTraceSummary[]
+  readonly hasMore: boolean
+  readonly limit: number
+  readonly offset: number
+}
+
+/** Distinct session scoped to one issue, ordered by last seen timestamp. */
+export interface SignalSessionSummary {
+  readonly sessionId: SessionId
+  readonly lastSeenAt: Date
+}
+
+/** Paginated distinct sessions for an issue. */
+export interface SignalSessionPage {
+  readonly items: readonly SignalSessionSummary[]
   readonly hasMore: boolean
   readonly limit: number
   readonly offset: number
@@ -517,6 +532,20 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly options?: ScoreAnalyticsOptions
   }): Effect.Effect<SignalTracePage, RepositoryError, ChSqlClient>
   countTracesBySignal(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly signalId: SignalId
+    readonly options?: ScoreAnalyticsOptions
+  }): Effect.Effect<number, RepositoryError, ChSqlClient>
+  listSessionsBySignal(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly signalId: SignalId
+    readonly limit?: number
+    readonly offset?: number
+    readonly options?: ScoreAnalyticsOptions
+  }): Effect.Effect<SignalSessionPage, RepositoryError, ChSqlClient>
+  countSessionsBySignal(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly signalId: SignalId

@@ -70,6 +70,12 @@ export interface SessionRepositoryShape {
     readonly sessionId: SessionId
   }): Effect.Effect<SessionDetail, NotFoundError | RepositoryError, ChSqlClient>
 
+  listBySessionIds(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly sessionIds: readonly SessionId[]
+  }): Effect.Effect<readonly Session[], RepositoryError, ChSqlClient>
+
   distinctFilterValues(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
@@ -93,7 +99,14 @@ export interface SessionRepositoryShape {
   }): Effect.Effect<TraceDistribution, RepositoryError, ChSqlClient>
 }
 
-export type SessionDistinctColumn = "tags" | "models" | "providers" | "serviceNames" | "tools" | "definedTools"
+export type SessionDistinctColumn =
+  | "userId"
+  | "tags"
+  | "models"
+  | "providers"
+  | "serviceNames"
+  | "tools"
+  | "definedTools"
 
 export interface SessionListCursor {
   readonly sortValue: string

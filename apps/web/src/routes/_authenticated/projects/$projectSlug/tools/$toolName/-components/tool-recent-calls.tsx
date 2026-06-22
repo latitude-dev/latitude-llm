@@ -1,11 +1,11 @@
+import type { FilterSet } from "@domain/shared"
 import { CopyableText, InfiniteTable, type InfiniteTableColumn, Sheet, Status, Text } from "@repo/ui"
 import { formatDuration, relativeTime } from "@repo/utils"
-import { type ReactNode, useState } from "react"
-import { type ToolsTimeRange, useRecentToolCalls } from "../../../../../../../domains/tools/tools.collection.ts"
-import type { RecentToolCallRecord } from "../../../../../../../domains/tools/tools.functions.ts"
-import { TraceDetailDrawer } from "../../../-components/trace-detail-drawer.tsx"
-
-const STATUS_VARIANT = { ok: "success", error: "destructive", unset: "neutral" } as const
+import { type ReactNode, useMemo, useState } from "react"
+import { useSessionsInfiniteScroll } from "../../../../../../../domains/sessions/sessions.collection.ts"
+import type { SessionRecord } from "../../../../../../../domains/sessions/sessions.functions.ts"
+import type { ToolsTimeRange } from "../../../../../../../domains/tools/tools.collection.ts"
+import { SessionDetailDrawer } from "../../../-components/session-detail-drawer.tsx"
 
 export function ToolRecentCalls({
   projectId,
@@ -22,26 +22,45 @@ export function ToolRecentCalls({
   readonly onOverlayActiveChange?: (active: boolean) => void
   readonly headerAction?: ReactNode
 }) {
-  const [openCall, setOpenCall] = useState<{ traceId: string; spanId: string } | null>(null)
-  const { data: calls, isLoading, infiniteScroll } = useRecentToolCalls({ projectId, toolName, range, errorsOnly })
+  const [openSessionId, setOpenSessionId] = useState<string | null>(null)
+  const filters = useMemo<FilterSet>(
+    () => ({
+      tools: [{ op: "in", value: [toolName] }],
+      startTime: [
+        { op: "gte", value: range.fromIso },
+        { op: "lte", value: range.toIso },
+      ],
+      ...(errorsOnly ? { status: [{ op: "in", value: ["error"] }] } : {}),
+    }),
+    [errorsOnly, range.fromIso, range.toIso, toolName],
+  )
+  const {
+    data: sessions,
+    isLoading,
+    infiniteScroll,
+  } = useSessionsInfiniteScroll({
+    projectId,
+    sorting: { column: "startTime", direction: "desc" },
+    filters,
+  })
 
-  const openTrace = (call: { traceId: string; spanId: string }) => {
-    setOpenCall(call)
+  const openSession = (sessionId: string) => {
+    setOpenSessionId(sessionId)
     onOverlayActiveChange?.(true)
   }
-  const closeTrace = () => {
-    setOpenCall(null)
+  const closeSession = () => {
+    setOpenSessionId(null)
     onOverlayActiveChange?.(false)
   }
 
-  const columns: InfiniteTableColumn<RecentToolCallRecord>[] = [
+  const columns: InfiniteTableColumn<SessionRecord>[] = [
     {
       key: "time",
       header: "Time",
       width: 110,
       minWidth: 100,
-      render: (call) => (
-        <span title={new Date(call.startTime).toLocaleString()}>{relativeTime(new Date(call.startTime))}</span>
+      render: (session) => (
+        <span title={new Date(session.startTime).toLocaleString()}>{relativeTime(new Date(session.startTime))}</span>
       ),
     },
     {
@@ -49,12 +68,12 @@ export function ToolRecentCalls({
       header: "Status",
       width: 90,
       minWidth: 80,
-      render: (call) => (
-        <Status
-          variant={STATUS_VARIANT[call.statusCode]}
-          label={call.statusCode === "error" ? call.errorType || "error" : call.statusCode}
-        />
-      ),
+      render: (session) =>
+        session.errorCount > 0 ? (
+          <Status variant="destructive" label="error" />
+        ) : (
+          <Status variant="success" label="ok" />
+        ),
     },
     {
       key: "duration",
@@ -62,83 +81,60 @@ export function ToolRecentCalls({
       width: 90,
       minWidth: 80,
       align: "end",
-      render: (call) => <span className="tabular-nums">{formatDuration(call.durationNs)}</span>,
+      render: (session) => <span className="tabular-nums">{formatDuration(session.durationNs)}</span>,
     },
     {
-      key: "input",
-      header: "Input",
+      key: "name",
+      header: "Session",
       width: 360,
       minWidth: 200,
-      render: (call) => (
-        <span className="block min-w-0 truncate font-mono text-xs text-muted-foreground" title={call.toolInput}>
-          {call.toolInput || "-"}
-        </span>
+      render: (session) => (
+        <Text.H5 noWrap ellipsis>
+          {session.rootSpanName || session.sessionId}
+        </Text.H5>
       ),
     },
     {
-      key: "output",
-      header: "Output",
-      width: 280,
-      minWidth: 160,
-      render: (call) =>
-        call.statusCode === "error" && call.statusMessage ? (
-          <span className="block min-w-0 truncate text-xs text-rose-600 dark:text-rose-400" title={call.statusMessage}>
-            {call.statusMessage}
-          </span>
-        ) : (
-          <span className="block min-w-0 truncate font-mono text-xs text-muted-foreground" title={call.toolOutput}>
-            {call.toolOutput || "-"}
-          </span>
-        ),
-    },
-    {
-      key: "trace",
-      header: "Trace",
-      width: 140,
+      key: "session",
+      header: "Session ID",
+      width: 160,
       minWidth: 120,
-      render: (call) => (
-        // Contain clicks/keys so copying the id doesn't open the sheet.
+      render: (session) => (
         // biome-ignore lint/a11y/noStaticElementInteractions: click containment only
         <div onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
-          <CopyableText value={call.traceId} size="sm" ellipsis tooltip="Copy trace id" />
+          <CopyableText value={session.sessionId} size="sm" ellipsis tooltip="Copy session id" />
         </div>
       ),
     },
   ]
 
   return (
-    // Plain background: the table rows are themselves bg-secondary.
     <div className="flex min-w-0 flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <Text.H5M color="foreground">{errorsOnly ? "Recent failed calls" : "Recent calls"}</Text.H5M>
+        <Text.H5M color="foreground">{errorsOnly ? "Recent failed sessions" : "Recent sessions"}</Text.H5M>
         {headerAction}
       </div>
       <InfiniteTable
-        data={calls}
+        data={sessions}
         isLoading={isLoading}
         columns={columns}
-        getRowKey={(call) => call.spanId}
-        onRowClick={(call) => openTrace({ traceId: call.traceId, spanId: call.spanId })}
-        getRowAriaLabel={(call) => `Open trace of call ${call.toolCallId || call.spanId}`}
+        getRowKey={(session) => session.sessionId}
+        onRowClick={(session) => openSession(session.sessionId)}
+        getRowAriaLabel={(session) => `Open session ${session.sessionId}`}
         infiniteScroll={infiniteScroll}
         scrollAreaLayout="intrinsic"
         className="max-h-[420px]"
-        blankSlate={errorsOnly ? "No failed calls in this time window" : "No calls in this time window"}
+        blankSlate={errorsOnly ? "No failed sessions in this time window" : "No sessions in this time window"}
       />
-      <Sheet open={openCall !== null} onClose={closeTrace} closeAriaLabel="Close trace panel">
-        {openCall ? (
-          <TraceDetailDrawer
-            key={`${openCall.traceId}-${openCall.spanId}`}
+      <Sheet open={openSessionId !== null} onClose={closeSession} closeAriaLabel="Close session panel">
+        {openSessionId ? (
+          <SessionDetailDrawer
+            key={openSessionId}
             projectId={projectId}
-            traceId={openCall.traceId}
-            onClose={closeTrace}
-            canNavigateNext={false}
-            canNavigatePrev={false}
-            urlSyncedTabs={false}
-            initialTab="spans"
-            initialSpanId={openCall.spanId}
-            drawerStoreKey="tool-trace-detail-drawer-width"
-            closeLabel="Back to tool"
+            sessionId={openSessionId}
+            onClose={closeSession}
+            filters={filters}
+            defaultTab="session"
           />
         ) : null}
       </Sheet>

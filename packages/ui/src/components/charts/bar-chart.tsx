@@ -9,6 +9,7 @@ import { cn } from "../../utils/cn.ts"
 import {
   type BarChartOverlay,
   type BarChartOverlayArea,
+  type BarChartOverlayHorizontalLine,
   type BarChartOverlayLine,
   buildBarChartOption,
 } from "./bar-chart-option.ts"
@@ -16,7 +17,7 @@ import { chartThemeFallback } from "./chart-css-theme.ts"
 import { echarts } from "./register-echarts.ts"
 import { useChartCssTheme } from "./use-chart-css-theme.ts"
 
-export type { BarChartOverlay, BarChartOverlayArea, BarChartOverlayLine }
+export type { BarChartOverlay, BarChartOverlayArea, BarChartOverlayHorizontalLine, BarChartOverlayLine }
 
 export type BarChartDataPoint = {
   readonly category: string

@@ -39,12 +39,31 @@ const normalizeFilterSet = (filterSet: MonitorTarget["filterSet"]): FilterSet =>
 
 function sameTargetScope(a: MonitorRecord["target"], b: MonitorTarget): boolean {
   if (!a) return false
+  if (a.stream !== b.stream) return false
+  if (a.savedSearchId || b.savedSearchId) return (a.savedSearchId ?? null) === (b.savedSearchId ?? null)
   return (
-    a.stream === b.stream &&
     stableStringify(normalizeFilterSet(a.filterSet)) === stableStringify(normalizeFilterSet(b.filterSet)) &&
-    (a.query ?? null) === (b.query ?? null) &&
-    (a.savedSearchId ?? null) === (b.savedSearchId ?? null)
+    (a.query ?? null) === (b.query ?? null)
   )
+}
+
+function sameMonitorScope(monitor: MonitorRecord, target: MonitorTarget): boolean {
+  if (target.savedSearchId) {
+    return (
+      monitor.target?.savedSearchId === target.savedSearchId ||
+      monitor.alerts.some((alert) => alert.source?.type === "savedSearch" && alert.source.id === target.savedSearchId)
+    )
+  }
+  return sameTargetScope(monitor.target, target)
+}
+
+function dedupeMonitors(monitors: readonly MonitorRecord[]): readonly MonitorRecord[] {
+  const seen = new Set<string>()
+  return monitors.filter((monitor) => {
+    if (seen.has(monitor.id)) return false
+    seen.add(monitor.id)
+    return true
+  })
 }
 
 function ActivityDot({ live }: { readonly live: boolean }) {
@@ -65,6 +84,8 @@ export function TargetMonitorsMenu({
   createTarget,
   label = "Add monitor",
   matchMode = "contains",
+  fallbackToAllMatches = false,
+  additionalMonitors = [],
 }: {
   readonly projectId: string
   readonly projectSlug: string
@@ -73,14 +94,20 @@ export function TargetMonitorsMenu({
   readonly createTarget: MonitorTarget
   readonly label?: string
   readonly matchMode?: "contains" | "exact"
+  readonly fallbackToAllMatches?: boolean
+  readonly additionalMonitors?: readonly MonitorRecord[]
 }) {
   const navigate = useNavigate()
   const [createOpen, setCreateOpen] = useState(false)
   const { monitors: fetchedMonitors } = useMonitorsForTarget({ projectId, stream, filterSetContains })
-  const monitors =
+  const exactMonitors =
     matchMode === "exact"
-      ? fetchedMonitors.filter((monitor) => sameTargetScope(monitor.target, createTarget))
+      ? fetchedMonitors.filter((monitor) => sameMonitorScope(monitor, createTarget))
       : fetchedMonitors
+  const monitors = dedupeMonitors([
+    ...(exactMonitors.length > 0 || !fallbackToAllMatches ? exactMonitors : fetchedMonitors),
+    ...additionalMonitors,
+  ])
 
   const targetDescription = describeMonitorTarget(createTarget)
   const createModal = createOpen ? (
@@ -111,7 +138,7 @@ export function TargetMonitorsMenu({
   if (monitors.length === 0) {
     return (
       <>
-        <Button variant="outline" size="sm" className="w-auto" onClick={() => setCreateOpen(true)}>
+        <Button variant="outline" size="sm" className="h-8 w-auto" onClick={() => setCreateOpen(true)}>
           <Icon icon={BellPlusIcon} size="sm" />
           {label}
         </Button>
@@ -120,16 +147,18 @@ export function TargetMonitorsMenu({
     )
   }
 
-  const lead = monitors.find((monitor) => monitor.mutedAt === null) ?? monitors[0]
+  const lead =
+    monitors.find((monitor) => sameMonitorScope(monitor, createTarget) && monitor.mutedAt === null) ??
+    monitors.find((monitor) => sameMonitorScope(monitor, createTarget))
 
   return (
     <>
       <DropdownMenuRoot modal={false}>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="w-auto max-w-56">
-            <ActivityDot live={lead?.mutedAt === null} />
+          <Button variant="outline" size="sm" className="h-8 w-auto max-w-56">
+            {lead ? <ActivityDot live={lead.mutedAt === null} /> : <Icon icon={BellPlusIcon} size="sm" />}
             <Text.H5 ellipsis noWrap>
-              {lead?.name}
+              {lead?.name ?? label}
             </Text.H5>
             <Icon icon={ChevronDownIcon} size="sm" color="foregroundMuted" />
           </Button>
@@ -140,12 +169,12 @@ export function TargetMonitorsMenu({
               <DropdownMenuItem
                 key={monitor.slug}
                 className="cursor-pointer items-center gap-2"
-                onSelect={() =>
+                onSelect={() => {
                   void navigate({
                     to: "/projects/$projectSlug/monitors/$monitorSlug",
                     params: { projectSlug, monitorSlug: monitor.slug },
                   })
-                }
+                }}
               >
                 <ActivityDot live={monitor.mutedAt === null} />
                 <Text.H5 ellipsis noWrap className="min-w-0 flex-1">
