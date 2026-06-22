@@ -1,20 +1,7 @@
 import type { FilterSet } from "@domain/shared"
-import {
-  Button,
-  CloseTrigger,
-  cn,
-  FormWrapper,
-  Icon,
-  Input,
-  Modal,
-  Popover,
-  PopoverTrigger,
-  Switch,
-  Text,
-  useToast,
-} from "@repo/ui"
+import { Button, CloseTrigger, FormWrapper, Icon, Input, Modal, Switch, Text, Tooltip, useToast } from "@repo/ui"
 import { useForm } from "@tanstack/react-form"
-import { BellRingIcon, CircleHelpIcon } from "lucide-react"
+import { BellRingIcon } from "lucide-react"
 import { useState } from "react"
 import {
   useCreateSavedSearch,
@@ -31,7 +18,7 @@ import {
   draftToCondition,
   targetAlertDraft,
 } from "../monitors/-components/alert-form-helpers.ts"
-import { SemanticMonitorPopoverContent, searchHasSemanticPart } from "./semantic-monitor-notice.tsx"
+import { searchHasSemanticPart } from "./semantic-monitor-notice.tsx"
 
 interface BaseProps {
   readonly open: boolean
@@ -62,14 +49,6 @@ export function SaveSearchModal(props: SaveSearchModalProps) {
 
 const MONITOR_ERROR_PREFIX = "monitor."
 
-const pendingSavedSearchTarget = () => ({
-  stream: "traces" as const,
-  filterSet: null,
-  query: null,
-  savedSearchId: "pending",
-  metric: { kind: "count" as const },
-})
-
 function monitorAlertErrorsFrom(error: unknown): AlertFieldErrors {
   const fieldErrors = extractFieldErrors(error)
   if (!fieldErrors) return {}
@@ -84,7 +63,15 @@ function CreateModal({ open, onClose, projectId, projectSlug, query, filterSet, 
   const { toast } = useToast()
   const createMutation = useCreateSavedSearch(projectId)
   const [withMonitor, setWithMonitor] = useState(false)
-  const [alertDraft, setAlertDraft] = useState<AlertDraft>(() => targetAlertDraft(pendingSavedSearchTarget()))
+  const [alertDraft, setAlertDraft] = useState<AlertDraft>(() =>
+    targetAlertDraft({
+      stream: "sessions",
+      filterSet,
+      query,
+      savedSearchId: "pending",
+      metric: { kind: "count" },
+    }),
+  )
   const [alertErrors, setAlertErrors] = useState<AlertFieldErrors>({})
 
   // Searches with a semantic part have no exact match rule for a monitor to count against.
@@ -176,70 +163,73 @@ function CreateModal({ open, onClose, projectId, projectSlug, query, filterSet, 
           </form.Field>
           <div className="flex flex-col gap-1.5">
             {semanticQuery ? (
-              <div className="flex items-center gap-1.5">
-                <Text.H6 color="foregroundMuted">This search can&apos;t have a monitor</Text.H6>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      aria-label="Why can't this search have a monitor?"
-                      className="flex shrink-0 cursor-pointer items-center"
-                    >
-                      <Icon icon={CircleHelpIcon} size="sm" color="foregroundMuted" />
-                    </button>
-                  </PopoverTrigger>
-                  <SemanticMonitorPopoverContent />
-                </Popover>
-              </div>
-            ) : null}
-            <div className={cn("flex flex-col rounded-lg border border-border", { "opacity-60": semanticQuery })}>
-              <label
-                htmlFor="save-search-monitor-toggle"
-                className={cn("flex items-center justify-between gap-3 p-3", {
-                  "cursor-default": semanticQuery,
-                  "cursor-pointer": !semanticQuery,
-                })}
-              >
-                <div className="flex items-start gap-2">
-                  <Icon icon={BellRingIcon} size="sm" color="foregroundMuted" className="mt-0.5 shrink-0" />
-                  <div className="flex flex-col gap-0.5">
-                    <Text.H5M>Monitor this search</Text.H5M>
-                    <Text.H6 color="foregroundMuted">
-                      Open incidents when this search matches or its metrics change
-                    </Text.H6>
+              <Tooltip
+                asChild
+                trigger={
+                  <div className="flex flex-col rounded-lg border border-border opacity-60">
+                    <div className="flex items-center justify-between gap-3 p-3">
+                      <div className="flex items-start gap-2">
+                        <Icon icon={BellRingIcon} size="sm" color="foregroundMuted" className="mt-0.5 shrink-0" />
+                        <div className="flex flex-col gap-0.5">
+                          <Text.H5M>Monitor this search</Text.H5M>
+                          <Text.H6 color="foregroundMuted">
+                            Open incidents when this search matches or its metrics change
+                          </Text.H6>
+                        </div>
+                      </div>
+                      <Switch id="save-search-monitor-toggle" disabled checked={false} />
+                    </div>
                   </div>
-                </div>
-                <Switch
-                  id="save-search-monitor-toggle"
-                  disabled={semanticQuery}
-                  checked={withMonitor && !semanticQuery}
-                  onCheckedChange={(checked) => {
-                    setWithMonitor(checked)
-                    if (!checked) setAlertErrors({})
-                  }}
-                />
-              </label>
-              {createMonitor ? (
-                <div className="border-t border-border p-3">
-                  <form.Subscribe selector={(state) => state.values.name}>
-                    {(name) => (
-                      <AlertCardForm
-                        value={alertDraft}
-                        onChange={(next) => {
-                          setAlertDraft(next)
-                          setAlertErrors({})
-                        }}
-                        projectId={projectId}
-                        projectSlug={projectSlug}
-                        showSourcePicker={false}
-                        {...(name.trim() ? { sourceName: name.trim() } : {})}
-                        errors={alertErrors}
-                      />
-                    )}
-                  </form.Subscribe>
-                </div>
-              ) : null}
-            </div>
+                }
+              >
+                Semantic searches can’t be monitored. Use exact text or filters to create a sessions monitor.
+              </Tooltip>
+            ) : (
+              <div className="flex flex-col rounded-lg border border-border">
+                <label
+                  htmlFor="save-search-monitor-toggle"
+                  className="flex cursor-pointer items-center justify-between gap-3 p-3"
+                >
+                  <div className="flex items-start gap-2">
+                    <Icon icon={BellRingIcon} size="sm" color="foregroundMuted" className="mt-0.5 shrink-0" />
+                    <div className="flex flex-col gap-0.5">
+                      <Text.H5M>Monitor this search</Text.H5M>
+                      <Text.H6 color="foregroundMuted">
+                        Open incidents when this search matches or its metrics change
+                      </Text.H6>
+                    </div>
+                  </div>
+                  <Switch
+                    id="save-search-monitor-toggle"
+                    checked={withMonitor}
+                    onCheckedChange={(checked) => {
+                      setWithMonitor(checked)
+                      if (!checked) setAlertErrors({})
+                    }}
+                  />
+                </label>
+                {createMonitor ? (
+                  <div className="border-t border-border p-3">
+                    <form.Subscribe selector={(state) => state.values.name}>
+                      {(name) => (
+                        <AlertCardForm
+                          value={alertDraft}
+                          onChange={(next) => {
+                            setAlertDraft(next)
+                            setAlertErrors({})
+                          }}
+                          projectId={projectId}
+                          projectSlug={projectSlug}
+                          showSourcePicker={false}
+                          {...(name.trim() ? { sourceName: name.trim() } : {})}
+                          errors={alertErrors}
+                        />
+                      )}
+                    </form.Subscribe>
+                  </div>
+                ) : null}
+              </div>
+            )}
           </div>
         </FormWrapper>
       </form>

@@ -14,25 +14,6 @@ const OPTIONS: readonly TabOption<AlertSeverity>[] = ALERT_SEVERITIES.map((sever
   icon: severityDot(severity),
 }))
 
-/**
- * Compact dot cluster — one canonical-palette dot per alert severity, capped
- * with a `+N` overflow. Used as the "monitored" signal (e.g. the traces-page
- * saved-search chip).
- */
-export function SeverityDots({ severities, max = 4 }: { readonly severities: readonly AlertSeverity[]; max?: number }) {
-  const shown = severities.slice(0, max)
-  const overflow = severities.length - shown.length
-  return (
-    <span className="flex items-center gap-1">
-      {shown.map((severity, index) => (
-        // Dots are positional + presentational; severities can repeat, so the index is the identity.
-        <DotIndicator key={index} size="md" style={{ background: SEVERITY_COLOR[severity] }} />
-      ))}
-      {overflow > 0 ? <span className="text-muted-foreground text-xs">+{overflow}</span> : null}
-    </span>
-  )
-}
-
 // Nearest Status tint per severity — the dot itself carries the exact canonical color.
 const SEVERITY_STATUS_VARIANT: Record<AlertSeverity, StatusProps["variant"]> = {
   low: "info",

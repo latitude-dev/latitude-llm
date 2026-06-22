@@ -20,7 +20,6 @@ import {
   listMonitorIncidents,
   listMonitors,
   listMonitorsForTarget,
-  listSavedSearchMonitorSummaries,
   type MonitorIncidentRecord,
   type MonitorIncidentsCursor,
   type MonitorListRowRecord,
@@ -28,7 +27,6 @@ import {
   type MonitorSearchRecord,
   muteMonitor,
   resolveMonitorIncident,
-  type SavedSearchMonitorSummaryRecord,
   searchMonitorsOrgWide,
   unmuteMonitor,
   updateMonitor,
@@ -209,23 +207,6 @@ export function useMonitor(input: { readonly projectId: string; readonly slug: s
     staleTime: MONITORS_QUERY_STALE_TIME_MS,
     enabled: (input.enabled ?? true) && Boolean(input.slug),
   })
-}
-
-const EMPTY_SAVED_SEARCH_MONITOR_SUMMARIES: Record<string, SavedSearchMonitorSummaryRecord> = {}
-
-/**
- * Batched `savedSearchId -> { monitorSlug, monitorCount, severities }` map (earliest-created
- * live, unmuted monitor per saved search) backing the saved-search dropdown rows and the
- * monitored-state chip on the traces page. One call per project.
- */
-export function useSavedSearchMonitorSummaries(projectId: string, { enabled = true }: { enabled?: boolean } = {}) {
-  const { data } = useQuery({
-    queryKey: ["monitors", "savedSearchSummaries", projectId] as const,
-    queryFn: () => listSavedSearchMonitorSummaries({ data: { projectId } }),
-    staleTime: MONITORS_QUERY_STALE_TIME_MS,
-    enabled: enabled && projectId.length > 0,
-  })
-  return data ?? EMPTY_SAVED_SEARCH_MONITOR_SUMMARIES
 }
 
 /** @public Consumed by the M4 details panel incidents table; not yet wired in M2. */

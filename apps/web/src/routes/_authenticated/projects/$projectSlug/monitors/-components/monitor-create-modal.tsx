@@ -110,9 +110,15 @@ export function MonitorCreateModal({
   const { data: savedSearches, isLoading: savedSearchesLoading } = useSavedSearchesList(projectId)
   const { data: users, isLoading: usersLoading } = useProjectUsers({ projectId, limit: 50 })
 
+  const sourceLocked = Boolean(initialAlert?.target)
   const targetName = alert.target ? monitorTargetName(alert.target) : null
-  const modalDescription = targetName
-    ? `This monitor watches ${targetName} and opens an incident when its condition is met.`
+  const modalTargetName =
+    alert.target?.stream === "sessions" &&
+    (Object.keys(alert.target.filterSet ?? {}).length > 0 || alert.target.query || alert.target.savedSearchId)
+      ? "matching sessions"
+      : targetName
+  const modalDescription = modalTargetName
+    ? `This monitor watches ${modalTargetName} and opens an incident when its condition is met.`
     : "Monitors watch your saved searches and open incidents when their conditions are met."
 
   const onAlertChange = (next: AlertDraft) => {
@@ -233,17 +239,19 @@ export function MonitorCreateModal({
           onChange={(event) => setDescription(event.target.value)}
           minRows={2}
         />
-        <div className="flex flex-col gap-1.5">
-          <Text.H5M>Source</Text.H5M>
-          <Select<MonitorSource>
-            name="monitor-source"
-            width="auto"
-            options={SOURCE_OPTIONS}
-            value={source}
-            onChange={onSourceChange}
-          />
-        </div>
-        {source === "savedSearch" ? (
+        {!sourceLocked ? (
+          <div className="flex flex-col gap-1.5">
+            <Text.H5M>Source</Text.H5M>
+            <Select<MonitorSource>
+              name="monitor-source"
+              width="auto"
+              options={SOURCE_OPTIONS}
+              value={source}
+              onChange={onSourceChange}
+            />
+          </div>
+        ) : null}
+        {!sourceLocked && source === "savedSearch" ? (
           <div className="flex flex-col gap-1.5">
             <Text.H5M>Saved search</Text.H5M>
             <Select<string>
@@ -261,7 +269,7 @@ export function MonitorCreateModal({
             {sourceError ? <Text.H6 color="destructive">{sourceError}</Text.H6> : null}
           </div>
         ) : null}
-        {source === "tools" ? (
+        {!sourceLocked && source === "tools" ? (
           <div className="flex flex-col gap-1.5">
             <Text.H5M>Tool</Text.H5M>
             <Select<string>
@@ -279,7 +287,7 @@ export function MonitorCreateModal({
             />
           </div>
         ) : null}
-        {source === "users" ? (
+        {!sourceLocked && source === "users" ? (
           <div className="flex flex-col gap-1.5">
             <Text.H5M>User</Text.H5M>
             <Select<string>

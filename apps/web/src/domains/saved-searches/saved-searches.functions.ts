@@ -148,10 +148,8 @@ export const getSavedSearchBySlugFn = createServerFn({ method: "GET" })
 const MONITOR_NAME_MAX_LENGTH = 128
 
 /**
- * Optional companion monitor created alongside a new saved search (the "Monitor
- * this search" section of the save-search modal). Mirrors the monitors-page
- * alert fields minus `source` — the source is the search being created, so
- * only the server can wire it up.
+ * Optional companion monitor created alongside a new saved search. It stores the
+ * saved-search id on the monitor target so edits keep flowing into the metric monitor.
  */
 const savedSearchMonitorSchema = z.object({
   kind: alertIncidentKindSchema,
@@ -216,9 +214,9 @@ export const createSavedSearchFn = createServerFn({ method: "POST" })
                   ...(unified
                     ? {
                         target: {
-                          stream: "traces",
-                          filterSet: null,
-                          query: null,
+                          stream: "sessions",
+                          filterSet: search.filterSet,
+                          query: search.query,
                           savedSearchId: search.id,
                           metric: monitorInput.metric ?? { kind: "count" },
                         },
