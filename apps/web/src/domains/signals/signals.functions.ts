@@ -179,6 +179,17 @@ const signalImpactInputSchema = z.object({
   signalId: z.string(),
 })
 
+export interface SignalImpactRecord {
+  readonly occurrences: number
+  readonly affectedTraces: number
+  readonly affectedSessions: number
+  readonly affectedUsers: number
+  readonly costMicrocents: number
+  readonly tokens: number
+  readonly totalProjectTraces: number
+  readonly affectedTracesPercent: number
+}
+
 const updateSignalTriageInputSchema = z.object({
   projectId: z.string(),
   signalId: z.string(),
