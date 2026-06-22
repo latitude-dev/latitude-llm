@@ -38,6 +38,7 @@ import {
 } from "@platform/db-clickhouse"
 import { SignalRepositoryLive, TaxonomyClusterRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
+import { cacheHitRate } from "@repo/utils"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
@@ -64,6 +65,11 @@ const serializeSession = (session: Session) => ({
   tokensCacheCreate: session.tokensCacheCreate,
   tokensReasoning: session.tokensReasoning,
   tokensTotal: session.tokensTotal,
+  cacheHitRate: cacheHitRate({
+    input: session.tokensInput,
+    cacheRead: session.tokensCacheRead,
+    cacheCreate: session.tokensCacheCreate,
+  }),
   costInputMicrocents: session.costInputMicrocents,
   costOutputMicrocents: session.costOutputMicrocents,
   costTotalMicrocents: session.costTotalMicrocents,

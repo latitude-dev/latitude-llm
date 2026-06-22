@@ -10,9 +10,11 @@ export {
 export { CryptoError, decrypt, encodeUtf8, encrypt, hash, toBuffer } from "./crypto.ts"
 export { extractLeadingEmoji } from "./extractLeadingEmoji.ts"
 export {
+  cacheHitRate,
   formatBytes,
   formatCount,
   formatDuration,
+  formatPercentage,
   formatPrice,
   isBlankCHString,
   normalizeCHString,

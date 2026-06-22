@@ -9,7 +9,7 @@ import {
   Text,
   Tooltip,
 } from "@repo/ui"
-import { formatCount, formatDuration, formatPrice, relativeTime } from "@repo/utils"
+import { formatCount, formatDuration, formatPercentage, formatPrice, relativeTime } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { useQueries } from "@tanstack/react-query"
 import { ChevronsDownUpIcon, ChevronsUpDownIcon } from "lucide-react"
@@ -54,6 +54,7 @@ export const SESSION_COLUMN_OPTIONS = [
   { id: "duration", label: "Duration" },
   { id: "ttft", label: "Time To First Token", defaultHidden: true },
   { id: "cost", label: "Cost" },
+  { id: "cacheHitRate", label: "Cache Hit Rate" },
   { id: "sessionId", label: "Session ID" },
   { id: "userId", label: "User ID" },
   { id: "models", label: "Models" },
@@ -428,6 +429,16 @@ export function SessionsView({
             isLoading={sessionMetricsLoading}
           />
         ),
+      },
+      {
+        key: "cacheHitRate",
+        header: "Cache Hit Rate",
+        align: "end",
+        width: 130,
+        render: (row) => {
+          const rate = field(row, "cacheHitRate")
+          return <span>{rate === null ? "-" : formatPercentage(rate)}</span>
+        },
       },
       {
         key: "sessionId",

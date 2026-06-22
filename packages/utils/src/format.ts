@@ -85,6 +85,41 @@ export function formatPrice(price: number): string {
   return `$${s}`
 }
 
+const percentageFormatter = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 1,
+  minimumFractionDigits: 0,
+  useGrouping: false,
+})
+
+/**
+ * Format a 0..1 ratio as a percentage string.
+ *
+ * Examples: `0.8` -> `"80%"`, `0.3333` -> `"33.3%"`, `1` -> `"100%"`, `0` -> `"0%"`
+ */
+export function formatPercentage(ratio: number): string {
+  return `${percentageFormatter.format(ratio * 100)}%`
+}
+
+/**
+ * Fraction of input tokens served from the provider's prompt cache:
+ * `cacheRead / (input + cacheRead + cacheCreate)`. Token counts are additive,
+ * so the denominator is the total input. Returns `null` when there are no
+ * input-side tokens — the rate is undefined, not 0, and should render as "—".
+ */
+export function cacheHitRate({
+  input,
+  cacheRead,
+  cacheCreate,
+}: {
+  input: number
+  cacheRead: number
+  cacheCreate: number
+}): number | null {
+  const totalInput = input + cacheRead + cacheCreate
+  if (totalInput <= 0) return null
+  return cacheRead / totalInput
+}
+
 const BYTE_UNITS = ["B", "KB", "MB", "GB", "TB"]
 
 /**
