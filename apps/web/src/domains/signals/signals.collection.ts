@@ -184,18 +184,6 @@ export function useSignals(input: {
       staleTime: ISSUES_QUERY_STALE_TIME_MS,
     })
 
-    if (result.hasMore) {
-      const nextOffset = result.offset + result.limit
-      void queryClient.prefetchQuery({
-        queryKey: getSignalsOffsetQueryKey(keyInput, nextOffset),
-        queryFn: () =>
-          listSignals({
-            data: buildListSignalsRequest(keyInput, nextOffset),
-          }),
-        staleTime: ISSUES_QUERY_STALE_TIME_MS,
-      })
-    }
-
     return result
   }
 

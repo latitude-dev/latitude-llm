@@ -402,7 +402,7 @@ describe("listSignalsUseCase", () => {
       {
         organizationId,
         projectId,
-        signalIds: [newestSignal.id, regressedSignal.id, ignoredSignal.id],
+        signalIds: [newestSignal.id, regressedSignal.id],
       },
     ])
     expect(listBySignalIdsCalls).toEqual([[newestSignal.id, regressedSignal.id]])
@@ -1237,6 +1237,57 @@ describe("listSignalsUseCase", () => {
       expect(result.hasMore).toBe(true)
       // Header counts cover the whole filtered set, not just the loaded page.
       expect(result.priorityCounts).toEqual({ urgent: 1, high: 1, medium: 1, low: 1, none: 1 })
+    })
+
+    it("skips full-list analytics on continuation pages while preserving row order", async () => {
+      const { repository: signalRepository } = createFakeSignalRepository(
+        mixedPrioritySeed.map((entry) => entry.issue),
+      )
+      const { repository: evaluationRepository } = createEvaluationRepository()
+      const aggregateInputs: Array<{ readonly signalIds: readonly string[] }> = []
+      let histogramCalls = 0
+      const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
+        listSignalWindowMetrics: () =>
+          Effect.succeed(
+            mixedPrioritySeed.map((entry) => makeWindowMetric({ signalId: SignalId(entry.issue.id) })),
+          ),
+        aggregateBySignals: (input) =>
+          Effect.sync(() => {
+            aggregateInputs.push({ signalIds: input.signalIds })
+            return input.signalIds.map((signalId) => makeOccurrence({ signalId: SignalId(signalId) }))
+          }),
+        histogramBySignals: () =>
+          Effect.sync(() => {
+            histogramCalls += 1
+            return []
+          }),
+      })
+
+      const result = await Effect.runPromise(
+        listSignalsUseCase({
+          organizationId,
+          projectId,
+          now,
+          limit: 2,
+          offset: 2,
+          includeAnalytics: false,
+        }).pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              Layer.succeed(SignalRepository, signalRepository),
+              Layer.succeed(EvaluationRepository, evaluationRepository),
+              Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+              Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+              Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+              provideSessionRepository,
+            ),
+          ),
+        ),
+      )
+
+      expect(result.items.map((item) => item.id)).toEqual([mediumSignal.id, lowSignal.id])
+      expect(aggregateInputs).toEqual([{ signalIds: [mediumSignal.id, lowSignal.id] }])
+      expect(histogramCalls).toBe(0)
     })
 
     const userA = "1".repeat(24)
