@@ -16,8 +16,8 @@ function SettingsLayout() {
   return (
     <div className="flex h-full min-w-0">
       <SettingsSubNav projectSlug={projectSlug} />
-      <main className="flex-1 min-w-0 overflow-y-auto">
-        <Container className="@container flex flex-col gap-8 px-6 pt-6">
+      <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
+        <Container className="@container flex flex-1 min-h-0 flex-col gap-8 px-6 pt-6 overflow-y-auto">
           <Outlet />
         </Container>
       </main>

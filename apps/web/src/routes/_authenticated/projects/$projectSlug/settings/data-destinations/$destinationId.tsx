@@ -54,7 +54,7 @@ function DestinationDetailPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-1 flex-col gap-4 min-h-0">
       <BackLink projectSlug={projectSlug} />
       <DestinationCard
         projectId={project.id}

@@ -116,7 +116,7 @@ export function DestinationRunsTable({ destinationId }: { readonly destinationId
       columns={columns}
       getRowKey={(run) => run.id}
       infiniteScroll={infiniteScroll}
-      scrollAreaLayout="intrinsic"
+      scrollAreaLayout="fill"
       blankSlate="No data syncronization runs yet."
     />
   )
