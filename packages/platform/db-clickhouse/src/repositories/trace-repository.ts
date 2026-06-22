@@ -28,6 +28,7 @@ import type {
   TraceDetail,
   TraceDistribution,
   TraceListPage,
+  TraceMetadataDetail,
   TraceMetrics,
   TraceTimeHistogramBucket,
 } from "@domain/spans"
@@ -93,6 +94,14 @@ const DETAIL_SELECT = `${LIST_SELECT},
   argMinIfMerge(system_instructions)   AS system_instructions
 `
 
+// Trace-panel detail: first input, last output, system instructions — but NOT
+// last_input_messages (huge in long traces; the full convo loads via chunks).
+const METADATA_DETAIL_SELECT = `${LIST_SELECT},
+  argMinIfMerge(input_messages)        AS input_messages,
+  argMaxIfMerge(output_messages)       AS output_messages,
+  argMinIfMerge(system_instructions)   AS system_instructions
+`
+
 type TraceListRow = {
   organization_id: string
   project_id: string
@@ -130,6 +139,12 @@ type TraceListRow = {
 type TraceDetailRow = TraceListRow & {
   input_messages: string
   last_input_messages: string
+  output_messages: string
+  system_instructions: string
+}
+
+type TraceMetadataDetailRow = TraceListRow & {
+  input_messages: string
   output_messages: string
   system_instructions: string
 }
@@ -327,6 +342,13 @@ const toDomainTraceDetail = (row: TraceDetailRow): TraceDetail => {
     allMessages: systemMessage ? [systemMessage, ...lastInput, ...output] : [...lastInput, ...output],
   }
 }
+
+const toDomainTraceMetadataDetail = (row: TraceMetadataDetailRow): TraceMetadataDetail => ({
+  ...toBaseFields(row),
+  systemInstructions: parseSystem(row.system_instructions),
+  inputMessages: parseMessages(row.input_messages),
+  outputMessages: parseMessages(row.output_messages),
+})
 
 interface SortColumn {
   readonly expr: string
@@ -1434,7 +1456,7 @@ export const TraceRepositoryLive = Layer.effect(
           return yield* chSqlClient
             .query(async (client) => {
               const result = await client.query({
-                query: `SELECT ${LIST_SELECT}
+                query: `SELECT ${METADATA_DETAIL_SELECT}
                       FROM traces
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
@@ -1448,7 +1470,7 @@ export const TraceRepositoryLive = Layer.effect(
                 },
                 format: "JSONEachRow",
               })
-              return result.json<TraceListRow>()
+              return result.json<TraceMetadataDetailRow>()
             })
             .pipe(
               Effect.flatMap((rows) => {
@@ -1456,7 +1478,7 @@ export const TraceRepositoryLive = Layer.effect(
                 if (!first) {
                   return Effect.fail(new NotFoundError({ entity: "Trace", id: traceId as string }))
                 }
-                return Effect.succeed(toBaseFields(first))
+                return Effect.succeed(toDomainTraceMetadataDetail(first))
               }),
               Effect.mapError((error) =>
                 isNotFoundError(error) ? error : toRepositoryError(error, "findMetadataByTraceId"),

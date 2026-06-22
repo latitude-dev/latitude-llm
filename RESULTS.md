@@ -168,6 +168,27 @@ for this pass = WON'T-FIX.** Both instrumentors capture streaming *messages* fin
 0.27.0). Non-streaming + tool-call traces (the actual test case) are unaffected. Expect 0 streaming
 tokens on every latest-model streaming scenario; do not re-investigate per-integration.
 
+**🐛 PRODUCT BUG FOUND (trace-detail panel) — FIXED, awaiting user verify:** the **Trace tab** always
+showed empty System Instructions / Input / Output, while the Conversation tab + Session tab were fine.
+Root cause: NOT the user's CH rollup migration — the write side is correct (verified: `traces` rollup
+has `input_messages`/`output_messages` populated). The web `getTraceDetail` called the metadata-only
+`findMetadataByTraceId` (LIST_SELECT, no messages) → `serializeTraceMetadataDetail` hardcoded the
+messages to `[]`. Sessions used the with-messages path (`findBySessionId` → real fields), hence the
+asymmetry. **Final fix (per user, avoids the heavy `last_input_messages`/`allMessages`):**
+- `findMetadataByTraceId` now selects `input_messages` + `output_messages` + `system_instructions`
+  (NEW `METADATA_DETAIL_SELECT`, **no `last_input_messages`**) and returns a NEW `TraceMetadataDetail`
+  entity (Trace + 3 fields, no `allMessages`). `getTraceDetail` stays on `findMetadataByTraceId`;
+  `serializeTraceDetail` maps the 3 fields; `TraceDetailRecord` drops `allMessages`.
+- The ONLY `traceDetail.allMessages` consumer was the **Signals "examples"** page; migrated it to the
+  chunked conversation loader (`useTraceConversationMessages`) with anchor auto-load + a `ready`-gated
+  scroll — same chunked model as the Conversation tab (`findConversationChunk` shares the exact
+  `[system?, …last_input, …output]` index space, so `anchor.messageIndex` stays valid; verified in SQL).
+Files: `entities/trace.ts`, `spans/index.ts`, `ports/trace-repository.ts`, db-clickhouse `trace-repository.ts`,
+web `traces.functions.ts` + `conversation-tab.tsx` (type ref) + `signal-examples.tsx`. Typecheck clean
+(@domain/spans, @platform/db-clickhouse, @app/web); 320 db-clickhouse tests pass; SQL-verified the new
+metadata query returns input/output. (System Instructions stay empty for our examples — no system prompt; expected.)
+**⚠️ Could NOT visually verify the Signals examples page locally (no occurrences seeded) — user to verify anchor scroll/highlight.**
+
 **Status legend:**
 - ⬜ Not started
 - 🔄 In progress (running / inspecting / awaiting user verdict)

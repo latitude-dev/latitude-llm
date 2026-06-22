@@ -12,6 +12,7 @@ import type {
   Trace,
   TraceDistinctColumn,
   TraceDistribution,
+  TraceMetadataDetail,
   TraceMetrics,
   TraceSearchHighlightsResult,
   TraceTimeHistogramBucket,
@@ -138,15 +139,13 @@ export interface TraceDetailRecord extends TraceRecord {
   readonly systemInstructions: GenAISystem
   readonly inputMessages: readonly GenAIMessage[]
   readonly outputMessages: readonly GenAIMessage[]
-  readonly allMessages: readonly GenAIMessage[]
 }
 
-const serializeTraceMetadataDetail = (trace: Trace): TraceDetailRecord => ({
+const serializeTraceDetail = (trace: TraceMetadataDetail): TraceDetailRecord => ({
   ...toTraceRecord(trace),
-  systemInstructions: [],
-  inputMessages: [],
-  outputMessages: [],
-  allMessages: [],
+  systemInstructions: trace.systemInstructions,
+  inputMessages: trace.inputMessages,
+  outputMessages: trace.outputMessages,
 })
 
 export interface TraceConversationChunkRecord {
@@ -445,7 +444,7 @@ export const getTraceDetail = createServerFn({ method: "GET" })
             traceId: TraceId(data.traceId),
           })
           .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-        return trace ? serializeTraceMetadataDetail(trace) : null
+        return trace ? serializeTraceDetail(trace) : null
       }).pipe(
         withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
         withAi(AIEmbedLive, getRedisClient()),
