@@ -397,11 +397,7 @@ export function BehavioursTrajectoryChart({
                 index % Math.ceil(buckets.length / 4) === 0
               if (!show) return null
               return (
-                <span
-                  key={bucket}
-                  className="absolute -translate-x-1/2 whitespace-nowrap"
-                  style={{ left: `${left}%` }}
-                >
+                <span key={bucket} className="absolute -translate-x-1/2 whitespace-nowrap" style={{ left: `${left}%` }}>
                   {bucketLabel(bucket, axis)}
                 </span>
               )
