@@ -93,7 +93,9 @@ Do NOT use old models. Update each example's `MODEL` constant before running. La
 7. Only then advance to the next integration.
 
 **Working branch:** `telemetry/integration-verification-fixes` (off `development`, PR target
-`development`). Commit per approved integration (conventional-commit messages), push each time.
+`development`) — **PR: https://github.com/latitude-dev/latitude-llm/pull/3655** (open, merged
+incrementally; QA resumes here next session — next up: #4 Bedrock/TS).
+Commit per approved integration (conventional-commit messages), push each time.
 First push landed #1–#3 + the two fixes (3 commits). NOTE: an unrelated WIP edit to
 `apps/web/.../spans-tab/span-filters-bar.tsx` is in the working tree — left untouched, NOT ours,
 do not commit it into this branch.
