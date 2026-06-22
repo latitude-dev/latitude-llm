@@ -1,5 +1,5 @@
 import type { SessionMetrics, TraceHistogramMetric, TraceMetrics, TraceTimeHistogramBucket } from "@domain/spans"
-import { formatCount, formatDuration, formatPrice } from "@repo/utils"
+import { cacheHitRate, formatCount, formatDuration, formatPercentage, formatPrice } from "@repo/utils"
 
 /**
  * Single source of truth shared by the metric cards and the histogram chart. Each entry says how to
@@ -74,14 +74,20 @@ export const HISTOGRAM_METRIC_DEFINITIONS: Readonly<Record<TraceHistogramMetric,
     selectBucket: (b) => b.tokensTotalSum,
     selectMetricsValue: (m) => m.tokensTotal.sum,
   },
-  ttft: {
-    id: "ttft",
-    label: "Median time to first token",
-    cardSkeletonWidthClassName: "w-20",
+  cacheHitRate: {
+    id: "cacheHitRate",
+    label: "Cache hit rate",
+    cardSkeletonWidthClassName: "w-16",
     tooltipNoun: "", // Already formats value
-    formatBucket: formatDuration,
-    selectBucket: (b) => b.timeToFirstTokenNsMedian,
-    selectMetricsValue: (m) => m.timeToFirstTokenNs.median,
+    formatBucket: formatPercentage,
+    // Per-bucket token-weighted ratio; 0 for buckets with no input-side tokens.
+    selectBucket: (b) =>
+      cacheHitRate({
+        input: b.tokensInputSum,
+        cacheRead: b.tokensCacheReadSum,
+        cacheCreate: b.tokensCacheCreateSum,
+      }) ?? 0,
+    selectMetricsValue: (m) => m.tokenAnalytics.cacheHitRate ?? 0,
   },
   spans: {
     id: "spans",

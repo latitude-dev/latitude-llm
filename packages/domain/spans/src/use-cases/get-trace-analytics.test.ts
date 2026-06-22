@@ -2,7 +2,12 @@ import { ChSqlClient, OrganizationId, ProjectId } from "@domain/shared"
 import { createFakeChSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { emptyTraceMetrics, type TraceMetrics, TraceRepository } from "../ports/trace-repository.ts"
+import {
+  emptyTraceMetrics,
+  type TraceMetrics,
+  TraceRepository,
+  type TraceTimeHistogramBucket,
+} from "../ports/trace-repository.ts"
 import { createFakeTraceRepository } from "../testing/fake-trace-repository.ts"
 import { getTraceAnalyticsUseCase } from "./get-trace-analytics.ts"
 
@@ -31,16 +36,7 @@ const parseRangeFromFilters = (
 
 const buildLayer = (input: {
   readonly metrics?: TraceMetrics
-  readonly histogramBuckets?: ReadonlyArray<{
-    bucketStart: string
-    traceCount: number
-    sessionCount: number
-    costTotalMicrocentsSum: number
-    durationNsMedian: number
-    tokensTotalSum: number
-    spanCountSum: number
-    timeToFirstTokenNsMedian: number
-  }>
+  readonly histogramBuckets?: ReadonlyArray<TraceTimeHistogramBucket>
 }) => {
   const calls: RepoCall[] = []
   const { repository } = createFakeTraceRepository({
@@ -123,6 +119,9 @@ describe("getTraceAnalyticsUseCase", () => {
         tokensTotalSum: 200,
         spanCountSum: 12,
         timeToFirstTokenNsMedian: 333,
+        tokensInputSum: 120,
+        tokensCacheReadSum: 60,
+        tokensCacheCreateSum: 20,
       },
       {
         bucketStart: "2026-04-15T12:00:00.000Z",
@@ -133,6 +132,9 @@ describe("getTraceAnalyticsUseCase", () => {
         tokensTotalSum: 150,
         spanCountSum: 4,
         timeToFirstTokenNsMedian: 222,
+        tokensInputSum: 90,
+        tokensCacheReadSum: 50,
+        tokensCacheCreateSum: 10,
       },
     ] as const
 

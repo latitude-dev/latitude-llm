@@ -53,6 +53,7 @@ const METRIC_ORDER: readonly TraceHistogramMetric[] = [
   "duration",
   "tokens",
   "ttft",
+  "cacheHitRate",
   "traces",
   "spans",
 ]
@@ -107,9 +108,13 @@ export function GeneralAggregations({
   // (`> 0`); showing it would just render "—" forever for projects that don't stream.
   const showTtft = !!activeMetrics && activeMetrics.timeToFirstTokenNs.max > 0
 
-  const visibleMetrics = METRIC_ORDER.filter((id) => id !== "ttft" || showTtft).map(
-    (id) => HISTOGRAM_METRIC_DEFINITIONS[id],
-  )
+  // Cache hit rate is undefined (null) when nothing in the view has input-side
+  // tokens — hide it rather than render a permanent 0%.
+  const showCacheHitRate = !!activeMetrics && activeMetrics.tokenAnalytics.cacheHitRate !== null
+
+  const visibleMetrics = METRIC_ORDER.filter(
+    (id) => (id !== "ttft" || showTtft) && (id !== "cacheHitRate" || showCacheHitRate),
+  ).map((id) => HISTOGRAM_METRIC_DEFINITIONS[id])
 
   const [showLeftFade, setShowLeftFade] = useState(false)
 

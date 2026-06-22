@@ -235,9 +235,21 @@ export interface TraceTimeHistogramBucket {
   readonly tokensTotalSum: number
   readonly spanCountSum: number
   readonly timeToFirstTokenNsMedian: number
+  readonly tokensInputSum: number
+  readonly tokensCacheReadSum: number
+  readonly tokensCacheCreateSum: number
 }
 
-export const TRACE_HISTOGRAM_METRICS = ["sessions", "cost", "duration", "tokens", "ttft", "traces", "spans"] as const
+export const TRACE_HISTOGRAM_METRICS = [
+  "sessions",
+  "cost",
+  "duration",
+  "tokens",
+  "ttft",
+  "cacheHitRate",
+  "traces",
+  "spans",
+] as const
 
 export type TraceHistogramMetric = (typeof TRACE_HISTOGRAM_METRICS)[number]
 
@@ -271,6 +283,9 @@ export const emptyTraceTimeHistogramBucket = (bucketStart: string): TraceTimeHis
   tokensTotalSum: 0,
   spanCountSum: 0,
   timeToFirstTokenNsMedian: 0,
+  tokensInputSum: 0,
+  tokensCacheReadSum: 0,
+  tokensCacheCreateSum: 0,
 })
 
 export class TraceRepository extends Context.Service<TraceRepository, TraceRepositoryShape>()(

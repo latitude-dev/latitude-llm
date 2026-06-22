@@ -51,6 +51,9 @@ describe("denseTraceTimeHistogramBuckets", () => {
       tokensTotalSum: 200,
       spanCountSum: 14,
       timeToFirstTokenNsMedian: 3_000_000,
+      tokensInputSum: 100,
+      tokensCacheReadSum: 80,
+      tokensCacheCreateSum: 20,
     }
     const dense = denseTraceTimeHistogramBuckets([populated], rangeStartIso, rangeEndIso, 3600)
     expect(dense).toHaveLength(3)
@@ -72,6 +75,9 @@ describe("denseTraceTimeHistogramBuckets", () => {
       expect(bucket.tokensTotalSum).toBe(0)
       expect(bucket.spanCountSum).toBe(0)
       expect(bucket.timeToFirstTokenNsMedian).toBe(0)
+      expect(bucket.tokensInputSum).toBe(0)
+      expect(bucket.tokensCacheReadSum).toBe(0)
+      expect(bucket.tokensCacheCreateSum).toBe(0)
     }
   })
 
@@ -97,6 +103,9 @@ describe("denseTraceTimeHistogramBuckets", () => {
         tokensTotalSum: 30,
         spanCountSum: 4,
         timeToFirstTokenNsMedian: 500,
+        tokensInputSum: 10,
+        tokensCacheReadSum: 8,
+        tokensCacheCreateSum: 2,
       },
       {
         bucketStart: "2024-06-01T10:00:00.123Z",
@@ -107,6 +116,9 @@ describe("denseTraceTimeHistogramBuckets", () => {
         tokensTotalSum: 70,
         spanCountSum: 6,
         timeToFirstTokenNsMedian: 1_500,
+        tokensInputSum: 20,
+        tokensCacheReadSum: 16,
+        tokensCacheCreateSum: 4,
       },
     ]
     const dense = denseTraceTimeHistogramBuckets(sparse, rangeStartIso, rangeEndIso, 3600)
@@ -120,6 +132,9 @@ describe("denseTraceTimeHistogramBuckets", () => {
       tokensTotalSum: 100,
       spanCountSum: 10,
       timeToFirstTokenNsMedian: 1_500,
+      tokensInputSum: 30,
+      tokensCacheReadSum: 24,
+      tokensCacheCreateSum: 6,
     })
   })
 })
