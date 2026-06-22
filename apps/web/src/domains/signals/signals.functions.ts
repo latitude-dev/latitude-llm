@@ -20,7 +20,6 @@ import {
   getRelatedSignalsUseCase,
   type ListSignalsResult,
   listSignalsUseCase,
-  listSignalTracesUseCase,
   type OrgSignalSearchItem,
   rankDimensionValues,
   type Signal,
@@ -36,9 +35,14 @@ import {
   TAG_AGGREGATION_FALLBACK_DAYS,
   updateSignalTriageUseCase,
 } from "@domain/signals"
-import { type TraceDetail, TraceRepository } from "@domain/spans"
+import { SessionRepository, TraceRepository } from "@domain/spans"
 import { AIEmbedLive, withAi } from "@platform/ai"
-import { ScoreAnalyticsRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import {
+  ScoreAnalyticsRepositoryLive,
+  SessionRepositoryLive,
+  TraceRepositoryLive,
+  withClickHouse,
+} from "@platform/db-clickhouse"
 import {
   EvaluationRepositoryLive,
   MembershipRepositoryLive,
@@ -60,7 +64,7 @@ import {
   type EvaluationSummaryRecord,
   toEvaluationSummaryRecord,
 } from "../evaluations/evaluation-alignment.functions.ts"
-import { type TraceRecord, toTraceRecord } from "../traces/traces.functions.ts"
+import { type SessionRecord, serializeSession } from "../sessions/sessions.functions.ts"
 
 const listSignalsInputSchema = z.object({
   projectId: z.string(),
@@ -106,7 +110,7 @@ const toSignalRecord = (issue: SignalListItem) => ({
   lastSeenAt: issue.lastSeenAt.toISOString(),
   occurrences: issue.occurrences,
   similarityScore: issue.similarityScore,
-  affectedTracesPercent: issue.affectedTracesPercent,
+  affectedSessionsPercent: issue.affectedSessionsPercent,
   escalationOccurrenceThreshold: issue.escalationOccurrenceThreshold,
   trend: issue.trend.map(toSignalsBucketRecord),
   evaluations: issue.evaluations.map(toEvaluationSummaryRecord),
@@ -120,7 +124,7 @@ const toSignalsListResultRecord = (result: ListSignalsResult, viewerUserId: stri
     counts: result.analytics.counts,
     histogram: result.analytics.histogram.map(toSignalsBucketRecord),
     histogramBucketSeconds: result.analytics.histogramBucketSeconds,
-    totalTraces: result.analytics.totalTraces,
+    totalSessions: result.analytics.totalSessions,
   },
   items: result.items.map(toSignalRecord),
   totalCount: result.totalCount,
@@ -168,11 +172,6 @@ const signalTracesInputSchema = z.object({
   signalId: z.string(),
   limit: z.number().int().min(1).max(100).optional(),
   offset: z.number().int().min(0).optional(),
-})
-
-const signalTracesCountInputSchema = z.object({
-  projectId: z.string(),
-  signalId: z.string(),
 })
 
 const signalImpactInputSchema = z.object({
@@ -265,10 +264,6 @@ const toSignalDetailRecord = (input: {
 })
 
 export type SignalDetailRecord = ReturnType<typeof toSignalDetailRecord>
-
-const toSignalTraceRecord = (trace: TraceDetail): TraceRecord => toTraceRecord(trace)
-
-export type SignalTraceRecord = TraceRecord
 
 const signalLifecycleActionInputSchema = z.object({
   projectId: z.string(),
@@ -366,7 +361,7 @@ export const listSignals = createServerFn({ method: "GET" })
         })
       }).pipe(
         withPostgres(Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive), pgClient, orgId),
-        withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive), chClient, orgId),
+        withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive), chClient, orgId),
         withAi(AIEmbedLive, redisClient),
         withTracing,
       ),
@@ -642,18 +637,18 @@ export const getSignalDetail = createServerFn({ method: "GET" })
     )
   })
 
-const toSignalTracePageRecord = (input: {
-  readonly items: readonly SignalTraceRecord[]
+const toSignalSessionPageRecord = (input: {
+  readonly items: readonly SessionRecord[]
   readonly hasMore: boolean
   readonly limit: number
   readonly offset: number
 }) => input
 
-export type SignalTracePageRecord = ReturnType<typeof toSignalTracePageRecord>
+export type SignalSessionPageRecord = ReturnType<typeof toSignalSessionPageRecord>
 
-export const listSignalTraces = createServerFn({ method: "GET" })
+export const listSignalSessions = createServerFn({ method: "GET" })
   .inputValidator(signalTracesInputSchema)
-  .handler(async ({ data }): Promise<SignalTracePageRecord> => {
+  .handler(async ({ data }): Promise<SignalSessionPageRecord> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
     const chClient = getClickhouseClient()
@@ -661,59 +656,32 @@ export const listSignalTraces = createServerFn({ method: "GET" })
     const signalId = SignalId(data.signalId)
 
     const result = await Effect.runPromise(
-      listSignalTracesUseCase({
-        organizationId: orgId,
-        projectId,
-        signalId,
-        ...(data.limit !== undefined ? { limit: data.limit } : {}),
-        ...(data.offset !== undefined ? { offset: data.offset } : {}),
-      }).pipe(
-        withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive), chClient, orgId),
-        withTracing,
-      ),
-    )
-
-    return toSignalTracePageRecord({
-      items: result.items.map(toSignalTraceRecord),
-      hasMore: result.hasMore,
-      limit: result.limit,
-      offset: result.offset,
-    })
-  })
-
-export const countSignalTraces = createServerFn({ method: "GET" })
-  .inputValidator(signalTracesCountInputSchema)
-  .handler(async ({ data }): Promise<{ readonly total: number }> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
-    const chClient = getClickhouseClient()
-    const projectId = ProjectId(data.projectId)
-    const signalId = SignalId(data.signalId)
-
-    return Effect.runPromise(
       Effect.gen(function* () {
         const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
-        const total = yield* scoreAnalyticsRepository.countTracesBySignal({
+        const sessionRepository = yield* SessionRepository
+        const sessionPage = yield* scoreAnalyticsRepository.listSessionsBySignal({
           organizationId: orgId,
           projectId,
           signalId,
+          ...(data.limit !== undefined ? { limit: data.limit } : {}),
+          ...(data.offset !== undefined ? { offset: data.offset } : {}),
         })
-        return { total }
-      }).pipe(withClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId), withTracing),
+        const sessions = yield* Effect.forEach(sessionPage.items, (item) =>
+          sessionRepository
+            .findBySessionId({ organizationId: orgId, projectId, sessionId: item.sessionId })
+            .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
+        )
+        return {
+          items: sessions.flatMap((session) => (session ? [serializeSession(session)] : [])),
+          hasMore: sessionPage.hasMore,
+          limit: sessionPage.limit,
+          offset: sessionPage.offset,
+        }
+      }).pipe(withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive), chClient, orgId)),
     )
-  })
 
-export interface SignalImpactRecord {
-  readonly occurrences: number
-  readonly affectedTraces: number
-  readonly affectedSessions: number
-  readonly affectedUsers: number
-  readonly costMicrocents: number
-  readonly tokens: number
-  readonly totalProjectTraces: number
-  /** Fraction of project traces affected by this issue, in `[0, 1]`. */
-  readonly affectedTracesPercent: number
-}
+    return toSignalSessionPageRecord(result)
+  })
 
 export const getSignalImpact = createServerFn({ method: "GET" })
   .inputValidator(signalImpactInputSchema)
@@ -1087,7 +1055,7 @@ export const applyBulkSignalLifecycleAction = createServerFn({ method: "POST" })
           }
         }).pipe(
           withPostgres(Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive), pgClient, orgId),
-          withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive), chClient, orgId),
+          withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive), chClient, orgId),
           withAi(AIEmbedLive, redisClient),
           withTracing,
         ),

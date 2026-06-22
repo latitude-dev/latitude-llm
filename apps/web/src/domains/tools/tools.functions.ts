@@ -1,7 +1,6 @@
 import { type OrganizationId, ProjectId } from "@domain/shared"
 import type {
   RecentDefiningSpan,
-  RecentToolCall,
   ToolAnalyticsScope,
   ToolCallHistogramBucket,
   ToolContextBreakdownRow,
@@ -75,28 +74,6 @@ interface ToolDetailRecord {
   readonly errorsUsage: ToolUsageMetricsRecord | null
 }
 
-export interface RecentToolCallRecord {
-  readonly spanId: string
-  readonly traceId: string
-  readonly sessionId: string
-  readonly startTime: string
-  readonly durationNs: number
-  readonly statusCode: "unset" | "ok" | "error"
-  readonly statusMessage: string
-  readonly errorType: string
-  readonly toolCallId: string
-  readonly toolInput: string
-  readonly toolOutput: string
-  readonly toolInputTruncated: boolean
-  readonly toolOutputTruncated: boolean
-}
-
-interface RecentToolCallsPageRecord {
-  readonly items: readonly RecentToolCallRecord[]
-  readonly hasMore: boolean
-  readonly nextCursor?: { readonly startTimeIso: string; readonly spanId: string }
-}
-
 export interface RecentDefiningSpanRecord {
   readonly spanId: string
   readonly traceId: string
@@ -155,22 +132,6 @@ const toRecentDefiningSpanRecord = (span: RecentDefiningSpan): RecentDefiningSpa
   name: span.name,
   serviceName: span.serviceName,
   model: span.model,
-})
-
-const toRecentToolCallRecord = (call: RecentToolCall): RecentToolCallRecord => ({
-  spanId: call.spanId,
-  traceId: call.traceId,
-  sessionId: call.sessionId,
-  startTime: call.startTime.toISOString(),
-  durationNs: call.durationNs,
-  statusCode: call.statusCode,
-  statusMessage: call.statusMessage,
-  errorType: call.errorType,
-  toolCallId: call.toolCallId,
-  toolInput: call.toolInput,
-  toolOutput: call.toolOutput,
-  toolInputTruncated: call.toolInputTruncated,
-  toolOutputTruncated: call.toolOutputTruncated,
 })
 
 const toolsScopeSchema = z.object({
@@ -360,45 +321,6 @@ export const getToolErrorBreakdown = createServerFn({ method: "GET" })
           toolName: data.toolName,
           ...(data.limit === undefined ? {} : { limit: data.limit }),
         })
-      }).pipe(withClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
-    )
-  })
-
-export const listRecentToolCalls = createServerFn({ method: "GET" })
-  .inputValidator(
-    toolsScopeSchema.extend({
-      toolName: toolNameSchema,
-      limit: z.number().int().min(1).max(50).optional(),
-      errorsOnly: z.boolean().optional(),
-      cursor: z.object({ startTimeIso: z.string().datetime(), spanId: z.string().length(16) }).optional(),
-    }),
-  )
-  .handler(async ({ data }): Promise<RecentToolCallsPageRecord> => {
-    const orgId = await resolveOrgScope(data)
-    return Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* ToolAnalyticsRepository
-        const page = yield* repo.listRecentToolCalls({
-          ...toScope(orgId, data),
-          toolName: data.toolName,
-          ...(data.limit === undefined ? {} : { limit: data.limit }),
-          ...(data.errorsOnly === undefined ? {} : { errorsOnly: data.errorsOnly }),
-          ...(data.cursor
-            ? { cursor: { startTime: new Date(data.cursor.startTimeIso), spanId: data.cursor.spanId } }
-            : {}),
-        })
-        return {
-          items: page.items.map(toRecentToolCallRecord),
-          hasMore: page.hasMore,
-          ...(page.nextCursor
-            ? {
-                nextCursor: {
-                  startTimeIso: page.nextCursor.startTime.toISOString(),
-                  spanId: page.nextCursor.spanId,
-                },
-              }
-            : {}),
-        }
       }).pipe(withClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })

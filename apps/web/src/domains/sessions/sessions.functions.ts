@@ -46,7 +46,7 @@ import { z } from "zod"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 
-const serializeSession = (session: Session) => ({
+export const serializeSession = (session: Session) => ({
   organizationId: session.organizationId,
   projectId: session.projectId,
   sessionId: session.sessionId,

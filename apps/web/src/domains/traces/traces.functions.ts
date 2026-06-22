@@ -78,7 +78,7 @@ export interface TraceRecord {
   readonly rootSpanName: string
 }
 
-export const toTraceRecord = (trace: Trace): TraceRecord => ({
+const toTraceRecord = (trace: Trace): TraceRecord => ({
   organizationId: trace.organizationId,
   projectId: trace.projectId,
   traceId: trace.traceId,

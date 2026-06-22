@@ -1,23 +1,27 @@
-import { Button, CopyableText, DetailSection, Icon, Sheet, Skeleton, TagList, Text, Tooltip } from "@repo/ui"
-import { formatCount } from "@repo/utils"
-import { ArrowDownRightIcon, CheckIcon, DatabaseIcon, TextAlignStartIcon } from "lucide-react"
+import {
+  CopyableText,
+  DetailSection,
+  Icon,
+  InfiniteTable,
+  type InfiniteTableColumn,
+  Sheet,
+  Skeleton,
+  Status,
+  TagList,
+  Text,
+  Tooltip,
+} from "@repo/ui"
+import { formatCount, formatDuration, relativeTime } from "@repo/utils"
+import { ArrowDownRightIcon, CheckIcon, TextAlignStartIcon } from "lucide-react"
 import { type ReactNode, useMemo, useState } from "react"
-import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
 import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alerts/alerts.collection.ts"
 import { useShowIncidentsOverlay } from "../../../../../../domains/alerts/use-show-incidents-overlay.ts"
+import type { SessionRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
 import {
   useSignalDetail,
-  useSignalTracesCount,
-  useSignalTracesInfiniteScroll,
+  useSignalSessionsInfiniteScroll,
 } from "../../../../../../domains/signals/signals.collection.ts"
-import { useSelectableRows } from "../../../../../../lib/hooks/useSelectableRows.ts"
-import { AddToDatasetModal } from "../../-components/add-to-dataset-modal.tsx"
-import {
-  DEFAULT_TRACE_TABLE_SORTING,
-  ProjectTracesTable,
-  type TraceColumnId,
-} from "../../-components/project-traces-table.tsx"
-import { TraceDetailDrawer } from "../../-components/trace-detail-drawer.tsx"
+import { SessionDetailDrawer } from "../../-components/session-detail-drawer.tsx"
 import { SignalDrawerEvaluations } from "./signal-drawer-evaluations.tsx"
 import { formatSeenAgeParts, formatSignalAgeAgoLabel } from "./signal-formatters.ts"
 import { SignalLifecycleStatuses } from "./signal-lifecycle-statuses.tsx"
@@ -90,8 +94,6 @@ function SignalLifecycleTimestampSummaryValue({
   )
 }
 
-const SIGNAL_TRACE_COLUMN_IDS = ["startTime", "name", "tags", "duration"] as const satisfies readonly TraceColumnId[]
-
 /**
  * Signal detail surface minus the `DetailDrawer` chrome (close, next/prev nav).
  *
@@ -138,21 +140,16 @@ export function SignalDetailBody({
 }) {
   const { data: issue, isLoading } = useSignalDetail({ projectId, signalId })
   const {
-    data: traces,
-    isLoading: tracesLoading,
+    data: sessions,
+    isLoading: sessionsLoading,
     infiniteScroll,
-  } = useSignalTracesInfiniteScroll({
+  } = useSignalSessionsInfiniteScroll({
     projectId,
     signalId,
     enabled: issue !== null,
   })
-  const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
-  const [traceSheetTraceId, setTraceSheetTraceId] = useState<string | null>(null)
-  const [traceSheetOpen, setTraceSheetOpen] = useState(false)
-
-  const traceIds = useMemo(() => traces.map((t) => t.traceId), [traces])
-  const totalTraceCount = useSignalTracesCount({ projectId, signalId, enabled: issue !== null })
-  const traceSelection = useSelectableRows({ rowIds: traceIds, totalRowCount: totalTraceCount })
+  const [sessionSheetSessionId, setSessionSheetSessionId] = useState<string | null>(null)
+  const [sessionSheetOpen, setSessionSheetOpen] = useState(false)
 
   // Window the incident query to the same range that the trend chart paints. Bucket keys are
   // ISO timestamps now (12h-aligned), and `trendBucketSeconds` tells us the cell width so we can
@@ -183,43 +180,71 @@ export function SignalDetailBody({
     sourceId: signalId,
     enabled: incidentsFlagEnabled && trendIncidentRange !== null,
   })
-  const { selectedCount, bulkSelection, clearSelections } = traceSelection
-
-  const openTraceSheet = (traceId: string) => {
-    setTraceSheetTraceId(traceId)
-    setTraceSheetOpen(true)
+  const openSessionSheet = (sessionId: string) => {
+    setSessionSheetSessionId(sessionId)
+    setSessionSheetOpen(true)
     onOverlayActiveChange?.(true)
   }
 
-  const closeTraceSheet = () => {
-    setTraceSheetOpen(false)
+  const closeSessionSheet = () => {
+    setSessionSheetOpen(false)
     onOverlayActiveChange?.(false)
   }
 
-  const traceSheetIndex = traceSheetTraceId ? traceIds.indexOf(traceSheetTraceId) : -1
-  const canNavigateNextTraceInSheet =
-    traceSheetTraceId !== null && traceIds.length > 0 && (traceSheetIndex < 0 || traceSheetIndex < traceIds.length - 1)
-  const canNavigatePrevTraceInSheet =
-    traceSheetTraceId !== null && traceIds.length > 0 && (traceSheetIndex < 0 || traceSheetIndex > 0)
-
-  const onNextTraceInSheet = () => {
-    if (!traceSheetTraceId) return
-    const idx = traceIds.indexOf(traceSheetTraceId)
-    const next = idx < 0 ? traceIds[0] : traceIds[idx + 1]
-    if (next) setTraceSheetTraceId(next)
-  }
-
-  const onPrevTraceInSheet = () => {
-    if (!traceSheetTraceId) return
-    const idx = traceIds.indexOf(traceSheetTraceId)
-    const prev = idx <= 0 ? undefined : traceIds[idx - 1]
-    if (prev) setTraceSheetTraceId(prev)
-  }
-
-  const getTraceRowAriaLabel = (input: { readonly traceId: string; readonly rootSpanName: string }) => {
-    const shortName = input.rootSpanName || input.traceId.slice(0, 8)
-    return `Open trace ${shortName} in the conversation panel`
-  }
+  const sessionColumns: InfiniteTableColumn<SessionRecord>[] = [
+    {
+      key: "time",
+      header: "Time",
+      width: 110,
+      minWidth: 100,
+      render: (session) => (
+        <span title={new Date(session.startTime).toLocaleString()}>{relativeTime(new Date(session.startTime))}</span>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      width: 90,
+      minWidth: 80,
+      render: (session) =>
+        session.errorCount > 0 ? (
+          <Status variant="destructive" label="error" />
+        ) : (
+          <Status variant="success" label="ok" />
+        ),
+    },
+    {
+      key: "duration",
+      header: "Duration",
+      width: 90,
+      minWidth: 80,
+      align: "end",
+      render: (session) => <span className="tabular-nums">{formatDuration(session.durationNs)}</span>,
+    },
+    {
+      key: "name",
+      header: "Session",
+      width: 320,
+      minWidth: 200,
+      render: (session) => (
+        <Text.H5 noWrap ellipsis>
+          {session.rootSpanName || session.sessionId}
+        </Text.H5>
+      ),
+    },
+    {
+      key: "sessionId",
+      header: "Session ID",
+      width: 160,
+      minWidth: 120,
+      render: (session) => (
+        // biome-ignore lint/a11y/noStaticElementInteractions: click containment only
+        <div onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+          <CopyableText value={session.sessionId} size="sm" ellipsis tooltip="Copy session id" />
+        </div>
+      ),
+    },
+  ]
 
   return (
     <>
@@ -380,78 +405,42 @@ export function SignalDetailBody({
 
           <DetailSection
             icon={<Icon icon={TextAlignStartIcon} size="sm" />}
-            label="Traces"
+            label="Sessions"
             defaultOpen
             className="gap-1"
             contentClassName="pl-0 pt-0 max-h-none overflow-hidden flex flex-col"
           >
-            {selectedCount > 0 && (
-              <div className="flex items-center gap-2 pb-2">
-                <Button variant="outline" size="sm" onClick={() => setAddToDatasetOpen(true)}>
-                  <Icon icon={DatabaseIcon} size="sm" />
-                  Add to Dataset ({selectedCount})
-                </Button>
-              </div>
-            )}
-            <ProjectTracesTable
-              projectId={projectId}
-              data={traces}
-              isLoading={tracesLoading}
-              visibleColumnIds={SIGNAL_TRACE_COLUMN_IDS}
-              defaultSorting={DEFAULT_TRACE_TABLE_SORTING}
-              onTraceClick={(trace) => openTraceSheet(trace.traceId)}
-              getTraceRowAriaLabel={getTraceRowAriaLabel}
-              rowInteractionRole="button"
-              activeTraceId={traceSheetTraceId ?? undefined}
-              selection={traceSelection}
+            <InfiniteTable
+              data={sessions}
+              isLoading={sessionsLoading}
+              columns={sessionColumns}
+              getRowKey={(session) => session.sessionId}
+              onRowClick={(session) => openSessionSheet(session.sessionId)}
+              getRowAriaLabel={(session) => `Open session ${session.sessionId}`}
               infiniteScroll={infiniteScroll}
-              blankSlate="This issue has not been seen on any traces yet."
+              blankSlate="This issue has not been seen on any sessions yet."
               scrollAreaLayout="intrinsic"
-              scrollContainerClassName="max-h-[min(28rem,50vh)]"
+              className="max-h-[min(28rem,50vh)]"
             />
           </DetailSection>
 
           {append}
         </div>
-
-        {bulkSelection && (
-          <AddToDatasetModal
-            open={addToDatasetOpen}
-            onOpenChange={setAddToDatasetOpen}
-            projectId={projectId}
-            signalId={signalId}
-            selection={bulkSelection}
-            selectedCount={selectedCount}
-            onSuccess={clearSelections}
-          />
-        )}
       </div>
 
       <Sheet
-        open={traceSheetOpen}
-        onClose={closeTraceSheet}
-        onClosed={() => setTraceSheetTraceId(null)}
-        closeAriaLabel="Close trace panel"
+        open={sessionSheetOpen}
+        onClose={closeSessionSheet}
+        onClosed={() => setSessionSheetSessionId(null)}
+        closeAriaLabel="Close session panel"
       >
-        {traceSheetTraceId ? (
-          <TraceDetailDrawer
-            key={traceSheetTraceId}
+        {sessionSheetSessionId ? (
+          <SessionDetailDrawer
+            key={sessionSheetSessionId}
             projectId={projectId}
-            traceId={traceSheetTraceId}
-            trace={traces.find((t) => t.traceId === traceSheetTraceId)}
-            onClose={closeTraceSheet}
-            onNextTrace={onNextTraceInSheet}
-            onPrevTrace={onPrevTraceInSheet}
-            canNavigateNext={canNavigateNextTraceInSheet}
-            canNavigatePrev={canNavigatePrevTraceInSheet}
-            urlSyncedTabs={false}
-            initialTab="conversation"
-            drawerStoreKey="issue-trace-detail-drawer-width"
-            closeLabel={
-              <>
-                Back to issue <HotkeyBadge hotkey="Escape" />
-              </>
-            }
+            sessionId={sessionSheetSessionId}
+            onClose={closeSessionSheet}
+            defaultTab="conversation"
           />
         ) : null}
       </Sheet>

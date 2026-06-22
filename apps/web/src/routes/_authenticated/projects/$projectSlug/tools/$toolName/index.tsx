@@ -163,9 +163,8 @@ function ToolDetailPageContent() {
                   to="/projects/$projectSlug"
                   params={{ projectSlug }}
                   search={{
+                    tab: "sessions",
                     filters: JSON.stringify({
-                      // Never-called tools have no calls to match — link to the
-                      // traces whose chat spans defined the tool instead.
                       ...(definedButNeverCalled
                         ? { definedTools: [{ op: "in", value: [toolName] }] }
                         : { tools: [{ op: "in", value: [toolName] }] }),
@@ -178,7 +177,7 @@ function ToolDetailPageContent() {
                   }}
                 >
                   <Icon icon={TextAlignStartIcon} size="sm" />
-                  View traces
+                  View sessions
                 </Link>
               </Button>
               {notFound ? null : (
@@ -378,19 +377,20 @@ function ToolDetailPageContent() {
                     to="/projects/$projectSlug"
                     params={{ projectSlug }}
                     search={{
-                      tab: "traces",
+                      tab: "sessions",
                       filters: JSON.stringify({
                         tools: [{ op: "in", value: [toolName] }],
                         startTime: [
                           { op: "gte", value: range.fromIso },
                           { op: "lte", value: range.toIso },
                         ],
+                        ...(errorsOnly ? { status: [{ op: "in", value: ["error"] }] } : {}),
                       }),
                       filtersOpen: true,
                     }}
                   >
                     <Icon icon={TextAlignStartIcon} size="sm" />
-                    View traces
+                    View sessions
                   </Link>
                 </Button>
               }
