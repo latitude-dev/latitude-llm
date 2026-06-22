@@ -249,7 +249,6 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       issue: signalContext,
       conversation: traceDetail.allMessages,
       runtime: sandboxRuntimeEnabled ? "sandbox" : "legacy",
-      legacyPolarity: evaluation.legacyPolarity,
       telemetry: buildEvaluationJudgeLiveTelemetryCapture({
         organizationId: input.organizationId,
         projectId: input.projectId,
@@ -326,8 +325,8 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         .pipe(Effect.catch(() => Effect.void))
     }
 
-    // Every evaluation run writes a score carrying its signal; membership is the passed=true subset
-    // (the behavior is present in this trace), so non-matching runs are persisted with passed=false.
+    const persistedSignalId =
+      execution.kind === "completed" && execution.result.passed === false ? evaluation.signalId : null
     const scoreWriteExit = yield* Effect.exit(
       writeScoreUseCase({
         projectId: input.projectId,
@@ -337,7 +336,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         traceId: traceDetail.traceId,
         spanId: traceDetail.rootSpanId || null,
         simulationId: traceDetail.simulationId || null,
-        signalId: evaluation.signalId,
+        signalId: persistedSignalId,
         value: execution.kind === "completed" ? execution.result.value : 0,
         passed: execution.kind === "completed" ? execution.result.passed : false,
         feedback: execution.kind === "completed" ? execution.result.feedback : execution.error,

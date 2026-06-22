@@ -76,7 +76,7 @@ const toAnalyticsRow = (score: Score) => ({
   session_id: score.sessionId ?? "",
   trace_id: score.traceId ?? "",
   span_id: score.spanId ?? "",
-  source: score.sourceType,
+  source: score.source,
   source_id: score.sourceId,
   simulation_id: score.simulationId ?? "",
   signal_id: score.signalId ?? "",
@@ -669,9 +669,7 @@ const buildSignalAnalyticsWhere = (input: {
     ? buildClickHouseWhere(input.filters, SCORE_FIELD_REGISTRY, { paramPrefix: input.paramPrefix })
     : { clauses: [], params: {} }
   const timeRangeResult = buildScoreCreatedAtTimeRange(input.timeRange, input.paramPrefix)
-  // A signal's occurrences are its matching scores: passed = true (the behavior is present).
-  // Non-matching scores carry the same signal_id but are not occurrences.
-  const clauses = ["signal_id != ''", "passed = true", ...filterResult.clauses, ...timeRangeResult.clauses]
+  const clauses = ["signal_id != ''", ...filterResult.clauses, ...timeRangeResult.clauses]
   const params = {
     ...filterResult.params,
     ...timeRangeResult.params,
@@ -707,8 +705,7 @@ const querySignalImpactCore = (
               uniqExactIf(session_id, session_id != '')     AS affected_sessions
             FROM scores
             WHERE ${scopeClause(options)}
-              AND signal_id = {signalId:String}
-              AND passed = true`,
+              AND signal_id = {signalId:String}`,
       query_params: params,
       format: "JSONEachRow",
     })
@@ -738,7 +735,6 @@ const querySignalImpactCostTokens = (
                 FROM scores
                 WHERE ${scopeClause(options)}
                   AND signal_id = {signalId:String}
-                  AND passed = true
                   AND trace_id != ''
               )`,
       query_params: params,
@@ -767,7 +763,6 @@ const querySignalImpactUsers = (
                   FROM scores
                   WHERE ${scopeClause(options)}
                     AND signal_id = {signalId:String}
-                    AND passed = true
                     AND session_id != ''
                 )
               GROUP BY session_id
@@ -1013,7 +1008,6 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                       FROM scores
                       WHERE ${scopeClause(options)}
                         AND signal_id IN ({signalIds:Array(String)})
-                        AND passed = true
                       GROUP BY signal_id`,
                 query_params: {
                   ...scopeParams(organizationId, projectId),
@@ -1081,7 +1075,6 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
             FROM scores
             WHERE ${scopeClause(options)}
               AND signal_id = {signalId:String}
-              AND passed = true
               AND trace_id != ''${scoreRange.clauses.length > 0 ? ` AND ${scoreRange.clauses.join(" AND ")}` : ""}`
           const params = {
             ...scopeParams(organizationId, projectId),
@@ -1177,7 +1170,6 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                       FROM scores
                       WHERE ${scopeClause(options)}
                         AND signal_id = {signalId:String}
-                        AND passed = true
                         AND session_id != ''${rangeWhere}`
 
           const candidates = chSqlClient.query<CoOccurrenceCandidateRow[]>(async (client) => {
@@ -1189,7 +1181,6 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                     FROM scores
                     WHERE ${scopeClause(options)}
                       AND signal_id != ''
-                      AND passed = true
                       AND signal_id != {signalId:String}
                       AND session_id != ''${rangeWhere}
                     GROUP BY signal_id
@@ -1210,7 +1201,6 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                     FROM scores
                     WHERE ${scopeClause(options)}
                       AND signal_id != ''
-                      AND passed = true
                       AND session_id != ''${rangeWhere}`,
               query_params: params,
               format: "JSONEachRow",
@@ -1274,7 +1264,6 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                         FROM scores
                         WHERE ${scopeClause(options)}
                           AND signal_id IN ({signalIds:Array(String)})
-                          AND passed = true
                           AND created_at >= toDateTime({now:String}, 'UTC') - INTERVAL 1 DAY
                         GROUP BY signal_id`,
                   query_params: {
@@ -1380,7 +1369,6 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                           FROM scores
                           WHERE ${scopeClause(options)}
                             AND signal_id IN ({signalIds:Array(String)})
-                            AND passed = true
                             AND trace_id != ''
                             AND ${scoresClauses.join(" AND ")}
                           GROUP BY signal_id, trace_id
@@ -1437,7 +1425,6 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                       FROM scores
                       WHERE ${scopeClause(options)}
                         AND signal_id = {signalId:FixedString(24)}
-                        AND passed = true
                         AND created_at >= now() - INTERVAL {days:UInt32} DAY
                       GROUP BY bucket
                       ORDER BY bucket ASC`,
@@ -1699,7 +1686,6 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                       FROM scores
                       WHERE ${scopeClause(options)}
                         AND signal_id = {signalId:FixedString(24)}
-                        AND passed = true
                         AND trace_id != ''
                       GROUP BY trace_id
                       ORDER BY last_seen_at DESC, trace_id DESC
@@ -1739,7 +1725,6 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                       FROM scores
                       WHERE ${scopeClause(options)}
                         AND signal_id = {signalId:FixedString(24)}
-                        AND passed = true
                         AND trace_id != ''`,
                 query_params: {
                   ...scopeParams(organizationId, projectId),
@@ -1771,7 +1756,6 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                       WHERE ${scopeClause(options)}
                         AND trace_id IN ({traceIds:Array(String)})
                         AND signal_id != ''
-                        AND passed = true
                       GROUP BY signal_id
                       ORDER BY last_seen_at DESC`,
                 query_params: {
@@ -1813,7 +1797,6 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                       FROM scores
                       WHERE ${scopeClause(options)}
                         AND signal_id != ''
-                        AND passed = true
                         AND trace_id IN (
                           SELECT trace_id
                           FROM traces

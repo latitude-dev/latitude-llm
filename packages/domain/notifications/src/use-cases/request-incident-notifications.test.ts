@@ -181,11 +181,10 @@ function setup(opts: SetupOpts = {}) {
   const annotation = opts.latestAnnotation
   const evaluation = opts.latestEvaluation
   const { repository: scoreRepository } = createFakeScoreRepository({
-    listBySignalId: ({ source, passed }) => {
+    listBySignalId: ({ source }) => {
       const pick = source === "annotation" ? annotation : source === "evaluation" ? evaluation : null
-      const matches = pick && (passed === undefined || pick.passed === passed)
       return Effect.succeed({
-        items: matches ? [pick] : [],
+        items: pick ? [pick] : [],
         hasMore: false,
         limit: 1,
         offset: 0,
@@ -464,7 +463,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       simulationId: null,
       signalId: cuid("i"),
       value: 0,
-      passed: true,
+      passed: false,
       feedback: "clusterable",
       error: null,
       errored: false,
@@ -475,7 +474,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       annotatorId,
       createdAt: new Date("2026-05-07T09:50:00Z"),
       updatedAt: new Date("2026-05-07T09:50:00Z"),
-      sourceType: "annotation" as const,
+      source: "annotation" as const,
       sourceId: "UI" as const,
       metadata: { rawFeedback: "Reviewer flagged a tool-call loop." },
     } as unknown as AnnotationScore
@@ -530,7 +529,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       simulationId: null,
       signalId: cuid("i"),
       value: 0,
-      passed: true,
+      passed: false,
       feedback: "clusterable",
       error: null,
       errored: false,
@@ -541,7 +540,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       annotatorId: null,
       createdAt: new Date("2026-05-07T09:50:00Z"),
       updatedAt: new Date("2026-05-07T09:50:00Z"),
-      sourceType: "annotation" as const,
+      source: "annotation" as const,
       sourceId: "SYSTEM" as const,
       metadata: { rawFeedback: "Detected token leakage in three consecutive responses." },
     } as unknown as AnnotationScore
@@ -575,7 +574,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       simulationId: null,
       signalId: cuid("i"),
       value: 0,
-      passed: true,
+      passed: false,
       feedback: "Output mentioned the customer's competitor.",
       error: null,
       errored: false,
@@ -586,7 +585,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       annotatorId: null,
       createdAt: new Date("2026-05-07T09:55:00Z"),
       updatedAt: new Date("2026-05-07T09:55:00Z"),
-      sourceType: "evaluation" as const,
+      source: "evaluation" as const,
       sourceId: evaluationId,
       metadata: { evaluationHash: "abc" },
     } as unknown as EvaluationScore
@@ -632,51 +631,6 @@ describe("requestIncidentNotificationsUseCase", () => {
     })
   })
 
-  it("excludes non-occurrence (passed=false) scores from the sample excerpt", async () => {
-    const evaluationScore = {
-      id: cuid("score-e"),
-      organizationId: cuid("o"),
-      projectId: cuid("p"),
-      sessionId: null,
-      traceId: null,
-      spanId: null,
-      simulationId: null,
-      signalId: cuid("i"),
-      value: 0,
-      passed: false,
-      feedback: "Behavior was absent in this trace.",
-      error: null,
-      errored: false,
-      duration: 0,
-      tokens: 0,
-      cost: 0,
-      draftedAt: null,
-      annotatorId: null,
-      createdAt: new Date("2026-05-07T09:55:00Z"),
-      updatedAt: new Date("2026-05-07T09:55:00Z"),
-      sourceType: "evaluation" as const,
-      sourceId: cuid("eval"),
-      metadata: { evaluationHash: "abc" },
-    } as unknown as EvaluationScore
-
-    const { incidentId, layer } = setup({
-      latestAnnotation: null,
-      latestEvaluation: evaluationScore,
-      memberUserIds: [cuid("ua")],
-    })
-
-    const result = await Effect.runPromise(
-      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
-        Effect.provide(layer),
-      ),
-    )
-
-    expect(result.status).toBe("ok")
-    if (result.status !== "ok") throw new Error("unreachable")
-    const payload = result.requests[0]?.payload as IncidentEventPayload
-    expect(payload.sampleExcerpt).toBeUndefined()
-  })
-
   it("truncates a long annotation excerpt to 200 chars and flags truncated", async () => {
     const longText = "x".repeat(500)
     const annotation = {
@@ -689,7 +643,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       simulationId: null,
       signalId: cuid("i"),
       value: 0,
-      passed: true,
+      passed: false,
       feedback: "f",
       error: null,
       errored: false,
@@ -700,7 +654,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       annotatorId: null,
       createdAt: new Date(),
       updatedAt: new Date(),
-      sourceType: "annotation" as const,
+      source: "annotation" as const,
       sourceId: "UI" as const,
       metadata: { rawFeedback: longText },
     } as unknown as AnnotationScore
@@ -773,7 +727,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       simulationId: null,
       signalId: cuid("i"),
       value: 0,
-      passed: true,
+      passed: false,
       feedback: "f",
       error: null,
       errored: false,
@@ -784,7 +738,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       annotatorId: null,
       createdAt: new Date(),
       updatedAt: new Date(),
-      sourceType: "annotation" as const,
+      source: "annotation" as const,
       sourceId: "UI" as const,
       metadata: { rawFeedback: "Annotator flagged the response for hallucinating a refund policy." },
     } as unknown as AnnotationScore
@@ -823,7 +777,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       simulationId: null,
       signalId: cuid("i"),
       value: 0,
-      passed: true,
+      passed: false,
       feedback: "f",
       error: null,
       errored: false,
@@ -834,7 +788,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       annotatorId: null,
       createdAt: new Date(),
       updatedAt: new Date(),
-      sourceType: "annotation" as const,
+      source: "annotation" as const,
       sourceId: "UI" as const,
       metadata: { rawFeedback: "Some feedback here." },
     } as unknown as AnnotationScore
