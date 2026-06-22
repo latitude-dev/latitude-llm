@@ -34,16 +34,18 @@ interface ResolveAttributesInput {
   readonly spanAttrs: readonly OtlpKeyValue[]
   readonly statusCode: string
   readonly spanName?: string
+  readonly scopeName?: string
 }
 
 export function resolveAttributes({
   spanAttrs,
   statusCode,
   spanName = "",
+  scopeName = "",
 }: ResolveAttributesInput): ResolvedAttributes {
   const provider = resolveProvider(spanAttrs, spanName)
   const model = first(modelCandidates, spanAttrs) ?? ""
-  const operation = resolveOperation(spanAttrs, spanName)
+  const operation = resolveOperation(spanAttrs, spanName, scopeName)
 
   return {
     operation,

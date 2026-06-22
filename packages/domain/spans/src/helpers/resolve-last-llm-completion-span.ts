@@ -3,10 +3,11 @@ import type { Operation, Span } from "../entities/span.ts"
 
 /**
  * True for spans that represent an LLM generation step (Vercel AI SDK / GenAI map to `chat`;
- * legacy GenAI paths may still emit `text_completion`).
+ * legacy GenAI paths may still emit `text_completion`; native GenAI emitters such as
+ * Google ADK emit `generate_content`).
  */
 export function isLlmCompletionOperation(operation: Operation): boolean {
-  return operation === "chat" || operation === "text_completion"
+  return operation === "chat" || operation === "text_completion" || operation === "generate_content"
 }
 
 /**

@@ -276,7 +276,7 @@ Registers LLM auto-instrumentations against a specific tracer provider.
 # InstrumentationName = Literal[
 #   "openai", "openai-agents", "anthropic", "bedrock", "cohere",
 #   "langchain", "llamaindex", "togetherai", "vertexai", "aiplatform",
-#   "aleph_alpha", "crewai", "dspy", "google_adk", "google_generativeai", "groq",
+#   "aleph_alpha", "crewai", "google_adk", "google_generativeai", "groq",
 #   "haystack", "litellm", "mistralai", "ollama", "replicate",
 #   "sagemaker", "transformers", "watsonx",
 # ]
@@ -327,12 +327,12 @@ Set the integration's key on the `instrumentations` dict to the LLM SDK module t
 | `aiplatform`          | `google-cloud-aiplatform`   | `import google.cloud.aiplatform` → that module |
 | `aleph_alpha`         | `aleph-alpha-client`        | `import aleph_alpha_client`                 |
 | `crewai`              | `crewai`                    | `import crewai`                             |
-| `dspy`                | `dspy-ai`                   | `import dspy`                               |
+| DSPy¹                 | `dspy`                      | via litellm → `{"litellm": litellm}`        |
 | `google_adk`          | `google-adk`                | `import google.adk` → `google.adk`          |
-| `google_generativeai` | `google-generativeai`       | `from google import genai` → `genai`        |
+| `google_generativeai` | `google-genai`              | `from google import genai` → `genai`        |
 | `groq`                | `groq`                      | `import groq`                               |
 | `haystack`            | `haystack-ai`               | `import haystack`                           |
-| `litellm`             | `litellm`                   | `import litellm`                            |
+| `litellm`             | `litellm` (≥ 1.88)          | `import litellm`                            |
 | `mistralai`           | `mistralai`                 | `import mistralai`                          |
 | `ollama`              | `ollama`                    | `import ollama`                             |
 | `replicate`           | `replicate`                 | `import replicate`                          |

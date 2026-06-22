@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.3.0] - 2026-06-19
+
+### Changed
+
+- **Haystack, LlamaIndex, and CrewAI now use the OpenInference instrumentors** instead of the OpenLLMetry/Traceloop ones (`opentelemetry-instrumentation-{haystack,llamaindex,crewai}`). The OpenLLMetry instrumentors produced no/incomplete conversations and no model/token/cost (Haystack emitted dict-key "content", LlamaIndex emitted no LLM span at all, CrewAI dumped agent-config templates and leaked the provider API key). The OpenInference instrumentors capture the real exchange: Haystack and LlamaIndex now resolve provider/model and full tool-call conversations; CrewAI captures the whole conversation (incl. tool calls/results) and no longer leaks the API key. Instrumenting is unchanged (`{"haystack": haystack}`, `{"llamaindex": llama_index}`, `{"crewai": crewai}`). New deps: `openinference-instrumentation-haystack==0.1.34`, `openinference-instrumentation-llama-index==4.4.2`, `openinference-instrumentation-crewai==1.1.9`.
+- **DSPy is now instrumented through litellm** instead of the OpenInference DSPy instrumentor, which emitted no token usage (Arize/phoenix#3119, closed "not planned") and duplicated the conversation. DSPy runs every LM call through litellm, so `instrumentations={"litellm": litellm}` captures the model call with provider/model/tokens/cost and the full conversation. **Breaking:** the `dspy` instrumentation key is removed — passing `{"dspy": ...}` now raises (use `{"litellm": litellm}`). (Note: DSPy's response cache is on by default; cached calls don't hit litellm, so set `cache=False` on `dspy.LM` to record usage on repeated runs.)
+- **LiteLLM now uses LiteLLM's native OpenTelemetry callback** instead of the OpenInference `openinference-instrumentation-litellm`. The native callback emits standard `gen_ai.*` semantic-convention spans, so LiteLLM traces now resolve **provider, cost, and token usage** (previously no provider was emitted → cost was always 0). Instrumenting is unchanged — still `instrumentations={"litellm": litellm}`. The SDK configures the callback through env-backed settings, set with `os.environ.setdefault` so you can override any of them: `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental` (structured `gen_ai.{input,output}.messages`), `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=SPAN_ONLY` (record prompt/response content), and `USE_OTEL_LITELLM_REQUEST_SPAN=true` (emit one child span per completion, so multiple calls in a capture no longer collapse onto the parent). **Requires `litellm >= 1.88`** for the structured semconv + per-call spans; older versions still export but fall back to legacy attributes (no provider/cost).
+- **OpenAI now uses the OpenInference `openai` instrumentor** (`openinference-instrumentation-openai`) instead of OpenLLMetry's `opentelemetry-instrumentation-openai`. The OpenLLMetry instrumentor emitted no `llm.request.type` on Responses API spans (so they resolved `operation=unspecified` and dropped out of the token/cost/conversation rollup) and flattened Responses tool turns into plain text. OpenInference resolves the operation natively for both Chat Completions and the Responses API, captures the full `tool_call`/`tool_call_response` turns, and records streaming token usage — provider/model/cost preserved. Instrumenting is unchanged (`{"openai": openai}`); Azure OpenAI (same key) benefits too.
+- **Google Gemini now uses the OpenInference `google-genai` instrumentor** (`openinference-instrumentation-google-genai`) instead of the OpenLLMetry `opentelemetry-instrumentation-google-generativeai`. The OpenLLMetry instrumentor only `str()`-ified the current `google-genai` SDK's `Part` objects, so tool calls and a binary `thought_signature` leaked into message text as unreadable Python reprs. The OpenInference instrumentor structures tool calls (`tool_call` parts) and additionally captures reasoning-token usage. Instrumenting is unchanged — still `instrumentations={"google_generativeai": genai}` with `from google import genai`; install the `google-genai` SDK.
+
+### Removed
+
+- Dropped the OpenLLMetry instrumentor deps `opentelemetry-instrumentation-haystack`, `opentelemetry-instrumentation-llamaindex`, and `opentelemetry-instrumentation-crewai` (replaced by the OpenInference instrumentors).
+- Dropped the `opentelemetry-instrumentation-google-generativeai` dependency (replaced by `openinference-instrumentation-google-genai`).
+- Dropped the `opentelemetry-instrumentation-openai` dependency (replaced by `openinference-instrumentation-openai`).
+- Moved `openai-agents` out of runtime dependencies into the dev group — it's the host SDK for the `openai-agents` integration (the user installs it when they use it), not something the SDK imports, so it no longer bloats every install.
+- Dropped the `openinference-instrumentation-dspy` dependency and the `dspy` instrumentation key (DSPy is observed via litellm — see above).
+- Dropped the `openinference-instrumentation-litellm` dependency (replaced by LiteLLM's built-in OpenTelemetry callback).
+
 ## [3.2.0] - 2026-06-16
 
 ### Added

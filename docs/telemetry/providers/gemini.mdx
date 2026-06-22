@@ -1,0 +1,95 @@
+---
+title: Google Gemini
+description: Connect your Google Gemini (Developer API) application to Latitude for observability.
+---
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses the **Google Gemini Developer API** (`google-genai`).
+
+<Check>
+  You'll keep calling Gemini exactly as you do today. Telemetry simply
+  observes and enriches those calls.
+</Check>
+
+<Note>
+  Auto-instrumentation for Gemini is available in the **Python** SDK. For other
+  languages, send traces via the [OpenTelemetry exporter](/telemetry/otel-exporter).
+</Note>
+
+<Tip>
+  Using **Vertex AI** or **Google Cloud AI Platform** instead of the Gemini
+  Developer API? See [Vertex AI](/telemetry/providers/vertex-ai) or
+  [Google AI Platform](/telemetry/providers/google-ai-platform).
+</Tip>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A project that uses the **Gemini SDK** (`google-genai`)
+- A **Gemini API key** (set as `GEMINI_API_KEY`)
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    <CodeGroup>
+      ```bash pip
+      pip install latitude-telemetry google-genai
+      ```
+
+      ```bash uv
+      uv add latitude-telemetry google-genai
+      ```
+
+      ```bash poetry
+      poetry add latitude-telemetry google-genai
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Initialize and use">
+    ```python
+    import os
+
+    from google import genai
+
+    from latitude_telemetry import Latitude, capture
+
+    latitude = Latitude(
+        api_key="your-api-key",
+        project="your-project-slug",
+        instrumentations={"google_generativeai": genai},
+    )
+
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+
+    def generate_reply():
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents="Hello",
+        )
+        return response.text
+
+    capture("generate-reply", generate_reply)
+
+    latitude.shutdown()
+    ```
+  </Step>
+
+</Steps>
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each execution shows input/output messages, model, token usage, latency, and errors

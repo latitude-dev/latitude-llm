@@ -1,0 +1,90 @@
+---
+title: DSPy
+description: Connect your DSPy program to Latitude for observability.
+---
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into a program built with **DSPy**.
+
+DSPy has no dedicated instrumentor — it routes every language-model call through **LiteLLM**. Instrumenting LiteLLM therefore captures all of DSPy's model calls, including those issued by modules like `Predict` and `ReAct`.
+
+<Check>
+  You'll keep writing DSPy modules exactly as you do today. Telemetry observes
+  the model calls DSPy makes under the hood.
+</Check>
+
+<Note>
+  DSPy instrumentation is available in the **Python** SDK only, via the LiteLLM
+  integration.
+</Note>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A project that uses **DSPy** (`dspy`, which depends on `litellm`)
+- A key for whichever provider your `dspy.LM` targets (e.g. `OPENAI_API_KEY`)
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    <CodeGroup>
+      ```bash pip
+      pip install latitude-telemetry dspy litellm
+      ```
+
+      ```bash uv
+      uv add latitude-telemetry dspy litellm
+      ```
+
+      ```bash poetry
+      poetry add latitude-telemetry dspy litellm
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Initialize and use">
+    ```python
+    import dspy
+    import litellm
+
+    from latitude_telemetry import Latitude, capture
+
+    # DSPy routes every LM call through litellm, so instrumenting litellm
+    # captures DSPy's model calls.
+    latitude = Latitude(
+        api_key="your-api-key",
+        project="your-project-slug",
+        instrumentations={"litellm": litellm},
+    )
+
+    dspy.configure(lm=dspy.LM("openai/gpt-4o-mini"))
+
+    def dspy_qa():
+        qa = dspy.Predict("question -> answer")
+        return qa(question="Hello").answer
+
+    capture("dspy-qa", dspy_qa)
+
+    latitude.shutdown()
+    ```
+  </Step>
+
+</Steps>
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each execution shows input/output messages, model, token usage, latency, and errors
+3. Wrap a request with `capture()` to group every model call DSPy makes into one trace

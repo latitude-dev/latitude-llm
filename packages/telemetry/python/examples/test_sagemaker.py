@@ -1,8 +1,9 @@
 """
-Test AWS SageMaker instrumentation against local Latitude instance.
+AWS SageMaker — Latitude telemetry example.
 
 Required env vars:
 - LATITUDE_API_KEY
+- LATITUDE_PROJECT_SLUG
 - AWS_ACCESS_KEY_ID
 - AWS_SECRET_ACCESS_KEY
 - AWS_REGION
@@ -13,12 +14,12 @@ Install: uv add boto3
 
 import json
 import os
+import uuid
 
 import boto3
 
 from latitude_telemetry import Latitude, capture
 
-# Initialize telemetry pointing to local instance
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project=os.environ["LATITUDE_PROJECT_SLUG"],
@@ -26,9 +27,20 @@ latitude = Latitude(
     disable_batch=True,
 )
 
+PROVIDER = "sagemaker"
+SESSION_ID = f"{PROVIDER}-{uuid.uuid4().hex[:8]}"
 
-@capture("test-sagemaker-completion", {"tags": ["python", "test"], "session_id": "example"})
-def test_sagemaker_completion():
+
+def _ctx(scenario: str, *extra_tags: str) -> dict:
+    return {
+        "tags": ["example", PROVIDER, *extra_tags],
+        "session_id": SESSION_ID,
+        "user_id": "example-user",
+        "metadata": {"scenario": scenario, "environment": "local"},
+    }
+
+
+def chat() -> str:
     client = boto3.client(
         "sagemaker-runtime",
         region_name=os.environ.get("AWS_REGION", "us-east-1"),
@@ -57,5 +69,8 @@ def test_sagemaker_completion():
 
 
 if __name__ == "__main__":
-    test_sagemaker_completion()
+    chat()
+
+    capture("sagemaker-chat-capture", chat, _ctx("chat"))
+
     latitude.flush()

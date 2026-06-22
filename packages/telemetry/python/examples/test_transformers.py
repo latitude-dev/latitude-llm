@@ -1,20 +1,21 @@
 """
-Test Hugging Face Transformers instrumentation against local Latitude instance.
+Hugging Face Transformers — Latitude telemetry example.
 
 Required env vars:
 - LATITUDE_API_KEY
+- LATITUDE_PROJECT_SLUG
 
 Install: uv add transformers torch
 """
 
 import os
+import uuid
 
 import transformers
 from transformers import pipeline
 
 from latitude_telemetry import Latitude, capture
 
-# Initialize telemetry pointing to local instance
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project=os.environ["LATITUDE_PROJECT_SLUG"],
@@ -22,13 +23,24 @@ latitude = Latitude(
     disable_batch=True,
 )
 
+PROVIDER = "transformers"
+MODEL = "gpt2"
+SESSION_ID = f"{PROVIDER}-{uuid.uuid4().hex[:8]}"
 
-@capture("test-transformers-completion", {"tags": ["python", "test"], "session_id": "example"})
-def test_transformers_completion():
-    # Using a small model for testing
+
+def _ctx(scenario: str, *extra_tags: str) -> dict:
+    return {
+        "tags": ["example", PROVIDER, *extra_tags],
+        "session_id": SESSION_ID,
+        "user_id": "example-user",
+        "metadata": {"scenario": scenario, "environment": "local"},
+    }
+
+
+def chat() -> str:
     generator = pipeline(
         "text-generation",
-        model="gpt2",
+        model=MODEL,
         max_new_tokens=50,
     )
 
@@ -38,5 +50,8 @@ def test_transformers_completion():
 
 
 if __name__ == "__main__":
-    test_transformers_completion()
+    chat()
+
+    capture("transformers-chat-capture", chat, _ctx("chat"))
+
     latitude.flush()

@@ -40,14 +40,16 @@ const TRACE_METRIC_COLUMNS: MetricColumns = {
   isError: "error_count > 0",
 }
 
-// Spans are individual rows (one per span): error is the span's own OTEL status,
-// tokens come off the raw input/output columns (no per-trace `tokens_total` rollup).
-// Note: cost/tokens are ~0 on `execute_tool` spans — meaningful only when the
-// filter scopes to LLM spans; tool monitors use count/errorRate/duration.
+// Billable operations whose usage should sum. Mirrors the rollup usage allowlist
+// (traces_mv / sessions_mv) so wrapper spans don't double-count cost/tokens.
+const BILLABLE_OPERATIONS_SQL = "('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker')"
+
+// cost/tokens are gated to billable operations (NULL otherwise) so sum/avg/p95 ignore
+// wrapper + tool spans; count/errorRate/duration still span all rows.
 const SPAN_METRIC_COLUMNS: MetricColumns = {
   duration: "duration_ns",
-  cost: "cost_total_microcents",
-  tokens: "tokens_input + tokens_output",
+  cost: `if(operation IN ${BILLABLE_OPERATIONS_SQL}, cost_total_microcents, NULL)`,
+  tokens: `if(operation IN ${BILLABLE_OPERATIONS_SQL}, tokens_input + tokens_output, NULL)`,
   isError: "status_code = 2",
 }
 
@@ -91,7 +93,7 @@ const buildSpanInnerQuery = (input: MetricSeriesWindowInput): InnerQuery => {
   const { whereClauses, params: filterParams } = buildSpanFilterClauses(input.target.filterSet)
   const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
   return {
-    sql: `SELECT span_id, start_time, status_code, duration_ns, cost_total_microcents, tokens_input, tokens_output
+    sql: `SELECT span_id, start_time, status_code, operation, duration_ns, cost_total_microcents, tokens_input, tokens_output
           FROM spans
           WHERE organization_id = {organizationId:String}
             AND project_id = {projectId:String}

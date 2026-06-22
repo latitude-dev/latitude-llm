@@ -82,7 +82,7 @@ function makeSpanRow({
     error_type: "",
     tags: [BASELINE_TEST_TAG],
     metadata: {},
-    operation: "",
+    operation: "chat",
     provider: "",
     model: "",
     response_model: "",

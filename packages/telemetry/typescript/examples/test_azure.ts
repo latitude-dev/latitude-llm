@@ -1,5 +1,5 @@
 /**
- * Test Azure OpenAI instrumentation against local Latitude instance.
+ * Azure OpenAI — Latitude telemetry example.
  *
  * Required env vars:
  * - LATITUDE_API_KEY
@@ -11,6 +11,7 @@
  * Install: npm install openai
  */
 
+import { randomUUID } from "node:crypto"
 import { AzureOpenAI, OpenAI } from "openai"
 import { capture, Latitude } from "../src"
 
@@ -22,33 +23,82 @@ const latitude = new Latitude({
   instrumentations: { openai: OpenAI },
 })
 
-async function main() {
-  // Wait for instrumentations to be ready
-  await latitude.ready
+const PROVIDER = "azure"
+const DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o-mini"
+const SESSION_ID = `${PROVIDER}-${randomUUID().slice(0, 8)}`
 
-  const client = new AzureOpenAI({
+function ctx(scenario: string, ...extraTags: string[]) {
+  return {
+    tags: ["example", PROVIDER, ...extraTags],
+    sessionId: SESSION_ID,
+    userId: "example-user",
+    metadata: { scenario, environment: "local" },
+  }
+}
+
+function client() {
+  return new AzureOpenAI({
     apiKey: process.env.AZURE_OPENAI_API_KEY,
     apiVersion: "2024-02-01",
     endpoint: process.env.AZURE_OPENAI_ENDPOINT,
   })
+}
 
-  const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o-mini"
+async function chat() {
+  const response = await client().chat.completions.create({
+    model: DEPLOYMENT,
+    messages: [{ role: "user", content: "Say 'Hello from Azure!' in exactly 5 words." }],
+    max_tokens: 50,
+  })
+  return response.choices[0]?.message?.content
+}
 
-  await capture(
-    "azure-chat",
-    async () => {
-      const response = await client.chat.completions.create({
-        model: deploymentName,
-        messages: [{ role: "user", content: "Say 'Hello from Azure!' in exactly 5 words." }],
-        max_tokens: 50,
-      })
-
-      return response.choices[0]?.message?.content
+async function toolConversation() {
+  const azure = client()
+  const tools = [
+    {
+      type: "function" as const,
+      function: {
+        name: "get_weather",
+        description: "Get the current weather for a city",
+        parameters: {
+          type: "object",
+          properties: { city: { type: "string" } },
+          required: ["city"],
+        },
+      },
     },
-    { tags: ["test", "azure-openai"], sessionId: "example" },
-  )
+  ]
+  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    {
+      role: "user",
+      content: "What's the weather in San Francisco? Use get_weather, then answer in one short sentence.",
+    },
+  ]
+
+  const first = await azure.chat.completions.create({ model: DEPLOYMENT, messages, tools, max_tokens: 200 })
+  const toolCall = first.choices[0]?.message?.tool_calls?.[0]
+  messages.push(first.choices[0]!.message)
+  messages.push({
+    role: "tool",
+    tool_call_id: toolCall!.id,
+    content: JSON.stringify({ city: "San Francisco", temperatureC: 21, conditions: "sunny" }),
+  })
+
+  const second = await azure.chat.completions.create({ model: DEPLOYMENT, messages, tools, max_tokens: 200 })
+  return second.choices[0]?.message?.content
+}
+
+async function main() {
+  await latitude.ready
+
+  await toolConversation()
+
+  await capture("azure-chat-capture", chat, ctx("chat"))
+  await capture("azure-tools-capture", toolConversation, ctx("tools", "tools"))
 
   await latitude.flush()
+  await latitude.shutdown()
 }
 
 main().catch(console.error)

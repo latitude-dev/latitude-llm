@@ -27,6 +27,7 @@ function toClickHouseDateTime(value: Date): string {
 
 function makeSpan({
   traceId,
+  spanId,
   userId,
   userEmail = "",
   sessionId = "",
@@ -34,11 +35,12 @@ function makeSpan({
   statusCode = 0,
   model = "",
   toolName = "",
-  operation = "",
+  operation = "chat",
   costTotalMicrocents = 0,
   tokensTotal = 0,
 }: {
   readonly traceId: string
+  readonly spanId?: string
   readonly userId: string
   readonly userEmail?: string
   readonly sessionId?: string
@@ -57,7 +59,7 @@ function makeSpan({
     user_id: userId,
     user_email: userEmail,
     trace_id: traceId,
-    span_id: traceId.slice(0, 16),
+    span_id: spanId ?? traceId.slice(0, 16),
     parent_span_id: "",
     api_key_id: "test-api-key",
     simulation_id: "",
@@ -126,10 +128,19 @@ const SPANS = [
     sessionId: "session-a1",
     startTime: daysAgo(2),
     model: "gpt-4o",
-    toolName: "search",
-    operation: "execute_tool",
     costTotalMicrocents: 200,
     tokensTotal: 20,
+  }),
+  // Same trace as a2: the tool call that the LLM step invoked. Tool spans carry
+  // no usage (excluded from the cost/token rollup), but feed the tool breakdown.
+  makeSpan({
+    traceId: traceId("a2"),
+    spanId: "a2toolaaaaaaaaaa",
+    userId: USER_A,
+    sessionId: "session-a1",
+    startTime: daysAgo(2),
+    toolName: "search",
+    operation: "execute_tool",
   }),
   makeSpan({
     traceId: traceId("a3"),

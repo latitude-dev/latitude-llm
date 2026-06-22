@@ -41,10 +41,6 @@ await latitude.ready
 const openai = new OpenAI()
 
 async function main() {
-  // Sentry and Latitude share the provider:
-  // - Sentry sees: all spans (HTTP, LLM, etc.)
-  // - Latitude sees: LLM spans with gen_ai.* attributes
-
   await capture(
     "sentry-chat",
     async () => {

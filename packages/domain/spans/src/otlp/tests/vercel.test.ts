@@ -582,10 +582,14 @@ describe("TravelPlanner trace — Vercel AI SDK", () => {
       expect(findSpan("llm1Outer").model).toBe("")
     })
 
-    it("resolves operation to 'chat' for generateText and streamText spans alike", () => {
-      expect(findSpan("llm1Outer").operation).toBe("chat")
+    it("resolves bare generateText/streamText wrappers to 'invoke_agent' and inner leaves to 'chat'", () => {
+      // The bare `ai.generateText` / `ai.streamText` wrappers carry a lossy
+      // summary and end after their leaves, so they are classified as inert
+      // wrappers (`invoke_agent`) and excluded from the conversation/usage
+      // rollup; the inner `.doGenerate` / `.doStream` leaves hold the real turn.
+      expect(findSpan("llm1Outer").operation).toBe("invoke_agent")
+      expect(findSpan("llm2Outer").operation).toBe("invoke_agent")
       expect(findSpan("llm1Inner").operation).toBe("chat")
-      expect(findSpan("llm2Outer").operation).toBe("chat")
       expect(findSpan("llm2Inner").operation).toBe("chat")
     })
 
@@ -1056,5 +1060,103 @@ describe("Vercel AI SDK top-level prompt fallback", () => {
     expect(span?.inputMessages[0]?.parts).toEqual([
       { type: "text", content: "SYSTEM PROMPT EXCERPT:\nYou are an expert writer." },
     ])
+  })
+})
+
+// Vercel AI SDK v7's `LegacyOpenTelemetry` emits the same `ai.*` spans as v6, but the
+// embedded ModelMessages use the v7 shapes: tool results carry a tagged `output`
+// (instead of v6 `result`), and files use `FilePart`. rosetta-ai 2.2.0 (Provider.VercelAI)
+// translates these — this guards the legacy path against v7 message changes.
+describe("Vercel AI SDK v7 — LegacyOpenTelemetry ai.* spans (v7 ModelMessage shapes)", () => {
+  function buildV7LegacyTrace(): OtlpExportTraceServiceRequest {
+    return {
+      resourceSpans: [
+        {
+          resource: { attributes: [str("service.name", SERVICE_NAME)] },
+          scopeSpans: [
+            {
+              scope: { name: SCOPE_NAME, version: "7.0.0-beta.181" },
+              spans: [
+                {
+                  traceId: TRACE_ID,
+                  spanId: "f7f7f7f7f7f70001",
+                  name: "ai.streamText.doStream",
+                  kind: 1,
+                  startTimeUnixNano: "1781784100000000000",
+                  endTimeUnixNano: "1781784101000000000",
+                  attributes: [
+                    str("ai.operationId", "ai.streamText.doStream"),
+                    str("ai.model.provider", "openai.chat"),
+                    str("ai.model.id", MODEL),
+                    int("ai.usage.inputTokens", 120),
+                    int("ai.usage.outputTokens", 18),
+                    str(
+                      "ai.prompt.messages",
+                      JSON.stringify([
+                        {
+                          role: "user",
+                          content: [
+                            { type: "text", text: "What's the weather?" },
+                            // v7 FilePart with tagged FileData (replaces v6 ImagePart).
+                            { type: "file", mediaType: "image/png", data: { type: "url", url: IMAGE_URL } },
+                          ],
+                        },
+                        {
+                          role: "assistant",
+                          content: [
+                            {
+                              type: "tool-call",
+                              toolCallId: "call_w_1",
+                              toolName: "get_weather",
+                              input: { city: "BCN" },
+                            },
+                          ],
+                        },
+                        {
+                          role: "tool",
+                          content: [
+                            {
+                              type: "tool-result",
+                              toolCallId: "call_w_1",
+                              toolName: "get_weather",
+                              // v7: tagged `output` replaces v6 `result`.
+                              output: { type: "json", value: { temp: 22, condition: "sunny" } },
+                            },
+                          ],
+                        },
+                      ]),
+                    ),
+                  ],
+                  status: { code: 1 },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+  }
+
+  it("translates v7 ModelMessages (output-based tool-result, FilePart) via rosetta-ai", () => {
+    const { spans } = transformOtlpToSpans(buildV7LegacyTrace(), CONTEXT)
+    const span = spans[0]
+    expect(span).toBeDefined()
+    expect(span?.provider).toBe("openai")
+    expect(span?.tokensInput).toBe(120)
+
+    const roles = span?.inputMessages.map((m) => m.role) ?? []
+    expect(roles).toContain("user")
+    expect(roles).toContain("tool")
+
+    // v7 tool-result `output` surfaces as a GenAI tool_call_response part.
+    const toolMsg = span?.inputMessages.find((m) => m.role === "tool")
+    const toolParts = (toolMsg as { parts: { type: string }[] }).parts
+    expect(toolParts.some((p) => p.type === "tool_call_response")).toBe(true)
+
+    // v7 FilePart (image url) surfaces as a uri/blob part, not a dropped/unknown part.
+    const userMsg = span?.inputMessages.find((m) => m.role === "user")
+    const userParts = (userMsg as { parts: { type: string }[] }).parts
+    expect(userParts.some((p) => p.type === "text")).toBe(true)
+    expect(userParts.some((p) => p.type === "uri" || p.type === "blob" || p.type === "file")).toBe(true)
   })
 })

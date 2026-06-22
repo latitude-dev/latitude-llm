@@ -1,5 +1,5 @@
 /**
- * Test Together AI instrumentation against local Latitude instance.
+ * Together AI — Latitude telemetry example.
  *
  * Required env vars:
  * - LATITUDE_API_KEY
@@ -9,6 +9,7 @@
  * Install: npm install together-ai
  */
 
+import { randomUUID } from "node:crypto"
 import Together, * as TogetherSDK from "together-ai"
 import { capture, Latitude } from "../src"
 
@@ -19,32 +20,75 @@ const latitude = new Latitude({
   instrumentations: { togetherai: TogetherSDK },
 })
 
+const PROVIDER = "togetherai"
+const MODEL = "meta-llama/Llama-3.2-3B-Instruct-Turbo"
+const SESSION_ID = `${PROVIDER}-${randomUUID().slice(0, 8)}`
+
+function ctx(scenario: string, ...extraTags: string[]) {
+  return {
+    tags: ["example", PROVIDER, ...extraTags],
+    sessionId: SESSION_ID,
+    userId: "example-user",
+    metadata: { scenario, environment: "local" },
+  }
+}
+
+async function chat() {
+  const client = new Together()
+  const response = await client.chat.completions.create({
+    model: MODEL,
+    messages: [{ role: "user", content: "Say 'Hello from Together!' in exactly 5 words." }],
+    max_tokens: 50,
+  })
+  return response.choices[0]?.message?.content
+}
+
+async function toolConversation() {
+  const client = new Together()
+  const tools = [
+    {
+      type: "function" as const,
+      function: {
+        name: "get_weather",
+        description: "Get the current weather for a city",
+        parameters: {
+          type: "object",
+          properties: { city: { type: "string" } },
+          required: ["city"],
+        },
+      },
+    },
+  ]
+  const messages: any[] = [
+    {
+      role: "user",
+      content: "What's the weather in San Francisco? Use get_weather, then answer in one short sentence.",
+    },
+  ]
+
+  const first = await client.chat.completions.create({ model: MODEL, messages, tools, max_tokens: 200 })
+  const toolCall = first.choices[0]?.message?.tool_calls?.[0]
+  messages.push(first.choices[0]!.message)
+  messages.push({
+    role: "tool",
+    tool_call_id: toolCall!.id,
+    content: JSON.stringify({ city: "San Francisco", temperatureC: 21, conditions: "sunny" }),
+  })
+
+  const second = await client.chat.completions.create({ model: MODEL, messages, tools, max_tokens: 200 })
+  return second.choices[0]?.message?.content
+}
+
 async function main() {
-  // Wait for instrumentations to be ready
   await latitude.ready
 
-  const client = new Together()
+  await toolConversation()
 
-  await capture(
-    "together-chat",
-    async () => {
-      const response = await client.chat.completions.create({
-        model: "meta-llama/Llama-3.2-3B-Instruct-Turbo",
-        messages: [
-          {
-            role: "user",
-            content: "Say 'Hello from Together!' in exactly 5 words.",
-          },
-        ],
-        max_tokens: 50,
-      })
-
-      return response.choices[0]?.message?.content
-    },
-    { tags: ["test", "together"], sessionId: "example" },
-  )
+  await capture("togetherai-chat-capture", chat, ctx("chat"))
+  await capture("togetherai-tools-capture", toolConversation, ctx("tools", "tools"))
 
   await latitude.flush()
+  await latitude.shutdown()
 }
 
 main().catch(console.error)

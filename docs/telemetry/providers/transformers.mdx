@@ -1,0 +1,84 @@
+---
+title: Hugging Face Transformers
+description: Connect your Hugging Face Transformers application to Latitude for observability.
+---
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an application that runs models locally with **Hugging Face Transformers**.
+
+<Check>
+  You'll keep calling Transformers exactly as you do today. Telemetry simply
+  observes and enriches those calls.
+</Check>
+
+<Note>
+  Auto-instrumentation for Transformers is available in the **Python** SDK. For other
+  languages, send traces via the [OpenTelemetry exporter](/telemetry/otel-exporter).
+</Note>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A project that uses the **Transformers** library (`transformers`)
+- A **Hugging Face token** for gated models (set as `HF_TOKEN`)
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    <CodeGroup>
+      ```bash pip
+      pip install latitude-telemetry transformers torch
+      ```
+
+      ```bash uv
+      uv add latitude-telemetry transformers torch
+      ```
+
+      ```bash poetry
+      poetry add latitude-telemetry transformers torch
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Initialize and use">
+    ```python
+    import transformers
+    from transformers import pipeline
+
+    from latitude_telemetry import Latitude, capture
+
+    latitude = Latitude(
+        api_key="your-api-key",
+        project="your-project-slug",
+        instrumentations={"transformers": transformers},
+    )
+
+    def generate_reply():
+        generator = pipeline("text-generation", model="gpt2", max_new_tokens=50)
+        result = generator("Hello:")
+        return result[0]["generated_text"]
+
+    capture("generate-reply", generate_reply)
+
+    latitude.shutdown()
+    ```
+  </Step>
+
+</Steps>
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each execution shows input/output messages, model, token usage, latency, and errors

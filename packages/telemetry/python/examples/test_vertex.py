@@ -1,8 +1,9 @@
 """
-Test Vertex AI instrumentation against local Latitude instance.
+Vertex AI — Latitude telemetry example.
 
 Required env vars:
 - LATITUDE_API_KEY
+- LATITUDE_PROJECT_SLUG
 - GOOGLE_APPLICATION_CREDENTIALS (path to service account JSON)
 - GOOGLE_CLOUD_PROJECT
 
@@ -10,13 +11,13 @@ Install: uv add google-cloud-aiplatform
 """
 
 import os
+import uuid
 
 import vertexai
 from vertexai.generative_models import GenerativeModel
 
 from latitude_telemetry import Latitude, capture
 
-# Initialize telemetry pointing to local instance
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project=os.environ["LATITUDE_PROJECT_SLUG"],
@@ -24,21 +25,35 @@ latitude = Latitude(
     disable_batch=True,
 )
 
+PROVIDER = "vertexai"
+MODEL = "gemini-2.5-flash"
+SESSION_ID = f"{PROVIDER}-{uuid.uuid4().hex[:8]}"
 
-@capture("test-vertex-completion", {"tags": ["python", "test"], "session_id": "example"})
-def test_vertex_completion():
-    # Initialize Vertex AI
+
+def _ctx(scenario: str, *extra_tags: str) -> dict:
+    return {
+        "tags": ["example", PROVIDER, *extra_tags],
+        "session_id": SESSION_ID,
+        "user_id": "example-user",
+        "metadata": {"scenario": scenario, "environment": "local"},
+    }
+
+
+def chat() -> str:
     vertexai.init(
         project=os.environ["GOOGLE_CLOUD_PROJECT"],
         location="us-central1",
     )
 
-    model = GenerativeModel("gemini-2.5-flash")
+    model = GenerativeModel(MODEL)
     response = model.generate_content("Say 'Hello from Vertex!' in exactly 5 words.")
 
     return response.text
 
 
 if __name__ == "__main__":
-    test_vertex_completion()
+    chat()
+
+    capture("vertexai-chat-capture", chat, _ctx("chat"))
+
     latitude.flush()

@@ -337,7 +337,7 @@ describe("createSpanIngestionWorker", () => {
     }
   })
 
-  it("keeps Vercel outer wrappers for tree structure while moving estimated cost onto the inner token span", async () => {
+  it("persists Vercel outer wrappers faithfully as invoke_agent (rollup gating, not zeroing, prevents double-count)", async () => {
     const consumer = new TestQueueConsumer()
     const disk = new FakeStorageDisk()
     const pub = createFakeEventsPublisher()
@@ -373,6 +373,7 @@ describe("createSpanIngestionWorker", () => {
         cost_total_microcents: string
         parent_span_id: string
         ai_operation_id: string
+        operation: string
         provider: string
         model: string
       }>(
@@ -385,6 +386,7 @@ describe("createSpanIngestionWorker", () => {
            cost_total_microcents,
            parent_span_id,
            attr_string['ai.operationId'] AS ai_operation_id,
+           operation,
            provider,
            model
          FROM spans
@@ -396,11 +398,16 @@ describe("createSpanIngestionWorker", () => {
 
     expect(rows).toHaveLength(2)
 
+    // The wrapper is classified `invoke_agent` and keeps its SDK-reported usage
+    // verbatim — the trace/session rollup excludes non-billable operations, so
+    // there is no double-count and no need to zero the span (which would destroy
+    // the reported values).
     expect(rows[0]?.name).toBe("ai.generateText")
     expect(rows[0]?.trace_id).toBe("11111111111111111111111111111111")
-    expect(Number(rows[0]?.tokens_input ?? 0)).toBe(0)
-    expect(Number(rows[0]?.tokens_output ?? 0)).toBe(0)
-    expect(Number(rows[0]?.cost_total_microcents ?? 0)).toBe(0)
+    expect(rows[0]?.operation).toBe("invoke_agent")
+    expect(Number(rows[0]?.tokens_input ?? 0)).toBe(918)
+    expect(Number(rows[0]?.tokens_output ?? 0)).toBe(31)
+    expect(Number(rows[0]?.cost_total_microcents ?? 0)).toBeGreaterThan(0)
     expect(rows[0]?.parent_span_id).toBe("")
     expect(rows[0]?.ai_operation_id).toBe("ai.generateText")
     expect(rows[0]?.provider).toBe("openai")
@@ -408,6 +415,7 @@ describe("createSpanIngestionWorker", () => {
 
     expect(rows[1]?.name).toBe("ai.generateText.doGenerate")
     expect(rows[1]?.trace_id).toBe("11111111111111111111111111111111")
+    expect(rows[1]?.operation).toBe("chat")
     expect(Number(rows[1]?.tokens_input ?? 0)).toBe(918)
     expect(Number(rows[1]?.tokens_output ?? 0)).toBe(31)
     expect(Number(rows[1]?.cost_total_microcents ?? 0)).toBeGreaterThan(0)

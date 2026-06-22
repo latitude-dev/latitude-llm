@@ -137,8 +137,8 @@ describe("Traceloop/OpenLLMetry — flattened indexed gen_ai.prompt/completion",
   })
 
   describe("identity and operation", () => {
-    it("resolves provider to 'OpenAI'", () => {
-      expect(findSpan("completion").provider).toBe("OpenAI")
+    it("resolves provider to canonical 'openai' (case-folded from 'OpenAI')", () => {
+      expect(findSpan("completion").provider).toBe("openai")
     })
 
     it("resolves model to 'gpt-4o-mini'", () => {
@@ -246,5 +246,155 @@ describe("Traceloop/OpenLLMetry — flattened indexed gen_ai.prompt/completion",
     it("streaming span resolves finish_reasons from array attribute", () => {
       expect(findSpan("streaming").finishReasons).toEqual(["stop"])
     })
+  })
+})
+
+// ─── Parser polish: Gemini double-encoded content + LangChain roles ──
+
+const POLISH_SPAN_ID = "c1c2c3c4c5c60001"
+
+function buildPolishTrace(attributes: OtlpKeyValue[]): OtlpExportTraceServiceRequest {
+  return {
+    resourceSpans: [
+      {
+        resource: { attributes: [str("service.name", SERVICE_NAME)] },
+        scopeSpans: [
+          {
+            scope: { name: SCOPE_NAME, version: SCOPE_VERSION },
+            spans: [
+              {
+                traceId: TRACE_ID,
+                spanId: POLISH_SPAN_ID,
+                name: "chat",
+                kind: 3,
+                startTimeUnixNano: "1710590400000000000",
+                endTimeUnixNano: "1710590401000000000",
+                attributes,
+                status: { code: 1 },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }
+}
+
+const firstSpan = (req: OtlpExportTraceServiceRequest): SpanDetail => {
+  const span = transformOtlpToSpans(req, CONTEXT).spans[0] as SpanDetail | undefined
+  if (!span) throw new Error("span not produced")
+  return span
+}
+
+describe("Gemini double-encoded input content (parser unwrap)", () => {
+  it("unwraps a stringified parts array into a real text part (not the JSON string)", () => {
+    const span = firstSpan(
+      buildPolishTrace([
+        str("gen_ai.prompt.0.role", "user"),
+        // OpenLLMetry google_generativeai serializes content as a stringified parts array.
+        str("gen_ai.prompt.0.content", '[{"type":"text","text":"What is the weather in Barcelona?"}]'),
+        str("gen_ai.completion.0.role", "assistant"),
+        str("gen_ai.completion.0.content", "It is sunny."),
+        str("gen_ai.system", "Google"),
+        str("gen_ai.request.model", "gemini-2.5-flash"),
+        str("llm.request.type", "chat"),
+      ]),
+    )
+
+    const user = span.inputMessages.find((m) => m.role === "user")
+    expect(user).toBeDefined()
+    const parts = (user as { parts: { type: string; content?: string }[] }).parts
+    const text = parts.find((p) => p.type === "text")
+    expect((text as { content: string }).content).toBe("What is the weather in Barcelona?")
+    // The literal JSON wrapper must not survive into the content.
+    expect((text as { content: string }).content).not.toContain('"type"')
+  })
+
+  it("leaves ordinary string content untouched", () => {
+    const span = firstSpan(
+      buildPolishTrace([
+        str("gen_ai.prompt.0.role", "user"),
+        str("gen_ai.prompt.0.content", "Just a plain question?"),
+        str("gen_ai.completion.0.role", "assistant"),
+        str("gen_ai.completion.0.content", "An answer."),
+        str("llm.request.type", "chat"),
+      ]),
+    )
+
+    const user = span.inputMessages.find((m) => m.role === "user")
+    const parts = (user as { parts: { type: string; content?: string }[] }).parts
+    expect((parts.find((p) => p.type === "text") as { content: string }).content).toBe("Just a plain question?")
+  })
+})
+
+describe("LangChain output role normalization", () => {
+  it("coerces an `ai` completion role to `assistant`", () => {
+    const span = firstSpan(
+      buildPolishTrace([
+        str("gen_ai.prompt.0.role", "human"),
+        str("gen_ai.prompt.0.content", "Hello"),
+        str("gen_ai.completion.0.role", "ai"),
+        str("gen_ai.completion.0.content", "Hi there!"),
+        str("llm.request.type", "chat"),
+      ]),
+    )
+
+    expect(span.outputMessages.find((m) => m.role === "assistant")).toBeDefined()
+    expect(span.outputMessages.some((m) => m.role === "unknown")).toBe(false)
+    // Input `human` role is aliased to `user`.
+    expect(span.inputMessages.find((m) => m.role === "user")).toBeDefined()
+  })
+
+  it("defaults a missing completion role to `assistant`", () => {
+    const span = firstSpan(
+      buildPolishTrace([
+        str("gen_ai.prompt.0.role", "user"),
+        str("gen_ai.prompt.0.content", "Hello"),
+        str("gen_ai.completion.0.content", "Hi there!"),
+        str("llm.request.type", "chat"),
+      ]),
+    )
+
+    expect(span.outputMessages.find((m) => m.role === "assistant")).toBeDefined()
+    expect(span.outputMessages.some((m) => m.role === "unknown")).toBe(false)
+  })
+
+  it("leaves an unrecognized completion role untouched (not forced to `assistant`)", () => {
+    const span = firstSpan(
+      buildPolishTrace([
+        str("gen_ai.prompt.0.role", "user"),
+        str("gen_ai.prompt.0.content", "Hello"),
+        str("gen_ai.completion.0.role", "narrator"),
+        str("gen_ai.completion.0.content", "Once upon a time…"),
+        str("llm.request.type", "chat"),
+      ]),
+    )
+
+    expect(span.outputMessages.find((m) => m.role === "narrator")).toBeDefined()
+    expect(span.outputMessages.some((m) => m.role === "assistant")).toBe(false)
+  })
+})
+
+describe("Role aliases — applied uniformly across both formats", () => {
+  it("aliases ai→assistant / human→user in the JSON-string prompt format", () => {
+    const span = firstSpan(
+      buildPolishTrace([
+        str(
+          "gen_ai.prompt",
+          JSON.stringify([
+            { role: "human", content: "Hello" },
+            { role: "ai", content: "Hi, how can I help?" },
+            { role: "human", content: "What's 2+2?" },
+          ]),
+        ),
+        str("gen_ai.completion", JSON.stringify([{ role: "ai", content: "4" }])),
+        str("llm.request.type", "chat"),
+      ]),
+    )
+
+    expect(span.inputMessages.find((m) => m.role === "user")).toBeDefined()
+    expect(span.inputMessages.find((m) => m.role === "assistant")).toBeDefined()
+    expect(span.inputMessages.some((m) => m.role === "human" || m.role === "ai")).toBe(false)
+    expect(span.outputMessages.find((m) => m.role === "assistant")).toBeDefined()
   })
 })

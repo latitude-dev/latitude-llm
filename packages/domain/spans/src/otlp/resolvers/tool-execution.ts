@@ -12,6 +12,7 @@ const toolNameCandidates: Candidate<string>[] = [
   fromString("ai.toolCall.name"), // Vercel AI SDK
   fromString("tool.name"), // OpenInference / Arize Phoenix
   fromString("traceloop.entity.name"), // OpenLLMetry / Traceloop
+  fromString("openai.agents.function.name"), // Latitude openai-agents TS bridge
 ]
 
 function jsonStringify(value: unknown): string {
@@ -47,6 +48,7 @@ const toolInputCandidates: Candidate<string>[] = [
   fromString("ai.toolCall.args"), // Vercel AI SDK
   fromString("input.value"), // OpenInference / Arize Phoenix
   fromString("traceloop.entity.input"), // OpenLLMetry / Traceloop
+  fromString("openai.agents.function.input"), // Latitude openai-agents TS bridge
 ]
 
 const toolOutputCandidates: Candidate<string>[] = [
@@ -54,6 +56,7 @@ const toolOutputCandidates: Candidate<string>[] = [
   fromString("ai.toolCall.result"), // Vercel AI SDK
   fromString("output.value"), // OpenInference / Arize Phoenix
   fromString("traceloop.entity.output"), // OpenLLMetry / Traceloop
+  fromString("openai.agents.function.output"), // Latitude openai-agents TS bridge
 ]
 
 interface ResolvedToolExecution {

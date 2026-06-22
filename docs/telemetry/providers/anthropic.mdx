@@ -157,13 +157,15 @@ When streaming, consume the stream inside `capture()` so the span covers the ful
   <Tab title="Python">
     ```python
     def stream_reply():
+        chunks = []
         with client.messages.stream(
             model="claude-sonnet-4-20250514",
             max_tokens=1024,
             messages=[{"role": "user", "content": input}],
         ) as stream:
             for text in stream.text_stream:
-                yield text
+                chunks.append(text)
+        return "".join(chunks)
 
     capture("stream-reply", stream_reply)
     ```

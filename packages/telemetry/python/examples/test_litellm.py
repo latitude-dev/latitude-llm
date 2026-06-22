@@ -1,20 +1,22 @@
 """
-Test LiteLLM instrumentation against local Latitude instance.
+LiteLLM — Latitude telemetry example. Uses LiteLLM's native OpenTelemetry callback.
 
 Required env vars:
 - LATITUDE_API_KEY
+- LATITUDE_PROJECT_SLUG
 - OPENAI_API_KEY (or other provider keys depending on model)
 
-Install: uv add litellm
+Install: uv add 'litellm>=1.88'
 """
 
+import json
 import os
+import uuid
 
 import litellm
 
 from latitude_telemetry import Latitude, capture
 
-# Initialize telemetry pointing to local instance
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project=os.environ["LATITUDE_PROJECT_SLUG"],
@@ -22,19 +24,85 @@ latitude = Latitude(
     disable_batch=True,
 )
 
+PROVIDER = "litellm"
+MODEL = "gpt-4o-mini"
+SESSION_ID = f"{PROVIDER}-{uuid.uuid4().hex[:8]}"
 
-@capture("test-litellm-completion", {"tags": ["python", "test"], "session_id": "example"})
-def test_litellm_completion():
-    # LiteLLM can call any provider - using OpenAI here as example
+
+def _ctx(scenario: str, *extra_tags: str) -> dict:
+    return {
+        "tags": ["example", PROVIDER, *extra_tags],
+        "session_id": SESSION_ID,
+        "user_id": "example-user",
+        "metadata": {"scenario": scenario, "environment": "local"},
+    }
+
+
+def chat() -> str | None:
     response = litellm.completion(
-        model="gpt-4o-mini",
+        model=MODEL,
         messages=[{"role": "user", "content": "Say 'Hello from LiteLLM!' in exactly 5 words."}],
         max_tokens=50,
     )
-
     return response.choices[0].message.content
 
 
+def stream() -> str:
+    chunks: list[str] = []
+    for chunk in litellm.completion(
+        model=MODEL,
+        messages=[{"role": "user", "content": "Say 'Hello from LiteLLM stream!' in exactly 6 words."}],
+        max_tokens=50,
+        stream=True,
+    ):
+        delta = chunk.choices[0].delta.content
+        if delta:
+            chunks.append(delta)
+    return "".join(chunks)
+
+
+def tool_conversation() -> str | None:
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get the current weather for a city",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"city": {"type": "string"}},
+                    "required": ["city"],
+                },
+            },
+        }
+    ]
+    messages = [
+        {
+            "role": "user",
+            "content": "What's the weather in San Francisco? Use get_weather, then answer in one short sentence.",
+        }
+    ]
+
+    first = litellm.completion(model=MODEL, messages=messages, tools=tools, max_tokens=200)
+    tool_call = first.choices[0].message.tool_calls[0]
+    messages.append(first.choices[0].message.model_dump())
+    messages.append(
+        {
+            "role": "tool",
+            "tool_call_id": tool_call.id,
+            "content": json.dumps({"city": "San Francisco", "temperatureC": 21, "conditions": "sunny"}),
+        }
+    )
+
+    second = litellm.completion(model=MODEL, messages=messages, tools=tools, max_tokens=200)
+    return second.choices[0].message.content
+
+
 if __name__ == "__main__":
-    test_litellm_completion()
+    tool_conversation()
+
+    capture("litellm-chat-capture", chat, _ctx("chat"))
+    capture("litellm-stream-capture", stream, _ctx("stream", "stream"))
+    capture("litellm-tools-capture", tool_conversation, _ctx("tools", "tools"))
+
     latitude.flush()

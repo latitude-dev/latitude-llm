@@ -1,5 +1,5 @@
 """
-Test AWS Bedrock instrumentation against local Latitude instance.
+AWS Bedrock — Latitude telemetry example.
 
 Required env vars:
 - LATITUDE_API_KEY
@@ -11,14 +11,13 @@ Required env vars:
 Install: uv add boto3
 """
 
-import json
 import os
+import uuid
 
 import boto3
 
 from latitude_telemetry import Latitude, capture
 
-# Initialize telemetry pointing to local instance
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project=os.environ["LATITUDE_PROJECT_SLUG"],
@@ -26,18 +25,29 @@ latitude = Latitude(
     disable_batch=True,
 )
 
+PROVIDER = "bedrock"
+MODEL = "nova-2-lite-v1:0"
+SESSION_ID = f"{PROVIDER}-{uuid.uuid4().hex[:8]}"
 
-@capture("test-bedrock-completion", {"tags": ["python", "test"], "session_id": "example"})
-def test_bedrock_completion():
+
+def _ctx(scenario: str, *extra_tags: str) -> dict:
+    return {
+        "tags": ["example", PROVIDER, *extra_tags],
+        "session_id": SESSION_ID,
+        "user_id": "example-user",
+        "metadata": {"scenario": scenario, "environment": "local"},
+    }
+
+
+def chat() -> str:
     client = boto3.client(
         "bedrock-runtime",
         region_name=os.environ.get("AWS_REGION", "eu-central-1"),
     )
 
-    # Using Amazon Nova on Bedrock via converse API
-    # The converse API has better instrumentation support than invoke_model
+    # The converse API has better instrumentation support than invoke_model.
     response = client.converse(
-        modelId="nova-2-lite-v1:0",
+        modelId=MODEL,
         messages=[{"role": "user", "content": [{"text": "Say 'Hello from Bedrock!' in exactly 5 words."}]}],
         inferenceConfig={
             "maxTokens": 50,
@@ -48,5 +58,8 @@ def test_bedrock_completion():
 
 
 if __name__ == "__main__":
-    test_bedrock_completion()
+    chat()
+
+    capture("bedrock-chat-capture", chat, _ctx("chat"))
+
     latitude.flush()

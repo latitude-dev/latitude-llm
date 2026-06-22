@@ -1,94 +1,88 @@
 /**
- * Test Vercel AI SDK instrumentation against local Latitude instance.
- *
- * This example shows both patterns:
- * - a generation wrapped in `capture()` for Latitude context tags/metadata
- * - a generation without `capture()` using only AI SDK telemetry + a Latitude tracer
- *
- * No Latitude auto-instrumentation is required.
+ * Vercel AI SDK **v6** — Latitude telemetry example. (For v7, see `test_vercel_ai_v7.ts`.)
  *
  * Required env vars:
  * - LATITUDE_API_KEY
  * - LATITUDE_PROJECT_SLUG
  * - OPENAI_API_KEY
  *
- * Install: npm install ai @ai-sdk/openai
+ * Install: npm install ai @ai-sdk/openai zod
  */
 
+import { randomUUID } from "node:crypto"
 import { openai } from "@ai-sdk/openai"
-import { generateText, streamText } from "ai"
+import { generateText, stepCountIs, streamText, tool } from "ai"
+import { z } from "zod"
 import { capture, Latitude } from "../src"
 
-const apiKey = process.env.LATITUDE_API_KEY
-const project = process.env.LATITUDE_PROJECT_SLUG
-
-if (!apiKey) {
-  throw new Error("LATITUDE_API_KEY is required")
-}
-
-if (!project) {
-  throw new Error("LATITUDE_PROJECT_SLUG is required")
-}
-
 const latitude = new Latitude({
-  apiKey,
-  project,
+  apiKey: process.env.LATITUDE_API_KEY!,
+  project: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
 })
+
+const PROVIDER = "vercel-ai"
+const MODEL = "gpt-4o-mini"
+const SESSION_ID = `${PROVIDER}-${randomUUID().slice(0, 8)}`
+const telemetry = { isEnabled: true }
+
+function ctx(scenario: string, ...extraTags: string[]) {
+  return {
+    tags: ["example", PROVIDER, ...extraTags],
+    sessionId: SESSION_ID,
+    userId: "example-user",
+    metadata: { scenario, environment: "local" },
+  }
+}
+
+const weatherTool = tool({
+  description: "Get the current weather for a given city",
+  inputSchema: z.object({ city: z.string().describe("The city to get the weather for") }),
+  execute: async ({ city }) => ({ city, temperatureC: 21, conditions: "sunny" }),
+})
+
+async function chat() {
+  const result = await generateText({
+    model: openai(MODEL),
+    prompt: "Say 'Hello from Vercel AI SDK!' in exactly 6 words.",
+    maxOutputTokens: 50,
+    experimental_telemetry: telemetry,
+  })
+  return result.text
+}
+
+async function stream() {
+  const result = streamText({
+    model: openai(MODEL),
+    prompt: "Say 'Hello from Vercel AI SDK stream!' in exactly 7 words.",
+    maxOutputTokens: 50,
+    experimental_telemetry: telemetry,
+  })
+  const chunks: string[] = []
+  for await (const chunk of result.textStream) chunks.push(chunk)
+  return chunks.join("")
+}
+
+async function toolConversation() {
+  const result = await generateText({
+    model: openai(MODEL),
+    prompt: "What's the weather in San Francisco? Use the getWeather tool, then answer in one short sentence.",
+    tools: { getWeather: weatherTool },
+    stopWhen: stepCountIs(5),
+    maxOutputTokens: 200,
+    experimental_telemetry: telemetry,
+  })
+  return result.text
+}
 
 async function main() {
   await latitude.ready
 
-  console.log("Wrapped with capture():")
-  const generatedText = await capture(
-    "vercel-ai-generate-text",
-    async () => {
-      const result = await generateText({
-        model: openai("gpt-4o-mini"),
-        prompt: "Say 'Hello from Vercel AI SDK!' in exactly 6 words.",
-        maxOutputTokens: 50,
-        experimental_telemetry: {
-          isEnabled: true,
-          metadata: {
-            provider: "openai",
-            sdk: "vercel-ai",
-          },
-        },
-      })
+  await toolConversation()
 
-      return result.text
-    },
-    {
-      tags: ["test", "vercel-ai"],
-      userId: "Jon",
-      sessionId: "example",
-      metadata: { env: "local", version: "3.0.0" },
-    },
-  )
-
-  console.log(generatedText)
-
-  console.log("\nWithout capture() wrapper:")
-  const streamedResult = streamText({
-    model: openai("gpt-4o-mini"),
-    prompt: "Say 'Hello from Vercel AI SDK stream!' in exactly 7 words.",
-    maxOutputTokens: 50,
-    experimental_telemetry: {
-      isEnabled: true,
-      metadata: {
-        provider: "openai",
-        sdk: "vercel-ai",
-        mode: "stream",
-      },
-    },
-  })
-
-  const chunks: string[] = []
-  for await (const chunk of streamedResult.textStream) {
-    chunks.push(chunk)
-  }
-
-  console.log(chunks.join(""))
+  await capture("vercel-ai-chat-capture", chat, ctx("chat"))
+  await capture("vercel-ai-stream-capture", stream, ctx("stream", "stream"))
+  await capture("vercel-ai-tools-capture", toolConversation, ctx("tools", "tools"))
 
   await latitude.flush()
 }

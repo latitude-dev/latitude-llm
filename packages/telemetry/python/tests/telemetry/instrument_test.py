@@ -43,26 +43,21 @@ class TestInstrument(TestCase):
         return client, completion
 
     def test_success_instruments_openai(self):
-        """Test that OpenAI instrumentation creates spans with correct attributes."""
-        client, completion = self.create_openai_mock()
+        """Registering the `openai` integration patches the OpenAI SDK.
 
-        with mock.patch("openai.resources.chat.completions.Completions.create", return_value=completion):
+        OpenAI uses the OpenInference instrumentor (global, stateful patch). This
+        verifies the registration wiring lands the patch; span content/attributes
+        are covered by the resolver suite + live e2e traces, not a mock here.
+        """
+        from openinference.instrumentation.openai import OpenAIInstrumentor
+
+        OpenAIInstrumentor().uninstrument()
+        try:
+            self.assertFalse(OpenAIInstrumentor()._is_instrumented_by_opentelemetry)
             register_latitude_instrumentations({"openai": openai_module}, self.provider)
-            client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": "Hello..."}],
-            )
-
-        spans = self.get_exported_spans()
-        self.assertEqual(len(spans), 1)
-
-        span = spans[0]
-        self.assert_span_name(span, "openai.chat")
-        self.assert_span_has_attribute(span, "gen_ai.system", "openai")
-        self.assert_span_has_attribute(span, "gen_ai.request.model", "gpt-4o-mini")
-        self.assert_span_has_attribute(span, "gen_ai.response.model", "gpt-4o-mini")
-        self.assert_span_has_attribute(span, "gen_ai.usage.input_tokens", 10)
-        self.assert_span_has_attribute(span, "gen_ai.usage.output_tokens", 20)
+            self.assertTrue(OpenAIInstrumentor()._is_instrumented_by_opentelemetry)
+        finally:
+            OpenAIInstrumentor().uninstrument()
 
     def test_rejects_legacy_list_form(self):
         """Passing a list (legacy form) raises TypeError with a migration hint."""

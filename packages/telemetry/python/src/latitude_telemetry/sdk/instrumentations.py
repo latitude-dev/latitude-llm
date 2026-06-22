@@ -9,6 +9,7 @@ same module instance the app actually uses.
 """
 
 import logging
+import os
 from dataclasses import dataclass
 from typing import Mapping, cast
 
@@ -37,15 +38,13 @@ class IntegrationDef:
 
 INTEGRATIONS: dict[InstrumentationName, IntegrationDef] = {
     "openai": IntegrationDef(
-        instrumentor_module="opentelemetry.instrumentation.openai",
+        instrumentor_module="openinference.instrumentation.openai",
         instrumentor_class="OpenAIInstrumentor",
         pypi_dist_name="openai",
     ),
     "openai-agents": IntegrationDef(
         instrumentor_module="openinference.instrumentation.openai_agents",
         instrumentor_class="OpenAIAgentsInstrumentor",
-        # The host package's PyPI distribution name is `openai-agents` (its import
-        # name is `agents`). The pip-install hint uses this.
         pypi_dist_name="openai-agents",
     ),
     "anthropic": IntegrationDef(
@@ -69,7 +68,7 @@ INTEGRATIONS: dict[InstrumentationName, IntegrationDef] = {
         pypi_dist_name="langchain-core",
     ),
     "llamaindex": IntegrationDef(
-        instrumentor_module="opentelemetry.instrumentation.llamaindex",
+        instrumentor_module="openinference.instrumentation.llama_index",
         instrumentor_class="LlamaIndexInstrumentor",
         pypi_dist_name="llama-index",
     ),
@@ -88,23 +87,15 @@ INTEGRATIONS: dict[InstrumentationName, IntegrationDef] = {
         instrumentor_class="AIPlatformInstrumentor",
         pypi_dist_name="google-cloud-aiplatform",
     ),
-    # Python-only — the OpenLLMetry Python ecosystem ships more pre-built
-    # instrumentors than the TypeScript side. Adding these here is a pure
-    # capability addition for Python users; nothing analogous exists in TS.
     "aleph_alpha": IntegrationDef(
         instrumentor_module="opentelemetry.instrumentation.alephalpha",
         instrumentor_class="AlephAlphaInstrumentor",
         pypi_dist_name="aleph-alpha-client",
     ),
     "crewai": IntegrationDef(
-        instrumentor_module="opentelemetry.instrumentation.crewai",
+        instrumentor_module="openinference.instrumentation.crewai",
         instrumentor_class="CrewAIInstrumentor",
         pypi_dist_name="crewai",
-    ),
-    "dspy": IntegrationDef(
-        instrumentor_module="openinference.instrumentation.dspy",
-        instrumentor_class="DSPyInstrumentor",
-        pypi_dist_name="dspy-ai",
     ),
     "google_adk": IntegrationDef(
         instrumentor_module="openinference.instrumentation.google_adk",
@@ -112,9 +103,9 @@ INTEGRATIONS: dict[InstrumentationName, IntegrationDef] = {
         pypi_dist_name="google-adk",
     ),
     "google_generativeai": IntegrationDef(
-        instrumentor_module="opentelemetry.instrumentation.google_generativeai",
-        instrumentor_class="GoogleGenerativeAiInstrumentor",
-        pypi_dist_name="google-generativeai",
+        instrumentor_module="openinference.instrumentation.google_genai",
+        instrumentor_class="GoogleGenAIInstrumentor",
+        pypi_dist_name="google-genai",
     ),
     "groq": IntegrationDef(
         instrumentor_module="opentelemetry.instrumentation.groq",
@@ -122,13 +113,13 @@ INTEGRATIONS: dict[InstrumentationName, IntegrationDef] = {
         pypi_dist_name="groq",
     ),
     "haystack": IntegrationDef(
-        instrumentor_module="opentelemetry.instrumentation.haystack",
+        instrumentor_module="openinference.instrumentation.haystack",
         instrumentor_class="HaystackInstrumentor",
         pypi_dist_name="haystack-ai",
     ),
     "litellm": IntegrationDef(
-        instrumentor_module="openinference.instrumentation.litellm",
-        instrumentor_class="LiteLLMInstrumentor",
+        instrumentor_module="litellm.integrations.opentelemetry",
+        instrumentor_class="OpenTelemetry",
         pypi_dist_name="litellm",
     ),
     "mistralai": IntegrationDef(
@@ -167,6 +158,36 @@ INTEGRATIONS: dict[InstrumentationName, IntegrationDef] = {
 def _is_plain_dict(value: object) -> bool:
     """A plain dict, not a list, not a string, not a tuple, not None."""
     return isinstance(value, dict)
+
+
+def _register_litellm_native_otel(litellm_module: object, tracer_provider: TracerProvider) -> None:
+    """
+    Register LiteLLM's built-in OpenTelemetry callback on our tracer provider.
+
+    Preferred over the OpenInference LiteLLM instrumentor, which emits no provider
+    (so cost never resolves). Env vars must be set before OpenTelemetryConfig()
+    reads them at construction; setdefault keeps any caller-set value.
+    """
+    from litellm.integrations.opentelemetry import OpenTelemetry, OpenTelemetryConfig
+
+    # USE_OTEL_LITELLM_REQUEST_SPAN forces a child span per completion; without it
+    # LiteLLM writes onto the active capture root, clobbering multi-call captures.
+    # The others opt into structured gen_ai messages + content capture (litellm >= 1.88).
+    os.environ.setdefault("USE_OTEL_LITELLM_REQUEST_SPAN", "true")
+    os.environ.setdefault("OTEL_SEMCONV_STABILITY_OPT_IN", "gen_ai_latest_experimental")
+    os.environ.setdefault("OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT", "SPAN_ONLY")
+
+    otel_logger = OpenTelemetry(
+        config=OpenTelemetryConfig(),
+        tracer_provider=tracer_provider,
+        callback_name="opentelemetry",
+    )
+
+    existing = list(getattr(litellm_module, "callbacks", None) or [])
+    if any(isinstance(cb, OpenTelemetry) for cb in existing):
+        return
+    existing.append(otel_logger)
+    litellm_module.callbacks = existing  # type: ignore[attr-defined]
 
 
 def register_latitude_instrumentations(
@@ -211,6 +232,21 @@ def register_latitude_instrumentations(
 
         name = raw_name
         config = INTEGRATIONS[name]
+
+        # LiteLLM uses its native OTel callback (gen_ai semconv), not an instrumentor.
+        if name == "litellm":
+            try:
+                _register_litellm_native_otel(module, tracer_provider)
+            except (ImportError, AttributeError):
+                logger.warning(
+                    "[Latitude] Instrumentation package not installed for %s: %s. "
+                    "Add it as a dependency to enable this instrumentation.",
+                    name,
+                    config.pypi_dist_name,
+                )
+            except Exception as e:
+                logger.warning("[Latitude] Failed to register %s instrumentation: %s", name, e)
+            continue
 
         try:
             instrumentor_module = __import__(config.instrumentor_module, fromlist=[config.instrumentor_class])

@@ -459,6 +459,91 @@ but the namespace form is the recommended shape.
 | `"vertexai"`   | `@google-cloud/vertexai`          |
 | `"aiplatform"` | `@google-cloud/aiplatform`        |
 
+## Vercel AI SDK
+
+The Vercel AI SDK (`ai`) emits its **own** OpenTelemetry spans — you do **not** pass it in the
+`instrumentations` map. Latitude just needs to own (or be attached to) the tracer provider, and the
+AI SDK spans flow through Latitude's smart filter and exporter automatically. Wrap calls in
+`capture()` to attach tags / metadata / session.
+
+### Vercel AI SDK v6
+
+In v6, OpenTelemetry is built into the `ai` package and is **opt-in per call** via
+`experimental_telemetry: { isEnabled: true }`:
+
+```typescript
+import { Latitude, capture } from "@latitude-data/telemetry"
+import { generateText } from "ai"
+import { openai } from "@ai-sdk/openai"
+
+const latitude = new Latitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  project: process.env.LATITUDE_PROJECT_SLUG!,
+})
+await latitude.ready
+
+await capture("generate-support-reply", async () => {
+  const { text } = await generateText({
+    model: openai("gpt-4o"),
+    prompt: "Hello",
+    experimental_telemetry: { isEnabled: true }, // required on each call in v6
+  })
+  return text
+})
+
+await latitude.shutdown()
+```
+
+### Vercel AI SDK v7
+
+In v7, OpenTelemetry moved out of `ai` into the separate **`@ai-sdk/otel`** package and is
+**opt-out**: once you register an integration, every AI SDK call emits telemetry by default — no
+per-call flag. Install the matching `@ai-sdk/otel` for your `ai` version, then register the
+`OpenTelemetry` integration once at startup, **after** constructing `Latitude`:
+
+```bash
+pnpm add @ai-sdk/otel
+```
+
+```typescript
+import { Latitude, capture } from "@latitude-data/telemetry"
+import { generateText, registerTelemetry } from "ai"
+import { OpenTelemetry } from "@ai-sdk/otel"
+import { openai } from "@ai-sdk/openai"
+
+const latitude = new Latitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  project: process.env.LATITUDE_PROJECT_SLUG!,
+})
+await latitude.ready
+
+// Register once. Uses the global tracer provider (the one Latitude registered),
+// so spans are exported to Latitude with no extra wiring.
+registerTelemetry(new OpenTelemetry())
+
+await capture("generate-support-reply", async () => {
+  const { text } = await generateText({
+    model: openai("gpt-4o"),
+    prompt: "Hello", // no experimental_telemetry needed in v7
+  })
+  return text
+})
+
+await latitude.shutdown()
+```
+
+Notes:
+
+- **Recommended integration is `OpenTelemetry`** — it emits standard OpenTelemetry GenAI
+  semantic-convention spans (`gen_ai.*`). `@ai-sdk/otel` also exports `LegacyOpenTelemetry`, which
+  emits the older `ai.*` spans (same shape as v6); both are ingested by Latitude.
+- **Order:** construct `Latitude` (which registers the global tracer provider) before
+  `registerTelemetry(...)`. Don't pass a custom `tracer` to `new OpenTelemetry({ tracer })` unless it
+  comes from Latitude's provider — otherwise spans bypass Latitude.
+- **Next.js:** register inside `instrumentation.ts` alongside your `registerOTel(...)` /
+  `@vercel/otel` setup.
+- **Opt out** of a single call with `telemetry: { isEnabled: false }`.
+
 ## Context Options
 
 `capture()` accepts these context options:

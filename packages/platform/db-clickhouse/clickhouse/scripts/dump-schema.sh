@@ -9,8 +9,9 @@
 # Sanitization:
 #   - Strips database-qualified names (e.g. latitude_development.spans → spans)
 #   - Removes TTL, storage_policy, and ttl_only_drop_parts clauses
-#   - Removes text indexes (TYPE text), which need ClickHouse 26.2+ and are
-#     not supported by the chdb version used in tests
+#   - Removes table clauses the chdb version used in tests can't parse:
+#     TYPE text indexes (need ClickHouse 26.2+), TYPE vector_similarity (HNSW)
+#     indexes, and CONSTRAINT ... CHECK clauses — then fixes any dangling comma
 #
 # Run after applying new ClickHouse migrations to keep the test schema in sync:
 #   pnpm --filter @platform/db-clickhouse ch:schema:dump
@@ -60,7 +61,7 @@ sanitize() {
     -e "s/, storage_policy = '[^']*'//g" \
     -e "s/SETTINGS ttl_only_drop_parts = [0-9]*, storage_policy = '[^']*', /SETTINGS /g" \
     -e "s/SETTINGS ttl_only_drop_parts = [0-9]*, /SETTINGS /g" \
-    | perl -0pe 's/,\n\s*INDEX \S+ \S+ TYPE text\([^\n]*(?=\n)//g; s/\n\s*INDEX \S+ \S+ TYPE text\([^\n]*,(?=\n)/,/g'
+    | perl -0pe 's/^\s*INDEX \S+ \S+ TYPE (?:text|vector_similarity)[^\n]*\n//mg; s/^\s*CONSTRAINT \S+ CHECK [^\n]*\n//mg; s/,(\s*\n\s*\))/$1/g'
 }
 
 {

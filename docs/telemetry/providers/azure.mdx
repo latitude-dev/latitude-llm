@@ -166,9 +166,11 @@ When streaming, consume the stream inside `capture()` so the span covers the ful
             messages=[{"role": "user", "content": input}],
             stream=True,
         )
+        chunks = []
         for chunk in stream:
             if chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
+                chunks.append(chunk.choices[0].delta.content)
+        return "".join(chunks)
 
     capture("stream-reply", stream_reply)
     ```

@@ -35,6 +35,31 @@ describe("isGenAiOrLlmAttributeSpan", () => {
   })
 })
 
+describe("Vercel AI SDK v7 spans", () => {
+  // v7's `@ai-sdk/otel` `OpenTelemetry` integration emits GenAI SemConv spans on the
+  // `gen_ai` tracer scope (operation names invoke_agent / chat / execute_tool).
+  it("exports v7 GenAI spans (gen_ai.* attributes)", () => {
+    for (const op of ["invoke_agent", "chat", "execute_tool", "embeddings", "rerank"]) {
+      const span = mockSpan({ scopeName: "gen_ai", attributes: { "gen_ai.operation.name": op } })
+      expect(isGenAiOrLlmAttributeSpan(span)).toBe(true)
+      expect(isDefaultExportSpan(span)).toBe(true)
+      expect(buildShouldExportSpan({})(span)).toBe(true)
+    }
+  })
+
+  // v7's `LegacyOpenTelemetry` (and v6 built-in) emit `ai.*` spans on the `ai` scope.
+  it("exports v7/v6 legacy spans (ai.* attributes)", () => {
+    const span = mockSpan({ scopeName: "ai", attributes: { "ai.operationId": "ai.streamText.doStream" } })
+    expect(isGenAiOrLlmAttributeSpan(span)).toBe(true)
+    expect(buildShouldExportSpan({})(span)).toBe(true)
+  })
+
+  it("still drops non-LLM spans regardless of scope", () => {
+    const span = mockSpan({ scopeName: "gen_ai", attributes: { "http.route": "/api" } })
+    expect(buildShouldExportSpan({})(span)).toBe(false)
+  })
+})
+
 describe("isDefaultExportSpan", () => {
   it("rejects generic HTTP instrumentation", () => {
     expect(

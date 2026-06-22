@@ -144,6 +144,25 @@ describe("resolveAttributes", () => {
       expect(result.provider).toBe("openai")
     })
 
+    it("resolves from OpenInference llm.provider (DSPy, no llm.system)", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("llm.provider", "openai")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.provider).toBe("openai")
+    })
+
+    it("case-folds non-canonical provider casing", () => {
+      const cases: [string, string, string][] = [
+        ["gen_ai.system", "Google", "google"],
+        ["llm.system", "OpenAI", "openai"],
+        ["llm.provider", "Anthropic", "anthropic"],
+      ]
+      for (const [key, input, expected] of cases) {
+        const attrs: OtlpKeyValue[] = [strAttr(key, input)]
+        const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+        expect(result.provider).toBe(expected)
+      }
+    })
+
     it("resolves from Vercel ai.model.provider and strips suffix", () => {
       const attrs: OtlpKeyValue[] = [strAttr("ai.model.provider", "openai.chat")]
       const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
@@ -160,6 +179,19 @@ describe("resolveAttributes", () => {
         ["ai.model.provider", "google.vertex.chat", "google-vertex"],
         ["ai.model.provider", "anthropic.messages", "anthropic"],
         ["ai.model.provider", "google.generative-ai", "google"],
+        // Vercel AI SDK v7 (@ai-sdk/otel) OTel GenAI well-known provider names
+        ["gen_ai.provider.name", "gcp.vertex_ai", "google-vertex"],
+        ["gen_ai.provider.name", "gcp.gemini", "google"],
+        ["gen_ai.provider.name", "aws.bedrock", "amazon-bedrock"],
+        ["gen_ai.provider.name", "azure.ai.openai", "azure"],
+        ["gen_ai.provider.name", "azure.ai.inference", "azure"],
+        ["gen_ai.provider.name", "mistral_ai", "mistral"],
+        ["gen_ai.provider.name", "x_ai", "xai"],
+        // Google ADK (OpenInference) reports the Vertex agent provider name
+        ["llm.provider", "gcp.vertex.agent", "google-vertex"],
+        // v7 also passes these through unchanged (already canonical)
+        ["gen_ai.provider.name", "openai", "openai"],
+        ["gen_ai.provider.name", "anthropic", "anthropic"],
       ]
 
       for (const [key, input, expected] of cases) {
@@ -222,6 +254,22 @@ describe("resolveAttributes", () => {
       expect(result.operation).toBe("chat")
     })
 
+    it("maps GenAI operation names emitted by Vercel AI SDK v7 (@ai-sdk/otel)", () => {
+      const cases: [string, string][] = [
+        ["invoke_agent", "invoke_agent"],
+        ["chat", "chat"],
+        ["execute_tool", "execute_tool"],
+        ["embeddings", "embeddings"],
+        ["rerank", "reranker"], // normalized to our Operation literal
+      ]
+
+      for (const [name, expected] of cases) {
+        const attrs: OtlpKeyValue[] = [strAttr("gen_ai.operation.name", name)]
+        const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+        expect(result.operation).toBe(expected)
+      }
+    })
+
     it("maps OpenInference span kinds to operation names", () => {
       const cases: [string, string][] = [
         ["LLM", "chat"],
@@ -256,14 +304,21 @@ describe("resolveAttributes", () => {
       }
     })
 
-    it("maps Vercel operation IDs", () => {
+    it("maps Vercel operation IDs (bare wrappers → invoke_agent, leaves → chat)", () => {
       const cases: [string, string][] = [
-        ["ai.generateText", "chat"],
+        // Bare wrappers carry a lossy summary and end after their leaves —
+        // classified as inert wrappers so the rollup excludes them.
+        ["ai.generateText", "invoke_agent"],
+        ["ai.streamText", "invoke_agent"],
+        ["ai.generateObject", "invoke_agent"],
+        ["ai.streamObject", "invoke_agent"],
+        // Leaves hold the faithful per-call exchange.
         ["ai.generateText.doGenerate", "chat"],
-        ["ai.streamText", "chat"],
         ["ai.streamText.doStream", "chat"],
-        ["ai.generateObject", "chat"],
+        ["ai.generateObject.doGenerate", "chat"],
+        ["ai.streamObject.doStream", "chat"],
         ["ai.embed", "embeddings"],
+        ["ai.embed.doEmbed", "embeddings"],
         ["ai.toolCall", "execute_tool"],
       ]
 
@@ -272,6 +327,33 @@ describe("resolveAttributes", () => {
         const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
         expect(result.operation).toBe(expected)
       }
+    })
+
+    it("maps Latitude openai-agents bridge span kinds", () => {
+      const cases: [string, string][] = [
+        ["agents.function", "execute_tool"],
+        ["agents.agent", "invoke_agent"],
+        ["agents.trace", "invoke_agent"],
+        ["agents.handoff", "invoke_agent"],
+        ["agents.guardrail", "guardrail"],
+      ]
+
+      for (const [kind, expected] of cases) {
+        const attrs: OtlpKeyValue[] = [strAttr("latitude.span.kind", kind)]
+        const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+        expect(result.operation).toBe(expected)
+      }
+    })
+
+    it("prefers gen_ai.operation.name over latitude.span.kind on the bridge LLM span", () => {
+      // The bridge's generation/response spans carry both attributes; the
+      // standard GenAI op must win so they resolve to `chat`, not the wrapper kind.
+      const attrs: OtlpKeyValue[] = [
+        strAttr("gen_ai.operation.name", "chat"),
+        strAttr("latitude.span.kind", "agents.generation"),
+      ]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.operation).toBe("chat")
     })
   })
 
@@ -395,6 +477,19 @@ describe("resolveAttributes", () => {
       ]
       const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.costTotalMicrocents).toBe(0)
+    })
+
+    it("estimates cost for Google ADK gcp.vertex.agent provider after alias", () => {
+      const attrs: OtlpKeyValue[] = [
+        strAttr("llm.provider", "gcp.vertex.agent"),
+        strAttr("llm.model_name", "gemini-2.5-flash"),
+        intAttr("gen_ai.usage.input_tokens", 100),
+        intAttr("gen_ai.usage.output_tokens", 50),
+      ]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.provider).toBe("google-vertex")
+      expect(result.costIsEstimated).toBe(true)
+      expect(result.costTotalMicrocents).toBeGreaterThan(0)
     })
   })
 
@@ -795,6 +890,20 @@ describe("resolveToolExecution", () => {
       expect(result.toolName).toBe("get_weather")
       expect(result.toolInput).toBe('{"city":"London"}')
       expect(result.toolOutput).toBe('{"temp":15,"rain":true}')
+    })
+  })
+
+  describe("Latitude openai-agents TS bridge convention", () => {
+    it("extracts from openai.agents.function.* attributes", () => {
+      const attrs: OtlpKeyValue[] = [
+        strAttr("openai.agents.function.name", "get_weather"),
+        strAttr("openai.agents.function.input", '{"city":"Barcelona"}'),
+        strAttr("openai.agents.function.output", "The weather in Barcelona is sunny and 22°C."),
+      ]
+      const result = resolveToolExecution(attrs, "execute_tool")
+      expect(result.toolName).toBe("get_weather")
+      expect(result.toolInput).toBe('{"city":"Barcelona"}')
+      expect(result.toolOutput).toBe("The weather in Barcelona is sunny and 22°C.")
     })
   })
 

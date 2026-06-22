@@ -1,0 +1,90 @@
+---
+title: Mistral AI
+description: Connect your Mistral AI-powered application to Latitude for observability.
+---
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses the **Mistral AI** SDK.
+
+<Check>
+  You'll keep calling Mistral exactly as you do today. Telemetry simply
+  observes and enriches those calls.
+</Check>
+
+<Note>
+  Auto-instrumentation for Mistral is available in the **Python** SDK. For other
+  languages, send traces via the [OpenTelemetry exporter](/telemetry/otel-exporter).
+</Note>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A project that uses the **Mistral SDK** (`mistralai`)
+- A **Mistral API key** (set as `MISTRAL_API_KEY`)
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    <CodeGroup>
+      ```bash pip
+      pip install latitude-telemetry mistralai
+      ```
+
+      ```bash uv
+      uv add latitude-telemetry mistralai
+      ```
+
+      ```bash poetry
+      poetry add latitude-telemetry mistralai
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Initialize and use">
+    ```python
+    import os
+
+    import mistralai
+    from mistralai import Mistral
+
+    from latitude_telemetry import Latitude, capture
+
+    latitude = Latitude(
+        api_key="your-api-key",
+        project="your-project-slug",
+        instrumentations={"mistralai": mistralai},
+    )
+
+    client = Mistral(api_key=os.environ["MISTRAL_API_KEY"])
+
+    def generate_reply():
+        response = client.chat.complete(
+            model="mistral-small-latest",
+            messages=[{"role": "user", "content": "Hello"}],
+        )
+        return response.choices[0].message.content
+
+    capture("generate-reply", generate_reply)
+
+    latitude.shutdown()
+    ```
+  </Step>
+
+</Steps>
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each execution shows input/output messages, model, token usage, latency, and errors

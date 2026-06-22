@@ -5,13 +5,8 @@ import { first, fromString } from "./utils.ts"
 
 const VERCEL_PROVIDER_SUFFIX = /\.(chat|messages|responses|generative-ai|embed)$/
 
-/**
- * Strip ANSI SGR escape sequences and trailing terminal noise from model strings.
- *
- * Claude Code emits the `model` attribute with ANSI color codes embedded (e.g.
- * `"\x1b[32mclaude-opus-4-5\x1b[0m"`) because it renders the value in a terminal
- * before writing it to the span. No other instrumentation source we know of does this.
- */
+// Claude Code embeds ANSI color codes in the `model` attribute (e.g.
+// `"\x1b[32mclaude-opus-4-5\x1b[0m"`); strip them. No other source does this.
 const ANSI_SGR_RE = new RegExp(`${String.fromCharCode(0x1b)}\\[[0-9;]*m`, "g")
 function sanitizeModelName(raw: string): string {
   return raw
@@ -34,19 +29,29 @@ const PROVIDER_ALIASES: Record<string, string> = {
   mistral_ai: "mistral",
   together_ai: "togetherai",
   fireworks_ai: "fireworks-ai",
+  // OTel GenAI well-known names from Vercel AI SDK v7's @ai-sdk/otel.
+  "gcp.vertex_ai": "google-vertex",
+  "gcp.gemini": "google",
+  "aws.bedrock": "amazon-bedrock",
+  "azure.ai.openai": "azure",
+  "azure.ai.inference": "azure",
+  x_ai: "xai",
+  "gcp.vertex.agent": "google-vertex", // Google ADK generate_content leaves
 }
 
-const aliasProvider = (v: string) => PROVIDER_ALIASES[v] ?? v
+// Case-fold before alias lookup so non-canonical casings (`Google`, `OpenAI`) resolve to
+// the same canonical key. Alias keys are lowercase.
+const aliasProvider = (v: string) => {
+  const lower = v.toLowerCase()
+  return PROVIDER_ALIASES[lower] ?? lower
+}
 
 const providerCandidates: Candidate<string>[] = [
   fromString("gen_ai.provider.name", aliasProvider), // OTEL GenAI v1.37+
   fromString("gen_ai.system", aliasProvider), // OTEL GenAI v1.36 deprecated
   fromString("llm.system", aliasProvider), // OpenInference / Arize Phoenix
-  fromString("ai.model.provider", (v) => {
-    // Vercel AI SDK
-    const stripped = v.replace(VERCEL_PROVIDER_SUFFIX, "")
-    return PROVIDER_ALIASES[stripped] ?? stripped
-  }),
+  fromString("llm.provider", aliasProvider), // OpenInference (DSPy, LiteLLM) — no llm.system
+  fromString("ai.model.provider", (v) => aliasProvider(v.replace(VERCEL_PROVIDER_SUFFIX, ""))), // Vercel AI SDK
   { resolve: (attrs) => (stringAttr(attrs, "span.type") === "llm_request" ? "anthropic" : undefined) }, // Claude Code
 ]
 

@@ -129,6 +129,7 @@ function transformSpan({
     spanAttrs,
     statusCode,
     spanName: span.name ?? "",
+    scopeName,
   })
   const content = parseContent(spanAttrs)
   const serviceName = stringAttr(resourceAttrs, "service.name") ?? ""

@@ -19,7 +19,6 @@ import { trace } from "@opentelemetry/api"
 import OpenAI from "openai"
 import { capture, Latitude } from "../src"
 
-// Initialize telemetry
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
@@ -38,38 +37,31 @@ async function main() {
   const result1 = await capture(
     "agent-with-custom-spans",
     async () => {
-      // Get tracer from the provider - this is a standard OTel tracer
       const tracer = trace.getTracer("custom.manual.instrumentation")
 
-      // Create a custom span for a non-LLM operation
-      // This span will receive latitude.tags, latitude.metadata, etc.
-      // from LatitudeSpanProcessor and pass the smart filter
+      // Manual spans receive latitude.* attributes from LatitudeSpanProcessor and pass the smart filter.
       await tracer.startActiveSpan("database.query", async (span) => {
         span.setAttribute("db.system", "postgresql")
         span.setAttribute("db.statement", "SELECT * FROM users WHERE id = 123")
 
-        // Simulate database work
         await new Promise((resolve) => setTimeout(resolve, 100))
 
         span.setAttribute("db.rows_affected", 1)
         span.end()
       })
 
-      // Another custom span for business logic
       await tracer.startActiveSpan("business.validate", async (span) => {
         span.setAttribute("validation.rules_applied", ["email_format", "required_fields"])
         span.setAttribute("validation.result", "success")
         span.end()
       })
 
-      // Now make an LLM call - this will also be traced
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [{ role: "user", content: "Say 'Custom spans work!' in exactly 3 words." }],
         max_tokens: 50,
       })
 
-      // One more custom span for post-processing
       await tracer.startActiveSpan("response.format", async (span) => {
         span.setAttribute("format.type", "markdown")
         span.setAttribute("format.includes_citations", false)
@@ -90,25 +82,21 @@ async function main() {
 
   console.log("\n2. Testing nested captures with manual spans...")
 
-  // Outer capture with manual spans
   const result2 = await capture(
     "nested-capture-with-manual-spans",
     async () => {
       const tracer = trace.getTracer("custom.manual.instrumentation")
 
-      // Manual span in outer context
       await tracer.startActiveSpan("outer.preprocess", async (span) => {
         span.setAttribute("preprocess.step", "data_loading")
         span.end()
       })
 
-      // Call inner function (also has capture)
       const innerResult = await capture(
         "inner-capture-manual",
         async () => {
           const innerTracer = trace.getTracer("custom.manual.instrumentation")
 
-          // Manual span in inner context
           await innerTracer.startActiveSpan("inner.llm_prep", async (span) => {
             span.setAttribute("prep.system_prompt_version", "v2.1")
             span.end()
@@ -128,7 +116,6 @@ async function main() {
         },
       )
 
-      // Manual span after inner call
       await tracer.startActiveSpan("outer.postprocess", async (span) => {
         span.setAttribute("postprocess.step", "result_formatting")
         span.end()
@@ -151,7 +138,6 @@ async function main() {
     async () => {
       const tracer = trace.getTracer("custom.manual.instrumentation")
 
-      // Manual span in callback
       await tracer.startActiveSpan("callback.data_fetch", async (span) => {
         span.setAttribute("data.source", "api")
         span.setAttribute("data.items_count", 42)

@@ -1,5 +1,5 @@
 /**
- * Test OpenAI Responses API against local Latitude instance.
+ * OpenAI Responses API — Latitude telemetry example.
  *
  * Required env vars:
  * - LATITUDE_API_KEY
@@ -9,6 +9,7 @@
  * Install: npm install openai
  */
 
+import { randomUUID } from "node:crypto"
 import OpenAI from "openai"
 import { capture, Latitude } from "../src"
 
@@ -19,48 +20,93 @@ const latitude = new Latitude({
   instrumentations: { openai: OpenAI },
 })
 
+const PROVIDER = "openai-responses"
+const MODEL = "gpt-4o-mini"
+const SESSION_ID = `${PROVIDER}-${randomUUID().slice(0, 8)}`
+
+const client = new OpenAI()
+
+function ctx(scenario: string, ...extraTags: string[]) {
+  return {
+    tags: ["example", PROVIDER, ...extraTags],
+    sessionId: SESSION_ID,
+    userId: "example-user",
+    metadata: { scenario, environment: "local" },
+  }
+}
+
+async function chat() {
+  const response = await client.responses.create({
+    model: MODEL,
+    input: "Say 'Hello from OpenAI Responses!' in exactly 5 words.",
+    max_output_tokens: 50,
+  })
+  return response.output_text
+}
+
+async function stream() {
+  const stream = await client.responses.create({
+    model: MODEL,
+    input: "Say 'Hello from OpenAI Responses stream!' in exactly 6 words.",
+    max_output_tokens: 50,
+    stream: true,
+  })
+
+  const chunks: string[] = []
+  for await (const event of stream) {
+    if (event.type === "response.output_text.delta") chunks.push(event.delta)
+  }
+  return chunks.join("")
+}
+
+async function toolConversation() {
+  const tools: OpenAI.Responses.Tool[] = [
+    {
+      type: "function",
+      name: "get_weather",
+      description: "Get the current weather for a city",
+      parameters: {
+        type: "object",
+        properties: { city: { type: "string" } },
+        required: ["city"],
+      },
+      strict: false,
+    },
+  ]
+  const input: OpenAI.Responses.ResponseInputItem[] = [
+    {
+      role: "user",
+      content: "What's the weather in San Francisco? Use get_weather, then answer in one short sentence.",
+    },
+  ]
+
+  const first = await client.responses.create({ model: MODEL, input, tools, max_output_tokens: 200 })
+  input.push(...first.output)
+  for (const item of first.output) {
+    if (item.type === "function_call") {
+      input.push({
+        type: "function_call_output",
+        call_id: item.call_id,
+        output: JSON.stringify({ city: "San Francisco", temperatureC: 21, conditions: "sunny" }),
+      })
+    }
+  }
+
+  const second = await client.responses.create({ model: MODEL, input, tools, max_output_tokens: 200 })
+  return second.output_text
+}
+
 async function main() {
   await latitude.ready
 
-  const client = new OpenAI()
+  await toolConversation()
 
-  await capture(
-    "openai-responses",
-    async () => {
-      const response = await client.responses.create({
-        model: "gpt-4o-mini",
-        input: "Say 'Hello from OpenAI Responses!' in exactly 5 words.",
-        max_output_tokens: 50,
-      })
-
-      return response.output_text
-    },
-    { tags: ["test", "openai", "responses"], userId: "Jon", sessionId: "example" },
-  )
-
-  await capture(
-    "openai-responses-stream",
-    async () => {
-      const stream = await client.responses.create({
-        model: "gpt-4o-mini",
-        input: "Say 'Hello from OpenAI Responses stream!' in exactly 6 words.",
-        max_output_tokens: 50,
-        stream: true,
-      })
-
-      const chunks: string[] = []
-      for await (const event of stream) {
-        if (event.type === "response.output_text.delta") {
-          chunks.push(event.delta)
-        }
-      }
-
-      return chunks.join("")
-    },
-    { tags: ["test", "openai", "responses", "stream"], userId: "Jon", sessionId: "example" },
-  )
+  await capture("openai-responses-chat-capture", chat, ctx("chat"))
+  await capture("openai-responses-stream-capture", stream, ctx("stream", "stream"))
+  await capture("openai-responses-tools-capture", toolConversation, ctx("tools", "tools"))
 
   await latitude.flush()
+  await latitude.shutdown()
 }
 
 main().catch(console.error)

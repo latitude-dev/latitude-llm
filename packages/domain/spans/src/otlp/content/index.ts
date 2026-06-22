@@ -6,6 +6,7 @@ import { parseClaudeCode } from "./claude-code.ts"
 import { parseFlue } from "./flue.ts"
 import { parseGenAICurrent } from "./genai.ts"
 import { parseGenAIDeprecated } from "./genai_deprecated.ts"
+import { parseJsonValue } from "./json-value.ts"
 import { parseLiveKit } from "./livekit.ts"
 import { parseOpenInference } from "./openinference.ts"
 import { parseVercel } from "./vercel.ts"
@@ -78,6 +79,10 @@ const PARSERS: readonly ContentParser[] = [
   {
     canHandle: (attrs) => hasKey(attrs, "user_prompt"), // Claude Code
     parse: parseClaudeCode,
+  },
+  {
+    canHandle: (attrs) => hasKey(attrs, "input.value") || hasKey(attrs, "output.value"),
+    parse: parseJsonValue,
   },
 ]
 
