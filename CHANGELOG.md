@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+## v0.3.14 - 2026-06-22
+
+### API & MCP
+
+- Added users analytics endpoints exposed over both the public API and MCP, with generated TS SDK types for user overview, activity, usage, behaviours, signals, and cost rollups (ref: #3630).
+- Exposed user and tool monitors over MCP, including monitor alert conditions, metrics, targets, and filter sets in the TS SDK (ref: #3631).
+
+### Traces
+
+- Streamed trace conversations in chunks so large conversations load progressively instead of in a single blocking fetch (ref: #3605).
+
+### Data destinations
+
+- Made the destination runs table scroll and paginate within the available viewport (ref: #3637).
+- Lowered the destination read page to 2k to keep bull-board responsive during backfill (ref: #3638).
+
+### Web
+
+- Added rotating search placeholder examples to the search input (ref: #3624).
+
+### Terminology
+
+- Updated terminology from OTLP to OTEL across the product.
+
 ## v0.3.13 - 2026-06-19
 
 ### Data destinations
