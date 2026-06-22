@@ -56,6 +56,7 @@ const tabTriggerVariants = cva(
       },
     },
     compoundVariants: [
+      { variant: "bordered", className: "rounded" },
       { size: "md", hideLabels: true, className: "h-8 w-8" },
       { size: "md", hideLabels: false, className: "h-8 gap-1 px-2" },
       { size: "sm", variant: "secondary", hideLabels: true, className: "h-8 w-8" },
@@ -114,11 +115,11 @@ const tabTriggerVariants = cva(
   },
 )
 
-const tabIndicatorVariants = cva("pointer-events-none absolute left-0 top-0 rounded-md", {
+const tabIndicatorVariants = cva("pointer-events-none absolute left-0 top-0", {
   variants: {
     variant: {
-      secondary: "bg-muted",
-      bordered: "border border-border bg-background",
+      secondary: "rounded-md bg-muted",
+      bordered: "rounded border border-border bg-background",
     },
   },
   defaultVariants: {

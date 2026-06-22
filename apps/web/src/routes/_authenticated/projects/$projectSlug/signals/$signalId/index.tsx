@@ -65,31 +65,41 @@ function SignalDetailPage() {
       <Layout.Content>
         <Layout.Header
           title={
-            <div className="flex min-w-0 flex-row items-center gap-3">
-              <Tooltip
-                asChild
-                side="bottom"
-                trigger={
-                  <Button asChild variant="ghost" className="h-8 w-8 p-0" aria-label="Back to issues">
-                    <Link to="/projects/$projectSlug/signals" params={{ projectSlug }}>
-                      <ArrowLeftIcon className="h-4 w-4 text-muted-foreground" />
-                    </Link>
-                  </Button>
-                }
-              >
-                Back to issues
-              </Tooltip>
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <div className="flex items-center gap-1">
+                <Tooltip
+                  asChild
+                  side="bottom"
+                  trigger={
+                    <Button asChild variant="ghost" className="h-7 w-7 p-0" aria-label="Back to issues">
+                      <Link to="/projects/$projectSlug/signals" params={{ projectSlug }}>
+                        <ArrowLeftIcon className="h-4 w-4 text-muted-foreground" />
+                      </Link>
+                    </Button>
+                  }
+                >
+                  Back to issues
+                </Tooltip>
+                <div className="h-4 w-px bg-border" />
+                <SignalNeighborNav
+                  projectId={project.id}
+                  projectSlug={projectSlug}
+                  signalId={signalId}
+                  lifecycleGroup={lifecycleGroup}
+                  overlayActive={overlayActive}
+                />
+              </div>
               {isLoading ? (
                 <Skeleton className="h-7 w-56" />
               ) : (
-                <>
+                <div className="flex min-w-0 items-center gap-2">
                   <Text.H4M className="min-w-0 truncate">{issue?.name ?? "Signal not found"}</Text.H4M>
                   {issue && issue.states.length > 0 ? (
                     <div className="shrink-0">
                       <SignalLifecycleStatuses states={issue.states} />
                     </div>
                   ) : null}
-                </>
+                </div>
               )}
             </div>
           }
@@ -102,14 +112,6 @@ function SignalDetailPage() {
           }
           actions={
             <>
-              <SignalNeighborNav
-                projectId={project.id}
-                projectSlug={projectSlug}
-                signalId={signalId}
-                lifecycleGroup={lifecycleGroup}
-                overlayActive={overlayActive}
-              />
-              <div className="mx-1 h-5 w-px bg-border" />
               <SignalTriageControls projectId={project.id} signalId={signalId} compact />
               <SignalLifecycleActions projectId={project.id} signalId={signalId} compact />
             </>

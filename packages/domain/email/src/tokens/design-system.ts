@@ -11,8 +11,9 @@ export const emailDesignTokens = {
     border: "#E5E5E5",
     foreground: "#030712",
     mutedForeground: "#545E69",
-    primary: "#076BD5",
-    primaryDark: "#0657AE",
+    primary: "#0080FF",
+    primaryForeground: "#F8FAFB",
+    input: "#D8D8D8",
     accent: "#EFF7FF",
     secondary: "#F9FAFB",
     white: "#FFFFFF",
@@ -44,7 +45,47 @@ export const emailDesignTokens = {
     card: "rounded-2xl",
     button: "rounded-lg",
   },
+  shadows: {
+    button: "0 1px 2px 0 rgb(0 0 0 / 0.05), inset 0 3px 8px 0 rgb(255 255 255 / 0.48)",
+  },
+  button: {
+    borderRadius: "0.5rem",
+    fontSize: "0.875rem",
+    lineHeight: "1.25rem",
+    fontWeight: 500,
+    padding: "5px 12px",
+  },
 } as const
+
+export function emailButtonStyle(variant: "default" | "outline" = "default") {
+  const base = {
+    fontFamily: emailDesignTokens.fontFamily,
+    display: "inline-block" as const,
+    textAlign: "center" as const,
+    textDecoration: "none",
+    borderRadius: emailDesignTokens.button.borderRadius,
+    fontSize: emailDesignTokens.button.fontSize,
+    lineHeight: emailDesignTokens.button.lineHeight,
+    fontWeight: emailDesignTokens.button.fontWeight,
+    padding: emailDesignTokens.button.padding,
+  }
+
+  if (variant === "outline") {
+    return {
+      ...base,
+      backgroundColor: emailDesignTokens.colors.white,
+      color: emailDesignTokens.colors.foreground,
+      border: `1px solid ${emailDesignTokens.colors.input}`,
+    }
+  }
+
+  return {
+    ...base,
+    backgroundColor: emailDesignTokens.colors.primary,
+    color: emailDesignTokens.colors.primaryForeground,
+    boxShadow: emailDesignTokens.shadows.button,
+  }
+}
 
 export const emailTailwindConfig = {
   theme: {
@@ -60,8 +101,9 @@ export const emailTailwindConfig = {
         },
         primary: {
           DEFAULT: emailDesignTokens.colors.primary,
-          "dark-1": emailDesignTokens.colors.primaryDark,
+          foreground: emailDesignTokens.colors.primaryForeground,
         },
+        input: emailDesignTokens.colors.input,
         accent: {
           DEFAULT: emailDesignTokens.colors.accent,
         },

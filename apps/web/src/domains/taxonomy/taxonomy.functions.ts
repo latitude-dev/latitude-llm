@@ -236,6 +236,9 @@ const intelligenceFromAggregate = (aggregate: ClusterAnalysisAggregate | null): 
 const flattenNodes = (nodes: readonly ProjectBehaviourNode[]): readonly ProjectBehaviourNode[] =>
   nodes.flatMap((node) => [node, ...flattenNodes(node.children)])
 
+const countBehaviourNodes = (nodes: readonly BehaviourNodeRecord[]): number =>
+  nodes.reduce((sum, node) => sum + 1 + countBehaviourNodes(node.children), 0)
+
 interface WeightedIntelligence {
   readonly intelligence: BehaviourIntelligenceSummaryRecord
   readonly weight: number
@@ -438,7 +441,8 @@ export const getProjectBehaviours = createServerFn({ method: "GET" })
         const topics = result.topics.map((topic) =>
           toBehaviourNodeRecord(topic, aggregatesByClusterId, positionsByClusterId),
         )
-        return { topics: data.segment === "high_escalation" ? pruneToHighEscalation(topics) : topics }
+        const displayTopics = data.segment === "high_escalation" ? pruneToHighEscalation(topics) : topics
+        return { topics: countBehaviourNodes(displayTopics) >= 2 ? displayTopics : [] }
       }).pipe(
         withPostgres(postgresTaxonomyReadLayer, getPostgresClient(), orgId),
         withClickHouse(clickHouseTaxonomyIntelligenceLayer, getClickhouseClient(), orgId),

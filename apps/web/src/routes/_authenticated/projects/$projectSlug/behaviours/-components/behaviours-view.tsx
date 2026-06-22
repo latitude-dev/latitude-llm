@@ -20,6 +20,7 @@ import { useHotkeys } from "@tanstack/react-hotkeys"
 import {
   ArrowDownIcon,
   ArrowUpIcon,
+  BrainIcon,
   ChevronRightIcon,
   FlameIcon,
   MinusIcon,
@@ -62,6 +63,17 @@ interface BehaviourTableRow {
 
 const formatDate = (iso: string) => new Date(iso).toLocaleDateString()
 const signalLabel = (kind: string) => kind.replaceAll("_", " ").replace(/^./, (char) => char.toUpperCase())
+
+const signalChartColors = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--success))",
+  "hsl(var(--warning-muted-foreground))",
+] as const
+
+const signalColorAt = (index: number) => signalChartColors[index % signalChartColors.length]
 const metricLabel = (metric: BehaviourTrajectoryMetric) =>
   metric === "churnRisk" ? "Churn risk" : metric === "wins" ? "Wins" : signalLabel(metric)
 
@@ -268,6 +280,8 @@ export function BehaviourDetailDrawer({
       ? []
       : [sessionFilter]
   const hasSessionFilters = sessionFilter !== "all" || Boolean(momentRange)
+  const positiveSignals = detectedSignals.filter((signal) => signal.count > 0)
+  const signalColorByKind = new Map(positiveSignals.map((signal, index) => [signal.kind, signalColorAt(index)]))
   const sessionFilterOptions = detectedSignals
     .filter((signal): signal is { readonly kind: MomentKind; readonly count: number } =>
       (MOMENT_KINDS as readonly string[]).includes(signal.kind),
@@ -277,7 +291,9 @@ export function BehaviourDetailDrawer({
       id: signal.kind satisfies BehaviourSessionFilter,
       label: signalLabel(signal.kind),
       valueText: formatCount(signal.count),
+      color: signalColorByKind.get(signal.kind) ?? signalColorAt(0),
     }))
+  const showDetectedSignalsChart = positiveSignals.length > 1
   useEffect(() => {
     setSessionFilter("all")
     setSessionOverlayId(null)
@@ -312,38 +328,39 @@ export function BehaviourDetailDrawer({
               {parentName ? <BehaviourBadge label={parentName} icon={TagIcon} /> : null}
               <BehaviourBadge label={`${formatCount(node.subtreeSessionCount)} sessions`} icon={TagIcon} />
               <BehaviourBadge label={trendLabel(node.trend.status)} icon={trendIcon(node.trend.status)} />
-              <BehaviourBadge label={`First seen ${node.firstSeenLabel.replaceAll("_", " ")}`} icon={SparklesIcon} />
+              {node.firstSeenLabel === "older" ? null : (
+                <BehaviourBadge label={`First seen ${node.firstSeenLabel.replaceAll("_", " ")}`} icon={SparklesIcon} />
+              )}
             </div>
+            <Text.H6 color="foregroundMuted">
+              First seen {formatDate(cluster.firstObservedAt)} · Last seen{" "}
+              {relativeTime(new Date(cluster.lastObservedAt))}
+            </Text.H6>
             <div className="flex flex-col gap-2">
               <Text.H2>{cluster.name}</Text.H2>
               <Text.H5 color="foregroundMuted">
                 {cluster.description || "This behavior has not been named in detail yet."}
               </Text.H5>
-              <Text.H6 color="foregroundMuted">
-                First seen {formatDate(cluster.firstObservedAt)} · Last seen{" "}
-                {relativeTime(new Date(cluster.lastObservedAt))}
-              </Text.H6>
             </div>
           </div>
 
-          <section className="flex flex-col gap-4 border-border border-t pt-5">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex flex-col gap-1">
-                <Text.H4>Conversation intelligence</Text.H4>
-                <Text.H6 color="foregroundMuted">
-                  Conversation intelligence summarizes session outcomes, detected signals, and activity patterns for
-                  this behaviour.
-                </Text.H6>
-              </div>
+          <div className="flex flex-col gap-2 pt-2">
+            <div className="flex flex-row items-center gap-2 text-muted-foreground">
+              <BrainIcon className="h-4 w-4" />
+              <Text.H6 color="foregroundMuted">Conversation intelligence</Text.H6>
+              <hr className="mx-2 flex-1 border-t-2 border-dashed border-border" />
             </div>
+            <div className="flex flex-col gap-4 pt-2">
             {intelligence ? (
-              <div className="flex flex-col gap-4">
-                <BehaviourSessionsHistogram isLoading={behaviourSessionsLoading} buckets={behaviourSessionHistogram} />
-                {detectedSignals.length > 1 ? (
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_auto]">
-                    <DetectedSignalsChart signals={detectedSignals} />
-                  </div>
-                ) : null}
+              <>
+                <div className={cn("grid gap-2", showDetectedSignalsChart ? "grid-cols-2" : "grid-cols-1")}>
+                  <BehaviourSessionsHistogram
+                    isLoading={behaviourSessionsLoading}
+                    buckets={behaviourSessionHistogram}
+                    height={96}
+                  />
+                  {showDetectedSignalsChart ? <DetectedSignalsChart signals={detectedSignals} /> : null}
+                </div>
                 {sessionFilterOptions.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {sessionFilterOptions.map((option) => (
@@ -352,6 +369,7 @@ export function BehaviourDetailDrawer({
                         active={activeMomentKinds.includes(option.id)}
                         label={option.label}
                         valueText={option.valueText}
+                        color={option.color}
                         onClick={() => {
                           onMomentRangeChange(undefined)
                           setSessionFilter((current) => (current === option.id && !momentRange ? "all" : option.id))
@@ -360,7 +378,7 @@ export function BehaviourDetailDrawer({
                     ))}
                   </div>
                 ) : null}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 pt-4">
                   <div className="flex items-center justify-between gap-2">
                     <Text.H5>Associated sessions</Text.H5>
                     {hasSessionFilters ? (
@@ -402,11 +420,12 @@ export function BehaviourDetailDrawer({
                     <Text.H5 color="foregroundMuted">No sessions match this filter.</Text.H5>
                   )}
                 </div>
-              </div>
+              </>
             ) : (
               <Text.H5 color="foregroundMuted">Conversation intelligence is not available yet.</Text.H5>
             )}
-          </section>
+            </div>
+          </div>
         </div>
       </DetailDrawer>
       {sessionOverlayId !== null ? (
@@ -576,38 +595,34 @@ function MetricButton({
   active,
   label,
   valueText,
+  color,
   onClick,
 }: {
   readonly active: boolean
   readonly label: string
   readonly valueText: string
+  readonly color: string
   readonly onClick: () => void
 }) {
   return (
     <button
       type="button"
       className={cn(
-        "inline-flex min-w-0 items-center justify-between gap-2 rounded-full border px-3 py-1.5 text-left hover:bg-muted/40",
+        "inline-flex min-w-0 items-center gap-2 rounded-full border px-3 py-1.5 text-left hover:bg-muted/40",
         active ? "border-primary bg-primary/10" : "border-border/60 bg-muted/20",
       )}
       onClick={onClick}
     >
-      <Text.H6 noWrap ellipsis>
+      <span className="size-2 shrink-0 rounded-full" style={{ background: color }} />
+      <Text.H6 noWrap ellipsis className="min-w-0 flex-1">
         {label}
       </Text.H6>
-      <Text.H6 color={active ? "foreground" : "foregroundMuted"}>{valueText}</Text.H6>
+      <Text.H6 color={active ? "foreground" : "foregroundMuted"} className="shrink-0">
+        {valueText}
+      </Text.H6>
     </button>
   )
 }
-
-const signalChartColors = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--success))",
-  "hsl(var(--warning-muted-foreground))",
-] as const
 
 const polarToCartesian = (center: number, radius: number, angleInDegrees: number) => {
   const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180
@@ -629,6 +644,17 @@ const describePieSlice = (center: number, radius: number, startAngle: number, en
   ].join(" ")
 }
 
+function ChartPanelHeader({ title, subtitle }: { readonly title: string; readonly subtitle?: string }) {
+  return (
+    <div className="shrink-0 p-2 pb-1">
+      <Text.H6 color="foregroundMuted">{title}</Text.H6>
+      <div className="mt-0.5 min-h-[1.25rem]">
+        {subtitle ? <Text.H6 className="tabular-nums">{subtitle}</Text.H6> : null}
+      </div>
+    </div>
+  )
+}
+
 function DetectedSignalsChart({
   signals,
 }: {
@@ -641,43 +667,32 @@ function DetectedSignalsChart({
     const startAngle = cursor
     const endAngle = cursor + (signal.count / total) * 360
     cursor = endAngle
-    return { signal, startAngle, endAngle, color: signalChartColors[index % signalChartColors.length] }
+    return { signal, startAngle, endAngle, color: signalColorAt(index) }
   })
 
   return (
-    <div className="flex items-center justify-center gap-5">
-      <svg className="size-40 shrink-0" viewBox="0 0 160 160" role="img" aria-label="Detected signal distribution">
-        <circle cx="80" cy="80" r="78" className="fill-muted" />
-        {slices.map((slice) => (
-          <Tooltip
-            key={slice.signal.kind}
-            asChild
-            trigger={
-              <path
-                d={describePieSlice(80, 78, slice.startAngle, slice.endAngle)}
-                fill={slice.color}
-                className="cursor-default outline-none transition-opacity hover:opacity-80 focus:opacity-80"
-                tabIndex={0}
-              />
-            }
-          >
-            {`${slice.signal.kind.replaceAll("_", " ")}: ${formatCount(slice.signal.count)} sessions`}
-          </Tooltip>
-        ))}
-      </svg>
-      <div className="flex min-w-0 flex-col gap-1">
-        <Text.H6 color="foregroundMuted">Detected signals</Text.H6>
-        {visibleSignals.map((signal, index) => (
-          <div key={signal.kind} className="flex min-w-0 items-center gap-2">
-            <span
-              className="size-2 shrink-0 rounded-full"
-              style={{ background: signalChartColors[index % signalChartColors.length] }}
-            />
-            <Text.H6 noWrap ellipsis>
-              {signal.kind.replaceAll("_", " ")} · {formatCount(signal.count)}
-            </Text.H6>
-          </div>
-        ))}
+    <div className="flex h-full flex-col rounded-lg bg-secondary">
+      <ChartPanelHeader title="Detected signals" />
+      <div className="flex flex-1 items-center justify-center px-2 pb-2">
+        <svg className="size-24 shrink-0" viewBox="0 0 160 160" role="img" aria-label="Detected signal distribution">
+          <circle cx="80" cy="80" r="78" className="fill-muted" />
+          {slices.map((slice) => (
+            <Tooltip
+              key={slice.signal.kind}
+              asChild
+              trigger={
+                <path
+                  d={describePieSlice(80, 78, slice.startAngle, slice.endAngle)}
+                  fill={slice.color}
+                  className="cursor-default outline-none transition-opacity hover:opacity-80 focus:opacity-80"
+                  tabIndex={0}
+                />
+              }
+            >
+              {`${slice.signal.kind.replaceAll("_", " ")}: ${formatCount(slice.signal.count)} sessions`}
+            </Tooltip>
+          ))}
+        </svg>
       </div>
     </div>
   )
@@ -697,9 +712,11 @@ function formatSessionHistogramTooltip(startTime: string, count: number) {
 function BehaviourSessionsHistogram({
   isLoading,
   buckets,
+  height = 140,
 }: {
   readonly isLoading: boolean
   readonly buckets: readonly { readonly startTime: string; readonly count: number }[]
+  readonly height?: number
 }) {
   const total = buckets.reduce((sum, bucket) => sum + bucket.count, 0)
   const data = useMemo(
@@ -713,26 +730,21 @@ function BehaviourSessionsHistogram({
   )
 
   return (
-    <div className="flex flex-col rounded-lg bg-secondary p-2">
-      <div className="flex items-center justify-between gap-3 px-2 py-2">
-        <div className="flex flex-col gap-1">
-          <Text.H6 color="foregroundMuted">Session activity</Text.H6>
-          <Text.H5 className="tabular-nums">{formatCount(total)} sessions</Text.H5>
-        </div>
-      </div>
+    <div className="flex h-full flex-col rounded-lg bg-secondary">
+      <ChartPanelHeader title="Session activity" subtitle={`${formatCount(total)} sessions`} />
       {isLoading ? (
-        <div className="px-2 py-3">
-          <HistogramSkeleton height={140} />
+        <div className="px-2 pb-2">
+          <HistogramSkeleton height={height} />
         </div>
       ) : data.length === 0 || data.every((bucket) => bucket.value === 0) ? (
-        <div className="flex min-h-[80px] items-center justify-center px-2 py-3">
+        <div className="flex min-h-[80px] flex-1 items-center justify-center px-2 pb-2">
           <Text.H6 color="foregroundMuted">No sessions in this time window</Text.H6>
         </div>
       ) : (
-        <div className="px-2 py-3">
+        <div className="px-2 pb-2">
           <BarChart
             data={data}
-            height={140}
+            height={height}
             showYAxis={false}
             xAxisLabelFontSize={10}
             ariaLabel="Behavior sessions over time"
@@ -982,20 +994,6 @@ export function BehavioursView({
               active={segment}
               onSelect={(value) => onSegmentChange(value)}
             />
-            {behaviourPath.length > 0 || momentRange ? (
-              // Clears the path-driven selection and any chart-derived filters.
-              <Button
-                variant="ghost"
-                size="sm"
-                className="whitespace-nowrap"
-                onClick={() => {
-                  onBehaviourPathChange([])
-                  onMomentRangeChange(undefined)
-                }}
-              >
-                Clear selection
-              </Button>
-            ) : null}
             {momentRange ? <BehaviourBadge label={selectedMomentRangeLabel(momentRange)} icon={TagIcon} /> : null}
           </Layout.ActionRowItem>
         </Layout.ActionsRow>
