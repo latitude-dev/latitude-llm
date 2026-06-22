@@ -177,12 +177,34 @@ export interface NumericRollup {
   readonly sum: number
 }
 
+/**
+ * Token-weighted token analytics over the filtered set (not per-row averages):
+ * `cacheHitRate` is `cacheReadTokens / (inputTokens + cacheReadTokens + cacheCreateTokens)`,
+ * `null` when there are no input-side tokens. Token fields are summed totals.
+ */
+export interface TokenAnalyticsAggregate {
+  readonly cacheHitRate: number | null
+  readonly inputTokens: number
+  readonly cacheReadTokens: number
+  readonly cacheCreateTokens: number
+  readonly outputTokens: number
+}
+
+export const emptyTokenAnalytics = (): TokenAnalyticsAggregate => ({
+  cacheHitRate: null,
+  inputTokens: 0,
+  cacheReadTokens: 0,
+  cacheCreateTokens: 0,
+  outputTokens: 0,
+})
+
 export interface TraceMetrics {
   readonly durationNs: NumericRollup
   readonly costTotalMicrocents: NumericRollup
   readonly spanCount: NumericRollup
   readonly tokensTotal: NumericRollup
   readonly timeToFirstTokenNs: NumericRollup
+  readonly tokenAnalytics: TokenAnalyticsAggregate
 }
 
 const zeroRollup = (): NumericRollup => ({ min: 0, max: 0, avg: 0, median: 0, sum: 0 })
@@ -194,6 +216,7 @@ export const emptyTraceMetrics = (): TraceMetrics => ({
   spanCount: zeroRollup(),
   tokensTotal: zeroRollup(),
   timeToFirstTokenNs: zeroRollup(),
+  tokenAnalytics: emptyTokenAnalytics(),
 })
 
 /**

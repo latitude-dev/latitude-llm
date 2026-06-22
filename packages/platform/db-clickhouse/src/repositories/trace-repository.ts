@@ -45,6 +45,7 @@ import { buildClickHouseWhere } from "../filter-builder.ts"
 import { TRACE_FIELD_REGISTRY } from "../registries/trace-fields.ts"
 import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-subquery.ts"
 import { isActiveSearch, planSearch } from "./search-plan.ts"
+import { TOKEN_ANALYTICS_SUM_SELECT, toTokenAnalytics } from "./token-analytics.ts"
 
 export const LIST_SELECT = `
   organization_id,
@@ -252,6 +253,10 @@ type TraceMetricsRow = {
   tokens_avg: string
   tokens_median: string
   tokens_sum: string
+  tokens_input_sum: string
+  tokens_output_sum: string
+  tokens_cache_read_sum: string
+  tokens_cache_create_sum: string
   ttft_min: string
   ttft_max: string
   ttft_avg: string
@@ -307,6 +312,7 @@ const toTraceMetrics = (row: TraceMetricsRow | undefined): TraceMetrics => {
     spanCount: toNumericRollup(row.span_min, row.span_max, row.span_avg, row.span_median, row.span_sum),
     tokensTotal: toNumericRollup(row.tokens_min, row.tokens_max, row.tokens_avg, row.tokens_median, row.tokens_sum),
     timeToFirstTokenNs: toTtftRollup(row),
+    tokenAnalytics: toTokenAnalytics(row),
   }
 }
 
@@ -1219,6 +1225,7 @@ export const TraceRepositoryLive = Layer.effect(
                           avg(tokens_total) AS tokens_avg,
                           quantileTDigest(0.5)(tokens_total) AS tokens_median,
                           sum(tokens_total) AS tokens_sum,
+                          ${TOKEN_ANALYTICS_SUM_SELECT},
                           minIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_min,
                           maxIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_max,
                           avgIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_avg,
@@ -1276,6 +1283,7 @@ export const TraceRepositoryLive = Layer.effect(
                         avg(tokens_total) AS tokens_avg,
                         quantileTDigest(0.5)(tokens_total) AS tokens_median,
                         sum(tokens_total) AS tokens_sum,
+                        ${TOKEN_ANALYTICS_SUM_SELECT},
                         minIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_min,
                         maxIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_max,
                         avgIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_avg,

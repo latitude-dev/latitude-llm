@@ -13,6 +13,7 @@ import { formatCount, formatDuration, formatPercentage, formatPrice, relativeTim
 import { Link } from "@tanstack/react-router"
 import { type MouseEvent, type ReactNode, useCallback, useMemo } from "react"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
+import { CacheHitRateSubheader } from "./table/cache-hit-rate-subheader.tsx"
 import { IndicatorsCell } from "./table/indicators-cell.tsx"
 import { TableMetricSubheader } from "./table/metric-subheader.tsx"
 import { TraceOutlierBadge } from "./trace-outlier-badge.tsx"
@@ -267,6 +268,16 @@ export function ProjectTracesTable({
         align: "end",
         width: 130,
         render: (trace) => <span>{trace.cacheHitRate === null ? "-" : formatPercentage(trace.cacheHitRate)}</span>,
+        ...(showMetricSubheaders
+          ? {
+              renderSubheader: () => (
+                <CacheHitRateSubheader
+                  analytics={traceMetrics?.tokenAnalytics}
+                  {...(metricsLoading !== undefined ? { isLoading: metricsLoading } : {})}
+                />
+              ),
+            }
+          : {}),
       },
       {
         key: "sessionId",

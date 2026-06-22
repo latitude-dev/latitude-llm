@@ -25,6 +25,7 @@ import type { SelectionState } from "../../../../../lib/hooks/useSelectableRows.
 import { FiltersSidebar } from "./filters-sidebar.tsx"
 import { sessionTracesQueryOptions } from "./session-detail-drawer/use-session-traces.ts"
 import { SessionOutlierBadge } from "./session-outlier-badge.tsx"
+import { CacheHitRateSubheader } from "./table/cache-hit-rate-subheader.tsx"
 import { IndicatorsCell } from "./table/indicators-cell.tsx"
 import { TableMetricSubheader } from "./table/metric-subheader.tsx"
 import { DEFAULT_SEARCH_SORTING, RELEVANCE_SORT_COLUMN } from "./trace-page-state.ts"
@@ -439,6 +440,9 @@ export function SessionsView({
           const rate = field(row, "cacheHitRate")
           return <span>{rate === null ? "-" : formatPercentage(rate)}</span>
         },
+        renderSubheader: () => (
+          <CacheHitRateSubheader analytics={sessionMetrics?.tokenAnalytics} isLoading={sessionMetricsLoading} />
+        ),
       },
       {
         key: "sessionId",

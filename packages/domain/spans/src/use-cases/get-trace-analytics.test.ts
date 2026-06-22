@@ -111,6 +111,7 @@ describe("getTraceAnalyticsUseCase", () => {
       spanCount: { min: 0, max: 0, avg: 0, median: 0, sum: 42 },
       tokensTotal: { min: 0, max: 0, avg: 0, median: 0, sum: 777 },
       timeToFirstTokenNs: { min: 0, max: 0, avg: 0, median: 555, sum: 0 },
+      tokenAnalytics: { cacheHitRate: null, inputTokens: 0, cacheReadTokens: 0, cacheCreateTokens: 0, outputTokens: 0 },
     }
     const buckets = [
       {
