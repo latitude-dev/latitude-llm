@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.3.0] - 2026-06-22
+
+### Added
+
+- **OpenAI Agents traces now capture tool definitions.** The `openai-agents` instrumentation forwards the
+  Responses API's echoed tool schemas (`_response.tools`) as `gen_ai.tool.definitions`, so the available
+  tools surface on agent model spans like they already do for the OpenAI SDK integration.
+
+### Changed
+
+- Bumped Traceloop instrumentations: `@traceloop/instrumentation-openai` 0.25.0 → 0.27.0 and
+  `@traceloop/instrumentation-anthropic` 0.26.0 → 0.27.0.
+
 ## [3.2.0] - 2026-06-18
 
 ### Added
