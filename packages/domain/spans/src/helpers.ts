@@ -184,6 +184,9 @@ export function denseTraceTimeHistogramBuckets(
       tokensTotalSum: prev.tokensTotalSum + b.tokensTotalSum,
       spanCountSum: prev.spanCountSum + b.spanCountSum,
       timeToFirstTokenNsMedian: Math.max(prev.timeToFirstTokenNsMedian, b.timeToFirstTokenNsMedian),
+      tokensInputSum: prev.tokensInputSum + b.tokensInputSum,
+      tokensCacheReadSum: prev.tokensCacheReadSum + b.tokensCacheReadSum,
+      tokensCacheCreateSum: prev.tokensCacheCreateSum + b.tokensCacheCreateSum,
     })
   }
 

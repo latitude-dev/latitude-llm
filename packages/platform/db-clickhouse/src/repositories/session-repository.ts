@@ -45,6 +45,7 @@ import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-sub
 import { buildSessionIntelligenceFilters } from "../session-intelligence-filters.ts"
 import { countSessionsBySearchQuery, type FetchFullSessions, listSessionsBySearchQuery } from "./search-by-project.ts"
 import { isActiveSearch } from "./search-plan.ts"
+import { TOKEN_ANALYTICS_SUM_SELECT, toTokenAnalytics } from "./token-analytics.ts"
 
 const LIST_SELECT = `
   organization_id,
@@ -168,6 +169,10 @@ type SessionMetricsRow = {
   tokens_avg: string
   tokens_median: string
   tokens_sum: string
+  tokens_input_sum: string
+  tokens_output_sum: string
+  tokens_cache_read_sum: string
+  tokens_cache_create_sum: string
   ttft_min: string
   ttft_max: string
   ttft_avg: string
@@ -203,7 +208,10 @@ const HISTOGRAM_BUCKET_SELECT = `count() AS session_count,
   quantileTDigest(0.5)(duration_ns) AS duration_median,
   sum(tokens_total) AS tokens_sum,
   sum(span_count) AS span_sum,
-  quantileTDigestIf(0.5)(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_median`
+  quantileTDigestIf(0.5)(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_median,
+  sum(tokens_input) AS tokens_input_sum,
+  sum(tokens_cache_read) AS tokens_cache_read_sum,
+  sum(tokens_cache_create) AS tokens_cache_create_sum`
 
 type SessionHistogramBucketRow = {
   bucket_start: string
@@ -214,6 +222,9 @@ type SessionHistogramBucketRow = {
   tokens_sum: string
   span_sum: string
   ttft_median: string
+  tokens_input_sum: string
+  tokens_cache_read_sum: string
+  tokens_cache_create_sum: string
 }
 
 const toSessionHistogramBucket = (row: SessionHistogramBucketRow): TraceTimeHistogramBucket => ({
@@ -225,6 +236,9 @@ const toSessionHistogramBucket = (row: SessionHistogramBucketRow): TraceTimeHist
   tokensTotalSum: Number(row.tokens_sum),
   spanCountSum: Number(row.span_sum),
   timeToFirstTokenNsMedian: finiteOrZero(row.ttft_median),
+  tokensInputSum: Number(row.tokens_input_sum),
+  tokensCacheReadSum: Number(row.tokens_cache_read_sum),
+  tokensCacheCreateSum: Number(row.tokens_cache_create_sum),
 })
 
 const toSessionMetrics = (row: SessionMetricsRow | undefined): SessionMetrics => {
@@ -254,6 +268,7 @@ const toSessionMetrics = (row: SessionMetricsRow | undefined): SessionMetrics =>
     ),
     timeToFirstTokenNs: toTtftRollup(row),
     traceCount: Number(row.trace_count_sum),
+    tokenAnalytics: toTokenAnalytics(row),
   }
 }
 
@@ -838,6 +853,7 @@ export const SessionRepositoryLive = Layer.effect(
                         avg(tokens_total) AS tokens_avg,
                         quantileTDigest(0.5)(tokens_total) AS tokens_median,
                         sum(tokens_total) AS tokens_sum,
+                        ${TOKEN_ANALYTICS_SUM_SELECT},
                         minIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_min,
                         maxIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_max,
                         avgIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_avg,

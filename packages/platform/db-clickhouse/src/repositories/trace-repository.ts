@@ -45,6 +45,7 @@ import { buildClickHouseWhere } from "../filter-builder.ts"
 import { TRACE_FIELD_REGISTRY } from "../registries/trace-fields.ts"
 import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-subquery.ts"
 import { isActiveSearch, planSearch } from "./search-plan.ts"
+import { TOKEN_ANALYTICS_SUM_SELECT, toTokenAnalytics } from "./token-analytics.ts"
 
 export const LIST_SELECT = `
   organization_id,
@@ -152,7 +153,10 @@ const HISTOGRAM_BUCKET_SELECT = `count() AS trace_count,
   quantileTDigest(0.5)(duration_ns) AS duration_median,
   sum(tokens_total) AS tokens_sum,
   sum(span_count) AS span_sum,
-  quantileTDigestIf(0.5)(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_median`
+  quantileTDigestIf(0.5)(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_median,
+  sum(tokens_input) AS tokens_input_sum,
+  sum(tokens_cache_read) AS tokens_cache_read_sum,
+  sum(tokens_cache_create) AS tokens_cache_create_sum`
 
 type TraceHistogramBucketRow = {
   bucket_start: string
@@ -163,6 +167,9 @@ type TraceHistogramBucketRow = {
   tokens_sum: string
   span_sum: string
   ttft_median: string
+  tokens_input_sum: string
+  tokens_cache_read_sum: string
+  tokens_cache_create_sum: string
 }
 
 const parseMessages = (json: string): GenAIMessage[] => {
@@ -252,6 +259,10 @@ type TraceMetricsRow = {
   tokens_avg: string
   tokens_median: string
   tokens_sum: string
+  tokens_input_sum: string
+  tokens_output_sum: string
+  tokens_cache_read_sum: string
+  tokens_cache_create_sum: string
   ttft_min: string
   ttft_max: string
   ttft_avg: string
@@ -291,6 +302,9 @@ const toHistogramBucket = (row: TraceHistogramBucketRow): TraceTimeHistogramBuck
   spanCountSum: Number(row.span_sum),
   // TTFT is gated on `> 0`, so empty buckets return `nan` from the aggregate — coerce to 0.
   timeToFirstTokenNsMedian: finiteOrZero(row.ttft_median),
+  tokensInputSum: Number(row.tokens_input_sum),
+  tokensCacheReadSum: Number(row.tokens_cache_read_sum),
+  tokensCacheCreateSum: Number(row.tokens_cache_create_sum),
 })
 
 const toTraceMetrics = (row: TraceMetricsRow | undefined): TraceMetrics => {
@@ -307,6 +321,7 @@ const toTraceMetrics = (row: TraceMetricsRow | undefined): TraceMetrics => {
     spanCount: toNumericRollup(row.span_min, row.span_max, row.span_avg, row.span_median, row.span_sum),
     tokensTotal: toNumericRollup(row.tokens_min, row.tokens_max, row.tokens_avg, row.tokens_median, row.tokens_sum),
     timeToFirstTokenNs: toTtftRollup(row),
+    tokenAnalytics: toTokenAnalytics(row),
   }
 }
 
@@ -1219,6 +1234,7 @@ export const TraceRepositoryLive = Layer.effect(
                           avg(tokens_total) AS tokens_avg,
                           quantileTDigest(0.5)(tokens_total) AS tokens_median,
                           sum(tokens_total) AS tokens_sum,
+                          ${TOKEN_ANALYTICS_SUM_SELECT},
                           minIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_min,
                           maxIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_max,
                           avgIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_avg,
@@ -1276,6 +1292,7 @@ export const TraceRepositoryLive = Layer.effect(
                         avg(tokens_total) AS tokens_avg,
                         quantileTDigest(0.5)(tokens_total) AS tokens_median,
                         sum(tokens_total) AS tokens_sum,
+                        ${TOKEN_ANALYTICS_SUM_SELECT},
                         minIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_min,
                         maxIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_max,
                         avgIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_avg,

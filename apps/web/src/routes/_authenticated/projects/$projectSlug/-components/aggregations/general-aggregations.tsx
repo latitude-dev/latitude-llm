@@ -52,7 +52,7 @@ const METRIC_ORDER: readonly TraceHistogramMetric[] = [
   "cost",
   "duration",
   "tokens",
-  "ttft",
+  "cacheHitRate",
   "traces",
   "spans",
 ]
@@ -103,13 +103,12 @@ export function GeneralAggregations({
   const traceCardLoading = isSessionsMode ? sessionMetricsLoading : traceCountLoading
   const metricsCardLoading = isSessionsMode ? sessionMetricsLoading : traceMetricsLoading
 
-  // TTFT card is hidden when no row in the current view recorded a first-token timestamp
-  // (`> 0`); showing it would just render "—" forever for projects that don't stream.
-  const showTtft = !!activeMetrics && activeMetrics.timeToFirstTokenNs.max > 0
-
-  const visibleMetrics = METRIC_ORDER.filter((id) => id !== "ttft" || showTtft).map(
-    (id) => HISTOGRAM_METRIC_DEFINITIONS[id],
-  )
+  // Each metric declares its own visibility via `isAvailable` (e.g. cache hit
+  // rate hides itself when there are no input-side tokens). The Boolean filter
+  // defends the panel against a metric id with no definition.
+  const visibleMetrics = METRIC_ORDER.map((id) => HISTOGRAM_METRIC_DEFINITIONS[id])
+    .filter((def): def is HistogramMetricDefinition => Boolean(def))
+    .filter((def) => def.isAvailable?.(activeMetrics) ?? true)
 
   const [showLeftFade, setShowLeftFade] = useState(false)
 

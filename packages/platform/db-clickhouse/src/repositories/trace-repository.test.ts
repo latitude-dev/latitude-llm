@@ -1046,6 +1046,15 @@ describe("TraceRepository", () => {
       expect(histogramSpanSum).toBe(metrics.spanCount.sum)
       expect(histogramTokenSum).toBe(metrics.tokensTotal.sum)
       expect(histogramCostSum).toBe(metrics.costTotalMicrocents.sum)
+
+      // tokenAnalytics is populated by the real aggregate SQL and the rate is
+      // token-weighted over the same filtered set.
+      const { tokenAnalytics } = metrics
+      if (tokenAnalytics.cacheHitRate !== null) {
+        const totalInput =
+          tokenAnalytics.inputTokens + tokenAnalytics.cacheReadTokens + tokenAnalytics.cacheCreateTokens
+        expect(tokenAnalytics.cacheHitRate).toBeCloseTo(tokenAnalytics.cacheReadTokens / totalInput)
+      }
     })
 
     // sortBy axis dispatch on the ranked search path: with searchQuery

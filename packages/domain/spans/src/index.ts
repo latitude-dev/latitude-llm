@@ -139,6 +139,7 @@ export type {
 export { ToolAnalyticsRepository } from "./ports/tool-analytics-repository.ts"
 export type {
   NumericRollup,
+  TokenAnalyticsAggregate,
   TraceDistinctColumn,
   TraceDistribution,
   TraceHistogramMetric,
@@ -150,6 +151,7 @@ export type {
   TraceTimeHistogramBucket,
 } from "./ports/trace-repository.ts"
 export {
+  emptyTokenAnalytics,
   emptyTraceDistribution,
   emptyTraceMetrics,
   emptyTraceTimeHistogramBucket,
