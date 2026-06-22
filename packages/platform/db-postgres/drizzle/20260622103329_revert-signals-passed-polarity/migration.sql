@@ -4,6 +4,11 @@ CREATE INDEX "scores_signal_discovery_work_idx" ON "latitude"."scores" ("organiz
 -- Reverts the Signals PR1 (#3621) passed-polarity flip back to the original
 -- problem-detector convention (passed = false = behavior present). The CH column +
 -- the source_type rename are kept (this is PG, the column is source_type).
+--
+-- DEPLOY ORDER (hard requirement, not advisory): run this BEFORE or atomically with the
+-- reverted-code deploy. If PR1 (new-polarity) code is still live after the data re-flip, it writes
+-- fresh passed=true / always-stamped signal_id rows this one-shot migration won't catch, leaving a
+-- mixed-polarity dataset.
 
 -- (A) Evaluation + flagger (source_id = 'SYSTEM') annotation scores were written
 -- uniformly in the new polarity (evals via the legacy-polarity boundary inversion;
@@ -15,9 +20,10 @@ WHERE "errored" = false
   AND ("source_type" = 'evaluation' OR ("source_type" = 'annotation' AND "source_id" = 'SYSTEM'));--> statement-breakpoint
 
 -- (B) Human annotations (source_id <> 'SYSTEM') use `passed` as a sentiment attribute
--- (thumbs up = passed true). PR1 never changed that write path, so annotations created
--- AFTER the v0.3.11 production deploy are already correct; only the rows the one-time
--- migration touched (created before it ran) were inverted. Re-flip only those.
+-- (thumbs up = passed true). PR1 never changed that write path; only the annotation rows that
+-- already existed when PR1's one-time migration RAN in production (2026-06-18 22:00 UTC — the
+-- migration-run time, NOT the later v0.3.11 app deploy) were inverted. Rows created after that
+-- cutoff are already correct, so re-flip only the rows created before it.
 UPDATE "latitude"."scores"
 SET "passed" = NOT "passed"
 WHERE "errored" = false

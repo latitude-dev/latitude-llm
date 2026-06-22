@@ -15,8 +15,9 @@ ALTER TABLE scores ON CLUSTER default UPDATE passed = NOT passed
   SETTINGS mutations_sync = 2;
 
 -- (B) human annotations (source_id != 'SYSTEM') use `passed` as a sentiment attribute; PR1 never
--- changed that write path, so rows created after the v0.3.11 deploy are already correct. Re-flip
--- only the rows the one-time PR1 migration touched (created before it ran in production).
+-- changed that write path. Only rows that existed when PR1's one-time migration RAN in production
+-- (2026-06-18 22:00 UTC — the migration-run time, NOT the later v0.3.11 app deploy) were inverted;
+-- rows created after that cutoff are already correct. Re-flip only the rows created before it.
 ALTER TABLE scores ON CLUSTER default UPDATE passed = NOT passed
   WHERE errored = false AND source = 'annotation' AND source_id != 'SYSTEM' AND created_at < '2026-06-18 22:00:00'
   SETTINGS mutations_sync = 2;

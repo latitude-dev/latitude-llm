@@ -13,7 +13,8 @@ ALTER TABLE scores UPDATE passed = NOT passed
   SETTINGS mutations_sync = 1;
 
 -- (B) human annotations (source_id != 'SYSTEM'): passed is sentiment, write path unchanged by PR1;
--- only the rows the one-time PR1 migration touched (created before the v0.3.11 deploy) were inverted.
+-- only rows that existed when PR1's one-time migration RAN in production (2026-06-18 22:00 UTC — the
+-- migration-run time, NOT the later v0.3.11 app deploy) were inverted.
 ALTER TABLE scores UPDATE passed = NOT passed
   WHERE errored = false AND source = 'annotation' AND source_id != 'SYSTEM' AND created_at < '2026-06-18 22:00:00'
   SETTINGS mutations_sync = 1;
