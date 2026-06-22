@@ -25,5 +25,8 @@ class UpdateProjectBodyFlaggers(UniversalBaseModel):
         typing.Optional[bool], FieldMetadata(alias="output-schema-validation")
     ] = None
     empty_response: typing_extensions.Annotated[typing.Optional[bool], FieldMetadata(alias="empty-response")] = None
+    low_cache_hit_rate: typing_extensions.Annotated[
+        typing.Optional[bool], FieldMetadata(alias="low-cache-hit-rate")
+    ] = None
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

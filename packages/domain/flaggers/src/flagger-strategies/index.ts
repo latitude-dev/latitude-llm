@@ -3,6 +3,7 @@ import { forgettingStrategy } from "./forgetting.ts"
 import { frustrationStrategy } from "./frustration.ts"
 import { jailbreakingStrategy } from "./jailbreaking.ts"
 import { lazinessStrategy } from "./laziness.ts"
+import { lowCacheHitRateStrategy } from "./low-cache-hit-rate.ts"
 import { nsfwStrategy } from "./nsfw.ts"
 import { outputSchemaValidationStrategy } from "./output-schema-validation.ts"
 import { refusalStrategy } from "./refusal.ts"
@@ -30,6 +31,7 @@ const STRATEGY_REGISTRY = {
   "tool-call-errors": toolCallErrorsStrategy,
   "output-schema-validation": outputSchemaValidationStrategy,
   "empty-response": emptyResponseStrategy,
+  "low-cache-hit-rate": lowCacheHitRateStrategy,
 } satisfies Record<FlaggerSlug, FlaggerStrategy>
 
 ;(() => {
@@ -78,6 +80,7 @@ export {
   frustrationStrategy,
   jailbreakingStrategy,
   lazinessStrategy,
+  lowCacheHitRateStrategy,
   nsfwStrategy,
   outputSchemaValidationStrategy,
   refusalStrategy,

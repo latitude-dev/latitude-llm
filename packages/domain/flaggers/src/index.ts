@@ -26,6 +26,7 @@ export {
   jailbreakingStrategy,
   lazinessStrategy,
   listFlaggerStrategySlugs,
+  lowCacheHitRateStrategy,
   MAX_EXCERPT_LENGTH,
   MAX_SNIPPET_EXCERPT_LENGTH,
   MAX_STAGES_PER_PROMPT,
@@ -45,6 +46,7 @@ export { FLAGGER_STRATEGY_SLUGS } from "./flagger-strategies/types.ts"
 export {
   type DeterministicFlaggerMatch,
   detectEmptyResponseFlagger,
+  detectLowCacheHitRateFlagger,
   detectOutputSchemaValidationFlagger,
   detectToolCallErrorsFlagger,
 } from "./helpers.ts"
