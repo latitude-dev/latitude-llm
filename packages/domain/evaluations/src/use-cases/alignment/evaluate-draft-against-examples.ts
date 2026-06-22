@@ -42,7 +42,7 @@ export const evaluateDraftAgainstExamplesUseCase = Effect.fn("evaluations.evalua
       })
 
       const expectedPositive = example.label === "positive"
-      const predictedPositive = execution.result.passed === true
+      const predictedPositive = execution.result.passed === false
 
       confusionMatrix = addConfusionMatrixObservation(confusionMatrix, {
         expectedPositive,
