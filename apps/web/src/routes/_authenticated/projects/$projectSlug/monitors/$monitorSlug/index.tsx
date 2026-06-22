@@ -17,7 +17,7 @@ import {
 } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { createFileRoute, getRouteApi, Link, useNavigate } from "@tanstack/react-router"
-import { ArrowLeftIcon, BellIcon, BellOffIcon, MenuIcon, PencilIcon, Trash2Icon } from "lucide-react"
+import { ArrowLeftIcon, BellIcon, BellOffIcon, EllipsisVerticalIcon, PencilIcon, Trash2Icon } from "lucide-react"
 import { type ReactNode, useMemo, useState } from "react"
 import { SeverityStatus } from "../../../../../../domains/alerts/severity-selector.tsx"
 import { describeMonitorTarget, targetToSessionFilters } from "../../../../../../domains/monitors/monitor-target.ts"
@@ -208,7 +208,7 @@ function MonitorDetailPage() {
                   <DropdownMenuRoot modal={false}>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm" className="h-7 w-7 p-0" aria-label="Monitor actions">
-                        <Icon icon={MenuIcon} size="sm" />
+                        <Icon icon={EllipsisVerticalIcon} size="sm" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuPortal>

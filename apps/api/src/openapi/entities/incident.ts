@@ -51,6 +51,13 @@ const MonitorMetricSchema = z
     z.object({ kind: z.literal("count").describe("Count matching events in each evaluation bucket.") }),
     z.object({ kind: z.literal("errorRate").describe("Measure the fraction of matching events that errored.") }),
     z.object({
+      kind: z
+        .literal("cacheHitRate")
+        .describe(
+          "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction.",
+        ),
+    }),
+    z.object({
       kind: z.literal("avg").describe("Average a numeric field over matching events."),
       field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
     }),

@@ -33,6 +33,16 @@ class MonitorMetric_ErrorRate(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
+class MonitorMetric_CacheHitRate(UniversalBaseModel):
+    """
+    Metric measured over the monitor target.
+    """
+
+    kind: typing.Literal["cacheHitRate"] = "cacheHitRate"
+
+    model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
+
+
 class MonitorMetric_Avg(UniversalBaseModel):
     """
     Metric measured over the monitor target.
@@ -91,6 +101,7 @@ class MonitorMetric_Median(UniversalBaseModel):
 MonitorMetric = typing.Union[
     MonitorMetric_Count,
     MonitorMetric_ErrorRate,
+    MonitorMetric_CacheHitRate,
     MonitorMetric_Avg,
     MonitorMetric_Sum,
     MonitorMetric_Min,

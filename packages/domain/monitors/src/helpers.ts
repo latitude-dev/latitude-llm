@@ -60,6 +60,8 @@ const formatMetric = (metric: MonitorMetric): string => {
       return "the volume"
     case "errorRate":
       return "the error rate"
+    case "cacheHitRate":
+      return "the cache hit rate"
     case "sum":
       return `the total ${metricFieldNoun(metric.field)}`
     case "min":

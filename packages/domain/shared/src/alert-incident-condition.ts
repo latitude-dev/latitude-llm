@@ -36,6 +36,7 @@ export type MonitorMetricField = z.infer<typeof monitorMetricFieldSchema>
 export const monitorMetricSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("count") }),
   z.object({ kind: z.literal("errorRate") }),
+  z.object({ kind: z.literal("cacheHitRate") }),
   z.object({ kind: z.literal("sum"), field: monitorMetricFieldSchema }),
   z.object({ kind: z.literal("min"), field: monitorMetricFieldSchema }),
   z.object({ kind: z.literal("max"), field: monitorMetricFieldSchema }),

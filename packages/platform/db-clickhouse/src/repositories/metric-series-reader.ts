@@ -40,6 +40,11 @@ interface MetricColumns {
   readonly cost: string
   readonly tokens: string
   readonly isError: string
+  // Prompt-cache token columns, summed for the cacheHitRate ratio (numerator
+  // `cacheRead`, denominator `inputTokens + cacheRead + cacheCreate`).
+  readonly inputTokens: string
+  readonly cacheRead: string
+  readonly cacheCreate: string
 }
 
 const TRACE_METRIC_COLUMNS: MetricColumns = {
@@ -47,19 +52,25 @@ const TRACE_METRIC_COLUMNS: MetricColumns = {
   cost: "cost_total_microcents",
   tokens: "tokens_total",
   isError: "error_count > 0",
+  inputTokens: "tokens_input",
+  cacheRead: "tokens_cache_read",
+  cacheCreate: "tokens_cache_create",
 }
 
-// Billable operations whose usage should sum. Mirrors the rollup usage allowlist
+// Operations whose token/cost usage should sum. Mirrors the rollup usage allowlist
 // (traces_mv / sessions_mv) so wrapper spans don't double-count cost/tokens.
-const BILLABLE_OPERATIONS_SQL = "('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker')"
+const USAGE_OPERATIONS_SQL = "('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker')"
 
 // cost/tokens are gated to billable operations (NULL otherwise) so sum/avg ignore
 // wrapper + tool spans; count/errorRate/duration still span all rows.
 const SPAN_METRIC_COLUMNS: MetricColumns = {
   duration: "duration_ns",
-  cost: `if(operation IN ${BILLABLE_OPERATIONS_SQL}, cost_total_microcents, NULL)`,
-  tokens: `if(operation IN ${BILLABLE_OPERATIONS_SQL}, tokens_input + tokens_output, NULL)`,
+  cost: `if(operation IN ${USAGE_OPERATIONS_SQL}, cost_total_microcents, NULL)`,
+  tokens: `if(operation IN ${USAGE_OPERATIONS_SQL}, tokens_input + tokens_output, NULL)`,
   isError: "status_code = 2",
+  inputTokens: `if(operation IN ${USAGE_OPERATIONS_SQL}, tokens_input, NULL)`,
+  cacheRead: `if(operation IN ${USAGE_OPERATIONS_SQL}, tokens_cache_read, NULL)`,
+  cacheCreate: `if(operation IN ${USAGE_OPERATIONS_SQL}, tokens_cache_create, NULL)`,
 }
 
 const metricColumnsFor = (stream: MetricSeriesWindowInput["target"]["stream"]): MetricColumns =>
@@ -81,6 +92,12 @@ const metricAggregate = (
       return stream === "traces" ? "uniqExact(coalesce(nullIf(session_id, ''), toString(trace_id)))" : "count()"
     case "errorRate":
       return `if(count() = 0, 0, countIf(${columns.isError}) / count())`
+    case "cacheHitRate": {
+      // Token-weighted prompt-cache ratio. Guard divide-by-zero: a window with no
+      // input-side tokens has an undefined rate, so read 0 (not nan) like errorRate.
+      const denominator = `(sum(${columns.inputTokens}) + sum(${columns.cacheRead}) + sum(${columns.cacheCreate}))`
+      return `if(${denominator} = 0, 0, sum(${columns.cacheRead}) / ${denominator})`
+    }
     case "sum":
       return `sum(${columns[metric.field]})`
     case "min":
@@ -110,7 +127,7 @@ const buildSpanInnerQuery = (input: MetricSeriesWindowInput): InnerQuery => {
   const { whereClauses, params: filterParams } = buildSpanFilterClauses(input.target.filterSet)
   const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
   return {
-    sql: `SELECT span_id, start_time, status_code, operation, duration_ns, cost_total_microcents, tokens_input, tokens_output
+    sql: `SELECT span_id, start_time, status_code, operation, duration_ns, cost_total_microcents, tokens_input, tokens_output, tokens_cache_read, tokens_cache_create
           FROM spans
           WHERE organization_id = {organizationId:String}
             AND project_id = {projectId:String}

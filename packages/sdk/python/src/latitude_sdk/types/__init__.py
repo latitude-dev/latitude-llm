@@ -116,6 +116,7 @@ if typing.TYPE_CHECKING:
     from .monitor_metric import (
         MonitorMetric,
         MonitorMetric_Avg,
+        MonitorMetric_CacheHitRate,
         MonitorMetric_Count,
         MonitorMetric_ErrorRate,
         MonitorMetric_Max,
@@ -125,6 +126,7 @@ if typing.TYPE_CHECKING:
     )
     from .monitor_metric_avg import MonitorMetricAvg
     from .monitor_metric_avg_field import MonitorMetricAvgField
+    from .monitor_metric_cache_hit_rate import MonitorMetricCacheHitRate
     from .monitor_metric_count import MonitorMetricCount
     from .monitor_metric_error_rate import MonitorMetricErrorRate
     from .monitor_metric_max import MonitorMetricMax
@@ -366,6 +368,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "MonitorMetric": ".monitor_metric",
     "MonitorMetricAvg": ".monitor_metric_avg",
     "MonitorMetricAvgField": ".monitor_metric_avg_field",
+    "MonitorMetricCacheHitRate": ".monitor_metric_cache_hit_rate",
     "MonitorMetricCount": ".monitor_metric_count",
     "MonitorMetricErrorRate": ".monitor_metric_error_rate",
     "MonitorMetricMax": ".monitor_metric_max",
@@ -377,6 +380,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "MonitorMetricSum": ".monitor_metric_sum",
     "MonitorMetricSumField": ".monitor_metric_sum_field",
     "MonitorMetric_Avg": ".monitor_metric",
+    "MonitorMetric_CacheHitRate": ".monitor_metric",
     "MonitorMetric_Count": ".monitor_metric",
     "MonitorMetric_ErrorRate": ".monitor_metric",
     "MonitorMetric_Max": ".monitor_metric",
@@ -642,6 +646,7 @@ __all__ = [
     "MonitorMetric",
     "MonitorMetricAvg",
     "MonitorMetricAvgField",
+    "MonitorMetricCacheHitRate",
     "MonitorMetricCount",
     "MonitorMetricErrorRate",
     "MonitorMetricMax",
@@ -653,6 +658,7 @@ __all__ = [
     "MonitorMetricSum",
     "MonitorMetricSumField",
     "MonitorMetric_Avg",
+    "MonitorMetric_CacheHitRate",
     "MonitorMetric_Count",
     "MonitorMetric_ErrorRate",
     "MonitorMetric_Max",

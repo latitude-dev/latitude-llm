@@ -8,6 +8,7 @@ import type * as LatitudeApi from "../index.js";
 export type MonitorMetric =
     | LatitudeApi.MonitorMetric.Count
     | LatitudeApi.MonitorMetric.ErrorRate
+    | LatitudeApi.MonitorMetric.CacheHitRate
     | LatitudeApi.MonitorMetric.Avg
     | LatitudeApi.MonitorMetric.Sum
     | LatitudeApi.MonitorMetric.Min
@@ -21,6 +22,10 @@ export namespace MonitorMetric {
 
     export interface ErrorRate {
         kind: "errorRate";
+    }
+
+    export interface CacheHitRate {
+        kind: "cacheHitRate";
     }
 
     export interface Avg {

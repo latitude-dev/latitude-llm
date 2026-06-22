@@ -85,6 +85,24 @@ const t12 = new Date("2026-06-01T12:00:00.000Z")
 const t13 = new Date("2026-06-01T13:00:00.000Z")
 const t15 = new Date("2026-06-01T15:00:00.000Z")
 const t16 = new Date("2026-06-01T16:00:00.000Z")
+const t18 = new Date("2026-06-01T18:00:00.000Z")
+const t19 = new Date("2026-06-01T19:00:00.000Z")
+const t20 = new Date("2026-06-01T20:00:00.000Z")
+const t21 = new Date("2026-06-01T21:00:00.000Z")
+
+// A span carrying prompt-cache token counts, for the cacheHitRate metric.
+const cacheSpan = (
+  n: number,
+  startTime: Date,
+  tokens: { input: number; cacheRead: number; cacheCreate: number },
+  operation = "",
+): SpanRow => ({
+  ...span(n, startTime, [TAG]),
+  operation,
+  tokens_input: tokens.input,
+  tokens_cache_read: tokens.cacheRead,
+  tokens_cache_create: tokens.cacheCreate,
+})
 
 /** A `traces` + `count` target — the saved-search/match shape this reader supersedes. */
 const countTarget = (filterSet: FilterSet = {}, query: string | null = null): MetricSeriesTarget => ({
@@ -106,6 +124,14 @@ const metricTarget = (metric: MetricSeriesTarget["metric"]): MetricSeriesTarget 
 const spanTarget = (metric: MetricSeriesTarget["metric"], filterSet: FilterSet): MetricSeriesTarget => ({
   stream: "spans",
   filterSet,
+  query: null,
+  metric,
+})
+
+/** A `sessions` target carrying an arbitrary metric (no filter / no query). */
+const sessionTarget = (metric: MetricSeriesTarget["metric"]): MetricSeriesTarget => ({
+  stream: "sessions",
+  filterSet: {},
   query: null,
   metric,
 })
@@ -306,6 +332,64 @@ describe("MetricSeriesReaderLive (traces / count)", () => {
     ).toBe(0)
   })
 
+  it("computes a token-weighted cacheHitRate over the matched traces", async () => {
+    // [18:00, 19:00): two traces. cache_read 80 + 20; input 10 + 80; cache_create 10 + 0.
+    // ratio = (80+20) / ((10+80) + (80+20) + (10+0)) = 100 / 200 = 0.5. The trace
+    // rollup only sums usage-operation tokens, so these must be `chat` spans.
+    await Effect.runPromise(
+      insertJsonEachRow(ch.client, "spans", [
+        cacheSpan(81, t18, { input: 10, cacheRead: 80, cacheCreate: 10 }, "chat"),
+        cacheSpan(82, t18, { input: 80, cacheRead: 20, cacheCreate: 0 }, "chat"),
+      ]),
+    )
+    const rate = await runCh(
+      reader.valueInWindow({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        from: t18,
+        to: t19,
+        target: metricTarget({ kind: "cacheHitRate" }),
+      }),
+    )
+    expect(rate).toBeCloseTo(0.5)
+  })
+
+  it("reads 0 (not nan) for cacheHitRate when matched traces have no input-side tokens", async () => {
+    // span() defaults every token field to 0 ⇒ denominator 0 ⇒ guarded to 0.
+    await Effect.runPromise(insertJsonEachRow(ch.client, "spans", [span(84, t19)]))
+    const rate = await runCh(
+      reader.valueInWindow({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        from: t19,
+        to: t20,
+        target: metricTarget({ kind: "cacheHitRate" }),
+      }),
+    )
+    expect(rate).toBe(0)
+  })
+
+  it("computes a token-weighted cacheHitRate over the matched sessions", async () => {
+    // [20:00, 21:00): two orphan spans roll up to two sessions whose cache tokens sum the
+    // same way as the traces case — ratio = (80+20) / ((10+80)+(80+20)+(10+0)) = 100 / 200 = 0.5.
+    await Effect.runPromise(
+      insertJsonEachRow(ch.client, "spans", [
+        cacheSpan(85, t20, { input: 10, cacheRead: 80, cacheCreate: 10 }, "chat"),
+        cacheSpan(86, t20, { input: 80, cacheRead: 20, cacheCreate: 0 }, "chat"),
+      ]),
+    )
+    const rate = await runCh(
+      reader.valueInWindow({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        from: t20,
+        to: t21,
+        target: sessionTarget({ kind: "cacheHitRate" }),
+      }),
+    )
+    expect(rate).toBeCloseTo(0.5)
+  })
+
   // ── spans stream (per tool-call) ────────────────────────────────────────────
   const EXECUTE_TOOL = { operation: [{ op: "eq" as const, value: "execute_tool" }] }
 
@@ -355,6 +439,28 @@ describe("MetricSeriesReaderLive (traces / count)", () => {
     expect(
       await runCh(reader.valueInWindow({ ...window, target: spanTarget({ kind: "sum", field: "duration" }, filter) })),
     ).toBe(12_000_000_000)
+  })
+
+  it("computes cacheHitRate over usage spans, ignoring non-usage operations", async () => {
+    // [20:00, 21:00): a `chat` span (input 10, cache_read 80, cache_create 10) and an
+    // `execute_tool` span whose tokens are gated out — the tool span's 1000 input
+    // tokens must not enter the denominator. ratio = 80 / (10 + 80 + 10) = 0.8
+    await Effect.runPromise(
+      insertJsonEachRow(ch.client, "spans", [
+        cacheSpan(91, t20, { input: 10, cacheRead: 80, cacheCreate: 10 }, "chat"),
+        cacheSpan(92, t20, { input: 1_000, cacheRead: 0, cacheCreate: 0 }, "execute_tool"),
+      ]),
+    )
+    const rate = await runCh(
+      reader.valueInWindow({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        from: t20,
+        to: t21,
+        target: spanTarget({ kind: "cacheHitRate" }, {}),
+      }),
+    )
+    expect(rate).toBeCloseTo(0.8)
   })
 
   it("buckets tool calls newest-first over the spans stream", async () => {
