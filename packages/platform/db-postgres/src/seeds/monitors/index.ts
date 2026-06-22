@@ -1,4 +1,4 @@
-import { SYSTEM_MONITOR_DEFINITIONS } from "@domain/monitors"
+import { SYSTEM_MONITOR_DEFINITIONS, savedSearchQueryIsMonitorable } from "@domain/monitors"
 import { buildIdempotencyKey, type IncidentEventPayload } from "@domain/notifications"
 import {
   ALERT_INCIDENT_KIND_LIFECYCLE,
@@ -38,14 +38,14 @@ const SAVED_SEARCHES: readonly SavedSearchSeed[] = [
     key: "tool-errors",
     slug: "tool-errors",
     name: "Tool errors",
-    query: "tool:error",
+    query: "`tool:error`",
     filterSet: { "metadata.error_source": [{ op: "eq", value: "tool" }] },
   },
   {
     key: "5xx-errors",
     slug: "5xx-errors",
     name: "5xx server errors",
-    query: "status:error",
+    query: "`status:error`",
     filterSet: { status: [{ op: "in", value: ["error"] }] },
   },
   {
@@ -59,7 +59,7 @@ const SAVED_SEARCHES: readonly SavedSearchSeed[] = [
     key: "refund-requests",
     slug: "refund-requests",
     name: "Refund requests",
-    query: "refund",
+    query: "`refund`",
     filterSet: { "metadata.intent": [{ op: "eq", value: "refund" }] },
   },
   {
@@ -73,12 +73,14 @@ const SAVED_SEARCHES: readonly SavedSearchSeed[] = [
     key: "checkout-flow",
     slug: "checkout-flow",
     name: "Checkout flow",
-    query: "checkout",
+    query: "`checkout`",
     filterSet: { "metadata.flow": [{ op: "eq", value: "checkout" }] },
   },
 ] as const
 
 const savedSearchId = (scope: SeedScope, key: string): string => scope.cuid(`saved-search:${key}`)
+
+const savedSearchByKey = new Map(SAVED_SEARCHES.map((search) => [search.key, search]))
 
 interface UserAlertSeed {
   readonly key: string
@@ -524,6 +526,11 @@ const seedMonitors: Seeder = {
           await ctx.db.insert(monitors).values(monitorRow).onConflictDoUpdate({ target: monitors.id, set: mSet })
 
           for (const alert of monitor.alerts) {
+            const savedSearch = savedSearchByKey.get(alert.savedSearchKey)
+            if (!savedSearch || !savedSearchQueryIsMonitorable(savedSearch.query)) {
+              throw new Error(`monitor alert ${alert.key} references an unmonitorable saved search`)
+            }
+
             const monitorAlertId = MonitorAlertId(scope.cuid(`monitor-alert:${alert.key}`))
             const alertRow: typeof monitorAlerts.$inferInsert = {
               id: monitorAlertId,
