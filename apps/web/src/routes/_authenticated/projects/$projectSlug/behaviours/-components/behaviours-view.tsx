@@ -4,7 +4,6 @@ import {
   Button,
   cn,
   DetailDrawer,
-  DetailSection,
   HistogramSkeleton,
   Icon,
   InfiniteTable,
@@ -345,11 +344,13 @@ export function BehaviourDetailDrawer({
             </div>
           </div>
 
-          <DetailSection
-            icon={<BrainIcon className="h-4 w-4" />}
-            label="Conversation intelligence"
-            contentClassName="flex max-h-none flex-col gap-4 overflow-visible pl-0"
-          >
+          <div className="flex flex-col gap-2 pt-2">
+            <div className="flex flex-row items-center gap-2 text-muted-foreground">
+              <BrainIcon className="h-4 w-4" />
+              <Text.H6 color="foregroundMuted">Conversation intelligence</Text.H6>
+              <hr className="mx-2 flex-1 border-t-2 border-dashed border-border" />
+            </div>
+            <div className="flex flex-col gap-4 pt-2">
             {intelligence ? (
               <>
                 <div className={cn("grid gap-2", showDetectedSignalsChart ? "grid-cols-2" : "grid-cols-1")}>
@@ -377,7 +378,7 @@ export function BehaviourDetailDrawer({
                     ))}
                   </div>
                 ) : null}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 pt-4">
                   <div className="flex items-center justify-between gap-2">
                     <Text.H5>Associated sessions</Text.H5>
                     {hasSessionFilters ? (
@@ -423,7 +424,8 @@ export function BehaviourDetailDrawer({
             ) : (
               <Text.H5 color="foregroundMuted">Conversation intelligence is not available yet.</Text.H5>
             )}
-          </DetailSection>
+            </div>
+          </div>
         </div>
       </DetailDrawer>
       {sessionOverlayId !== null ? (
