@@ -69,10 +69,8 @@ function findAnchorNode(container: HTMLElement, anchor: SignalOccurrenceRecord["
 }
 
 /**
- * Scrolls the conversation to the occurrence's anchor once `ready` (the chunk
- * holding `anchor.messageIndex` has loaded). The viewer is keyed by score id so
- * switching examples remounts it. Waits for the (async-rendered markdown) node
- * via a MutationObserver, then centers it; `scrolledRef` guards a single scroll.
+ * Scrolls to the occurrence's anchor once its chunk has loaded (`ready`), waiting out the
+ * async markdown render via a MutationObserver. `scrolledRef` guards a single scroll.
  */
 function useScrollToAnchor(
   scrollRef: RefObject<HTMLDivElement | null>,
@@ -80,9 +78,7 @@ function useScrollToAnchor(
   ready: boolean,
 ) {
   const scrolledRef = useRef(false)
-  // Reactive on `ready`: the anchored message arrives asynchronously via chunked
-  // loading, so the scroll target may not exist until a later render. Fire once
-  // it's loaded; the MutationObserver then absorbs the markdown render lag.
+  // Fire once the anchor's chunk has loaded — it arrives async, so the target may not exist on mount.
   useEffect(() => {
     if (!ready || scrolledRef.current) return
     const container = scrollRef.current
@@ -127,9 +123,7 @@ function ExampleConversation({
 
   const { anchor } = occurrence
 
-  // Stream chunks until the anchored message is loaded (same chunked model as the
-  // Conversation tab — `findConversationChunk` shares the message index space, so
-  // `anchor.messageIndex` stays valid). Mirrors the conversation tab's focus auto-load.
+  // Stream chunks until the anchored message is loaded so its scroll/highlight target exists.
   const autoLoadingRef = useRef(false)
   useEffect(() => {
     if (anchor.messageIndex < messages.length) return

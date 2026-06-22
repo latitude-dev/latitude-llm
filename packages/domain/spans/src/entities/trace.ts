@@ -76,10 +76,8 @@ export const traceDetailSchema = traceSchema.extend({
 export type TraceDetail = z.infer<typeof traceDetailSchema>
 
 /**
- * TraceMetadataDetail — the trace-panel point-lookup shape: Trace plus the
- * first input, last output, and opening system instructions. Deliberately omits
- * `allMessages` (and the heavy `last_input_messages` it needs) — the full
- * conversation is loaded separately via chunked streaming.
+ * Trace-panel point-lookup: Trace + first input, last output, system instructions.
+ * Omits `allMessages` / `last_input_messages` (huge) — the full convo streams via chunks.
  */
 const traceMetadataDetailSchema = traceSchema.extend({
   systemInstructions: genAISystemSchema,

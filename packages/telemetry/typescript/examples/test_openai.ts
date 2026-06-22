@@ -22,8 +22,7 @@ const latitude = new Latitude({
 
 const PROVIDER = "openai"
 const MODEL = "gpt-5.5"
-// gpt-5.5 is a reasoning model: max_completion_tokens must cover hidden reasoning
-// tokens AND the visible answer, or the response truncates with finish_reason "length".
+// gpt-5.5 is a reasoning model: budget must cover reasoning + the visible answer (else finish_reason "length").
 const MAX_TOKENS = 2000
 const SESSION_ID = `${PROVIDER}-${randomUUID().slice(0, 8)}`
 

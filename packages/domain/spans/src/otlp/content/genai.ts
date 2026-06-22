@@ -101,11 +101,8 @@ function normalizeSemconvMessage(msg: unknown): unknown {
   return { ...kept, parts }
 }
 
-// Tool results belong in a "tool" message in the unified model. Some providers (e.g. Anthropic)
-// nest the tool_result inside a "user" turn — sometimes alongside ordinary text. Hoist the
-// tool_call_response parts into their own "tool" message (so they pair with the originating
-// tool_call downstream, which keys off role === "tool") and leave any sibling parts under the
-// original role, rather than relabeling the whole turn.
+// Hoist tool_call_response parts into their own "tool" message (downstream pairing keys off
+// role === "tool"); some providers (Anthropic) nest tool results in a "user" turn.
 function hoistToolResults(messages: readonly GenAIMessage[]): GenAIMessage[] {
   const out: GenAIMessage[] = []
   for (const msg of messages) {

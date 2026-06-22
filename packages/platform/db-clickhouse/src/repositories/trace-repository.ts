@@ -94,8 +94,7 @@ const DETAIL_SELECT = `${LIST_SELECT},
   argMinIfMerge(system_instructions)   AS system_instructions
 `
 
-// Trace-panel detail: first input, last output, system instructions — but NOT
-// last_input_messages (huge in long traces; the full convo loads via chunks).
+// Trace-panel detail WITHOUT last_input_messages (huge in long traces; the full convo loads via chunks).
 const METADATA_DETAIL_SELECT = `${LIST_SELECT},
   argMinIfMerge(input_messages)        AS input_messages,
   argMaxIfMerge(output_messages)       AS output_messages,
