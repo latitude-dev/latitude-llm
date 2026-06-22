@@ -137,6 +137,11 @@ function MonitorDetailPage() {
   const target = monitor?.target ?? null
   const muted = monitor?.mutedAt != null
   const description = describeMonitorTarget(target)
+  const savedSearchTarget = target?.savedSearchId
+    ? { slug: monitor?.targetSavedSearchSlug ?? null, name: monitor?.targetSavedSearchName ?? "Saved search" }
+    : alert?.source?.type === "savedSearch"
+      ? { slug: alert.sourceSlug, name: alert.sourceName ?? "Saved search" }
+      : null
   const canEditAlert = monitor ? !monitor.system || alert?.kind === "issue.escalating" : false
   const canDeleteMonitor = monitor ? !monitor.system : false
   const onEditAlert = () => {
@@ -237,9 +242,20 @@ function MonitorDetailPage() {
                     <ConfigField label="Status">
                       {muted ? <Status variant="neutral" label="Muted" /> : <Status variant="success" label="Live" />}
                     </ConfigField>
-                    {description ? (
+                    {description || savedSearchTarget ? (
                       <ConfigField label="Target">
-                        <Text.H5 color="foreground">{description.label}</Text.H5>
+                        {savedSearchTarget?.slug ? (
+                          <Link
+                            to="/projects/$projectSlug"
+                            params={{ projectSlug }}
+                            search={{ tab: "sessions", savedSearch: savedSearchTarget.slug }}
+                            className="hover:underline"
+                          >
+                            <Text.H5 color="primary">{savedSearchTarget.name}</Text.H5>
+                          </Link>
+                        ) : (
+                          <Text.H5 color="foreground">{description?.label ?? savedSearchTarget?.name}</Text.H5>
+                        )}
                       </ConfigField>
                     ) : null}
                     {alert ? (

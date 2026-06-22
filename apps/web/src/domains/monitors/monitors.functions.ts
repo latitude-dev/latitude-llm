@@ -95,6 +95,12 @@ const toMonitorRecord = (monitor: Monitor, savedSearchRefs: ReadonlyMap<string, 
   system: monitor.system,
   alerts: monitor.alerts.map((alert) => toMonitorAlertRecord(alert, savedSearchRefs)),
   target: monitor.target,
+  targetSavedSearchName: monitor.target?.savedSearchId
+    ? (savedSearchRefs.get(monitor.target.savedSearchId)?.name ?? null)
+    : null,
+  targetSavedSearchSlug: monitor.target?.savedSearchId
+    ? (savedSearchRefs.get(monitor.target.savedSearchId)?.slug ?? null)
+    : null,
   mutedAt: monitor.mutedAt?.toISOString() ?? null,
   deletedAt: monitor.deletedAt?.toISOString() ?? null,
   createdAt: monitor.createdAt.toISOString(),
@@ -114,8 +120,10 @@ const resolveSavedSearchRefs = async (
   projectId: ProjectId,
   monitors: readonly Monitor[],
 ): Promise<ReadonlyMap<string, SavedSearchRef>> => {
-  const referencesSavedSearch = monitors.some((monitor) =>
-    monitor.alerts.some((alert) => alert.source?.type === "savedSearch" && alert.source.id !== null),
+  const referencesSavedSearch = monitors.some(
+    (monitor) =>
+      monitor.target?.savedSearchId ||
+      monitor.alerts.some((alert) => alert.source?.type === "savedSearch" && alert.source.id !== null),
   )
   if (!referencesSavedSearch) return new Map()
   const page = await Effect.runPromise(
