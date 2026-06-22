@@ -22,6 +22,12 @@ export interface HistogramMetricDefinition {
    * other.
    */
   readonly selectMetricsValue: (metrics: TraceMetrics | SessionMetrics, totalCount: number) => number
+  /**
+   * Whether to show this metric's card/series for the current aggregate. Omit
+   * for always-visible metrics; a ratio metric hides itself when its
+   * denominator is empty so it doesn't render a meaningless permanent 0.
+   */
+  readonly isAvailable?: (metrics: TraceMetrics | SessionMetrics | undefined) => boolean
 }
 
 const microcentsToUSD = (microcents: number): string => formatPrice(microcents / 100_000_000)
@@ -88,6 +94,8 @@ export const HISTOGRAM_METRIC_DEFINITIONS: Readonly<Record<TraceHistogramMetric,
         cacheCreate: b.tokensCacheCreateSum,
       }) ?? 0,
     selectMetricsValue: (m) => m.tokenAnalytics.cacheHitRate ?? 0,
+    // Undefined (null) rate ⇒ no input-side tokens in view; hide rather than show 0%.
+    isAvailable: (m) => !!m && m.tokenAnalytics.cacheHitRate !== null,
   },
   spans: {
     id: "spans",

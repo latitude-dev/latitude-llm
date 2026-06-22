@@ -245,7 +245,6 @@ export const TRACE_HISTOGRAM_METRICS = [
   "cost",
   "duration",
   "tokens",
-  "ttft",
   "cacheHitRate",
   "traces",
   "spans",
