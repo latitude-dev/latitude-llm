@@ -34,7 +34,7 @@ export const createFakeScriptRuntime = (overrides?: FakeScriptRuntimeOverrides) 
     })
 
   const defaultRun = (_input: ScriptRunInput): Effect.Effect<RunResult, ScriptRunError> =>
-    Effect.succeed({ value: 1, passed: true, duration: 0, tokens: 0, cost: 0 })
+    Effect.succeed({ value: 1, duration: 0, tokens: 0, cost: 0 })
 
   const runtime: ScriptRuntimeShape = {
     compile: (input) => {

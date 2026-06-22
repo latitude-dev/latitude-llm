@@ -15,32 +15,31 @@ This spec defines the real **sandbox runtime**: a portable, host-controlled, res
 
 ## The execution contract
 
-One contract for every evaluation: the script returns a **score** (`value` ∈ [0,1]), a **`passed`** verdict (membership — the script decides; there is no host-side threshold), and optional **`feedback`** (reasoning). There are no dialects, and every evaluation runs and persists the same way.
+One contract for every evaluation: the script returns a **score** (`value` ∈ [0,1]) and optional **`feedback`** (reasoning); the host derives membership by thresholding `value` via `isScoreMatch` (default 0.5). There are no dialects, and every evaluation runs and persists the same way.
 
 ### Output: score, verdict, feedback
 
 ```ts
-// Script return — a normalized score, a pass/fail verdict, and optional reasoning
-Score(value: number, passed: boolean, feedback?: string)   // value ∈ [0,1]; passed = membership; feedback = reasoning
-Passed(value?: number, feedback?: string)                  // sugar → Score(value ?? 1, true,  feedback)
-Failed(value?: number, feedback?: string)                  // sugar → Score(value ?? 0, false, feedback)
+// Script return — a normalized score and optional reasoning
+Score(value: number, feedback?: string)   // value ∈ [0,1]; feedback = reasoning
+Passed(value?: number, feedback?: string)  // sugar → Score(value ?? 1, feedback)
+Failed(value?: number, feedback?: string)  // sugar → Score(value ?? 0, feedback)
 
 // Host-side result
 type RunResult = {
   value: number        // the normalized score ∈ [0, 1] — always returned
-  passed: boolean      // the membership verdict — the script decides; no host-side threshold
   feedback?: string    // optional reasoning text
   duration: number     // ns, wall time of the run including host calls
   tokens: number       // total tokens consumed by llm() calls (0 for pure runs)
   cost: number         // microcents consumed by llm() calls (0 for pure runs)
 }
 
-// The script decides membership; the host stores it verbatim:
-matched = result.passed
+// The host derives membership by thresholding the score (isScoreMatch, default 0.5):
+matched = isScoreMatch(result.value)
 ```
 
-- **The script returns all three.** A normalized `value` (the score, for sort/confidence/display), `passed` (the membership verdict — the script decides it; there is no host-side threshold), and optional `feedback`. Generated judges are phrased *as the signal* ("does this trace exhibit X?") so judge-yes = matched, and polarity disappears from the contract. Legacy quality-phrased scripts (where *pass* = does-not-exhibit) migrate by verdict inversion or regeneration — that migration belongs to the signals rollout, not to this spec's executor swap.
-- **`value` is the score, `passed` is membership** — independent fields: the script computes a score and decides pass/fail (`value` is often a degenerate 0/1 for a binary judge; a future `similarity()` yields a continuous `value`). Any cutoff is written into the script, never a host knob. Definition edits apply forward only, like every definition edit.
+- **The script returns the score (+ optional feedback); the host derives the verdict.** A normalized `value` (for sort/confidence/display) and optional `feedback`; the host derives membership by thresholding `value` via `isScoreMatch` (default 0.5). Generated judges are phrased in the problem-detector convention ("does this trace exhibit the problem?") and return `Passed`/`Failed`: an exhibited (problem-present) trace is `Failed` (`value` 0 → `passed = false`, an occurrence) and a clean trace is `Passed` (`value` 1 → `passed = true`, absent).
+- **`value` is the score; the host derives `passed` by thresholding it** — the script computes a score (`value` is often a degenerate 0/1 for a binary judge — `Passed()`/`Failed()` set `value` = 1/0; a future `similarity()` yields a continuous `value`), and the host applies `isScoreMatch` to derive membership. Definition edits apply forward only, like every definition edit.
 - Membership is monotone per (signal, trace) downstream — a later non-matching run never un-matches (occurrence dedup is first-match-wins), which makes non-deterministic `llm()` detectors safe by construction. Occurrences are counted as **distinct `trace_id` per signal**, so a trace re-scored by a fresh evaluation generation (after the signal is re-tracked or re-optimized into a new evaluation id) still counts once.
 
 ### Persistence policy
@@ -61,14 +60,14 @@ Per the contract already documented in `dev-docs/evaluations.md`:
 | `parse(value, schema)` | — | Validates an unknown value against a schema |
 | `llm(prompt, { schema })` | `llm` | Structured generation through the host (`@domain/ai`); the schema is required — schema-less calls throw in-sandbox; model/provider stay host-managed (`EVALUATION_SCRIPT_RUNTIME_MODEL`); remaining options are host-approved only |
 | `similarity(...)` / `embedding(...)` | `embeddings` | **FUTURE (`specs/signals.md` → Phase 7)** — semantic similarity as something a script can call. A host bridge mirroring `llm()`; needs an embeddings-ready execution lane (chunk embeddings exist only on the later `trace_search_embeddings` hop, not at trace-end). See the semantic-similarity future below. |
-| `Score(value, passed, feedback?)` | — | The return: normalized score `value` ∈ [0,1], the `passed` verdict (membership), optional `feedback` reasoning |
-| `Passed(value?, feedback?)` / `Failed(value?, feedback?)` | — | Sugar over `Score` (`value ?? 1, true` / `value ?? 0, false`); keeps stored templates valid |
+| `Score(value, feedback?)` | — | The return: normalized score `value` ∈ [0,1], optional `feedback` reasoning; the host thresholds `value` (`isScoreMatch`) to derive membership |
+| `Passed(value?, feedback?)` / `Failed(value?, feedback?)` | — | Sugar over `Score` (`value ?? 1` / `value ?? 0`); keeps stored templates valid |
 
 No ambient I/O: no `fetch`, no timers, no `process`, no dynamic import. Anything a script can *do* beyond pure computation is an explicit host function.
 
 ### Compatibility and the semantic-similarity future
 
-- **Existing evaluation templates run unchanged**: the stored template *is* `const result = await llm(\`…\`, { schema: z.object({ passed, feedback }) }); return result.passed ? Passed(1, …) : Failed(0, …)` — the judge's LLM returns the verdict, and `Passed`/`Failed` set membership directly, so execution under the new runtime is byte-compatible. The exhibition-polarity migration of legacy scripts happens later, at the signals rollout.
+- **Existing evaluation templates run unchanged**: the stored template *is* `const result = await llm(\`…\`, { schema: z.object({ passed, feedback }) }); return result.passed ? Passed(1, …) : Failed(0, …)` — the judge's LLM returns the verdict, `Passed`/`Failed` set `value` = 1/0, and the host derives membership by thresholding `value` (`isScoreMatch`), so execution under the new runtime is byte-compatible. There is no polarity migration.
 - **Compiled rules** — a `SignalRule` (the declarative `evaluations.settings` payload) compiles deterministically to a generated script returning `Passed()` / `Failed()`; the compiled text + content hash are stored, debuggable, and exactly what executes.
 - **Semantic similarity is a future capability, not in this contract yet.** Today every evaluation is a script that runs here. A future phase (`specs/signals.md` → Phase 7) adds semantic similarity — most likely a `similarity()`/`embedding()` host function the script calls (an embeddings-gated lane, since chunk embeddings land on a later ingest hop), with a possible **native batch-runner optimization** for the pure-similarity case (one pass over a trace's chunk embeddings against all anchor sets, instead of a per-trace isolate). Its shape — including any precedence rule for a script that calls both `similarity()` and `llm()` — is deferred to that phase.
 
@@ -146,7 +145,7 @@ The swap is deliberately boring:
 
 ## Testing
 
-- **Unit (pure)**: contract conformance — `Passed`/`Failed`/`Score` mapping, verdict membership (`passed` reported by the detector), capability detection, limit enforcement (instruction/memory/wall), error taxonomy, determinism of pure runs, bytecode-cache correctness.
+- **Unit (pure)**: contract conformance — `Passed`/`Failed`/`Score` mapping, host-derived membership (`isScoreMatch` over the returned `value`), capability detection, limit enforcement (instruction/memory/wall), error taxonomy, determinism of pure runs, bytecode-cache correctness.
 - **Parity**: every seeded/stored template script through old and new executors; identical llm requests and results.
 - **Adversarial**: infinite loops, memory bombs, catastrophic regexes, prototype-pollution attempts, host-function abuse — each must die by budget or boundary, never by worker.
 
@@ -171,7 +170,7 @@ The swap is deliberately boring:
 
 ### Phase 2 - Detector enablement (pre-signals)
 
-- [ ] **P2-1**: verdict membership wiring (`Passed`/`Failed` → stored `passed`) + `SignalRule` → script codegen with stored compiled text + hash.
+- [ ] **P2-1**: host-derived membership wiring (`isScoreMatch` over the returned `value` → stored `passed`) + `SignalRule` → script codegen with stored compiled text + hash.
 - [ ] **P2-2**: dry-run harness entry point (run against a historical trace) consumed by a minimal preview surface.
 
 **Exit gate**: `specs/signals.md` flows A/F can be built against the runtime with no further runtime work.

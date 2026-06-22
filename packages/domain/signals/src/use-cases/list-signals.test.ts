@@ -50,7 +50,6 @@ const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation => ({
   name: "Monitor issue",
   description: "Regression monitor",
   script: "return { passed: false }",
-  legacyPolarity: false,
   trigger: defaultEvaluationTrigger(),
   alignment: emptyEvaluationAlignment("hash-v1"),
   alignedAt: new Date("2026-04-01T00:00:00.000Z"),

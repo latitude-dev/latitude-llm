@@ -95,7 +95,7 @@ describe("EvaluationAlignmentExamplesRepositoryLive", () => {
         traceId: "trace-positive",
         sessionId: "session-positive",
         signalId: signalId as string,
-        passed: true,
+        passed: false,
         sourceType: "annotation",
         metadata: annotationMetadata("leaked token"),
         createdAt: new Date("2026-04-01T00:00:00.000Z"),
@@ -105,7 +105,7 @@ describe("EvaluationAlignmentExamplesRepositoryLive", () => {
         traceId: "trace-positive",
         sessionId: "session-positive",
         signalId: signalId as string,
-        passed: true,
+        passed: false,
         sourceType: "annotation",
         metadata: annotationMetadata("mentioned api key"),
         createdAt: new Date("2026-04-01T00:01:00.000Z"),
@@ -114,7 +114,7 @@ describe("EvaluationAlignmentExamplesRepositoryLive", () => {
         id: "m".repeat(24),
         traceId: "trace-draft",
         signalId: signalId as string,
-        passed: true,
+        passed: false,
         sourceType: "annotation",
         draftedAt: new Date("2026-04-01T00:02:00.000Z"),
         metadata: annotationMetadata("draft"),
@@ -157,7 +157,7 @@ describe("EvaluationAlignmentExamplesRepositoryLive", () => {
         traceId: "trace-empty-session",
         sessionId: "",
         signalId: signalId as string,
-        passed: true,
+        passed: false,
         sourceType: "annotation",
         metadata: annotationMetadata("missing session"),
         createdAt: new Date("2026-04-01T00:00:00.000Z"),
@@ -167,7 +167,7 @@ describe("EvaluationAlignmentExamplesRepositoryLive", () => {
         traceId: "trace-prefers-non-empty",
         sessionId: "",
         signalId: signalId as string,
-        passed: true,
+        passed: false,
         sourceType: "annotation",
         metadata: annotationMetadata("first row is empty"),
         createdAt: new Date("2026-04-01T00:01:00.000Z"),
@@ -177,7 +177,7 @@ describe("EvaluationAlignmentExamplesRepositoryLive", () => {
         traceId: "trace-prefers-non-empty",
         sessionId: "session-present",
         signalId: signalId as string,
-        passed: true,
+        passed: false,
         sourceType: "annotation",
         metadata: annotationMetadata("later row has session"),
         createdAt: new Date("2026-04-01T00:02:00.000Z"),
@@ -213,17 +213,17 @@ describe("EvaluationAlignmentExamplesRepositoryLive", () => {
     ])
   })
 
-  it("returns positive examples in priority order, preferring those without any opposite-polarity (absent) scores", async () => {
+  it("returns positive examples in priority order, preferring those without any passed scores", async () => {
     await database.db.insert(scoresTable).values([
-      // Tier 2 inserted first — has an absent annotation on top of the present target annotation.
+      // Tier 2 inserted first — has a passed annotation on top of the failed target annotation.
       makeScoreRow({
         id: "d".repeat(24),
         traceId: "trace-tier-2",
         sessionId: "session-tier-2",
         signalId: signalId as string,
-        passed: true,
+        passed: false,
         sourceType: "annotation",
-        metadata: annotationMetadata("present target annotation"),
+        metadata: annotationMetadata("failed target annotation"),
         createdAt: new Date("2026-04-01T00:00:00.000Z"),
       }),
       makeScoreRow({
@@ -231,20 +231,20 @@ describe("EvaluationAlignmentExamplesRepositoryLive", () => {
         traceId: "trace-tier-2",
         sessionId: "session-tier-2",
         signalId: otherSignalId as string,
-        passed: false,
+        passed: true,
         sourceType: "annotation",
-        metadata: annotationMetadata("absent on other signal"),
+        metadata: annotationMetadata("passed on other issue"),
         createdAt: new Date("2026-04-01T00:01:00.000Z"),
       }),
-      // Tier 1 inserted after — present target annotation with no absent scores at all.
+      // Tier 1 inserted after — failed target annotation with no passed scores at all.
       makeScoreRow({
         id: "f".repeat(24),
         traceId: "trace-tier-1",
         sessionId: "session-tier-1",
         signalId: signalId as string,
-        passed: true,
+        passed: false,
         sourceType: "annotation",
-        metadata: annotationMetadata("present target annotation"),
+        metadata: annotationMetadata("failed target annotation"),
         createdAt: new Date("2026-04-01T00:02:00.000Z"),
       }),
     ])
@@ -262,28 +262,28 @@ describe("EvaluationAlignmentExamplesRepositoryLive", () => {
     ] satisfies ReadonlyArray<readonly [string, EvaluationAlignmentPositivePriority]>)
   })
 
-  it("returns negative examples in priority order and excludes traces tied to the target signal", async () => {
+  it("returns negative examples in priority order and excludes traces tied to the target issue", async () => {
     await database.db.insert(scoresTable).values([
-      // Tier 1: absent annotation + no present scores.
+      // Tier 1: passed annotation + no failed scores.
       makeScoreRow({
         id: "o".repeat(24),
         traceId: "trace-tier-1",
         sessionId: "session-tier-1",
         signalId: null,
-        passed: false,
+        passed: true,
         sourceType: "annotation",
         metadata: annotationMetadata("all good"),
         createdAt: new Date("2026-04-01T01:00:00.000Z"),
       }),
-      // Tier 2: absent annotation + a present score on a different signal.
+      // Tier 2: passed annotation + a failed score on a different issue.
       makeScoreRow({
         id: "q".repeat(24),
         traceId: "trace-tier-2",
         sessionId: "session-tier-2",
         signalId: null,
-        passed: false,
+        passed: true,
         sourceType: "annotation",
-        metadata: annotationMetadata("absent on target"),
+        metadata: annotationMetadata("passed on target"),
         createdAt: new Date("2026-04-01T01:01:00.000Z"),
       }),
       makeScoreRow({
@@ -291,40 +291,40 @@ describe("EvaluationAlignmentExamplesRepositoryLive", () => {
         traceId: "trace-tier-2",
         sessionId: "session-tier-2",
         signalId: otherSignalId as string,
-        passed: true,
+        passed: false,
         sourceType: "annotation",
-        metadata: annotationMetadata("present on other signal"),
+        metadata: annotationMetadata("failed on other issue"),
         createdAt: new Date("2026-04-01T01:02:00.000Z"),
       }),
-      // Ineligible: only an evaluation score (not an annotation), so no absent annotation.
+      // Ineligible: only passed evaluation/custom scores, no passed annotation.
       makeScoreRow({
         id: "p".repeat(24),
-        traceId: "trace-no-absent-annotation",
-        sessionId: "session-no-absent-annotation",
+        traceId: "trace-no-passed-annotation",
+        sessionId: "session-no-passed-annotation",
         signalId: null,
         passed: true,
         sourceType: "evaluation",
         metadata: evaluationMetadata("hash-no-annotation"),
         createdAt: new Date("2026-04-01T01:03:00.000Z"),
       }),
-      // Ineligible: linked to the target signal.
+      // Ineligible: linked to the target issue.
       makeScoreRow({
         id: "t".repeat(24),
         traceId: "trace-target-linked",
         sessionId: "session-target-linked",
         signalId: signalId as string,
-        passed: false,
+        passed: true,
         sourceType: "annotation",
-        metadata: annotationMetadata("linked to target signal"),
+        metadata: annotationMetadata("linked to target issue"),
         createdAt: new Date("2026-04-01T01:04:00.000Z"),
       }),
-      // Ineligible: explicitly excluded trace (would otherwise be an absent-annotation negative).
+      // Ineligible: explicitly excluded trace.
       makeScoreRow({
         id: "u".repeat(24),
         traceId: "trace-excluded",
         sessionId: "session-excluded",
         signalId: null,
-        passed: false,
+        passed: true,
         sourceType: "annotation",
         metadata: annotationMetadata("exclude me"),
         createdAt: new Date("2026-04-01T01:05:00.000Z"),
@@ -356,7 +356,7 @@ describe("EvaluationAlignmentExamplesRepositoryLive", () => {
         id: "v".repeat(24),
         traceId: "trace-positive-before",
         signalId: signalId as string,
-        passed: true,
+        passed: false,
         sourceType: "annotation",
         metadata: annotationMetadata("older positive"),
         createdAt: new Date("2026-04-01T01:00:00.000Z"),
@@ -365,7 +365,7 @@ describe("EvaluationAlignmentExamplesRepositoryLive", () => {
         id: "w".repeat(24),
         traceId: "trace-positive-after",
         signalId: signalId as string,
-        passed: true,
+        passed: false,
         sourceType: "annotation",
         metadata: annotationMetadata("new positive"),
         createdAt: new Date("2026-04-01T03:00:00.000Z"),
@@ -374,7 +374,7 @@ describe("EvaluationAlignmentExamplesRepositoryLive", () => {
         id: "x".repeat(24),
         traceId: "trace-negative-before",
         signalId: null,
-        passed: false,
+        passed: true,
         sourceType: "annotation",
         metadata: annotationMetadata("older negative"),
         createdAt: new Date("2026-04-01T01:30:00.000Z"),
@@ -383,7 +383,7 @@ describe("EvaluationAlignmentExamplesRepositoryLive", () => {
         id: "y".repeat(24),
         traceId: "trace-negative-after",
         signalId: null,
-        passed: false,
+        passed: true,
         sourceType: "annotation",
         metadata: annotationMetadata("new negative"),
         createdAt: new Date("2026-04-01T03:30:00.000Z"),

@@ -7,11 +7,11 @@ import {
   DraftScoreNotEligibleForDiscoveryError,
   ErroredScoreNotEligibleForDiscoveryError,
   MissingScoreFeedbackForDiscoveryError,
+  PassedScoreNotEligibleForDiscoveryError,
   ScoreAlreadyOwnedBySignalError,
   ScoreDiscoveryOrganizationMismatchError,
   ScoreDiscoveryProjectMismatchError,
   ScoreNotFoundForDiscoveryError,
-  UnmatchedScoreNotEligibleForDiscoveryError,
 } from "../errors.ts"
 
 export interface CheckEligibilityInput {
@@ -58,8 +58,8 @@ export const checkEligibilityUseCase = (input: CheckEligibilityInput) =>
       return yield* new MissingScoreFeedbackForDiscoveryError({ scoreId: input.scoreId })
     }
 
-    if (!score.passed) {
-      return yield* new UnmatchedScoreNotEligibleForDiscoveryError({ scoreId: input.scoreId })
+    if (score.passed) {
+      return yield* new PassedScoreNotEligibleForDiscoveryError({ scoreId: input.scoreId })
     }
 
     return score

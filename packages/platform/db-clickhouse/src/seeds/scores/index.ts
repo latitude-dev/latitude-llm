@@ -79,8 +79,7 @@ function buildTau2SignalAnalyticsRows(scope: SeedScope) {
         simulation_id: "",
         signal_id: scopedSignalIdByFixtureIndex(scope, signalIndex),
         value: 0.05 + (occurrenceIndex % 4) * 0.03,
-        // Occurrence = the signal's behavior is present in the trace: passed=true under the cutover convention.
-        passed: true,
+        passed: false,
         errored: false,
         duration: 0,
         tokens: 0,

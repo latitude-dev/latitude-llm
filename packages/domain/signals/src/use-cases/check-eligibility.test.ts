@@ -19,8 +19,8 @@ const makeScore = (overrides: Partial<Score> = {}): Score =>
     signalId: null,
     sourceType: "annotation",
     sourceId: "UI",
-    value: 0.9,
-    passed: true,
+    value: 0.1,
+    passed: false,
     feedback: "The agent gave a wrong answer",
     metadata: { rawFeedback: "The agent gave a wrong answer" },
     error: null,
@@ -54,7 +54,7 @@ const runEligibility = (
 }
 
 describe("checkEligibilityUseCase", () => {
-  it("returns the eligible score for non-draft, matched (passed), non-errored, unowned scores with feedback", async () => {
+  it("returns the eligible score for non-draft, failed, non-errored, unowned scores with feedback", async () => {
     const score = makeScore()
     const result = await runEligibility(score)
 
@@ -72,9 +72,7 @@ describe("checkEligibilityUseCase", () => {
   })
 
   it("rejects errored scores", async () => {
-    await expect(
-      runEligibility(makeScore({ error: "provider timeout", errored: true, passed: false })),
-    ).rejects.toMatchObject({
+    await expect(runEligibility(makeScore({ error: "provider timeout", errored: true }))).rejects.toMatchObject({
       _tag: "ErroredScoreNotEligibleForDiscoveryError",
     })
   })
@@ -91,9 +89,9 @@ describe("checkEligibilityUseCase", () => {
     })
   })
 
-  it("rejects unmatched (passed = false) scores", async () => {
-    await expect(runEligibility(makeScore({ passed: false }))).rejects.toMatchObject({
-      _tag: "UnmatchedScoreNotEligibleForDiscoveryError",
+  it("rejects passed scores", async () => {
+    await expect(runEligibility(makeScore({ passed: true }))).rejects.toMatchObject({
+      _tag: "PassedScoreNotEligibleForDiscoveryError",
     })
   })
 

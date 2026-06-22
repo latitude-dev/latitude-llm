@@ -82,34 +82,11 @@ describe("compile", () => {
 
 describe("run: the score contract", () => {
   it("maps Score/Passed/Failed sugar onto the single score shape", async () => {
-    expect(await compileAndRun("return Score(0.7, true, 'why')")).toMatchObject({
-      value: 0.7,
-      passed: true,
-      feedback: "why",
-    })
-    expect(await compileAndRun("return Score(0.2, false)")).toMatchObject({ value: 0.2, passed: false })
-    expect(await compileAndRun("return Passed()")).toMatchObject({ value: 1, passed: true })
-    expect(await compileAndRun("return Passed(undefined, 'fine')")).toMatchObject({
-      value: 1,
-      passed: true,
-      feedback: "fine",
-    })
-    expect(await compileAndRun("return Failed()")).toMatchObject({ value: 0, passed: false })
-    expect(await compileAndRun("return Failed(0.2, 'meh')")).toMatchObject({
-      value: 0.2,
-      passed: false,
-      feedback: "meh",
-    })
-  })
-
-  it("defaults Score(value) membership from the value and tolerates legacy Score(value, feedback)", async () => {
-    expect(await compileAndRun("return Score(0.8)")).toMatchObject({ value: 0.8, passed: true })
-    expect(await compileAndRun("return Score(0.3)")).toMatchObject({ value: 0.3, passed: false })
-    expect(await compileAndRun("return Score(0.9, 'legacy feedback')")).toMatchObject({
-      value: 0.9,
-      passed: true,
-      feedback: "legacy feedback",
-    })
+    expect(await compileAndRun("return Score(0.7, 'why')")).toMatchObject({ value: 0.7, feedback: "why" })
+    expect(await compileAndRun("return Passed()")).toMatchObject({ value: 1 })
+    expect(await compileAndRun("return Passed(undefined, 'fine')")).toMatchObject({ value: 1, feedback: "fine" })
+    expect(await compileAndRun("return Failed()")).toMatchObject({ value: 0 })
+    expect(await compileAndRun("return Failed(0.2, 'meh')")).toMatchObject({ value: 0.2, feedback: "meh" })
   })
 
   it("meters pure runs with zero tokens and cost", async () => {

@@ -53,13 +53,13 @@ export class MissingScoreFeedbackForDiscoveryError extends Data.TaggedError("Mis
   readonly httpMessage = "Score feedback is required for signal discovery"
 }
 
-export class UnmatchedScoreNotEligibleForDiscoveryError extends Data.TaggedError(
-  "UnmatchedScoreNotEligibleForDiscoveryError",
+export class PassedScoreNotEligibleForDiscoveryError extends Data.TaggedError(
+  "PassedScoreNotEligibleForDiscoveryError",
 )<{
   readonly scoreId: string
 }> {
   readonly httpStatus = 409
-  readonly httpMessage = "Scores without a match (passed = false) are not eligible for signal discovery"
+  readonly httpMessage = "Passed scores are not eligible for signal discovery"
 }
 
 export class SignalNotFoundForDetailsGenerationError extends Data.TaggedError(
@@ -110,7 +110,7 @@ const eligibilityErrors = [
   ErroredScoreNotEligibleForDiscoveryError,
   ScoreAlreadyOwnedBySignalError,
   MissingScoreFeedbackForDiscoveryError,
-  UnmatchedScoreNotEligibleForDiscoveryError,
+  PassedScoreNotEligibleForDiscoveryError,
 ] as const
 
 export type CheckEligibilityError = InstanceType<(typeof eligibilityErrors)[number]>

@@ -69,7 +69,6 @@ export const persistAlignmentResultUseCase = Effect.fn("evaluations.persistAlign
     name: issue.name,
     description: issue.description,
     script: input.script,
-    legacyPolarity: false,
     trigger: input.trigger,
     alignment: {
       evaluationHash: input.evaluationHash,

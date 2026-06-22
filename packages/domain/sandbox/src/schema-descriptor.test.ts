@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { scriptScoreSchema } from "./contract.ts"
+import { isScoreMatch, scriptScoreSchema } from "./contract.ts"
 import { buildSchemaFromDescriptor, type SchemaDescriptor, schemaDescriptorSchema } from "./schema-descriptor.ts"
 
 describe("schemaDescriptorSchema", () => {
@@ -65,14 +65,15 @@ describe("buildSchemaFromDescriptor", () => {
 
 describe("score contract", () => {
   it("validates the Score shape and bounds", () => {
-    expect(scriptScoreSchema.safeParse({ value: 0.7, passed: true, feedback: "why" }).success).toBe(true)
-    expect(scriptScoreSchema.safeParse({ value: 1, passed: false }).success).toBe(true)
-    expect(scriptScoreSchema.safeParse({ value: 1.2, passed: true }).success).toBe(false)
-    expect(scriptScoreSchema.safeParse({ value: -0.1, passed: true }).success).toBe(false)
+    expect(scriptScoreSchema.safeParse({ value: 0.7, feedback: "why" }).success).toBe(true)
+    expect(scriptScoreSchema.safeParse({ value: 1 }).success).toBe(true)
+    expect(scriptScoreSchema.safeParse({ value: 1.2 }).success).toBe(false)
+    expect(scriptScoreSchema.safeParse({ value: -0.1 }).success).toBe(false)
   })
 
-  it("requires the script to decide membership via passed", () => {
-    expect(scriptScoreSchema.safeParse({ value: 0.5 }).success).toBe(false)
-    expect(scriptScoreSchema.safeParse({ value: 0.5, passed: "yes" }).success).toBe(false)
+  it("derives membership from the threshold on the host side", () => {
+    expect(isScoreMatch(0.5)).toBe(true)
+    expect(isScoreMatch(0.49)).toBe(false)
+    expect(isScoreMatch(0.3, 0.2)).toBe(true)
   })
 })
