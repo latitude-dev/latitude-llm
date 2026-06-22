@@ -1,8 +1,11 @@
-# Telemetry Integrations — Verification Pass
+# Telemetry Integration QA
 
-> **Living document.** This file is the single source of truth for an exhaustive,
-> one-by-one verification of every Latitude telemetry integration. It is written to
-> survive context compaction — all the state needed to resume the work lives here.
+> **Living document (IN PROGRESS).** Single source of truth for an exhaustive, one-by-one
+> verification of every Latitude telemetry integration — and the fixes QA surfaces. Written to
+> survive context compaction: all the state needed to resume the work lives here.
+> **Status: partial** — not all integrations are verified and not all bugs are fixed yet; this is
+> merged incrementally and QA continues across sessions. See the status table + run log for exactly
+> what's done.
 
 ---
 
