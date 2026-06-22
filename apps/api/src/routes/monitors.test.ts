@@ -167,6 +167,7 @@ describe("Monitors Routes Integration", () => {
     const setup = await setupUserMonitorTenant(database)
     const headers = { ...createApiKeyAuthHeaders(setup.apiKeyToken), "Content-Type": "application/json" }
     const target = {
+      kind: "tool",
       stream: "spans",
       filterSet: {
         operation: [{ op: "eq", value: "execute_tool" }],
