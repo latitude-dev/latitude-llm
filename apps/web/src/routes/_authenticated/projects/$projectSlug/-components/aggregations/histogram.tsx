@@ -168,7 +168,6 @@ export function Histogram({
         showYAxis={false}
         ariaLabel={`${definition.label} by time bucket`}
         formatTooltip={formatTooltip}
-        {...(definition.valueMax !== undefined ? { yMax: definition.valueMax } : {})}
         onSelect={onRangeSelect ? handleSelect : undefined}
         {...(overlay ? { overlay } : {})}
         {...(showIncidents ? { onBucketAxisPointerChange: handleBucketAxisPointerChange } : {})}
