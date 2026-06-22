@@ -54,7 +54,7 @@ const makeScore = (overrides: Partial<Score> = {}): Score =>
     simulationId: null,
     signalId: null,
     value: 0.2,
-    passed: true,
+    passed: false,
     feedback: "The assistant leaks API tokens in its response.",
     metadata: {
       rawFeedback: "The assistant leaks API tokens in its response.",
@@ -99,7 +99,6 @@ const makeEvaluation = (signalId: string, overrides: Partial<Evaluation> = {}): 
     name: "Token leakage evaluation",
     description: "Flags token leakage",
     script: "return { passed: false }",
-    legacyPolarity: false,
     trigger: defaultEvaluationTrigger(),
     alignment: emptyEvaluationAlignment("abc123"),
     alignedAt: new Date("2026-03-29T08:00:00.000Z"),
