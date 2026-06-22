@@ -4,16 +4,20 @@ export const DESTINATION_INTERVAL_MS_DEFAULT = 300_000
 
 /**
  * Source read page: rows fetched (and delivered) per window. NOT a ClickHouse
- * memory bound — `listByIngestedAtWindow` late-materializes, so the wide payload
- * columns (KB–MB LLM messages) are read only for the spans on this page; a 5k
- * page over a full window peaks ~250 MiB regardless of window size (the per-query
- * 4 GiB `max_memory_usage` guard is just defense-in-depth). The real ceiling is
- * worker heap — it holds a page of `SpanDetail` plus the mapped events — and the
- * destination's delivery batch, so this is an operational size, not a safety
- * limit. Cursor pagination chains the rest; a bigger page = fewer, larger
- * windows. 1M backfill cap ≈ 200 pages.
+ * memory bound — `listByIngestedAtWindow` late-materializes, so wide payload
+ * columns are read only for the spans on this page (a page over a full window
+ * peaks well under the per-query 4 GiB `max_memory_usage` guard regardless of
+ * window size). The binding constraint is the **worker event loop**: each window
+ * does synchronous main-thread work (JSON-parse the ClickHouse response, map
+ * spans → events, serialize the delivery batch) that scales with page size, and
+ * the workers process co-hosts the bull-board dashboard — so a large page blocks
+ * the loop in long bursts and the dashboard HTTP times out (502) during heavy
+ * backfill. 2k keeps each burst short enough that the dashboard stays responsive;
+ * cursor pagination just chains more, lighter windows. (Decoupling bull-board
+ * onto its own process — the Workbench migration — is the real fix; this caps the
+ * blast radius until then.) 1M backfill cap ≈ 500 pages.
  */
-export const DESTINATION_READ_PAGE_SIZE = 5_000
+export const DESTINATION_READ_PAGE_SIZE = 2_000
 
 /**
  * Hard cap on records imported by a single backfill. A destination connected to
