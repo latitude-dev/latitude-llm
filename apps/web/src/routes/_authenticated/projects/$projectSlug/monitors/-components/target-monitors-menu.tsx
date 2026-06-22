@@ -13,7 +13,7 @@ import {
   Text,
 } from "@repo/ui"
 import { useNavigate } from "@tanstack/react-router"
-import { BellPlusIcon, ChevronDownIcon, ExternalLinkIcon } from "lucide-react"
+import { BellPlusIcon, ChevronDownIcon } from "lucide-react"
 import { useState } from "react"
 import { describeMonitorTarget } from "../../../../../../domains/monitors/monitor-target.ts"
 import { useMonitorsForTarget } from "../../../../../../domains/monitors/monitors.collection.ts"
@@ -85,7 +85,6 @@ export function TargetMonitorsMenu({
   label = "Add monitor",
   matchMode = "contains",
   fallbackToAllMatches = false,
-  onMonitorSelect,
   additionalMonitors = [],
 }: {
   readonly projectId: string
@@ -96,7 +95,6 @@ export function TargetMonitorsMenu({
   readonly label?: string
   readonly matchMode?: "contains" | "exact"
   readonly fallbackToAllMatches?: boolean
-  readonly onMonitorSelect?: (monitor: MonitorRecord) => void
   readonly additionalMonitors?: readonly MonitorRecord[]
 }) {
   const navigate = useNavigate()
@@ -172,10 +170,6 @@ export function TargetMonitorsMenu({
                 key={monitor.slug}
                 className="cursor-pointer items-center gap-2"
                 onSelect={() => {
-                  if (onMonitorSelect) {
-                    onMonitorSelect(monitor)
-                    return
-                  }
                   void navigate({
                     to: "/projects/$projectSlug/monitors/$monitorSlug",
                     params: { projectSlug, monitorSlug: monitor.slug },
@@ -187,22 +181,6 @@ export function TargetMonitorsMenu({
                   {monitor.name}
                 </Text.H5>
                 {monitor.mutedAt ? <Status variant="neutral" label="Muted" /> : null}
-                {onMonitorSelect ? (
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    aria-label={`Open ${monitor.name}`}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      void navigate({
-                        to: "/projects/$projectSlug/monitors/$monitorSlug",
-                        params: { projectSlug, monitorSlug: monitor.slug },
-                      })
-                    }}
-                  >
-                    <Icon icon={ExternalLinkIcon} size="xs" color="foregroundMuted" />
-                  </Button>
-                ) : null}
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />

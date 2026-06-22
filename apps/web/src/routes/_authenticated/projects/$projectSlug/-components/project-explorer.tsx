@@ -17,14 +17,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRegisterCommands } from "../../../../../components/command-palette/command-palette-provider.tsx"
 import type { PaletteCommand } from "../../../../../components/command-palette/types.ts"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
-import { targetToSessionFilters } from "../../../../../domains/monitors/monitor-target.ts"
 import { useMonitors } from "../../../../../domains/monitors/monitors.collection.ts"
-import type { MonitorRecord } from "../../../../../domains/monitors/monitors.functions.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
-import {
-  useSavedSearchBySlug,
-  useSavedSearchesList,
-} from "../../../../../domains/saved-searches/saved-searches.collection.ts"
+import { useSavedSearchBySlug } from "../../../../../domains/saved-searches/saved-searches.collection.ts"
 import type { SavedSearchRecord } from "../../../../../domains/saved-searches/saved-searches.functions.ts"
 import { withSessionDefaults } from "../../../../../domains/sessions/sessions.collection.ts"
 import { useTracesCount } from "../../../../../domains/traces/traces.collection.ts"
@@ -105,7 +100,6 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   const hasSearchQuery = query.length > 0
   const hasSemanticSearchQuery = searchHasSemanticPart(query)
   const { data: loadedSavedSearch } = useSavedSearchBySlug(currentProject.id, savedSearchSlug || null)
-  const { data: savedSearches } = useSavedSearchesList(currentProject.id)
   const { monitors: projectMonitors } = useMonitors({ projectId: currentProject.id, limit: 100, system: false })
 
   // Hydrate a slug-only `?savedSearch=` deep-link (the monitor incidents table and the command
@@ -239,38 +233,6 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
           monitor.target?.savedSearchId || monitor.alerts.some((alert) => alert.source?.type === "savedSearch"),
       ),
     [projectMonitors],
-  )
-  const applyMonitorToSessions = useCallback(
-    (monitor: MonitorRecord) => {
-      const savedSearchId =
-        monitor.target?.savedSearchId ??
-        monitor.alerts.find((alert) => alert.source?.type === "savedSearch")?.source?.id
-      const savedSearch = savedSearches.find((search) => search.id === savedSearchId)
-      if (savedSearch) {
-        setRawFilters(serializeFilters(savedSearch.filterSet) ?? "")
-        setQuery(savedSearch.query ?? "")
-        setSavedSearchSlug(savedSearch.slug)
-      } else if (monitor.target) {
-        const next = targetToSessionFilters(monitor.target)
-        setRawFilters(serializeFilters(next.filters) ?? "")
-        setQuery(next.query ?? "")
-        setSavedSearchSlug("")
-      } else {
-        return
-      }
-      setActiveSessionId("")
-      setActiveTraceId("")
-      setSelectedSpanId("")
-    },
-    [
-      savedSearches,
-      setActiveSessionId,
-      setActiveTraceId,
-      setQuery,
-      setRawFilters,
-      setSavedSearchSlug,
-      setSelectedSpanId,
-    ],
   )
   const sorting: InfiniteTableSorting = {
     column: sortBy || defaultSorting.column,
@@ -604,7 +566,6 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
                   matchMode="exact"
                   fallbackToAllMatches
                   additionalMonitors={savedSearchMonitors}
-                  onMonitorSelect={applyMonitorToSessions}
                 />
               )
             ) : null}

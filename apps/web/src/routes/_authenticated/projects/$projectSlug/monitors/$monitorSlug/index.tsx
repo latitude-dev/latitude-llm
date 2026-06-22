@@ -20,12 +20,13 @@ import { createFileRoute, getRouteApi, Link, useNavigate } from "@tanstack/react
 import { ArrowLeftIcon, BellIcon, BellOffIcon, MenuIcon, PencilIcon, Trash2Icon } from "lucide-react"
 import { type ReactNode, useMemo, useState } from "react"
 import { SeverityStatus } from "../../../../../../domains/alerts/severity-selector.tsx"
-import { describeMonitorTarget } from "../../../../../../domains/monitors/monitor-target.ts"
+import { describeMonitorTarget, targetToSessionFilters } from "../../../../../../domains/monitors/monitor-target.ts"
 import { useMonitor, useMonitorIncidentStats } from "../../../../../../domains/monitors/monitors.collection.ts"
 import type { MonitorAlertRecord } from "../../../../../../domains/monitors/monitors.functions.ts"
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbLink, BreadcrumbSeparator, BreadcrumbText } from "../../../../-components/breadcrumb-ui.tsx"
+import { serializeFilters } from "../../-components/trace-page-state.ts"
 import { useRouteProject } from "../../-route-data.ts"
 import { MonitorAlertEditModal } from "../-components/monitor-alert-edit-modal.tsx"
 import { MonitorDeleteConfirmModal } from "../-components/monitor-delete-confirm-modal.tsx"
@@ -142,6 +143,15 @@ function MonitorDetailPage() {
     : alert?.source?.type === "savedSearch"
       ? { slug: alert.sourceSlug, name: alert.sourceName ?? "Saved search" }
       : null
+  const sessionTarget = target?.stream === "sessions" && !savedSearchTarget ? targetToSessionFilters(target) : null
+  const sessionTargetFilters = sessionTarget ? serializeFilters(sessionTarget.filters) : undefined
+  const sessionTargetSearch = sessionTarget
+    ? {
+        tab: "sessions" as const,
+        ...(sessionTargetFilters ? { filters: sessionTargetFilters } : {}),
+        ...(sessionTarget.query ? { query: sessionTarget.query } : {}),
+      }
+    : null
   const canEditAlert = monitor ? !monitor.system || alert?.kind === "issue.escalating" : false
   const canDeleteMonitor = monitor ? !monitor.system : false
   const onEditAlert = () => {
@@ -252,6 +262,15 @@ function MonitorDetailPage() {
                             className="hover:underline"
                           >
                             <Text.H5 color="primary">{savedSearchTarget.name}</Text.H5>
+                          </Link>
+                        ) : sessionTargetSearch ? (
+                          <Link
+                            to="/projects/$projectSlug"
+                            params={{ projectSlug }}
+                            search={sessionTargetSearch}
+                            className="hover:underline"
+                          >
+                            <Text.H5 color="primary">{description?.label ?? savedSearchTarget?.name}</Text.H5>
                           </Link>
                         ) : (
                           <Text.H5 color="foreground">{description?.label ?? savedSearchTarget?.name}</Text.H5>
