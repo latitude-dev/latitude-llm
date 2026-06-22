@@ -351,79 +351,83 @@ export function BehaviourDetailDrawer({
               <hr className="mx-2 flex-1 border-t-2 border-dashed border-border" />
             </div>
             <div className="flex flex-col gap-4 pt-2">
-            {intelligence ? (
-              <>
-                <div className={cn("grid gap-2", showDetectedSignalsChart ? "grid-cols-2" : "grid-cols-1")}>
-                  <BehaviourSessionsHistogram
-                    isLoading={behaviourSessionsLoading}
-                    buckets={behaviourSessionHistogram}
-                    height={96}
-                  />
-                  {showDetectedSignalsChart ? <DetectedSignalsChart signals={detectedSignals} /> : null}
-                </div>
-                {sessionFilterOptions.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {sessionFilterOptions.map((option) => (
-                      <MetricButton
-                        key={option.id}
-                        active={activeMomentKinds.includes(option.id)}
-                        label={option.label}
-                        valueText={option.valueText}
-                        color={option.color}
-                        onClick={() => {
-                          onMomentRangeChange(undefined)
-                          setSessionFilter((current) => (current === option.id && !momentRange ? "all" : option.id))
-                        }}
-                      />
-                    ))}
-                  </div>
-                ) : null}
-                <div className="flex flex-col gap-2 pt-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <Text.H5>Associated sessions</Text.H5>
-                    {hasSessionFilters ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSessionFilter("all")
-                          onMomentRangeChange(undefined)
-                        }}
-                      >
-                        <Icon icon={XIcon} size="xs" />
-                        Clear filters
-                      </Button>
-                    ) : null}
-                  </div>
-                  {momentRange ? (
-                    <TurnRangeSlider range={momentRange} maxTurn={momentRangeMaxTurn} onChange={onMomentRangeChange} />
-                  ) : null}
-                  <Text.H6 color="foregroundMuted">
-                    {momentRange
-                      ? selectedMomentRangeLabel(momentRange)
-                      : sessionFilter === "all"
-                        ? "All sessions for this behavior"
-                        : `Sessions matching ${sessionFilter.replaceAll("_", " ")}`}
-                  </Text.H6>
-                  {behaviourSessionsLoading ? (
-                    <Skeleton className="h-16 rounded-xl" />
-                  ) : behaviourSessions.length ? (
-                    <BehaviourSessionsTable
-                      sessions={behaviourSessions}
-                      activeSessionId={sessionOverlayId ?? undefined}
-                      onSessionClick={openSessionOverlay}
-                      hasMore={hasNextBehaviourSessionsPage === true}
-                      isLoadingMore={isFetchingNextBehaviourSessionsPage}
-                      onLoadMore={() => void fetchNextBehaviourSessionsPage()}
+              {intelligence ? (
+                <>
+                  <div className={cn("grid gap-2", showDetectedSignalsChart ? "grid-cols-2" : "grid-cols-1")}>
+                    <BehaviourSessionsHistogram
+                      isLoading={behaviourSessionsLoading}
+                      buckets={behaviourSessionHistogram}
+                      height={96}
                     />
-                  ) : (
-                    <Text.H5 color="foregroundMuted">No sessions match this filter.</Text.H5>
-                  )}
-                </div>
-              </>
-            ) : (
-              <Text.H5 color="foregroundMuted">Conversation intelligence is not available yet.</Text.H5>
-            )}
+                    {showDetectedSignalsChart ? <DetectedSignalsChart signals={detectedSignals} /> : null}
+                  </div>
+                  {sessionFilterOptions.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {sessionFilterOptions.map((option) => (
+                        <MetricButton
+                          key={option.id}
+                          active={activeMomentKinds.includes(option.id)}
+                          label={option.label}
+                          valueText={option.valueText}
+                          color={option.color}
+                          onClick={() => {
+                            onMomentRangeChange(undefined)
+                            setSessionFilter((current) => (current === option.id && !momentRange ? "all" : option.id))
+                          }}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+                  <div className="flex flex-col gap-2 pt-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <Text.H5>Associated sessions</Text.H5>
+                      {hasSessionFilters ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSessionFilter("all")
+                            onMomentRangeChange(undefined)
+                          }}
+                        >
+                          <Icon icon={XIcon} size="xs" />
+                          Clear filters
+                        </Button>
+                      ) : null}
+                    </div>
+                    {momentRange ? (
+                      <TurnRangeSlider
+                        range={momentRange}
+                        maxTurn={momentRangeMaxTurn}
+                        onChange={onMomentRangeChange}
+                      />
+                    ) : null}
+                    <Text.H6 color="foregroundMuted">
+                      {momentRange
+                        ? selectedMomentRangeLabel(momentRange)
+                        : sessionFilter === "all"
+                          ? "All sessions for this behavior"
+                          : `Sessions matching ${sessionFilter.replaceAll("_", " ")}`}
+                    </Text.H6>
+                    {behaviourSessionsLoading ? (
+                      <Skeleton className="h-16 rounded-xl" />
+                    ) : behaviourSessions.length ? (
+                      <BehaviourSessionsTable
+                        sessions={behaviourSessions}
+                        activeSessionId={sessionOverlayId ?? undefined}
+                        onSessionClick={openSessionOverlay}
+                        hasMore={hasNextBehaviourSessionsPage === true}
+                        isLoadingMore={isFetchingNextBehaviourSessionsPage}
+                        onLoadMore={() => void fetchNextBehaviourSessionsPage()}
+                      />
+                    ) : (
+                      <Text.H5 color="foregroundMuted">No sessions match this filter.</Text.H5>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <Text.H5 color="foregroundMuted">Conversation intelligence is not available yet.</Text.H5>
+              )}
             </div>
           </div>
         </div>
