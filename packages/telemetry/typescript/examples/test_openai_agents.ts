@@ -23,12 +23,12 @@ const latitude = new Latitude({
 })
 
 const PROVIDER = "openai-agents"
-const MODEL = "gpt-4o-mini"
+const MODEL = "gpt-5.5"
 const SESSION_ID = `${PROVIDER}-${randomUUID().slice(0, 8)}`
 
 function ctx(scenario: string, ...extraTags: string[]) {
   return {
-    tags: ["example", PROVIDER, ...extraTags],
+    tags: ["example", PROVIDER, "openai-agents-ts", ...extraTags],
     sessionId: SESSION_ID,
     userId: "example-user",
     metadata: { scenario, environment: "local" },
@@ -64,8 +64,6 @@ async function toolConversation() {
 
 async function main() {
   await latitude.ready
-
-  await toolConversation()
 
   await capture("openai-agents-chat-capture", chat, ctx("chat"))
   await capture("openai-agents-tools-capture", toolConversation, ctx("tools", "tools"))
