@@ -74,8 +74,14 @@ const metricAggregate = (
       return `if(count() = 0, 0, countIf(${columns.isError}) / count())`
     case "sum":
       return `sum(${columns[metric.field]})`
+    case "min":
+      return `if(count() = 0, 0, min(${columns[metric.field]}))`
+    case "max":
+      return `if(count() = 0, 0, max(${columns[metric.field]}))`
     case "avg":
       return `if(count() = 0, 0, avg(${columns[metric.field]}))`
+    case "median":
+      return `if(count() = 0, 0, quantileTDigest(0.5)(${columns[metric.field]}))`
     case "p95":
       return `if(count() = 0, 0, quantileTDigest(0.95)(${columns[metric.field]}))`
   }

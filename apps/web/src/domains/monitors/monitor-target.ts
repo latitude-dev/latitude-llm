@@ -88,6 +88,17 @@ export const metricOptionId = (metric: MonitorMetric): string =>
 const buildOptions = (options: readonly { label: string; metric: MonitorMetric }[]): readonly MonitorMetricOption[] =>
   options.map((option) => ({ id: metricOptionId(option.metric), ...option }))
 
+const numericMetricOptions = (
+  field: "duration" | "cost" | "tokens",
+  noun: string,
+): readonly { label: string; metric: MonitorMetric }[] => [
+  { label: `Total ${noun}`, metric: { kind: "sum", field } },
+  { label: `Minimum ${noun}`, metric: { kind: "min", field } },
+  { label: `Maximum ${noun}`, metric: { kind: "max", field } },
+  { label: `Average ${noun}`, metric: { kind: "avg", field } },
+  { label: `Median ${noun}`, metric: { kind: "median", field } },
+]
+
 /**
  * The metrics offered when creating a monitor over a target, tailored per stream
  * so the labels and units make sense (latency, not "average duration"; "calls"
@@ -98,40 +109,27 @@ export const targetMetricOptions = (stream: MonitorStream): readonly MonitorMetr
     return buildOptions([
       { label: "Error rate", metric: { kind: "errorRate" } },
       { label: "Call volume", metric: { kind: "count" } },
-      { label: "Average latency", metric: { kind: "avg", field: "duration" } },
-      { label: "p95 latency", metric: { kind: "p95", field: "duration" } },
-      { label: "Total cost", metric: { kind: "sum", field: "cost" } },
-      { label: "Average cost", metric: { kind: "avg", field: "cost" } },
-      { label: "Total tokens", metric: { kind: "sum", field: "tokens" } },
-      { label: "Average tokens", metric: { kind: "avg", field: "tokens" } },
+      ...numericMetricOptions("duration", "latency"),
+      ...numericMetricOptions("cost", "cost"),
+      ...numericMetricOptions("tokens", "tokens"),
     ])
   }
   if (stream === "traces") {
     return buildOptions([
       { label: "Error rate", metric: { kind: "errorRate" } },
       { label: "Session volume", metric: { kind: "count" } },
-      { label: "Average latency", metric: { kind: "avg", field: "duration" } },
-      { label: "p95 latency", metric: { kind: "p95", field: "duration" } },
-      { label: "Total cost", metric: { kind: "sum", field: "cost" } },
-      { label: "Average cost", metric: { kind: "avg", field: "cost" } },
-      { label: "p95 cost", metric: { kind: "p95", field: "cost" } },
-      { label: "Total tokens", metric: { kind: "sum", field: "tokens" } },
-      { label: "Average tokens", metric: { kind: "avg", field: "tokens" } },
-      { label: "p95 tokens", metric: { kind: "p95", field: "tokens" } },
+      ...numericMetricOptions("duration", "latency"),
+      ...numericMetricOptions("cost", "cost"),
+      ...numericMetricOptions("tokens", "tokens"),
     ])
   }
   if (stream === "sessions") {
     return buildOptions([
       { label: "Session volume", metric: { kind: "count" } },
       { label: "Error rate", metric: { kind: "errorRate" } },
-      { label: "Average latency", metric: { kind: "avg", field: "duration" } },
-      { label: "p95 latency", metric: { kind: "p95", field: "duration" } },
-      { label: "Total cost", metric: { kind: "sum", field: "cost" } },
-      { label: "Average cost", metric: { kind: "avg", field: "cost" } },
-      { label: "p95 cost", metric: { kind: "p95", field: "cost" } },
-      { label: "Total tokens", metric: { kind: "sum", field: "tokens" } },
-      { label: "Average tokens", metric: { kind: "avg", field: "tokens" } },
-      { label: "p95 tokens", metric: { kind: "p95", field: "tokens" } },
+      ...numericMetricOptions("duration", "latency"),
+      ...numericMetricOptions("cost", "cost"),
+      ...numericMetricOptions("tokens", "tokens"),
     ])
   }
   return buildOptions([{ label: "Count", metric: { kind: "count" } }])

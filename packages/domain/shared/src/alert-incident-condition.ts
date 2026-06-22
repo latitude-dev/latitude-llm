@@ -75,7 +75,7 @@ export type AlertIncidentSignalEscalatingCondition = z.infer<typeof alertInciden
 /**
  * What a query-time monitor measures over its target's matched rows. `count`
  * (the default) is one per matched entity; `errorRate` is `errored / total`;
- * `avg`/`p95`/`sum` aggregate a numeric field. The membership/threshold cutoff
+ * `sum`/`min`/`max`/`avg`/`median`/`p95` aggregate a numeric field. The membership/threshold cutoff
  * is the alert condition, not part of the metric.
  */
 export const MONITOR_METRIC_FIELDS = ["duration", "cost", "tokens"] as const
@@ -85,9 +85,12 @@ export type MonitorMetricField = z.infer<typeof monitorMetricFieldSchema>
 export const monitorMetricSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("count") }),
   z.object({ kind: z.literal("errorRate") }),
-  z.object({ kind: z.literal("avg"), field: monitorMetricFieldSchema }),
-  z.object({ kind: z.literal("p95"), field: monitorMetricFieldSchema }),
   z.object({ kind: z.literal("sum"), field: monitorMetricFieldSchema }),
+  z.object({ kind: z.literal("min"), field: monitorMetricFieldSchema }),
+  z.object({ kind: z.literal("max"), field: monitorMetricFieldSchema }),
+  z.object({ kind: z.literal("avg"), field: monitorMetricFieldSchema }),
+  z.object({ kind: z.literal("median"), field: monitorMetricFieldSchema }),
+  z.object({ kind: z.literal("p95"), field: monitorMetricFieldSchema }),
 ])
 export type MonitorMetric = z.infer<typeof monitorMetricSchema>
 

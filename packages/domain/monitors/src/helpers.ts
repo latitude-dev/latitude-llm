@@ -95,12 +95,18 @@ const formatMetric = (metric: MonitorMetric): string => {
       return "the volume"
     case "errorRate":
       return "the error rate"
-    case "avg":
-      return `the average ${metricFieldNoun(metric.field)}`
-    case "p95":
-      return `the p95 ${metricFieldNoun(metric.field)}`
     case "sum":
       return `the total ${metricFieldNoun(metric.field)}`
+    case "min":
+      return `the minimum ${metricFieldNoun(metric.field)}`
+    case "max":
+      return `the maximum ${metricFieldNoun(metric.field)}`
+    case "avg":
+      return `the average ${metricFieldNoun(metric.field)}`
+    case "median":
+      return `the median ${metricFieldNoun(metric.field)}`
+    case "p95":
+      return `the p95 ${metricFieldNoun(metric.field)}`
   }
 }
 

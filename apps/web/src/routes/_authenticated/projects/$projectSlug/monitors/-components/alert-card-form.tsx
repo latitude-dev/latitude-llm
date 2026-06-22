@@ -1,6 +1,17 @@
 import { type AlertSeverity, DEFAULT_ESCALATION_SENSITIVITY, type MonitorMetric } from "@domain/shared"
-import { Button, Icon, Input, Select, type TabOption, Tabs, Text } from "@repo/ui"
-import { EqualApproximately, LineDotRightHorizontal, SparklesIcon, TrendingUp, XIcon } from "lucide-react"
+import { Button, cn, Icon, Input, Select, type TabOption, Tabs, Text } from "@repo/ui"
+import {
+  ActivityIcon,
+  CircleDollarSignIcon,
+  EqualApproximately,
+  GaugeIcon,
+  HashIcon,
+  LineDotRightHorizontal,
+  SparklesIcon,
+  TimerIcon,
+  TrendingUp,
+  XIcon,
+} from "lucide-react"
 import { SeveritySelector } from "../../../../../../domains/alerts/severity-selector.tsx"
 import {
   metricOptionId,
@@ -54,6 +65,32 @@ const isMatchKind = (kind: UserAlertKind): boolean => kind === "savedSearch.matc
 const isEscalatingKind = (kind: UserAlertKind): boolean =>
   kind === "savedSearch.escalating" || kind === "metric.escalating"
 
+type MetricDimension = "count" | "errorRate" | "duration" | "cost" | "tokens"
+
+const DIMENSION_META: Record<MetricDimension, { label: string; description: string; icon: typeof HashIcon }> = {
+  count: { label: "Volume", description: "How many matching sessions happen", icon: HashIcon },
+  errorRate: { label: "Errors", description: "Share of matching sessions that fail", icon: ActivityIcon },
+  duration: { label: "Latency", description: "How long matching sessions take", icon: TimerIcon },
+  cost: { label: "Cost", description: "Spend across matching sessions", icon: CircleDollarSignIcon },
+  tokens: { label: "Tokens", description: "Token usage across matching sessions", icon: GaugeIcon },
+}
+
+const aggregationLabel = (metric: MonitorMetric): string => {
+  if (metric.kind === "count") return "Count"
+  if (metric.kind === "errorRate") return "Rate"
+  if (metric.kind === "sum") return "Sum"
+  if (metric.kind === "min") return "Min"
+  if (metric.kind === "max") return "Max"
+  if (metric.kind === "avg") return "Average"
+  if (metric.kind === "median") return "Median"
+  return "P95"
+}
+
+const metricDimension = (metric: MonitorMetric): MetricDimension => {
+  if (metric.kind === "count" || metric.kind === "errorRate") return metric.kind
+  return metric.field
+}
+
 function MetricSelector({
   value,
   stream,
@@ -66,20 +103,60 @@ function MetricSelector({
   readonly disabled?: boolean
 }) {
   const options = targetMetricOptions(stream)
+  const selectedDimension = metricDimension(value)
+  const dimensions = (["count", "errorRate", "duration", "cost", "tokens"] as const).filter((dimension) =>
+    options.some((option) => metricDimension(option.metric) === dimension),
+  )
+  const aggregations = options.filter((option) => metricDimension(option.metric) === selectedDimension)
+
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-2">
       <Text.H5M>Metric</Text.H5M>
-      <Select<string>
-        name="metric"
-        width="auto"
-        options={options.map((option) => ({ label: option.label, value: option.id }))}
-        value={metricOptionId(value)}
-        onChange={(id) => {
-          const next = options.find((option) => option.id === id)
-          if (next) onChange(next.metric)
-        }}
-        {...(disabled ? { disabled: true } : {})}
-      />
+      <div className="grid grid-cols-2 gap-2">
+        {dimensions.map((dimension) => {
+          const meta = DIMENSION_META[dimension]
+          const active = dimension === selectedDimension
+          return (
+            <button
+              key={dimension}
+              type="button"
+              disabled={disabled}
+              className={cn(
+                "flex min-w-0 cursor-pointer items-start gap-2 rounded-lg border border-border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                {
+                  "border-primary bg-primary/5": active,
+                  "hover:bg-muted": !active,
+                },
+              )}
+              onClick={() => {
+                const next = options.find((option) => metricDimension(option.metric) === dimension)
+                if (next) onChange(next.metric)
+              }}
+            >
+              <Icon icon={meta.icon} size="sm" color={active ? "primary" : "foregroundMuted"} className="shrink-0" />
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <Text.H5M>{meta.label}</Text.H5M>
+                <Text.H6 color="foregroundMuted">{meta.description}</Text.H6>
+              </span>
+            </button>
+          )
+        })}
+      </div>
+      {aggregations.length > 1 ? (
+        <div className="flex flex-col gap-1.5">
+          <Text.H6 color="foregroundMuted">Measure</Text.H6>
+          <Tabs<string>
+            variant="bordered"
+            size="sm"
+            options={aggregations.map((option) => ({ id: option.id, label: aggregationLabel(option.metric) }))}
+            active={metricOptionId(value)}
+            onSelect={(id) => {
+              const next = aggregations.find((option) => option.id === id)
+              if (next && !disabled) onChange(next.metric)
+            }}
+          />
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -149,7 +226,7 @@ function ThresholdWindowForm({
   const relative = value.comparison === "timesMoreThan"
   const expected = relative && value.baselineKind === "expected"
   const hasLookback = relative && !expected
-  // Unified metric thresholds are floats (error rate 0.1, p95 latency…); counts are whole numbers.
+  // Unified metric thresholds are floats (error rate 0.1, average latency…); counts are whole numbers.
   const amountStep = expected ? 1 : relative || targetMode ? 0.1 : 1
   const amountMin = expected ? SENSITIVITY_MIN : targetMode ? 0 : 1
   // Absolute thresholds carry the metric's display unit; relative ones are unitless multipliers.
@@ -164,7 +241,8 @@ function ThresholdWindowForm({
       step={amountStep}
       value={value.amount}
       onChange={(event) => onChange({ amount: Number(event.target.value) })}
-      className="w-20 h-9"
+      size="sm"
+      className="h-7 w-16"
       {...(disabled ? { disabled: true } : {})}
     />
   )
@@ -199,6 +277,7 @@ function ThresholdWindowForm({
               options={TARGET_DIRECTION_OPTIONS}
               value={value.direction}
               onChange={(direction) => onChange({ direction })}
+              size="small"
               {...(disabled ? { disabled: true } : {})}
             />
           ) : null}
@@ -210,6 +289,7 @@ function ThresholdWindowForm({
             options={comparisonOptions}
             value={value.comparison}
             onChange={(comparison) => onChange({ comparison })}
+            size="small"
             {...(disabled ? { disabled: true } : {})}
           />
           {relative ? (
@@ -219,6 +299,7 @@ function ThresholdWindowForm({
               options={BASELINE_KIND_OPTIONS}
               value={value.baselineKind}
               onChange={onBaselineKindChange}
+              size="small"
               {...(disabled ? { disabled: true } : {})}
             />
           ) : null}
@@ -229,7 +310,8 @@ function ThresholdWindowForm({
               step={1}
               value={value.lookbackAmount}
               onChange={(event) => onChange({ lookbackAmount: Number(event.target.value) })}
-              className="w-20 h-9"
+              size="sm"
+              className="h-7 w-16"
               {...(disabled ? { disabled: true } : {})}
             />
           ) : null}
@@ -240,6 +322,7 @@ function ThresholdWindowForm({
               options={LOOKBACK_UNIT_OPTIONS}
               value={value.lookbackUnit}
               onChange={(lookbackUnit) => onChange({ lookbackUnit })}
+              size="small"
               {...(disabled ? { disabled: true } : {})}
             />
           ) : null}
@@ -263,7 +346,8 @@ function ThresholdWindowForm({
               min={1}
               value={value.windowAmount}
               onChange={(event) => onChange({ windowAmount: Number(event.target.value) })}
-              className="w-20 h-9"
+              size="sm"
+              className="h-7 w-16"
               {...(disabled ? { disabled: true } : {})}
             />
             <Select<WindowUnit>
@@ -272,6 +356,7 @@ function ThresholdWindowForm({
               options={WINDOW_UNIT_OPTIONS}
               value={value.windowUnit}
               onChange={(windowUnit) => onChange({ windowUnit })}
+              size="small"
               {...(disabled ? { disabled: true } : {})}
             />
           </div>
