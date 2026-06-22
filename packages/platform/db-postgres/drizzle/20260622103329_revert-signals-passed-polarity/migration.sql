@@ -23,7 +23,7 @@ SET "passed" = NOT "passed"
 WHERE "errored" = false
   AND "source_type" = 'annotation'
   AND "source_id" <> 'SYSTEM'
-  AND "created_at" < '2026-06-19 12:50:49+00';--> statement-breakpoint
+  AND "created_at" < '2026-06-18 22:00:00+00';--> statement-breakpoint
 
 -- (C) PR1 always-stamped signal_id on every evaluation run; the original writer stamped
 -- it only on completed matches. After the re-flip an occurrence is passed = false, so

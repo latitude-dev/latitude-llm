@@ -18,7 +18,7 @@ ALTER TABLE scores ON CLUSTER default UPDATE passed = NOT passed
 -- changed that write path, so rows created after the v0.3.11 deploy are already correct. Re-flip
 -- only the rows the one-time PR1 migration touched (created before it ran in production).
 ALTER TABLE scores ON CLUSTER default UPDATE passed = NOT passed
-  WHERE errored = false AND source = 'annotation' AND source_id != 'SYSTEM' AND created_at < '2026-06-19 12:50:49'
+  WHERE errored = false AND source = 'annotation' AND source_id != 'SYSTEM' AND created_at < '2026-06-18 22:00:00'
   SETTINGS mutations_sync = 2;
 
 -- (C) restore the 'signal_id only on matches' invariant: PR1 always-stamped signal_id on every
@@ -35,5 +35,5 @@ ALTER TABLE scores ON CLUSTER default UPDATE passed = NOT passed
   WHERE errored = false AND (source = 'evaluation' OR (source = 'annotation' AND source_id = 'SYSTEM'))
   SETTINGS mutations_sync = 2;
 ALTER TABLE scores ON CLUSTER default UPDATE passed = NOT passed
-  WHERE errored = false AND source = 'annotation' AND source_id != 'SYSTEM' AND created_at < '2026-06-19 12:50:49'
+  WHERE errored = false AND source = 'annotation' AND source_id != 'SYSTEM' AND created_at < '2026-06-18 22:00:00'
   SETTINGS mutations_sync = 2;

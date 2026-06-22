@@ -15,7 +15,7 @@ ALTER TABLE scores UPDATE passed = NOT passed
 -- (B) human annotations (source_id != 'SYSTEM'): passed is sentiment, write path unchanged by PR1;
 -- only the rows the one-time PR1 migration touched (created before the v0.3.11 deploy) were inverted.
 ALTER TABLE scores UPDATE passed = NOT passed
-  WHERE errored = false AND source = 'annotation' AND source_id != 'SYSTEM' AND created_at < '2026-06-19 12:50:49'
+  WHERE errored = false AND source = 'annotation' AND source_id != 'SYSTEM' AND created_at < '2026-06-18 22:00:00'
   SETTINGS mutations_sync = 1;
 
 -- (C) restore the 'signal_id only on matches' invariant: clear signal_id from non-occurrence
@@ -31,5 +31,5 @@ ALTER TABLE scores UPDATE passed = NOT passed
   WHERE errored = false AND (source = 'evaluation' OR (source = 'annotation' AND source_id = 'SYSTEM'))
   SETTINGS mutations_sync = 1;
 ALTER TABLE scores UPDATE passed = NOT passed
-  WHERE errored = false AND source = 'annotation' AND source_id != 'SYSTEM' AND created_at < '2026-06-19 12:50:49'
+  WHERE errored = false AND source = 'annotation' AND source_id != 'SYSTEM' AND created_at < '2026-06-18 22:00:00'
   SETTINGS mutations_sync = 1;
