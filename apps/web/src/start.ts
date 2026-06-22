@@ -9,8 +9,17 @@ import {
 } from "@repo/observability"
 import { isHttpError } from "@repo/utils"
 import { createMiddleware, createStart } from "@tanstack/react-start"
+import { isStaleServerFnError, maybeReloadForStaleServerFn } from "./lib/stale-server-fn.ts"
 
 type Logger = ReturnType<typeof createLogger>
+
+const safeSessionStorage = (): Pick<Storage, "getItem" | "setItem"> | null => {
+  try {
+    return window.sessionStorage
+  } catch {
+    return null
+  }
+}
 
 type ServerFnMeta = {
   readonly id?: string
@@ -78,6 +87,21 @@ export const recordRequestError = (span: Span, error: unknown): void => {
 }
 
 /**
+ * Records a request-level error on its span, except a stale server-fn error:
+ * a stale client called a hash from an older build, which is expected churn
+ * around deploys (the client self-heals by reloading), so it's marked OK and
+ * kept out of Datadog rather than recorded as a fault in this deploy.
+ */
+export const recordRequestErrorUnlessStale = (span: Span, error: unknown): void => {
+  if (isStaleServerFnError(error)) {
+    span.setAttribute("server_fn.stale", true)
+    span.setStatus({ code: SpanStatusCode.OK })
+    return
+  }
+  recordRequestError(span, error)
+}
+
+/**
  * Records a thrown server-fn error onto its span and shapes it for re-throwing.
  * The re-thrown `Error` carries the original `httpStatus`/`httpMessage` (as
  * non-enumerable props, so they don't leak into the client-bound JSON message)
@@ -123,12 +147,32 @@ export const tracingRequestMiddleware = ({ tracer }: { tracer: Tracer }) =>
         }
         return result
       } catch (error) {
-        recordRequestError(span, error)
+        recordRequestErrorUnlessStale(span, error)
         throw error
       } finally {
         span.end()
       }
     })
+  })
+
+// Client-side self-heal: when a stale tab calls a server-fn hash the current
+// build no longer has, reload once so the user lands on the new build instead
+// of an error boundary. See `./lib/stale-server-fn.ts`.
+export const staleServerFnReloadMiddleware = () =>
+  createMiddleware({ type: "function" }).client(async ({ next }) => {
+    try {
+      return await next()
+    } catch (error) {
+      if (typeof window !== "undefined") {
+        maybeReloadForStaleServerFn({
+          error,
+          reload: () => window.location.reload(),
+          now: Date.now(),
+          storage: safeSessionStorage(),
+        })
+      }
+      throw error
+    }
   })
 
 export const tracingFnMiddleware = ({ tracer, logger }: { tracer: Tracer; logger: Logger }) =>
@@ -212,6 +256,6 @@ export const startInstance = createStart(async () => {
 
   return {
     requestMiddleware: [tracingRequestMiddleware({ tracer })],
-    functionMiddleware: [tracingFnMiddleware({ tracer, logger })],
+    functionMiddleware: [staleServerFnReloadMiddleware(), tracingFnMiddleware({ tracer, logger })],
   }
 })

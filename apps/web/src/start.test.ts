@@ -1,8 +1,11 @@
 import { NotFoundError, RepositoryError, UnauthorizedError } from "@domain/shared"
 import type { Span } from "@repo/observability"
+import { SpanStatusCode } from "@repo/observability"
 import { isHttpError } from "@repo/utils"
 import { describe, expect, it, vi } from "vitest"
-import { recordRequestError, recordServerFnError } from "./start.ts"
+import { recordRequestError, recordRequestErrorUnlessStale, recordServerFnError } from "./start.ts"
+
+const staleServerFnError = () => new Error("Server function info not found for abc123def456")
 
 const fakeSpan = () => {
   const span = {
@@ -118,5 +121,32 @@ describe("recordRequestError", () => {
     recordRequestError(span, new Error("boom"))
 
     expect(span.recordException).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe("recordRequestErrorUnlessStale", () => {
+  it("does NOT record a stale server-fn error and marks the span OK", () => {
+    const span = fakeSpan()
+    recordRequestErrorUnlessStale(span, staleServerFnError())
+
+    expect(span.recordException).not.toHaveBeenCalled()
+    expect(span.setAttribute).toHaveBeenCalledWith("server_fn.stale", true)
+    expect(span.setStatus).toHaveBeenCalledWith({ code: SpanStatusCode.OK })
+  })
+
+  it("records a non-stale 5xx server fault", () => {
+    const span = fakeSpan()
+    recordRequestErrorUnlessStale(span, new RepositoryError({ cause: new Error("boom"), operation: "findById" }))
+
+    expect(span.recordException).toHaveBeenCalledTimes(1)
+  })
+
+  it("leaves a 4xx client error unrecorded (delegates to recordRequestError)", () => {
+    const span = fakeSpan()
+    recordRequestErrorUnlessStale(span, new NotFoundError({ entity: "Sandbox", id: "org-123" }))
+
+    expect(span.recordException).not.toHaveBeenCalled()
+    expect(span.setStatus).not.toHaveBeenCalled()
+    expect(span.setAttribute).not.toHaveBeenCalledWith("server_fn.stale", true)
   })
 })
