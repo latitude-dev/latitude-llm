@@ -8,7 +8,6 @@ import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/in
 import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
-import { ColumnsSelector } from "../-components/columns-selector.tsx"
 import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
@@ -161,12 +160,6 @@ function UsersPage() {
               />
             </Layout.ActionRowItem>
             <Layout.ActionRowItem>
-              <ColumnsSelector
-                columns={columnSettings.columns}
-                selectedColumnIds={columnSettings.visibleColumnIds}
-                onChange={(nextColumnIds) => columnSettings.setVisibleColumnIds(nextColumnIds as UsersColumnId[])}
-                onOrderChange={(nextColumnIds) => columnSettings.setColumnIds(nextColumnIds as UsersColumnId[])}
-              />
               <div className="relative">
                 <Input
                   value={searchInput}
@@ -181,7 +174,7 @@ function UsersPage() {
                 projectId={project.id}
                 projectSlug={project.slug}
                 target={allUsersMonitorTarget()}
-                label="Monitor all users"
+                label="Monitor users"
               />
             </Layout.ActionRowItem>
           </Layout.ActionsRow>

@@ -8,7 +8,6 @@ import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/in
 import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
-import { ColumnsSelector } from "../-components/columns-selector.tsx"
 import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
@@ -146,10 +145,6 @@ function ToolsPageContent() {
 
   return (
     <Layout>
-      <Layout.Header
-        title="Tools"
-        description="Every tool your agents define and call, with usage, failure and latency metrics."
-      />
       <Layout.Actions>
         <Layout.ActionsRow>
           <Layout.ActionRowItem>
@@ -184,12 +179,6 @@ function ToolsPageContent() {
             />
           </Layout.ActionRowItem>
           <Layout.ActionRowItem>
-            <ColumnsSelector
-              columns={TOOLS_COLUMN_OPTIONS}
-              selectedColumnIds={columnSettings.visibleColumnIds}
-              onChange={(nextColumnIds) => columnSettings.setVisibleColumnIds(nextColumnIds as ToolsColumnId[])}
-              onOrderChange={(nextColumnIds) => columnSettings.setColumnIds(nextColumnIds as ToolsColumnId[])}
-            />
             <div className="relative">
               <Input
                 value={searchInput}
@@ -204,7 +193,7 @@ function ToolsPageContent() {
               projectId={project.id}
               projectSlug={project.slug}
               target={allToolsMonitorTarget()}
-              label="Monitor all tools"
+              label="Monitor tools"
             />
           </Layout.ActionRowItem>
         </Layout.ActionsRow>
