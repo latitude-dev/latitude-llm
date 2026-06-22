@@ -43,6 +43,7 @@ export {
   type DeleteSandboxInput,
   deleteSandboxUseCase,
 } from "./use-cases/delete-sandbox.ts"
+export { findOrCreateActiveSandboxUseCase } from "./use-cases/find-or-create-active-sandbox.ts"
 export {
   type FindOrCreateLinkedSandboxProjectInput,
   findOrCreateLinkedSandboxProjectUseCase,

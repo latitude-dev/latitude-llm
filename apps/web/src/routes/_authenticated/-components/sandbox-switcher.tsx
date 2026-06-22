@@ -13,9 +13,10 @@ import { toUserMessage } from "../../../lib/errors.ts"
  * Flipping the toggle asks the server to find-or-create the org's one sandbox
  * **and** a sandbox project mirroring the current live project (linked by its
  * stable id), then navigates into it — the browser session's active org never
- * changes. If the sandbox is archived we still navigate into it — the gray
- * strip surfaces "Activate", which is the intended entry point for waking it.
- * The sandbox sidebar renders the same toggle *on*; here it is always *off*.
+ * changes. An asleep sandbox is woken on entry, so the toggle always lands in
+ * an active one; the gray "Activate" strip is only reachable by navigating to
+ * an archived sandbox directly. The sandbox sidebar renders the same toggle
+ * *on*; here it is always *off*.
  */
 export function SandboxSwitcher({ collapsed, projectId }: { readonly collapsed: boolean; readonly projectId: string }) {
   const router = useRouter()
