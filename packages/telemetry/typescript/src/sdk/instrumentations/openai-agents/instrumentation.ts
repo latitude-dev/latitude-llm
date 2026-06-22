@@ -329,6 +329,13 @@ function applySpanDataAttributes(otelSpan: OtelSpan, data: AgentsSpanData): void
           otelSpan.setAttribute("gen_ai.usage.output_tokens", response.usage.output_tokens)
         }
       }
+      // The Responses API echoes the configured tool schemas on `_response.tools` (flat
+      // `{type,name,description,parameters}` shape) — the only place the adapter sees full
+      // definitions (the agent span carries names only). Forward them as gen_ai.tool.definitions.
+      const tools = data._response?.tools
+      if (Array.isArray(tools) && tools.length > 0) {
+        otelSpan.setAttribute("gen_ai.tool.definitions", JSON.stringify(tools))
+      }
       if (data._input !== undefined) {
         otelSpan.setAttribute("gen_ai.input.messages", JSON.stringify(buildInputMessages({ input: data._input })))
       }
