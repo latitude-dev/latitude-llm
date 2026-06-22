@@ -256,7 +256,7 @@ describe("formatHumanReadableAlert", () => {
     )
   })
 
-  it("renders a unified p95-latency metric.escalating with ms units and a window", () => {
+  it("renders a unified p95-latency metric.escalating with seconds units and a window", () => {
     const alert = makeAlert({
       kind: "metric.escalating",
       source: null,
@@ -268,7 +268,7 @@ describe("formatHumanReadableAlert", () => {
       },
     })
     expect(formatHumanReadableAlert(alert, { targetName: "all users" })).toBe(
-      "Opens an incident when the p95 latency for all users is over 500ms, sustained for at least 15 minutes.",
+      "Opens an incident when the p95 latency for all users is over 0.5s, sustained for at least 15 minutes.",
     )
   })
 
@@ -284,6 +284,25 @@ describe("formatHumanReadableAlert", () => {
     })
     expect(formatHumanReadableAlert(alert, { targetName: "the `search` tool" })).toBe(
       "Opens an incident when the total cost for the `search` tool is over $10.",
+    )
+  })
+
+  it("renders min/max metric names as observed values, not totals", () => {
+    const alert = makeAlert({
+      kind: "metric.threshold",
+      source: null,
+      condition: {
+        kind: "metric.threshold",
+        metric: { kind: "min", field: "cost" },
+        threshold: {
+          mode: "multiplier",
+          factor: 2,
+          baseline: { kind: "period", lookback: { unit: "days", days: 7 } },
+        },
+      },
+    })
+    expect(formatHumanReadableAlert(alert, { targetName: "all sessions" })).toBe(
+      "Opens an incident when the cheapest matching session among all sessions is 2 times more than the same metric during the previous week.",
     )
   })
 })

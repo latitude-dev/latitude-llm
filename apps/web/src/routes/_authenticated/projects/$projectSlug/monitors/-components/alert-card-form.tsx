@@ -7,7 +7,6 @@ import {
   GaugeIcon,
   HashIcon,
   LineDotRightHorizontal,
-  SparklesIcon,
   TimerIcon,
   TrendingUp,
   XIcon,
@@ -37,9 +36,6 @@ import { SavedSearchSourcePicker } from "./saved-search-source-picker.tsx"
 // Sensitivity is an integer 1–6 (shared with the seasonal escalation detector).
 const SENSITIVITY_MIN = 1
 const SENSITIVITY_MAX = 6
-const EXPECTED_EXPLANATION =
-  "The system will learn the patterns and seasonality from your trace history to find anomalies"
-
 // Field help copy — written so a non-engineer can predict what each control does.
 const KIND_HELP: Record<UserAlertKind, string> = {
   "savedSearch.match": "Opens an incident each time a new matching trace is detected",
@@ -170,9 +166,9 @@ const SEVERITY_HELP: Record<AlertSeverity, string> = {
   high: "Incidents open as high priority — needs immediate attention",
 }
 
-const COMPARISON_OPTIONS: { label: string; value: ComparisonMode }[] = [
-  { label: "times", value: "times" },
-  { label: "times more than", value: "timesMoreThan" },
+const COMPARISON_TABS: readonly TabOption<ComparisonMode>[] = [
+  { id: "times", label: "Absolute" },
+  { id: "timesMoreThan", label: "Relative" },
 ]
 
 const TARGET_DIRECTION_OPTIONS: { label: string; value: MetricDirection }[] = [
@@ -180,8 +176,12 @@ const TARGET_DIRECTION_OPTIONS: { label: string; value: MetricDirection }[] = [
   { label: "below", value: "below" },
 ]
 
+const RELATIVE_DIRECTION_OPTIONS: { label: string; value: MetricDirection }[] = [
+  { label: "times more than", value: "above" },
+  { label: "times less than", value: "below" },
+]
+
 const BASELINE_KIND_OPTIONS: { label: string; value: BaselineKind }[] = [
-  { label: "the average of the last", value: "average" },
   { label: "the previous", value: "period" },
   { label: "expected", value: "expected" },
 ]
@@ -191,6 +191,12 @@ const LOOKBACK_UNIT_OPTIONS: { label: string; value: LookbackUnit }[] = [
   { label: "hours", value: "hours" },
   { label: "days", value: "days" },
 ]
+
+const LOOKBACK_MAX_BY_UNIT: Record<LookbackUnit, number> = {
+  minutes: 59,
+  hours: 23,
+  days: 30,
+}
 
 const WINDOW_UNIT_OPTIONS: { label: string; value: WindowUnit }[] = [
   { label: "minutes", value: "minutes" },
@@ -241,19 +247,15 @@ function ThresholdWindowForm({
       step={amountStep}
       value={value.amount}
       onChange={(event) => onChange({ amount: Number(event.target.value) })}
+      onFocus={(event) => event.currentTarget.select()}
       size="sm"
       className="h-7 w-16"
       {...(disabled ? { disabled: true } : {})}
     />
   )
 
-  const comparisonOptions = targetMode
-    ? [
-        { label: "absolute", value: "times" as const },
-        { label: value.direction === "below" ? "times less than" : "times more than", value: "timesMoreThan" as const },
-      ]
-    : COMPARISON_OPTIONS
   const leadIn = targetMode ? "Alert when the metric is" : "Alert when traces are detected"
+  const lookbackMax = LOOKBACK_MAX_BY_UNIT[value.lookbackUnit]
 
   // The amount doubles as the sensitivity in expected mode; snap an out-of-range
   // count/factor onto a valid 1–6 default when switching so the field stays valid.
@@ -264,13 +266,39 @@ function ThresholdWindowForm({
     onChange(needsSensitivityReset ? { baselineKind, amount: DEFAULT_ESCALATION_SENSITIVITY } : { baselineKind })
   }
 
+  const onComparisonChange = (comparison: ComparisonMode) => {
+    if (comparison === value.comparison) return
+    if (comparison === "times") {
+      onChange({ comparison, amount: targetMode ? 1 : 100 })
+      return
+    }
+    onChange({ comparison, amount: 2, baselineKind: "period" })
+  }
+
+  const onLookbackUnitChange = (lookbackUnit: LookbackUnit) => {
+    onChange({ lookbackUnit, lookbackAmount: Math.min(value.lookbackAmount, LOOKBACK_MAX_BY_UNIT[lookbackUnit]) })
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col">
-        <Text.H5M>Threshold</Text.H5M>
-        <div className="flex flex-wrap items-center gap-2 -mt-1">
+      <div className="flex flex-col gap-2">
+        <div className="flex min-h-8 flex-row flex-wrap items-center justify-between gap-2">
+          <div className="flex h-8 items-center">
+            <Text.H5M>Threshold</Text.H5M>
+          </div>
+          <Tabs<ComparisonMode>
+            variant="bordered"
+            size="sm"
+            options={COMPARISON_TABS}
+            active={value.comparison}
+            onSelect={(comparison) => {
+              if (!disabled) onComparisonChange(comparison)
+            }}
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           <Text.H5 color="foregroundMuted">{leadIn}</Text.H5>
-          {targetMode ? (
+          {targetMode && !relative ? (
             <Select<MetricDirection>
               name="direction"
               width="auto"
@@ -283,15 +311,19 @@ function ThresholdWindowForm({
           ) : null}
           {amountInput}
           {absoluteUnit ? <Text.H5 color="foregroundMuted">{absoluteUnit}</Text.H5> : null}
-          <Select<ComparisonMode>
-            name="comparison"
-            width="auto"
-            options={comparisonOptions}
-            value={value.comparison}
-            onChange={(comparison) => onChange({ comparison })}
-            size="small"
-            {...(disabled ? { disabled: true } : {})}
-          />
+          {!targetMode && !relative ? <Text.H5 color="foregroundMuted">times</Text.H5> : null}
+          {targetMode && relative ? (
+            <Select<MetricDirection>
+              name="relativeDirection"
+              width="auto"
+              options={RELATIVE_DIRECTION_OPTIONS}
+              value={value.direction}
+              onChange={(direction) => onChange({ direction })}
+              size="small"
+              {...(disabled ? { disabled: true } : {})}
+            />
+          ) : null}
+          {!targetMode && relative ? <Text.H5 color="foregroundMuted">times more than</Text.H5> : null}
           {relative ? (
             <Select<BaselineKind>
               name="baselineKind"
@@ -307,9 +339,13 @@ function ThresholdWindowForm({
             <Input
               type="number"
               min={1}
+              max={lookbackMax}
               step={1}
               value={value.lookbackAmount}
-              onChange={(event) => onChange({ lookbackAmount: Number(event.target.value) })}
+              onChange={(event) =>
+                onChange({ lookbackAmount: Math.max(1, Math.min(Number(event.target.value), lookbackMax)) })
+              }
+              onFocus={(event) => event.currentTarget.select()}
               size="sm"
               className="h-7 w-16"
               {...(disabled ? { disabled: true } : {})}
@@ -321,19 +357,13 @@ function ThresholdWindowForm({
               width="auto"
               options={LOOKBACK_UNIT_OPTIONS}
               value={value.lookbackUnit}
-              onChange={(lookbackUnit) => onChange({ lookbackUnit })}
+              onChange={onLookbackUnitChange}
               size="small"
               {...(disabled ? { disabled: true } : {})}
             />
           ) : null}
         </div>
         <FieldErrors errors={errors?.threshold} />
-        {expected ? (
-          <div className="rounded-lg bg-muted/80 px-3 py-2 flex justify-start items-start gap-2 mt-3">
-            <Icon icon={SparklesIcon} size="sm" color="foregroundMuted" className="shrink-0" />
-            <Text.H6 color="foregroundMuted">{EXPECTED_EXPLANATION}</Text.H6>
-          </div>
-        ) : null}
       </div>
 
       {isEscalatingKind(value.kind) ? (
@@ -346,6 +376,7 @@ function ThresholdWindowForm({
               min={1}
               value={value.windowAmount}
               onChange={(event) => onChange({ windowAmount: Number(event.target.value) })}
+              onFocus={(event) => event.currentTarget.select()}
               size="sm"
               className="h-7 w-16"
               {...(disabled ? { disabled: true } : {})}

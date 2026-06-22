@@ -33,8 +33,8 @@ export type UserAlertKind =
 export type ComparisonMode = "times" | "timesMoreThan"
 export type WindowUnit = "minutes" | "hours" | "days"
 export type MetricDirection = AlertMetricThresholdDirection
-/** `average`/`period` carry a `lookback`; `expected` is the dynamically-learned baseline (no window). */
-export type BaselineKind = "average" | "period" | "expected"
+/** `period` carries a `lookback`; `expected` is the dynamically-learned baseline (no window). */
+export type BaselineKind = "period" | "expected"
 export type LookbackUnit = "minutes" | "hours" | "days"
 
 /**
@@ -55,7 +55,7 @@ export interface AlertDraft {
   /** count (absolute) · factor (multiplier) · sensitivity (expected) — see `comparison`/`baselineKind`. */
   readonly amount: number
   readonly baselineKind: BaselineKind
-  /** Lookback window for `average`/`period` baselines (ignored for `expected`). */
+  /** Lookback window for `period` baselines (ignored for `expected`). */
   readonly lookbackAmount: number
   readonly lookbackUnit: LookbackUnit
   readonly windowAmount: number
@@ -71,7 +71,7 @@ export const emptyAlertDraft = (overrides?: Partial<AlertDraft>): AlertDraft => 
   direction: "above",
   comparison: "times",
   amount: 100,
-  baselineKind: "average",
+  baselineKind: "period",
   lookbackAmount: 7,
   lookbackUnit: "days",
   windowAmount: 5,
@@ -224,7 +224,7 @@ const thresholdToDraftFields = (
     return {
       comparison: "times",
       amount: threshold.count,
-      baselineKind: "average",
+      baselineKind: "period",
       lookbackAmount: 7,
       lookbackUnit: "days",
     }
@@ -234,7 +234,7 @@ const thresholdToDraftFields = (
     return {
       comparison: "timesMoreThan",
       amount: threshold.factor,
-      baselineKind: threshold.baseline.kind,
+      baselineKind: "period",
       lookbackAmount: lookback.amount,
       lookbackUnit: lookback.unit,
     }
@@ -257,7 +257,7 @@ const metricThresholdToDraftFields = (
     return {
       comparison: "times",
       amount: metricValueFromStored(threshold.value, metric),
-      baselineKind: "average",
+      baselineKind: "period",
       lookbackAmount: 7,
       lookbackUnit: "days",
     }
@@ -267,7 +267,7 @@ const metricThresholdToDraftFields = (
     return {
       comparison: "timesMoreThan",
       amount: threshold.factor,
-      baselineKind: threshold.baseline.kind,
+      baselineKind: "period",
       lookbackAmount: lookback.amount,
       lookbackUnit: lookback.unit,
     }
