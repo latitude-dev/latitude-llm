@@ -303,7 +303,6 @@ const snapshotSampleExcerpt = (incident: SourcedIncident) =>
       projectId: incident.projectId,
       signalId: SignalId(incident.sourceId),
       source: "annotation",
-      passed: true,
       options: { limit: 1 },
     })
     const latestAnnotation = annotations.items[0]
@@ -323,7 +322,6 @@ const snapshotSampleExcerpt = (incident: SourcedIncident) =>
       projectId: incident.projectId,
       signalId: SignalId(incident.sourceId),
       source: "evaluation",
-      passed: true,
       options: { limit: 1 },
     })
     const latestEvaluation = evaluations.items[0]

@@ -152,7 +152,6 @@ export const generateSignalDetailsUseCase = (input: GenerateSignalDetailsInput) 
       const recentScores = yield* scoreRepository.listBySignalId({
         projectId: ProjectId(input.projectId),
         signalId: issue.id,
-        passed: true,
         options: {
           limit: SIGNAL_DETAILS_MAX_OCCURRENCES,
         },

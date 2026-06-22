@@ -484,18 +484,15 @@ export const ScoreRepositoryLive = Layer.effect(
         projectId,
         signalId,
         source,
-        passed,
         options,
       }: {
         readonly projectId: ProjectId
         readonly signalId: SignalId
         readonly source?: ScoreSourceType
-        readonly passed?: boolean
         readonly options?: ScoreListOptions
       }) => {
         const filters: SQL[] = [eq(scores.projectId, projectId), eq(scores.signalId, signalId as string)]
         if (source !== undefined) filters.push(eq(scores.sourceType, source))
-        if (passed !== undefined) filters.push(eq(scores.passed, passed))
         // `filters` always carries the project + issue conditions, so
         // `and(...)` never returns undefined here — assert for the
         // narrower drizzle signature on `baseWhere`.
@@ -563,7 +560,6 @@ export const ScoreRepositoryLive = Layer.effect(
                     eq(scores.signalId, signalId as string),
                     eq(scores.sourceType, "annotation"),
                     eq(scores.sourceId, "SYSTEM"),
-                    eq(scores.passed, true),
                     isNull(scores.draftedAt),
                     sql`${scores.metadata} ? 'flaggerSlug'`,
                   ),

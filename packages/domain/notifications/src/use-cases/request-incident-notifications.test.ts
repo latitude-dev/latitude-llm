@@ -474,7 +474,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       annotatorId,
       createdAt: new Date("2026-05-07T09:50:00Z"),
       updatedAt: new Date("2026-05-07T09:50:00Z"),
-      source: "annotation" as const,
+      sourceType: "annotation" as const,
       sourceId: "UI" as const,
       metadata: { rawFeedback: "Reviewer flagged a tool-call loop." },
     } as unknown as AnnotationScore
@@ -540,7 +540,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       annotatorId: null,
       createdAt: new Date("2026-05-07T09:50:00Z"),
       updatedAt: new Date("2026-05-07T09:50:00Z"),
-      source: "annotation" as const,
+      sourceType: "annotation" as const,
       sourceId: "SYSTEM" as const,
       metadata: { rawFeedback: "Detected token leakage in three consecutive responses." },
     } as unknown as AnnotationScore
@@ -585,7 +585,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       annotatorId: null,
       createdAt: new Date("2026-05-07T09:55:00Z"),
       updatedAt: new Date("2026-05-07T09:55:00Z"),
-      source: "evaluation" as const,
+      sourceType: "evaluation" as const,
       sourceId: evaluationId,
       metadata: { evaluationHash: "abc" },
     } as unknown as EvaluationScore
@@ -654,7 +654,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       annotatorId: null,
       createdAt: new Date(),
       updatedAt: new Date(),
-      source: "annotation" as const,
+      sourceType: "annotation" as const,
       sourceId: "UI" as const,
       metadata: { rawFeedback: longText },
     } as unknown as AnnotationScore
@@ -738,7 +738,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       annotatorId: null,
       createdAt: new Date(),
       updatedAt: new Date(),
-      source: "annotation" as const,
+      sourceType: "annotation" as const,
       sourceId: "UI" as const,
       metadata: { rawFeedback: "Annotator flagged the response for hallucinating a refund policy." },
     } as unknown as AnnotationScore
@@ -788,7 +788,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       annotatorId: null,
       createdAt: new Date(),
       updatedAt: new Date(),
-      source: "annotation" as const,
+      sourceType: "annotation" as const,
       sourceId: "UI" as const,
       metadata: { rawFeedback: "Some feedback here." },
     } as unknown as AnnotationScore
