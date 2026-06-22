@@ -16,7 +16,9 @@ const MIN_BUBBLE_SIZE_PX = 4
 const MAX_BUBBLE_SIZE_PX = 30
 const ROW_HEIGHT_PX = 48
 const MAX_TURN_BUCKETS = 14
-const CHART_X_PADDING_PERCENT = 2.5
+
+const bucketCenterXPercent = (bucketIndex: number, bucketCount: number): number =>
+  ((bucketIndex + 0.5) / bucketCount) * 100
 
 const metricOptions: ReadonlyArray<{ readonly id: BehaviourTrajectoryMetric; readonly label: string }> = [
   { id: "frequency", label: "Frequency" },
@@ -55,8 +57,8 @@ const resolveVisibleLevel = (topics: readonly BehaviourNodeRecord[], path: reado
 const bucketLabel = (bucket: string, axis: TrajectoryAxis): string => {
   if (axis === "turn") {
     const [start, end] = bucket.split(":").map((value) => Number(value))
-    if (Number.isFinite(start) && Number.isFinite(end) && start !== end) return `Turns ${start + 1}-${end + 1}`
-    if (Number.isFinite(start)) return `Turn ${start + 1}`
+    if (Number.isFinite(start) && Number.isFinite(end) && start !== end) return `${start + 1}-${end + 1}`
+    if (Number.isFinite(start)) return `${start + 1}`
     return bucket
   }
   const [, month, day] = bucket.split("-")
@@ -334,11 +336,7 @@ export function BehavioursTrajectoryChart({
                   const count = row ? metricValue(row, metric) : 0
                   if (count <= 0) return null
                   const size = bubbleSize(count, maxCount)
-                  const left =
-                    buckets.length === 1
-                      ? 50
-                      : CHART_X_PADDING_PERCENT +
-                        (bucketIndex / (buckets.length - 1)) * (100 - CHART_X_PADDING_PERCENT * 2)
+                  const left = bucketCenterXPercent(bucketIndex, buckets.length)
                   const top = rowIndex * ROW_HEIGHT_PX + ROW_HEIGHT_PX / 2
                   return (
                     <Tooltip
@@ -391,7 +389,7 @@ export function BehavioursTrajectoryChart({
           <span />
           <div className="relative h-5 text-muted-foreground text-xs">
             {buckets.map((bucket, index) => {
-              const left = buckets.length === 1 ? 50 : (index / (buckets.length - 1)) * 100
+              const left = bucketCenterXPercent(index, buckets.length)
               const show =
                 buckets.length <= 6 ||
                 index === 0 ||
@@ -401,14 +399,7 @@ export function BehavioursTrajectoryChart({
               return (
                 <span
                   key={bucket}
-                  className={cn(
-                    "absolute whitespace-nowrap",
-                    index === 0
-                      ? "translate-x-0"
-                      : index === buckets.length - 1
-                        ? "-translate-x-full"
-                        : "-translate-x-1/2",
-                  )}
+                  className="absolute -translate-x-1/2 whitespace-nowrap"
                   style={{ left: `${left}%` }}
                 >
                   {bucketLabel(bucket, axis)}
