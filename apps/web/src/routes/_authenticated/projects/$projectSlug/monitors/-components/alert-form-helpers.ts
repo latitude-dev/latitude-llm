@@ -103,7 +103,7 @@ export const targetAlertDraft = (target: MonitorTarget, overrides?: Partial<Aler
 export const kindsForDraft = (draft: AlertDraft): readonly UserAlertKind[] =>
   draft.target === null
     ? ["savedSearch.match", "savedSearch.threshold", "savedSearch.escalating"]
-    : ["metric.threshold", "metric.escalating"]
+    : ["event.matched", "metric.threshold", "metric.escalating"]
 
 /** Switch kind within the current mode, resetting threshold/window fields but keeping target/metric/source/severity. */
 export const draftWithKind = (draft: AlertDraft, kind: UserAlertKind): AlertDraft =>

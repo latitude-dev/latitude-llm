@@ -29,7 +29,7 @@ import {
   type AlertFieldErrors,
   alertFieldErrorsFrom,
   draftToCondition,
-  emptyAlertDraft,
+  targetAlertDraft,
 } from "../monitors/-components/alert-form-helpers.ts"
 import { SemanticMonitorPopoverContent, searchHasSemanticPart } from "./semantic-monitor-notice.tsx"
 
@@ -62,6 +62,14 @@ export function SaveSearchModal(props: SaveSearchModalProps) {
 
 const MONITOR_ERROR_PREFIX = "monitor."
 
+const pendingSavedSearchTarget = () => ({
+  stream: "traces" as const,
+  filterSet: null,
+  query: null,
+  savedSearchId: "pending",
+  metric: { kind: "count" as const },
+})
+
 function monitorAlertErrorsFrom(error: unknown): AlertFieldErrors {
   const fieldErrors = extractFieldErrors(error)
   if (!fieldErrors) return {}
@@ -76,7 +84,7 @@ function CreateModal({ open, onClose, projectId, projectSlug, query, filterSet, 
   const { toast } = useToast()
   const createMutation = useCreateSavedSearch(projectId)
   const [withMonitor, setWithMonitor] = useState(false)
-  const [alertDraft, setAlertDraft] = useState<AlertDraft>(() => emptyAlertDraft())
+  const [alertDraft, setAlertDraft] = useState<AlertDraft>(() => targetAlertDraft(pendingSavedSearchTarget()))
   const [alertErrors, setAlertErrors] = useState<AlertFieldErrors>({})
 
   // Searches with a semantic part have no exact match rule for a monitor to count against.
@@ -98,6 +106,7 @@ function CreateModal({ open, onClose, projectId, projectSlug, query, filterSet, 
                     kind: alertDraft.kind,
                     condition: draftToCondition(alertDraft),
                     severity: alertDraft.severity,
+                    metric: alertDraft.metric,
                   },
                 }
               : {}),
@@ -195,7 +204,9 @@ function CreateModal({ open, onClose, projectId, projectSlug, query, filterSet, 
                   <Icon icon={BellRingIcon} size="sm" color="foregroundMuted" className="mt-0.5 shrink-0" />
                   <div className="flex flex-col gap-0.5">
                     <Text.H5M>Monitor this search</Text.H5M>
-                    <Text.H6 color="foregroundMuted">Open incidents when traces match this search</Text.H6>
+                    <Text.H6 color="foregroundMuted">
+                      Open incidents when this search matches or its metrics change
+                    </Text.H6>
                   </div>
                 </div>
                 <Switch

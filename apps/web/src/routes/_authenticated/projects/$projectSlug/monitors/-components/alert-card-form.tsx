@@ -1,9 +1,8 @@
 import { type AlertSeverity, DEFAULT_ESCALATION_SENSITIVITY, type MonitorMetric } from "@domain/shared"
-import { Badge, Button, Icon, Input, Select, type TabOption, Tabs, Text } from "@repo/ui"
+import { Button, Icon, Input, Select, type TabOption, Tabs, Text } from "@repo/ui"
 import { EqualApproximately, LineDotRightHorizontal, SparklesIcon, TrendingUp, XIcon } from "lucide-react"
 import { SeveritySelector } from "../../../../../../domains/alerts/severity-selector.tsx"
 import {
-  describeMonitorTarget,
   metricOptionId,
   metricThresholdUnitLabel,
   targetMetricOptions,
@@ -81,18 +80,6 @@ function MetricSelector({
         }}
         {...(disabled ? { disabled: true } : {})}
       />
-    </div>
-  )
-}
-
-function TargetChip({ target }: { readonly target: NonNullable<AlertDraft["target"]> }) {
-  const description = describeMonitorTarget(target)
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Text.H5M>Target</Text.H5M>
-      <div>
-        <Badge variant="muted">{description?.label ?? target.stream}</Badge>
-      </div>
     </div>
   )
 }
@@ -364,9 +351,7 @@ export function AlertCardForm({
         <Text.H6 color="foregroundMuted">{KIND_HELP[value.kind]}</Text.H6>
       </div>
 
-      {targetMode && value.target ? <TargetChip target={value.target} /> : null}
-
-      {targetMode && value.target && !isMatchKind(value.kind) ? (
+      {targetMode && value.target ? (
         <MetricSelector
           value={value.metric}
           stream={value.target.stream}

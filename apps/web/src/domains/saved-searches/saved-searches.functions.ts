@@ -19,6 +19,7 @@ import {
   alertIncidentKindSchema,
   alertSeveritySchema,
   filterSetSchema,
+  monitorMetricSchema,
   OrganizationId,
   ProjectId,
   SavedSearchId,
@@ -156,6 +157,7 @@ const savedSearchMonitorSchema = z.object({
   kind: alertIncidentKindSchema,
   condition: alertIncidentConditionSchema.nullable(),
   severity: alertSeveritySchema,
+  metric: monitorMetricSchema.optional(),
 })
 
 export type SavedSearchMonitorInput = z.infer<typeof savedSearchMonitorSchema>
@@ -198,6 +200,7 @@ export const createSavedSearchFn = createServerFn({ method: "POST" })
             return yield* sqlClient.transaction(
               Effect.gen(function* () {
                 const search = yield* createSearch
+                const unified = monitorInput.kind.startsWith("event.") || monitorInput.kind.startsWith("metric.")
                 yield* createMonitorUseCase({
                   organizationId: orgId,
                   projectId: ProjectId(data.projectId),
@@ -205,11 +208,22 @@ export const createSavedSearchFn = createServerFn({ method: "POST" })
                   alerts: [
                     {
                       kind: monitorInput.kind,
-                      source: { type: "savedSearch", id: search.id },
+                      source: unified ? null : { type: "savedSearch", id: search.id },
                       condition: monitorInput.condition,
                       severity: monitorInput.severity,
                     },
                   ],
+                  ...(unified
+                    ? {
+                        target: {
+                          stream: "traces",
+                          filterSet: null,
+                          query: null,
+                          savedSearchId: search.id,
+                          metric: monitorInput.metric ?? { kind: "count" },
+                        },
+                      }
+                    : {}),
                 })
                 return search
               }),
