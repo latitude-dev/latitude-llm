@@ -2,8 +2,8 @@ import { ProjectRepository } from "@domain/projects"
 import {
   DEFAULT_SANDBOX_NAME,
   deleteSandboxUseCase,
+  findOrCreateActiveSandboxUseCase,
   findOrCreateLinkedSandboxProjectUseCase,
-  findOrCreateSandboxUseCase,
   reactivateSandboxUseCase,
 } from "@domain/sandboxes"
 import { OrganizationId, projectIdSchema } from "@domain/shared"
@@ -56,9 +56,11 @@ export const reactivateSandbox = createServerFn({ method: "POST" })
 
 /**
  * Everything the sidebar toggle needs to land inside the sandbox, in one call:
- * find-or-create the org's single sandbox, then find-or-create the sandbox
- * project mirroring the given live project. The flow spans two RLS scopes
- * (parent org, then sandbox org), so it composes one scoped use-case run each.
+ * find-or-create the org's single sandbox, wake it if it was asleep, then
+ * find-or-create the sandbox project mirroring the given live project. The flow
+ * spans two RLS scopes (parent org, then sandbox org), so it composes one
+ * scoped use-case run each. Entering via the toggle always lands in an active
+ * sandbox — the "asleep" state is only reachable by navigating to it directly.
  */
 export const enterSandboxProject = createServerFn({ method: "POST" })
   .inputValidator(z.object({ projectId: projectIdSchema }))
@@ -76,7 +78,7 @@ export const enterSandboxProject = createServerFn({ method: "POST" })
     )
 
     const { sandboxOrganizationId, createdNow } = await Effect.runPromise(
-      findOrCreateSandboxUseCase({
+      findOrCreateActiveSandboxUseCase({
         parentOrganizationId: organizationId,
         actorUserId: userId,
         name: DEFAULT_SANDBOX_NAME,
