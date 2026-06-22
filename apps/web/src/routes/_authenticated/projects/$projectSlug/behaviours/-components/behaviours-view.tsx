@@ -312,7 +312,9 @@ export function BehaviourDetailDrawer({
               {parentName ? <BehaviourBadge label={parentName} icon={TagIcon} /> : null}
               <BehaviourBadge label={`${formatCount(node.subtreeSessionCount)} sessions`} icon={TagIcon} />
               <BehaviourBadge label={trendLabel(node.trend.status)} icon={trendIcon(node.trend.status)} />
-              <BehaviourBadge label={`First seen ${node.firstSeenLabel.replaceAll("_", " ")}`} icon={SparklesIcon} />
+              {node.firstSeenLabel === "older" ? null : (
+                <BehaviourBadge label={`First seen ${node.firstSeenLabel.replaceAll("_", " ")}`} icon={SparklesIcon} />
+              )}
             </div>
             <div className="flex flex-col gap-2">
               <Text.H2>{cluster.name}</Text.H2>
