@@ -326,7 +326,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     }
 
     const persistedSignalId =
-      execution.kind === "completed" && execution.result.passed === false ? evaluation.signalId : null
+      execution.kind === "completed" && execution.result.passed === true ? evaluation.signalId : null
     const scoreWriteExit = yield* Effect.exit(
       writeScoreUseCase({
         projectId: input.projectId,

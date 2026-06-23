@@ -6,6 +6,7 @@ import { checkEligibilityUseCase } from "./check-eligibility.ts"
 
 const organizationId = "oooooooooooooooooooooooo"
 const projectId = "pppppppppppppppppppppppp"
+const evaluationId = "eeeeeeeeeeeeeeeeeeeeeeee"
 
 const makeScore = (overrides: Partial<Score> = {}): Score =>
   scoreSchema.parse({
@@ -91,6 +92,28 @@ describe("checkEligibilityUseCase", () => {
 
   it("rejects passed scores", async () => {
     await expect(runEligibility(makeScore({ passed: true }))).rejects.toMatchObject({
+      _tag: "PassedScoreNotEligibleForDiscoveryError",
+    })
+  })
+
+  it("returns a present evaluation score (passed=true)", async () => {
+    const score = makeScore({
+      sourceType: "evaluation",
+      sourceId: evaluationId,
+      metadata: { evaluationHash: "hash" },
+      passed: true,
+    })
+    expect(await runEligibility(score)).toEqual(score)
+  })
+
+  it("rejects an absent evaluation run (passed=false)", async () => {
+    const score = makeScore({
+      sourceType: "evaluation",
+      sourceId: evaluationId,
+      metadata: { evaluationHash: "hash" },
+      passed: false,
+    })
+    await expect(runEligibility(score)).rejects.toMatchObject({
       _tag: "PassedScoreNotEligibleForDiscoveryError",
     })
   })

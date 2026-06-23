@@ -1,11 +1,13 @@
 import { EMBEDDING_DIMENSIONS } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
+import { EvaluationRepository, type EvaluationRepositoryShape } from "@domain/evaluations"
 import { OutboxEventWriter } from "@domain/events"
 import { type Score, ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
 import {
   DistributedLockRepository,
   DistributedLockUnavailableError,
+  NotFoundError,
   OrganizationId,
   ScoreId,
   SignalId,
@@ -23,6 +25,20 @@ import { assignOrCreateSignalUseCase } from "./assign-or-create-signal-from-scor
 
 const organizationId = "oooooooooooooooooooooooo"
 const projectId = "pppppppppppppppppppppppp"
+
+// Annotation-score discovery never reaches the evaluation branch of checkEligibility;
+// this stub only satisfies the EvaluationRepository requirement.
+const evaluationRepositoryStub: EvaluationRepositoryShape = {
+  findById: (id) => Effect.fail(new NotFoundError({ entity: "Evaluation", id })),
+  save: () => Effect.die("unexpected EvaluationRepository.save"),
+  listByProjectId: () => Effect.die("unexpected EvaluationRepository.listByProjectId"),
+  listBySignalId: () => Effect.die("unexpected EvaluationRepository.listBySignalId"),
+  listBySignalIds: () => Effect.die("unexpected EvaluationRepository.listBySignalIds"),
+  archive: () => Effect.die("unexpected EvaluationRepository.archive"),
+  unarchive: () => Effect.die("unexpected EvaluationRepository.unarchive"),
+  softDelete: () => Effect.die("unexpected EvaluationRepository.softDelete"),
+  softDeleteBySignalId: () => Effect.die("unexpected EvaluationRepository.softDeleteBySignalId"),
+}
 
 const makeEmbedding = (): number[] =>
   Array.from({ length: EMBEDDING_DIMENSIONS }, (_, index) => {
@@ -123,6 +139,7 @@ describe("assignOrCreateSignalUseCase", () => {
       }).pipe(
         Effect.provide(fakeAi.layer),
         Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(EvaluationRepository, evaluationRepositoryStub),
         Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(DistributedLockRepository, {
           withLock: (input, effect) =>
@@ -195,6 +212,7 @@ describe("assignOrCreateSignalUseCase", () => {
       }).pipe(
         Effect.provide(fakeAi.layer),
         Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(EvaluationRepository, evaluationRepositoryStub),
         Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(DistributedLockRepository, {
           withLock: (_input, effect) => effect,
@@ -240,6 +258,7 @@ describe("assignOrCreateSignalUseCase", () => {
       }).pipe(
         Effect.provide(fakeAi.layer),
         Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(EvaluationRepository, evaluationRepositoryStub),
         Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(DistributedLockRepository, {
           withLock: (input, effect) =>
@@ -284,6 +303,7 @@ describe("assignOrCreateSignalUseCase", () => {
       }).pipe(
         Effect.provide(fakeAi.layer),
         Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(EvaluationRepository, evaluationRepositoryStub),
         Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(DistributedLockRepository, {
           withLock: (input) => Effect.fail(new DistributedLockUnavailableError({ key: input.key })),
@@ -330,6 +350,7 @@ describe("assignOrCreateSignalUseCase", () => {
       }).pipe(
         Effect.provide(fakeAi.layer),
         Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(EvaluationRepository, evaluationRepositoryStub),
         Effect.provideService(SignalRepository, signalRepository),
         Effect.provideService(DistributedLockRepository, {
           withLock: (_input, effect) => effect,

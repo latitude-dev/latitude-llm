@@ -997,7 +997,7 @@ describe("runLiveEvaluationUseCase", () => {
         simulationId: null,
         sourceType: "evaluation",
         sourceId: evaluation.id,
-        signalId: null,
+        signalId: evaluation.signalId,
         value: 1,
         passed: true,
         feedback: "The conversation does not exhibit the linked issue.",
@@ -1037,7 +1037,7 @@ describe("runLiveEvaluationUseCase", () => {
     })
   })
 
-  it("assigns the linked issue immediately for failed live evaluation results", async () => {
+  it("leaves the score unassigned for a failing live evaluation result", async () => {
     const evaluation = makeEvaluation({
       script: VALID_SCRIPT,
     })
@@ -1100,7 +1100,7 @@ describe("runLiveEvaluationUseCase", () => {
       simulationId: null,
       sourceType: "evaluation",
       sourceId: evaluation.id,
-      signalId: evaluation.signalId,
+      signalId: null,
       value: 0,
       passed: false,
       feedback: "The conversation exhibits the linked issue.",

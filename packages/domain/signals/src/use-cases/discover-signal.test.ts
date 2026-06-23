@@ -231,6 +231,7 @@ describe("discoverSignalUseCase", () => {
         id: ScoreId("tttttttttttttttttttttttt"),
         sourceType: "evaluation",
         sourceId: linkedEvaluation.id,
+        passed: true,
         metadata: {
           evaluationHash: "eval-hash-v1",
         },
@@ -409,6 +410,7 @@ describe("discoverSignalUseCase", () => {
       id: ScoreId("vvvvvvvvvvvvvvvvvvvvvvvv"),
       sourceType: "evaluation",
       sourceId: foreignEvaluation.id,
+      passed: true,
       metadata: {
         evaluationHash: "eval-hash-v2",
       },

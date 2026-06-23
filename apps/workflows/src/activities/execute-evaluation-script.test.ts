@@ -95,7 +95,7 @@ describe("MVP script template helpers", () => {
   })
 
   describe("generateBaselinePromptText", () => {
-    it("produces a prompt containing the issue name and description", () => {
+    it("produces a prompt containing the signal name and description", () => {
       const prompt = generateBaselinePromptText("Secret leakage", "The assistant leaked a secret API key.")
       expect(prompt).toContain("Secret leakage")
       expect(prompt).toContain("The assistant leaked a secret API key.")

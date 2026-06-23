@@ -38,6 +38,7 @@ Rules for the script:
 - The script field must contain the entire evaluation script, with no markdown fences
 - Preserve the current MVP script wrapper exactly: one llm() call that returns { passed: boolean, feedback: string }, followed by the existing Passed/Failed return logic
 - Only change the prompt text inside the llm() template literal
+- The prompt must instruct the judge to set passed to true when the target behavior is present and false when it is absent
 - The only allowed interpolation placeholder inside the prompt text is \${conversation} — it will be replaced at runtime with the formatted conversation
 - Do not use backticks inside the prompt text
 - Keep the prompt text focused on detecting the target issue in the conversation

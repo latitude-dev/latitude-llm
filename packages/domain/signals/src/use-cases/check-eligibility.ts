@@ -58,7 +58,11 @@ export const checkEligibilityUseCase = (input: CheckEligibilityInput) =>
       return yield* new MissingScoreFeedbackForDiscoveryError({ scoreId: input.scoreId })
     }
 
-    if (score.passed) {
+    if (score.sourceType === "evaluation") {
+      if (!score.passed) {
+        return yield* new PassedScoreNotEligibleForDiscoveryError({ scoreId: input.scoreId })
+      }
+    } else if (score.passed) {
       return yield* new PassedScoreNotEligibleForDiscoveryError({ scoreId: input.scoreId })
     }
 

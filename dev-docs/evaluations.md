@@ -82,6 +82,8 @@ Evaluation rows live in Postgres with:
 - `script`, `trigger`, and `alignment`
 - `aligned_at`, `archived_at`, and `deleted_at`
 
+Membership is recorded as `scores.signal_id`, never `passed`. An evaluation run's `passed` is host-derived by thresholding the script's `value`; the writer stamps `signal_id` when the behavior is _present_ (`passed = true`). The baseline judge prompt and GEPA proposer set `passed = true` when the behavior is present, so generated and re-optimized judges follow this convention.
+
 Post-MVP, the model may grow a narrow execution-settings payload:
 
 ```typescript
