@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## v0.3.17 - 2026-06-23
+
+### Signals
+
+- Standardized generated signal verdicts on `passed=true` meaning the behavior is present, with alignment, discovery, live evaluation, and GEPA prompts updated to use the same convention (ref: #3661).
+- Kept failed signal-linked evaluation runs as unowned ClickHouse denominators so absent behavior still contributes to evaluation analytics (ref: #3661).
+
+### Onboarding and demo data
+
+- Sped up sample project seeding by skipping ClickHouse reset mutations for fresh projects and polling asynchronous reset mutations only when retry data exists (ref: #3663).
+- Quieted sample-project notification emails and made the behaviours page wait for taxonomy data before rendering empty states (ref: #3666).
+
+### Docs and models
+
+- Reorganized the docs into Observe, Understand, and Refine sections, added spans, tool calls, and behaviours pages, and fixed the introduction image link (ref: #3634).
+- Updated the bundled `models.dev` provider catalog (ref: #3632).
+
 ## v0.3.16 - 2026-06-23
 
 ### Monitors
