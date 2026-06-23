@@ -47,8 +47,11 @@ constraint:
    `X.Y.Z`.
 5. Commit both with the exact message `release: vX.Y.Z` and push to
    `origin/development`.
-5. Run `scripts/release.sh` (without an explicit version) so it tags the latest
-   `origin/development` commit with the next patch version.
+5. Run `scripts/release.sh --yes` (without an explicit version) so it tags the
+   latest `origin/development` commit with the next patch version. The `--yes`
+   flag is required when running non-interactively (agent or CI): the script's
+   confirmation prompt cannot be answered without a terminal, and without
+   `--yes` it exits with an error rather than tagging.
 
 Still obey all release invariants: never tag local-only commits, never promote
 via `main`, and stop to ask if the working tree or branch state makes the
@@ -81,7 +84,9 @@ release unsafe or ambiguous.
 5. Commit the changelog update with message `release: vX.Y.Z` (matching the
    release version exactly) and push it to `origin/development`.
 6. Run `scripts/release.sh [version]`. Use `--dry` first when you want to preview
-   the release summary without tagging.
+   the release summary without tagging. Pass `--yes` to skip the confirmation
+   prompt — always required when running without a terminal (agent or CI),
+   otherwise the script errors out instead of tagging.
 
 ## Changelog style
 

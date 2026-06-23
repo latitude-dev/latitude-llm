@@ -6,7 +6,7 @@ export GIT_PAGER=cat
 
 usage() {
   cat <<EOF
-Usage: $0 [--patch|--minor|--major] [--dry] [version]
+Usage: $0 [--patch|--minor|--major] [--dry] [--yes] [version]
 
 Tags the latest origin/development commit for production and pushes the tag. Production deploys are
 triggered by pushed vX.Y.Z tags.
@@ -17,7 +17,8 @@ component. If no release tag exists yet, it starts at v0.1.0.
 
 Before tagging, prints a summary of the changes that will be deployed and asks
 for confirmation. Use --dry to print the summary only without creating or
-pushing the tag.
+pushing the tag. Use --yes to skip the confirmation prompt (required when
+running without a terminal, e.g. an agent or CI).
 
 Examples:
   $0
@@ -25,12 +26,14 @@ Examples:
   $0 --major
   $0 v1.2.3
   $0 --dry
+  $0 --yes
 EOF
 }
 
 bump_kind="patch"
 version=""
 dry_run=0
+assume_yes=0
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -52,6 +55,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     --dry | --dry-run)
       dry_run=1
+      shift
+      ;;
+    -y | --yes)
+      assume_yes=1
       shift
       ;;
     v*)
@@ -163,14 +170,20 @@ if [ "${dry_run}" -eq 1 ]; then
   exit 0
 fi
 
-read -r -p "Tag latest origin/development commit ${target_sha} as ${version} and push to origin? [y/N] " response
-case "${response}" in
-  [yY] | [yY][eE][sS]) ;;
-  *)
-    echo "Aborted. No tag created."
-    exit 0
-    ;;
-esac
+if [ "${assume_yes}" -ne 1 ]; then
+  if [ ! -t 0 ]; then
+    echo "No terminal available to confirm the release. Re-run with --yes to tag ${version} non-interactively."
+    exit 1
+  fi
+  read -r -p "Tag latest origin/development commit ${target_sha} as ${version} and push to origin? [y/N] " response
+  case "${response}" in
+    [yY] | [yY][eE][sS]) ;;
+    *)
+      echo "Aborted. No tag created."
+      exit 0
+      ;;
+  esac
+fi
 
 echo "Tagging ${target_sha} as ${version}..."
 git tag "${version}" "${target_sha}"
