@@ -6,9 +6,11 @@ import type * as LatitudeApi from "../../../../index.js";
  * @example
  *     {
  *         name: "name",
- *         alerts: [{
- *                 kind: "savedSearch.match"
- *             }]
+ *         target: {
+ *             type: "savedSearch"
+ *         },
+ *         trigger: "match",
+ *         severity: "low"
  *     }
  */
 export interface CreateMonitorBody {
@@ -16,7 +18,28 @@ export interface CreateMonitorBody {
     name: string;
     /** Optional free-form description. */
     description?: string;
-    /** The monitor's alert. Exactly one. */
-    alerts: LatitudeApi.CreateMonitorAlertBody[];
-    target?: LatitudeApi.MonitorTarget;
+    target: LatitudeApi.MonitorTarget;
+    /** When the monitor opens incidents: `match`, `threshold`, or `escalating`. */
+    trigger: CreateMonitorBody.Trigger;
+    metric?: LatitudeApi.MonitorMetric;
+    condition?: LatitudeApi.AlertCondition;
+    /** Severity assigned to incidents opened by this monitor. */
+    severity: CreateMonitorBody.Severity;
+}
+
+export namespace CreateMonitorBody {
+    /** When the monitor opens incidents: `match`, `threshold`, or `escalating`. */
+    export const Trigger = {
+        Match: "match",
+        Threshold: "threshold",
+        Escalating: "escalating",
+    } as const;
+    export type Trigger = (typeof Trigger)[keyof typeof Trigger];
+    /** Severity assigned to incidents opened by this monitor. */
+    export const Severity = {
+        Low: "low",
+        Medium: "medium",
+        High: "high",
+    } as const;
+    export type Severity = (typeof Severity)[keyof typeof Severity];
 }

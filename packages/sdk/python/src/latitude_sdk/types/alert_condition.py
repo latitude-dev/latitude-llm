@@ -2,12 +2,7 @@
 
 import typing
 
-from .alert_condition_kind import AlertConditionKind
-from .alert_condition_one import AlertConditionOne
 from .alert_condition_sensitivity import AlertConditionSensitivity
-from .alert_condition_three import AlertConditionThree
 from .alert_condition_zero import AlertConditionZero
 
-AlertCondition = typing.Union[
-    AlertConditionZero, AlertConditionOne, AlertConditionSensitivity, AlertConditionThree, AlertConditionKind
-]
+AlertCondition = typing.Union[AlertConditionZero, AlertConditionSensitivity]

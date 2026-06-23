@@ -1,8 +1,12 @@
 import type { SavedSearchNotFoundError, SavedSearchRepository } from "@domain/saved-searches"
 import {
+  type AlertSeverity,
   generateId,
   generateSlug,
+  type MonitorConfig,
   MonitorId,
+  type MonitorTargetType,
+  type MonitorTrigger,
   type OrganizationId,
   type ProjectId,
   type RepositoryError,
@@ -11,19 +15,21 @@ import {
 } from "@domain/shared"
 import { Effect } from "effect"
 import type { Monitor, MonitorTarget } from "../entities/monitor.ts"
-import type { AlertConditionMismatchError } from "../errors.ts"
 import { MonitorRepository } from "../ports/monitor-repository.ts"
 import { assertMonitorableSavedSearch } from "./assert-monitorable-saved-search.ts"
-import { buildMonitorAlert, type MonitorAlertInput } from "./create-monitor-alert.ts"
 
 const NAME_MAX_LENGTH = 128
 
-const targetKindMatchesQueryPlan = (target: MonitorTarget): boolean => {
-  if (target.kind === "tool") return target.stream === "spans"
-  if (target.kind === "user") return target.stream === "traces"
-  if (target.kind === "session") return target.stream === "sessions"
-  if (target.kind === "savedSearch") return target.savedSearchId !== null
-  return false
+interface CreateMonitorRuleInput {
+  readonly trigger: MonitorTrigger
+  readonly config: MonitorConfig
+  readonly severity: AlertSeverity
+}
+
+interface CreateMonitorTargetInput {
+  readonly type: MonitorTargetType
+  readonly id: string | null
+  readonly filterSet?: MonitorTarget["filterSet"]
 }
 
 export interface CreateMonitorInput {
@@ -31,39 +37,63 @@ export interface CreateMonitorInput {
   readonly projectId: ProjectId
   readonly name: string
   readonly description?: string
-  /** At least one; each must be a user-creatable kind (see `buildMonitorAlert`). */
-  readonly alerts: readonly MonitorAlertInput[]
-  /**
-   * The unified query-time target for `event.*`/`metric.*` alerts (tool/user/raw-stream
-   * monitors). Required when the alerts are unified kinds; omitted for legacy saved-search
-   * monitors (which carry their target on the alert source).
-   */
-  readonly target?: MonitorTarget
+  readonly target: CreateMonitorTargetInput
+  readonly rule: CreateMonitorRuleInput
 }
 
-export type CreateMonitorError =
-  | RepositoryError
-  | ValidationError
-  | AlertConditionMismatchError
-  | SavedSearchNotFoundError
+export type CreateMonitorError = RepositoryError | ValidationError | SavedSearchNotFoundError
 
-/**
- * Creates a non-system monitor with its alerts, atomically. The monitor's
- * `slug` is derived from `name` (unique per project). Rejects an empty alert
- * list; every alert is validated via `buildMonitorAlert` (user-creatable kinds
- * only). `system` is fixed to `false` — the input has no `system` field, so a
- * system monitor can't be created here.
- */
+const validateRule = (rule: CreateMonitorRuleInput): Effect.Effect<void, ValidationError> => {
+  if (rule.trigger === "match" && rule.config.condition !== undefined) {
+    return Effect.fail(
+      new ValidationError({ field: "rule.condition", message: "Match monitors cannot define a condition" }),
+    )
+  }
+  if (rule.trigger !== "match" && rule.config.condition?.trigger !== rule.trigger) {
+    return Effect.fail(
+      new ValidationError({ field: "rule.condition", message: "Condition trigger must match monitor trigger" }),
+    )
+  }
+  if (rule.trigger === "escalating" && (rule.config.metric?.kind ?? "count") !== "count") {
+    return Effect.fail(
+      new ValidationError({ field: "rule.metric", message: "Escalating monitors only support count metrics" }),
+    )
+  }
+  if (rule.config.condition?.trigger === "escalating" && rule.config.condition.metric.kind !== "count") {
+    return Effect.fail(
+      new ValidationError({
+        field: "rule.condition.metric",
+        message: "Escalating monitors only support count metrics",
+      }),
+    )
+  }
+  if (
+    rule.config.condition?.trigger === "escalating" &&
+    rule.config.condition.threshold !== undefined &&
+    rule.config.condition.threshold.mode !== "expected"
+  ) {
+    return Effect.fail(
+      new ValidationError({
+        field: "rule.condition.threshold",
+        message: "Escalating monitors only support expected thresholds",
+      }),
+    )
+  }
+  return Effect.void
+}
+
 export const createMonitorUseCase = (
   input: CreateMonitorInput,
 ): Effect.Effect<Monitor, CreateMonitorError, SqlClient | MonitorRepository | SavedSearchRepository> =>
   Effect.gen(function* () {
     const trimmedName = input.name.trim()
     if (trimmedName.length < 1 || trimmedName.length > NAME_MAX_LENGTH) {
-      return yield* new ValidationError({ field: "name", message: `Name must be 1–${NAME_MAX_LENGTH} characters` })
+      return yield* new ValidationError({ field: "name", message: `Name must be 1-${NAME_MAX_LENGTH} characters` })
     }
-    if (input.alerts.length === 0) {
-      return yield* new ValidationError({ field: "alerts", message: "A monitor must have at least one alert" })
+
+    yield* validateRule(input.rule)
+    if (input.target.type === "savedSearch" && input.target.id !== null) {
+      yield* assertMonitorableSavedSearch(input.target.id)
     }
 
     const sqlClient = yield* SqlClient
@@ -72,45 +102,6 @@ export const createMonitorUseCase = (
         const repository = yield* MonitorRepository
         const now = new Date()
         const monitorId = MonitorId(generateId())
-
-        const alerts = yield* Effect.forEach(input.alerts, (alertInput) =>
-          buildMonitorAlert(alertInput, monitorId, now),
-        )
-
-        // Source-vs-target split. A monitor is homogeneous: all unified (sourceless,
-        // target on the monitor) or all legacy (saved-search source, no target). Reject
-        // a mix outright, then require/forbid the target accordingly.
-        const sourcelessCount = alerts.filter((alert) => alert.source === null).length
-        if (sourcelessCount > 0 && sourcelessCount !== alerts.length) {
-          return yield* new ValidationError({
-            field: "alerts",
-            message: "A monitor cannot mix unified and saved-search alerts",
-          })
-        }
-        const unified = sourcelessCount > 0
-        if (unified && input.target == null) {
-          return yield* new ValidationError({ field: "target", message: "Unified alerts require a monitor target" })
-        }
-        if (!unified && input.target != null) {
-          return yield* new ValidationError({ field: "target", message: "A target is only valid for unified alerts" })
-        }
-        if (input.target && !targetKindMatchesQueryPlan(input.target)) {
-          return yield* new ValidationError({
-            field: "target",
-            message: "Monitor target kind does not match its query plan",
-          })
-        }
-
-        // A search with a semantic part has no exact match rule to count against.
-        const watchedSearchIds = [
-          ...new Set(
-            alerts.flatMap((alert) =>
-              alert.source?.type === "savedSearch" && alert.source.id ? [alert.source.id] : [],
-            ),
-          ),
-        ]
-        yield* Effect.forEach(watchedSearchIds, assertMonitorableSavedSearch, { discard: true })
-
         const slug = yield* generateSlug({
           name: trimmedName,
           count: (candidate) =>
@@ -129,8 +120,17 @@ export const createMonitorUseCase = (
           name: trimmedName,
           description: input.description?.trim() ?? "",
           system: false,
-          alerts,
-          target: input.target ?? null,
+          target: {
+            type: input.target.type,
+            id: input.target.id,
+            ...(input.target.filterSet !== undefined ? { filterSet: input.target.filterSet } : {}),
+            kind: input.target.type,
+            stream: input.target.type === "tool" ? "spans" : input.target.type === "session" ? "sessions" : "traces",
+            query: null,
+            savedSearchId: input.target.type === "savedSearch" ? input.target.id : null,
+            metric: input.rule.config.metric ?? { kind: "count" },
+          },
+          rule: input.rule,
           mutedAt: null,
           deletedAt: null,
           createdAt: now,

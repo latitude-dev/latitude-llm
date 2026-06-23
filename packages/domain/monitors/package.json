@@ -17,11 +17,10 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
-    "@domain/alerts": "workspace:*",
+    "@domain/incidents": "workspace:*",
     "@domain/events": "workspace:*",
     "@domain/signals": "workspace:*",
     "@domain/notifications": "workspace:*",
-    "@domain/queue": "workspace:*",
     "@domain/saved-searches": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",

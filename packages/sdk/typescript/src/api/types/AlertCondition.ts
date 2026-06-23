@@ -3,35 +3,21 @@
 import type * as LatitudeApi from "../index.js";
 
 /**
- * The alert's configuration when the incident opened, or `null` for kinds with no parameters.
+ * The monitor rule configuration when the incident opened, or `null` for signal incidents and match monitors.
  */
 export type AlertCondition =
     | {
-          kind: "savedSearch.threshold";
-          threshold: LatitudeApi.AlertCountThreshold;
+          trigger: "threshold";
+          metric: LatitudeApi.MonitorMetric;
+          threshold: LatitudeApi.AlertMetricThreshold;
+          direction?: ("above" | "below") | undefined;
       }
     | {
-          kind: "savedSearch.escalating";
-          threshold: LatitudeApi.AlertCountThreshold;
-          window: {
-              minutes: number;
-          };
-      }
-    | {
-          kind: "issue.escalating";
+          trigger: "escalating";
+          metric: LatitudeApi.MonitorMetric;
+          threshold?: LatitudeApi.AlertMetricThreshold | undefined;
+          direction?: ("above" | "below") | undefined;
           sensitivity?: number | undefined;
-      }
-    | {
-          kind: "metric.threshold";
-          metric: LatitudeApi.MonitorMetric;
-          threshold: LatitudeApi.AlertMetricThreshold;
-          direction?: ("above" | "below") | undefined;
-      }
-    | {
-          kind: "metric.escalating";
-          metric: LatitudeApi.MonitorMetric;
-          threshold: LatitudeApi.AlertMetricThreshold;
-          direction?: ("above" | "below") | undefined;
           window: {
               minutes: number;
           };

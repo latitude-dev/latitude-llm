@@ -248,7 +248,6 @@ export function SignalsView({
             emptyLabel={metrics ? "-" : ""}
             showLabels={false}
             states={issue.states}
-            resolvedAt={issue.resolvedAt}
             escalationOccurrenceThreshold={issue.escalationOccurrenceThreshold}
           />
         )
@@ -319,11 +318,6 @@ export function SignalsView({
           isLoading={isLoading}
           columns={columns}
           getRowKey={(issue) => issue.id}
-          getRowClassName={(issue, context) =>
-            issue.states.includes("regressed") && !context.isActive
-              ? "bg-rose-500/7 hover:bg-rose-500/10 dark:bg-rose-500/15 dark:hover:bg-rose-500/19"
-              : undefined
-          }
           selection={selection}
           getRowGroup={(issue) => issue.priority ?? "none"}
           renderGroupHeader={(groupKey) => (

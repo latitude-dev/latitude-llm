@@ -1,77 +1,46 @@
 import {
+  type AlertIncidentCondition,
   alertIncidentConditionSchema,
-  alertIncidentKindSchema,
-  alertIncidentSourceTypeSchema,
   alertSeveritySchema,
   cuidSchema,
+  type FilterSet,
   filterSetSchema,
-  monitorAlertIdSchema,
+  type MonitorConfig,
+  monitorConfigSchema,
   monitorIdSchema,
   monitorMetricSchema,
   monitorStreamSchema,
+  monitorTargetTypeSchema,
+  monitorTriggerSchema,
   organizationIdSchema,
   projectIdSchema,
 } from "@domain/shared"
 import { z } from "zod"
 
-/**
- * What a query-time monitor watches: a stream + predicate + the metric to measure
- * (the unified `event.*`/`metric.*` model). `savedSearchId` set ⇒ the predicate
- * resolves live from that saved search (inline `filterSet`/`query` left null);
- * otherwise the inline `filterSet`/`query` apply. A monitor's `target` is `null`
- * for legacy source-based alerts (target on the alert) and system issue monitors.
- */
-export const MONITOR_TARGET_KINDS = ["signal", "tool", "user", "session", "savedSearch"] as const
-export const monitorTargetKindSchema = z.enum(MONITOR_TARGET_KINDS)
-export type MonitorTargetKind = z.infer<typeof monitorTargetKindSchema>
-
 export const monitorTargetSchema = z.object({
-  kind: monitorTargetKindSchema,
-  stream: monitorStreamSchema,
-  filterSet: filterSetSchema.nullable(),
-  query: z.string().nullable(),
-  savedSearchId: cuidSchema.nullable(),
-  metric: monitorMetricSchema,
+  type: monitorTargetTypeSchema,
+  id: cuidSchema.nullable(),
+  filterSet: filterSetSchema.nullable().optional(),
+  kind: monitorTargetTypeSchema.default("user"),
+  stream: monitorStreamSchema.default("traces"),
+  query: z.string().nullable().default(null),
+  savedSearchId: cuidSchema.nullable().default(null),
+  metric: monitorMetricSchema.default({ kind: "count" }),
 })
 export type MonitorTarget = z.infer<typeof monitorTargetSchema>
 
-/**
- * Decode a target's product `kind` from its persisted query-plan fields — the
- * inverse of the create-time kind→query-plan encoding that `createMonitor`
- * validates. `savedSearchId`/`stream` uniquely identify the kind, so `kind` is
- * recoverable rather than stored. This is the single source of truth for
- * classifying a persisted target; repositories must not re-derive it independently.
- */
-export const monitorTargetKind = (target: Pick<MonitorTarget, "stream" | "savedSearchId">): MonitorTargetKind => {
-  if (target.savedSearchId) return "savedSearch"
-  if (target.stream === "spans") return "tool"
-  if (target.stream === "sessions") return "session"
-  return "user"
-}
-
-/**
- * A `(kind, source, condition, severity)` firing rule owned by a monitor.
- * `source.id = null` means "all entities of `source.type`". `source` itself is
- * `null` for UNIFIED kinds (`event.*`/`metric.*`) — they watch the monitor's
- * `target`, not a `(sourceType, sourceId)`. `condition` is `null` for kinds with
- * no parameters (`issue.new`, `issue.regressed`, `savedSearch.match`,
- * `event.matched`); otherwise the kind-specific `AlertIncidentCondition`.
- */
-export const monitorAlertSchema = z.object({
-  id: monitorAlertIdSchema,
-  monitorId: monitorIdSchema,
-  kind: alertIncidentKindSchema,
-  source: z
-    .object({
-      type: alertIncidentSourceTypeSchema,
-      id: cuidSchema.nullable(),
-    })
-    .nullable(),
-  condition: alertIncidentConditionSchema.nullable(),
+export const monitorRuleSchema = z.object({
+  trigger: monitorTriggerSchema,
+  config: monitorConfigSchema,
   severity: alertSeveritySchema,
-  createdAt: z.date(),
 })
-export type MonitorAlert = z.infer<typeof monitorAlertSchema>
+export type MonitorRule = z.infer<typeof monitorRuleSchema>
+
+export const monitorConfigCondition = (config: MonitorConfig): AlertIncidentCondition | null =>
+  alertIncidentConditionSchema.nullable().parse(config.condition ?? null)
+
+export const monitorConfigFilterSet = (config: MonitorConfig): FilterSet | null =>
+  filterSetSchema.nullable().parse(config.filterSet ?? null)
 
 /**
  * Owns one or more alerts, scoped to a project. `mutedAt` is the only seam
@@ -81,8 +50,7 @@ export type MonitorAlert = z.infer<typeof monitorAlertSchema>
  *
  * `system` monitors are auto-provisioned, not deletable, and structurally
  * locked: name/slug and the alert set (kind/source/severity) are fixed, but
- * `mutedAt` and the predefined alerts' `condition` values stay editable (e.g.
- * the `issue.escalating` alert's `sensitivity`).
+ * `mutedAt` and the predefined alerts' `condition` values stay editable.
  */
 export const monitorSchema = z.object({
   id: monitorIdSchema,
@@ -93,9 +61,8 @@ export const monitorSchema = z.object({
   name: z.string().min(1).max(128),
   description: z.string(),
   system: z.boolean(),
-  alerts: z.array(monitorAlertSchema).readonly(),
-  /** The unified query-time target; `null` for legacy source-based + system issue monitors. */
-  target: monitorTargetSchema.nullable(),
+  target: monitorTargetSchema,
+  rule: monitorRuleSchema,
   mutedAt: z.date().nullable(),
   deletedAt: z.date().nullable(),
   createdAt: z.date(),

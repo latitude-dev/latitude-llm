@@ -48,6 +48,9 @@ export function SaveSearchModal(props: SaveSearchModalProps) {
 }
 
 const MONITOR_ERROR_PREFIX = "monitor."
+type SavedSearchAlertKind = "savedSearch.match" | "savedSearch.threshold" | "savedSearch.escalating"
+
+const isSavedSearchAlertKind = (kind: string): kind is SavedSearchAlertKind => kind.startsWith("savedSearch.")
 
 function monitorAlertErrorsFrom(error: unknown): AlertFieldErrors {
   const fieldErrors = extractFieldErrors(error)
@@ -65,6 +68,8 @@ function CreateModal({ open, onClose, projectId, projectSlug, query, filterSet, 
   const [withMonitor, setWithMonitor] = useState(false)
   const [alertDraft, setAlertDraft] = useState<AlertDraft>(() =>
     targetAlertDraft({
+      type: "savedSearch",
+      id: "pending",
       kind: "savedSearch",
       stream: "sessions",
       filterSet,
@@ -91,7 +96,7 @@ function CreateModal({ open, onClose, projectId, projectSlug, query, filterSet, 
             ...(createMonitor
               ? {
                   monitor: {
-                    kind: alertDraft.kind,
+                    kind: isSavedSearchAlertKind(alertDraft.kind) ? alertDraft.kind : "savedSearch.match",
                     condition: draftToCondition(alertDraft),
                     severity: alertDraft.severity,
                     metric: alertDraft.metric,

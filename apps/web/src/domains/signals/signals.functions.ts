@@ -111,9 +111,7 @@ const toSignalRecord = (issue: SignalListItem) => ({
   priority: issue.priority,
   createdAt: issue.createdAt.toISOString(),
   updatedAt: issue.updatedAt.toISOString(),
-  escalatedAt: issue.escalatedAt?.toISOString() ?? null,
-  resolvedAt: issue.resolvedAt?.toISOString() ?? null,
-  ignoredAt: issue.ignoredAt?.toISOString() ?? null,
+  mutedAt: issue.mutedAt?.toISOString() ?? null,
   firstSeenAt: issue.firstSeenAt.toISOString(),
   lastSeenAt: issue.lastSeenAt.toISOString(),
   occurrences: issue.occurrences,
@@ -184,9 +182,7 @@ const toSignalSummaryRecord = (issue: Signal) => ({
   source: issue.source,
   createdAt: issue.createdAt.toISOString(),
   updatedAt: issue.updatedAt.toISOString(),
-  escalatedAt: issue.escalatedAt?.toISOString() ?? null,
-  resolvedAt: issue.resolvedAt?.toISOString() ?? null,
-  ignoredAt: issue.ignoredAt?.toISOString() ?? null,
+  mutedAt: issue.mutedAt?.toISOString() ?? null,
 })
 
 export type SignalSummaryRecord = ReturnType<typeof toSignalSummaryRecord>
@@ -287,9 +283,7 @@ const toSignalDetailRecord = (input: {
   states: input.states,
   createdAt: input.issue.createdAt.toISOString(),
   updatedAt: input.issue.updatedAt.toISOString(),
-  escalatedAt: input.issue.escalatedAt?.toISOString() ?? null,
-  resolvedAt: input.issue.resolvedAt?.toISOString() ?? null,
-  ignoredAt: input.issue.ignoredAt?.toISOString() ?? null,
+  mutedAt: input.issue.mutedAt?.toISOString() ?? null,
   firstSeenAt: input.firstSeenAt.toISOString(),
   lastSeenAt: input.lastSeenAt.toISOString(),
   totalOccurrences: input.totalOccurrences,
@@ -317,8 +311,7 @@ const toSignalLifecycleCommandRecord = (result: ApplySignalLifecycleCommandResul
   keepMonitoring: result.keepMonitoring,
   items: result.items.map((item) => ({
     signalId: item.signalId,
-    resolvedAt: item.resolvedAt?.toISOString() ?? null,
-    ignoredAt: item.ignoredAt?.toISOString() ?? null,
+    mutedAt: item.mutedAt?.toISOString() ?? null,
     updatedAt: item.updatedAt.toISOString(),
     changed: item.changed,
   })),
@@ -535,7 +528,7 @@ const toOrgSignalSearchRecord = (item: OrgSignalSearchItem): OrgSignalSearchReco
  * analytics pipeline), this is a lightweight search across every project in the caller's
  * organization. The lexical tier runs always; the semantic tier runs only when `semantic` is set
  * (the debounced call), embedding the query first. Each result carries its owning project's
- * slug/name and derived lifecycle states. Resolved/ignored issues are excluded.
+ * slug/name and derived lifecycle states. Muted issues are excluded.
  */
 export const searchOrgSignals = createServerFn({ method: "GET" })
   .inputValidator(
@@ -631,7 +624,6 @@ export const getSignalLifecycleSummary = createServerFn({ method: "GET" })
         const states = deriveSignalLifecycleStates({
           issue,
           isEscalating: issue.lifecycle.isEscalating,
-          isRegressed: issue.lifecycle.isRegressed,
           now,
         })
         return { id: issue.id, name: issue.name, states: [...states] }
@@ -746,7 +738,6 @@ export const getSignalDetail = createServerFn({ method: "GET" })
           states: deriveSignalLifecycleStates({
             issue,
             isEscalating: issue.lifecycle.isEscalating,
-            isRegressed: issue.lifecycle.isRegressed,
             now,
           }),
           firstSeenAt: occurrence?.firstSeenAt ?? issue.createdAt,
@@ -1210,7 +1201,7 @@ export const applyBulkSignalLifecycleAction = createServerFn({ method: "POST" })
     if (signalIds.length === 0) {
       return {
         command: data.command,
-        keepMonitoring: null,
+        keepMonitoring: true,
         items: [],
       }
     }

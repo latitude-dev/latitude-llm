@@ -35,15 +35,13 @@ export const signals = latitudeSchema.table(
       )
       .notNull(),
     clusteredAt: tzTimestamp("clustered_at").notNull(), // last time the centroid/cluster state was refreshed; used as the authoritative decay anchor (not updatedAt)
-    escalatedAt: tzTimestamp("escalated_at"), // DORMANT: not maintained by the system. "Currently escalating" is derived from open `alert_incidents` rows. Kept for backward compatibility; always null in practice.
-    resolvedAt: tzTimestamp("resolved_at"), // issue resolved manually
-    ignoredAt: tzTimestamp("ignored_at"), // issue ignored manually
+    mutedAt: tzTimestamp("muted_at"),
     ...timestamps(),
   },
   (t) => [
     organizationRLSPolicy("signals"),
     // project-scoped lifecycle filtering and management actions.
-    index("signals_project_lifecycle_idx").on(t.organizationId, t.projectId, t.ignoredAt, t.resolvedAt, t.createdAt),
+    index("signals_project_lifecycle_idx").on(t.organizationId, t.projectId, t.mutedAt, t.createdAt),
     index("signals_search_document_idx").using("gin", t.searchDocument),
     // Signals are not soft-deleted, so a plain unique constraint is sufficient
     // (no need for `nullsNotDistinct` over a deletedAt column).

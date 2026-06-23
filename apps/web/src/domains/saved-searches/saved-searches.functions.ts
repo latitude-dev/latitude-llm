@@ -16,7 +16,6 @@ import {
 } from "@domain/saved-searches"
 import {
   alertIncidentConditionSchema,
-  alertIncidentKindSchema,
   alertSeveritySchema,
   filterSetSchema,
   monitorMetricSchema,
@@ -146,13 +145,14 @@ export const getSavedSearchBySlugFn = createServerFn({ method: "GET" })
   })
 
 const MONITOR_NAME_MAX_LENGTH = 128
+const savedSearchMonitorKindSchema = z.enum(["savedSearch.match", "savedSearch.threshold", "savedSearch.escalating"])
 
 /**
  * Optional companion monitor created alongside a new saved search. It stores the
  * saved-search id on the monitor target so edits keep flowing into the metric monitor.
  */
 const savedSearchMonitorSchema = z.object({
-  kind: alertIncidentKindSchema,
+  kind: savedSearchMonitorKindSchema,
   condition: alertIncidentConditionSchema.nullable(),
   severity: alertSeveritySchema,
   metric: monitorMetricSchema.optional(),
@@ -198,31 +198,28 @@ export const createSavedSearchFn = createServerFn({ method: "POST" })
             return yield* sqlClient.transaction(
               Effect.gen(function* () {
                 const search = yield* createSearch
-                const unified = monitorInput.kind.startsWith("event.") || monitorInput.kind.startsWith("metric.")
                 yield* createMonitorUseCase({
                   organizationId: orgId,
                   projectId: ProjectId(data.projectId),
                   name: search.name.slice(0, MONITOR_NAME_MAX_LENGTH),
-                  alerts: [
-                    {
-                      kind: monitorInput.kind,
-                      source: unified ? null : { type: "savedSearch", id: search.id },
-                      condition: monitorInput.condition,
-                      severity: monitorInput.severity,
+                  target: {
+                    type: "savedSearch",
+                    id: search.id,
+                    filterSet: search.filterSet,
+                  },
+                  rule: {
+                    trigger: monitorInput.kind.includes("threshold")
+                      ? "threshold"
+                      : monitorInput.kind.includes("escalating")
+                        ? "escalating"
+                        : "match",
+                    config: {
+                      filterSet: search.filterSet,
+                      metric: monitorInput.metric ?? { kind: "count" },
+                      ...(monitorInput.condition ? { condition: monitorInput.condition as never } : {}),
                     },
-                  ],
-                  ...(unified
-                    ? {
-                        target: {
-                          kind: "savedSearch",
-                          stream: "sessions",
-                          filterSet: search.filterSet,
-                          query: search.query,
-                          savedSearchId: search.id,
-                          metric: monitorInput.metric ?? { kind: "count" },
-                        },
-                      }
-                    : {}),
+                    severity: monitorInput.severity,
+                  },
                 })
                 return search
               }),

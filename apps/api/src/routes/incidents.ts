@@ -1,9 +1,9 @@
-import { AlertIncidentRepository, resolveAlertIncidentUseCase } from "@domain/alerts"
+import { IncidentRepository, resolveIncidentUseCase } from "@domain/incidents"
 import { ProjectRepository } from "@domain/projects"
 import { AlertIncidentId, cuidSchema, NotFoundError, OrganizationId, ProjectId } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import {
-  AlertIncidentRepositoryLive,
+  IncidentRepositoryLive,
   OutboxEventWriterLive,
   ProjectRepositoryLive,
   withPostgres,
@@ -13,7 +13,6 @@ import { Effect, Layer } from "effect"
 import { defineApiEndpoint } from "../mcp/index.ts"
 import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
 import {
-  INCIDENT_KINDS,
   INCIDENT_SEVERITIES,
   INCIDENT_SOURCE_TYPES,
   IncidentSchema,
@@ -53,22 +52,11 @@ const ListIncidentsQuerySchema = z.object({
       "Lower bound (inclusive) of the time window. Returns incidents whose lifetime overlaps `[fromIso, toIso]`. Defaults to 7 days before `toIso`.",
     ),
   toIso: z.iso.datetime().optional().describe("Upper bound (inclusive) of the time window. Defaults to now."),
-  // Hono's query parser returns a string when a key appears once and an array
-  // when it's repeated; preprocess so a lone `?sourceTypes=issue` still parses
-  // as a single-element array against the Zod schema. Applied to every list-
-  // valued query param below.
-  sourceTypes: z
-    .preprocess(
-      (val) => (val === undefined || Array.isArray(val) ? val : [val]),
-      z.array(z.enum(INCIDENT_SOURCE_TYPES)),
-    )
+  source_type: z
+    .enum(INCIDENT_SOURCE_TYPES)
     .optional()
-    .describe("Restrict to incidents whose source type matches any value in this list."),
-  sourceId: cuidSchema.optional().describe("Restrict to incidents tied to a single source entity (e.g. one issue id)."),
-  kinds: z
-    .preprocess((val) => (val === undefined || Array.isArray(val) ? val : [val]), z.array(z.enum(INCIDENT_KINDS)))
-    .optional()
-    .describe("Restrict to incidents whose kind matches any value in this list."),
+    .describe("Restrict to incidents triggered by this source type: `monitor` or `signal`."),
+  source_id: cuidSchema.optional().describe("Restrict to incidents tied to one source entity id."),
   severities: z
     .preprocess((val) => (val === undefined || Array.isArray(val) ? val : [val]), z.array(z.enum(INCIDENT_SEVERITIES)))
     .optional()
@@ -114,20 +102,19 @@ const listIncidents = incidentEndpoint({
         const projectRepo = yield* ProjectRepository
         const project = yield* projectRepo.findBySlug(projectSlug)
 
-        const incidentRepo = yield* AlertIncidentRepository
+        const incidentRepo = yield* IncidentRepository
         return yield* incidentRepo.listByProjectId({
           organizationId: OrganizationId(organizationId as string),
           projectId: ProjectId(project.id as string),
           from,
           to,
-          ...(query.sourceTypes && query.sourceTypes.length > 0 ? { sourceTypes: query.sourceTypes } : {}),
-          ...(query.sourceId ? { sourceId: query.sourceId } : {}),
-          ...(query.kinds && query.kinds.length > 0 ? { kinds: query.kinds } : {}),
+          ...(query.source_type ? { sourceTypes: [query.source_type] } : {}),
+          ...(query.source_id ? { sourceId: query.source_id } : {}),
           ...(query.severities && query.severities.length > 0 ? { severities: query.severities } : {}),
         })
       }).pipe(
         withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, AlertIncidentRepositoryLive),
+          Layer.mergeAll(ProjectRepositoryLive, IncidentRepositoryLive),
           c.var.postgresClient,
           organizationId,
         ),
@@ -168,7 +155,7 @@ const resolveIncident = incidentEndpoint({
 
         // Re-tag lookup misses as `Incident` and 404 incidents outside the
         // project in the path, so callers can't probe other projects' ids.
-        const incidentRepo = yield* AlertIncidentRepository
+        const incidentRepo = yield* IncidentRepository
         const current = yield* incidentRepo
           .findById(AlertIncidentId(incidentId))
           .pipe(
@@ -180,10 +167,10 @@ const resolveIncident = incidentEndpoint({
           return yield* new NotFoundError({ entity: "Incident", id: incidentId })
         }
 
-        return yield* resolveAlertIncidentUseCase({ id: current.id, endedAt: new Date() })
+        return yield* resolveIncidentUseCase({ id: current.id, endedAt: new Date() })
       }).pipe(
         withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, AlertIncidentRepositoryLive, OutboxEventWriterLive),
+          Layer.mergeAll(ProjectRepositoryLive, IncidentRepositoryLive, OutboxEventWriterLive),
           c.var.postgresClient,
           organizationId,
         ),

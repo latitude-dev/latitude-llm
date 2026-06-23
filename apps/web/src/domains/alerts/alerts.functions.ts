@@ -1,19 +1,18 @@
-import {
-  ALERT_INCIDENT_SOURCE_TYPES,
-  type AlertIncident,
-  type AlertIncidentKind,
-  AlertIncidentRepository,
-  type AlertSeverity,
-} from "@domain/alerts"
-import { formatHumanReadableAlert } from "@domain/monitors"
+import { type AlertSeverity, type Incident, IncidentRepository } from "@domain/incidents"
+import { formatHumanReadableRule } from "@domain/monitors"
 import { type IncidentMonitorInfo, IncidentMonitorReader } from "@domain/notifications"
-import { SavedSearchRepository } from "@domain/saved-searches"
-import { OrganizationId, ProjectId, SavedSearchId, SignalId } from "@domain/shared"
+import {
+  type IncidentNotificationKey,
+  type IncidentSourceType,
+  incidentSourceTypeSchema,
+  OrganizationId,
+  ProjectId,
+  SignalId,
+} from "@domain/shared"
 import { SignalRepository, type SignalWithLifecycle } from "@domain/signals"
 import {
-  AlertIncidentRepositoryLive,
   IncidentMonitorReaderLive,
-  SavedSearchRepositoryLive,
+  IncidentRepositoryLive,
   SignalRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
@@ -28,23 +27,22 @@ const listProjectAlertIncidentsInRangeInputSchema = z.object({
   projectId: z.string(),
   fromIso: z.iso.datetime(),
   toIso: z.iso.datetime(),
-  sourceType: z.enum(ALERT_INCIDENT_SOURCE_TYPES).optional(),
+  sourceType: incidentSourceTypeSchema.optional(),
   sourceId: z.string().min(1).optional(),
 })
 
 export interface AlertIncidentRecord {
   readonly id: string
   readonly projectId: string
-  readonly kind: AlertIncidentKind
+  readonly kind: IncidentNotificationKey
   readonly severity: AlertSeverity
-  readonly sourceType: AlertIncident["sourceType"]
-  /** `null` for unified (target-on-monitor) incidents — the target lives on the monitor. */
+  readonly sourceType: IncidentSourceType
   readonly sourceId: string | null
   readonly startedAt: string
   readonly endedAt: string | null
   /** Resolved name of the issue tied to the incident; `null` if not found (e.g., deleted). */
   readonly signalName: string | null
-  /** Resolved name of the saved search tied to the incident (the source); `null` on issue rows or when deleted. */
+  /** Resolved name of the saved search tied to the monitor, when available. */
   readonly savedSearchName: string | null
   /** Owning monitor name + slug for the attribution line + deep link; `null` on legacy or issue rows. */
   readonly monitorName: string | null
@@ -53,28 +51,43 @@ export interface AlertIncidentRecord {
   readonly conditionSummary: string | null
 }
 
+const notificationKeyForIncident = (incident: Incident): IncidentNotificationKey => {
+  if (incident.sourceType === "signal") return "signal.escalating"
+  return incident.condition?.trigger === "escalating"
+    ? "monitor.escalating"
+    : incident.condition?.trigger === "threshold"
+      ? "monitor.threshold"
+      : "monitor.match"
+}
+
 const toRecord = (
-  incident: AlertIncident,
+  incident: Incident,
   issue: SignalWithLifecycle | undefined,
   savedSearchName: string | undefined,
   monitor: IncidentMonitorInfo | undefined,
-): AlertIncidentRecord => ({
-  id: incident.id,
-  projectId: incident.projectId,
-  kind: incident.kind,
-  severity: incident.severity,
-  sourceType: incident.sourceType,
-  sourceId: incident.sourceId,
-  startedAt: incident.startedAt.toISOString(),
-  endedAt: incident.endedAt?.toISOString() ?? null,
-  signalName: issue?.name ?? null,
-  savedSearchName: savedSearchName ?? null,
-  monitorName: monitor?.name ?? null,
-  monitorSlug: monitor?.slug ?? null,
-  conditionSummary: incident.condition
-    ? formatHumanReadableAlert({ kind: incident.kind, condition: incident.condition })
-    : null,
-})
+): AlertIncidentRecord => {
+  const kind = notificationKeyForIncident(incident)
+  return {
+    id: incident.id,
+    projectId: incident.projectId,
+    kind,
+    severity: incident.severity,
+    sourceType: incident.sourceType,
+    sourceId: incident.sourceId,
+    startedAt: incident.startedAt.toISOString(),
+    endedAt: incident.endedAt?.toISOString() ?? null,
+    signalName: issue?.name ?? null,
+    savedSearchName: savedSearchName ?? null,
+    monitorName: monitor?.name ?? null,
+    monitorSlug: monitor?.slug ?? null,
+    conditionSummary: incident.condition
+      ? formatHumanReadableRule({
+          trigger: kind.split(".")[1] as "threshold" | "escalating",
+          condition: incident.condition,
+        })
+      : null,
+  }
+}
 
 /**
  * Returns incidents for the project whose lifetime overlaps `[fromIso, toIso]`,
@@ -94,9 +107,8 @@ export const listProjectAlertIncidentsInRange = createServerFn({
 
     const items = await Effect.runPromise(
       Effect.gen(function* () {
-        const incidentRepo = yield* AlertIncidentRepository
+        const incidentRepo = yield* IncidentRepository
         const signalRepo = yield* SignalRepository
-        const savedSearchRepo = yield* SavedSearchRepository
         const monitorReader = yield* IncidentMonitorReader
 
         const incidents = yield* incidentRepo.listByProjectId({
@@ -109,7 +121,7 @@ export const listProjectAlertIncidentsInRange = createServerFn({
         })
 
         const signalIds = Array.from(
-          new Set(incidents.flatMap((i) => (i.sourceType === "issue" && i.sourceId !== null ? [i.sourceId] : []))),
+          new Set(incidents.flatMap((i) => (i.sourceType === "signal" ? [i.sourceId] : []))),
         ).map(SignalId)
 
         const issues =
@@ -118,48 +130,24 @@ export const listProjectAlertIncidentsInRange = createServerFn({
             : ([] as readonly SignalWithLifecycle[])
         const signalById = new Map(issues.map((issue) => [issue.id, issue] as const))
 
-        // Saved-search names are the source label for `savedSearch.*` rows (mirrors the issue name).
-        const savedSearchIds = Array.from(
-          new Set(
-            incidents.flatMap((i) => (i.sourceType === "savedSearch" && i.sourceId !== null ? [i.sourceId] : [])),
-          ),
-        )
         const savedSearchNameById = new Map<string, string>()
-        for (const id of savedSearchIds) {
-          const found = yield* savedSearchRepo.findById(SavedSearchId(id)).pipe(
-            Effect.map((s) => s.name),
-            Effect.catchTag("SavedSearchNotFoundError", () => Effect.succeed(null)),
-          )
-          if (found !== null) savedSearchNameById.set(id, found)
-        }
-
-        const monitorAlertIds = Array.from(
-          new Set(incidents.filter((i) => i.monitorAlertId !== null).map((i) => i.monitorAlertId as string)),
-        )
-        const monitorByAlertId = new Map<string, IncidentMonitorInfo>()
-        for (const alertId of monitorAlertIds) {
-          const info = yield* monitorReader.findByAlertId(alertId)
-          if (info) monitorByAlertId.set(alertId, info)
+        const monitorById = new Map<string, IncidentMonitorInfo>()
+        for (const monitorId of new Set(incidents.flatMap((i) => (i.sourceType === "monitor" ? [i.sourceId] : [])))) {
+          const info = yield* monitorReader.findByMonitorId(monitorId)
+          if (info) monitorById.set(monitorId, info)
         }
 
         return incidents.map((incident) =>
           toRecord(
             incident,
-            incident.sourceType === "issue" && incident.sourceId !== null
-              ? signalById.get(SignalId(incident.sourceId))
-              : undefined,
-            incident.sourceId !== null ? savedSearchNameById.get(incident.sourceId) : undefined,
-            incident.monitorAlertId ? monitorByAlertId.get(incident.monitorAlertId) : undefined,
+            incident.sourceType === "signal" ? signalById.get(SignalId(incident.sourceId)) : undefined,
+            savedSearchNameById.get(incident.sourceId),
+            incident.sourceType === "monitor" ? monitorById.get(incident.sourceId) : undefined,
           ),
         )
       }).pipe(
         withPostgres(
-          Layer.mergeAll(
-            AlertIncidentRepositoryLive,
-            SignalRepositoryLive,
-            SavedSearchRepositoryLive,
-            IncidentMonitorReaderLive,
-          ),
+          Layer.mergeAll(IncidentRepositoryLive, SignalRepositoryLive, IncidentMonitorReaderLive),
           pgClient,
           orgId,
         ),

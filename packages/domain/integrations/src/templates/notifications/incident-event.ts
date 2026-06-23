@@ -1,4 +1,4 @@
-import { ALERT_INCIDENT_KIND_LABEL } from "@domain/shared"
+import { INCIDENT_NOTIFICATION_KEY_LABEL } from "@domain/shared"
 import { Effect } from "effect"
 import {
   actionsLink,
@@ -15,9 +15,9 @@ import type { SlackNotificationRenderer } from "./types.ts"
 
 export const incidentEventRenderer: SlackNotificationRenderer<"incident.event"> = (payload, ctx) =>
   Effect.gen(function* () {
-    const name = ALERT_INCIDENT_KIND_LABEL[payload.incidentKind] ?? "Incident"
+    const name = INCIDENT_NOTIFICATION_KEY_LABEL[payload.incidentKind] ?? "Incident"
     const color = severityColor(payload.severity)
-    const isSavedSearch = payload.sourceType === "savedSearch"
+    const isMonitorIncident = payload.sourceType === "monitor"
     const signalUrl = ctx.project
       ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals/${payload.sourceId}`
       : ctx.webAppUrl
@@ -40,13 +40,13 @@ export const incidentEventRenderer: SlackNotificationRenderer<"incident.event"> 
       `${payload.severity} · ${payload.sourceType} · ${projectOrOrgContext(ctx.organization, ctx.project)}${triageContextSuffix({ priority: payload.priority, assigneeName })}`,
     )
 
-    if (isSavedSearch) {
-      const searchRef = sourceName ?? "a saved search"
+    if (isMonitorIncident) {
+      const searchRef = sourceName ?? "a monitored target"
       return {
         text: `${name} in ${ctx.project?.name ?? ctx.organization.name}: ${searchRef}`,
         color,
         blocks: [
-          sectionMarkdown(`A saved search fired an alert: *${searchRef}*.`),
+          sectionMarkdown(`A monitor fired: *${searchRef}*.`),
           ...attribution,
           context,
           actionsLink("View monitor", monitorUrl),

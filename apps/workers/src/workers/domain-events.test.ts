@@ -319,6 +319,31 @@ describe("domain-events dispatcher", () => {
     expect(throttled?.options?.debounceMs).toBeUndefined()
   })
 
+  it("routes SignalCreated to discovery notification requests", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope("SignalCreated", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      signalId: "signal-1",
+      createdAt: "2026-05-07T10:00:00.000Z",
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    expect(published).toHaveLength(1)
+    const job = published[0]
+    expect(job?.queue).toBe("notifications")
+    expect(job?.task).toBe("request-signal-discovered-notifications")
+    expect(job?.payload).toEqual({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      signalId: "signal-1",
+      discoveredAt: "2026-05-07T10:00:00.000Z",
+    })
+    expect(job?.options?.dedupeKey).toBe("notifications:request-signal-discovered:signal-1")
+  })
+
   it("routes IncidentCreated to notifications:request-incident-notifications with stable dedupe key", async () => {
     const { consumer, published } = setupDispatcher()
 
@@ -326,8 +351,8 @@ describe("domain-events dispatcher", () => {
       organizationId: "org-1",
       projectId: "proj-1",
       alertIncidentId: "ai-1",
-      kind: "issue.new",
-      sourceType: "issue",
+      kind: "signal.discovered",
+      sourceType: "signal",
       sourceId: "issue-1",
     })
 
@@ -348,8 +373,8 @@ describe("domain-events dispatcher", () => {
       organizationId: "org-1",
       projectId: "proj-1",
       alertIncidentId: "ai-1",
-      kind: "issue.escalating",
-      sourceType: "issue",
+      kind: "signal.escalating",
+      sourceType: "signal",
       sourceId: "issue-1",
     })
 
@@ -436,8 +461,8 @@ describe("domain-events dispatcher", () => {
       organizationId: "org-1",
       projectId: "proj-1",
       alertIncidentId: "ai-1",
-      kind: "issue.escalating",
-      sourceType: "issue",
+      kind: "signal.escalating",
+      sourceType: "signal",
       sourceId: "issue-1",
       reason: "threshold",
     })
@@ -458,8 +483,8 @@ describe("domain-events dispatcher", () => {
       organizationId: "org-1",
       projectId: "proj-1",
       alertIncidentId: "ai-1",
-      kind: "issue.escalating",
-      sourceType: "issue",
+      kind: "signal.escalating",
+      sourceType: "signal",
       sourceId: "issue-1",
       reason,
     })

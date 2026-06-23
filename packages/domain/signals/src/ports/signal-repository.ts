@@ -9,7 +9,6 @@ import type { Signal } from "../entities/signal.ts"
  */
 export interface SignalLifecycleFlags {
   readonly isEscalating: boolean
-  readonly isRegressed: boolean
 }
 
 /**

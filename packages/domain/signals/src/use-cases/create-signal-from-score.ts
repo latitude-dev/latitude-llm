@@ -109,9 +109,7 @@ const buildNewSignalFromScore = ({
     priority: null,
     centroid,
     clusteredAt: centroid.clusteredAt,
-    escalatedAt: null,
-    resolvedAt: null,
-    ignoredAt: null,
+    mutedAt: null,
     createdAt: assignedAt,
     updatedAt: assignedAt,
   }

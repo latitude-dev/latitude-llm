@@ -1,5 +1,7 @@
 import { type Monitor, MonitorRepository, updateMonitorUseCase } from "@domain/monitors"
 import { createFakeMonitorRepository } from "@domain/monitors/testing"
+import { SavedSearchRepository } from "@domain/saved-searches"
+import { createFakeSavedSearchRepository } from "@domain/saved-searches/testing"
 import { MonitorId, OrganizationId, ProjectId, SqlClient, ValidationError } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
@@ -10,6 +12,15 @@ const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
 const monitorId = MonitorId("m".repeat(24))
 const at = new Date("2026-06-01T10:00:00.000Z")
+const target = {
+  type: "user",
+  id: null,
+  kind: "user",
+  stream: "traces",
+  query: null,
+  savedSearchId: null,
+  metric: { kind: "count" },
+} as const
 
 const makeMonitor = (overrides: Partial<Monitor> = {}): Monitor => ({
   id: monitorId,
@@ -19,8 +30,8 @@ const makeMonitor = (overrides: Partial<Monitor> = {}): Monitor => ({
   name: overrides.name ?? "My monitor",
   description: overrides.description ?? "",
   system: overrides.system ?? false,
-  alerts: [],
-  target: null,
+  target: overrides.target ?? target,
+  rule: overrides.rule ?? { trigger: "match", config: {}, severity: "low" },
   mutedAt: null,
   deletedAt: null,
   createdAt: at,
@@ -30,14 +41,19 @@ const makeMonitor = (overrides: Partial<Monitor> = {}): Monitor => ({
 const provide = (repo: MonitorRepositoryShape) =>
   Layer.mergeAll(
     Layer.succeed(MonitorRepository, MonitorRepository.of(repo)),
+    Layer.succeed(SavedSearchRepository, SavedSearchRepository.of(createFakeSavedSearchRepository().repository)),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
   )
 
-const run = <A, E>(effect: Effect.Effect<A, E, SqlClient | MonitorRepository>, repo: MonitorRepositoryShape) =>
-  Effect.runPromise(effect.pipe(Effect.provide(provide(repo))))
+const run = <A, E>(
+  effect: Effect.Effect<A, E, SqlClient | MonitorRepository | SavedSearchRepository>,
+  repo: MonitorRepositoryShape,
+) => Effect.runPromise(effect.pipe(Effect.provide(provide(repo))))
 
-const runError = <A, E>(effect: Effect.Effect<A, E, SqlClient | MonitorRepository>, repo: MonitorRepositoryShape) =>
-  Effect.runPromise(effect.pipe(Effect.flip, Effect.provide(provide(repo))))
+const runError = <A, E>(
+  effect: Effect.Effect<A, E, SqlClient | MonitorRepository | SavedSearchRepository>,
+  repo: MonitorRepositoryShape,
+) => Effect.runPromise(effect.pipe(Effect.flip, Effect.provide(provide(repo))))
 
 describe("updateMonitorUseCase", () => {
   it("rejects editing a system monitor", async () => {
@@ -72,5 +88,70 @@ describe("updateMonitorUseCase", () => {
     const result = await run(updateMonitorUseCase({ id: monitorId, description: "Watch 5xx" }), repo)
     expect(result.description).toBe("Watch 5xx")
     expect(monitors[0]?.slug).toBe("my-monitor")
+  })
+
+  it("rejects unsupported escalating metric and threshold shapes", async () => {
+    const { repo } = createFakeMonitorRepository([makeMonitor()])
+    const metricError = await runError(
+      updateMonitorUseCase({
+        id: monitorId,
+        target: { ...target, metric: { kind: "avg", field: "duration" } },
+        rule: {
+          trigger: "escalating",
+          severity: "high",
+          config: {
+            metric: { kind: "avg", field: "duration" },
+            condition: { trigger: "escalating", metric: { kind: "avg", field: "duration" } },
+          },
+        },
+      }),
+      repo,
+    )
+    expect(metricError).toBeInstanceOf(ValidationError)
+    expect(metricError.message).toBe("Escalating monitors only support count metrics")
+
+    const thresholdError = await runError(
+      updateMonitorUseCase({
+        id: monitorId,
+        rule: {
+          trigger: "escalating",
+          severity: "high",
+          config: {
+            metric: { kind: "count" },
+            condition: {
+              trigger: "escalating",
+              metric: { kind: "count" },
+              threshold: { mode: "absolute", value: 10 },
+            },
+          },
+        },
+      }),
+      repo,
+    )
+    expect(thresholdError).toBeInstanceOf(ValidationError)
+    expect(thresholdError.message).toBe("Escalating monitors only support expected thresholds")
+  })
+
+  it("rejects target metric edits that would make an escalating monitor inert", async () => {
+    const escalatingRule = {
+      trigger: "escalating" as const,
+      severity: "high" as const,
+      config: {
+        metric: { kind: "count" as const },
+        condition: { trigger: "escalating" as const, metric: { kind: "count" as const } },
+      },
+    }
+    const { repo } = createFakeMonitorRepository([makeMonitor({ rule: escalatingRule })])
+
+    const error = await runError(
+      updateMonitorUseCase({
+        id: monitorId,
+        target: { ...target, metric: { kind: "avg", field: "duration" } },
+      }),
+      repo,
+    )
+
+    expect(error).toBeInstanceOf(ValidationError)
+    expect(error.message).toBe("Escalating monitors only support count metrics")
   })
 })

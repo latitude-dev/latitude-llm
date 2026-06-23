@@ -1,6 +1,11 @@
 import { DEFAULT_EMBEDDING_CONFIG, EMBEDDING_DIMENSIONS } from "@domain/ai"
-import type { EntrySignalsSnapshot } from "@domain/alerts"
-import type { ScoreSourceType, SignalEscalationSignals } from "@domain/scores"
+import type {
+  EscalationDecision,
+  EscalationDecisionInput,
+  EscalationExitReason,
+  EscalationTransition,
+} from "@domain/incidents"
+import type { ScoreSourceType } from "@domain/scores"
 import {
   createCentroid,
   normalizeCentroid,
@@ -10,13 +15,9 @@ import {
 import {
   CENTROID_HALF_LIFE_SECONDS,
   CENTROID_SOURCE_WEIGHTS,
-  ESCALATION_ABSOLUTE_RATE_EXIT_FACTOR,
-  ESCALATION_EXIT_DWELL_MS,
   ESCALATION_EXIT_THRESHOLD_FACTOR,
-  ESCALATION_MAX_DURATION_MS,
   ESCALATION_MIN_OCCURRENCES_THRESHOLD,
   ESCALATION_THRESHOLD_FACTOR,
-  MIN_SEASONAL_SAMPLES,
   NEW_SIGNAL_AGE_DAYS,
   SIGNAL_STATES,
 } from "./constants.ts"
@@ -26,6 +27,8 @@ import {
   SignalState,
   type SignalState as SignalStateValue,
 } from "./entities/signal.ts"
+
+export { evaluateSeasonalEscalation, seasonalAnomalyThreshold } from "@domain/incidents"
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
 
@@ -93,7 +96,6 @@ export interface DeriveSignalLifecycleStatesInput {
   readonly issue: Signal
   /** Lifecycle flags joined from `alert_incidents` by `SignalRepository` reads. */
   readonly isEscalating: boolean
-  readonly isRegressed: boolean
   readonly now?: Date
 }
 
@@ -113,240 +115,23 @@ export const getEscalationExitThreshold = (baselineAvgOccurrences: number): numb
   Math.floor(getEscalationOccurrenceThreshold(baselineAvgOccurrences) * ESCALATION_EXIT_THRESHOLD_FACTOR)
 
 /**
- * An issue is "new" while its first seen timestamp is within
- * `NEW_SIGNAL_AGE_DAYS` of `now`. New issues are excluded from escalation
+ * A signal is "new" while its first seen timestamp is within
+ * `NEW_SIGNAL_AGE_DAYS` of `now`. New signals are excluded from escalation
  * detection — their `baselineAvgOccurrences` window (days 1–8 ago) hasn't
  * filled in yet, so any volume above the floor would falsely trip the
- * threshold. The discrete `issue.new` alert covers this case.
+ * threshold.
  */
 export const isSignalNew = (firstSeenAt: Date, now: Date = new Date()): boolean =>
   firstSeenAt.getTime() > now.getTime() - NEW_SIGNAL_AGE_DAYS * MILLISECONDS_PER_DAY
 
-// ---------------------------------------------------------------------------
-// Seasonal escalation detector
-// ---------------------------------------------------------------------------
-
-/**
- * Effective sigma: combines the observed stddev with two floors to keep band
- * widths defensible at small sample sizes:
- *   - `√expected` is the Poisson lower bound for count data (Var ≈ mean).
- *   - `1.0` is a hard floor against `σ = 0` on quiet buckets — without it the
- *     first non-zero sample after a quiet stretch trips the detector.
- */
-const sigmaEffective = (observed: number, expected: number): number =>
-  Math.max(observed, Math.sqrt(Math.max(0, expected)), 1.0)
-
-/**
- * Seasonal anomaly threshold for a window: `expected + k · σ_effective`. Shared
- * with `@domain/monitors`' saved-search `expected` mode so both compute the same
- * band. `k` is the caller's resolved σ-multiplier (sensitivity, sample-adjusted).
- */
-export const seasonalAnomalyThreshold = (expected: number, stddev: number, k: number): number =>
-  expected + k * sigmaEffective(stddev, expected)
-
-const snapshotFromSignals = (
-  signals: SignalEscalationSignals,
-  kShort: number,
-  kLong: number,
-  entryThreshold1h: number,
-  entryThreshold6hPerHour: number,
-): EntrySignalsSnapshot => ({
-  expected1h: signals.expected1h,
-  expected6hPerHour: signals.expected6hPerHour,
-  stddev1h: signals.stddev1h,
-  stddev6hPerHour: signals.stddev6hPerHour,
-  kShort,
-  kLong,
-  entryThreshold1h,
-  entryThreshold6hPerHour,
-  entryCount24h: signals.recent24h,
-})
-
-export interface SeasonalEscalationDecisionInput {
-  readonly signals: SignalEscalationSignals
-  /**
-   * User-facing sensitivity. Lower = noisier (trips more easily); higher =
-   * quieter. `k_long = k_short − 1` is derived internally — the multi-window
-   * SRE pattern needs distinct sensitivities so the short window doesn't
-   * dominate the long one when they're nested inside each other.
-   */
-  readonly kShort: number
-  readonly isNew: boolean
-  readonly wasEscalating: boolean
-  /**
-   * Snapshot frozen at the moment of entry. `null` for legacy incidents
-   * opened before the seasonal detector landed (or for incidents emitted by
-   * the transitional `entrySignals = null` path during rollout). When null,
-   * the absolute-rate backstop is skipped — only band-shape exit + timeout
-   * apply.
-   */
-  readonly entrySignals: EntrySignalsSnapshot | null
-  /** `null` when the incident isn't currently open (i.e. `wasEscalating === false`). */
-  readonly startedAt: Date | null
-  /**
-   * Tracks the start of the band-shape exit dwell. `null` when the exit
-   * shape isn't currently holding. The detector advances it on consecutive
-   * checks until `now - exitEligibleSince >= ESCALATION_EXIT_DWELL_MS`, at
-   * which point the incident closes via `reason: "threshold"`.
-   */
-  readonly exitEligibleSince: Date | null
-  readonly now: Date
-}
-
-export type SeasonalEscalationTransition = "enter" | "exit" | "none"
-
-export type SeasonalEscalationExitReason =
-  | "threshold"
-  | "absolute-rate-drop"
-  | "timeout"
-  // Manual lifecycle closes: the user resolved or ignored the issue, so the
-  // open escalation is stale and gets closed directly (no organic recovery).
-  // These are emitted by `applySignalLifecycleCommandUseCase`, not the detector.
-  | "resolved"
-  | "ignored"
-
-export interface SeasonalEscalationDecision {
-  readonly transition: SeasonalEscalationTransition
-  /** Set on `transition: "exit"`. */
-  readonly reason?: SeasonalEscalationExitReason
-  /** Set on `transition: "enter"`. The caller forwards this to the outbox event. */
-  readonly entrySignalsSnapshot?: EntrySignalsSnapshot
-  /**
-   * The next value the caller must persist on `alert_incidents.exit_eligible_since`.
-   * `null` clears the dwell. Identical to the prior value when nothing changed
-   * (caller should still write only when it differs).
-   */
-  readonly nextExitEligibleSince: Date | null
-}
-
-/**
- * Seasonal escalation decision function: pure mapping from the current
- * observed signals + persisted dwell/snapshot state to the next transition
- * and the caller's required mutations.
- *
- * Three layers of control on exits, evaluated in priority order:
- *   1. **Timeout** (72h) — bypasses band and backstop. Ghost-incident guard.
- *   2. **Absolute-rate backstop** — `recent_24h < entryCount24h · 0.5`
- *      closes the incident regardless of bands. Catches incidents whose
- *      seasonal baseline catches up with the sustained-but-declining rate
- *      ("the bands rose to meet the incident, not the other way around").
- *   3. **Band-shape + dwell** — both windows must drop below `expected +
- *      k_exit · σ` for `ESCALATION_EXIT_DWELL_MS` continuously. The dwell
- *      kills the flapping case where a single-bin dip would otherwise close
- *      an active incident.
- *
- * Cold-start: `isNew` (firstSeenAt within 7 days) returns `none` outright.
- * Below `MIN_SEASONAL_SAMPLES` of contributing prior weeks, `k` is inflated
- * by +1 (wider band where we have less evidence). At zero prior weeks the
- * detector falls back to the floor used pre-rewrite — same `ESCALATION_MIN_OCCURRENCES_THRESHOLD`
- * gate as before — but for ENTRY only. The EXIT path is unified across all
- * sample counts: `sigmaEffective` floors σ at 1.0, so the exit band is a
- * small positive number even with zero seasonal history, and a cold-start
- * incident de-escalates via band-shape + dwell ~one dwell after it goes quiet
- * instead of hanging until the 72h timeout (the absolute-rate backstop is the
- * only other cold-start exit, and it needs a non-null entry snapshot). The
- * 7-day issue-age guard makes the zero-history case rare in practice.
- */
-export const evaluateSeasonalEscalation = (input: SeasonalEscalationDecisionInput): SeasonalEscalationDecision => {
-  const { signals, kShort, isNew, wasEscalating, entrySignals, startedAt, exitEligibleSince, now } = input
-
-  if (isNew) {
-    // Never trip on issues younger than `NEW_SIGNAL_AGE_DAYS` — the seasonal
-    // bins barely have data to compare against, and the discrete `issue.new`
-    // alert already covers the surfacing case.
-    return { transition: "none", nextExitEligibleSince: null }
-  }
-
-  // wasEscalating === true: timeout always wins, before the snapshot or
-  // band even gets a vote. Match Datadog/CloudWatch behaviour — a 72h
-  // unchanged incident is almost certainly ghost state, not a real incident.
-  if (wasEscalating && startedAt !== null && now.getTime() - startedAt.getTime() >= ESCALATION_MAX_DURATION_MS) {
-    return { transition: "exit", reason: "timeout", nextExitEligibleSince: null }
-  }
-
-  // Band geometry. `k` is inflated by +1 below `MIN_SEASONAL_SAMPLES`
-  // contributing prior weeks (including the zero-history cold-start case) so
-  // the band widens where the σ estimate is noisy. `sigmaEffective` floors σ
-  // at 1.0, which is what keeps these bands — and so the band-shape exit
-  // below — well-defined even when expected/stddev are zero.
-  const kAdj = signals.samplesCount < MIN_SEASONAL_SAMPLES ? kShort + 1 : kShort
-  const kLong = Math.max(1, kAdj - 1)
-
-  const sigma1h = sigmaEffective(signals.stddev1h, signals.expected1h)
-  const sigma6hPerHour = sigmaEffective(signals.stddev6hPerHour, signals.expected6hPerHour)
-  const recent6hPerHour = signals.recent6h / 6
-
-  const entryBand1h = seasonalAnomalyThreshold(signals.expected1h, signals.stddev1h, kAdj)
-  const entryBand6hPerHour = seasonalAnomalyThreshold(signals.expected6hPerHour, signals.stddev6hPerHour, kLong)
-  const exitBand1h = signals.expected1h + ESCALATION_EXIT_THRESHOLD_FACTOR * kAdj * sigma1h
-  const exitBand6hPerHour = signals.expected6hPerHour + ESCALATION_EXIT_THRESHOLD_FACTOR * kLong * sigma6hPerHour
-
-  if (!wasEscalating) {
-    // Entry. Cold start (no seasonal history) can't trust the bands to size an
-    // entry, so it falls back to the pre-rewrite absolute floor; the seasonal
-    // path uses the multi-window band test.
-    if (signals.samplesCount === 0) {
-      const floor1h = ESCALATION_MIN_OCCURRENCES_THRESHOLD / 6
-      if (signals.recent6h >= ESCALATION_MIN_OCCURRENCES_THRESHOLD && signals.recent1h >= floor1h) {
-        // No real expected/sigma to freeze — record kShort/kLong + zero
-        // thresholds so the snapshot type stays satisfied. `entryCount24h`
-        // is still captured (from `recent24h`), so the absolute-rate backstop
-        // remains usable on the close side.
-        return {
-          transition: "enter",
-          entrySignalsSnapshot: snapshotFromSignals(signals, kShort, Math.max(1, kShort - 1), 0, 0),
-          nextExitEligibleSince: null,
-        }
-      }
-      return { transition: "none", nextExitEligibleSince: null }
-    }
-
-    // Multi-window AND: short window proves "now", long window proves "sustained".
-    // Both must clear their bands so the short window doesn't trip on a single noisy minute.
-    if (signals.recent1h > entryBand1h && recent6hPerHour > entryBand6hPerHour) {
-      return {
-        transition: "enter",
-        entrySignalsSnapshot: snapshotFromSignals(signals, kShort, kLong, entryBand1h, entryBand6hPerHour),
-        nextExitEligibleSince: null,
-      }
-    }
-    return { transition: "none", nextExitEligibleSince: null }
-  }
-
-  // wasEscalating === true. Exit pipeline — applies to every open incident
-  // regardless of seasonal history (cold-start included). Priority order:
-  //
-  //   1. Absolute-rate backstop: the 24h rate has clearly dropped vs. entry,
-  //      so close regardless of band shape. Catches the case where the
-  //      seasonal baseline climbed to meet a declining-but-still-elevated
-  //      rate. Needs the entry snapshot; skipped when it's null.
-  if (entrySignals !== null && signals.recent24h < entrySignals.entryCount24h * ESCALATION_ABSOLUTE_RATE_EXIT_FACTOR) {
-    return { transition: "exit", reason: "absolute-rate-drop", nextExitEligibleSince: null }
-  }
-
-  //   2. Band-shape + dwell: both windows below the (σ-floored) exit band for
-  //      the full dwell. For a cold-start incident the σ floor keeps the exit
-  //      band a small positive number, so once it goes quiet this fires ~one
-  //      dwell later instead of leaving it stuck until the 72h timeout.
-  const exitShapeHolds = signals.recent1h < exitBand1h && recent6hPerHour < exitBand6hPerHour
-  if (!exitShapeHolds) {
-    return { transition: "none", nextExitEligibleSince: null }
-  }
-
-  // Exit shape holds — start or advance the dwell, but don't close yet.
-  if (exitEligibleSince === null) {
-    return { transition: "none", nextExitEligibleSince: now }
-  }
-  if (now.getTime() - exitEligibleSince.getTime() >= ESCALATION_EXIT_DWELL_MS) {
-    return { transition: "exit", reason: "threshold", nextExitEligibleSince: null }
-  }
-  return { transition: "none", nextExitEligibleSince: exitEligibleSince }
-}
+export type SeasonalEscalationDecisionInput = EscalationDecisionInput
+export type SeasonalEscalationTransition = EscalationTransition
+export type SeasonalEscalationExitReason = EscalationExitReason
+export type SeasonalEscalationDecision = EscalationDecision
 
 export const deriveSignalLifecycleStates = ({
   issue,
   isEscalating,
-  isRegressed,
   now = new Date(),
 }: DeriveSignalLifecycleStatesInput): readonly SignalStateValue[] => {
   const states = new Set<SignalStateValue>()
@@ -355,26 +140,8 @@ export const deriveSignalLifecycleStates = ({
     states.add(SignalState.New)
   }
 
-  // Escalating and regressed flags are sourced from `alert_incidents` rows
-  // joined onto the issue read by `SignalRepository`. They're authoritative
-  // — consumers don't recompute them from the occurrence aggregate.
   if (isEscalating) {
     states.add(SignalState.Escalating)
-  }
-
-  // Regressed only when the issue has actually-active regression history
-  // AND the user hasn't re-resolved it. `resolvedAt` set wins: it means
-  // the user has acknowledged the regression by resolving again.
-  if (issue.resolvedAt === null && isRegressed) {
-    states.add(SignalState.Regressed)
-  }
-
-  if (issue.resolvedAt !== null) {
-    states.add(SignalState.Resolved)
-  }
-
-  if (issue.ignoredAt !== null) {
-    states.add(SignalState.Ignored)
   }
 
   if (states.size === 0) {

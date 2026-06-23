@@ -1,4 +1,4 @@
-import type { AlertIncidentSourceType } from "@domain/alerts"
+import type { IncidentSourceType } from "@domain/incidents"
 import { useQuery } from "@tanstack/react-query"
 import { type AlertIncidentRecord, listProjectAlertIncidentsInRange } from "./alerts.functions.ts"
 
@@ -15,9 +15,8 @@ export function useProjectAlertIncidentsInRange({
   readonly projectId: string
   readonly fromIso: string
   readonly toIso: string
-  /** Restrict to a single source type (e.g., `"issue"`). */
-  readonly sourceType?: AlertIncidentSourceType
-  /** Restrict to incidents tied to a single source entity (e.g., a specific issue id). */
+  readonly sourceType?: IncidentSourceType
+  /** Restrict to incidents tied to a single source entity. */
   readonly sourceId?: string
   readonly enabled?: boolean
 }) {

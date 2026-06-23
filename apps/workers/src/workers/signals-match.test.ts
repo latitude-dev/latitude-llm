@@ -110,9 +110,7 @@ const makeSignalRow = (input?: { readonly id?: string; readonly projectId?: stri
   source: "annotation" as const,
   centroid: createSignalCentroid(),
   clusteredAt: TIMESTAMP,
-  escalatedAt: null,
-  resolvedAt: null,
-  ignoredAt: null,
+  mutedAt: null,
   createdAt: TIMESTAMP,
   updatedAt: TIMESTAMP,
 })

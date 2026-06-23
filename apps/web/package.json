@@ -17,7 +17,7 @@
   "dependencies": {
     "@better-auth/sso": "catalog:",
     "@domain/admin": "workspace:*",
-    "@domain/alerts": "workspace:*",
+    "@domain/incidents": "workspace:*",
     "@domain/annotations": "workspace:*",
     "@domain/api-keys": "workspace:*",
     "@domain/billing": "workspace:*",

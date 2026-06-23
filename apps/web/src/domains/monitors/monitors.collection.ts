@@ -1,12 +1,5 @@
 import type { MonitorTarget } from "@domain/monitors"
-import type {
-  AlertIncidentCondition,
-  AlertIncidentKind,
-  AlertIncidentSourceType,
-  AlertSeverity,
-  FilterSet,
-  MonitorStream,
-} from "@domain/shared"
+import type { AlertIncidentCondition, AlertSeverity, FilterSet, MonitorStream } from "@domain/shared"
 import { type InfiniteTableInfiniteScroll, useToast } from "@repo/ui"
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useMemo, useState } from "react"
@@ -30,13 +23,18 @@ import {
   searchMonitorsOrgWide,
   unmuteMonitor,
   updateMonitor,
-  updateMonitorAlert,
+  updateMonitorRule,
 } from "./monitors.functions.ts"
 
-/** Client-side alert draft mirroring the server `createAlertFieldsSchema`. `source` is null for unified `event.*`/`metric.*` alerts. */
-export interface MonitorAlertDraft {
-  readonly kind: AlertIncidentKind
-  readonly source: { readonly type: AlertIncidentSourceType; readonly id: string | null } | null
+export interface MonitorRuleDraft {
+  readonly kind:
+    | "savedSearch.match"
+    | "savedSearch.threshold"
+    | "savedSearch.escalating"
+    | "monitor.match"
+    | "monitor.threshold"
+    | "monitor.escalating"
+  readonly source: { readonly type: "savedSearch" | "monitor" | "signal"; readonly id: string | null } | null
   readonly condition?: AlertIncidentCondition | null
   readonly severity?: AlertSeverity
 }
@@ -367,14 +365,14 @@ export const invalidateAllMonitorQueries = (queryClient: ReturnType<typeof useQu
     queryClient.invalidateQueries({ queryKey: ["monitors", "incident-stats", projectId] }),
   ])
 
-/** Create a user monitor (with its alerts). Invalidates the list on success. */
+/** Create a user monitor with one inline rule. Invalidates the list on success. */
 export function useCreateMonitor(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: {
       readonly name: string
       readonly description?: string
-      readonly alerts: readonly MonitorAlertDraft[]
+      readonly rule: MonitorRuleDraft
       readonly target?: MonitorTarget
     }) =>
       createMonitor({
@@ -382,7 +380,7 @@ export function useCreateMonitor(projectId: string) {
           projectId,
           name: input.name,
           ...(input.description !== undefined ? { description: input.description } : {}),
-          alerts: input.alerts.map((alert) => ({ ...alert })),
+          rule: { ...input.rule },
           ...(input.target !== undefined ? { target: input.target } : {}),
         },
       }),
@@ -409,27 +407,20 @@ export function useDeleteMonitor(projectId: string) {
   })
 }
 
-/**
- * Per-alert actions used by the details-panel alert block: edit an alert's
- * configurable values in place. Alerts are never added or deleted from the
- * app — a monitor keeps the single alert it was created with. Invalidates the
- * list + detail queries so the panel reflects the change.
- */
-export function useMonitorAlertActions(projectId: string) {
+export function useMonitorRuleActions(projectId: string) {
   const queryClient = useQueryClient()
   const onSuccess = () => invalidateMonitorQueries(queryClient, projectId)
 
-  const editAlert = useMutation({
+  const editRule = useMutation({
     mutationFn: (input: {
       readonly monitorId: string
-      readonly alertId: string
-      readonly kind?: AlertIncidentKind
-      readonly source?: { readonly type: AlertIncidentSourceType; readonly id: string | null }
+      readonly kind?: MonitorRuleDraft["kind"]
+      readonly source?: { readonly type: "savedSearch" | "monitor" | "signal"; readonly id: string | null }
       readonly condition?: AlertIncidentCondition | null
       readonly severity?: AlertSeverity
-    }) => updateMonitorAlert({ data: input }),
+    }) => updateMonitorRule({ data: input }),
     onSuccess,
   })
 
-  return { editAlert }
+  return { editRule }
 }

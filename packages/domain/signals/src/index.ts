@@ -93,6 +93,7 @@ export {
 } from "./helpers.ts"
 export { buildHistogramBucketScaffold, fillBuckets } from "./histogram-buckets.ts"
 export { type SignalDiscoveryLockInput, signalDiscoveryLockKey, withSignalDiscoveryLock } from "./locks.ts"
+export { makeScoreOccurrenceReader } from "./ports/score-occurrence-reader.ts"
 export {
   type ListSignalsRepositoryInput,
   type OrgSignalSearchHit,

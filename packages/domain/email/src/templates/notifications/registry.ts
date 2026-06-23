@@ -4,6 +4,7 @@ import { incidentClosedRenderer } from "./incident-closed/index.tsx"
 import { incidentEventRenderer } from "./incident-event/index.tsx"
 import { incidentOpenedRenderer } from "./incident-opened/index.tsx"
 import { signalAssignedRenderer } from "./signal-assigned/index.tsx"
+import { signalDiscoveredRenderer } from "./signal-discovered/index.tsx"
 import type { NotificationEmailRendererRegistry } from "./types.ts"
 import { wrappedReportRenderer } from "./wrapped-report/index.tsx"
 
@@ -19,5 +20,6 @@ export const NOTIFICATION_EMAIL_RENDERERS: NotificationEmailRendererRegistry = {
   "wrapped.report": wrappedReportRenderer,
   "custom.message": customMessageRenderer,
   "issue.assigned": signalAssignedRenderer,
+  "signal.discovered": signalDiscoveredRenderer,
   "destination.quarantined": destinationQuarantinedRenderer,
 }

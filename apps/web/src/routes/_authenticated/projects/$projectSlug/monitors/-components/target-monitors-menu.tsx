@@ -56,10 +56,7 @@ function sameTargetScope(a: MonitorRecord["target"], b: MonitorTarget): boolean 
 
 function sameMonitorScope(monitor: MonitorRecord, target: MonitorTarget): boolean {
   if (target.savedSearchId) {
-    return (
-      monitor.target?.savedSearchId === target.savedSearchId ||
-      monitor.alerts.some((alert) => alert.source?.type === "savedSearch" && alert.source.id === target.savedSearchId)
-    )
+    return monitor.target?.savedSearchId === target.savedSearchId
   }
   return sameTargetScope(monitor.target, target)
 }

@@ -1,5 +1,4 @@
-import { SavedSearchRepository } from "@domain/saved-searches"
-import { SavedSearchId, SignalId, UserId } from "@domain/shared"
+import { SignalId, UserId } from "@domain/shared"
 import { SignalRepository } from "@domain/signals"
 import { UserRepository } from "@domain/users"
 import { Effect } from "effect"
@@ -18,17 +17,9 @@ const loadError = (cause: unknown) => ({
 
 const MISSING: ResolvedIncidentSource = { name: null, description: null }
 
-/** Resolve the source name by `sourceId`, mirroring how the issue name is resolved — the saved search is the source for `savedSearch.*`. */
 export const resolveIncidentSource = (input: { readonly sourceType: string; readonly sourceId: string }) =>
   Effect.gen(function* () {
-    if (input.sourceType === "savedSearch") {
-      const repo = yield* SavedSearchRepository
-      return yield* repo.findById(SavedSearchId(input.sourceId)).pipe(
-        Effect.map((s): ResolvedIncidentSource => ({ name: s.name, description: null })),
-        Effect.catchTag("SavedSearchNotFoundError", () => Effect.succeed(MISSING)),
-        Effect.catchTag("RepositoryError", (cause) => Effect.fail(loadError(cause))),
-      )
-    }
+    if (input.sourceType !== "signal") return MISSING
     const repo = yield* SignalRepository
     return yield* repo.findById(SignalId(input.sourceId)).pipe(
       Effect.map((i): ResolvedIncidentSource => ({ name: i.name, description: i.description ?? null })),

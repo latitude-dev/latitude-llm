@@ -41,8 +41,6 @@ const EMPTY_ISSUES_ANALYTICS: SignalsListResultRecord["analytics"] = {
     newSignals: 0,
     escalatingSignals: 0,
     ongoingSignals: 0,
-    regressedSignals: 0,
-    resolvedSignals: 0,
     seenOccurrences: 0,
   },
   histogram: [],
@@ -293,7 +291,7 @@ const ORG_SEARCH_LIMIT = 10
  * Org-wide issue search for the Command Palette. One tier per call: pass `semantic: false` for the
  * instant lexical tier and `semantic: true` for the debounced semantic tier. Results span every
  * project in the organization, each carrying its owning project's slug/name and derived states.
- * Resolved/ignored issues are excluded so the palette recommends active issues only.
+ * Muted issues are excluded so the palette recommends active issues only.
  * `preferProjectId` (the current project, when inside one) ranks that project's issues first.
  */
 export function useSignalsOrgSearch(

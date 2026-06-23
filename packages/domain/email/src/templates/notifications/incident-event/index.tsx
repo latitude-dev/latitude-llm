@@ -1,4 +1,4 @@
-import { ALERT_INCIDENT_KIND_LABEL } from "@domain/shared"
+import { INCIDENT_NOTIFICATION_KEY_LABEL } from "@domain/shared"
 import { Effect } from "effect"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
@@ -19,11 +19,11 @@ const buildSignalUrl = (
 
 export const incidentEventRenderer: NotificationEmailRenderer<"incident.event"> = (payload, ctx) =>
   Effect.gen(function* () {
-    const isSavedSearch = payload.sourceType === "savedSearch"
+    const isMonitorIncident = payload.sourceType === "monitor"
     const source = yield* resolveIncidentSource(payload)
     const assigneeName = yield* resolveAssigneeName(payload.assigneeId)
-    const sourceName = source.name ?? (isSavedSearch ? "a saved search" : "a signal")
-    const heading = ALERT_INCIDENT_KIND_LABEL[payload.incidentKind] ?? "Incident"
+    const sourceName = source.name ?? (isMonitorIncident ? "a monitored target" : "a signal")
+    const heading = INCIDENT_NOTIFICATION_KEY_LABEL[payload.incidentKind] ?? "Incident"
     const monitor = buildMonitorAttribution({
       webAppUrl: ctx.webAppUrl,
       projectSlug: ctx.project?.slug,
@@ -32,8 +32,8 @@ export const incidentEventRenderer: NotificationEmailRenderer<"incident.event"> 
       incidentKind: payload.incidentKind,
       condition: payload.condition,
     })
-    const signalUrl = isSavedSearch ? undefined : buildSignalUrl(ctx, payload)
-    const ctaUrl = isSavedSearch ? monitor?.url : signalUrl
+    const signalUrl = isMonitorIncident ? undefined : buildSignalUrl(ctx, payload)
+    const ctaUrl = isMonitorIncident ? monitor?.url : signalUrl
     const subject = `${heading}: ${sourceName}`
 
     const html = yield* Effect.tryPromise({

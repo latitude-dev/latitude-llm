@@ -217,6 +217,8 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   const timeTo = getTimeFilterValue(filters, "lte")
   const sessionsMonitorTarget = useMemo<MonitorTarget>(
     () => ({
+      type: "session",
+      id: loadedSavedSearch?.id ?? null,
       kind: "session",
       stream: "sessions",
       filterSet: filters,
@@ -228,10 +230,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   )
   const savedSearchMonitors = useMemo(
     () =>
-      projectMonitors.filter(
-        (monitor) =>
-          monitor.target?.savedSearchId || monitor.alerts.some((alert) => alert.source?.type === "savedSearch"),
-      ),
+      projectMonitors.filter((monitor) => monitor.target?.savedSearchId || monitor.rule.source?.type === "savedSearch"),
     [projectMonitors],
   )
   const sorting: InfiniteTableSorting = {

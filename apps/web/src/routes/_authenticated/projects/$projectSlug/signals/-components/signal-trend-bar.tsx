@@ -1,4 +1,4 @@
-import type { AlertSeverity } from "@domain/alerts"
+import type { AlertSeverity } from "@domain/incidents"
 import { SEVERITY_COLOR } from "@domain/shared"
 import { ChartSkeleton, Text, TooltipContent, TooltipProvider, TooltipRoot, TooltipTrigger } from "@repo/ui"
 import { formatCount } from "@repo/utils"
@@ -20,11 +20,9 @@ import {
 const DEFAULT_MAX_VISIBLE_BUCKET_LABELS = 6
 const MINI_HISTOGRAM_GUIDE_LINE_COUNT = 5
 const MINI_HISTOGRAM_TOP_INSET_PX = 6
-const REGRESSED_BAR_CLASSES = "bg-rose-700 dark:bg-rose-400"
 const ESCALATING_BAR_CLASSES = "bg-yellow-500/75 dark:bg-yellow-300/85"
 const DEFAULT_ROW_BAR_CLASSES = "bg-muted-foreground/60 dark:bg-muted-foreground/70"
 const DEFAULT_BACKGROUND_GUIDE_CLASSES = "border-border/60 dark:border-muted-foreground/30"
-const DEFAULT_MUTED_GUIDE_CLASSES = "border-muted-foreground/60 dark:border-muted-foreground/70"
 const DEFAULT_BUCKET_SECONDS = 24 * 60 * 60
 const SEVERITY_RANK: Record<AlertSeverity, number> = { low: 0, medium: 1, high: 2 }
 
@@ -37,21 +35,11 @@ function parseBucketStartMs(bucket: string): number {
   return Date.parse(bucket.length === 10 ? `${bucket}T00:00:00.000Z` : bucket)
 }
 
-function toBucketEndMs(bucket: string, bucketWidthMs: number): number {
-  const startMs = parseBucketStartMs(bucket)
-  return Number.isFinite(startMs) ? startMs + bucketWidthMs - 1 : Number.NaN
-}
-
 function resolveBarClasses(input: {
   readonly barVariant: "row" | "details"
-  readonly isRegressedBucket: boolean
   readonly isEscalatingBucket: boolean
   readonly hasLifecycleHighlight: boolean
 }) {
-  if (input.isRegressedBucket) {
-    return REGRESSED_BAR_CLASSES
-  }
-
   if (input.isEscalatingBucket) {
     return ESCALATING_BAR_CLASSES
   }
@@ -164,9 +152,9 @@ function IncidentBucketTooltipExtras({ info }: { readonly info: IncidentBucketIn
       severity: incident.severity,
       label: formatIncidentKindLabel(incident.kind),
       sub:
-        incident.kind === "issue.escalating" && incident.endedAt
+        incident.kind === "signal.escalating" && incident.endedAt
           ? `Started ${formatTime(incident.startedAt)} → ${formatTime(incident.endedAt)}`
-          : incident.kind === "issue.escalating"
+          : incident.kind === "signal.escalating"
             ? `Started ${formatTime(incident.startedAt)} · ongoing`
             : formatTime(incident.startedAt),
     })
@@ -213,7 +201,6 @@ export function SignalTrendBar({
   maxVisibleBucketLabels = DEFAULT_MAX_VISIBLE_BUCKET_LABELS,
   barVariant = "row",
   states = [],
-  resolvedAt = null,
   escalationOccurrenceThreshold = null,
   escalationThresholds = null,
   incidents = [],
@@ -231,7 +218,6 @@ export function SignalTrendBar({
   readonly maxVisibleBucketLabels?: number
   readonly barVariant?: "row" | "details"
   readonly states?: readonly string[]
-  readonly resolvedAt?: string | null
   /**
    * Legacy flat escalation threshold from the pre-seasonal detector. Used by the row variant
    * for the per-bucket "escalating" highlight when `escalationThresholds` isn't supplied; the
@@ -327,9 +313,6 @@ export function SignalTrendBar({
   }
 
   const bucketWidthMs = bucketSeconds * 1000
-
-  const resolvedAtMs = resolvedAt ? new Date(resolvedAt).getTime() : null
-  const isRegressedSignal = states.includes("regressed")
   const isEscalatingSignal = states.includes("escalating")
   const incidentsEnabled = barVariant === "details" && incidents.length > 0
   const incidentInfoByBucket = incidentsEnabled
@@ -341,35 +324,17 @@ export function SignalTrendBar({
     : null
   const visualBuckets = chartBuckets.map((bucket, index) => {
     const heightPercent = toVisibleHeightPercent(bucket.count, maxCount)
-    const bucketStartMs = parseBucketStartMs(bucket.key)
-    const bucketEndMs = toBucketEndMs(bucket.key, bucketWidthMs)
-    const isRegressedBucket =
-      isRegressedSignal && resolvedAtMs !== null && bucket.count > 0 && bucketEndMs > resolvedAtMs
-    // Per-bucket coloring: prefer the seasonal series when available so the highlight follows
-    // the same band the dashed line draws. Fall back to the legacy flat threshold (passed by
-    // the row variant in the issues table) when the seasonal series isn't loaded.
     const escalatingThreshold = bucket.thresholdCount ?? escalationOccurrenceThreshold
-    const isEscalatingBucket =
-      !isRegressedBucket && isEscalatingSignal && escalatingThreshold !== null && bucket.count >= escalatingThreshold
-    // The "this bucket contains the resolved-at moment" marker — works for both daily and
-    // sub-day buckets since we just check whether resolvedAt falls in the bucket's [start, end).
-    const isResolvedBoundaryBucket =
-      isRegressedSignal &&
-      resolvedAtMs !== null &&
-      Number.isFinite(bucketStartMs) &&
-      resolvedAtMs >= bucketStartMs &&
-      resolvedAtMs <= bucketEndMs
+    const isEscalatingBucket = isEscalatingSignal && escalatingThreshold !== null && bucket.count >= escalatingThreshold
 
     return {
       ...bucket,
       heightPercent,
-      isRegressedBucket,
       isEscalatingBucket,
-      isResolvedBoundaryBucket,
       incidentInfo: incidentInfoByBucket?.[index] ?? EMPTY_INCIDENT_INFO,
     }
   })
-  const hasLifecycleHighlight = visualBuckets.some((bucket) => bucket.isRegressedBucket || bucket.isEscalatingBucket)
+  const hasLifecycleHighlight = visualBuckets.some((bucket) => bucket.isEscalatingBucket)
 
   return (
     <div className="flex min-w-0 flex-col" style={{ height }} role="img" aria-label="Signal occurrence trend">
@@ -439,24 +404,16 @@ export function SignalTrendBar({
                         className="pointer-events-none absolute inset-0 rounded-[2px] bg-foreground/[0.06] opacity-0 transition-opacity group-hover/bucket:opacity-100"
                         aria-hidden
                       />
-                      {bucket.isResolvedBoundaryBucket ? (
-                        <span
-                          className={`pointer-events-none absolute bottom-0 top-0 left-1/2 z-[2] -translate-x-1/2 border-l border-dashed ${DEFAULT_MUTED_GUIDE_CLASSES}`}
-                          aria-hidden
-                        />
-                      ) : null}
                       <span
                         className={`relative z-[1] w-full transition-[filter] group-hover/bucket:brightness-90 ${
                           barVariant === "details"
                             ? `rounded-t-sm ${resolveBarClasses({
                                 barVariant,
-                                isRegressedBucket: bucket.isRegressedBucket,
                                 isEscalatingBucket: bucket.isEscalatingBucket,
                                 hasLifecycleHighlight,
                               })}`
                             : `rounded-t-[2px] ${resolveBarClasses({
                                 barVariant,
-                                isRegressedBucket: bucket.isRegressedBucket,
                                 isEscalatingBucket: bucket.isEscalatingBucket,
                                 hasLifecycleHighlight,
                               })}`
@@ -488,9 +445,6 @@ export function SignalTrendBar({
                   <TooltipContent side="top" sideOffset={6}>
                     <div className="flex flex-col gap-0.5">
                       <Text.H6>{bucket.tooltipLabel}</Text.H6>
-                      {bucket.isResolvedBoundaryBucket ? (
-                        <Text.H6 color="foregroundMuted">Signal was resolved</Text.H6>
-                      ) : null}
                       <Text.H6B>{formatCount(bucket.count)} occurrences</Text.H6B>
                       {showIncidentExtras ? <IncidentBucketTooltipExtras info={bucket.incidentInfo} /> : null}
                     </div>

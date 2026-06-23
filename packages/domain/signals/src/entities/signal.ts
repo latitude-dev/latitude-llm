@@ -27,9 +27,6 @@ export const SignalState = {
   New: "new",
   Escalating: "escalating",
   Ongoing: "ongoing",
-  Resolved: "resolved",
-  Regressed: "regressed",
-  Ignored: "ignored",
 } as const satisfies Record<string, SignalState>
 
 // ---------------------------------------------------------------------------
@@ -58,9 +55,7 @@ export const signalSchema = z.object({
   priority: signalPrioritySchema.nullable(), // manual triage priority; null when unset
   centroid: signalCentroidSchema, // running weighted sum of clustered score feedback embeddings; drives derived pgvector semantic matching.
   clusteredAt: z.date(), // last time the centroid/cluster state was refreshed; authoritative decay anchor (not updatedAt)
-  escalatedAt: z.date().nullable(), // DORMANT: not maintained by the system. "Currently escalating" is derived from open `alert_incidents` rows. Kept on the entity for backward compatibility; always null in practice.
-  resolvedAt: z.date().nullable(), // issue resolved manually
-  ignoredAt: z.date().nullable(), // issue ignored manually
+  mutedAt: z.date().nullable(),
   createdAt: z.date(), // issue creation time
   updatedAt: z.date(), // issue update time
 })

@@ -436,7 +436,6 @@ export const listSessionSignals = createServerFn({ method: "GET" })
           const states = deriveSignalLifecycleStates({
             issue,
             isEscalating: issue.lifecycle.isEscalating,
-            isRegressed: issue.lifecycle.isRegressed,
             now,
           })
           return [

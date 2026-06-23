@@ -29,16 +29,10 @@ const formatBucketTooltipLabel = (startMs: number): string => new Date(startMs).
 
 const absoluteThresholdValue = (monitor: MonitorRecord, metric: MonitorMetric | null): number | null => {
   if (!metric) return null
-  const condition = monitor.alerts[0]?.condition
+  const condition = monitor.rule.condition
   if (!condition) return null
-  if (condition.kind === "metric.threshold" || condition.kind === "metric.escalating") {
+  if ((condition.trigger === "threshold" || condition.trigger === "escalating") && condition.threshold) {
     return condition.threshold.mode === "absolute" ? condition.threshold.value : null
-  }
-  if (
-    metric.kind === "count" &&
-    (condition.kind === "savedSearch.threshold" || condition.kind === "savedSearch.escalating")
-  ) {
-    return condition.threshold.mode === "absolute" ? condition.threshold.count : null
   }
   return null
 }

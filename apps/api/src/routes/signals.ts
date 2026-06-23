@@ -97,7 +97,7 @@ const ExportBodySchema = z
     lifecycleGroup: z
       .enum(SIGNAL_LIFECYCLE_GROUPS)
       .optional()
-      .describe('`"active"` for unresolved/unignored signals; `"archived"` for the rest. Omit to include both.'),
+      .describe('`"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both.'),
   })
   .openapi("ExportSignalsBody")
 
@@ -116,20 +116,10 @@ const LifecycleBodySchema = z
   })
   .openapi("SignalsLifecycleBody")
 
-const ResolveBodySchema = LifecycleBodySchema.extend({
-  keepMonitoring: z
-    .boolean()
-    .optional()
-    .describe(
-      "When `true`, monitoring continues after the signals are resolved. When `false`, monitoring stops. Defaults to the project setting.",
-    ),
-}).openapi("ResolveSignalsBody")
-
 const LifecycleItemSchema = z
   .object({
     signalId: cuidSchema.describe("Signal this entry applies to."),
-    resolvedAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was resolved, or `null`."),
-    ignoredAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was ignored, or `null`."),
+    mutedAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was muted, or `null`."),
     updatedAt: z.string().describe("ISO-8601 timestamp of the last update."),
     changed: z
       .boolean()
@@ -159,10 +149,10 @@ const buildLifecycleEndpoint = ({
   command: SignalLifecycleCommand
   name: string
   fernMethod: string
-  pathSuffix: "/resolve" | "/unresolve" | "/ignore" | "/unignore"
+  pathSuffix: "/mute" | "/unmute"
   summary: string
   description: string
-  bodySchema: typeof LifecycleBodySchema | typeof ResolveBodySchema
+  bodySchema: typeof LifecycleBodySchema
 }) =>
   signalEndpoint({
     route: createRoute({
@@ -191,9 +181,6 @@ const buildLifecycleEndpoint = ({
             projectId: project.id,
             signalIds: body.signalIds.map((id) => SignalId(id)),
             command,
-            ...(command === "resolve" && "keepMonitoring" in body && body.keepMonitoring !== undefined
-              ? { keepMonitoring: body.keepMonitoring }
-              : {}),
           })
         }).pipe(
           withPostgres(
@@ -215,8 +202,7 @@ const buildLifecycleEndpoint = ({
         {
           items: result.items.map((item) => ({
             signalId: item.signalId,
-            resolvedAt: item.resolvedAt ? item.resolvedAt.toISOString() : null,
-            ignoredAt: item.ignoredAt ? item.ignoredAt.toISOString() : null,
+            mutedAt: item.mutedAt ? item.mutedAt.toISOString() : null,
             updatedAt: item.updatedAt.toISOString(),
             changed: item.changed,
           })),
@@ -226,44 +212,23 @@ const buildLifecycleEndpoint = ({
     },
   })
 
-const resolveSignals = buildLifecycleEndpoint({
-  command: "resolve",
-  name: "resolveSignals",
-  fernMethod: "resolve",
-  pathSuffix: "/resolve",
-  summary: "Resolve signals",
-  description:
-    "Marks each signal in `signalIds` as resolved. When `keepMonitoring` is `false`, monitoring is also stopped for each resolved signal; when omitted, the project's default applies.",
-  bodySchema: ResolveBodySchema,
-})
-
-const unresolveSignals = buildLifecycleEndpoint({
-  command: "unresolve",
-  name: "unresolveSignals",
-  fernMethod: "unresolve",
-  pathSuffix: "/unresolve",
-  summary: "Unresolve signals",
-  description: "Reverts each signal in `signalIds` to the unresolved state.",
+const muteSignals = buildLifecycleEndpoint({
+  command: "mute",
+  name: "muteSignals",
+  fernMethod: "mute",
+  pathSuffix: "/mute",
+  summary: "Mute signals",
+  description: "Mutes each signal in `signalIds`.",
   bodySchema: LifecycleBodySchema,
 })
 
-const ignoreSignals = buildLifecycleEndpoint({
-  command: "ignore",
-  name: "ignoreSignals",
-  fernMethod: "ignore",
-  pathSuffix: "/ignore",
-  summary: "Ignore signals",
-  description: "Marks each signal in `signalIds` as ignored. Monitoring is also stopped for each ignored signal.",
-  bodySchema: LifecycleBodySchema,
-})
-
-const unignoreSignals = buildLifecycleEndpoint({
-  command: "unignore",
-  name: "unignoreSignals",
-  fernMethod: "unignore",
-  pathSuffix: "/unignore",
-  summary: "Unignore signals",
-  description: "Reverts each signal in `signalIds` to a non-ignored state.",
+const unmuteSignals = buildLifecycleEndpoint({
+  command: "unmute",
+  name: "unmuteSignals",
+  fernMethod: "unmute",
+  pathSuffix: "/unmute",
+  summary: "Unmute signals",
+  description: "Reverts each signal in `signalIds` to an unmuted state.",
   bodySchema: LifecycleBodySchema,
 })
 
@@ -280,7 +245,7 @@ const ListSignalsQuerySchema = PaginatedQueryParamsSchema.extend({
   lifecycleGroup: z
     .enum(SIGNAL_LIFECYCLE_GROUP_VALUES)
     .optional()
-    .describe('`"active"` for unresolved/unignored signals; `"archived"` for the rest. Omit to include both.'),
+    .describe('`"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both.'),
   sortBy: z
     .enum(ISSUES_SORT_FIELDS)
     .default("lastSeen")
@@ -397,7 +362,7 @@ const getSignalAnalytics = signalEndpoint({
     ...signalsFernGroup("analytics"),
     summary: "Get project signal analytics",
     description:
-      "Returns signal analytics for the project: counts of ongoing, new, escalating, regressed, and resolved signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
+      "Returns signal analytics for the project: counts of ongoing, new, and escalating signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, query: SignalAnalyticsQuerySchema },
     responses: openApiResponses({
@@ -783,10 +748,8 @@ export const createSignalsRoutes = () => {
   getSignal.mountHttp(app, createTierRateLimiter("low"))
   getSignalTrend.mountHttp(app, createTierRateLimiter("medium"))
   listSignalTraces.mountHttp(app, createTierRateLimiter("medium"))
-  resolveSignals.mountHttp(app, createTierRateLimiter("medium"))
-  unresolveSignals.mountHttp(app, createTierRateLimiter("medium"))
-  ignoreSignals.mountHttp(app, createTierRateLimiter("medium"))
-  unignoreSignals.mountHttp(app, createTierRateLimiter("medium"))
+  muteSignals.mountHttp(app, createTierRateLimiter("medium"))
+  unmuteSignals.mountHttp(app, createTierRateLimiter("medium"))
   monitorSignal.mountHttp(app, createTierRateLimiter("critical"))
   unmonitorSignal.mountHttp(app, createTierRateLimiter("medium"))
   exportSignals.mountHttp(app, createTierRateLimiter("critical"))

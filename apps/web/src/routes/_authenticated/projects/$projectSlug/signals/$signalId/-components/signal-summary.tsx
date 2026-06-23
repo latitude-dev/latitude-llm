@@ -56,7 +56,7 @@ function SeenTile({
  * - **Evaluations** (fixed ~500px): the issue-evaluations component at its native
  *   width, so it neither wraps (too narrow) nor stretches (too wide).
  *
- * Triage (assignee / priority) and the resolve/ignore lifecycle live in the
+ * Triage (assignee / priority) and mute action live in the
  * page header, tracker-style. "Affected users" is hidden when there's no user
  * attribution (count 0).
  */
@@ -156,7 +156,7 @@ export function SignalSummary({ projectId, signalId }: { readonly projectId: str
           signalSource={issue?.source ?? "annotation"}
           evaluations={issue?.evaluations ?? []}
           flaggerSlugs={issue?.flaggerSlugs ?? []}
-          canMonitorSignal={issue ? issue.resolvedAt === null && issue.ignoredAt === null : false}
+          canMonitorSignal={issue ? issue.mutedAt === null : false}
           isSignalLoading={isLoading}
         />
       </div>

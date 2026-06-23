@@ -135,7 +135,7 @@ export class SignalsClient {
     }
 
     /**
-     * Returns signal analytics for the project: counts of ongoing, new, escalating, regressed, and resolved signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
+     * Returns signal analytics for the project: counts of ongoing, new, and escalating signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {LatitudeApi.SignalsAnalyticsRequest} request
@@ -530,99 +530,7 @@ export class SignalsClient {
     }
 
     /**
-     * Marks each signal in `signalIds` as resolved. When `keepMonitoring` is `false`, monitoring is also stopped for each resolved signal; when omitted, the project's default applies.
-     *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
-     * @param {LatitudeApi.ResolveSignalsBody} request
-     * @param {SignalsClient.RequestOptions} requestOptions - Request-specific configuration.
-     *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
-     *
-     * @example
-     *     await client.signals.resolve("projectSlug", {
-     *         signalIds: ["signalIds"]
-     *     })
-     */
-    public resolve(
-        projectSlug: string,
-        request: LatitudeApi.ResolveSignalsBody,
-        requestOptions?: SignalsClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.SignalsLifecycleResponse> {
-        return core.HttpResponsePromise.fromPromise(this.__resolve(projectSlug, request, requestOptions));
-    }
-
-    private async __resolve(
-        projectSlug: string,
-        request: LatitudeApi.ResolveSignalsBody,
-        requestOptions?: SignalsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.SignalsLifecycleResponse>> {
-        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
-        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
-            _authRequest.headers,
-            this._options?.headers,
-            requestOptions?.headers,
-        );
-        const _response = await core.fetcher({
-            url: core.url.join(
-                (await core.Supplier.get(this._options.baseUrl)) ??
-                    (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
-                `v1/projects/${core.url.encodePathParam(projectSlug)}/signals/resolve`,
-            ),
-            method: "POST",
-            headers: _headers,
-            contentType: "application/json",
-            queryParameters: requestOptions?.queryParams,
-            requestType: "json",
-            body: request,
-            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
-            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
-            abortSignal: requestOptions?.abortSignal,
-            fetchFn: this._options?.fetch,
-            logging: this._options.logging,
-        });
-        if (_response.ok) {
-            return { data: _response.body as LatitudeApi.SignalsLifecycleResponse, rawResponse: _response.rawResponse };
-        }
-
-        if (_response.error.reason === "status-code") {
-            switch (_response.error.statusCode) {
-                case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
-                case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
-                case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
-                default:
-                    throw new errors.LatitudeApiError({
-                        statusCode: _response.error.statusCode,
-                        body: _response.error.body,
-                        rawResponse: _response.rawResponse,
-                    });
-            }
-        }
-
-        return handleNonStatusCodeError(
-            _response.error,
-            _response.rawResponse,
-            "POST",
-            "/v1/projects/{projectSlug}/signals/resolve",
-        );
-    }
-
-    /**
-     * Reverts each signal in `signalIds` to the unresolved state.
+     * Mutes each signal in `signalIds`.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {LatitudeApi.SignalsLifecycleBody} request
@@ -633,19 +541,19 @@ export class SignalsClient {
      * @throws {@link LatitudeApi.NotFoundError}
      *
      * @example
-     *     await client.signals.unresolve("projectSlug", {
+     *     await client.signals.mute("projectSlug", {
      *         signalIds: ["signalIds"]
      *     })
      */
-    public unresolve(
+    public mute(
         projectSlug: string,
         request: LatitudeApi.SignalsLifecycleBody,
         requestOptions?: SignalsClient.RequestOptions,
     ): core.HttpResponsePromise<LatitudeApi.SignalsLifecycleResponse> {
-        return core.HttpResponsePromise.fromPromise(this.__unresolve(projectSlug, request, requestOptions));
+        return core.HttpResponsePromise.fromPromise(this.__mute(projectSlug, request, requestOptions));
     }
 
-    private async __unresolve(
+    private async __mute(
         projectSlug: string,
         request: LatitudeApi.SignalsLifecycleBody,
         requestOptions?: SignalsClient.RequestOptions,
@@ -661,7 +569,7 @@ export class SignalsClient {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.LatitudeApiEnvironment.Production,
-                `v1/projects/${core.url.encodePathParam(projectSlug)}/signals/unresolve`,
+                `v1/projects/${core.url.encodePathParam(projectSlug)}/signals/mute`,
             ),
             method: "POST",
             headers: _headers,
@@ -709,12 +617,12 @@ export class SignalsClient {
             _response.error,
             _response.rawResponse,
             "POST",
-            "/v1/projects/{projectSlug}/signals/unresolve",
+            "/v1/projects/{projectSlug}/signals/mute",
         );
     }
 
     /**
-     * Marks each signal in `signalIds` as ignored. Monitoring is also stopped for each ignored signal.
+     * Reverts each signal in `signalIds` to an unmuted state.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {LatitudeApi.SignalsLifecycleBody} request
@@ -725,19 +633,19 @@ export class SignalsClient {
      * @throws {@link LatitudeApi.NotFoundError}
      *
      * @example
-     *     await client.signals.ignore("projectSlug", {
+     *     await client.signals.unmute("projectSlug", {
      *         signalIds: ["signalIds"]
      *     })
      */
-    public ignore(
+    public unmute(
         projectSlug: string,
         request: LatitudeApi.SignalsLifecycleBody,
         requestOptions?: SignalsClient.RequestOptions,
     ): core.HttpResponsePromise<LatitudeApi.SignalsLifecycleResponse> {
-        return core.HttpResponsePromise.fromPromise(this.__ignore(projectSlug, request, requestOptions));
+        return core.HttpResponsePromise.fromPromise(this.__unmute(projectSlug, request, requestOptions));
     }
 
-    private async __ignore(
+    private async __unmute(
         projectSlug: string,
         request: LatitudeApi.SignalsLifecycleBody,
         requestOptions?: SignalsClient.RequestOptions,
@@ -753,7 +661,7 @@ export class SignalsClient {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.LatitudeApiEnvironment.Production,
-                `v1/projects/${core.url.encodePathParam(projectSlug)}/signals/ignore`,
+                `v1/projects/${core.url.encodePathParam(projectSlug)}/signals/unmute`,
             ),
             method: "POST",
             headers: _headers,
@@ -801,99 +709,7 @@ export class SignalsClient {
             _response.error,
             _response.rawResponse,
             "POST",
-            "/v1/projects/{projectSlug}/signals/ignore",
-        );
-    }
-
-    /**
-     * Reverts each signal in `signalIds` to a non-ignored state.
-     *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
-     * @param {LatitudeApi.SignalsLifecycleBody} request
-     * @param {SignalsClient.RequestOptions} requestOptions - Request-specific configuration.
-     *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
-     *
-     * @example
-     *     await client.signals.unignore("projectSlug", {
-     *         signalIds: ["signalIds"]
-     *     })
-     */
-    public unignore(
-        projectSlug: string,
-        request: LatitudeApi.SignalsLifecycleBody,
-        requestOptions?: SignalsClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.SignalsLifecycleResponse> {
-        return core.HttpResponsePromise.fromPromise(this.__unignore(projectSlug, request, requestOptions));
-    }
-
-    private async __unignore(
-        projectSlug: string,
-        request: LatitudeApi.SignalsLifecycleBody,
-        requestOptions?: SignalsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.SignalsLifecycleResponse>> {
-        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
-        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
-            _authRequest.headers,
-            this._options?.headers,
-            requestOptions?.headers,
-        );
-        const _response = await core.fetcher({
-            url: core.url.join(
-                (await core.Supplier.get(this._options.baseUrl)) ??
-                    (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
-                `v1/projects/${core.url.encodePathParam(projectSlug)}/signals/unignore`,
-            ),
-            method: "POST",
-            headers: _headers,
-            contentType: "application/json",
-            queryParameters: requestOptions?.queryParams,
-            requestType: "json",
-            body: request,
-            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
-            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
-            abortSignal: requestOptions?.abortSignal,
-            fetchFn: this._options?.fetch,
-            logging: this._options.logging,
-        });
-        if (_response.ok) {
-            return { data: _response.body as LatitudeApi.SignalsLifecycleResponse, rawResponse: _response.rawResponse };
-        }
-
-        if (_response.error.reason === "status-code") {
-            switch (_response.error.statusCode) {
-                case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
-                case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
-                case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
-                default:
-                    throw new errors.LatitudeApiError({
-                        statusCode: _response.error.statusCode,
-                        body: _response.error.body,
-                        rawResponse: _response.rawResponse,
-                    });
-            }
-        }
-
-        return handleNonStatusCodeError(
-            _response.error,
-            _response.rawResponse,
-            "POST",
-            "/v1/projects/{projectSlug}/signals/unignore",
+            "/v1/projects/{projectSlug}/signals/unmute",
         );
     }
 

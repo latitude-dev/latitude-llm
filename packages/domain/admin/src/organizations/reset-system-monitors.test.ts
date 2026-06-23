@@ -1,6 +1,6 @@
-import { buildSystemMonitors, MonitorRepository } from "@domain/monitors"
+import { MonitorRepository } from "@domain/monitors"
 import { createFakeMonitorRepository } from "@domain/monitors/testing"
-import { OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { MonitorId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -46,33 +46,44 @@ const run = (org: AdminOrganizationDetails, monitorRepo: ReturnType<typeof creat
   )
 
 describe("resetSystemMonitorsUseCase", () => {
-  it("re-provisions the three system monitors for every project in the org", async () => {
+  it("keeps the compatibility command as a no-op after system monitors are deleted", async () => {
     const { repo, monitors } = createFakeMonitorRepository()
     const result = await run(makeOrg([projectA, projectB]), repo)
 
-    expect(result).toEqual({ projectsCount: 2, monitorsReset: 6 })
-    expect(monitors.length).toBe(6)
-    for (const projectId of [projectA, projectB]) {
-      const slugs = monitors
-        .filter((m) => m.projectId === projectId)
-        .map((m) => m.slug)
-        .sort()
-      expect(slugs).toEqual(["issue-discovered", "issue-escalating", "issue-regressed"])
-    }
+    expect(result).toEqual({ projectsCount: 2, monitorsReset: 0 })
+    expect(monitors.length).toBe(0)
   })
 
-  it("overwrites an existing system monitor's metadata (not skip-if-exists)", async () => {
-    const seeded = buildSystemMonitors({ organizationId, projectId: ProjectId(projectA) }).map((monitor) =>
-      monitor.slug === "issue-discovered" ? { ...monitor, name: "Stale name", description: "Stale" } : monitor,
-    )
-    const { repo, monitors } = createFakeMonitorRepository(seeded)
+  it("does not overwrite existing monitors", async () => {
+    const { repo, monitors } = createFakeMonitorRepository()
+    monitors.push({
+      id: MonitorId("m".repeat(24)),
+      organizationId,
+      projectId: ProjectId(projectA),
+      slug: "custom-monitor",
+      name: "Custom monitor",
+      description: "Custom",
+      target: {
+        type: "session",
+        id: null,
+        kind: "session",
+        stream: "traces",
+        query: null,
+        savedSearchId: null,
+        metric: { kind: "count" },
+      },
+      rule: { trigger: "match", config: {}, severity: "medium" },
+      mutedAt: null,
+      deletedAt: null,
+      system: false,
+      createdAt: at,
+      updatedAt: at,
+    })
 
     const result = await run(makeOrg([projectA]), repo)
 
-    expect(result).toEqual({ projectsCount: 1, monitorsReset: 3 })
-    expect(monitors.length).toBe(3)
-    const discovered = monitors.find((m) => m.projectId === projectA && m.slug === "issue-discovered")
-    expect(discovered?.name).toBe("Signal discovered")
-    expect(discovered?.description).toBe("Notifies each time a new issue is detected.")
+    expect(result).toEqual({ projectsCount: 1, monitorsReset: 0 })
+    expect(monitors).toHaveLength(1)
+    expect(monitors[0]?.slug).toBe("custom-monitor")
   })
 })

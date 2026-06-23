@@ -1,11 +1,10 @@
 import { NotFoundError } from "@domain/shared"
 import { Effect } from "effect"
-import { type Signal, SignalState } from "../entities/signal.ts"
+import type { Signal } from "../entities/signal.ts"
 import type { SignalLifecycleFlags, SignalRepositoryShape, SignalWithLifecycle } from "../ports/signal-repository.ts"
 
 const DEFAULT_LIFECYCLE: SignalLifecycleFlags = {
   isEscalating: false,
-  isRegressed: false,
 }
 
 const dot = (a: readonly number[], b: readonly number[]): number =>
@@ -19,9 +18,8 @@ const normalize = (vector: readonly number[]): readonly number[] | null => {
 
 interface FakeSignalRepositoryOptions {
   /**
-   * Per-issue lifecycle overlay. Tests that exercise escalation / regression
-   * derivation set the flags here per issue id; everything else defaults to
-   * `{ isEscalating: false, isRegressed: false }`.
+   * Per-signal lifecycle overlay. Tests that exercise escalation derivation
+   * set the flags here per signal id; everything else defaults to not escalating.
    */
   readonly lifecycle?: ReadonlyMap<string, SignalLifecycleFlags>
 }
@@ -160,14 +158,7 @@ export const createFakeSignalRepository = (
           .filter((issue) => issue.projectId === projectId)
           .map(withLifecycle)
           .filter((issue) => {
-            const states = [
-              ...(issue.createdAt.getTime() > Date.now() - 72 * 60 * 60 * 1000 ? [SignalState.New] : []),
-              ...(issue.lifecycle.isEscalating ? [SignalState.Escalating] : []),
-              ...(issue.resolvedAt === null && issue.lifecycle.isRegressed ? [SignalState.Regressed] : []),
-              ...(issue.resolvedAt !== null ? [SignalState.Resolved] : []),
-              ...(issue.ignoredAt !== null ? [SignalState.Ignored] : []),
-            ]
-            const archived = issue.ignoredAt !== null || states.includes(SignalState.Resolved)
+            const archived = issue.mutedAt !== null
             if (lifecycleGroup === "active" && archived) return false
             if (lifecycleGroup === "archived" && !archived) return false
             if (assigneeIds?.length && !assigneeIds.includes(issue.assigneeId ?? "unassigned")) return false

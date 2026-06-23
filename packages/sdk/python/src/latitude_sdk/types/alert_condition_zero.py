@@ -4,15 +4,22 @@ import typing
 
 import pydantic
 from ..core.pydantic_utilities import UniversalBaseModel
-from .alert_count_threshold import AlertCountThreshold
+from .alert_condition_zero_direction import AlertConditionZeroDirection
+from .alert_metric_threshold import AlertMetricThreshold
+from .monitor_metric import MonitorMetric
 
 
 class AlertConditionZero(UniversalBaseModel):
-    kind: typing.Literal["savedSearch.threshold"] = pydantic.Field(default="savedSearch.threshold")
+    trigger: typing.Literal["threshold"] = pydantic.Field(default="threshold")
     """
-    Threshold alert: opens once the count threshold is crossed.
+    Opens once the measured value crosses the threshold.
     """
 
-    threshold: AlertCountThreshold
+    metric: MonitorMetric
+    threshold: AlertMetricThreshold
+    direction: typing.Optional[AlertConditionZeroDirection] = pydantic.Field(default=None)
+    """
+    Direction that opens the incident. Defaults to `above` when omitted.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

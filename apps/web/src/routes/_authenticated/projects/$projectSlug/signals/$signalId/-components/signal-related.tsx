@@ -78,13 +78,10 @@ function RelatedSignalCard({ projectSlug, row }: { readonly projectSlug: string;
     >
       <div className="flex min-w-0 flex-row items-center gap-2">
         <Text.H5 className="min-w-0 flex-1 truncate group-hover:underline">{row.name}</Text.H5>
-        {/* Resolved/ignored cards are included on purpose — "a similar issue was
-            already resolved" is the most actionable neighbor to surface. */}
         <div className="shrink-0">
           <SignalLifecycleStatuses states={row.states} wrap={false} />
         </div>
       </div>
-      {/* The description lets users judge the similarity themselves. */}
       <Text.H6 color="foregroundMuted" className="line-clamp-2 flex-1">
         {row.description}
       </Text.H6>

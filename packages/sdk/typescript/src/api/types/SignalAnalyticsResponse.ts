@@ -6,7 +6,5 @@ export interface SignalAnalyticsResponse {
     ongoing: LatitudeApi.SignalAnalyticsOngoing;
     "new": LatitudeApi.SignalAnalyticsNew;
     escalating: LatitudeApi.SignalAnalyticsEscalating;
-    regressed: LatitudeApi.SignalAnalyticsRegressed;
-    resolved: LatitudeApi.SignalAnalyticsResolved;
     occurrences: LatitudeApi.SignalAnalyticsOccurrences;
 }

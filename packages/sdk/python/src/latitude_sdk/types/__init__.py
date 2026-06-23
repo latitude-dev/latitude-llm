@@ -15,24 +15,11 @@ if typing.TYPE_CHECKING:
     from .alert_baseline import AlertBaseline
     from .alert_baseline_kind import AlertBaselineKind
     from .alert_condition import AlertCondition
-    from .alert_condition_kind import AlertConditionKind
-    from .alert_condition_kind_direction import AlertConditionKindDirection
-    from .alert_condition_kind_window import AlertConditionKindWindow
-    from .alert_condition_one import AlertConditionOne
-    from .alert_condition_one_window import AlertConditionOneWindow
     from .alert_condition_sensitivity import AlertConditionSensitivity
-    from .alert_condition_three import AlertConditionThree
-    from .alert_condition_three_direction import AlertConditionThreeDirection
+    from .alert_condition_sensitivity_direction import AlertConditionSensitivityDirection
+    from .alert_condition_sensitivity_window import AlertConditionSensitivityWindow
     from .alert_condition_zero import AlertConditionZero
-    from .alert_count_threshold import (
-        AlertCountThreshold,
-        AlertCountThreshold_Absolute,
-        AlertCountThreshold_Expected,
-        AlertCountThreshold_Multiplier,
-    )
-    from .alert_count_threshold_absolute import AlertCountThresholdAbsolute
-    from .alert_count_threshold_expected import AlertCountThresholdExpected
-    from .alert_count_threshold_multiplier import AlertCountThresholdMultiplier
+    from .alert_condition_zero_direction import AlertConditionZeroDirection
     from .alert_duration import AlertDuration, AlertDuration_Days, AlertDuration_Hours, AlertDuration_Minutes
     from .alert_duration_days import AlertDurationDays
     from .alert_duration_hours import AlertDurationHours
@@ -55,19 +42,6 @@ if typing.TYPE_CHECKING:
     from .api_key_list_item import ApiKeyListItem
     from .create_custom_score_body import CreateCustomScoreBody
     from .create_evaluation_score_body import CreateEvaluationScoreBody
-    from .create_monitor_alert_body import CreateMonitorAlertBody
-    from .create_monitor_alert_body_condition import CreateMonitorAlertBodyCondition
-    from .create_monitor_alert_body_condition_kind import CreateMonitorAlertBodyConditionKind
-    from .create_monitor_alert_body_condition_kind_direction import CreateMonitorAlertBodyConditionKindDirection
-    from .create_monitor_alert_body_condition_kind_window import CreateMonitorAlertBodyConditionKindWindow
-    from .create_monitor_alert_body_condition_one import CreateMonitorAlertBodyConditionOne
-    from .create_monitor_alert_body_condition_one_window import CreateMonitorAlertBodyConditionOneWindow
-    from .create_monitor_alert_body_condition_sensitivity import CreateMonitorAlertBodyConditionSensitivity
-    from .create_monitor_alert_body_condition_three import CreateMonitorAlertBodyConditionThree
-    from .create_monitor_alert_body_condition_three_direction import CreateMonitorAlertBodyConditionThreeDirection
-    from .create_monitor_alert_body_condition_zero import CreateMonitorAlertBodyConditionZero
-    from .create_monitor_alert_body_kind import CreateMonitorAlertBodyKind
-    from .create_monitor_alert_body_severity import CreateMonitorAlertBodySeverity
     from .create_score_body import CreateScoreBody
     from .custom_score_response import CustomScoreResponse
     from .dataset import Dataset
@@ -101,7 +75,6 @@ if typing.TYPE_CHECKING:
     from .health_response import HealthResponse
     from .import_rows_from_traces_response import ImportRowsFromTracesResponse
     from .incident import Incident
-    from .incident_kind import IncidentKind
     from .incident_notifications_setting import IncidentNotificationsSetting
     from .incident_severity import IncidentSeverity
     from .incident_source_type import IncidentSourceType
@@ -112,15 +85,9 @@ if typing.TYPE_CHECKING:
     from .member import Member, Member_Active, Member_Invited
     from .member_list import MemberList
     from .monitor import Monitor
-    from .monitor_alert import MonitorAlert
-    from .monitor_alert_kind import MonitorAlertKind
-    from .monitor_alert_list import MonitorAlertList
-    from .monitor_alert_severity import MonitorAlertSeverity
-    from .monitor_alert_source import MonitorAlertSource
-    from .monitor_alert_source_type import MonitorAlertSourceType
+    from .monitor_config import MonitorConfig
     from .monitor_filter_set import MonitorFilterSet
     from .monitor_incident import MonitorIncident
-    from .monitor_incident_kind import MonitorIncidentKind
     from .monitor_incident_severity import MonitorIncidentSeverity
     from .monitor_incident_source_type import MonitorIncidentSourceType
     from .monitor_list import MonitorList
@@ -129,21 +96,29 @@ if typing.TYPE_CHECKING:
         MonitorMetric_Avg,
         MonitorMetric_Count,
         MonitorMetric_ErrorRate,
-        MonitorMetric_P95,
+        MonitorMetric_Max,
+        MonitorMetric_Median,
+        MonitorMetric_Min,
         MonitorMetric_Sum,
     )
     from .monitor_metric_avg import MonitorMetricAvg
     from .monitor_metric_avg_field import MonitorMetricAvgField
     from .monitor_metric_count import MonitorMetricCount
     from .monitor_metric_error_rate import MonitorMetricErrorRate
-    from .monitor_metric_p_95 import MonitorMetricP95
-    from .monitor_metric_p_95_field import MonitorMetricP95Field
+    from .monitor_metric_max import MonitorMetricMax
+    from .monitor_metric_max_field import MonitorMetricMaxField
+    from .monitor_metric_median import MonitorMetricMedian
+    from .monitor_metric_median_field import MonitorMetricMedianField
+    from .monitor_metric_min import MonitorMetricMin
+    from .monitor_metric_min_field import MonitorMetricMinField
     from .monitor_metric_sum import MonitorMetricSum
     from .monitor_metric_sum_field import MonitorMetricSumField
+    from .monitor_rule import MonitorRule
+    from .monitor_rule_severity import MonitorRuleSeverity
+    from .monitor_rule_trigger import MonitorRuleTrigger
     from .monitor_signal_response import MonitorSignalResponse
     from .monitor_target import MonitorTarget
-    from .monitor_target_kind import MonitorTargetKind
-    from .monitor_target_stream import MonitorTargetStream
+    from .monitor_target_type import MonitorTargetType
     from .notifications_setting import NotificationsSetting
     from .o_auth_key import OAuthKey
     from .o_auth_key_list import OAuthKeyList
@@ -171,8 +146,6 @@ if typing.TYPE_CHECKING:
     from .signal_analytics_new import SignalAnalyticsNew
     from .signal_analytics_occurrences import SignalAnalyticsOccurrences
     from .signal_analytics_ongoing import SignalAnalyticsOngoing
-    from .signal_analytics_regressed import SignalAnalyticsRegressed
-    from .signal_analytics_resolved import SignalAnalyticsResolved
     from .signal_analytics_response import SignalAnalyticsResponse
     from .signal_detail import SignalDetail
     from .signal_detail_source import SignalDetailSource
@@ -261,22 +234,11 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AlertBaseline": ".alert_baseline",
     "AlertBaselineKind": ".alert_baseline_kind",
     "AlertCondition": ".alert_condition",
-    "AlertConditionKind": ".alert_condition_kind",
-    "AlertConditionKindDirection": ".alert_condition_kind_direction",
-    "AlertConditionKindWindow": ".alert_condition_kind_window",
-    "AlertConditionOne": ".alert_condition_one",
-    "AlertConditionOneWindow": ".alert_condition_one_window",
     "AlertConditionSensitivity": ".alert_condition_sensitivity",
-    "AlertConditionThree": ".alert_condition_three",
-    "AlertConditionThreeDirection": ".alert_condition_three_direction",
+    "AlertConditionSensitivityDirection": ".alert_condition_sensitivity_direction",
+    "AlertConditionSensitivityWindow": ".alert_condition_sensitivity_window",
     "AlertConditionZero": ".alert_condition_zero",
-    "AlertCountThreshold": ".alert_count_threshold",
-    "AlertCountThresholdAbsolute": ".alert_count_threshold_absolute",
-    "AlertCountThresholdExpected": ".alert_count_threshold_expected",
-    "AlertCountThresholdMultiplier": ".alert_count_threshold_multiplier",
-    "AlertCountThreshold_Absolute": ".alert_count_threshold",
-    "AlertCountThreshold_Expected": ".alert_count_threshold",
-    "AlertCountThreshold_Multiplier": ".alert_count_threshold",
+    "AlertConditionZeroDirection": ".alert_condition_zero_direction",
     "AlertDuration": ".alert_duration",
     "AlertDurationDays": ".alert_duration_days",
     "AlertDurationHours": ".alert_duration_hours",
@@ -300,19 +262,6 @@ _dynamic_imports: typing.Dict[str, str] = {
     "ApiKeyListItem": ".api_key_list_item",
     "CreateCustomScoreBody": ".create_custom_score_body",
     "CreateEvaluationScoreBody": ".create_evaluation_score_body",
-    "CreateMonitorAlertBody": ".create_monitor_alert_body",
-    "CreateMonitorAlertBodyCondition": ".create_monitor_alert_body_condition",
-    "CreateMonitorAlertBodyConditionKind": ".create_monitor_alert_body_condition_kind",
-    "CreateMonitorAlertBodyConditionKindDirection": ".create_monitor_alert_body_condition_kind_direction",
-    "CreateMonitorAlertBodyConditionKindWindow": ".create_monitor_alert_body_condition_kind_window",
-    "CreateMonitorAlertBodyConditionOne": ".create_monitor_alert_body_condition_one",
-    "CreateMonitorAlertBodyConditionOneWindow": ".create_monitor_alert_body_condition_one_window",
-    "CreateMonitorAlertBodyConditionSensitivity": ".create_monitor_alert_body_condition_sensitivity",
-    "CreateMonitorAlertBodyConditionThree": ".create_monitor_alert_body_condition_three",
-    "CreateMonitorAlertBodyConditionThreeDirection": ".create_monitor_alert_body_condition_three_direction",
-    "CreateMonitorAlertBodyConditionZero": ".create_monitor_alert_body_condition_zero",
-    "CreateMonitorAlertBodyKind": ".create_monitor_alert_body_kind",
-    "CreateMonitorAlertBodySeverity": ".create_monitor_alert_body_severity",
     "CreateScoreBody": ".create_score_body",
     "CustomScoreResponse": ".custom_score_response",
     "Dataset": ".dataset",
@@ -346,7 +295,6 @@ _dynamic_imports: typing.Dict[str, str] = {
     "HealthResponse": ".health_response",
     "ImportRowsFromTracesResponse": ".import_rows_from_traces_response",
     "Incident": ".incident",
-    "IncidentKind": ".incident_kind",
     "IncidentNotificationsSetting": ".incident_notifications_setting",
     "IncidentSeverity": ".incident_severity",
     "IncidentSourceType": ".incident_source_type",
@@ -359,15 +307,9 @@ _dynamic_imports: typing.Dict[str, str] = {
     "Member_Active": ".member",
     "Member_Invited": ".member",
     "Monitor": ".monitor",
-    "MonitorAlert": ".monitor_alert",
-    "MonitorAlertKind": ".monitor_alert_kind",
-    "MonitorAlertList": ".monitor_alert_list",
-    "MonitorAlertSeverity": ".monitor_alert_severity",
-    "MonitorAlertSource": ".monitor_alert_source",
-    "MonitorAlertSourceType": ".monitor_alert_source_type",
+    "MonitorConfig": ".monitor_config",
     "MonitorFilterSet": ".monitor_filter_set",
     "MonitorIncident": ".monitor_incident",
-    "MonitorIncidentKind": ".monitor_incident_kind",
     "MonitorIncidentSeverity": ".monitor_incident_severity",
     "MonitorIncidentSourceType": ".monitor_incident_source_type",
     "MonitorList": ".monitor_list",
@@ -376,19 +318,27 @@ _dynamic_imports: typing.Dict[str, str] = {
     "MonitorMetricAvgField": ".monitor_metric_avg_field",
     "MonitorMetricCount": ".monitor_metric_count",
     "MonitorMetricErrorRate": ".monitor_metric_error_rate",
-    "MonitorMetricP95": ".monitor_metric_p_95",
-    "MonitorMetricP95Field": ".monitor_metric_p_95_field",
+    "MonitorMetricMax": ".monitor_metric_max",
+    "MonitorMetricMaxField": ".monitor_metric_max_field",
+    "MonitorMetricMedian": ".monitor_metric_median",
+    "MonitorMetricMedianField": ".monitor_metric_median_field",
+    "MonitorMetricMin": ".monitor_metric_min",
+    "MonitorMetricMinField": ".monitor_metric_min_field",
     "MonitorMetricSum": ".monitor_metric_sum",
     "MonitorMetricSumField": ".monitor_metric_sum_field",
     "MonitorMetric_Avg": ".monitor_metric",
     "MonitorMetric_Count": ".monitor_metric",
     "MonitorMetric_ErrorRate": ".monitor_metric",
-    "MonitorMetric_P95": ".monitor_metric",
+    "MonitorMetric_Max": ".monitor_metric",
+    "MonitorMetric_Median": ".monitor_metric",
+    "MonitorMetric_Min": ".monitor_metric",
     "MonitorMetric_Sum": ".monitor_metric",
+    "MonitorRule": ".monitor_rule",
+    "MonitorRuleSeverity": ".monitor_rule_severity",
+    "MonitorRuleTrigger": ".monitor_rule_trigger",
     "MonitorSignalResponse": ".monitor_signal_response",
     "MonitorTarget": ".monitor_target",
-    "MonitorTargetKind": ".monitor_target_kind",
-    "MonitorTargetStream": ".monitor_target_stream",
+    "MonitorTargetType": ".monitor_target_type",
     "NotificationsSetting": ".notifications_setting",
     "OAuthKey": ".o_auth_key",
     "OAuthKeyList": ".o_auth_key_list",
@@ -418,8 +368,6 @@ _dynamic_imports: typing.Dict[str, str] = {
     "SignalAnalyticsNew": ".signal_analytics_new",
     "SignalAnalyticsOccurrences": ".signal_analytics_occurrences",
     "SignalAnalyticsOngoing": ".signal_analytics_ongoing",
-    "SignalAnalyticsRegressed": ".signal_analytics_regressed",
-    "SignalAnalyticsResolved": ".signal_analytics_resolved",
     "SignalAnalyticsResponse": ".signal_analytics_response",
     "SignalDetail": ".signal_detail",
     "SignalDetailSource": ".signal_detail_source",
@@ -534,22 +482,11 @@ __all__ = [
     "AlertBaseline",
     "AlertBaselineKind",
     "AlertCondition",
-    "AlertConditionKind",
-    "AlertConditionKindDirection",
-    "AlertConditionKindWindow",
-    "AlertConditionOne",
-    "AlertConditionOneWindow",
     "AlertConditionSensitivity",
-    "AlertConditionThree",
-    "AlertConditionThreeDirection",
+    "AlertConditionSensitivityDirection",
+    "AlertConditionSensitivityWindow",
     "AlertConditionZero",
-    "AlertCountThreshold",
-    "AlertCountThresholdAbsolute",
-    "AlertCountThresholdExpected",
-    "AlertCountThresholdMultiplier",
-    "AlertCountThreshold_Absolute",
-    "AlertCountThreshold_Expected",
-    "AlertCountThreshold_Multiplier",
+    "AlertConditionZeroDirection",
     "AlertDuration",
     "AlertDurationDays",
     "AlertDurationHours",
@@ -573,19 +510,6 @@ __all__ = [
     "ApiKeyListItem",
     "CreateCustomScoreBody",
     "CreateEvaluationScoreBody",
-    "CreateMonitorAlertBody",
-    "CreateMonitorAlertBodyCondition",
-    "CreateMonitorAlertBodyConditionKind",
-    "CreateMonitorAlertBodyConditionKindDirection",
-    "CreateMonitorAlertBodyConditionKindWindow",
-    "CreateMonitorAlertBodyConditionOne",
-    "CreateMonitorAlertBodyConditionOneWindow",
-    "CreateMonitorAlertBodyConditionSensitivity",
-    "CreateMonitorAlertBodyConditionThree",
-    "CreateMonitorAlertBodyConditionThreeDirection",
-    "CreateMonitorAlertBodyConditionZero",
-    "CreateMonitorAlertBodyKind",
-    "CreateMonitorAlertBodySeverity",
     "CreateScoreBody",
     "CustomScoreResponse",
     "Dataset",
@@ -619,7 +543,6 @@ __all__ = [
     "HealthResponse",
     "ImportRowsFromTracesResponse",
     "Incident",
-    "IncidentKind",
     "IncidentNotificationsSetting",
     "IncidentSeverity",
     "IncidentSourceType",
@@ -632,15 +555,9 @@ __all__ = [
     "Member_Active",
     "Member_Invited",
     "Monitor",
-    "MonitorAlert",
-    "MonitorAlertKind",
-    "MonitorAlertList",
-    "MonitorAlertSeverity",
-    "MonitorAlertSource",
-    "MonitorAlertSourceType",
+    "MonitorConfig",
     "MonitorFilterSet",
     "MonitorIncident",
-    "MonitorIncidentKind",
     "MonitorIncidentSeverity",
     "MonitorIncidentSourceType",
     "MonitorList",
@@ -649,19 +566,27 @@ __all__ = [
     "MonitorMetricAvgField",
     "MonitorMetricCount",
     "MonitorMetricErrorRate",
-    "MonitorMetricP95",
-    "MonitorMetricP95Field",
+    "MonitorMetricMax",
+    "MonitorMetricMaxField",
+    "MonitorMetricMedian",
+    "MonitorMetricMedianField",
+    "MonitorMetricMin",
+    "MonitorMetricMinField",
     "MonitorMetricSum",
     "MonitorMetricSumField",
     "MonitorMetric_Avg",
     "MonitorMetric_Count",
     "MonitorMetric_ErrorRate",
-    "MonitorMetric_P95",
+    "MonitorMetric_Max",
+    "MonitorMetric_Median",
+    "MonitorMetric_Min",
     "MonitorMetric_Sum",
+    "MonitorRule",
+    "MonitorRuleSeverity",
+    "MonitorRuleTrigger",
     "MonitorSignalResponse",
     "MonitorTarget",
-    "MonitorTargetKind",
-    "MonitorTargetStream",
+    "MonitorTargetType",
     "NotificationsSetting",
     "OAuthKey",
     "OAuthKeyList",
@@ -691,8 +616,6 @@ __all__ = [
     "SignalAnalyticsNew",
     "SignalAnalyticsOccurrences",
     "SignalAnalyticsOngoing",
-    "SignalAnalyticsRegressed",
-    "SignalAnalyticsResolved",
     "SignalAnalyticsResponse",
     "SignalDetail",
     "SignalDetailSource",

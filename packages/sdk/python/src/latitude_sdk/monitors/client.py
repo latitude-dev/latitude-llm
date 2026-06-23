@@ -4,22 +4,20 @@ import typing
 
 from ..core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from ..core.request_options import RequestOptions
-from ..types.create_monitor_alert_body import CreateMonitorAlertBody
+from ..types.alert_condition import AlertCondition
 from ..types.monitor import Monitor
-from ..types.monitor_alert import MonitorAlert
-from ..types.monitor_alert_list import MonitorAlertList
 from ..types.monitor_filter_set import MonitorFilterSet
 from ..types.monitor_list import MonitorList
+from ..types.monitor_metric import MonitorMetric
 from ..types.monitor_target import MonitorTarget
 from ..types.paginated_monitor_incidents import PaginatedMonitorIncidents
 from ..types.paginated_monitors import PaginatedMonitors
 from .raw_client import AsyncRawMonitorsClient, RawMonitorsClient
-from .types.list_monitors_for_target_body_stream import ListMonitorsForTargetBodyStream
-from .types.list_monitors_for_target_body_target_kind import ListMonitorsForTargetBodyTargetKind
-from .types.update_monitor_alert_body_condition import UpdateMonitorAlertBodyCondition
-from .types.update_monitor_alert_body_kind import UpdateMonitorAlertBodyKind
-from .types.update_monitor_alert_body_severity import UpdateMonitorAlertBodySeverity
-from .types.update_monitor_alert_body_source import UpdateMonitorAlertBodySource
+from .types.create_monitor_body_severity import CreateMonitorBodySeverity
+from .types.create_monitor_body_trigger import CreateMonitorBodyTrigger
+from .types.list_monitors_for_target_body_target_type import ListMonitorsForTargetBodyTargetType
+from .types.update_monitor_body_severity import UpdateMonitorBodySeverity
+from .types.update_monitor_body_trigger import UpdateMonitorBodyTrigger
 
 # this is used as the default value for optional parameters
 OMIT = typing.cast(typing.Any, ...)
@@ -98,13 +96,16 @@ class MonitorsClient:
         project_slug: str,
         *,
         name: str,
-        alerts: typing.Sequence[CreateMonitorAlertBody],
+        target: MonitorTarget,
+        trigger: CreateMonitorBodyTrigger,
+        severity: CreateMonitorBodySeverity,
         description: typing.Optional[str] = OMIT,
-        target: typing.Optional[MonitorTarget] = OMIT,
+        metric: typing.Optional[MonitorMetric] = OMIT,
+        condition: typing.Optional[AlertCondition] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> Monitor:
         """
-        Creates a monitor with one alert. Saved-search alerts use a saved-search source; tool and user alerts use `event.*` or `metric.*` kinds with `source: null` and a `target`. The slug is derived from `name`.
+        Creates a monitor with one rule. The slug is derived from `name`.
 
         Parameters
         ----------
@@ -114,13 +115,20 @@ class MonitorsClient:
         name : str
             Human-readable name. Used to derive the slug.
 
-        alerts : typing.Sequence[CreateMonitorAlertBody]
-            The monitor's alert. Exactly one.
+        target : MonitorTarget
+
+        trigger : CreateMonitorBodyTrigger
+            When the monitor opens incidents: `match`, `threshold`, or `escalating`.
+
+        severity : CreateMonitorBodySeverity
+            Severity assigned to incidents opened by this monitor.
 
         description : typing.Optional[str]
             Optional free-form description.
 
-        target : typing.Optional[MonitorTarget]
+        metric : typing.Optional[MonitorMetric]
+
+        condition : typing.Optional[AlertCondition]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -132,7 +140,7 @@ class MonitorsClient:
 
         Examples
         --------
-        from latitude import CreateMonitorAlertBody, LatitudeApiClient
+        from latitude import LatitudeApiClient, MonitorTarget
 
         client = LatitudeApiClient(
             token="YOUR_TOKEN",
@@ -140,19 +148,22 @@ class MonitorsClient:
         client.monitors.create(
             project_slug="projectSlug",
             name="name",
-            alerts=[
-                CreateMonitorAlertBody(
-                    kind="savedSearch.match",
-                )
-            ],
+            target=MonitorTarget(
+                type="savedSearch",
+            ),
+            trigger="match",
+            severity="low",
         )
         """
         _response = self._raw_client.create(
             project_slug,
             name=name,
-            alerts=alerts,
-            description=description,
             target=target,
+            trigger=trigger,
+            severity=severity,
+            description=description,
+            metric=metric,
+            condition=condition,
             request_options=request_options,
         )
         return _response.data
@@ -161,26 +172,22 @@ class MonitorsClient:
         self,
         project_slug: str,
         *,
-        stream: ListMonitorsForTargetBodyStream,
-        target_kind: typing.Optional[ListMonitorsForTargetBodyTargetKind] = OMIT,
-        filter_set_contains: typing.Optional[MonitorFilterSet] = OMIT,
+        filter_set_contains: MonitorFilterSet,
+        target_type: typing.Optional[ListMonitorsForTargetBodyTargetType] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> MonitorList:
         """
-        Returns live unified monitors matching the supplied target kind and/or filter subset. Use `targetKind: user` with `stream: traces` for users, or `targetKind: tool` with `stream: spans` for tools.
+        Returns live monitors matching the supplied target type and/or filter subset.
 
         Parameters
         ----------
         project_slug : str
             Project slug (human-readable identifier)
 
-        stream : ListMonitorsForTargetBodyStream
-            Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`.
+        filter_set_contains : MonitorFilterSet
 
-        target_kind : typing.Optional[ListMonitorsForTargetBodyTargetKind]
-            Optional target kind to match: `user`, `tool`, `session`, or `savedSearch`.
-
-        filter_set_contains : typing.Optional[MonitorFilterSet]
+        target_type : typing.Optional[ListMonitorsForTargetBodyTargetType]
+            Optional target type to match.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -192,21 +199,27 @@ class MonitorsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude import FilterCondition, LatitudeApiClient
 
         client = LatitudeApiClient(
             token="YOUR_TOKEN",
         )
         client.monitors.list_for_target(
             project_slug="projectSlug",
-            stream="traces",
+            filter_set_contains={
+                "key": [
+                    FilterCondition(
+                        op="eq",
+                        value="value",
+                    )
+                ]
+            },
         )
         """
         _response = self._raw_client.list_for_target(
             project_slug,
-            stream=stream,
-            target_kind=target_kind,
             filter_set_contains=filter_set_contains,
+            target_type=target_type,
             request_options=request_options,
         )
         return _response.data
@@ -252,7 +265,7 @@ class MonitorsClient:
         self, project_slug: str, monitor_slug: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> None:
         """
-        Deletes a monitor and its alerts. System monitors cannot be deleted.
+        Deletes a monitor. System monitors cannot be deleted.
 
         Parameters
         ----------
@@ -291,10 +304,15 @@ class MonitorsClient:
         *,
         name: typing.Optional[str] = OMIT,
         description: typing.Optional[str] = OMIT,
+        target: typing.Optional[MonitorTarget] = OMIT,
+        trigger: typing.Optional[UpdateMonitorBodyTrigger] = OMIT,
+        metric: typing.Optional[MonitorMetric] = OMIT,
+        condition: typing.Optional[AlertCondition] = OMIT,
+        severity: typing.Optional[UpdateMonitorBodySeverity] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> Monitor:
         """
-        Updates a monitor's name and description. System monitors cannot be edited.
+        Updates a monitor's metadata, target, and rule. System monitor edits are restricted.
 
         Parameters
         ----------
@@ -309,6 +327,18 @@ class MonitorsClient:
 
         description : typing.Optional[str]
             New description.
+
+        target : typing.Optional[MonitorTarget]
+
+        trigger : typing.Optional[UpdateMonitorBodyTrigger]
+            Replacement incident trigger for the monitor rule.
+
+        metric : typing.Optional[MonitorMetric]
+
+        condition : typing.Optional[AlertCondition]
+
+        severity : typing.Optional[UpdateMonitorBodySeverity]
+            Replacement incident severity.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -331,158 +361,13 @@ class MonitorsClient:
         )
         """
         _response = self._raw_client.update(
-            project_slug, monitor_slug, name=name, description=description, request_options=request_options
-        )
-        return _response.data
-
-    def list_alerts(
-        self, project_slug: str, monitor_slug: str, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> MonitorAlertList:
-        """
-        Returns the monitor's alerts.
-
-        Parameters
-        ----------
-        project_slug : str
-            Project slug (human-readable identifier)
-
-        monitor_slug : str
-            Monitor slug (human-readable identifier within the project).
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        MonitorAlertList
-            The monitor's alerts
-
-        Examples
-        --------
-        from latitude import LatitudeApiClient
-
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
-        )
-        client.monitors.list_alerts(
-            project_slug="projectSlug",
-            monitor_slug="monitorSlug",
-        )
-        """
-        _response = self._raw_client.list_alerts(project_slug, monitor_slug, request_options=request_options)
-        return _response.data
-
-    def get_alert(
-        self,
-        project_slug: str,
-        monitor_slug: str,
-        alert_id: str,
-        *,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> MonitorAlert:
-        """
-        Returns a single monitor alert by id.
-
-        Parameters
-        ----------
-        project_slug : str
-            Project slug (human-readable identifier)
-
-        monitor_slug : str
-            Monitor slug (human-readable identifier within the project).
-
-        alert_id : str
-            Monitor-alert identifier.
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        MonitorAlert
-            Monitor alert
-
-        Examples
-        --------
-        from latitude import LatitudeApiClient
-
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
-        )
-        client.monitors.get_alert(
-            project_slug="projectSlug",
-            monitor_slug="monitorSlug",
-            alert_id="alertId",
-        )
-        """
-        _response = self._raw_client.get_alert(project_slug, monitor_slug, alert_id, request_options=request_options)
-        return _response.data
-
-    def update_alert(
-        self,
-        project_slug: str,
-        monitor_slug: str,
-        alert_id: str,
-        *,
-        kind: typing.Optional[UpdateMonitorAlertBodyKind] = OMIT,
-        source: typing.Optional[UpdateMonitorAlertBodySource] = OMIT,
-        condition: typing.Optional[UpdateMonitorAlertBodyCondition] = OMIT,
-        severity: typing.Optional[UpdateMonitorAlertBodySeverity] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> Monitor:
-        """
-        Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may. Saved-search alerts use a source; tool and user alerts use `source: null` with the monitor target.
-
-        Parameters
-        ----------
-        project_slug : str
-            Project slug (human-readable identifier)
-
-        monitor_slug : str
-            Monitor slug (human-readable identifier within the project).
-
-        alert_id : str
-            Monitor-alert identifier.
-
-        kind : typing.Optional[UpdateMonitorAlertBodyKind]
-            New alert kind. Not allowed on system monitors. Supply the matching `source` and `condition` when you change it.
-
-        source : typing.Optional[UpdateMonitorAlertBodySource]
-            Replace the saved-search source, or set `null` for unified tool/user alerts. Not allowed on system monitors.
-
-        condition : typing.Optional[UpdateMonitorAlertBodyCondition]
-            Replace the alert's configuration. On system monitors this is the only editable field (e.g. signal-escalation `sensitivity`).
-
-        severity : typing.Optional[UpdateMonitorAlertBodySeverity]
-            Replace the severity. Not allowed on system monitors.
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        Monitor
-            Monitor with the updated alert
-
-        Examples
-        --------
-        from latitude import LatitudeApiClient
-
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
-        )
-        client.monitors.update_alert(
-            project_slug="projectSlug",
-            monitor_slug="monitorSlug",
-            alert_id="alertId",
-        )
-        """
-        _response = self._raw_client.update_alert(
             project_slug,
             monitor_slug,
-            alert_id,
-            kind=kind,
-            source=source,
+            name=name,
+            description=description,
+            target=target,
+            trigger=trigger,
+            metric=metric,
             condition=condition,
             severity=severity,
             request_options=request_options,
@@ -698,13 +583,16 @@ class AsyncMonitorsClient:
         project_slug: str,
         *,
         name: str,
-        alerts: typing.Sequence[CreateMonitorAlertBody],
+        target: MonitorTarget,
+        trigger: CreateMonitorBodyTrigger,
+        severity: CreateMonitorBodySeverity,
         description: typing.Optional[str] = OMIT,
-        target: typing.Optional[MonitorTarget] = OMIT,
+        metric: typing.Optional[MonitorMetric] = OMIT,
+        condition: typing.Optional[AlertCondition] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> Monitor:
         """
-        Creates a monitor with one alert. Saved-search alerts use a saved-search source; tool and user alerts use `event.*` or `metric.*` kinds with `source: null` and a `target`. The slug is derived from `name`.
+        Creates a monitor with one rule. The slug is derived from `name`.
 
         Parameters
         ----------
@@ -714,13 +602,20 @@ class AsyncMonitorsClient:
         name : str
             Human-readable name. Used to derive the slug.
 
-        alerts : typing.Sequence[CreateMonitorAlertBody]
-            The monitor's alert. Exactly one.
+        target : MonitorTarget
+
+        trigger : CreateMonitorBodyTrigger
+            When the monitor opens incidents: `match`, `threshold`, or `escalating`.
+
+        severity : CreateMonitorBodySeverity
+            Severity assigned to incidents opened by this monitor.
 
         description : typing.Optional[str]
             Optional free-form description.
 
-        target : typing.Optional[MonitorTarget]
+        metric : typing.Optional[MonitorMetric]
+
+        condition : typing.Optional[AlertCondition]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -734,7 +629,7 @@ class AsyncMonitorsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient, CreateMonitorAlertBody
+        from latitude import AsyncLatitudeApiClient, MonitorTarget
 
         client = AsyncLatitudeApiClient(
             token="YOUR_TOKEN",
@@ -745,11 +640,11 @@ class AsyncMonitorsClient:
             await client.monitors.create(
                 project_slug="projectSlug",
                 name="name",
-                alerts=[
-                    CreateMonitorAlertBody(
-                        kind="savedSearch.match",
-                    )
-                ],
+                target=MonitorTarget(
+                    type="savedSearch",
+                ),
+                trigger="match",
+                severity="low",
             )
 
 
@@ -758,9 +653,12 @@ class AsyncMonitorsClient:
         _response = await self._raw_client.create(
             project_slug,
             name=name,
-            alerts=alerts,
-            description=description,
             target=target,
+            trigger=trigger,
+            severity=severity,
+            description=description,
+            metric=metric,
+            condition=condition,
             request_options=request_options,
         )
         return _response.data
@@ -769,26 +667,22 @@ class AsyncMonitorsClient:
         self,
         project_slug: str,
         *,
-        stream: ListMonitorsForTargetBodyStream,
-        target_kind: typing.Optional[ListMonitorsForTargetBodyTargetKind] = OMIT,
-        filter_set_contains: typing.Optional[MonitorFilterSet] = OMIT,
+        filter_set_contains: MonitorFilterSet,
+        target_type: typing.Optional[ListMonitorsForTargetBodyTargetType] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> MonitorList:
         """
-        Returns live unified monitors matching the supplied target kind and/or filter subset. Use `targetKind: user` with `stream: traces` for users, or `targetKind: tool` with `stream: spans` for tools.
+        Returns live monitors matching the supplied target type and/or filter subset.
 
         Parameters
         ----------
         project_slug : str
             Project slug (human-readable identifier)
 
-        stream : ListMonitorsForTargetBodyStream
-            Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`.
+        filter_set_contains : MonitorFilterSet
 
-        target_kind : typing.Optional[ListMonitorsForTargetBodyTargetKind]
-            Optional target kind to match: `user`, `tool`, `session`, or `savedSearch`.
-
-        filter_set_contains : typing.Optional[MonitorFilterSet]
+        target_type : typing.Optional[ListMonitorsForTargetBodyTargetType]
+            Optional target type to match.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -802,7 +696,7 @@ class AsyncMonitorsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude import AsyncLatitudeApiClient, FilterCondition
 
         client = AsyncLatitudeApiClient(
             token="YOUR_TOKEN",
@@ -812,7 +706,14 @@ class AsyncMonitorsClient:
         async def main() -> None:
             await client.monitors.list_for_target(
                 project_slug="projectSlug",
-                stream="traces",
+                filter_set_contains={
+                    "key": [
+                        FilterCondition(
+                            op="eq",
+                            value="value",
+                        )
+                    ]
+                },
             )
 
 
@@ -820,9 +721,8 @@ class AsyncMonitorsClient:
         """
         _response = await self._raw_client.list_for_target(
             project_slug,
-            stream=stream,
-            target_kind=target_kind,
             filter_set_contains=filter_set_contains,
+            target_type=target_type,
             request_options=request_options,
         )
         return _response.data
@@ -876,7 +776,7 @@ class AsyncMonitorsClient:
         self, project_slug: str, monitor_slug: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> None:
         """
-        Deletes a monitor and its alerts. System monitors cannot be deleted.
+        Deletes a monitor. System monitors cannot be deleted.
 
         Parameters
         ----------
@@ -923,10 +823,15 @@ class AsyncMonitorsClient:
         *,
         name: typing.Optional[str] = OMIT,
         description: typing.Optional[str] = OMIT,
+        target: typing.Optional[MonitorTarget] = OMIT,
+        trigger: typing.Optional[UpdateMonitorBodyTrigger] = OMIT,
+        metric: typing.Optional[MonitorMetric] = OMIT,
+        condition: typing.Optional[AlertCondition] = OMIT,
+        severity: typing.Optional[UpdateMonitorBodySeverity] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> Monitor:
         """
-        Updates a monitor's name and description. System monitors cannot be edited.
+        Updates a monitor's metadata, target, and rule. System monitor edits are restricted.
 
         Parameters
         ----------
@@ -941,6 +846,18 @@ class AsyncMonitorsClient:
 
         description : typing.Optional[str]
             New description.
+
+        target : typing.Optional[MonitorTarget]
+
+        trigger : typing.Optional[UpdateMonitorBodyTrigger]
+            Replacement incident trigger for the monitor rule.
+
+        metric : typing.Optional[MonitorMetric]
+
+        condition : typing.Optional[AlertCondition]
+
+        severity : typing.Optional[UpdateMonitorBodySeverity]
+            Replacement incident severity.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -971,184 +888,13 @@ class AsyncMonitorsClient:
         asyncio.run(main())
         """
         _response = await self._raw_client.update(
-            project_slug, monitor_slug, name=name, description=description, request_options=request_options
-        )
-        return _response.data
-
-    async def list_alerts(
-        self, project_slug: str, monitor_slug: str, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> MonitorAlertList:
-        """
-        Returns the monitor's alerts.
-
-        Parameters
-        ----------
-        project_slug : str
-            Project slug (human-readable identifier)
-
-        monitor_slug : str
-            Monitor slug (human-readable identifier within the project).
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        MonitorAlertList
-            The monitor's alerts
-
-        Examples
-        --------
-        import asyncio
-
-        from latitude import AsyncLatitudeApiClient
-
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
-        )
-
-
-        async def main() -> None:
-            await client.monitors.list_alerts(
-                project_slug="projectSlug",
-                monitor_slug="monitorSlug",
-            )
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.list_alerts(project_slug, monitor_slug, request_options=request_options)
-        return _response.data
-
-    async def get_alert(
-        self,
-        project_slug: str,
-        monitor_slug: str,
-        alert_id: str,
-        *,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> MonitorAlert:
-        """
-        Returns a single monitor alert by id.
-
-        Parameters
-        ----------
-        project_slug : str
-            Project slug (human-readable identifier)
-
-        monitor_slug : str
-            Monitor slug (human-readable identifier within the project).
-
-        alert_id : str
-            Monitor-alert identifier.
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        MonitorAlert
-            Monitor alert
-
-        Examples
-        --------
-        import asyncio
-
-        from latitude import AsyncLatitudeApiClient
-
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
-        )
-
-
-        async def main() -> None:
-            await client.monitors.get_alert(
-                project_slug="projectSlug",
-                monitor_slug="monitorSlug",
-                alert_id="alertId",
-            )
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.get_alert(
-            project_slug, monitor_slug, alert_id, request_options=request_options
-        )
-        return _response.data
-
-    async def update_alert(
-        self,
-        project_slug: str,
-        monitor_slug: str,
-        alert_id: str,
-        *,
-        kind: typing.Optional[UpdateMonitorAlertBodyKind] = OMIT,
-        source: typing.Optional[UpdateMonitorAlertBodySource] = OMIT,
-        condition: typing.Optional[UpdateMonitorAlertBodyCondition] = OMIT,
-        severity: typing.Optional[UpdateMonitorAlertBodySeverity] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> Monitor:
-        """
-        Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may. Saved-search alerts use a source; tool and user alerts use `source: null` with the monitor target.
-
-        Parameters
-        ----------
-        project_slug : str
-            Project slug (human-readable identifier)
-
-        monitor_slug : str
-            Monitor slug (human-readable identifier within the project).
-
-        alert_id : str
-            Monitor-alert identifier.
-
-        kind : typing.Optional[UpdateMonitorAlertBodyKind]
-            New alert kind. Not allowed on system monitors. Supply the matching `source` and `condition` when you change it.
-
-        source : typing.Optional[UpdateMonitorAlertBodySource]
-            Replace the saved-search source, or set `null` for unified tool/user alerts. Not allowed on system monitors.
-
-        condition : typing.Optional[UpdateMonitorAlertBodyCondition]
-            Replace the alert's configuration. On system monitors this is the only editable field (e.g. signal-escalation `sensitivity`).
-
-        severity : typing.Optional[UpdateMonitorAlertBodySeverity]
-            Replace the severity. Not allowed on system monitors.
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        Monitor
-            Monitor with the updated alert
-
-        Examples
-        --------
-        import asyncio
-
-        from latitude import AsyncLatitudeApiClient
-
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
-        )
-
-
-        async def main() -> None:
-            await client.monitors.update_alert(
-                project_slug="projectSlug",
-                monitor_slug="monitorSlug",
-                alert_id="alertId",
-            )
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.update_alert(
             project_slug,
             monitor_slug,
-            alert_id,
-            kind=kind,
-            source=source,
+            name=name,
+            description=description,
+            target=target,
+            trigger=trigger,
+            metric=metric,
             condition=condition,
             severity=severity,
             request_options=request_options,

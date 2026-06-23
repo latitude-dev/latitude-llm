@@ -41,9 +41,9 @@ const KIND_HELP: Record<UserAlertKind, string> = {
   "savedSearch.match": "Opens an incident each time a new matching trace is detected",
   "savedSearch.threshold": "Opens an incident once matching traces reach a threshold",
   "savedSearch.escalating": "Opens an incident when matching traces stay elevated for a sustained window",
-  "event.matched": "Opens an incident each time a new matching event is detected",
-  "metric.threshold": "Opens an incident once the metric crosses a threshold",
-  "metric.escalating": "Opens an incident when the metric stays elevated for a sustained window",
+  "monitor.match": "Opens an incident each time the monitor target matches",
+  "monitor.threshold": "Opens an incident once the metric crosses a threshold",
+  "monitor.escalating": "Opens an incident when the metric stays elevated for a sustained window",
 }
 
 // Tab label + icon per kind. Saved-search exposes all three; a unified target
@@ -52,14 +52,14 @@ const TAB_FOR_KIND: Record<UserAlertKind, { label: string; icon: typeof EqualApp
   "savedSearch.match": { label: "Match", icon: EqualApproximately },
   "savedSearch.threshold": { label: "Threshold", icon: LineDotRightHorizontal },
   "savedSearch.escalating": { label: "Escalating", icon: TrendingUp },
-  "event.matched": { label: "Match", icon: EqualApproximately },
-  "metric.threshold": { label: "Threshold", icon: LineDotRightHorizontal },
-  "metric.escalating": { label: "Escalating", icon: TrendingUp },
+  "monitor.match": { label: "Match", icon: EqualApproximately },
+  "monitor.threshold": { label: "Threshold", icon: LineDotRightHorizontal },
+  "monitor.escalating": { label: "Escalating", icon: TrendingUp },
 }
 
-const isMatchKind = (kind: UserAlertKind): boolean => kind === "savedSearch.match" || kind === "event.matched"
+const isMatchKind = (kind: UserAlertKind): boolean => kind === "savedSearch.match" || kind === "monitor.match"
 const isEscalatingKind = (kind: UserAlertKind): boolean =>
-  kind === "savedSearch.escalating" || kind === "metric.escalating"
+  kind === "savedSearch.escalating" || kind === "monitor.escalating"
 
 type MetricDimension = "count" | "errorRate" | "duration" | "cost" | "tokens"
 
@@ -78,8 +78,7 @@ const aggregationLabel = (metric: MonitorMetric): string => {
   if (metric.kind === "min") return "Min"
   if (metric.kind === "max") return "Max"
   if (metric.kind === "avg") return "Average"
-  if (metric.kind === "median") return "Median"
-  return "P95"
+  return "Median"
 }
 
 const metricDimension = (metric: MonitorMetric): MetricDimension => {

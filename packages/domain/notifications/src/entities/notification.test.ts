@@ -10,9 +10,9 @@ const cuid = (seed: string) => seed.padEnd(24, "0")
 describe("incident payload backwards compatibility", () => {
   const legacyBase = {
     alertIncidentId: cuid("ai"),
-    sourceType: "issue",
+    sourceType: "monitor",
     sourceId: cuid("i"),
-    incidentKind: "issue.new",
+    incidentKind: "monitor.match",
     severity: "medium",
   }
 
@@ -25,7 +25,7 @@ describe("incident payload backwards compatibility", () => {
   it("parses pre-triage incident.opened payloads", () => {
     const parsed = payloadSchemaFor("incident.opened").parse({
       ...legacyBase,
-      incidentKind: "issue.escalating",
+      incidentKind: "signal.escalating",
     })
     expect(parsed.assigneeId).toBeUndefined()
     expect(parsed.priority).toBeUndefined()
@@ -34,7 +34,7 @@ describe("incident payload backwards compatibility", () => {
   it("parses pre-triage incident.closed payloads", () => {
     const parsed = payloadSchemaFor("incident.closed").parse({
       ...legacyBase,
-      incidentKind: "issue.escalating",
+      incidentKind: "signal.escalating",
       recovery: { durationMs: 60_000 },
     })
     expect(parsed.assigneeId).toBeUndefined()

@@ -4,4 +4,4 @@ import typing
 
 from .filter_condition import FilterCondition
 
-MonitorFilterSet = typing.Optional[typing.Dict[str, typing.Optional[typing.List[FilterCondition]]]]
+MonitorFilterSet = typing.Dict[str, typing.List[FilterCondition]]

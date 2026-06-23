@@ -222,13 +222,13 @@ describe("Signals Routes Integration", () => {
     expect(res.status).toBe(404)
   })
 
-  it<ApiTestContext>("POST /resolve rejects an empty signalIds list with 400", async ({ app, database }) => {
+  it<ApiTestContext>("POST /mute rejects an empty signalIds list with 400", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "3333333333333333aaaaaaaa"
     const slug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const res = await app.fetch(
-      new Request(`http://localhost/v1/projects/${slug}/signals/resolve`, {
+      new Request(`http://localhost/v1/projects/${slug}/signals/mute`, {
         method: "POST",
         headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
         body: JSON.stringify({ signalIds: [] }),
@@ -327,15 +327,11 @@ describe("Signals Routes Integration", () => {
       ongoing: { total: number }
       new: { total: number }
       escalating: { total: number }
-      regressed: { total: number }
-      resolved: { total: number }
       occurrences: { total: number; buckets: ReadonlyArray<{ bucket: string; value: number }> }
     }
     expect(body.ongoing.total).toBe(0)
     expect(body.new.total).toBe(0)
     expect(body.escalating.total).toBe(0)
-    expect(body.regressed.total).toBe(0)
-    expect(body.resolved.total).toBe(0)
     expect(body.occurrences.total).toBe(0)
     expect(body.occurrences.buckets.every((b) => b.value === 0)).toBe(true)
     expect(body.occurrences.buckets.length).toBeGreaterThanOrEqual(14)

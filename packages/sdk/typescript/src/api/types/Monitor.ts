@@ -15,11 +15,10 @@ export interface Monitor {
     name: string;
     /** Free-form description. Empty string when not set. */
     description: string;
-    /** `true` for the auto-provisioned system monitors, which can't be deleted or edited; `false` otherwise. */
+    /** `true` for auto-provisioned system monitors, which cannot be deleted or edited; `false` otherwise. */
     system: boolean;
-    /** The monitor's alerts. Always at least one. */
-    alerts: LatitudeApi.MonitorAlert[];
-    target?: LatitudeApi.MonitorTarget | undefined;
+    target: LatitudeApi.MonitorTarget;
+    rule: LatitudeApi.MonitorRule;
     /** ISO-8601 timestamp at which the monitor was muted, or `null` when active. */
     mutedAt?: string | undefined;
     /** ISO-8601 timestamp at which the monitor was deleted, or `null`. */

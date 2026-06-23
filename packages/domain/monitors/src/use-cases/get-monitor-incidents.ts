@@ -1,4 +1,4 @@
-import { type AlertIncident, type AlertIncidentCursor, AlertIncidentRepository } from "@domain/alerts"
+import { type Incident, type IncidentCursor, IncidentRepository } from "@domain/incidents"
 import { NotificationRepository } from "@domain/notifications"
 import type { MonitorId, OrganizationId, RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
@@ -12,18 +12,18 @@ export interface GetMonitorIncidentsInput {
   /** Default 50, clamped to 100. */
   readonly limit?: number
   /** Keyset cursor; omit for the first page. */
-  readonly cursor?: AlertIncidentCursor
+  readonly cursor?: IncidentCursor
 }
 
 export interface MonitorIncidentItem {
-  readonly incident: AlertIncident
+  readonly incident: Incident
   /** True if any of the incident's notification idempotency keys exists — the "Notified"/"Muted" badge. */
   readonly notified: boolean
 }
 
 export interface GetMonitorIncidentsResult {
   readonly items: readonly MonitorIncidentItem[]
-  readonly nextCursor: AlertIncidentCursor | null
+  readonly nextCursor: IncidentCursor | null
   readonly hasMore: boolean
 }
 
@@ -35,13 +35,9 @@ const incidentNotificationKeys = (incidentId: string): readonly string[] => [
 
 export const getMonitorIncidentsUseCase = (
   input: GetMonitorIncidentsInput,
-): Effect.Effect<
-  GetMonitorIncidentsResult,
-  RepositoryError,
-  SqlClient | AlertIncidentRepository | NotificationRepository
-> =>
+): Effect.Effect<GetMonitorIncidentsResult, RepositoryError, SqlClient | IncidentRepository | NotificationRepository> =>
   Effect.gen(function* () {
-    const alertIncidentRepository = yield* AlertIncidentRepository
+    const alertIncidentRepository = yield* IncidentRepository
     const notificationRepository = yield* NotificationRepository
 
     const limit = Math.min(input.limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE)

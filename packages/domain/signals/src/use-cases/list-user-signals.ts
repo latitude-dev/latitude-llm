@@ -67,7 +67,6 @@ export const listUserSignalsUseCase = (
           states: deriveSignalLifecycleStates({
             issue,
             isEscalating: issue.lifecycle.isEscalating,
-            isRegressed: issue.lifecycle.isRegressed,
             now,
           }),
           occurrences: rollup.occurrences,

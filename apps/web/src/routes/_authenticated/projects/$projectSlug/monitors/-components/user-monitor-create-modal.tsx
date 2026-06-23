@@ -34,7 +34,7 @@ const targetWithFilter = (
 
 const presetDraft = (target: MonitorTarget, overrides: Partial<AlertDraft>): AlertDraft =>
   targetAlertDraft(target, {
-    kind: "metric.escalating",
+    kind: "monitor.escalating",
     comparison: "timesMoreThan",
     baselineKind: "expected",
     amount: 3,
@@ -60,9 +60,13 @@ const userMonitorPresets = (target: MonitorTarget): readonly UserMonitorPreset[]
     {
       id: "slow",
       name: allUsers ? "Users are seeing slow responses" : "User is seeing slow responses",
-      description: `Opens an incident when p95 trace latency for ${subject} stays higher than expected.`,
+      description: `Opens an incident when median trace latency for ${subject} stays higher than expected.`,
       icon: GaugeIcon,
-      draft: presetDraft(target, { metric: { kind: "p95", field: "duration" }, severity: "medium", windowAmount: 15 }),
+      draft: presetDraft(target, {
+        metric: { kind: "median", field: "duration" },
+        severity: "medium",
+        windowAmount: 15,
+      }),
     },
     {
       id: "activity-spike",
@@ -123,13 +127,13 @@ export function UserMonitorCreateModal({
   const createPreset = async () => {
     const preset = presets.find((entry) => entry.id === selectedPresetId)
     if (!preset) return
-    const alertTarget = draftToTarget(preset.draft)
+    const presetTarget = draftToTarget(preset.draft)
     try {
       await create.mutateAsync({
         name: `${preset.name} — ${targetName}`,
         description: preset.description,
-        alerts: [draftToAlertDraft(preset.draft)],
-        ...(alertTarget ? { target: alertTarget } : {}),
+        rule: draftToAlertDraft(preset.draft),
+        ...(presetTarget ? { target: presetTarget } : {}),
       })
       toast({ description: "Monitor created." })
       onClose()
@@ -149,7 +153,7 @@ export function UserMonitorCreateModal({
       await create.mutateAsync({
         name: trimmedName,
         ...(advancedValue.description.trim() ? { description: advancedValue.description.trim() } : {}),
-        alerts: [draftToAlertDraft(advancedValue.alert)],
+        rule: draftToAlertDraft(advancedValue.alert),
         ...(target ? { target } : {}),
       })
       toast({ description: "Monitor created." })
@@ -157,7 +161,7 @@ export function UserMonitorCreateModal({
     } catch (error) {
       const fieldErrors = extractFieldErrors(error)
       const nameErr = fieldErrors?.name?.[0]
-      const errors = alertFieldErrorsFrom(fieldErrors, 0)
+      const errors = alertFieldErrorsFrom(fieldErrors, null)
       if (nameErr || hasAlertFieldErrors(errors)) {
         setAdvancedValue({ ...advancedValue, ...(nameErr ? { nameError: nameErr } : {}), alertErrors: errors })
         return

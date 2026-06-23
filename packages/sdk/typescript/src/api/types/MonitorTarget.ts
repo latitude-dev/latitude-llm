@@ -3,36 +3,23 @@
 import type * as LatitudeApi from "../index.js";
 
 /**
- * Unified query-time target for tool, user, and raw-stream monitors; `null` for legacy saved-search and system monitors.
+ * Entity or filter set watched by this monitor.
  */
 export interface MonitorTarget {
-    /** Product target category: `tool`, `user`, `session`, `savedSearch`, or system `signal`. */
-    kind: MonitorTarget.Kind;
-    /** Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`. */
-    stream: MonitorTarget.Stream;
+    /** Product target category: `savedSearch`, `tool`, `user`, or `session`. */
+    type: MonitorTarget.Type;
+    /** Target entity id, or `null` for project-wide targets. */
+    id?: string | undefined;
     filterSet?: LatitudeApi.MonitorFilterSet | undefined;
-    /** Optional semantic query applied with the filters. Use `null` for user/tool monitors. */
-    query?: string | undefined;
-    /** Saved-search target id, or `null` when `filterSet` and `query` define the target inline. */
-    savedSearchId?: string | undefined;
-    metric: LatitudeApi.MonitorMetric;
 }
 
 export namespace MonitorTarget {
-    /** Product target category: `tool`, `user`, `session`, `savedSearch`, or system `signal`. */
-    export const Kind = {
-        Signal: "signal",
+    /** Product target category: `savedSearch`, `tool`, `user`, or `session`. */
+    export const Type = {
+        SavedSearch: "savedSearch",
         Tool: "tool",
         User: "user",
         Session: "session",
-        SavedSearch: "savedSearch",
     } as const;
-    export type Kind = (typeof Kind)[keyof typeof Kind];
-    /** Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`. */
-    export const Stream = {
-        Traces: "traces",
-        Spans: "spans",
-        Sessions: "sessions",
-    } as const;
-    export type Stream = (typeof Stream)[keyof typeof Stream];
+    export type Type = (typeof Type)[keyof typeof Type];
 }

@@ -6,7 +6,7 @@ import { OutboxEventWriterLive, type PostgresClient, ProjectRepositoryLive, with
 import { createLogger, withTracing } from "@repo/observability"
 import { Data, Effect, Layer } from "effect"
 import { getPostgresClient, getWorkflowStarter } from "../clients.ts"
-import { provisionFlaggers, provisionSystemMonitors } from "../services/provisioning.ts"
+import { provisionFlaggers } from "../services/provisioning.ts"
 
 const logger = createLogger("projects")
 
@@ -34,21 +34,12 @@ export const createProjectsWorker = ({ consumer, postgresClient }: ProjectsDeps)
           }),
         )
 
-        // System monitors are provisioned for every project so issue incidents can resolve their monitor-backed alert configuration immediately.
-        const monitors = yield* Effect.promise(() =>
-          provisionSystemMonitors({
-            organizationId: payload.organizationId,
-            projectId: payload.projectId,
-          }),
-        )
-
         logger.info("Project provisioning completed", {
           organizationId: payload.organizationId,
           projectId: payload.projectId,
           durationMs: Date.now() - startTime,
           flaggersProvisioned: results.length,
           results: results.map((r) => r.slug),
-          systemMonitorsProvisioned: monitors.length,
         })
       }).pipe(withTracing),
 

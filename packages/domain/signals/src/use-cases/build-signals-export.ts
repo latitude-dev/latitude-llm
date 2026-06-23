@@ -54,9 +54,7 @@ export const buildSignalsExportUseCase = Effect.fn("issues.buildSignalsExport")(
   const selectionIds =
     input.selection?.mode === "all" || input.selection === undefined ? null : new Set(input.selection.rowIds)
   const remainingSelectedIds = input.selection?.mode === "selected" ? new Set(input.selection.rowIds) : null
-  const csvRows: string[][] = [
-    ["id", "name", "description", "createdAt", "updatedAt", "escalatedAt", "resolvedAt", "ignoredAt"],
-  ]
+  const csvRows: string[][] = [["id", "name", "description", "createdAt", "updatedAt"]]
 
   let offset = 0
   while (true) {
@@ -90,9 +88,6 @@ export const buildSignalsExportUseCase = Effect.fn("issues.buildSignalsExport")(
         escapeCsvField(issue.description),
         issue.createdAt.toISOString(),
         issue.updatedAt.toISOString(),
-        issue.escalatedAt?.toISOString() ?? "",
-        issue.resolvedAt?.toISOString() ?? "",
-        issue.ignoredAt?.toISOString() ?? "",
       ])
 
       remainingSelectedIds?.delete(issue.id)

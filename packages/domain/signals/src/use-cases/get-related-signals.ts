@@ -117,7 +117,6 @@ export const getRelatedSignalsUseCase = (
           states: deriveSignalLifecycleStates({
             issue,
             isEscalating: issue.lifecycle.isEscalating,
-            isRegressed: issue.lifecycle.isRegressed,
             now,
           }),
           occurrences: aggregate?.totalOccurrences ?? 0,

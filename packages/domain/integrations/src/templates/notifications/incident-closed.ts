@@ -16,7 +16,7 @@ import type { SlackNotificationRenderer } from "./types.ts"
 export const incidentClosedRenderer: SlackNotificationRenderer<"incident.closed"> = (payload, ctx) =>
   Effect.gen(function* () {
     const projectName = ctx.project?.name ?? ctx.organization.name
-    const isSavedSearch = payload.sourceType === "savedSearch"
+    const isMonitorIncident = payload.sourceType === "monitor"
     const signalUrl = ctx.project
       ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals/${payload.sourceId}`
       : ctx.webAppUrl
@@ -40,8 +40,8 @@ export const incidentClosedRenderer: SlackNotificationRenderer<"incident.closed"
       `${payload.severity} · ${payload.sourceType} · ${projectOrOrgContext(ctx.organization, ctx.project)}${triageContextSuffix({ priority: payload.priority, assigneeName })}`,
     )
 
-    if (isSavedSearch) {
-      const searchRef = sourceName ?? "a saved search"
+    if (isMonitorIncident) {
+      const searchRef = sourceName ?? "a monitored target"
       return {
         text: `Resolved: escalation on ${searchRef} — elevated for ${duration}`,
         color: COLORS.resolved,

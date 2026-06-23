@@ -54,18 +54,11 @@ class SignalDetail(UniversalBaseModel):
     Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`).
     """
 
-    resolved_at: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="resolvedAt")] = pydantic.Field(
+    muted_at: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="mutedAt")] = pydantic.Field(
         default=None
     )
     """
-    ISO-8601 timestamp at which the signal was resolved, or `null`.
-    """
-
-    ignored_at: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="ignoredAt")] = pydantic.Field(
-        default=None
-    )
-    """
-    ISO-8601 timestamp at which the signal was ignored, or `null`.
+    ISO-8601 timestamp at which the signal was muted, or `null`.
     """
 
     created_at: typing_extensions.Annotated[str, FieldMetadata(alias="createdAt")] = pydantic.Field()

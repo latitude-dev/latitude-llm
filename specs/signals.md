@@ -1,10 +1,10 @@
 # Signals
 
-> **Documentation** — eventual durable homes: `dev-docs/signals.md` (new) and an updated `dev-docs/monitors.md`. Related current docs: `dev-docs/issues.md`, `dev-docs/scores.md`, `dev-docs/notifications.md`, `dev-docs/conversation-intelligence.md`, `dev-docs/evaluations.md`.
+> **Documentation** — durable homes: `dev-docs/signals.md` and `dev-docs/monitors.md`. Related current docs: `dev-docs/scores.md`, `dev-docs/notifications.md`, `dev-docs/conversation-intelligence.md`, and `dev-docs/evaluations.md`.
 >
 > **Depends on** — `specs/sandbox-runtime.md`, the execution contract for evaluations: an evaluation run returns a normalized score (`value` ∈ [0,1]) and optional `feedback`; the host derives the run's verdict by thresholding `value` (`isScoreMatch`, default 0.5), and membership is recorded as `signal_id`. Phases 0–1 of that spec are built; Phase 2 (rule/script codegen + dry-run harness) is the substrate this spec consumes.
 >
-> **Supersedes (conceptually)** — `specs/monitors.md` and `specs/alerts.md`. Those specs still accurately describe what is *currently built*; this spec defines the model that replaces their framing. Do not retire them until the migration phases are underway.
+> **Superseded spec note** — `specs/monitors.md` has been retired. `dev-docs/monitors.md` is now authoritative for the shipped monitor model.
 >
 > **Origin** — LAT-664 ("Consolidate monitor situation"). The foundational choices (a signal's occurrences are its scores; membership is materialized at write time) are argued under [Why membership is materialized at write time](#why-membership-is-materialized-at-write-time).
 
@@ -12,7 +12,7 @@
 
 1. [Purpose](#purpose) — the problem and the consolidated model
 2. [Why membership is materialized at write time](#why-membership-is-materialized-at-write-time) — the foundational argument
-3. [Concepts](#concepts) — Signal, Evaluation, Score, Monitor, Alert, Incident
+3. [Concepts](#concepts) — Signal, Evaluation, Score, Signal Escalation, Monitors, Incident
 4. [Discovery and tracking](#discovery-and-tracking)
 5. [The matching pipeline](#the-matching-pipeline)
 6. [Main flows](#main-flows)
@@ -35,16 +35,19 @@ Latitude has two parallel tracking systems with overlapping names and separate U
 This spec consolidates both around one small set of concepts:
 
 ```
-                evaluation runs per trace     monitors aggregate         alerts fire on        records the
-                (or annotation lands)         the score stream           conditions            firing
-  Trace ──────▶ SIGNAL ─────────────────────▶ MONITOR ─────────────────▶ ALERT ──────────────▶ INCIDENT ──▶ notifications
-                membership = its SCORES        (a metric over the
-                (write-time materialized)       signal's scores/traces)
+                evaluation runs per trace     escalation reads          records the
+                (or annotation lands)         the score stream          source-keyed event
+  Trace ──────▶ SIGNAL ─────────────────────▶ ESCALATION ENGINE ──────▶ INCIDENT ──▶ notifications
+                membership = its SCORES                                source_type = signal
+                (write-time materialized)
+
+  Saved search / tool / user / session ─────▶ MONITOR ────────────────▶ INCIDENT ──▶ notifications
+                                             single target + rule       source_type = monitor
 ```
 
 The one-line mental model for users and docs:
 
-> Latitude groups your traces into **Signals** — buckets you define with an **Evaluation** (a script Latitude runs on each trace, typically an LLM-as-judge it generates for you), plus the buckets Latitude discovers for you automatically from annotations. A signal's members are its **Scores**. Any signal can be watched with a **Monitor**; monitors have **Alerts**, and a fired alert opens an **Incident**, which is what notifies you.
+> Latitude groups your traces into **Signals** — buckets you define with an **Evaluation** (a script Latitude runs on each trace, typically an LLM-as-judge it generates for you), plus the buckets Latitude discovers for you automatically from annotations. A signal's members are its **Scores**. Signal escalation opens signal-sourced **Incidents**; user **Monitors** are separate single-rule watches over saved-search/tool/user/session targets that open monitor-sourced incidents.
 
 Two structural decisions carry the whole spec. Both are stated here and argued in full under [Why membership is materialized at write time](#why-membership-is-materialized-at-write-time):
 
@@ -77,7 +80,7 @@ These consequences carry through the rest of the spec:
 - an optional **`filters`** (a `FilterSet`): a cheap, row-local pre-gate restricting which traces the evaluation is even run against ("only `service = checkout`", "only traces above p90 latency"). Empty/absent = all traces. `filters` is only meaningful alongside an evaluation — it gates evaluation execution.
 - an optional **`evaluation`** (an `evaluations` row linked 1:1 via `evaluations.signal_id`, **one active per signal**): the membership detector, run at write time. With no linked evaluation there is no write-time detection — membership comes only from annotations. Having or not having an evaluation is a *state*, not a kind: a system-created signal starts with no evaluation and can later gain one (when tracked) while keeping `origin = 'system'`. Tell auto-generated from hand-built by `origin`, never by the presence of an evaluation.
 - **triage metadata**: priority and a single assignee, carried over from issues (multi-assignee deferred).
-- a **lifecycle**: `resolved` / `ignored` / `escalating` etc., carried over from issues **unchanged for the MVP**. It stays on the signal row; it is not relocated onto a monitor.
+- a **status** derived from age, activity, and signal-sourced incidents: `new`, `ongoing`, and `escalating`. Manual noise control is `muted_at`, not a resolved/ignored lifecycle.
 
 Constraints:
 
@@ -107,28 +110,19 @@ Constraints:
 
   *(Scale lever, not the MVP: if deterministic scripts that run on every trace ever strain the canonical path, those recomputable, feedback-free scores could go ClickHouse-only — a future per-run optimization, never a rule about evaluation kinds.)*
 
-### Monitor
+### Signal Escalation
 
-**A monitor watches one signal over time.** Monitors never own detection — that lives on the signal's evaluation. A monitor owns:
+Signal escalation is intrinsic to the signal, not represented as a default monitor. The score occurrence series feeds the shared `EscalationEngine`; when the engine enters, the incidents domain opens an incident with `source_type = "signal"` and `source_id = signal.id`. When the engine exits, it closes that same source-keyed incident.
 
-- a **target**: a signal (`monitors.target_signal_id` = signal CUID). Saved-search and raw-stream targets remain available via the existing `target_*` columns; this spec focuses on signal targets. Saved searches stay the home for plain filter tracking — `SavedSearchMatchReader` is reused unchanged.
-- a **metric** (`MonitorMetric`, already exists): `count` of matching scores (default), `errorRate`, or `avg`/`p95`/`sum` of `duration`/`cost`/`tokens`. Field aggregates read the matched traces (`score.trace_id → traces`); the score's own cost/tokens are the *evaluation's* (an llm judge's; zero for scripts that don't call `llm()`), not the trace's.
-- **mute** (`muted_at`): notifications off; evaluation and incident recording continue.
+Signal mute (`signals.muted_at`) suppresses notification fan-out for `signal.escalating` incidents. It does not stop score assignment, discovery matching, or linked evaluation execution.
 
-Every signal gets a **default monitor** provisioned at creation — the occurrences (`count`) monitor carrying the same alerts issues get today: a high-severity `metric.escalating` alert in `expected` mode plus an `event.regressed` alert.
+### Monitors
 
-### Alert
-
-**A condition on a monitor.** Two flavors (Sentry-shaped, carried over from the monitors model):
-
-- **Event alerts** — `event.matched` (a new matching score entered the signal) and `event.regressed` (a datapoint after the monitor's resolve anchor).
-- **Metric alerts** — `metric.threshold` (absolute / multiplier / expected) and `metric.escalating` (sustained).
-
-The two unrelated "is this escalating?" implementations — the issue seasonal detector over score counts, and the saved-search bucketed sustained-gate over trace-match counts — **merge into one** `metric.escalating` evaluator: every monitor target now yields the same *per-bucket count series → per-bucket threshold → open/close state machine* shape. The seasonal detector (`evaluateSeasonalEscalation`) survives as the threshold function of `expected` mode (knob: `sensitivity`); issue escalation stops being special — it is the default monitor's escalating alert in that mode.
+User monitors are a separate single-rule surface over saved-search/tool/user/session targets. They write monitor-sourced incidents with `source_type = "monitor"` and source keys `monitor.match`, `monitor.threshold`, or `monitor.escalating`. See `dev-docs/monitors.md`.
 
 ### Incident
 
-**Unchanged.** Same `alert_incidents` lifecycle (point vs sustained), backtracked `started_at`/`ended_at`, and notifications pipeline (`incident.event` / `incident.opened` / `incident.closed`). Incidents snapshot the firing alert's `condition`, and additionally snapshot the monitor's **target definition** (the signal plus a summary of its evaluation — `type`/`settings`/`script`) at open time so closed incidents stay self-describing after an evaluation edit or signal delete.
+Incidents are the shared alert hub. Signal escalation and monitor rules both write `incidents` rows keyed by `(source_type, source_id)`, and the notifications pipeline derives `incident.event`, `incident.opened`, or `incident.closed` from the row lifecycle. Signal incidents use project gate `signal.escalating`; monitor incidents use the `monitor.*` gates.
 
 ## Discovery and tracking
 
@@ -184,7 +178,7 @@ span ingestion → ClickHouse spans insert → TracesIngested (outbox)          
          ├─ run the evaluation's script  → sandbox runner (sampling/turn/debounce are evaluation settings)
          └─ write score (matched or not) with signal_id, source_type='evaluation', source_id=evaluationId
               · Postgres-canonical + ClickHouse, like any score
-      └─ publishes monitors:evaluate (leading-edge throttle, 5 min)             [reuse shape]
+      └─ publishes signal escalation checks as needed
 ```
 
 ### B. Create a signal manually (user origin, must have an evaluation)
@@ -195,7 +189,6 @@ UI: Signals page / "Create signal from this search" → builder (live preview re
    ├─ compile settings→script (or accept a raw script); sandbox ScriptCompileError rejects at save time
    ├─ judge path: generate the script via optimize-evaluation; alignment accrues from annotations
    ├─ detect capability from the script (does it call llm()?) → execution lane + backfill eligibility (not storage; storage is uniform)
-   ├─ provisionDefaultMonitorUseCase (count monitor + metric.escalating 'expected' + event.regressed)
    └─ enqueue signals:backfill { signalId, window: 14d }   (deterministic scripts only)
 ```
 
@@ -209,29 +202,25 @@ flagger (trace-end) / human annotation
      └─ create new system-created signal { origin: 'system', no evaluation }
 ```
 
-### D. Monitor evaluation → alert → incident → notification
+### D. Signal escalation → incident → notification
 
 ```
-triggers: monitors:evaluate (leading-edge throttle) + 5-min sweep cron            [reuse shape]
-└─ evaluateMonitorUseCase (@domain/monitors)
-   ├─ signal target → SignalScoreReader (CH score-analytics: count where signal_id=?;
-   │    avg/sum/p95 over matched traces via score.trace_id → traces)               [new reader]
-   ├─ compute metric series per bucket
-   └─ per active alert, run the kind's state machine:
-        event.matched / event.regressed / metric.threshold / metric.escalating     [reuse / merge]
-└─ alert_incidents insert/close (condition + target_snapshot) → IncidentCreated    [reuse]
-   → notifications (mute gate: monitor.mutedAt) → in-app / email / Slack            [reuse]
+score assignment / scheduled escalation checks
+└─ ScoreOccurrenceReader (count where signal_id=? AND passed = false)
+└─ EscalationEngine
+   ├─ enter → incident insert source_type='signal', source_id=signalId → IncidentCreated
+   └─ exit  → close open signal incident → IncidentClosed
+      → notifications (project gate: signal.escalating; mute gate: signal.mutedAt)
 ```
 
 ### E. Triage from the signal page
 
 ```
-[Resolve] → resolveSignalUseCase: signal.resolved_at = now; close open sustained incidents (silent)
-[Ignore]  → ignoreSignalUseCase:  signal.ignored_at = now (scores keep recording; nothing notifies)
-[Delete]  → deleteSignalUseCase:  soft-delete signal (deleted_at) + its monitors; archive its
+[Mute]   → muteSignalUseCase: signal.muted_at = now (scores keep recording; notifications do not fan out)
+[Unmute] → muteSignalUseCase: signal.muted_at = null
+[Delete] → deleteSignalUseCase:  soft-delete signal (deleted_at) + archive its
               evaluation (auto write-stop via the active-detector scan). No CH cleanup —
-              deleted-signal scores linger and are excluded read-side via the PG lifecycle.
-regression → flow D, event.regressed branch
+              deleted-signal scores linger and are excluded read-side via PG state.
 ```
 
 ### F. Track a system-created signal with a judge evaluation
@@ -247,7 +236,7 @@ frontend polls getSignalAlignmentState (Temporal workflow.describe())           
 
 ## Data model
 
-**No new tables.** Every entity evolves a table that already exists: `issues` → `signals` (rename + columns), `scores` (rename + split source), `evaluations` (rename + a `settings` column — the detector now lives here, always as a script), `monitors` (one target column), and the ClickHouse `scores` analytics table (one column). Occurrences are scores — there is no separate occurrence table. The unified `event.*`/`metric.*` alert model, `MonitorMetric`, and the `monitors.target_*` columns are **already built** (only `event.regressed` is genuinely new). `legend: ▸NEW ▸CHANGED ▸KEPT ▸DROPPED` is per-line below.
+**No new signal membership table.** Every entity evolves a table that already exists: `issues` → `signals` (rename + columns), `scores` (rename + split source), `evaluations` (rename + a `settings` column — the detector now lives here, always as a script), and the ClickHouse `scores` analytics table (one column). Occurrences are scores — there is no separate occurrence table. Alerting now goes through the shared source-keyed `incidents` hub (`monitor | signal`), with monitor details documented in `dev-docs/monitors.md`. `legend: ▸NEW ▸CHANGED ▸KEPT ▸DROPPED` is per-line below.
 
 ### Shared contracts (`@domain/shared`, `@domain/scores`)
 
@@ -291,16 +280,17 @@ export type ScoreSourceType = (typeof SCORE_SOURCE_TYPES)[number]
 //   user       — human annotation (UI / API / queue)            (source_id = user id / sentinel)
 //   custom     — public /scores push  [POST-MVP]                (source_id = caller tag)
 
-// CHANGED (@domain/shared, alert-incident-kinds.ts): ALERT_INCIDENT_KINDS already contains
-// event.matched / metric.threshold / metric.escalating (unified, target-on-monitor) plus the
-// legacy issue.* / savedSearch.* kinds. The signals migration adds exactly ONE:
-//   + "event.regressed"   // a datapoint after the signal's resolved_at clears it; point; no condition; severity high
-// and retires issue.* / savedSearch.* once existing monitors migrate to signal targets.
+// CHANGED (@domain/shared, alert-incident-kinds.ts): incidents now use source types
+// monitor | signal and notification keys:
+//   signal.escalating
+//   monitor.match
+//   monitor.threshold
+//   monitor.escalating
 
 // ALREADY EXISTS (@domain/shared, alert-incident-condition.ts) — reused verbatim:
-//   MonitorMetric         = { kind:"count" } | { kind:"errorRate" } | { kind:"avg"|"p95"|"sum"; field:"duration"|"cost"|"tokens" }
+//   MonitorMetric         = { kind:"count" } | { kind:"errorRate" } | { kind:"avg"|"median"|"sum"|"min"|"max"; field:"duration"|"cost"|"tokens" }
 //   AlertMetricThreshold  = absolute(value) | multiplier(factor, baseline) | expected(sensitivity)   // + direction above|below
-//   metric.threshold / metric.escalating conditions carry { metric, threshold, direction?, window? }
+//   threshold / escalating conditions carry { metric, threshold, direction?, window? }
 ```
 
 ### Postgres: `signals` (evolves `issues` in place — keep the rows)
@@ -321,19 +311,17 @@ signals                                  -- was `issues`
   centroid_embedding  vector(2048) null   ▸KEPT  -- derived from centroid; similarity routing for discovery (system-created signals)
   search_document     tsvector GENERATED  ▸KEPT  -- setweight(name 'A') || setweight(description 'B'); GIN
   clustered_at        timestamptz null    ▸CHANGED  -- was NOT NULL; nullable (only discovered signals cluster)
-  resolved_at         timestamptz null    ▸KEPT  -- lifecycle (MVP: stays on the signal row, not the monitor)
-  ignored_at          timestamptz null    ▸KEPT  -- lifecycle
-  escalated_at        timestamptz null    ▸KEPT  -- dormant; "escalating" derived from open alert_incidents
+  muted_at            timestamptz null    ▸CHANGED  -- manual notification mute
   deleted_at          timestamptz null    ▸NEW   -- issues were NOT soft-deleted; signals are (delete flow soft-deletes)
   created_at, updated_at                  ▸KEPT
   -- DROPPED: `uuid` (dormant legacy column)
 
   unique  (organization_id, project_id, slug)  WHERE deleted_at IS NULL     ▸CHANGED  -- now partial (soft-delete)
   gin     (search_document)                                                 ▸KEPT
-  btree   (organization_id, project_id, ignored_at, resolved_at, created_at) WHERE deleted_at IS NULL   ▸KEPT
+  btree   (organization_id, project_id, created_at) WHERE deleted_at IS NULL   ▸KEPT
 ```
 
-The detector is no longer a `signals` column — it is the linked `evaluations` row (one active per signal; a system-created signal may have none). "List active detectors" for the matching pipeline reads `evaluations` (the supporting partial index lives there — see below) and joins back to `signals` to apply signal-level lifecycle gating (`deleted_at`; `resolved`/`ignored` signals still record per [Triage](#e-triage-from-the-signal-page), so they are not excluded here).
+The detector is no longer a `signals` column — it is the linked `evaluations` row (one active per signal; a system-created signal may have none). "List active detectors" for the matching pipeline reads `evaluations` (the supporting partial index lives there — see below) and joins back to `signals` to apply signal-level lifecycle gating (`deleted_at`). Muted signals still record scores and can be matched by discovery; mute only gates notifications.
 
 (Semantic-similarity anchors and their Redis-cached embeddings are deferred to [Phase 7](#phase-7--semantic-similarity-evaluations-future); the MVP detector is always a sandbox script.)
 
@@ -374,35 +362,27 @@ evaluations
 
 No `type` or `capability` column: every evaluation is a script. Type lives in `settings` (templated evals); what a script does (llm/semantic/code) is detected from it when needed (execution lane, analytics). Invariants: `script` is always present; `settings` is optional (compiles to `script` when set); `alignment`/`aligned_at` are set only for aligned judge scripts (those that call `llm()`), NULL otherwise. The active-detector partial-unique index requires a one-time migration that **dedupes today's multiple-evaluations-per-issue rows** (keep the most-recently-aligned as active, archive the rest) before it can be created.
 
-### Postgres: `monitors` (one new target column)
+### Postgres: `monitors`
 
-The unified `target_*` + `metric` model already exists; signals just add a target column.
+Monitors are independent project watches with one target and one rule. They are not provisioned per signal. The current monitor target types are saved search, tool, user, and session; monitor incidents write `source_type = "monitor"` and `source_id = monitors.id`. See `dev-docs/monitors.md` for the authoritative monitor data model.
+
+### Postgres: `incidents`
+
+Incidents are the shared alert hub for both signal and monitor producers.
 
 ```
-monitors
-  id, organization_id, project_id, slug, name, description, system   ▸KEPT
-  target_stream          varchar(32) null   ▸KEPT  -- MonitorStream (traces|spans|sessions)
-  target_filter_set      jsonb null         ▸KEPT
-  target_query           text null          ▸KEPT
-  target_saved_search_id varchar(24) null   ▸KEPT
-  target_signal_id       varchar(24) null   ▸NEW   -- a signal target; signal monitor = this set + metric set, others null
-  metric                 jsonb null         ▸KEPT  -- MonitorMetric (already exists)
-  is_default             boolean default false   ▸NEW   -- the auto-provisioned per-signal occurrences monitor
-  muted_at, deleted_at, timestamps          ▸KEPT
-
-  unique (project_id, slug) WHERE deleted_at IS NULL                          ▸KEPT
-  btree  (organization_id, project_id)      WHERE deleted_at IS NULL          ▸KEPT
-  partial unique (target_signal_id) WHERE is_default AND deleted_at IS NULL   ▸NEW  -- one default monitor per signal
-  btree  (organization_id, target_signal_id) WHERE deleted_at IS NULL         ▸NEW  -- "monitors watching signal X" firing scan
+incidents
+  id, organization_id, project_id
+  source_type varchar(32) NOT NULL  -- monitor | signal
+  source_id   varchar(24) NOT NULL
+  severity    varchar(16) NOT NULL
+  condition   jsonb null            -- monitor rule condition snapshot, null for signal escalation
+  entry_signals jsonb null
+  exit_eligible_since timestamptz null
+  started_at, ended_at, created_at
 ```
 
-### Postgres: `monitor_alerts` (no schema change)
-
-Reused as-is. A signal monitor's alerts use the **unified** kinds — `event.matched`, `event.regressed` (new), `metric.threshold`, `metric.escalating` — with `source_type`/`source_id` **null** (the target is the monitor's `target_signal_id`). `condition` (the `metric.*` variants already carry `{ metric, threshold, direction?, window? }`) and `severity` carry over. The only change is the enum addition above; `event.regressed` joins `KINDS_WITHOUT_CONDITION` (point, no params) and is **not** user-creatable.
-
-### Postgres: `alert_incidents` (no required change)
-
-The unified model already resolves a signal incident's target by joining `monitor_alert_id → monitors.target_signal_id`; `source_type`/`source_id` stay null (note: this is `AlertIncidentSourceType`, a **different** enum from the score `ScoreSourceType` renamed above — do not conflate), `condition` snapshots the firing alert (metric included), and `entry_signals`/`exit_eligible_since`/backtracking carry over. **Optional hardening** (recommended, not required): add `target_snapshot jsonb` capturing the signal plus a summary of its evaluation (`type`/`settings`/`script`) so a closed incident stays self-describing if its signal or evaluation is later edited or deleted — otherwise a deleted signal's closed incidents lose their target label.
+Signal escalation incidents use `source_type = "signal"` and notification gate `signal.escalating`. Monitor incidents use `source_type = "monitor"` and derive `monitor.match`, `monitor.threshold`, or `monitor.escalating` from their condition snapshot.
 
 ### ClickHouse: `scores` analytics (one new column; append-only)
 
@@ -415,7 +395,7 @@ ALTER TABLE scores ADD COLUMN signal_id FixedString(24) DEFAULT '';   -- NEW; ba
 -- everything else unchanged: value Float32, passed Bool, errored Bool, duration/tokens/cost UInt64, created_at.
 ```
 
-- **The CH `scores` table is the single signal counting/aggregate surface** monitors read; it loses its issue-trend special-casing. Occurrence count = `countDistinct(trace_id) WHERE signal_id = ?`. Metric aggregates (`avg`/`p95`/`sum` of trace `duration`/`cost`/`tokens`) join the matched `trace_id` back to the traces analytics — the score's own duration/tokens/cost are the *evaluation's* (zero for scripts that don't call `llm()`), not the trace's.
+- **The CH `scores` table is the single signal counting/aggregate surface** escalation and analytics read; it loses its issue-trend special-casing. Occurrence count = `countDistinct(trace_id) WHERE signal_id = ? AND passed = false`. Metric aggregates (`avg`/`median`/`sum`/`min`/`max` of trace `duration`/`cost`/`tokens`) join the matched `trace_id` back to the traces analytics — the score's own duration/tokens/cost are the *evaluation's* (zero for scripts that don't call `llm()`), not the trace's.
 - All scores follow the existing Postgres-canonical → ClickHouse sync (drafted annotations sync once published). No CH-only split in the MVP.
 
 ## UI
@@ -426,23 +406,19 @@ A **Signals** nav item replaces **Issues** (single list — hand-built and disco
 
 ### Signals list
 
-One table; `origin` (auto/manual), priority, assignee, trend, monitors, and last incident are columns/filters on the same surface.
+One table; `origin` (auto/manual), priority, assignee, trend, escalation state, and last signal incident are columns/filters on the same surface.
 
 ### Signal detail page
 
-Definition (evaluation + filters), monitor charts, alerts, incidents, and member traces in one context. System-created signals with no evaluation show their annotation evidence and a **Track** action; judge evaluations (scripts that call `llm()`) additionally show the alignment sections (confusion matrix, realign).
+Definition (evaluation + filters), signal trend, escalation incidents, mute state, and member traces in one context. System-created signals with no evaluation show their annotation evidence and a **Track** action; judge evaluations (scripts that call `llm()`) additionally show the alignment sections (confusion matrix, realign).
 
 ### Creating a signal
 
 One builder, three entry points (Signals list, "Create signal from this search", annotation flow), one rule: **never let users define membership blind** — the builder always shows a live preview via the sandbox dry-run harness against sample traces. The builder edits a declarative `settings` form (or, for advanced users, a raw `script`); either way it produces the evaluation's `script`, generating a judge that calls `llm()` via `optimize-evaluation` when that's the chosen form.
 
-### Creating a monitor
+### Monitoring
 
-Target = a signal; metric = Occurrences (count) or an aggregate; alerts = the existing card stack. UI/UX copied from today's monitors surface (the tools/users monitor flows).
-
-### Monitors list
-
-Today's dashboard generalized: one row per monitor with a **Target** column (deep-linked to the signal), status (Live / Muted / Resolved / Escalating), metric, and last incident.
+Signal escalation is built into the signal detail flow and notification pipeline. User-created monitors remain the project-level monitor surface for saved-search/tool/user/session targets.
 
 ## API / SDK / MCP
 
@@ -453,16 +429,16 @@ Signals are exposed as a public REST surface under `/v1/projects/{projectSlug}/s
 | GET / POST | `/` | `listSignals` / `createSignal` |
 | GET / PATCH / DELETE | `/{signalSlug}` | `getSignal` / `updateSignal` / `deleteSignal` |
 | GET | `/{signalSlug}/traces` | `listSignalTraces` |
-| POST | `/{signalSlug}/resolve`, `/ignore`, `/track` | `resolveSignal` / `ignoreSignal` / `trackSignal` |
+| POST | `/{signalSlug}/mute`, `/unmute`, `/track` | `muteSignal` / `unmuteSignal` / `trackSignal` |
 
 - `createSignal` accepts an `evaluation` — its `settings` (default, compiled to a script; judge `criteria` is the first settings form) or a raw `script` (advanced) — plus optional `filters`; rejects evaluation-less creation (only system-created signals may have no evaluation).
-- Monitors gain `signal` as a target type in their existing API.
+- Monitors remain a separate target/rule API; signal escalation is exposed through signal incidents, not signal-target monitors.
 - `custom`-source score push (the `/scores` API accepting `signal_id`) is **POST-MVP**.
 
 ## Migration
 
 - **Issues → signals, in place.** Rename `issues` → `signals` (keep rows, centroid, embeddings); existing issues become `origin = 'system'` (auto-generated, annotation-assignable as today) — those with no linked evaluation keep none, those with a generated evaluation keep it; either way `origin` stays `system`. Issue-linked evaluations stay as they are (they are already judge scripts that call `llm()`): set `evaluations.signal_id` and **dedupe to one active per signal** (keep the most-recently-aligned active, archive the rest) so the active-detector unique index can be created. `scores.issue_id` → `signal_id` (Phase 1); `source` → `source_type` (Phase 2/PR1, PG only — the CH column stays `source`; `evaluation` is kept; `annotation` splits into `flagger`/`user` in Phase 6).
-- **System monitors** become signal monitors (the three `issue.*` system monitors remap to the new `ALERT_KINDS` over signal targets).
+- **System alerting** becomes signal escalation incidents using `source_type = "signal"` and notification key `signal.escalating`.
 - **Flaggers** stay as the trace-end auto-annotation engine feeding system-created signals (flow C), unchanged.
 - **Semantic moments** stay as the conversation-intelligence anchor matching they are today; folding them into signal evaluations (and consolidating overlapping flaggers) is deferred to [Phase 7](#phase-7--semantic-similarity-evaluations-future), once semantic detection is added.
 
@@ -476,7 +452,7 @@ Signals are exposed as a public REST surface under `/v1/projects/{projectSlug}/s
 4. **One evaluation per signal, on the existing `evaluations` table, always a script** — not a separate detector entity, not a jsonb column on the signal, no `type`/`capability` columns. A `settings` object optionally compiles to the `script`; the script is what executes. Exactly one *active* evaluation per signal (archived predecessors kept for lineage); a system-created signal may have none. → [Evaluation](#evaluation-the-detector)
 5. **Evaluations write every run** (present and absent), mirroring how judges persist pass and fail today; occurrences are the rows carrying `signal_id`. **All scores are stored the same way** — Postgres-canonical + ClickHouse mirror, no per-type or per-capability split. → [Score](#score--the-membership-ledger)
 6. **Users cannot create evaluation-less signals** — only `system`-origin signals may have no evaluation, which removes the pure-filter write-amplification footgun; `filters` is only an evaluation pre-gate; plain filter tracking stays saved searches + monitors. → [Signal](#signal)
-7. **Lifecycle stays on the signal row** for the MVP (resolve/ignore/escalating carried over from issues), not relocated onto the default monitor. → [Signal](#signal)
+7. **Mute stays on the signal row** for the MVP; escalation is represented by source-keyed incidents, not by a default monitor. → [Signal](#signal)
 8. **Script evaluations are the MVP detector; the judge is a generated script that calls `llm()`.** Both arise from the builder (settings → script, or raw script) and from the discovery → tracking path. **There is no tunable threshold**: the script returns `Passed`/`Failed`, so the cutoff is written into the script; `value` is only confidence/sort. **Semantic similarity is a future capability** ([Phase 7](#phase-7--semantic-similarity-evaluations-future)) — likely a `similarity()`/`embedding()` host function the script can call (with a possible native batch-runner optimization), shape deferred. **Custom-source scores** (`/scores` accepting `signal_id`) are POST-MVP.
 9. **No per-project signal cap.** Evaluation matching cost and score write volume are bounded by the shared selection pre-gate (sampling / turn / filter) and the single `signals:match` pipeline, not by an arbitrary count limit.
 10. **A signal's behavior is present when `passed = true`.** Membership is `signal_id`; the writer stamps it when an evaluation's verdict is present (`passed = true`), and the generated-judge convention (baseline prompt + GEPA proposer) sets `passed = true` when the behavior is present. `passed` is host-derived per run, so the convention lives in the runtime sites (writer, discovery eligibility, alignment scoring) and the judge prompt — no stored flag, no `scores` migration. → [Evaluation](#evaluation-the-detector) / [Score](#score--the-membership-ledger) / [Phase 2 PR2](#phase-2--evaluation-substrate--script-evaluations-mvp)
@@ -487,7 +463,7 @@ Signals are exposed as a public REST surface under `/v1/projects/{projectSlug}/s
 >
 > Each phase is an **independently shippable, behavior-preserving deploy**: production keeps working after every phase. Parallelism lives *within* a phase (tasks sharing dependencies run concurrently); phases themselves are mostly sequential, which is the deliberate price of safe incremental rollout. **MVP = Phases 1–4.** Every phase updates the relevant `dev-docs/*` as part of its definition of done (the "remember docs" requirement).
 >
-> **Incremental-schema note.** The data-model end state above is reached over several phases, not at once. `source_type` is a one-step rename (`source`→`source_type`, PG only — the CH column stays `source`); the `evaluation` value is **kept** (no remap), and `annotation` splits into `flagger`/`user` in Phase 6 — there is no add-then-collapse round trip. Monitoring unifies similarly — discovery-born signals keep the existing issue-event escalation path until Phase 5/6, while custom signals get the new signal-score path in Phase 4. Running two paths temporarily is intentional and non-breaking. **The exception is Phase 2's engine cutover** ([below](#phase-2--evaluation-substrate--script-evaluations-mvp)), which is not an incremental additive step (no feature flag, brief accepted downtime).
+> **Incremental-schema note.** The data-model end state above is reached over several phases, not at once. `source_type` is a one-step rename (`source`→`source_type`, PG only — the CH column stays `source`); the `evaluation` value is **kept** (no remap), and `annotation` splits into `flagger`/`user` in Phase 6 — there is no add-then-collapse round trip. Alerting converges on the source-keyed `incidents` hub: signal escalation writes `source_type = "signal"`, while monitors write `source_type = "monitor"` from the single-rule monitor evaluator. **The exception is Phase 2's engine cutover** ([below](#phase-2--evaluation-substrate--script-evaluations-mvp)), which is not an incremental additive step (no feature flag, brief accepted downtime); its membership-polarity inversion was subsequently **reverted** back to the original `passed = false` = present convention.
 
 ### Phase 1 — Rename Issues → Signals `[MVP]`
 
@@ -550,9 +526,9 @@ PR1 shipped one present-verdict convention: behavior *present* ⇒ `passed = fal
 
 - [ ] Contracts: `SIGNAL_ORIGINS`, `EvaluationSettings` zod (`@domain/shared`).
 - [ ] Additive PG migration: `signals` — `origin` (backfill `'system'`), `filters`, `deleted_at`, nullable `centroid`/`clustered_at`, partial-unique slug; `evaluations` — `settings`, nullable `alignment`/`aligned_at`, dedupe-then-active-detector partial-unique index `(signal_id) WHERE deleted_at IS NULL AND archived_at IS NULL` + lookup btree. Make `toCentroidEmbedding` + the API evaluation response mapper null-safe; handle the un-renamed `issues_centroid_embedding_consistency_check` constraint (survived Phase 1's rename, untracked by Drizzle).
-- [ ] **Settings → script codegen** (`@domain/sandbox`, **net-new** — no such codegen pre-exists): build `compileSettingsToScript` + compile-on-save validation (`ScriptCompileError` → 422), single-sourcing the judge template so capability detection (`llm(`) and parity hold. Generated scripts use the present-verdict convention (`Passed()` when the behavior is present).
-- [ ] **`evaluations.script_hash`** column, filled for all evaluations — the writer reads it for the score's `metadata.evaluationHash` instead of the now-nullable `alignment.evaluationHash` (only needed once `alignment` becomes nullable).
-- [ ] `createSignal`/`updateSignal`/`deleteSignal` use-cases + API routes (monitors template) + MCP/SDK regen; reject evaluation-less `origin=user`. `deleteSignal` = PG **soft-delete** + archive the linked evaluation (auto write-stop via the active-detector scan); **no CH cleanup** — deleted-signal scores are excluded read-side via PG lifecycle. **No per-project signal cap.** Default-monitor provisioning stays Phase 4.
+- [ ] **Settings → script codegen** (`@domain/sandbox`, **net-new**): the original "consume the existing sandbox-runtime *SignalRule* codegen" claim is **refuted** — no such codegen exists yet; PR2 **builds** `compileSettingsToScript` + compile-on-save validation (`ScriptCompileError` → 422), single-sourcing the judge template so capability detection (`llm(`) and parity hold.
+- [ ] **`evaluations.script_hash`** column, filled for all evaluations — the writer reads it for the score's `metadata.evaluationHash` instead of the now-nullable `alignment.evaluationHash` (moved here from PR1: only needed once `alignment` becomes nullable).
+- [ ] `createSignal`/`updateSignal`/`deleteSignal` use-cases + API routes (monitors template) + MCP/SDK regen; reject evaluation-less `origin=user`. `deleteSignal` = PG **soft-delete** + archive the linked evaluation (auto write-stop via the active-detector scan); **no CH cleanup** — deleted-signal scores are excluded read-side via PG lifecycle. **No per-project signal cap.** Signal escalation is handled by source-keyed incidents, not default monitors.
 - [ ] `signals:backfill` worker + `backfillSignalScoresUseCase`: deterministic scripts only (judges collect forward); sandbox traces excluded; `windowStartIso` resolved once; idempotent per `(evaluation, trace)`.
 
 #### PR4 — Builder UI `[ ] pending`
@@ -576,19 +552,15 @@ PR1 shipped one present-verdict convention: behavior *present* ⇒ `passed = fal
 
 ### Phase 4 — Monitors on signals `[MVP]` (hard-req 4)
 
-**Deps:** P2.
-**Ships:** alerting on custom (and any) signals; users create monitors targeting a signal with a metric + alerts (tools/users monitor UX copied); each new signal gets a default monitor.
-**Safe because:** it's additive monitor columns + a new reader; existing project-level system monitors keep covering discovery-born signals via the existing path.
+**Reconciled shipped model (2026-06-23):** signal alerting did not ship as signal-target monitors with a monitor-alert stack. Signal escalation is intrinsic to signals and writes directly to the shared `incidents` hub with `source_type = "signal"` and notification key `signal.escalating`. User-created monitors are a separate single-rule surface over saved-search/tool/user/session targets; see `dev-docs/monitors.md`.
 
-- [ ] **P4-a** PG migration (additive): `monitors.target_signal_id`, `is_default` + the two indexes.
-- [ ] **P4-b** `SignalScoreReader` (`@platform/db-clickhouse`): `count WHERE signal_id=?`; `avg`/`p95`/`sum` of trace `duration`/`cost`/`tokens` by joining matched `trace_id → traces`; `errorRate`; per-bucket series for the escalation machine. Mirrors `SavedSearchMatchReader`.
-- [ ] **P4-c** Signal monitor evaluation: wire signal targets into `evaluateMonitorUseCase`, reusing the unified `event.matched`/`metric.threshold`/`metric.escalating` state machines (`run-*-alert.ts`) over the `SignalScoreReader` series; `metric.escalating` `expected` mode reuses `evaluateSeasonalEscalation`.
-- [ ] **P4-d** `event.regressed` kind: add to `ALERT_INCIDENT_KINDS` (+ point lifecycle, no-condition, label, severity); fires on the first datapoint after the signal's `resolved_at` clears (mirror `issue.regressed`, signal-driven).
-- [ ] **P4-e** Default monitor provisioning: `provisionDefaultSignalMonitorUseCase` on signal create (count + `metric.escalating` expected + `event.regressed`, `is_default=true`); reuse `provisionSystemMonitorsUseCase` patterns.
-- [ ] **P4-f** Monitor-on-signal UI: create/edit (metric + alert card stack, copied from the tools/users monitor flow) on the signal page; monitors-list **Target** column deep-linking to the signal.
-- [ ] **P4-g** Monitors API + MCP: signal target on create/update; regen.
+- [x] **P4-a** Signal escalation uses the shared `EscalationEngine` and score occurrence series instead of default per-signal monitor provisioning.
+- [x] **P4-b** Signal incidents use `(source_type, source_id) = ("signal", signal.id)` and no monitor-alert join.
+- [x] **P4-c** Signal mute is `signals.muted_at`; mute gates notification fan-out and does not stop discovery or score assignment.
+- [x] **P4-d** Signal UI exposes mute/unmute, not resolve/ignore/regression actions.
+- [x] **P4-e** Notification settings gate `signal.escalating`, while monitor settings gate `monitor.match`, `monitor.threshold`, and `monitor.escalating`.
 
-**Exit gate:** create a monitor on a signal → metric series computes from signal scores → alert fires → incident + notification.
+**Exit gate:** a signal escalation opens/closes a `signal` incident, respects signal mute, and fans out under the `signal.escalating` gate.
 
 > **— MVP line: Phases 1–4 —**
 
@@ -600,14 +572,15 @@ PR1 shipped one present-verdict convention: behavior *present* ⇒ `passed = fal
 
 ### Phase 6 — Taxonomy cleanup + legacy retirement `[POST-MVP]`
 
-**Deps:** P1–P5.
+**Reconciled shipped model (2026-06-23):** alert taxonomy cleanup shipped as a new incidents source taxonomy, not as `issue.*` or `savedSearch.*` monitor kinds.
 
-- [ ] **P6-a** Finish `source_type`: split `annotation`→`flagger` (sourceId=SYSTEM) / `user` (else) (PG + CH backfill). (`evaluation` is unchanged — no remap, no evaluation-sourced backfill.)
-- [ ] **P6-b** Retire `issue.*` / `savedSearch.*` alert kinds once all monitors run on signal targets (breaking SDK — major bump).
-- [ ] **P6-c** Drop deprecated CH `issue_id` and any dormant columns.
-- [ ] **P6-d** `/scores` accepts caller-supplied `signal_id` for `custom`-source evaluations (the POST-MVP custom-source path).
+- [x] **P6-a** Incident sources are `monitor | signal`.
+- [x] **P6-b** Incident notification keys are `monitor.match`, `monitor.threshold`, `monitor.escalating`, and `signal.escalating`.
+- [x] **P6-c** Monitor UI/API use a single `rule`, with target-mode drafts mapped to `monitor.*`.
+- [x] **P6-d** Signal lifecycle actions are mute/unmute; resolved/ignored/regressed UI copy is retired.
+- [ ] **P6-e** Dormant storage names such as `scores.issue_id` can be cleaned up later as a compatibility-only migration.
 
-**Exit gate:** `source_type` is the four-value enum (`annotation` split into `flagger`/`user`); legacy `issue.*`/`savedSearch.*` kinds and `issue_id` removed; `custom`-source push live.
+**Exit gate:** monitor and signal incidents use the final source taxonomy; the old alert-kind axis is absent from the shipped monitor/signal UI and notification producer.
 
 ### Phase 7 — Semantic similarity evaluations `[FUTURE]`
 

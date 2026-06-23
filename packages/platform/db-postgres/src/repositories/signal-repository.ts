@@ -49,9 +49,8 @@ import { signals } from "../schema/signals.ts"
 import { preferProjectFirst } from "./org-search.ts"
 
 // Lifecycle flags derived from `alert_incidents` are joined onto every
-// non-locking issue read. The two EXISTS subqueries are the system of record
-// for "is this issue currently escalating / regressed" — see
-// `deriveSignalLifecycleStates` in @domain/signals.
+// non-locking issue read. The EXISTS subquery is the system of record for
+// "is this signal currently escalating" — see `deriveSignalLifecycleStates`.
 //
 // `signals.id` is qualified via raw SQL because Drizzle's template renders
 // the bare column inside the EXISTS subquery as `"id"` (unqualified), which
@@ -63,33 +62,18 @@ const outerSignalId = sql.raw(`"latitude"."signals"."id"`)
 const isEscalatingExpr = sql<boolean>`exists (
   select 1
   from ${alertIncidents}
-  where ${alertIncidents.sourceType} = 'issue'
+  where ${alertIncidents.sourceType} = 'signal'
     and ${alertIncidents.sourceId} = ${outerSignalId}
-    and ${alertIncidents.kind} = 'issue.escalating'
     and ${alertIncidents.endedAt} is null
 )`
-
-// Gated on `signals.resolved_at IS NULL` so a "resolved → regressed → resolved
-// again" issue doesn't keep showing as regressed forever — the historical
-// regression incident stays in the table, but the flag clears once the issue is
-// resolved again.
-const isRegressedExpr = sql<boolean>`(${signals.resolvedAt} is null and exists (
-  select 1
-  from ${alertIncidents}
-  where ${alertIncidents.sourceType} = 'issue'
-    and ${alertIncidents.sourceId} = ${outerSignalId}
-    and ${alertIncidents.kind} = 'issue.regressed'
-))`
 
 const signalColumnsWithLifecycle = {
   ...getTableColumns(signals),
   isEscalating: isEscalatingExpr,
-  isRegressed: isRegressedExpr,
 } as const
 
 type SignalRowWithLifecycle = typeof signals.$inferSelect & {
   readonly isEscalating: boolean
-  readonly isRegressed: boolean
 }
 
 const toDomainSignal = (row: typeof signals.$inferSelect): Signal =>
@@ -105,9 +89,7 @@ const toDomainSignal = (row: typeof signals.$inferSelect): Signal =>
     priority: row.priority,
     centroid: row.centroid,
     clusteredAt: row.clusteredAt,
-    escalatedAt: row.escalatedAt,
-    resolvedAt: row.resolvedAt,
-    ignoredAt: row.ignoredAt,
+    mutedAt: row.mutedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   })
@@ -116,7 +98,6 @@ const toSignalWithLifecycle = (row: SignalRowWithLifecycle): SignalWithLifecycle
   const issue = toDomainSignal(row)
   const lifecycle: SignalLifecycleFlags = {
     isEscalating: row.isEscalating,
-    isRegressed: row.isRegressed,
   }
   return Object.assign({}, issue, { lifecycle })
 }
@@ -207,9 +188,7 @@ const toInsertRow = (issue: Signal, centroidEmbedding: readonly number[] | null)
   centroid: issue.centroid,
   centroidEmbedding: centroidEmbedding === null ? null : [...centroidEmbedding],
   clusteredAt: issue.clusteredAt,
-  escalatedAt: issue.escalatedAt,
-  resolvedAt: issue.resolvedAt,
-  ignoredAt: issue.ignoredAt,
+  mutedAt: issue.mutedAt,
   createdAt: issue.createdAt,
   updatedAt: issue.updatedAt,
 })
@@ -299,9 +278,9 @@ const signalRepositoryCoreLive = Layer.effect(
                 eq(signals.projectId, projectId),
                 or(hasAnnotationEvidence, meetsVisibilityThreshold),
                 lifecycleGroup === "active"
-                  ? and(isNull(signals.resolvedAt), isNull(signals.ignoredAt))
+                  ? isNull(signals.mutedAt)
                   : lifecycleGroup === "archived"
-                    ? or(isNotNull(signals.resolvedAt), isNotNull(signals.ignoredAt))
+                    ? isNotNull(signals.mutedAt)
                     : undefined,
                 assigneeConditions,
                 timeRange?.from ? gte(signals.updatedAt, timeRange.from) : undefined,
@@ -329,7 +308,7 @@ const signalRepositoryCoreLive = Layer.effect(
               )`
               const orderBy =
                 sort?.field === "state"
-                  ? [direction(signals.resolvedAt), direction(signals.ignoredAt), direction(signals.updatedAt)]
+                  ? [direction(signals.mutedAt), direction(signals.updatedAt)]
                   : sort?.field === "occurrences"
                     ? [direction(occurrencesSort), desc(signals.updatedAt), asc(signals.id)]
                     : sort?.field === "affectedSessions"
@@ -561,8 +540,7 @@ const signalRepositoryCoreLive = Layer.effect(
                   and(
                     eq(signals.organizationId, organizationId),
                     isNull(projects.deletedAt),
-                    isNull(signals.resolvedAt),
-                    isNull(signals.ignoredAt),
+                    isNull(signals.mutedAt),
                     or(sql`${signals.searchDocument} @@ ${lexicalQuery}`, ilike(signals.name, `%${query}%`)),
                   ),
                 )
@@ -601,8 +579,7 @@ const signalRepositoryCoreLive = Layer.effect(
                 and(
                   eq(signals.organizationId, organizationId),
                   isNull(projects.deletedAt),
-                  isNull(signals.resolvedAt),
-                  isNull(signals.ignoredAt),
+                  isNull(signals.mutedAt),
                   isNotNull(signals.centroidEmbedding),
                   sql`(${score} >= ${SIGNAL_DISCOVERY_MIN_SIMILARITY} OR ${vectorScore} >= ${SIGNAL_DISCOVERY_MIN_VECTOR_SIMILARITY})`,
                 ),
@@ -636,9 +613,7 @@ const signalRepositoryCoreLive = Layer.effect(
                   centroid: row.centroid,
                   centroidEmbedding: row.centroidEmbedding,
                   clusteredAt: row.clusteredAt,
-                  escalatedAt: row.escalatedAt,
-                  resolvedAt: row.resolvedAt,
-                  ignoredAt: row.ignoredAt,
+                  mutedAt: row.mutedAt,
                   updatedAt: row.updatedAt,
                 },
               }),

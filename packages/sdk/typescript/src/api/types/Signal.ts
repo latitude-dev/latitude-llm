@@ -19,10 +19,8 @@ export interface Signal {
     source: Signal.Source;
     /** Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`). */
     states: Signal.States.Item[];
-    /** ISO-8601 timestamp at which the signal was resolved, or `null`. */
-    resolvedAt?: string | undefined;
-    /** ISO-8601 timestamp at which the signal was ignored, or `null`. */
-    ignoredAt?: string | undefined;
+    /** ISO-8601 timestamp at which the signal was muted, or `null`. */
+    mutedAt?: string | undefined;
     /** ISO-8601 timestamp of creation. */
     createdAt: string;
     /** ISO-8601 timestamp of the last update. */
@@ -56,9 +54,6 @@ export namespace Signal {
             New: "new",
             Escalating: "escalating",
             Ongoing: "ongoing",
-            Resolved: "resolved",
-            Regressed: "regressed",
-            Ignored: "ignored",
         } as const;
         export type Item = (typeof Item)[keyof typeof Item];
     }

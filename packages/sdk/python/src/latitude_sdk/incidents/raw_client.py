@@ -17,9 +17,8 @@ from ..errors.unauthorized_error import UnauthorizedError
 from ..types.error import Error
 from ..types.incident import Incident
 from ..types.list_incidents_response import ListIncidentsResponse
-from .types.incidents_list_request_kinds_item import IncidentsListRequestKindsItem
 from .types.incidents_list_request_severities_item import IncidentsListRequestSeveritiesItem
-from .types.incidents_list_request_source_types_item import IncidentsListRequestSourceTypesItem
+from .types.incidents_list_request_source_type import IncidentsListRequestSourceType
 
 
 class RawIncidentsClient:
@@ -32,13 +31,8 @@ class RawIncidentsClient:
         *,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
-        source_types: typing.Optional[
-            typing.Union[IncidentsListRequestSourceTypesItem, typing.Sequence[IncidentsListRequestSourceTypesItem]]
-        ] = None,
+        source_type: typing.Optional[IncidentsListRequestSourceType] = None,
         source_id: typing.Optional[str] = None,
-        kinds: typing.Optional[
-            typing.Union[IncidentsListRequestKindsItem, typing.Sequence[IncidentsListRequestKindsItem]]
-        ] = None,
         severities: typing.Optional[
             typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]
         ] = None,
@@ -58,14 +52,11 @@ class RawIncidentsClient:
         to_iso : typing.Optional[dt.datetime]
             Upper bound (inclusive) of the time window. Defaults to now.
 
-        source_types : typing.Optional[typing.Union[IncidentsListRequestSourceTypesItem, typing.Sequence[IncidentsListRequestSourceTypesItem]]]
-            Restrict to incidents whose source type matches any value in this list.
+        source_type : typing.Optional[IncidentsListRequestSourceType]
+            Restrict to incidents triggered by this source type: `monitor` or `signal`.
 
         source_id : typing.Optional[str]
-            Restrict to incidents tied to a single source entity (e.g. one issue id).
-
-        kinds : typing.Optional[typing.Union[IncidentsListRequestKindsItem, typing.Sequence[IncidentsListRequestKindsItem]]]
-            Restrict to incidents whose kind matches any value in this list.
+            Restrict to incidents tied to one source entity id.
 
         severities : typing.Optional[typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]]
             Restrict to incidents whose severity matches any value in this list.
@@ -84,9 +75,8 @@ class RawIncidentsClient:
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
                 "toIso": serialize_datetime(to_iso) if to_iso is not None else None,
-                "sourceTypes": source_types,
-                "sourceId": source_id,
-                "kinds": kinds,
+                "source_type": source_type,
+                "source_id": source_id,
                 "severities": severities,
             },
             request_options=request_options,
@@ -225,13 +215,8 @@ class AsyncRawIncidentsClient:
         *,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
-        source_types: typing.Optional[
-            typing.Union[IncidentsListRequestSourceTypesItem, typing.Sequence[IncidentsListRequestSourceTypesItem]]
-        ] = None,
+        source_type: typing.Optional[IncidentsListRequestSourceType] = None,
         source_id: typing.Optional[str] = None,
-        kinds: typing.Optional[
-            typing.Union[IncidentsListRequestKindsItem, typing.Sequence[IncidentsListRequestKindsItem]]
-        ] = None,
         severities: typing.Optional[
             typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]
         ] = None,
@@ -251,14 +236,11 @@ class AsyncRawIncidentsClient:
         to_iso : typing.Optional[dt.datetime]
             Upper bound (inclusive) of the time window. Defaults to now.
 
-        source_types : typing.Optional[typing.Union[IncidentsListRequestSourceTypesItem, typing.Sequence[IncidentsListRequestSourceTypesItem]]]
-            Restrict to incidents whose source type matches any value in this list.
+        source_type : typing.Optional[IncidentsListRequestSourceType]
+            Restrict to incidents triggered by this source type: `monitor` or `signal`.
 
         source_id : typing.Optional[str]
-            Restrict to incidents tied to a single source entity (e.g. one issue id).
-
-        kinds : typing.Optional[typing.Union[IncidentsListRequestKindsItem, typing.Sequence[IncidentsListRequestKindsItem]]]
-            Restrict to incidents whose kind matches any value in this list.
+            Restrict to incidents tied to one source entity id.
 
         severities : typing.Optional[typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]]
             Restrict to incidents whose severity matches any value in this list.
@@ -277,9 +259,8 @@ class AsyncRawIncidentsClient:
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
                 "toIso": serialize_datetime(to_iso) if to_iso is not None else None,
-                "sourceTypes": source_types,
-                "sourceId": source_id,
-                "kinds": kinds,
+                "source_type": source_type,
+                "source_id": source_id,
                 "severities": severities,
             },
             request_options=request_options,

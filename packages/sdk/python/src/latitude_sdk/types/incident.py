@@ -7,7 +7,6 @@ import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
 from .alert_condition import AlertCondition
-from .incident_kind import IncidentKind
 from .incident_severity import IncidentSeverity
 from .incident_source_type import IncidentSourceType
 
@@ -30,17 +29,12 @@ class Incident(UniversalBaseModel):
 
     source_type: typing_extensions.Annotated[IncidentSourceType, FieldMetadata(alias="sourceType")] = pydantic.Field()
     """
-    Kind of entity that triggered the incident. `issue` for signal-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a search.
+    Kind of entity that triggered the incident: `signal` or `monitor`.
     """
 
     source_id: typing_extensions.Annotated[str, FieldMetadata(alias="sourceId")] = pydantic.Field()
     """
     Id of the entity that triggered the incident (matches `sourceType`).
-    """
-
-    kind: IncidentKind = pydantic.Field()
-    """
-    Reason the incident opened. `issue.new` fires when a new signal is discovered; `issue.regressed` when a resolved signal is detected again; `issue.escalating` when an ongoing signal is being detected more than expected. The `savedSearch.*` kinds are raised by monitors watching a search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when matching traces are detected above a configured threshold, and `savedSearch.escalating` when they stay above the threshold for a sustained window.
     """
 
     severity: IncidentSeverity = pydantic.Field()
@@ -63,13 +57,6 @@ class Incident(UniversalBaseModel):
     created_at: typing_extensions.Annotated[str, FieldMetadata(alias="createdAt")] = pydantic.Field()
     """
     ISO-8601 timestamp at which the incident row was created.
-    """
-
-    monitor_alert_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="monitorAlertId")] = (
-        pydantic.Field(default=None)
-    )
-    """
-    Id of the monitor alert that opened this incident, or `null` when not attributed to a monitor.
     """
 
     condition: typing.Optional[AlertCondition] = None

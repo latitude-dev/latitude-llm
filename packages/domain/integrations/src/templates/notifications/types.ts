@@ -1,5 +1,4 @@
 import type { NOTIFICATION_KIND_META, NotificationKind } from "@domain/notifications"
-import type { SavedSearchRepository } from "@domain/saved-searches"
 import type { NotificationId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import type { SignalRepository } from "@domain/signals"
 import type { UserRepository } from "@domain/users"
@@ -73,16 +72,17 @@ export class RenderSlackError extends Data.TaggedError("RenderSlackError")<{
 
 /**
  * Per-kind Effect service requirements for rendering. Incident kinds
- * look up the source name (issue or saved search) from its repository;
- * other kinds need nothing beyond the payload + context.
+ * look up signal source names when applicable; monitor source display
+ * data is already carried on the payload.
  */
 export type SlackRenderDepsByKind = {
-  readonly "incident.event": SignalRepository | SavedSearchRepository | UserRepository | SqlClient
-  readonly "incident.opened": SignalRepository | SavedSearchRepository | UserRepository | SqlClient
-  readonly "incident.closed": SignalRepository | SavedSearchRepository | UserRepository | SqlClient
+  readonly "incident.event": SignalRepository | UserRepository | SqlClient
+  readonly "incident.opened": SignalRepository | UserRepository | SqlClient
+  readonly "incident.closed": SignalRepository | UserRepository | SqlClient
   readonly "wrapped.report": never
   readonly "custom.message": never
   readonly "issue.assigned": never
+  readonly "signal.discovered": never
   readonly "destination.quarantined": never
 }
 
