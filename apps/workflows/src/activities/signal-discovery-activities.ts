@@ -17,7 +17,13 @@ import {
 import { AIEmbedLive, AIGenerateLive, AIRerankLive, withAi } from "@platform/ai"
 import { RedisDistributedLockRepositoryLive } from "@platform/cache-redis"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
-import { OutboxEventWriterLive, ScoreRepositoryLive, SignalRepositoryLive, withPostgres } from "@platform/db-postgres"
+import {
+  EvaluationRepositoryLive,
+  OutboxEventWriterLive,
+  ScoreRepositoryLive,
+  SignalRepositoryLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
@@ -28,7 +34,11 @@ export const checkEligibility = async (input: CheckEligibilityInput) => {
   try {
     await Effect.runPromise(
       checkEligibilityUseCase(input).pipe(
-        withPostgres(ScoreRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
+        withPostgres(
+          Layer.mergeAll(ScoreRepositoryLive, EvaluationRepositoryLive),
+          getPostgresClient(),
+          OrganizationId(input.organizationId),
+        ),
         withTracing,
       ),
     )
@@ -65,7 +75,7 @@ export const createSignalFromScore = async (input: CreateSignalFromScoreInput) =
   Effect.runPromise(
     createSignalFromScoreUseCase(input).pipe(
       withPostgres(
-        Layer.mergeAll(ScoreRepositoryLive, SignalRepositoryLive),
+        Layer.mergeAll(ScoreRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive),
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),
@@ -78,7 +88,7 @@ export const assignOrCreateSignal = async (input: AssignOrCreateSignalInput) =>
   Effect.runPromise(
     assignOrCreateSignalUseCase(input).pipe(
       withPostgres(
-        Layer.mergeAll(ScoreRepositoryLive, SignalRepositoryLive, OutboxEventWriterLive),
+        Layer.mergeAll(ScoreRepositoryLive, SignalRepositoryLive, OutboxEventWriterLive, EvaluationRepositoryLive),
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),
@@ -107,7 +117,7 @@ export const assignScoreToSignal = async (input: AssignScoreToSignalInput) =>
   Effect.runPromise(
     assignScoreToSignalUseCase(input).pipe(
       withPostgres(
-        Layer.mergeAll(ScoreRepositoryLive, SignalRepositoryLive, OutboxEventWriterLive),
+        Layer.mergeAll(ScoreRepositoryLive, SignalRepositoryLive, OutboxEventWriterLive, EvaluationRepositoryLive),
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),

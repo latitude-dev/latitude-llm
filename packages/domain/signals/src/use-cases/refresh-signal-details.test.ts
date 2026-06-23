@@ -91,6 +91,7 @@ const makeEvaluation = (id: string, signalId: string): Evaluation =>
     trigger: defaultEvaluationTrigger(),
     alignment: emptyEvaluationAlignment("hash-1"),
     alignedAt: new Date("2026-03-31T10:00:00.000Z"),
+    membershipOnPass: false,
     archivedAt: null,
     deletedAt: null,
     createdAt: new Date("2026-03-31T10:00:00.000Z"),
