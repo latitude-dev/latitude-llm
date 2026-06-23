@@ -11,6 +11,6 @@ export const generateBaselinePromptText = (signalName: string, signalDescription
     EVALUATION_CONVERSATION_PLACEHOLDER,
     ``,
     `Determine whether the conversation exhibits the described issue.`,
-    `If the issue is present, set passed to false. If the issue is absent, set passed to true.`,
+    `If the issue is present, set passed to true. If the issue is absent, set passed to false.`,
     `Provide a brief feedback explanation for your decision.`,
   ].join("\n")

@@ -81,6 +81,9 @@ Evaluation rows live in Postgres with:
 - multiple evaluations may link to the same issue
 - `script`, `trigger`, and `alignment`
 - `aligned_at`, `archived_at`, and `deleted_at`
+- `membership_on_pass` (boolean, default false) for the present-verdict polarity
+
+Membership is recorded as `scores.signal_id`, never `passed`. An evaluation run's `passed` is host-derived by thresholding the script's `value`; the writer stamps `signal_id` when the behavior is _present_, and which verdict counts as present is per-evaluation: `membership_on_pass = true` (every evaluation generated under the current convention) means present ⇒ `passed = true`, while `false` (deprecated pre-existing evaluations) means present ⇒ `passed = false`. `passed` is never re-flipped in storage, so the polarity stays per-evaluation with no `scores` migration. The baseline judge prompt, GEPA proposer, alignment scoring, the live writer, and discovery eligibility all read this flag; re-optimizing an evaluation regenerates a current-convention script and persists `membership_on_pass = true`, upgrading deprecated evaluations forward-only.
 
 Post-MVP, the model may grow a narrow execution-settings payload:
 
