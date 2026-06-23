@@ -15,6 +15,7 @@ export const evaluateOptimizationCandidate = Effect.fn("evaluations.evaluateOpti
   readonly signalName: string
   readonly signalDescription: string
   readonly judgeTelemetry: EvaluationOptimizationJudgeTelemetryScope
+  readonly membershipOnPass?: boolean
 }) {
   yield* Effect.annotateCurrentSpan("evaluation.candidateHash", input.candidate.hash)
   yield* Effect.annotateCurrentSpan("evaluation.exampleTraceId", input.example.traceId)
@@ -34,7 +35,9 @@ export const evaluateOptimizationCandidate = Effect.fn("evaluations.evaluateOpti
   })
 
   const expectedPositive = input.example.label === "positive"
-  const predictedPositive = execution.result.passed === false
+  const predictedPositive = input.membershipOnPass
+    ? execution.result.passed === true
+    : execution.result.passed === false
   const score = expectedPositive === predictedPositive ? 1 : 0
 
   return {

@@ -123,6 +123,7 @@ export const optimizeEvaluationWorkflow = async (
     evaluationId: input.evaluationId ?? null,
     jobId: input.jobId,
     draft: baselineDraft,
+    membershipOnPass: false,
     signalName: collected.signalName,
     signalDescription: collected.signalDescription,
     positiveExamples: collected.positiveExamples,
@@ -151,6 +152,7 @@ export const optimizeEvaluationWorkflow = async (
     signalName: collected.signalName,
     signalDescription: collected.signalDescription,
     draft: optimizedDraft,
+    membershipOnPass: false,
     positiveExamples: collected.positiveExamples,
     negativeExamples: collected.negativeExamples,
   })
@@ -164,6 +166,7 @@ export const optimizeEvaluationWorkflow = async (
     evaluationHash: optimizedDraft.evaluationHash,
     confusionMatrix: baselineEvaluation.confusionMatrix,
     trigger: optimizedDraft.trigger,
+    membershipOnPass: false,
   })
 
   return {

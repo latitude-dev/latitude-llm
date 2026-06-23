@@ -139,6 +139,7 @@ export const optimizeEvaluationDraft = (input: {
   readonly signalDescription: string
   readonly positiveExamples: readonly HydratedEvaluationAlignmentExample[]
   readonly negativeExamples: readonly HydratedEvaluationAlignmentExample[]
+  readonly membershipOnPass?: boolean
 }): Promise<GeneratedEvaluationDraft> =>
   Effect.runPromise(
     Effect.gen(function* () {
@@ -197,6 +198,7 @@ export const optimizeEvaluationDraft = (input: {
               example: hydratedExample,
               signalName: input.signalName,
               signalDescription: input.signalDescription,
+              membershipOnPass: input.membershipOnPass ?? false,
               judgeTelemetry: {
                 organizationId: input.organizationId,
                 projectId: input.projectId,

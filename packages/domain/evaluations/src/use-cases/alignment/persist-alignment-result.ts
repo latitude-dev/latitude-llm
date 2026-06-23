@@ -15,6 +15,7 @@ export const persistAlignmentResultUseCase = Effect.fn("evaluations.persistAlign
   readonly evaluationHash: string
   readonly confusionMatrix: ConfusionMatrix
   readonly trigger: EvaluationTrigger
+  readonly membershipOnPass?: boolean
 }) {
   yield* Effect.annotateCurrentSpan("evaluation.projectId", input.projectId)
   yield* Effect.annotateCurrentSpan("evaluation.signalId", input.signalId)
@@ -75,6 +76,7 @@ export const persistAlignmentResultUseCase = Effect.fn("evaluations.persistAlign
       confusionMatrix: input.confusionMatrix,
     },
     alignedAt: now,
+    membershipOnPass: input.membershipOnPass ?? false,
     archivedAt: existingEvaluation?.archivedAt ?? null,
     deletedAt: existingEvaluation?.deletedAt ?? null,
     createdAt: existingEvaluation?.createdAt ?? now,

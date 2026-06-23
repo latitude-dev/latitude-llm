@@ -114,6 +114,7 @@ export const refreshEvaluationAlignmentWorkflow = async (
       signalName: state.signalName,
       signalDescription: state.signalDescription,
       draft: state.draft,
+      membershipOnPass: state.membershipOnPass,
       positiveExamples: collected.positiveExamples,
       negativeExamples: collected.negativeExamples,
     })
@@ -128,6 +129,7 @@ export const refreshEvaluationAlignmentWorkflow = async (
       evaluationHash: loaded.currentScriptHash,
       confusionMatrix: baseline.confusionMatrix,
       trigger: state.draft.trigger,
+      membershipOnPass: state.membershipOnPass,
     })
     return {
       status: "full-metric-rebuild",
@@ -152,6 +154,7 @@ export const refreshEvaluationAlignmentWorkflow = async (
     signalDescription: state.signalDescription,
     draft: state.draft,
     previousConfusionMatrix: state.confusionMatrix,
+    membershipOnPass: state.membershipOnPass,
     positiveExamples: collected.positiveExamples,
     negativeExamples: collected.negativeExamples,
   })
@@ -166,6 +169,7 @@ export const refreshEvaluationAlignmentWorkflow = async (
       evaluationHash: state.draft.evaluationHash,
       confusionMatrix: refresh.nextConfusionMatrix,
       trigger: state.draft.trigger,
+      membershipOnPass: state.membershipOnPass,
     })
     return { status: "metric-only", newExampleCount: refresh.newExampleCount }
   }

@@ -49,6 +49,7 @@ export const loadAlignmentStateUseCase = Effect.fn("evaluations.loadAlignmentSta
     name: evaluation.name,
     description: evaluation.description,
     alignedAt: evaluation.alignedAt.toISOString(),
+    membershipOnPass: evaluation.membershipOnPass,
     draft: {
       script: evaluation.script,
       evaluationHash: evaluation.alignment.evaluationHash,
