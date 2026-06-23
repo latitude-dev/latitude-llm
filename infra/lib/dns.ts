@@ -263,6 +263,7 @@ export function createDnsRecords(
       records: [
         "vc-domain-verify=one-pager.latitude.so,c092b9f764af8a38180d",
         "vc-domain-verify=latitude.so,016a0dbeca8838d547f9",
+        "vc-domain-verify=try.latitude.so,caecfef4004b8549d7e7",
       ],
       ttl: 300,
       allowOverwrite: true,
@@ -285,6 +286,16 @@ export function createDnsRecords(
       type: "CNAME",
       records: ["customers.withbaker.com"],
       ttl: 300,
+      allowOverwrite: true,
+    })
+
+    // CNAME for try.latitude.so -> Dub
+    records.tryCname = new aws.route53.Record(`${name}-try-cname`, {
+      zoneId: hostedZoneId,
+      name: "try.latitude.so",
+      type: "CNAME",
+      records: ["cname.dub.co"],
+      ttl: 86400,
       allowOverwrite: true,
     })
   }
