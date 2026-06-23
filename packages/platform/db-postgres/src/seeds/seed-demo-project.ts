@@ -50,7 +50,13 @@ export const seedDemoProjectPostgres = (params: { client: PostgresClient; scope:
 
   const program = Effect.gen(function* () {
     const ctx = yield* buildContext
-    yield* runSeeders(contentSeeders, ctx)
+    yield* runSeeders(contentSeeders, { ...ctx, maxTau2Trajectories: 300 })
+    yield* Effect.promise(() =>
+      params.client.pool.query("DELETE FROM latitude.notifications WHERE organization_id = $1 AND project_id = $2", [
+        params.scope.organizationId,
+        params.scope.projectId,
+      ]),
+    )
   })
 
   return Effect.runPromise(program.pipe(Effect.provide(repositoriesLayer)))

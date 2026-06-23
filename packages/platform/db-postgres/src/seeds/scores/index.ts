@@ -36,10 +36,10 @@ function createdAtForTau2Signal(scope: SeedScope, signalIndex: number, occurrenc
   )
 }
 
-function buildFailedTrajectoryIndexesByFamily() {
+function buildFailedTrajectoryIndexesByFamily(maxTrajectories = TAU2_SEED_TRAJECTORIES.length) {
   const byFamily = new Map<(typeof TAU2_SEED_SIGNAL_FAMILIES)[number]["key"], number[]>()
 
-  TAU2_SEED_TRAJECTORIES.forEach((trajectory, trajectoryIndex) => {
+  TAU2_SEED_TRAJECTORIES.slice(0, maxTrajectories).forEach((trajectory, trajectoryIndex) => {
     const family = classifyTau2SeedTrajectory(trajectory)
     if (family === null) return
 
@@ -58,12 +58,12 @@ function buildTau2Feedback(signalName: string, trajectory: Tau2SeedTrajectory): 
   )
 }
 
-function buildTau2SignalScoreRows(scope: SeedScope) {
+function buildTau2SignalScoreRows(scope: SeedScope, maxTrajectories = TAU2_SEED_TRAJECTORIES.length) {
   const orgId = scope.organizationId
   const projectId = scope.projectId
   const familyKeys = TAU2_SEED_SIGNAL_FAMILIES.map((family) => family.key)
-  const failedByFamily = buildFailedTrajectoryIndexesByFamily()
-  const allFailedTrajectoryIndexes = TAU2_SEED_TRAJECTORIES.flatMap((trajectory, index) =>
+  const failedByFamily = buildFailedTrajectoryIndexesByFamily(maxTrajectories)
+  const allFailedTrajectoryIndexes = TAU2_SEED_TRAJECTORIES.slice(0, maxTrajectories).flatMap((trajectory, index) =>
     trajectory.outcome === "failure" || trajectory.reward < 1 ? [index] : [],
   )
 
@@ -114,12 +114,12 @@ function buildTau2SignalScoreRows(scope: SeedScope) {
   })
 }
 
-function buildTau2ControlScoreRows(scope: SeedScope) {
+function buildTau2ControlScoreRows(scope: SeedScope, maxTrajectories = TAU2_SEED_TRAJECTORIES.length) {
   const orgId = scope.organizationId
   const projectId = scope.projectId
-  const successIndexes = TAU2_SEED_TRAJECTORIES.flatMap((trajectory, index) =>
-    trajectory.outcome === "success" && trajectory.reward >= 1 ? [index] : [],
-  ).slice(0, 6)
+  const successIndexes = TAU2_SEED_TRAJECTORIES.slice(0, maxTrajectories)
+    .flatMap((trajectory, index) => (trajectory.outcome === "success" && trajectory.reward >= 1 ? [index] : []))
+    .slice(0, 6)
 
   return successIndexes.map((trajectoryIndex, index) => {
     const trajectory = TAU2_SEED_TRAJECTORIES[trajectoryIndex]!
@@ -160,9 +160,9 @@ function buildTau2ControlScoreRows(scope: SeedScope) {
   })
 }
 
-function buildAllScoreRows(scope: SeedScope) {
-  const tau2ControlScoreRows = buildTau2ControlScoreRows(scope)
-  const tau2SignalScoreRows = buildTau2SignalScoreRows(scope)
+function buildAllScoreRows(scope: SeedScope, maxTau2Trajectories?: number) {
+  const tau2ControlScoreRows = buildTau2ControlScoreRows(scope, maxTau2Trajectories)
+  const tau2SignalScoreRows = buildTau2SignalScoreRows(scope, maxTau2Trajectories)
 
   return {
     tau2ControlScoreRows,
@@ -186,7 +186,7 @@ const seedScores: Seeder = {
   run: (ctx: SeedContext) =>
     Effect.tryPromise({
       try: async () => {
-        const built = buildAllScoreRows(ctx.scope)
+        const built = buildAllScoreRows(ctx.scope, ctx.maxTau2Trajectories)
         const allScoreRows = built.all
         for (const row of allScoreRows) {
           const { id, ...set } = row

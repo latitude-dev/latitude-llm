@@ -138,6 +138,17 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
   )
 }
 
+function SampleProjectStrip() {
+  return (
+    <div className="relative flex shrink-0 items-center justify-center gap-4 px-4 py-3 text-primary-foreground">
+      <Text.H6 color="white" className="text-center opacity-95">
+        This sample project uses lightweight seed data. Some features, including semantic search and behavior detail
+        drill-downs, may not be fully functional.
+      </Text.H6>
+    </div>
+  )
+}
+
 function ProjectLayout() {
   const { projectSlug } = Route.useParams()
   const projectFromLoader = Route.useLoaderData({ select: (data) => data.project })
@@ -157,6 +168,20 @@ function ProjectLayout() {
     return (
       <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
         <Outlet />
+      </div>
+    )
+  }
+
+  if (project.settings.isSample) {
+    return (
+      <div className="flex h-screen flex-col overflow-hidden bg-primary">
+        <SampleProjectStrip />
+        <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-t-2xl bg-background">
+          <ProjectSidebar project={project} projectSlug={projectSlug} />
+          <main className="flex-1 min-w-0 overflow-y-auto">
+            <Outlet />
+          </main>
+        </div>
       </div>
     )
   }

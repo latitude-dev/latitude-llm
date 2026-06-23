@@ -26,6 +26,7 @@ export interface SeedContext {
    * created at runtime via the backoffice. See {@link SeedScope}.
    */
   readonly scope: SeedScope
+  readonly maxTau2Trajectories?: number
 }
 
 export class SeedError extends Data.TaggedError("SeedError")<{

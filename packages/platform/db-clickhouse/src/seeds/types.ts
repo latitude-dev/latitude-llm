@@ -14,6 +14,7 @@ export interface SeedContext {
   readonly scope: SeedScope
   /** When true, seeders skip progress logs. Tests opt in. */
   readonly quiet?: boolean
+  readonly maxTau2Trajectories?: number
 }
 
 export interface Seeder {

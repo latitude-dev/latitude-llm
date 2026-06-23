@@ -12,4 +12,4 @@ import { runSeeders } from "./runner.ts"
  * `bootstrapSeedScope`.
  */
 export const seedDemoProjectClickHouse = (params: { client: ClickHouseClient; scope: SeedScope }): Promise<void> =>
-  Effect.runPromise(runSeeders(allSeeders, { client: params.client, scope: params.scope }))
+  Effect.runPromise(runSeeders(allSeeders, { client: params.client, scope: params.scope, maxTau2Trajectories: 300 }))
