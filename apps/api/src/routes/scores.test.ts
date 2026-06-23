@@ -243,7 +243,7 @@ describe("Scores Routes Integration", () => {
     expect(analyticsRows[0]?.source_id).toBe(evaluationId)
   })
 
-  it<ApiTestContext>("queues centralized discovery for failed scores from signal-linked evaluations", async ({
+  it<ApiTestContext>("keeps failed scores from linked evaluations unowned and syncs analytics", async ({
     app,
     database,
     clickhouse,
@@ -334,7 +334,7 @@ describe("Scores Routes Integration", () => {
     })
 
     const analyticsRows = await queryAnalyticsScores(clickhouse, tenant.organizationId, body.id)
-    expect(analyticsRows).toHaveLength(0)
+    expect(analyticsRows).toHaveLength(1)
   })
 
   it<ApiTestContext>("requests discovery for failed evaluation scores even when the evaluation is missing", async ({
