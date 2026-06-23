@@ -1,5 +1,15 @@
 # @latitude-data/openclaw-telemetry
 
+> [!WARNING]
+> **Deprecated.** Use OpenClaw's official OpenTelemetry exporter — the bundled
+> [`@openclaw/diagnostics-otel`](https://docs.openclaw.ai/gateway/opentelemetry)
+> plugin — pointed at Latitude's OTLP ingest instead. It follows OpenTelemetry
+> GenAI semantic conventions, is maintained by OpenClaw, and produces a cleaner
+> `invoke_agent → chat → execute_tool` trace tree.
+>
+> **Setup:** [Latitude docs → OpenClaw telemetry](https://docs.latitude.so/telemetry/openclaw).
+> This package is no longer maintained and will receive no further updates.
+
 OpenClaw plugin that streams every agent run to [Latitude](https://latitude.so) as OTLP traces — full system prompt, message history, assistant output, token usage, tool I/O, and the running agent's name on every span.
 
 ## Requirements

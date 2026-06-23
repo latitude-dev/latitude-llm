@@ -68,6 +68,12 @@ const CLAUDE_CODE_OPERATION: Record<string, string> = {
   tool: "execute_tool",
 }
 
+const OPENCLAW_TELEMETRY_SCOPE = "openclaw"
+const OPENCLAW_SPAN_OPERATION: Record<string, Operation> = {
+  "openclaw.run": "invoke_agent",
+  "openclaw.tool.execution": "execute_tool",
+}
+
 const CLAUDE_CODE_NATIVE_SPAN_PREFIX = "claude_code."
 
 /**
@@ -101,6 +107,10 @@ export function resolveOperation(spanAttrs: readonly OtlpKeyValue[], spanName: s
     stringAttr(spanAttrs, "openinference.span.kind") === "AGENT"
   ) {
     return "chat"
+  }
+  if (scopeName === OPENCLAW_TELEMETRY_SCOPE) {
+    const mapped = OPENCLAW_SPAN_OPERATION[spanName]
+    if (mapped) return mapped
   }
   return first(operationCandidates, spanAttrs) ?? operationFromClaudeCodeNativeSpanName(spanName) ?? "unspecified"
 }

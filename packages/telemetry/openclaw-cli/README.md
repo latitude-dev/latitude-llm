@@ -1,5 +1,12 @@
 # @latitude-data/openclaw-telemetry-cli
 
+> [!WARNING]
+> **Deprecated.** This installs the deprecated `@latitude-data/openclaw-telemetry`
+> plugin. Use OpenClaw's official [`@openclaw/diagnostics-otel`](https://docs.openclaw.ai/gateway/opentelemetry)
+> exporter pointed at Latitude instead — setup at
+> [Latitude docs → OpenClaw telemetry](https://docs.latitude.so/telemetry/openclaw).
+> No longer maintained.
+
 One-shot installer for the [`@latitude-data/openclaw-telemetry`](https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/openclaw#readme) OpenClaw plugin. Wraps `openclaw plugins install` + the manual `openclaw config set` flow into a single `npx -y` command, with TTY prompts, CI flags, dry-run, custom config dir, upgrade detection, and the gateway restart.
 
 For details on the plugin runtime itself — what it sends, the span tree, and the manual install flow — see the [runtime README](https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/openclaw#readme).

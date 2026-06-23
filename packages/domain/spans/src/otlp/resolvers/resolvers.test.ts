@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest"
 import type { OtlpEvent, OtlpKeyValue } from "../types.ts"
 import { resolveAttributes } from "./index.ts"
 import { resolvePerformance } from "./performance.ts"
+import { resolveStatusCode } from "./status.ts"
 import { resolveToolExecution } from "./tool-execution.ts"
+import { resolveUsage } from "./usage.ts"
 import { first, fromFloat, fromInt, fromString, fromStringArray } from "./utils.ts"
 
 function strAttr(key: string, value: string): OtlpKeyValue {
@@ -287,6 +289,30 @@ describe("resolveAttributes", () => {
         const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
         expect(result.operation).toBe(expected)
       }
+    })
+
+    it("maps OpenClaw diagnostics-otel run/tool spans by name (scope `openclaw`)", () => {
+      expect(
+        resolveAttributes({ spanAttrs: [], statusCode: "unset", spanName: "openclaw.run", scopeName: "openclaw" })
+          .operation,
+      ).toBe("invoke_agent")
+      expect(
+        resolveAttributes({
+          spanAttrs: [strAttr("gen_ai.tool.name", "bash")],
+          statusCode: "unset",
+          spanName: "openclaw.tool.execution",
+          scopeName: "openclaw",
+        }).operation,
+      ).toBe("execute_tool")
+      // model.call keeps its gen_ai.operation.name (not overridden by the scope map).
+      expect(
+        resolveAttributes({
+          spanAttrs: [strAttr("gen_ai.operation.name", "chat")],
+          statusCode: "unset",
+          spanName: "openclaw.model.call",
+          scopeName: "openclaw",
+        }).operation,
+      ).toBe("chat")
     })
 
     it("maps OpenLLMetry request types", () => {
@@ -915,5 +941,81 @@ describe("resolveToolExecution", () => {
       expect(result.toolInput).toBe("")
       expect(result.toolOutput).toBe("")
     })
+  })
+})
+
+describe("resolveUsage — embedded message usage (OpenClaw)", () => {
+  // OpenClaw buries usage + provider cost in the assistant message JSON instead
+  // of flat gen_ai.usage.* attrs. Tokens are additive (input excludes cache).
+  const outputMessages = (usage: unknown) =>
+    strAttr("openclaw.content.output_messages", JSON.stringify([{ role: "assistant", content: [], usage }]))
+
+  it("reads additive tokens + provider cost (not estimated), folding cache into input", () => {
+    const u = resolveUsage({
+      attrs: [
+        outputMessages({
+          input: 951,
+          output: 127,
+          cacheRead: 20864,
+          cacheWrite: 0,
+          reasoningTokens: 0,
+          totalTokens: 21942,
+          cost: { input: 0.004755, output: 0.00381, cacheRead: 0.010432, cacheWrite: 0, total: 0.018997 },
+        }),
+      ],
+      provider: "openai",
+      model: "gpt-5.5",
+    })
+    expect(u.tokensInput).toBe(951) // additive — not reduced by cache
+    expect(u.tokensOutput).toBe(127)
+    expect(u.tokensCacheRead).toBe(20864)
+    expect(u.tokensCacheCreate).toBe(0)
+    expect(u.tokensReasoning).toBe(0)
+    expect(u.costInputMicrocents).toBe(1_518_700) // (0.004755 + 0.010432) * 1e8
+    expect(u.costOutputMicrocents).toBe(381_000)
+    expect(u.costTotalMicrocents).toBe(1_899_700)
+    expect(u.costIsEstimated).toBe(false)
+  })
+
+  it("falls back to flat gen_ai.usage.* attrs when there is no embedded usage", () => {
+    const u = resolveUsage({
+      attrs: [intAttr("gen_ai.usage.input_tokens", 100), intAttr("gen_ai.usage.output_tokens", 20)],
+      provider: "openai",
+      model: "gpt-5.5",
+    })
+    expect(u.tokensInput).toBe(100)
+    expect(u.tokensOutput).toBe(20)
+  })
+
+  it("ignores output_messages that carry no usage object", () => {
+    const u = resolveUsage({
+      attrs: [strAttr("openclaw.content.output_messages", JSON.stringify([{ role: "assistant", content: [] }]))],
+      provider: "openai",
+      model: "gpt-5.5",
+    })
+    expect(u.tokensInput).toBe(0)
+    expect(u.tokensOutput).toBe(0)
+  })
+})
+
+describe("resolveStatusCode", () => {
+  it("passes the OTel status through for non-OpenClaw scopes", () => {
+    expect(resolveStatusCode([], "unset", "openinference")).toBe("unset")
+    expect(resolveStatusCode([], "ok", "openinference")).toBe("ok")
+    expect(resolveStatusCode([], "error", "openinference")).toBe("error")
+  })
+
+  it("treats unset OpenClaw spans as ok (success is signalled out-of-band, not via OTel status)", () => {
+    expect(resolveStatusCode([], "unset", "openclaw")).toBe("ok")
+    expect(resolveStatusCode([strAttr("openclaw.outcome", "completed")], "unset", "openclaw")).toBe("ok")
+  })
+
+  it("keeps OpenClaw spans the plugin explicitly marked as error", () => {
+    expect(resolveStatusCode([], "error", "openclaw")).toBe("error")
+  })
+
+  it("marks an OpenClaw span as error when its outcome is not a success value", () => {
+    expect(resolveStatusCode([strAttr("openclaw.outcome", "error")], "unset", "openclaw")).toBe("error")
+    expect(resolveStatusCode([strAttr("openclaw.outcome", "abandoned")], "unset", "openclaw")).toBe("error")
   })
 })
