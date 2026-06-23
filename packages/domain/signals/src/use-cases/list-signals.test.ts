@@ -1240,17 +1240,13 @@ describe("listSignalsUseCase", () => {
     })
 
     it("skips full-list analytics on continuation pages while preserving row order", async () => {
-      const { repository: signalRepository } = createFakeSignalRepository(
-        mixedPrioritySeed.map((entry) => entry.issue),
-      )
+      const { repository: signalRepository } = createFakeSignalRepository(mixedPrioritySeed.map((entry) => entry.issue))
       const { repository: evaluationRepository } = createEvaluationRepository()
       const aggregateInputs: Array<{ readonly signalIds: readonly string[] }> = []
       let histogramCalls = 0
       const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
         listSignalWindowMetrics: () =>
-          Effect.succeed(
-            mixedPrioritySeed.map((entry) => makeWindowMetric({ signalId: SignalId(entry.issue.id) })),
-          ),
+          Effect.succeed(mixedPrioritySeed.map((entry) => makeWindowMetric({ signalId: SignalId(entry.issue.id) }))),
         aggregateBySignals: (input) =>
           Effect.sync(() => {
             aggregateInputs.push({ signalIds: input.signalIds })

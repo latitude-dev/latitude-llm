@@ -576,10 +576,7 @@ export const listSignalsUseCase = (
       })
       .pipe(Effect.withSpan("issues.listSignals.countByProjectId"))
 
-    const [windowMetrics, searchCandidates] = yield* Effect.all([
-      windowMetricsEffect,
-      searchCandidatesEffect,
-    ])
+    const [windowMetrics, searchCandidates] = yield* Effect.all([windowMetricsEffect, searchCandidatesEffect])
 
     const windowMetricsBySignalId = new Map(windowMetrics.map((metric) => [metric.signalId, metric] as const))
     const baseCandidateIds = parsed.search
@@ -757,7 +754,9 @@ export const listSignalsUseCase = (
               signalIds: pageSignalIds,
             })
             .pipe(Effect.withSpan("issues.listSignals.aggregateBySignals")),
-      parsed.includeAnalytics || pageSignalIds.length > 0 ? countTotalSessionsEffect : Effect.succeed({ totalCount: 0 }),
+      parsed.includeAnalytics || pageSignalIds.length > 0
+        ? countTotalSessionsEffect
+        : Effect.succeed({ totalCount: 0 }),
     ])
 
     const evaluationsBySignalId = new Map<string, Evaluation[]>()
