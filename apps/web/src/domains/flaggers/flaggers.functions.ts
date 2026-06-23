@@ -119,9 +119,6 @@ export const listFlaggersByProject = createServerFn({ method: "GET" })
       }).pipe(withPostgres(FlaggerRepositoryLive, client, orgId), withTracing),
     )
 
-    // Render the full strategy catalog: stored rows carry the project's config,
-    // and any strategy without a row (e.g. one shipped after the project was
-    // provisioned) shows disabled until the user enables it — no back-fill.
     const storedBySlug = new Map(stored.map((flagger) => [flagger.slug, flagger]))
     return FLAGGER_STRATEGY_SLUGS.map((slug) => {
       const row = storedBySlug.get(slug)
@@ -129,7 +126,9 @@ export const listFlaggersByProject = createServerFn({ method: "GET" })
     })
   })
 
-export const configureProjectFlaggersForOnboarding = createServerFn({ method: "POST" })
+export const configureProjectFlaggersForOnboarding = createServerFn({
+  method: "POST",
+})
   .inputValidator(
     z.object({
       projectId: z.string(),
@@ -172,20 +171,13 @@ export const updateFlagger = createServerFn({ method: "POST" })
     const client = getPostgresClient()
 
     const flagger = await Effect.runPromise(
-      Effect.gen(function* () {
-        // Ensure a row exists for strategies the project was never provisioned
-        // (shown disabled in settings); idempotent, then the update applies the
-        // user's enabled/sampling values.
-        const repo = yield* FlaggerRepository
-        yield* repo.saveManyForProject({ projectId, slugs: [data.slug] })
-        return yield* updateFlaggerUseCase({
-          organizationId,
-          projectId,
-          slug: data.slug,
-          enabled: data.enabled,
-          sampling: data.sampling,
-          actorUserId: userId,
-        })
+      updateFlaggerUseCase({
+        organizationId,
+        projectId,
+        slug: data.slug,
+        enabled: data.enabled,
+        sampling: data.sampling,
+        actorUserId: userId,
       }).pipe(
         withPostgres(Layer.mergeAll(FlaggerRepositoryLive, OutboxEventWriterLive), client, orgId),
         Effect.provide(RedisCacheStoreLive(getRedisClient())),

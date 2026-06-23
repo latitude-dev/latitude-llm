@@ -127,10 +127,10 @@ describe("updateFlaggerUseCase", () => {
     expect(deletedKeys).toEqual([`org:${ORG_ID}:flaggers:${PROJECT_ID}`])
   })
 
-  it("returns null and still evicts the cache when the row does not exist", async () => {
-    // Eviction runs unconditionally so a no-op update doesn't leave a stale
-    // cache entry around if the caller meant to invalidate state.
-    const { repository } = createFakeFlaggerRepository([])
+  it("creates the row when missing, applies the update, and evicts the cache", async () => {
+    // A strategy the project was never provisioned (shown disabled in settings)
+    // is created on demand so enabling it persists rather than being a no-op.
+    const { repository, flaggers } = createFakeFlaggerRepository([])
     const { layer: cacheLayer, deletedKeys } = createCacheLayer()
 
     const layer = Layer.mergeAll(
@@ -145,11 +145,13 @@ describe("updateFlaggerUseCase", () => {
         organizationId: ORG_ID,
         projectId: PROJECT_ID,
         slug: "jailbreaking",
-        enabled: false,
+        enabled: true,
       }).pipe(Effect.provide(layer)),
     )
 
-    expect(updated).toBeNull()
+    expect(updated?.slug).toBe("jailbreaking")
+    expect(updated?.enabled).toBe(true)
+    expect(flaggers.size).toBe(1)
     expect(deletedKeys).toEqual([`org:${ORG_ID}:flaggers:${PROJECT_ID}`])
   })
 
@@ -193,7 +195,7 @@ describe("updateFlaggerUseCase", () => {
     })
   })
 
-  it("does NOT emit FlaggerToggled when no matching row exists", async () => {
+  it("emits FlaggerToggled after creating a row that did not exist", async () => {
     const { repository } = createFakeFlaggerRepository([])
     const { layer: cacheLayer } = createCacheLayer()
     const { layer: outboxLayer, written } = createOutboxLayer()
@@ -210,11 +212,13 @@ describe("updateFlaggerUseCase", () => {
         organizationId: ORG_ID,
         projectId: PROJECT_ID,
         slug: "jailbreaking",
-        enabled: false,
+        enabled: true,
       }).pipe(Effect.provide(layer)),
     )
 
-    expect(written).toEqual([])
+    expect(written).toHaveLength(1)
+    expect(written[0]?.eventName).toBe("FlaggerToggled")
+    expect(written[0]?.payload).toMatchObject({ flaggerSlug: "jailbreaking", enabled: true })
   })
 
   it("succeeds even when no CacheStore is in the layer (eviction is best-effort)", async () => {
