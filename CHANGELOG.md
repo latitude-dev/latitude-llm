@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+## v0.3.16 - 2026-06-23
+
+### Monitors
+
+- Reworked monitor creation to be source-first: create monitors directly from saved searches, tools, users, and sessions through a unified metric alert configuration (ref: #3650).
+- Replaced the flat metric dropdown with a dimension-first selector and compact threshold controls, added min/max/median metrics, and simplified thresholds to absolute/relative tabs with capped relative lookbacks (ref: #3650).
+- Rendered absolute thresholds and incident markers as overlays on metric charts, and showed duration thresholds in seconds while preserving nanosecond storage (ref: #3650).
+- Linked saved-search monitor targets back to sessions with the saved search selected, and made monitor selector rows navigate to monitor details consistently (ref: #3650).
+- Classified `listMonitorsForTarget` by target kind so all-users monitors (empty or extra-predicate filter sets) stay in the users dropdown, with null-safe filter containment and a single canonical target-kind decoder across Postgres, the API, and the TS/Python SDKs (ref: #3659).
+
+### Signals and sessions
+
+- Based score analytics on distinct sessions instead of traces, exposed session pages in signal details, and switched signal/monitor/tool-activity views from trace rows to session rows (ref: #3650).
+- Moved session monitoring into the sessions action row, matching saved-search-backed monitors and applying their filters to the table (ref: #3650).
+- Added a session monitor selector and User ID filter suggestions via the distinct-value combobox (ref: #3650).
+
+### Web and flaggers
+
+- Fixed the settings scroll layout with a per-route `fillHeight` flag so detail routes own their internal scroll while other pages scroll at the viewport edge (ref: #3657).
+- Rendered the full flagger strategy catalog by synthesizing disabled records for unprovisioned strategies, creating the row only when a flagger is enabled via a new `findOrCreateFlagger` use case (ref: #3657).
+
 ## v0.3.15 - 2026-06-22
 
 ### Telemetry
