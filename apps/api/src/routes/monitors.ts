@@ -113,6 +113,10 @@ const ListMonitorIncidentsQuerySchema = z.object({
 const ListMonitorsForTargetBodySchema = z
   .object({
     stream: MonitorTargetSchema.shape.stream,
+    targetKind: MonitorTargetSchema.shape.kind
+      .exclude(["signal"])
+      .optional()
+      .describe("Optional target kind to match: `user`, `tool`, `session`, or `savedSearch`."),
     filterSetContains: MonitorTargetSchema.shape.filterSet
       .unwrap()
       .describe(
@@ -247,7 +251,7 @@ const listMonitorsForTarget = monitorEndpoint({
     ...monitorsFernGroup("listForTarget"),
     summary: "List monitors for target",
     description:
-      "Returns live unified monitors whose target contains the supplied user or tool filter. Use `stream: traces` with a `userId` filter for users, or `stream: spans` with `operation = execute_tool` and `toolName` filters for tools.",
+      "Returns live unified monitors matching the supplied target kind and/or filter subset. Use `targetKind: user` with `stream: traces` for users, or `targetKind: tool` with `stream: spans` for tools.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(ListMonitorsForTargetBodySchema) },
     responses: openApiResponses({ status: 200, schema: MonitorListSchema, description: "Matching monitors" }),
@@ -264,6 +268,7 @@ const listMonitorsForTarget = monitorEndpoint({
         return yield* listMonitorsForTargetUseCase({
           projectId: project.id,
           stream: body.stream,
+          ...(body.targetKind !== undefined ? { targetKind: body.targetKind } : {}),
           filterSetContains: body.filterSetContains,
         })
       }).pipe(

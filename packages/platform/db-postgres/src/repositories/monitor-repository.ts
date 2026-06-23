@@ -5,6 +5,7 @@ import {
   MonitorRepository,
   type MonitorSearchResult,
   monitorSchema,
+  monitorTargetKind,
 } from "@domain/monitors"
 import {
   type MonitorId,
@@ -48,14 +49,13 @@ const toMonitorAlert = (row: typeof monitorAlerts.$inferSelect): MonitorAlert =>
   createdAt: row.createdAt,
 })
 
-const inferTargetKind = (row: {
-  readonly targetStream: typeof monitors.$inferSelect.targetStream
-  readonly targetSavedSearchId: typeof monitors.$inferSelect.targetSavedSearchId
-}): NonNullable<Monitor["target"]>["kind"] => {
-  if (row.targetSavedSearchId) return "savedSearch"
-  if (row.targetStream === "spans") return "tool"
-  if (row.targetStream === "sessions") return "session"
-  return "user"
+const targetKindPredicate = (kind: NonNullable<Monitor["target"]>["kind"] | undefined) => {
+  if (!kind) return undefined
+  if (kind === "savedSearch") return isNotNull(monitors.targetSavedSearchId)
+  if (kind === "tool") return and(eq(monitors.targetStream, "spans"), isNull(monitors.targetSavedSearchId))
+  if (kind === "session") return and(eq(monitors.targetStream, "sessions"), isNull(monitors.targetSavedSearchId))
+  if (kind === "user") return and(eq(monitors.targetStream, "traces"), isNull(monitors.targetSavedSearchId))
+  return sql`false`
 }
 
 const toMonitor = (row: typeof monitors.$inferSelect, alerts: readonly MonitorAlert[]): Monitor =>
@@ -70,7 +70,7 @@ const toMonitor = (row: typeof monitors.$inferSelect, alerts: readonly MonitorAl
     alerts,
     target: row.targetStream
       ? {
-          kind: inferTargetKind(row),
+          kind: monitorTargetKind({ stream: row.targetStream, savedSearchId: row.targetSavedSearchId }),
           stream: row.targetStream,
           filterSet: row.targetFilterSet ?? null,
           query: row.targetQuery ?? null,
@@ -642,7 +642,7 @@ export const MonitorRepositoryLive = Layer.effect(
                   {
                     alert: toMonitorAlert(row.alert),
                     target: {
-                      kind: inferTargetKind(row),
+                      kind: monitorTargetKind({ stream: row.targetStream, savedSearchId: row.targetSavedSearchId }),
                       stream: row.targetStream,
                       filterSet: row.targetFilterSet ?? null,
                       query: row.targetQuery ?? null,
@@ -654,7 +654,7 @@ export const MonitorRepositoryLive = Layer.effect(
               : [],
           )
         }),
-      listMonitorsForTarget: ({ projectId, stream, filterSetContains }) =>
+      listMonitorsForTarget: ({ projectId, stream, targetKind, filterSetContains }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const { organizationId } = sqlClient
@@ -667,8 +667,8 @@ export const MonitorRepositoryLive = Layer.effect(
                   eq(monitors.organizationId, organizationId),
                   eq(monitors.projectId, projectId),
                   eq(monitors.targetStream, stream),
-                  // jsonb containment: the monitor's target filter set includes the given predicate.
-                  sql`${monitors.targetFilterSet} @> ${JSON.stringify(filterSetContains)}::jsonb`,
+                  targetKindPredicate(targetKind),
+                  sql`coalesce(${monitors.targetFilterSet}, '{}'::jsonb) @> ${JSON.stringify(filterSetContains)}::jsonb`,
                   isNull(monitors.deletedAt),
                 ),
               )

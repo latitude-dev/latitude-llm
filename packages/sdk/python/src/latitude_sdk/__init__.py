@@ -308,6 +308,7 @@ if typing.TYPE_CHECKING:
     from .members import InviteMemberBodyRole, UpdateMemberRoleBodyRole
     from .monitors import (
         ListMonitorsForTargetBodyStream,
+        ListMonitorsForTargetBodyTargetKind,
         UpdateMonitorAlertBodyCondition,
         UpdateMonitorAlertBodyConditionKind,
         UpdateMonitorAlertBodyConditionKindDirection,
@@ -486,6 +487,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "LatitudeApiClientEnvironment": ".environment",
     "ListIncidentsResponse": ".types",
     "ListMonitorsForTargetBodyStream": ".monitors",
+    "ListMonitorsForTargetBodyTargetKind": ".monitors",
     "ListTracesBodySortBy": ".traces",
     "ListTracesBodySortDirection": ".traces",
     "Member": ".types",
@@ -846,6 +848,7 @@ __all__ = [
     "LatitudeApiClientEnvironment",
     "ListIncidentsResponse",
     "ListMonitorsForTargetBodyStream",
+    "ListMonitorsForTargetBodyTargetKind",
     "ListTracesBodySortBy",
     "ListTracesBodySortDirection",
     "Member",

@@ -11,6 +11,8 @@ import type * as LatitudeApi from "../../../../index.js";
 export interface ListMonitorsForTargetBody {
     /** Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`. */
     stream: ListMonitorsForTargetBody.Stream;
+    /** Optional target kind to match: `user`, `tool`, `session`, or `savedSearch`. */
+    targetKind?: ListMonitorsForTargetBody.TargetKind;
     filterSetContains?: LatitudeApi.MonitorFilterSet | undefined;
 }
 
@@ -22,4 +24,12 @@ export namespace ListMonitorsForTargetBody {
         Sessions: "sessions",
     } as const;
     export type Stream = (typeof Stream)[keyof typeof Stream];
+    /** Optional target kind to match: `user`, `tool`, `session`, or `savedSearch`. */
+    export const TargetKind = {
+        Tool: "tool",
+        User: "user",
+        Session: "session",
+        SavedSearch: "savedSearch",
+    } as const;
+    export type TargetKind = (typeof TargetKind)[keyof typeof TargetKind];
 }

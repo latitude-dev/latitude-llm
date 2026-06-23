@@ -7250,6 +7250,16 @@
             ],
             "description": "Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`."
           },
+          "targetKind": {
+            "type": "string",
+            "enum": [
+              "tool",
+              "user",
+              "session",
+              "savedSearch"
+            ],
+            "description": "Optional target kind to match: `user`, `tool`, `session`, or `savedSearch`."
+          },
           "filterSetContains": {
             "allOf": [
               {
@@ -14556,7 +14566,7 @@
         "x-fern-sdk-group-name": "monitors",
         "x-fern-sdk-method-name": "listForTarget",
         "summary": "List monitors for target",
-        "description": "Returns live unified monitors whose target contains the supplied user or tool filter. Use `stream: traces` with a `userId` filter for users, or `stream: spans` with `operation = execute_tool` and `toolName` filters for tools.",
+        "description": "Returns live unified monitors matching the supplied target kind and/or filter subset. Use `targetKind: user` with `stream: traces` for users, or `targetKind: tool` with `stream: spans` for tools.",
         "security": [
           {
             "ApiKeyAuth": []

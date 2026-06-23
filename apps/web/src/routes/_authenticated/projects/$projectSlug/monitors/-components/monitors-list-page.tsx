@@ -349,7 +349,6 @@ function MonitorsPageContent({ system }: { readonly system: boolean }) {
           onActiveMonitorChange={(slug) => slug && openMonitor(slug)}
           projectId={project.id}
           projectSlug={project.slug}
-          showWatching={!system}
           sorting={sorting}
           onSortChange={setSorting}
           selection={selection}

@@ -36,6 +36,20 @@ export const monitorTargetSchema = z.object({
 export type MonitorTarget = z.infer<typeof monitorTargetSchema>
 
 /**
+ * Decode a target's product `kind` from its persisted query-plan fields — the
+ * inverse of the create-time kind→query-plan encoding that `createMonitor`
+ * validates. `savedSearchId`/`stream` uniquely identify the kind, so `kind` is
+ * recoverable rather than stored. This is the single source of truth for
+ * classifying a persisted target; repositories must not re-derive it independently.
+ */
+export const monitorTargetKind = (target: Pick<MonitorTarget, "stream" | "savedSearchId">): MonitorTargetKind => {
+  if (target.savedSearchId) return "savedSearch"
+  if (target.stream === "spans") return "tool"
+  if (target.stream === "sessions") return "session"
+  return "user"
+}
+
+/**
  * A `(kind, source, condition, severity)` firing rule owned by a monitor.
  * `source.id = null` means "all entities of `source.type`". `source` itself is
  * `null` for UNIFIED kinds (`event.*`/`metric.*`) — they watch the monitor's

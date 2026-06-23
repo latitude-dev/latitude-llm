@@ -37,10 +37,17 @@ function stableStringify(value: unknown): string {
 
 const normalizeFilterSet = (filterSet: MonitorTarget["filterSet"]): FilterSet => filterSet ?? {}
 
+const firstEqValue = (filterSet: MonitorTarget["filterSet"], field: string): string | null => {
+  const condition = filterSet?.[field]?.find((entry) => entry.op === "eq")
+  return typeof condition?.value === "string" ? condition.value : null
+}
+
 function sameTargetScope(a: MonitorRecord["target"], b: MonitorTarget): boolean {
   if (!a) return false
-  if (a.stream !== b.stream) return false
+  if (a.kind !== b.kind || a.stream !== b.stream) return false
   if (a.savedSearchId || b.savedSearchId) return (a.savedSearchId ?? null) === (b.savedSearchId ?? null)
+  if (a.kind === "tool") return firstEqValue(a.filterSet, "toolName") === firstEqValue(b.filterSet, "toolName")
+  if (a.kind === "user") return firstEqValue(a.filterSet, "userId") === firstEqValue(b.filterSet, "userId")
   return (
     stableStringify(normalizeFilterSet(a.filterSet)) === stableStringify(normalizeFilterSet(b.filterSet)) &&
     (a.query ?? null) === (b.query ?? null)
@@ -99,7 +106,12 @@ export function TargetMonitorsMenu({
 }) {
   const navigate = useNavigate()
   const [createOpen, setCreateOpen] = useState(false)
-  const { monitors: fetchedMonitors } = useMonitorsForTarget({ projectId, stream, filterSetContains })
+  const { monitors: fetchedMonitors } = useMonitorsForTarget({
+    projectId,
+    stream,
+    targetKind: createTarget.kind,
+    filterSetContains,
+  })
   const exactMonitors =
     matchMode === "exact"
       ? fetchedMonitors.filter((monitor) => sameMonitorScope(monitor, createTarget))

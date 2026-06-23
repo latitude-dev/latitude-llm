@@ -25,6 +25,7 @@ from ..types.monitor_target import MonitorTarget
 from ..types.paginated_monitor_incidents import PaginatedMonitorIncidents
 from ..types.paginated_monitors import PaginatedMonitors
 from .types.list_monitors_for_target_body_stream import ListMonitorsForTargetBodyStream
+from .types.list_monitors_for_target_body_target_kind import ListMonitorsForTargetBodyTargetKind
 from .types.update_monitor_alert_body_condition import UpdateMonitorAlertBodyCondition
 from .types.update_monitor_alert_body_kind import UpdateMonitorAlertBodyKind
 from .types.update_monitor_alert_body_severity import UpdateMonitorAlertBodySeverity
@@ -239,11 +240,12 @@ class RawMonitorsClient:
         project_slug: str,
         *,
         stream: ListMonitorsForTargetBodyStream,
+        target_kind: typing.Optional[ListMonitorsForTargetBodyTargetKind] = OMIT,
         filter_set_contains: typing.Optional[MonitorFilterSet] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[MonitorList]:
         """
-        Returns live unified monitors whose target contains the supplied user or tool filter. Use `stream: traces` with a `userId` filter for users, or `stream: spans` with `operation = execute_tool` and `toolName` filters for tools.
+        Returns live unified monitors matching the supplied target kind and/or filter subset. Use `targetKind: user` with `stream: traces` for users, or `targetKind: tool` with `stream: spans` for tools.
 
         Parameters
         ----------
@@ -252,6 +254,9 @@ class RawMonitorsClient:
 
         stream : ListMonitorsForTargetBodyStream
             Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`.
+
+        target_kind : typing.Optional[ListMonitorsForTargetBodyTargetKind]
+            Optional target kind to match: `user`, `tool`, `session`, or `savedSearch`.
 
         filter_set_contains : typing.Optional[MonitorFilterSet]
 
@@ -268,6 +273,7 @@ class RawMonitorsClient:
             method="POST",
             json={
                 "stream": stream,
+                "targetKind": target_kind,
                 "filterSetContains": convert_and_respect_annotation_metadata(
                     object_=filter_set_contains, annotation=MonitorFilterSet, direction="write"
                 ),
@@ -1292,11 +1298,12 @@ class AsyncRawMonitorsClient:
         project_slug: str,
         *,
         stream: ListMonitorsForTargetBodyStream,
+        target_kind: typing.Optional[ListMonitorsForTargetBodyTargetKind] = OMIT,
         filter_set_contains: typing.Optional[MonitorFilterSet] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[MonitorList]:
         """
-        Returns live unified monitors whose target contains the supplied user or tool filter. Use `stream: traces` with a `userId` filter for users, or `stream: spans` with `operation = execute_tool` and `toolName` filters for tools.
+        Returns live unified monitors matching the supplied target kind and/or filter subset. Use `targetKind: user` with `stream: traces` for users, or `targetKind: tool` with `stream: spans` for tools.
 
         Parameters
         ----------
@@ -1305,6 +1312,9 @@ class AsyncRawMonitorsClient:
 
         stream : ListMonitorsForTargetBodyStream
             Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`.
+
+        target_kind : typing.Optional[ListMonitorsForTargetBodyTargetKind]
+            Optional target kind to match: `user`, `tool`, `session`, or `savedSearch`.
 
         filter_set_contains : typing.Optional[MonitorFilterSet]
 
@@ -1321,6 +1331,7 @@ class AsyncRawMonitorsClient:
             method="POST",
             json={
                 "stream": stream,
+                "targetKind": target_kind,
                 "filterSetContains": convert_and_respect_annotation_metadata(
                     object_=filter_set_contains, annotation=MonitorFilterSet, direction="write"
                 ),

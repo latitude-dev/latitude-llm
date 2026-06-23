@@ -1,6 +1,6 @@
 import { NotFoundError } from "@domain/shared"
 import { Effect } from "effect"
-import type { Monitor, MonitorAlert } from "../entities/monitor.ts"
+import { type Monitor, type MonitorAlert, monitorTargetKind } from "../entities/monitor.ts"
 import type { MonitorListPage, MonitorRepositoryShape } from "../ports/monitor-repository.ts"
 
 const isLive = (monitor: Monitor) => monitor.deletedAt === null
@@ -189,10 +189,17 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
           .filter((m) => m.projectId === projectId && isLive(m) && m.target !== null)
           .flatMap((m) => m.alerts.map((alert) => ({ alert, target: m.target as NonNullable<typeof m.target> }))),
       ),
-    listMonitorsForTarget: ({ projectId, stream, filterSetContains }) =>
+    listMonitorsForTarget: ({ projectId, stream, targetKind, filterSetContains }) =>
       Effect.sync(() =>
         monitors
-          .filter((m) => m.projectId === projectId && isLive(m) && m.target?.stream === stream)
+          .filter(
+            (m) =>
+              m.projectId === projectId &&
+              isLive(m) &&
+              m.target != null &&
+              m.target.stream === stream &&
+              (targetKind === undefined || monitorTargetKind(m.target) === targetKind),
+          )
           .filter((m) => {
             const filterSet = m.target?.filterSet ?? {}
             return Object.entries(filterSetContains).every(([field, conditions]) =>

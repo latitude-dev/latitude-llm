@@ -208,6 +208,7 @@ export const listMonitors = createServerFn({ method: "GET" })
 const listMonitorsForTargetInputSchema = z.object({
   projectId: z.string(),
   stream: monitorStreamSchema,
+  targetKind: monitorTargetSchema.shape.kind.optional(),
   filterSetContains: filterSetSchema,
 })
 
@@ -221,6 +222,7 @@ export const listMonitorsForTarget = createServerFn({ method: "GET" })
       listMonitorsForTargetUseCase({
         projectId: ProjectId(data.projectId),
         stream: data.stream,
+        ...(data.targetKind !== undefined ? { targetKind: data.targetKind } : {}),
         filterSetContains: data.filterSetContains,
       }).pipe(withPostgres(MonitorRepositoryLive, getPostgresClient(), orgId), withTracing),
     )
