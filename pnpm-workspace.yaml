@@ -2,6 +2,7 @@ packages:
   - apps/*
   - packages/**
   - "!packages/telemetry/python/**"
+  - "!packages/telemetry/hermes/**"
   - "!packages/platform/op-gepa/python/**"
   - "!packages/telemetry/typescript/examples/flue-app"
   - "!packages/telemetry/typescript/examples/flue-app/**"
