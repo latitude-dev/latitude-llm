@@ -169,13 +169,55 @@ const readPostgresSnapshotRows = async (name: string): Promise<readonly Snapshot
   return rows
 }
 
+const RESET_MUTATION_POLL_INTERVAL_MS = 2_000
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
+
+type PendingMutation = { readonly table: string; readonly latest_fail_reason: string }
+
+const pendingResetMutations = async (
+  client: ClickHouseClient,
+  scope: SeedScope,
+): Promise<readonly PendingMutation[]> => {
+  const resultSet = await client.query({
+    query: `SELECT table, latest_fail_reason
+            FROM system.mutations
+            WHERE table IN ({tables:Array(String)})
+              AND command LIKE {predicate:String}
+              AND is_done = 0`,
+    query_params: { tables: [...clickHouseTables], predicate: `%project_id = '${scope.projectId}'%` },
+    format: "JSONEachRow",
+  })
+  return resultSet.json<PendingMutation>()
+}
+
+/**
+ * `ALTER TABLE … DELETE` is a heavyweight mutation that rewrites every part
+ * holding matching rows; on the large shared production tables (e.g.
+ * message_embeddings) it runs for minutes. Awaiting it with
+ * `mutations_sync: "2"` holds the HTTP request open with no data flowing, so
+ * the client's 30s `request_timeout` trips the socket and the activity fails
+ * every retry. Instead we submit the mutations without waiting and poll
+ * `system.mutations` with short queries until the project's deletes complete,
+ * letting the activity's 30-minute start-to-close timeout be the real budget.
+ */
 const resetClickHouse = async (client: ClickHouseClient, scope: SeedScope) => {
   for (const table of clickHouseTables) {
     await client.command({
       query: `ALTER TABLE ${table} DELETE WHERE organization_id = {organizationId:String} AND project_id = {projectId:String}`,
       query_params: { organizationId: scope.organizationId, projectId: scope.projectId },
-      clickhouse_settings: { mutations_sync: "2" },
+      clickhouse_settings: { mutations_sync: "0" },
     })
+  }
+
+  for (;;) {
+    const pending = await pendingResetMutations(client, scope)
+    const failed = pending.find((mutation) => mutation.latest_fail_reason.length > 0)
+    if (failed) {
+      throw new Error(`Demo seed reset mutation failed on ${failed.table}: ${failed.latest_fail_reason}`)
+    }
+    if (pending.length === 0) return
+    await sleep(RESET_MUTATION_POLL_INTERVAL_MS)
   }
 }
 
