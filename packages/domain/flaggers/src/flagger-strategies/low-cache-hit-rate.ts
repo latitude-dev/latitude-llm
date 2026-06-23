@@ -12,7 +12,7 @@ export const lowCacheHitRateStrategy: FlaggerStrategy = {
   details: {
     name: "Low cache hit rate",
     description:
-      "Flags large multi-turn traces where caching is active but the hit rate is unexpectedly low, signaling broken caching, without calling an LLM.",
+      "Flags large multi-turn traces where caching is active but fewer than 30% of input tokens were served from cache, signaling broken caching, without calling an LLM.",
   },
 
   hasRequiredContext(trace: TraceDetail): boolean {
