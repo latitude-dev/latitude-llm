@@ -1,6 +1,6 @@
 import { Text } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
-import { TagsIcon } from "lucide-react"
+import { Loader2Icon, TagsIcon } from "lucide-react"
 import { useMemo } from "react"
 import { type BehaviourSegment, useProjectBehaviours } from "../../../../../domains/taxonomy/taxonomy.collection.ts"
 import type {
@@ -17,6 +17,8 @@ import { BehaviourDetailDrawer, BehavioursView } from "./-components/behaviours-
 
 const isBehaviourTrajectoryMetric = (value: string): value is BehaviourTrajectoryMetric =>
   value === "frequency" || value === "escalation" || value === "resolution" || value === "churnRisk" || value === "wins"
+
+const isDemoProjectName = (name: string) => /(^|\b)demo project(\b|$)/i.test(name)
 
 const findNodeByPath = (
   topics: readonly BehaviourNodeRecord[],
@@ -131,17 +133,28 @@ function BehavioursPageContent() {
   }, [activeBehaviourId, behaviourPath, topics])
   const setBehaviourPath = (path: readonly string[]) => setBehaviourPathParam(path.join("."))
   const hasNoBehaviours = !isLoading && topics.length === 0 && segment === "all" && !timeRange
+  const isDemoProject = project.settings.isSample || isDemoProjectName(project.name)
 
   if (hasNoBehaviours) {
     return (
       <Layout>
         <Layout.Content>
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-            <TagsIcon className="h-8 w-8 text-muted-foreground" />
-            <Text.H3>No behaviors yet</Text.H3>
-            <Text.H5 color="foregroundMuted">
-              Live taxonomy behaviors will appear here after sessions have been clustered.
-            </Text.H5>
+          <div className="flex flex-1 flex-col items-center justify-center gap-6 p-8 text-center">
+            <div className="h-14 w-14 rounded-xl bg-muted flex items-center justify-center">
+              {isDemoProject ? (
+                <Loader2Icon className="h-6 w-6 animate-spin text-muted-foreground" />
+              ) : (
+                <TagsIcon className="h-6 w-6 text-muted-foreground" />
+              )}
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <Text.H3>{isDemoProject ? "Sample behaviors are loading" : "No behaviors yet"}</Text.H3>
+              <Text.H5 color="foregroundMuted" centered>
+                {isDemoProject
+                  ? "We found the sample traces and signals. The behavior taxonomy is still being prepared — check back in about a minute."
+                  : "Live taxonomy behaviors will appear here after sessions have been clustered."}
+              </Text.H5>
+            </div>
           </div>
         </Layout.Content>
       </Layout>

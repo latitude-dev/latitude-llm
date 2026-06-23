@@ -36,10 +36,10 @@ function createdAtForTau2Signal(scope: SeedScope, signalIndex: number, occurrenc
   )
 }
 
-function buildFailedTrajectoryIndexesByFamily() {
+function buildFailedTrajectoryIndexesByFamily(maxTrajectories = TAU2_SEED_TRAJECTORIES.length) {
   const byFamily = new Map<(typeof TAU2_SEED_SIGNAL_FAMILIES)[number]["key"], number[]>()
 
-  TAU2_SEED_TRAJECTORIES.forEach((trajectory, trajectoryIndex) => {
+  TAU2_SEED_TRAJECTORIES.slice(0, maxTrajectories).forEach((trajectory, trajectoryIndex) => {
     const family = classifyTau2SeedTrajectory(trajectory)
     if (family === null) return
 
@@ -51,12 +51,12 @@ function buildFailedTrajectoryIndexesByFamily() {
   return byFamily
 }
 
-function buildTau2SignalAnalyticsRows(scope: SeedScope) {
+function buildTau2SignalAnalyticsRows(scope: SeedScope, maxTrajectories = TAU2_SEED_TRAJECTORIES.length) {
   const orgId = scope.organizationId
   const projectId = scope.projectId
   const familyKeys = TAU2_SEED_SIGNAL_FAMILIES.map((family) => family.key)
-  const failedByFamily = buildFailedTrajectoryIndexesByFamily()
-  const allFailedTrajectoryIndexes = TAU2_SEED_TRAJECTORIES.flatMap((trajectory, index) =>
+  const failedByFamily = buildFailedTrajectoryIndexesByFamily(maxTrajectories)
+  const allFailedTrajectoryIndexes = TAU2_SEED_TRAJECTORIES.slice(0, maxTrajectories).flatMap((trajectory, index) =>
     trajectory.outcome === "failure" || trajectory.reward < 1 ? [index] : [],
   )
 
@@ -177,9 +177,9 @@ export function buildLifecycleAnalyticsRows(scope: SeedScope) {
   ]
 }
 
-function buildAllAnalyticsRows(scope: SeedScope) {
+function buildAllAnalyticsRows(scope: SeedScope, maxTau2Trajectories?: number) {
   const lifecycleAnalyticsRows = buildLifecycleAnalyticsRows(scope)
-  const tau2SignalAnalyticsRows = buildTau2SignalAnalyticsRows(scope)
+  const tau2SignalAnalyticsRows = buildTau2SignalAnalyticsRows(scope, maxTau2Trajectories)
 
   return {
     lifecycleAnalyticsRows,
@@ -199,7 +199,7 @@ const seedScores: Seeder = {
         if (!ctx.quiet) console.log("  -> scores/tau2-support-analytics: already seeded, skipping")
         return
       }
-      const built = buildAllAnalyticsRows(ctx.scope)
+      const built = buildAllAnalyticsRows(ctx.scope, ctx.maxTau2Trajectories)
       yield* insertJsonEachRow(ctx.client, "scores", built.all)
       if (!ctx.quiet) {
         console.log(

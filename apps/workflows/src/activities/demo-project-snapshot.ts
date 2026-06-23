@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import { createReadStream, existsSync, readdirSync, readFileSync } from "node:fs"
 import { createInterface } from "node:readline"
@@ -21,6 +22,8 @@ const clickHouseTables = [
   "session_moment_labels",
   "taxonomy_observations",
 ] as const
+
+const DEMO_SNAPSHOT_TRACE_LIMIT = 300
 
 type ClickHouseTable = (typeof clickHouseTables)[number]
 type SnapshotRow = Record<string, unknown>
@@ -143,6 +146,36 @@ const insertClickHouseRows = async (client: ClickHouseClient, table: ClickHouseT
   await client.insert({ table, values: rows, format: "JSONEachRow" })
 }
 
+const hardcodedEmbedding = (contentHash: string): readonly number[] => {
+  const embedding = Array.from({ length: 2048 }, () => 0)
+  const digest = Buffer.from(sha256([contentHash]), "hex")
+  for (let i = 0; i < digest.length; i += 2) {
+    embedding[digest[i]! % embedding.length] = digest[i + 1]! >= 128 ? 1 : -1
+  }
+  return embedding
+}
+
+const insertHardcodedMessageEmbeddings = async (
+  client: ClickHouseClient,
+  scope: SeedScope,
+  contentHashes: Iterable<string>,
+) => {
+  const insertedAt = formatClickHouseTimestamp(scope.timelineAnchor.toISOString(), 0)
+  const rows = [...contentHashes].map((contentHash) => ({
+    organization_id: scope.organizationId,
+    project_id: scope.projectId,
+    content_hash: contentHash,
+    embedding: hardcodedEmbedding(contentHash),
+    embedding_model: "voyage-4-large",
+    inserted_at: insertedAt,
+    retention_days: 30,
+  }))
+
+  for (let i = 0; i < rows.length; i += 1000) {
+    await insertClickHouseRows(client, "message_embeddings", rows.slice(i, i + 1000))
+  }
+}
+
 const importClickHouseTable = async (
   client: ClickHouseClient,
   table: ClickHouseTable,
@@ -151,10 +184,18 @@ const importClickHouseTable = async (
     readonly deltaMs: number
     readonly mapClusterId: (id: string) => string
     readonly mapRunId: (id: string) => string
+    readonly keep?: (row: SnapshotRow) => boolean
+    readonly afterKeep?: (row: SnapshotRow) => void
+    readonly limit?: number
   },
 ) => {
   const batch: SnapshotRow[] = []
+  let kept = 0
   for await (const row of readSnapshotRows(`clickhouse/${table}.jsonl.gz`)) {
+    if (input.limit !== undefined && kept >= input.limit) break
+    if (input.keep && !input.keep(row)) continue
+    input.afterKeep?.(row)
+    kept++
     batch.push(mapClickHouseRow(table, row, input))
     if (batch.length >= 1000) {
       await insertClickHouseRows(client, table, batch.splice(0))
@@ -425,7 +466,60 @@ export const importDemoProjectDerivedSnapshot = async (input: {
     mapRunId,
   )
 
-  for (const table of clickHouseTables) {
-    await importClickHouseTable(input.clickhouseClient, table, { scope: input.scope, deltaMs, mapClusterId, mapRunId })
-  }
+  const traceIds = new Set<string>()
+  const contentHashes = new Set<string>()
+  const analysisKeys = new Set<string>()
+  const momentKeys = new Set<string>()
+  const analysisKey = (row: SnapshotRow) => `${String(row.session_id)}\0${String(row.analysis_hash)}`
+  const momentKey = (row: SnapshotRow) =>
+    `${String(row.session_id)}\0${String(row.analysis_hash)}\0${String(row.moment_id)}`
+
+  await importClickHouseTable(input.clickhouseClient, "trace_search_documents", {
+    scope: input.scope,
+    deltaMs,
+    mapClusterId,
+    mapRunId,
+    limit: DEMO_SNAPSHOT_TRACE_LIMIT,
+    afterKeep: (row) => traceIds.add(String(row.trace_id)),
+  })
+  await importClickHouseTable(input.clickhouseClient, "trace_message_occurrences", {
+    scope: input.scope,
+    deltaMs,
+    mapClusterId,
+    mapRunId,
+    keep: (row) => traceIds.has(String(row.trace_id)),
+    afterKeep: (row) => contentHashes.add(String(row.content_hash)),
+  })
+  await insertHardcodedMessageEmbeddings(input.clickhouseClient, input.scope, contentHashes)
+  await importClickHouseTable(input.clickhouseClient, "session_analyses", {
+    scope: input.scope,
+    deltaMs,
+    mapClusterId,
+    mapRunId,
+    keep: (row) => Array.isArray(row.trace_ids) && row.trace_ids.some((traceId) => traceIds.has(String(traceId))),
+    afterKeep: (row) => analysisKeys.add(analysisKey(row)),
+  })
+  await importClickHouseTable(input.clickhouseClient, "session_semantic_moments", {
+    scope: input.scope,
+    deltaMs,
+    mapClusterId,
+    mapRunId,
+    keep: (row) => traceIds.has(String(row.trace_id)) && analysisKeys.has(analysisKey(row)),
+    afterKeep: (row) => momentKeys.add(momentKey(row)),
+  })
+  await importClickHouseTable(input.clickhouseClient, "session_moment_labels", {
+    scope: input.scope,
+    deltaMs,
+    mapClusterId,
+    mapRunId,
+    keep: (row) => momentKeys.has(momentKey(row)),
+  })
+  await importClickHouseTable(input.clickhouseClient, "taxonomy_observations", {
+    scope: input.scope,
+    deltaMs,
+    mapClusterId,
+    mapRunId,
+    keep: (row) => typeof row.assigned_cluster_id === "string" && row.assigned_cluster_id.length > 0,
+    limit: DEMO_SNAPSHOT_TRACE_LIMIT,
+  })
 }

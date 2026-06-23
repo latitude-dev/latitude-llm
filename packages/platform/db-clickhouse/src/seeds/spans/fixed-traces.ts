@@ -585,10 +585,10 @@ function buildLargeConversationSpans(scope: SeedScope): SpanRow[] {
   return specs.map((spec) => createLargeConversationChatSpan({ scope, spec }))
 }
 
-function buildTau2TrajectorySpans(scope: SeedScope): SpanRow[] {
+function buildTau2TrajectorySpans(scope: SeedScope, maxTrajectories = TAU2_SEED_TRAJECTORIES.length): SpanRow[] {
   const spans: SpanRow[] = []
 
-  TAU2_SEED_TRAJECTORIES.forEach((trajectory, trajectoryIndex) => {
+  TAU2_SEED_TRAJECTORIES.slice(0, maxTrajectories).forEach((trajectory, trajectoryIndex) => {
     const messages: readonly Tau2SeedTrajectoryMessage[] = trajectory.messages
     const traceId = scope.traceHex("tau2-trajectory", trajectoryIndex)
     const rootSpanId = scope.spanHex("tau2-trajectory-root", trajectoryIndex)
@@ -766,8 +766,8 @@ function buildTau2TrajectorySpans(scope: SeedScope): SpanRow[] {
   return spans
 }
 
-function buildAllFixedSpans(scope: SeedScope): SpanRow[] {
-  return [...buildTau2TrajectorySpans(scope), ...buildCompatibilitySupportSpans(scope)]
+function buildAllFixedSpans(scope: SeedScope, maxTau2Trajectories?: number): SpanRow[] {
+  return [...buildTau2TrajectorySpans(scope, maxTau2Trajectories), ...buildCompatibilitySupportSpans(scope)]
 }
 
 const seedFixedTraces: Seeder = {
@@ -782,7 +782,7 @@ const seedFixedTraces: Seeder = {
         if (!ctx.quiet) console.log("  -> spans/fixed-traces: already seeded, skipping")
         return
       }
-      const allFixedSpans = buildAllFixedSpans(ctx.scope)
+      const allFixedSpans = buildAllFixedSpans(ctx.scope, ctx.maxTau2Trajectories)
       // `insertJsonEachRow` chunks large inserts into multiple requests, so a
       // mid-insert failure can commit some batches but not others. The sentinel
       // above is read back from the `spans` table, so it must only become
