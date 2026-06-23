@@ -9,7 +9,10 @@ import { DestinationRunsTable } from "../-components/destination-runs-table.tsx"
 import { destinationsQueryKey } from "../-components/destinations-section.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/data-destinations/$destinationId")(
-  { component: DestinationDetailPage },
+  {
+    staticData: { fillHeight: true },
+    component: DestinationDetailPage,
+  },
 )
 
 function BackLink({ projectSlug }: { readonly projectSlug: string }) {

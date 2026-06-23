@@ -1,5 +1,6 @@
 import {
   configureProjectFlaggersForOnboardingUseCase,
+  FLAGGER_DEFAULT_SAMPLING,
   FLAGGER_STRATEGY_SLUGS,
   FlaggerRepository,
   type FlaggerSlug,
@@ -54,6 +55,34 @@ const toFlaggerRecord = (flagger: {
 
 export type FlaggerRecord = ReturnType<typeof toFlaggerRecord>
 
+// A registered strategy a project has no stored row for yet: shown disabled in
+// settings without writing to the DB. The placeholder id is the slug; the real
+// row (with a real id) replaces it on the next read once the user enables it.
+const toMissingFlaggerRecord = (slug: FlaggerSlug, organizationId: string, projectId: string): FlaggerRecord => {
+  const strategy = getFlaggerStrategy(slug)
+  const details = strategy && isLlmCapableStrategy(strategy) ? strategy.annotator : strategy?.details
+  const epoch = new Date(0).toISOString()
+
+  return {
+    id: slug,
+    organizationId,
+    projectId,
+    slug,
+    name: details?.name ?? humanizeSlug(slug),
+    description: details?.description ?? "Flags matching trace behavior for review.",
+    instructions:
+      strategy && isLlmCapableStrategy(strategy)
+        ? strategy.annotator.instructions
+        : "Runs deterministically from telemetry data and does not call an LLM.",
+    enabled: false,
+    sampling: FLAGGER_DEFAULT_SAMPLING,
+    mode: strategy && isLlmCapableStrategy(strategy) ? "llm" : "deterministic",
+    suppressedBy: strategy?.suppressedBy ?? [],
+    createdAt: epoch,
+    updatedAt: epoch,
+  }
+}
+
 const toAvailableFlaggerRecord = (slug: FlaggerSlug) => {
   const strategy = getFlaggerStrategy(slug)
   const details = strategy && isLlmCapableStrategy(strategy) ? strategy.annotator : strategy?.details
@@ -83,17 +112,23 @@ export const listFlaggersByProject = createServerFn({ method: "GET" })
     const projectId = ProjectId(data.projectId)
     const client = getPostgresClient()
 
-    const flaggers = await Effect.runPromise(
+    const stored = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* FlaggerRepository
         return yield* repo.listByProject({ projectId })
       }).pipe(withPostgres(FlaggerRepositoryLive, client, orgId), withTracing),
     )
 
-    return flaggers.map(toFlaggerRecord)
+    const storedBySlug = new Map(stored.map((flagger) => [flagger.slug, flagger]))
+    return FLAGGER_STRATEGY_SLUGS.map((slug) => {
+      const row = storedBySlug.get(slug)
+      return row ? toFlaggerRecord(row) : toMissingFlaggerRecord(slug, organizationId, data.projectId)
+    })
   })
 
-export const configureProjectFlaggersForOnboarding = createServerFn({ method: "POST" })
+export const configureProjectFlaggersForOnboarding = createServerFn({
+  method: "POST",
+})
   .inputValidator(
     z.object({
       projectId: z.string(),

@@ -561,4 +561,89 @@ describe("processFlaggersUseCase", () => {
       expect(decision.action).not.toBe("failed")
     }
   })
+
+  describe("low-cache-hit-rate (deterministic, token-driven)", () => {
+    // A large multi-turn trace where caching is active but most context is
+    // re-sent uncached. Thresholds: >=4 messages, cacheCreate>0, total input
+    // >=20k tokens, cacheRead/total < 30%.
+    const multiTurnMessages: TraceDetail["allMessages"] = [
+      { role: "user", parts: [{ type: "text", content: "Summarize the attached contract." }] },
+      { role: "assistant", parts: [{ type: "text", content: "Here is the summary." }] },
+      { role: "user", parts: [{ type: "text", content: "Now compare it to last year's." }] },
+      { role: "assistant", parts: [{ type: "text", content: "Comparing the two versions." }] },
+    ]
+
+    it("writes a flagger-authored score on a low-cache-hit-rate match", async () => {
+      const trace: TraceDetail = {
+        ...makeTraceDetail(multiTurnMessages),
+        // total = 22_000 (>=20k), rate = 2_000 / 22_000 ≈ 9% (<30%), cacheCreate > 0
+        tokensInput: 18_000,
+        tokensCacheRead: 2_000,
+        tokensCacheCreate: 2_000,
+      }
+
+      const { result, scores } = await runUseCase(trace, [makeFlagger("low-cache-hit-rate", 0)], deps)
+
+      expect(decisionFor(result.decisions, "low-cache-hit-rate")).toEqual({
+        slug: "low-cache-hit-rate",
+        action: "matched-issue",
+      })
+      const annotationScores = [...scores.values()].filter(
+        (score) => score.sourceType === "annotation" && score.metadata?.flaggerSlug === "low-cache-hit-rate",
+      )
+      expect(annotationScores).toHaveLength(1)
+      expect(annotationScores[0]?.sourceId).toBe("SYSTEM")
+      expect(deps.enqueued).toEqual([])
+    })
+
+    it("drops with no-match when the cache hit rate is healthy", async () => {
+      const trace: TraceDetail = {
+        ...makeTraceDetail(multiTurnMessages),
+        // rate = 18_000 / 22_000 ≈ 82% (>=30%) → not a low-cache trace
+        tokensInput: 2_000,
+        tokensCacheRead: 18_000,
+        tokensCacheCreate: 2_000,
+      }
+
+      const { result, scores } = await runUseCase(trace, [makeFlagger("low-cache-hit-rate", 0)], deps)
+
+      expect(decisionFor(result.decisions, "low-cache-hit-rate")).toEqual({
+        slug: "low-cache-hit-rate",
+        action: "dropped",
+        reason: "no-match",
+      })
+      expect(scores.size).toBe(0)
+    })
+
+    it("drops with no-match when caching is inactive (no cache-create tokens)", async () => {
+      const trace: TraceDetail = {
+        ...makeTraceDetail(multiTurnMessages),
+        // 30k uncached input but caching never engaged → not a broken-cache signal
+        tokensInput: 30_000,
+        tokensCacheRead: 0,
+        tokensCacheCreate: 0,
+      }
+
+      const { result, scores } = await runUseCase(trace, [makeFlagger("low-cache-hit-rate", 0)], deps)
+
+      expect(decisionFor(result.decisions, "low-cache-hit-rate")).toEqual({
+        slug: "low-cache-hit-rate",
+        action: "dropped",
+        reason: "no-match",
+      })
+      expect(scores.size).toBe(0)
+    })
+
+    it("drops with missing-context when the trace has no token usage", async () => {
+      const trace = makeTraceDetail(multiTurnMessages)
+
+      const { result } = await runUseCase(trace, [makeFlagger("low-cache-hit-rate", 0)], deps)
+
+      expect(decisionFor(result.decisions, "low-cache-hit-rate")).toEqual({
+        slug: "low-cache-hit-rate",
+        action: "dropped",
+        reason: "missing-context",
+      })
+    })
+  })
 })

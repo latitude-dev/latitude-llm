@@ -94,6 +94,12 @@ export const FLAGGER_GROUPS = [
     slugs: ["empty-response", "tool-call-errors", "output-schema-validation"],
   },
   {
+    id: "cost-efficiency",
+    label: "Cost & efficiency",
+    description: "Free deterministic checks for token waste and broken caching.",
+    slugs: ["low-cache-hit-rate"],
+  },
+  {
     id: "user-signals",
     label: "User-side signals",
     description: "LLM-based detection of risky or unhappy user behavior.",
@@ -104,12 +110,6 @@ export const FLAGGER_GROUPS = [
     label: "Agent behavior",
     description: "LLM-based detection of failure modes in the agent's own output.",
     slugs: ["refusal", "laziness", "forgetting", "trashing"],
-  },
-  {
-    id: "cost-efficiency",
-    label: "Cost & efficiency",
-    description: "Free deterministic checks for token waste and broken caching.",
-    slugs: ["low-cache-hit-rate"],
   },
 ] as const satisfies ReadonlyArray<FlaggerGroup>
 

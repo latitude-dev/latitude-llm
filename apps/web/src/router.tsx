@@ -35,5 +35,6 @@ declare module "@tanstack/react-router" {
     readonly breadcrumb?: import("react").ComponentType
     /** When true, the project sidebar auto-collapses for this route. */
     readonly collapseSidebar?: boolean
+    readonly fillHeight?: boolean
   }
 }

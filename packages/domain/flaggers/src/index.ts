@@ -75,6 +75,11 @@ export {
   draftFlaggerAnnotationWithBillingUseCase,
 } from "./use-cases/draft-flagger-annotation-with-billing.ts"
 export {
+  type FindOrCreateFlaggerError,
+  type FindOrCreateFlaggerInput,
+  findOrCreateFlaggerUseCase,
+} from "./use-cases/find-or-create-flagger.ts"
+export {
   type FlaggerAnnotateInput,
   type FlaggerAnnotateOutput,
   type FlaggerAnnotatorOutput,
