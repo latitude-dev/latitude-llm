@@ -76,12 +76,6 @@
       {
         "group": "Getting Started",
         "pages": [
-          "telemetry/start-tracing"
-        ]
-      },
-      {
-        "group": "Observability",
-        "pages": [
           "telemetry/start-tracing",
           {
             "group": "SDKs",
@@ -140,6 +134,26 @@
               "telemetry/openclaw",
               "telemetry/pi-coding-agent"
             ]
+          }
+        ]
+      },
+      {
+        "group": "Observe",
+        "pages": [
+          "observability/overview",
+          "observability/sessions",
+          "observability/users",
+          "observability/tools",
+          "observability/traces",
+          "observability/spans",
+          "observability/tool-calls",
+          {
+            "group": "Search",
+            "pages": [
+              "search/overview",
+              "search/saved-searches",
+              "search/guides/search-and-review-effectively"
+            ]
           },
           {
             "group": "Features",
@@ -152,14 +166,10 @@
               "observability/features/percentile-cohorts",
               "observability/features/releases-versioning",
               "observability/features/sampling",
-              "observability/sessions",
-              "observability/users",
-              "observability/tools",
               "observability/features/tags",
               "observability/features/token-cost-tracking",
               "observability/features/trace-ids",
               "observability/features/trace-urls",
-              "observability/traces",
               "observability/features/user-tracking"
             ]
           },
@@ -172,23 +182,11 @@
         ]
       },
       {
-        "group": "Search",
-        "pages": [
-          "search/overview",
-          "search/saved-searches",
-          {
-            "group": "Guides",
-            "pages": [
-              "search/guides/search-and-review-effectively"
-            ]
-          }
-        ]
-      },
-      {
-        "group": "Signals",
+        "group": "Understand",
         "pages": [
           "signals/overview",
           "signals/management",
+          "search/behaviours",
           {
             "group": "Annotations",
             "pages": [
@@ -216,7 +214,7 @@
         ]
       },
       {
-        "group": "Monitors",
+        "group": "Refine",
         "pages": [
           "monitors/overview"
         ]
