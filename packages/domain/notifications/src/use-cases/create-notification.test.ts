@@ -1,8 +1,11 @@
+import { createProject, ProjectRepository } from "@domain/projects"
+import { createFakeProjectRepository } from "@domain/projects/testing"
 import {
   generateId,
   NotificationId,
   type NotificationPreferences,
   OrganizationId,
+  ProjectId,
   SqlClient,
   UserId,
 } from "@domain/shared"
@@ -19,11 +22,13 @@ const cuid = (seed: string) => seed.padEnd(24, "0")
 
 interface SetupOpts {
   readonly user?: Partial<User>
+  readonly sampleProject?: boolean
 }
 
 function setup(opts: SetupOpts = {}) {
   const orgId = OrganizationId(cuid("o"))
   const userId = UserId(cuid("u"))
+  const projectId = ProjectId(cuid("p"))
 
   const { repository: userRepo, users } = createFakeUserRepository()
   users.set(userId, {
@@ -41,14 +46,24 @@ function setup(opts: SetupOpts = {}) {
   } satisfies User)
 
   const { repo: notificationRepo, rows } = createFakeNotificationRepository()
+  const { repository: projectRepo } = createFakeProjectRepository([
+    createProject({
+      id: projectId,
+      organizationId: orgId,
+      name: opts.sampleProject ? "Sample project" : "Project",
+      slug: opts.sampleProject ? "sample-project" : "project",
+      settings: opts.sampleProject ? { isSample: true } : null,
+    }),
+  ])
 
   const layer = Layer.mergeAll(
+    Layer.succeed(ProjectRepository, projectRepo),
     Layer.succeed(UserRepository, userRepo),
     Layer.succeed(NotificationRepository, notificationRepo),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: orgId })),
   )
 
-  return { orgId, userId, rows, layer }
+  return { orgId, projectId, userId, rows, layer }
 }
 
 const incidentPayload = (alertIncidentId: string) => ({
@@ -109,6 +124,27 @@ describe("createNotificationUseCase", () => {
 
     expect(second.notification).toBeNull()
     expect(second.emailEligible).toBe(false)
+    expect(rows).toHaveLength(1)
+  })
+
+  it("suppresses email for sample-project notifications while keeping the in-app row", async () => {
+    const { orgId, projectId, userId, rows, layer } = setup({ sampleProject: true })
+    const alertIncidentId = cuid("ai")
+
+    const result = await Effect.runPromise(
+      createNotificationUseCase({
+        organizationId: orgId,
+        userId,
+        notificationId: NotificationId(generateId()),
+        kind: "incident.opened",
+        idempotencyKey: `incident.opened:${alertIncidentId}`,
+        projectId,
+        payload: incidentPayload(alertIncidentId),
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(result.notification).not.toBeNull()
+    expect(result.emailEligible).toBe(false)
     expect(rows).toHaveLength(1)
   })
 

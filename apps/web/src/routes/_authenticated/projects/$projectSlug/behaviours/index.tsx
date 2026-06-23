@@ -93,12 +93,14 @@ function BehavioursPageContent() {
         : undefined,
     [timeFrom, timeTo],
   )
+  const isDemoProject = project.settings.isSample || isDemoProjectName(project.name)
   const { data, isLoading } = useProjectBehaviours({
     projectId: project.id,
     dimension: "topic",
     segment,
     sortBy: "category",
     ...(timeRange ? { timeRange } : {}),
+    pollUntilTopics: isDemoProject && segment === "all" && !timeRange,
   })
   const momentRange = useMemo((): BehaviourMomentRangeRecord | undefined => {
     if (!isBehaviourTrajectoryMetric(momentMetric)) return undefined
@@ -133,7 +135,6 @@ function BehavioursPageContent() {
   }, [activeBehaviourId, behaviourPath, topics])
   const setBehaviourPath = (path: readonly string[]) => setBehaviourPathParam(path.join("."))
   const hasNoBehaviours = !isLoading && topics.length === 0 && segment === "all" && !timeRange
-  const isDemoProject = project.settings.isSample || isDemoProjectName(project.name)
 
   if (hasNoBehaviours) {
     return (

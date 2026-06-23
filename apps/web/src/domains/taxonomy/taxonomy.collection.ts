@@ -120,12 +120,14 @@ export function useProjectBehaviours({
   segment,
   sortBy,
   timeRange,
+  pollUntilTopics,
 }: {
   readonly projectId: string
   readonly dimension: BehaviourDimension
   readonly segment: BehaviourSegment
   readonly sortBy: BehaviourSortBy
   readonly timeRange?: BehaviourTimeRangeRecord
+  readonly pollUntilTopics?: boolean
 }) {
   return useQuery({
     queryKey: projectBehavioursQueryKey({ projectId, dimension, segment, sortBy, timeRange }),
@@ -133,6 +135,7 @@ export function useProjectBehaviours({
       getProjectBehaviours({ data: { projectId, dimension, segment, sortBy, ...(timeRange ? { timeRange } : {}) } }),
     staleTime: 30_000,
     enabled: projectId.length > 0,
+    refetchInterval: (query) => (pollUntilTopics && (query.state.data?.topics.length ?? 0) === 0 ? 5_000 : false),
   })
 }
 

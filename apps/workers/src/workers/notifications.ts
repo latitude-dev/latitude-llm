@@ -50,7 +50,7 @@ const requestLayer = Layer.mergeAll(
   UserRepositoryLive,
 )
 
-const createLayer = Layer.mergeAll(NotificationRepositoryLive, UserRepositoryLive)
+const createLayer = Layer.mergeAll(NotificationRepositoryLive, ProjectRepositoryLive, UserRepositoryLive)
 
 /**
  * Org-level Slack fan-out runs at the producer step (not per recipient).

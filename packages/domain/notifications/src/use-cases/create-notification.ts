@@ -1,3 +1,4 @@
+import { ProjectRepository } from "@domain/projects"
 import type {
   NotFoundError,
   NotificationId,
@@ -81,6 +82,16 @@ export const createNotificationUseCase = (input: CreateNotificationInput) =>
       return { notification: null, emailEligible: false } as const
     }
 
+    if (input.projectId !== null) {
+      const projects = yield* ProjectRepository
+      const project = yield* projects
+        .findById(input.projectId)
+        .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+      if (project?.settings?.isSample === true) {
+        return { notification: inserted, emailEligible: false } as const
+      }
+    }
+
     // Read the recipient's prefs to decide email eligibility. Missing user
     // (impossible in practice — we just resolved them as a member) is
     // treated as "no email" rather than failing the insert.
@@ -95,5 +106,5 @@ export const createNotificationUseCase = (input: CreateNotificationInput) =>
   }).pipe(Effect.withSpan("notifications.createNotification")) as Effect.Effect<
     CreateNotificationResult,
     CreateNotificationError,
-    SqlClient | NotificationRepository | UserRepository
+    SqlClient | NotificationRepository | ProjectRepository | UserRepository
   >
