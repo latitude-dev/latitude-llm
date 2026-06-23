@@ -21,7 +21,6 @@ export const evaluateDraftAgainstExamplesUseCase = Effect.fn("evaluations.evalua
     readonly positiveExamples: readonly HydratedEvaluationAlignmentExample[]
     readonly negativeExamples: readonly HydratedEvaluationAlignmentExample[]
     readonly judgeTelemetry: EvaluationAlignmentJudgeTelemetryScope
-    readonly membershipOnPass?: boolean
   }) {
     const examples = [...input.positiveExamples, ...input.negativeExamples]
     let confusionMatrix = emptyConfusionMatrix()
@@ -43,9 +42,7 @@ export const evaluateDraftAgainstExamplesUseCase = Effect.fn("evaluations.evalua
       })
 
       const expectedPositive = example.label === "positive"
-      const predictedPositive = input.membershipOnPass
-        ? execution.result.passed === true
-        : execution.result.passed === false
+      const predictedPositive = execution.result.passed === true
 
       confusionMatrix = addConfusionMatrixObservation(confusionMatrix, {
         expectedPositive,

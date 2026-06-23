@@ -267,7 +267,6 @@ export const evaluateBaselineEvaluationDraft = (input: {
   readonly draft: GeneratedEvaluationDraft
   readonly positiveExamples: readonly HydratedEvaluationAlignmentExample[]
   readonly negativeExamples: readonly HydratedEvaluationAlignmentExample[]
-  readonly membershipOnPass?: boolean
 }): Promise<BaselineEvaluationResult> =>
   Effect.runPromise(
     evaluateBaselineDraftUseCase({
@@ -276,7 +275,6 @@ export const evaluateBaselineEvaluationDraft = (input: {
       script: input.draft.script,
       positiveExamples: input.positiveExamples,
       negativeExamples: input.negativeExamples,
-      membershipOnPass: input.membershipOnPass ?? false,
       judgeTelemetry: {
         organizationId: input.organizationId,
         projectId: input.projectId,
@@ -309,7 +307,6 @@ export const evaluateIncrementalEvaluationDraft = (input: {
   readonly previousConfusionMatrix: Parameters<typeof evaluateIncrementalDraftUseCase>[0]["previousConfusionMatrix"]
   readonly positiveExamples: readonly HydratedEvaluationAlignmentExample[]
   readonly negativeExamples: readonly HydratedEvaluationAlignmentExample[]
-  readonly membershipOnPass?: boolean
 }): Promise<IncrementalEvaluationRefreshResult> =>
   Effect.runPromise(
     evaluateIncrementalDraftUseCase({
@@ -319,7 +316,6 @@ export const evaluateIncrementalEvaluationDraft = (input: {
       previousConfusionMatrix: input.previousConfusionMatrix,
       positiveExamples: input.positiveExamples,
       negativeExamples: input.negativeExamples,
-      membershipOnPass: input.membershipOnPass ?? false,
       judgeTelemetry: {
         organizationId: input.organizationId,
         projectId: input.projectId,

@@ -310,7 +310,7 @@ describe("evaluation-alignment activities", () => {
         const hasLeakage = (input.prompt ?? "").includes("sk-live-123")
         return Effect.succeed({
           object: {
-            passed: !hasLeakage,
+            passed: hasLeakage,
             feedback: hasLeakage ? "Detected leaked token" : "No leakage detected",
           } as never,
           tokens: 10,
@@ -470,7 +470,7 @@ describe("evaluation-alignment activities", () => {
         const hasLeakage = (input.prompt ?? "").includes("sk-live-123")
         return Effect.succeed({
           object: {
-            passed: !hasLeakage,
+            passed: hasLeakage,
             feedback: hasLeakage ? "Detected leaked token" : "No leakage detected",
           } as never,
           tokens: 10,
@@ -537,7 +537,7 @@ describe("evaluation-alignment activities", () => {
     const { layer: aiLayer } = createFakeAI({
       generate: () =>
         Effect.succeed({
-          object: { passed: false, feedback: "Incorrectly flagged clean output" } as never,
+          object: { passed: true, feedback: "Incorrectly flagged clean output" } as never,
           tokens: 10,
           duration: 50,
         }),
@@ -598,7 +598,7 @@ describe("evaluation-alignment activities", () => {
           const hasLeakage = (input.prompt ?? "").includes("sk-live-123")
           return Effect.succeed({
             object: {
-              passed: !hasLeakage,
+              passed: hasLeakage,
               feedback: hasLeakage ? "Detected leaked token" : "No leakage detected",
             } as never,
             tokens: 12,

@@ -84,7 +84,6 @@ export const loadAlignmentStateOrInactiveUseCase = Effect.fn("evaluations.loadAl
         name: evaluation.name,
         description: evaluation.description,
         alignedAt: evaluation.alignedAt.toISOString(),
-        membershipOnPass: evaluation.membershipOnPass,
         draft: {
           script: evaluation.script,
           evaluationHash: evaluation.alignment.evaluationHash,

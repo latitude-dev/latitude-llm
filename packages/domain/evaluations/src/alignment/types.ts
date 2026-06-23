@@ -22,7 +22,6 @@ export interface LoadedEvaluationAlignmentState {
   readonly name: string
   readonly description: string
   readonly alignedAt: string
-  readonly membershipOnPass: boolean
   readonly draft: GeneratedEvaluationDraft
   readonly confusionMatrix: ConfusionMatrix
 }

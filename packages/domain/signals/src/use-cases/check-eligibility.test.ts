@@ -1,14 +1,5 @@
-import {
-  defaultEvaluationTrigger,
-  type Evaluation,
-  EvaluationRepository,
-  type EvaluationRepositoryShape,
-  emptyEvaluationAlignment,
-  evaluationSchema,
-} from "@domain/evaluations"
 import { type Score, ScoreRepository, scoreSchema } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
-import { NotFoundError } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
@@ -16,40 +7,6 @@ import { checkEligibilityUseCase } from "./check-eligibility.ts"
 const organizationId = "oooooooooooooooooooooooo"
 const projectId = "pppppppppppppppppppppppp"
 const evaluationId = "eeeeeeeeeeeeeeeeeeeeeeee"
-
-const makeEvaluation = (membershipOnPass: boolean): Evaluation =>
-  evaluationSchema.parse({
-    id: evaluationId,
-    organizationId,
-    projectId,
-    signalId: "iiiiiiiiiiiiiiiiiiiiiiii",
-    name: "Eval",
-    description: "Detector",
-    script: "const result = true",
-    trigger: defaultEvaluationTrigger(),
-    alignment: emptyEvaluationAlignment("hash"),
-    alignedAt: new Date("2026-01-01T00:00:00.000Z"),
-    membershipOnPass,
-    archivedAt: null,
-    deletedAt: null,
-    createdAt: new Date("2026-01-01T00:00:00.000Z"),
-    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
-  })
-
-const createEvaluationRepository = (evaluation: Evaluation | null): EvaluationRepositoryShape => ({
-  findById: (id) =>
-    evaluation && id === evaluation.id
-      ? Effect.succeed(evaluation)
-      : Effect.fail(new NotFoundError({ entity: "Evaluation", id })),
-  save: () => Effect.die("unexpected EvaluationRepository.save"),
-  listByProjectId: () => Effect.die("unexpected EvaluationRepository.listByProjectId"),
-  listBySignalId: () => Effect.die("unexpected EvaluationRepository.listBySignalId"),
-  listBySignalIds: () => Effect.die("unexpected EvaluationRepository.listBySignalIds"),
-  archive: () => Effect.die("unexpected EvaluationRepository.archive"),
-  unarchive: () => Effect.die("unexpected EvaluationRepository.unarchive"),
-  softDelete: () => Effect.die("unexpected EvaluationRepository.softDelete"),
-  softDeleteBySignalId: () => Effect.die("unexpected EvaluationRepository.softDeleteBySignalId"),
-})
 
 const makeScore = (overrides: Partial<Score> = {}): Score =>
   scoreSchema.parse({
@@ -82,7 +39,6 @@ const makeScore = (overrides: Partial<Score> = {}): Score =>
 const runEligibility = (
   score: Score | null,
   inputOverrides?: Partial<{ organizationId: string; projectId: string }>,
-  evaluation: Evaluation | null = null,
 ) => {
   const { repository, scores } = createFakeScoreRepository()
   if (score) {
@@ -94,10 +50,7 @@ const runEligibility = (
       organizationId: inputOverrides?.organizationId ?? organizationId,
       projectId: inputOverrides?.projectId ?? projectId,
       scoreId: score?.id ?? "missing-score-id-0000000",
-    }).pipe(
-      Effect.provideService(ScoreRepository, repository),
-      Effect.provideService(EvaluationRepository, createEvaluationRepository(evaluation)),
-    ),
+    }).pipe(Effect.provideService(ScoreRepository, repository)),
   )
 }
 
@@ -143,50 +96,24 @@ describe("checkEligibilityUseCase", () => {
     })
   })
 
-  it("returns a present evaluation score under membership_on_pass=true (passed=true)", async () => {
-    const evaluation = makeEvaluation(true)
+  it("returns a present evaluation score (passed=true)", async () => {
     const score = makeScore({
       sourceType: "evaluation",
-      sourceId: evaluation.id,
+      sourceId: evaluationId,
       metadata: { evaluationHash: "hash" },
       passed: true,
     })
-    expect(await runEligibility(score, undefined, evaluation)).toEqual(score)
+    expect(await runEligibility(score)).toEqual(score)
   })
 
-  it("rejects an absent evaluation run under membership_on_pass=true (passed=false)", async () => {
-    const evaluation = makeEvaluation(true)
+  it("rejects an absent evaluation run (passed=false)", async () => {
     const score = makeScore({
       sourceType: "evaluation",
-      sourceId: evaluation.id,
+      sourceId: evaluationId,
       metadata: { evaluationHash: "hash" },
       passed: false,
     })
-    await expect(runEligibility(score, undefined, evaluation)).rejects.toMatchObject({
-      _tag: "PassedScoreNotEligibleForDiscoveryError",
-    })
-  })
-
-  it("returns a present evaluation score under the deprecated membership_on_pass=false (passed=false)", async () => {
-    const evaluation = makeEvaluation(false)
-    const score = makeScore({
-      sourceType: "evaluation",
-      sourceId: evaluation.id,
-      metadata: { evaluationHash: "hash" },
-      passed: false,
-    })
-    expect(await runEligibility(score, undefined, evaluation)).toEqual(score)
-  })
-
-  it("rejects an absent evaluation run under the deprecated membership_on_pass=false (passed=true)", async () => {
-    const evaluation = makeEvaluation(false)
-    const score = makeScore({
-      sourceType: "evaluation",
-      sourceId: evaluation.id,
-      metadata: { evaluationHash: "hash" },
-      passed: true,
-    })
-    await expect(runEligibility(score, undefined, evaluation)).rejects.toMatchObject({
+    await expect(runEligibility(score)).rejects.toMatchObject({
       _tag: "PassedScoreNotEligibleForDiscoveryError",
     })
   })

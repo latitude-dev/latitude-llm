@@ -10,7 +10,6 @@ export const evaluateBaselineDraftUseCase = (input: {
   readonly positiveExamples: readonly HydratedEvaluationAlignmentExample[]
   readonly negativeExamples: readonly HydratedEvaluationAlignmentExample[]
   readonly judgeTelemetry: EvaluationAlignmentJudgeTelemetryScope
-  readonly membershipOnPass?: boolean
 }) =>
   evaluateDraftAgainstExamplesUseCase({
     signalName: input.signalName,
@@ -19,5 +18,4 @@ export const evaluateBaselineDraftUseCase = (input: {
     positiveExamples: input.positiveExamples,
     negativeExamples: input.negativeExamples,
     judgeTelemetry: input.judgeTelemetry,
-    membershipOnPass: input.membershipOnPass ?? false,
   }).pipe(Effect.withSpan("evaluations.evaluateBaselineDraft"))

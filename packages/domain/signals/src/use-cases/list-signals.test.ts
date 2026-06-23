@@ -53,7 +53,6 @@ const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation => ({
   trigger: defaultEvaluationTrigger(),
   alignment: emptyEvaluationAlignment("hash-v1"),
   alignedAt: new Date("2026-04-01T00:00:00.000Z"),
-  membershipOnPass: false,
   archivedAt: null,
   deletedAt: null,
   createdAt: new Date("2026-04-01T00:00:00.000Z"),

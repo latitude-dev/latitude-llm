@@ -128,15 +128,7 @@ function makeEvaluation(
   overrides?: Partial<
     Pick<
       Evaluation,
-      | "id"
-      | "organizationId"
-      | "projectId"
-      | "signalId"
-      | "script"
-      | "trigger"
-      | "membershipOnPass"
-      | "archivedAt"
-      | "deletedAt"
+      "id" | "organizationId" | "projectId" | "signalId" | "script" | "trigger" | "archivedAt" | "deletedAt"
     >
   >,
 ) {
@@ -151,7 +143,6 @@ function makeEvaluation(
     trigger: overrides?.trigger ?? defaultEvaluationTrigger(),
     alignment: emptyEvaluationAlignment("hash"),
     alignedAt: new Date("2026-01-01T00:00:00.000Z"),
-    membershipOnPass: overrides?.membershipOnPass ?? false,
     archivedAt: overrides?.archivedAt ?? null,
     deletedAt: overrides?.deletedAt ?? null,
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -1006,7 +997,7 @@ describe("runLiveEvaluationUseCase", () => {
         simulationId: null,
         sourceType: "evaluation",
         sourceId: evaluation.id,
-        signalId: null,
+        signalId: evaluation.signalId,
         value: 1,
         passed: true,
         feedback: "The conversation does not exhibit the linked issue.",
@@ -1046,7 +1037,7 @@ describe("runLiveEvaluationUseCase", () => {
     })
   })
 
-  it("assigns the linked issue immediately for failed live evaluation results", async () => {
+  it("leaves the score unassigned for a failing live evaluation result", async () => {
     const evaluation = makeEvaluation({
       script: VALID_SCRIPT,
     })
@@ -1109,7 +1100,7 @@ describe("runLiveEvaluationUseCase", () => {
       simulationId: null,
       sourceType: "evaluation",
       sourceId: evaluation.id,
-      signalId: evaluation.signalId,
+      signalId: null,
       value: 0,
       passed: false,
       feedback: "The conversation exhibits the linked issue.",
@@ -1148,80 +1139,6 @@ describe("runLiveEvaluationUseCase", () => {
       "ScoreCreated",
     ])
     expectImmutableAnalyticsSyncOrder(operations)
-  })
-
-  it("stamps signal_id on a passing result for a membership_on_pass evaluation", async () => {
-    const evaluation = makeEvaluation({ script: VALID_SCRIPT, membershipOnPass: true })
-    const issue = makeSignal({ id: SignalId(evaluation.signalId) })
-    const traceDetail = makeTraceDetail()
-    const { repository: traceRepository } = createFakeTraceRepository({
-      findByTraceId: () => Effect.succeed(traceDetail),
-    })
-    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
-    const signalRepository = createSignalRepository(() => Effect.succeed(issue))
-    const { scoreWriteLayer } = createTrackedScoreWriteFixture()
-    const { layer: aiLayer } = createFakeAI({
-      generate: <T>(input: GenerateInput<T>) =>
-        Effect.succeed({
-          object: input.schema.parse({ passed: true, value: 1, feedback: "The behavior is present." }),
-          tokens: 80,
-          duration: 100_000_000,
-          tokenUsage: { input: 30, output: 50 },
-        } satisfies GenerateResult<T>),
-    })
-
-    const result = await Effect.runPromise(
-      runLiveEvaluationUseCase(INPUT).pipe(
-        Effect.provide(
-          createUseCaseLayer({ traceRepository, evaluationRepository, scoreWriteLayer, signalRepository, aiLayer }),
-        ),
-      ),
-    )
-
-    expect(result.action).toBe("persisted")
-    if (result.action !== "persisted") throw new Error("Expected a persisted live evaluation result")
-    expect(result.context.score).toMatchObject({
-      signalId: evaluation.signalId,
-      value: 1,
-      passed: true,
-    })
-  })
-
-  it("leaves signal_id null on a failing result for a membership_on_pass evaluation", async () => {
-    const evaluation = makeEvaluation({ script: VALID_SCRIPT, membershipOnPass: true })
-    const issue = makeSignal({ id: SignalId(evaluation.signalId) })
-    const traceDetail = makeTraceDetail()
-    const { repository: traceRepository } = createFakeTraceRepository({
-      findByTraceId: () => Effect.succeed(traceDetail),
-    })
-    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
-    const signalRepository = createSignalRepository(() => Effect.succeed(issue))
-    const { scoreWriteLayer } = createTrackedScoreWriteFixture()
-    const { layer: aiLayer } = createFakeAI({
-      generate: <T>(input: GenerateInput<T>) =>
-        Effect.succeed({
-          object: input.schema.parse({ passed: false, value: 0, feedback: "The behavior is absent." }),
-          tokens: 80,
-          duration: 100_000_000,
-          tokenUsage: { input: 30, output: 50 },
-        } satisfies GenerateResult<T>),
-    })
-
-    const result = await Effect.runPromise(
-      runLiveEvaluationUseCase(INPUT).pipe(
-        Effect.provide(
-          createUseCaseLayer({ traceRepository, evaluationRepository, scoreWriteLayer, signalRepository, aiLayer }),
-        ),
-      ),
-    )
-
-    expect(result.action).toBe("persisted")
-    if (result.action !== "persisted") throw new Error("Expected a persisted live evaluation result")
-    expect(result.context.score).toMatchObject({
-      signalId: null,
-      value: 0,
-      passed: false,
-    })
   })
 
   it("persists an errored live evaluation score when execution fails", async () => {

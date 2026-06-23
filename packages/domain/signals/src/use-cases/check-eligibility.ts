@@ -1,4 +1,3 @@
-import { EvaluationRepository } from "@domain/evaluations"
 import { type Score, ScoreRepository } from "@domain/scores"
 import type { RepositoryError } from "@domain/shared"
 import { ScoreId } from "@domain/shared"
@@ -60,17 +59,7 @@ export const checkEligibilityUseCase = (input: CheckEligibilityInput) =>
     }
 
     if (score.sourceType === "evaluation") {
-      const evaluationRepository = yield* EvaluationRepository
-      const evaluation = yield* evaluationRepository
-        .findById(score.sourceId)
-        .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-      const present =
-        evaluation === null
-          ? score.passed === false
-          : evaluation.membershipOnPass
-            ? score.passed === true
-            : score.passed === false
-      if (!present) {
+      if (!score.passed) {
         return yield* new PassedScoreNotEligibleForDiscoveryError({ scoreId: input.scoreId })
       }
     } else if (score.passed) {
@@ -78,8 +67,4 @@ export const checkEligibilityUseCase = (input: CheckEligibilityInput) =>
     }
 
     return score
-  }).pipe(Effect.withSpan("issues.checkEligibility")) as Effect.Effect<
-    Score,
-    CheckEligibilityError | RepositoryError,
-    ScoreRepository | EvaluationRepository
-  >
+  }).pipe(Effect.withSpan("issues.checkEligibility")) as Effect.Effect<Score, CheckEligibilityError | RepositoryError>

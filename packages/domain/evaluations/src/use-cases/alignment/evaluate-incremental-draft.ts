@@ -22,7 +22,6 @@ export const evaluateIncrementalDraftUseCase = Effect.fn("evaluations.evaluateIn
   readonly positiveExamples: readonly HydratedEvaluationAlignmentExample[]
   readonly negativeExamples: readonly HydratedEvaluationAlignmentExample[]
   readonly judgeTelemetry: EvaluationAlignmentJudgeTelemetryScope
-  readonly membershipOnPass?: boolean
 }) {
   const newExampleCount = input.positiveExamples.length + input.negativeExamples.length
   const previousMetrics = deriveEvaluationAlignmentMetrics(input.previousConfusionMatrix)
@@ -51,7 +50,6 @@ export const evaluateIncrementalDraftUseCase = Effect.fn("evaluations.evaluateIn
     positiveExamples: input.positiveExamples,
     negativeExamples: input.negativeExamples,
     judgeTelemetry: input.judgeTelemetry,
-    membershipOnPass: input.membershipOnPass ?? false,
   })
 
   const decision = decideAlignmentRefreshStrategy({

@@ -34,11 +34,7 @@ export const checkEligibility = async (input: CheckEligibilityInput) => {
   try {
     await Effect.runPromise(
       checkEligibilityUseCase(input).pipe(
-        withPostgres(
-          Layer.mergeAll(ScoreRepositoryLive, EvaluationRepositoryLive),
-          getPostgresClient(),
-          OrganizationId(input.organizationId),
-        ),
+        withPostgres(ScoreRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
         withTracing,
       ),
     )

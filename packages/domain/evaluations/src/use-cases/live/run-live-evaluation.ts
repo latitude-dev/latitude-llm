@@ -325,10 +325,8 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         .pipe(Effect.catch(() => Effect.void))
     }
 
-    const present =
-      execution.kind === "completed" &&
-      (evaluation.membershipOnPass ? execution.result.passed === true : execution.result.passed === false)
-    const persistedSignalId = present ? evaluation.signalId : null
+    const persistedSignalId =
+      execution.kind === "completed" && execution.result.passed === true ? evaluation.signalId : null
     const scoreWriteExit = yield* Effect.exit(
       writeScoreUseCase({
         projectId: input.projectId,
