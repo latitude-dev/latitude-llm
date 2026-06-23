@@ -191,18 +191,47 @@ const pendingResetMutations = async (
   return resultSet.json<PendingMutation>()
 }
 
+const projectRowExists = async (
+  client: ClickHouseClient,
+  table: ClickHouseTable,
+  scope: SeedScope,
+): Promise<boolean> => {
+  const resultSet = await client.query({
+    query: `SELECT 1 FROM ${table}
+            WHERE organization_id = {organizationId:String} AND project_id = {projectId:String}
+            LIMIT 1`,
+    query_params: { organizationId: scope.organizationId, projectId: scope.projectId },
+    format: "JSONEachRow",
+  })
+  return (await resultSet.json()).length > 0
+}
+
 /**
- * `ALTER TABLE … DELETE` is a heavyweight mutation that rewrites every part
- * holding matching rows; on the large shared production tables (e.g.
- * message_embeddings) it runs for minutes. Awaiting it with
+ * The reset only exists to keep Temporal retries / re-seeds idempotent — a
+ * freshly created demo project has no rows here, and these tables are all
+ * ReplacingMergeTree keyed by `(organization_id, project_id, …)` with
+ * deterministic snapshot rows, so a re-insert dedups on its own. So we delete
+ * only from tables that actually hold rows for this project. `(organization_id,
+ * project_id)` is the primary-key prefix on every table, making the existence
+ * check an index point-lookup; on the common fresh-project path all checks
+ * come back empty and no mutation runs at all.
+ *
+ * When a delete is warranted, `ALTER TABLE … DELETE` is a heavyweight mutation
+ * that rewrites parts and can run for minutes. Awaiting it with
  * `mutations_sync: "2"` holds the HTTP request open with no data flowing, so
  * the client's 30s `request_timeout` trips the socket and the activity fails
  * every retry. Instead we submit the mutations without waiting and poll
- * `system.mutations` with short queries until the project's deletes complete,
- * letting the activity's 30-minute start-to-close timeout be the real budget.
+ * `system.mutations` with short queries until they complete, letting the
+ * activity's 30-minute start-to-close timeout be the real budget.
  */
 const resetClickHouse = async (client: ClickHouseClient, scope: SeedScope) => {
-  for (const table of clickHouseTables) {
+  const presence = await Promise.all(
+    clickHouseTables.map(async (table) => ({ table, hasRows: await projectRowExists(client, table, scope) })),
+  )
+  const tablesToReset = presence.filter((entry) => entry.hasRows).map((entry) => entry.table)
+  if (tablesToReset.length === 0) return
+
+  for (const table of tablesToReset) {
     await client.command({
       query: `ALTER TABLE ${table} DELETE WHERE organization_id = {organizationId:String} AND project_id = {projectId:String}`,
       query_params: { organizationId: scope.organizationId, projectId: scope.projectId },
