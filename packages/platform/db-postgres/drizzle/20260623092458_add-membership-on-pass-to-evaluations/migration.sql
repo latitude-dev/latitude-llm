@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."evaluations" ADD COLUMN "membership_on_pass" boolean DEFAULT false NOT NULL;

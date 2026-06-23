@@ -105,6 +105,7 @@ export const evaluationSchema = z.object({
   trigger: evaluationTriggerSchema, // controls when the evaluation runs on live traffic
   alignment: evaluationAlignmentSchema, // persisted confusion matrix and script hash
   alignedAt: z.date(), // last time the evaluation was realigned
+  membershipOnPass: z.boolean().default(false), // present-verdict polarity: true = membership when passed=true (current evals); false = when passed=false (deprecated)
   archivedAt: z.date().nullable(), // archived evaluations are still visible in read-only mode
   deletedAt: z.date().nullable(), // deleted evaluations are soft deleted from management UI
   createdAt: z.date(), // evaluation creation time

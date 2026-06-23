@@ -1,5 +1,5 @@
 import type { EvaluationAlignment, EvaluationTrigger } from "@domain/evaluations"
-import { index, jsonb, text, unique, varchar } from "drizzle-orm/pg-core"
+import { boolean, index, jsonb, text, unique, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
 export const evaluations = latitudeSchema.table(
@@ -15,6 +15,7 @@ export const evaluations = latitudeSchema.table(
     trigger: jsonb("trigger").$type<EvaluationTrigger>().notNull(), // controls when the evaluation runs on live traffic
     alignment: jsonb("alignment").$type<EvaluationAlignment>().notNull(), // persisted confusion matrix and script hash
     alignedAt: tzTimestamp("aligned_at").notNull(), // last time the evaluation was realigned
+    membershipOnPass: boolean("membership_on_pass").notNull().default(false), // present-verdict polarity: true = membership stamped when passed=true (current evals); false = when passed=false (deprecated)
     archivedAt: tzTimestamp("archived_at"), // archived evaluations are still visible in read-only mode
     deletedAt: tzTimestamp("deleted_at"), // deleted evaluations are soft deleted from management UI
     ...timestamps(),
