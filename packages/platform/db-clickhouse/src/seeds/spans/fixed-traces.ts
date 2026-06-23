@@ -3,7 +3,7 @@ import { CUSTOMER_USERS, EMPLOYEE_USERS, type SeedScope, type SeedUser, seedUser
 import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
 import { isSentinelPresent } from "../idempotency.ts"
-import type { Seeder } from "../types.ts"
+import type { Seeder, TraceSlot } from "../types.ts"
 import type { SpanRow } from "./span-builders.ts"
 
 function formatClickHouseTimestamp(date: Date): string {
@@ -313,100 +313,100 @@ function createCompatibilityChatSpan(opts: {
   }
 }
 
-export function buildCompatibilitySupportSpans(scope: SeedScope): SpanRow[] {
-  const specs = [
-    {
-      traceKey: "lifecycle",
-      index: 0,
-      daysAgo: 12,
-      userPrompt: "Can you check whether my delivered keyboard return is still eligible?",
-      assistantResponse:
-        "I need to authenticate you first, then inspect the delivered order and item status before confirming return eligibility.",
-      tags: ["support", "lifecycle", "tau2-retail"],
-      metadata: { seed: "tau2-compatibility", story: "retail-return-lifecycle" },
-      user: CUSTOMER_USERS[0],
-    },
-    {
-      traceKey: "lifecycle",
-      index: 1,
-      daysAgo: 11,
-      userPrompt: "I accidentally cancelled my order. Can you undo it immediately?",
-      assistantResponse:
-        "Cancelled orders cannot be reinstated automatically. I can help place a new order or transfer you for an out-of-scope exception review.",
-      tags: ["support", "lifecycle", "tau2-retail"],
-      metadata: { seed: "tau2-compatibility", story: "cancelled-order-policy" },
-      user: CUSTOMER_USERS[1],
-    },
-    {
-      traceKey: "lifecycle",
-      index: 2,
-      daysAgo: 10,
-      userPrompt: "My phone has no service and I need it fixed before I leave the airport.",
-      assistantResponse:
-        "Let's troubleshoot step by step. I will inspect the device state, verify SIM and roaming settings, then run a speed test before calling this resolved.",
-      tags: ["support", "lifecycle", "tau2-telecom"],
-      metadata: { seed: "tau2-compatibility", story: "telecom-troubleshooting" },
-      user: CUSTOMER_USERS[2],
-    },
-    {
-      traceKey: "lifecycle",
-      index: 3,
-      daysAgo: 9,
-      userPrompt: "Can you waive this mobile data fee as a courtesy?",
-      assistantResponse:
-        "I need to verify the account and policy eligibility before discussing credits. I cannot promise a waiver before review.",
-      tags: ["support", "lifecycle", "tau2-telecom"],
-      // Same user as the troubleshooting trace so one profile accumulates
-      // multiple issue occurrences.
-      metadata: { seed: "tau2-compatibility", story: "telecom-credit-policy" },
-      user: CUSTOMER_USERS[2],
-    },
-    {
-      traceKey: "lifecycle",
-      index: 4,
-      daysAgo: 8,
-      userPrompt: "Should I get the premium credit card if I already have a corporate travel card?",
-      assistantResponse:
-        "I need to compare the card fees, rewards, and your subscription benefits against the policy documents before recommending a product.",
-      tags: ["support", "lifecycle", "tau2-banking"],
-      metadata: { seed: "tau2-compatibility", story: "banking-knowledge-grounding" },
-      user: CUSTOMER_USERS[3],
-    },
-    {
-      traceKey: "annotation-demo",
-      index: 0,
-      daysAgo: 2,
-      userPrompt: "I want to return my gaming keyboard and mouse now that I quit gaming.",
-      assistantResponse:
-        "I authenticated the account, checked both delivered orders, and requested returns for the eligible keyboard and mouse to the original payment methods.",
-      tags: ["support", "annotation", "tau2-retail"],
-      metadata: { seed: "tau2-compatibility", story: "annotation-ui-polish" },
-      user: CUSTOMER_USERS[0],
-    },
-    {
-      traceKey: "code-block-demo",
-      index: 0,
-      daysAgo: 1,
-      userPrompt: "How do I fetch a trace with the Latitude Node SDK?",
-      assistantResponse:
-        "Set your API key in the `Authorization` header, then call the SDK. Here's a minimal example:\n\n" +
-        "```ts\n" +
-        'import { Latitude } from "@latitude-data/sdk"\n\n' +
-        "const sdk = new Latitude(process.env.LATITUDE_API_KEY!)\n" +
-        'const trace = await sdk.traces.get("trace-id")\n' +
-        "console.log(trace.spans.length)\n" +
-        "```\n\n" +
-        "Keep the key in an environment variable — never hard-code it.",
-      tags: ["support", "developer", "code-example"],
-      metadata: { seed: "tau2-compatibility", story: "code-block-rendering" },
-      user: EMPLOYEE_USERS[0],
-      serviceName: "developer-support-agent",
-      systemInstruction:
-        "You are a developer support AI agent. Help users integrate the Latitude SDK and API, and include short, correct code examples when useful.",
-    },
-  ] as const
+const COMPATIBILITY_TRACE_SPECS = [
+  {
+    traceKey: "lifecycle",
+    index: 0,
+    daysAgo: 12,
+    userPrompt: "Can you check whether my delivered keyboard return is still eligible?",
+    assistantResponse:
+      "I need to authenticate you first, then inspect the delivered order and item status before confirming return eligibility.",
+    tags: ["support", "lifecycle", "tau2-retail"],
+    metadata: { seed: "tau2-compatibility", story: "retail-return-lifecycle" },
+    user: CUSTOMER_USERS[0],
+  },
+  {
+    traceKey: "lifecycle",
+    index: 1,
+    daysAgo: 11,
+    userPrompt: "I accidentally cancelled my order. Can you undo it immediately?",
+    assistantResponse:
+      "Cancelled orders cannot be reinstated automatically. I can help place a new order or transfer you for an out-of-scope exception review.",
+    tags: ["support", "lifecycle", "tau2-retail"],
+    metadata: { seed: "tau2-compatibility", story: "cancelled-order-policy" },
+    user: CUSTOMER_USERS[1],
+  },
+  {
+    traceKey: "lifecycle",
+    index: 2,
+    daysAgo: 10,
+    userPrompt: "My phone has no service and I need it fixed before I leave the airport.",
+    assistantResponse:
+      "Let's troubleshoot step by step. I will inspect the device state, verify SIM and roaming settings, then run a speed test before calling this resolved.",
+    tags: ["support", "lifecycle", "tau2-telecom"],
+    metadata: { seed: "tau2-compatibility", story: "telecom-troubleshooting" },
+    user: CUSTOMER_USERS[2],
+  },
+  {
+    traceKey: "lifecycle",
+    index: 3,
+    daysAgo: 9,
+    userPrompt: "Can you waive this mobile data fee as a courtesy?",
+    assistantResponse:
+      "I need to verify the account and policy eligibility before discussing credits. I cannot promise a waiver before review.",
+    tags: ["support", "lifecycle", "tau2-telecom"],
+    // Same user as the troubleshooting trace so one profile accumulates
+    // multiple issue occurrences.
+    metadata: { seed: "tau2-compatibility", story: "telecom-credit-policy" },
+    user: CUSTOMER_USERS[2],
+  },
+  {
+    traceKey: "lifecycle",
+    index: 4,
+    daysAgo: 8,
+    userPrompt: "Should I get the premium credit card if I already have a corporate travel card?",
+    assistantResponse:
+      "I need to compare the card fees, rewards, and your subscription benefits against the policy documents before recommending a product.",
+    tags: ["support", "lifecycle", "tau2-banking"],
+    metadata: { seed: "tau2-compatibility", story: "banking-knowledge-grounding" },
+    user: CUSTOMER_USERS[3],
+  },
+  {
+    traceKey: "annotation-demo",
+    index: 0,
+    daysAgo: 2,
+    userPrompt: "I want to return my gaming keyboard and mouse now that I quit gaming.",
+    assistantResponse:
+      "I authenticated the account, checked both delivered orders, and requested returns for the eligible keyboard and mouse to the original payment methods.",
+    tags: ["support", "annotation", "tau2-retail"],
+    metadata: { seed: "tau2-compatibility", story: "annotation-ui-polish" },
+    user: CUSTOMER_USERS[0],
+  },
+  {
+    traceKey: "code-block-demo",
+    index: 0,
+    daysAgo: 1,
+    userPrompt: "How do I fetch a trace with the Latitude Node SDK?",
+    assistantResponse:
+      "Set your API key in the `Authorization` header, then call the SDK. Here's a minimal example:\n\n" +
+      "```ts\n" +
+      'import { Latitude } from "@latitude-data/sdk"\n\n' +
+      "const sdk = new Latitude(process.env.LATITUDE_API_KEY!)\n" +
+      'const trace = await sdk.traces.get("trace-id")\n' +
+      "console.log(trace.spans.length)\n" +
+      "```\n\n" +
+      "Keep the key in an environment variable — never hard-code it.",
+    tags: ["support", "developer", "code-example"],
+    metadata: { seed: "tau2-compatibility", story: "code-block-rendering" },
+    user: EMPLOYEE_USERS[0],
+    serviceName: "developer-support-agent",
+    systemInstruction:
+      "You are a developer support AI agent. Help users integrate the Latitude SDK and API, and include short, correct code examples when useful.",
+  },
+] as const
 
-  return specs.map((spec) => createCompatibilityChatSpan({ scope, ...spec }))
+export function buildCompatibilitySupportSpans(scope: SeedScope): SpanRow[] {
+  return COMPATIBILITY_TRACE_SPECS.map((spec) => createCompatibilityChatSpan({ scope, ...spec }))
 }
 
 type LargeConversationSpec = {
@@ -548,41 +548,41 @@ function createLargeConversationChatSpan(opts: { scope: SeedScope; spec: LargeCo
   }
 }
 
-function buildLargeConversationSpans(scope: SeedScope): SpanRow[] {
-  const specs: readonly LargeConversationSpec[] = [
-    {
-      traceKey: "large-conversation",
-      index: 0,
-      sessionId: "seed-large-conversation-1",
-      daysAgo: 1,
-      turnCount: 120,
-      scenario: "return eligibility investigation with repeated shipping and payment updates",
-      serviceName: "load-test-retail-support-agent",
-      user: CUSTOMER_USERS[4],
-    },
-    {
-      traceKey: "large-conversation",
-      index: 1,
-      sessionId: "seed-large-conversation-2",
-      daysAgo: 1,
-      turnCount: 240,
-      scenario: "telecom outage troubleshooting with many device-state checkpoints",
-      serviceName: "load-test-telecom-support-agent",
-      user: CUSTOMER_USERS[5],
-    },
-    {
-      traceKey: "large-conversation",
-      index: 2,
-      sessionId: "seed-large-conversation-3",
-      daysAgo: 1,
-      turnCount: 420,
-      scenario: "travel itinerary exception review with long-running policy comparisons",
-      serviceName: "load-test-travel-support-agent",
-      user: CUSTOMER_USERS[6],
-    },
-  ]
+const LARGE_CONVERSATION_SPECS: readonly LargeConversationSpec[] = [
+  {
+    traceKey: "large-conversation",
+    index: 0,
+    sessionId: "seed-large-conversation-1",
+    daysAgo: 1,
+    turnCount: 120,
+    scenario: "return eligibility investigation with repeated shipping and payment updates",
+    serviceName: "load-test-retail-support-agent",
+    user: CUSTOMER_USERS[4],
+  },
+  {
+    traceKey: "large-conversation",
+    index: 1,
+    sessionId: "seed-large-conversation-2",
+    daysAgo: 1,
+    turnCount: 240,
+    scenario: "telecom outage troubleshooting with many device-state checkpoints",
+    serviceName: "load-test-telecom-support-agent",
+    user: CUSTOMER_USERS[5],
+  },
+  {
+    traceKey: "large-conversation",
+    index: 2,
+    sessionId: "seed-large-conversation-3",
+    daysAgo: 1,
+    turnCount: 420,
+    scenario: "travel itinerary exception review with long-running policy comparisons",
+    serviceName: "load-test-travel-support-agent",
+    user: CUSTOMER_USERS[6],
+  },
+]
 
-  return specs.map((spec) => createLargeConversationChatSpan({ scope, spec }))
+function buildLargeConversationSpans(scope: SeedScope): SpanRow[] {
+  return LARGE_CONVERSATION_SPECS.map((spec) => createLargeConversationChatSpan({ scope, spec }))
 }
 
 function buildTau2TrajectorySpans(scope: SeedScope, maxTrajectories = TAU2_SEED_TRAJECTORIES.length): SpanRow[] {
@@ -821,3 +821,14 @@ const seedLargeConversationTraces: Seeder = {
 }
 
 export const fixedTraceSeeders: readonly Seeder[] = [seedFixedTraces, seedLargeConversationTraces]
+
+/**
+ * Every deterministic trace this module seeds, as `(traceKey, index)` slots.
+ * Must stay in lockstep with the builders above; the demo-project snapshot
+ * import enumerates these to remap trace ids across projects.
+ */
+export const fixedTraceSlots: readonly TraceSlot[] = [
+  ...TAU2_SEED_TRAJECTORIES.map((_, index) => ({ traceKey: "tau2-trajectory", index })),
+  ...LARGE_CONVERSATION_SPECS.map((spec) => ({ traceKey: spec.traceKey, index: spec.index })),
+  ...COMPATIBILITY_TRACE_SPECS.map((spec) => ({ traceKey: spec.traceKey, index: spec.index })),
+]

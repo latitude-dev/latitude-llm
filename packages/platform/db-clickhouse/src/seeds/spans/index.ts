@@ -1,10 +1,10 @@
 import { type SeedScope, TraceId } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
-import type { SeedContext, Seeder } from "../types.ts"
-import { fixedTraceSeeders } from "./fixed-traces.ts"
+import type { SeedContext, Seeder, TraceSlot } from "../types.ts"
+import { fixedTraceSeeders, fixedTraceSlots } from "./fixed-traces.ts"
 import { generateAllSpans, type SpanRow, type TraceConfig } from "./generator.ts"
-import { orphanFragmentSeeders } from "./orphan-fragments.ts"
+import { orphanFragmentSeeders, orphanFragmentTraceSlots } from "./orphan-fragments.ts"
 
 const TRACE_COUNT = 2000
 const BATCH_SIZE = 500
@@ -51,3 +51,10 @@ export const runSpansSeed = (
   })
 
 export const spanSeeders: Seeder[] = [...fixedTraceSeeders, ...orphanFragmentSeeders]
+
+/**
+ * Catalog of every deterministic trace the demo seed writes, as
+ * `(traceKey, index)` slots. The ambient `generateAllSpans` traces are not
+ * included — they are not part of the demo seed (`allSeeders`).
+ */
+export const spanTraceSlots: readonly TraceSlot[] = [...fixedTraceSlots, ...orphanFragmentTraceSlots]
