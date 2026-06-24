@@ -12,7 +12,7 @@ import { createMembership } from '../memberships/create'
 import { createProviderApiKey } from '../providerApiKeys'
 import { createWorkspace } from '../workspaces'
 import { createUser } from './createUser'
-import { users } from '../../schema/models/users'
+import { unsafelyCheckIfAnyUserExists } from '../../queries/users/exists'
 import { UserTitle } from '@latitude-data/constants/users'
 import { createDatasetOnboarding } from '../onboardingResources/createDatasetOnboarding'
 
@@ -51,11 +51,7 @@ export default async function setupService(
     // In enterprise (self-hosted) mode only the first user to set up the
     // instance becomes a platform admin. Subsequent signups and invited users
     // default to non-admin.
-    const isFirstUser = await tx
-      .select({ id: users.id })
-      .from(users)
-      .limit(1)
-      .then((rows) => rows.length === 0)
+    const isFirstUser = !(await unsafelyCheckIfAnyUserExists(tx))
 
     const user = await createUser(
       {

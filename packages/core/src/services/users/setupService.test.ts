@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import setupService, { NEW_SIGNUPS_DISABLED_MESSAGE } from './setupService'
 import { SubscriptionPlan } from '../../plans'
 import { unsafelyFindUserByEmail } from '../../queries/users/findByEmail'
+import { unsafelyCheckIfAnyUserExists } from '../../queries/users/exists'
 import * as envModule from '@latitude-data/env'
 
 vi.mock('../../events/publisher', () => ({
@@ -11,9 +12,17 @@ vi.mock('../../events/publisher', () => ({
   },
 }))
 
+vi.mock('../../queries/users/exists', () => ({
+  unsafelyCheckIfAnyUserExists: vi.fn(),
+}))
+
+const mockedCheckIfAnyUserExists = vi.mocked(unsafelyCheckIfAnyUserExists)
+
 describe('setupService', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+
+    mockedCheckIfAnyUserExists.mockResolvedValue(false)
 
     vi.spyOn(envModule, 'env', 'get').mockReturnValue({
       ...envModule.env,
@@ -111,6 +120,8 @@ describe('setupService', () => {
     })
 
     it('creates the first user with admin=true and enterprise plan', async () => {
+      mockedCheckIfAnyUserExists.mockResolvedValue(false)
+
       const result = await setupService({
         email: 'enterprise@example.com',
         name: 'Enterprise User',
@@ -129,24 +140,20 @@ describe('setupService', () => {
     })
 
     it('does not make subsequent users admin', async () => {
-      const first = await setupService({
-        email: 'first-enterprise@example.com',
-        name: 'First Enterprise User',
-        companyName: 'First Enterprise Company',
-        defaultProviderName: 'OpenAI',
-        defaultProviderApiKey: 'test-api-key',
-      }).then((r) => r.unwrap())
+      mockedCheckIfAnyUserExists.mockResolvedValue(true)
 
-      const second = await setupService({
+      const result = await setupService({
         email: 'second-enterprise@example.com',
         name: 'Second Enterprise User',
         companyName: 'Second Enterprise Company',
         defaultProviderName: 'OpenAI',
         defaultProviderApiKey: 'test-api-key',
-      }).then((r) => r.unwrap())
+      })
 
-      expect(first.user.admin).toBe(true)
-      expect(second.user.admin).toBe(false)
+      expect(result.ok).toBe(true)
+      const { user } = result.unwrap()
+
+      expect(user.admin).toBe(false)
     })
   })
 })
