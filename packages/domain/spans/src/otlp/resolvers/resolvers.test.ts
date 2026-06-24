@@ -1018,4 +1018,8 @@ describe("resolveStatusCode", () => {
     expect(resolveStatusCode([strAttr("openclaw.outcome", "error")], "unset", "openclaw")).toBe("error")
     expect(resolveStatusCode([strAttr("openclaw.outcome", "abandoned")], "unset", "openclaw")).toBe("error")
   })
+
+  it("lets a failing outcome override an OTel ok status", () => {
+    expect(resolveStatusCode([strAttr("openclaw.outcome", "abandoned")], "ok", "openclaw")).toBe("error")
+  })
 })

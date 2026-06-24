@@ -126,10 +126,11 @@ function extractEmbeddedUsage(outputMessagesJson: string): OpenclawUsage | undef
   try {
     const parsed: unknown = JSON.parse(outputMessagesJson)
     if (!Array.isArray(parsed)) return undefined
-    const withUsage = parsed.find(
-      (m): m is { usage: OpenclawUsage } =>
-        !!m && typeof m === "object" && typeof (m as { usage?: unknown }).usage === "object",
-    )
+    const withUsage = parsed.find((m): m is { usage: OpenclawUsage } => {
+      if (!m || typeof m !== "object") return false
+      const usage = (m as { usage?: unknown }).usage
+      return usage !== null && typeof usage === "object"
+    })
     return withUsage?.usage
   } catch {
     return undefined
