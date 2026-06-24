@@ -103,12 +103,14 @@ describe('setupService', () => {
   })
 
   describe('when LATITUDE_ENTERPRISE_MODE is true', () => {
-    it('creates user with admin=true and enterprise plan', async () => {
+    beforeEach(() => {
       vi.spyOn(envModule, 'env', 'get').mockReturnValue({
         ...envModule.env,
         LATITUDE_ENTERPRISE_MODE: true,
       } as typeof envModule.env)
+    })
 
+    it('creates the first user with admin=true and enterprise plan', async () => {
       const result = await setupService({
         email: 'enterprise@example.com',
         name: 'Enterprise User',
@@ -124,6 +126,27 @@ describe('setupService', () => {
       expect(workspace.currentSubscription.plan).toBe(
         SubscriptionPlan.EnterpriseV1,
       )
+    })
+
+    it('does not make subsequent users admin', async () => {
+      const first = await setupService({
+        email: 'first-enterprise@example.com',
+        name: 'First Enterprise User',
+        companyName: 'First Enterprise Company',
+        defaultProviderName: 'OpenAI',
+        defaultProviderApiKey: 'test-api-key',
+      }).then((r) => r.unwrap())
+
+      const second = await setupService({
+        email: 'second-enterprise@example.com',
+        name: 'Second Enterprise User',
+        companyName: 'Second Enterprise Company',
+        defaultProviderName: 'OpenAI',
+        defaultProviderApiKey: 'test-api-key',
+      }).then((r) => r.unwrap())
+
+      expect(first.user.admin).toBe(true)
+      expect(second.user.admin).toBe(false)
     })
   })
 })
