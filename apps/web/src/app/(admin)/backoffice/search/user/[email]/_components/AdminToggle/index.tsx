@@ -32,6 +32,7 @@ export function AdminToggle({ userEmail, isAdmin }: Props) {
         description: error.message || 'Failed to update admin access',
         variant: 'destructive',
       })
+      router.refresh()
     },
   })
 
