@@ -2,8 +2,10 @@ import { ExternalUserId, OrganizationId, ProjectId, SessionId, SimulationId, Spa
 import type { SpanDetail, SpanKind, SpanStatusCode } from "../entities/span.ts"
 import { stringAttr } from "./attributes.ts"
 import { parseContent } from "./content/index.ts"
+import { isDroppedSpan } from "./dropped-spans.ts"
 import { resolveAttributes } from "./resolvers/index.ts"
 import { resolvePerformance } from "./resolvers/performance.ts"
+import { resolveStatusCode } from "./resolvers/status.ts"
 import { resolveToolExecution } from "./resolvers/tool-execution.ts"
 import type { OtlpAnyValue, OtlpExportTraceServiceRequest, OtlpKeyValue, OtlpResource, OtlpSpan } from "./types.ts"
 
@@ -123,7 +125,8 @@ function transformSpan({
   const spanAttrs = span.attributes ?? []
   const spanEvents = span.events ?? []
   const resourceAttrs = resource?.attributes ?? []
-  const statusCode = INT_TO_STATUS_CODE[span.status?.code ?? 0] ?? "unset"
+  const otelStatusCode = INT_TO_STATUS_CODE[span.status?.code ?? 0] ?? "unset"
+  const statusCode = resolveStatusCode(spanAttrs, otelStatusCode, scopeName)
 
   const resolved = resolveAttributes({
     spanAttrs,
@@ -241,6 +244,7 @@ export function transformOtlpToSpans(
       const scopeName = scopeSpans.scope?.name ?? ""
       const scopeVersion = scopeSpans.scope?.version ?? ""
       for (const span of scopeSpans.spans ?? []) {
+        if (isDroppedSpan(scopeName, span.name ?? "")) continue
         const projectId = resolveSpanProjectId(span.attributes ?? [], resourceAttrs, context)
         if (!projectId) {
           rejectedSpans++
