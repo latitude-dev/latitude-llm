@@ -15,6 +15,7 @@ import { FREE_PLANS } from '@latitude-data/core/plans'
 
 import { ImpersonateUserButton } from '../ImpersonateUserButton'
 import { UpdateEmailModal } from '../UpdateEmailModal'
+import { AdminToggle } from '../AdminToggle'
 import { DashboardHeader } from '$/app/(admin)/backoffice/search/_components/DashboardHeader'
 import { DataTable } from '$/app/(admin)/backoffice/search/_components/DataTable'
 import { useRecentSearches } from '$/app/(admin)/backoffice/search/_hooks/useRecentSearches'
@@ -304,6 +305,7 @@ export function UserDashboard({ user }: Props) {
                     Update Email
                   </Button>
                 </div>
+                <AdminToggle userEmail={user.email} isAdmin={user.admin} />
               </div>
             )}
           </div>
