@@ -1,0 +1,56 @@
+[project]
+name = "latitude-telemetry-hermes"
+version = "0.1.0"
+description = "Hermes Agent plugin that streams sessions to Latitude as OTLP traces"
+authors = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
+maintainers = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
+readme = "README.md"
+license = "MIT"
+keywords = ["hermes", "hermes-agent", "telemetry", "otlp", "opentelemetry", "latitude"]
+urls.repository = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/hermes"
+urls.homepage = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/hermes#readme"
+urls.documentation = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/hermes#readme"
+requires-python = ">=3.11, <3.15"
+dependencies = [
+    "certifi>=2024.2.2",
+]
+
+# Hermes discovers pip-installed plugins through this entry-point group and
+# calls the module's `register(ctx)` (see hermes_cli/plugins.py). The entry
+# point name ("latitude") is the plugin key used by `hermes plugins enable`.
+[project.entry-points."hermes_agent.plugins"]
+latitude = "latitude_telemetry_hermes"
+
+[dependency-groups]
+dev = [
+    "pytest==9.0.3",
+    "ruff==0.14.14",
+]
+
+[tool.uv]
+# Refuse to resolve PyPI packages published less than 7 days ago (mirrors the
+# sibling latitude-telemetry package and the JS-side `.npmrc minimum-release-age`).
+exclude-newer = "7d"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+indent-width = 4
+
+[tool.ruff.lint]
+select = ["B", "C4", "E", "F", "I", "W", "UP"]
+ignore = ["F401", "F403", "UP006", "UP035", "UP045", "E402"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+addopts = "-p no:warnings"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/latitude_telemetry_hermes"]

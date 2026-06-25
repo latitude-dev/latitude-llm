@@ -131,6 +131,7 @@
             "group": "Agent harnesses",
             "pages": [
               "telemetry/claude-code",
+              "telemetry/hermes",
               "telemetry/openclaw",
               "telemetry/pi-coding-agent"
             ]
