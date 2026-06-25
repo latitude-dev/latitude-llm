@@ -14,7 +14,7 @@ ensure_env_files() {
   fi
 
   if ! rg "^LAT_ADMIN_DATABASE_URL=" "$REPO_ROOT/.env.development" >/dev/null 2>&1; then
-    printf "\nLAT_ADMIN_DATABASE_URL=postgres://latitude:secret@localhost:5432/latitude_development\n" >> "$REPO_ROOT/.env.development"
+    printf "\nLAT_ADMIN_DATABASE_URL=postgres://latitude:secret@localhost:5432/latitude_development\n" >>"$REPO_ROOT/.env.development"
   fi
 }
 
@@ -34,9 +34,9 @@ ensure_goose() {
 
   local goose_arch
   case "$arch" in
-    amd64) goose_arch="x86_64" ;;
-    arm64) goose_arch="arm64" ;;
-    *) goose_arch="$arch" ;;
+  amd64) goose_arch="x86_64" ;;
+  arm64) goose_arch="arm64" ;;
+  *) goose_arch="$arch" ;;
   esac
 
   local tmp_bin
@@ -50,6 +50,8 @@ main() {
   ensure_env_files
   ensure_goose
   pnpm install --frozen-lockfile
+  pnpm build --filter @latitude-data/telemetry
+  pnpm build --filter @latitude-data/sdk
 }
 
 main "$@"
