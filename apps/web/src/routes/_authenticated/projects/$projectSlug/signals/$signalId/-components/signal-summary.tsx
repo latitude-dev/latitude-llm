@@ -154,6 +154,7 @@ export function SignalSummary({ projectId, signalId }: { readonly projectId: str
           projectId={projectId}
           signalId={signalId}
           signalSource={issue?.source ?? "annotation"}
+          signalOrigin={issue?.origin ?? "system"}
           evaluations={issue?.evaluations ?? []}
           flaggerSlugs={issue?.flaggerSlugs ?? []}
           canMonitorSignal={issue ? issue.resolvedAt === null && issue.ignoredAt === null : false}

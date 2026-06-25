@@ -72,6 +72,7 @@ export const toEvaluationSummaryRecord = (evaluation: Evaluation) => ({
   createdAt: evaluation.createdAt.toISOString(),
   updatedAt: evaluation.updatedAt.toISOString(),
   trigger: evaluation.trigger,
+  settings: evaluation.settings ?? null,
   alignment: evaluation.alignment
     ? {
         evaluationHash: evaluation.alignment.evaluationHash,

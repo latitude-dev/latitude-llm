@@ -282,6 +282,7 @@ const toSignalDetailRecord = (input: {
   name: input.issue.name,
   description: input.issue.description,
   source: input.issue.source,
+  origin: input.issue.origin,
   assigneeId: input.issue.assigneeId,
   priority: input.issue.priority,
   states: input.states,
