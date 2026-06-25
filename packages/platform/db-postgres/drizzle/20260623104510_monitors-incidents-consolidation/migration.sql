@@ -10,18 +10,22 @@ ALTER TABLE "latitude"."monitors" ADD COLUMN "trigger" varchar(32);--> statement
 ALTER TABLE "latitude"."monitors" ADD COLUMN "config" jsonb;--> statement-breakpoint
 ALTER TABLE "latitude"."monitors" ADD COLUMN "severity" varchar(16);--> statement-breakpoint
 ALTER TABLE "latitude"."signals" ADD COLUMN "muted_at" timestamp with time zone;--> statement-breakpoint
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1
-    FROM "latitude"."monitor_alerts" a
-    WHERE a.deleted_at IS NULL AND a.kind NOT LIKE 'issue.%'
-    GROUP BY a.monitor_id
-    HAVING count(*) > 1
-  ) THEN
-    RAISE EXCEPTION 'Cannot consolidate monitors with multiple active non-issue alerts';
-  END IF;
-END $$;--> statement-breakpoint
+CREATE TEMP TABLE "monitors_consolidation_multi_alert_monitors" AS
+SELECT a.monitor_id
+FROM "latitude"."monitor_alerts" a
+WHERE a.deleted_at IS NULL AND a.kind NOT LIKE 'issue.%'
+GROUP BY a.monitor_id
+HAVING count(*) > 1;--> statement-breakpoint
+DELETE FROM "latitude"."incidents" i
+USING "latitude"."monitor_alerts" a, "monitors_consolidation_multi_alert_monitors" m
+WHERE i.monitor_alert_id = a.id AND a.monitor_id = m.monitor_id;--> statement-breakpoint
+DELETE FROM "latitude"."monitor_alerts" a
+USING "monitors_consolidation_multi_alert_monitors" m
+WHERE a.monitor_id = m.monitor_id;--> statement-breakpoint
+DELETE FROM "latitude"."monitors" m
+USING "monitors_consolidation_multi_alert_monitors" multi
+WHERE m.id = multi.monitor_id;--> statement-breakpoint
+DROP TABLE "monitors_consolidation_multi_alert_monitors";--> statement-breakpoint
 WITH fold_alerts AS (
   SELECT DISTINCT ON (a.monitor_id)
     a.id,
@@ -179,6 +183,23 @@ ALTER TABLE "latitude"."incidents" ALTER COLUMN "source_type" SET NOT NULL;--> s
 ALTER TABLE "latitude"."incidents" ALTER COLUMN "source_id" SET NOT NULL;--> statement-breakpoint
 DROP INDEX IF EXISTS "latitude"."signals_project_lifecycle_idx";--> statement-breakpoint
 CREATE INDEX "signals_project_lifecycle_idx" ON "latitude"."signals" ("organization_id","project_id","muted_at","created_at");--> statement-breakpoint
-CREATE INDEX "incidents_open_source_idx" ON "latitude"."incidents" ("source_type","source_id","started_at") WHERE ended_at IS NULL;--> statement-breakpoint
+WITH duplicate_open_incidents AS (
+  SELECT id
+  FROM (
+    SELECT
+      id,
+      row_number() OVER (
+        PARTITION BY organization_id, source_type, source_id
+        ORDER BY started_at DESC, id DESC
+      ) AS duplicate_rank
+    FROM "latitude"."incidents"
+    WHERE ended_at IS NULL
+  ) ranked
+  WHERE duplicate_rank > 1
+)
+DELETE FROM "latitude"."incidents" i
+USING duplicate_open_incidents d
+WHERE i.id = d.id;--> statement-breakpoint
+CREATE UNIQUE INDEX "incidents_open_source_idx" ON "latitude"."incidents" ("organization_id","source_type","source_id") WHERE ended_at IS NULL;--> statement-breakpoint
 CREATE INDEX "monitors_config_filter_set_idx" ON "latitude"."monitors" USING gin (("config"->'filterSet')) WHERE deleted_at IS NULL;--> statement-breakpoint
 ALTER POLICY "alert_incidents_organization_policy" ON "latitude"."incidents" RENAME TO "incidents_organization_policy";

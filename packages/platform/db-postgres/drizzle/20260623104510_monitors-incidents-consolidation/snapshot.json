@@ -6928,6 +6928,13 @@
       "nameExplicit": true,
       "columns": [
         {
+          "value": "organization_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
           "value": "source_type",
           "isExpression": false,
           "asc": true,
@@ -6940,16 +6947,9 @@
           "asc": true,
           "nullsFirst": false,
           "opclass": null
-        },
-        {
-          "value": "started_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
         }
       ],
-      "isUnique": false,
+      "isUnique": true,
       "where": "ended_at IS NULL",
       "with": "",
       "method": "btree",
