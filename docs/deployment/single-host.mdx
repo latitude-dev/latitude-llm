@@ -138,6 +138,37 @@ Every service exposes an HTTP health endpoint, wired as the container healthchec
 
 `docker-stack.yml` publishes `web` (3000), `api` (3001), and `ingest` (3002) on the host over plain HTTP. For anything internet-facing, put a TLS-terminating reverse proxy (Caddy, nginx, Traefik) in front, route your domain(s) to those ports, and set the `LAT_*_URL` / `*_ORIGINS` values to the public `https://` URLs.
 
+## Custom domain
+
+Latitude exposes three public surfaces, each typically on its own hostname behind your [reverse proxy](#tls-and-reverse-proxy): the **web** UI, the **API** (which also hosts the **MCP server**), and **ingest** (OTLP traces). `.env.example` ships these pointing at `localhost`; for a real domain you must update the public URLs **and** the origin allowlists, so that browsers, the API, and MCP clients all agree on where each service lives.
+
+In `.env.production`:
+
+```bash
+# Public URLs — what users, SDKs, and MCP clients connect to
+# (https, terminated by your reverse proxy)
+LAT_WEB_URL=https://app.your-domain.com
+LAT_API_URL=https://api.your-domain.com
+LAT_INGEST_URL=https://ingest.your-domain.com
+
+# Origin allowlists — must contain your web origin, or browser calls to the API
+# are rejected and sign-in fails. Comma-separate to allow several origins.
+LAT_TRUSTED_ORIGINS=https://app.your-domain.com
+LAT_CORS_ALLOWED_ORIGINS=https://app.your-domain.com
+```
+
+Then restart so the services pick up the new values:
+
+```bash
+docker compose --env-file .env.production -f docker-stack.yml up -d
+```
+
+The hostnames are yours to pick — three subdomains (above), three separate domains, or one domain with path routing — as long as each `LAT_*_URL` exactly matches (scheme included) the URL your reverse proxy serves, and the proxy forwards each host to the matching service port. Leave the `LAT_*_PORT` values as their defaults (`3000` / `3001` / `3002`): they're the ports each service listens on internally, not part of the public hostname.
+
+<Note>
+  **MCP clients** connect to `${LAT_API_URL}/v1/mcp` but sign in via OAuth against the **web** origin, so both `LAT_WEB_URL` and `LAT_API_URL` must be correct.
+</Note>
+
 ## Bring your own infrastructure
 
 Each infra service in `docker-stack.yml` is a clearly-marked, independently removable block. To use an existing or managed datastore, comment out its block and point the matching `LAT_*` value at your instance:
