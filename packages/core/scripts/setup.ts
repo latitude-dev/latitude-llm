@@ -1,4 +1,4 @@
-import { and, eq, isNull, ne } from 'drizzle-orm'
+import { and, asc, eq, isNull, ne } from 'drizzle-orm'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import fs from 'fs'
@@ -82,27 +82,44 @@ function getAllPromptlFiles(
   return files
 }
 
-async function migrateExistingUsersToAdmins() {
-  console.log('\n--- Migrating existing users to admins ---')
+/**
+ * Guarantees the instance always has at least one platform admin without
+ * indiscriminately promoting every user. If an admin already exists this is a
+ * no-op; otherwise the oldest user is promoted.
+ */
+async function ensureAtLeastOneAdmin() {
+  console.log('\n--- Ensuring at least one admin exists ---')
 
-  const nonAdminUsers = await database
-    .select()
+  const existingAdmin = await database
+    .select({ id: users.id })
     .from(users)
-    .where(eq(users.admin, false))
+    .where(eq(users.admin, true))
+    .limit(1)
+    .then((rows) => rows[0])
 
-  if (nonAdminUsers.length === 0) {
-    console.log('✓ All users are already admins')
+  if (existingAdmin) {
+    console.log('✓ An admin already exists')
     return
   }
 
-  console.log(`Found ${nonAdminUsers.length} non-admin users to migrate`)
+  const firstUser = await database
+    .select({ id: users.id, email: users.email })
+    .from(users)
+    .orderBy(asc(users.createdAt))
+    .limit(1)
+    .then((rows) => rows[0])
+
+  if (!firstUser) {
+    console.log('✓ No users yet, nothing to promote')
+    return
+  }
 
   await database
     .update(users)
     .set({ admin: true })
-    .where(eq(users.admin, false))
+    .where(eq(users.id, firstUser.id))
 
-  console.log(`✓ Migrated ${nonAdminUsers.length} users to admins`)
+  console.log(`✓ Promoted ${firstUser.email} to admin`)
 }
 
 async function migrateExistingWorkspacesToEnterprise() {
@@ -161,7 +178,7 @@ async function main() {
 
   console.log('Starting setup...')
 
-  await migrateExistingUsersToAdmins()
+  await ensureAtLeastOneAdmin()
   await migrateExistingWorkspacesToEnterprise()
 
   // 1. Find or create user

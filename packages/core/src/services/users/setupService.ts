@@ -12,6 +12,7 @@ import { createMembership } from '../memberships/create'
 import { createProviderApiKey } from '../providerApiKeys'
 import { createWorkspace } from '../workspaces'
 import { createUser } from './createUser'
+import { unsafelyCheckIfAnyUserExists } from '../../queries/users/exists'
 import { UserTitle } from '@latitude-data/constants/users'
 import { createDatasetOnboarding } from '../onboardingResources/createDatasetOnboarding'
 
@@ -46,14 +47,19 @@ export default async function setupService(
     return Result.error(new BadRequestError(NEW_SIGNUPS_DISABLED_MESSAGE))
   }
 
-  return transaction.call(async () => {
+  return transaction.call(async (tx) => {
+    // In enterprise (self-hosted) mode only the first user to set up the
+    // instance becomes a platform admin. Subsequent signups and invited users
+    // default to non-admin.
+    const isFirstUser = !(await unsafelyCheckIfAnyUserExists(tx))
+
     const user = await createUser(
       {
         email,
         name,
         confirmedAt: new Date(),
         title,
-        admin: env.LATITUDE_ENTERPRISE_MODE === true,
+        admin: env.LATITUDE_ENTERPRISE_MODE === true && isFirstUser,
       },
       transaction,
     ).then((r) => r.unwrap())

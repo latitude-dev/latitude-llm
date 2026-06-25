@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import setupService, { NEW_SIGNUPS_DISABLED_MESSAGE } from './setupService'
 import { SubscriptionPlan } from '../../plans'
 import { unsafelyFindUserByEmail } from '../../queries/users/findByEmail'
+import { unsafelyCheckIfAnyUserExists } from '../../queries/users/exists'
 import * as envModule from '@latitude-data/env'
 
 vi.mock('../../events/publisher', () => ({
@@ -11,9 +12,17 @@ vi.mock('../../events/publisher', () => ({
   },
 }))
 
+vi.mock('../../queries/users/exists', () => ({
+  unsafelyCheckIfAnyUserExists: vi.fn(),
+}))
+
+const mockedCheckIfAnyUserExists = vi.mocked(unsafelyCheckIfAnyUserExists)
+
 describe('setupService', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+
+    mockedCheckIfAnyUserExists.mockResolvedValue(false)
 
     vi.spyOn(envModule, 'env', 'get').mockReturnValue({
       ...envModule.env,
@@ -103,11 +112,15 @@ describe('setupService', () => {
   })
 
   describe('when LATITUDE_ENTERPRISE_MODE is true', () => {
-    it('creates user with admin=true and enterprise plan', async () => {
+    beforeEach(() => {
       vi.spyOn(envModule, 'env', 'get').mockReturnValue({
         ...envModule.env,
         LATITUDE_ENTERPRISE_MODE: true,
       } as typeof envModule.env)
+    })
+
+    it('creates the first user with admin=true and enterprise plan', async () => {
+      mockedCheckIfAnyUserExists.mockResolvedValue(false)
 
       const result = await setupService({
         email: 'enterprise@example.com',
@@ -124,6 +137,23 @@ describe('setupService', () => {
       expect(workspace.currentSubscription.plan).toBe(
         SubscriptionPlan.EnterpriseV1,
       )
+    })
+
+    it('does not make subsequent users admin', async () => {
+      mockedCheckIfAnyUserExists.mockResolvedValue(true)
+
+      const result = await setupService({
+        email: 'second-enterprise@example.com',
+        name: 'Second Enterprise User',
+        companyName: 'Second Enterprise Company',
+        defaultProviderName: 'OpenAI',
+        defaultProviderApiKey: 'test-api-key',
+      })
+
+      expect(result.ok).toBe(true)
+      const { user } = result.unwrap()
+
+      expect(user.admin).toBe(false)
     })
   })
 })
