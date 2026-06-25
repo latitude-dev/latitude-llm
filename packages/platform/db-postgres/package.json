@@ -69,7 +69,7 @@
     "drizzle-orm": "catalog:",
     "effect": "catalog:",
     "pg": "catalog:",
-    "stripe": "22.1.0",
+    "stripe": "22.2.0",
     "zod": "catalog:"
   },
   "devDependencies": {
