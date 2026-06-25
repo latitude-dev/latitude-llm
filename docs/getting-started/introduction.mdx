@@ -1,19 +1,19 @@
 ---
 title: Latitude Overview
-description: Understand what Latitude is, why teams use its MIT-licensed open-source platform, and how observability, search, and issues work together.
+description: Understand what Latitude is, why teams use its MIT-licensed open-source platform, and how Observe, Understand, and Refine fit together.
 ---
 
 # Latitude Overview
 
-Latitude is an **open-source, MIT-licensed** platform for improving production AI agents. It helps teams capture real agent traffic, find important behaviours across that traffic, and turn repeated failures into trackable issues.
+Latitude is an **open-source, MIT-licensed** platform for improving production AI agents. It helps teams capture real agent traffic, understand what is going wrong, and turn repeated failures into tracked signals you can monitor and fix.
 
-The core workflow is simple: **observe what happened, search for what matters, track recurring issues, and monitor whether fixes work**.
+The product is organized around the loop you work in every day: **Observe, Understand, Refine**.
 
 <Frame>
   <iframe
     width="100%"
     height="450"
-    src="https://www.youtube.com/embed/QxXjVlnYwps"
+    src="https://www.youtube.com/embed/dSvLSbenabc"
     title="Latitude demo"
     frameborder="0"
     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -21,67 +21,56 @@ The core workflow is simple: **observe what happened, search for what matters, t
   ></iframe>
 </Frame>
 
-## Observability
+## Observe
 
-Latitude starts by collecting agent telemetry. Each interaction becomes a trace made of spans for LLM calls, tool calls, retrieval steps, HTTP requests, and other instrumented work. Related traces can be grouped into sessions so teams can review full multi-turn conversations.
+Latitude starts by collecting agent telemetry. Each interaction becomes a trace made of spans for LLM calls, tool calls, retrieval steps, and other instrumented work. Related traces are grouped into sessions so you can review full multi-turn conversations.
 
-Use observability to inspect:
+Observe lets you inspect:
 
 - traces, spans, and sessions
-- model providers, model names, tokens, latency, cost, and errors
+- model providers, models, tokens, latency, cost, and errors
 - tool calls and nested execution paths
-- users, session ids, tags, metadata, environments, and releases
+- per-user activity in the **Users** view, and per-tool reliability, errors, and latency in the **Tools** view
+- tags, metadata, environments, and releases
 
 <Frame>
   <img
     src="/images/traces/traces-overview.png"
-    alt="Latitude traces page showing captured agent interactions"
+    alt="Latitude showing captured sessions and traces with duration, cost, and token metrics"
   />
 </Frame>
 
-Learn more in [Observability](../observability/overview), [Traces](../observability/traces), and [Sessions](../observability/sessions).
+Learn more in [Observability](../observability/overview), [Sessions](../observability/sessions), [Users](../observability/users), and [Tools](../observability/tools).
 
-## Search
+## Understand
 
-Search lets teams find behaviours across production traces without knowing the exact words users used. Latitude supports semantic search, exact text search, and metadata filters, so you can move from a broad question to a focused set of real examples.
+Once traffic is flowing, Understand helps you find what matters and group it into something you can track.
 
-Use search to find cohorts such as:
-
-- frustrated users
-- tool loops or tool call failures
-- incorrect answers or hallucinations
-- failed purchases, onboarding problems, or domain-specific workflows
-- traces from a specific user, model, release, environment, tag, or metadata value
-
-<Frame>
-  <img
-    src="/images/search/search-results.png"
-    alt="Latitude search results showing traces matched by a behavioural query"
-  />
-</Frame>
-
-Learn more in [Search](../search/overview) and [Saved Searches](../search/saved-searches).
-
-## Issues
-
-Issues are recurring failure patterns discovered from failed signals. Human annotations, built-in flaggers, evaluations, and custom scores can all identify bad behaviour. Latitude groups similar failures into issues with examples, trends, affected users, lifecycle states, and linked monitors.
-
-Use issues to:
-
-- triage new and escalating production problems
-- inspect example traces that explain the failure pattern
-- distinguish noise from problems worth fixing
-- resolve or ignore issues as part of your team workflow
-- generate evaluations that keep monitoring for the same failure mode
+- **Search** finds behaviours across production traces by meaning, exact text, or metadata filters, so you can move from a broad question to a focused set of real examples.
+- **Behaviours** clusters your sessions by meaning into the topics users actually hit, with trends and outcome metrics, so you discover what matters without writing a query.
+- **Signals** are the recurring failure patterns Latitude groups from failed scores. Human annotations, flaggers, evaluations, and custom checks all feed in, and each signal carries example traces, affected-user counts, trends, and a lifecycle your team can act on.
 
 <Frame>
   <img
     src="/images/signals/signals-list.png"
-    alt="Latitude signals page showing recurring production failure patterns"
+    alt="Latitude Signals page showing recurring production failure patterns"
   />
 </Frame>
 
-Learn more in [Signal Discovery](../signals/overview), [Issue Management](../signals/management), and [Evaluations](../evaluations/overview).
+Learn more in [Search](../search/overview), [Behaviours](../search/behaviours), and [Signals](../signals/overview).
+
+## Refine
+
+Refine turns what you learned into guardrails. **Monitors** watch a signal, a saved search, or your raw traffic and open an incident when something needs attention, notifying you in-app, by email, or in Slack. Evaluations generated from a signal keep scoring live traffic, so you catch regressions after you ship a fix.
+
+<Frame>
+  <img
+    src="/images/monitors/monitors-list.png"
+    alt="Latitude Monitors list showing what is being watched and its status"
+  />
+</Frame>
+
+Learn more in [Monitors](../monitors/overview) and [Evaluations](../evaluations/overview).
 
 ## Why Latitude?
 
@@ -90,31 +79,33 @@ AI agents fail in ways that are hard to predict upfront. Logs and dashboards sho
 Latitude is built around that loop:
 
 - **Agent-native telemetry**: inspect multi-step agent behaviour, not just isolated API calls.
-- **Semantic discovery**: search by meaning across production conversations.
-- **Issue-centric workflow**: turn failures into named, trackable problems instead of scattered examples.
-- **Human-aligned monitoring**: use annotations, evaluations, and scores together so automated monitoring stays connected to human judgment.
+- **Semantic discovery**: search by meaning, and let Behaviours surface patterns you did not know to look for.
+- **Signal-centric workflow**: turn failures into named, trackable problems instead of scattered examples.
+- **Human-aligned monitoring**: annotations, evaluations, and scores work together so automated monitoring stays connected to human judgment.
 - **Open source and MIT licensed**: run, inspect, self-host, fork, and contribute to the platform your team depends on.
 
 ## How Latitude is different
 
-Most LLM observability platforms focus on one narrow part of the production quality loop. Tools such as Langfuse, Datadog, Sentry, and PostHog are useful for visibility, evaluation, analytics, or feedback workflows, but they usually leave the work of turning scattered signals into trackable AI-agent issues to the team using them.
+Most LLM observability platforms focus on one narrow part of the production quality loop. Tools such as Langfuse, Datadog, Sentry, and PostHog are useful for visibility, evaluation, analytics, or feedback workflows, but they usually leave the work of turning scattered findings into trackable AI-agent signals to the team using them.
 
-Latitude is built around **LLM signal discovery**. Observability, semantic search, annotations, flaggers, scores, and evaluations are designed to work together automatically so teams can track production agent failures with minimal manual setup.
+Latitude is built around **LLM signal discovery**. Observability, semantic search, behaviours, annotations, flaggers, scores, and evaluations are designed to work together automatically so teams can track production agent failures with minimal manual setup.
 
 The difference is the combined workflow:
 
 - **Flaggers** detect common failure categories automatically, such as frustration, refusal, jailbreaking, tool errors, and empty responses.
-- **Semantic search** helps teams find product-specific behaviours and failure modes across real conversations.
-- **Annotations** turn human review into structured signal that can create or refine issues.
-- **Automatically human-aligned evaluations** convert important issue patterns into monitors that stay connected to human judgment.
-- **Issues** bring those signals together into named, prioritized, lifecycle-managed production failure patterns.
+- **Search and Behaviours** help teams find product-specific failure modes across real conversations.
+- **Annotations** turn human review into structured input that can create or refine signals.
+- **Automatically human-aligned evaluations** convert important signal patterns into monitors that stay connected to human judgment.
+- **Signals** bring those findings together into named, prioritized, lifecycle-managed production failure patterns.
 
-Instead of only showing traces, only running evaluations, or only collecting annotations, Latitude combines these primitives into an issue-centric workflow for finding, tracking, fixing, and monitoring AI agent failures in production.
+Instead of only showing traces, only running evaluations, or only collecting annotations, Latitude combines these primitives into a signal-centric workflow for finding, tracking, fixing, and monitoring AI agent failures in production.
 
 ## Getting started
 
 - [Start tracing](../telemetry/start-tracing): connect your agent and send your first traces to Latitude.
-- [How to use Latitude](./how-to-use-latitude): follow the recommended workflow for finding, tracking, and fixing production issues.
+- [How to use Latitude](./how-to-use-latitude): follow the recommended workflow for finding, tracking, and fixing production signals.
+
+Latitude also exposes everything through an [MCP server](./mcp), so your coding agents can read and manage your workspace, and supports [self-hosting](../deployment/overview) from a single host to a full cluster.
 
 ## Community & contact
 
