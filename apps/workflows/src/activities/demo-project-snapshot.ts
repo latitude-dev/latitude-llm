@@ -4,8 +4,9 @@ import { createReadStream, existsSync, readdirSync, readFileSync } from "node:fs
 import { createInterface } from "node:readline"
 import { fileURLToPath } from "node:url"
 import { createGunzip } from "node:zlib"
-import type { SeedScope } from "@domain/shared/seeding"
+import { type SeedScope, seedTraceHex } from "@domain/shared/seeding"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
+import { demoSeedTraceSlots } from "@platform/db-clickhouse/seeding"
 import type { PostgresClient } from "@platform/db-postgres"
 
 const sourceSnapshotDir = fileURLToPath(new URL("../seed-snapshots/demo-project-derived-v1/", import.meta.url))
@@ -22,8 +23,6 @@ const clickHouseTables = [
   "session_moment_labels",
   "taxonomy_observations",
 ] as const
-
-const DEMO_SNAPSHOT_TRACE_LIMIT = 300
 
 type ClickHouseTable = (typeof clickHouseTables)[number]
 type SnapshotRow = Record<string, unknown>
@@ -44,6 +43,24 @@ const timestampColumnsByTable: Record<ClickHouseTable, readonly string[]> = {
   session_semantic_moments: ["start_time", "end_time", "indexed_at"],
   session_moment_labels: ["indexed_at"],
   taxonomy_observations: ["start_time", "end_time", "indexed_at"],
+}
+
+// Columns holding seeded trace/session ids that the snapshot carries from the
+// SOURCE project verbatim. Single-trace sessions key `session_id` by the trace
+// id, so session columns go through the same trace-id remap; literal session
+// ids (e.g. `seed-large-conversation-1`, `session-anthropic-demo`) aren't in
+// the map and pass through unchanged.
+const remapColumnsByTable: Record<
+  ClickHouseTable,
+  { readonly ids: readonly string[]; readonly idArrays: readonly string[] }
+> = {
+  trace_search_documents: { ids: ["trace_id"], idArrays: [] },
+  message_embeddings: { ids: [], idArrays: [] },
+  trace_message_occurrences: { ids: ["trace_id", "session_id"], idArrays: [] },
+  session_analyses: { ids: ["session_id"], idArrays: ["trace_ids"] },
+  session_semantic_moments: { ids: ["trace_id", "session_id"], idArrays: [] },
+  session_moment_labels: { ids: ["session_id"], idArrays: [] },
+  taxonomy_observations: { ids: ["session_id"], idArrays: [] },
 }
 
 const postgresTimestampColumns = new Set([
@@ -114,6 +131,24 @@ const mapObservationId = (sourceId: unknown, scope: SeedScope): unknown =>
     ? sha256(["snapshot:taxonomy-observation", scope.projectId, sourceId]).slice(0, 32)
     : sourceId
 
+/**
+ * Maps the source project's seeded trace ids onto the target project's. Both
+ * are `seedTraceHex(projectId, traceKey, index)`, so regenerating every demo
+ * trace slot under each project id yields the source→target translation. The
+ * snapshot stores the source project's ids verbatim, while the actual
+ * traces/spans are seeded fresh under the target project — without this the
+ * imported derived data references traces that don't exist.
+ */
+export const buildTraceIdRemap = (sourceProjectId: string, targetProjectId: string): ReadonlyMap<string, string> => {
+  const remap = new Map<string, string>()
+  for (const slot of demoSeedTraceSlots) {
+    const source = seedTraceHex(sourceProjectId, slot.traceKey, slot.index)
+    const target = seedTraceHex(targetProjectId, slot.traceKey, slot.index)
+    if (source !== target) remap.set(source, target)
+  }
+  return remap
+}
+
 const mapClickHouseRow = (
   table: ClickHouseTable,
   row: SnapshotRow,
@@ -122,11 +157,19 @@ const mapClickHouseRow = (
     readonly deltaMs: number
     readonly mapClusterId: (id: string) => string
     readonly mapRunId: (id: string) => string
+    readonly traceIdRemap: ReadonlyMap<string, string>
   },
 ): SnapshotRow => {
   const mapped: SnapshotRow = { ...row, organization_id: input.scope.organizationId, project_id: input.scope.projectId }
   for (const column of timestampColumnsByTable[table])
     mapped[column] = formatClickHouseTimestamp(mapped[column], input.deltaMs)
+
+  const remapId = (value: unknown): unknown =>
+    typeof value === "string" ? (input.traceIdRemap.get(value) ?? value) : value
+  const remapColumns = remapColumnsByTable[table]
+  for (const column of remapColumns.ids) mapped[column] = remapId(mapped[column])
+  for (const column of remapColumns.idArrays)
+    if (Array.isArray(mapped[column])) mapped[column] = (mapped[column] as readonly unknown[]).map(remapId)
 
   if (table === "taxonomy_observations") {
     mapped.observation_id = mapObservationId(mapped.observation_id, input.scope)
@@ -184,18 +227,15 @@ const importClickHouseTable = async (
     readonly deltaMs: number
     readonly mapClusterId: (id: string) => string
     readonly mapRunId: (id: string) => string
+    readonly traceIdRemap: ReadonlyMap<string, string>
     readonly keep?: (row: SnapshotRow) => boolean
     readonly afterKeep?: (row: SnapshotRow) => void
-    readonly limit?: number
   },
 ) => {
   const batch: SnapshotRow[] = []
-  let kept = 0
   for await (const row of readSnapshotRows(`clickhouse/${table}.jsonl.gz`)) {
-    if (input.limit !== undefined && kept >= input.limit) break
     if (input.keep && !input.keep(row)) continue
     input.afterKeep?.(row)
-    kept++
     batch.push(mapClickHouseRow(table, row, input))
     if (batch.length >= 1000) {
       await insertClickHouseRows(client, table, batch.splice(0))
@@ -439,6 +479,7 @@ export const importDemoProjectDerivedSnapshot = async (input: {
   const deltaMs = utcDay(input.scope.timelineAnchor) - utcDay(new Date(manifest.sourceTimelineAnchorIso))
   const mapClusterId = (id: string) => stableId("taxonomy-cluster", id, input.scope)
   const mapRunId = (id: string) => stableId("taxonomy-run", id, input.scope)
+  const traceIdRemap = buildTraceIdRemap(manifest.sourceProjectId, input.scope.projectId)
 
   await resetClickHouse(input.clickhouseClient, input.scope)
   await resetPostgres(input.postgresClient, input.scope)
@@ -479,7 +520,13 @@ export const importDemoProjectDerivedSnapshot = async (input: {
     deltaMs,
     mapClusterId,
     mapRunId,
-    limit: DEMO_SNAPSHOT_TRACE_LIMIT,
+    traceIdRemap,
+    // Import a trace's derived data only if that trace is in the seeded slice
+    // (`traceIdRemap` is keyed by the seeded source trace ids). A blind row
+    // limit here would pick traces spread across the full corpus, most of which
+    // aren't seeded under the target project — leaving their sessions pointing
+    // at non-existent traces (the permanent-skeleton bug this fix exists for).
+    keep: (row) => traceIdRemap.has(String(row.trace_id)),
     afterKeep: (row) => traceIds.add(String(row.trace_id)),
   })
   await importClickHouseTable(input.clickhouseClient, "trace_message_occurrences", {
@@ -487,6 +534,7 @@ export const importDemoProjectDerivedSnapshot = async (input: {
     deltaMs,
     mapClusterId,
     mapRunId,
+    traceIdRemap,
     keep: (row) => traceIds.has(String(row.trace_id)),
     afterKeep: (row) => contentHashes.add(String(row.content_hash)),
   })
@@ -496,6 +544,7 @@ export const importDemoProjectDerivedSnapshot = async (input: {
     deltaMs,
     mapClusterId,
     mapRunId,
+    traceIdRemap,
     keep: (row) => Array.isArray(row.trace_ids) && row.trace_ids.some((traceId) => traceIds.has(String(traceId))),
     afterKeep: (row) => analysisKeys.add(analysisKey(row)),
   })
@@ -504,6 +553,7 @@ export const importDemoProjectDerivedSnapshot = async (input: {
     deltaMs,
     mapClusterId,
     mapRunId,
+    traceIdRemap,
     keep: (row) => traceIds.has(String(row.trace_id)) && analysisKeys.has(analysisKey(row)),
     afterKeep: (row) => momentKeys.add(momentKey(row)),
   })
@@ -512,6 +562,7 @@ export const importDemoProjectDerivedSnapshot = async (input: {
     deltaMs,
     mapClusterId,
     mapRunId,
+    traceIdRemap,
     keep: (row) => momentKeys.has(momentKey(row)),
   })
   await importClickHouseTable(input.clickhouseClient, "taxonomy_observations", {
@@ -519,7 +570,13 @@ export const importDemoProjectDerivedSnapshot = async (input: {
     deltaMs,
     mapClusterId,
     mapRunId,
-    keep: (row) => typeof row.assigned_cluster_id === "string" && row.assigned_cluster_id.length > 0,
-    limit: DEMO_SNAPSHOT_TRACE_LIMIT,
+    traceIdRemap,
+    // Behaviours read sessions from here; keep only observations whose session
+    // is a seeded single-trace session (`session_id` is the trace id), so every
+    // behaviour's "associated session" resolves to a real seeded trace.
+    keep: (row) =>
+      typeof row.assigned_cluster_id === "string" &&
+      row.assigned_cluster_id.length > 0 &&
+      traceIdRemap.has(String(row.session_id)),
   })
 }

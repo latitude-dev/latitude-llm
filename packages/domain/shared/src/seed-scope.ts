@@ -116,6 +116,14 @@ const SPAN_HEX_LENGTH = 16
 const deriveTraceHex = (projectId: string, key: string, index: number): string =>
   sha256(["trace", projectId, key, index]).toString("hex").slice(0, TRACE_HEX_LENGTH)
 
+/**
+ * Project-scoped trace hex, matching `SeedScope.traceHex`, but callable
+ * without building a full scope. The demo-project snapshot import uses it to
+ * regenerate a `(traceKey, index)` slot under two different project ids and so
+ * map the source project's seeded trace ids onto the target project's.
+ */
+export const seedTraceHex = (projectId: string, key: string, index = 0): string => deriveTraceHex(projectId, key, index)
+
 const deriveSpanHex = (projectId: string, key: string, index: number): string =>
   sha256(["span", projectId, key, index]).toString("hex").slice(0, SPAN_HEX_LENGTH)
 

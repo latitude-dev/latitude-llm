@@ -2,7 +2,7 @@ import type { SeedScope } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
 import { isSentinelPresent } from "../idempotency.ts"
-import type { Seeder } from "../types.ts"
+import type { Seeder, TraceSlot } from "../types.ts"
 import type { SpanRow } from "./span-builders.ts"
 
 function formatClickHouseTimestamp(date: Date): string {
@@ -299,3 +299,14 @@ const seedOrphanFragments: Seeder = {
 }
 
 export const orphanFragmentSeeders: readonly Seeder[] = [seedOrphanFragments]
+
+/**
+ * Trace slots for the orphan-fragment traces. Each spec seeds one trace at
+ * the default index 0 via `scope.traceHex(traceKey)`; their LLM span carries a
+ * literal `sessionId`, so the snapshot remap only needs to translate the
+ * (project-scoped) trace ids.
+ */
+export const orphanFragmentTraceSlots: readonly TraceSlot[] = ORPHAN_FRAGMENT_SPECS.map((spec) => ({
+  traceKey: spec.traceKey,
+  index: 0,
+}))
