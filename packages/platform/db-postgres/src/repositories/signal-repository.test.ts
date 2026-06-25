@@ -22,11 +22,13 @@ const signalBase = {
   projectId: projectId as string,
   source: "annotation" as const,
   origin: "system" as const,
+  filters: null,
   centroid: createSignalCentroid(),
   clusteredAt: new Date("2026-04-01T00:00:00.000Z"),
   escalatedAt: null,
   resolvedAt: null,
   ignoredAt: null,
+  deletedAt: null,
   assigneeId: null,
   priority: null,
   createdAt: new Date("2026-04-01T00:00:00.000Z"),
@@ -487,16 +489,16 @@ describe("SignalRepositoryLive", () => {
     )
 
     await database.db.insert(scoresTable).values([
-      ...Array.from({ length: MIN_OCCURRENCES_FOR_VISIBILITY }, (_, index) =>
-        makeCustomScoreRow({
+      ...Array.from({ length: 3 }, (_, index) =>
+        makeAnnotationScoreRow({
           id: `stalemetadatascore00000${index + 1}`,
           projectId: listTestProjectId,
           signalId: staleMetadata.id,
           createdAt: new Date("2026-03-30T10:00:00.000Z"),
         }),
       ),
-      ...Array.from({ length: MIN_OCCURRENCES_FOR_VISIBILITY }, (_, index) =>
-        makeCustomScoreRow({
+      ...Array.from({ length: 3 }, (_, index) =>
+        makeAnnotationScoreRow({
           id: `freshmetadatascore00000${index + 1}`,
           projectId: listTestProjectId,
           signalId: freshMetadata.id,

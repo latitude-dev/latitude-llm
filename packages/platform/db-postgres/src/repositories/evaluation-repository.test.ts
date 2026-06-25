@@ -122,9 +122,11 @@ describe("EvaluationRepositoryLive", () => {
       id: EvaluationId("f".repeat(24)),
       name: "First lifecycle evaluation",
     })
+    // Archived so it can coexist with `first` under the one-active-evaluation-per-signal index.
     const second = makeEvaluation({
       id: EvaluationId("g".repeat(24)),
       name: "Second lifecycle evaluation",
+      archivedAt: new Date("2026-04-01T01:00:00.000Z"),
     })
     const otherSignalEvaluation = makeEvaluation({
       id: EvaluationId("h".repeat(24)),

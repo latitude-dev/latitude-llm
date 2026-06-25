@@ -431,6 +431,73 @@ describe("listSignalsUseCase", () => {
     expect(result.offset).toBe(0)
   })
 
+  it("lists signals that have no occurrences yet in the default view", async () => {
+    const now = new Date("2026-04-10T00:00:00.000Z")
+    const activeSignal = makeSignal({
+      id: SignalId("aaaaaaaaaaaaaaaaaaaaaaaa"),
+      createdAt: new Date("2026-03-20T08:00:00.000Z"),
+      updatedAt: new Date("2026-03-20T08:00:00.000Z"),
+      clusteredAt: new Date("2026-03-20T08:00:00.000Z"),
+    })
+    // A freshly created user signal with no scores yet: no window metric and no
+    // full-history occurrence aggregate.
+    const freshSignal = makeSignal({
+      id: SignalId("ffffffffffffffffffffffff"),
+      origin: "user",
+      source: "custom",
+      centroid: null,
+      clusteredAt: null,
+      createdAt: new Date("2026-04-09T08:00:00.000Z"),
+      updatedAt: new Date("2026-04-09T08:00:00.000Z"),
+    })
+
+    const { repository: signalRepository } = createFakeSignalRepository([activeSignal, freshSignal])
+    const { repository: evaluationRepository } = createEvaluationRepository()
+    const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
+      listSignalWindowMetrics: () =>
+        Effect.succeed([
+          makeWindowMetric({
+            signalId: activeSignal.id,
+            occurrences: 5,
+            firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
+            lastSeenAt: new Date("2026-04-05T00:00:00.000Z"),
+          }),
+        ]),
+      aggregateBySignals: aggregateOccurrences([
+        makeOccurrence({
+          signalId: activeSignal.id,
+          totalOccurrences: 5,
+          firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
+          lastSeenAt: new Date("2026-04-05T00:00:00.000Z"),
+        }),
+      ]),
+    })
+
+    const result = await Effect.runPromise(
+      listSignalsUseCase({ organizationId, projectId, now }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(SignalRepository, signalRepository),
+            Layer.succeed(EvaluationRepository, evaluationRepository),
+            Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+            provideSessionRepository,
+          ),
+        ),
+      ),
+    )
+
+    expect(result.totalCount).toBe(2)
+    const occurrencesById = new Map(result.items.map((issue) => [issue.id, issue.occurrences]))
+    expect(occurrencesById.get(freshSignal.id)).toBe(0)
+    expect(occurrencesById.get(activeSignal.id)).toBe(5)
+    const fresh = result.items.find((issue) => issue.id === freshSignal.id)
+    expect(fresh?.firstSeenAt).toEqual(freshSignal.createdAt)
+    expect(fresh?.lastSeenAt).toEqual(freshSignal.createdAt)
+    expect(fresh?.affectedSessionsPercent).toBe(0)
+  })
+
   it("keeps analytics independent from the lifecycle tab and hydrates only visible signal ids", async () => {
     const now = new Date("2026-04-10T12:00:00.000Z")
     const activeSignal = makeSignal({
