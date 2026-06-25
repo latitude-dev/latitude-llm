@@ -10,7 +10,7 @@ from ..core.serialization import FieldMetadata
 
 class EvaluationAlignmentMetrics(UniversalBaseModel):
     """
-    Alignment metrics computed from the evaluation's confusion matrix.
+    Alignment metrics computed from the evaluation's confusion matrix, or `null` for an unaligned (e.g. raw / deterministic) evaluation.
     """
 
     alignment_metric: typing_extensions.Annotated[float, FieldMetadata(alias="alignmentMetric")] = pydantic.Field()

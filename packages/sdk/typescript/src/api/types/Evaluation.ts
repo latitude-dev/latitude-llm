@@ -9,8 +9,8 @@ export interface Evaluation {
     name: string;
     /** Generated description of the evaluation. */
     description: string;
-    /** ISO-8601 timestamp at which the evaluation was last realigned. */
-    alignedAt: string;
+    /** ISO-8601 timestamp at which the evaluation was last realigned, or `null` if never aligned. */
+    alignedAt?: string | undefined;
     /** ISO-8601 timestamp at which the evaluation was archived, or `null`. */
     archivedAt?: string | undefined;
     /** ISO-8601 timestamp at which the evaluation was deleted, or `null`. */
@@ -21,5 +21,5 @@ export interface Evaluation {
     updatedAt: string;
     /** Sampling rate as a percentage in `[0, 100]`. `0` means the evaluation is paused. */
     sampling: number;
-    alignment: LatitudeApi.EvaluationAlignmentMetrics;
+    alignment?: LatitudeApi.EvaluationAlignmentMetrics | undefined;
 }

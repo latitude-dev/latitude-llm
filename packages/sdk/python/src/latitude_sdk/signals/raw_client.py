@@ -11,11 +11,14 @@ from ..core.http_response import AsyncHttpResponse, HttpResponse
 from ..core.jsonable_encoder import jsonable_encoder
 from ..core.pydantic_utilities import parse_obj_as
 from ..core.request_options import RequestOptions
+from ..core.serialization import convert_and_respect_annotation_metadata
 from ..errors.bad_request_error import BadRequestError
 from ..errors.not_found_error import NotFoundError
 from ..errors.unauthorized_error import UnauthorizedError
+from ..types.create_signal_response import CreateSignalResponse
 from ..types.error import Error
 from ..types.export_signals_response import ExportSignalsResponse
+from ..types.filter_condition import FilterCondition
 from ..types.monitor_signal_response import MonitorSignalResponse
 from ..types.paginated_signals import PaginatedSignals
 from ..types.paginated_traces import PaginatedTraces
@@ -23,6 +26,9 @@ from ..types.signal_analytics_response import SignalAnalyticsResponse
 from ..types.signal_detail import SignalDetail
 from ..types.signal_histogram import SignalHistogram
 from ..types.signals_lifecycle_response import SignalsLifecycleResponse
+from ..types.update_signal_response import UpdateSignalResponse
+from .types.create_signal_body_evaluation import CreateSignalBodyEvaluation
+from .types.create_signal_body_priority import CreateSignalBodyPriority
 from .types.export_signals_body_lifecycle_group import ExportSignalsBodyLifecycleGroup
 from .types.signals_list_request_lifecycle_group import SignalsListRequestLifecycleGroup
 from .types.signals_list_request_sort_by import SignalsListRequestSortBy
@@ -153,51 +159,76 @@ class RawSignalsClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    def analytics(
+    def create(
         self,
         project_slug: str,
         *,
-        from_iso: typing.Optional[dt.datetime] = None,
-        to_iso: typing.Optional[dt.datetime] = None,
+        name: str,
+        description: str,
+        evaluation: CreateSignalBodyEvaluation,
+        priority: typing.Optional[CreateSignalBodyPriority] = OMIT,
+        filters: typing.Optional[typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]]] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
-    ) -> HttpResponse[SignalAnalyticsResponse]:
+    ) -> HttpResponse[CreateSignalResponse]:
         """
-        Returns signal analytics for the project: counts of ongoing, new, escalating, regressed, and resolved signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
+        Creates a user-defined signal with its membership detector — a judge from `settings`, or a raw `script` (advanced). The script is validated at save time (422 on a compile error). Deterministic scripts are backfilled over recent history; judges detect forward from creation.
 
         Parameters
         ----------
         project_slug : str
             Project slug (human-readable identifier)
 
-        from_iso : typing.Optional[dt.datetime]
-            Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.
+        name : str
+            Human-readable name. Used to derive the slug.
 
-        to_iso : typing.Optional[dt.datetime]
-            Upper bound (inclusive) of the time range. Defaults to now.
+        description : str
+            What this signal captures.
+
+        evaluation : CreateSignalBodyEvaluation
+            The signal's membership detector. Provide exactly one of `settings` or `script`.
+
+        priority : typing.Optional[CreateSignalBodyPriority]
+            Manual triage priority. Null/omitted leaves it unset.
+
+        filters : typing.Optional[typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]]]
+            Row-local pre-gate restricting which traces the evaluation runs against. Omitted = all traces.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
         Returns
         -------
-        HttpResponse[SignalAnalyticsResponse]
-            Signal analytics
+        HttpResponse[CreateSignalResponse]
+            Signal created
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/analytics",
-            method="GET",
-            params={
-                "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
-                "toIso": serialize_datetime(to_iso) if to_iso is not None else None,
+            f"v1/projects/{jsonable_encoder(project_slug)}/signals",
+            method="POST",
+            json={
+                "name": name,
+                "description": description,
+                "priority": priority,
+                "filters": convert_and_respect_annotation_metadata(
+                    object_=filters,
+                    annotation=typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]],
+                    direction="write",
+                ),
+                "evaluation": convert_and_respect_annotation_metadata(
+                    object_=evaluation, annotation=CreateSignalBodyEvaluation, direction="write"
+                ),
+            },
+            headers={
+                "content-type": "application/json",
             },
             request_options=request_options,
+            omit=OMIT,
         )
         try:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
-                    SignalAnalyticsResponse,
+                    CreateSignalResponse,
                     parse_obj_as(
-                        type_=SignalAnalyticsResponse,  # type: ignore
+                        type_=CreateSignalResponse,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -273,6 +304,231 @@ class RawSignalsClient:
                     SignalDetail,
                     parse_obj_as(
                         type_=SignalDetail,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def delete(
+        self, project_slug: str, signal_slug: str, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> HttpResponse[None]:
+        """
+        Soft-deletes a signal and archives its detector so it stops matching new traces. Existing scores are retained but excluded from reads; the slug becomes reusable.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_slug : str
+            Signal slug.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[None]
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/projects/{jsonable_encoder(project_slug)}/signals/{jsonable_encoder(signal_slug)}",
+            method="DELETE",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                return HttpResponse(response=_response, data=None)
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def update(
+        self,
+        project_slug: str,
+        signal_slug: str,
+        *,
+        name: typing.Optional[str] = OMIT,
+        description: typing.Optional[str] = OMIT,
+        filters: typing.Optional[typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]]] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[UpdateSignalResponse]:
+        """
+        Updates a signal's name, description, and evaluation pre-gate `filters`. Filter changes apply forward-only — existing membership is never re-evaluated. The slug is stable.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_slug : str
+            Signal slug.
+
+        name : typing.Optional[str]
+            New name. Omitted leaves it unchanged.
+
+        description : typing.Optional[str]
+            New description. Omitted leaves it unchanged.
+
+        filters : typing.Optional[typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]]]
+            New evaluation pre-gate. Explicit `null` clears it; omitted leaves it unchanged.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[UpdateSignalResponse]
+            Signal updated
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/projects/{jsonable_encoder(project_slug)}/signals/{jsonable_encoder(signal_slug)}",
+            method="PATCH",
+            json={
+                "name": name,
+                "description": description,
+                "filters": convert_and_respect_annotation_metadata(
+                    object_=filters,
+                    annotation=typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]],
+                    direction="write",
+                ),
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    UpdateSignalResponse,
+                    parse_obj_as(
+                        type_=UpdateSignalResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def analytics(
+        self,
+        project_slug: str,
+        *,
+        from_iso: typing.Optional[dt.datetime] = None,
+        to_iso: typing.Optional[dt.datetime] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[SignalAnalyticsResponse]:
+        """
+        Returns signal analytics for the project: counts of ongoing, new, escalating, regressed, and resolved signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        from_iso : typing.Optional[dt.datetime]
+            Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.
+
+        to_iso : typing.Optional[dt.datetime]
+            Upper bound (inclusive) of the time range. Defaults to now.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SignalAnalyticsResponse]
+            Signal analytics
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/projects/{jsonable_encoder(project_slug)}/signals/analytics",
+            method="GET",
+            params={
+                "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
+                "toIso": serialize_datetime(to_iso) if to_iso is not None else None,
+            },
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SignalAnalyticsResponse,
+                    parse_obj_as(
+                        type_=SignalAnalyticsResponse,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -1173,51 +1429,76 @@ class AsyncRawSignalsClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    async def analytics(
+    async def create(
         self,
         project_slug: str,
         *,
-        from_iso: typing.Optional[dt.datetime] = None,
-        to_iso: typing.Optional[dt.datetime] = None,
+        name: str,
+        description: str,
+        evaluation: CreateSignalBodyEvaluation,
+        priority: typing.Optional[CreateSignalBodyPriority] = OMIT,
+        filters: typing.Optional[typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]]] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
-    ) -> AsyncHttpResponse[SignalAnalyticsResponse]:
+    ) -> AsyncHttpResponse[CreateSignalResponse]:
         """
-        Returns signal analytics for the project: counts of ongoing, new, escalating, regressed, and resolved signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
+        Creates a user-defined signal with its membership detector — a judge from `settings`, or a raw `script` (advanced). The script is validated at save time (422 on a compile error). Deterministic scripts are backfilled over recent history; judges detect forward from creation.
 
         Parameters
         ----------
         project_slug : str
             Project slug (human-readable identifier)
 
-        from_iso : typing.Optional[dt.datetime]
-            Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.
+        name : str
+            Human-readable name. Used to derive the slug.
 
-        to_iso : typing.Optional[dt.datetime]
-            Upper bound (inclusive) of the time range. Defaults to now.
+        description : str
+            What this signal captures.
+
+        evaluation : CreateSignalBodyEvaluation
+            The signal's membership detector. Provide exactly one of `settings` or `script`.
+
+        priority : typing.Optional[CreateSignalBodyPriority]
+            Manual triage priority. Null/omitted leaves it unset.
+
+        filters : typing.Optional[typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]]]
+            Row-local pre-gate restricting which traces the evaluation runs against. Omitted = all traces.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
         Returns
         -------
-        AsyncHttpResponse[SignalAnalyticsResponse]
-            Signal analytics
+        AsyncHttpResponse[CreateSignalResponse]
+            Signal created
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/analytics",
-            method="GET",
-            params={
-                "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
-                "toIso": serialize_datetime(to_iso) if to_iso is not None else None,
+            f"v1/projects/{jsonable_encoder(project_slug)}/signals",
+            method="POST",
+            json={
+                "name": name,
+                "description": description,
+                "priority": priority,
+                "filters": convert_and_respect_annotation_metadata(
+                    object_=filters,
+                    annotation=typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]],
+                    direction="write",
+                ),
+                "evaluation": convert_and_respect_annotation_metadata(
+                    object_=evaluation, annotation=CreateSignalBodyEvaluation, direction="write"
+                ),
+            },
+            headers={
+                "content-type": "application/json",
             },
             request_options=request_options,
+            omit=OMIT,
         )
         try:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
-                    SignalAnalyticsResponse,
+                    CreateSignalResponse,
                     parse_obj_as(
-                        type_=SignalAnalyticsResponse,  # type: ignore
+                        type_=CreateSignalResponse,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -1293,6 +1574,231 @@ class AsyncRawSignalsClient:
                     SignalDetail,
                     parse_obj_as(
                         type_=SignalDetail,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def delete(
+        self, project_slug: str, signal_slug: str, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> AsyncHttpResponse[None]:
+        """
+        Soft-deletes a signal and archives its detector so it stops matching new traces. Existing scores are retained but excluded from reads; the slug becomes reusable.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_slug : str
+            Signal slug.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[None]
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/projects/{jsonable_encoder(project_slug)}/signals/{jsonable_encoder(signal_slug)}",
+            method="DELETE",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                return AsyncHttpResponse(response=_response, data=None)
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def update(
+        self,
+        project_slug: str,
+        signal_slug: str,
+        *,
+        name: typing.Optional[str] = OMIT,
+        description: typing.Optional[str] = OMIT,
+        filters: typing.Optional[typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]]] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[UpdateSignalResponse]:
+        """
+        Updates a signal's name, description, and evaluation pre-gate `filters`. Filter changes apply forward-only — existing membership is never re-evaluated. The slug is stable.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_slug : str
+            Signal slug.
+
+        name : typing.Optional[str]
+            New name. Omitted leaves it unchanged.
+
+        description : typing.Optional[str]
+            New description. Omitted leaves it unchanged.
+
+        filters : typing.Optional[typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]]]
+            New evaluation pre-gate. Explicit `null` clears it; omitted leaves it unchanged.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[UpdateSignalResponse]
+            Signal updated
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/projects/{jsonable_encoder(project_slug)}/signals/{jsonable_encoder(signal_slug)}",
+            method="PATCH",
+            json={
+                "name": name,
+                "description": description,
+                "filters": convert_and_respect_annotation_metadata(
+                    object_=filters,
+                    annotation=typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]],
+                    direction="write",
+                ),
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    UpdateSignalResponse,
+                    parse_obj_as(
+                        type_=UpdateSignalResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def analytics(
+        self,
+        project_slug: str,
+        *,
+        from_iso: typing.Optional[dt.datetime] = None,
+        to_iso: typing.Optional[dt.datetime] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[SignalAnalyticsResponse]:
+        """
+        Returns signal analytics for the project: counts of ongoing, new, escalating, regressed, and resolved signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        from_iso : typing.Optional[dt.datetime]
+            Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.
+
+        to_iso : typing.Optional[dt.datetime]
+            Upper bound (inclusive) of the time range. Defaults to now.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SignalAnalyticsResponse]
+            Signal analytics
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/projects/{jsonable_encoder(project_slug)}/signals/analytics",
+            method="GET",
+            params={
+                "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
+                "toIso": serialize_datetime(to_iso) if to_iso is not None else None,
+            },
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SignalAnalyticsResponse,
+                    parse_obj_as(
+                        type_=SignalAnalyticsResponse,  # type: ignore
                         object_=_response.json(),
                     ),
                 )

@@ -7,12 +7,22 @@ from importlib import import_module
 
 if typing.TYPE_CHECKING:
     from .types import (
+        CreateSignalBodyEvaluation,
+        CreateSignalBodyEvaluationScript,
+        CreateSignalBodyEvaluationSettings,
+        CreateSignalBodyEvaluationSettingsSettings,
+        CreateSignalBodyPriority,
         ExportSignalsBodyLifecycleGroup,
         SignalsListRequestLifecycleGroup,
         SignalsListRequestSortBy,
         SignalsListRequestSortDirection,
     )
 _dynamic_imports: typing.Dict[str, str] = {
+    "CreateSignalBodyEvaluation": ".types",
+    "CreateSignalBodyEvaluationScript": ".types",
+    "CreateSignalBodyEvaluationSettings": ".types",
+    "CreateSignalBodyEvaluationSettingsSettings": ".types",
+    "CreateSignalBodyPriority": ".types",
     "ExportSignalsBodyLifecycleGroup": ".types",
     "SignalsListRequestLifecycleGroup": ".types",
     "SignalsListRequestSortBy": ".types",
@@ -42,6 +52,11 @@ def __dir__():
 
 
 __all__ = [
+    "CreateSignalBodyEvaluation",
+    "CreateSignalBodyEvaluationScript",
+    "CreateSignalBodyEvaluationSettings",
+    "CreateSignalBodyEvaluationSettingsSettings",
+    "CreateSignalBodyPriority",
     "ExportSignalsBodyLifecycleGroup",
     "SignalsListRequestLifecycleGroup",
     "SignalsListRequestSortBy",

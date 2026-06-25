@@ -69,6 +69,7 @@ if typing.TYPE_CHECKING:
     from .create_monitor_alert_body_kind import CreateMonitorAlertBodyKind
     from .create_monitor_alert_body_severity import CreateMonitorAlertBodySeverity
     from .create_score_body import CreateScoreBody
+    from .create_signal_response import CreateSignalResponse
     from .custom_score_response import CustomScoreResponse
     from .dataset import Dataset
     from .dataset_row import DatasetRow
@@ -238,6 +239,7 @@ if typing.TYPE_CHECKING:
     from .traces_ref import TracesRef, TracesRef_Filters, TracesRef_Ids
     from .traces_ref_filters import TracesRefFilters
     from .traces_ref_ids import TracesRefIds
+    from .update_signal_response import UpdateSignalResponse
     from .user_activity_bucket import UserActivityBucket
     from .user_activity_response import UserActivityResponse
     from .user_behaviour import UserBehaviour
@@ -314,6 +316,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "CreateMonitorAlertBodyKind": ".create_monitor_alert_body_kind",
     "CreateMonitorAlertBodySeverity": ".create_monitor_alert_body_severity",
     "CreateScoreBody": ".create_score_body",
+    "CreateSignalResponse": ".create_signal_response",
     "CustomScoreResponse": ".custom_score_response",
     "Dataset": ".dataset",
     "DatasetRow": ".dataset_row",
@@ -487,6 +490,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "TracesRefIds": ".traces_ref_ids",
     "TracesRef_Filters": ".traces_ref",
     "TracesRef_Ids": ".traces_ref",
+    "UpdateSignalResponse": ".update_signal_response",
     "UserActivityBucket": ".user_activity_bucket",
     "UserActivityResponse": ".user_activity_response",
     "UserBehaviour": ".user_behaviour",
@@ -587,6 +591,7 @@ __all__ = [
     "CreateMonitorAlertBodyKind",
     "CreateMonitorAlertBodySeverity",
     "CreateScoreBody",
+    "CreateSignalResponse",
     "CustomScoreResponse",
     "Dataset",
     "DatasetRow",
@@ -760,6 +765,7 @@ __all__ = [
     "TracesRefIds",
     "TracesRef_Filters",
     "TracesRef_Ids",
+    "UpdateSignalResponse",
     "UserActivityBucket",
     "UserActivityResponse",
     "UserBehaviour",
