@@ -1,9 +1,16 @@
 import type { MomentKind } from "@domain/conversation-intelligence"
 import type { FilterSet } from "@domain/shared"
-import { CopyableText, Icon, ProviderIcon, Status, type TabOption, Tabs, Text, Tooltip } from "@repo/ui"
+import { Button, CopyableText, Icon, ProviderIcon, Status, type TabOption, Tabs, Text, Tooltip } from "@repo/ui"
 import { formatCount, relativeTime } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { GroupIcon, ListTreeIcon, MessageSquareIcon, MessagesSquareIcon, ShieldAlertIcon } from "lucide-react"
+import {
+  DatabaseIcon,
+  GroupIcon,
+  ListTreeIcon,
+  MessageSquareIcon,
+  MessagesSquareIcon,
+  ShieldAlertIcon,
+} from "lucide-react"
 import { use, useEffect, useMemo, useState } from "react"
 import { useAnnotationsBySession } from "../../../../../../domains/annotations/annotations.collection.ts"
 import { deriveSessionStatus, useSessionSignals } from "../../../../../../domains/sessions/sessions.collection.ts"
@@ -11,6 +18,7 @@ import type { SessionDetailRecord } from "../../../../../../domains/sessions/ses
 import { TraceScopeContext } from "../../../../../../domains/traces/trace-scope.tsx"
 import type { TraceRecord } from "../../../../../../domains/traces/traces.functions.ts"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
+import { AddToDatasetModal } from "../add-to-dataset-modal.tsx"
 import type { OpenTraceOptions } from "../session-detail-drawer.tsx"
 import { useSpanFilters } from "../trace-detail-drawer/tabs/spans-tab/use-span-filters.ts"
 import { SpansTab } from "../trace-detail-drawer/tabs/spans-tab.tsx"
@@ -77,6 +85,11 @@ export function SessionSlot({
   readonly focusMomentId?: string | undefined
 }) {
   const traceIds = session.traceIds
+  const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
+  const datasetSelection = useMemo(
+    () => ({ mode: "selected" as const, rowIds: [...traceIds] }),
+    [traceIds],
+  )
 
   // Annotations and issues are analysis/feedback features the sandbox doesn't
   // produce — both off under a sandbox scope: hide the tabs and skip the fetches.
@@ -217,59 +230,67 @@ export function SessionSlot({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 flex-col gap-5 border-b px-6 py-4">
-        <div className="flex flex-col gap-1">
-          <div className="flex flex-row items-center gap-2">
-            <Text.H4 ellipsis noWrap>
-              {title}
-            </Text.H4>
-            {session.providers.length > 0 && (
-              <div className="flex items-center gap-1">
-                {session.providers.map((p) => (
-                  <Tooltip
-                    key={p}
-                    asChild
-                    trigger={
-                      <span>
-                        <ProviderIcon provider={p} size="sm" />
-                      </span>
-                    }
+        <div className="flex flex-row items-start justify-between gap-4">
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className="flex flex-row items-center gap-2">
+              <Text.H4 ellipsis noWrap>
+                {title}
+              </Text.H4>
+              {session.providers.length > 0 && (
+                <div className="flex items-center gap-1">
+                  {session.providers.map((p) => (
+                    <Tooltip
+                      key={p}
+                      asChild
+                      trigger={
+                        <span>
+                          <ProviderIcon provider={p} size="sm" />
+                        </span>
+                      }
+                    >
+                      {p}
+                    </Tooltip>
+                  ))}
+                </div>
+              )}
+              <SessionStatusPill status={status} lastActivity={relativeTime(new Date(session.endTime))} />
+              {session.errorCount > 0 ? (
+                singleTrace ? (
+                  <button
+                    type="button"
+                    onClick={navigateToSpansWithErrors}
+                    aria-label={`View ${session.errorCount} errored spans`}
+                    className="inline-flex shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
-                    {p}
-                  </Tooltip>
-                ))}
-              </div>
-            )}
-            <SessionStatusPill status={status} lastActivity={relativeTime(new Date(session.endTime))} />
-            {session.errorCount > 0 ? (
-              singleTrace ? (
-                <button
-                  type="button"
-                  onClick={navigateToSpansWithErrors}
-                  aria-label={`View ${session.errorCount} errored spans`}
-                  className="inline-flex shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                >
+                    <Status
+                      variant="destructive"
+                      indicator={false}
+                      label={`${formatCount(session.errorCount)} ${session.errorCount === 1 ? "error" : "errors"}`}
+                      className="cursor-pointer transition-opacity hover:opacity-80"
+                    />
+                  </button>
+                ) : (
                   <Status
                     variant="destructive"
                     indicator={false}
                     label={`${formatCount(session.errorCount)} ${session.errorCount === 1 ? "error" : "errors"}`}
-                    className="cursor-pointer transition-opacity hover:opacity-80"
                   />
-                </button>
-              ) : (
-                <Status
-                  variant="destructive"
-                  indicator={false}
-                  label={`${formatCount(session.errorCount)} ${session.errorCount === 1 ? "error" : "errors"}`}
-                />
-              )
-            ) : null}
+                )
+              ) : null}
+            </div>
+            <CopyableText
+              value={session.sessionId}
+              displayValue={session.sessionId.slice(0, 7)}
+              size="sm"
+              tooltip="Copy session ID"
+            />
           </div>
-          <CopyableText
-            value={session.sessionId}
-            displayValue={session.sessionId.slice(0, 7)}
-            size="sm"
-            tooltip="Copy session ID"
-          />
+          {!isSandbox && traceIds.length > 0 ? (
+            <Button variant="outline" size="sm" className="shrink-0" onClick={() => setAddToDatasetOpen(true)}>
+              <Icon icon={DatabaseIcon} size="sm" />
+              Add to dataset
+            </Button>
+          ) : null}
         </div>
         <Tabs options={tabs} active={effectiveActiveTab} onSelect={selectTab} wrap />
       </div>
@@ -328,6 +349,17 @@ export function SessionSlot({
           </div>
         )}
       </div>
+
+      {!isSandbox && traceIds.length > 0 ? (
+        <AddToDatasetModal
+          open={addToDatasetOpen}
+          onOpenChange={setAddToDatasetOpen}
+          projectId={projectId}
+          selection={datasetSelection}
+          selectedCount={traceIds.length}
+          onSuccess={() => setAddToDatasetOpen(false)}
+        />
+      ) : null}
     </div>
   )
 }
