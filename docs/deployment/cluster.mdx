@@ -179,6 +179,36 @@ ingress:
 
 Keep the `config.*Url` values on `https://` — they feed the `LAT_*_URL` and CORS/trusted-origin settings.
 
+## Custom domain
+
+Latitude exposes three public surfaces — the **web** UI, the **API** (which also hosts the **MCP server**), and **ingest** (OTLP traces). You set them through `config.webUrl`, `config.apiUrl`, and `config.ingestUrl`; the [Ingress](#tls-and-reverse-proxy) derives its three hosts from those same values, and the chart wires the rest of the URL contract for you — `LAT_TRUSTED_ORIGINS` and `LAT_CORS_ALLOWED_ORIGINS` are derived from `config.webUrl`.
+
+So a standard three-host setup needs nothing beyond getting those three URLs right and pointing DNS at the Ingress:
+
+```yaml
+config:
+  webUrl: https://app.your-domain.com
+  apiUrl: https://api.your-domain.com
+  ingestUrl: https://ingest.your-domain.com
+```
+
+Each must be the real, externally-resolvable `https://` URL (scheme included): the chart feeds them into the in-cluster `LAT_*_URL`, CORS, and trusted-origin settings and routes the matching Ingress host to each Service. The `LAT_*_PORT` values stay cluster-internal — the Ingress maps your hostnames to them, so you leave them unchanged. Add the certificates as shown under [TLS and reverse proxy](#tls-and-reverse-proxy).
+
+If you serve the web UI from more than one origin (e.g. a vanity host alongside the canonical one), override the allowlists explicitly through `config.extraEnv`:
+
+```yaml
+config:
+  extraEnv:
+    - name: LAT_TRUSTED_ORIGINS
+      value: https://app.your-domain.com,https://latitude.your-domain.com
+    - name: LAT_CORS_ALLOWED_ORIGINS
+      value: https://app.your-domain.com,https://latitude.your-domain.com
+```
+
+<Note>
+  **MCP clients** connect to `${apiUrl}/v1/mcp` but sign in via OAuth against the **web** origin, so both `config.apiUrl` and `config.webUrl` must be correct and externally reachable (Ingress + TLS).
+</Note>
+
 ## Bring your own infrastructure
 
 Every bundled dependency is an independent toggle: set `<dep>.enabled: false` and fill its `external:` block, and the chart wires the right `LAT_*` configuration at your existing or managed instance instead of deploying the bundle.

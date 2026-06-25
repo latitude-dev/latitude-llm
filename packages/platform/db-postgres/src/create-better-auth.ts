@@ -97,7 +97,7 @@ export interface StripePlanConfig {
 }
 
 export const createBetterAuth = (config: BetterAuthConfig) => {
-  const baseUrl = config.baseUrl ?? Effect.runSync(parseEnv("LAT_BETTER_AUTH_URL", "string", "http://localhost:3000"))
+  const baseUrl = config.baseUrl ?? Effect.runSync(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000"))
   const basePath = config.basePath ?? "/auth"
   const secret = config.secret ?? Effect.runSync(parseEnv("LAT_BETTER_AUTH_SECRET", "string"))
 
