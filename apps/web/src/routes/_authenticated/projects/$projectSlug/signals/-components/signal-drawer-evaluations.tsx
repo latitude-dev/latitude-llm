@@ -52,11 +52,15 @@ function AlignmentTooltipContent({
   readonly evaluation: EvaluationSummaryRecord
   readonly onOpenStats: () => void
 }) {
-  const confusionMatrix = evaluation.alignment.confusionMatrix
+  const alignment = evaluation.alignment
+  if (!alignment) return null
+  const confusionMatrix = alignment.confusionMatrix
 
   return (
     <div className="flex flex-col">
-      <Text.H6 color="foregroundMuted">Aligned at {new Date(evaluation.alignedAt).toLocaleString()}</Text.H6>
+      {evaluation.alignedAt ? (
+        <Text.H6 color="foregroundMuted">Aligned at {new Date(evaluation.alignedAt).toLocaleString()}</Text.H6>
+      ) : null}
       <Button
         variant="link"
         className="w-auto h-auto p-0"
@@ -484,22 +488,26 @@ export function SignalDrawerEvaluations({
             <SummaryField
               label="Alignment"
               value={
-                <Tooltip
-                  asChild
-                  trigger={
-                    <span className="inline-flex">
-                      <Status
-                        variant={getAlignmentVariant(primaryEvaluation.alignment.metrics.alignmentMetric)}
-                        label={formatPercent(primaryEvaluation.alignment.metrics.alignmentMetric)}
-                      />
-                    </span>
-                  }
-                >
-                  <AlignmentTooltipContent
-                    evaluation={primaryEvaluation}
-                    onOpenStats={() => setStatsEvaluation(primaryEvaluation)}
-                  />
-                </Tooltip>
+                primaryEvaluation.alignment ? (
+                  <Tooltip
+                    asChild
+                    trigger={
+                      <span className="inline-flex">
+                        <Status
+                          variant={getAlignmentVariant(primaryEvaluation.alignment.metrics.alignmentMetric)}
+                          label={formatPercent(primaryEvaluation.alignment.metrics.alignmentMetric)}
+                        />
+                      </span>
+                    }
+                  >
+                    <AlignmentTooltipContent
+                      evaluation={primaryEvaluation}
+                      onOpenStats={() => setStatsEvaluation(primaryEvaluation)}
+                    />
+                  </Tooltip>
+                ) : (
+                  <Text.H6 color="foregroundMuted">Not aligned</Text.H6>
+                )
               }
             />
             <SummaryField

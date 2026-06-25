@@ -11,7 +11,8 @@ type AlignmentStat = {
 // The headline "alignment metric" surfaced on the badge is intentionally listed
 // first and flagged so readers can see which individual stat the badge reflects.
 const buildStats = (evaluation: EvaluationSummaryRecord): readonly AlignmentStat[] => {
-  const metrics = evaluation.alignment.metrics
+  const metrics = evaluation.alignment?.metrics
+  if (!metrics) return []
 
   return [
     {
@@ -64,7 +65,8 @@ const buildStats = (evaluation: EvaluationSummaryRecord): readonly AlignmentStat
 }
 
 function ConfusionMatrixBlock({ evaluation }: { readonly evaluation: EvaluationSummaryRecord }) {
-  const confusionMatrix = evaluation.alignment.confusionMatrix
+  const confusionMatrix = evaluation.alignment?.confusionMatrix
+  if (!confusionMatrix) return null
 
   return (
     <div className="flex flex-col gap-2">
@@ -138,7 +140,7 @@ export function AlignmentStatsModal({
       title="Alignment stats"
       description="All metrics derivable from the stored confusion matrix. Balanced accuracy is the main alignment metric used in the system, the rest are exposed here for reference."
     >
-      {evaluation !== null ? (
+      {evaluation && evaluation.alignment ? (
         <div className="flex flex-col gap-6">
           <ConfusionMatrixBlock evaluation={evaluation} />
           <div className="flex flex-col">
@@ -147,6 +149,8 @@ export function AlignmentStatsModal({
             ))}
           </div>
         </div>
+      ) : evaluation ? (
+        <Text.H5 color="foregroundMuted">This evaluation has not been aligned yet.</Text.H5>
       ) : null}
     </Modal>
   )

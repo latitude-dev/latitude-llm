@@ -66,17 +66,19 @@ export const toEvaluationSummaryRecord = (evaluation: Evaluation) => ({
   signalId: evaluation.signalId,
   name: evaluation.name,
   description: evaluation.description,
-  alignedAt: evaluation.alignedAt.toISOString(),
+  alignedAt: evaluation.alignedAt?.toISOString() ?? null,
   archivedAt: evaluation.archivedAt?.toISOString() ?? null,
   deletedAt: evaluation.deletedAt?.toISOString() ?? null,
   createdAt: evaluation.createdAt.toISOString(),
   updatedAt: evaluation.updatedAt.toISOString(),
   trigger: evaluation.trigger,
-  alignment: {
-    evaluationHash: evaluation.alignment.evaluationHash,
-    confusionMatrix: evaluation.alignment.confusionMatrix,
-    metrics: deriveEvaluationAlignmentMetrics(evaluation.alignment.confusionMatrix),
-  },
+  alignment: evaluation.alignment
+    ? {
+        evaluationHash: evaluation.alignment.evaluationHash,
+        confusionMatrix: evaluation.alignment.confusionMatrix,
+        metrics: deriveEvaluationAlignmentMetrics(evaluation.alignment.confusionMatrix),
+      }
+    : null,
 })
 
 export type EvaluationSummaryRecord = ReturnType<typeof toEvaluationSummaryRecord>

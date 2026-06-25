@@ -1,6 +1,7 @@
 import { BadRequestError, EvaluationId, ProjectId, SignalId } from "@domain/shared"
 import { Effect } from "effect"
 import type { LoadedEvaluationAlignmentState } from "../../alignment/types.ts"
+import { emptyEvaluationAlignment } from "../../entities/evaluation.ts"
 import { isDeletedEvaluation } from "../../helpers.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
 import { EvaluationSignalRepository } from "../../ports/evaluation-signal-repository.ts"
@@ -41,6 +42,9 @@ export const loadAlignmentStateUseCase = Effect.fn("evaluations.loadAlignmentSta
 
   const issue = yield* signalRepository.findById(SignalId(input.signalId))
 
+  // An unaligned judge (alignment accrues as annotations land) has no matrix yet: present an empty
+  // one keyed on the live script hash so the refresh path rebuilds from scratch.
+  const evaluationHash = evaluation.alignment?.evaluationHash ?? evaluation.scriptHash ?? ""
   return {
     evaluationId: evaluation.id,
     signalId: evaluation.signalId,
@@ -48,12 +52,12 @@ export const loadAlignmentStateUseCase = Effect.fn("evaluations.loadAlignmentSta
     signalDescription: issue.description,
     name: evaluation.name,
     description: evaluation.description,
-    alignedAt: evaluation.alignedAt.toISOString(),
+    alignedAt: (evaluation.alignedAt ?? evaluation.updatedAt).toISOString(),
     draft: {
       script: evaluation.script,
-      evaluationHash: evaluation.alignment.evaluationHash,
+      evaluationHash,
       trigger: evaluation.trigger,
     },
-    confusionMatrix: evaluation.alignment.confusionMatrix,
+    confusionMatrix: evaluation.alignment?.confusionMatrix ?? emptyEvaluationAlignment(evaluationHash).confusionMatrix,
   } satisfies LoadedEvaluationAlignmentState
 })

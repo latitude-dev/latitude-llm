@@ -104,8 +104,8 @@ export const evaluationSchema = z.object({
   script: z.string().min(1),
   scriptHash: z.string().optional(), // hash of `script`; stamped onto each score's metadata.evaluationHash. Backfilled from alignment.evaluationHash for legacy rows; the mapper falls back to it when unset.
   trigger: evaluationTriggerSchema, // controls when the evaluation runs on live traffic
-  alignment: evaluationAlignmentSchema, // persisted confusion matrix and script hash
-  alignedAt: z.date(), // last time the evaluation was realigned
+  alignment: evaluationAlignmentSchema.nullable(), // confusion matrix + script hash; set only for aligned judge scripts (those that call llm()), NULL otherwise
+  alignedAt: z.date().nullable(), // last realignment time; NULL for unaligned (e.g. raw / deterministic) scripts
   archivedAt: z.date().nullable(), // archived evaluations are still visible in read-only mode
   deletedAt: z.date().nullable(), // deleted evaluations are soft deleted from management UI
   createdAt: z.date(), // evaluation creation time

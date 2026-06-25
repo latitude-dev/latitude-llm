@@ -26,7 +26,7 @@ const toDomainEvaluation = (row: typeof evaluations.$inferSelect): Evaluation =>
     // migration→deploy window where old code inserted a row before script_hash existed.
     scriptHash: row.scriptHash ?? row.alignment?.evaluationHash ?? undefined,
     trigger: row.trigger as EvaluationTrigger,
-    alignment: row.alignment as EvaluationAlignment,
+    alignment: (row.alignment as EvaluationAlignment | null) ?? null,
     alignedAt: row.alignedAt,
     archivedAt: row.archivedAt,
     deletedAt: row.deletedAt,

@@ -1002,7 +1002,7 @@ describe("runLiveEvaluationUseCase", () => {
         passed: true,
         feedback: "The conversation does not exhibit the linked issue.",
         metadata: {
-          evaluationHash: evaluation.alignment.evaluationHash,
+          evaluationHash: evaluation.alignment?.evaluationHash,
         },
         error: null,
         errored: false,
@@ -1105,7 +1105,7 @@ describe("runLiveEvaluationUseCase", () => {
       passed: false,
       feedback: "The conversation exhibits the linked issue.",
       metadata: {
-        evaluationHash: evaluation.alignment.evaluationHash,
+        evaluationHash: evaluation.alignment?.evaluationHash,
       },
       error: null,
       errored: false,
@@ -1209,7 +1209,7 @@ describe("runLiveEvaluationUseCase", () => {
       passed: false,
       feedback: "AI generation failed (openai/gpt-5.4): upstream timeout",
       metadata: {
-        evaluationHash: evaluation.alignment.evaluationHash,
+        evaluationHash: evaluation.alignment?.evaluationHash,
       },
       error: "AI generation failed (openai/gpt-5.4): upstream timeout",
       errored: true,

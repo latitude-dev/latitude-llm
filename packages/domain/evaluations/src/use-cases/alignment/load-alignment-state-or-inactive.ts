@@ -2,6 +2,7 @@ import { hashOptimizationCandidateText } from "@domain/optimizations"
 import { EvaluationId, ProjectId, SignalId } from "@domain/shared"
 import { Effect } from "effect"
 import type { LoadedEvaluationAlignmentState } from "../../alignment/types.ts"
+import { emptyEvaluationAlignment } from "../../entities/evaluation.ts"
 import { isArchivedEvaluation, isDeletedEvaluation } from "../../helpers.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
 import { EvaluationSignalRepository } from "../../ports/evaluation-signal-repository.ts"
@@ -74,6 +75,8 @@ export const loadAlignmentStateOrInactiveUseCase = Effect.fn("evaluations.loadAl
     const issue = yield* signalRepository.findById(SignalId(input.signalId))
     const currentScriptHash = yield* Effect.tryPromise(() => hashOptimizationCandidateText(evaluation.script))
 
+    // An unaligned judge (alignment accrues as annotations land) has no matrix yet: present an empty
+    // one and force a full rebuild (incrementalEligible = false).
     return {
       status: "active",
       state: {
@@ -83,15 +86,16 @@ export const loadAlignmentStateOrInactiveUseCase = Effect.fn("evaluations.loadAl
         signalDescription: issue.description,
         name: evaluation.name,
         description: evaluation.description,
-        alignedAt: evaluation.alignedAt.toISOString(),
+        alignedAt: (evaluation.alignedAt ?? evaluation.updatedAt).toISOString(),
         draft: {
           script: evaluation.script,
-          evaluationHash: evaluation.alignment.evaluationHash,
+          evaluationHash: evaluation.alignment?.evaluationHash ?? currentScriptHash,
           trigger: evaluation.trigger,
         },
-        confusionMatrix: evaluation.alignment.confusionMatrix,
+        confusionMatrix:
+          evaluation.alignment?.confusionMatrix ?? emptyEvaluationAlignment(currentScriptHash).confusionMatrix,
       },
-      incrementalEligible: currentScriptHash === evaluation.alignment.evaluationHash,
+      incrementalEligible: evaluation.alignment != null && currentScriptHash === evaluation.alignment.evaluationHash,
       currentScriptHash,
     } satisfies LoadAlignmentStateOrInactiveResult
   },
