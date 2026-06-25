@@ -5,10 +5,8 @@ import {
   buildEvaluationOptimizationJudgeTelemetryCapture,
   type EvaluationOptimizationJudgeTelemetryScope,
 } from "../../runtime/ai-telemetry.ts"
-import { executeEvaluationScriptWithAI } from "../../runtime/evaluation-execution.ts"
+import { executeEvaluationScriptSandboxed } from "../../runtime/sandbox-execution.ts"
 
-// TODO(eval-sandbox): when sandbox is available, executeEvaluationScript will run arbitrary JS
-// and this function's structure will remain the same — it just calls executeEvaluationScript.
 export const evaluateOptimizationCandidate = Effect.fn("evaluations.evaluateOptimizationCandidate")(function* (input: {
   readonly candidate: OptimizationCandidate
   readonly example: HydratedEvaluationAlignmentExample
@@ -19,7 +17,7 @@ export const evaluateOptimizationCandidate = Effect.fn("evaluations.evaluateOpti
   yield* Effect.annotateCurrentSpan("evaluation.candidateHash", input.candidate.hash)
   yield* Effect.annotateCurrentSpan("evaluation.exampleTraceId", input.example.traceId)
 
-  const execution = yield* executeEvaluationScriptWithAI({
+  const execution = yield* executeEvaluationScriptSandboxed({
     script: input.candidate.text,
     conversation: input.example.conversation,
     issue: {

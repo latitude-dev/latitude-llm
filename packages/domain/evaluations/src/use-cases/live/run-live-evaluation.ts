@@ -11,7 +11,6 @@ import {
   type UnknownStripePlanError,
 } from "@domain/billing"
 import { OutboxEventWriter } from "@domain/events"
-import { type FeatureFlagRepository, hasFeatureFlagUseCase } from "@domain/feature-flags"
 import { DETECTOR_HEALTH_WINDOW_SECONDS, DetectorHealthTracker, type ScriptRuntime } from "@domain/sandbox"
 import {
   type EvaluationScore,
@@ -240,15 +239,12 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       } satisfies RunLiveEvaluationResult
     }
 
-    const sandboxRuntimeEnabled = yield* hasFeatureFlagUseCase({ identifier: "evaluation-sandbox-runtime" })
-
     const executionStartedAt = performance.now()
     const execution = yield* executeLiveEvaluationUseCase({
       evaluationId: evaluation.id,
       script: evaluation.script,
       issue: signalContext,
       conversation: traceDetail.allMessages,
-      runtime: sandboxRuntimeEnabled ? "sandbox" : "legacy",
       telemetry: buildEvaluationJudgeLiveTelemetryCapture({
         organizationId: input.organizationId,
         projectId: input.projectId,
@@ -410,7 +406,6 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     | DetectorHealthTracker
     | EvaluationSignalRepository
     | EvaluationRepository
-    | FeatureFlagRepository
     | OutboxEventWriter
     | ScoreAnalyticsRepository
     | ScoreRepository

@@ -15,9 +15,5 @@
     "@domain/sandbox": "workspace:*",
     "effect": "catalog:",
     "quickjs-emscripten": "catalog:"
-  },
-  "devDependencies": {
-    "@domain/ai": "workspace:*",
-    "@domain/evaluations": "workspace:*"
   }
 }

@@ -1,6 +1,6 @@
+import { EVALUATION_CONVERSATION_PLACEHOLDER } from "@domain/evaluations"
 import { detectScriptCapabilities } from "@domain/sandbox"
 import { describe, expect, it } from "vitest"
-import { validateEvaluationScript } from "../runtime/evaluation-execution.ts"
 import { compileSettingsToScript } from "./compile-settings-to-script.ts"
 
 describe("compileSettingsToScript", () => {
@@ -14,9 +14,15 @@ describe("compileSettingsToScript", () => {
     expect(detectScriptCapabilities(script)).toContain("llm")
   })
 
-  it("produces a script that matches the MVP judge template (single-sourced wrapper)", () => {
+  it("uses the single-sourced judge wrapper (one llm() call, present-verdict return, only the conversation placeholder)", () => {
     const script = compileSettingsToScript({ kind: "judge", criteria: "the response is unhelpful" })
-    // Only ${conversation} interpolates; no stray backticks — the same shape as a discovered judge.
-    expect(validateEvaluationScript(script)).toBe(true)
+
+    expect(script).toContain("await llm(")
+    expect(script).toContain("return Passed(")
+    expect(script).toContain("return Failed(")
+    expect(script).toContain(EVALUATION_CONVERSATION_PLACEHOLDER)
+    // The only `${...}` interpolation in the generated script is the conversation placeholder.
+    const interpolations = script.match(/\$\{[^}]+\}/g) ?? []
+    expect(interpolations).toEqual([EVALUATION_CONVERSATION_PLACEHOLDER])
   })
 })

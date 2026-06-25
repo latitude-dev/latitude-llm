@@ -878,6 +878,9 @@ importers:
       '@platform/queue-bullmq':
         specifier: workspace:*
         version: link:../../packages/platform/queue-bullmq
+      '@platform/sandbox-quickjs':
+        specifier: workspace:*
+        version: link:../../packages/platform/sandbox-quickjs
       '@platform/workflows-temporal':
         specifier: workspace:*
         version: link:../../packages/platform/workflows-temporal
@@ -1273,9 +1276,6 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../events
-      '@domain/feature-flags':
-        specifier: workspace:*
-        version: link:../feature-flags
       '@domain/models':
         specifier: workspace:*
         version: link:../models
@@ -2498,13 +2498,6 @@ importers:
       quickjs-emscripten:
         specifier: 'catalog:'
         version: 0.32.0
-    devDependencies:
-      '@domain/ai':
-        specifier: workspace:*
-        version: link:../../domain/ai
-      '@domain/evaluations':
-        specifier: workspace:*
-        version: link:../../domain/evaluations
 
   packages/platform/slack:
     dependencies:
