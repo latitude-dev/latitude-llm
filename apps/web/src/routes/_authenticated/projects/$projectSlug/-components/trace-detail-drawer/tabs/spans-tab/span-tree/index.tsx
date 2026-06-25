@@ -114,7 +114,10 @@ export function SpanTree({
     // biome-ignore lint/a11y/noStaticElementInteractions: passive mouse tracking for waterfall cursor
     <div
       ref={containerRef}
-      className={cn("relative flex flex-col overflow-hidden", isMinimized ? "shrink-0" : "flex-1")}
+      className={cn(
+        "relative flex flex-col overflow-hidden",
+        isMinimized ? "shrink-0 border-b border-border" : "flex-1",
+      )}
       style={isMinimized ? { maxHeight: MINIMIZED_MAX_HEIGHT } : undefined}
       onMouseMove={onMouseMove}
       onMouseLeave={onMouseLeave}
