@@ -135,6 +135,11 @@ export {
   assignScoreToSignalUseCase,
 } from "./use-cases/assign-score-to-signal.ts"
 export {
+  type BackfillSignalScoresInput,
+  type BackfillSignalScoresResult,
+  backfillSignalScoresUseCase,
+} from "./use-cases/backfill-signal-scores.ts"
+export {
   type BuildSignalsExportInput,
   type BuildSignalsExportResult,
   buildSignalsExportUseCase,

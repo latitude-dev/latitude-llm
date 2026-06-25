@@ -70,6 +70,7 @@ import { createProjectsWorker } from "./workers/projects.ts"
 import { createSandboxesWorker } from "./workers/sandboxes.ts"
 import { createScoresWorker } from "./workers/scores.ts"
 import { createSignalsWorker } from "./workers/signals.ts"
+import { createSignalsBackfillWorker } from "./workers/signals-backfill.ts"
 import { createSignalsMatchWorker } from "./workers/signals-match.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 import { createStartFlaggerWorkflowWorker } from "./workers/start-flagger-workflow.ts"
@@ -222,6 +223,7 @@ const bootstrap = async () => {
     createAnnotationQueuesWorker(ctx)
     createTraceEndWorker(ctx)
     createSignalsMatchWorker(ctx)
+    createSignalsBackfillWorker(ctx)
     createDeterministicFlaggersWorker(ctx)
     createStartFlaggerWorkflowWorker(ctx)
     createProjectsWorker(ctx)
