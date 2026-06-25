@@ -122,15 +122,10 @@ const getSignalSessionsPageKey = (projectId: string, signalId: string, offset: n
 const getSignalSessionsCountQueryKey = (projectId: string, signalId: string) =>
   ["issue-sessions-count", projectId, signalId] as const
 
-const buildListSignalsRequest = (
-  input: SignalsKeyInput,
-  offset: number,
-  options: { readonly includeAnalytics: boolean; readonly limit?: number },
-) => ({
+const buildListSignalsRequest = (input: SignalsKeyInput, offset: number) => ({
   projectId: input.projectId,
-  limit: options.limit ?? input.limit,
+  limit: input.limit,
   offset,
-  includeAnalytics: options.includeAnalytics,
   sort: {
     field: input.sorting.column,
     direction: input.sorting.direction,
@@ -187,7 +182,7 @@ export function useSignals(input: {
       queryKey: offsetKey,
       queryFn: () =>
         listSignals({
-          data: buildListSignalsRequest(keyInput, offset, { includeAnalytics: false }),
+          data: buildListSignalsRequest(keyInput, offset),
         }),
       staleTime: ISSUES_QUERY_STALE_TIME_MS,
     })
@@ -200,7 +195,7 @@ export function useSignals(input: {
     queryKey: getSignalsAnalyticsQueryKey(keyInput),
     queryFn: (): Promise<SignalsListResultRecord> =>
       getSignalsAnalytics({
-        data: buildListSignalsRequest(keyInput, 0, { includeAnalytics: true }),
+        data: buildListSignalsRequest(keyInput, 0),
       }),
     staleTime: ISSUES_QUERY_STALE_TIME_MS,
     placeholderData: keepPreviousData,
@@ -235,15 +230,16 @@ export function useSignals(input: {
 
   const data = useMemo(() => paginatedData?.pages.flatMap((page) => page.items) ?? [], [paginatedData])
   const firstPage = paginatedData?.pages[0]
+  const analyticsPage = analyticsQuery.data
 
   return {
     data: data as readonly SignalRecord[],
-    analytics: analyticsQuery.data?.analytics ?? EMPTY_ISSUES_ANALYTICS,
+    analytics: analyticsPage?.analytics ?? EMPTY_ISSUES_ANALYTICS,
     totalCount: firstPage?.totalCount ?? 0,
     hasAnySignals: firstPage?.hasAnySignals ?? false,
-    occurrencesSum: firstPage?.occurrencesSum ?? 0,
-    priorityCounts: firstPage?.priorityCounts ?? EMPTY_PRIORITY_COUNTS,
-    mySignalsCount: firstPage?.mySignalsCount ?? 0,
+    occurrencesSum: analyticsPage?.occurrencesSum ?? 0,
+    priorityCounts: analyticsPage?.priorityCounts ?? EMPTY_PRIORITY_COUNTS,
+    mySignalsCount: analyticsPage?.mySignalsCount ?? 0,
     isLoading,
     // True while a new query key is in flight and the previous result is being
     // shown as placeholder (e.g. after a sort/filter change). Lets consumers

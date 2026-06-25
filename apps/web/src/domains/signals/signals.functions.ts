@@ -79,7 +79,6 @@ const listSignalsInputSchema = z.object({
     })
     .optional(),
   searchQuery: z.string().max(500).optional(),
-  includeAnalytics: z.boolean().optional(),
   timeRange: z
     .object({
       fromIso: z.iso.datetime().optional(),
