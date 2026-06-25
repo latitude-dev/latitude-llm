@@ -91,9 +91,14 @@ import {
 const DEFAULT_SORTING: SignalsTableSorting = { column: "lastSeen", direction: "desc" }
 const SIGNAL_SEARCH_DEBOUNCE_MS = 300
 const DEFAULT_SIGNALS_RANGE_SECONDS = 30 * 24 * 60 * 60
-const SORT_COLUMNS = ["lastSeen", "occurrences", "state"] as const satisfies readonly SignalsTableSorting["column"][]
+const SORT_COLUMNS = [
+  "lastSeen",
+  "occurrences",
+  "affectedSessions",
+  "state",
+] as const satisfies readonly SignalsTableSorting["column"][]
 const SORT_DIRECTIONS = ["asc", "desc"] as const satisfies readonly SignalsTableSorting["direction"][]
-const SORT_PARAM_PATTERN = /^(lastSeen|occurrences|state):(asc|desc)$/
+const SORT_PARAM_PATTERN = /^(lastSeen|occurrences|affectedSessions|state):(asc|desc)$/
 const EMPTY_ISSUES: readonly SignalRecord[] = []
 
 function serializeSorting(sorting: SignalsTableSorting): string {
@@ -219,6 +224,7 @@ function SignalsPage() {
 
   const {
     data: signalsData,
+    rowMetricsBySignalId,
     analytics,
     occurrencesSum,
     priorityCounts,
@@ -524,6 +530,7 @@ function SignalsPage() {
         </div>
         <SignalsView
           issues={issues}
+          rowMetricsBySignalId={rowMetricsBySignalId}
           isLoading={showSkeletons}
           infiniteScroll={infiniteScroll}
           sorting={sorting}

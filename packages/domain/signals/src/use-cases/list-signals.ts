@@ -32,7 +32,7 @@ import { SignalRepository, type SignalSearchCandidate, type SignalWithLifecycle 
 export const signalsLifecycleGroupSchema = z.enum(["active", "archived"])
 export type SignalsLifecycleGroup = z.infer<typeof signalsLifecycleGroupSchema>
 
-export const signalsSortFieldSchema = z.enum(["lastSeen", "occurrences", "state"])
+export const signalsSortFieldSchema = z.enum(["lastSeen", "occurrences", "affectedSessions", "state"])
 export type SignalsSortField = z.infer<typeof signalsSortFieldSchema>
 
 /** Sentinel accepted by the assignee filter to match issues with no assignee. */
@@ -382,6 +382,14 @@ const sortCandidates = (
           : compareDesc(left.windowMetric.occurrences, right.windowMetric.occurrences)
       if (occurrencesComparison !== 0) {
         return occurrencesComparison
+      }
+    } else if (input.field === "affectedSessions") {
+      const affectedSessionsComparison =
+        input.direction === "asc"
+          ? compareAsc(left.windowMetric.affectedSessions, right.windowMetric.affectedSessions)
+          : compareDesc(left.windowMetric.affectedSessions, right.windowMetric.affectedSessions)
+      if (affectedSessionsComparison !== 0) {
+        return affectedSessionsComparison
       }
     } else if (input.field === "state") {
       // Priority numbers go low → high in importance order

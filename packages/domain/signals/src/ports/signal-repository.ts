@@ -71,7 +71,7 @@ export interface ListSignalTableRowsRepositoryInput extends ListSignalsRepositor
     readonly to?: Date
   }
   readonly sort?: {
-    readonly field: "lastSeen" | "occurrences" | "state"
+    readonly field: "lastSeen" | "occurrences" | "affectedSessions" | "state"
     readonly direction: "asc" | "desc"
   }
 }

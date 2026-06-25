@@ -66,7 +66,7 @@ export interface SignalsExportPayload extends BaseExportPayload {
     | undefined
   readonly sort?:
     | {
-        readonly field: "lastSeen" | "occurrences" | "state"
+        readonly field: "lastSeen" | "occurrences" | "affectedSessions" | "state"
         readonly direction: "asc" | "desc"
       }
     | undefined

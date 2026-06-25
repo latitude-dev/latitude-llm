@@ -309,10 +309,31 @@ const signalRepositoryCoreLive = Layer.effect(
                 search ? or(ilike(signals.name, `%${search}%`), ilike(signals.description, `%${search}%`)) : undefined,
               )
               const direction = sort?.direction === "asc" ? asc : desc
+              const occurrencesSort = sql<number>`(
+                select count(*)
+                from ${scores}
+                where ${scores.signalId} = ${signals.id}
+                  and ${scores.draftedAt} is null
+                  ${timeRange?.from ? sql`and ${scores.createdAt} >= ${timeRange.from}` : sql``}
+                  ${timeRange?.to ? sql`and ${scores.createdAt} <= ${timeRange.to}` : sql``}
+              )`
+              const affectedSessionsSort = sql<number>`(
+                select count(distinct ${scores.sessionId})
+                from ${scores}
+                where ${scores.signalId} = ${signals.id}
+                  and ${scores.draftedAt} is null
+                  and ${scores.sessionId} is not null
+                  ${timeRange?.from ? sql`and ${scores.createdAt} >= ${timeRange.from}` : sql``}
+                  ${timeRange?.to ? sql`and ${scores.createdAt} <= ${timeRange.to}` : sql``}
+              )`
               const orderBy =
                 sort?.field === "state"
                   ? [direction(signals.resolvedAt), direction(signals.ignoredAt), direction(signals.updatedAt)]
-                  : [direction(signals.updatedAt), direction(signals.createdAt), asc(signals.id)]
+                  : sort?.field === "occurrences"
+                    ? [direction(occurrencesSort), desc(signals.updatedAt), asc(signals.id)]
+                    : sort?.field === "affectedSessions"
+                      ? [direction(affectedSessionsSort), desc(signals.updatedAt), asc(signals.id)]
+                      : [direction(signals.updatedAt), direction(signals.createdAt), asc(signals.id)]
 
               return Promise.all([
                 db

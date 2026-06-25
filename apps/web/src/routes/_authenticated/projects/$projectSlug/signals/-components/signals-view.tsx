@@ -5,6 +5,7 @@ import {
   type InfiniteTableColumn,
   type InfiniteTableInfiniteScroll,
   type InfiniteTableSelection,
+  Skeleton,
   TagList,
   Text,
   Tooltip,
@@ -18,7 +19,11 @@ import {
 } from "../../../../../../components/signals/signal-priority-meta.tsx"
 import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
 import type { MemberRecord } from "../../../../../../domains/members/members.functions.ts"
-import type { SignalRecord, SignalsListResultRecord } from "../../../../../../domains/signals/signals.functions.ts"
+import type {
+  SignalRecord,
+  SignalRowMetricsRecord,
+  SignalsListResultRecord,
+} from "../../../../../../domains/signals/signals.functions.ts"
 import {
   ListingLayout as Layout,
   listingLayoutIntrinsicScroll,
@@ -99,6 +104,10 @@ function AssigneeCell({
   )
 }
 
+function AnalyticsCellSkeleton() {
+  return <Skeleton className="ml-auto h-4 w-10" />
+}
+
 function PriorityGroupHeader({ group, count }: { readonly group: SignalPriorityGroupId; readonly count: number }) {
   const meta = SIGNAL_PRIORITY_META[group]
   return (
@@ -129,12 +138,13 @@ function EvaluatedByTooltip({ evaluationNames }: { readonly evaluationNames: rea
 }
 
 export interface SignalsTableSorting {
-  readonly column: "lastSeen" | "occurrences" | "state"
+  readonly column: "lastSeen" | "occurrences" | "affectedSessions" | "state"
   readonly direction: "asc" | "desc"
 }
 
 export function SignalsView({
   issues,
+  rowMetricsBySignalId,
   isLoading,
   infiniteScroll,
   sorting,
@@ -146,6 +156,7 @@ export function SignalsView({
   projectSlug,
 }: {
   readonly issues: readonly SignalRecord[]
+  readonly rowMetricsBySignalId: SignalRowMetricsRecord["metricsBySignalId"]
   readonly isLoading: boolean
   readonly infiniteScroll: InfiniteTableInfiniteScroll
   readonly sorting: SignalsTableSorting
@@ -228,17 +239,20 @@ export function SignalsView({
       header: "Trend",
       width: 176,
       minWidth: 176,
-      render: (issue) => (
-        <SignalTrendBar
-          buckets={issue.trend}
-          height={36}
-          emptyLabel="-"
-          showLabels={false}
-          states={issue.states}
-          resolvedAt={issue.resolvedAt}
-          escalationOccurrenceThreshold={issue.escalationOccurrenceThreshold}
-        />
-      ),
+      render: (issue) => {
+        const metrics = rowMetricsBySignalId[issue.id]
+        return (
+          <SignalTrendBar
+            buckets={metrics?.trend ?? []}
+            height={36}
+            emptyLabel={metrics ? "-" : ""}
+            showLabels={false}
+            states={issue.states}
+            resolvedAt={issue.resolvedAt}
+            escalationOccurrenceThreshold={issue.escalationOccurrenceThreshold}
+          />
+        )
+      },
       renderSubheader: () => (
         <div className="flex min-w-0 w-full items-center gap-0.5">
           <Text.H6 color="foregroundMuted" className="min-w-0 truncate tabular-nums">
@@ -263,7 +277,10 @@ export function SignalsView({
       minWidth: 76,
       align: "end",
       sortKey: "occurrences",
-      render: (issue) => formatCount(issue.occurrences),
+      render: (issue) => {
+        const metrics = rowMetricsBySignalId[issue.id]
+        return metrics ? formatCount(metrics.occurrences) : <AnalyticsCellSkeleton />
+      },
       renderSubheader: () => (
         <div className="flex min-w-0 w-full items-center justify-end gap-0.5">
           <Text.H6 color="foregroundMuted" className="min-w-0 truncate text-center tabular-nums">
@@ -279,12 +296,11 @@ export function SignalsView({
       width: 76,
       minWidth: 76,
       align: "end",
-      // Affected sessions % is `affectedSessions / totalSessions` with a constant
-      // denominator across the page, so sorting by either column is the same
-      // operation. Sharing the sort key lets clicks on either header drive the
-      // same sort and lights up the indicator on both at once.
-      sortKey: "occurrences",
-      render: (issue) => formatPercent(issue.affectedSessionsPercent),
+      sortKey: "affectedSessions",
+      render: (issue) => {
+        const metrics = rowMetricsBySignalId[issue.id]
+        return metrics ? formatPercent(metrics.affectedSessionsPercent) : <AnalyticsCellSkeleton />
+      },
     },
   ]
 
