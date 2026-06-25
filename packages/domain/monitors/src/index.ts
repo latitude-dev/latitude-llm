@@ -18,6 +18,7 @@ export {
   monitorConfigFilterSet,
   monitorRuleSchema,
   monitorSchema,
+  monitorStreamForTargetType,
   monitorTargetSchema,
 } from "./entities/monitor.ts"
 export { SystemMonitorForbiddenError } from "./errors.ts"

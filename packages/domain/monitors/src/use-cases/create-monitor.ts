@@ -15,6 +15,7 @@ import {
 } from "@domain/shared"
 import { Effect } from "effect"
 import type { Monitor, MonitorTarget } from "../entities/monitor.ts"
+import { monitorStreamForTargetType } from "../entities/monitor.ts"
 import { MonitorRepository } from "../ports/monitor-repository.ts"
 import { assertMonitorableSavedSearch } from "./assert-monitorable-saved-search.ts"
 
@@ -125,7 +126,7 @@ export const createMonitorUseCase = (
             id: input.target.id,
             ...(input.target.filterSet !== undefined ? { filterSet: input.target.filterSet } : {}),
             kind: input.target.type,
-            stream: input.target.type === "tool" ? "spans" : input.target.type === "session" ? "sessions" : "traces",
+            stream: monitorStreamForTargetType(input.target.type),
             query: null,
             savedSearchId: input.target.type === "savedSearch" ? input.target.id : null,
             metric: input.rule.config.metric ?? { kind: "count" },

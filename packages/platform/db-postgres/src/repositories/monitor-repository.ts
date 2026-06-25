@@ -5,6 +5,7 @@ import {
   type MonitorSearchResult,
   monitorConfigFilterSet,
   monitorSchema,
+  monitorStreamForTargetType,
   type SavedSearchMonitorSummary,
 } from "@domain/monitors"
 import {
@@ -53,6 +54,10 @@ const toMonitor = (row: typeof monitors.$inferSelect): Monitor => {
       type: row.targetType,
       id: row.targetId,
       ...(filterSet === undefined ? {} : { filterSet }),
+      kind: row.targetType,
+      stream: monitorStreamForTargetType(row.targetType),
+      savedSearchId: row.targetType === "savedSearch" ? row.targetId : null,
+      ...(row.config.metric === undefined ? {} : { metric: row.config.metric }),
     },
     rule: {
       trigger: row.trigger,

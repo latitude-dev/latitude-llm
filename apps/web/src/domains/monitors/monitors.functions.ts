@@ -15,6 +15,7 @@ import {
   type MonitorLastIncident,
   MonitorRepository,
   type MonitorSearchResult,
+  monitorStreamForTargetType,
   monitorTargetSchema,
   muteMonitorUseCase,
   searchMonitorsUseCase,
@@ -73,16 +74,13 @@ export interface MonitorRuleRecord {
   readonly createdAt: string
 }
 
-const monitorStreamForTarget = (target: Monitor["target"]) =>
-  target.stream ?? (target.type === "tool" ? "spans" : target.type === "session" ? "sessions" : "traces")
-
 const monitorMetricForTarget = (monitor: Monitor) =>
   monitor.target.metric ?? monitor.rule.config.metric ?? { kind: "count" as const }
 
 const normalizedMonitorTarget = (monitor: Monitor) => ({
   ...monitor.target,
   kind: monitor.target.kind ?? monitor.target.type,
-  stream: monitorStreamForTarget(monitor.target),
+  stream: monitorStreamForTargetType(monitor.target.type),
   filterSet: monitor.target.filterSet ?? null,
   query: monitor.target.query ?? null,
   savedSearchId: monitor.target.savedSearchId ?? (monitor.target.type === "savedSearch" ? monitor.target.id : null),

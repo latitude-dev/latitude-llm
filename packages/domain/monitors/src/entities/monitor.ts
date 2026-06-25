@@ -6,6 +6,8 @@ import {
   type FilterSet,
   filterSetSchema,
   type MonitorConfig,
+  type MonitorStream,
+  type MonitorTargetType,
   monitorConfigSchema,
   monitorIdSchema,
   monitorMetricSchema,
@@ -28,6 +30,9 @@ export const monitorTargetSchema = z.object({
   metric: monitorMetricSchema.default({ kind: "count" }),
 })
 export type MonitorTarget = z.infer<typeof monitorTargetSchema>
+
+export const monitorStreamForTargetType = (type: MonitorTargetType): MonitorStream =>
+  type === "tool" ? "spans" : type === "session" ? "sessions" : "traces"
 
 export const monitorRuleSchema = z.object({
   trigger: monitorTriggerSchema,
