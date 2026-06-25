@@ -1,5 +1,5 @@
 import { Button, DatabaseAddIcon, Icon, Text } from "@repo/ui"
-import { DatabaseIcon } from "lucide-react"
+import { DatabaseIcon, ExternalLinkIcon } from "lucide-react"
 
 export function DatasetsEmptyState({
   onCreate,
@@ -21,10 +21,18 @@ export function DatasetsEmptyState({
             started.
           </Text.H5>
         </div>
-        <Button onClick={onCreate} disabled={creating} isLoading={creating}>
-          <Icon size="sm" icon={DatabaseAddIcon} />
-          Dataset
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={onCreate} disabled={creating} isLoading={creating}>
+            <Icon size="sm" icon={DatabaseAddIcon} />
+            Dataset
+          </Button>
+          <a href="https://docs.latitude.so/evaluations/overview" target="_blank" rel="noopener noreferrer">
+            <Button variant="outline">
+              <Icon size="sm" icon={ExternalLinkIcon} />
+              Read the docs
+            </Button>
+          </a>
+        </div>
       </div>
     </div>
   )

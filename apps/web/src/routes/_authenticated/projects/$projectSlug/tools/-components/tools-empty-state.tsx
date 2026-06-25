@@ -17,7 +17,7 @@ export function ToolsEmptyState({ isLoading = false }: { readonly isLoading?: bo
           </Text.H5>
         </div>
         {!isLoading ? (
-          <a href="https://docs.latitude.so" target="_blank" rel="noopener noreferrer">
+          <a href="https://docs.latitude.so/observability/tools" target="_blank" rel="noopener noreferrer">
             <Button>
               <Icon size="sm" icon={ExternalLinkIcon} />
               Read the docs

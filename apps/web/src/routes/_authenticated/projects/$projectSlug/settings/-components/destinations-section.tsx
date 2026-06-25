@@ -41,6 +41,7 @@ export function DestinationsSection({
             icon: Plus,
             onClick: () => setCreating(true),
           }}
+          docsHref="https://docs.latitude.so/more/data-destinations/overview"
         />
       ) : (
         <>
