@@ -12,16 +12,42 @@ Stream [Hermes Agent](https://github.com/NousResearch/hermes-agent) (Nous Resear
 
 1. In Latitude, copy your project slug from the project sidebar.
 2. Create or copy an API key from **Settings → API Keys**.
-3. Install the plugin and enable it in Hermes:
+3. Install the plugin:
 
 ```bash
 pip install latitude-telemetry-hermes
-hermes plugins enable latitude
 ```
 
-Hermes discovers the plugin automatically through the `hermes_agent.plugins` entry point — there are no files to copy.
+4. Enable it by adding `latitude` to the enabled-plugins list in `~/.hermes/config.yaml`:
 
-4. Set your credentials in the environment, or add them to `~/.hermes/.env` (Hermes loads it at startup):
+```yaml
+plugins:
+  enabled:
+    - latitude
+```
+
+Hermes discovers the plugin through the `hermes_agent.plugins` entry point — there are no files to copy.
+
+<Note>
+  **Enable via `config.yaml`, not `hermes plugins enable latitude`.** Hermes's runtime loads
+  pip/entry-point plugins, but its `hermes plugins list`/`enable`/`disable` commands scan only
+  bundled and `~/.hermes/plugins/` directory plugins — so they report a pip-installed plugin as
+  **"not installed or bundled"** even though it loads fine ([hermes-agent#23802](https://github.com/NousResearch/hermes-agent/issues/23802)).
+  The `config.yaml` entry above is the reliable way to turn it on.
+</Note>
+
+<Note>
+  The plugin must be installed into the **same Python that runs Hermes**. The official installer
+  puts Hermes in its own venv (`~/.hermes/hermes-agent/venv`) that ignores your shell's Python, so
+  a plain `pip install` from another interpreter (system, pyenv, mise, …) won't be discovered.
+  Install into Hermes's venv instead:
+
+  ```bash
+  ~/.hermes/bin/uv pip install --python ~/.hermes/hermes-agent/venv/bin/python latitude-telemetry-hermes
+  ```
+</Note>
+
+5. Set your credentials in the environment, or add them to `~/.hermes/.env` (Hermes loads it at startup):
 
 ```bash
 LATITUDE_API_KEY=lat_xxx
@@ -40,11 +66,7 @@ LATITUDE_PROJECT=your-project-slug
 
 Run Hermes and send a message to your agent, then open your Latitude project and go to **Traces**. The new trace should appear within a few seconds.
 
-To confirm the plugin is loaded:
-
-```bash
-hermes plugins list
-```
+If nothing arrives, set `LATITUDE_DEBUG=true` in `~/.hermes/.env` and run again to see the plugin's logging. (`hermes plugins list` does **not** show pip-installed plugins — see the install note — so it can't be used to confirm the plugin is loaded.)
 
 ## Structural-only telemetry
 
@@ -58,22 +80,17 @@ Structural-only traces still include timing, model, token usage, and run structu
 
 ## Disable or uninstall
 
-To pause telemetry without removing anything, disable the plugin:
-
-```bash
-hermes plugins disable latitude
-```
-
-Or set the environment variable in `~/.hermes/.env`:
+To pause telemetry without removing anything, set the environment variable in `~/.hermes/.env`:
 
 ```bash
 LATITUDE_HERMES_TELEMETRY_ENABLED=0
 ```
 
-To remove the integration entirely:
+To stop Hermes loading the plugin at all, remove `latitude` from `plugins.enabled` in `~/.hermes/config.yaml`. (`hermes plugins disable latitude` doesn't work for pip-installed plugins — see the install note.)
+
+To remove the integration entirely, drop it from `plugins.enabled` and uninstall the package:
 
 ```bash
-hermes plugins disable latitude
 pip uninstall latitude-telemetry-hermes
 ```
 
