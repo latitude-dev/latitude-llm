@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## v0.3.18 - 2026-06-25
+
+### Spans and ingestion
+
+- Ingested OpenClaw's native `@openclaw/diagnostics-otel` exporter: classified `openclaw.run` and `openclaw.tool.execution` spans into `invoke_agent`/`execute_tool` operations, read per-call tokens and the provider's real cost from `openclaw.content.output_messages`, derived span status from `openclaw.outcome`, and dropped the orphan `openclaw.model.usage` span. The generic transform stays brand-agnostic; OpenClaw specifics live in the resolver layer (ref: #3668).
+- Deprecated the hand-rolled `@latitude-data/openclaw-telemetry` plugin and CLI in favor of the native exporter, and rewrote the public OpenClaw docs to recommend it with a production-ingest config example (ref: #3668).
+
+### Models
+
+- Updated the bundled `models.dev` provider catalog (ref: #3669).
+
 ## v0.3.17 - 2026-06-23
 
 ### Signals
