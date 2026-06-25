@@ -30,6 +30,12 @@ export LATITUDE_PROJECT=my-project
 That's it — every session is now streamed to Latitude as OTLP traces. To export
 structure and timing without prompt/response/tool content, set `LATITUDE_NO_CONTENT=true`.
 
+> **Self-hosted / local Latitude?** The plugin defaults to Latitude Cloud
+> (`https://ingest.latitude.so`). Point it at your own ingest by setting
+> `LATITUDE_BASE_URL` to the ingest **origin only** — e.g. `http://localhost:3002`
+> for a local dev stack — without the `/v1/traces` suffix (the plugin appends it).
+> Your `LATITUDE_API_KEY` and `LATITUDE_PROJECT` must come from that same instance.
+
 ## How it works
 
 Hermes loads pip-installed plugins via the `hermes_agent.plugins` entry point and calls
@@ -61,7 +67,7 @@ All configuration is read from environment variables:
 |-----|---------|-------------|
 | `LATITUDE_API_KEY` | — | API key (required) |
 | `LATITUDE_PROJECT` / `LATITUDE_PROJECT_SLUG` | — | Project slug (required) |
-| `LATITUDE_BASE_URL` | `https://ingest.latitude.so` | Ingest endpoint |
+| `LATITUDE_BASE_URL` | `https://ingest.latitude.so` | Ingest origin (no path; the plugin appends `/v1/traces`). Set to your own ingest for self-hosted/local, e.g. `http://localhost:3002` |
 | `LATITUDE_HERMES_TELEMETRY_ENABLED` / `LATITUDE_TELEMETRY_ENABLED` | `true` | Master switch |
 | `LATITUDE_HERMES_NO_CONTENT` / `LATITUDE_NO_CONTENT` | `false` | Export structure/timing only (no prompts, responses, or tool I/O) |
 | `LATITUDE_DEBUG` | `false` | Verbose logging |

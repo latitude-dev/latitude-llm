@@ -28,6 +28,14 @@ LATITUDE_API_KEY=lat_xxx
 LATITUDE_PROJECT=your-project-slug
 ```
 
+<Note>
+  The plugin sends to Latitude Cloud (`https://ingest.latitude.so`) by default. If you
+  run a **self-hosted or local** Latitude, also set `LATITUDE_BASE_URL` to your ingest
+  **origin only** — for example `http://localhost:3002` on a local dev stack — with no
+  `/v1/traces` suffix (the plugin appends it). The API key and project slug must belong
+  to that same instance.
+</Note>
+
 ## Verify
 
 Run Hermes and send a message to your agent, then open your Latitude project and go to **Traces**. The new trace should appear within a few seconds.
@@ -79,7 +87,7 @@ All configuration is read from environment variables (set them in your shell or 
 |-----|---------|-------------|
 | `LATITUDE_API_KEY` | — | API key (required) |
 | `LATITUDE_PROJECT` / `LATITUDE_PROJECT_SLUG` | — | Project slug (required) |
-| `LATITUDE_BASE_URL` | `https://ingest.latitude.so` | Ingest endpoint |
+| `LATITUDE_BASE_URL` | `https://ingest.latitude.so` | Ingest origin (no path; the plugin appends `/v1/traces`). Set to your own ingest for self-hosted/local, e.g. `http://localhost:3002` |
 | `LATITUDE_HERMES_TELEMETRY_ENABLED` / `LATITUDE_TELEMETRY_ENABLED` | `true` | Master switch |
 | `LATITUDE_HERMES_NO_CONTENT` / `LATITUDE_NO_CONTENT` | `false` | Export structure/timing only |
 | `LATITUDE_DEBUG` | `false` | Verbose logging |

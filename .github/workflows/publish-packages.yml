@@ -75,6 +75,14 @@ jobs:
       ref: ${{ github.sha }}
     secrets: inherit
 
+  publish-hermes-telemetry:
+    permissions:
+      contents: write
+    uses: ./.github/workflows/publish-hermes-telemetry.yml
+    with:
+      ref: ${{ github.sha }}
+    secrets: inherit
+
   publish-python-sdk:
     permissions:
       contents: write
