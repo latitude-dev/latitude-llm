@@ -226,6 +226,7 @@ function setup(opts: SetupOpts = {}) {
             name: "Seeded issue",
             description: "Seeded issue description",
             source: "annotation",
+            origin: "system",
             assigneeId: triage.assigneeId,
             priority: triage.priority,
             centroid: createSignalCentroid(),

@@ -119,7 +119,7 @@ describe("createSignalFromScoreUseCase", () => {
     expect(scores.get(score.id)?.signalId).toBe(result.signalId)
     expect(issues.get(result.signalId)?.name).toBe("Token leakage in assistant responses")
     expect(issues.get(result.signalId)?.description).toBe("The assistant exposes secrets or tokens in its replies.")
-    expect(issues.get(result.signalId)?.centroid.mass).toBeGreaterThan(0)
+    expect(issues.get(result.signalId)?.centroid?.mass).toBeGreaterThan(0)
     expect(calls.generate).toHaveLength(1)
 
     expect(outbox.events).toHaveLength(1)

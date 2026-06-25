@@ -85,6 +85,8 @@ const toDomainSignal = (row: typeof signals.$inferSelect): Signal =>
     name: row.name,
     description: row.description,
     source: row.source,
+    origin: row.origin,
+    filters: row.filters,
     assigneeId: row.assigneeId,
     priority: row.priority,
     centroid: row.centroid,
@@ -92,6 +94,7 @@ const toDomainSignal = (row: typeof signals.$inferSelect): Signal =>
     escalatedAt: row.escalatedAt,
     resolvedAt: row.resolvedAt,
     ignoredAt: row.ignoredAt,
+    deletedAt: row.deletedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   })
@@ -146,7 +149,8 @@ const validateVector = (
 
 const toCentroidEmbedding = (issue: Signal): Effect.Effect<readonly number[] | null, RepositoryError> =>
   Effect.gen(function* () {
-    if (issue.centroid.mass <= 0) {
+    // User-created signals carry no centroid; only discovered signals cluster.
+    if (issue.centroid === null || issue.centroid.mass <= 0) {
       return null
     }
 
@@ -186,6 +190,8 @@ const toInsertRow = (issue: Signal, centroidEmbedding: readonly number[] | null)
   name: issue.name,
   description: issue.description,
   source: issue.source,
+  origin: issue.origin,
+  filters: issue.filters,
   assigneeId: issue.assigneeId,
   priority: issue.priority,
   centroid: issue.centroid,
@@ -194,6 +200,7 @@ const toInsertRow = (issue: Signal, centroidEmbedding: readonly number[] | null)
   escalatedAt: issue.escalatedAt,
   resolvedAt: issue.resolvedAt,
   ignoredAt: issue.ignoredAt,
+  deletedAt: issue.deletedAt,
   createdAt: issue.createdAt,
   updatedAt: issue.updatedAt,
 })
@@ -229,6 +236,7 @@ const signalRepositoryCoreLive = Layer.effect(
                   and(
                     eq(signals.organizationId, organizationId),
                     eq(signals.projectId, projectId),
+                    isNull(signals.deletedAt),
                     or(hasAnnotationEvidence, meetsVisibilityThreshold),
                   ),
                 )
@@ -373,7 +381,7 @@ const signalRepositoryCoreLive = Layer.effect(
               db
                 .select(signalColumnsWithLifecycle)
                 .from(signals)
-                .where(and(eq(signals.organizationId, organizationId), eq(signals.id, id)))
+                .where(and(eq(signals.organizationId, organizationId), eq(signals.id, id), isNull(signals.deletedAt)))
                 .limit(1),
             )
             .pipe(
@@ -393,7 +401,7 @@ const signalRepositoryCoreLive = Layer.effect(
               db
                 .select()
                 .from(signals)
-                .where(and(eq(signals.organizationId, organizationId), eq(signals.id, id)))
+                .where(and(eq(signals.organizationId, organizationId), eq(signals.id, id), isNull(signals.deletedAt)))
                 .limit(1)
                 .for("update"),
             )
@@ -428,6 +436,7 @@ const signalRepositoryCoreLive = Layer.effect(
                   and(
                     eq(signals.organizationId, organizationId),
                     eq(signals.projectId, projectId),
+                    isNull(signals.deletedAt),
                     inArray(signals.id, signalIds),
                   ),
                 )
@@ -468,6 +477,7 @@ const signalRepositoryCoreLive = Layer.effect(
                 and(
                   eq(signals.organizationId, organizationId),
                   eq(signals.projectId, projectId),
+                  isNull(signals.deletedAt),
                   isNotNull(signals.centroidEmbedding),
                   sql`(${score} >= ${SIGNAL_DISCOVERY_MIN_SIMILARITY} OR ${vectorScore} >= ${SIGNAL_DISCOVERY_MIN_VECTOR_SIMILARITY})`,
                 ),
@@ -499,6 +509,7 @@ const signalRepositoryCoreLive = Layer.effect(
                   eq(signals.organizationId, organizationId),
                   eq(signals.projectId, projectId),
                   eq(signals.id, signalId),
+                  isNull(signals.deletedAt),
                 ),
               )
               .limit(1),
@@ -526,6 +537,7 @@ const signalRepositoryCoreLive = Layer.effect(
                   eq(signals.organizationId, organizationId),
                   eq(signals.projectId, projectId),
                   ne(signals.id, signalId),
+                  isNull(signals.deletedAt),
                   isNotNull(signals.centroidEmbedding),
                 ),
               )
@@ -605,6 +617,7 @@ const signalRepositoryCoreLive = Layer.effect(
                 and(
                   eq(signals.organizationId, organizationId),
                   isNull(projects.deletedAt),
+                  isNull(signals.deletedAt),
                   isNull(signals.resolvedAt),
                   isNull(signals.ignoredAt),
                   isNotNull(signals.centroidEmbedding),
@@ -635,6 +648,8 @@ const signalRepositoryCoreLive = Layer.effect(
                   name: row.name,
                   description: row.description,
                   source: row.source,
+                  origin: row.origin,
+                  filters: row.filters,
                   assigneeId: row.assigneeId,
                   priority: row.priority,
                   centroid: row.centroid,
@@ -643,9 +658,21 @@ const signalRepositoryCoreLive = Layer.effect(
                   escalatedAt: row.escalatedAt,
                   resolvedAt: row.resolvedAt,
                   ignoredAt: row.ignoredAt,
+                  deletedAt: row.deletedAt,
                   updatedAt: row.updatedAt,
                 },
               }),
+          )
+        }),
+
+      softDelete: (id: SignalId) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient.query((db, organizationId) =>
+            db
+              .update(signals)
+              .set({ deletedAt: sql`now()`, updatedAt: sql`now()` })
+              .where(and(eq(signals.organizationId, organizationId), eq(signals.id, id), isNull(signals.deletedAt))),
           )
         }),
 
@@ -656,6 +683,7 @@ const signalRepositoryCoreLive = Layer.effect(
             eq(signals.organizationId, sqlClient.organizationId),
             eq(signals.projectId, input.projectId),
             eq(signals.slug, input.slug),
+            isNull(signals.deletedAt),
             ...(input.excludeSignalId ? [ne(signals.id, input.excludeSignalId)] : []),
           )
           const [row] = yield* sqlClient.query((db) =>
@@ -677,6 +705,7 @@ const signalRepositoryCoreLive = Layer.effect(
                     eq(signals.organizationId, organizationId),
                     eq(signals.projectId, projectId),
                     eq(signals.slug, slug),
+                    isNull(signals.deletedAt),
                   ),
                 )
                 .limit(1),
@@ -702,6 +731,7 @@ const signalRepositoryCoreLive = Layer.effect(
                   eq(signals.organizationId, organizationId),
                   eq(signals.projectId, projectId),
                   eq(signals.slug, slug),
+                  isNull(signals.deletedAt),
                 ),
               )
               .limit(1),

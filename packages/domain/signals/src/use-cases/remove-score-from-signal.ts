@@ -72,10 +72,15 @@ export const removeScoreFromSignalUseCase = (input: RemoveScoreFromSignalInput) 
           return { action: "issue-not-found" } satisfies RemoveScoreFromSignalResult
         }
 
+        // Only discovered signals carry a centroid to recompute; a user-created signal has none.
+        if (issue.issue.centroid === null) {
+          return { action: "removed" } satisfies RemoveScoreFromSignalResult
+        }
+
         const updatedCentroid = updateSignalCentroid({
           centroid: {
             ...issue.issue.centroid,
-            clusteredAt: issue.issue.clusteredAt,
+            clusteredAt: issue.issue.clusteredAt ?? timestamp,
           },
           score: {
             embedding: normalizedEmbedding,

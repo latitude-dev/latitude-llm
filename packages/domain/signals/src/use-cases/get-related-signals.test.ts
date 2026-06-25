@@ -43,6 +43,7 @@ const makeSignal = (overrides: Partial<Signal> & { id: Signal["id"] }): Signal =
   name: `Signal ${(overrides.id as string).slice(0, 4)}`,
   description: "An issue",
   source: "annotation",
+  origin: "system",
   assigneeId: null,
   priority: null,
   centroid: createSignalCentroid(),

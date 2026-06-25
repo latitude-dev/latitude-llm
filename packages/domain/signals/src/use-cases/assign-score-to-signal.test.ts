@@ -66,6 +66,7 @@ const makeSignal = (overrides?: Partial<Signal>): Signal => ({
   name: "Token leakage in responses",
   description: "The assistant leaks API tokens in its response.",
   source: "annotation",
+  origin: "system",
   assigneeId: null,
   priority: null,
   centroid: createSignalCentroid(),
@@ -127,7 +128,7 @@ describe("assignScoreToSignalUseCase", () => {
       signalId: existingSignal.id,
     })
     expect(scores.get(score.id)?.signalId).toBe(existingSignal.id)
-    expect(issues.get(existingSignal.id)?.centroid.mass).toBeGreaterThan(0)
+    expect(issues.get(existingSignal.id)?.centroid?.mass).toBeGreaterThan(0)
     expect(writtenEvents).toEqual([
       expect.objectContaining({
         eventName: "ScoreAssignedToSignal",
@@ -213,7 +214,7 @@ describe("assignScoreToSignalUseCase", () => {
       action: "already-assigned",
       signalId: winningSignalId,
     })
-    expect(issues.get(existingSignal.id)?.centroid.mass).toBe(0)
+    expect(issues.get(existingSignal.id)?.centroid?.mass).toBe(0)
     expect(writtenEvents).toHaveLength(0)
   })
 
@@ -263,7 +264,7 @@ describe("assignScoreToSignalUseCase", () => {
       action: "already-assigned",
       signalId: winningSignalId,
     })
-    expect(issues.get(existingSignal.id)?.centroid.mass).toBe(0)
+    expect(issues.get(existingSignal.id)?.centroid?.mass).toBe(0)
     expect(writtenEvents).toHaveLength(0)
   })
 
@@ -300,7 +301,7 @@ describe("assignScoreToSignalUseCase", () => {
 
     expect(error._tag).toBe("SignalNotFoundForAssignmentError")
     expect(scores.get(score.id)?.signalId).toBeNull()
-    expect(issues.get(foreignSignal.id)?.centroid.mass).toBe(0)
+    expect(issues.get(foreignSignal.id)?.centroid?.mass).toBe(0)
   })
 
   describe("regression detection", () => {
