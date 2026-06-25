@@ -1239,7 +1239,7 @@ describe("listSignalsUseCase", () => {
       expect(result.priorityCounts).toEqual({ urgent: 1, high: 1, medium: 1, low: 1, none: 1 })
     })
 
-    it("skips full-list analytics on continuation pages while preserving row order", async () => {
+    it("uses the table-row path without analytics on non-analytics reads", async () => {
       const { repository: signalRepository } = createFakeSignalRepository(mixedPrioritySeed.map((entry) => entry.issue))
       const { repository: evaluationRepository } = createEvaluationRepository()
       const aggregateInputs: Array<{ readonly signalIds: readonly string[] }> = []
@@ -1281,8 +1281,8 @@ describe("listSignalsUseCase", () => {
         ),
       )
 
-      expect(result.items.map((item) => item.id)).toEqual([mediumSignal.id, lowSignal.id])
-      expect(aggregateInputs).toEqual([{ signalIds: [mediumSignal.id, lowSignal.id] }])
+      expect(result.items.map((item) => item.id)).toEqual([unsetSignal.id, mediumSignal.id])
+      expect(aggregateInputs).toEqual([])
       expect(histogramCalls).toBe(0)
     })
 

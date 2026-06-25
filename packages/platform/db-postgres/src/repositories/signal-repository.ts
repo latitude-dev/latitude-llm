@@ -21,8 +21,25 @@ import {
   SignalRepository,
   type SignalWithLifecycle,
   signalSchema,
+  UNASSIGNED_FILTER,
 } from "@domain/signals"
-import { and, asc, desc, eq, getTableColumns, ilike, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm"
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  gte,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { alertIncidents } from "../schema/alert-incidents.ts"
@@ -242,6 +259,83 @@ const signalRepositoryCoreLive = Layer.effect(
                 limit,
                 offset,
               })),
+            )
+        }),
+
+      listTableRows: ({ projectId, limit, offset, lifecycleGroup, assigneeIds, searchQuery, timeRange, sort }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) => {
+              const hasAnnotationEvidence = sql<boolean>`exists (
+                select 1
+                from ${scores}
+                where ${scores.signalId} = ${signals.id}
+                  and ${scores.draftedAt} is null
+                  and ${scores.sourceType} = 'annotation'
+              )`
+
+              const meetsVisibilityThreshold = sql<boolean>`(
+                select count(*)
+                from ${scores}
+                where ${scores.signalId} = ${signals.id}
+                  and ${scores.draftedAt} is null
+              ) >= ${MIN_OCCURRENCES_FOR_VISIBILITY}`
+
+              const assigneeConditions = assigneeIds?.length
+                ? assigneeIds.includes(UNASSIGNED_FILTER)
+                  ? or(
+                      isNull(signals.assigneeId),
+                      ...(() => {
+                        const assigned = assigneeIds.filter((id) => id !== UNASSIGNED_FILTER)
+                        return assigned.length ? [inArray(signals.assigneeId, assigned)] : []
+                      })(),
+                    )
+                  : inArray(signals.assigneeId, assigneeIds)
+                : undefined
+              const search = searchQuery?.trim()
+              const where = and(
+                eq(signals.organizationId, organizationId),
+                eq(signals.projectId, projectId),
+                or(hasAnnotationEvidence, meetsVisibilityThreshold),
+                lifecycleGroup === "active"
+                  ? and(isNull(signals.resolvedAt), isNull(signals.ignoredAt))
+                  : lifecycleGroup === "archived"
+                    ? or(isNotNull(signals.resolvedAt), isNotNull(signals.ignoredAt))
+                    : undefined,
+                assigneeConditions,
+                timeRange?.from ? gte(signals.updatedAt, timeRange.from) : undefined,
+                timeRange?.to ? lte(signals.updatedAt, timeRange.to) : undefined,
+                search ? or(ilike(signals.name, `%${search}%`), ilike(signals.description, `%${search}%`)) : undefined,
+              )
+              const direction = sort?.direction === "asc" ? asc : desc
+              const orderBy =
+                sort?.field === "state"
+                  ? [direction(signals.resolvedAt), direction(signals.ignoredAt), direction(signals.updatedAt)]
+                  : [direction(signals.updatedAt), direction(signals.createdAt), asc(signals.id)]
+
+              return Promise.all([
+                db
+                  .select(signalColumnsWithLifecycle)
+                  .from(signals)
+                  .where(where)
+                  .orderBy(...orderBy)
+                  .limit(limit)
+                  .offset(offset),
+                db.select({ value: count() }).from(signals).where(where),
+              ])
+            })
+            .pipe(
+              Effect.map(([rows, totals]) => {
+                const totalCount = Number(totals[0]?.value ?? 0)
+                return {
+                  items: rows.map(toSignalWithLifecycle),
+                  hasMore: offset + limit < totalCount,
+                  totalCount,
+                  limit,
+                  offset,
+                }
+              }),
             )
         }),
 

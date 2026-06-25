@@ -23,6 +23,7 @@ import {
   getSignalDimensions,
   getSignalImpact,
   getSignalOccurrences,
+  getSignalsAnalytics,
   listSignalSessions,
   listSignals,
   searchOrgSignals,
@@ -95,6 +96,8 @@ const getSignalsQueryKey = (input: SignalsKeyInput) =>
 const getSignalsOffsetQueryKey = (input: SignalsKeyInput, offset: number) =>
   [...getSignalsQueryKey(input), "offset", offset] as const
 
+const getSignalsAnalyticsQueryKey = (input: SignalsKeyInput) => [...getSignalsQueryKey(input), "analytics"] as const
+
 const getSignalQueryKey = (projectId: string, signalId: string) => ["issue", projectId, signalId] as const
 
 const getSignalDetailQueryKey = (projectId: string, signalId: string) => ["issue-detail", projectId, signalId] as const
@@ -119,10 +122,15 @@ const getSignalSessionsPageKey = (projectId: string, signalId: string, offset: n
 const getSignalSessionsCountQueryKey = (projectId: string, signalId: string) =>
   ["issue-sessions-count", projectId, signalId] as const
 
-const buildListSignalsRequest = (input: SignalsKeyInput, offset: number) => ({
+const buildListSignalsRequest = (
+  input: SignalsKeyInput,
+  offset: number,
+  options: { readonly includeAnalytics: boolean; readonly limit?: number },
+) => ({
   projectId: input.projectId,
-  limit: input.limit,
+  limit: options.limit ?? input.limit,
   offset,
+  includeAnalytics: options.includeAnalytics,
   sort: {
     field: input.sorting.column,
     direction: input.sorting.direction,
@@ -179,13 +187,25 @@ export function useSignals(input: {
       queryKey: offsetKey,
       queryFn: () =>
         listSignals({
-          data: buildListSignalsRequest(keyInput, offset),
+          data: buildListSignalsRequest(keyInput, offset, { includeAnalytics: false }),
         }),
       staleTime: ISSUES_QUERY_STALE_TIME_MS,
     })
 
     return result
   }
+
+  const enabled = (input.enabled ?? true) && input.projectId.length > 0
+  const analyticsQuery = useQuery({
+    queryKey: getSignalsAnalyticsQueryKey(keyInput),
+    queryFn: (): Promise<SignalsListResultRecord> =>
+      getSignalsAnalytics({
+        data: buildListSignalsRequest(keyInput, 0, { includeAnalytics: true }),
+      }),
+    staleTime: ISSUES_QUERY_STALE_TIME_MS,
+    placeholderData: keepPreviousData,
+    enabled,
+  })
 
   const {
     data: paginatedData,
@@ -201,7 +221,7 @@ export function useSignals(input: {
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.offset + lastPage.limit : undefined),
     staleTime: ISSUES_QUERY_STALE_TIME_MS,
     placeholderData: keepPreviousData,
-    enabled: (input.enabled ?? true) && input.projectId.length > 0,
+    enabled,
   })
 
   const infiniteScroll: InfiniteTableInfiniteScroll = useMemo(
@@ -218,7 +238,7 @@ export function useSignals(input: {
 
   return {
     data: data as readonly SignalRecord[],
-    analytics: firstPage?.analytics ?? EMPTY_ISSUES_ANALYTICS,
+    analytics: analyticsQuery.data?.analytics ?? EMPTY_ISSUES_ANALYTICS,
     totalCount: firstPage?.totalCount ?? 0,
     hasAnySignals: firstPage?.hasAnySignals ?? false,
     occurrencesSum: firstPage?.occurrencesSum ?? 0,
@@ -229,6 +249,7 @@ export function useSignals(input: {
     // shown as placeholder (e.g. after a sort/filter change). Lets consumers
     // surface skeleton states without unmounting the surrounding page layout.
     isReloading: isPlaceholderData,
+    isAnalyticsLoading: analyticsQuery.isLoading || analyticsQuery.isPlaceholderData,
     infiniteScroll,
   }
 }

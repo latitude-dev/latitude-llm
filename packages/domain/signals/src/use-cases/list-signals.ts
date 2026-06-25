@@ -71,6 +71,7 @@ const listSignalsInputSchema = z.object({
   /** Restrict to issues assigned to any of these users; `"unassigned"` matches `assigneeId: null`. */
   assigneeIds: z.array(signalAssigneeFilterSchema).min(1).optional(),
   search: signalSearchSchema.optional(),
+  textSearchQuery: z.string().min(1).optional(),
   timeRange: signalsTimeRangeSchema.optional(),
   sort: z
     .object({
@@ -457,6 +458,41 @@ const makeZeroWindowMetric = (issue: SignalWithLifecycle): SignalWindowMetric =>
   lastSeenAt: issue.createdAt,
 })
 
+const toLightListItem = (issue: SignalWithLifecycle, now: Date): SignalListItem => {
+  const states = deriveSignalLifecycleStates({
+    issue,
+    isEscalating: issue.lifecycle.isEscalating,
+    isRegressed: issue.lifecycle.isRegressed,
+    now,
+  })
+
+  return {
+    id: issue.id,
+    projectId: issue.projectId,
+    slug: issue.slug,
+    name: issue.name,
+    description: issue.description,
+    source: issue.source,
+    states,
+    assigneeId: issue.assigneeId,
+    priority: issue.priority,
+    createdAt: issue.createdAt,
+    updatedAt: issue.updatedAt,
+    escalatedAt: issue.escalatedAt,
+    resolvedAt: issue.resolvedAt,
+    ignoredAt: issue.ignoredAt,
+    firstSeenAt: issue.createdAt,
+    lastSeenAt: issue.updatedAt,
+    occurrences: 0,
+    similarityScore: null,
+    affectedSessionsPercent: 0,
+    escalationOccurrenceThreshold: null,
+    trend: [],
+    evaluations: [],
+    tags: [],
+  }
+}
+
 const toAnalyticsCounts = (candidates: readonly AnalyticsCandidate[]): SignalListAnalyticsCounts => ({
   newSignals: candidates.filter((candidate) => candidate.lifecycleStates.includes(SignalState.New)).length,
   escalatingSignals: candidates.filter((candidate) => candidate.lifecycleStates.includes(SignalState.Escalating))
@@ -530,6 +566,93 @@ export const listSignalsUseCase = (
           assigneeCounts: {},
         } satisfies ListSignalsResult
       }
+    }
+
+    if (!parsed.includeAnalytics) {
+      const histogramTimeRange = resolveHistogramTimeRange({
+        timeRange: parsed.timeRange,
+        now,
+      })
+      const histogramBucketSeconds = pickTraceHistogramBucketSeconds(
+        histogramTimeRange.from.getTime(),
+        histogramTimeRange.to.getTime(),
+      )
+      const histogramScaffold = buildHistogramBucketScaffold({
+        from: histogramTimeRange.from,
+        to: histogramTimeRange.to,
+        bucketSeconds: histogramBucketSeconds,
+      })
+      const page = parsed.signalIds
+        ? yield* signalRepository.findByIds({ projectId: parsed.projectId, signalIds: parsed.signalIds }).pipe(
+            Effect.map((rows) => {
+              const filteredRows = rows.filter((issue) => {
+                const candidate = {
+                  issue,
+                  windowMetric: makeZeroWindowMetric(issue),
+                  lifecycleStates: deriveSignalLifecycleStates({
+                    issue,
+                    isEscalating: issue.lifecycle.isEscalating,
+                    isRegressed: issue.lifecycle.isRegressed,
+                    now,
+                  }),
+                  similarityScore: null,
+                  firstSeenAt: issue.createdAt,
+                  lastSeenAt: issue.updatedAt,
+                  escalationOccurrenceThreshold: null,
+                } satisfies AnalyticsCandidate
+                return (
+                  matchesLifecycleGroup(candidate, parsed.lifecycleGroup) &&
+                  matchesAssigneeFilter(candidate, parsed.assigneeIds)
+                )
+              })
+              return {
+                items: filteredRows.slice(parsed.offset, parsed.offset + parsed.limit),
+                totalCount: filteredRows.length,
+                hasMore: parsed.offset + parsed.limit < filteredRows.length,
+                limit: parsed.limit,
+                offset: parsed.offset,
+              }
+            }),
+          )
+        : yield* signalRepository.listTableRows({
+            projectId: parsed.projectId,
+            limit: parsed.limit,
+            offset: parsed.offset,
+            ...(parsed.lifecycleGroup ? { lifecycleGroup: parsed.lifecycleGroup } : {}),
+            ...(parsed.assigneeIds ? { assigneeIds: parsed.assigneeIds } : {}),
+            ...(parsed.textSearchQuery
+              ? { searchQuery: parsed.textSearchQuery }
+              : parsed.search
+                ? { searchQuery: parsed.search.query }
+                : {}),
+            ...(selectedTimeRange ? { timeRange: selectedTimeRange } : {}),
+            sort: parsed.sort,
+          })
+
+      return {
+        analytics: {
+          counts: {
+            newSignals: 0,
+            escalatingSignals: 0,
+            ongoingSignals: 0,
+            regressedSignals: 0,
+            resolvedSignals: 0,
+            seenOccurrences: 0,
+          },
+          histogram: fillBuckets({ scaffold: histogramScaffold, buckets: [] }),
+          histogramBucketSeconds,
+          totalSessions: 0,
+        },
+        items: page.items.map((issue) => toLightListItem(issue, now)),
+        totalCount: page.totalCount,
+        hasMore: page.hasMore,
+        hasAnySignals,
+        limit: parsed.limit,
+        offset: parsed.offset,
+        occurrencesSum: 0,
+        priorityCounts: emptyPriorityCounts(),
+        assigneeCounts: {},
+      } satisfies ListSignalsResult
     }
 
     const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
@@ -710,7 +833,7 @@ export const listSignalsUseCase = (
     const tagsTimeRange = resolveTagsTimeRange({ timeRange: selectedTimeRange, now })
 
     const [evaluationPage, trendSeries, tagsAggregates, pageOccurrences, sessionCount] = yield* Effect.all([
-      pageSignalIds.length === 0
+      !parsed.includeAnalytics || pageSignalIds.length === 0
         ? Effect.succeed({
             items: [] as readonly Evaluation[],
             hasMore: false,
@@ -725,7 +848,7 @@ export const listSignalsUseCase = (
               limit: 1000,
             },
           }),
-      pageSignalIds.length === 0
+      !parsed.includeAnalytics || pageSignalIds.length === 0
         ? Effect.succeed([] satisfies readonly SignalTrendSeries[])
         : scoreAnalyticsRepository
             .trendBySignals({
@@ -735,7 +858,7 @@ export const listSignalsUseCase = (
               timeRange: trendTimeRange,
             })
             .pipe(Effect.withSpan("issues.listSignals.trendBySignals")),
-      pageSignalIds.length === 0
+      !parsed.includeAnalytics || pageSignalIds.length === 0
         ? Effect.succeed([])
         : scoreAnalyticsRepository
             .aggregateTagsBySignals({
@@ -745,7 +868,7 @@ export const listSignalsUseCase = (
               timeRange: tagsTimeRange,
             })
             .pipe(Effect.withSpan("issues.listSignals.aggregateTagsBySignals")),
-      pageSignalIds.length === 0
+      !parsed.includeAnalytics || pageSignalIds.length === 0
         ? Effect.succeed([] satisfies readonly SignalOccurrenceAggregate[])
         : scoreAnalyticsRepository
             .aggregateBySignals({
@@ -754,9 +877,7 @@ export const listSignalsUseCase = (
               signalIds: pageSignalIds,
             })
             .pipe(Effect.withSpan("issues.listSignals.aggregateBySignals")),
-      parsed.includeAnalytics || pageSignalIds.length > 0
-        ? countTotalSessionsEffect
-        : Effect.succeed({ totalCount: 0 }),
+      parsed.includeAnalytics ? countTotalSessionsEffect : Effect.succeed({ totalCount: 0 }),
     ])
 
     const evaluationsBySignalId = new Map<string, Evaluation[]>()
@@ -819,7 +940,9 @@ export const listSignalsUseCase = (
               : Math.min(candidate.windowMetric.affectedSessions / sessionCount.totalCount, 1),
           escalationOccurrenceThreshold:
             occurrence !== null ? getEscalationOccurrenceThreshold(occurrence.baselineAvgOccurrences) : null,
-          trend: trendBySignalId.get(candidate.issue.id) ?? fillBuckets({ scaffold: trendScaffold, buckets: [] }),
+          trend: parsed.includeAnalytics
+            ? (trendBySignalId.get(candidate.issue.id) ?? fillBuckets({ scaffold: trendScaffold, buckets: [] }))
+            : [],
           evaluations: evaluationsBySignalId.get(candidate.issue.id) ?? [],
           tags: tagsBySignalId.get(candidate.issue.id) ?? [],
         }

@@ -79,6 +79,7 @@ const listSignalsInputSchema = z.object({
     })
     .optional(),
   searchQuery: z.string().max(500).optional(),
+  includeAnalytics: z.boolean().optional(),
   timeRange: z
     .object({
       fromIso: z.iso.datetime().optional(),
@@ -297,90 +298,98 @@ const toSignalLifecycleCommandRecord = (result: ApplySignalLifecycleCommandResul
 
 type SignalLifecycleCommandRecord = ReturnType<typeof toSignalLifecycleCommandRecord>
 
+type ListSignalsRequest = z.infer<typeof listSignalsInputSchema>
+
+const runSignalsList = async (
+  data: ListSignalsRequest,
+  options: { readonly includeAnalytics: boolean },
+): Promise<SignalsListResultRecord> => {
+  const { organizationId, userId } = await requireSession()
+  const orgId = OrganizationId(organizationId)
+  const pgClient = getPostgresClient()
+  const chClient = getClickhouseClient()
+  const redisClient = getRedisClient()
+  const trimmedSearchQuery = data.searchQuery?.trim() || undefined
+
+  const result = await Effect.runPromise(
+    Effect.gen(function* () {
+      const directMatch = trimmedSearchQuery
+        ? yield* Effect.gen(function* () {
+            const signalRepo = yield* SignalRepository
+            const [byId, bySlug] = yield* Effect.all(
+              [
+                signalRepo
+                  .findById(SignalId(trimmedSearchQuery))
+                  .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
+                signalRepo
+                  .findBySlug({ projectId: ProjectId(data.projectId), slug: trimmedSearchQuery })
+                  .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
+              ],
+              { concurrency: 2 },
+            )
+            const idMatch = byId && byId.projectId === data.projectId ? byId : null
+            return idMatch ?? bySlug
+          })
+        : null
+
+      const search =
+        options.includeAnalytics && trimmedSearchQuery && !directMatch
+          ? yield* embedSignalSearchQueryUseCase({
+              organizationId,
+              projectId: data.projectId,
+              query: trimmedSearchQuery,
+            })
+          : undefined
+
+      const timeRange =
+        data.timeRange?.fromIso || data.timeRange?.toIso
+          ? {
+              ...(data.timeRange?.fromIso ? { from: new Date(data.timeRange.fromIso) } : {}),
+              ...(data.timeRange?.toIso ? { to: new Date(data.timeRange.toIso) } : {}),
+            }
+          : undefined
+
+      return yield* listSignalsUseCase({
+        organizationId,
+        projectId: data.projectId,
+        ...(data.limit !== undefined ? { limit: data.limit } : {}),
+        ...(data.offset !== undefined ? { offset: data.offset } : {}),
+        includeAnalytics: options.includeAnalytics,
+        ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
+        ...(data.assigneeIds?.length ? { assigneeIds: data.assigneeIds } : {}),
+        ...(data.sort ? { sort: data.sort } : {}),
+        ...(timeRange ? { timeRange } : {}),
+        ...(directMatch
+          ? { signalIds: [directMatch.id] }
+          : search
+            ? {
+                search: {
+                  query: search.query,
+                  normalizedEmbedding: search.normalizedEmbedding,
+                },
+              }
+            : trimmedSearchQuery
+              ? { textSearchQuery: trimmedSearchQuery }
+              : {}),
+      })
+    }).pipe(
+      withPostgres(Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive), pgClient, orgId),
+      withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive), chClient, orgId),
+      withAi(AIEmbedLive, redisClient),
+      withTracing,
+    ),
+  )
+
+  return toSignalsListResultRecord(result, userId)
+}
+
 export const listSignals = createServerFn({ method: "GET" })
   .inputValidator(listSignalsInputSchema)
-  .handler(async ({ data }): Promise<SignalsListResultRecord> => {
-    const { organizationId, userId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
-    const pgClient = getPostgresClient()
-    const chClient = getClickhouseClient()
-    const redisClient = getRedisClient()
-    const trimmedSearchQuery = data.searchQuery?.trim() || undefined
+  .handler(async ({ data }): Promise<SignalsListResultRecord> => runSignalsList(data, { includeAnalytics: false }))
 
-    const result = await Effect.runPromise(
-      Effect.gen(function* () {
-        // Direct-match lookup: if the user typed an exact issue id or slug, narrow the listing
-        // to that issue and skip the (expensive) semantic-search embed call entirely. When
-        // neither matches, fall through to the semantic search path. The id lookup is org-
-        // scoped via RLS but not project-scoped — guard against cross-project leakage by
-        // comparing the returned `projectId` to the request's project before accepting it.
-        const directMatch = trimmedSearchQuery
-          ? yield* Effect.gen(function* () {
-              const signalRepo = yield* SignalRepository
-              const [byId, bySlug] = yield* Effect.all(
-                [
-                  signalRepo
-                    .findById(SignalId(trimmedSearchQuery))
-                    .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
-                  signalRepo
-                    .findBySlug({ projectId: ProjectId(data.projectId), slug: trimmedSearchQuery })
-                    .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
-                ],
-                { concurrency: 2 },
-              )
-              const idMatch = byId && byId.projectId === data.projectId ? byId : null
-              return idMatch ?? bySlug
-            })
-          : null
-
-        const search =
-          trimmedSearchQuery && !directMatch
-            ? yield* embedSignalSearchQueryUseCase({
-                organizationId,
-                projectId: data.projectId,
-                query: trimmedSearchQuery,
-              })
-            : undefined
-
-        const timeRange =
-          data.timeRange?.fromIso || data.timeRange?.toIso
-            ? {
-                ...(data.timeRange?.fromIso ? { from: new Date(data.timeRange.fromIso) } : {}),
-                ...(data.timeRange?.toIso ? { to: new Date(data.timeRange.toIso) } : {}),
-              }
-            : undefined
-
-        return yield* listSignalsUseCase({
-          organizationId,
-          projectId: data.projectId,
-          ...(data.limit !== undefined ? { limit: data.limit } : {}),
-          ...(data.offset !== undefined ? { offset: data.offset } : {}),
-          includeAnalytics: (data.offset ?? 0) === 0,
-          ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
-          ...(data.assigneeIds?.length ? { assigneeIds: data.assigneeIds } : {}),
-          ...(data.sort ? { sort: data.sort } : {}),
-          ...(timeRange ? { timeRange } : {}),
-          ...(directMatch
-            ? { signalIds: [directMatch.id] }
-            : search
-              ? {
-                  search: {
-                    query: search.query,
-                    normalizedEmbedding: search.normalizedEmbedding,
-                  },
-                }
-              : {}),
-        })
-      }).pipe(
-        withPostgres(Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive), pgClient, orgId),
-        withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive), chClient, orgId),
-        withAi(AIEmbedLive, redisClient),
-        withTracing,
-      ),
-    )
-
-    return toSignalsListResultRecord(result, userId)
-  })
+export const getSignalsAnalytics = createServerFn({ method: "GET" })
+  .inputValidator(listSignalsInputSchema)
+  .handler(async ({ data }): Promise<SignalsListResultRecord> => runSignalsList(data, { includeAnalytics: true }))
 
 export interface OrgSignalSearchRecord {
   readonly id: string

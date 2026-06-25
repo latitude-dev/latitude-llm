@@ -90,6 +90,7 @@ import {
 
 const DEFAULT_SORTING: SignalsTableSorting = { column: "lastSeen", direction: "desc" }
 const SIGNAL_SEARCH_DEBOUNCE_MS = 300
+const DEFAULT_SIGNALS_RANGE_SECONDS = 30 * 24 * 60 * 60
 const SORT_COLUMNS = ["lastSeen", "occurrences", "state"] as const satisfies readonly SignalsTableSorting["column"][]
 const SORT_DIRECTIONS = ["asc", "desc"] as const satisfies readonly SignalsTableSorting["direction"][]
 const SORT_PARAM_PATTERN = /^(lastSeen|occurrences|state):(asc|desc)$/
@@ -196,13 +197,14 @@ function SignalsPage() {
     storageKey: "projects.issues.columns.v1",
     columns: ISSUES_COLUMN_OPTIONS,
   })
-  const timeRange =
-    timeFrom || timeTo
-      ? {
-          ...(timeFrom ? { fromIso: timeFrom } : {}),
-          ...(timeTo ? { toIso: timeTo } : {}),
-        }
-      : undefined
+  const timeRange = useMemo(() => {
+    const toMs = timeTo ? Date.parse(timeTo) : Date.now()
+    const fromMs = timeFrom ? Date.parse(timeFrom) : toMs - DEFAULT_SIGNALS_RANGE_SECONDS * 1000
+    return {
+      fromIso: new Date(fromMs).toISOString(),
+      toIso: new Date(toMs).toISOString(),
+    }
+  }, [timeFrom, timeTo])
 
   const assigneeIds = useMemo(() => parseAssignees(assigneesParam), [assigneesParam])
   const setAssigneeIds = useCallback(
@@ -225,6 +227,7 @@ function SignalsPage() {
     hasAnySignals,
     isLoading,
     isReloading,
+    isAnalyticsLoading,
     infiniteScroll,
   } = useSignals({
     projectId: project.id,
@@ -386,7 +389,7 @@ function SignalsPage() {
   }, [archived, lifecycleGroup, project.id, searchQuery, selection, sorting.column, sorting.direction, timeRange])
 
   const hasActiveFilters =
-    lifecycleGroup !== "active" || searchQuery !== "" || Boolean(timeRange) || assigneeIds.length > 0
+    lifecycleGroup !== "active" || searchQuery !== "" || Boolean(timeFrom || timeTo) || assigneeIds.length > 0
   // Derived from the un-substituted data so a placeholder reload (which forces
   // `issues` to []) does not falsely trigger the empty state.
   const hasNoSignals = !hasAnySignals && !hasActiveFilters
@@ -419,7 +422,7 @@ function SignalsPage() {
           <Layout.ActionsRow>
             <Layout.ActionRowItem>
               <TimeFilterDropdown
-                {...(timeFrom ? { startTimeFrom: timeFrom } : {})}
+                startTimeFrom={timeFrom || timeRange.fromIso}
                 {...(timeTo ? { startTimeTo: timeTo } : {})}
                 onChange={(from, to) => {
                   setTimeFrom(from ?? "")
@@ -512,7 +515,7 @@ function SignalsPage() {
             projectId={project.id}
             projectSlug={project.slug}
             analytics={analytics}
-            isLoading={showSkeletons}
+            isLoading={isAnalyticsLoading}
             onRangeSelect={(range) => {
               setTimeFrom(range?.from ?? "")
               setTimeTo(range?.to ?? "")
