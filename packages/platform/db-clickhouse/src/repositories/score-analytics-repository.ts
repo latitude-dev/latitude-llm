@@ -1773,7 +1773,6 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                         FROM scores
                         WHERE ${scopeClause(options)}
                           AND signal_id = {signalId:FixedString(24)}
-                          AND passed = true
                           AND trace_id != ''
                       )
                       GROUP BY normalized_session_id
@@ -1814,7 +1813,6 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                       FROM scores
                       WHERE ${scopeClause(options)}
                         AND signal_id = {signalId:FixedString(24)}
-                        AND passed = true
                         AND trace_id != ''`,
                 query_params: {
                   ...scopeParams(organizationId, projectId),
