@@ -32,6 +32,7 @@ import { TraceScopeContext } from "../../../../../domains/traces/trace-scope.tsx
 import { useTraceDetail } from "../../../../../domains/traces/traces.collection.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
+import { AddTraceToDatasetAction } from "./add-trace-to-dataset-action.tsx"
 import { isGlobalAnnotation } from "./annotations/hooks/use-annotation-navigation.ts"
 import { useConversationAnnotationFocus } from "./annotations/hooks/use-conversation-annotation-focus.ts"
 import { TraceAnnotationsList } from "./annotations/trace-annotations-list.tsx"
@@ -514,6 +515,7 @@ function TraceDetailDrawerShell({
     readonly closeLabel?: ReactNode
     readonly drawerStoreKey?: string
   }) {
+  const isSandbox = !!use(TraceScopeContext)
   return (
     <DetailDrawer
       storeKey={drawerStoreKey}
@@ -527,6 +529,7 @@ function TraceDetailDrawerShell({
       }
       actions={
         <>
+          {!isSandbox && <AddTraceToDatasetAction projectId={projectId} traceId={traceId} />}
           <Tooltip
             asChild
             side="bottom"
