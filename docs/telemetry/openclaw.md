@@ -4,7 +4,7 @@ Stream OpenClaw agent runs into Latitude as traces. After setup, agent runs appe
 
 The recommended way is OpenClaw's **official OpenTelemetry exporter** (the bundled `@openclaw/diagnostics-otel` plugin), pointed at Latitude's OTLP ingest. It follows OpenTelemetry GenAI semantic conventions and is maintained by OpenClaw — see [OpenClaw's OpenTelemetry docs](https://docs.openclaw.ai/gateway/opentelemetry).
 
-> **Deprecated:** the previous `@latitude-data/openclaw-telemetry` plugin (and its `…-cli` installer) is replaced by the native exporter below. See [Migrating from the Latitude plugin](#migrating-from-the-latitude-plugin).
+> **Note:** OpenClaw's official exporter is the preferred setup and is documented below. If you need to group a multi-turn conversation into a Latitude **session**, the Latitude-maintained [`@latitude-data/openclaw-telemetry`](https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/openclaw) plugin remains the only option that emits a session id today — the native exporter doesn't yet ([openclaw/openclaw#91927](https://github.com/openclaw/openclaw/issues/91927)).
 
 ## Prerequisites
 
@@ -92,7 +92,7 @@ openclaw config set 'diagnostics.otel.enabled' false
 openclaw gateway restart
 ```
 
-## Migrating from the Latitude plugin
+## Switching to the native exporter
 
 If you previously installed `@latitude-data/openclaw-telemetry`, remove it and switch to the native exporter above:
 
@@ -103,10 +103,16 @@ openclaw plugins install clawhub:@openclaw/diagnostics-otel
 openclaw gateway restart
 ```
 
-The native exporter produces the same Traces view (and a cleaner `invoke_agent → chat → execute_tool` structure), so no changes are needed on the Latitude side.
+The native exporter produces a cleaner `invoke_agent → chat → execute_tool` structure, and no changes are needed on the Latitude side.
+
+> **Note — session grouping.** The native exporter does not export a session id (OpenClaw redacts session keys by design — see [OpenClaw's OpenTelemetry docs](https://docs.openclaw.ai/gateway/opentelemetry)), so each agent turn arrives as its own trace and the **Sessions** view won't group a multi-turn conversation. The `@latitude-data/openclaw-telemetry` plugin emits a `session.id` and does group turns. We're tracking opt-in upstream support in [openclaw/openclaw#91927](https://github.com/openclaw/openclaw/issues/91927); once it lands, Latitude groups automatically (we already resolve `session.id`, `gen_ai.session.id`, `gen_ai.conversation.id`, and `langfuse.session.id`).
 
 ## Troubleshooting
 
 **No traces appear.** Restart the gateway, confirm the API key and project slug are correct, and send a new agent message. A `401`/`403` from ingest means the API key isn't valid for that project's organization.
 
 **Traces show timing but no content.** `captureContent.enabled` is `false` — set it to `true` and restart.
+
+**Traces aren't grouped into sessions.** Expected with the native exporter — it doesn't emit a session id (see the note above). Each turn is its own trace until [openclaw/openclaw#91927](https://github.com/openclaw/openclaw/issues/91927) ships an opt-in session attribute. For session grouping today, use the `@latitude-data/openclaw-telemetry` plugin.
+
+**Traces silently never arrive.** Check that `tracesEndpoint` uses **`https://`**. Plain `http://` gets a `301` redirect that OTLP exporters don't follow on `POST`, so batches are dropped with no error.
