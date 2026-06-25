@@ -102,6 +102,7 @@ export const evaluationSchema = z.object({
   // TODO(eval-sandbox): when sandbox is available, this field will hold arbitrary JS; until then
   // it must conform to the fixed LLM-as-judge template enforced by validateEvaluationScript().
   script: z.string().min(1),
+  scriptHash: z.string().optional(), // hash of `script`; stamped onto each score's metadata.evaluationHash. Backfilled from alignment.evaluationHash for legacy rows; the mapper falls back to it when unset.
   trigger: evaluationTriggerSchema, // controls when the evaluation runs on live traffic
   alignment: evaluationAlignmentSchema, // persisted confusion matrix and script hash
   alignedAt: z.date(), // last time the evaluation was realigned

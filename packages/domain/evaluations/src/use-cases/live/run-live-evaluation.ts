@@ -341,7 +341,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         passed: execution.kind === "completed" ? execution.result.passed : false,
         feedback: execution.kind === "completed" ? execution.result.feedback : execution.error,
         metadata: {
-          evaluationHash: evaluation.alignment.evaluationHash,
+          evaluationHash: evaluation.scriptHash ?? evaluation.alignment?.evaluationHash ?? "",
         },
         error: execution.kind === "errored" ? execution.error : null,
         duration: execution.duration,
