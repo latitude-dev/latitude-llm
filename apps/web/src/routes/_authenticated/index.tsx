@@ -15,7 +15,7 @@ import { resolveDefaultProjectSlug } from "../../domains/projects/projects.funct
 const searchSchema = z.object({
   next: z.literal("integrations").optional(),
   installed: z.literal("ok").optional(),
-  error: z.enum(["workspace_taken", "oauth_failed"]).optional(),
+  error: z.string().optional(),
 })
 
 export const Route = createFileRoute("/_authenticated/")({
