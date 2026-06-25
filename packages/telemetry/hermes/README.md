@@ -15,11 +15,36 @@ plugins from Python, so this connector ships as a **pip package** rather than np
 
 ```bash
 pip install latitude-telemetry-hermes
-hermes plugins enable latitude
 ```
 
-Hermes discovers the plugin automatically through the `hermes_agent.plugins` entry point —
-there are no files to copy. Set your credentials in the environment (or in `~/.hermes/.env`,
+Then enable the plugin by adding `latitude` to `~/.hermes/config.yaml`:
+
+```yaml
+plugins:
+  enabled:
+    - latitude
+```
+
+Hermes discovers the plugin through the `hermes_agent.plugins` entry point — there are no
+files to copy.
+
+> **Enable via `config.yaml`, not `hermes plugins enable latitude`.** Hermes's runtime loads
+> pip/entry-point plugins, but its `hermes plugins list`/`enable`/`disable` commands scan only
+> bundled and `~/.hermes/plugins/` directory plugins — so they report a pip-installed plugin as
+> "not installed or bundled" even though it loads fine
+> ([hermes-agent#23802](https://github.com/NousResearch/hermes-agent/issues/23802)). The
+> `config.yaml` entry above is the reliable way to turn it on.
+
+> **Plugin not loading at all?** It must be installed into the *same* Python that runs Hermes.
+> The official installer puts Hermes in its own venv (`~/.hermes/hermes-agent/venv`) that ignores
+> your shell's Python — so a plain `pip install` from another interpreter (system, pyenv, mise, …)
+> won't be discovered. Install into Hermes's venv instead:
+>
+> ```bash
+> ~/.hermes/bin/uv pip install --python ~/.hermes/hermes-agent/venv/bin/python latitude-telemetry-hermes
+> ```
+
+Set your credentials in the environment (or in `~/.hermes/.env`,
 which Hermes loads at startup):
 
 ```bash
