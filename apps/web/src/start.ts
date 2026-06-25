@@ -9,8 +9,17 @@ import {
 } from "@repo/observability"
 import { isHttpError } from "@repo/utils"
 import { createMiddleware, createStart } from "@tanstack/react-start"
+import { isStaleServerFnError, maybeReloadForStaleServerFn } from "./lib/stale-server-fn.ts"
 
 type Logger = ReturnType<typeof createLogger>
+
+const safeSessionStorage = (): Pick<Storage, "getItem" | "setItem"> | null => {
+  try {
+    return window.sessionStorage
+  } catch {
+    return null
+  }
+}
 
 type ServerFnMeta = {
   readonly id?: string
@@ -123,12 +132,34 @@ export const tracingRequestMiddleware = ({ tracer }: { tracer: Tracer }) =>
         }
         return result
       } catch (error) {
+        if (isStaleServerFnError(error)) {
+          span.setAttribute("server_fn.stale", true)
+          span.setStatus({ code: SpanStatusCode.OK })
+          throw error
+        }
         recordRequestError(span, error)
         throw error
       } finally {
         span.end()
       }
     })
+  })
+
+export const staleServerFnReloadMiddleware = () =>
+  createMiddleware({ type: "function" }).client(async ({ next }) => {
+    try {
+      return await next()
+    } catch (error) {
+      if (typeof window !== "undefined") {
+        maybeReloadForStaleServerFn({
+          error,
+          reload: () => window.location.reload(),
+          now: Date.now(),
+          storage: safeSessionStorage(),
+        })
+      }
+      throw error
+    }
   })
 
 export const tracingFnMiddleware = ({ tracer, logger }: { tracer: Tracer; logger: Logger }) =>
@@ -212,6 +243,6 @@ export const startInstance = createStart(async () => {
 
   return {
     requestMiddleware: [tracingRequestMiddleware({ tracer })],
-    functionMiddleware: [tracingFnMiddleware({ tracer, logger })],
+    functionMiddleware: [staleServerFnReloadMiddleware(), tracingFnMiddleware({ tracer, logger })],
   }
 })
