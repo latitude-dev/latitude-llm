@@ -323,6 +323,7 @@ const signalRepositoryCoreLive = Layer.effect(
                 where ${scores.signalId} = ${signals.id}
                   and ${scores.draftedAt} is null
                   and ${scores.sessionId} is not null
+                  and ${scores.sessionId} != ''
                   ${timeRange?.from ? sql`and ${scores.createdAt} >= ${timeRange.from}` : sql``}
                   ${timeRange?.to ? sql`and ${scores.createdAt} <= ${timeRange.to}` : sql``}
               )`
