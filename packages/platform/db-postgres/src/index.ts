@@ -45,6 +45,7 @@ export { EvaluationAlignmentExamplesRepositoryLive } from "./repositories/evalua
 export { EvaluationRepositoryLive } from "./repositories/evaluation-repository.ts"
 export { FeatureFlagRepositoryLive } from "./repositories/feature-flag-repository.ts"
 export { FlaggerRepositoryLive } from "./repositories/flagger-repository.ts"
+export { type GardenableProjectRef, listGardenableProjectRefs } from "./repositories/gardenable-projects.ts"
 export { IncidentMonitorReaderLive } from "./repositories/incident-monitor-reader.ts"
 export { InvitationRepositoryLive } from "./repositories/invitation-repository.ts"
 export { MembershipRepositoryLive } from "./repositories/membership-repository.ts"

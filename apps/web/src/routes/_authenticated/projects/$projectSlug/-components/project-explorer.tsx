@@ -17,6 +17,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRegisterCommands } from "../../../../../components/command-palette/command-palette-provider.tsx"
 import type { PaletteCommand } from "../../../../../components/command-palette/types.ts"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
+import {
+  addTracesToDatasetFunction,
+  createDatasetFromTracesFunction,
+} from "../../../../../domains/datasets/datasets.functions.ts"
 import { useMonitors } from "../../../../../domains/monitors/monitors.collection.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { useSavedSearchBySlug } from "../../../../../domains/saved-searches/saved-searches.collection.ts"
@@ -715,11 +719,31 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
             open={addToDatasetOpen}
             onOpenChange={setAddToDatasetOpen}
             projectId={currentProject.id}
-            selection={bulkSelection}
+            itemLabel="trace"
             selectedCount={selectedCount}
+            onAddToExisting={(datasetId) =>
+              addTracesToDatasetFunction({
+                data: {
+                  projectId: currentProject.id,
+                  datasetId,
+                  selection: bulkSelection,
+                  filters: effectiveFilters,
+                  ...(hasSearchQuery ? { searchQuery: query } : {}),
+                },
+              })
+            }
+            onCreateNew={(name) =>
+              createDatasetFromTracesFunction({
+                data: {
+                  projectId: currentProject.id,
+                  name,
+                  selection: bulkSelection,
+                  filters: effectiveFilters,
+                  ...(hasSearchQuery ? { searchQuery: query } : {}),
+                },
+              })
+            }
             onSuccess={clearSelections}
-            filters={effectiveFilters}
-            {...(hasSearchQuery ? { searchQuery: query } : {})}
           />
         </>
       )}

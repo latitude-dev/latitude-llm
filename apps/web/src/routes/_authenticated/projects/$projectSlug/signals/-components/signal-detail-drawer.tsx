@@ -1,4 +1,5 @@
 import {
+  Button,
   CopyableText,
   DetailSection,
   Icon,
@@ -12,15 +13,27 @@ import {
   Tooltip,
 } from "@repo/ui"
 import { formatCount, formatDuration, relativeTime } from "@repo/utils"
-import { ArrowDownRightIcon, CheckIcon, TextAlignStartIcon } from "lucide-react"
-import { type ReactNode, useMemo, useState } from "react"
+import { ArrowDownRightIcon, CheckIcon, DatabaseIcon, TextAlignStartIcon } from "lucide-react"
+import { type ReactNode, useEffect, useMemo, useState } from "react"
 import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alerts/alerts.collection.ts"
 import { useShowIncidentsOverlay } from "../../../../../../domains/alerts/use-show-incidents-overlay.ts"
+import {
+  addTracesToDatasetFunction,
+  createDatasetFromTracesFunction,
+} from "../../../../../../domains/datasets/datasets.functions.ts"
 import type { SessionRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
 import {
   useSignalDetail,
+  useSignalSessionsCount,
   useSignalSessionsInfiniteScroll,
 } from "../../../../../../domains/signals/signals.collection.ts"
+import {
+  type BulkSelection,
+  EMPTY_SELECTION,
+  type SelectionState,
+  useSelectableRows,
+} from "../../../../../../lib/hooks/useSelectableRows.ts"
+import { AddToDatasetModal } from "../../-components/add-to-dataset-modal.tsx"
 import { SessionDetailDrawer } from "../../-components/session-detail-drawer.tsx"
 import { SignalDrawerEvaluations } from "./signal-drawer-evaluations.tsx"
 import { formatSeenAgeParts, formatSignalAgeAgoLabel } from "./signal-formatters.ts"
@@ -148,8 +161,36 @@ export function SignalDetailBody({
     signalId,
     enabled: issue !== null,
   })
+  const totalSessionCount = useSignalSessionsCount({ projectId, signalId, enabled: issue !== null })
   const [sessionSheetSessionId, setSessionSheetSessionId] = useState<string | null>(null)
   const [sessionSheetOpen, setSessionSheetOpen] = useState(false)
+  const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
+  const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
+
+  useEffect(() => {
+    setSelectionState(EMPTY_SELECTION)
+  }, [signalId])
+
+  const sessionIds = useMemo(() => sessions.map((session) => session.sessionId), [sessions])
+  const sessionSelection = useSelectableRows<string>({
+    rowIds: sessionIds,
+    totalRowCount: totalSessionCount,
+    controlledState: selectionState,
+    onStateChange: setSelectionState,
+  })
+  // A signal session selection becomes the trace ids of its sessions: "selected"
+  // / "allExcept" expand each loaded session to all its trace ids; "all" defers
+  // to the signal scope so the server resolves every trace linked to the signal.
+  const datasetSelection = useMemo<BulkSelection<string> | null>(() => {
+    const selection = sessionSelection.bulkSelection
+    if (!selection) return null
+    if (selection.mode === "all") return selection
+    const tracesBySession = new Map<string, readonly string[]>(
+      sessions.map((session) => [session.sessionId, session.traceIds]),
+    )
+    const traceIds = selection.rowIds.flatMap((id) => [...(tracesBySession.get(id) ?? [])])
+    return { mode: selection.mode, rowIds: traceIds }
+  }, [sessionSelection.bulkSelection, sessions])
 
   // Window the incident query to the same range that the trend chart paints. Bucket keys are
   // ISO timestamps now (12h-aligned), and `trendBucketSeconds` tells us the cell width so we can
@@ -410,11 +451,20 @@ export function SignalDetailBody({
             className="gap-1"
             contentClassName="pl-0 pt-0 max-h-none overflow-hidden flex flex-col"
           >
+            {sessionSelection.selectedCount > 0 ? (
+              <div className="flex items-center gap-2 pb-2">
+                <Button variant="outline" size="sm" onClick={() => setAddToDatasetOpen(true)}>
+                  <Icon icon={DatabaseIcon} size="xs" />
+                  Add to dataset ({sessionSelection.selectedCount.toLocaleString()})
+                </Button>
+              </div>
+            ) : null}
             <InfiniteTable
               data={sessions}
               isLoading={sessionsLoading}
               columns={sessionColumns}
               getRowKey={(session) => session.sessionId}
+              selection={sessionSelection}
               onRowClick={(session) => openSessionSheet(session.sessionId)}
               getRowAriaLabel={(session) => `Open session ${session.sessionId}`}
               infiniteScroll={infiniteScroll}
@@ -444,6 +494,23 @@ export function SignalDetailBody({
           />
         ) : null}
       </Sheet>
+
+      {datasetSelection ? (
+        <AddToDatasetModal
+          open={addToDatasetOpen}
+          onOpenChange={setAddToDatasetOpen}
+          projectId={projectId}
+          itemLabel="session"
+          selectedCount={sessionSelection.selectedCount}
+          onAddToExisting={(datasetId) =>
+            addTracesToDatasetFunction({ data: { projectId, datasetId, signalId, selection: datasetSelection } })
+          }
+          onCreateNew={(name) =>
+            createDatasetFromTracesFunction({ data: { projectId, name, signalId, selection: datasetSelection } })
+          }
+          onSuccess={sessionSelection.clearSelections}
+        />
+      ) : null}
     </>
   )
 }
