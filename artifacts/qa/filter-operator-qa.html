@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Filter operators QA fixture</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: #f8fafc;
+        color: #0f172a;
+        font-size: 14px;
+      }
+      .shell {
+        display: flex;
+        min-height: 100vh;
+      }
+      .main {
+        flex: 1;
+        padding: 24px 32px;
+      }
+      .sidebar {
+        width: 320px;
+        background: #fff;
+        border-left: 1px solid #e2e8f0;
+        padding: 16px;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0 0 8px;
+      }
+      .muted {
+        color: #64748b;
+        font-size: 13px;
+      }
+      .trace-row {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 8px;
+        font-size: 13px;
+      }
+      .filters-title {
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0 0 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #e2e8f0;
+      }
+      .section-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        font-weight: 600;
+        margin: 12px 0 8px;
+      }
+      .filter-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .tabs {
+        display: flex;
+        gap: 4px;
+        position: relative;
+      }
+      .tab {
+        position: relative;
+        z-index: 1;
+        border: none;
+        background: transparent;
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 500;
+        color: #64748b;
+        cursor: pointer;
+      }
+      .tab[aria-selected="true"] {
+        color: #0f172a;
+      }
+      .tab-indicator {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        border-radius: 6px;
+        background: #f1f5f9;
+        transition:
+          transform 0.2s ease,
+          width 0.2s ease;
+        z-index: 0;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+        min-height: 32px;
+        padding: 6px 10px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: #fff;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: #f1f5f9;
+        border-radius: 4px;
+        padding: 2px 8px;
+        font-size: 12px;
+      }
+      .chip button {
+        border: none;
+        background: none;
+        cursor: pointer;
+        color: #64748b;
+      }
+      .chips input {
+        border: none;
+        outline: none;
+        flex: 1;
+        min-width: 80px;
+        font-size: 13px;
+      }
+      .json {
+        margin-top: 12px;
+        padding: 10px;
+        border-radius: 8px;
+        background: #0f172a;
+        color: #e2e8f0;
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      #cursor {
+        position: fixed;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: rgba(37, 99, 235, 0.9);
+        border: 2px solid #fff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+        pointer-events: none;
+        z-index: 1000;
+        transform: translate(-50%, -50%);
+        transition:
+          left 0.4s ease,
+          top 0.4s ease;
+      }
+      .qa-badge {
+        display: inline-block;
+        background: #16a34a;
+        color: #fff;
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        margin-left: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="cursor"></div>
+    <div class="shell">
+      <main class="main">
+        <h1>Traces <span class="qa-badge">QA</span></h1>
+        <p class="muted">MultiSelectFilterSection — operator tabs + value chips</p>
+        <div class="trace-row">trace_8f2a… · ok · gpt-4o · flagger:classify</div>
+        <div class="trace-row">trace_91bc… · ok · claude-sonnet · support-handoff</div>
+        <div class="trace-row">trace_a044… · error · gpt-4o-mini · billing</div>
+      </main>
+      <aside class="sidebar">
+        <div class="filters-title">Filters</div>
+        <div class="section-label"><span>Tags</span><span>^</span></div>
+        <div class="filter-stack" id="tags-filter">
+          <div class="tabs" role="tablist" id="operator-tabs">
+            <div class="tab-indicator" id="tab-indicator"></div>
+            <button class="tab" type="button" role="tab" data-op="in" aria-selected="true">Any of</button>
+            <button class="tab" type="button" role="tab" data-op="notIn" aria-selected="false">None of</button>
+            <button class="tab" type="button" role="tab" data-op="all" aria-selected="false">All of</button>
+          </div>
+          <div class="chips" id="chips">
+            <span class="chip" data-value="flagger:classify">
+              flagger:classify
+              <button type="button" aria-label="Remove">×</button>
+            </span>
+            <input id="chip-input" placeholder="Search..." aria-label="Search tags" />
+          </div>
+          <div class="json" id="filter-json"></div>
+        </div>
+      </aside>
+    </div>
+    <script>
+      const state = { op: "in", values: ["flagger:classify"] }
+      const tabs = document.querySelectorAll(".tab")
+      const indicator = document.getElementById("tab-indicator")
+      const jsonEl = document.getElementById("filter-json")
+      const cursor = document.getElementById("cursor")
+
+      function buildFilter() {
+        if (state.values.length === 0) return {}
+        switch (state.op) {
+          case "in":
+            return { tags: [{ op: "in", value: [...state.values] }] }
+          case "notIn":
+            return { tags: [{ op: "notIn", value: [...state.values] }] }
+          case "all":
+            return { tags: state.values.map((v) => ({ op: "eq", value: v })) }
+        }
+      }
+
+      function renderJson() {
+        jsonEl.textContent = JSON.stringify(buildFilter(), null, 2)
+      }
+
+      function positionIndicator(activeTab) {
+        indicator.style.width = `${activeTab.offsetWidth}px`
+        indicator.style.transform = `translateX(${activeTab.offsetLeft}px)`
+      }
+
+      function setOp(op) {
+        state.op = op
+        tabs.forEach((tab) => {
+          const selected = tab.dataset.op === op
+          tab.setAttribute("aria-selected", selected ? "true" : "false")
+          if (selected) positionIndicator(tab)
+        })
+        renderJson()
+      }
+
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", () => setOp(tab.dataset.op))
+      })
+
+      window.demoMoveCursor = (x, y) => {
+        cursor.style.left = `${x}px`
+        cursor.style.top = `${y}px`
+      }
+
+      window.demoClickTab = (op) => {
+        const tab = document.querySelector(`[data-op="${op}"]`)
+        if (tab) tab.click()
+      }
+
+      window.demoAddChip = (value) => {
+        if (state.values.includes(value)) return
+        state.values.push(value)
+        const chip = document.createElement("span")
+        chip.className = "chip"
+        chip.dataset.value = value
+        chip.innerHTML = `${value} <button type="button" aria-label="Remove">×</button>`
+        document.getElementById("chips").insertBefore(chip, document.getElementById("chip-input"))
+        renderJson()
+      }
+
+      setOp("in")
+      requestAnimationFrame(() => positionIndicator(document.querySelector('[data-op="in"]')))
+    </script>
+  </body>
+</html>

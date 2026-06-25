@@ -57,3 +57,30 @@ describe("buildMultiSelectArrayFilter", () => {
     ])
   })
 })
+
+describe("operator round-trip", () => {
+  it("preserves values when switching operator via rebuild", () => {
+    const values = ["flagger:classify", "prod"] as const
+    const fromIn = { tags: buildMultiSelectArrayFilter("in", values) }
+    const parsed = getMultiSelectArrayFilter(fromIn, "tags")
+    expect(parsed).toEqual({ op: "in", values: ["flagger:classify", "prod"] })
+
+    const switched = { tags: buildMultiSelectArrayFilter("notIn", parsed.values) }
+    expect(getMultiSelectArrayFilter(switched, "tags")).toEqual({
+      op: "notIn",
+      values: ["flagger:classify", "prod"],
+    })
+
+    const all = { tags: buildMultiSelectArrayFilter("all", parsed.values) }
+    expect(getMultiSelectArrayFilter(all, "tags")).toEqual({
+      op: "all",
+      values: ["flagger:classify", "prod"],
+    })
+  })
+
+  it("clears field when values become empty", () => {
+    expect(buildMultiSelectArrayFilter("in", [])).toEqual([])
+    expect(buildMultiSelectArrayFilter("notIn", [])).toEqual([])
+    expect(buildMultiSelectArrayFilter("all", [])).toEqual([])
+  })
+})
