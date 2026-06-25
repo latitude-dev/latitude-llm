@@ -554,7 +554,16 @@ export const bulkDeleteMonitors = createServerFn({ method: "POST" })
         }
         return { deletedCount, skippedSystemCount }
       }).pipe(
-        withPostgres(Layer.mergeAll(MonitorRepositoryLive, SavedSearchRepositoryLive), getPostgresClient(), orgId),
+        withPostgres(
+          Layer.mergeAll(
+            MonitorRepositoryLive,
+            SavedSearchRepositoryLive,
+            IncidentRepositoryLive,
+            OutboxEventWriterLive,
+          ),
+          getPostgresClient(),
+          orgId,
+        ),
         withTracing,
       ),
     )
@@ -711,7 +720,11 @@ export const deleteMonitor = createServerFn({ method: "POST" })
 
     const monitor = await Effect.runPromise(
       deleteMonitorUseCase({ id: MonitorId(data.monitorId) }).pipe(
-        withPostgres(MonitorRepositoryLive, getPostgresClient(), orgId),
+        withPostgres(
+          Layer.mergeAll(MonitorRepositoryLive, IncidentRepositoryLive, OutboxEventWriterLive),
+          getPostgresClient(),
+          orgId,
+        ),
         withTracing,
       ),
     )

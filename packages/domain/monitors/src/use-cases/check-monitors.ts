@@ -312,23 +312,31 @@ export const checkMonitorsUseCase = (input: CheckMonitorsInput) =>
         )
       } else if (decision.transition === "exit") {
         const endedAt = decision.transitionAt ?? new Date()
-        const closedId = yield* incidentRepository.closeOpen({ sourceType: "monitor", sourceId: monitor.id, endedAt })
-        if (closedId !== null) {
-          yield* outboxEventWriter.write({
-            eventName: "IncidentClosed",
-            aggregateType: "alert_incident",
-            aggregateId: closedId,
-            organizationId: monitor.organizationId,
-            payload: {
-              organizationId: monitor.organizationId,
-              projectId: monitor.projectId,
-              alertIncidentId: closedId,
+        yield* sqlClient.transaction(
+          Effect.gen(function* () {
+            const closedId = yield* incidentRepository.closeOpen({
               sourceType: "monitor",
               sourceId: monitor.id,
-              reason: decision.reason ?? "threshold",
-            },
-          })
-        }
+              endedAt,
+            })
+            if (closedId !== null) {
+              yield* outboxEventWriter.write({
+                eventName: "IncidentClosed",
+                aggregateType: "alert_incident",
+                aggregateId: closedId,
+                organizationId: monitor.organizationId,
+                payload: {
+                  organizationId: monitor.organizationId,
+                  projectId: monitor.projectId,
+                  alertIncidentId: closedId,
+                  sourceType: "monitor",
+                  sourceId: monitor.id,
+                  reason: decision.reason ?? "threshold",
+                },
+              })
+            }
+          }),
+        )
       } else if (openIncident !== null) {
         const previous = openIncident.exitEligibleSince?.getTime() ?? null
         const next = decision.nextExitEligibleSince?.getTime() ?? null

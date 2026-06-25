@@ -99,25 +99,6 @@ const toMonitorRow = (monitor: Monitor): typeof monitors.$inferInsert => ({
   updatedAt: monitor.updatedAt,
 })
 
-const closeOpenIncidentForMonitor = async (
-  db: Parameters<Parameters<SqlClientShape<Operator>["query"]>[0]>[0],
-  organizationId: string,
-  monitorId: string,
-  now: Date,
-): Promise<void> => {
-  await db
-    .update(alertIncidents)
-    .set({ endedAt: now })
-    .where(
-      and(
-        eq(alertIncidents.organizationId, organizationId),
-        eq(alertIncidents.sourceType, "monitor"),
-        eq(alertIncidents.sourceId, monitorId),
-        isNull(alertIncidents.endedAt),
-      ),
-    )
-}
-
 export const MonitorRepositoryLive = Layer.effect(
   MonitorRepository,
   Effect.succeed(
@@ -340,9 +321,9 @@ export const MonitorRepositoryLive = Layer.effect(
       softDelete: (id) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const deleted = yield* sqlClient.query(async (db) => {
-            const now = new Date()
-            const rows = await db
+          const now = new Date()
+          const deleted = yield* sqlClient.query((db) =>
+            db
               .update(monitors)
               .set({ deletedAt: now, updatedAt: now })
               .where(
@@ -352,10 +333,8 @@ export const MonitorRepositoryLive = Layer.effect(
                   isNull(monitors.deletedAt),
                 ),
               )
-              .returning({ id: monitors.id })
-            if (rows.length > 0) await closeOpenIncidentForMonitor(db, sqlClient.organizationId, id, now)
-            return rows
-          })
+              .returning({ id: monitors.id }),
+          )
           if (deleted.length === 0) return yield* new NotFoundError({ entity: "Monitor", id })
         }),
       updateMetadata: ({ id, name, slug, description }) =>

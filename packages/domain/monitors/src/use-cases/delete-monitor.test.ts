@@ -1,5 +1,6 @@
+import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
 import { deleteMonitorUseCase, type Monitor, MonitorRepository } from "@domain/monitors"
-import { createFakeMonitorRepository } from "@domain/monitors/testing"
+import { createFakeAlertIncidentStore, createFakeMonitorRepository } from "@domain/monitors/testing"
 import { MonitorId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
@@ -36,9 +37,19 @@ const makeMonitor = (overrides: Partial<Monitor> = {}): Monitor => ({
   updatedAt: at,
 })
 
-const provide = (repo: MonitorRepositoryShape) =>
+const provide = (repo: MonitorRepositoryShape, events: OutboxWriteEvent[] = []) =>
   Layer.mergeAll(
     Layer.succeed(MonitorRepository, MonitorRepository.of(repo)),
+    createFakeAlertIncidentStore().layer,
+    Layer.succeed(
+      OutboxEventWriter,
+      OutboxEventWriter.of({
+        write: (event) =>
+          Effect.sync(() => {
+            events.push(event)
+          }),
+      }),
+    ),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
   )
 

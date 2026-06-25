@@ -16,6 +16,7 @@ import {
   IncidentRepositoryLive,
   MonitorRepositoryLive,
   NotificationRepositoryLive,
+  OutboxEventWriterLive,
   ProjectRepositoryLive,
   SavedSearchRepositoryLive,
   withPostgres,
@@ -432,7 +433,7 @@ const deleteMonitor = monitorEndpoint({
         yield* deleteMonitorUseCase({ id: current.id })
       }).pipe(
         withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive),
+          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive, IncidentRepositoryLive, OutboxEventWriterLive),
           c.var.postgresClient,
           organizationId,
         ),
