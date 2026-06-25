@@ -9,7 +9,6 @@ import {
   type SqlClientShape,
 } from "@domain/shared"
 import {
-  MIN_OCCURRENCES_FOR_VISIBILITY,
   normalizeSignalCentroid,
   type OrgSignalSearchHit,
   SIGNAL_DISCOVERY_MIN_SIMILARITY,
@@ -28,7 +27,6 @@ import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { alertIncidents } from "../schema/alert-incidents.ts"
 import { projects } from "../schema/projects.ts"
-import { scores } from "../schema/scores.ts"
 import { signals } from "../schema/signals.ts"
 import { preferProjectFirst } from "./org-search.ts"
 
@@ -214,21 +212,9 @@ const signalRepositoryCoreLive = Layer.effect(
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           return yield* sqlClient
             .query((db, organizationId) => {
-              const hasAnnotationEvidence = sql<boolean>`exists (
-                select 1
-                from ${scores}
-                where ${scores.signalId} = ${signals.id}
-                  and ${scores.draftedAt} is null
-                  and ${scores.sourceType} = 'annotation'
-              )`
-
-              const meetsVisibilityThreshold = sql<boolean>`(
-                select count(*)
-                from ${scores}
-                where ${scores.signalId} = ${signals.id}
-                  and ${scores.draftedAt} is null
-              ) >= ${MIN_OCCURRENCES_FOR_VISIBILITY}`
-
+              // Every non-deleted signal is listed regardless of occurrence count: user-created
+              // signals are deliberate (and may have zero occurrences until traffic arrives), and
+              // discovered signals are surfaced as soon as they exist.
               return db
                 .select(signalColumnsWithLifecycle)
                 .from(signals)
@@ -237,7 +223,6 @@ const signalRepositoryCoreLive = Layer.effect(
                     eq(signals.organizationId, organizationId),
                     eq(signals.projectId, projectId),
                     isNull(signals.deletedAt),
-                    or(hasAnnotationEvidence, meetsVisibilityThreshold),
                   ),
                 )
                 .orderBy(desc(signals.createdAt))
