@@ -1,4 +1,4 @@
-export { generateBaselinePromptText } from "./alignment/baseline-prompt.ts"
+export { generateBaselinePromptText, generateJudgePromptText } from "./alignment/baseline-prompt.ts"
 export type {
   BaselineEvaluationExampleResult,
   BaselineEvaluationResult,
@@ -9,6 +9,7 @@ export type {
   LoadedEvaluationAlignmentState,
   PersistEvaluationAlignmentResult,
 } from "./alignment/types.ts"
+export { compileSettingsToScript, validateEvaluationScriptCompiles } from "./codegen/compile-settings-to-script.ts"
 export {
   ALIGNMENT_CURATED_DATASET_MAX_ROWS,
   ALIGNMENT_CURATED_DATASET_MIN_ROWS,
