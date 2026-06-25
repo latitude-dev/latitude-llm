@@ -9,7 +9,7 @@ import { useRouteProject } from "./-route-data.ts"
 const searchSchema = z.object({
   step: z.enum(ONBOARDING_STEPS).optional(),
   installed: z.literal("ok").optional(),
-  error: z.enum(["workspace_taken", "oauth_failed"]).optional(),
+  error: z.string().optional(),
 })
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/onboarding")({

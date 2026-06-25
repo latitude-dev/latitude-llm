@@ -60,7 +60,7 @@ export function OnboardingFlow({
   readonly slackEnvConfigured: boolean
   readonly initialStep?: OnboardingStep
   readonly flashInstalled?: "ok"
-  readonly flashError?: "workspace_taken" | "oauth_failed"
+  readonly flashError?: string
   readonly onOpenProjectTraces: (projectId: string) => Promise<void>
 }) {
   const { toast } = useToast()

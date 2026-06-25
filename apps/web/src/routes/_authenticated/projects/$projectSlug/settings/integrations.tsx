@@ -18,7 +18,7 @@ import { SLACK_INTEGRATION_QUERY_KEY, SlackRouteRow } from "./-components/slack-
 
 const searchSchema = z.object({
   installed: z.literal("ok").optional(),
-  error: z.enum(["workspace_taken", "oauth_failed"]).optional(),
+  error: z.string().optional(),
 })
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/integrations")({
