@@ -95,6 +95,8 @@ ignore = [
     # in new Python versions but we want to maintain compatibility
     "UP006",
     "UP035",
+    # We maintain a custom StrEnum base class with helper classmethods instead of enum.StrEnum
+    "UP042",
     "E402",  # We allow import not at top of file to not import every framework package
 ]
 
