@@ -18,7 +18,7 @@ export const StripeBillingProviderLive = Layer.effect(
     Effect.map(({ stripeSecretKey, proOveragePriceId, proOverageMeterEventName }) => {
       const stripeClient = stripeSecretKey
         ? new Stripe(stripeSecretKey, {
-            apiVersion: "2026-04-22.dahlia",
+            apiVersion: "2026-05-27.dahlia",
           })
         : null
 
