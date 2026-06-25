@@ -1,14 +1,18 @@
 # @latitude-data/openclaw-telemetry
 
-> [!WARNING]
-> **Deprecated.** Use OpenClaw's official OpenTelemetry exporter — the bundled
-> [`@openclaw/diagnostics-otel`](https://docs.openclaw.ai/gateway/opentelemetry)
-> plugin — pointed at Latitude's OTLP ingest instead. It follows OpenTelemetry
-> GenAI semantic conventions, is maintained by OpenClaw, and produces a cleaner
+> [!NOTE]
+> **OpenClaw's official OpenTelemetry exporter is the preferred setup** — the
+> bundled [`@openclaw/diagnostics-otel`](https://docs.openclaw.ai/gateway/opentelemetry)
+> plugin pointed at Latitude's OTLP ingest. It follows OpenTelemetry GenAI
+> semantic conventions, is maintained by OpenClaw, and produces a cleaner
 > `invoke_agent → chat → execute_tool` trace tree.
 >
-> **Setup:** [Latitude docs → OpenClaw telemetry](https://docs.latitude.so/telemetry/openclaw).
-> This package is no longer maintained and will receive no further updates.
+> This plugin stays supported for one reason: it emits a `session.id`, so it is
+> currently the only way to group a multi-turn conversation into a Latitude
+> **session**. The native exporter doesn't export a session id yet
+> ([openclaw/openclaw#91927](https://github.com/openclaw/openclaw/issues/91927)).
+> If you don't need session grouping, prefer the official exporter —
+> [Latitude docs → OpenClaw telemetry](https://docs.latitude.so/telemetry/openclaw).
 
 OpenClaw plugin that streams every agent run to [Latitude](https://latitude.so) as OTLP traces — full system prompt, message history, assistant output, token usage, tool I/O, and the running agent's name on every span.
 
