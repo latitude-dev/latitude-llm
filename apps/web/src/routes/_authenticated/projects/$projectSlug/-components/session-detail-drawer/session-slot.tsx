@@ -86,10 +86,7 @@ export function SessionSlot({
 }) {
   const traceIds = session.traceIds
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
-  const datasetSelection = useMemo(
-    () => ({ mode: "selected" as const, rowIds: [...traceIds] }),
-    [traceIds],
-  )
+  const datasetSelection = useMemo(() => ({ mode: "selected" as const, rowIds: [...traceIds] }), [traceIds])
 
   // Annotations and issues are analysis/feedback features the sandbox doesn't
   // produce — both off under a sandbox scope: hide the tabs and skip the fetches.
