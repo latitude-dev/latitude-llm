@@ -4,6 +4,9 @@
     ".": {
       "ignore": [
         "scripts/taxonomy/*.ts"
+      ],
+      "ignoreDependencies": [
+        "playwright"
       ]
     },
     "apps/api": {

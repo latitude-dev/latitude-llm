@@ -15,6 +15,7 @@
     "knip": "knip",
     "knip:fix": "knip --fix",
     "knip:fix:files": "knip --fix-type files --allow-remove-files",
+    "qa:filter-operators": "node ./scripts/qa-filter-operators.mjs",
     "clean": "node ./scripts/clean-repo.mjs",
     "db:reset": "pnpm --filter \"@platform/db-postgres\" pg:reset && pnpm --filter \"@platform/db-clickhouse\" ch:reset",
     "db:up": "pnpm --filter \"@platform/db-postgres\" pg:migrate && pnpm --filter \"@platform/db-clickhouse\" ch:up",
