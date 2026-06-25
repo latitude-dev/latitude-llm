@@ -390,6 +390,21 @@ const _registry = {
     }
   }>(),
 
+  // Backfills a newly-created deterministic evaluation over a historical trace window. Judges
+  // collect forward and are never backfilled. `windowStartIso` is resolved once at enqueue so
+  // paging is stable; the worker re-enqueues itself with a cursor until the window is exhausted.
+  // Separate topic from `signals` so the matching-pipeline worker stays decoupled from backfill.
+  "signals-backfill": payloads<{
+    run: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly signalId: string
+      readonly evaluationId: string
+      readonly windowStartIso: string
+      readonly cursor?: string
+    }
+  }>(),
+
   // Runs the deterministic portion of every registered flagger strategy against
   // a trace. Matched strategies write a SYSTEM-authored score directly; strategies
   // that return `no-match` are sampled and, if selected, routed to the LLM

@@ -148,11 +148,23 @@ export {
   checkSignalEscalationUseCase,
 } from "./use-cases/check-signal-escalation.ts"
 export {
+  type CreateSignalError,
+  type CreateSignalInput,
+  type CreateSignalResult,
+  createSignalUseCase,
+} from "./use-cases/create-signal.ts"
+export {
   type CreateSignalFromScoreError,
   type CreateSignalFromScoreInput,
   type CreateSignalFromScoreResult,
   createSignalFromScoreUseCase,
 } from "./use-cases/create-signal-from-score.ts"
+export {
+  type DeleteSignalError,
+  type DeleteSignalInput,
+  type DeleteSignalResult,
+  deleteSignalUseCase,
+} from "./use-cases/delete-signal.ts"
 export {
   type DiscoverSignalError,
   type DiscoverSignalInput,
@@ -265,6 +277,12 @@ export {
   type SweepEscalatingSignalsResult,
   sweepEscalatingSignalsUseCase,
 } from "./use-cases/sweep-escalating-signals.ts"
+export {
+  type UpdateSignalError,
+  type UpdateSignalInput,
+  type UpdateSignalResult,
+  updateSignalUseCase,
+} from "./use-cases/update-signal.ts"
 export {
   type UpdateSignalTriageError,
   type UpdateSignalTriageInput,

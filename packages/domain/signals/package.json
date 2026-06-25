@@ -23,6 +23,7 @@
     "@domain/exports": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/queue": "workspace:*",
+    "@domain/sandbox": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/scores": "workspace:*",
     "@domain/spans": "workspace:*",

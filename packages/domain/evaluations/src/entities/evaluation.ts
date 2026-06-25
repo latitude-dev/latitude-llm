@@ -1,4 +1,4 @@
-import { cuidSchema, evaluationIdSchema, filterSetSchema } from "@domain/shared"
+import { cuidSchema, evaluationIdSchema, evaluationSettingsSchema, filterSetSchema } from "@domain/shared"
 import { z } from "zod"
 
 import { DEFAULT_EVALUATION_SAMPLING, EVALUATION_NAME_MAX_LENGTH, EVALUATION_TURNS } from "../constants.ts"
@@ -99,6 +99,7 @@ export const evaluationSchema = z.object({
   signalId: cuidSchema, // in MVP evaluations are issue-linked; multiple evaluations may link to the same issue
   name: z.string().min(1).max(EVALUATION_NAME_MAX_LENGTH), // unique name within the project among non-deleted rows
   description: z.string(), // generated from the resulting script after alignment
+  settings: evaluationSettingsSchema.nullish(), // optional declarative config that compiled to `script`; null for a raw / GEPA-generated script
   // TODO(eval-sandbox): when sandbox is available, this field will hold arbitrary JS; until then
   // it must conform to the fixed LLM-as-judge template enforced by validateEvaluationScript().
   script: z.string().min(1),

@@ -21,6 +21,7 @@ const toDomainEvaluation = (row: typeof evaluations.$inferSelect): Evaluation =>
     signalId: row.signalId,
     name: row.name,
     description: row.description,
+    settings: row.settings ?? null,
     script: row.script,
     // script_hash is backfilled for every row; the alignment fallback covers the brief
     // migration→deploy window where old code inserted a row before script_hash existed.
@@ -41,6 +42,7 @@ const toInsertRow = (evaluation: Evaluation): typeof evaluations.$inferInsert =>
   signalId: evaluation.signalId,
   name: evaluation.name,
   description: evaluation.description,
+  settings: evaluation.settings ?? null,
   script: evaluation.script,
   scriptHash: evaluation.scriptHash ?? null,
   trigger: evaluation.trigger,

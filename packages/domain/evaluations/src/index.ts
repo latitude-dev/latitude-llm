@@ -162,6 +162,12 @@ export {
 } from "./use-cases/alignment/load-alignment-state-or-inactive.ts"
 export { persistAlignmentResultUseCase } from "./use-cases/alignment/persist-alignment-result.ts"
 export {
+  type CreateEvaluationError,
+  type CreateEvaluationInput,
+  type CreateEvaluationResult,
+  createEvaluationUseCase,
+} from "./use-cases/create-evaluation.ts"
+export {
   deriveSignalAlignmentState,
   type GetSignalAlignmentStateError,
   type GetSignalAlignmentStateInput,
