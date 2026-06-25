@@ -2,8 +2,8 @@ import { type FontSize, type FontWeight, font, Text } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import { DesignSystemPage } from "./-components/design-system-page.tsx"
-import { UsageCode, UsageSection } from "./-components/usage-section.tsx"
 import { TypeSample, TypographyRow, TypographySection, TypographyTable } from "./-components/typography-table.tsx"
+import { UsageCode, UsageSection } from "./-components/usage-section.tsx"
 
 export const Route = createFileRoute("/design-system/typography")({
   component: TypographyPage,

@@ -10,20 +10,30 @@ export function UsageSection({ description, children }: { description?: string |
   )
 }
 
-export function UsageCode({
-  lines,
-  language = "tsx",
-}: {
-  lines: readonly string[]
-  language?: string | undefined
-}) {
+const LANGUAGE_LABELS: Record<string, string> = {
+  tsx: "TypeScript",
+  ts: "TypeScript",
+  typescript: "TypeScript",
+  js: "JavaScript",
+  jsx: "JavaScript",
+  javascript: "JavaScript",
+  json: "JSON",
+  html: "HTML",
+  css: "CSS",
+}
+
+function languageLabel(language: string): string {
+  return LANGUAGE_LABELS[language.toLowerCase()] ?? language
+}
+
+export function UsageCode({ lines, language = "tsx" }: { lines: readonly string[]; language?: string | undefined }) {
   const value = lines.join("\n").replace(/\n+$/, "")
 
   return (
     <div className="overflow-hidden rounded-xl border border-border/70 bg-muted/40">
       <div className="flex items-center justify-between border-b border-border/60 bg-muted/60 px-3 py-1.5">
         <Text.Mono size="h7" color="foregroundMuted">
-          {language}
+          {languageLabel(language)}
         </Text.Mono>
         <CopyButton value={value} tooltip="Copy code" />
       </div>

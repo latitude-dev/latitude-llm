@@ -258,13 +258,7 @@ function ChatPage() {
       wide
     >
       <UsageSection description="Conversation renders a list of GenAI messages with role-aware styling and rich content parts.">
-        <UsageCode
-          lines={[
-            'import { Conversation } from "@repo/ui"',
-            "",
-            "<Conversation messages={messages} />",
-          ]}
-        />
+        <UsageCode lines={['import { Conversation } from "@repo/ui"', "", "<Conversation messages={messages} />"]} />
       </UsageSection>
 
       {SECTIONS.map((section) => (

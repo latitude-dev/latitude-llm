@@ -85,11 +85,7 @@ const COMPONENT_REGISTRY: Record<string, ComponentEntry> = {
     description: "Selection control with indeterminate state.",
     usage: {
       description: "Control Checkbox with checked and onCheckedChange. Supports boolean and indeterminate states.",
-      lines: [
-        'import { Checkbox } from "@repo/ui"',
-        "",
-        "<Checkbox checked={checked} onCheckedChange={setChecked} />",
-      ],
+      lines: ['import { Checkbox } from "@repo/ui"', "", "<Checkbox checked={checked} onCheckedChange={setChecked} />"],
     },
     Demo: CheckboxDemo,
   },
@@ -494,10 +490,7 @@ function DateRangePickerDemo() {
 
   return (
     <>
-      <ComponentDemoSection
-        title="With presets"
-        description="Calendar popover with quick-select ranges."
-      >
+      <ComponentDemoSection title="With presets" description="Calendar popover with quick-select ranges.">
         <div className="max-w-md">
           <DateRangePicker
             value={range}

@@ -1,7 +1,6 @@
-import { cn, Icon, LatitudeLogo, Text } from "@repo/ui"
+import { cn, LatitudeLogo, Text } from "@repo/ui"
 import { Link, useRouterState } from "@tanstack/react-router"
-import { Palette } from "lucide-react"
-import { DesignSystemThemeBadge, DesignSystemThemeToggle } from "./design-system-theme.tsx"
+import { DesignSystemThemeToggle } from "./design-system-theme.tsx"
 import { DESIGN_SYSTEM_NAV } from "./nav-config.ts"
 
 function isNavItemActive(pathname: string, to: string) {
@@ -19,23 +18,23 @@ export function DesignSystemSidebar() {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col border-r border-border/70 bg-background">
-      <div className="flex flex-col gap-1 border-b border-border/70 px-5 py-5">
-        <Link to="/design-system" className="flex items-center gap-2 rounded-lg transition-colors hover:opacity-80">
-          <LatitudeLogo className="h-5 w-5" />
-          <div className="flex min-w-0 flex-col">
-            <Text.H6 weight="semibold">Latitude UI</Text.H6>
-            <Text.H6 color="foregroundMuted" className="text-[11px]">
-              Design system
-            </Text.H6>
-          </div>
-        </Link>
+    <aside className="flex h-full w-[280px] shrink-0 flex-col border-r border-border">
+      <div className="shrink-0 border-b border-border p-4">
+        <div className="flex w-full items-center justify-between gap-3">
+          <Link to="/design-system" className="flex min-w-0 flex-1 items-center gap-2">
+            <LatitudeLogo className="h-5 w-5 shrink-0" />
+            <Text.H5M ellipsis className="min-w-0 flex-1">
+              Latitude Design
+            </Text.H5M>
+          </Link>
+          <DesignSystemThemeToggle />
+        </div>
       </div>
 
-      <nav className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-3 py-5">
-        {DESIGN_SYSTEM_NAV.map((section) => (
-          <div key={section.label} className="flex flex-col gap-2">
-            <Text.H6 color="foreground" weight="medium" className="px-2 uppercase tracking-wide">
+      <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-6 py-6">
+        {DESIGN_SYSTEM_NAV.map((section, index) => (
+          <div key={section.label} className={cn("flex flex-col gap-1", index > 0 && "mt-4")}>
+            <Text.H6 color="foregroundMuted" weight="medium" className="px-2 uppercase tracking-wide">
               {section.label}
             </Text.H6>
             {section.items.map((item) => {
@@ -45,34 +44,20 @@ export function DesignSystemSidebar() {
                 <Link
                   key={item.to}
                   to={item.to}
-                  className={cn(
-                    "rounded-md px-2 py-1.5 text-sm transition-colors",
-                    active
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                  )}
+                  className={cn("flex items-center rounded-lg px-2 py-2 transition-colors", {
+                    "bg-accent": active,
+                    "hover:bg-muted": !active,
+                  })}
                 >
-                  {item.label}
+                  <Text.H5M color={active ? "accentForeground" : "foregroundMuted"} ellipsis className="min-w-0 flex-1">
+                    {item.label}
+                  </Text.H5M>
                 </Link>
               )
             })}
           </div>
         ))}
       </nav>
-
-      <div className="flex flex-col gap-3 border-t border-border/70 px-4 py-4">
-        <div className="flex items-center justify-between gap-2">
-          <DesignSystemThemeToggle compact />
-          <DesignSystemThemeBadge />
-        </div>
-        <Link
-          to="/"
-          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-        >
-          <Icon icon={Palette} size="sm" color="foregroundMuted" />
-          Back to app
-        </Link>
-      </div>
     </aside>
   )
 }

@@ -36,13 +36,7 @@ function SpacingPage() {
       wide
     >
       <UsageSection description="Spacing tokens map to Tailwind padding, margin, and gap utilities across the product.">
-        <UsageCode
-          lines={[
-            '<div className="flex flex-col gap-4 p-6" />',
-            "",
-            "// p-4 · gap-2 · m-6 · space-y-3",
-          ]}
-        />
+        <UsageCode lines={['<div className="flex flex-col gap-4 p-6" />', "", "// p-4 · gap-2 · m-6 · space-y-3"]} />
       </UsageSection>
 
       <TypographySection title="Scale" description="Visual reference for each spacing token.">

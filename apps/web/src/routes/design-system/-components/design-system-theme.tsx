@@ -1,4 +1,4 @@
-import { Button, Icon, Text, useMountEffect } from "@repo/ui"
+import { Button, Icon, useMountEffect } from "@repo/ui"
 import { Moon, Sun } from "lucide-react"
 import { createContext, type ReactNode, useContext, useState } from "react"
 
@@ -63,24 +63,12 @@ export function useDesignSystemTheme() {
   return context
 }
 
-export function DesignSystemThemeToggle({ compact = false }: { compact?: boolean }) {
+export function DesignSystemThemeToggle() {
   const { theme, toggleTheme } = useDesignSystemTheme()
 
   return (
-    <Button variant="outline" size={compact ? "sm" : "default"} onClick={toggleTheme}>
-      <Icon icon={theme === "light" ? Moon : Sun} size="sm" />
-      {compact ? null : theme === "light" ? "Dark mode" : "Light mode"}
+    <Button variant="outline" size="icon" onClick={toggleTheme} className="h-8 w-8 shrink-0" aria-label="Toggle theme">
+      <Icon icon={theme === "light" ? Moon : Sun} size="sm" color="foregroundMuted" />
     </Button>
-  )
-}
-
-export function DesignSystemThemeBadge() {
-  const { theme } = useDesignSystemTheme()
-
-  return (
-    <div className="flex items-center gap-2 rounded-lg border border-border/60 px-2 py-1">
-      <Text.H6 color="foregroundMuted">Theme</Text.H6>
-      <Text.Mono>{theme}</Text.Mono>
-    </div>
   )
 }

@@ -23,7 +23,7 @@ function ShadowsPage() {
           lines={[
             'import { boxShadow } from "@repo/ui"',
             "",
-            '<div className={boxShadow.md} />',
+            "<div className={boxShadow.md} />",
             '// or: className="shadow-md"',
           ]}
         />
