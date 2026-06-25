@@ -62,6 +62,24 @@ export interface ListSignalsRepositoryInput {
   readonly offset: number
 }
 
+export interface ListSignalTableRowsRepositoryInput extends ListSignalsRepositoryInput {
+  readonly lifecycleGroup?: "active" | "archived"
+  readonly assigneeIds?: readonly string[]
+  readonly searchQuery?: string
+  readonly timeRange?: {
+    readonly from?: Date
+    readonly to?: Date
+  }
+  readonly sort?: {
+    readonly field: "lastSeen" | "occurrences" | "affectedSessions" | "state"
+    readonly direction: "asc" | "desc"
+  }
+}
+
+export interface SignalTableRowsPage extends SignalListPage {
+  readonly totalCount: number
+}
+
 export interface SignalRepositoryShape {
   findById(id: SignalId): Effect.Effect<SignalWithLifecycle, NotFoundError | RepositoryError, SqlClient>
   /**
@@ -142,6 +160,9 @@ export interface SignalRepositoryShape {
   }): Effect.Effect<number, RepositoryError, SqlClient>
   save(issue: Signal): Effect.Effect<void, RepositoryError, SqlClient>
   list(input: ListSignalsRepositoryInput): Effect.Effect<SignalListPage, RepositoryError, SqlClient>
+  listTableRows(
+    input: ListSignalTableRowsRepositoryInput,
+  ): Effect.Effect<SignalTableRowsPage, RepositoryError, SqlClient>
 }
 
 export class SignalRepository extends Context.Service<SignalRepository, SignalRepositoryShape>()(

@@ -1,6 +1,6 @@
 import { NotFoundError } from "@domain/shared"
 import { Effect } from "effect"
-import type { Signal } from "../entities/signal.ts"
+import { type Signal, SignalState } from "../entities/signal.ts"
 import type { SignalLifecycleFlags, SignalRepositoryShape, SignalWithLifecycle } from "../ports/signal-repository.ts"
 
 const DEFAULT_LIFECYCLE: SignalLifecycleFlags = {
@@ -148,6 +148,51 @@ export const createFakeSignalRepository = (
         return {
           items: window.slice(0, limit).map(withLifecycle),
           hasMore: window.length > limit,
+          limit,
+          offset,
+        }
+      }),
+
+    listTableRows: ({ projectId, limit, offset, lifecycleGroup, assigneeIds, searchQuery, timeRange, sort }) =>
+      Effect.sync(() => {
+        const query = searchQuery?.trim().toLowerCase()
+        const filtered = [...issues.values()]
+          .filter((issue) => issue.projectId === projectId)
+          .map(withLifecycle)
+          .filter((issue) => {
+            const states = [
+              ...(issue.createdAt.getTime() > Date.now() - 72 * 60 * 60 * 1000 ? [SignalState.New] : []),
+              ...(issue.lifecycle.isEscalating ? [SignalState.Escalating] : []),
+              ...(issue.resolvedAt === null && issue.lifecycle.isRegressed ? [SignalState.Regressed] : []),
+              ...(issue.resolvedAt !== null ? [SignalState.Resolved] : []),
+              ...(issue.ignoredAt !== null ? [SignalState.Ignored] : []),
+            ]
+            const archived = issue.ignoredAt !== null || states.includes(SignalState.Resolved)
+            if (lifecycleGroup === "active" && archived) return false
+            if (lifecycleGroup === "archived" && !archived) return false
+            if (assigneeIds?.length && !assigneeIds.includes(issue.assigneeId ?? "unassigned")) return false
+            if (timeRange?.from && issue.updatedAt < timeRange.from) return false
+            if (timeRange?.to && issue.updatedAt > timeRange.to) return false
+            if (
+              query &&
+              !issue.name.toLowerCase().includes(query) &&
+              !issue.description.toLowerCase().includes(query)
+            ) {
+              return false
+            }
+            return true
+          })
+          .sort((a, b) => {
+            const direction = sort?.direction === "asc" ? 1 : -1
+            const field = sort?.field ?? "lastSeen"
+            if (field === "state") return direction * a.name.localeCompare(b.name)
+            return direction * (a.updatedAt.getTime() - b.updatedAt.getTime())
+          })
+        const window = filtered.slice(offset, offset + limit)
+        return {
+          items: window,
+          hasMore: offset + limit < filtered.length,
+          totalCount: filtered.length,
           limit,
           offset,
         }

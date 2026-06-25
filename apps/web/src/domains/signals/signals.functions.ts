@@ -6,7 +6,15 @@ import {
   type SignalDimension,
   type SignalEscalationThresholdBucket,
 } from "@domain/scores"
-import { OrganizationId, ProjectId, resolveSettings, SettingsReader, SignalId } from "@domain/shared"
+import {
+  type FilterCondition,
+  type FilterSet,
+  OrganizationId,
+  ProjectId,
+  resolveSettings,
+  SettingsReader,
+  SignalId,
+} from "@domain/shared"
 import {
   type ApplySignalLifecycleCommandResult,
   applySignalLifecycleCommandUseCase,
@@ -141,6 +149,27 @@ const toSignalsListResultRecord = (result: ListSignalsResult, viewerUserId: stri
 })
 
 export type SignalsListResultRecord = ReturnType<typeof toSignalsListResultRecord>
+
+const signalRowMetricsInputSchema = z.object({
+  projectId: z.string(),
+  signalIds: z.array(z.string()).min(1).max(100),
+  timeRange: z
+    .object({
+      fromIso: z.iso.datetime().optional(),
+      toIso: z.iso.datetime().optional(),
+    })
+    .optional(),
+})
+
+export interface SignalRowMetricRecord {
+  readonly occurrences: number
+  readonly affectedSessionsPercent: number
+  readonly trend: readonly ReturnType<typeof toSignalsBucketRecord>[]
+}
+
+export interface SignalRowMetricsRecord {
+  readonly metricsBySignalId: Readonly<Record<string, SignalRowMetricRecord>>
+}
 
 const signalInputSchema = z.object({
   projectId: z.string(),
@@ -297,88 +326,188 @@ const toSignalLifecycleCommandRecord = (result: ApplySignalLifecycleCommandResul
 
 type SignalLifecycleCommandRecord = ReturnType<typeof toSignalLifecycleCommandRecord>
 
+type ListSignalsRequest = z.infer<typeof listSignalsInputSchema>
+
+const runSignalsList = async (
+  data: ListSignalsRequest,
+  options: { readonly includeAnalytics: boolean },
+): Promise<SignalsListResultRecord> => {
+  const { organizationId, userId } = await requireSession()
+  const orgId = OrganizationId(organizationId)
+  const pgClient = getPostgresClient()
+  const chClient = getClickhouseClient()
+  const redisClient = getRedisClient()
+  const trimmedSearchQuery = data.searchQuery?.trim() || undefined
+
+  const result = await Effect.runPromise(
+    Effect.gen(function* () {
+      const directMatch = trimmedSearchQuery
+        ? yield* Effect.gen(function* () {
+            const signalRepo = yield* SignalRepository
+            const [byId, bySlug] = yield* Effect.all(
+              [
+                signalRepo
+                  .findById(SignalId(trimmedSearchQuery))
+                  .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
+                signalRepo
+                  .findBySlug({ projectId: ProjectId(data.projectId), slug: trimmedSearchQuery })
+                  .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
+              ],
+              { concurrency: 2 },
+            )
+            const idMatch = byId && byId.projectId === data.projectId ? byId : null
+            return idMatch ?? bySlug
+          })
+        : null
+
+      const search =
+        options.includeAnalytics && trimmedSearchQuery && !directMatch
+          ? yield* embedSignalSearchQueryUseCase({
+              organizationId,
+              projectId: data.projectId,
+              query: trimmedSearchQuery,
+            })
+          : undefined
+
+      const timeRange =
+        data.timeRange?.fromIso || data.timeRange?.toIso
+          ? {
+              ...(data.timeRange?.fromIso ? { from: new Date(data.timeRange.fromIso) } : {}),
+              ...(data.timeRange?.toIso ? { to: new Date(data.timeRange.toIso) } : {}),
+            }
+          : undefined
+
+      return yield* listSignalsUseCase({
+        organizationId,
+        projectId: data.projectId,
+        ...(data.limit !== undefined ? { limit: data.limit } : {}),
+        ...(data.offset !== undefined ? { offset: data.offset } : {}),
+        includeAnalytics: options.includeAnalytics,
+        ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
+        ...(data.assigneeIds?.length ? { assigneeIds: data.assigneeIds } : {}),
+        ...(data.sort ? { sort: data.sort } : {}),
+        ...(timeRange ? { timeRange } : {}),
+        ...(directMatch
+          ? { signalIds: [directMatch.id] }
+          : search
+            ? {
+                search: {
+                  query: search.query,
+                  normalizedEmbedding: search.normalizedEmbedding,
+                },
+              }
+            : trimmedSearchQuery
+              ? { textSearchQuery: trimmedSearchQuery }
+              : {}),
+      })
+    }).pipe(
+      withPostgres(Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive), pgClient, orgId),
+      withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive), chClient, orgId),
+      withAi(AIEmbedLive, redisClient),
+      withTracing,
+    ),
+  )
+
+  return toSignalsListResultRecord(result, userId)
+}
+
 export const listSignals = createServerFn({ method: "GET" })
   .inputValidator(listSignalsInputSchema)
-  .handler(async ({ data }): Promise<SignalsListResultRecord> => {
-    const { organizationId, userId } = await requireSession()
+  .handler(async ({ data }): Promise<SignalsListResultRecord> => runSignalsList(data, { includeAnalytics: false }))
+
+export const getSignalsAnalytics = createServerFn({ method: "GET" })
+  .inputValidator(listSignalsInputSchema)
+  .handler(async ({ data }): Promise<SignalsListResultRecord> => runSignalsList(data, { includeAnalytics: true }))
+
+export const getSignalRowMetrics = createServerFn({ method: "GET" })
+  .inputValidator(signalRowMetricsInputSchema)
+  .handler(async ({ data }): Promise<SignalRowMetricsRecord> => {
+    const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
-    const pgClient = getPostgresClient()
     const chClient = getClickhouseClient()
-    const redisClient = getRedisClient()
-    const trimmedSearchQuery = data.searchQuery?.trim() || undefined
+    const timeRange =
+      data.timeRange?.fromIso || data.timeRange?.toIso
+        ? {
+            ...(data.timeRange?.fromIso ? { from: new Date(data.timeRange.fromIso) } : {}),
+            ...(data.timeRange?.toIso ? { to: new Date(data.timeRange.toIso) } : {}),
+          }
+        : undefined
 
-    const result = await Effect.runPromise(
+    const trendTo = new Date(timeRange?.to ?? timeRange?.from ?? new Date())
+    trendTo.setUTCHours(23, 59, 59, 999)
+    const trendFrom = new Date(trendTo)
+    trendFrom.setUTCDate(trendFrom.getUTCDate() - 13)
+    trendFrom.setUTCHours(0, 0, 0, 0)
+    const trendScaffold: string[] = []
+    const trendCursor = new Date(trendFrom)
+    while (trendCursor.getTime() <= trendTo.getTime()) {
+      trendScaffold.push(trendCursor.toISOString().slice(0, 10))
+      trendCursor.setUTCDate(trendCursor.getUTCDate() + 1)
+    }
+
+    return Effect.runPromise(
       Effect.gen(function* () {
-        // Direct-match lookup: if the user typed an exact issue id or slug, narrow the listing
-        // to that issue and skip the (expensive) semantic-search embed call entirely. When
-        // neither matches, fall through to the semantic search path. The id lookup is org-
-        // scoped via RLS but not project-scoped — guard against cross-project leakage by
-        // comparing the returned `projectId` to the request's project before accepting it.
-        const directMatch = trimmedSearchQuery
-          ? yield* Effect.gen(function* () {
-              const signalRepo = yield* SignalRepository
-              const [byId, bySlug] = yield* Effect.all(
-                [
-                  signalRepo
-                    .findById(SignalId(trimmedSearchQuery))
-                    .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
-                  signalRepo
-                    .findBySlug({ projectId: ProjectId(data.projectId), slug: trimmedSearchQuery })
-                    .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
-                ],
-                { concurrency: 2 },
-              )
-              const idMatch = byId && byId.projectId === data.projectId ? byId : null
-              return idMatch ?? bySlug
-            })
-          : null
+        const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
+        const sessionRepository = yield* SessionRepository
+        const startTimeConditions: FilterCondition[] = []
+        if (timeRange?.from) startTimeConditions.push({ op: "gte", value: timeRange.from.toISOString() })
+        if (timeRange?.to) startTimeConditions.push({ op: "lte", value: timeRange.to.toISOString() })
+        const sessionCountFilters: FilterSet | undefined =
+          startTimeConditions.length > 0 ? { startTime: startTimeConditions } : undefined
+        const signalIds = data.signalIds.map(SignalId)
+        const [metrics, sessionCount, trendSeries] = yield* Effect.all([
+          scoreAnalyticsRepository.listSignalWindowMetrics({
+            organizationId: orgId,
+            projectId: ProjectId(data.projectId),
+            signalIds,
+            ...(timeRange ? { timeRange } : {}),
+          }),
+          sessionRepository.countByProjectId({
+            organizationId: orgId,
+            projectId: ProjectId(data.projectId),
+            ...(sessionCountFilters ? { filters: sessionCountFilters } : {}),
+          }),
+          scoreAnalyticsRepository.trendBySignals({
+            organizationId: orgId,
+            projectId: ProjectId(data.projectId),
+            signalIds,
+            timeRange: { from: trendFrom, to: trendTo },
+          }),
+        ])
 
-        const search =
-          trimmedSearchQuery && !directMatch
-            ? yield* embedSignalSearchQueryUseCase({
-                organizationId,
-                projectId: data.projectId,
-                query: trimmedSearchQuery,
-              })
-            : undefined
+        const metricsBySignalId = new Map(metrics.map((metric) => [metric.signalId as string, metric] as const))
+        const trendBySignalId = new Map(
+          trendSeries.map((series) => [
+            series.signalId as string,
+            fillBuckets({ scaffold: trendScaffold, buckets: series.buckets }).map(toSignalsBucketRecord),
+          ]),
+        )
 
-        const timeRange =
-          data.timeRange?.fromIso || data.timeRange?.toIso
-            ? {
-                ...(data.timeRange?.fromIso ? { from: new Date(data.timeRange.fromIso) } : {}),
-                ...(data.timeRange?.toIso ? { to: new Date(data.timeRange.toIso) } : {}),
-              }
-            : undefined
-
-        return yield* listSignalsUseCase({
-          organizationId,
-          projectId: data.projectId,
-          ...(data.limit !== undefined ? { limit: data.limit } : {}),
-          ...(data.offset !== undefined ? { offset: data.offset } : {}),
-          ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
-          ...(data.assigneeIds?.length ? { assigneeIds: data.assigneeIds } : {}),
-          ...(data.sort ? { sort: data.sort } : {}),
-          ...(timeRange ? { timeRange } : {}),
-          ...(directMatch
-            ? { signalIds: [directMatch.id] }
-            : search
-              ? {
-                  search: {
-                    query: search.query,
-                    normalizedEmbedding: search.normalizedEmbedding,
-                  },
-                }
-              : {}),
-        })
+        return {
+          metricsBySignalId: Object.fromEntries(
+            data.signalIds.map((signalId) => {
+              const metric = metricsBySignalId.get(signalId)
+              return [
+                signalId,
+                {
+                  occurrences: metric?.occurrences ?? 0,
+                  affectedSessionsPercent:
+                    !metric || sessionCount.totalCount === 0
+                      ? 0
+                      : Math.min(metric.affectedSessions / sessionCount.totalCount, 1),
+                  trend:
+                    trendBySignalId.get(signalId) ??
+                    fillBuckets({ scaffold: trendScaffold, buckets: [] }).map(toSignalsBucketRecord),
+                },
+              ]
+            }),
+          ),
+        } satisfies SignalRowMetricsRecord
       }).pipe(
-        withPostgres(Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive), pgClient, orgId),
         withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive), chClient, orgId),
-        withAi(AIEmbedLive, redisClient),
         withTracing,
       ),
     )
-
-    return toSignalsListResultRecord(result, userId)
   })
 
 export interface OrgSignalSearchRecord {
@@ -1042,6 +1171,7 @@ export const applyBulkSignalLifecycleAction = createServerFn({ method: "POST" })
               projectId: data.projectId,
               limit: BULK_ACTION_BATCH_SIZE,
               offset,
+              includeAnalytics: false,
               ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
               ...(data.assigneeIds?.length ? { assigneeIds: data.assigneeIds } : {}),
               ...(data.sort ? { sort: data.sort } : {}),

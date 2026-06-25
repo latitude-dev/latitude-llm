@@ -32,7 +32,7 @@ import { SignalRepository, type SignalSearchCandidate, type SignalWithLifecycle 
 export const signalsLifecycleGroupSchema = z.enum(["active", "archived"])
 export type SignalsLifecycleGroup = z.infer<typeof signalsLifecycleGroupSchema>
 
-export const signalsSortFieldSchema = z.enum(["lastSeen", "occurrences", "state"])
+export const signalsSortFieldSchema = z.enum(["lastSeen", "occurrences", "affectedSessions", "state"])
 export type SignalsSortField = z.infer<typeof signalsSortFieldSchema>
 
 /** Sentinel accepted by the assignee filter to match issues with no assignee. */
@@ -71,6 +71,7 @@ const listSignalsInputSchema = z.object({
   /** Restrict to issues assigned to any of these users; `"unassigned"` matches `assigneeId: null`. */
   assigneeIds: z.array(signalAssigneeFilterSchema).min(1).optional(),
   search: signalSearchSchema.optional(),
+  textSearchQuery: z.string().min(1).optional(),
   timeRange: signalsTimeRangeSchema.optional(),
   sort: z
     .object({
@@ -83,6 +84,7 @@ const listSignalsInputSchema = z.object({
     }),
   limit: z.number().int().min(1).max(100).default(50),
   offset: z.number().int().min(0).default(0),
+  includeAnalytics: z.boolean().default(true),
   now: z.date().optional(),
 })
 
@@ -381,6 +383,14 @@ const sortCandidates = (
       if (occurrencesComparison !== 0) {
         return occurrencesComparison
       }
+    } else if (input.field === "affectedSessions") {
+      const affectedSessionsComparison =
+        input.direction === "asc"
+          ? compareAsc(left.windowMetric.affectedSessions, right.windowMetric.affectedSessions)
+          : compareDesc(left.windowMetric.affectedSessions, right.windowMetric.affectedSessions)
+      if (affectedSessionsComparison !== 0) {
+        return affectedSessionsComparison
+      }
     } else if (input.field === "state") {
       // Priority numbers go low → high in importance order
       // (`Regressed = 0`, `Escalating = 1`, …, `Ignored = 5`). The user-
@@ -427,7 +437,6 @@ const sortCandidates = (
 const toCandidate = (input: {
   readonly issue: SignalWithLifecycle
   readonly windowMetric: SignalWindowMetric
-  readonly occurrence: SignalOccurrenceAggregate | null
   readonly similarityScore: number | null
   readonly now: Date
 }): AnalyticsCandidate => {
@@ -443,10 +452,52 @@ const toCandidate = (input: {
     windowMetric: input.windowMetric,
     lifecycleStates,
     similarityScore: input.similarityScore,
-    firstSeenAt: input.occurrence?.firstSeenAt ?? input.windowMetric.firstSeenAt ?? input.issue.createdAt,
-    lastSeenAt: input.occurrence?.lastSeenAt ?? input.windowMetric.lastSeenAt ?? input.issue.createdAt,
-    escalationOccurrenceThreshold:
-      input.occurrence !== null ? getEscalationOccurrenceThreshold(input.occurrence.baselineAvgOccurrences) : null,
+    firstSeenAt: input.windowMetric.firstSeenAt,
+    lastSeenAt: input.windowMetric.lastSeenAt,
+    escalationOccurrenceThreshold: null,
+  }
+}
+
+const makeZeroWindowMetric = (issue: SignalWithLifecycle): SignalWindowMetric => ({
+  signalId: issue.id,
+  occurrences: 0,
+  affectedSessions: 0,
+  firstSeenAt: issue.createdAt,
+  lastSeenAt: issue.createdAt,
+})
+
+const toLightListItem = (issue: SignalWithLifecycle, now: Date): SignalListItem => {
+  const states = deriveSignalLifecycleStates({
+    issue,
+    isEscalating: issue.lifecycle.isEscalating,
+    isRegressed: issue.lifecycle.isRegressed,
+    now,
+  })
+
+  return {
+    id: issue.id,
+    projectId: issue.projectId,
+    slug: issue.slug,
+    name: issue.name,
+    description: issue.description,
+    source: issue.source,
+    states,
+    assigneeId: issue.assigneeId,
+    priority: issue.priority,
+    createdAt: issue.createdAt,
+    updatedAt: issue.updatedAt,
+    escalatedAt: issue.escalatedAt,
+    resolvedAt: issue.resolvedAt,
+    ignoredAt: issue.ignoredAt,
+    firstSeenAt: issue.createdAt,
+    lastSeenAt: issue.updatedAt,
+    occurrences: 0,
+    similarityScore: null,
+    affectedSessionsPercent: 0,
+    escalationOccurrenceThreshold: null,
+    trend: [],
+    evaluations: [],
+    tags: [],
   }
 }
 
@@ -525,16 +576,105 @@ export const listSignalsUseCase = (
       }
     }
 
+    if (!parsed.includeAnalytics) {
+      const histogramTimeRange = resolveHistogramTimeRange({
+        timeRange: parsed.timeRange,
+        now,
+      })
+      const histogramBucketSeconds = pickTraceHistogramBucketSeconds(
+        histogramTimeRange.from.getTime(),
+        histogramTimeRange.to.getTime(),
+      )
+      const histogramScaffold = buildHistogramBucketScaffold({
+        from: histogramTimeRange.from,
+        to: histogramTimeRange.to,
+        bucketSeconds: histogramBucketSeconds,
+      })
+      const page = parsed.signalIds
+        ? yield* signalRepository.findByIds({ projectId: parsed.projectId, signalIds: parsed.signalIds }).pipe(
+            Effect.map((rows) => {
+              const filteredRows = rows.filter((issue) => {
+                const candidate = {
+                  issue,
+                  windowMetric: makeZeroWindowMetric(issue),
+                  lifecycleStates: deriveSignalLifecycleStates({
+                    issue,
+                    isEscalating: issue.lifecycle.isEscalating,
+                    isRegressed: issue.lifecycle.isRegressed,
+                    now,
+                  }),
+                  similarityScore: null,
+                  firstSeenAt: issue.createdAt,
+                  lastSeenAt: issue.updatedAt,
+                  escalationOccurrenceThreshold: null,
+                } satisfies AnalyticsCandidate
+                return (
+                  matchesLifecycleGroup(candidate, parsed.lifecycleGroup) &&
+                  matchesAssigneeFilter(candidate, parsed.assigneeIds)
+                )
+              })
+              return {
+                items: filteredRows.slice(parsed.offset, parsed.offset + parsed.limit),
+                totalCount: filteredRows.length,
+                hasMore: parsed.offset + parsed.limit < filteredRows.length,
+                limit: parsed.limit,
+                offset: parsed.offset,
+              }
+            }),
+          )
+        : yield* signalRepository.listTableRows({
+            projectId: parsed.projectId,
+            limit: parsed.limit,
+            offset: parsed.offset,
+            ...(parsed.lifecycleGroup ? { lifecycleGroup: parsed.lifecycleGroup } : {}),
+            ...(parsed.assigneeIds ? { assigneeIds: parsed.assigneeIds } : {}),
+            ...(parsed.textSearchQuery
+              ? { searchQuery: parsed.textSearchQuery }
+              : parsed.search
+                ? { searchQuery: parsed.search.query }
+                : {}),
+            ...(selectedTimeRange ? { timeRange: selectedTimeRange } : {}),
+            sort: parsed.sort,
+          })
+
+      return {
+        analytics: {
+          counts: {
+            newSignals: 0,
+            escalatingSignals: 0,
+            ongoingSignals: 0,
+            regressedSignals: 0,
+            resolvedSignals: 0,
+            seenOccurrences: 0,
+          },
+          histogram: fillBuckets({ scaffold: histogramScaffold, buckets: [] }),
+          histogramBucketSeconds,
+          totalSessions: 0,
+        },
+        items: page.items.map((issue) => toLightListItem(issue, now)),
+        totalCount: page.totalCount,
+        hasMore: page.hasMore,
+        hasAnySignals,
+        limit: parsed.limit,
+        offset: parsed.offset,
+        occurrencesSum: 0,
+        priorityCounts: emptyPriorityCounts(),
+        assigneeCounts: {},
+      } satisfies ListSignalsResult
+    }
+
     const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
     const evaluationRepository = yield* EvaluationRepository
     const sessionRepository = yield* SessionRepository
 
-    const windowMetricsEffect = scoreAnalyticsRepository.listSignalWindowMetrics({
-      organizationId: parsed.organizationId,
-      projectId: parsed.projectId,
-      ...(selectedTimeRange ? { timeRange: selectedTimeRange } : {}),
-      ...(parsed.signalIds ? { signalIds: parsed.signalIds } : {}),
-    })
+    const windowMetricsEffect = scoreAnalyticsRepository
+      .listSignalWindowMetrics({
+        organizationId: parsed.organizationId,
+        projectId: parsed.projectId,
+        ...(selectedTimeRange ? { timeRange: selectedTimeRange } : {}),
+        ...(parsed.signalIds ? { signalIds: parsed.signalIds } : {}),
+      })
+      .pipe(Effect.withSpan("issues.listSignals.listSignalWindowMetrics"))
 
     const searchCandidatesEffect = parsed.search
       ? signalRepository.hybridSearch({
@@ -559,16 +699,15 @@ export const listSignalsUseCase = (
     }
     const sessionCountFilters: FilterSet | undefined =
       startTimeConditions.length > 0 ? { startTime: startTimeConditions } : undefined
-
-    const [windowMetrics, searchCandidates, sessionCount] = yield* Effect.all([
-      windowMetricsEffect,
-      searchCandidatesEffect,
-      sessionRepository.countByProjectId({
+    const countTotalSessionsEffect = sessionRepository
+      .countByProjectId({
         organizationId: parsed.organizationId,
         projectId: parsed.projectId,
         ...(sessionCountFilters ? { filters: sessionCountFilters } : {}),
-      }),
-    ])
+      })
+      .pipe(Effect.withSpan("issues.listSignals.countByProjectId"))
+
+    const [windowMetrics, searchCandidates] = yield* Effect.all([windowMetricsEffect, searchCandidatesEffect])
 
     const windowMetricsBySignalId = new Map(windowMetrics.map((metric) => [metric.signalId, metric] as const))
     const baseCandidateIds = parsed.search
@@ -601,6 +740,8 @@ export const listSignalsUseCase = (
     })
 
     if (candidateSignalIds.length === 0) {
+      const sessionCount = parsed.includeAnalytics ? yield* countTotalSessionsEffect : { totalCount: 0 }
+
       return {
         analytics: {
           counts: {
@@ -631,23 +772,14 @@ export const listSignalsUseCase = (
       searchCandidates.map((candidate) => [candidate.signalId, candidate.score] as const),
     )
     const forceIncludeSignalIds = parsed.signalIds ? new Set<string>(parsed.signalIds) : null
-    const canonicalSignals = yield* signalRepository.findByIds({
-      projectId: parsed.projectId,
-      signalIds: candidateSignalIds,
-    })
+    const canonicalSignals = yield* signalRepository
+      .findByIds({
+        projectId: parsed.projectId,
+        signalIds: candidateSignalIds,
+      })
+      .pipe(Effect.withSpan("issues.listSignals.findByIds"))
 
     const matchedSignalIds = canonicalSignals.map((issue) => issue.id)
-    const fullHistoryOccurrences =
-      matchedSignalIds.length === 0
-        ? []
-        : yield* scoreAnalyticsRepository.aggregateBySignals({
-            organizationId: parsed.organizationId,
-            projectId: parsed.projectId,
-            signalIds: matchedSignalIds,
-          })
-    const occurrencesBySignalId = new Map(
-      fullHistoryOccurrences.map((occurrence) => [occurrence.signalId, occurrence] as const),
-    )
 
     const analyticsCandidates = canonicalSignals
       .map((issue) => {
@@ -662,14 +794,7 @@ export const listSignalsUseCase = (
 
         return toCandidate({
           issue,
-          windowMetric:
-            windowMetric ??
-            ({
-              signalId: issue.id,
-              occurrences: 0,
-              affectedSessions: 0,
-            } as unknown as SignalWindowMetric),
-          occurrence: occurrencesBySignalId.get(issue.id) ?? null,
+          windowMetric: windowMetric ?? makeZeroWindowMetric(issue),
           similarityScore: searchScoresBySignalId.get(issue.id) ?? null,
           now,
         })
@@ -677,15 +802,17 @@ export const listSignalsUseCase = (
       .filter((candidate): candidate is AnalyticsCandidate => candidate !== null)
 
     const analyticsHistogram =
-      matchedSignalIds.length === 0
-        ? []
-        : yield* scoreAnalyticsRepository.histogramBySignals({
-            organizationId: parsed.organizationId,
-            projectId: parsed.projectId,
-            signalIds: matchedSignalIds,
-            timeRange: histogramTimeRange,
-            bucketSeconds: histogramBucketSeconds,
-          })
+      parsed.includeAnalytics && matchedSignalIds.length > 0
+        ? yield* scoreAnalyticsRepository
+            .histogramBySignals({
+              organizationId: parsed.organizationId,
+              projectId: parsed.projectId,
+              signalIds: matchedSignalIds,
+              timeRange: histogramTimeRange,
+              bucketSeconds: histogramBucketSeconds,
+            })
+            .pipe(Effect.withSpan("issues.listSignals.histogramBySignals"))
+        : []
 
     const lifecycleCandidates = analyticsCandidates.filter((candidate) =>
       matchesLifecycleGroup(candidate, parsed.lifecycleGroup),
@@ -713,8 +840,8 @@ export const listSignalsUseCase = (
     const trendScaffold = buildBucketScaffold(trendTimeRange)
     const tagsTimeRange = resolveTagsTimeRange({ timeRange: selectedTimeRange, now })
 
-    const [evaluationPage, trendSeries, tagsAggregates] = yield* Effect.all([
-      pageSignalIds.length === 0
+    const [evaluationPage, trendSeries, tagsAggregates, pageOccurrences, sessionCount] = yield* Effect.all([
+      !parsed.includeAnalytics || pageSignalIds.length === 0
         ? Effect.succeed({
             items: [] as readonly Evaluation[],
             hasMore: false,
@@ -729,22 +856,36 @@ export const listSignalsUseCase = (
               limit: 1000,
             },
           }),
-      pageSignalIds.length === 0
+      !parsed.includeAnalytics || pageSignalIds.length === 0
         ? Effect.succeed([] satisfies readonly SignalTrendSeries[])
-        : scoreAnalyticsRepository.trendBySignals({
-            organizationId: parsed.organizationId,
-            projectId: parsed.projectId,
-            signalIds: pageSignalIds,
-            timeRange: trendTimeRange,
-          }),
-      pageSignalIds.length === 0
+        : scoreAnalyticsRepository
+            .trendBySignals({
+              organizationId: parsed.organizationId,
+              projectId: parsed.projectId,
+              signalIds: pageSignalIds,
+              timeRange: trendTimeRange,
+            })
+            .pipe(Effect.withSpan("issues.listSignals.trendBySignals")),
+      !parsed.includeAnalytics || pageSignalIds.length === 0
         ? Effect.succeed([])
-        : scoreAnalyticsRepository.aggregateTagsBySignals({
-            organizationId: parsed.organizationId,
-            projectId: parsed.projectId,
-            signalIds: pageSignalIds,
-            timeRange: tagsTimeRange,
-          }),
+        : scoreAnalyticsRepository
+            .aggregateTagsBySignals({
+              organizationId: parsed.organizationId,
+              projectId: parsed.projectId,
+              signalIds: pageSignalIds,
+              timeRange: tagsTimeRange,
+            })
+            .pipe(Effect.withSpan("issues.listSignals.aggregateTagsBySignals")),
+      !parsed.includeAnalytics || pageSignalIds.length === 0
+        ? Effect.succeed([] satisfies readonly SignalOccurrenceAggregate[])
+        : scoreAnalyticsRepository
+            .aggregateBySignals({
+              organizationId: parsed.organizationId,
+              projectId: parsed.projectId,
+              signalIds: pageSignalIds,
+            })
+            .pipe(Effect.withSpan("issues.listSignals.aggregateBySignals")),
+      parsed.includeAnalytics ? countTotalSessionsEffect : Effect.succeed({ totalCount: 0 }),
     ])
 
     const evaluationsBySignalId = new Map<string, Evaluation[]>()
@@ -765,6 +906,9 @@ export const listSignalsUseCase = (
     )
 
     const tagsBySignalId = new Map(tagsAggregates.map((entry) => [entry.signalId, entry.tags] as const))
+    const occurrencesBySignalId = new Map(
+      pageOccurrences.map((occurrence) => [occurrence.signalId, occurrence] as const),
+    )
 
     return {
       analytics: {
@@ -776,34 +920,41 @@ export const listSignalsUseCase = (
         histogramBucketSeconds,
         totalSessions: sessionCount.totalCount,
       },
-      items: pageCandidates.map((candidate) => ({
-        id: candidate.issue.id,
-        projectId: candidate.issue.projectId,
-        slug: candidate.issue.slug,
-        name: candidate.issue.name,
-        description: candidate.issue.description,
-        source: candidate.issue.source,
-        states: candidate.lifecycleStates,
-        assigneeId: candidate.issue.assigneeId,
-        priority: candidate.issue.priority,
-        createdAt: candidate.issue.createdAt,
-        updatedAt: candidate.issue.updatedAt,
-        escalatedAt: candidate.issue.escalatedAt,
-        resolvedAt: candidate.issue.resolvedAt,
-        ignoredAt: candidate.issue.ignoredAt,
-        firstSeenAt: candidate.firstSeenAt,
-        lastSeenAt: candidate.lastSeenAt,
-        occurrences: candidate.windowMetric.occurrences,
-        similarityScore: candidate.similarityScore,
-        affectedSessionsPercent:
-          sessionCount.totalCount === 0
-            ? 0
-            : Math.min(candidate.windowMetric.affectedSessions / sessionCount.totalCount, 1),
-        escalationOccurrenceThreshold: candidate.escalationOccurrenceThreshold,
-        trend: trendBySignalId.get(candidate.issue.id) ?? fillBuckets({ scaffold: trendScaffold, buckets: [] }),
-        evaluations: evaluationsBySignalId.get(candidate.issue.id) ?? [],
-        tags: tagsBySignalId.get(candidate.issue.id) ?? [],
-      })),
+      items: pageCandidates.map((candidate) => {
+        const occurrence = occurrencesBySignalId.get(candidate.issue.id) ?? null
+
+        return {
+          id: candidate.issue.id,
+          projectId: candidate.issue.projectId,
+          slug: candidate.issue.slug,
+          name: candidate.issue.name,
+          description: candidate.issue.description,
+          source: candidate.issue.source,
+          states: candidate.lifecycleStates,
+          assigneeId: candidate.issue.assigneeId,
+          priority: candidate.issue.priority,
+          createdAt: candidate.issue.createdAt,
+          updatedAt: candidate.issue.updatedAt,
+          escalatedAt: candidate.issue.escalatedAt,
+          resolvedAt: candidate.issue.resolvedAt,
+          ignoredAt: candidate.issue.ignoredAt,
+          firstSeenAt: occurrence?.firstSeenAt ?? candidate.firstSeenAt,
+          lastSeenAt: occurrence?.lastSeenAt ?? candidate.lastSeenAt,
+          occurrences: candidate.windowMetric.occurrences,
+          similarityScore: candidate.similarityScore,
+          affectedSessionsPercent:
+            sessionCount.totalCount === 0
+              ? 0
+              : Math.min(candidate.windowMetric.affectedSessions / sessionCount.totalCount, 1),
+          escalationOccurrenceThreshold:
+            occurrence !== null ? getEscalationOccurrenceThreshold(occurrence.baselineAvgOccurrences) : null,
+          trend: parsed.includeAnalytics
+            ? (trendBySignalId.get(candidate.issue.id) ?? fillBuckets({ scaffold: trendScaffold, buckets: [] }))
+            : [],
+          evaluations: evaluationsBySignalId.get(candidate.issue.id) ?? [],
+          tags: tagsBySignalId.get(candidate.issue.id) ?? [],
+        }
+      }),
       totalCount: tableCandidates.length,
       hasMore: parsed.offset + parsed.limit < tableCandidates.length,
       hasAnySignals,

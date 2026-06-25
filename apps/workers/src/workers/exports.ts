@@ -81,7 +81,7 @@ type SignalsExportInput = {
     readonly to?: Date
   }
   readonly sort?: {
-    readonly field: "lastSeen" | "occurrences" | "state"
+    readonly field: "lastSeen" | "occurrences" | "affectedSessions" | "state"
     readonly direction: "asc" | "desc"
   }
 }
@@ -147,7 +147,7 @@ function generateSignalsExport(
       readonly toIso?: string | undefined
     }
     readonly sort?: {
-      readonly field: "lastSeen" | "occurrences" | "state"
+      readonly field: "lastSeen" | "occurrences" | "affectedSessions" | "state"
       readonly direction: "asc" | "desc"
     }
   },

@@ -1,6 +1,6 @@
 import type { SignalDimension } from "@domain/scores"
 import type { InfiniteTableInfiniteScroll } from "@repo/ui"
-import { keepPreviousData, useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useInfiniteQuery, useMutation, useQueries, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import type {
@@ -11,6 +11,7 @@ import type {
   SignalImpactRecord,
   SignalOccurrenceRecord,
   SignalRecord,
+  SignalRowMetricsRecord,
   SignalSessionPageRecord,
   SignalSummaryRecord,
   SignalsListResultRecord,
@@ -23,6 +24,8 @@ import {
   getSignalDimensions,
   getSignalImpact,
   getSignalOccurrences,
+  getSignalRowMetrics,
+  getSignalsAnalytics,
   listSignalSessions,
   listSignals,
   searchOrgSignals,
@@ -59,7 +62,7 @@ const DEFAULT_ISSUES_SORTING = {
 } as const satisfies SignalsSorting
 
 interface SignalsSorting {
-  readonly column: "lastSeen" | "occurrences" | "state"
+  readonly column: "lastSeen" | "occurrences" | "affectedSessions" | "state"
   readonly direction: "asc" | "desc"
 }
 
@@ -94,6 +97,11 @@ const getSignalsQueryKey = (input: SignalsKeyInput) =>
 
 const getSignalsOffsetQueryKey = (input: SignalsKeyInput, offset: number) =>
   [...getSignalsQueryKey(input), "offset", offset] as const
+
+const getSignalsAnalyticsQueryKey = (input: SignalsKeyInput) => [...getSignalsQueryKey(input), "analytics"] as const
+
+const getSignalRowMetricsQueryKey = (input: SignalsKeyInput, offset: number, signalIds: readonly string[]) =>
+  [...getSignalsQueryKey(input), "rowMetrics", offset, signalIds.join(",")] as const
 
 const getSignalQueryKey = (projectId: string, signalId: string) => ["issue", projectId, signalId] as const
 
@@ -184,20 +192,20 @@ export function useSignals(input: {
       staleTime: ISSUES_QUERY_STALE_TIME_MS,
     })
 
-    if (result.hasMore) {
-      const nextOffset = result.offset + result.limit
-      void queryClient.prefetchQuery({
-        queryKey: getSignalsOffsetQueryKey(keyInput, nextOffset),
-        queryFn: () =>
-          listSignals({
-            data: buildListSignalsRequest(keyInput, nextOffset),
-          }),
-        staleTime: ISSUES_QUERY_STALE_TIME_MS,
-      })
-    }
-
     return result
   }
+
+  const enabled = (input.enabled ?? true) && input.projectId.length > 0
+  const analyticsQuery = useQuery({
+    queryKey: getSignalsAnalyticsQueryKey(keyInput),
+    queryFn: (): Promise<SignalsListResultRecord> =>
+      getSignalsAnalytics({
+        data: buildListSignalsRequest(keyInput, 0),
+      }),
+    staleTime: ISSUES_QUERY_STALE_TIME_MS,
+    placeholderData: keepPreviousData,
+    enabled,
+  })
 
   const {
     data: paginatedData,
@@ -213,7 +221,7 @@ export function useSignals(input: {
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.offset + lastPage.limit : undefined),
     staleTime: ISSUES_QUERY_STALE_TIME_MS,
     placeholderData: keepPreviousData,
-    enabled: (input.enabled ?? true) && input.projectId.length > 0,
+    enabled,
   })
 
   const infiniteScroll: InfiniteTableInfiniteScroll = useMemo(
@@ -225,22 +233,56 @@ export function useSignals(input: {
     [fetchNextPage, hasNextPage, isFetchingNextPage],
   )
 
-  const data = useMemo(() => paginatedData?.pages.flatMap((page) => page.items) ?? [], [paginatedData])
+  const pages = paginatedData?.pages ?? []
+  const rowMetricsQueries = useQueries({
+    queries: pages.flatMap((page) => {
+      const signalIds = page.items.map((issue) => issue.id)
+      if (signalIds.length === 0) return []
+      return [
+        {
+          queryKey: getSignalRowMetricsQueryKey(keyInput, page.offset, signalIds),
+          queryFn: (): Promise<SignalRowMetricsRecord> =>
+            getSignalRowMetrics({
+              data: {
+                projectId: keyInput.projectId,
+                signalIds,
+                ...(keyInput.timeRange ? { timeRange: keyInput.timeRange } : {}),
+              },
+            }),
+          staleTime: ISSUES_QUERY_STALE_TIME_MS,
+          enabled,
+        },
+      ]
+    }),
+  })
+
+  const data = useMemo(() => pages.flatMap((page) => page.items), [pages])
+  const rowMetricsBySignalId = useMemo(
+    () =>
+      Object.assign(
+        {},
+        ...rowMetricsQueries.map((query) => query.data?.metricsBySignalId ?? {}),
+      ) as SignalRowMetricsRecord["metricsBySignalId"],
+    [rowMetricsQueries],
+  )
   const firstPage = paginatedData?.pages[0]
+  const analyticsPage = analyticsQuery.data
 
   return {
     data: data as readonly SignalRecord[],
-    analytics: firstPage?.analytics ?? EMPTY_ISSUES_ANALYTICS,
+    rowMetricsBySignalId,
+    analytics: analyticsPage?.analytics ?? EMPTY_ISSUES_ANALYTICS,
     totalCount: firstPage?.totalCount ?? 0,
     hasAnySignals: firstPage?.hasAnySignals ?? false,
-    occurrencesSum: firstPage?.occurrencesSum ?? 0,
-    priorityCounts: firstPage?.priorityCounts ?? EMPTY_PRIORITY_COUNTS,
-    mySignalsCount: firstPage?.mySignalsCount ?? 0,
+    occurrencesSum: analyticsPage?.occurrencesSum ?? 0,
+    priorityCounts: analyticsPage?.priorityCounts ?? EMPTY_PRIORITY_COUNTS,
+    mySignalsCount: analyticsPage?.mySignalsCount ?? 0,
     isLoading,
     // True while a new query key is in flight and the previous result is being
     // shown as placeholder (e.g. after a sort/filter change). Lets consumers
     // surface skeleton states without unmounting the surrounding page layout.
     isReloading: isPlaceholderData,
+    isAnalyticsLoading: analyticsQuery.isLoading || analyticsQuery.isPlaceholderData,
     infiniteScroll,
   }
 }
