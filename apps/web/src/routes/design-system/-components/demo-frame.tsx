@@ -6,7 +6,7 @@ export function DemoFrame({ children, className }: { children: ReactNode; classN
   return (
     <div
       className={cn(
-        "flex w-full items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-background p-4 sm:p-6",
+        "flex w-full items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-background px-4 py-8 sm:px-6 sm:py-12",
         className,
       )}
     >

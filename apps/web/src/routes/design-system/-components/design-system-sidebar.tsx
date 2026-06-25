@@ -34,7 +34,7 @@ export function DesignSystemSidebar() {
 
       <nav className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-3 py-5">
         {DESIGN_SYSTEM_NAV.map((section) => (
-          <div key={section.label} className="flex flex-col gap-1">
+          <div key={section.label} className="flex flex-col gap-2">
             <Text.H6 color="foreground" weight="medium" className="px-2 uppercase tracking-wide">
               {section.label}
             </Text.H6>

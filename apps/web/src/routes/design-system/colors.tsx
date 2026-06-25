@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { DesignSystemPage } from "./-components/design-system-page.tsx"
 import { useDesignSystemTheme } from "./-components/design-system-theme.tsx"
 import { TypographySection } from "./-components/typography-table.tsx"
+import { UsageCode, UsageSection } from "./-components/usage-section.tsx"
 
 function rgbToHex(rgb: string): string {
   const match = rgb.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/)
@@ -151,6 +152,16 @@ function ColorsPage() {
       description="All design system colors from @repo/ui and theme CSS variables. Toggle theme in the sidebar to compare light and dark values."
       wide
     >
+      <UsageSection description="Semantic colors are CSS variables on :root. Reference them with hsl(var(--token)) or the matching Tailwind utility classes.">
+        <UsageCode
+          lines={[
+            '<div className="bg-background text-foreground border-border" />',
+            "",
+            '<div style={{ backgroundColor: "hsl(var(--primary))" }} />',
+          ]}
+        />
+      </UsageSection>
+
       <div ref={swatchesRef}>
         {COLOR_GROUPS.map((group) => (
           <TypographySection key={group.title} title={group.title} description="CSS variables and Tailwind tokens.">

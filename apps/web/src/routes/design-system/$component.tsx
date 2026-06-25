@@ -24,14 +24,21 @@ import { useState } from "react"
 import { ComponentDemoSection } from "./-components/demo-frame.tsx"
 import { DesignSystemPage } from "./-components/design-system-page.tsx"
 import { useDesignSystemTheme } from "./-components/design-system-theme.tsx"
+import { UsageCode, UsageSection } from "./-components/usage-section.tsx"
 
 export const Route = createFileRoute("/design-system/$component")({
   component: ComponentPage,
 })
 
+type ComponentUsage = {
+  description: string
+  lines: readonly string[]
+}
+
 type ComponentEntry = {
   title: string
   description: string
+  usage: ComponentUsage
   Demo: () => ReactNode
 }
 
@@ -39,51 +46,130 @@ const COMPONENT_REGISTRY: Record<string, ComponentEntry> = {
   alert: {
     title: "Alert",
     description: "Inline feedback banners with semantic variants.",
+    usage: {
+      description: "Import Alert from @repo/ui for inline page-level feedback.",
+      lines: [
+        'import { Alert } from "@repo/ui"',
+        "",
+        '<Alert title="Heads up" description="Your changes were saved." />',
+        '<Alert variant="destructive" title="Error" description="Something went wrong." />',
+      ],
+    },
     Demo: AlertDemo,
   },
   avatar: {
     title: "Avatar",
     description: "Hash-colored initials, optional image, and stacked groups.",
+    usage: {
+      description: "Avatar renders initials from a name hash. AvatarGroup stacks multiple avatars with overflow.",
+      lines: [
+        'import { Avatar, AvatarGroup } from "@repo/ui"',
+        "",
+        '<Avatar name="Ada Lovelace" size="md" />',
+        '<AvatarGroup size="md" items={[{ id: "1", name: "Alex Rivera" }]} />',
+      ],
+    },
     Demo: AvatarDemo,
   },
   badge: {
     title: "Badge",
     description: "Compact labels for status and metadata.",
+    usage: {
+      description: "Use Badge for compact categorical labels. Do not wrap label text in Text.",
+      lines: ['import { Badge } from "@repo/ui"', "", '<Badge variant="outline">live</Badge>'],
+    },
     Demo: BadgeDemo,
   },
   checkbox: {
     title: "Checkbox",
     description: "Selection control with indeterminate state.",
+    usage: {
+      description: "Control Checkbox with checked and onCheckedChange. Supports boolean and indeterminate states.",
+      lines: [
+        'import { Checkbox } from "@repo/ui"',
+        "",
+        "<Checkbox checked={checked} onCheckedChange={setChecked} />",
+      ],
+    },
     Demo: CheckboxDemo,
   },
   "copy-button": {
     title: "Copy button",
     description: "Clipboard copy with feedback.",
+    usage: {
+      description: "CopyButton copies a string value and shows toast feedback on success.",
+      lines: ['import { CopyButton } from "@repo/ui"', "", '<CopyButton value="cuid_abc123" />'],
+    },
     Demo: CopyButtonDemo,
   },
   "date-range-picker": {
     title: "Date range picker",
     description: "Calendar popover with presets.",
+    usage: {
+      description: "Control the picker with value, selectedPresetId, and onChange.",
+      lines: [
+        'import { DateRangePicker } from "@repo/ui"',
+        "",
+        "<DateRangePicker",
+        "  value={range}",
+        "  presets={presets}",
+        "  selectedPresetId={selectedPresetId}",
+        "  onChange={({ range }) => setRange(range)}",
+        "/>",
+      ],
+    },
     Demo: DateRangePickerDemo,
   },
   forms: {
     title: "Forms",
     description: "Input, label, and form field composition.",
+    usage: {
+      description: "Compose Input with an optional label prop, or wrap with FormField for descriptions and errors.",
+      lines: [
+        'import { FormField, Input, Label, Text } from "@repo/ui"',
+        "",
+        '<Input label={<Text.H6>Email</Text.H6>} name="email" type="email" />',
+        "<FormField label={...} errors={[...]}>",
+        '  <Input name="workspace" aria-invalid="true" />',
+        "</FormField>",
+      ],
+    },
     Demo: FormsDemo,
   },
   "rich-text-editor": {
     title: "Rich text editor",
     description: "Lazy-loaded CodeMirror editor with JSON detection.",
+    usage: {
+      description: "RichTextEditor is a controlled component. JSON content is auto-detected and highlighted.",
+      lines: [
+        'import { RichTextEditor } from "@repo/ui"',
+        "",
+        '<RichTextEditor value={value} onChange={setValue} minHeight="120px" />',
+      ],
+    },
     Demo: RichTextEditorDemo,
   },
   status: {
     title: "Status",
     description: "Compact pill statuses with semantic variants.",
+    usage: {
+      description: "Status renders a leading dot and label. Long labels truncate in constrained layouts.",
+      lines: ['import { Status } from "@repo/ui"', "", '<Status label="Healthy" variant="success" />'],
+    },
     Demo: StatusDemo,
   },
   charts: {
     title: "Charts",
     description: "ECharts bar chart and loading skeletons.",
+    usage: {
+      description: "BarChart reads theme colors from CSS variables. Use skeletons while data loads.",
+      lines: [
+        'import { BarChart, ChartSkeleton } from "@repo/ui"',
+        "",
+        '<BarChart data={[{ category: "Mon", value: 120 }]} height={200} ariaLabel="Requests" />',
+        "<ChartSkeleton minHeight={160} />",
+      ],
+    },
     Demo: ChartsDemo,
   },
 }
@@ -98,6 +184,9 @@ function ComponentPage() {
 
   return (
     <DesignSystemPage eyebrow="Components" title={entry.title} description={entry.description} wide>
+      <UsageSection description={entry.usage.description}>
+        <UsageCode lines={entry.usage.lines} />
+      </UsageSection>
       <entry.Demo />
     </DesignSystemPage>
   )
@@ -107,16 +196,24 @@ function AlertDemo() {
   return (
     <>
       <ComponentDemoSection title="Default" description="General information for the user.">
-        <Alert title="Default alert" description="General information for the user." />
+        <div className="w-full max-w-xl">
+          <Alert title="Default alert" description="General information for the user." />
+        </div>
       </ComponentDemoSection>
       <ComponentDemoSection title="Success" description="Positive confirmation after a completed action.">
-        <Alert variant="success" title="Success" description="Your changes were saved." />
+        <div className="w-full max-w-xl">
+          <Alert variant="success" title="Success" description="Your changes were saved." />
+        </div>
       </ComponentDemoSection>
       <ComponentDemoSection title="Warning" description="Caution before a potentially impactful action.">
-        <Alert variant="warning" title="Warning" description="This action may affect billing." />
+        <div className="w-full max-w-xl">
+          <Alert variant="warning" title="Warning" description="This action may affect billing." />
+        </div>
       </ComponentDemoSection>
       <ComponentDemoSection title="Destructive" description="Error or failure state.">
-        <Alert variant="destructive" title="Error" description="Something went wrong. Try again." />
+        <div className="w-full max-w-xl">
+          <Alert variant="destructive" title="Error" description="Something went wrong. Try again." />
+        </div>
       </ComponentDemoSection>
     </>
   )
@@ -400,9 +497,8 @@ function DateRangePickerDemo() {
       <ComponentDemoSection
         title="With presets"
         description="Calendar popover with quick-select ranges."
-        frameClassName="block"
       >
-        <div className="mx-auto w-full max-w-md">
+        <div className="max-w-md">
           <DateRangePicker
             value={range}
             presets={presets}

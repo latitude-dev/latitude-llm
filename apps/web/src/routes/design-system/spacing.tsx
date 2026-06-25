@@ -2,6 +2,7 @@ import { Text } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import { DesignSystemPage } from "./-components/design-system-page.tsx"
 import { TypographySection } from "./-components/typography-table.tsx"
+import { UsageCode, UsageSection } from "./-components/usage-section.tsx"
 
 export const Route = createFileRoute("/design-system/spacing")({
   component: SpacingPage,
@@ -34,6 +35,16 @@ function SpacingPage() {
       description="Tailwind spacing scale used for padding, margin, and gap. Values map to rem-based spacing utilities."
       wide
     >
+      <UsageSection description="Spacing tokens map to Tailwind padding, margin, and gap utilities across the product.">
+        <UsageCode
+          lines={[
+            '<div className="flex flex-col gap-4 p-6" />',
+            "",
+            "// p-4 · gap-2 · m-6 · space-y-3",
+          ]}
+        />
+      </UsageSection>
+
       <TypographySection title="Scale" description="Visual reference for each spacing token.">
         <div className="overflow-hidden rounded-xl border border-border/70">
           {SPACING_SCALE.map(({ token, value, className }) => (

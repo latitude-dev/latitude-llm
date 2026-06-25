@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { DemoFrame } from "./-components/demo-frame.tsx"
 import { DesignSystemPage } from "./-components/design-system-page.tsx"
 import { TypographySection } from "./-components/typography-table.tsx"
+import { UsageCode, UsageSection } from "./-components/usage-section.tsx"
 
 export const Route = createFileRoute("/design-system/infinite-table")({
   component: InfiniteTablePage,
@@ -63,6 +64,22 @@ function InfiniteTablePage() {
       description="Virtualized list with sortable headers, optional subheader row, and grouped rows."
       wide
     >
+      <UsageSection description="InfiniteTable virtualizes rows for large datasets. Define columns with render functions and a stable getRowKey.">
+        <UsageCode
+          lines={[
+            'import { InfiniteTable } from "@repo/ui"',
+            "",
+            "<InfiniteTable",
+            "  data={rows}",
+            "  columns={columns}",
+            "  getRowKey={(row) => row.id}",
+            "  sorting={sorting}",
+            "  onSortChange={setSorting}",
+            "/>",
+          ]}
+        />
+      </UsageSection>
+
       <TypographySection
         title="With subheader row"
         description="renderSubheader adds a second line under sortable column headers — useful for aggregates."

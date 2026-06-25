@@ -3,7 +3,7 @@ import type { ReactNode } from "react"
 import { useDesignSystemTheme } from "./design-system-theme.tsx"
 
 export function DesignSystemPage({
-  eyebrow,
+  eyebrow: _eyebrow,
   title,
   description,
   actions,
@@ -22,11 +22,6 @@ export function DesignSystemPage({
   return (
     <div className={`flex min-h-full flex-col gap-8 p-6 sm:p-8 lg:p-10 ${surfaceClass}`}>
       <header className={`flex max-w-4xl flex-col gap-4 ${wide ? "max-w-none" : ""}`}>
-        {eyebrow ? (
-          <Text.H6 color="foreground" weight="semibold">
-            {eyebrow}
-          </Text.H6>
-        ) : null}
         <Text.H2 className="text-balance">{title}</Text.H2>
         {description ? <Text.H6 color="foregroundMuted">{description}</Text.H6> : null}
         {actions ? <div className="flex flex-wrap items-center gap-3">{actions}</div> : null}

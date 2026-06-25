@@ -1,10 +1,10 @@
-import { Button, Icon, Text } from "@repo/ui"
+import { Button, Icon } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
-import { Check, Plus, Sparkles, Trash2 } from "lucide-react"
+import { Check, Plus, Sparkles } from "lucide-react"
 import type { ComponentProps } from "react"
 import { ComponentDemoSection } from "./-components/demo-frame.tsx"
 import { DesignSystemPage } from "./-components/design-system-page.tsx"
-import { TypographySection } from "./-components/typography-table.tsx"
+import { UsageCode, UsageSection } from "./-components/usage-section.tsx"
 
 export const Route = createFileRoute("/design-system/button")({
   component: ButtonPage,
@@ -49,64 +49,37 @@ function ButtonPage() {
       description="Triggers actions and navigation. Use Button from @repo/ui for all clickable actions in the product."
       wide
     >
+      <UsageSection description="Import Button from @repo/ui. Do not wrap labels in Text — Button sets typography internally.">
+        <UsageCode
+          lines={[
+            'import { Button, Icon } from "@repo/ui"',
+            'import { Plus } from "lucide-react"',
+            "",
+            '<Button variant="outline" size="sm">',
+            '  <Icon icon={Plus} size="sm" />',
+            "  Add item",
+            "</Button>",
+          ]}
+        />
+      </UsageSection>
+
       {VARIANTS.map(({ value, label, description }) => (
         <ComponentDemoSection key={value} title={label} description={description}>
-          <Button variant={value}>{label}</Button>
+          <Button variant={value}>
+            <Icon icon={Sparkles} size="sm" />
+            Set up
+          </Button>
         </ComponentDemoSection>
       ))}
 
       {SIZES.map(({ value, label, description }) => (
         <ComponentDemoSection key={value} title={label} description={description}>
-          <Button size={value}>{label}</Button>
+          <Button size={value}>
+            <Icon icon={Sparkles} size="sm" />
+            Set up
+          </Button>
         </ComponentDemoSection>
       ))}
-
-      <ComponentDemoSection
-        title="Loading"
-        description="Shows a spinner and blocks interaction while preserving layout."
-      >
-        <Button isLoading>Loading</Button>
-      </ComponentDemoSection>
-
-      <ComponentDemoSection title="Loading secondary" description="Loading state on a secondary variant.">
-        <Button variant="secondary" isLoading>
-          Loading
-        </Button>
-      </ComponentDemoSection>
-
-      <ComponentDemoSection title="Disabled" description="Default variant with interaction blocked.">
-        <Button disabled>Disabled</Button>
-      </ComponentDemoSection>
-
-      <ComponentDemoSection title="Disabled outline" description="Outlined variant with interaction blocked.">
-        <Button variant="outline" disabled>
-          Disabled
-        </Button>
-      </ComponentDemoSection>
-
-      <ComponentDemoSection
-        title="With icon"
-        description="Icon before the label. Icons inherit button sizing and color tokens."
-      >
-        <Button>
-          <Icon icon={Plus} size="sm" />
-          Add item
-        </Button>
-      </ComponentDemoSection>
-
-      <ComponentDemoSection title="With icon secondary" description="Secondary variant with a leading icon.">
-        <Button variant="secondary">
-          <Icon icon={Sparkles} size="sm" />
-          Generate
-        </Button>
-      </ComponentDemoSection>
-
-      <ComponentDemoSection title="With icon destructive" description="Destructive variant with a leading icon.">
-        <Button variant="destructive">
-          <Icon icon={Trash2} size="sm" />
-          Delete
-        </Button>
-      </ComponentDemoSection>
 
       <ComponentDemoSection title="Icon only" description="Square icon button. Always provide aria-label.">
         <Button size="icon" aria-label="Confirm">
@@ -121,32 +94,22 @@ function ButtonPage() {
       </ComponentDemoSection>
 
       <ComponentDemoSection title="Icon only ghost" description="Ghost square icon button.">
-        <Button size="icon" variant="ghost" aria-label="Delete">
-          <Icon icon={Trash2} size="sm" />
+        <Button size="icon" variant="ghost" aria-label="Set up">
+          <Icon icon={Sparkles} size="sm" />
         </Button>
       </ComponentDemoSection>
 
       <ComponentDemoSection
         title="Full width"
         description="Stretches to the container width — common in mobile forms and dialogs."
-        frameClassName="block"
       >
-        <div className="mx-auto w-full max-w-sm">
-          <Button size="full">Continue</Button>
+        <div className="w-full max-w-sm">
+          <Button size="full">
+            <Icon icon={Sparkles} size="sm" />
+            Set up
+          </Button>
         </div>
       </ComponentDemoSection>
-
-      <TypographySection
-        title="Usage"
-        description="Import Button from @repo/ui. Do not wrap labels in Text — Button sets typography internally."
-      >
-        <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
-          <Text.Mono display="block">{`<Button variant="outline" size="sm">`}</Text.Mono>
-          <Text.Mono display="block">{`  <Icon icon={Plus} size="sm" />`}</Text.Mono>
-          <Text.Mono display="block">{`  Add item`}</Text.Mono>
-          <Text.Mono display="block">{`</Button>`}</Text.Mono>
-        </div>
-      </TypographySection>
     </DesignSystemPage>
   )
 }

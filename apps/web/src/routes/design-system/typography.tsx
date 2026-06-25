@@ -2,6 +2,7 @@ import { type FontSize, type FontWeight, font, Text } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import { DesignSystemPage } from "./-components/design-system-page.tsx"
+import { UsageCode, UsageSection } from "./-components/usage-section.tsx"
 import { TypeSample, TypographyRow, TypographySection, TypographyTable } from "./-components/typography-table.tsx"
 
 export const Route = createFileRoute("/design-system/typography")({
@@ -132,6 +133,18 @@ function TypographyPage() {
       description="Type scale, weights, and families from @repo/ui. Use the Text component for all UI copy."
       wide
     >
+      <UsageSection description="Typography styles are consumed through Text components from @repo/ui. Each export pre-sets size, weight, and family for its role.">
+        <UsageCode
+          lines={[
+            'import { Text } from "@repo/ui"',
+            "",
+            '<Text.H3 weight="semibold">Section title</Text.H3>',
+            '<Text.H5 color="foregroundMuted">Supporting copy</Text.H5>',
+            '<Text.Mono size="h6">trace_abc123</Text.Mono>',
+          ]}
+        />
+      </UsageSection>
+
       <TypographySection title="Headings" description="Used to introduce pages or sections.">
         <TypographyTable
           columns={[

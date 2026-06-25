@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import type { GenAIMessage } from "rosetta-ai"
 import { ComponentDemoSection } from "./-components/demo-frame.tsx"
 import { DesignSystemPage } from "./-components/design-system-page.tsx"
+import { UsageCode, UsageSection } from "./-components/usage-section.tsx"
 
 export const Route = createFileRoute("/design-system/chat")({
   component: ChatPage,
@@ -256,6 +257,16 @@ function ChatPage() {
       description="Every message role and content part the renderer supports: text & markdown, media, files, tool calls, and edge-case roles."
       wide
     >
+      <UsageSection description="Conversation renders a list of GenAI messages with role-aware styling and rich content parts.">
+        <UsageCode
+          lines={[
+            'import { Conversation } from "@repo/ui"',
+            "",
+            "<Conversation messages={messages} />",
+          ]}
+        />
+      </UsageSection>
+
       {SECTIONS.map((section) => (
         <ComponentDemoSection
           key={section.title}

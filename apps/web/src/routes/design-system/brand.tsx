@@ -5,6 +5,7 @@ import type { ReactNode } from "react"
 import { DemoFrame } from "./-components/demo-frame.tsx"
 import { DesignSystemPage } from "./-components/design-system-page.tsx"
 import { TypographySection } from "./-components/typography-table.tsx"
+import { UsageCode, UsageSection } from "./-components/usage-section.tsx"
 
 export const Route = createFileRoute("/design-system/brand")({
   component: BrandPage,
@@ -37,6 +38,17 @@ function BrandPage() {
       title="Brand"
       description="Latitude logo assets for product UI, marketing, and partner materials."
     >
+      <UsageSection description="Import the logo mark from @repo/ui. Use the PNG or SVG lockup from /public when the wordmark is required.">
+        <UsageCode
+          lines={[
+            'import { LatitudeLogo } from "@repo/ui"',
+            "",
+            '<LatitudeLogo className="h-5 w-5" />',
+            '<img src="/latitude-logo.png" alt="Latitude" className="h-8 w-auto" />',
+          ]}
+        />
+      </UsageSection>
+
       <TypographySection
         title="Logo mark"
         description="The standalone icon from LatitudeLogo in @repo/ui. Use for compact surfaces such as nav bars, favicons, and avatars."
