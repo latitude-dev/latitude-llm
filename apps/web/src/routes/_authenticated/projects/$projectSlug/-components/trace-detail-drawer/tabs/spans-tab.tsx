@@ -53,12 +53,12 @@ export function SpansTab({
   }, [selectedSpanId, spans?.length])
 
   function handleSelectSpan(spanId: string) {
-    if (spanId === selectedSpanId) {
+    if (spanId === "" || spanId === selectedSpanId) {
       onSelectSpan("")
       setIsMinimized(false)
-    } else {
-      onSelectSpan(spanId)
+      return
     }
+    onSelectSpan(spanId)
   }
 
   function handleCloseDetail() {
@@ -118,7 +118,7 @@ export function SpansTab({
         spans={filteredSpans}
         selectedSpanId={selectedSpanId}
         onSelectSpan={handleSelectSpan}
-        isMinimized={isMinimized}
+        isMinimized={isMinimized && selectedSpanId !== ""}
         onToggleMinimized={handleToggleMinimized}
         isActive={isActive}
       />
