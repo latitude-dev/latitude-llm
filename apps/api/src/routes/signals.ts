@@ -1,18 +1,22 @@
 import { monitorSignalUseCase, unmonitorSignalUseCase } from "@domain/evaluations"
 import { MembershipRepository } from "@domain/organizations"
 import { ProjectRepository } from "@domain/projects"
-import { WorkflowQuerier, WorkflowStarter } from "@domain/queue"
+import { QueuePublisher, WorkflowQuerier, WorkflowStarter } from "@domain/queue"
 import { BadRequestError, cuidSchema, OrganizationId, ProjectId, SignalId, UserId } from "@domain/shared"
 import {
   applySignalLifecycleCommandUseCase,
+  createSignalUseCase,
+  deleteSignalUseCase,
   embedSignalSearchQueryUseCase,
   getSignalAnalyticsUseCase,
   getSignalDetailsUseCase,
   getSignalTrendUseCase,
   listSignalsUseCase,
   listSignalTracesUseCase,
+  SIGNAL_PRIORITIES,
   type SignalLifecycleCommand,
   SignalRepository,
+  updateSignalUseCase,
 } from "@domain/signals"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import { AIEmbedLive, withAi } from "@platform/ai"
@@ -32,6 +36,7 @@ import {
   SignalRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
+import { QuickJsScriptRuntimeLive } from "@platform/sandbox-quickjs"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineApiEndpoint } from "../mcp/index.ts"
@@ -47,7 +52,13 @@ import {
 import { SignalAnalyticsResponseSchema, toSignalAnalyticsResponse } from "../openapi/entities/signal-analytics.ts"
 import { fetchTraceIndicators, PaginatedTracesSchema, toTraceResponse } from "../openapi/entities/trace.ts"
 import { PaginatedQueryParamsSchema } from "../openapi/pagination.ts"
-import { jsonBody, openApiResponses, PROTECTED_SECURITY, ProjectParamsSchema } from "../openapi/schemas.ts"
+import {
+  FilterSetSchema,
+  jsonBody,
+  openApiResponses,
+  PROTECTED_SECURITY,
+  ProjectParamsSchema,
+} from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
 const signalsFernGroup = (methodName: string) =>
@@ -776,9 +787,198 @@ const unmonitorSignal = signalEndpoint({
   },
 })
 
+const SignalEvaluationBodySchema = z
+  .union([
+    z.object({
+      settings: z
+        .object({
+          kind: z.literal("judge"),
+          criteria: z.string().min(1).describe("Natural-language description of the behavior the judge detects."),
+        })
+        .describe("Declarative judge config; compiled to a sandbox script that calls an LLM."),
+    }),
+    z.object({
+      script: z
+        .string()
+        .min(1)
+        .describe("Raw sandbox evaluation script (advanced). Must compile in the QuickJS runtime."),
+    }),
+  ])
+  .describe("The signal's membership detector. Provide exactly one of `settings` or `script`.")
+
+const CreateSignalBodySchema = z
+  .object({
+    name: z.string().min(1).max(128).describe("Human-readable name. Used to derive the slug."),
+    description: z.string().min(1).describe("What this signal captures."),
+    priority: z.enum(SIGNAL_PRIORITIES).nullish().describe("Manual triage priority. Null/omitted leaves it unset."),
+    filters: FilterSetSchema.nullish().describe(
+      "Row-local pre-gate restricting which traces the evaluation runs against. Omitted = all traces.",
+    ),
+    evaluation: SignalEvaluationBodySchema,
+  })
+  .openapi("CreateSignalBody")
+
+const UpdateSignalBodySchema = z
+  .object({
+    name: z.string().min(1).max(128).optional().describe("New name. Omitted leaves it unchanged."),
+    description: z.string().min(1).optional().describe("New description. Omitted leaves it unchanged."),
+    filters: FilterSetSchema.nullable()
+      .optional()
+      .describe("New evaluation pre-gate. Explicit `null` clears it; omitted leaves it unchanged."),
+  })
+  .openapi("UpdateSignalBody")
+
+const CreateSignalResponseSchema = z
+  .object({
+    id: cuidSchema.describe("Created signal id."),
+    slug: z.string().describe("URL-safe identifier; use it on the other signal endpoints."),
+    evaluationId: cuidSchema.describe("Id of the signal's detector evaluation."),
+  })
+  .openapi("CreateSignalResponse")
+
+const UpdateSignalResponseSchema = z
+  .object({
+    id: cuidSchema.describe("Updated signal id."),
+    slug: z.string().describe("URL-safe identifier (stable across updates)."),
+    changed: z.boolean().describe("Whether any field actually changed."),
+  })
+  .openapi("UpdateSignalResponse")
+
+const createSignal = signalEndpoint({
+  route: createRoute({
+    method: "post",
+    path: "/",
+    name: "createSignal",
+    tags: ["Signals"],
+    ...signalsFernGroup("create"),
+    summary: "Create signal",
+    description:
+      "Creates a user-defined signal with its membership detector — a judge from `settings`, or a raw `script` (advanced). The script is validated at save time (422 on a compile error). Deterministic scripts are backfilled over recent history; judges detect forward from creation.",
+    security: PROTECTED_SECURITY,
+    request: { params: ProjectParamsSchema, body: jsonBody(CreateSignalBodySchema) },
+    responses: openApiResponses({ status: 201, schema: CreateSignalResponseSchema, description: "Signal created" }),
+  }),
+  handler: async (c) => {
+    const { projectSlug } = c.req.valid("param")
+    const body = c.req.valid("json")
+    const organizationId = c.var.organization.id
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const projectRepo = yield* ProjectRepository
+        const project = yield* projectRepo.findBySlug(projectSlug)
+        return yield* createSignalUseCase({
+          organizationId: organizationId as string,
+          projectId: project.id as string,
+          name: body.name,
+          description: body.description,
+          ...(body.priority != null ? { priority: body.priority } : {}),
+          ...(body.filters != null ? { filters: body.filters } : {}),
+          evaluation: body.evaluation,
+        })
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive, OutboxEventWriterLive),
+          c.var.postgresClient,
+          organizationId,
+        ),
+        Effect.provide(QuickJsScriptRuntimeLive),
+        Effect.provide(Layer.succeed(QueuePublisher, c.var.queuePublisher)),
+        withTracing,
+      ),
+    )
+
+    return c.json({ id: result.signalId, slug: result.slug, evaluationId: result.evaluationId }, 201)
+  },
+})
+
+const updateSignal = signalEndpoint({
+  route: createRoute({
+    method: "patch",
+    path: "/{signalSlug}",
+    name: "updateSignal",
+    tags: ["Signals"],
+    ...signalsFernGroup("update"),
+    summary: "Update signal",
+    description:
+      "Updates a signal's name, description, and evaluation pre-gate `filters`. Filter changes apply forward-only — existing membership is never re-evaluated. The slug is stable.",
+    security: PROTECTED_SECURITY,
+    request: { params: SignalSlugParamsSchema, body: jsonBody(UpdateSignalBodySchema) },
+    responses: openApiResponses({ status: 200, schema: UpdateSignalResponseSchema, description: "Signal updated" }),
+  }),
+  handler: async (c) => {
+    const { projectSlug, signalSlug } = c.req.valid("param")
+    const body = c.req.valid("json")
+    const organizationId = c.var.organization.id
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const projectRepo = yield* ProjectRepository
+        const project = yield* projectRepo.findBySlug(projectSlug)
+        const signalRepo = yield* SignalRepository
+        const signal = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
+        return yield* updateSignalUseCase({
+          projectId: project.id as string,
+          signalId: SignalId(signal.id as string),
+          ...(body.name !== undefined ? { name: body.name } : {}),
+          ...(body.description !== undefined ? { description: body.description } : {}),
+          ...(body.filters !== undefined ? { filters: body.filters } : {}),
+        })
+      }).pipe(
+        withPostgres(Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive), c.var.postgresClient, organizationId),
+        withTracing,
+      ),
+    )
+
+    return c.json({ id: result.signalId, slug: signalSlug, changed: result.changed }, 200)
+  },
+})
+
+const deleteSignal = signalEndpoint({
+  route: createRoute({
+    method: "delete",
+    path: "/{signalSlug}",
+    name: "deleteSignal",
+    tags: ["Signals"],
+    ...signalsFernGroup("delete"),
+    summary: "Delete signal",
+    description:
+      "Soft-deletes a signal and archives its detector so it stops matching new traces. Existing scores are retained but excluded from reads; the slug becomes reusable.",
+    security: PROTECTED_SECURITY,
+    request: { params: SignalSlugParamsSchema },
+    responses: { 204: { description: "Signal deleted" } },
+  }),
+  handler: async (c) => {
+    const { projectSlug, signalSlug } = c.req.valid("param")
+    const organizationId = c.var.organization.id
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const projectRepo = yield* ProjectRepository
+        const project = yield* projectRepo.findBySlug(projectSlug)
+        const signalRepo = yield* SignalRepository
+        const signal = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
+        yield* deleteSignalUseCase({ projectId: project.id as string, signalId: SignalId(signal.id as string) })
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive),
+          c.var.postgresClient,
+          organizationId,
+        ),
+        withTracing,
+      ),
+    )
+
+    return c.body(null, 204)
+  },
+})
+
 export const createSignalsRoutes = () => {
   const app = new OpenAPIHono<OrganizationScopedEnv>()
   listSignals.mountHttp(app, createTierRateLimiter("low"))
+  createSignal.mountHttp(app, createTierRateLimiter("critical"))
+  updateSignal.mountHttp(app, createTierRateLimiter("medium"))
+  deleteSignal.mountHttp(app, createTierRateLimiter("medium"))
   getSignalAnalytics.mountHttp(app, createTierRateLimiter("medium"))
   getSignal.mountHttp(app, createTierRateLimiter("low"))
   getSignalTrend.mountHttp(app, createTierRateLimiter("medium"))

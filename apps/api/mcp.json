@@ -7775,6 +7775,359 @@
       }
     },
     {
+      "name": "createSignal",
+      "title": "Create signal",
+      "description": "Creates a user-defined signal with its membership detector — a judge from `settings`, or a raw `script` (advanced). The script is validated at save time (422 on a compile error). Deterministic scripts are backfilled over recent history; judges detect forward from creation.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Human-readable name. Used to derive the slug."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What this signal captures."
+          },
+          "priority": {
+            "description": "Manual triage priority. Null/omitted leaves it unset.",
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high",
+                  "urgent"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "filters": {
+            "description": "Row-local pre-gate restricting which traces the evaluation runs against. Omitted = all traces.",
+            "anyOf": [
+              {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "type": "string",
+                        "enum": [
+                          "eq",
+                          "neq",
+                          "gt",
+                          "gte",
+                          "lt",
+                          "lte",
+                          "in",
+                          "notIn",
+                          "contains",
+                          "notContains",
+                          "gtePercentile"
+                        ],
+                        "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                      },
+                      "value": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "number"
+                                }
+                              ]
+                            }
+                          }
+                        ],
+                        "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                      }
+                    },
+                    "required": [
+                      "op",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evaluation": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "settings": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "judge"
+                      },
+                      "criteria": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Natural-language description of the behavior the judge detects."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "criteria"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Declarative judge config; compiled to a sandbox script that calls an LLM."
+                  }
+                },
+                "required": [
+                  "settings"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "script": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Raw sandbox evaluation script (advanced). Must compile in the QuickJS runtime."
+                  }
+                },
+                "required": [
+                  "script"
+                ],
+                "additionalProperties": false
+              }
+            ],
+            "description": "The signal's membership detector. Provide exactly one of `settings` or `script`."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "name",
+          "description",
+          "evaluation"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Created signal id."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe identifier; use it on the other signal endpoints."
+          },
+          "evaluationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Id of the signal's detector evaluation."
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "evaluationId"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "updateSignal",
+      "title": "Update signal",
+      "description": "Updates a signal's name, description, and evaluation pre-gate `filters`. Filter changes apply forward-only — existing membership is never re-evaluated. The slug is stable.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "signalSlug": {
+            "type": "string",
+            "description": "Signal slug."
+          },
+          "name": {
+            "description": "New name. Omitted leaves it unchanged.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "description": {
+            "description": "New description. Omitted leaves it unchanged.",
+            "type": "string",
+            "minLength": 1
+          },
+          "filters": {
+            "description": "New evaluation pre-gate. Explicit `null` clears it; omitted leaves it unchanged.",
+            "anyOf": [
+              {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "type": "string",
+                        "enum": [
+                          "eq",
+                          "neq",
+                          "gt",
+                          "gte",
+                          "lt",
+                          "lte",
+                          "in",
+                          "notIn",
+                          "contains",
+                          "notContains",
+                          "gtePercentile"
+                        ],
+                        "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                      },
+                      "value": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "number"
+                                }
+                              ]
+                            }
+                          }
+                        ],
+                        "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                      }
+                    },
+                    "required": [
+                      "op",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "projectSlug",
+          "signalSlug"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Updated signal id."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe identifier (stable across updates)."
+          },
+          "changed": {
+            "type": "boolean",
+            "description": "Whether any field actually changed."
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "changed"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "deleteSignal",
+      "title": "Delete signal",
+      "description": "Soft-deletes a signal and archives its detector so it stops matching new traces. Existing scores are retained but excluded from reads; the slug becomes reusable.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "signalSlug": {
+            "type": "string",
+            "description": "Signal slug."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "signalSlug"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
       "name": "getSignalAnalytics",
       "title": "Get project signal analytics",
       "description": "Returns signal analytics for the project: counts of ongoing, new, escalating, regressed, and resolved signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
@@ -8131,8 +8484,15 @@
                   "description": "Generated description of the evaluation."
                 },
                 "alignedAt": {
-                  "type": "string",
-                  "description": "ISO-8601 timestamp at which the evaluation was last realigned."
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which the evaluation was last realigned, or `null` if never aligned."
                 },
                 "archivedAt": {
                   "anyOf": [
@@ -8171,58 +8531,65 @@
                   "description": "Sampling rate as a percentage in `[0, 100]`. `0` means the evaluation is paused."
                 },
                 "alignment": {
-                  "type": "object",
-                  "properties": {
-                    "alignmentMetric": {
-                      "type": "number",
-                      "description": "Headline score that judges how well the evaluation tracks human annotations."
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "alignmentMetric": {
+                          "type": "number",
+                          "description": "Headline score that judges how well the evaluation tracks human annotations."
+                        },
+                        "accuracy": {
+                          "type": "number",
+                          "description": "Accuracy: `(TP + TN) / total`."
+                        },
+                        "precision": {
+                          "type": "number",
+                          "description": "Precision: `TP / (TP + FP)`."
+                        },
+                        "recall": {
+                          "type": "number",
+                          "description": "Recall / sensitivity: `TP / (TP + FN)`."
+                        },
+                        "specificity": {
+                          "type": "number",
+                          "description": "Specificity: `TN / (TN + FP)`."
+                        },
+                        "trueness": {
+                          "type": "number",
+                          "description": "Mean of precision and negative predictive value."
+                        },
+                        "f1": {
+                          "type": "number",
+                          "description": "F1 score: harmonic mean of precision and recall."
+                        },
+                        "balancedAccuracy": {
+                          "type": "number",
+                          "description": "Balanced accuracy: mean of recall and specificity."
+                        },
+                        "matthewsCorrelationCoefficient": {
+                          "type": "number",
+                          "description": "Matthews correlation coefficient, in `[-1, 1]`."
+                        }
+                      },
+                      "required": [
+                        "alignmentMetric",
+                        "accuracy",
+                        "precision",
+                        "recall",
+                        "specificity",
+                        "trueness",
+                        "f1",
+                        "balancedAccuracy",
+                        "matthewsCorrelationCoefficient"
+                      ],
+                      "additionalProperties": false
                     },
-                    "accuracy": {
-                      "type": "number",
-                      "description": "Accuracy: `(TP + TN) / total`."
-                    },
-                    "precision": {
-                      "type": "number",
-                      "description": "Precision: `TP / (TP + FP)`."
-                    },
-                    "recall": {
-                      "type": "number",
-                      "description": "Recall / sensitivity: `TP / (TP + FN)`."
-                    },
-                    "specificity": {
-                      "type": "number",
-                      "description": "Specificity: `TN / (TN + FP)`."
-                    },
-                    "trueness": {
-                      "type": "number",
-                      "description": "Mean of precision and negative predictive value."
-                    },
-                    "f1": {
-                      "type": "number",
-                      "description": "F1 score: harmonic mean of precision and recall."
-                    },
-                    "balancedAccuracy": {
-                      "type": "number",
-                      "description": "Balanced accuracy: mean of recall and specificity."
-                    },
-                    "matthewsCorrelationCoefficient": {
-                      "type": "number",
-                      "description": "Matthews correlation coefficient, in `[-1, 1]`."
+                    {
+                      "type": "null"
                     }
-                  },
-                  "required": [
-                    "alignmentMetric",
-                    "accuracy",
-                    "precision",
-                    "recall",
-                    "specificity",
-                    "trueness",
-                    "f1",
-                    "balancedAccuracy",
-                    "matthewsCorrelationCoefficient"
                   ],
-                  "additionalProperties": false,
-                  "description": "Alignment metrics computed from the evaluation's confusion matrix."
+                  "description": "Alignment metrics computed from the evaluation's confusion matrix, or `null` for an unaligned (e.g. raw / deterministic) evaluation."
                 }
               },
               "required": [
