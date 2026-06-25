@@ -124,7 +124,8 @@
               "telemetry/frameworks/eve",
               "telemetry/frameworks/flue",
               "telemetry/frameworks/strands",
-              "telemetry/frameworks/livekit"
+              "telemetry/frameworks/livekit",
+              "telemetry/frameworks/elevenlabs"
             ]
           },
           {
