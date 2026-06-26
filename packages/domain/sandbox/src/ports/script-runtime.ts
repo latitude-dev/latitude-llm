@@ -10,16 +10,73 @@ export interface ScriptConversationMessage {
   readonly content: string
 }
 
-/** `{ name, description }` context of the owning entity (`issue` / `signal` globals). */
-export interface ScriptSubjectContext {
+export interface ScriptCostBreakdown {
+  readonly input: number
+  readonly output: number
+  readonly total: number
+}
+
+export interface ScriptTokenBreakdown {
+  readonly input: number
+  readonly output: number
+  readonly total: number
+  readonly cacheRead: number
+  readonly cacheCreate: number
+  readonly reasoning: number
+}
+
+/** A tool span (`operation = execute_tool`) projected for the script; `input`/`output` are truncated. */
+export interface ScriptToolContext {
   readonly name: string
-  readonly description: string
+  readonly input: string
+  readonly output: string
+  readonly error: boolean
+  readonly duration: number
+}
+
+export interface ScriptTraceContext {
+  readonly id: string
+  readonly name: string
+  readonly status: string
+  readonly errorCount: number
+  readonly spanCount: number
+  readonly duration: number
+  readonly timeToFirstToken: number
+  readonly cost: ScriptCostBreakdown
+  readonly tokens: ScriptTokenBreakdown
+  readonly models: readonly string[]
+  readonly providers: readonly string[]
+  readonly finishReasons: readonly string[]
+  readonly tools: readonly ScriptToolContext[]
+}
+
+/**
+ * The single runtime context bound into every evaluation script as the `session` global. Built from a
+ * trace's session (`@domain/spans`). `conversation` is the lossy, deduped, session-wide transcript (its
+ * `toString()` renders `[role] content` lines) used by `llm()`; per-trace rollups plus the `tools`
+ * projection carry the structured metrics + tool data deterministic conditions read. There is no raw
+ * per-span array. Base units: ns, microcents, token counts.
+ */
+export interface ScriptSessionContext {
+  readonly id: string
+  readonly traceCount: number
+  readonly spanCount: number
+  readonly errorCount: number
+  readonly duration: number
+  readonly timeToFirstToken: number
+  readonly cost: ScriptCostBreakdown
+  readonly tokens: ScriptTokenBreakdown
+  readonly startTime: string
+  readonly endTime: string
+  readonly userId: string
+  readonly tags: readonly string[]
+  readonly metadata: Readonly<Record<string, string>>
+  readonly conversation: readonly ScriptConversationMessage[]
+  readonly traces: readonly ScriptTraceContext[]
 }
 
 export interface ScriptRunContext {
-  readonly conversation: readonly ScriptConversationMessage[]
-  readonly issue?: ScriptSubjectContext
-  readonly signal?: ScriptSubjectContext
+  readonly session: ScriptSessionContext
 }
 
 /** Schema-less generation is out of contract: every `llm()` call declares its output shape. */
