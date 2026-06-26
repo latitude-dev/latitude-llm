@@ -71,6 +71,10 @@ import { TracesView } from "./traces-view.tsx"
 
 export type ExplorerMode = "traces" | "sessions"
 
+/** Default Sessions time window when none is set — keeps listing, counts, and
+ * metrics scoped to what the time filter shows (matches the Signals page). */
+const DEFAULT_SESSION_RANGE_SECONDS = 30 * 24 * 60 * 60
+
 export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string }) {
   const routeProject = useRouteProject()
   const { data: project } = useProjectsCollection(
@@ -195,6 +199,21 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   const traceIdsRef = useRef<string[]>([])
 
   const filters = useMemo(() => parseFilters(rawFilters || undefined), [rawFilters])
+  // In Sessions mode, default the time range to the last month when the user
+  // hasn't set one, so listing, counts, metrics, and the time dropdown all stay
+  // scoped to the same visible window (matches the Signals page). Traces mode
+  // keeps the raw filter set untouched.
+  const sessionFilters = useMemo(() => {
+    if (!isSessions || filters.startTime) return filters
+    // Match how the time dropdown stores a "Last month" preset: an open-ended
+    // `gte` (no `lte`), so the dropdown shows "Last month" instead of a custom
+    // absolute range, and the data still scopes to the last 30 days.
+    const fromMs = Date.now() - DEFAULT_SESSION_RANGE_SECONDS * 1000
+    return {
+      ...filters,
+      startTime: [{ op: "gte" as const, value: new Date(fromMs).toISOString() }],
+    }
+  }, [filters, isSessions])
   // The Sessions surface's hooks (useSessionsInfiniteScroll / useSessionsCount)
   // apply `withSessionDefaults` internally to hide orphan-fragment sessions
   // by default. The trace-side surfaces here (count, export, add-to-dataset)
@@ -217,8 +236,8 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   })
   const hasActiveFilters = Object.keys(filters).length > 0
   const hasSelectedSavedSearch = savedSearchSlug.length > 0
-  const timeFrom = getTimeFilterValue(filters, "gte")
-  const timeTo = getTimeFilterValue(filters, "lte")
+  const timeFrom = getTimeFilterValue(sessionFilters, "gte")
+  const timeTo = getTimeFilterValue(sessionFilters, "lte")
   const sessionsMonitorTarget = useMemo<MonitorTarget>(
     () => ({
       kind: "session",
@@ -639,7 +658,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
         <TraceAggregationsPanel
           projectId={currentProject.id}
           projectSlug={currentProject.slug}
-          filters={filters}
+          filters={sessionFilters}
           mode={activeTab}
           onTimeRangeSelect={onTimeRangeSelect}
         />
@@ -648,7 +667,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
       {isSessions ? (
         <SessionsView
           projectId={currentProject.id}
-          filters={filters}
+          filters={sessionFilters}
           filtersOpen={filtersOpen}
           activeSessionId={activeSessionId || undefined}
           activeTraceId={activeTraceId || undefined}
