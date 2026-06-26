@@ -30,7 +30,7 @@ export const TaxonomyObservationAssignmentMethod = {
 export const taxonomyMomentObservationSchema = z.object({
   organizationId: cuidSchema,
   projectId: cuidSchema,
-  observationId: cuidSchema,
+  observationId: z.string().min(1),
   sessionId: sessionIdSchema,
   analysisHash: z.string().length(64),
   momentId: z.string().min(1),

@@ -46,7 +46,10 @@ export const TaxonomyLineageRepositoryLive = Layer.effect(
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const insertRows = rows.map(toInsertRow)
           yield* sqlClient.query((db, organizationId) =>
-            db.insert(taxonomyClusterLineage).values(insertRows.map((row) => ({ ...row, organizationId }))),
+            db
+              .insert(taxonomyClusterLineage)
+              .values(insertRows.map((row) => ({ ...row, organizationId })))
+              .onConflictDoNothing({ target: taxonomyClusterLineage.id }),
           )
         }),
 
