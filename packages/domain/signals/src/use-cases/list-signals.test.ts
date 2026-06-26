@@ -1354,6 +1354,69 @@ describe("listSignalsUseCase", () => {
       expect(histogramCalls).toBe(0)
     })
 
+    it("can compute analytics without loading page item enrichments", async () => {
+      const { repository: signalRepository } = createFakeSignalRepository(mixedPrioritySeed.map((entry) => entry.issue))
+      const { repository: evaluationRepository, listBySignalIdsCalls } = createEvaluationRepository()
+      let aggregateCalls = 0
+      let tagsCalls = 0
+      let trendCalls = 0
+      let histogramCalls = 0
+      const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
+        listSignalWindowMetrics: () =>
+          Effect.succeed(mixedPrioritySeed.map((entry) => makeWindowMetric({ signalId: SignalId(entry.issue.id) }))),
+        aggregateBySignals: () =>
+          Effect.sync(() => {
+            aggregateCalls += 1
+            return []
+          }),
+        aggregateTagsBySignals: () =>
+          Effect.sync(() => {
+            tagsCalls += 1
+            return []
+          }),
+        trendBySignals: () =>
+          Effect.sync(() => {
+            trendCalls += 1
+            return []
+          }),
+        histogramBySignals: () =>
+          Effect.sync(() => {
+            histogramCalls += 1
+            return []
+          }),
+      })
+
+      const result = await Effect.runPromise(
+        listSignalsUseCase({
+          organizationId,
+          projectId,
+          now,
+          includeAnalytics: true,
+          includeItems: false,
+        }).pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              Layer.succeed(SignalRepository, signalRepository),
+              Layer.succeed(EvaluationRepository, evaluationRepository),
+              Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+              Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+              Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+              provideSessionRepository,
+            ),
+          ),
+        ),
+      )
+
+      expect(result.items).toEqual([])
+      expect(result.totalCount).toBe(mixedPrioritySeed.length)
+      expect(result.priorityCounts).toEqual({ urgent: 1, high: 1, medium: 1, low: 1, none: 1 })
+      expect(histogramCalls).toBe(1)
+      expect(listBySignalIdsCalls).toEqual([])
+      expect(aggregateCalls).toBe(0)
+      expect(tagsCalls).toBe(0)
+      expect(trendCalls).toBe(0)
+    })
+
     const userA = "1".repeat(24)
     const userB = "2".repeat(24)
     const assignedToA = makeSignal({ id: SignalId("a".repeat(24)), assigneeId: userA, priority: "high" })
