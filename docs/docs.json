@@ -218,7 +218,16 @@
       {
         "group": "Refine",
         "pages": [
-          "monitors/overview"
+          "monitors/overview",
+          {
+            "group": "Datasets",
+            "pages": [
+              "datasets/overview",
+              "datasets/add-traces",
+              "datasets/expected-output"
+            ]
+          },
+          "test-and-fix/regression-testing"
         ]
       },
       {
