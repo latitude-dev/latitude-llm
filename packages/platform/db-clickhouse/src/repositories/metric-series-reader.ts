@@ -91,8 +91,6 @@ const metricAggregate = (
       return `if(count() = 0, 0, avg(${columns[metric.field]}))`
     case "median":
       return `if(count() = 0, 0, quantileTDigest(0.5)(${columns[metric.field]}))`
-    case "p95":
-      return `if(count() = 0, 0, quantileTDigest(0.95)(${columns[metric.field]}))`
   }
 }
 

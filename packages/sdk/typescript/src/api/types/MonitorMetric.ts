@@ -12,8 +12,7 @@ export type MonitorMetric =
     | LatitudeApi.MonitorMetric.Sum
     | LatitudeApi.MonitorMetric.Min
     | LatitudeApi.MonitorMetric.Max
-    | LatitudeApi.MonitorMetric.Median
-    | LatitudeApi.MonitorMetric.P95;
+    | LatitudeApi.MonitorMetric.Median;
 
 export namespace MonitorMetric {
     export interface Count {
@@ -95,22 +94,6 @@ export namespace MonitorMetric {
     }
 
     export namespace MonitorMetricMedian {
-        /** Numeric field to aggregate. */
-        export const Field = {
-            Duration: "duration",
-            Cost: "cost",
-            Tokens: "tokens",
-        } as const;
-        export type Field = (typeof Field)[keyof typeof Field];
-    }
-
-    export interface P95 {
-        kind: "p95";
-        /** Numeric field to aggregate. */
-        field: MonitorMetricP95.Field;
-    }
-
-    export namespace MonitorMetricP95 {
         /** Numeric field to aggregate. */
         export const Field = {
             Duration: "duration",

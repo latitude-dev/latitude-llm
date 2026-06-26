@@ -25,7 +25,7 @@ export const alertCountThresholdSchema = z.discriminatedUnion("mode", [
 ])
 export type AlertCountThreshold = z.infer<typeof alertCountThresholdSchema>
 
-export const MONITOR_METRIC_KINDS = ["count", "errorRate", "sum", "min", "max", "avg", "median", "p95"] as const
+export const MONITOR_METRIC_KINDS = ["count", "errorRate", "sum", "min", "max", "avg", "median"] as const
 export const monitorMetricKindSchema = z.enum(MONITOR_METRIC_KINDS)
 export type MonitorMetricKind = z.infer<typeof monitorMetricKindSchema>
 
@@ -41,7 +41,6 @@ export const monitorMetricSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("max"), field: monitorMetricFieldSchema }),
   z.object({ kind: z.literal("avg"), field: monitorMetricFieldSchema }),
   z.object({ kind: z.literal("median"), field: monitorMetricFieldSchema }),
-  z.object({ kind: z.literal("p95"), field: monitorMetricFieldSchema }),
 ])
 export type MonitorMetric = z.infer<typeof monitorMetricSchema>
 

@@ -114,7 +114,6 @@ if typing.TYPE_CHECKING:
         MonitorMetric_Max,
         MonitorMetric_Median,
         MonitorMetric_Min,
-        MonitorMetric_P95,
         MonitorMetric_Sum,
     )
     from .monitor_metric_avg import MonitorMetricAvg
@@ -127,8 +126,6 @@ if typing.TYPE_CHECKING:
     from .monitor_metric_median_field import MonitorMetricMedianField
     from .monitor_metric_min import MonitorMetricMin
     from .monitor_metric_min_field import MonitorMetricMinField
-    from .monitor_metric_p_95 import MonitorMetricP95
-    from .monitor_metric_p_95_field import MonitorMetricP95Field
     from .monitor_metric_sum import MonitorMetricSum
     from .monitor_metric_sum_field import MonitorMetricSumField
     from .monitor_rule import MonitorRule
@@ -358,8 +355,6 @@ _dynamic_imports: typing.Dict[str, str] = {
     "MonitorMetricMedianField": ".monitor_metric_median_field",
     "MonitorMetricMin": ".monitor_metric_min",
     "MonitorMetricMinField": ".monitor_metric_min_field",
-    "MonitorMetricP95": ".monitor_metric_p_95",
-    "MonitorMetricP95Field": ".monitor_metric_p_95_field",
     "MonitorMetricSum": ".monitor_metric_sum",
     "MonitorMetricSumField": ".monitor_metric_sum_field",
     "MonitorMetric_Avg": ".monitor_metric",
@@ -368,7 +363,6 @@ _dynamic_imports: typing.Dict[str, str] = {
     "MonitorMetric_Max": ".monitor_metric",
     "MonitorMetric_Median": ".monitor_metric",
     "MonitorMetric_Min": ".monitor_metric",
-    "MonitorMetric_P95": ".monitor_metric",
     "MonitorMetric_Sum": ".monitor_metric",
     "MonitorRule": ".monitor_rule",
     "MonitorRuleSeverity": ".monitor_rule_severity",
@@ -625,8 +619,6 @@ __all__ = [
     "MonitorMetricMedianField",
     "MonitorMetricMin",
     "MonitorMetricMinField",
-    "MonitorMetricP95",
-    "MonitorMetricP95Field",
     "MonitorMetricSum",
     "MonitorMetricSumField",
     "MonitorMetric_Avg",
@@ -635,7 +627,6 @@ __all__ = [
     "MonitorMetric_Max",
     "MonitorMetric_Median",
     "MonitorMetric_Min",
-    "MonitorMetric_P95",
     "MonitorMetric_Sum",
     "MonitorRule",
     "MonitorRuleSeverity",

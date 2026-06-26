@@ -5210,31 +5210,6 @@
               "kind",
               "field"
             ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "kind": {
-                "type": "string",
-                "enum": [
-                  "p95"
-                ],
-                "description": "Find the 95th-percentile numeric field value over matching events."
-              },
-              "field": {
-                "type": "string",
-                "enum": [
-                  "duration",
-                  "cost",
-                  "tokens"
-                ],
-                "description": "Numeric field to aggregate."
-              }
-            },
-            "required": [
-              "kind",
-              "field"
-            ]
           }
         ],
         "description": "Metric measured over the monitor target."

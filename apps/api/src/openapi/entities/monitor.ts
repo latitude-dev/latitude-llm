@@ -51,10 +51,6 @@ export const MonitorMetricSchema = z
       kind: z.literal("median").describe("Find the median numeric field value over matching events."),
       field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
     }),
-    z.object({
-      kind: z.literal("p95").describe("Find the 95th-percentile numeric field value over matching events."),
-      field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
-    }),
   ])
   .openapi("MonitorMetric")
 

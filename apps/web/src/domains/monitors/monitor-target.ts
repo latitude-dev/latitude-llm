@@ -126,7 +126,6 @@ const numericMetricOptions = (
   { label: `Maximum ${noun}`, metric: { kind: "max", field } },
   { label: `Average ${noun}`, metric: { kind: "avg", field } },
   { label: `Median ${noun}`, metric: { kind: "median", field } },
-  { label: `95th percentile ${noun}`, metric: { kind: "p95", field } },
 ]
 
 /**

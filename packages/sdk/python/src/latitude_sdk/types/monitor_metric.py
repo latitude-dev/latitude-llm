@@ -10,7 +10,6 @@ from .monitor_metric_avg_field import MonitorMetricAvgField
 from .monitor_metric_max_field import MonitorMetricMaxField
 from .monitor_metric_median_field import MonitorMetricMedianField
 from .monitor_metric_min_field import MonitorMetricMinField
-from .monitor_metric_p_95_field import MonitorMetricP95Field
 from .monitor_metric_sum_field import MonitorMetricSumField
 
 
@@ -89,17 +88,6 @@ class MonitorMetric_Median(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-class MonitorMetric_P95(UniversalBaseModel):
-    """
-    Metric measured over the monitor target.
-    """
-
-    kind: typing.Literal["p95"] = "p95"
-    field: MonitorMetricP95Field
-
-    model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
-
-
 MonitorMetric = typing.Union[
     MonitorMetric_Count,
     MonitorMetric_ErrorRate,
@@ -108,5 +96,4 @@ MonitorMetric = typing.Union[
     MonitorMetric_Min,
     MonitorMetric_Max,
     MonitorMetric_Median,
-    MonitorMetric_P95,
 ]

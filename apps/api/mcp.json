@@ -9607,30 +9607,6 @@
                                     "field"
                                   ],
                                   "additionalProperties": false
-                                },
-                                {
-                                  "type": "object",
-                                  "properties": {
-                                    "kind": {
-                                      "type": "string",
-                                      "const": "p95",
-                                      "description": "Find the 95th-percentile numeric field value over matching events."
-                                    },
-                                    "field": {
-                                      "type": "string",
-                                      "enum": [
-                                        "duration",
-                                        "cost",
-                                        "tokens"
-                                      ],
-                                      "description": "Numeric field to aggregate."
-                                    }
-                                  },
-                                  "required": [
-                                    "kind",
-                                    "field"
-                                  ],
-                                  "additionalProperties": false
                                 }
                               ],
                               "description": "Metric measured over the monitor target."
@@ -9942,30 +9918,6 @@
                                       "type": "string",
                                       "const": "median",
                                       "description": "Find the median numeric field value over matching events."
-                                    },
-                                    "field": {
-                                      "type": "string",
-                                      "enum": [
-                                        "duration",
-                                        "cost",
-                                        "tokens"
-                                      ],
-                                      "description": "Numeric field to aggregate."
-                                    }
-                                  },
-                                  "required": [
-                                    "kind",
-                                    "field"
-                                  ],
-                                  "additionalProperties": false
-                                },
-                                {
-                                  "type": "object",
-                                  "properties": {
-                                    "kind": {
-                                      "type": "string",
-                                      "const": "p95",
-                                      "description": "Find the 95th-percentile numeric field value over matching events."
                                     },
                                     "field": {
                                       "type": "string",
@@ -10456,30 +10408,6 @@
                               "field"
                             ],
                             "additionalProperties": false
-                          },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "kind": {
-                                "type": "string",
-                                "const": "p95",
-                                "description": "Find the 95th-percentile numeric field value over matching events."
-                              },
-                              "field": {
-                                "type": "string",
-                                "enum": [
-                                  "duration",
-                                  "cost",
-                                  "tokens"
-                                ],
-                                "description": "Numeric field to aggregate."
-                              }
-                            },
-                            "required": [
-                              "kind",
-                              "field"
-                            ],
-                            "additionalProperties": false
                           }
                         ],
                         "description": "Metric measured over the monitor target."
@@ -10791,30 +10719,6 @@
                                 "type": "string",
                                 "const": "median",
                                 "description": "Find the median numeric field value over matching events."
-                              },
-                              "field": {
-                                "type": "string",
-                                "enum": [
-                                  "duration",
-                                  "cost",
-                                  "tokens"
-                                ],
-                                "description": "Numeric field to aggregate."
-                              }
-                            },
-                            "required": [
-                              "kind",
-                              "field"
-                            ],
-                            "additionalProperties": false
-                          },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "kind": {
-                                "type": "string",
-                                "const": "p95",
-                                "description": "Find the 95th-percentile numeric field value over matching events."
                               },
                               "field": {
                                 "type": "string",
@@ -13995,30 +13899,6 @@
                                 "field"
                               ],
                               "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "kind": {
-                                  "type": "string",
-                                  "const": "p95",
-                                  "description": "Find the 95th-percentile numeric field value over matching events."
-                                },
-                                "field": {
-                                  "type": "string",
-                                  "enum": [
-                                    "duration",
-                                    "cost",
-                                    "tokens"
-                                  ],
-                                  "description": "Numeric field to aggregate."
-                                }
-                              },
-                              "required": [
-                                "kind",
-                                "field"
-                              ],
-                              "additionalProperties": false
                             }
                           ]
                         },
@@ -14166,30 +14046,6 @@
                                           "type": "string",
                                           "const": "median",
                                           "description": "Find the median numeric field value over matching events."
-                                        },
-                                        "field": {
-                                          "type": "string",
-                                          "enum": [
-                                            "duration",
-                                            "cost",
-                                            "tokens"
-                                          ],
-                                          "description": "Numeric field to aggregate."
-                                        }
-                                      },
-                                      "required": [
-                                        "kind",
-                                        "field"
-                                      ],
-                                      "additionalProperties": false
-                                    },
-                                    {
-                                      "type": "object",
-                                      "properties": {
-                                        "kind": {
-                                          "type": "string",
-                                          "const": "p95",
-                                          "description": "Find the 95th-percentile numeric field value over matching events."
                                         },
                                         "field": {
                                           "type": "string",
@@ -14517,30 +14373,6 @@
                                           "type": "string",
                                           "const": "median",
                                           "description": "Find the median numeric field value over matching events."
-                                        },
-                                        "field": {
-                                          "type": "string",
-                                          "enum": [
-                                            "duration",
-                                            "cost",
-                                            "tokens"
-                                          ],
-                                          "description": "Numeric field to aggregate."
-                                        }
-                                      },
-                                      "required": [
-                                        "kind",
-                                        "field"
-                                      ],
-                                      "additionalProperties": false
-                                    },
-                                    {
-                                      "type": "object",
-                                      "properties": {
-                                        "kind": {
-                                          "type": "string",
-                                          "const": "p95",
-                                          "description": "Find the 95th-percentile numeric field value over matching events."
                                         },
                                         "field": {
                                           "type": "string",
@@ -15149,30 +14981,6 @@
                           "field"
                         ],
                         "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "p95",
-                            "description": "Find the 95th-percentile numeric field value over matching events."
-                          },
-                          "field": {
-                            "type": "string",
-                            "enum": [
-                              "duration",
-                              "cost",
-                              "tokens"
-                            ],
-                            "description": "Numeric field to aggregate."
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "field"
-                        ],
-                        "additionalProperties": false
                       }
                     ]
                   }
@@ -15473,30 +15281,6 @@
                           "field"
                         ],
                         "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "p95",
-                            "description": "Find the 95th-percentile numeric field value over matching events."
-                          },
-                          "field": {
-                            "type": "string",
-                            "enum": [
-                              "duration",
-                              "cost",
-                              "tokens"
-                            ],
-                            "description": "Numeric field to aggregate."
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "field"
-                        ],
-                        "additionalProperties": false
                       }
                     ]
                   },
@@ -15641,30 +15425,6 @@
                                 "type": "string",
                                 "const": "median",
                                 "description": "Find the median numeric field value over matching events."
-                              },
-                              "field": {
-                                "type": "string",
-                                "enum": [
-                                  "duration",
-                                  "cost",
-                                  "tokens"
-                                ],
-                                "description": "Numeric field to aggregate."
-                              }
-                            },
-                            "required": [
-                              "kind",
-                              "field"
-                            ],
-                            "additionalProperties": false
-                          },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "kind": {
-                                "type": "string",
-                                "const": "p95",
-                                "description": "Find the 95th-percentile numeric field value over matching events."
                               },
                               "field": {
                                 "type": "string",
@@ -16150,30 +15910,6 @@
                           "field"
                         ],
                         "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "p95",
-                            "description": "Find the 95th-percentile numeric field value over matching events."
-                          },
-                          "field": {
-                            "type": "string",
-                            "enum": [
-                              "duration",
-                              "cost",
-                              "tokens"
-                            ],
-                            "description": "Numeric field to aggregate."
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "field"
-                        ],
-                        "additionalProperties": false
                       }
                     ]
                   },
@@ -16318,30 +16054,6 @@
                                 "type": "string",
                                 "const": "median",
                                 "description": "Find the median numeric field value over matching events."
-                              },
-                              "field": {
-                                "type": "string",
-                                "enum": [
-                                  "duration",
-                                  "cost",
-                                  "tokens"
-                                ],
-                                "description": "Numeric field to aggregate."
-                              }
-                            },
-                            "required": [
-                              "kind",
-                              "field"
-                            ],
-                            "additionalProperties": false
-                          },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "kind": {
-                                "type": "string",
-                                "const": "p95",
-                                "description": "Find the 95th-percentile numeric field value over matching events."
                               },
                               "field": {
                                 "type": "string",
@@ -16959,30 +16671,6 @@
                           "field"
                         ],
                         "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "p95",
-                            "description": "Find the 95th-percentile numeric field value over matching events."
-                          },
-                          "field": {
-                            "type": "string",
-                            "enum": [
-                              "duration",
-                              "cost",
-                              "tokens"
-                            ],
-                            "description": "Numeric field to aggregate."
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "field"
-                        ],
-                        "additionalProperties": false
                       }
                     ]
                   },
@@ -17130,30 +16818,6 @@
                                     "type": "string",
                                     "const": "median",
                                     "description": "Find the median numeric field value over matching events."
-                                  },
-                                  "field": {
-                                    "type": "string",
-                                    "enum": [
-                                      "duration",
-                                      "cost",
-                                      "tokens"
-                                    ],
-                                    "description": "Numeric field to aggregate."
-                                  }
-                                },
-                                "required": [
-                                  "kind",
-                                  "field"
-                                ],
-                                "additionalProperties": false
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "kind": {
-                                    "type": "string",
-                                    "const": "p95",
-                                    "description": "Find the 95th-percentile numeric field value over matching events."
                                   },
                                   "field": {
                                     "type": "string",
@@ -17481,30 +17145,6 @@
                                     "type": "string",
                                     "const": "median",
                                     "description": "Find the median numeric field value over matching events."
-                                  },
-                                  "field": {
-                                    "type": "string",
-                                    "enum": [
-                                      "duration",
-                                      "cost",
-                                      "tokens"
-                                    ],
-                                    "description": "Numeric field to aggregate."
-                                  }
-                                },
-                                "required": [
-                                  "kind",
-                                  "field"
-                                ],
-                                "additionalProperties": false
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "kind": {
-                                    "type": "string",
-                                    "const": "p95",
-                                    "description": "Find the 95th-percentile numeric field value over matching events."
                                   },
                                   "field": {
                                     "type": "string",
@@ -18274,30 +17914,6 @@
                                 "field"
                               ],
                               "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "kind": {
-                                  "type": "string",
-                                  "const": "p95",
-                                  "description": "Find the 95th-percentile numeric field value over matching events."
-                                },
-                                "field": {
-                                  "type": "string",
-                                  "enum": [
-                                    "duration",
-                                    "cost",
-                                    "tokens"
-                                  ],
-                                  "description": "Numeric field to aggregate."
-                                }
-                              },
-                              "required": [
-                                "kind",
-                                "field"
-                              ],
-                              "additionalProperties": false
                             }
                           ]
                         },
@@ -18445,30 +18061,6 @@
                                           "type": "string",
                                           "const": "median",
                                           "description": "Find the median numeric field value over matching events."
-                                        },
-                                        "field": {
-                                          "type": "string",
-                                          "enum": [
-                                            "duration",
-                                            "cost",
-                                            "tokens"
-                                          ],
-                                          "description": "Numeric field to aggregate."
-                                        }
-                                      },
-                                      "required": [
-                                        "kind",
-                                        "field"
-                                      ],
-                                      "additionalProperties": false
-                                    },
-                                    {
-                                      "type": "object",
-                                      "properties": {
-                                        "kind": {
-                                          "type": "string",
-                                          "const": "p95",
-                                          "description": "Find the 95th-percentile numeric field value over matching events."
                                         },
                                         "field": {
                                           "type": "string",
@@ -18796,30 +18388,6 @@
                                           "type": "string",
                                           "const": "median",
                                           "description": "Find the median numeric field value over matching events."
-                                        },
-                                        "field": {
-                                          "type": "string",
-                                          "enum": [
-                                            "duration",
-                                            "cost",
-                                            "tokens"
-                                          ],
-                                          "description": "Numeric field to aggregate."
-                                        }
-                                      },
-                                      "required": [
-                                        "kind",
-                                        "field"
-                                      ],
-                                      "additionalProperties": false
-                                    },
-                                    {
-                                      "type": "object",
-                                      "properties": {
-                                        "kind": {
-                                          "type": "string",
-                                          "const": "p95",
-                                          "description": "Find the 95th-percentile numeric field value over matching events."
                                         },
                                         "field": {
                                           "type": "string",
@@ -19521,30 +19089,6 @@
                           "field"
                         ],
                         "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "p95",
-                            "description": "Find the 95th-percentile numeric field value over matching events."
-                          },
-                          "field": {
-                            "type": "string",
-                            "enum": [
-                              "duration",
-                              "cost",
-                              "tokens"
-                            ],
-                            "description": "Numeric field to aggregate."
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "field"
-                        ],
-                        "additionalProperties": false
                       }
                     ]
                   },
@@ -19692,30 +19236,6 @@
                                     "type": "string",
                                     "const": "median",
                                     "description": "Find the median numeric field value over matching events."
-                                  },
-                                  "field": {
-                                    "type": "string",
-                                    "enum": [
-                                      "duration",
-                                      "cost",
-                                      "tokens"
-                                    ],
-                                    "description": "Numeric field to aggregate."
-                                  }
-                                },
-                                "required": [
-                                  "kind",
-                                  "field"
-                                ],
-                                "additionalProperties": false
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "kind": {
-                                    "type": "string",
-                                    "const": "p95",
-                                    "description": "Find the 95th-percentile numeric field value over matching events."
                                   },
                                   "field": {
                                     "type": "string",
@@ -20043,30 +19563,6 @@
                                     "type": "string",
                                     "const": "median",
                                     "description": "Find the median numeric field value over matching events."
-                                  },
-                                  "field": {
-                                    "type": "string",
-                                    "enum": [
-                                      "duration",
-                                      "cost",
-                                      "tokens"
-                                    ],
-                                    "description": "Numeric field to aggregate."
-                                  }
-                                },
-                                "required": [
-                                  "kind",
-                                  "field"
-                                ],
-                                "additionalProperties": false
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "kind": {
-                                    "type": "string",
-                                    "const": "p95",
-                                    "description": "Find the 95th-percentile numeric field value over matching events."
                                   },
                                   "field": {
                                     "type": "string",
@@ -20644,30 +20140,6 @@
                   "field"
                 ],
                 "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "p95",
-                    "description": "Find the 95th-percentile numeric field value over matching events."
-                  },
-                  "field": {
-                    "type": "string",
-                    "enum": [
-                      "duration",
-                      "cost",
-                      "tokens"
-                    ],
-                    "description": "Numeric field to aggregate."
-                  }
-                },
-                "required": [
-                  "kind",
-                  "field"
-                ],
-                "additionalProperties": false
               }
             ]
           },
@@ -20815,30 +20287,6 @@
                             "type": "string",
                             "const": "median",
                             "description": "Find the median numeric field value over matching events."
-                          },
-                          "field": {
-                            "type": "string",
-                            "enum": [
-                              "duration",
-                              "cost",
-                              "tokens"
-                            ],
-                            "description": "Numeric field to aggregate."
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "field"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "p95",
-                            "description": "Find the 95th-percentile numeric field value over matching events."
                           },
                           "field": {
                             "type": "string",
@@ -21166,30 +20614,6 @@
                             "type": "string",
                             "const": "median",
                             "description": "Find the median numeric field value over matching events."
-                          },
-                          "field": {
-                            "type": "string",
-                            "enum": [
-                              "duration",
-                              "cost",
-                              "tokens"
-                            ],
-                            "description": "Numeric field to aggregate."
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "field"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "p95",
-                            "description": "Find the 95th-percentile numeric field value over matching events."
                           },
                           "field": {
                             "type": "string",
@@ -21805,30 +21229,6 @@
                           "field"
                         ],
                         "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "p95",
-                            "description": "Find the 95th-percentile numeric field value over matching events."
-                          },
-                          "field": {
-                            "type": "string",
-                            "enum": [
-                              "duration",
-                              "cost",
-                              "tokens"
-                            ],
-                            "description": "Numeric field to aggregate."
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "field"
-                        ],
-                        "additionalProperties": false
                       }
                     ]
                   },
@@ -21976,30 +21376,6 @@
                                     "type": "string",
                                     "const": "median",
                                     "description": "Find the median numeric field value over matching events."
-                                  },
-                                  "field": {
-                                    "type": "string",
-                                    "enum": [
-                                      "duration",
-                                      "cost",
-                                      "tokens"
-                                    ],
-                                    "description": "Numeric field to aggregate."
-                                  }
-                                },
-                                "required": [
-                                  "kind",
-                                  "field"
-                                ],
-                                "additionalProperties": false
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "kind": {
-                                    "type": "string",
-                                    "const": "p95",
-                                    "description": "Find the 95th-percentile numeric field value over matching events."
                                   },
                                   "field": {
                                     "type": "string",
@@ -22327,30 +21703,6 @@
                                     "type": "string",
                                     "const": "median",
                                     "description": "Find the median numeric field value over matching events."
-                                  },
-                                  "field": {
-                                    "type": "string",
-                                    "enum": [
-                                      "duration",
-                                      "cost",
-                                      "tokens"
-                                    ],
-                                    "description": "Numeric field to aggregate."
-                                  }
-                                },
-                                "required": [
-                                  "kind",
-                                  "field"
-                                ],
-                                "additionalProperties": false
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "kind": {
-                                    "type": "string",
-                                    "const": "p95",
-                                    "description": "Find the 95th-percentile numeric field value over matching events."
                                   },
                                   "field": {
                                     "type": "string",
@@ -22921,30 +22273,6 @@
                                     "field"
                                   ],
                                   "additionalProperties": false
-                                },
-                                {
-                                  "type": "object",
-                                  "properties": {
-                                    "kind": {
-                                      "type": "string",
-                                      "const": "p95",
-                                      "description": "Find the 95th-percentile numeric field value over matching events."
-                                    },
-                                    "field": {
-                                      "type": "string",
-                                      "enum": [
-                                        "duration",
-                                        "cost",
-                                        "tokens"
-                                      ],
-                                      "description": "Numeric field to aggregate."
-                                    }
-                                  },
-                                  "required": [
-                                    "kind",
-                                    "field"
-                                  ],
-                                  "additionalProperties": false
                                 }
                               ],
                               "description": "Metric measured over the monitor target."
@@ -23256,30 +22584,6 @@
                                       "type": "string",
                                       "const": "median",
                                       "description": "Find the median numeric field value over matching events."
-                                    },
-                                    "field": {
-                                      "type": "string",
-                                      "enum": [
-                                        "duration",
-                                        "cost",
-                                        "tokens"
-                                      ],
-                                      "description": "Numeric field to aggregate."
-                                    }
-                                  },
-                                  "required": [
-                                    "kind",
-                                    "field"
-                                  ],
-                                  "additionalProperties": false
-                                },
-                                {
-                                  "type": "object",
-                                  "properties": {
-                                    "kind": {
-                                      "type": "string",
-                                      "const": "p95",
-                                      "description": "Find the 95th-percentile numeric field value over matching events."
                                     },
                                     "field": {
                                       "type": "string",
@@ -23954,30 +23258,6 @@
                           "field"
                         ],
                         "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "p95",
-                            "description": "Find the 95th-percentile numeric field value over matching events."
-                          },
-                          "field": {
-                            "type": "string",
-                            "enum": [
-                              "duration",
-                              "cost",
-                              "tokens"
-                            ],
-                            "description": "Numeric field to aggregate."
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "field"
-                        ],
-                        "additionalProperties": false
                       }
                     ]
                   },
@@ -24125,30 +23405,6 @@
                                     "type": "string",
                                     "const": "median",
                                     "description": "Find the median numeric field value over matching events."
-                                  },
-                                  "field": {
-                                    "type": "string",
-                                    "enum": [
-                                      "duration",
-                                      "cost",
-                                      "tokens"
-                                    ],
-                                    "description": "Numeric field to aggregate."
-                                  }
-                                },
-                                "required": [
-                                  "kind",
-                                  "field"
-                                ],
-                                "additionalProperties": false
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "kind": {
-                                    "type": "string",
-                                    "const": "p95",
-                                    "description": "Find the 95th-percentile numeric field value over matching events."
                                   },
                                   "field": {
                                     "type": "string",
@@ -24476,30 +23732,6 @@
                                     "type": "string",
                                     "const": "median",
                                     "description": "Find the median numeric field value over matching events."
-                                  },
-                                  "field": {
-                                    "type": "string",
-                                    "enum": [
-                                      "duration",
-                                      "cost",
-                                      "tokens"
-                                    ],
-                                    "description": "Numeric field to aggregate."
-                                  }
-                                },
-                                "required": [
-                                  "kind",
-                                  "field"
-                                ],
-                                "additionalProperties": false
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "kind": {
-                                    "type": "string",
-                                    "const": "p95",
-                                    "description": "Find the 95th-percentile numeric field value over matching events."
                                   },
                                   "field": {
                                     "type": "string",
@@ -25193,30 +24425,6 @@
                           "field"
                         ],
                         "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "p95",
-                            "description": "Find the 95th-percentile numeric field value over matching events."
-                          },
-                          "field": {
-                            "type": "string",
-                            "enum": [
-                              "duration",
-                              "cost",
-                              "tokens"
-                            ],
-                            "description": "Numeric field to aggregate."
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "field"
-                        ],
-                        "additionalProperties": false
                       }
                     ]
                   },
@@ -25364,30 +24572,6 @@
                                     "type": "string",
                                     "const": "median",
                                     "description": "Find the median numeric field value over matching events."
-                                  },
-                                  "field": {
-                                    "type": "string",
-                                    "enum": [
-                                      "duration",
-                                      "cost",
-                                      "tokens"
-                                    ],
-                                    "description": "Numeric field to aggregate."
-                                  }
-                                },
-                                "required": [
-                                  "kind",
-                                  "field"
-                                ],
-                                "additionalProperties": false
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "kind": {
-                                    "type": "string",
-                                    "const": "p95",
-                                    "description": "Find the 95th-percentile numeric field value over matching events."
                                   },
                                   "field": {
                                     "type": "string",
@@ -25715,30 +24899,6 @@
                                     "type": "string",
                                     "const": "median",
                                     "description": "Find the median numeric field value over matching events."
-                                  },
-                                  "field": {
-                                    "type": "string",
-                                    "enum": [
-                                      "duration",
-                                      "cost",
-                                      "tokens"
-                                    ],
-                                    "description": "Numeric field to aggregate."
-                                  }
-                                },
-                                "required": [
-                                  "kind",
-                                  "field"
-                                ],
-                                "additionalProperties": false
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "kind": {
-                                    "type": "string",
-                                    "const": "p95",
-                                    "description": "Find the 95th-percentile numeric field value over matching events."
                                   },
                                   "field": {
                                     "type": "string",
