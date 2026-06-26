@@ -8,7 +8,7 @@ import {
   VerificationId,
 } from "@domain/shared"
 import { Effect } from "effect"
-import { OutboxEventWriter } from "../../../events/src/outbox-event-writer.ts"
+import { OutboxEventWriter } from "@domain/events"
 
 import type { User } from "../entities/user.ts"
 

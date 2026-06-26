@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import type { OutboxEventWriterShape, OutboxWriteEvent } from "../../../events/src/outbox-event-writer.ts"
+import type { OutboxEventWriterShape, OutboxWriteEvent } from "@domain/events"
 
 const writtenEvents: OutboxWriteEvent[] = []
 

@@ -1834,6 +1834,9 @@ importers:
 
   packages/domain/users:
     dependencies:
+      '@domain/events':
+        specifier: workspace:*
+        version: link:../events
       '@domain/oauth-keys':
         specifier: workspace:*
         version: link:../oauth-keys

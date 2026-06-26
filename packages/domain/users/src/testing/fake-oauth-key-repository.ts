@@ -1,6 +1,6 @@
 import type { VerificationValue } from "@domain/oauth-keys"
 import { Effect } from "effect"
-import type { OAuthKeyRepository } from "../../../oauth-keys/src/ports/oauth-key-repository.ts"
+import type { OAuthKeyRepository } from "@domain/oauth-keys"
 
 type OAuthKeyRepositoryShape = (typeof OAuthKeyRepository)["Service"]
 

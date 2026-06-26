@@ -19,6 +19,7 @@
     "@domain/oauth-keys": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/shared": "workspace:*",
+    "@domain/events": "workspace:*",
     "effect": "catalog:",
     "zod": "catalog:"
   }
