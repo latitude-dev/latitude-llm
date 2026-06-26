@@ -9,7 +9,6 @@ import { useSessionDetail } from "../../../../../domains/sessions/sessions.colle
 import { TraceScopeContext } from "../../../../../domains/traces/trace-scope.tsx"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { SignalLifecycleActions } from "../signals/-components/signal-lifecycle-actions.tsx"
-import { AddTraceToDatasetAction } from "./add-trace-to-dataset-action.tsx"
 import { isSessionTab, SessionSlot, type SessionTabId } from "./session-detail-drawer/session-slot.tsx"
 import { SignalSlot } from "./session-detail-drawer/signal-slot.tsx"
 import { type DetailSlotKind, SlotTransition } from "./session-detail-drawer/slot-transition.tsx"
@@ -155,25 +154,18 @@ export function SessionDetailDrawer({
       }
       actions={
         showDetail ? (
-          <>
-            <Tooltip
-              asChild
-              side="bottom"
-              trigger={
-                <Button variant="default-soft" onClick={backToSession} type="button">
-                  <Icon icon={ChevronLeftIcon} />
-                  View session
-                </Button>
-              }
-            >
-              View session <HotkeyBadge hotkey="Escape" />
-            </Tooltip>
-            {detailKind === "trace" && !isSandbox && traceId ? (
-              <AddTraceToDatasetAction projectId={projectId} traceId={traceId} />
-            ) : null}
-          </>
-        ) : !isSandbox && session?.latestTraceId ? (
-          <AddTraceToDatasetAction projectId={projectId} traceId={session.latestTraceId} />
+          <Tooltip
+            asChild
+            side="bottom"
+            trigger={
+              <Button variant="default-soft" onClick={backToSession} type="button">
+                <Icon icon={ChevronLeftIcon} />
+                View session
+              </Button>
+            }
+          >
+            View session <HotkeyBadge hotkey="Escape" />
+          </Tooltip>
         ) : undefined
       }
       rightActions={

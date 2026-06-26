@@ -8,6 +8,7 @@ import {
   Icon,
   InfiniteTable,
   type InfiniteTableColumn,
+  type InfiniteTableSelection,
   Skeleton,
   Slider,
   Tabs,
@@ -22,6 +23,7 @@ import {
   ArrowUpIcon,
   BrainIcon,
   ChevronRightIcon,
+  DatabaseIcon,
   FlameIcon,
   MinusIcon,
   SparklesIcon,
@@ -29,6 +31,11 @@ import {
   XIcon,
 } from "lucide-react"
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
+import {
+  addClusterSessionsToDatasetFunction,
+  type ClusterSource,
+  createDatasetFromClusterSessionsFunction,
+} from "../../../../../../domains/datasets/datasets.functions.ts"
 import {
   type BehaviourSegment,
   useBehaviourSessions,
@@ -46,6 +53,12 @@ import {
   ListingLayout as Layout,
   listingLayoutIntrinsicScroll,
 } from "../../../../../../layouts/ListingLayout/index.tsx"
+import {
+  EMPTY_SELECTION,
+  type SelectionState,
+  useSelectableRows,
+} from "../../../../../../lib/hooks/useSelectableRows.ts"
+import { AddToDatasetModal } from "../../-components/add-to-dataset-modal.tsx"
 import { SessionDetailDrawer } from "../../-components/session-detail-drawer.tsx"
 import { BehavioursTrajectoryChart } from "./behaviours-trajectory-chart.tsx"
 
@@ -263,6 +276,8 @@ export function BehaviourDetailDrawer({
   const [sessionOverlayId, setSessionOverlayId] = useState<string | null>(null)
   const [sessionOverlayMomentId, setSessionOverlayMomentId] = useState<string | null>(null)
   const [sessionPanelEntered, setSessionPanelEntered] = useState(false)
+  const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
+  const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
   const { data: intelligence } = useClusterProfile(projectId, cluster.id, timeRange)
   const {
     data: behaviourSessionsData,
@@ -273,6 +288,35 @@ export function BehaviourDetailDrawer({
   } = useBehaviourSessions(projectId, cluster.id, sessionFilter, timeRange, momentRange)
   const behaviourSessions = behaviourSessionsData?.pages.flatMap((page) => page.sessions) ?? []
   const behaviourSessionHistogram = behaviourSessionsData?.pages[0]?.histogram ?? []
+  // A session row's identity is its (first) trace id — the unit a dataset row is
+  // built from. Selecting rows therefore selects trace ids directly.
+  const sessionRowKey = useCallback((session: BehaviourSessionRecord) => session.traceId || session.sessionId, [])
+  const sessionRowKeys = useMemo(() => behaviourSessions.map(sessionRowKey), [behaviourSessions, sessionRowKey])
+  // The histogram is computed over the full filtered set (no pagination), so its
+  // total is the count "Select all" stands for, not just the loaded page.
+  const totalSessionCount = useMemo(
+    () => behaviourSessionHistogram.reduce((sum, bucket) => sum + bucket.count, 0),
+    [behaviourSessionHistogram],
+  )
+  const sessionSelection = useSelectableRows<string>({
+    rowIds: sessionRowKeys,
+    totalRowCount: totalSessionCount,
+    controlledState: selectionState,
+    onStateChange: setSelectionState,
+  })
+  const clusterSource = useMemo<ClusterSource>(
+    () => ({
+      clusterId: cluster.id,
+      ...(sessionFilter !== "all" ? { filter: sessionFilter } : {}),
+      ...(momentRange
+        ? { momentRange: { metric: momentRange.metric, fromTurn: momentRange.fromTurn, toTurn: momentRange.toTurn } }
+        : {}),
+      ...(timeRange?.fromIso ? { timeFromIso: timeRange.fromIso } : {}),
+      ...(timeRange?.toIso ? { timeToIso: timeRange.toIso } : {}),
+    }),
+    [cluster.id, sessionFilter, momentRange, timeRange],
+  )
+  const datasetSelection = sessionSelection.bulkSelection
   const detectedSignals = intelligence?.topMoments ?? []
   const activeMomentKinds = momentRange
     ? momentKindsForTrajectoryMetric(momentRange.metric)
@@ -306,6 +350,12 @@ export function BehaviourDetailDrawer({
     setSessionOverlayId(null)
     setSessionPanelEntered(false)
   }, [momentRange])
+
+  // The selection stands for a specific filtered set; drop it whenever that set
+  // changes so a stale "select all" can't carry into a different filter.
+  useEffect(() => {
+    setSelectionState(EMPTY_SELECTION)
+  }, [cluster.id, sessionFilter, momentRange, timeRange])
 
   const openSessionOverlay = (session: BehaviourSessionRecord) => {
     setSessionOverlayId(session.sessionId)
@@ -361,8 +411,8 @@ export function BehaviourDetailDrawer({
                     />
                     {showDetectedSignalsChart ? <DetectedSignalsChart signals={detectedSignals} /> : null}
                   </div>
-                  {sessionFilterOptions.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
+                  {sessionFilterOptions.length > 0 || hasSessionFilters ? (
+                    <div className="flex flex-wrap items-center gap-2">
                       {sessionFilterOptions.map((option) => (
                         <MetricButton
                           key={option.id}
@@ -376,11 +426,6 @@ export function BehaviourDetailDrawer({
                           }}
                         />
                       ))}
-                    </div>
-                  ) : null}
-                  <div className="flex flex-col gap-2 pt-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <Text.H5>Associated sessions</Text.H5>
                       {hasSessionFilters ? (
                         <Button
                           variant="ghost"
@@ -395,6 +440,9 @@ export function BehaviourDetailDrawer({
                         </Button>
                       ) : null}
                     </div>
+                  ) : null}
+                  <div className="flex flex-col gap-2 pt-4">
+                    <Text.H5>Associated sessions</Text.H5>
                     {momentRange ? (
                       <TurnRangeSlider
                         range={momentRange}
@@ -409,12 +457,25 @@ export function BehaviourDetailDrawer({
                           ? "All sessions for this behavior"
                           : `Sessions matching ${sessionFilter.replaceAll("_", " ")}`}
                     </Text.H6>
+                    {sessionSelection.selectedCount > 0 ? (
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setAddToDatasetOpen(true)}>
+                          <Icon icon={DatabaseIcon} size="xs" />
+                          Add to dataset ({sessionSelection.selectedCount.toLocaleString()})
+                        </Button>
+                      </div>
+                    ) : null}
                     {behaviourSessionsLoading ? (
                       <Skeleton className="h-16 rounded-xl" />
                     ) : behaviourSessions.length ? (
                       <BehaviourSessionsTable
                         sessions={behaviourSessions}
-                        activeSessionId={sessionOverlayId ?? undefined}
+                        activeRowKey={
+                          behaviourSessions.find((session) => session.sessionId === sessionOverlayId)?.traceId ||
+                          (sessionOverlayId ?? undefined)
+                        }
+                        getRowKey={sessionRowKey}
+                        selection={sessionSelection}
                         onSessionClick={openSessionOverlay}
                         hasMore={hasNextBehaviourSessionsPage === true}
                         isLoadingMore={isFetchingNextBehaviourSessionsPage}
@@ -432,6 +493,26 @@ export function BehaviourDetailDrawer({
           </div>
         </div>
       </DetailDrawer>
+      {datasetSelection ? (
+        <AddToDatasetModal
+          open={addToDatasetOpen}
+          onOpenChange={setAddToDatasetOpen}
+          projectId={projectId}
+          itemLabel="session"
+          selectedCount={sessionSelection.selectedCount}
+          onAddToExisting={(datasetId) =>
+            addClusterSessionsToDatasetFunction({
+              data: { projectId, datasetId, cluster: clusterSource, selection: datasetSelection },
+            })
+          }
+          onCreateNew={(name) =>
+            createDatasetFromClusterSessionsFunction({
+              data: { projectId, name, cluster: clusterSource, selection: datasetSelection },
+            })
+          }
+          onSuccess={sessionSelection.clearSelections}
+        />
+      ) : null}
       {sessionOverlayId !== null ? (
         <>
           <button
@@ -524,14 +605,18 @@ function TurnRangeSlider({
 
 function BehaviourSessionsTable({
   sessions,
-  activeSessionId,
+  activeRowKey,
+  getRowKey,
+  selection,
   onSessionClick,
   hasMore,
   isLoadingMore,
   onLoadMore,
 }: {
   readonly sessions: readonly BehaviourSessionRecord[]
-  readonly activeSessionId: string | undefined
+  readonly activeRowKey: string | undefined
+  readonly getRowKey: (session: BehaviourSessionRecord) => string
+  readonly selection: InfiniteTableSelection
   readonly onSessionClick: (session: BehaviourSessionRecord) => void
   readonly hasMore: boolean
   readonly isLoadingMore: boolean
@@ -577,11 +662,12 @@ function BehaviourSessionsTable({
       <InfiniteTable
         data={sessions}
         columns={columns}
-        getRowKey={(session) => session.sessionId}
+        getRowKey={getRowKey}
+        selection={selection}
         onRowClick={onSessionClick}
         getRowAriaLabel={(session) => `Open session ${session.sessionId} in the session panel`}
         rowInteractionRole="button"
-        {...(activeSessionId ? { activeRowKey: activeSessionId } : {})}
+        {...(activeRowKey ? { activeRowKey } : {})}
         scrollAreaLayout="intrinsic"
         className="max-h-[min(28rem,50vh)]"
         infiniteScroll={{ hasMore, isLoadingMore, onLoadMore }}

@@ -337,8 +337,10 @@ export function makeLlmSpan({
   span.cost_is_estimated = 1
   span.response_id = randomResponseId(modelConfig.provider)
   span.finish_reasons = [finishReason]
-  span.input_messages = JSON.stringify(inputMessages)
-  span.output_messages = JSON.stringify(outputMessages)
+  // Empty lists serialize to "" (not "[]") to match the real span writer: the
+  // trace/session rollups select messages with `input_messages != ''`.
+  span.input_messages = inputMessages.length > 0 ? JSON.stringify(inputMessages) : ""
+  span.output_messages = outputMessages.length > 0 ? JSON.stringify(outputMessages) : ""
   span.system_instructions = systemInstructions ? JSON.stringify([{ type: "text", content: systemInstructions }]) : ""
   span.tool_definitions = toolDefinitions ? JSON.stringify(toolDefinitions.map(toolToDefinition)) : ""
   span.scope_name = modelConfig.scopeName

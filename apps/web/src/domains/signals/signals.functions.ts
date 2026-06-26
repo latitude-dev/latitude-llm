@@ -828,6 +828,24 @@ export const listSignalSessions = createServerFn({ method: "GET" })
     return toSignalSessionPageRecord(result)
   })
 
+export const countSignalSessions = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), signalId: z.string() }))
+  .handler(async ({ data }): Promise<number> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
+        return yield* scoreAnalyticsRepository.countSessionsBySignal({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          signalId: SignalId(data.signalId),
+        })
+      }).pipe(withClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), orgId)),
+    )
+  })
+
 export const getSignalImpact = createServerFn({ method: "GET" })
   .inputValidator(signalImpactInputSchema)
   .handler(async ({ data }): Promise<SignalImpactRecord> => {
