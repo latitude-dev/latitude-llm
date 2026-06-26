@@ -1,6 +1,5 @@
 import { createEvaluationUseCase, type EvaluationRepository } from "@domain/evaluations"
 import { OutboxEventWriter } from "@domain/events"
-import { QueuePublisher } from "@domain/queue"
 import type { ScriptCompileError, ScriptRuntime } from "@domain/sandbox"
 import {
   type BadRequestError,
@@ -19,10 +18,6 @@ import { z } from "zod"
 import { SIGNAL_NAME_MAX_LENGTH } from "../constants.ts"
 import { signalPrioritySchema, signalSchema } from "../entities/signal.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
-
-// User-created deterministic evaluations are backfilled over the trailing two weeks; judges
-// collect forward only.
-const BACKFILL_WINDOW_DAYS = 14
 
 const createSignalInputSchema = z.object({
   organizationId: cuidSchema,
@@ -57,7 +52,6 @@ export const createSignalUseCase = (input: CreateSignalInput) =>
       Effect.gen(function* () {
         const signalRepository = yield* SignalRepository
         const outboxEventWriter = yield* OutboxEventWriter
-        const queuePublisher = yield* QueuePublisher
 
         const slug = yield* generateSlug({
           name: parsed.name,
@@ -113,22 +107,11 @@ export const createSignalUseCase = (input: CreateSignalInput) =>
           },
         })
 
-        if (evaluation.isDeterministic) {
-          const windowStartIso = new Date(now.getTime() - BACKFILL_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString()
-          yield* queuePublisher.publish("signals-backfill", "run", {
-            organizationId: signal.organizationId,
-            projectId: signal.projectId,
-            signalId: signal.id,
-            evaluationId: evaluation.evaluationId,
-            windowStartIso,
-          })
-        }
-
         return { signalId: signal.id, slug, evaluationId: evaluation.evaluationId } satisfies CreateSignalResult
       }),
     )
   }).pipe(Effect.withSpan("signals.createSignal")) as Effect.Effect<
     CreateSignalResult,
     CreateSignalError,
-    SignalRepository | EvaluationRepository | OutboxEventWriter | QueuePublisher | ScriptRuntime | SqlClient
+    SignalRepository | EvaluationRepository | OutboxEventWriter | ScriptRuntime | SqlClient
   >

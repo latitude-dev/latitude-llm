@@ -1,7 +1,5 @@
 import { type Evaluation, EvaluationRepository } from "@domain/evaluations"
 import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
-import { QueuePublisher } from "@domain/queue"
-import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { createFakeScriptRuntime } from "@domain/sandbox/testing"
 import { OrganizationId, SqlClient, type SqlClientShape } from "@domain/shared"
 import { Effect, Layer } from "effect"
@@ -50,7 +48,6 @@ const createFakeEvaluationRepository = () => {
 const buildLayer = () => {
   const { repository: signalRepository, issues } = createFakeSignalRepository()
   const evaluationRepo = createFakeEvaluationRepository()
-  const queue = createFakeQueuePublisher()
   const events: OutboxWriteEvent[] = []
   const outboxEventWriter = OutboxEventWriter.of({
     write: (event) => Effect.sync(() => void events.push(event)),
@@ -59,17 +56,16 @@ const buildLayer = () => {
     Layer.succeed(SignalRepository, signalRepository),
     Layer.succeed(EvaluationRepository, evaluationRepo.service),
     Layer.succeed(OutboxEventWriter, outboxEventWriter),
-    Layer.succeed(QueuePublisher, queue.publisher),
     createFakeScriptRuntime().layer,
   )
-  return { layer, issues, evaluations: evaluationRepo.evaluations, queue, events }
+  return { layer, issues, evaluations: evaluationRepo.evaluations, events }
 }
 
 const run = <A, E>(effect: Effect.Effect<A, E, never>) => Effect.runPromise(effect)
 
 describe("createSignalUseCase", () => {
-  it("creates a user signal with no centroid and a deterministic evaluation, and enqueues backfill", async () => {
-    const { layer, issues, evaluations, queue } = buildLayer()
+  it("creates a user signal with no centroid and a deterministic evaluation", async () => {
+    const { layer, issues, evaluations } = buildLayer()
 
     const result = await run(
       createSignalUseCase({
@@ -90,13 +86,10 @@ describe("createSignalUseCase", () => {
     const evaluation = evaluations.get(result.evaluationId)
     expect(evaluation?.signalId).toBe(result.signalId)
     expect(evaluation?.alignment ?? null).toBeNull()
-
-    const backfill = queue.published.find((m) => m.queue === "signals-backfill" && m.task === "run")
-    expect(backfill?.payload).toMatchObject({ signalId: result.signalId, evaluationId: result.evaluationId })
   })
 
-  it("creates a judge from settings without enqueuing backfill (judges collect forward)", async () => {
-    const { layer, evaluations, queue, events } = buildLayer()
+  it("creates a judge evaluation from settings", async () => {
+    const { layer, evaluations, events } = buildLayer()
 
     const result = await run(
       createSignalUseCase({
@@ -112,7 +105,6 @@ describe("createSignalUseCase", () => {
     expect(evaluation?.settings).toEqual({ kind: "judge", criteria: "the assistant refuses a valid request" })
     expect(evaluation?.script).toContain("await llm(")
 
-    expect(queue.published.some((m) => m.queue === "signals-backfill")).toBe(false)
     expect(events.some((e) => e.eventName === "SignalCreated")).toBe(true)
   })
 })

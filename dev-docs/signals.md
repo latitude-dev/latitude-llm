@@ -144,7 +144,7 @@ type SignalOrigin = "user" | "system";
 
 Tell auto-generated from hand-built by `origin`, never by the presence of an evaluation: a tracked `system` signal has an evaluation but stays `system`.
 
-A `user` signal **must** have an evaluation. `createSignal` accepts `evaluation.settings` (a declarative form, compiled to a script — `kind: "judge"` is the first) **or** `evaluation.script` (raw, advanced). The script is validated in the QuickJS sandbox at save time (`ScriptCompileError` → HTTP 422). Deterministic scripts (no `llm()`) are backfilled over the trailing 14 days via the `signals-backfill` worker; judges collect forward only. See [`dev-docs/evaluations.md`](evaluations.md) for `settings`/`script_hash`/active-detector details.
+A `user` signal **must** have an evaluation. `createSignal` accepts `evaluation.settings` (a declarative form, compiled to a script — `kind: "judge"` is the first) **or** `evaluation.script` (raw, advanced). The script is validated in the QuickJS sandbox at save time (`ScriptCompileError` → HTTP 422). The evaluation collects forward only: from creation onward it scores new incoming traces through the normal `signals:match` → `live-evaluations:execute` path — there is no historical backfill. See [`dev-docs/evaluations.md`](evaluations.md) for `settings`/`script_hash`/active-detector details.
 
 Lifecycle:
 

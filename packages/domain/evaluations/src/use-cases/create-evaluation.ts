@@ -1,10 +1,5 @@
 import { hashOptimizationCandidateText } from "@domain/optimizations"
-import {
-  detectScriptCapabilities,
-  hasLlmCapability,
-  type ScriptCompileError,
-  type ScriptRuntime,
-} from "@domain/sandbox"
+import type { ScriptCompileError, ScriptRuntime } from "@domain/sandbox"
 import {
   BadRequestError,
   type EvaluationSettings,
@@ -32,8 +27,6 @@ export interface CreateEvaluationInput {
 export interface CreateEvaluationResult {
   readonly evaluationId: string
   readonly script: string
-  /** `true` when the script calls no `llm()` — eligible for historical backfill (judges collect forward). */
-  readonly isDeterministic: boolean
 }
 
 export type CreateEvaluationError = BadRequestError | ScriptCompileError | RepositoryError
@@ -61,8 +54,6 @@ export const createEvaluationUseCase = (input: CreateEvaluationInput) =>
       try: () => hashOptimizationCandidateText(script),
       catch: () => new BadRequestError({ message: "Failed to hash evaluation script" }),
     })
-    const isDeterministic = !hasLlmCapability(detectScriptCapabilities(script))
-
     const now = input.now ?? new Date()
     const evaluation = evaluationSchema.parse({
       id: generateId<"EvaluationId">(),
@@ -86,7 +77,7 @@ export const createEvaluationUseCase = (input: CreateEvaluationInput) =>
     const repo = yield* EvaluationRepository
     yield* repo.save(evaluation)
 
-    return { evaluationId: evaluation.id, script, isDeterministic } satisfies CreateEvaluationResult
+    return { evaluationId: evaluation.id, script } satisfies CreateEvaluationResult
   }).pipe(Effect.withSpan("evaluations.createEvaluation")) as Effect.Effect<
     CreateEvaluationResult,
     CreateEvaluationError,

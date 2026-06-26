@@ -5,11 +5,6 @@
 export * from "./browser.ts"
 
 export {
-  type BackfillSignalScoresInput,
-  type BackfillSignalScoresResult,
-  backfillSignalScoresUseCase,
-} from "./use-cases/backfill-signal-scores.ts"
-export {
   type CreateSignalError,
   type CreateSignalInput,
   type CreateSignalResult,
