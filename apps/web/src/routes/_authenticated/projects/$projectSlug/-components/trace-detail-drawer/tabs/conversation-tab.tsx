@@ -42,6 +42,8 @@ import { MessageAnnotationTrigger } from "../../annotations/message-annotation-t
 import { findNearestMessageAnchor, flashElement } from "../../conversation-timeline/flash-highlight.ts"
 import { TimelineBar } from "../../conversation-timeline/timeline-bar.tsx"
 import { useViewportBand } from "../../conversation-timeline/use-viewport-band.ts"
+import { computeLoadedConversationHighlights } from "./compute-loaded-conversation-highlights.ts"
+import { ConversationSearchBar } from "./conversation-search-bar.tsx"
 import { useScrollToFirstHighlight } from "./use-scroll-to-first-highlight.ts"
 
 const LOAD_MORE_THRESHOLD_PX = 1200
@@ -307,12 +309,26 @@ function ConversationContent({
     ],
   )
 
+  const [conversationSearch, setConversationSearch] = useState("")
+  const conversationSearchQuery = conversationSearch.trim()
+
   const effectiveSearchQuery = searchQuery ?? ""
-  const { data: searchHighlightsData } = useTraceSearchHighlights({
+  const { data: remoteSearchHighlightsData } = useTraceSearchHighlights({
     projectId,
     traceId: traceDetail.traceId,
     searchQuery: effectiveSearchQuery,
+    enabled: conversationSearchQuery.length === 0,
   })
+
+  const loadedConversationHighlights = useMemo(
+    () => computeLoadedConversationHighlights(messages, conversationSearchQuery),
+    [conversationSearchQuery, messages],
+  )
+
+  const searchHighlightsData = useMemo<TraceSearchHighlightsResult | undefined>(() => {
+    if (conversationSearchQuery.length > 0) return loadedConversationHighlights
+    return remoteSearchHighlightsData
+  }, [conversationSearchQuery, loadedConversationHighlights, remoteSearchHighlightsData])
 
   const searchHighlightRanges = useMemo(() => toSearchHighlightRanges(searchHighlightsData), [searchHighlightsData])
 
@@ -328,11 +344,14 @@ function ConversationContent({
     return { messageIndex: first.messageIndex, partIndex: first.partIndex }
   }, [searchHighlightsData])
 
+  const activeSearchQuery = conversationSearchQuery.length > 0 ? conversationSearchQuery : effectiveSearchQuery
+
   // TODO(frontend-use-effect-policy): loading search target pages is a query-side effect keyed by async highlight results.
   useEffect(() => {
+    if (conversationSearchQuery.length > 0) return
     if (!firstMatchHint || firstMatchHint.messageIndex < messages.length) return
     loadMoreMessages()
-  }, [firstMatchHint, messages.length, loadMoreMessages])
+  }, [conversationSearchQuery, firstMatchHint, messages.length, loadMoreMessages])
 
   useEffect(() => {
     if (focusMessageIndex === undefined || focusMessageIndex < messages.length) return
@@ -342,7 +361,7 @@ function ConversationContent({
   useScrollToFirstHighlight({
     scrollRef,
     traceId: traceDetail.traceId,
-    searchQuery: effectiveSearchQuery,
+    searchQuery: activeSearchQuery,
     highlightsData: searchHighlightsData,
     loadedMessageCount: messages.length,
   })
@@ -379,6 +398,7 @@ function ConversationContent({
 
   return (
     <div className="relative flex-1 min-h-0 flex flex-col">
+      <ConversationSearchBar value={conversationSearch} onChange={setConversationSearch} />
       <div
         ref={scrollRef}
         className="flex min-w-0 flex-col py-8 px-4 overflow-y-auto overflow-x-hidden flex-1"

@@ -141,6 +141,11 @@ export { buildConversationSpanMaps } from "./use-cases/map-conversation-to-spans
 export type { ParsedSearchQuery } from "./use-cases/parse-search-query.ts"
 export { parseSearchQuery } from "./use-cases/parse-search-query.ts"
 export type {
+  TraceHighlight,
+  TraceSearchHighlightsResult,
+} from "./use-cases/compute-trace-search-highlights.ts"
+export { computeTraceSearchHighlights } from "./use-cases/compute-trace-search-highlights.ts"
+export type {
   SelectTraceEndItemsError,
   TraceEndSelectionDecision,
   TraceEndSelectionInput,
