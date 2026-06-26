@@ -35,7 +35,7 @@ const latitude = new Latitude({
 const openai = new OpenAI()
 
 const MODEL = "gpt-5.5"
-// gpt-5.5 is a reasoning model: budget must cover reasoning + the visible answer (else finish_reason "length").
+// gpt-5.5 is a reasoning model — budget for reasoning + the answer.
 const MAX_TOKENS = 2000
 const SYSTEM = "You are a helpful assistant participating in a telemetry QA test. Keep answers concise."
 const SESSION_ID = `project-multi-${randomUUID().slice(0, 8)}`
@@ -105,9 +105,7 @@ async function main() {
   console.log(`${PRIMARY_SLUG} →`, await capture("full-stack-agent-run", fullStackAgent, ctx(PRIMARY_SLUG, "tools", "tools", "agent:full-stack")))
   console.log(`${SECONDARY_SLUG} →`, await capture("call-summariser-run", callSummariser, ctx(SECONDARY_SLUG, "chat", "agent:summariser")))
 
-  // Spans with no `project` AND no constructor default are rejected by the ingest service with
-  // a `partial_success` body — exporters log the rejection but don't retry. Always set a project
-  // either on the constructor or on each `capture()` when running this pattern.
+  // A span with neither a per-capture `project` nor a constructor default is rejected at ingest.
 
   await latitude.flush()
   await latitude.shutdown()

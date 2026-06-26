@@ -156,9 +156,8 @@ export function parseGenAICurrent(attrs: readonly OtlpKeyValue[]): ParsedContent
     }
   }
 
-  // Run a rosetta pass per direction so inline role:"system" turns and any already-separated
-  // gen_ai.system_instructions are reconciled into systemInstructions (rosetta keeps mid-conversation
-  // system inline).
+  // Reconcile inline role:"system" turns with any separated gen_ai.system_instructions into
+  // systemInstructions (rosetta keeps mid-conversation system inline).
   if (inputMessages.length > 0) {
     const result = safeTranslate(inputMessages, {
       from: Provider.GenAI,

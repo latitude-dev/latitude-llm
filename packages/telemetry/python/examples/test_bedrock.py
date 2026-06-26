@@ -33,8 +33,7 @@ PROVIDER = "bedrock"
 MODEL = "eu.anthropic.claude-opus-4-8"
 MAX_TOKENS = 1024
 REGION = os.environ.get("AWS_REGION", "eu-central-1")
-# Bedrock's Anthropic models take system instructions out-of-band (converse `system`),
-# NOT as a role:"system" message — we verify Latitude lands it in systemInstructions.
+# converse `system` is the out-of-band system field — verify it lands in systemInstructions.
 SYSTEM = "You are a helpful assistant participating in a telemetry QA test. Keep answers concise."
 SESSION_ID = f"{PROVIDER}-{uuid.uuid4().hex[:8]}"
 

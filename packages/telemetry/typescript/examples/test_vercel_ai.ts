@@ -23,7 +23,7 @@ const latitude = new Latitude({
 
 const PROVIDER = "vercel-ai"
 const MODEL = "gpt-5.5"
-// gpt-5.5 is a reasoning model: budget must cover reasoning + the visible answer.
+// gpt-5.5 is a reasoning model — budget for reasoning + the answer.
 const MAX_TOKENS = 2000
 const SYSTEM = "You are a helpful assistant participating in a telemetry QA test. Keep answers concise."
 const SESSION_ID = `${PROVIDER}-${randomUUID().slice(0, 8)}`

@@ -28,7 +28,7 @@ const latitude = new Latitude({
 
 const PROVIDER = "openai"
 const MODEL = "gpt-5.5"
-// gpt-5.5 is a reasoning model: budget must cover reasoning + the visible answer (else finish_reason "length").
+// gpt-5.5 is a reasoning model — budget for reasoning + the answer.
 const MAX_TOKENS = 2000
 const SYSTEM = "You are a helpful assistant participating in a telemetry QA test. Keep answers concise."
 const SESSION_ID = `manual-${randomUUID().slice(0, 8)}`
@@ -68,8 +68,7 @@ async function manualSpansWithToolConversation() {
     },
   ]
 
-  // Manual span: non-LLM work BEFORE the model call. Should pass the smart filter
-  // purely because it inherits latitude.* attributes from the capture() context.
+  // Manual span (non-LLM): passes the smart filter only because it inherits the capture() latitude.* attrs.
   await tracer.startActiveSpan("pipeline.prepare", async (span) => {
     span.setAttribute("prepare.step", "load_user_context")
     span.setAttribute("prepare.cache_hit", false)
@@ -86,9 +85,8 @@ async function manualSpansWithToolConversation() {
   const toolCall = first.choices[0]?.message?.tool_calls?.[0]
   messages.push(first.choices[0]!.message)
 
-  // Manual tool-execution span following the OTEL GenAI semantic conventions
-  // (v1.37+): `gen_ai.operation.name=execute_tool` makes Latitude classify it as
-  // an execute_tool span, and `gen_ai.tool.call.id` ties it to the LLM's tool_call.
+  // Manual tool-execution span via the OTEL GenAI semconv: gen_ai.operation.name=execute_tool
+  // classifies it; gen_ai.tool.call.id ties it to the LLM's tool_call.
   const args = JSON.parse(toolCall!.function.arguments) as { city: string }
   const toolResult = await tracer.startActiveSpan(`execute_tool ${toolCall!.function.name}`, async (span) => {
     span.setAttribute("gen_ai.operation.name", "execute_tool")

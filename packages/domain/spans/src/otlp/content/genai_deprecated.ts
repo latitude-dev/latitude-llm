@@ -180,10 +180,8 @@ function resolveToolDefinitions(attrs: readonly OtlpKeyValue[]): ToolDefinition[
   return raw.map(toToolDefinition).filter(Boolean) as ToolDefinition[]
 }
 
-// Rosetta only renders a tool_call that carries an `id`, and joins a tool result to its call by
-// matching `tool_call_id`. Deprecated emitters (e.g. Traceloop) often omit both, so mint a per-message
-// id for id-less tool_calls and back-fill the matching tool result — mirroring the OpenInference parser.
-// Without this, rosetta drops the tool_calls into `_provider_metadata` and the call never surfaces.
+// Deprecated emitters (e.g. Traceloop) often omit tool_call ids, which rosetta needs to render the
+// call and join its result. Mint a per-message id for id-less tool_calls and back-fill the result.
 function linkToolCalls(messages: Record<string, unknown>[]): void {
   const pending: { id: string; name: string | undefined }[] = []
   messages.forEach((msg, i) => {

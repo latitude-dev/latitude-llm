@@ -26,8 +26,7 @@ latitude = Latitude(
 
 PROVIDER = "gemini"
 MODEL = "gemini-3.5-flash"
-# Gemini takes system instructions out-of-band (config `system_instruction`), NOT as a
-# role:"system" message — we verify Latitude lands it in systemInstructions.
+# `system_instruction` is the out-of-band system field — verify it lands in systemInstructions.
 SYSTEM = "You are a helpful assistant participating in a telemetry QA test. Keep answers concise."
 SESSION_ID = f"{PROVIDER}-{uuid.uuid4().hex[:8]}"
 

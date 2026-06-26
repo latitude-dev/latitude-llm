@@ -33,11 +33,10 @@ const latitude = new Latitude({
 const openai = new OpenAI()
 
 const MODEL = "gpt-5.5"
-// gpt-5.5 is a reasoning model: budget must cover reasoning + the visible answer (else finish_reason "length").
+// gpt-5.5 is a reasoning model — budget for reasoning + the answer.
 const MAX_TOKENS = 2000
 const SYSTEM = "You are a helpful assistant participating in a telemetry QA test. Keep answers concise."
-// Shared run id so the whole run is findable via a single tag, while the per-capture
-// sessionId/userId/metadata stay as the merge-semantics fixture they exist to test.
+// Shared run-id tag so the whole run is findable; the per-capture session/user/metadata are the merge fixture.
 const RUN = `capture-nesting-${randomUUID().slice(0, 8)}`
 
 async function say(prompt: string) {
@@ -92,9 +91,7 @@ async function decoratorStyleNesting() {
     async () => {
       const outerResponse = await say("Say 'First call' in exactly 2 words.")
 
-      // Inner capture runs the tool conversation so we verify the MERGED context
-      // (tags deduped, sessionId/userId overridden, metadata shallow-merged)
-      // lands on the tool-conversation spans.
+      // Inner capture runs the tool conversation, so its spans carry the MERGED context.
       const innerResponse = await capture("inner-capture", toolConversation, {
         tags: ["inner-tag", "shared-tag", RUN, "capture-nesting-ts"], // shared-tag deduped
         sessionId: "inner-session", // overrides outer-session

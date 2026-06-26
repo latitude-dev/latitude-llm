@@ -27,10 +27,9 @@ latitude = Latitude(
 
 PROVIDER = "openai-responses"
 MODEL = "gpt-5.5"
-# gpt-5.5 is a reasoning model: budget must cover reasoning + the visible answer (else finish_reason "length").
+# gpt-5.5 is a reasoning model — budget for reasoning + the answer.
 MAX_TOKENS = 2000
-# The Responses API takes system instructions out-of-band (top-level `instructions`), NOT as a
-# role:"system" message — we verify Latitude lands it in systemInstructions.
+# `instructions` is the out-of-band system field — verify it lands in systemInstructions.
 SYSTEM = "You are a helpful assistant participating in a telemetry QA test. Keep answers concise."
 SESSION_ID = f"{PROVIDER}-{uuid.uuid4().hex[:8]}"
 

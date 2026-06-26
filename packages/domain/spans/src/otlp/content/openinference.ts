@@ -120,11 +120,7 @@ function buildMessageContent(
   return plainContent ?? ""
 }
 
-/**
- * Resolves the id a tool result pairs with — explicit `tool_call_id`, else a name match, else the
- * oldest pending call (OpenInference, e.g. google-adk, omits the id) — and consumes the matched
- * entry from `pendingToolCalls`.
- */
+/** Resolves the id a tool result pairs with (explicit tool_call_id → name match → oldest pending), consuming it. */
 function resolvePendingToolCallId(
   explicitId: string | undefined,
   toolName: string | undefined,
@@ -176,11 +172,9 @@ function assembleMessages(
 
     const explicitId = msgFields?.get("tool_call_id")
     const hasToolCalls = !!msgToolCalls && msgToolCalls.size > 0
-    // A tool result the provider delivered on a non-tool turn — Gemini carries function responses
-    // on a role:"user" turn tagged only with tool_call_id — is EXTRACTED into its own role:"tool"
-    // message (mirroring hoistToolResults) rather than relabeling the turn. Limited to a single
-    // message.content string: a multi-part turn could mix the result with real text the flat
-    // OpenInference shape can't separate, so those are left intact.
+    // Gemini delivers function responses on a role:"user" turn tagged only with tool_call_id.
+    // Extract those into their own role:"tool" message (mirrors hoistToolResults — don't relabel
+    // the turn). Single-content only: a multi-part turn could mix in real text we can't split.
     const extractAsToolResult =
       role !== "tool" && explicitId !== undefined && !hasToolCalls && typeof content === "string"
 
