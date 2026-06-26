@@ -34,8 +34,8 @@ export interface CreateAccountResult {
  * Adds a verification value to the "verifications" table,
  * Behaviorally mirrors `betterAuth.api.signInMagicLink` so the API and
  * web produce identical rows + side effects:
- * 
- * 1. Generates a hashedToken. Adds email, hashedToken, expiresAt to 
+ *
+ * 1. Generates a hashedToken. Adds email, hashedToken, expiresAt to
  * verification table
  * 2. Pushes MagicLinkEmailRequested event to outbox
  *
@@ -80,5 +80,5 @@ export const createAccountUseCase = Effect.fn("users.createAccount")(function* (
     })
     .pipe(Effect.mapError((error): RepositoryError => toRepositoryError(error, "write InvitationEmailRequested")))
 
-  return {email: normalizedEmail, token: verificationToken}
+  return { email: normalizedEmail, token: verificationToken }
 })

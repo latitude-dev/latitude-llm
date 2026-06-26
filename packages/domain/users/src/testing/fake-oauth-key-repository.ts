@@ -1,11 +1,10 @@
+import type { VerificationValue } from "@domain/oauth-keys"
 import { Effect } from "effect"
 import type { OAuthKeyRepository } from "../../../oauth-keys/src/ports/oauth-key-repository.ts"
-import type { VerificationValue } from "@domain/oauth-keys"
 
 type OAuthKeyRepositoryShape = (typeof OAuthKeyRepository)["Service"]
 
 export const createFakeOAuthKeyRepository = (overrides?: Partial<OAuthKeyRepositoryShape>) => {
-
   const verificationValues: VerificationValue[] = []
 
   const repository: OAuthKeyRepositoryShape = {

@@ -4,12 +4,12 @@ import type { OutboxEventWriterShape, OutboxWriteEvent } from "../../../events/s
 const writtenEvents: OutboxWriteEvent[] = []
 
 export const createFakeOutboxEventWriter = () => {
-    const outboxEventWriter: OutboxEventWriterShape = {
-        write: (event) =>
-            Effect.sync(() => {
-                writtenEvents.push(event)
-            }),
-    }
+  const outboxEventWriter: OutboxEventWriterShape = {
+    write: (event) =>
+      Effect.sync(() => {
+        writtenEvents.push(event)
+      }),
+  }
 
-    return { outboxEventWriter, writtenEvents }
+  return { outboxEventWriter, writtenEvents }
 }

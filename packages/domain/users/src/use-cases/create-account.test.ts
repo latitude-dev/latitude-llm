@@ -1,22 +1,21 @@
+import { OAuthKeyRepository } from "@domain/oauth-keys"
 import { OrganizationId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { createFakeOAuthKeyRepository } from "../testing/fake-oauth-key-repository.ts"
-import { OAuthKeyRepository } from "@domain/oauth-keys"
-import { createAccountUseCase } from "./create-account.ts"
 import { OutboxEventWriter } from "../../../events/src/outbox-event-writer.ts"
+import { createFakeOAuthKeyRepository } from "../testing/fake-oauth-key-repository.ts"
 import { createFakeOutboxEventWriter } from "../testing/fake-outbox-event-writer.ts"
+import { createAccountUseCase } from "./create-account.ts"
 
 const ORG_ID = OrganizationId("iapkf6osmlm7mbw9kulosua4")
 
 const EMAIL = "alice@example.com"
 const WEB_URL = "https://example.com"
 
-
 const createTestLayers = () => {
   const { repository: oauthKeyRepo, verificationValues } = createFakeOAuthKeyRepository()
-  const {outboxEventWriter, writtenEvents} = createFakeOutboxEventWriter()
+  const { outboxEventWriter, writtenEvents } = createFakeOutboxEventWriter()
   const fakeSqlClient = createFakeSqlClient()
 
   const testLayers = Layer.mergeAll(
@@ -41,9 +40,7 @@ describe("createAccountUseCase", () => {
         organizationId: ORG_ID,
         email: EMAIL,
         webUrl: WEB_URL,
-      }).pipe(
-        Effect.provide(layers.testLayers),
-      ),
+      }).pipe(Effect.provide(layers.testLayers)),
     )
 
     expect(result.email).toBe(EMAIL)
