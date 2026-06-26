@@ -94,9 +94,8 @@ export const targetAlertDraft = (target: MonitorTarget, overrides?: Partial<Aler
   })
 
 /**
- * Tabs available for a draft's mode. Saved-search keeps the three-tab set
- * (match/threshold/escalating); a unified target drops "match" — an incident per
- * matching tool call / trace is never what you want for a tool or user.
+ * Tabs available for a draft's mode. Both saved-search and target monitors can
+ * fire on match, threshold, or escalation; match monitors do not use metric controls.
  */
 export const kindsForDraft = (draft: AlertDraft): readonly UserAlertKind[] =>
   draft.target === null

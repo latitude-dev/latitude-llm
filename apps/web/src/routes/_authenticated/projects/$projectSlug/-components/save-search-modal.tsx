@@ -16,7 +16,7 @@ import {
   type AlertFieldErrors,
   alertFieldErrorsFrom,
   draftToCondition,
-  targetAlertDraft,
+  emptyAlertDraft,
 } from "../monitors/-components/alert-form-helpers.ts"
 import { searchHasSemanticPart } from "./semantic-monitor-notice.tsx"
 
@@ -66,18 +66,7 @@ function CreateModal({ open, onClose, projectId, projectSlug, query, filterSet, 
   const { toast } = useToast()
   const createMutation = useCreateSavedSearch(projectId)
   const [withMonitor, setWithMonitor] = useState(false)
-  const [alertDraft, setAlertDraft] = useState<AlertDraft>(() =>
-    targetAlertDraft({
-      type: "savedSearch",
-      id: "pending",
-      kind: "savedSearch",
-      stream: "sessions",
-      filterSet,
-      query,
-      savedSearchId: "pending",
-      metric: { kind: "count" },
-    }),
-  )
+  const [alertDraft, setAlertDraft] = useState<AlertDraft>(() => emptyAlertDraft({ sourceId: "pending" }))
   const [alertErrors, setAlertErrors] = useState<AlertFieldErrors>({})
 
   // Searches with a semantic part have no exact match rule for a monitor to count against.
@@ -99,7 +88,7 @@ function CreateModal({ open, onClose, projectId, projectSlug, query, filterSet, 
                     kind: isSavedSearchAlertKind(alertDraft.kind) ? alertDraft.kind : "savedSearch.match",
                     condition: draftToCondition(alertDraft),
                     severity: alertDraft.severity,
-                    metric: alertDraft.metric,
+                    metric: { kind: "count" },
                   },
                 }
               : {}),
@@ -227,7 +216,7 @@ function CreateModal({ open, onClose, projectId, projectSlug, query, filterSet, 
                           projectId={projectId}
                           projectSlug={projectSlug}
                           showSourcePicker={false}
-                          {...(name.trim() ? { sourceName: name.trim() } : {})}
+                          sourceName={name.trim() || "this search"}
                           errors={alertErrors}
                         />
                       )}

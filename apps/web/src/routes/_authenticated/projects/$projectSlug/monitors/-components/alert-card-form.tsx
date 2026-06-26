@@ -466,7 +466,7 @@ export function AlertCardForm({
         <Text.H6 color="foregroundMuted">{KIND_HELP[value.kind]}</Text.H6>
       </div>
 
-      {targetMode && value.target ? (
+      {targetMode && value.target && !isMatchKind(value.kind) ? (
         <MetricSelector
           value={value.metric}
           stream={value.target.stream}

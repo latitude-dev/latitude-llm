@@ -4,7 +4,6 @@ import {
   type AlertIncidentCondition,
   type AlertMetricThreshold,
   formatMetricValue,
-  type IncidentNotificationKey,
   type MonitorMetric,
   type MonitorTrigger,
 } from "@domain/shared"
@@ -122,9 +121,9 @@ export function formatHumanReadableRule(rule: HumanReadableRuleInput, context?: 
 }
 
 export function formatHumanReadableAlert(
-  alert: { readonly kind?: IncidentNotificationKey; readonly condition?: AlertIncidentCondition | null },
+  alert: { readonly kind?: string; readonly condition?: AlertIncidentCondition | null },
   context?: HumanReadableRuleContext,
 ): string {
-  const trigger = alert.kind?.startsWith("monitor.") ? (alert.kind.split(".")[1] as MonitorTrigger) : "escalating"
+  const trigger = alert.kind?.includes(".") ? (alert.kind.split(".")[1] as MonitorTrigger) : "escalating"
   return formatHumanReadableRule({ trigger, condition: alert.condition ?? null }, context)
 }

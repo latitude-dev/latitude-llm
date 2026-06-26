@@ -1,6 +1,6 @@
 import { Button, CloseTrigger, Icon, Modal, useToast } from "@repo/ui"
 import { useParams } from "@tanstack/react-router"
-import { LinkIcon, PauseIcon, PlayIcon } from "lucide-react"
+import { BellIcon, BellOffIcon, LinkIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useRegisterCommands } from "../../../../../../components/command-palette/command-palette-provider.tsx"
 import type { PaletteCommand } from "../../../../../../components/command-palette/types.ts"
@@ -15,9 +15,10 @@ function getLifecycleConfirmation(action: LifecycleConfirmationAction) {
     case "mute":
       return {
         title: "Mute signal",
-        description: "Mute this signal. New occurrences will not trigger signal notifications.",
+        description:
+          "Mute this signal. New occurrences will still start incidents, but they will not trigger signal notifications.",
         confirmLabel: "Mute",
-        confirmIcon: PauseIcon,
+        confirmIcon: BellOffIcon,
         confirmVariant: "destructive" as const,
       }
     case "unmute":
@@ -25,7 +26,7 @@ function getLifecycleConfirmation(action: LifecycleConfirmationAction) {
         title: "Unmute signal",
         description: "Unmute this signal so new occurrences can trigger notifications again.",
         confirmLabel: "Unmute",
-        confirmIcon: PlayIcon,
+        confirmIcon: BellIcon,
         confirmVariant: undefined,
       }
   }
@@ -80,7 +81,7 @@ export function SignalLifecycleActions({
     commands.push({
       id: `issue:${signalId}:${issue.mutedAt ? "unmute" : "mute"}`,
       title: issue.mutedAt ? "Unmute signal" : "Mute signal",
-      icon: issue.mutedAt ? PlayIcon : PauseIcon,
+      icon: issue.mutedAt ? BellIcon : BellOffIcon,
       section: "context",
       group: "Signal",
       keywords: issue.mutedAt ? "unmute resume" : "mute pause",
@@ -113,13 +114,13 @@ export function SignalLifecycleActions({
   return (
     <>
       <Button
-        variant={compact ? "default" : "ghost"}
+        variant="outline"
         size={compact ? "sm" : undefined}
         className={compact ? "text-sm" : "text-foreground group-hover:text-secondary-foreground/80"}
         disabled={isLifecycleDisabled}
         onClick={() => setLifecycleConfirmAction(action)}
       >
-        <Icon icon={issue?.mutedAt ? PlayIcon : PauseIcon} size="sm" />
+        <Icon icon={issue?.mutedAt ? BellIcon : BellOffIcon} size="sm" />
         {issue?.mutedAt ? "Unmute" : "Mute"}
       </Button>
 
@@ -139,7 +140,7 @@ export function SignalLifecycleActions({
               onClick={() => (lifecycleConfirmAction ? void runLifecycleCommand(lifecycleConfirmAction) : undefined)}
               disabled={lifecycleConfirmAction === null || isLifecycleLoading}
             >
-              <Icon icon={lifecycleConfirmation?.confirmIcon ?? PauseIcon} size="sm" />
+              <Icon icon={lifecycleConfirmation?.confirmIcon ?? BellOffIcon} size="sm" />
               {lifecycleConfirmation?.confirmLabel ?? "Confirm"}
             </Button>
           </Modal.Footer>

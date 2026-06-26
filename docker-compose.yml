@@ -8,6 +8,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
 
     command: postgres -c wal_level=logical
 
@@ -46,7 +51,8 @@ services:
   temporal:
     image: temporalio/auto-setup:1.27.2
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     env_file:
       - .env.${NODE_ENV:-development}
     environment:
