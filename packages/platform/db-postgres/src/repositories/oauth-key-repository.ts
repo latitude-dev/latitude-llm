@@ -1,9 +1,9 @@
-import { type OAuthKey, OAuthKeyRepository } from "@domain/oauth-keys"
+import { type OAuthKey, OAuthKeyRepository, type VerificationValue } from "@domain/oauth-keys"
 import { RepositoryError, SqlClient, type SqlClientShape } from "@domain/shared"
 import { and, desc, eq, inArray, max } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
-import { oauthAccessTokens, oauthApplications, users } from "../schema/better-auth.ts"
+import { oauthAccessTokens, oauthApplications, users, verifications } from "../schema/better-auth.ts"
 
 const toDomain = (row: {
   readonly clientId: string | null
@@ -204,6 +204,25 @@ export const OAuthKeyRepositoryLive = Layer.effect(
           .pipe(
             Effect.mapError(
               (cause): RepositoryError => new RepositoryError({ operation: "markApplicationDisabled", cause }),
+            ),
+          )
+      }),
+
+    createVerificationValue: (verification: VerificationValue) =>
+      Effect.gen(function* () {
+        const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+        yield* sqlClient
+          .query((db) =>
+            db.insert(verifications).values({
+              id: verification.id,
+              identifier: verification.hashedToken,
+              value: verification.value,
+              expiresAt: verification.expiresAt,
+            }),
+          )
+          .pipe(
+            Effect.mapError(
+              (cause): RepositoryError => new RepositoryError({ operation: "createVerificationValue", cause }),
             ),
           )
       }),

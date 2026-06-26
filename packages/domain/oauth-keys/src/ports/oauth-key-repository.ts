@@ -1,6 +1,7 @@
 import type { RepositoryError, SqlClient } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { OAuthKey } from "../entities/oauth-key.ts"
+import type { VerificationValue } from "../entities/verification.ts"
 
 /**
  * Port for busting cached OAuth-token validations on revoke. The platform
@@ -81,5 +82,7 @@ export class OAuthKeyRepository extends Context.Service<
      * belongs to the caller's organization.
      */
     markApplicationDisabled: (clientId: string) => Effect.Effect<void, RepositoryError, SqlClient>
+
+    createVerificationValue: (verification: VerificationValue) => Effect.Effect<void, RepositoryError, SqlClient>
   }
 >()("@domain/oauth-keys/OAuthKeyRepository") {}

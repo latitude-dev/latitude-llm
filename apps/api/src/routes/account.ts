@@ -1,17 +1,20 @@
 import type { UserId } from "@domain/shared"
-import { type GetAccountResult, getAccountUseCase } from "@domain/users"
+import { createAccountUseCase, type GetAccountResult, getAccountUseCase } from "@domain/users"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import {
   MembershipRepositoryLive,
+  OAuthKeyRepositoryLive,
   OrganizationRepositoryLive,
+  OutboxEventWriterLive,
   UserRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
+import { parseEnv } from "@platform/env"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineApiEndpoint } from "../mcp/index.ts"
 import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
-import { openApiResponses, PROTECTED_SECURITY } from "../openapi/schemas.ts"
+import { jsonBody, openApiResponses, PROTECTED_SECURITY } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
 export const accountPath = "/account"
@@ -49,12 +52,23 @@ const AccountResponseSchema = z
   })
   .openapi("AccountResponse")
 
+const CreateAccountSchema = z
+  .object({
+    email: z.string().email().describe("The email address in question. This email gets sent the magic link to login."),
+  })
+  .openapi("CreateAccountBody")
+
 // Fern uses these to derive the SDK shape: `client.account.get()`. See
 // `routes/api-keys.ts` for the longer explanation of why the vendor-extension
 // overrides matter even on single-method namespaces.
 const accountFernGroup = {
   "x-fern-sdk-group-name": "account",
   "x-fern-sdk-method-name": "get",
+} as const
+
+const createAccountFernGroup = {
+  "x-fern-sdk-group-name": "account",
+  "x-fern-sdk-method-name": "create",
 } as const
 
 const accountEndpoint = defineApiEndpoint<OrganizationScopedEnv>(accountPath)
@@ -91,6 +105,45 @@ const getAccount = accountEndpoint({
   },
 })
 
+const createAccount = accountEndpoint({
+  route: createRoute({
+    method: "post",
+    path: "/",
+    name: "createAccount",
+    tags: ["Account"],
+    ...createAccountFernGroup,
+    summary: "Create account",
+    description: "Creates account for user",
+    security: PROTECTED_SECURITY,
+    request: { body: jsonBody(CreateAccountSchema) },
+    responses: openApiResponses({ status: 200, schema: AccountResponseSchema, description: "Account snapshot" }),
+  }),
+  handler: async (c) => {
+    const { email } = c.req.valid("json")
+
+    const webUrl = await Effect.runPromise(parseEnv("LAT_WEB_URL", "string"))
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        return yield* createAccountUseCase({
+          organizationId: c.var.organization.id,
+          email,
+          webUrl,
+        })
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(OAuthKeyRepositoryLive, OutboxEventWriterLive),
+          c.var.postgresClient,
+          c.var.organization.id,
+        ),
+        withTracing,
+      ),
+    )
+
+    return c.json({ success: true }, 200)
+  },
+})
+
 const toResponse = (result: GetAccountResult) => ({
   user: result.user
     ? {
@@ -111,5 +164,6 @@ const toResponse = (result: GetAccountResult) => ({
 export const createAccountRoutes = () => {
   const app = new OpenAPIHono<OrganizationScopedEnv>()
   getAccount.mountHttp(app, createTierRateLimiter("low"))
+  createAccount.mountHttp(app, createTierRateLimiter("medium"))
   return app
 }

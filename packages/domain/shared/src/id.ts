@@ -83,6 +83,9 @@ export type SpanId = Id<"SpanId">
 export type SessionId = Id<"SessionId">
 export type ExternalUserId = Id<"ExternalUserId">
 
+// OAuth related IDs
+export type VerificationId = Id<"VerificationId">
+
 // Factory functions to create branded IDs
 // Use these when creating IDs from strings (e.g., from database rows)
 export const UserId = (value: string): UserId => value as UserId
@@ -122,6 +125,7 @@ export const DatasetId = (value: string): DatasetId => value as DatasetId
 export const DatasetRowId = (value: string): DatasetRowId => value as DatasetRowId
 export const DatasetVersionId = (value: string): DatasetVersionId => value as DatasetVersionId
 export const ExternalUserId = (value: string): ExternalUserId => value as ExternalUserId
+export const VerificationId = (value: string): VerificationId => value as VerificationId
 
 /** Zod schemas that parse strings into branded domain IDs (CUID2, length {@link CUID_LENGTH}). */
 export const userIdSchema = cuidSchema.transform(UserId)
@@ -156,6 +160,7 @@ export const slackDeliveryIdSchema = cuidSchema.transform(SlackDeliveryId)
 export const destinationIdSchema = cuidSchema.transform(DestinationId)
 export const destinationSyncRunIdSchema = cuidSchema.transform(DestinationSyncRunId)
 export const ssoProviderIdSchema = cuidSchema.transform(SsoProviderId)
+export const VerificationIdSchema = cuidSchema.transform(VerificationId)
 
 // The telemetry-related IDs have custom length constraints
 export const SESSION_ID_LENGTH = 128

@@ -1,5 +1,6 @@
 export type { User } from "./entities/user.ts"
 export { userRoleSchema, userSchema } from "./entities/user.ts"
 export { UserRepository } from "./ports/user-repository.ts"
+export { type CreateAccountInput, type CreateAccountResult, createAccountUseCase } from "./use-cases/create-account.ts"
 export { type DeleteUserInput, deleteUserUseCase } from "./use-cases/delete-user.ts"
 export { type GetAccountInput, type GetAccountResult, getAccountUseCase } from "./use-cases/get-account.ts"

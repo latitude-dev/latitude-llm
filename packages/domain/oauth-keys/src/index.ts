@@ -1,4 +1,5 @@
 export type { OAuthKey } from "./entities/oauth-key.ts"
+export type { VerificationValue } from "./entities/verification.js"
 export { OAuthApplicationNotFoundError, OAuthKeyNotFoundError } from "./errors.ts"
 export { OAuthKeyRepository, OAuthTokenCacheInvalidator } from "./ports/oauth-key-repository.ts"
 export { type GetOAuthKeyInput, getOAuthKeyUseCase } from "./use-cases/get-oauth-key.ts"
