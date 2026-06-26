@@ -3684,6 +3684,11 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-04",
@@ -3753,6 +3758,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 81920
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-04",
@@ -3931,6 +3945,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 38912
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -4053,6 +4076,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 262144
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -4097,6 +4129,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 262144
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "release_date": "2026-05-21",
@@ -4248,6 +4289,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 38912
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -4522,6 +4572,15 @@
         "family": "qwen",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 81920
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -4555,6 +4614,15 @@
         "family": "qwen3.6",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 131072
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -4617,6 +4685,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 81920
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -4765,6 +4842,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 81920
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -4946,6 +5032,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 81920
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-04",
@@ -5304,6 +5399,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 38912
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -5484,6 +5588,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 81920
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -5631,6 +5744,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 38912
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -5750,6 +5872,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 38912
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-04",
@@ -5839,6 +5970,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 131072
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -5899,6 +6039,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 81920
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -6828,7 +6977,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-10",
-        "release_date": "2025-07-09",
+        "release_date": "2025-11-19",
         "last_updated": "2025-07-09",
         "modalities": {
           "input": [
@@ -6957,7 +7106,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-10",
-        "release_date": "2025-07-09",
+        "release_date": "2025-11-19",
         "last_updated": "2025-07-09",
         "modalities": {
           "input": [
@@ -7103,7 +7252,7 @@
         "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
-        "release_date": "2026-03-09",
+        "release_date": "2026-03-10",
         "last_updated": "2026-03-23",
         "modalities": {
           "input": [
@@ -7190,7 +7339,7 @@
         "reasoning": false,
         "tool_call": true,
         "temperature": true,
-        "release_date": "2026-03-09",
+        "release_date": "2026-03-10",
         "last_updated": "2026-03-23",
         "modalities": {
           "input": [
@@ -7230,7 +7379,7 @@
         ],
         "tool_call": true,
         "temperature": true,
-        "release_date": "2026-03-09",
+        "release_date": "2026-03-10",
         "last_updated": "2026-03-23",
         "modalities": {
           "input": [
@@ -7318,7 +7467,7 @@
         "reasoning": false,
         "tool_call": true,
         "temperature": true,
-        "release_date": "2025-09-05",
+        "release_date": "2025-07-11",
         "last_updated": "2025-09-05",
         "modalities": {
           "input": [
@@ -7462,8 +7611,7 @@
         "modalities": {
           "input": [
             "text",
-            "image",
-            "pdf"
+            "image"
           ],
           "output": [
             "text"
@@ -7545,7 +7693,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2025-12-21",
+        "release_date": "2025-12-03",
         "last_updated": "2025-12-21",
         "modalities": {
           "input": [
@@ -7665,7 +7813,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2025-12-21",
+        "release_date": "2025-12-18",
         "last_updated": "2025-12-21",
         "modalities": {
           "input": [
@@ -7689,7 +7837,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2025-12-21",
+        "release_date": "2025-12-03",
         "last_updated": "2025-12-21",
         "modalities": {
           "input": [
@@ -7713,7 +7861,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2026-03-06",
+        "release_date": "2026-01-15",
         "last_updated": "2026-03-06",
         "modalities": {
           "input": [
@@ -7737,7 +7885,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2024-03-01",
+        "release_date": "2024-04-15",
         "last_updated": "2024-03",
         "modalities": {
           "input": [
@@ -7761,7 +7909,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2026-03-06",
+        "release_date": "2026-01-15",
         "last_updated": "2026-03-06",
         "modalities": {
           "input": [
@@ -7785,7 +7933,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2024-09-01",
+        "release_date": "2024-12-04",
         "last_updated": "2024-09",
         "modalities": {
           "input": [
@@ -7809,7 +7957,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2026-03-06",
+        "release_date": "2026-01-15",
         "last_updated": "2026-03-06",
         "modalities": {
           "input": [
@@ -7953,7 +8101,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2024-09-01",
+        "release_date": "2025-01-07",
         "last_updated": "2024-09",
         "modalities": {
           "input": [
@@ -7977,7 +8125,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2024-03-01",
+        "release_date": "2024-06-03",
         "last_updated": "2024-03",
         "modalities": {
           "input": [
@@ -8002,7 +8150,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-04",
-        "release_date": "2024-07-01",
+        "release_date": "2024-07-18",
         "last_updated": "2024-07-01",
         "modalities": {
           "input": [
@@ -8079,7 +8227,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-10",
-        "release_date": "2025-05-07",
+        "release_date": "2025-05-21",
         "last_updated": "2025-05-07",
         "modalities": {
           "input": [
@@ -8146,11 +8294,12 @@
         ],
         "tool_call": true,
         "temperature": true,
-        "release_date": "2026-05-21",
+        "release_date": "2026-04-29",
         "last_updated": "2026-05-21",
         "modalities": {
           "input": [
-            "text"
+            "text",
+            "image"
           ],
           "output": [
             "text"
@@ -8205,11 +8354,12 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-10",
-        "release_date": "2025-05-07",
+        "release_date": "2025-12-09",
         "last_updated": "2025-05-07",
         "modalities": {
           "input": [
-            "text"
+            "text",
+            "image"
           ],
           "output": [
             "text"
@@ -8234,7 +8384,7 @@
         "tool_call": false,
         "temperature": true,
         "knowledge": "2024-10",
-        "release_date": "2025-12-01",
+        "release_date": "2025-12-02",
         "last_updated": "2025-12-01",
         "modalities": {
           "input": [
@@ -8294,7 +8444,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-06",
-        "release_date": "2024-09-01",
+        "release_date": "2024-09-17",
         "last_updated": "2026-03-16",
         "modalities": {
           "input": [
@@ -8674,7 +8824,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2026-06-08",
+        "release_date": "2025-10-15",
         "last_updated": "2026-06-08",
         "modalities": {
           "input": [
@@ -8762,7 +8912,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2026-06-08",
+        "release_date": "2025-05-20",
         "last_updated": "2026-06-08",
         "modalities": {
           "input": [
@@ -8786,7 +8936,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2026-06-08",
+        "release_date": "2025-07-31",
         "last_updated": "2026-06-08",
         "modalities": {
           "input": [
@@ -8860,7 +9010,7 @@
         "tool_call": false,
         "temperature": true,
         "knowledge": "2025-01",
-        "release_date": "2025-03-20",
+        "release_date": "2025-08-26",
         "last_updated": "2025-08-26",
         "modalities": {
           "input": [
@@ -9117,7 +9267,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2026-06-08",
+        "release_date": "2025-10-15",
         "last_updated": "2026-06-08",
         "modalities": {
           "input": [
@@ -9204,8 +9354,8 @@
         "attachment": false,
         "reasoning": false,
         "tool_call": false,
-        "temperature": false,
-        "release_date": "2025-05-22",
+        "temperature": true,
+        "release_date": "2025-05-20",
         "last_updated": "2025-05-22",
         "modalities": {
           "input": [
@@ -9333,7 +9483,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2026-06-08",
+        "release_date": "2024-08-02",
         "last_updated": "2026-06-08",
         "modalities": {
           "input": [
@@ -9368,7 +9518,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-10",
-        "release_date": "2024-12-01",
+        "release_date": "2025-10-29",
         "last_updated": "2024-12-01",
         "modalities": {
           "input": [
@@ -9399,7 +9549,7 @@
         "tool_call": false,
         "temperature": true,
         "knowledge": "2021-09",
-        "release_date": "2023-09-28",
+        "release_date": "2023-09-18",
         "last_updated": "2023-03-01",
         "modalities": {
           "input": [
@@ -9605,7 +9755,7 @@
         "structured_output": false,
         "temperature": true,
         "knowledge": "2021-09",
-        "release_date": "2023-05-28",
+        "release_date": "2023-03-01",
         "last_updated": "2023-11-06",
         "modalities": {
           "input": [
@@ -9644,7 +9794,7 @@
         "structured_output": true,
         "temperature": true,
         "knowledge": "2024-10",
-        "release_date": "2025-08-07",
+        "release_date": "2025-10-06",
         "last_updated": "2025-10-06",
         "modalities": {
           "input": [
@@ -9653,8 +9803,7 @@
             "pdf"
           ],
           "output": [
-            "text",
-            "image"
+            "text"
           ]
         },
         "open_weights": false,
@@ -9688,7 +9837,7 @@
         "structured_output": true,
         "temperature": true,
         "knowledge": "2024-10",
-        "release_date": "2025-04-16",
+        "release_date": "2025-06-10",
         "last_updated": "2025-06-10",
         "modalities": {
           "input": [
@@ -10080,7 +10229,7 @@
         "structured_output": true,
         "temperature": true,
         "knowledge": "2025-08-31",
-        "release_date": "2026-02-24",
+        "release_date": "2026-02-05",
         "last_updated": "2026-02-05",
         "modalities": {
           "input": [
@@ -10486,7 +10635,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-10",
-        "release_date": "2024-06-26",
+        "release_date": "2025-06-26",
         "last_updated": "2024-06-26",
         "modalities": {
           "input": [
@@ -11549,7 +11698,7 @@
         "interleaved": true,
         "temperature": true,
         "knowledge": "2025-01",
-        "release_date": "2025-01-01",
+        "release_date": "2026-01-19",
         "last_updated": "2026-01-19",
         "modalities": {
           "input": [
@@ -11588,9 +11737,7 @@
         "last_updated": "2026-04-07",
         "modalities": {
           "input": [
-            "text",
-            "image",
-            "pdf"
+            "text"
           ],
           "output": [
             "text"
@@ -11710,6 +11857,35 @@
           "cache_read": 0.05
         }
       },
+      "zai/glm-5.2-fast": {
+        "id": "zai/glm-5.2-fast",
+        "name": "GLM 5.2 Fast",
+        "family": "glm",
+        "attachment": false,
+        "reasoning": true,
+        "tool_call": true,
+        "temperature": true,
+        "release_date": "2026-06-16",
+        "last_updated": "2026-06-16",
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": false,
+        "limit": {
+          "context": 1000000,
+          "output": 128000
+        },
+        "cost": {
+          "input": 3,
+          "output": 10.25,
+          "cache_read": 0.5
+        }
+      },
       "zai/glm-5v-turbo": {
         "id": "zai/glm-5v-turbo",
         "name": "GLM 5V Turbo",
@@ -11827,7 +12003,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
-        "release_date": "2026-03-13",
+        "release_date": "2026-01-19",
         "last_updated": "2026-01-19",
         "modalities": {
           "input": [
@@ -11924,7 +12100,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2026-01-28",
+        "release_date": "2026-02-13",
         "last_updated": "2026-01-28",
         "modalities": {
           "input": [
@@ -12007,7 +12183,8 @@
         "last_updated": "2025-09",
         "modalities": {
           "input": [
-            "text"
+            "text",
+            "image"
           ],
           "output": [
             "text"
@@ -12081,7 +12258,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2025-10-31",
+        "release_date": "2025-10-24",
         "last_updated": "2025-10-31",
         "modalities": {
           "input": [
@@ -12105,7 +12282,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2025-08-28",
+        "release_date": "2025-09-09",
         "last_updated": "2025-08-28",
         "modalities": {
           "input": [
@@ -12129,7 +12306,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2025-11-28",
+        "release_date": "2025-12-03",
         "last_updated": "2025-11-28",
         "modalities": {
           "input": [
@@ -12315,7 +12492,7 @@
         "tool_call": false,
         "temperature": true,
         "knowledge": "2024-10",
-        "release_date": "2024-12-01",
+        "release_date": "2025-12-15",
         "last_updated": "2025-12-15",
         "modalities": {
           "input": [
@@ -12378,7 +12555,7 @@
         "reasoning_options": [],
         "tool_call": false,
         "temperature": true,
-        "release_date": "2026-03-18",
+        "release_date": "2026-03-11",
         "last_updated": "2026-03-11",
         "modalities": {
           "input": [
@@ -12412,7 +12589,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-10",
-        "release_date": "2024-12-01",
+        "release_date": "2025-10-28",
         "last_updated": "2025-10-28",
         "modalities": {
           "input": [
@@ -12484,7 +12661,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-10",
-        "release_date": "2025-12-17",
+        "release_date": "2025-12-16",
         "last_updated": "2026-02-04",
         "modalities": {
           "input": [
@@ -12559,7 +12736,6 @@
         "modalities": {
           "input": [
             "text",
-            "image",
             "pdf"
           ],
           "output": [
@@ -12753,7 +12929,7 @@
         "interleaved": true,
         "temperature": true,
         "knowledge": "2025-03-31",
-        "release_date": "2024-11-24",
+        "release_date": "2025-11-24",
         "last_updated": "2025-11-24",
         "modalities": {
           "input": [
@@ -13307,7 +13483,9 @@
         "last_updated": "2026-04-29",
         "modalities": {
           "input": [
-            "text"
+            "text",
+            "image",
+            "pdf"
           ],
           "output": [
             "text"
@@ -13331,7 +13509,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2025-06-01",
+        "release_date": "2025-05-29",
         "last_updated": "2025-06",
         "modalities": {
           "input": [
@@ -13355,7 +13533,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2026-06-08",
+        "release_date": "2025-11-25",
         "last_updated": "2026-06-08",
         "modalities": {
           "input": [
@@ -13403,7 +13581,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2026-06-08",
+        "release_date": "2025-12-16",
         "last_updated": "2026-06-08",
         "modalities": {
           "input": [
@@ -13427,7 +13605,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2024-10-01",
+        "release_date": "2024-10-02",
         "last_updated": "2024-10",
         "modalities": {
           "input": [
@@ -13475,7 +13653,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2026-06-08",
+        "release_date": "2026-01-15",
         "last_updated": "2026-06-08",
         "modalities": {
           "input": [
@@ -13499,7 +13677,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2026-06-08",
+        "release_date": "2026-01-15",
         "last_updated": "2026-06-08",
         "modalities": {
           "input": [
@@ -13523,7 +13701,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2025-06-01",
+        "release_date": "2025-05-29",
         "last_updated": "2025-06",
         "modalities": {
           "input": [
@@ -13547,7 +13725,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2026-06-08",
+        "release_date": "2025-11-25",
         "last_updated": "2026-06-08",
         "modalities": {
           "input": [
@@ -13667,7 +13845,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2024-03-01",
+        "release_date": "2024-03-13",
         "last_updated": "2024-03",
         "modalities": {
           "input": [
@@ -13691,7 +13869,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2024-10-01",
+        "release_date": "2024-10-30",
         "last_updated": "2024-10",
         "modalities": {
           "input": [
@@ -13764,7 +13942,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-10",
-        "release_date": "2025-01-01",
+        "release_date": "2026-01-27",
         "last_updated": "2025-01",
         "modalities": {
           "input": [
@@ -13938,7 +14116,7 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2024-04-01",
+        "release_date": "2024-04-30",
         "last_updated": "2024-04",
         "modalities": {
           "input": [
@@ -13976,12 +14154,13 @@
         "tool_call": false,
         "temperature": true,
         "knowledge": "2024-10",
-        "release_date": "2024-12-01",
+        "release_date": "2025-12-02",
         "last_updated": "2024-12-01",
         "modalities": {
           "input": [
             "text",
-            "image"
+            "image",
+            "pdf"
           ],
           "output": [
             "text"
@@ -14101,7 +14280,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-09",
-        "release_date": "2025-09-24",
+        "release_date": "2025-09-23",
         "last_updated": "2025-09-24",
         "modalities": {
           "input": [
@@ -14210,7 +14389,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
-        "release_date": "2025-09-23",
+        "release_date": "2025-09-05",
         "last_updated": "2025-09-23",
         "modalities": {
           "input": [
@@ -14264,7 +14443,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
-        "release_date": "2025-09-12",
+        "release_date": "2025-09-11",
         "last_updated": "2025-09",
         "modalities": {
           "input": [
@@ -14303,7 +14482,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
-        "release_date": "2026-06-01",
+        "release_date": "2026-06-02",
         "last_updated": "2026-06-02",
         "modalities": {
           "input": [
@@ -14336,13 +14515,12 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
-        "release_date": "2025-09-24",
+        "release_date": "2025-09-23",
         "last_updated": "2025-09-24",
         "modalities": {
           "input": [
             "text",
-            "image",
-            "pdf"
+            "image"
           ],
           "output": [
             "text"
@@ -14370,8 +14548,7 @@
         "last_updated": "2026-05-21",
         "modalities": {
           "input": [
-            "text",
-            "pdf"
+            "text"
           ],
           "output": [
             "text"
@@ -14452,7 +14629,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-09",
-        "release_date": "2025-09-12",
+        "release_date": "2025-09-11",
         "last_updated": "2025-09",
         "modalities": {
           "input": [
@@ -14538,7 +14715,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
-        "release_date": "2025-04-01",
+        "release_date": "2025-07-22",
         "last_updated": "2025-04",
         "modalities": {
           "input": [
@@ -14569,7 +14746,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
-        "release_date": "2025-04-01",
+        "release_date": "2025-04-28",
         "last_updated": "2025-04",
         "modalities": {
           "input": [
@@ -14655,7 +14832,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-01",
-        "release_date": "2025-01",
+        "release_date": "2026-01-23",
         "last_updated": "2025-01",
         "modalities": {
           "input": [
@@ -14816,7 +14993,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
-        "release_date": "2025-04-01",
+        "release_date": "2025-04-28",
         "last_updated": "2025-04",
         "modalities": {
           "input": [
@@ -14845,7 +15022,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
-        "release_date": "2025-09-24",
+        "release_date": "2025-09-23",
         "last_updated": "2025-04",
         "modalities": {
           "input": [
@@ -14875,13 +15052,12 @@
         "reasoning": false,
         "tool_call": false,
         "temperature": true,
-        "release_date": "2025-09-24",
+        "release_date": "2025-09-23",
         "last_updated": "2026-05-01",
         "modalities": {
           "input": [
             "text",
-            "image",
-            "pdf"
+            "image"
           ],
           "output": [
             "text"
@@ -14906,7 +15082,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
-        "release_date": "2025-04-01",
+        "release_date": "2025-04-28",
         "last_updated": "2025-04",
         "modalities": {
           "input": [
@@ -14935,7 +15111,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
-        "release_date": "2025-04-01",
+        "release_date": "2025-04-28",
         "last_updated": "2025-04",
         "modalities": {
           "input": [
@@ -14967,8 +15143,7 @@
         "last_updated": "2026-04-24",
         "modalities": {
           "input": [
-            "text",
-            "pdf"
+            "text"
           ],
           "output": [
             "text"
@@ -14995,7 +15170,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
-        "release_date": "2025-04-01",
+        "release_date": "2025-07-31",
         "last_updated": "2025-04",
         "modalities": {
           "input": [
@@ -15057,7 +15232,7 @@
         "reasoning_options": [],
         "tool_call": false,
         "temperature": true,
-        "release_date": "2026-03-13",
+        "release_date": "2026-01-15",
         "last_updated": "2026-03-13",
         "modalities": {
           "input": [
@@ -15082,7 +15257,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-10",
-        "release_date": "2025-08-30",
+        "release_date": "2025-09-01",
         "last_updated": "2025-08-30",
         "modalities": {
           "input": [
@@ -15107,7 +15282,7 @@
         "tool_call": false,
         "temperature": true,
         "knowledge": "2023-12",
-        "release_date": "2024-09-18",
+        "release_date": "2024-09-25",
         "last_updated": "2024-09-18",
         "modalities": {
           "input": [
@@ -15254,7 +15429,7 @@
         "tool_call": false,
         "temperature": true,
         "knowledge": "2023-12",
-        "release_date": "2024-09-18",
+        "release_date": "2024-09-25",
         "last_updated": "2024-09-18",
         "modalities": {
           "input": [
@@ -15377,9 +15552,7 @@
         "last_updated": "2026-04-24",
         "modalities": {
           "input": [
-            "text",
-            "image",
-            "pdf"
+            "text"
           ],
           "output": [
             "text"
@@ -15470,8 +15643,7 @@
         "last_updated": "2026-04-24",
         "modalities": {
           "input": [
-            "text",
-            "pdf"
+            "text"
           ],
           "output": [
             "text"
@@ -15502,9 +15674,7 @@
         "last_updated": "2025-12-01",
         "modalities": {
           "input": [
-            "text",
-            "image",
-            "pdf"
+            "text"
           ],
           "output": [
             "text"
@@ -15568,9 +15738,7 @@
         "last_updated": "2025-12-01",
         "modalities": {
           "input": [
-            "text",
-            "image",
-            "pdf"
+            "text"
           ],
           "output": [
             "text"
@@ -15690,7 +15858,7 @@
         "interleaved": true,
         "temperature": true,
         "knowledge": "2024-10",
-        "release_date": "2025-10-27",
+        "release_date": "2025-12-23",
         "last_updated": "2025-12-23",
         "modalities": {
           "input": [
@@ -15853,7 +16021,7 @@
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-10",
-        "release_date": "2025-10-27",
+        "release_date": "2025-12-23",
         "last_updated": "2025-10-27",
         "modalities": {
           "input": [
@@ -15885,7 +16053,7 @@
         "tool_call": false,
         "temperature": true,
         "knowledge": "2024-10",
-        "release_date": "2025-10-24",
+        "release_date": "2025-11-09",
         "last_updated": "2025-10-24",
         "modalities": {
           "input": [
@@ -17946,7 +18114,7 @@
         "tool_call": true,
         "temperature": true,
         "release_date": "2026-06-01",
-        "last_updated": "2026-06-01",
+        "last_updated": "2026-06-25",
         "modalities": {
           "input": [
             "text",
@@ -17959,7 +18127,7 @@
         },
         "open_weights": true,
         "limit": {
-          "context": 512000,
+          "context": 1000000,
           "output": 128000
         },
         "cost": {
@@ -23881,6 +24049,18 @@
         "family": "gpt-mini",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -23943,6 +24123,18 @@
         "family": "gpt-nano",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -24090,6 +24282,11 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -24150,6 +24347,11 @@
         "family": "glm",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -24181,6 +24383,24 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024,
+            "max": 63999
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-03-31",
@@ -24242,6 +24462,17 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -24274,6 +24505,16 @@
         "family": "claude-haiku",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024,
+            "max": 63999
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-02-28",
@@ -24365,6 +24606,11 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -24394,6 +24640,14 @@
         "family": "gpt-pro",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -24425,6 +24679,7 @@
         "name": "grok-4.20-beta-0309-reasoning",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "release_date": "2026-03-16",
@@ -24600,6 +24855,16 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024,
+            "max": 31999
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-03-31",
@@ -24659,6 +24924,11 @@
         "family": "glm-flash",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -24688,6 +24958,11 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -24720,6 +24995,11 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -24778,6 +25058,16 @@
         "family": "claude-sonnet",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024,
+            "max": 63999
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-07-31",
@@ -24898,6 +25188,21 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ]
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2026-01-31",
@@ -24978,6 +25283,18 @@
         "family": "gpt-nano",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -25009,6 +25326,7 @@
         "name": "claude-opus-4-1-20250805-thinking",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-03",
@@ -25126,6 +25444,24 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024,
+            "max": 63999
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-03-31",
@@ -25157,6 +25493,16 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024,
+            "max": 31999
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-03-31",
@@ -25274,6 +25620,18 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -25332,6 +25690,7 @@
         "name": "claude-opus-4-6-thinking",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-05",
@@ -25363,6 +25722,16 @@
         "family": "claude-sonnet",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024,
+            "max": 63999
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-03-31",
@@ -25394,6 +25763,14 @@
         "family": "gpt-codex",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "medium"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -25425,6 +25802,14 @@
         "family": "gpt-codex",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "medium"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -25455,6 +25840,7 @@
         "name": "grok-4-fast-reasoning",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-06",
@@ -25515,6 +25901,7 @@
         "name": "claude-sonnet-4-5-20250929-thinking",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-03",
@@ -25689,6 +26076,11 @@
         "family": "glm",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -25720,6 +26112,16 @@
         "family": "claude-haiku",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024,
+            "max": 63999
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-02-28",
@@ -25751,6 +26153,18 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -25829,6 +26243,18 @@
         "family": "gpt-mini",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -25921,6 +26347,25 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "max"
+            ]
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024,
+            "max": 127999
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-05-31",
@@ -25980,6 +26425,16 @@
         "family": "claude-sonnet",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024,
+            "max": 63999
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-07-31",
@@ -26040,6 +26495,7 @@
         "name": "grok-4-1-fast-reasoning",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-06",
@@ -26098,6 +26554,7 @@
         "name": "gpt-5-thinking",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-10",
@@ -26128,6 +26585,17 @@
         "family": "gpt-mini",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -26192,6 +26660,11 @@
         "family": "glm",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -26227,6 +26700,16 @@
         "family": "gpt-pro",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": false,
         "temperature": false,
@@ -26275,6 +26758,11 @@
         "family": "glm-air",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -26459,6 +26947,17 @@
         "name": "grok-4.20-multi-agent-beta-0309",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "release_date": "2026-03-16",
@@ -26488,6 +26987,11 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -26719,6 +27223,7 @@
         "name": "claude-opus-4-5-20251101-thinking",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-03",
@@ -26779,6 +27284,11 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -26811,6 +27321,17 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -27355,6 +27876,7 @@
         "family": "deepseek-thinking",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-07",
@@ -27384,6 +27906,16 @@
         "family": "deepseek-flash",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -27417,6 +27949,7 @@
         "family": "minimax",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -27477,6 +28010,16 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "temperature": false,
         "knowledge": "2026-01-31",
@@ -27510,6 +28053,7 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -27542,6 +28086,7 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -27571,6 +28116,7 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -27600,6 +28146,7 @@
         "family": "minimax",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -27660,6 +28207,20 @@
         "family": "claude-sonnet",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-08-31",
@@ -27784,6 +28345,20 @@
         "family": "claude-sonnet",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-07-31",
@@ -27844,6 +28419,7 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -27935,6 +28511,16 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "temperature": false,
         "release_date": "2026-05-28",
@@ -28004,6 +28590,7 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -28037,6 +28624,16 @@
         "family": "deepseek-thinking",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -28069,6 +28666,7 @@
         "name": "Qwen3 Next 80B A3B Thinking",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -28203,6 +28801,7 @@
         "family": "minimax",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -28235,6 +28834,7 @@
         "family": "minimax",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -28400,6 +29000,20 @@
         "family": "claude-haiku",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-02-28",
@@ -28572,6 +29186,7 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -28601,6 +29216,20 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-03-31",
@@ -28689,6 +29318,7 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2026-01",
@@ -28751,6 +29381,7 @@
         "family": "glm-air",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -28780,6 +29411,7 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -28870,6 +29502,7 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -28932,6 +29565,7 @@
         "family": "deepseek",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-07",
@@ -28991,6 +29625,7 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2026-01",
@@ -29081,6 +29716,20 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-05-31",
@@ -39706,9 +40355,9 @@
           "output": 16384
         },
         "cost": {
-          "input": 0.85,
-          "output": 2.75,
-          "cache_read": 0.3
+          "input": 0.43,
+          "output": 1.75,
+          "cache_read": 0.08
         }
       },
       "openai-gpt-4o-2024-11-20": {
@@ -41231,7 +41880,7 @@
         "id": "qwen-3-7-max",
         "name": "Qwen 3.7 Max",
         "family": "qwen",
-        "attachment": false,
+        "attachment": true,
         "reasoning": true,
         "reasoning_options": [],
         "tool_call": true,
@@ -41240,7 +41889,9 @@
         "last_updated": "2026-06-11",
         "modalities": {
           "input": [
-            "text"
+            "text",
+            "image",
+            "video"
           ],
           "output": [
             "text"
@@ -48758,8 +49409,8 @@
           "output": 8192
         },
         "cost": {
-          "input": 0.44,
-          "output": 0.99
+          "input": 0.22,
+          "output": 0.83
         }
       },
       "mistralai/Mistral-Medium-3.5-128B": {
@@ -48862,6 +49513,44 @@
         "cost": {
           "input": 0.77,
           "output": 2.75
+        }
+      },
+      "zai-org/GLM-5.2": {
+        "id": "zai-org/GLM-5.2",
+        "name": "GLM-5.2",
+        "family": "glm",
+        "attachment": false,
+        "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "high"
+            ]
+          }
+        ],
+        "tool_call": true,
+        "structured_output": true,
+        "temperature": true,
+        "release_date": "2026-06-13",
+        "last_updated": "2026-06-13",
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": true,
+        "limit": {
+          "context": 524288,
+          "output": 32768
+        },
+        "cost": {
+          "input": 1.54,
+          "output": 4.84
         }
       }
     }
@@ -49580,6 +50269,7 @@
         "family": "phi",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-10",
@@ -49609,6 +50299,7 @@
         "family": "phi",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-10",
@@ -49638,6 +50329,7 @@
         "family": "phi",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-10",
@@ -49667,6 +50359,7 @@
         "family": "phi",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-10",
@@ -49696,6 +50389,7 @@
         "family": "phi",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-10",
@@ -49725,6 +50419,7 @@
         "family": "phi",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-10",
@@ -49754,6 +50449,7 @@
         "family": "mai",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-06",
@@ -49783,6 +50479,7 @@
         "family": "phi",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-10",
@@ -49812,6 +50509,7 @@
         "family": "phi",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-10",
@@ -49841,6 +50539,7 @@
         "family": "phi",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-10",
@@ -49871,6 +50570,7 @@
         "family": "phi",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-10",
@@ -49900,6 +50600,7 @@
         "family": "phi",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-10",
@@ -49931,6 +50632,7 @@
         "family": "phi",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-10",
@@ -49960,6 +50662,7 @@
         "family": "phi",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-10",
@@ -49989,6 +50692,7 @@
         "family": "phi",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-10",
@@ -50018,6 +50722,17 @@
         "family": "o",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": false,
         "temperature": false,
         "knowledge": "2024-04",
@@ -50048,6 +50763,17 @@
         "family": "o-mini",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": false,
         "temperature": false,
         "knowledge": "2023-10",
@@ -50077,6 +50803,7 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": false,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-10",
@@ -50108,6 +50835,17 @@
         "family": "o-mini",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": false,
         "temperature": false,
         "knowledge": "2024-04",
@@ -50138,6 +50876,7 @@
         "family": "o",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": false,
         "temperature": false,
         "knowledge": "2023-10",
@@ -50167,6 +50906,17 @@
         "family": "o-mini",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": false,
         "temperature": false,
         "knowledge": "2024-04",
@@ -50196,6 +50946,7 @@
         "family": "gpt-nano",
         "attachment": true,
         "reasoning": false,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-04",
@@ -50226,6 +50977,17 @@
         "family": "o",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": false,
         "temperature": false,
         "knowledge": "2023-10",
@@ -50256,6 +51018,7 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": false,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-04",
@@ -50286,6 +51049,7 @@
         "family": "gpt-mini",
         "attachment": true,
         "reasoning": false,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-04",
@@ -50316,6 +51080,7 @@
         "family": "gpt-mini",
         "attachment": true,
         "reasoning": false,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-10",
@@ -50347,6 +51112,7 @@
         "family": "mistral-small",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-09",
@@ -50377,6 +51143,7 @@
         "family": "mistral-nemo",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-03",
@@ -50406,6 +51173,7 @@
         "family": "mistral-medium",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-09",
@@ -50436,6 +51204,7 @@
         "family": "mistral-large",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-09",
@@ -50465,6 +51234,7 @@
         "family": "ministral",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-03",
@@ -50494,6 +51264,7 @@
         "family": "codestral",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-03",
@@ -50523,6 +51294,7 @@
         "family": "command-a",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-03",
@@ -50552,6 +51324,7 @@
         "family": "command-r",
         "attachment": false,
         "reasoning": false,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-03",
@@ -50581,6 +51354,7 @@
         "family": "command-r",
         "attachment": false,
         "reasoning": false,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-03",
@@ -50610,6 +51384,7 @@
         "family": "command-r",
         "attachment": false,
         "reasoning": false,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-03",
@@ -50639,6 +51414,7 @@
         "family": "command-r",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-03",
@@ -50668,6 +51444,7 @@
         "family": "llama",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-12",
@@ -50697,6 +51474,7 @@
         "family": "llama",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-12",
@@ -50728,6 +51506,7 @@
         "family": "llama",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-12",
@@ -50757,6 +51536,7 @@
         "family": "llama",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-12",
@@ -50787,6 +51567,7 @@
         "family": "llama",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-12",
@@ -50816,6 +51597,7 @@
         "family": "llama",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-12",
@@ -50845,6 +51627,7 @@
         "family": "llama",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-12",
@@ -50874,6 +51657,7 @@
         "family": "llama",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-12",
@@ -50905,6 +51689,7 @@
         "family": "llama",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-12",
@@ -50935,6 +51720,7 @@
         "family": "llama",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2023-12",
@@ -51269,6 +52055,46 @@
         "cost": {
           "input": 0.29,
           "output": 1.15
+        }
+      },
+      "glm-5.2-short": {
+        "id": "glm-5.2-short",
+        "name": "GLM 5.2 short",
+        "family": "glm",
+        "attachment": false,
+        "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
+        "tool_call": true,
+        "temperature": true,
+        "release_date": "2026-06-17",
+        "last_updated": "2026-06-17",
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": true,
+        "limit": {
+          "context": 200000,
+          "output": 200000
+        },
+        "cost": {
+          "input": 1.45,
+          "output": 4.5
         }
       },
       "moonshotai/Kimi-K2.6": {
@@ -54472,6 +55298,17 @@
         "family": "gemini-flash-lite",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -54508,6 +55345,13 @@
         "family": "gemini-pro",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "budget_tokens",
+            "min": 128,
+            "max": 32768
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -54559,6 +55403,16 @@
         "family": "gemini-flash",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "min": 0,
+            "max": 24576
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -54595,6 +55449,17 @@
         "family": "gemini-flash",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -54631,6 +55496,11 @@
         "family": "gemma",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -54657,6 +55527,16 @@
         "family": "gemini-pro",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -54708,6 +55588,17 @@
         "family": "gemini-flash-lite",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -54743,6 +55634,16 @@
         "family": "gemini-flash-lite",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "min": 512,
+            "max": 24576
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -54779,6 +55680,16 @@
         "family": "gemini-pro",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -54830,6 +55741,11 @@
         "family": "gemma",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -54856,6 +55772,15 @@
         "family": "gemini-pro",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -54907,6 +55832,17 @@
         "family": "gemini-flash",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -54943,6 +55879,17 @@
         "family": "gemini-flash",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -54979,6 +55926,17 @@
         "family": "gemini-flash-lite",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -55015,6 +55973,16 @@
         "family": "o",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -55048,6 +56016,17 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -55178,6 +56157,18 @@
         "family": "gpt-nano",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -55211,6 +56202,7 @@
         "family": "gpt-codex",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": false,
         "structured_output": true,
         "temperature": true,
@@ -55308,6 +56300,16 @@
         "family": "o-mini",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -55339,6 +56341,18 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -55372,6 +56386,7 @@
         "family": "gpt-codex",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -55404,6 +56419,7 @@
         "family": "gpt-codex",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -55500,6 +56516,16 @@
         "family": "o",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -55533,6 +56559,18 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -55599,6 +56637,18 @@
         "family": "gpt-mini",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -55681,6 +56731,17 @@
         "family": "gpt-mini",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -55747,6 +56808,17 @@
         "family": "gpt-nano",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -55813,6 +56885,17 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -55846,6 +56929,18 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -55912,6 +57007,11 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -55946,6 +57046,11 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -55977,6 +57082,11 @@
         "family": "glm-flash",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -56008,6 +57118,11 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -56042,6 +57157,11 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -56115,6 +57235,11 @@
         "family": "glm-air",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -56146,6 +57271,11 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -56179,6 +57309,11 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -56213,6 +57348,16 @@
         "family": "claude-haiku",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024,
+            "max": 63999
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-02-28",
@@ -56246,6 +57391,16 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024,
+            "max": 31999
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-03-31",
@@ -56279,6 +57434,21 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ]
+          }
+        ],
         "tool_call": true,
         "temperature": false,
         "knowledge": "2026-01-31",
@@ -56332,6 +57502,24 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024,
+            "max": 63999
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-03-31",
@@ -56405,6 +57593,16 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024,
+            "max": 31999
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-03-31",
@@ -56438,6 +57636,16 @@
         "family": "claude-sonnet",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024,
+            "max": 63999
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-03-31",
@@ -56471,6 +57679,25 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "max"
+            ]
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024,
+            "max": 127999
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-05-31",
@@ -56524,6 +57751,16 @@
         "family": "claude-sonnet",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024,
+            "max": 63999
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-07-31",
@@ -56557,6 +57794,25 @@
         "family": "claude-sonnet",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "max"
+            ]
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024,
+            "max": 63999
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-08-31",
@@ -56855,6 +58111,7 @@
         "family": "minimax",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "release_date": "2026-03-18",
@@ -56885,6 +58142,7 @@
         "family": "minimax",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "release_date": "2026-02-12",
@@ -56915,6 +58173,7 @@
         "family": "minimax",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "release_date": "2025-12-23",
@@ -56983,6 +58242,7 @@
         "family": "minimax",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "release_date": "2025-10-27",
@@ -57011,6 +58271,7 @@
         "family": "minimax",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "release_date": "2026-03-18",
@@ -57041,6 +58302,7 @@
         "family": "minimax",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "release_date": "2026-02-13",
@@ -65378,6 +66640,16 @@
         "family": "o",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -65411,6 +66683,17 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -65444,6 +66727,16 @@
         "family": "o-mini",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -65476,6 +66769,18 @@
         "family": "gpt-nano",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -65509,6 +66814,16 @@
         "family": "o-mini",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -65540,6 +66855,18 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -65605,6 +66932,16 @@
         "family": "gpt-oss",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -65634,6 +66971,18 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -65684,6 +67033,18 @@
         "family": "gpt-mini",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -65750,6 +67111,17 @@
         "family": "gpt-mini",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -65816,6 +67188,17 @@
         "family": "gpt-nano",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -65877,6 +67260,17 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -65910,6 +67304,18 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -65960,6 +67366,15 @@
         "family": "claude-sonnet",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-07-31",
@@ -65993,6 +67408,11 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "temperature": false,
         "knowledge": "2026-01-31",
@@ -66026,6 +67446,15 @@
         "family": "claude-haiku",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-02-28",
@@ -66059,6 +67488,15 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-05-31",
@@ -66092,6 +67530,15 @@
         "family": "claude-sonnet",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-08-31",
@@ -66677,9 +68124,9 @@
           "output": 131072
         },
         "cost": {
-          "input": 0.6,
-          "output": 2.2,
-          "cache_read": 0.11,
+          "input": 0.38,
+          "output": 1.98,
+          "cache_read": 0.19,
           "cache_write": 0
         }
       },
@@ -66744,8 +68191,8 @@
           "output": 8192
         },
         "cost": {
-          "input": 0.2,
-          "output": 0.6
+          "input": 0.09,
+          "output": 0.58
         }
       },
       "llama-3-70b-instruct": {
@@ -66802,8 +68249,8 @@
           "output": 65536
         },
         "cost": {
-          "input": 0.1,
-          "output": 0.3
+          "input": 0.07,
+          "output": 0.27
         }
       },
       "seed-1-8-251228": {
@@ -66862,8 +68309,8 @@
           "output": 16384
         },
         "cost": {
-          "input": 1,
-          "output": 3,
+          "input": 0.574,
+          "output": 2.294,
           "cache_read": 0.5
         }
       },
@@ -67102,8 +68549,8 @@
           "output": 32768
         },
         "cost": {
-          "input": 0.5,
-          "output": 2
+          "input": 0.15,
+          "output": 1.5
         }
       },
       "qwen3-vl-8b-instruct": {
@@ -67498,9 +68945,9 @@
           "output": 65536
         },
         "cost": {
-          "input": 2.5,
-          "output": 7.5,
-          "cache_read": 0.5,
+          "input": 1.25,
+          "output": 3.75,
+          "cache_read": 0.125,
           "cache_write": 3.125
         }
       },
@@ -67752,8 +69199,8 @@
           "output": 65536
         },
         "cost": {
-          "input": 3,
-          "output": 15,
+          "input": 0.845,
+          "output": 3.38,
           "cache_read": 0.6,
           "cache_write": 3.75
         }
@@ -68034,8 +69481,8 @@
           "output": 2048
         },
         "cost": {
-          "input": 0.17,
-          "output": 0.66
+          "input": 0.18,
+          "output": 0.59
         }
       },
       "llama-3.3-70b-instruct": {
@@ -68289,9 +69736,9 @@
           "output": 131072
         },
         "cost": {
-          "input": 1.4,
-          "output": 4.4,
-          "cache_read": 0.26,
+          "input": 0.931,
+          "output": 2.93,
+          "cache_read": 0.173,
           "cache_write": 0
         }
       },
@@ -68354,8 +69801,8 @@
           "output": 32768
         },
         "cost": {
-          "input": 0.5,
-          "output": 6
+          "input": 0.15,
+          "output": 1.2
         }
       },
       "glm-4.6": {
@@ -68383,8 +69830,8 @@
           "output": 131072
         },
         "cost": {
-          "input": 0.6,
-          "output": 2.2,
+          "input": 0.431,
+          "output": 2.007,
           "cache_read": 0.11,
           "cache_write": 0
         }
@@ -68478,8 +69925,8 @@
           "output": 262144
         },
         "cost": {
-          "input": 0.6,
-          "output": 2.5,
+          "input": 0.574,
+          "output": 2.294,
           "cache_read": 0.15
         }
       },
@@ -68761,9 +70208,9 @@
           "output": 131072
         },
         "cost": {
-          "input": 1.4,
-          "output": 4.4,
-          "cache_read": 0.26,
+          "input": 1.26,
+          "output": 3.96,
+          "cache_read": 0.234,
           "cache_write": 0
         }
       },
@@ -69587,9 +71034,9 @@
           "output": 262144
         },
         "cost": {
-          "input": 0.6,
-          "output": 3,
-          "cache_read": 0.1
+          "input": 0.405,
+          "output": 1.98,
+          "cache_read": 0.225
         }
       },
       "seed-1-6-250915": {
@@ -69741,8 +71188,8 @@
           "output": 32766
         },
         "cost": {
-          "input": 0.15,
-          "output": 0.75
+          "input": 0.05,
+          "output": 0.25
         }
       },
       "qwen-vl-max": {
@@ -70335,9 +71782,9 @@
           "output": 262144
         },
         "cost": {
-          "input": 0.95,
-          "output": 4,
-          "cache_read": 0.16
+          "input": 0.5,
+          "output": 2.8,
+          "cache_read": 0.1
         }
       },
       "gpt-4.1": {
@@ -70513,8 +71960,8 @@
           "output": 2048
         },
         "cost": {
-          "input": 0.24,
-          "output": 0.97
+          "input": 0.27,
+          "output": 0.85
         }
       },
       "qwen3-coder-480b-a35b-instruct": {
@@ -70542,8 +71989,8 @@
           "output": 65536
         },
         "cost": {
-          "input": 0.4,
-          "output": 1.8
+          "input": 0.3,
+          "output": 1.3
         }
       },
       "devstral-2512": {
@@ -71195,9 +72642,9 @@
           "output": 98304
         },
         "cost": {
-          "input": 0.2,
-          "output": 1.1,
-          "cache_read": 0.03,
+          "input": 0.13,
+          "output": 0.85,
+          "cache_read": 0.025,
           "cache_write": 0
         }
       },
@@ -71245,6 +72692,36 @@
           "input": 1.9,
           "output": 8,
           "cache_read": 0.38
+        }
+      },
+      "mistral-ocr-latest": {
+        "id": "mistral-ocr-latest",
+        "name": "Mistral OCR",
+        "family": "mistral",
+        "attachment": true,
+        "reasoning": false,
+        "tool_call": true,
+        "structured_output": false,
+        "temperature": true,
+        "release_date": "2025-03-06",
+        "last_updated": "2025-03-06",
+        "modalities": {
+          "input": [
+            "text",
+            "image"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": false,
+        "limit": {
+          "context": 0,
+          "output": 0
+        },
+        "cost": {
+          "input": 0,
+          "output": 0
         }
       },
       "claude-sonnet-4-6": {
@@ -71372,8 +72849,8 @@
           "output": 8192
         },
         "cost": {
-          "input": 0.5,
-          "output": 2
+          "input": 0.3,
+          "output": 1.5
         }
       },
       "mimo-v2-pro": {
@@ -71648,8 +73125,8 @@
           "output": 32766
         },
         "cost": {
-          "input": 0.1,
-          "output": 0.5
+          "input": 0.04,
+          "output": 0.15
         }
       },
       "glm-4.5-flash": {
@@ -71710,9 +73187,9 @@
           "output": 131072
         },
         "cost": {
-          "input": 1,
-          "output": 3.2,
-          "cache_read": 0.2,
+          "input": 0.72,
+          "output": 2.3,
+          "cache_read": 0.144,
           "cache_write": 0
         }
       },
@@ -71920,9 +73397,9 @@
           "output": 16384
         },
         "cost": {
-          "input": 0.28,
-          "output": 0.42,
-          "cache_read": 0.028
+          "input": 0.26,
+          "output": 0.38,
+          "cache_read": 0.13
         }
       },
       "qwen3.6-max-preview": {
@@ -87545,23 +89022,23 @@
     "name": "evroc",
     "doc": "https://docs.evroc.com/products/think/overview.html",
     "models": {
-      "moonshotai/Kimi-K2.5": {
-        "id": "moonshotai/Kimi-K2.5",
-        "name": "Kimi K2.5",
+      "moonshotai/Kimi-K2.6": {
+        "id": "moonshotai/Kimi-K2.6",
+        "name": "Kimi K2.6",
         "family": "kimi-k2",
-        "attachment": false,
+        "attachment": true,
         "reasoning": true,
         "reasoning_options": [
           {
-            "type": "toggle"
+            "type": "budget_tokens"
           }
         ],
         "tool_call": true,
-        "interleaved": {
-          "field": "reasoning_content"
-        },
-        "release_date": "2026-01-27",
-        "last_updated": "2026-01-27",
+        "structured_output": true,
+        "temperature": true,
+        "knowledge": "2025-01",
+        "release_date": "2026-04-21",
+        "last_updated": "2026-04-21",
         "modalities": {
           "input": [
             "text",
@@ -87578,19 +89055,26 @@
           "output": 262144
         },
         "cost": {
-          "input": 1.47,
-          "output": 5.9
+          "input": 1.4375,
+          "output": 5.75
         }
       },
-      "microsoft/Phi-4-multimodal-instruct": {
-        "id": "microsoft/Phi-4-multimodal-instruct",
-        "name": "Phi-4 15B",
-        "family": "phi",
-        "attachment": false,
-        "reasoning": false,
-        "tool_call": false,
-        "release_date": "2025-01-01",
-        "last_updated": "2025-01-01",
+      "google/gemma-4-26B-A4B-it": {
+        "id": "google/gemma-4-26B-A4B-it",
+        "name": "Gemma 4 26B A4B IT",
+        "family": "gemma",
+        "attachment": true,
+        "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
+        "tool_call": true,
+        "structured_output": true,
+        "temperature": true,
+        "release_date": "2026-04-02",
+        "last_updated": "2026-04-02",
         "modalities": {
           "input": [
             "text",
@@ -87602,12 +89086,12 @@
         },
         "open_weights": true,
         "limit": {
-          "context": 32000,
-          "output": 32000
+          "context": 262144,
+          "output": 32768
         },
         "cost": {
-          "input": 0.24,
-          "output": 0.47
+          "input": 0.144,
+          "output": 0.575
         }
       },
       "Qwen/Qwen3-Embedding-8B": {
@@ -87633,17 +89117,17 @@
           "output": 4096
         },
         "cost": {
-          "input": 0.12,
-          "output": 0.12
+          "input": 0.115,
+          "output": 0.115
         }
       },
-      "Qwen/Qwen3-30B-A3B-Instruct-2507-FP8": {
-        "id": "Qwen/Qwen3-30B-A3B-Instruct-2507-FP8",
-        "name": "Qwen3 30B 2507",
+      "Qwen/Qwen3-Reranker-4B": {
+        "id": "Qwen/Qwen3-Reranker-4B",
+        "name": "Qwen3 Reranker 4B",
         "family": "qwen",
         "attachment": false,
         "reasoning": false,
-        "tool_call": true,
+        "tool_call": false,
         "release_date": "2025-07-30",
         "last_updated": "2025-07-30",
         "modalities": {
@@ -87656,12 +89140,49 @@
         },
         "open_weights": true,
         "limit": {
-          "context": 64000,
-          "output": 64000
+          "context": 32000,
+          "output": 4096
         },
         "cost": {
-          "input": 0.35,
-          "output": 1.42
+          "input": 0.0575,
+          "output": 0
+        }
+      },
+      "Qwen/Qwen3.6-35B-A3B-FP8": {
+        "id": "Qwen/Qwen3.6-35B-A3B-FP8",
+        "name": "Qwen3.6 35B-A3B",
+        "family": "qwen",
+        "attachment": true,
+        "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
+        "tool_call": true,
+        "structured_output": true,
+        "temperature": true,
+        "release_date": "2026-04-17",
+        "last_updated": "2026-04-17",
+        "modalities": {
+          "input": [
+            "text",
+            "image",
+            "video",
+            "audio"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": true,
+        "limit": {
+          "context": 262144,
+          "output": 65536
+        },
+        "cost": {
+          "input": 0.345,
+          "output": 1.38
         }
       },
       "Qwen/Qwen3-VL-30B-A3B-Instruct": {
@@ -87689,8 +89210,8 @@
           "output": 100000
         },
         "cost": {
-          "input": 0.24,
-          "output": 0.94
+          "input": 0.23,
+          "output": 0.92
         }
       },
       "openai/gpt-oss-120b": {
@@ -87726,8 +89247,36 @@
           "output": 65536
         },
         "cost": {
-          "input": 0.24,
-          "output": 0.94
+          "input": 0.23,
+          "output": 0.92
+        }
+      },
+      "openai/whisper-large-v3-turbo": {
+        "id": "openai/whisper-large-v3-turbo",
+        "name": "Whisper Large v3 Turbo",
+        "family": "whisper",
+        "attachment": false,
+        "reasoning": false,
+        "tool_call": false,
+        "release_date": "2024-10-01",
+        "last_updated": "2024-10-01",
+        "modalities": {
+          "input": [
+            "audio"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": true,
+        "limit": {
+          "context": 448,
+          "output": 448
+        },
+        "cost": {
+          "input": 0.0023,
+          "output": 0.0023,
+          "output_audio": 2.3
         }
       },
       "openai/whisper-large-v3": {
@@ -87753,23 +89302,35 @@
           "output": 4096
         },
         "cost": {
-          "input": 0.00236,
-          "output": 0.00236,
-          "output_audio": 2.36
+          "input": 0.0023,
+          "output": 0.0023,
+          "output_audio": 2.3
         }
       },
-      "mistralai/devstral-small-2-24b-instruct-2512": {
-        "id": "mistralai/devstral-small-2-24b-instruct-2512",
-        "name": "Devstral Small 2 24B Instruct 2512",
-        "family": "devstral",
-        "attachment": false,
-        "reasoning": false,
+      "mistralai/Mistral-Medium-3.5-128B": {
+        "id": "mistralai/Mistral-Medium-3.5-128B",
+        "name": "Mistral Medium 3.5",
+        "family": "mistral-medium",
+        "attachment": true,
+        "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
-        "release_date": "2025-12-01",
-        "last_updated": "2025-12-01",
+        "structured_output": true,
+        "temperature": true,
+        "release_date": "2026-04-29",
+        "last_updated": "2026-04-29",
         "modalities": {
           "input": [
-            "text"
+            "text",
+            "image"
           ],
           "output": [
             "text"
@@ -87777,39 +89338,12 @@
         },
         "open_weights": true,
         "limit": {
-          "context": 32768,
-          "output": 32768
+          "context": 262144,
+          "output": 262144
         },
         "cost": {
-          "input": 0.12,
-          "output": 0.47
-        }
-      },
-      "mistralai/Magistral-Small-2509": {
-        "id": "mistralai/Magistral-Small-2509",
-        "name": "Magistral Small 1.2 24B",
-        "family": "magistral-small",
-        "attachment": false,
-        "reasoning": false,
-        "tool_call": false,
-        "release_date": "2025-06-01",
-        "last_updated": "2025-06-01",
-        "modalities": {
-          "input": [
-            "text"
-          ],
-          "output": [
-            "text"
-          ]
-        },
-        "open_weights": true,
-        "limit": {
-          "context": 131072,
-          "output": 131072
-        },
-        "cost": {
-          "input": 0.59,
-          "output": 2.36
+          "input": 1.725,
+          "output": 6.9
         }
       },
       "mistralai/Voxtral-Small-24B-2507": {
@@ -87836,20 +89370,22 @@
           "output": 32000
         },
         "cost": {
-          "input": 0.00236,
-          "output": 0.00236,
-          "output_audio": 2.36
+          "input": 0.0023,
+          "output": 0.0023,
+          "output_audio": 2.3
         }
       },
       "nvidia/Llama-3.3-70B-Instruct-FP8": {
         "id": "nvidia/Llama-3.3-70B-Instruct-FP8",
-        "name": "Llama 3.3 70B",
+        "name": "Llama-3.3-70B-Instruct",
         "family": "llama",
-        "attachment": false,
+        "attachment": true,
         "reasoning": false,
-        "tool_call": false,
-        "release_date": "2024-12-01",
-        "last_updated": "2024-12-01",
+        "tool_call": true,
+        "temperature": true,
+        "knowledge": "2023-12",
+        "release_date": "2024-12-06",
+        "last_updated": "2024-12-06",
         "modalities": {
           "input": [
             "text"
@@ -87860,12 +89396,51 @@
         },
         "open_weights": true,
         "limit": {
-          "context": 131072,
-          "output": 32768
+          "context": 128000,
+          "output": 4096
         },
         "cost": {
-          "input": 1.18,
-          "output": 1.18
+          "input": 1.15,
+          "output": 1.15
+        }
+      },
+      "evroc/roc": {
+        "id": "evroc/roc",
+        "name": "roc",
+        "attachment": true,
+        "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "budget_tokens"
+          }
+        ],
+        "tool_call": true,
+        "interleaved": {
+          "field": "reasoning_content"
+        },
+        "structured_output": true,
+        "temperature": true,
+        "knowledge": "2026-01",
+        "release_date": "2026-06-06",
+        "last_updated": "2026-06-06",
+        "modalities": {
+          "input": [
+            "text",
+            "image",
+            "video"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": false,
+        "limit": {
+          "context": 262144,
+          "output": 262144
+        },
+        "cost": {
+          "input": 2.875,
+          "output": 11.516
         }
       },
       "KBLab/kb-whisper-large": {
@@ -87891,9 +89466,9 @@
           "output": 448
         },
         "cost": {
-          "input": 0.00236,
-          "output": 0.00236,
-          "output_audio": 2.36
+          "input": 0.0023,
+          "output": 0.0023,
+          "output_audio": 2.3
         }
       },
       "intfloat/multilingual-e5-large-instruct": {
@@ -87919,8 +89494,8 @@
           "output": 512
         },
         "cost": {
-          "input": 0.12,
-          "output": 0.12
+          "input": 0.114,
+          "output": 0.114
         }
       }
     }
@@ -91165,6 +92740,11 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -91336,6 +92916,11 @@
         "family": "glm-free",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -91779,6 +93364,11 @@
         "family": "kimi-free",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -91815,6 +93405,11 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -91894,6 +93489,11 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -91925,6 +93525,7 @@
         "family": "kimi-thinking",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -92069,6 +93670,18 @@
         "family": "gpt-nano",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -92202,6 +93815,16 @@
         "family": "gpt-codex",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -92238,6 +93861,17 @@
         "family": "gpt-codex-spark",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -92273,6 +93907,17 @@
         "family": "gpt-codex",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -92468,6 +94113,18 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -92504,6 +94161,17 @@
         "family": "gpt-codex",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -92692,6 +94360,16 @@
         "family": "gpt-codex",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -92728,6 +94406,11 @@
         "family": "kimi-k2",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -92855,6 +94538,18 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -92908,6 +94603,18 @@
         "family": "gpt-mini",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -92980,6 +94687,11 @@
         "family": "kimi-k2",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -93102,6 +94814,17 @@
         "family": "gpt-nano",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -93138,6 +94861,16 @@
         "family": "gpt-pro",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": false,
         "temperature": false,
@@ -93394,6 +95127,16 @@
         "family": "gpt-pro",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": false,
         "temperature": false,
@@ -93476,6 +95219,11 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -93547,6 +95295,16 @@
         "family": "gpt-codex",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -93583,6 +95341,17 @@
         "family": "gpt-codex",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -93620,6 +95389,11 @@
         "family": "glm-free",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -93766,6 +95540,17 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -95251,6 +97036,47 @@
           "cache_read": 0.41
         }
       },
+      "step-3.7-flash": {
+        "id": "step-3.7-flash",
+        "name": "Step 3.7 Flash",
+        "attachment": true,
+        "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
+        "tool_call": true,
+        "temperature": true,
+        "knowledge": "2026-01-01",
+        "release_date": "2026-05-29",
+        "last_updated": "2026-05-29",
+        "modalities": {
+          "input": [
+            "text",
+            "image"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": true,
+        "limit": {
+          "context": 256000,
+          "input": 256000,
+          "output": 256000
+        },
+        "cost": {
+          "input": 0.19,
+          "output": 1.13,
+          "cache_read": 0.04
+        }
+      },
       "step-3.5-flash-2603": {
         "id": "step-3.5-flash-2603",
         "name": "Step 3.5 Flash 2603",
@@ -95649,7 +97475,7 @@
         "tool_call": true,
         "temperature": true,
         "release_date": "2026-06-01",
-        "last_updated": "2026-06-01",
+        "last_updated": "2026-06-25",
         "modalities": {
           "input": [
             "text",
@@ -95662,13 +97488,29 @@
         },
         "open_weights": true,
         "limit": {
-          "context": 512000,
+          "context": 1000000,
           "output": 128000
         },
         "cost": {
-          "input": 0.6,
-          "output": 2.4,
-          "cache_read": 0.12
+          "input": 0.3,
+          "output": 1.2,
+          "cache_read": 0.06,
+          "tiers": [
+            {
+              "input": 0.6,
+              "output": 2.4,
+              "cache_read": 0.12,
+              "tier": {
+                "type": "context",
+                "size": 512000
+              }
+            }
+          ],
+          "context_over_200k": {
+            "input": 0.6,
+            "output": 2.4,
+            "cache_read": 0.12
+          }
         }
       },
       "MiniMax-M2.7": {
@@ -123372,6 +125214,16 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "temperature": false,
         "knowledge": "2026-01-31",
@@ -123652,6 +125504,12 @@
         "family": "claude-haiku",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "budget_tokens",
+            "min": 1024
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-02-28",
@@ -123685,6 +125543,20 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-05-31",
@@ -123784,6 +125656,20 @@
         "family": "claude-sonnet",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-08-31",
@@ -124682,7 +126568,8 @@
         },
         "cost": {
           "input": 0.6,
-          "output": 2.5
+          "output": 2.5,
+          "cache_read": 0.6
         }
       },
       "moonshotai/kimi-k2.5": {
@@ -124713,11 +126600,12 @@
         "open_weights": true,
         "limit": {
           "context": 256000,
-          "output": 262144
+          "output": 256000
         },
         "cost": {
-          "input": 0.375,
-          "output": 2.025
+          "input": 0,
+          "output": 0,
+          "cache_read": 0
         }
       },
       "moonshotai/kimi-k2.6": {
@@ -124747,13 +126635,13 @@
         },
         "open_weights": true,
         "limit": {
-          "context": 262144,
-          "output": 262144
+          "context": 256000,
+          "output": 256000
         },
         "cost": {
-          "input": 0.66,
-          "output": 3.41,
-          "cache_read": 0.144
+          "input": 0,
+          "output": 0,
+          "cache_read": 0
         }
       },
       "moonshotai/kimi-k2-0905": {
@@ -124920,8 +126808,8 @@
         },
         "open_weights": false,
         "limit": {
-          "context": 65536,
-          "output": 65536
+          "context": 131072,
+          "output": 32768
         },
         "cost": {
           "input": 0.5,
@@ -125375,7 +127263,7 @@
         "open_weights": false,
         "limit": {
           "context": 32768,
-          "output": 8192
+          "output": 32768
         },
         "cost": {
           "input": 0.3,
@@ -126600,13 +128488,12 @@
         },
         "open_weights": true,
         "limit": {
-          "context": 202752,
-          "output": 131072
+          "context": 200000,
+          "output": 128000
         },
         "cost": {
-          "input": 0.4,
-          "output": 1.75,
-          "cache_read": 0.08
+          "input": 0,
+          "output": 0
         }
       },
       "z-ai/glm-4.5v": {
@@ -126707,13 +128594,13 @@
         },
         "open_weights": true,
         "limit": {
-          "context": 202752,
-          "output": 65535
+          "context": 200000,
+          "output": 128000
         },
         "cost": {
-          "input": 0.98,
-          "output": 3.08,
-          "cache_read": 0.49
+          "input": 0,
+          "output": 0,
+          "cache_read": 0
         }
       },
       "z-ai/glm-4.6": {
@@ -126773,13 +128660,13 @@
         },
         "open_weights": true,
         "limit": {
-          "context": 1048576,
-          "output": 32768
+          "context": 1024000,
+          "output": 128000
         },
         "cost": {
-          "input": 0.95,
-          "output": 3,
-          "cache_read": 0.18
+          "input": 0,
+          "output": 0,
+          "cache_read": 0
         }
       },
       "z-ai/glm-4.6v": {
@@ -126944,13 +128831,13 @@
         },
         "open_weights": true,
         "limit": {
-          "context": 202752,
-          "output": 16384
+          "context": 198000,
+          "output": 128000
         },
         "cost": {
-          "input": 0.6,
-          "output": 1.92,
-          "cache_read": 0.12
+          "input": 0,
+          "output": 0,
+          "cache_read": 0
         }
       },
       "z-ai/glm-5-turbo": {
@@ -130308,6 +132195,36 @@
           "output": 2
         }
       },
+      "sakana/fugu-ultra": {
+        "id": "sakana/fugu-ultra",
+        "name": "Fugu Ultra",
+        "attachment": true,
+        "reasoning": true,
+        "tool_call": true,
+        "structured_output": true,
+        "temperature": false,
+        "release_date": "2026-06-24",
+        "last_updated": "2026-06-24",
+        "modalities": {
+          "input": [
+            "text",
+            "image"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": false,
+        "limit": {
+          "context": 1000000,
+          "output": 128000
+        },
+        "cost": {
+          "input": 5,
+          "output": 30,
+          "cache_read": 0.5
+        }
+      },
       "anthracite-org/magnum-v4-72b": {
         "id": "anthracite-org/magnum-v4-72b",
         "name": "Magnum v4 72B",
@@ -130737,13 +132654,12 @@
         },
         "open_weights": true,
         "limit": {
-          "context": 1048576,
+          "context": 32000,
           "output": 131072
         },
         "cost": {
-          "input": 0.14,
-          "output": 0.28,
-          "cache_read": 0.0028
+          "input": 0.105,
+          "output": 0.28
         }
       },
       "xiaomi/mimo-v2.5-pro": {
@@ -132088,13 +134004,13 @@
         },
         "open_weights": false,
         "limit": {
-          "context": 262144,
-          "output": 262144
+          "context": 256000,
+          "output": 256000
         },
         "cost": {
-          "input": 0.66,
-          "output": 3.41,
-          "cache_read": 0.144
+          "input": 0,
+          "output": 0,
+          "cache_read": 0
         }
       },
       "relace/relace-search": {
@@ -133318,8 +135234,8 @@
           "output": 32000
         },
         "cost": {
-          "input": 0.04815,
-          "output": 0.19305
+          "input": 0,
+          "output": 0
         }
       },
       "qwen/qwen-2.5-coder-32b-instruct": {
@@ -133885,13 +135801,13 @@
         },
         "open_weights": true,
         "limit": {
-          "context": 262144,
-          "output": 262144
+          "context": 256000,
+          "output": 64000
         },
         "cost": {
-          "input": 0.11,
-          "output": 0.8,
-          "cache_read": 0.07
+          "input": 0,
+          "output": 0,
+          "cache_read": 0
         }
       },
       "qwen/qwen3.6-27b": {
@@ -133959,11 +135875,12 @@
         "open_weights": true,
         "limit": {
           "context": 262144,
-          "output": 262144
+          "output": 81920
         },
         "cost": {
           "input": 0.14,
-          "output": 1
+          "output": 1,
+          "cache_read": 0.05
         }
       },
       "qwen/qwen3.5-9b": {
@@ -134030,12 +135947,13 @@
         },
         "open_weights": true,
         "limit": {
-          "context": 131072,
-          "output": 65536
+          "context": 256000,
+          "output": 64000
         },
         "cost": {
-          "input": 0.385,
-          "output": 2.45
+          "input": 0,
+          "output": 0,
+          "cache_read": 0
         }
       },
       "qwen/qwen3-vl-30b-a3b-instruct": {
@@ -134889,13 +136807,12 @@
         },
         "open_weights": true,
         "limit": {
-          "context": 163840,
-          "output": 32768
+          "context": 128000,
+          "output": 32000
         },
         "cost": {
-          "input": 0.5,
-          "output": 2.15,
-          "cache_read": 0.35
+          "input": 0,
+          "output": 0
         }
       },
       "deepseek/deepseek-v4-flash": {
@@ -134935,13 +136852,13 @@
         },
         "open_weights": true,
         "limit": {
-          "context": 1000000,
-          "output": 65536
+          "context": 1024000,
+          "output": 384000
         },
         "cost": {
-          "input": 0.09,
-          "output": 0.18,
-          "cache_read": 0.02
+          "input": 0,
+          "output": 0,
+          "cache_read": 0
         }
       },
       "deepseek/deepseek-v3.1-terminus": {
@@ -134971,13 +136888,12 @@
         },
         "open_weights": true,
         "limit": {
-          "context": 163840,
-          "output": 32768
+          "context": 128000,
+          "output": 32000
         },
         "cost": {
-          "input": 0.27,
-          "output": 0.95,
-          "cache_read": 0.13
+          "input": 0,
+          "output": 0
         }
       },
       "deepseek/deepseek-r1-distill-llama-70b": {
@@ -135048,13 +136964,13 @@
         },
         "open_weights": true,
         "limit": {
-          "context": 1048576,
+          "context": 1024000,
           "output": 384000
         },
         "cost": {
-          "input": 0.435,
-          "output": 0.87,
-          "cache_read": 0.003625
+          "input": 0,
+          "output": 0,
+          "cache_read": 0
         }
       },
       "deepseek/deepseek-r1": {
@@ -135180,8 +137096,8 @@
           "output": 16000
         },
         "cost": {
-          "input": 0.2002,
-          "output": 0.8001
+          "input": 0,
+          "output": 0
         }
       },
       "deepseek/deepseek-v3.2": {
@@ -135215,8 +137131,9 @@
           "output": 64000
         },
         "cost": {
-          "input": 0.2288,
-          "output": 0.3432
+          "input": 0,
+          "output": 0,
+          "cache_read": 0
         }
       },
       "deepseek/deepseek-chat-v3.1": {
@@ -135280,13 +137197,13 @@
         },
         "open_weights": true,
         "limit": {
-          "context": 196608,
-          "output": 196608
+          "context": 200000,
+          "output": 128000
         },
         "cost": {
-          "input": 0.15,
-          "output": 0.9,
-          "cache_read": 0.05
+          "input": 0,
+          "output": 0,
+          "cache_read": 0
         }
       },
       "minimax/minimax-m2.1": {
@@ -135537,9 +137454,9 @@
           "output": 80000
         },
         "cost": {
-          "input": 0.3,
-          "output": 1.2,
-          "cache_read": 0.06
+          "input": 0,
+          "output": 0,
+          "cache_read": 0
         }
       },
       "nousresearch/hermes-3-llama-3.1-405b:free": {
@@ -135779,6 +137696,7 @@
         "family": "gpt-pro",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -135808,7 +137726,18 @@
         "name": "gemini-2.5-pro",
         "family": "gemini-pro",
         "attachment": true,
-        "reasoning": false,
+        "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -135871,6 +137800,7 @@
         "family": "gpt-pro",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -135900,7 +137830,18 @@
         "name": "gemini-2.5-flash",
         "family": "gemini-flash",
         "attachment": true,
-        "reasoning": false,
+        "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -135963,6 +137904,17 @@
         "family": "gemini-flash-lite",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -136115,6 +138067,7 @@
         "family": "gpt-codex",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -136145,6 +138098,7 @@
         "family": "gpt-codex",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -136294,7 +138248,18 @@
         "name": "gemini-2.5-flash-lite",
         "family": "gemini-flash-lite",
         "attachment": true,
-        "reasoning": false,
+        "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -136357,6 +138322,7 @@
         "family": "gpt-codex",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -136556,6 +138522,7 @@
         "family": "gpt-mini",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -136677,7 +138644,18 @@
         "name": "gemini-2.5-flash-preview-05-20",
         "family": "gemini-flash",
         "attachment": true,
-        "reasoning": false,
+        "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -136709,7 +138687,18 @@
         "name": "gemini-2.5-flash-lite-preview-06-17",
         "family": "gemini-flash-lite",
         "attachment": true,
-        "reasoning": false,
+        "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -136741,7 +138730,18 @@
         "name": "gemini-2.5-pro-preview-06-05",
         "family": "gemini-pro",
         "attachment": true,
-        "reasoning": false,
+        "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -136804,6 +138804,7 @@
         "family": "gpt-codex",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -136834,6 +138835,7 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -137080,6 +139082,7 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -137109,6 +139112,7 @@
         "family": "glmv",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -137140,6 +139144,11 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -137169,6 +139178,7 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -137256,6 +139266,7 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -137285,6 +139296,7 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -137314,6 +139326,7 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": false,
         "structured_output": false,
         "temperature": true,
@@ -137343,6 +139356,7 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": false,
         "structured_output": false,
         "temperature": true,
@@ -137430,6 +139444,7 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": false,
         "structured_output": false,
         "temperature": true,
@@ -138392,6 +140407,11 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-04",
@@ -138456,6 +140476,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 81920
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-04",
@@ -138550,6 +140579,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 38912
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -138672,6 +140710,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 262144
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -138723,6 +140770,15 @@
         "family": "qwen",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 131072
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -138755,6 +140811,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 262144
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "release_date": "2026-05-21",
@@ -138848,6 +140913,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 38912
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -138966,6 +141040,15 @@
         "family": "qwen3.6",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 131072
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -139028,6 +141111,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 81920
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -139147,6 +141239,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 81920
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -139243,6 +141344,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 81920
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-04",
@@ -139364,6 +141474,15 @@
         "family": "qwen",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 81920
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -139425,6 +141544,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 38912
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -139490,6 +141618,15 @@
         "family": "qwen",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 131072
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -139522,6 +141659,15 @@
         "family": "qwen",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 81920
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -139641,6 +141787,15 @@
         "family": "qwen",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 81920
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -139702,6 +141857,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 38912
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -139761,6 +141925,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 38912
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2024-04",
@@ -139850,6 +142023,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 131072
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -139881,6 +142063,15 @@
         "family": "qwen",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 81920
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -139943,6 +142134,15 @@
         "family": "qwen",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 81920
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-04",
@@ -140007,6 +142207,12 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "budget_tokens",
+            "min": 1024
+          }
+        ],
         "tool_call": true,
         "temperature": false,
         "knowledge": "2026-01-31",
@@ -140060,6 +142266,16 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -140126,6 +142342,16 @@
         "family": "gemini-flash",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -140162,6 +142388,12 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "budget_tokens",
+            "min": 1024
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-03-31",
@@ -140195,6 +142427,17 @@
         "family": "gpt-nano",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -140228,6 +142471,17 @@
         "family": "gpt-mini",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -140261,6 +142515,17 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -140294,6 +142559,13 @@
         "family": "gemini-pro",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "budget_tokens",
+            "min": 128,
+            "max": 32768
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -140345,6 +142617,16 @@
         "family": "gemini-pro",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -140396,6 +142678,13 @@
         "family": "gemini-flash",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "budget_tokens",
+            "min": 0,
+            "max": 24576
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -140432,6 +142721,12 @@
         "family": "claude-sonnet",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "budget_tokens",
+            "min": 1024
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-07-31",
@@ -140465,6 +142760,7 @@
         "family": "claude-haiku",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-02-28",
@@ -140498,6 +142794,16 @@
         "family": "gpt-nano",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -140531,6 +142837,12 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "budget_tokens",
+            "min": 1024
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-05-31",
@@ -140584,6 +142896,17 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -140617,6 +142940,12 @@
         "family": "claude-sonnet",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "budget_tokens",
+            "min": 1024
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-07-31",
@@ -140650,6 +142979,12 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "budget_tokens",
+            "min": 1024
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-03-31",
@@ -140683,6 +143018,16 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -140749,6 +143094,16 @@
         "family": "gemini-flash-lite",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -140785,6 +143140,16 @@
         "family": "gemini-pro",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -140836,6 +143201,12 @@
         "family": "claude-sonnet",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "budget_tokens",
+            "min": 1024
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-08-31",
@@ -140869,6 +143240,16 @@
         "family": "gpt-oss",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -140898,6 +143279,16 @@
         "family": "gpt-oss",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -140927,6 +143318,17 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -140960,6 +143362,16 @@
         "family": "gpt-mini",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -148642,6 +151054,7 @@
         "family": "minimax",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -148674,6 +151087,11 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -148708,6 +151126,24 @@
         "family": "claude-sonnet",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "max"
+            ]
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -148763,6 +151199,17 @@
         "family": "gemini-flash-lite",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -148799,6 +151246,11 @@
         "family": "deepseek-flash",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -148887,6 +151339,20 @@
         "family": "seed",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -148996,6 +151462,20 @@
         "family": "seed",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -149051,6 +151531,11 @@
         "family": "deepseek-flash",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -149079,12 +151564,66 @@
           "cache_read": 0.0308
         }
       },
+      "qwen3.7-plus": {
+        "id": "qwen3.7-plus",
+        "name": "Qwen3.7 Plus",
+        "family": "qwen",
+        "attachment": false,
+        "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 262144
+          }
+        ],
+        "tool_call": true,
+        "interleaved": {
+          "field": "reasoning_content"
+        },
+        "structured_output": true,
+        "temperature": true,
+        "knowledge": "2025-04",
+        "release_date": "2026-06-02",
+        "last_updated": "2026-06-02",
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": false,
+        "limit": {
+          "context": 991000,
+          "output": 64000
+        },
+        "cost": {
+          "input": 0.282,
+          "output": 1.128,
+          "cache_read": 0.0564,
+          "cache_write": 0.3525
+        }
+      },
       "gemini-2.5-pro": {
         "id": "gemini-2.5-pro",
         "name": "Gemini 2.5 Pro",
         "family": "gemini-pro",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -149188,12 +151727,73 @@
           }
         }
       },
+      "qwen3.7-max": {
+        "id": "qwen3.7-max",
+        "name": "Qwen3.7 Max",
+        "family": "qwen",
+        "attachment": false,
+        "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "budget_tokens",
+            "max": 262144
+          }
+        ],
+        "tool_call": true,
+        "interleaved": {
+          "field": "reasoning_content"
+        },
+        "structured_output": true,
+        "temperature": true,
+        "release_date": "2026-05-21",
+        "last_updated": "2026-05-21",
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "open_weights": false,
+        "limit": {
+          "context": 991000,
+          "output": 64000
+        },
+        "cost": {
+          "input": 1.69,
+          "output": 5.07,
+          "cache_read": 0.169,
+          "cache_write": 2.1125
+        }
+      },
       "gemini-2.5-flash": {
         "id": "gemini-2.5-flash",
         "name": "Gemini 2.5 Flash",
         "family": "gemini-flash",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          {
+            "type": "budget_tokens",
+            "min": 0,
+            "max": 24576
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -149271,6 +151871,21 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ]
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -149326,6 +151941,11 @@
         "family": "glm-free",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -149453,6 +152073,21 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ]
+          }
+        ],
         "tool_call": true,
         "interleaved": true,
         "structured_output": true,
@@ -149665,6 +152300,16 @@
         "family": "gpt-codex",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -149698,6 +152343,16 @@
         "family": "gemini-pro",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -149749,6 +152404,20 @@
         "family": "seed",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -149807,6 +152476,20 @@
         "family": "seed",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -149865,6 +152548,18 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -149898,6 +152593,17 @@
         "family": "gpt-codex",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -149932,6 +152638,7 @@
         "family": "minimax",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -149966,6 +152673,24 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "max"
+            ]
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -150021,6 +152746,16 @@
         "family": "gpt-codex",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -150095,6 +152830,11 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -150128,6 +152868,7 @@
         "family": "minimax-free",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -150160,6 +152901,18 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -150226,6 +152979,18 @@
         "family": "gpt-mini",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -150316,6 +153081,16 @@
         "family": "gemini-pro",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -150367,6 +153142,24 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "max"
+            ]
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024
+          }
+        ],
         "tool_call": true,
         "interleaved": true,
         "structured_output": true,
@@ -150420,6 +153213,11 @@
         "family": "deepseek-thinking",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -150454,6 +153252,11 @@
         "family": "glmv",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -150489,6 +153292,11 @@
         "family": "glm",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -150522,6 +153330,24 @@
         "family": "claude-sonnet",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          },
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "max"
+            ]
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024
+          }
+        ],
         "tool_call": true,
         "interleaved": true,
         "structured_output": true,
@@ -150575,6 +153401,17 @@
         "family": "gemini-flash",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": true,
@@ -150626,6 +153463,7 @@
         "family": "minimax",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -150710,6 +153548,17 @@
         "family": "gpt-codex",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -150804,6 +153653,11 @@
         "family": "deepseek-thinking",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -150838,6 +153692,17 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -150871,6 +153736,18 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -174280,7 +177157,7 @@
         "tool_call": true,
         "temperature": true,
         "release_date": "2026-06-01",
-        "last_updated": "2026-06-01",
+        "last_updated": "2026-06-25",
         "modalities": {
           "input": [
             "text",
@@ -174293,7 +177170,7 @@
         },
         "open_weights": true,
         "limit": {
-          "context": 512000,
+          "context": 1000000,
           "output": 128000
         },
         "cost": {
@@ -175016,7 +177893,7 @@
         "tool_call": true,
         "temperature": true,
         "release_date": "2026-06-01",
-        "last_updated": "2026-06-01",
+        "last_updated": "2026-06-25",
         "modalities": {
           "input": [
             "text",
@@ -175029,13 +177906,29 @@
         },
         "open_weights": true,
         "limit": {
-          "context": 512000,
+          "context": 1000000,
           "output": 128000
         },
         "cost": {
-          "input": 0.6,
-          "output": 2.4,
-          "cache_read": 0.12
+          "input": 0.3,
+          "output": 1.2,
+          "cache_read": 0.06,
+          "tiers": [
+            {
+              "input": 0.6,
+              "output": 2.4,
+              "cache_read": 0.12,
+              "tier": {
+                "type": "context",
+                "size": 512000
+              }
+            }
+          ],
+          "context_over_200k": {
+            "input": 0.6,
+            "output": 2.4,
+            "cache_read": 0.12
+          }
         }
       },
       "MiniMax-M2.7": {
@@ -175087,6 +177980,13 @@
         "family": "claude-sonnet",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "budget_tokens",
+            "min": 1024,
+            "max": 32000
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-07-31",
@@ -175121,6 +178021,7 @@
         "family": "claude-sonnet",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-03-31",
@@ -175214,6 +178115,13 @@
         "family": "claude-haiku",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "budget_tokens",
+            "min": 1024,
+            "max": 32000
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-02-28",
@@ -175301,6 +178209,7 @@
         "family": "gpt-nano",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -175334,6 +178243,18 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ]
+          }
+        ],
         "tool_call": true,
         "temperature": false,
         "knowledge": "2026-01-31",
@@ -175388,6 +178309,7 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -175421,6 +178343,17 @@
         "family": "gpt-codex",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -175455,6 +178388,18 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ]
+          }
+        ],
         "tool_call": true,
         "temperature": false,
         "release_date": "2026-05-28",
@@ -175508,6 +178453,18 @@
         "family": "claude-fable",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ]
+          }
+        ],
         "tool_call": true,
         "temperature": false,
         "knowledge": "2026-01-31",
@@ -175541,6 +178498,13 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "budget_tokens",
+            "min": 1024,
+            "max": 32000
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-03-31",
@@ -175575,6 +178539,18 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -175625,6 +178601,18 @@
         "family": "gpt-mini",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -175759,6 +178747,22 @@
         "family": "claude-sonnet",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "max"
+            ]
+          },
+          {
+            "type": "budget_tokens",
+            "min": 1024,
+            "max": 32000
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-08-31",
@@ -175793,6 +178797,16 @@
         "family": "gpt-mini",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -175878,6 +178892,17 @@
         "family": "claude-opus",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "low",
+              "medium",
+              "high",
+              "max"
+            ]
+          }
+        ],
         "tool_call": true,
         "temperature": true,
         "knowledge": "2025-05-31",
@@ -175932,6 +178957,7 @@
         "family": "gpt-codex",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -175966,6 +178992,18 @@
         "family": "gpt",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "effort",
+            "values": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ],
         "tool_call": true,
         "structured_output": true,
         "temperature": false,
@@ -176673,6 +179711,11 @@
         "family": "kimi-k2",
         "attachment": true,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
@@ -176806,8 +179849,15 @@
         "family": "minimax",
         "attachment": true,
         "reasoning": true,
-        "reasoning_options": [],
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
+        "interleaved": {
+          "field": "reasoning_content"
+        },
         "structured_output": true,
         "temperature": true,
         "release_date": "2026-06-12",
@@ -176826,7 +179876,6 @@
           "context": 524288,
           "output": 65536
         },
-        "status": "beta",
         "cost": {
           "input": 0.6,
           "output": 1.2,
@@ -176898,19 +179947,22 @@
       },
       "hf:nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4": {
         "id": "hf:nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4",
-        "name": "Nemotron 3 Super 120B",
+        "name": "Nemotron 3 Super 120B A12B",
         "family": "nemotron",
         "attachment": false,
         "reasoning": true,
+        "reasoning_options": [
+          {
+            "type": "toggle"
+          }
+        ],
         "tool_call": true,
         "interleaved": {
           "field": "reasoning_content"
         },
-        "structured_output": true,
         "temperature": true,
-        "knowledge": "2024-04",
         "release_date": "2026-03-11",
-        "last_updated": "2026-04-03",
+        "last_updated": "2026-03-11",
         "modalities": {
           "input": [
             "text"
