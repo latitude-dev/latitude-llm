@@ -49,6 +49,13 @@ export const deleteSignalUseCase = (input: DeleteSignalInput) =>
           })
         }
 
+        // Discovery-born signals are dismissed through the lifecycle (ignore), not deleted.
+        if (signal.origin === "system") {
+          return yield* new BadRequestError({
+            message: "System-discovered signals cannot be deleted; ignore them instead",
+          })
+        }
+
         const active = yield* evaluationRepository.listBySignalId({
           projectId: parsed.projectId,
           signalId: parsed.signalId,

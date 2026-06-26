@@ -118,6 +118,7 @@ export const monitorSignal = createServerFn({ method: "POST" })
           signalId,
           actorUserId: UserId(userId),
           isAutomaticallyMonitored: issue.source === "flagger",
+          signalOrigin: issue.origin,
         })
       }).pipe(
         withPostgres(

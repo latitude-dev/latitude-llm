@@ -1,3 +1,4 @@
+import { EvaluationRepository } from "@domain/evaluations"
 import {
   BadRequestError,
   type ConcurrentSqlTransactionError,
@@ -59,8 +60,9 @@ export const updateSignalUseCase = (input: UpdateSignalInput) =>
         const nextName = parsed.name ?? signal.name
         const nextDescription = parsed.description ?? signal.description
         const nextFilters = parsed.filters === undefined ? (signal.filters ?? null) : parsed.filters
+        const nameChanged = parsed.name !== undefined && parsed.name !== signal.name
         const changed =
-          (parsed.name !== undefined && parsed.name !== signal.name) ||
+          nameChanged ||
           (parsed.description !== undefined && parsed.description !== signal.description) ||
           parsed.filters !== undefined
 
@@ -76,11 +78,26 @@ export const updateSignalUseCase = (input: UpdateSignalInput) =>
           updatedAt: now,
         })
 
+        // The evaluation is created with the signal's name; keep them in sync on rename.
+        if (nameChanged) {
+          const evaluationRepository = yield* EvaluationRepository
+          const active = yield* evaluationRepository.listBySignalId({
+            projectId: parsed.projectId,
+            signalId: parsed.signalId,
+            options: { lifecycle: "active" },
+          })
+          yield* Effect.forEach(
+            active.items,
+            (evaluation) => evaluationRepository.save({ ...evaluation, name: nextName, updatedAt: now }),
+            { discard: true },
+          )
+        }
+
         return { signalId: signal.id, changed: true } satisfies UpdateSignalResult
       }),
     )
   }).pipe(Effect.withSpan("signals.updateSignal")) as Effect.Effect<
     UpdateSignalResult,
     UpdateSignalError,
-    SignalRepository | SqlClient
+    SignalRepository | EvaluationRepository | SqlClient
   >

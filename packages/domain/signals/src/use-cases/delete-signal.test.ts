@@ -76,4 +76,40 @@ describe("deleteSignalUseCase", () => {
     expect(issues.get(signalId)?.deletedAt).not.toBeNull()
     expect(archived).toEqual([activeEvaluation.id])
   })
+
+  it("rejects deleting a system-discovered signal", async () => {
+    const signalId = "ssssssssssssssssssssssss"
+    const systemSignal: Signal = { ...makeUserSignal(signalId), source: "flagger", origin: "system" }
+    const { repository: signalRepository, issues } = createFakeSignalRepository([systemSignal])
+
+    const archived: string[] = []
+    const evaluationRepository = EvaluationRepository.of({
+      findById: () => Effect.die("not used"),
+      save: () => Effect.void,
+      listByProjectId: () => Effect.succeed({ items: [], hasMore: false, limit: 100, offset: 0 }),
+      listBySignalId: () => Effect.succeed({ items: [], hasMore: false, limit: 100, offset: 0 }),
+      listBySignalIds: () => Effect.succeed({ items: [], hasMore: false, limit: 100, offset: 0 }),
+      archive: (id) => Effect.sync(() => void archived.push(id)),
+      unarchive: () => Effect.void,
+      softDelete: () => Effect.void,
+      softDeleteBySignalId: () => Effect.void,
+    })
+
+    await expect(
+      Effect.runPromise(
+        deleteSignalUseCase({ projectId, signalId: SignalId(signalId) }).pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              Layer.succeed(SignalRepository, signalRepository),
+              Layer.succeed(EvaluationRepository, evaluationRepository),
+            ),
+          ),
+          Effect.provideService(SqlClient, createPassthroughSqlClient()),
+        ),
+      ),
+    ).rejects.toMatchObject({ _tag: "BadRequestError" })
+
+    expect(issues.get(signalId)?.deletedAt ?? null).toBeNull()
+    expect(archived).toEqual([])
+  })
 })

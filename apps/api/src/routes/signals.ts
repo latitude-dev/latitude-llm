@@ -725,6 +725,7 @@ const monitorSignal = signalEndpoint({
           projectId: ProjectId(project.id as string),
           signalId: SignalId(signal.id as string),
           isAutomaticallyMonitored: signal.source === "flagger",
+          signalOrigin: signal.origin,
           ...(actorUserId !== undefined ? { actorUserId } : {}),
         })
       }).pipe(
@@ -925,7 +926,11 @@ const updateSignal = signalEndpoint({
           ...(body.filters !== undefined ? { filters: body.filters } : {}),
         })
       }).pipe(
-        withPostgres(Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive), c.var.postgresClient, organizationId),
+        withPostgres(
+          Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive),
+          c.var.postgresClient,
+          organizationId,
+        ),
         withTracing,
       ),
     )

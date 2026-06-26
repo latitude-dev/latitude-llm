@@ -1,3 +1,4 @@
+import { type Evaluation, EvaluationRepository } from "@domain/evaluations"
 import { OrganizationId, SignalId, SqlClient, type SqlClientShape } from "@domain/shared"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -41,9 +42,37 @@ const makeUserSignal = (): Signal => ({
   updatedAt: new Date("2026-06-01T00:00:00Z"),
 })
 
+const makeEvaluationRepository = (evaluations: readonly Evaluation[] = []) => {
+  const saved: Evaluation[] = []
+  const repository = EvaluationRepository.of({
+    findById: () => Effect.die("not used"),
+    save: (evaluation) => Effect.sync(() => void saved.push(evaluation)),
+    listByProjectId: () => Effect.succeed({ items: [], hasMore: false, limit: 100, offset: 0 }),
+    listBySignalId: () => Effect.succeed({ items: [...evaluations], hasMore: false, limit: 100, offset: 0 }),
+    listBySignalIds: () => Effect.succeed({ items: [], hasMore: false, limit: 100, offset: 0 }),
+    archive: () => Effect.void,
+    unarchive: () => Effect.void,
+    softDelete: () => Effect.void,
+    softDeleteBySignalId: () => Effect.void,
+  })
+  return { repository, saved }
+}
+
+const provide = (
+  signalRepository: ReturnType<typeof createFakeSignalRepository>["repository"],
+  evaluationRepository: ReturnType<typeof makeEvaluationRepository>["repository"],
+) =>
+  Effect.provide(
+    Layer.mergeAll(
+      Layer.succeed(SignalRepository, signalRepository),
+      Layer.succeed(EvaluationRepository, evaluationRepository),
+    ),
+  )
+
 describe("updateSignalUseCase", () => {
   it("updates name, description, and filters; keeps the slug stable", async () => {
     const { repository, issues } = createFakeSignalRepository([makeUserSignal()])
+    const { repository: evaluationRepository } = makeEvaluationRepository()
 
     const result = await Effect.runPromise(
       updateSignalUseCase({
@@ -53,7 +82,7 @@ describe("updateSignalUseCase", () => {
         description: "Checkout is slow",
         filters: { "tags.service": [{ op: "in", value: ["checkout"] }] },
       }).pipe(
-        Effect.provide(Layer.succeed(SignalRepository, repository)),
+        provide(repository, evaluationRepository),
         Effect.provideService(SqlClient, createPassthroughSqlClient()),
       ),
     )
@@ -68,15 +97,37 @@ describe("updateSignalUseCase", () => {
 
   it("is a no-op when no fields are provided", async () => {
     const { repository, issues } = createFakeSignalRepository([makeUserSignal()])
+    const { repository: evaluationRepository } = makeEvaluationRepository()
 
     const result = await Effect.runPromise(
       updateSignalUseCase({ projectId, signalId: SignalId(signalId) }).pipe(
-        Effect.provide(Layer.succeed(SignalRepository, repository)),
+        provide(repository, evaluationRepository),
         Effect.provideService(SqlClient, createPassthroughSqlClient()),
       ),
     )
 
     expect(result.changed).toBe(false)
     expect(issues.get(signalId)?.name).toBe("Slow checkout")
+  })
+
+  it("syncs the active evaluation's name when the signal is renamed", async () => {
+    const { repository } = createFakeSignalRepository([makeUserSignal()])
+    const evaluation = {
+      id: "eeeeeeeeeeeeeeeeeeeeeeee",
+      signalId,
+      projectId,
+      name: "Slow checkout",
+    } as unknown as Evaluation
+    const { repository: evaluationRepository, saved } = makeEvaluationRepository([evaluation])
+
+    await Effect.runPromise(
+      updateSignalUseCase({ projectId, signalId: SignalId(signalId), name: "Checkout latency" }).pipe(
+        provide(repository, evaluationRepository),
+        Effect.provideService(SqlClient, createPassthroughSqlClient()),
+      ),
+    )
+
+    expect(saved).toHaveLength(1)
+    expect(saved[0]?.name).toBe("Checkout latency")
   })
 })
