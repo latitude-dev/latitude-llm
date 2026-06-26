@@ -60,7 +60,7 @@ type MonitorRule = {
 }
 ```
 
-`target.type` is the product category used for creation and list filters. `target.stream` is derived from `target.type` on load (`tool` → `spans`, `session` → `sessions`, everything else → `traces`), not free-form. `target.stream`, `target.filterSet`, and `target.query` are the ClickHouse reader input and are stored **inline** on the monitor; the evaluator reads them directly without dereferencing any external entity. `target.savedSearchId` records the saved search a `savedSearch` target was built from (used for attribution and UI linking); the monitor-page metric histogram resolves that saved search live into the same `(stream, filterSet, query, metric)` reader contract, but the incident evaluator does not.
+`target.type` is the product category used for creation and list filters. `target.stream` is derived from `target.type` on load (`tool` → `spans`, `session` → `sessions`, everything else → `traces`), not free-form. Tool, user, and session targets carry inline filter/query inputs. Saved-search targets store the saved-search id and resolve the saved search live at evaluation time, so monitor checks follow saved-search edits instead of duplicating the saved-search predicate.
 
 ## Target x Trigger
 
@@ -146,7 +146,7 @@ Point rules use `MetricSeriesReader` directly:
 - `match` fires when any matching row exists in the lookback window, backdating the incident's `started_at` to the first event.
 - `threshold` computes the configured metric value over the window and compares it to the configured threshold (absolute, multiplier-over-baseline, or seasonal/expected).
 
-Escalating rules adapt `MetricSeriesReader` into the incidents package's generic `SeriesReader` and then call `EscalationEngine`. The engine owns the sustained state machine, including seasonal expected-mode thresholds, entry snapshots, dwell exits, and hard timeouts. This is the same engine used for signal escalation; the reader decides which source produces the bucket series.
+Before reading ClickHouse, saved-search monitor targets resolve their current saved-search `filterSet` and `query`; if the saved search has been deleted, that monitor is skipped until the delete cascade removes it. Escalating rules adapt `MetricSeriesReader` into the incidents package's generic `SeriesReader` and then call `EscalationEngine`. The engine owns the sustained state machine, including seasonal expected-mode thresholds, entry snapshots, dwell exits, and hard timeouts. This is the same engine used for signal escalation; the reader decides which source produces the bucket series.
 
 The ClickHouse adapter is `MetricSeriesReaderLive` in `@platform/db-clickhouse`. It turns a target's `(stream, filterSet, query, metric)` into per-stream ClickHouse queries (over `traces`, `spans`, or `sessions`) and returns:
 
@@ -195,6 +195,7 @@ Public API/MCP surfaces follow the same contract: monitor create/update accepts 
 - Every active monitor has exactly one target and one rule.
 - Monitor slugs are unique per project among non-deleted rows.
 - Soft delete sets `deleted_at`; deleted monitors are hidden and do not fire.
+- Deleting a saved search cascades to active monitors with `target.type = "savedSearch"` and `target.id` matching the saved search.
 - Mute sets `muted_at`; muted monitors do not evaluate and the notification producer also skips any race-window fan-out.
 - Incidents are source keyed by `(source_type, source_id)`, not by a monitor-alert join.
 - At most one *open* incident per `(organization_id, source_type, source_id)` — enforced by a partial unique index on `incidents` where `ended_at IS NULL`. Point incidents (`ended_at = started_at`) are not open and do not contend for this slot.

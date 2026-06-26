@@ -7,6 +7,7 @@ import {
   SeriesReader,
   seasonalAnomalyThreshold,
 } from "@domain/incidents"
+import { SavedSearchRepository } from "@domain/saved-searches"
 import {
   type AlertBaseline,
   type AlertIncidentCondition,
@@ -19,6 +20,7 @@ import {
   type MonitorMetric,
   type ProjectId,
   type RepositoryError,
+  SavedSearchId,
   SqlClient,
 } from "@domain/shared"
 import { SEASONAL_HISTORY_WEEKS } from "@domain/signals"
@@ -91,15 +93,68 @@ const seasonalThreshold = (
   return seasonalAnomalyThreshold(expected, deviation, adjustedSensitivity)
 }
 
-const monitorTarget = (monitor: Monitor, metric: MonitorMetric = monitor.target.metric): MetricSeriesTarget => ({
+const inlineMonitorTarget = (monitor: Monitor, metric: MonitorMetric = monitor.target.metric): MetricSeriesTarget => ({
   stream: monitor.target.stream,
   filterSet: monitor.target.filterSet ?? {},
   query: monitor.target.query,
   metric,
 })
 
+interface ResolvedMonitorTarget {
+  readonly monitor: Monitor
+  readonly target: MetricSeriesTarget
+}
+
+const monitorCanEvaluate = (monitor: Monitor): boolean =>
+  monitor.rule.trigger === "match" || monitor.rule.trigger === "threshold" || monitorCanUseSeasonalEngine(monitor)
+
+const resolveMonitorTargets = (monitors: readonly Monitor[]) =>
+  Effect.gen(function* () {
+    const savedSearchRepository = yield* SavedSearchRepository
+    const savedSearchTargetCache = new Map<string, Pick<MetricSeriesTarget, "filterSet" | "query"> | null>()
+
+    const resolveSavedSearchTarget = (monitor: Monitor, metric: MonitorMetric) =>
+      Effect.gen(function* () {
+        const savedSearchId = monitor.target.id
+        if (savedSearchId === null) return null
+        let predicate: Pick<MetricSeriesTarget, "filterSet" | "query"> | null
+        if (savedSearchTargetCache.has(savedSearchId)) {
+          predicate = savedSearchTargetCache.get(savedSearchId) ?? null
+        } else {
+          predicate = yield* savedSearchRepository.findById(SavedSearchId(savedSearchId)).pipe(
+            Effect.map((search) => ({ filterSet: search.filterSet, query: search.query })),
+            Effect.catchTag("SavedSearchNotFoundError", () => Effect.succeed(null)),
+            Effect.tap((target) => Effect.sync(() => savedSearchTargetCache.set(savedSearchId, target))),
+          )
+        }
+        if (predicate === null) return null
+
+        return {
+          stream: monitor.target.stream,
+          filterSet: predicate.filterSet,
+          query: predicate.query,
+          metric,
+        } satisfies MetricSeriesTarget
+      })
+
+    const resolved = yield* Effect.forEach(
+      monitors,
+      (monitor) => {
+        const target =
+          monitor.target.type === "savedSearch"
+            ? resolveSavedSearchTarget(monitor, monitor.target.metric)
+            : Effect.succeed<MetricSeriesTarget | null>(inlineMonitorTarget(monitor))
+        return target.pipe(Effect.map((target): ResolvedMonitorTarget | null => (target ? { monitor, target } : null)))
+      },
+      { concurrency: 1 },
+    )
+
+    return resolved.filter((entry): entry is ResolvedMonitorTarget => entry !== null)
+  })
+
 const evaluatePointMonitor = (
   monitor: Monitor,
+  target: MetricSeriesTarget,
   condition: AlertIncidentCondition | null,
   metricReader: MetricSeriesReaderShape,
   now: Date,
@@ -107,11 +162,11 @@ const evaluatePointMonitor = (
   Effect.gen(function* () {
     const from = new Date(now.getTime() - SAVED_SEARCH_CURRENT_WINDOW_MS)
     if (monitor.rule.trigger === "match") {
-      const target = monitorTarget(monitor)
+      const matchTarget = { ...target, metric: { kind: "count" as const } }
       const value = yield* metricReader.valueInWindow({
         organizationId: monitor.organizationId,
         projectId: monitor.projectId,
-        target,
+        target: matchTarget,
         from,
         to: now,
       })
@@ -119,7 +174,7 @@ const evaluatePointMonitor = (
       const firstEventAt = yield* metricReader.firstEventAt({
         organizationId: monitor.organizationId,
         projectId: monitor.projectId,
-        target,
+        target: matchTarget,
         from,
         to: now,
       })
@@ -131,12 +186,12 @@ const evaluatePointMonitor = (
 
     if (condition?.trigger !== "threshold") return null
 
-    const target = monitorTarget(monitor, condition.metric)
+    const metricTarget = { ...target, metric: condition.metric }
     const valueIn = (windowFrom: Date, windowTo: Date) =>
       metricReader.valueInWindow({
         organizationId: monitor.organizationId,
         projectId: monitor.projectId,
-        target,
+        target: metricTarget,
         from: windowFrom,
         to: windowTo,
       })
@@ -149,7 +204,7 @@ const evaluatePointMonitor = (
     } else if (threshold.mode === "multiplier") {
       const baseline = baselineWindow(threshold.baseline, now)
       const baselineValue = yield* valueIn(baseline.from, baseline.to)
-      const scale = metricIsAccumulating(target.metric) ? SAVED_SEARCH_CURRENT_WINDOW_MS / baseline.lengthMs : 1
+      const scale = metricIsAccumulating(metricTarget.metric) ? SAVED_SEARCH_CURRENT_WINDOW_MS / baseline.lengthMs : 1
       thresholdValue = threshold.factor * baselineValue * scale
     } else {
       const historical = yield* Effect.all(
@@ -167,7 +222,7 @@ const evaluatePointMonitor = (
       ? yield* metricReader.firstEventAt({
           organizationId: monitor.organizationId,
           projectId: monitor.projectId,
-          target,
+          target: metricTarget,
           from,
           to: now,
         })
@@ -190,27 +245,23 @@ export const checkMonitorsUseCase = (input: CheckMonitorsInput) =>
     const monitors = yield* monitorRepository.listActiveMonitors({ projectId: input.projectId })
     const now = new Date()
     const active = monitors.filter((monitor) => monitor.mutedAt === null)
-    const pointMonitors = active.filter(
-      (monitor) => monitor.rule.trigger === "match" || monitor.rule.trigger === "threshold",
+    const resolved = yield* resolveMonitorTargets(active.filter(monitorCanEvaluate))
+    const pointMonitors = resolved.filter(
+      ({ monitor }) => monitor.rule.trigger === "match" || monitor.rule.trigger === "threshold",
     )
-    const eligible = active.filter(monitorCanUseSeasonalEngine)
-    const monitorById = new Map(eligible.map((monitor) => [monitor.id as string, monitor]))
+    const eligible = resolved.filter(({ monitor }) => monitorCanUseSeasonalEngine(monitor))
+    const targetByMonitorId = new Map(eligible.map((entry) => [entry.monitor.id as string, entry.target]))
     const seriesReader = makeMetricSeriesReaderSeriesReader(metricReader, {
       resolveTarget: (sourceId) => {
-        const monitor = monitorById.get(sourceId)
-        if (!monitor) throw new Error(`Monitor ${sourceId} is not eligible for metric series evaluation`)
-        return {
-          stream: monitor.target.stream,
-          filterSet: monitor.target.filterSet ?? {},
-          query: monitor.target.query,
-          metric: monitor.target.metric,
-        }
+        const target = targetByMonitorId.get(sourceId)
+        if (!target) throw new Error(`Monitor ${sourceId} is not eligible for metric series evaluation`)
+        return target
       },
     })
 
-    for (const monitor of pointMonitors) {
+    for (const { monitor, target } of pointMonitors) {
       const condition = monitorConfigCondition(monitor.rule.config)
-      const point = yield* evaluatePointMonitor(monitor, condition, metricReader, now)
+      const point = yield* evaluatePointMonitor(monitor, target, condition, metricReader, now)
       if (point === null) continue
       yield* sqlClient.transaction(
         Effect.gen(function* () {
@@ -247,7 +298,7 @@ export const checkMonitorsUseCase = (input: CheckMonitorsInput) =>
       )
     }
 
-    for (const monitor of eligible) {
+    for (const { monitor } of eligible) {
       const openIncident = yield* incidentRepository.findOpen({ sourceType: "monitor", sourceId: monitor.id })
       const condition = monitorConfigCondition(monitor.rule.config)
       const thresholdSensitivity =
@@ -353,5 +404,11 @@ export const checkMonitorsUseCase = (input: CheckMonitorsInput) =>
   }) as Effect.Effect<
     CheckMonitorsResult,
     RepositoryError,
-    SqlClient | ChSqlClient | MonitorRepository | IncidentRepository | MetricSeriesReader | OutboxEventWriter
+    | SqlClient
+    | ChSqlClient
+    | MonitorRepository
+    | IncidentRepository
+    | MetricSeriesReader
+    | OutboxEventWriter
+    | SavedSearchRepository
   >

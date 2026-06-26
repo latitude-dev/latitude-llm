@@ -1,5 +1,15 @@
 import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
-import { ChSqlClient, MonitorId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { SavedSearchRepository } from "@domain/saved-searches"
+import { createFakeSavedSearchRepository } from "@domain/saved-searches/testing"
+import {
+  ChSqlClient,
+  type FilterSet,
+  MonitorId,
+  OrganizationId,
+  ProjectId,
+  SavedSearchId,
+  SqlClient,
+} from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -15,6 +25,7 @@ import { checkMonitorsUseCase } from "./check-monitors.ts"
 const cuid = (seed: string) => seed.padEnd(24, "0")
 const organizationId = OrganizationId(cuid("o"))
 const projectId = ProjectId(cuid("p"))
+const savedSearchId = SavedSearchId(cuid("s"))
 const now = new Date("2026-06-23T12:00:00.000Z")
 
 const monitor = ({ id, rule, ...edits }: Partial<Monitor> & Pick<Monitor, "id" | "rule">): Monitor => ({
@@ -27,12 +38,12 @@ const monitor = ({ id, rule, ...edits }: Partial<Monitor> & Pick<Monitor, "id" |
   system: false,
   target: {
     type: "savedSearch",
-    id: cuid("s"),
+    id: savedSearchId,
     filterSet: {},
     kind: "savedSearch",
     stream: "traces",
     query: null,
-    savedSearchId: cuid("s"),
+    savedSearchId,
     metric: { kind: "count" },
   },
   rule,
@@ -43,10 +54,28 @@ const monitor = ({ id, rule, ...edits }: Partial<Monitor> & Pick<Monitor, "id" |
   ...edits,
 })
 
-const layersFor = (monitors: readonly Monitor[], matches: readonly Date[]) => {
+const layersFor = (
+  monitors: readonly Monitor[],
+  matches: readonly Date[],
+  savedSearch: { readonly query: string | null; readonly filterSet: FilterSet } = { query: null, filterSet: {} },
+) => {
   const monitorStore = createFakeMonitorRepository(monitors)
   const incidentStore = createFakeAlertIncidentStore()
   const metricReader = createFakeMetricSeriesReader(matches)
+  const savedSearchStore = createFakeSavedSearchRepository([
+    {
+      id: savedSearchId,
+      organizationId,
+      projectId,
+      slug: "saved-search",
+      name: "Saved search",
+      query: savedSearch.query,
+      filterSet: savedSearch.filterSet,
+      deletedAt: null,
+      createdAt: new Date("2026-06-20T00:00:00.000Z"),
+      updatedAt: new Date("2026-06-20T00:00:00.000Z"),
+    },
+  ])
   const events: OutboxWriteEvent[] = []
   const outboxLayer = Layer.succeed(
     OutboxEventWriter,
@@ -63,8 +92,10 @@ const layersFor = (monitors: readonly Monitor[], matches: readonly Date[]) => {
   return {
     events,
     incidents: incidentStore.incidents,
+    metricCalls: metricReader.calls,
     layer: Layer.mergeAll(
       Layer.succeed(MonitorRepository, monitorStore.repo),
+      Layer.succeed(SavedSearchRepository, savedSearchStore.repository),
       incidentStore.layer,
       metricReader.layer,
       outboxLayer,
@@ -116,6 +147,42 @@ describe("checkMonitorsUseCase", () => {
         sourceType: "monitor",
         sourceId: MonitorId(cuid("m1")),
       },
+    })
+  })
+
+  it("resolves saved-search targets from the live saved search", async () => {
+    const firstMatch = new Date("2026-06-23T11:58:00.000Z")
+    const savedSearch = {
+      query: '"payment failed"',
+      filterSet: { userId: [{ op: "eq" as const, value: "user-1" }] },
+    }
+    const { metricCalls, layer } = layersFor(
+      [
+        monitor({
+          id: MonitorId(cuid("m-live")),
+          target: {
+            type: "savedSearch",
+            id: savedSearchId,
+            filterSet: { userId: [{ op: "eq", value: "stale-user" }] },
+            kind: "savedSearch",
+            stream: "traces",
+            query: null,
+            savedSearchId,
+            metric: { kind: "count" },
+          },
+          rule: { trigger: "match", config: {}, severity: "medium" },
+        }),
+      ],
+      [firstMatch],
+      savedSearch,
+    )
+
+    await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
+
+    expect(metricCalls[0]?.target).toMatchObject({
+      filterSet: savedSearch.filterSet,
+      query: savedSearch.query,
+      metric: { kind: "count" },
     })
   })
 
