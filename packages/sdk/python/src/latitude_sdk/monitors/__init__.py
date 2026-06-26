@@ -6,16 +6,8 @@ import typing
 from importlib import import_module
 
 if typing.TYPE_CHECKING:
-    from .types import (
-        CreateMonitorBodySeverity,
-        CreateMonitorBodyTrigger,
-        ListMonitorsForTargetBodyTargetType,
-        UpdateMonitorBodySeverity,
-        UpdateMonitorBodyTrigger,
-    )
+    from .types import ListMonitorsForTargetBodyTargetType, UpdateMonitorBodySeverity, UpdateMonitorBodyTrigger
 _dynamic_imports: typing.Dict[str, str] = {
-    "CreateMonitorBodySeverity": ".types",
-    "CreateMonitorBodyTrigger": ".types",
     "ListMonitorsForTargetBodyTargetType": ".types",
     "UpdateMonitorBodySeverity": ".types",
     "UpdateMonitorBodyTrigger": ".types",
@@ -43,10 +35,4 @@ def __dir__():
     return sorted(lazy_attrs)
 
 
-__all__ = [
-    "CreateMonitorBodySeverity",
-    "CreateMonitorBodyTrigger",
-    "ListMonitorsForTargetBodyTargetType",
-    "UpdateMonitorBodySeverity",
-    "UpdateMonitorBodyTrigger",
-]
+__all__ = ["ListMonitorsForTargetBodyTargetType", "UpdateMonitorBodySeverity", "UpdateMonitorBodyTrigger"]

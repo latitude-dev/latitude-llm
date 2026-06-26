@@ -126,9 +126,12 @@ const stableId = (prefix: string, sourceId: string, scope: SeedScope): string =>
 
 const sha256 = (parts: readonly string[]): string => createHash("sha256").update(parts.join("\0")).digest("hex")
 
-const mapObservationId = (sourceId: unknown, scope: SeedScope): unknown =>
+// Observation ids are cuid-width (exactly 24 chars per `taxonomyMomentObservationSchema`);
+// the live analysis pipeline truncates its hash to 24, so the snapshot remap must too —
+// a 32-char id fails validation on every gardening read (`listAllByCluster`).
+export const mapObservationId = (sourceId: unknown, scope: SeedScope): unknown =>
   typeof sourceId === "string"
-    ? sha256(["snapshot:taxonomy-observation", scope.projectId, sourceId]).slice(0, 32)
+    ? sha256(["snapshot:taxonomy-observation", scope.projectId, sourceId]).slice(0, 24)
     : sourceId
 
 /**
@@ -149,7 +152,7 @@ export const buildTraceIdRemap = (sourceProjectId: string, targetProjectId: stri
   return remap
 }
 
-const mapClickHouseRow = (
+export const mapClickHouseRow = (
   table: ClickHouseTable,
   row: SnapshotRow,
   input: {
@@ -158,9 +161,17 @@ const mapClickHouseRow = (
     readonly mapClusterId: (id: string) => string
     readonly mapRunId: (id: string) => string
     readonly traceIdRemap: ReadonlyMap<string, string>
+    readonly sessionTimes?: ReadonlyMap<string, { readonly start_time: unknown; readonly end_time: unknown }>
   },
 ): SnapshotRow => {
   const mapped: SnapshotRow = { ...row, organization_id: input.scope.organizationId, project_id: input.scope.projectId }
+  if (table === "taxonomy_observations" && input.sessionTimes) {
+    const sessionTime = input.sessionTimes.get(`${String(row.session_id)}\0${String(row.analysis_hash)}`)
+    if (sessionTime) {
+      mapped.start_time = sessionTime.start_time
+      mapped.end_time = sessionTime.end_time
+    }
+  }
   for (const column of timestampColumnsByTable[table])
     mapped[column] = formatClickHouseTimestamp(mapped[column], input.deltaMs)
 
@@ -228,6 +239,7 @@ const importClickHouseTable = async (
     readonly mapClusterId: (id: string) => string
     readonly mapRunId: (id: string) => string
     readonly traceIdRemap: ReadonlyMap<string, string>
+    readonly sessionTimes?: ReadonlyMap<string, { readonly start_time: unknown; readonly end_time: unknown }>
     readonly keep?: (row: SnapshotRow) => boolean
     readonly afterKeep?: (row: SnapshotRow) => void
   },
@@ -514,6 +526,7 @@ export const importDemoProjectDerivedSnapshot = async (input: {
   const analysisKey = (row: SnapshotRow) => `${String(row.session_id)}\0${String(row.analysis_hash)}`
   const momentKey = (row: SnapshotRow) =>
     `${String(row.session_id)}\0${String(row.analysis_hash)}\0${String(row.moment_id)}`
+  const sessionTimes = new Map<string, { readonly start_time: unknown; readonly end_time: unknown }>()
 
   await importClickHouseTable(input.clickhouseClient, "trace_search_documents", {
     scope: input.scope,
@@ -546,7 +559,10 @@ export const importDemoProjectDerivedSnapshot = async (input: {
     mapRunId,
     traceIdRemap,
     keep: (row) => Array.isArray(row.trace_ids) && row.trace_ids.some((traceId) => traceIds.has(String(traceId))),
-    afterKeep: (row) => analysisKeys.add(analysisKey(row)),
+    afterKeep: (row) => {
+      analysisKeys.add(analysisKey(row))
+      sessionTimes.set(analysisKey(row), { start_time: row.start_time, end_time: row.end_time })
+    },
   })
   await importClickHouseTable(input.clickhouseClient, "session_semantic_moments", {
     scope: input.scope,
@@ -571,6 +587,7 @@ export const importDemoProjectDerivedSnapshot = async (input: {
     mapClusterId,
     mapRunId,
     traceIdRemap,
+    sessionTimes,
     // Behaviours read sessions from here; keep only observations whose session
     // is a seeded single-trace session (`session_id` is the trace id), so every
     // behaviour's "associated session" resolves to a real seeded trace.

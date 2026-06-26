@@ -49,6 +49,29 @@ const makeObservation = (overrides: Partial<TaxonomyMomentObservation> = {}): Ta
   ...overrides,
 })
 
+const toClickHouseDateTime = (date: Date) => date.toISOString().replace("Z", "")
+
+const makeObservationRow = (observation: TaxonomyMomentObservation) => ({
+  organization_id: observation.organizationId as string,
+  project_id: observation.projectId as string,
+  observation_id: observation.observationId,
+  session_id: observation.sessionId as string,
+  analysis_hash: observation.analysisHash,
+  moment_id: observation.momentId,
+  projection_method: observation.projectionMethod,
+  projection_hash: observation.projectionHash,
+  projection_metadata: JSON.stringify(observation.projectionMetadata),
+  embedding: [...observation.embedding],
+  assigned_cluster_id: observation.assignedClusterId ?? "",
+  assignment_confidence: observation.assignmentConfidence,
+  assignment_method: observation.assignmentMethod,
+  reassignment_run_id: observation.reassignmentRunId ?? "",
+  start_time: toClickHouseDateTime(observation.startTime),
+  end_time: toClickHouseDateTime(observation.endTime),
+  retention_days: observation.retentionDays,
+  indexed_at: toClickHouseDateTime(observation.indexedAt),
+})
+
 const runWithRepository = <A, E>(effect: Effect.Effect<A, E, TaxonomyObservationRepository | ChSqlClient>) =>
   Effect.runPromise(effect.pipe(withClickHouse(TaxonomyObservationRepositoryLive, ch.client, organizationId)))
 
@@ -72,6 +95,59 @@ describe("TaxonomyObservationRepositoryLive", () => {
     expect(rows).toHaveLength(1)
     expect(rows[0]?.momentId).toBe("moment-1")
     expect(rows[0]?.projectionMetadata).toEqual({ turnIndexes: [0, 2] })
+  })
+
+  it("ignores malformed legacy observation ids", async () => {
+    const legacyProjectId = ProjectId("l".repeat(24))
+    const legacySessionId = SessionId("legacy-session")
+    const valid = makeObservation({
+      observationId: "v".repeat(24),
+      projectId: legacyProjectId,
+      sessionId: legacySessionId,
+      assignedClusterId: clusterId,
+      assignmentMethod: "centroid_online",
+      assignmentConfidence: 0.8,
+    })
+    const legacy = makeObservation({
+      observationId: "f".repeat(32),
+      projectId: legacyProjectId,
+      sessionId: legacySessionId,
+      momentId: "legacy-moment",
+    })
+
+    await ch.client.insert({
+      table: "taxonomy_observations",
+      values: [makeObservationRow(legacy)],
+      format: "JSONEachRow",
+    })
+
+    const result = await runWithRepository(
+      Effect.gen(function* () {
+        const repo = yield* TaxonomyObservationRepository
+        yield* repo.upsert(valid)
+        const rows = yield* repo.listBySession({
+          organizationId,
+          projectId: legacyProjectId,
+          sessionId: legacySessionId,
+        })
+        const sample = yield* repo.listForClusteringSample({
+          organizationId,
+          projectId: legacyProjectId,
+          since: new Date("2026-05-23T00:00:00.000Z"),
+          limit: 10,
+        })
+        const counts = yield* repo.getCounts({
+          organizationId,
+          projectId: legacyProjectId,
+          since: new Date("2026-05-23T00:00:00.000Z"),
+        })
+        return { rows, sample, counts }
+      }),
+    )
+
+    expect(result.rows.map((row) => row.observationId)).toEqual([valid.observationId])
+    expect(result.sample.map((row) => row.observationId)).toEqual([valid.observationId])
+    expect(result.counts).toEqual({ total: 1, assigned: 1, noise: 0 })
   })
 
   it("keeps noise and counts project-scoped", async () => {

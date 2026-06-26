@@ -52,11 +52,15 @@ function AlignmentTooltipContent({
   readonly evaluation: EvaluationSummaryRecord
   readonly onOpenStats: () => void
 }) {
-  const confusionMatrix = evaluation.alignment.confusionMatrix
+  const alignment = evaluation.alignment
+  if (!alignment) return null
+  const confusionMatrix = alignment.confusionMatrix
 
   return (
     <div className="flex flex-col">
-      <Text.H6 color="foregroundMuted">Aligned at {new Date(evaluation.alignedAt).toLocaleString()}</Text.H6>
+      {evaluation.alignedAt ? (
+        <Text.H6 color="foregroundMuted">Aligned at {new Date(evaluation.alignedAt).toLocaleString()}</Text.H6>
+      ) : null}
       <Button
         variant="link"
         className="w-auto h-auto p-0"
@@ -231,6 +235,7 @@ export function SignalDrawerEvaluations({
   projectId,
   signalId,
   signalSource,
+  signalOrigin,
   evaluations,
   flaggerSlugs,
   canMonitorSignal,
@@ -239,6 +244,7 @@ export function SignalDrawerEvaluations({
   readonly projectId: string
   readonly signalId: string
   readonly signalSource: "annotation" | "custom" | "flagger"
+  readonly signalOrigin: "user" | "system"
   readonly evaluations: readonly EvaluationSummaryRecord[]
   readonly flaggerSlugs?: readonly string[]
   readonly canMonitorSignal: boolean
@@ -375,6 +381,16 @@ export function SignalDrawerEvaluations({
   )
   const primaryEvaluation = visibleEvaluations[0] ?? null
   const hiddenEvaluationCount = Math.max(0, visibleEvaluations.length - 1)
+  // System-origin evaluations are annotation-aligned, so realign/remove apply.
+  // User-origin evaluations come from a raw API/MCP script or declarative settings
+  // and cannot be realigned (no annotations) — the signal owns its evaluation.
+  const isUserOriginEvaluation = signalOrigin === "user"
+  const userEvaluationNote =
+    primaryEvaluation === null || !isUserOriginEvaluation
+      ? null
+      : primaryEvaluation.settings
+        ? "Custom evaluation defined from settings. Editing its settings is coming soon."
+        : "Custom script defined via the API or MCP. It is not editable here."
   const isActionPending = isBusy || isStartingGenerate || isStartingRealign || isDeleting
   const monitorBlockedByLifecycle = !canMonitorSignal
   const isGenerating = isStartingGenerate || tracked?.kind === "initial"
@@ -401,6 +417,18 @@ export function SignalDrawerEvaluations({
           </div>
         </div>
         {hiddenEvaluationCount > 0 ? <Skeleton className="h-4 w-48 self-center" /> : null}
+      </div>
+    )
+  }
+
+  if (visibleEvaluations.length === 0 && isUserOriginEvaluation) {
+    return (
+      <div className="flex w-full items-start gap-3 rounded-lg border border-dashed border-border px-5 py-4">
+        <Icon icon={ShieldCheckIcon} size="md" color="foregroundMuted" />
+        <div className="flex min-w-0 flex-col gap-1">
+          <Text.H5M>Custom signal</Text.H5M>
+          <Text.H6 color="foregroundMuted">This signal has no active evaluation.</Text.H6>
+        </div>
       </div>
     )
   }
@@ -478,112 +506,121 @@ export function SignalDrawerEvaluations({
     <>
       <div className="flex w-full flex-col gap-2 px-1 pt-2">
         {primaryEvaluation ? (
-          <div className="flex flex-row flex-wrap items-end gap-8">
-            <SummaryField
-              label="Alignment"
-              value={
-                <Tooltip
-                  asChild
-                  trigger={
-                    <span className="inline-flex">
-                      <Status
-                        variant={getAlignmentVariant(primaryEvaluation.alignment.metrics.alignmentMetric)}
-                        label={formatPercent(primaryEvaluation.alignment.metrics.alignmentMetric)}
-                      />
-                    </span>
-                  }
-                >
-                  <AlignmentTooltipContent
-                    evaluation={primaryEvaluation}
-                    onOpenStats={() => setStatsEvaluation(primaryEvaluation)}
-                  />
-                </Tooltip>
-              }
-            />
-            <SummaryField
-              label="Sampling"
-              value={
-                <Tooltip
-                  asChild
-                  trigger={
-                    <button
-                      type="button"
-                      onClick={() => setSamplingEvaluation(primaryEvaluation)}
-                      disabled={isActionPending}
-                      className="inline-flex h-5 cursor-pointer items-center gap-1 bg-transparent p-0 disabled:cursor-not-allowed disabled:opacity-50"
+          <>
+            {userEvaluationNote ? <Text.H6 color="foregroundMuted">{userEvaluationNote}</Text.H6> : null}
+            <div className="flex flex-row flex-wrap items-end gap-8">
+              <SummaryField
+                label="Alignment"
+                value={
+                  primaryEvaluation.alignment ? (
+                    <Tooltip
+                      asChild
+                      trigger={
+                        <span className="inline-flex">
+                          <Status
+                            variant={getAlignmentVariant(primaryEvaluation.alignment.metrics.alignmentMetric)}
+                            label={formatPercent(primaryEvaluation.alignment.metrics.alignmentMetric)}
+                          />
+                        </span>
+                      }
                     >
-                      <Text.H5 color="foreground">{formatPercent(primaryEvaluation.trigger.sampling / 100)}</Text.H5>
-                      <Icon icon={PencilIcon} size="xs" color="foregroundMuted" />
-                    </button>
-                  }
-                >
-                  <Text.H6 color="foregroundMuted">
-                    Click to change. We evaluate this signal on{" "}
-                    {formatPercent(primaryEvaluation.trigger.sampling / 100)} of the incoming traces.
-                  </Text.H6>
-                </Tooltip>
-              }
-            />
-            <SummaryField
-              label="Scope"
-              value={(() => {
-                const conditionCount = countFilterConditions(primaryEvaluation.trigger.filter)
-                const summary =
-                  conditionCount === 0 ? "All traces" : `${conditionCount} filter${conditionCount === 1 ? "" : "s"}`
-                return (
+                      <AlignmentTooltipContent
+                        evaluation={primaryEvaluation}
+                        onOpenStats={() => setStatsEvaluation(primaryEvaluation)}
+                      />
+                    </Tooltip>
+                  ) : (
+                    <Text.H6 color="foregroundMuted">Not aligned</Text.H6>
+                  )
+                }
+              />
+              <SummaryField
+                label="Sampling"
+                value={
                   <Tooltip
                     asChild
                     trigger={
                       <button
                         type="button"
-                        onClick={() => setFilterEvaluation(primaryEvaluation)}
+                        onClick={() => setSamplingEvaluation(primaryEvaluation)}
                         disabled={isActionPending}
                         className="inline-flex h-5 cursor-pointer items-center gap-1 bg-transparent p-0 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <Icon icon={FilterIcon} size="xs" color="foregroundMuted" />
-                        <Text.H5 color="foreground">{summary}</Text.H5>
+                        <Text.H5 color="foreground">{formatPercent(primaryEvaluation.trigger.sampling / 100)}</Text.H5>
                         <Icon icon={PencilIcon} size="xs" color="foregroundMuted" />
                       </button>
                     }
                   >
                     <Text.H6 color="foregroundMuted">
-                      {conditionCount === 0
-                        ? "Click to limit which traces this evaluation runs on."
-                        : "Click to change which traces this evaluation runs on."}
+                      Click to change. We evaluate this signal on{" "}
+                      {formatPercent(primaryEvaluation.trigger.sampling / 100)} of the incoming traces.
                     </Text.H6>
                   </Tooltip>
-                )
-              })()}
-            />
-            <div className="flex min-w-0 flex-1 items-end justify-end gap-x-1">
-              <Tooltip
-                asChild
-                trigger={
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-foreground group-hover:text-secondary-foreground/80"
-                    onClick={() => setDeleteEvaluationId(primaryEvaluation.id)}
-                    disabled={isActionPending}
-                    aria-label="Remove evaluation"
-                  >
-                    <Icon icon={XIcon} size="sm" />
-                  </Button>
                 }
-              >
-                <Text.H6 color="foregroundMuted">Remove evaluation</Text.H6>
-              </Tooltip>
-              <Button
-                variant="outline"
-                onClick={() => setRealignEvaluationId(primaryEvaluation.id)}
-                disabled={isActionPending}
-                isLoading={isPrimaryEvaluationRealigning}
-              >
-                <Icon icon={RotateCwIcon} size="sm" />
-                {isPrimaryEvaluationRealigning ? "Realigning" : "Realign"}
-              </Button>
+              />
+              <SummaryField
+                label="Scope"
+                value={(() => {
+                  const conditionCount = countFilterConditions(primaryEvaluation.trigger.filter)
+                  const summary =
+                    conditionCount === 0 ? "All traces" : `${conditionCount} filter${conditionCount === 1 ? "" : "s"}`
+                  return (
+                    <Tooltip
+                      asChild
+                      trigger={
+                        <button
+                          type="button"
+                          onClick={() => setFilterEvaluation(primaryEvaluation)}
+                          disabled={isActionPending}
+                          className="inline-flex h-5 cursor-pointer items-center gap-1 bg-transparent p-0 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Icon icon={FilterIcon} size="xs" color="foregroundMuted" />
+                          <Text.H5 color="foreground">{summary}</Text.H5>
+                          <Icon icon={PencilIcon} size="xs" color="foregroundMuted" />
+                        </button>
+                      }
+                    >
+                      <Text.H6 color="foregroundMuted">
+                        {conditionCount === 0
+                          ? "Click to limit which traces this evaluation runs on."
+                          : "Click to change which traces this evaluation runs on."}
+                      </Text.H6>
+                    </Tooltip>
+                  )
+                })()}
+              />
+              {!isUserOriginEvaluation ? (
+                <div className="flex min-w-0 flex-1 items-end justify-end gap-x-1">
+                  <Tooltip
+                    asChild
+                    trigger={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-foreground group-hover:text-secondary-foreground/80"
+                        onClick={() => setDeleteEvaluationId(primaryEvaluation.id)}
+                        disabled={isActionPending}
+                        aria-label="Remove evaluation"
+                      >
+                        <Icon icon={XIcon} size="sm" />
+                      </Button>
+                    }
+                  >
+                    <Text.H6 color="foregroundMuted">Remove evaluation</Text.H6>
+                  </Tooltip>
+                  <Button
+                    variant="outline"
+                    onClick={() => setRealignEvaluationId(primaryEvaluation.id)}
+                    disabled={isActionPending}
+                    isLoading={isPrimaryEvaluationRealigning}
+                  >
+                    <Icon icon={RotateCwIcon} size="sm" />
+                    {isPrimaryEvaluationRealigning ? "Realigning" : "Realign"}
+                  </Button>
+                </div>
+              ) : null}
             </div>
-          </div>
+          </>
         ) : null}
         {hiddenEvaluationCount > 0 ? (
           <Text.H6 className="self-center text-center" color="foregroundMuted">

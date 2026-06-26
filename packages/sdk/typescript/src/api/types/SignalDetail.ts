@@ -20,7 +20,7 @@ export interface SignalDetail {
     /** Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`). */
     states: SignalDetail.States.Item[];
     /** ISO-8601 timestamp at which the signal was muted, or `null`. */
-    mutedAt?: string | undefined;
+    mutedAt: string | null;
     /** ISO-8601 timestamp of creation. */
     createdAt: string;
     /** ISO-8601 timestamp of the last update. */
@@ -30,9 +30,9 @@ export interface SignalDetail {
     /** Tags seen on the signal's occurrences. */
     tags: string[];
     /** ISO-8601 timestamp of the earliest occurrence over the signal's lifetime, or `null` if none yet. */
-    firstSeenAt?: string | undefined;
+    firstSeenAt: string | null;
     /** ISO-8601 timestamp of the latest occurrence over the signal's lifetime, or `null` if none yet. */
-    lastSeenAt?: string | undefined;
+    lastSeenAt: string | null;
     /** Lifetime occurrence count. */
     occurrences: number;
     /** Lifetime fraction of project traces affected by this signal, in `[0, 1]`. */

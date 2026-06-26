@@ -6,7 +6,7 @@ import pydantic
 import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
-from .alert_condition import AlertCondition
+from .monitor_incident_condition import MonitorIncidentCondition
 from .monitor_incident_severity import MonitorIncidentSeverity
 from .monitor_incident_source_type import MonitorIncidentSourceType
 
@@ -61,7 +61,11 @@ class MonitorIncident(UniversalBaseModel):
     ISO-8601 timestamp at which the incident row was created.
     """
 
-    condition: typing.Optional[AlertCondition] = None
+    condition: typing.Optional[MonitorIncidentCondition] = pydantic.Field(default=None)
+    """
+    The monitor rule configuration when the incident opened, or `null` for signal incidents and match monitors.
+    """
+
     notified: bool = pydantic.Field()
     """
     `true` when this incident triggered at least one notification.

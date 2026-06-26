@@ -78,12 +78,14 @@ export const createFakeSignalRepository = (
         // empty when the source is missing or has a zero-mass centroid,
         // zero-mass neighbors skipped, self excluded, project-scoped.
         const source = issues.get(signalId)
-        if (!source || source.projectId !== projectId || source.centroid.mass <= 0) return []
+        if (!source || source.projectId !== projectId || source.centroid === null || source.centroid.mass <= 0)
+          return []
         const sourceVector = normalize(source.centroid.base)
         if (sourceVector === null) return []
         return [...issues.values()]
-          .filter((issue) => issue.projectId === projectId && issue.id !== signalId && issue.centroid.mass > 0)
+          .filter((issue) => issue.projectId === projectId && issue.id !== signalId && (issue.centroid?.mass ?? 0) > 0)
           .flatMap((issue) => {
+            if (issue.centroid === null) return []
             const vector = normalize(issue.centroid.base)
             if (vector === null) return []
             return [{ signalId: issue.id, similarity: dot(sourceVector, vector) }]
@@ -124,6 +126,12 @@ export const createFakeSignalRepository = (
     save: (issue) =>
       Effect.sync(() => {
         issues.set(issue.id, issue)
+      }),
+
+    softDelete: (id) =>
+      Effect.sync(() => {
+        const issue = issues.get(id)
+        if (issue) issues.set(id, { ...issue, deletedAt: new Date(), updatedAt: new Date() })
       }),
 
     countBySlug: ({ projectId, slug, excludeSignalId }) =>

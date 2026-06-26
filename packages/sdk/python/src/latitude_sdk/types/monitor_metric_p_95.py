@@ -4,16 +4,13 @@ import typing
 
 import pydantic
 from ..core.pydantic_utilities import UniversalBaseModel
+from .monitor_metric_p_95_field import MonitorMetricP95Field
 
 
-class AlertConditionSensitivityWindow(UniversalBaseModel):
+class MonitorMetricP95(UniversalBaseModel):
+    field: MonitorMetricP95Field = pydantic.Field()
     """
-    Sustained-condition window.
-    """
-
-    minutes: int = pydantic.Field()
-    """
-    How long the threshold must stay crossed before the incident opens. Minimum 5.
+    Numeric field to aggregate.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -6,7 +6,7 @@ export interface PaginatedMonitors {
     /** Page of items, in the requested sort order. */
     items: LatitudeApi.Monitor[];
     /** Opaque cursor for fetching the next page. `null` when there are no more pages. Pass it back in `cursor` to continue. */
-    nextCursor?: string | undefined;
+    nextCursor: string | null;
     /** `true` when there is at least one more page after this one. */
     hasMore: boolean;
 }

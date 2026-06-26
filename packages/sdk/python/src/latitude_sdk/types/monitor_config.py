@@ -17,7 +17,11 @@ class MonitorConfig(UniversalBaseModel):
     """
 
     filter_set: typing_extensions.Annotated[typing.Optional[MonitorFilterSet], FieldMetadata(alias="filterSet")] = None
-    query: typing.Optional[str] = None
+    query: typing.Optional[str] = pydantic.Field(default=None)
+    """
+    Semantic query applied by inline monitor targets.
+    """
+
     metric: typing.Optional[MonitorMetric] = None
     condition: typing.Optional[AlertCondition] = None
 

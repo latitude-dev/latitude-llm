@@ -33,6 +33,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => {
     name: "Bad JSON output",
     description: "The model returns malformed JSON.",
     source: "annotation",
+    origin: "system",
     assigneeId: null,
     priority: null,
     centroid: {

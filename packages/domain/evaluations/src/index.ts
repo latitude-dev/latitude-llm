@@ -1,4 +1,4 @@
-export { generateBaselinePromptText } from "./alignment/baseline-prompt.ts"
+export { generateBaselinePromptText, generateJudgePromptText } from "./alignment/baseline-prompt.ts"
 export type {
   BaselineEvaluationExampleResult,
   BaselineEvaluationResult,
@@ -9,6 +9,7 @@ export type {
   LoadedEvaluationAlignmentState,
   PersistEvaluationAlignmentResult,
 } from "./alignment/types.ts"
+export { compileSettingsToScript, validateEvaluationScriptCompiles } from "./codegen/compile-settings-to-script.ts"
 export {
   ALIGNMENT_CURATED_DATASET_MAX_ROWS,
   ALIGNMENT_CURATED_DATASET_MIN_ROWS,
@@ -131,21 +132,13 @@ export {
   type EvaluationExecutionResult,
   type EvaluationExecutionResultPayload,
   type EvaluationScriptExecution,
-  type EvaluationScriptSchema,
   type EvaluationSignalContext,
-  type ExecuteEvaluationScriptWithAIError,
   estimateEvaluationScriptCostMicrocents,
   evaluationExecutionResultPayloadSchema,
   evaluationExecutionResultSchema,
-  evaluationRuntimeZod,
   evaluationSignalContextSchema,
-  executeEvaluationScript,
-  executeEvaluationScriptWithAI,
-  extractPromptFromEvaluationScript,
-  formatEvaluationConversationForPrompt,
   toEvaluationConversationMessages,
   toEvaluationExecutionResult,
-  validateEvaluationScript,
   wrapPromptAsEvaluationScript,
 } from "./runtime/evaluation-execution.ts"
 export { executeEvaluationScriptSandboxed } from "./runtime/sandbox-execution.ts"
@@ -160,6 +153,12 @@ export {
   loadAlignmentStateOrInactiveUseCase,
 } from "./use-cases/alignment/load-alignment-state-or-inactive.ts"
 export { persistAlignmentResultUseCase } from "./use-cases/alignment/persist-alignment-result.ts"
+export {
+  type CreateEvaluationError,
+  type CreateEvaluationInput,
+  type CreateEvaluationResult,
+  createEvaluationUseCase,
+} from "./use-cases/create-evaluation.ts"
 export {
   deriveSignalAlignmentState,
   type GetSignalAlignmentStateError,
@@ -178,13 +177,11 @@ export {
   type LiveEvaluationExecutionInput,
   type LiveEvaluationExecutionResult,
   type LiveEvaluationResultPayload,
-  type LiveEvaluationRuntime,
   type LiveEvaluationSignalContext,
   liveEvaluationConversationInputSchema,
   liveEvaluationExecutionInputSchema,
   liveEvaluationExecutionResultSchema,
   liveEvaluationResultPayloadSchema,
-  liveEvaluationRuntimeSchema,
   liveEvaluationSignalContextSchema,
 } from "./use-cases/live/execute-live-evaluation.ts"
 export { listAllActiveEvaluations } from "./use-cases/live/list-all-active-evaluations.ts"

@@ -59,8 +59,6 @@ export class IncidentsClient {
             toIso,
             source_type: sourceType,
             source_id: sourceId,
-            sourceType: legacySourceType,
-            sourceId: legacySourceId,
             sourceTypes,
             kinds,
             severities,
@@ -70,8 +68,6 @@ export class IncidentsClient {
             toIso: toIso != null ? toIso : undefined,
             source_type: sourceType != null ? sourceType : undefined,
             source_id: sourceId,
-            sourceType: legacySourceType != null ? legacySourceType : undefined,
-            sourceId: legacySourceId,
             sourceTypes: Array.isArray(sourceTypes)
                 ? sourceTypes.map((item) => item)
                 : sourceTypes != null

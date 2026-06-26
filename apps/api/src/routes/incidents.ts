@@ -29,6 +29,7 @@ const incidentsFernGroup = (methodName: string) =>
 
 const DEFAULT_RANGE_DAYS = 7
 const DEFAULT_RANGE_MS = DEFAULT_RANGE_DAYS * 24 * 60 * 60 * 1000
+const IncidentSourceTypeQuerySchema = z.enum(INCIDENT_SOURCE_TYPES)
 
 const resolveIncidentsRange = (
   fromIso: string | undefined,
@@ -52,20 +53,14 @@ const ListIncidentsQuerySchema = z.object({
       "Lower bound (inclusive) of the time window. Returns incidents whose lifetime overlaps `[fromIso, toIso]`. Defaults to 7 days before `toIso`.",
     ),
   toIso: z.iso.datetime().optional().describe("Upper bound (inclusive) of the time window. Defaults to now."),
-  source_type: z
-    .enum(INCIDENT_SOURCE_TYPES)
-    .optional()
-    .describe("Restrict to incidents triggered by this source type: `monitor` or `signal`."),
+  source_type: IncidentSourceTypeQuerySchema.optional().describe(
+    "Restrict to incidents triggered by this source type: `monitor` or `signal`.",
+  ),
   source_id: cuidSchema.optional().describe("Restrict to incidents tied to one source entity id."),
-  sourceType: z
-    .enum(INCIDENT_SOURCE_TYPES)
-    .optional()
-    .describe("Deprecated alias for `source_type`; prefer `source_type`."),
-  sourceId: cuidSchema.optional().describe("Deprecated alias for `source_id`; prefer `source_id`."),
   sourceTypes: z
     .preprocess(
       (val) => (val === undefined || Array.isArray(val) ? val : [val]),
-      z.array(z.enum(INCIDENT_SOURCE_TYPES)),
+      z.array(IncidentSourceTypeQuerySchema),
     )
     .optional()
     .describe("Deprecated alias for `source_type`; prefer `source_type`."),
@@ -78,6 +73,41 @@ const ListIncidentsQuerySchema = z.object({
     .optional()
     .describe("Restrict to incidents whose severity matches any value in this list."),
 })
+
+type ListIncidentsQuery = z.infer<typeof ListIncidentsQuerySchema>
+
+const parseLegacySourceType = (sourceType: string | undefined) => {
+  if (sourceType === undefined) return undefined
+  const parsed = IncidentSourceTypeQuerySchema.safeParse(sourceType)
+  if (parsed.success) return parsed.data
+  throw new BadRequestError({ message: "`sourceType` must be `monitor` or `signal`." })
+}
+
+const parseLegacySourceId = (sourceId: string | undefined) => {
+  if (sourceId === undefined) return undefined
+  const parsed = cuidSchema.safeParse(sourceId)
+  if (parsed.success) return parsed.data
+  throw new BadRequestError({ message: "`sourceId` must be a valid id." })
+}
+
+export const resolveListIncidentsFilters = (
+  query: ListIncidentsQuery,
+  legacyQuery: { readonly sourceType?: string | undefined; readonly sourceId?: string | undefined },
+) => {
+  if (query.kinds !== undefined) {
+    throw new BadRequestError({ message: "`kinds` is no longer supported. Use `source_type` and `severities`." })
+  }
+
+  const legacySourceType = parseLegacySourceType(legacyQuery.sourceType)
+  const legacySourceId = parseLegacySourceId(legacyQuery.sourceId)
+
+  return {
+    sourceTypes: query.source_type
+      ? [query.source_type]
+      : (query.sourceTypes ?? (legacySourceType ? [legacySourceType] : undefined)),
+    sourceId: query.source_id ?? legacySourceId,
+  }
+}
 
 const ListIncidentsResponseSchema = z
   .object({
@@ -112,13 +142,10 @@ const listIncidents = incidentEndpoint({
     const query = c.req.valid("query")
     const organizationId = c.var.organization.id
     const { from, to } = resolveIncidentsRange(query.fromIso, query.toIso, new Date())
-    if (query.kinds !== undefined) {
-      throw new BadRequestError({ message: "`kinds` is no longer supported. Use `source_type` and `severities`." })
-    }
-    const sourceTypes = query.source_type
-      ? [query.source_type]
-      : (query.sourceTypes ?? (query.sourceType ? [query.sourceType] : undefined))
-    const sourceId = query.source_id ?? query.sourceId
+    const { sourceTypes, sourceId } = resolveListIncidentsFilters(query, {
+      sourceType: c.req.query("sourceType"),
+      sourceId: c.req.query("sourceId"),
+    })
 
     const incidents = await Effect.runPromise(
       Effect.gen(function* () {

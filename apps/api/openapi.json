@@ -4141,6 +4141,180 @@
           "count"
         ]
       },
+      "CreateSignalResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Created signal id."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe identifier; use it on the other signal endpoints."
+          },
+          "evaluationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Id of the signal's detector evaluation."
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "evaluationId"
+        ]
+      },
+      "CreateSignalBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Human-readable name. Used to derive the slug."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What this signal captures."
+          },
+          "priority": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "urgent",
+              null
+            ],
+            "description": "Manual triage priority. Null/omitted leaves it unset."
+          },
+          "filters": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/FilterCondition"
+              }
+            },
+            "description": "Row-local pre-gate restricting which traces the evaluation runs against. Omitted = all traces."
+          },
+          "evaluation": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "settings": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "judge"
+                        ]
+                      },
+                      "criteria": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Natural-language description of the behavior the judge detects."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "criteria"
+                    ],
+                    "description": "Declarative judge config; compiled to a sandbox script that calls an LLM."
+                  }
+                },
+                "required": [
+                  "settings"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "script": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Raw sandbox evaluation script (advanced). Must compile in the QuickJS runtime."
+                  }
+                },
+                "required": [
+                  "script"
+                ]
+              }
+            ],
+            "description": "The signal's membership detector. Provide exactly one of `settings` or `script`."
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "evaluation"
+        ]
+      },
+      "UpdateSignalResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Updated signal id."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe identifier (stable across updates)."
+          },
+          "changed": {
+            "type": "boolean",
+            "description": "Whether any field actually changed."
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "changed"
+        ]
+      },
+      "UpdateSignalBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "New name. Omitted leaves it unchanged."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New description. Omitted leaves it unchanged."
+          },
+          "filters": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/FilterCondition"
+              }
+            },
+            "description": "New evaluation pre-gate. Explicit `null` clears it; omitted leaves it unchanged."
+          }
+        }
+      },
       "SignalAnalyticsResponse": {
         "type": "object",
         "properties": {
@@ -4401,8 +4575,11 @@
             "description": "Generated description of the evaluation."
           },
           "alignedAt": {
-            "type": "string",
-            "description": "ISO-8601 timestamp at which the evaluation was last realigned."
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp at which the evaluation was last realigned, or `null` if never aligned."
           },
           "archivedAt": {
             "type": [
@@ -4450,7 +4627,10 @@
         ]
       },
       "EvaluationAlignmentMetrics": {
-        "type": "object",
+        "type": [
+          "object",
+          "null"
+        ],
         "properties": {
           "alignmentMetric": {
             "type": "number",
@@ -4500,7 +4680,7 @@
           "balancedAccuracy",
           "matthewsCorrelationCoefficient"
         ],
-        "description": "Alignment metrics computed from the evaluation's confusion matrix."
+        "description": "Alignment metrics computed from the evaluation's confusion matrix, or `null` for an unaligned (e.g. raw / deterministic) evaluation."
       },
       "SignalMonitoringState": {
         "oneOf": [
@@ -10968,6 +11148,297 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "Signals"
+        ],
+        "x-fern-sdk-group-name": "signals",
+        "x-fern-sdk-method-name": "create",
+        "summary": "Create signal",
+        "description": "Creates a user-defined signal with its membership detector — a judge from `settings`, or a raw `script` (advanced). The script is validated at save time (422 on a compile error). Deterministic scripts are backfilled over recent history; judges detect forward from creation.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "createSignal",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSignalBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Signal created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateSignalResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/signals/{signalSlug}": {
+      "patch": {
+        "tags": [
+          "Signals"
+        ],
+        "x-fern-sdk-group-name": "signals",
+        "x-fern-sdk-method-name": "update",
+        "summary": "Update signal",
+        "description": "Updates a signal's name, description, and evaluation pre-gate `filters`. Filter changes apply forward-only — existing membership is never re-evaluated. The slug is stable.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "updateSignal",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Signal slug."
+            },
+            "required": true,
+            "description": "Signal slug.",
+            "name": "signalSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSignalBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signal updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateSignalResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Signals"
+        ],
+        "x-fern-sdk-group-name": "signals",
+        "x-fern-sdk-method-name": "delete",
+        "summary": "Delete signal",
+        "description": "Soft-deletes a signal and archives its detector so it stops matching new traces. Existing scores are retained but excluded from reads; the slug becomes reusable.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "deleteSignal",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Signal slug."
+            },
+            "required": true,
+            "description": "Signal slug.",
+            "name": "signalSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Signal deleted"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Signals"
+        ],
+        "x-fern-sdk-group-name": "signals",
+        "x-fern-sdk-method-name": "get",
+        "summary": "Get project signal",
+        "description": "Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getSignal",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Signal slug."
+            },
+            "required": true,
+            "description": "Signal slug.",
+            "name": "signalSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Signal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/projects/{projectSlug}/signals/analytics": {
@@ -11026,87 +11497,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SignalAnalyticsResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/projects/{projectSlug}/signals/{signalSlug}": {
-      "get": {
-        "tags": [
-          "Signals"
-        ],
-        "x-fern-sdk-group-name": "signals",
-        "x-fern-sdk-method-name": "get",
-        "summary": "Get project signal",
-        "description": "Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.",
-        "security": [
-          {
-            "ApiKeyAuth": []
-          }
-        ],
-        "operationId": "getSignal",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Project slug (human-readable identifier)"
-            },
-            "required": true,
-            "description": "Project slug (human-readable identifier)",
-            "name": "projectSlug",
-            "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Signal slug."
-            },
-            "required": true,
-            "description": "Signal slug.",
-            "name": "signalSlug",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Signal",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SignalDetail"
                 }
               }
             }
@@ -11791,32 +12181,6 @@
             "required": false,
             "description": "Restrict to incidents tied to one source entity id.",
             "name": "source_id",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "monitor",
-                "signal"
-              ],
-              "description": "Deprecated alias for `source_type`; prefer `source_type`."
-            },
-            "required": false,
-            "description": "Deprecated alias for `source_type`; prefer `source_type`.",
-            "name": "sourceType",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 24,
-              "maxLength": 24,
-              "description": "Deprecated alias for `source_id`; prefer `source_id`."
-            },
-            "required": false,
-            "description": "Deprecated alias for `source_id`; prefer `source_id`.",
-            "name": "sourceId",
             "in": "query"
           },
           {

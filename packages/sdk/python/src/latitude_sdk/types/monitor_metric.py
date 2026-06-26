@@ -10,6 +10,7 @@ from .monitor_metric_avg_field import MonitorMetricAvgField
 from .monitor_metric_max_field import MonitorMetricMaxField
 from .monitor_metric_median_field import MonitorMetricMedianField
 from .monitor_metric_min_field import MonitorMetricMinField
+from .monitor_metric_p_95_field import MonitorMetricP95Field
 from .monitor_metric_sum_field import MonitorMetricSumField
 
 
@@ -94,7 +95,7 @@ class MonitorMetric_P95(UniversalBaseModel):
     """
 
     kind: typing.Literal["p95"] = "p95"
-    field: MonitorMetricMedianField
+    field: MonitorMetricP95Field
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 

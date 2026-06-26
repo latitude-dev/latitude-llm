@@ -9,7 +9,6 @@ import {
   type SqlClientShape,
 } from "@domain/shared"
 import {
-  MIN_OCCURRENCES_FOR_VISIBILITY,
   normalizeSignalCentroid,
   type OrgSignalSearchHit,
   SIGNAL_DISCOVERY_MIN_SIMILARITY,
@@ -23,23 +22,7 @@ import {
   signalSchema,
   UNASSIGNED_FILTER,
 } from "@domain/signals"
-import {
-  and,
-  asc,
-  count,
-  desc,
-  eq,
-  getTableColumns,
-  gte,
-  ilike,
-  inArray,
-  isNotNull,
-  isNull,
-  lte,
-  ne,
-  or,
-  sql,
-} from "drizzle-orm"
+import { and, asc, count, desc, eq, getTableColumns, ilike, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { alertIncidents } from "../schema/alert-incidents.ts"
@@ -85,11 +68,14 @@ const toDomainSignal = (row: typeof signals.$inferSelect): Signal =>
     name: row.name,
     description: row.description,
     source: row.source,
+    origin: row.origin,
+    filters: row.filters,
     assigneeId: row.assigneeId,
     priority: row.priority,
     centroid: row.centroid,
     clusteredAt: row.clusteredAt,
     mutedAt: row.mutedAt,
+    deletedAt: row.deletedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   })
@@ -143,7 +129,8 @@ const validateVector = (
 
 const toCentroidEmbedding = (issue: Signal): Effect.Effect<readonly number[] | null, RepositoryError> =>
   Effect.gen(function* () {
-    if (issue.centroid.mass <= 0) {
+    // User-created signals carry no centroid; only discovered signals cluster.
+    if (issue.centroid === null || issue.centroid.mass <= 0) {
       return null
     }
 
@@ -183,12 +170,15 @@ const toInsertRow = (issue: Signal, centroidEmbedding: readonly number[] | null)
   name: issue.name,
   description: issue.description,
   source: issue.source,
+  origin: issue.origin,
+  filters: issue.filters,
   assigneeId: issue.assigneeId,
   priority: issue.priority,
   centroid: issue.centroid,
   centroidEmbedding: centroidEmbedding === null ? null : [...centroidEmbedding],
   clusteredAt: issue.clusteredAt,
   mutedAt: issue.mutedAt,
+  deletedAt: issue.deletedAt,
   createdAt: issue.createdAt,
   updatedAt: issue.updatedAt,
 })
@@ -202,21 +192,9 @@ const signalRepositoryCoreLive = Layer.effect(
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           return yield* sqlClient
             .query((db, organizationId) => {
-              const hasAnnotationEvidence = sql<boolean>`exists (
-                select 1
-                from ${scores}
-                where ${scores.signalId} = ${signals.id}
-                  and ${scores.draftedAt} is null
-                  and ${scores.sourceType} = 'annotation'
-              )`
-
-              const meetsVisibilityThreshold = sql<boolean>`(
-                select count(*)
-                from ${scores}
-                where ${scores.signalId} = ${signals.id}
-                  and ${scores.draftedAt} is null
-              ) >= ${MIN_OCCURRENCES_FOR_VISIBILITY}`
-
+              // Every non-deleted signal is listed regardless of occurrence count: user-created
+              // signals are deliberate (and may have zero occurrences until traffic arrives), and
+              // discovered signals are surfaced as soon as they exist.
               return db
                 .select(signalColumnsWithLifecycle)
                 .from(signals)
@@ -224,7 +202,7 @@ const signalRepositoryCoreLive = Layer.effect(
                   and(
                     eq(signals.organizationId, organizationId),
                     eq(signals.projectId, projectId),
-                    or(hasAnnotationEvidence, meetsVisibilityThreshold),
+                    isNull(signals.deletedAt),
                   ),
                 )
                 .orderBy(desc(signals.createdAt))
@@ -246,21 +224,6 @@ const signalRepositoryCoreLive = Layer.effect(
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           return yield* sqlClient
             .query((db, organizationId) => {
-              const hasAnnotationEvidence = sql<boolean>`exists (
-                select 1
-                from ${scores}
-                where ${scores.signalId} = ${signals.id}
-                  and ${scores.draftedAt} is null
-                  and ${scores.sourceType} = 'annotation'
-              )`
-
-              const meetsVisibilityThreshold = sql<boolean>`(
-                select count(*)
-                from ${scores}
-                where ${scores.signalId} = ${signals.id}
-                  and ${scores.draftedAt} is null
-              ) >= ${MIN_OCCURRENCES_FOR_VISIBILITY}`
-
               const assigneeConditions = assigneeIds?.length
                 ? assigneeIds.includes(UNASSIGNED_FILTER)
                   ? or(
@@ -273,28 +236,48 @@ const signalRepositoryCoreLive = Layer.effect(
                   : inArray(signals.assigneeId, assigneeIds)
                 : undefined
               const search = searchQuery?.trim()
+              const scoreCreatedFromClause = timeRange?.from ? sql`and ${scores.createdAt} >= ${timeRange.from}` : sql``
+              const scoreCreatedToClause = timeRange?.to ? sql`and ${scores.createdAt} <= ${timeRange.to}` : sql``
+              const hasScoreActivityInTimeRange =
+                timeRange?.from || timeRange?.to
+                  ? sql<boolean>`exists (
+                      select 1
+                      from ${scores}
+                      where ${scores.signalId} = ${signals.id}
+                        and ${scores.draftedAt} is null
+                        ${scoreCreatedFromClause}
+                        ${scoreCreatedToClause}
+                    )`
+                  : undefined
               const where = and(
                 eq(signals.organizationId, organizationId),
                 eq(signals.projectId, projectId),
-                or(hasAnnotationEvidence, meetsVisibilityThreshold),
+                isNull(signals.deletedAt),
                 lifecycleGroup === "active"
                   ? isNull(signals.mutedAt)
                   : lifecycleGroup === "archived"
                     ? isNotNull(signals.mutedAt)
                     : undefined,
                 assigneeConditions,
-                timeRange?.from ? gte(signals.updatedAt, timeRange.from) : undefined,
-                timeRange?.to ? lte(signals.updatedAt, timeRange.to) : undefined,
+                hasScoreActivityInTimeRange,
                 search ? or(ilike(signals.name, `%${search}%`), ilike(signals.description, `%${search}%`)) : undefined,
               )
               const direction = sort?.direction === "asc" ? asc : desc
+              const lastSeenSort = sql<Date>`coalesce((
+                select max(${scores.createdAt})
+                from ${scores}
+                where ${scores.signalId} = ${signals.id}
+                  and ${scores.draftedAt} is null
+                  ${scoreCreatedFromClause}
+                  ${scoreCreatedToClause}
+              ), ${signals.createdAt})`
               const occurrencesSort = sql<number>`(
                 select count(*)
                 from ${scores}
                 where ${scores.signalId} = ${signals.id}
                   and ${scores.draftedAt} is null
-                  ${timeRange?.from ? sql`and ${scores.createdAt} >= ${timeRange.from}` : sql``}
-                  ${timeRange?.to ? sql`and ${scores.createdAt} <= ${timeRange.to}` : sql``}
+                  ${scoreCreatedFromClause}
+                  ${scoreCreatedToClause}
               )`
               const affectedSessionsSort = sql<number>`(
                 select count(distinct ${scores.sessionId})
@@ -303,17 +286,17 @@ const signalRepositoryCoreLive = Layer.effect(
                   and ${scores.draftedAt} is null
                   and ${scores.sessionId} is not null
                   and ${scores.sessionId} != ''
-                  ${timeRange?.from ? sql`and ${scores.createdAt} >= ${timeRange.from}` : sql``}
-                  ${timeRange?.to ? sql`and ${scores.createdAt} <= ${timeRange.to}` : sql``}
+                  ${scoreCreatedFromClause}
+                  ${scoreCreatedToClause}
               )`
               const orderBy =
                 sort?.field === "state"
                   ? [direction(signals.mutedAt), direction(signals.updatedAt)]
                   : sort?.field === "occurrences"
-                    ? [direction(occurrencesSort), desc(signals.updatedAt), asc(signals.id)]
+                    ? [direction(occurrencesSort), desc(lastSeenSort), asc(signals.id)]
                     : sort?.field === "affectedSessions"
-                      ? [direction(affectedSessionsSort), desc(signals.updatedAt), asc(signals.id)]
-                      : [direction(signals.updatedAt), direction(signals.createdAt), asc(signals.id)]
+                      ? [direction(affectedSessionsSort), desc(lastSeenSort), asc(signals.id)]
+                      : [direction(lastSeenSort), direction(signals.createdAt), asc(signals.id)]
 
               return Promise.all([
                 db
@@ -348,7 +331,7 @@ const signalRepositoryCoreLive = Layer.effect(
               db
                 .select(signalColumnsWithLifecycle)
                 .from(signals)
-                .where(and(eq(signals.organizationId, organizationId), eq(signals.id, id)))
+                .where(and(eq(signals.organizationId, organizationId), eq(signals.id, id), isNull(signals.deletedAt)))
                 .limit(1),
             )
             .pipe(
@@ -368,7 +351,7 @@ const signalRepositoryCoreLive = Layer.effect(
               db
                 .select()
                 .from(signals)
-                .where(and(eq(signals.organizationId, organizationId), eq(signals.id, id)))
+                .where(and(eq(signals.organizationId, organizationId), eq(signals.id, id), isNull(signals.deletedAt)))
                 .limit(1)
                 .for("update"),
             )
@@ -403,6 +386,7 @@ const signalRepositoryCoreLive = Layer.effect(
                   and(
                     eq(signals.organizationId, organizationId),
                     eq(signals.projectId, projectId),
+                    isNull(signals.deletedAt),
                     inArray(signals.id, signalIds),
                   ),
                 )
@@ -443,6 +427,7 @@ const signalRepositoryCoreLive = Layer.effect(
                 and(
                   eq(signals.organizationId, organizationId),
                   eq(signals.projectId, projectId),
+                  isNull(signals.deletedAt),
                   isNotNull(signals.centroidEmbedding),
                   sql`(${score} >= ${SIGNAL_DISCOVERY_MIN_SIMILARITY} OR ${vectorScore} >= ${SIGNAL_DISCOVERY_MIN_VECTOR_SIMILARITY})`,
                 ),
@@ -474,6 +459,7 @@ const signalRepositoryCoreLive = Layer.effect(
                   eq(signals.organizationId, organizationId),
                   eq(signals.projectId, projectId),
                   eq(signals.id, signalId),
+                  isNull(signals.deletedAt),
                 ),
               )
               .limit(1),
@@ -501,6 +487,7 @@ const signalRepositoryCoreLive = Layer.effect(
                   eq(signals.organizationId, organizationId),
                   eq(signals.projectId, projectId),
                   ne(signals.id, signalId),
+                  isNull(signals.deletedAt),
                   isNotNull(signals.centroidEmbedding),
                 ),
               )
@@ -580,6 +567,7 @@ const signalRepositoryCoreLive = Layer.effect(
                   eq(signals.organizationId, organizationId),
                   isNull(projects.deletedAt),
                   isNull(signals.mutedAt),
+                  isNull(signals.deletedAt),
                   isNotNull(signals.centroidEmbedding),
                   sql`(${score} >= ${SIGNAL_DISCOVERY_MIN_SIMILARITY} OR ${vectorScore} >= ${SIGNAL_DISCOVERY_MIN_VECTOR_SIMILARITY})`,
                 ),
@@ -608,15 +596,29 @@ const signalRepositoryCoreLive = Layer.effect(
                   name: row.name,
                   description: row.description,
                   source: row.source,
+                  origin: row.origin,
+                  filters: row.filters,
                   assigneeId: row.assigneeId,
                   priority: row.priority,
                   centroid: row.centroid,
                   centroidEmbedding: row.centroidEmbedding,
                   clusteredAt: row.clusteredAt,
                   mutedAt: row.mutedAt,
+                  deletedAt: row.deletedAt,
                   updatedAt: row.updatedAt,
                 },
               }),
+          )
+        }),
+
+      softDelete: (id: SignalId) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient.query((db, organizationId) =>
+            db
+              .update(signals)
+              .set({ deletedAt: sql`now()`, updatedAt: sql`now()` })
+              .where(and(eq(signals.organizationId, organizationId), eq(signals.id, id), isNull(signals.deletedAt))),
           )
         }),
 
@@ -627,6 +629,7 @@ const signalRepositoryCoreLive = Layer.effect(
             eq(signals.organizationId, sqlClient.organizationId),
             eq(signals.projectId, input.projectId),
             eq(signals.slug, input.slug),
+            isNull(signals.deletedAt),
             ...(input.excludeSignalId ? [ne(signals.id, input.excludeSignalId)] : []),
           )
           const [row] = yield* sqlClient.query((db) =>
@@ -648,6 +651,7 @@ const signalRepositoryCoreLive = Layer.effect(
                     eq(signals.organizationId, organizationId),
                     eq(signals.projectId, projectId),
                     eq(signals.slug, slug),
+                    isNull(signals.deletedAt),
                   ),
                 )
                 .limit(1),
@@ -673,6 +677,7 @@ const signalRepositoryCoreLive = Layer.effect(
                   eq(signals.organizationId, organizationId),
                   eq(signals.projectId, projectId),
                   eq(signals.slug, slug),
+                  isNull(signals.deletedAt),
                 ),
               )
               .limit(1),

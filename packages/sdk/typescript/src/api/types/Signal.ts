@@ -20,7 +20,7 @@ export interface Signal {
     /** Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`). */
     states: Signal.States.Item[];
     /** ISO-8601 timestamp at which the signal was muted, or `null`. */
-    mutedAt?: string | undefined;
+    mutedAt: string | null;
     /** ISO-8601 timestamp of creation. */
     createdAt: string;
     /** ISO-8601 timestamp of the last update. */

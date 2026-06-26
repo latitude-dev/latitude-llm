@@ -109,6 +109,8 @@ export { taxonomyClusterLockKey, withTaxonomyClusterLock } from "./locks.ts"
 export {
   type ClusterAnalysisAggregate,
   type ClusterRepresentativeExample,
+  type ClusterSessionMomentRange,
+  type ClusterSessionTraceIdsInput,
   TaxonomyClusterIntelligenceRepository,
   type TaxonomyClusterIntelligenceRepositoryShape,
 } from "./ports/taxonomy-cluster-intelligence-repository.ts"
@@ -195,6 +197,10 @@ export {
   type GetClusterDetailsResult,
   getClusterDetailsUseCase,
 } from "./use-cases/get-details.ts"
+export {
+  type ListClusterSessionTraceIdsInput,
+  listClusterSessionTraceIdsUseCase,
+} from "./use-cases/list-cluster-session-trace-ids.ts"
 export {
   type ListTaxonomyClustersInput,
   listClustersUseCase,

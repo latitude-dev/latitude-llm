@@ -267,7 +267,12 @@ export function SignalsView({
       width: 114,
       minWidth: 114,
       sortKey: "lastSeen",
-      render: (issue) => <SeenAtCell lastSeenAtIso={issue.lastSeenAt} firstSeenAtIso={issue.firstSeenAt} />,
+      render: (issue) => {
+        const metrics = rowMetricsBySignalId[issue.id]
+        if (!metrics) return <AnalyticsCellSkeleton />
+        if (metrics.occurrences === 0) return <span className="truncate text-muted-foreground">Never</span>
+        return <SeenAtCell lastSeenAtIso={issue.lastSeenAt} firstSeenAtIso={issue.firstSeenAt} />
+      },
     },
     {
       key: "occurrences",

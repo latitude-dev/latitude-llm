@@ -19,6 +19,7 @@ from ..types.incident import Incident
 from ..types.list_incidents_response import ListIncidentsResponse
 from .types.incidents_list_request_severities_item import IncidentsListRequestSeveritiesItem
 from .types.incidents_list_request_source_type import IncidentsListRequestSourceType
+from .types.incidents_list_request_source_types_item import IncidentsListRequestSourceTypesItem
 
 
 class RawIncidentsClient:
@@ -31,15 +32,15 @@ class RawIncidentsClient:
         *,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
-	        source_type: typing.Optional[IncidentsListRequestSourceType] = None,
-	        source_id: typing.Optional[str] = None,
-	        source_types: typing.Optional[
-	            typing.Union[IncidentsListRequestSourceType, typing.Sequence[IncidentsListRequestSourceType]]
-	        ] = None,
-	        kinds: typing.Optional[typing.Union[str, typing.Sequence[str]]] = None,
-	        severities: typing.Optional[
-	            typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]
-	        ] = None,
+        source_type: typing.Optional[IncidentsListRequestSourceType] = None,
+        source_id: typing.Optional[str] = None,
+        source_types: typing.Optional[
+            typing.Union[IncidentsListRequestSourceTypesItem, typing.Sequence[IncidentsListRequestSourceTypesItem]]
+        ] = None,
+        kinds: typing.Optional[typing.Union[str, typing.Sequence[str]]] = None,
+        severities: typing.Optional[
+            typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]
+        ] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[ListIncidentsResponse]:
         """
@@ -62,6 +63,12 @@ class RawIncidentsClient:
         source_id : typing.Optional[str]
             Restrict to incidents tied to one source entity id.
 
+        source_types : typing.Optional[typing.Union[IncidentsListRequestSourceTypesItem, typing.Sequence[IncidentsListRequestSourceTypesItem]]]
+            Deprecated alias for `source_type`; prefer `source_type`.
+
+        kinds : typing.Optional[typing.Union[str, typing.Sequence[str]]]
+            Deprecated filter from the previous incidents model. This endpoint now filters by source and severity.
+
         severities : typing.Optional[typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]]
             Restrict to incidents whose severity matches any value in this list.
 
@@ -76,15 +83,15 @@ class RawIncidentsClient:
         _response = self._client_wrapper.httpx_client.request(
             f"v1/projects/{jsonable_encoder(project_slug)}/incidents",
             method="GET",
-	            params={
-	                "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
-	                "toIso": serialize_datetime(to_iso) if to_iso is not None else None,
-	                "source_type": source_type,
-	                "source_id": source_id,
-	                "sourceTypes": source_types,
-	                "kinds": kinds,
-	                "severities": severities,
-	            },
+            params={
+                "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
+                "toIso": serialize_datetime(to_iso) if to_iso is not None else None,
+                "source_type": source_type,
+                "source_id": source_id,
+                "sourceTypes": source_types,
+                "kinds": kinds,
+                "severities": severities,
+            },
             request_options=request_options,
         )
         try:
@@ -224,7 +231,7 @@ class AsyncRawIncidentsClient:
         source_type: typing.Optional[IncidentsListRequestSourceType] = None,
         source_id: typing.Optional[str] = None,
         source_types: typing.Optional[
-            typing.Union[IncidentsListRequestSourceType, typing.Sequence[IncidentsListRequestSourceType]]
+            typing.Union[IncidentsListRequestSourceTypesItem, typing.Sequence[IncidentsListRequestSourceTypesItem]]
         ] = None,
         kinds: typing.Optional[typing.Union[str, typing.Sequence[str]]] = None,
         severities: typing.Optional[
@@ -251,6 +258,12 @@ class AsyncRawIncidentsClient:
 
         source_id : typing.Optional[str]
             Restrict to incidents tied to one source entity id.
+
+        source_types : typing.Optional[typing.Union[IncidentsListRequestSourceTypesItem, typing.Sequence[IncidentsListRequestSourceTypesItem]]]
+            Deprecated alias for `source_type`; prefer `source_type`.
+
+        kinds : typing.Optional[typing.Union[str, typing.Sequence[str]]]
+            Deprecated filter from the previous incidents model. This endpoint now filters by source and severity.
 
         severities : typing.Optional[typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]]
             Restrict to incidents whose severity matches any value in this list.

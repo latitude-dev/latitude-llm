@@ -105,6 +105,7 @@ const buildNewSignalFromScore = ({
     name,
     description,
     source,
+    origin: "system",
     assigneeId: null,
     priority: null,
     centroid,

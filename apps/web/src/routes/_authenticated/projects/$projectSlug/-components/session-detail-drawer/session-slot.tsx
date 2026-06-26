@@ -11,6 +11,7 @@ import type { SessionDetailRecord } from "../../../../../../domains/sessions/ses
 import { TraceScopeContext } from "../../../../../../domains/traces/trace-scope.tsx"
 import type { TraceRecord } from "../../../../../../domains/traces/traces.functions.ts"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
+import { AddTraceToDatasetAction } from "../add-trace-to-dataset-action.tsx"
 import type { OpenTraceOptions } from "../session-detail-drawer.tsx"
 import { useSpanFilters } from "../trace-detail-drawer/tabs/spans-tab/use-span-filters.ts"
 import { SpansTab } from "../trace-detail-drawer/tabs/spans-tab.tsx"
@@ -213,6 +214,9 @@ export function SessionSlot({
 
   const title = session.rootSpanName || session.sessionId.slice(0, 12)
   const status = deriveSessionStatus(session.endTime)
+  // Prefer the latest output trace; fall back to any trace so sessions whose
+  // spans have no output messages (latestTraceId === "") can still be added.
+  const datasetTraceId = latestTraceId || session.traceIds[0]
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -262,6 +266,15 @@ export function SessionSlot({
                   label={`${formatCount(session.errorCount)} ${session.errorCount === 1 ? "error" : "errors"}`}
                 />
               )
+            ) : null}
+            {!isSandbox && datasetTraceId ? (
+              <div className="ml-auto shrink-0">
+                <AddTraceToDatasetAction
+                  projectId={projectId}
+                  traceId={datasetTraceId}
+                  description={`Adding ${latestTraceId ? "the latest" : "a"} trace of this session · ${datasetTraceId.slice(0, 7)}`}
+                />
+              </div>
             ) : null}
           </div>
           <CopyableText

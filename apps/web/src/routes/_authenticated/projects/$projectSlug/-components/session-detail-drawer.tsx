@@ -98,7 +98,8 @@ export function SessionDetailDrawer({
   // the issue slot under a sandbox scope, even from a deep-linked `?signalId=`
   // (its `SignalLifecycleActions` registers command-palette commands, and the
   // sandbox tree has no provider).
-  const signalsEnabled = !use(TraceScopeContext)
+  const isSandbox = !!use(TraceScopeContext)
+  const signalsEnabled = !isSandbox
   const detailKind: DetailSlotKind | null =
     traceId.length > 0 ? "trace" : signalId.length > 0 && signalsEnabled ? "issue" : null
   const showDetail = detailKind !== null && !isSessionMissing

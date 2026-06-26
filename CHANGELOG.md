@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+## v0.3.19 - 2026-06-25
+
+### Telemetry
+
+- Shipped the Hermes telemetry connector as a typed Python package with tests, lockfile, docs, changelog, and CI publishing for PyPI releases (ref: #3658, #3677, #3678).
+- Added an ElevenLabs Agents telemetry guide and documented Hermes and OpenClaw configuration updates (ref: #3689, #3681, #3672).
+
+### Signals and traces
+
+- Reduced repeated signal analytics fetches by batching list-signal analytics and repository reads across projects, groups, and score counts.
+- Fixed signal detail pages so annotation scores list sessions correctly instead of dropping score identifiers (ref: #3682).
+- Added an "add to dataset" action from trace and session detail drawers (ref: #3684).
+- Expanded the span tree automatically when no span is selected so trace details open with usable context (ref: #3675).
+
+### Web and operations
+
+- Kept expected web 4xx responses out of Datadog Error Tracking while preserving unexpected error reporting (ref: #3671).
+- Accepted unknown OAuth error codes in Slack integration routes so integrations can show recoverable failures instead of breaking navigation (ref: #3679).
+- Remapped demo-project snapshot trace and session IDs during seeding so seeded demo data stays attached to the target project (ref: #3667).
+- Clarified the low-cache-hit-rate flagger description and refreshed public overview and deployment docs (ref: #3664, #3680, #3673).
+
 ## v0.3.18 - 2026-06-25
 
 ### Spans and ingestion

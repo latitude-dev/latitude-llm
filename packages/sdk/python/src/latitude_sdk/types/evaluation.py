@@ -25,9 +25,11 @@ class Evaluation(UniversalBaseModel):
     Generated description of the evaluation.
     """
 
-    aligned_at: typing_extensions.Annotated[str, FieldMetadata(alias="alignedAt")] = pydantic.Field()
+    aligned_at: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="alignedAt")] = pydantic.Field(
+        default=None
+    )
     """
-    ISO-8601 timestamp at which the evaluation was last realigned.
+    ISO-8601 timestamp at which the evaluation was last realigned, or `null` if never aligned.
     """
 
     archived_at: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="archivedAt")] = pydantic.Field(
@@ -59,6 +61,6 @@ class Evaluation(UniversalBaseModel):
     Sampling rate as a percentage in `[0, 100]`. `0` means the evaluation is paused.
     """
 
-    alignment: EvaluationAlignmentMetrics
+    alignment: typing.Optional[EvaluationAlignmentMetrics] = None
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

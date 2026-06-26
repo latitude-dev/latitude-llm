@@ -33,6 +33,8 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => {
     name: "API token leak",
     description: "The assistant leaks API tokens.",
     source: "annotation",
+    origin: "system",
+    filters: null,
     assigneeId: null,
     priority: null,
     centroid: {
@@ -44,6 +46,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => {
     },
     clusteredAt: now,
     mutedAt: null,
+    deletedAt: null,
     createdAt: new Date("2026-04-01T10:00:00.000Z"),
     updatedAt: now,
     ...overrides,

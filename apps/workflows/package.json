@@ -33,6 +33,7 @@
     "@platform/env": "workspace:*",
     "@platform/op-gepa": "workspace:*",
     "@platform/queue-bullmq": "workspace:*",
+    "@platform/sandbox-quickjs": "workspace:*",
     "@platform/workflows-temporal": "workspace:*",
     "@repo/observability": "workspace:*",
     "@repo/utils": "workspace:*",

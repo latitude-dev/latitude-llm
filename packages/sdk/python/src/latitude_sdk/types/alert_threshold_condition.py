@@ -4,20 +4,15 @@ import typing
 
 import pydantic
 from ..core.pydantic_utilities import UniversalBaseModel
-from .alert_condition_zero_direction import AlertConditionZeroDirection
 from .alert_metric_threshold import AlertMetricThreshold
+from .alert_threshold_condition_direction import AlertThresholdConditionDirection
 from .monitor_metric import MonitorMetric
 
 
-class AlertConditionZero(UniversalBaseModel):
-    trigger: typing.Literal["threshold"] = pydantic.Field(default="threshold")
-    """
-    Opens once the measured value crosses the threshold.
-    """
-
+class AlertThresholdCondition(UniversalBaseModel):
     metric: MonitorMetric
     threshold: AlertMetricThreshold
-    direction: typing.Optional[AlertConditionZeroDirection] = pydantic.Field(default=None)
+    direction: typing.Optional[AlertThresholdConditionDirection] = pydantic.Field(default=None)
     """
     Direction that opens the incident. Defaults to `above` when omitted.
     """

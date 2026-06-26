@@ -6,11 +6,21 @@ import typing
 from importlib import import_module
 
 if typing.TYPE_CHECKING:
+    from .create_signal_body_evaluation import CreateSignalBodyEvaluation
+    from .create_signal_body_evaluation_script import CreateSignalBodyEvaluationScript
+    from .create_signal_body_evaluation_settings import CreateSignalBodyEvaluationSettings
+    from .create_signal_body_evaluation_settings_settings import CreateSignalBodyEvaluationSettingsSettings
+    from .create_signal_body_priority import CreateSignalBodyPriority
     from .export_signals_body_lifecycle_group import ExportSignalsBodyLifecycleGroup
     from .signals_list_request_lifecycle_group import SignalsListRequestLifecycleGroup
     from .signals_list_request_sort_by import SignalsListRequestSortBy
     from .signals_list_request_sort_direction import SignalsListRequestSortDirection
 _dynamic_imports: typing.Dict[str, str] = {
+    "CreateSignalBodyEvaluation": ".create_signal_body_evaluation",
+    "CreateSignalBodyEvaluationScript": ".create_signal_body_evaluation_script",
+    "CreateSignalBodyEvaluationSettings": ".create_signal_body_evaluation_settings",
+    "CreateSignalBodyEvaluationSettingsSettings": ".create_signal_body_evaluation_settings_settings",
+    "CreateSignalBodyPriority": ".create_signal_body_priority",
     "ExportSignalsBodyLifecycleGroup": ".export_signals_body_lifecycle_group",
     "SignalsListRequestLifecycleGroup": ".signals_list_request_lifecycle_group",
     "SignalsListRequestSortBy": ".signals_list_request_sort_by",
@@ -40,6 +50,11 @@ def __dir__():
 
 
 __all__ = [
+    "CreateSignalBodyEvaluation",
+    "CreateSignalBodyEvaluationScript",
+    "CreateSignalBodyEvaluationSettings",
+    "CreateSignalBodyEvaluationSettingsSettings",
+    "CreateSignalBodyPriority",
     "ExportSignalsBodyLifecycleGroup",
     "SignalsListRequestLifecycleGroup",
     "SignalsListRequestSortBy",

@@ -18,6 +18,7 @@ import type {
   UpdateSignalTriageRecord,
 } from "./signals.functions.ts"
 import {
+  countSignalSessions,
   getRelatedSignals,
   getSignal,
   getSignalDetail,
@@ -445,6 +446,24 @@ export function useUpdateSignalTriage(projectId: string, signalId: string) {
       }),
     onSuccess: () => invalidateSignalQueries(projectId, signalId),
   })
+}
+
+export function useSignalSessionsCount({
+  projectId,
+  signalId,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly signalId: string
+  readonly enabled?: boolean
+}) {
+  const { data } = useQuery({
+    queryKey: getSignalSessionsCountQueryKey(projectId, signalId),
+    queryFn: () => countSignalSessions({ data: { projectId, signalId } }),
+    staleTime: ISSUES_QUERY_STALE_TIME_MS,
+    enabled: enabled && projectId.length > 0 && signalId.length > 0,
+  })
+  return data ?? 0
 }
 
 export function useSignalSessionsInfiniteScroll({

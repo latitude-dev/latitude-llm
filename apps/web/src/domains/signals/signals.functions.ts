@@ -260,8 +260,8 @@ const SIGNAL_DETAIL_TREND_BUCKET_SECONDS = 12 * 60 * 60 // 12h
 const toSignalDetailRecord = (input: {
   readonly issue: Signal
   readonly states: readonly string[]
-  readonly firstSeenAt: Date
-  readonly lastSeenAt: Date
+  readonly firstSeenAt: Date | null
+  readonly lastSeenAt: Date | null
   readonly totalOccurrences: number
   readonly escalationOccurrenceThreshold: number | null
   readonly trend: readonly { readonly bucket: string; readonly count: number }[]
@@ -278,14 +278,15 @@ const toSignalDetailRecord = (input: {
   name: input.issue.name,
   description: input.issue.description,
   source: input.issue.source,
+  origin: input.issue.origin,
   assigneeId: input.issue.assigneeId,
   priority: input.issue.priority,
   states: input.states,
   createdAt: input.issue.createdAt.toISOString(),
   updatedAt: input.issue.updatedAt.toISOString(),
   mutedAt: input.issue.mutedAt?.toISOString() ?? null,
-  firstSeenAt: input.firstSeenAt.toISOString(),
-  lastSeenAt: input.lastSeenAt.toISOString(),
+  firstSeenAt: input.firstSeenAt?.toISOString() ?? null,
+  lastSeenAt: input.lastSeenAt?.toISOString() ?? null,
   totalOccurrences: input.totalOccurrences,
   escalationOccurrenceThreshold: input.escalationOccurrenceThreshold,
   trend: input.trend,
@@ -740,8 +741,8 @@ export const getSignalDetail = createServerFn({ method: "GET" })
             isEscalating: issue.lifecycle.isEscalating,
             now,
           }),
-          firstSeenAt: occurrence?.firstSeenAt ?? issue.createdAt,
-          lastSeenAt: occurrence?.lastSeenAt ?? issue.createdAt,
+          firstSeenAt: occurrence?.firstSeenAt ?? null,
+          lastSeenAt: occurrence?.lastSeenAt ?? null,
           totalOccurrences: occurrence?.totalOccurrences ?? 0,
           escalationOccurrenceThreshold:
             occurrence !== null ? getEscalationOccurrenceThreshold(occurrence.baselineAvgOccurrences) : null,
@@ -816,6 +817,24 @@ export const listSignalSessions = createServerFn({ method: "GET" })
     )
 
     return toSignalSessionPageRecord(result)
+  })
+
+export const countSignalSessions = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), signalId: z.string() }))
+  .handler(async ({ data }): Promise<number> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
+        return yield* scoreAnalyticsRepository.countSessionsBySignal({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          signalId: SignalId(data.signalId),
+        })
+      }).pipe(withClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), orgId)),
+    )
   })
 
 export const getSignalImpact = createServerFn({ method: "GET" })

@@ -23,7 +23,10 @@ export const EvaluationSchema = z
     id: cuidSchema.describe("Stable evaluation identifier."),
     name: z.string().describe("Human-readable name."),
     description: z.string().describe("Generated description of the evaluation."),
-    alignedAt: z.string().describe("ISO-8601 timestamp at which the evaluation was last realigned."),
+    alignedAt: z
+      .string()
+      .nullable()
+      .describe("ISO-8601 timestamp at which the evaluation was last realigned, or `null` if never aligned."),
     archivedAt: z.string().nullable().describe("ISO-8601 timestamp at which the evaluation was archived, or `null`."),
     deletedAt: z.string().nullable().describe("ISO-8601 timestamp at which the evaluation was deleted, or `null`."),
     createdAt: z.string().describe("ISO-8601 timestamp of creation."),
@@ -33,7 +36,9 @@ export const EvaluationSchema = z
       .min(0)
       .max(100)
       .describe("Sampling rate as a percentage in `[0, 100]`. `0` means the evaluation is paused."),
-    alignment: AlignmentMetricsSchema.describe("Alignment metrics computed from the evaluation's confusion matrix."),
+    alignment: AlignmentMetricsSchema.nullable().describe(
+      "Alignment metrics computed from the evaluation's confusion matrix, or `null` for an unaligned (e.g. raw / deterministic) evaluation.",
+    ),
   })
   .openapi("Evaluation")
 
@@ -41,11 +46,11 @@ export const toEvaluationResponse = (evaluation: Evaluation) => ({
   id: evaluation.id as string,
   name: evaluation.name,
   description: evaluation.description,
-  alignedAt: evaluation.alignedAt.toISOString(),
+  alignedAt: evaluation.alignedAt ? evaluation.alignedAt.toISOString() : null,
   archivedAt: evaluation.archivedAt ? evaluation.archivedAt.toISOString() : null,
   deletedAt: evaluation.deletedAt ? evaluation.deletedAt.toISOString() : null,
   createdAt: evaluation.createdAt.toISOString(),
   updatedAt: evaluation.updatedAt.toISOString(),
   sampling: evaluation.trigger.sampling,
-  alignment: deriveEvaluationAlignmentMetrics(evaluation.alignment.confusionMatrix),
+  alignment: evaluation.alignment ? deriveEvaluationAlignmentMetrics(evaluation.alignment.confusionMatrix) : null,
 })

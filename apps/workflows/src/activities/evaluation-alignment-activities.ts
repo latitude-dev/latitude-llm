@@ -32,6 +32,7 @@ import {
   StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
+import { QuickJsScriptRuntimeLive } from "@platform/sandbox-quickjs"
 import { createLogger, withTracing } from "@repo/observability"
 import { Data, Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
@@ -284,6 +285,7 @@ export const evaluateBaselineEvaluationDraft = (input: {
       },
     }).pipe(
       withAi(AIGenerateLive, getRedisClient()),
+      Effect.provide(QuickJsScriptRuntimeLive),
       withTracing,
       Effect.mapError(
         (cause) =>
@@ -325,6 +327,7 @@ export const evaluateIncrementalEvaluationDraft = (input: {
       },
     }).pipe(
       withAi(AIGenerateLive, getRedisClient()),
+      Effect.provide(QuickJsScriptRuntimeLive),
       withTracing,
       Effect.mapError(
         (cause) =>

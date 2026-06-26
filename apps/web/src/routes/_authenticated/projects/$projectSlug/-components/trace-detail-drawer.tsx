@@ -32,6 +32,7 @@ import { TraceScopeContext } from "../../../../../domains/traces/trace-scope.tsx
 import { useTraceDetail } from "../../../../../domains/traces/traces.collection.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
+import { AddTraceToDatasetAction } from "./add-trace-to-dataset-action.tsx"
 import { isGlobalAnnotation } from "./annotations/hooks/use-annotation-navigation.ts"
 import { useConversationAnnotationFocus } from "./annotations/hooks/use-conversation-annotation-focus.ts"
 import { TraceAnnotationsList } from "./annotations/trace-annotations-list.tsx"
@@ -405,6 +406,11 @@ export function TraceDetailBody({
                   className="cursor-pointer transition-opacity hover:opacity-80"
                 />
               </button>
+            ) : null}
+            {!isSandbox ? (
+              <div className="ml-auto shrink-0">
+                <AddTraceToDatasetAction projectId={projectId} traceId={traceId} />
+              </div>
             ) : null}
           </div>
           <CopyableText value={traceId} displayValue={traceId.slice(0, 7)} size="sm" tooltip="Copy trace ID" />

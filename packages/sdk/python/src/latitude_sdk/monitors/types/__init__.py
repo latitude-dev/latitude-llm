@@ -6,14 +6,10 @@ import typing
 from importlib import import_module
 
 if typing.TYPE_CHECKING:
-    from .create_monitor_body_severity import CreateMonitorBodySeverity
-    from .create_monitor_body_trigger import CreateMonitorBodyTrigger
     from .list_monitors_for_target_body_target_type import ListMonitorsForTargetBodyTargetType
     from .update_monitor_body_severity import UpdateMonitorBodySeverity
     from .update_monitor_body_trigger import UpdateMonitorBodyTrigger
 _dynamic_imports: typing.Dict[str, str] = {
-    "CreateMonitorBodySeverity": ".create_monitor_body_severity",
-    "CreateMonitorBodyTrigger": ".create_monitor_body_trigger",
     "ListMonitorsForTargetBodyTargetType": ".list_monitors_for_target_body_target_type",
     "UpdateMonitorBodySeverity": ".update_monitor_body_severity",
     "UpdateMonitorBodyTrigger": ".update_monitor_body_trigger",
@@ -41,10 +37,4 @@ def __dir__():
     return sorted(lazy_attrs)
 
 
-__all__ = [
-    "CreateMonitorBodySeverity",
-    "CreateMonitorBodyTrigger",
-    "ListMonitorsForTargetBodyTargetType",
-    "UpdateMonitorBodySeverity",
-    "UpdateMonitorBodyTrigger",
-]
+__all__ = ["ListMonitorsForTargetBodyTargetType", "UpdateMonitorBodySeverity", "UpdateMonitorBodyTrigger"]

@@ -1197,6 +1197,73 @@ describe("ScoreAnalyticsRepository", () => {
 
       expect(total).toBe(1)
     })
+
+    it("lists distinct sessions for one issue newest-first with pagination", async () => {
+      const page = await fixture.runCh(
+        fixture.repo.listSessionsBySignal({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          signalId: SignalId(signalA),
+          limit: 1,
+          offset: 0,
+        }),
+      )
+
+      expect(page.items).toEqual([
+        {
+          sessionId: SessionId("session_window_a"),
+          lastSeenAt: new Date("2026-04-09T10:00:00.000Z"),
+        },
+      ])
+      expect(page.hasMore).toBe(false)
+      expect(page.limit).toBe(1)
+      expect(page.offset).toBe(0)
+    })
+
+    it("counts distinct sessions linked to one issue", async () => {
+      const total = await fixture.runCh(
+        fixture.repo.countSessionsBySignal({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          signalId: SignalId(signalA),
+        }),
+      )
+
+      expect(total).toBe(1)
+    })
+
+    it("includes annotation scores where passed=false (signal membership is via signal_id)", async () => {
+      const signalAnnotation = "cccccccccccccccccccccccc"
+      const traceAnnotation = "cccccccccccccccccccccccccccccccc"
+      const sessionAnnotation = "session_annotation_c"
+
+      await fixture.insertScores([
+        makeScoreRow({
+          signal_id: signalAnnotation,
+          trace_id: traceAnnotation,
+          session_id: sessionAnnotation,
+          source: "annotation",
+          source_id: "UI",
+          passed: false,
+          created_at: "2026-04-09 11:00:00.000",
+        }),
+      ])
+
+      const page = await fixture.runCh(
+        fixture.repo.listSessionsBySignal({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          signalId: SignalId(signalAnnotation),
+        }),
+      )
+
+      expect(page.items).toEqual([
+        {
+          sessionId: SessionId(sessionAnnotation),
+          lastSeenAt: new Date("2026-04-09T11:00:00.000Z"),
+        },
+      ])
+    })
   })
 
   // ------------------------------------------------------------------

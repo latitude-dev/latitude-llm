@@ -5,6 +5,7 @@ import typing
 from ..core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from ..core.request_options import RequestOptions
 from ..types.alert_condition import AlertCondition
+from ..types.create_monitor_body import CreateMonitorBody
 from ..types.monitor import Monitor
 from ..types.monitor_filter_set import MonitorFilterSet
 from ..types.monitor_list import MonitorList
@@ -13,8 +14,6 @@ from ..types.monitor_target import MonitorTarget
 from ..types.paginated_monitor_incidents import PaginatedMonitorIncidents
 from ..types.paginated_monitors import PaginatedMonitors
 from .raw_client import AsyncRawMonitorsClient, RawMonitorsClient
-from .types.create_monitor_body_severity import CreateMonitorBodySeverity
-from .types.create_monitor_body_trigger import CreateMonitorBodyTrigger
 from .types.list_monitors_for_target_body_target_type import ListMonitorsForTargetBodyTargetType
 from .types.update_monitor_body_severity import UpdateMonitorBodySeverity
 from .types.update_monitor_body_trigger import UpdateMonitorBodyTrigger
@@ -92,17 +91,7 @@ class MonitorsClient:
         return _response.data
 
     def create(
-        self,
-        project_slug: str,
-        *,
-        name: str,
-        target: MonitorTarget,
-        trigger: CreateMonitorBodyTrigger,
-        severity: CreateMonitorBodySeverity,
-        description: typing.Optional[str] = OMIT,
-        metric: typing.Optional[MonitorMetric] = OMIT,
-        condition: typing.Optional[AlertCondition] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
+        self, project_slug: str, *, request: CreateMonitorBody, request_options: typing.Optional[RequestOptions] = None
     ) -> Monitor:
         """
         Creates a monitor with one rule. The slug is derived from `name`.
@@ -112,23 +101,7 @@ class MonitorsClient:
         project_slug : str
             Project slug (human-readable identifier)
 
-        name : str
-            Human-readable name. Used to derive the slug.
-
-        target : MonitorTarget
-
-        trigger : CreateMonitorBodyTrigger
-            When the monitor opens incidents: `match`, `threshold`, or `escalating`.
-
-        severity : CreateMonitorBodySeverity
-            Severity assigned to incidents opened by this monitor.
-
-        description : typing.Optional[str]
-            Optional free-form description.
-
-        metric : typing.Optional[MonitorMetric]
-
-        condition : typing.Optional[AlertCondition]
+        request : CreateMonitorBody
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -140,32 +113,23 @@ class MonitorsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient, MonitorTarget
+        from latitude import CreateMonitorBody_Match, LatitudeApiClient, MonitorTarget
 
         client = LatitudeApiClient(
             token="YOUR_TOKEN",
         )
         client.monitors.create(
             project_slug="projectSlug",
-            name="name",
-            target=MonitorTarget(
-                type="savedSearch",
+            request=CreateMonitorBody_Match(
+                name="name",
+                target=MonitorTarget(
+                    type="savedSearch",
+                ),
+                severity="low",
             ),
-            trigger="match",
-            severity="low",
         )
         """
-        _response = self._raw_client.create(
-            project_slug,
-            name=name,
-            target=target,
-            trigger=trigger,
-            severity=severity,
-            description=description,
-            metric=metric,
-            condition=condition,
-            request_options=request_options,
-        )
+        _response = self._raw_client.create(project_slug, request=request, request_options=request_options)
         return _response.data
 
     def list_for_target(
@@ -579,17 +543,7 @@ class AsyncMonitorsClient:
         return _response.data
 
     async def create(
-        self,
-        project_slug: str,
-        *,
-        name: str,
-        target: MonitorTarget,
-        trigger: CreateMonitorBodyTrigger,
-        severity: CreateMonitorBodySeverity,
-        description: typing.Optional[str] = OMIT,
-        metric: typing.Optional[MonitorMetric] = OMIT,
-        condition: typing.Optional[AlertCondition] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
+        self, project_slug: str, *, request: CreateMonitorBody, request_options: typing.Optional[RequestOptions] = None
     ) -> Monitor:
         """
         Creates a monitor with one rule. The slug is derived from `name`.
@@ -599,23 +553,7 @@ class AsyncMonitorsClient:
         project_slug : str
             Project slug (human-readable identifier)
 
-        name : str
-            Human-readable name. Used to derive the slug.
-
-        target : MonitorTarget
-
-        trigger : CreateMonitorBodyTrigger
-            When the monitor opens incidents: `match`, `threshold`, or `escalating`.
-
-        severity : CreateMonitorBodySeverity
-            Severity assigned to incidents opened by this monitor.
-
-        description : typing.Optional[str]
-            Optional free-form description.
-
-        metric : typing.Optional[MonitorMetric]
-
-        condition : typing.Optional[AlertCondition]
+        request : CreateMonitorBody
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -629,7 +567,11 @@ class AsyncMonitorsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient, MonitorTarget
+        from latitude import (
+            AsyncLatitudeApiClient,
+            CreateMonitorBody_Match,
+            MonitorTarget,
+        )
 
         client = AsyncLatitudeApiClient(
             token="YOUR_TOKEN",
@@ -639,28 +581,19 @@ class AsyncMonitorsClient:
         async def main() -> None:
             await client.monitors.create(
                 project_slug="projectSlug",
-                name="name",
-                target=MonitorTarget(
-                    type="savedSearch",
+                request=CreateMonitorBody_Match(
+                    name="name",
+                    target=MonitorTarget(
+                        type="savedSearch",
+                    ),
+                    severity="low",
                 ),
-                trigger="match",
-                severity="low",
             )
 
 
         asyncio.run(main())
         """
-        _response = await self._raw_client.create(
-            project_slug,
-            name=name,
-            target=target,
-            trigger=trigger,
-            severity=severity,
-            description=description,
-            metric=metric,
-            condition=condition,
-            request_options=request_options,
-        )
+        _response = await self._raw_client.create(project_slug, request=request, request_options=request_options)
         return _response.data
 
     async def list_for_target(

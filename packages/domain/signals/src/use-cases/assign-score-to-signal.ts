@@ -80,10 +80,13 @@ const buildSignalWithAssignedScore = ({
   readonly normalizedEmbedding: readonly number[]
   readonly assignedAt: Date
 }): Signal => {
+  if (issue.centroid === null) {
+    return { ...issue, updatedAt: assignedAt }
+  }
   const centroid = updateSignalCentroid({
     centroid: {
       ...issue.centroid,
-      clusteredAt: issue.clusteredAt,
+      clusteredAt: issue.clusteredAt ?? assignedAt,
     },
     score: {
       embedding: normalizedEmbedding,

@@ -15,6 +15,7 @@ from ..errors.forbidden_error import ForbiddenError
 from ..errors.not_found_error import NotFoundError
 from ..errors.unauthorized_error import UnauthorizedError
 from ..types.alert_condition import AlertCondition
+from ..types.create_monitor_body import CreateMonitorBody
 from ..types.error import Error
 from ..types.monitor import Monitor
 from ..types.monitor_filter_set import MonitorFilterSet
@@ -23,31 +24,12 @@ from ..types.monitor_metric import MonitorMetric
 from ..types.monitor_target import MonitorTarget
 from ..types.paginated_monitor_incidents import PaginatedMonitorIncidents
 from ..types.paginated_monitors import PaginatedMonitors
-from .types.create_monitor_body_severity import CreateMonitorBodySeverity
-from .types.create_monitor_body_trigger import CreateMonitorBodyTrigger
 from .types.list_monitors_for_target_body_target_type import ListMonitorsForTargetBodyTargetType
 from .types.update_monitor_body_severity import UpdateMonitorBodySeverity
 from .types.update_monitor_body_trigger import UpdateMonitorBodyTrigger
 
 # this is used as the default value for optional parameters
 OMIT = typing.cast(typing.Any, ...)
-
-
-def _validate_create_monitor_condition(
-    *, trigger: CreateMonitorBodyTrigger, condition: typing.Any
-) -> None:
-    condition_trigger = getattr(condition, "trigger", None) if condition is not OMIT and condition is not None else None
-
-    if trigger == "match":
-        if condition is not OMIT and condition is not None:
-            raise ValueError("Monitor condition must be omitted when trigger is 'match'.")
-        return
-
-    if trigger in ("threshold", "escalating"):
-        if condition is OMIT or condition is None:
-            raise ValueError(f"Monitor condition is required when trigger is '{trigger}'.")
-        if condition_trigger != trigger:
-            raise ValueError(f"Monitor condition trigger must be '{trigger}'.")
 
 
 class RawMonitorsClient:
@@ -147,17 +129,7 @@ class RawMonitorsClient:
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def create(
-        self,
-        project_slug: str,
-        *,
-        name: str,
-        target: MonitorTarget,
-        trigger: CreateMonitorBodyTrigger,
-        severity: CreateMonitorBodySeverity,
-        description: typing.Optional[str] = OMIT,
-        metric: typing.Optional[MonitorMetric] = OMIT,
-        condition: typing.Optional[AlertCondition] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
+        self, project_slug: str, *, request: CreateMonitorBody, request_options: typing.Optional[RequestOptions] = None
     ) -> HttpResponse[Monitor]:
         """
         Creates a monitor with one rule. The slug is derived from `name`.
@@ -167,23 +139,7 @@ class RawMonitorsClient:
         project_slug : str
             Project slug (human-readable identifier)
 
-        name : str
-            Human-readable name. Used to derive the slug.
-
-        target : MonitorTarget
-
-        trigger : CreateMonitorBodyTrigger
-            When the monitor opens incidents: `match`, `threshold`, or `escalating`.
-
-        severity : CreateMonitorBodySeverity
-            Severity assigned to incidents opened by this monitor.
-
-        description : typing.Optional[str]
-            Optional free-form description.
-
-        metric : typing.Optional[MonitorMetric]
-
-        condition : typing.Optional[AlertCondition]
+        request : CreateMonitorBody
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -193,26 +149,12 @@ class RawMonitorsClient:
         HttpResponse[Monitor]
             Monitor created
         """
-        _validate_create_monitor_condition(trigger=trigger, condition=condition)
-
         _response = self._client_wrapper.httpx_client.request(
             f"v1/projects/{jsonable_encoder(project_slug)}/monitors",
             method="POST",
-            json={
-                "name": name,
-                "description": description,
-                "target": convert_and_respect_annotation_metadata(
-                    object_=target, annotation=MonitorTarget, direction="write"
-                ),
-                "trigger": trigger,
-                "metric": convert_and_respect_annotation_metadata(
-                    object_=metric, annotation=MonitorMetric, direction="write"
-                ),
-                "condition": convert_and_respect_annotation_metadata(
-                    object_=condition, annotation=AlertCondition, direction="write"
-                ),
-                "severity": severity,
-            },
+            json=convert_and_respect_annotation_metadata(
+                object_=request, annotation=CreateMonitorBody, direction="write"
+            ),
             headers={
                 "content-type": "application/json",
             },
@@ -963,17 +905,7 @@ class AsyncRawMonitorsClient:
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def create(
-        self,
-        project_slug: str,
-        *,
-        name: str,
-        target: MonitorTarget,
-        trigger: CreateMonitorBodyTrigger,
-        severity: CreateMonitorBodySeverity,
-        description: typing.Optional[str] = OMIT,
-        metric: typing.Optional[MonitorMetric] = OMIT,
-        condition: typing.Optional[AlertCondition] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
+        self, project_slug: str, *, request: CreateMonitorBody, request_options: typing.Optional[RequestOptions] = None
     ) -> AsyncHttpResponse[Monitor]:
         """
         Creates a monitor with one rule. The slug is derived from `name`.
@@ -983,23 +915,7 @@ class AsyncRawMonitorsClient:
         project_slug : str
             Project slug (human-readable identifier)
 
-        name : str
-            Human-readable name. Used to derive the slug.
-
-        target : MonitorTarget
-
-        trigger : CreateMonitorBodyTrigger
-            When the monitor opens incidents: `match`, `threshold`, or `escalating`.
-
-        severity : CreateMonitorBodySeverity
-            Severity assigned to incidents opened by this monitor.
-
-        description : typing.Optional[str]
-            Optional free-form description.
-
-        metric : typing.Optional[MonitorMetric]
-
-        condition : typing.Optional[AlertCondition]
+        request : CreateMonitorBody
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -1009,26 +925,12 @@ class AsyncRawMonitorsClient:
         AsyncHttpResponse[Monitor]
             Monitor created
         """
-        _validate_create_monitor_condition(trigger=trigger, condition=condition)
-
         _response = await self._client_wrapper.httpx_client.request(
             f"v1/projects/{jsonable_encoder(project_slug)}/monitors",
             method="POST",
-            json={
-                "name": name,
-                "description": description,
-                "target": convert_and_respect_annotation_metadata(
-                    object_=target, annotation=MonitorTarget, direction="write"
-                ),
-                "trigger": trigger,
-                "metric": convert_and_respect_annotation_metadata(
-                    object_=metric, annotation=MonitorMetric, direction="write"
-                ),
-                "condition": convert_and_respect_annotation_metadata(
-                    object_=condition, annotation=AlertCondition, direction="write"
-                ),
-                "severity": severity,
-            },
+            json=convert_and_respect_annotation_metadata(
+                object_=request, annotation=CreateMonitorBody, direction="write"
+            ),
             headers={
                 "content-type": "application/json",
             },

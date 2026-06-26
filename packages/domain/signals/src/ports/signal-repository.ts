@@ -148,9 +148,9 @@ export interface SignalRepositoryShape {
     readonly slug: string
   }): Effect.Effect<boolean, RepositoryError, SqlClient>
   /**
-   * Returns the number of non-deleted issues with this slug in the project,
-   * scoped to the active organization (issues aren't soft-deleted, so this
-   * is a simple COUNT). Powers the `exists` callback of `generateSlug`.
+   * Returns the number of non-deleted signals with this slug in the project,
+   * scoped to the active organization. Powers the `exists` callback of
+   * `generateSlug`; a soft-deleted signal frees its slug for reuse.
    */
   countBySlug(input: {
     readonly projectId: ProjectId
@@ -158,6 +158,8 @@ export interface SignalRepositoryShape {
     readonly excludeSignalId?: SignalId
   }): Effect.Effect<number, RepositoryError, SqlClient>
   save(issue: Signal): Effect.Effect<void, RepositoryError, SqlClient>
+  /** Soft-delete: stamps `deleted_at` so the signal is excluded read-side and frees its slug. No-op if already deleted. */
+  softDelete(id: SignalId): Effect.Effect<void, RepositoryError, SqlClient>
   list(input: ListSignalsRepositoryInput): Effect.Effect<SignalListPage, RepositoryError, SqlClient>
   listTableRows(
     input: ListSignalTableRowsRepositoryInput,

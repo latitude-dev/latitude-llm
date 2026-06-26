@@ -50,7 +50,7 @@ The important invariants are:
 
 ## Evaluation Model
 
-MVP evaluation rows do not need a `settings` payload.
+An evaluation optionally carries a declarative `settings` payload that compiles to its `script`; `settings` is null for a raw or GEPA-generated script.
 
 The required persisted shapes are:
 
@@ -77,23 +77,23 @@ type EvaluationAlignment = {
 
 Evaluation rows live in Postgres with:
 
-- optional `issue_id` for issue-linked evaluations
-- multiple evaluations may link to the same issue
-- `script`, `trigger`, and `alignment`
-- `aligned_at`, `archived_at`, and `deleted_at`
+- `signal_id` — the backed signal. **One *active* detector per signal**, enforced by a partial-unique index `(signal_id) WHERE deleted_at IS NULL AND archived_at IS NULL`; archived predecessors are kept for lineage. (A one-time migration deduped the historical multiple-evaluations-per-signal rows, keeping the most-recently-aligned active.)
+- `script` (always present) + `script_hash` — the writer stamps each score's `metadata.evaluationHash` from `script_hash` (not from the now-nullable `alignment`). Backfilled from `alignment.evaluationHash`.
+- `settings` (nullable) — the declarative config that compiled to `script`.
+- `trigger`
+- `alignment` / `aligned_at` — **nullable**; set only for aligned judge scripts (those that call `llm()`), null for raw/deterministic scripts.
+- `archived_at` and `deleted_at`
 
 Membership is recorded as `scores.signal_id`, never `passed`. An evaluation run's `passed` is host-derived by thresholding the script's `value`; the writer stamps `signal_id` when the behavior is _present_ (`passed = true`). The baseline judge prompt and GEPA proposer set `passed = true` when the behavior is present, so generated and re-optimized judges follow this convention.
 
-Post-MVP, the model may grow a narrow execution-settings payload:
+`EvaluationSettings` (in `@domain/shared`) is the declarative config a user edits in the builder; it compiles deterministically to `script`. The judge form is the first kind:
 
 ```typescript
-type EvaluationSettings = {
-  provider?: string
-  model?: string
-}
+type EvaluationSettings = { kind: "judge"; criteria: string }
+// future kinds compile to a script too: deterministic rule comparators, semantic similarity (Phase 7)
 ```
 
-That extension is intentionally limited to provider/model selection and should only land when the later provider-settings phase is implemented.
+`compileSettingsToScript` (in `@domain/evaluations`, not `@domain/sandbox` — sandbox is the lower-level runtime contract and must not depend on the judge template) turns settings into a script. The judge form reuses the single-sourced baseline judge wrapper (`generateJudgePromptText` + `wrapPromptAsEvaluationScript`), so a settings-authored judge is the same shape as a discovered one and `llm()` capability detection holds. `validateEvaluationScriptCompiles` compiles the result in the QuickJS sandbox and surfaces a `ScriptCompileError` (HTTP 422) for an invalid script. `createEvaluationUseCase` ties these together: compile/validate → stamp `script_hash` → detect capability → persist unaligned.
 
 ## Background Tasks
 
