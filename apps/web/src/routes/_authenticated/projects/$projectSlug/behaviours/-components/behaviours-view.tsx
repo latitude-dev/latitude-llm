@@ -642,10 +642,10 @@ function BehaviourSessionsTable({
       },
       {
         key: "signals",
-        header: "Detected signals",
+        header: "Moments",
         width: 220,
         render: (session) =>
-          session.momentKinds.length > 0 ? session.momentKinds.join(", ").replaceAll("_", " ") : "no detected signals",
+          session.momentKinds.length > 0 ? session.momentKinds.join(", ").replaceAll("_", " ") : "-",
       },
       {
         key: "sessionId",
@@ -762,9 +762,9 @@ function DetectedSignalsChart({
 
   return (
     <div className="flex h-full flex-col rounded-lg bg-secondary">
-      <ChartPanelHeader title="Detected signals" />
+      <ChartPanelHeader title="Moments" />
       <div className="flex flex-1 items-center justify-center px-2 pb-2">
-        <svg className="size-24 shrink-0" viewBox="0 0 160 160" role="img" aria-label="Detected signal distribution">
+        <svg className="size-24 shrink-0" viewBox="0 0 160 160" role="img" aria-label="Moment distribution">
           <circle cx="80" cy="80" r="78" className="fill-muted" />
           {slices.map((slice) => (
             <Tooltip
