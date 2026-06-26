@@ -1,6 +1,7 @@
 import {
   DEFAULT_SCRIPT_MEMORY_BYTES,
   DEFAULT_SCRIPT_STACK_SIZE_BYTES,
+  minimalScriptSession,
   type ScriptRunError,
   type ScriptRunInput,
   type ScriptRunLimits,
@@ -26,7 +27,7 @@ const limits = (overrides?: Partial<ScriptRunLimits>): ScriptRunLimits => ({
 const runError = async (source: string, input?: Partial<ScriptRunInput>): Promise<ScriptRunError> => {
   const script = await Effect.runPromise(runtime.compile({ source }))
   const exit = await Effect.runPromiseExit(
-    runtime.run({ script, context: { conversation: [] }, limits: limits(), ...input }),
+    runtime.run({ script, context: { session: minimalScriptSession() }, limits: limits(), ...input }),
   )
   if (Exit.isSuccess(exit)) throw new Error(`expected run to fail, got ${JSON.stringify(exit.value)}`)
   const error = Cause.findErrorOption(exit.cause)
@@ -86,7 +87,9 @@ describe("isolation boundary", () => {
         `,
       }),
     )
-    const result = await Effect.runPromise(runtime.run({ script, context: { conversation: [] }, limits: limits() }))
+    const result = await Effect.runPromise(
+      runtime.run({ script, context: { session: minimalScriptSession() }, limits: limits() }),
+    )
     expect(result.feedback ?? "").toBe("")
     expect(result.value).toBe(1)
   })
@@ -101,7 +104,7 @@ describe("isolation boundary", () => {
       runtime.compile({ source: "Object.prototype.polluted = 'yes'; return Score(({}).polluted === 'yes' ? 1 : 0)" }),
     )
     const pollutingResult = await Effect.runPromise(
-      runtime.run({ script: polluting, context: { conversation: [] }, limits: limits() }),
+      runtime.run({ script: polluting, context: { session: minimalScriptSession() }, limits: limits() }),
     )
     expect(pollutingResult.value).toBe(1)
 
@@ -109,7 +112,7 @@ describe("isolation boundary", () => {
       runtime.compile({ source: "return Score(({}).polluted === undefined ? 1 : 0)" }),
     )
     const probeResult = await Effect.runPromise(
-      runtime.run({ script: probe, context: { conversation: [] }, limits: limits() }),
+      runtime.run({ script: probe, context: { session: minimalScriptSession() }, limits: limits() }),
     )
     expect(probeResult.value).toBe(1)
 
@@ -131,7 +134,7 @@ describe("isolation boundary", () => {
             `,
           }),
         ),
-        context: { conversation: [] },
+        context: { session: minimalScriptSession() },
         limits: limits(),
       }),
     )
@@ -141,12 +144,12 @@ describe("isolation boundary", () => {
   it("keeps hostile conversation content inert", async () => {
     const script = await Effect.runPromise(
       // biome-ignore lint/suspicious/noTemplateCurlyInString: the placeholder must interpolate inside the sandbox, not here
-      runtime.compile({ source: "return Score(1, `${conversation}`.slice(0, 64))" }),
+      runtime.compile({ source: "return Score(1, `${session.conversation}`.slice(0, 64))" }),
     )
     const result = await Effect.runPromise(
       runtime.run({
         script,
-        context: { conversation: [{ role: "user", content: "`); globalThis.escaped = true; (`" }] },
+        context: { session: minimalScriptSession([{ role: "user", content: "`); globalThis.escaped = true; (`" }]) },
         limits: limits(),
       }),
     )

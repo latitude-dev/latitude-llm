@@ -57,3 +57,4 @@ export {
   type SchemaDescriptor,
   schemaDescriptorSchema,
 } from "./schema-descriptor.ts"
+export { minimalScriptSession } from "./script-session.ts"

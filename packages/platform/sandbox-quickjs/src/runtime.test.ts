@@ -3,6 +3,7 @@ import {
   DEFAULT_SCRIPT_STACK_SIZE_BYTES,
   type HostLlmCall,
   type HostLlmFunction,
+  minimalScriptSession,
   type RunResult,
   type ScriptRunError,
   type ScriptRunInput,
@@ -33,7 +34,7 @@ const compileAndRun = async (
   const script = await compile(source)
   return run({
     script,
-    context: { conversation: [{ role: "user", content: "hello" }] },
+    context: { session: minimalScriptSession([{ role: "user", content: "hello" }]) },
     ...(options?.llm ? { llm: options.llm } : {}),
     ...(options?.limits ? { limits: options.limits } : {}),
   })
@@ -98,30 +99,32 @@ describe("run: the score contract", () => {
 
   it("rejects out-of-range or non-numeric scores as runtime errors", async () => {
     const script = await compile("return Score(2)")
-    const error = await runError({ script, context: { conversation: [] } })
+    const error = await runError({ script, context: { session: minimalScriptSession() } })
     expect(error._tag).toBe("ScriptRuntimeError")
 
     const nan = await compile("return Score('high')")
-    expect((await runError({ script: nan, context: { conversation: [] } }))._tag).toBe("ScriptRuntimeError")
+    expect((await runError({ script: nan, context: { session: minimalScriptSession() } }))._tag).toBe(
+      "ScriptRuntimeError",
+    )
   })
 
   it("rejects runs that do not return a Score", async () => {
     const script = await compile("return { value: 1 }")
-    const error = await runError({ script, context: { conversation: [] } })
+    const error = await runError({ script, context: { session: minimalScriptSession() } })
     expect(error._tag).toBe("ScriptRuntimeError")
     expect(error.message).toContain("must return Score")
   })
 
   it("surfaces script throws as ScriptRuntimeError", async () => {
     const script = await compile("throw new Error('detector blew up')")
-    const error = await runError({ script, context: { conversation: [] } })
+    const error = await runError({ script, context: { session: minimalScriptSession() } })
     expect(error._tag).toBe("ScriptRuntimeError")
     expect(error.message).toContain("detector blew up")
   })
 
   it("pure runs are deterministic functions of (definition, trace)", async () => {
-    const script = await compile("return Score(conversation[0].content.includes('hello') ? 1 : 0)")
-    const context = { conversation: [{ role: "user", content: "hello there" }] }
+    const script = await compile("return Score(session.conversation[0].content.includes('hello') ? 1 : 0)")
+    const context = { session: minimalScriptSession([{ role: "user", content: "hello there" }]) }
     const first = await run({ script, context })
     const second = await run({ script, context })
     expect(second.value).toBe(first.value)
@@ -130,33 +133,30 @@ describe("run: the score contract", () => {
 })
 
 describe("run: host-controlled globals", () => {
-  it("exposes conversation as a read-only view that stringifies as prompt lines", async () => {
+  it("exposes session.conversation as a read-only view that stringifies as prompt lines", async () => {
     const script = await compile(`
-      const text = \`\${conversation}\`
-      const frozen = Object.isFrozen(conversation) && Object.isFrozen(conversation[0])
+      const text = \`\${session.conversation}\`
+      const frozen = Object.isFrozen(session.conversation) && Object.isFrozen(session.conversation[0])
       return Score(text === "[user] hi\\n[assistant] yo" && frozen ? 1 : 0)
     `)
     const result = await run({
       script,
       context: {
-        conversation: [
+        session: minimalScriptSession([
           { role: "user", content: "hi" },
           { role: "assistant", content: "yo" },
-        ],
+        ]),
       },
     })
     expect(result.value).toBe(1)
   })
 
-  it("exposes the owning entity as issue/signal context", async () => {
+  it("exposes session and not the legacy conversation/issue/signal globals", async () => {
     const script = await compile(
-      "return Score(issue.name === 'n' && issue.description === 'd' ? 1 : 0, typeof signal === 'undefined' ? 'no signal' : 'signal leaked')",
+      "return Score(typeof session === 'object' && typeof conversation === 'undefined' && typeof issue === 'undefined' && typeof signal === 'undefined' ? 1 : 0)",
     )
-    const result = await run({
-      script,
-      context: { conversation: [], issue: { name: "n", description: "d" } },
-    })
-    expect(result).toMatchObject({ value: 1, feedback: "no signal" })
+    const result = await run({ script, context: { session: minimalScriptSession() } })
+    expect(result.value).toBe(1)
   })
 
   it("validates values host-side through parse()", async () => {
@@ -174,7 +174,7 @@ describe("run: host-controlled globals", () => {
         return Score(1, String(error.message).slice(0, 32))
       }
     `)
-    const result = await run({ script: bad, context: { conversation: [] } })
+    const result = await run({ script: bad, context: { session: minimalScriptSession() } })
     expect(result.value).toBe(1)
     expect(result.feedback).toContain("validation failed")
   })
@@ -195,7 +195,7 @@ describe("run: host-controlled globals", () => {
     expect(zodV4.value).toBe(1)
 
     const script = await compile('require("node:fs"); return Score(0)')
-    const error = await runError({ script, context: { conversation: [] } })
+    const error = await runError({ script, context: { session: minimalScriptSession() } })
     expect(error._tag).toBe("ScriptRuntimeError")
     expect(error.message).toContain('require() is unavailable in the sandbox for module "node:fs"')
   })
@@ -203,7 +203,7 @@ describe("run: host-controlled globals", () => {
 
 describe("run: llm host calls", () => {
   const judgeScript = `const result = await llm(
-  \`Judge:\n\${conversation}\`,
+  \`Judge:\n\${session.conversation}\`,
   { schema: z.object({ passed: z.boolean(), feedback: z.string() }) }
 )
 
@@ -268,7 +268,7 @@ if (result.passed) {
     expect(script.capabilities).toEqual([])
     const result = await run({
       script,
-      context: { conversation: [] },
+      context: { session: minimalScriptSession() },
       llm: async () => ({ object: {}, tokens: 0, duration: 0, cost: 0 }),
     })
     expect(result.value).toBe(1)
@@ -278,7 +278,7 @@ if (result.passed) {
     const script = await compile(judgeScript)
     const error = await runError({
       script,
-      context: { conversation: [] },
+      context: { session: minimalScriptSession() },
       llm: async () => {
         throw new Error("upstream timeout")
       },
@@ -308,7 +308,7 @@ if (result.passed) {
 
   it("fails fast when an llm-capability script runs without a host implementation", async () => {
     const script = await compile("await llm('x'); return Score(1)")
-    const error = await runError({ script, context: { conversation: [] }, limits: tightLimits() })
+    const error = await runError({ script, context: { session: minimalScriptSession() }, limits: tightLimits() })
     expect(error._tag).toBe("ScriptRuntimeError")
     expect(error.message).toContain("without a host llm implementation")
   })
@@ -318,7 +318,7 @@ if (result.passed) {
     const script = await compile("const r = await llm('x', { schema: { kind: 'exploit' } }); return Score(1)")
     const error = await runError({
       script,
-      context: { conversation: [] },
+      context: { session: minimalScriptSession() },
       llm: async (call) => {
         calls.push(call)
         return { object: {}, tokens: 0, duration: 0, cost: 0 }
@@ -331,7 +331,7 @@ if (result.passed) {
 
   it("does not let scripts masquerade their own throws as transient host failures", async () => {
     const script = await compile("const e = new Error('fake'); e.name = 'HostCallError'; throw e")
-    const error = await runError({ script, context: { conversation: [] } })
+    const error = await runError({ script, context: { session: minimalScriptSession() } })
     expect(error._tag).toBe("ScriptRuntimeError")
   })
 
@@ -344,7 +344,7 @@ if (result.passed) {
 
     for (const source of ["await llm('x'); return Score(1)", "await llm('x', {}); return Score(1)"]) {
       const script = await compile(source)
-      const error = await runError({ script, context: { conversation: [] }, llm, limits: tightLimits() })
+      const error = await runError({ script, context: { session: minimalScriptSession() }, llm, limits: tightLimits() })
       expect(error._tag).toBe("ScriptRuntimeError")
       expect(error.message).toContain("llm() requires a schema")
     }
