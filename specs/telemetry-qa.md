@@ -308,14 +308,8 @@ expected to parse their framework-specific span attributes.
 
 | # | Integration | Example dir | Backend key | Testable now | Status | Notes / bugs / fixes |
 |---|---|---|---|---|---|---|
-| 57 | Eve (eve.dev) | `examples/eve-app` | OpenAI | ✅ | ⬜ | Agent framework on Vercel AI SDK; spans `ai.eve.turn` / `eve.*` via `@vercel/otel` exporter (no Latitude `instrumentations` entry). |
-| 58 | Flue (flueframework.com) | `examples/flue-app` | OpenAI | ✅ | ⬜ | Workflow framework; spans via `@flue/opentelemetry` + Latitude SDK `createOpenTelemetryObserver()`. |
-
-> **TODO when we reach Eve (#57) & Flue (#58):** Latitude currently has **no in-app onboarding
-> instructions** for these two integrations. Action items: (1) author the in-app instructions
-> docs for Eve and Flue (the connect/integration onboarding pages), and (2) source/add the
-> corresponding **icons** (Eve + Flue logos) for the integration list. Confirm the missing-docs
-> assumption against the codebase before writing.
+| 57 | Eve (eve.dev) | `examples/eve-app` | OpenAI | ✅ | ✅ | **DONE (review-only; coworker tested the integration — not re-run).** Agent framework on Vercel AI SDK; spans `ai.eve.turn` / `eve.*` via `@vercel/otel` exporter (no Latitude `instrumentations` entry). Example reviewed = correct (the `pnpm-workspace.yaml` `allowBuilds` is pnpm auto-managed, not a bug). Docs `eve.mdx` reviewed = good + nav-registered. **Icon:** wide wordmark didn't read at small sizes → **uses the Vercel icon** (`eve: VercelIcon` in provider-map; Eve is a Vercel framework). **In-app instructions ADDED** (`onboarding-integration-snippets.ts` + `telemetry-instructions.tsx`): TS-only, `registerOTel` instrumentation-file snippet, no Latitude-SDK install (uses `@vercel/otel`; `providerUsesLatitudeSdk` opt-out). |
+| 58 | Flue (flueframework.com) | `examples/flue-app` | OpenAI | ✅ | ✅ | **DONE (review-only; coworker tested — not re-run).** Workflow framework; spans via `@flue/opentelemetry` + Latitude SDK `createOpenTelemetryObserver()`. Example reviewed = correct (matches docs: `new Latitude({serviceName})` + `observe(createOpenTelemetryObserver())`). Docs `flue.mdx` reviewed = good + nav-registered. **Icon:** custom `flue.tsx` (black tile, theme-aware). **In-app instructions ADDED:** TS-only, `@flue/opentelemetry @opentelemetry/api` packages + init/observe snippet. |
 
 ---
 
@@ -373,7 +367,9 @@ Run via the uv venv at `packages/telemetry/python/.venv`.
 | 55 | OpenClaw CLI installer | `packages/telemetry/openclaw-cli` | One-shot installer for the OpenClaw plugin | ⚠️ | ⬜ | Installer/config tool — verify wiring, not trace shape directly. |
 | 56 | Pi agent telemetry | `packages/telemetry/pi` | Pi coding-agent extension → streams sessions as OTLP traces | ⚠️ | ⬜ | Needs the Pi agent installed. |
 | 59 | Hermes telemetry | `packages/telemetry/hermes` | **pip** plugin for Nous Research's **Hermes Agent** harness → streams sessions as OTLP traces (user prompts, model turns, tool calls/results, token usage, real system prompt). Same family as claude-code/pi/openclaw. | ⚠️ | ⬜ | **NEW (merged to development, picked up via the 2026-06-26 rebase; PRs incl. #3681).** Python pkg `latitude-telemetry-hermes` v0.1.0, entry point `hermes_agent.plugins` → `latitude`. Needs Hermes Agent installed in the **same** venv (official installer uses `~/.hermes/hermes-agent/venv`); enable via `~/.hermes/config.yaml` (**not** `hermes plugins enable` — hermes-agent#23802 reports pip plugins as "not installed" to the CLI). Has `tests/test_plugin.py`. Verify OTLP trace shape like the other harness integrations when reached. |
-| 60 | ElevenLabs Agents | `docs/telemetry/frameworks/elevenlabs.mdx` (docs-only) | Hosted voice-agent platform; observed via ElevenLabs **Custom LLM** → point the agent at a self-run OpenAI-compatible proxy instrumented with Latitude. | ⚠️ | ⬜ | **NEW (dev docs #3689, picked up via rebase).** Not a Latitude package — the actual telemetry is the **OpenAI instrumentation** (#1) running on your proxy, so span parsing is already covered. What's new is the documented onboarding pattern (custom-LLM proxy). Verify the docs/wiring, not a distinct span shape. |
+| 60 | ElevenLabs Agents | `docs/telemetry/frameworks/elevenlabs.mdx` (docs-only) | Hosted voice-agent platform; observed via ElevenLabs **Custom LLM** → point the agent at a self-run OpenAI-compatible proxy instrumented with Latitude. | ⚠️ | ✅ | **DONE (review-only).** Not a Latitude package — the actual telemetry is the **OpenAI instrumentation** (#1) running on your proxy, so span parsing is already covered. Docs `elevenlabs.mdx` reviewed = good + nav-registered. **Icon:** custom `elevenlabs.tsx` (theme-aware bars). **In-app instructions ADDED:** TS+Py, custom-LLM proxy snippets (express / fastapi) with `instrumentations:{openai}`, packages `openai express` / `openai fastapi uvicorn`. |
+
+> **Eve/Flue/ElevenLabs polish (this PR, 2026-06-26):** added provider icons as `.tsx` (`elevenlabs.tsx`, `flue.tsx`; Eve reuses `VercelIcon`), wired into `provider-map.ts` + barrel; added **in-app onboarding instructions** for all three to `onboarding-integration-snippets.ts` + `telemetry-instructions.tsx`. Docs pages + examples reviewed (no code bugs). Remaining non-SDK integrations (#54 OpenClaw paths, #55, #56 Pi, #59 Hermes) deferred to a follow-up PR.
 
 ---
 
