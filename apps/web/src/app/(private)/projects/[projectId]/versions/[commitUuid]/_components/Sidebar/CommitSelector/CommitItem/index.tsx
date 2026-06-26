@@ -12,7 +12,10 @@ import Link from 'next/link'
 import { useSelectedLayoutSegment } from 'next/navigation'
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
 import useDeploymentTests from '$/stores/deploymentTests'
+import useFeature from '$/stores/useFeature'
+import { DISABLE_VERSION_DEPLOY_FLAG } from '@latitude-data/core/services/workspaceFeatures/flags'
 import { ACTIVE_DEPLOYMENT_STATUSES } from '@latitude-data/core/schema/models/types/DeploymentTest'
+import { DEPLOY_DISABLED_TOOLTIP } from '../deployDisabled'
 
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
@@ -124,6 +127,11 @@ export function CommitItem({
     )
   }, [project.id, commit, isHead, currentDocument, selectedSegment])
 
+  const { isEnabled: deployDisabled, isLoading: isLoadingDeployFeature } =
+    useFeature(DISABLE_VERSION_DEPLOY_FLAG)
+  // Keep deploy blocked until the feature flag resolves so it never flashes as
+  // clickable before we know whether it's disabled.
+  const deployBlocked = deployDisabled || isLoadingDeployFeature
   const hasDraftButtons = isDraft && onCommitPublish && onCommitDelete
   const isCurrentCommit = currentCommit.uuid === commit?.uuid
   const isHeadBaseline =
@@ -267,15 +275,17 @@ export function CommitItem({
                     <Button
                       iconProps={{ name: 'split', color: 'foregroundMuted' }}
                       variant='nope'
+                      lookDisabled={deployBlocked}
                       onClick={(e) => {
                         e.stopPropagation()
                         e.preventDefault()
+                        if (deployBlocked) return
                         onCommitPublish?.(commit.id)
                       }}
                     />
                   }
                 >
-                  Deploy version
+                  {deployDisabled ? DEPLOY_DISABLED_TOOLTIP : 'Deploy version'}
                 </Tooltip>
                 <Tooltip
                   asChild

@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { TabSelector } from '$/components/TabSelector'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -29,6 +30,10 @@ import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import useDeploymentTests from '$/stores/deploymentTests'
+import useFeature from '$/stores/useFeature'
+
+import { DISABLE_VERSION_DEPLOY_FLAG } from '@latitude-data/core/services/workspaceFeatures/flags'
+import { DEPLOY_DISABLED_TOOLTIP } from './deployDisabled'
 
 import { HELP_CENTER } from '@latitude-data/core/constants'
 
@@ -159,6 +164,11 @@ export default function CommitSelector({
   }, [currentCommit.id, headCommit?.id, activeTests])
   const [publishCommit, setPublishCommit] = useState<number | null>(null)
   const [deleteCommit, setDeleteCommit] = useState<number | null>(null)
+  const { isEnabled: deployDisabled, isLoading: isLoadingDeployFeature } =
+    useFeature(DISABLE_VERSION_DEPLOY_FLAG)
+  // Keep deploy blocked until we know whether it's disabled, so it never flashes
+  // as clickable before the feature flag resolves.
+  const deployBlocked = deployDisabled || isLoadingDeployFeature
   const canPublish = !currentCommit.mergedAt
   const getInitialTab = (): 'active' | 'drafts' | 'archived' => {
     if (currentCommit.mergedAt && currentCommit.id !== headCommit?.id) {
@@ -247,13 +257,26 @@ export default function CommitSelector({
         </SelectContent>
       </SelectRoot>
       {canPublish ? (
-        <Button
-          fancy
-          fullWidth
-          onClick={() => setPublishCommit(currentCommit.id)}
-        >
-          Deploy version
-        </Button>
+        deployBlocked ? (
+          <Tooltip
+            asChild
+            trigger={
+              <Button fancy fullWidth lookDisabled>
+                Deploy version
+              </Button>
+            }
+          >
+            {deployDisabled ? DEPLOY_DISABLED_TOOLTIP : 'Deploy version'}
+          </Tooltip>
+        ) : (
+          <Button
+            fancy
+            fullWidth
+            onClick={() => setPublishCommit(currentCommit.id)}
+          >
+            Deploy version
+          </Button>
+        )
       ) : null}
       {currentCommit.mergedAt ? (
         <Button variant='outline' fullWidth onClick={() => setOpen(true)}>
