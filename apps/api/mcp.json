@@ -8974,6 +8974,38 @@
             "minLength": 24,
             "maxLength": 24
           },
+          "sourceType": {
+            "description": "Deprecated alias for `source_type`; prefer `source_type`.",
+            "type": "string",
+            "enum": [
+              "monitor",
+              "signal"
+            ]
+          },
+          "sourceId": {
+            "description": "Deprecated alias for `source_id`; prefer `source_id`.",
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24
+          },
+          "sourceTypes": {
+            "description": "Deprecated alias for `source_type`; prefer `source_type`.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "monitor",
+                "signal"
+              ]
+            }
+          },
+          "kinds": {
+            "description": "Deprecated filter from the previous incidents model. This endpoint now filters by source and severity.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "severities": {
             "description": "Restrict to incidents whose severity matches any value in this list.",
             "type": "array",
@@ -9206,6 +9238,30 @@
                                       "type": "string",
                                       "const": "median",
                                       "description": "Find the median numeric field value over matching events."
+                                    },
+                                    "field": {
+                                      "type": "string",
+                                      "enum": [
+                                        "duration",
+                                        "cost",
+                                        "tokens"
+                                      ],
+                                      "description": "Numeric field to aggregate."
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "field"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "p95",
+                                      "description": "Find the 95th-percentile numeric field value over matching events."
                                     },
                                     "field": {
                                       "type": "string",
@@ -9533,6 +9589,30 @@
                                       "type": "string",
                                       "const": "median",
                                       "description": "Find the median numeric field value over matching events."
+                                    },
+                                    "field": {
+                                      "type": "string",
+                                      "enum": [
+                                        "duration",
+                                        "cost",
+                                        "tokens"
+                                      ],
+                                      "description": "Numeric field to aggregate."
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "field"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "p95",
+                                      "description": "Find the 95th-percentile numeric field value over matching events."
                                     },
                                     "field": {
                                       "type": "string",
@@ -10023,6 +10103,30 @@
                               "field"
                             ],
                             "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "p95",
+                                "description": "Find the 95th-percentile numeric field value over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
                           }
                         ],
                         "description": "Metric measured over the monitor target."
@@ -10334,6 +10438,30 @@
                                 "type": "string",
                                 "const": "median",
                                 "description": "Find the median numeric field value over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "p95",
+                                "description": "Find the 95th-percentile numeric field value over matching events."
                               },
                               "field": {
                                 "type": "string",
@@ -13253,6 +13381,17 @@
                           "additionalProperties": false
                         }
                       }
+                    },
+                    "query": {
+                      "description": "Semantic query applied when evaluating inline trace targets.",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": [
@@ -13341,6 +13480,17 @@
                               "additionalProperties": false
                             }
                           }
+                        },
+                        "query": {
+                          "description": "Semantic query applied by inline monitor targets.",
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         },
                         "metric": {
                           "description": "Metric evaluated by threshold and escalating monitor rules.",
@@ -13476,6 +13626,30 @@
                                   "type": "string",
                                   "const": "median",
                                   "description": "Find the median numeric field value over matching events."
+                                },
+                                "field": {
+                                  "type": "string",
+                                  "enum": [
+                                    "duration",
+                                    "cost",
+                                    "tokens"
+                                  ],
+                                  "description": "Numeric field to aggregate."
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "field"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "p95",
+                                  "description": "Find the 95th-percentile numeric field value over matching events."
                                 },
                                 "field": {
                                   "type": "string",
@@ -13639,6 +13813,30 @@
                                           "type": "string",
                                           "const": "median",
                                           "description": "Find the median numeric field value over matching events."
+                                        },
+                                        "field": {
+                                          "type": "string",
+                                          "enum": [
+                                            "duration",
+                                            "cost",
+                                            "tokens"
+                                          ],
+                                          "description": "Numeric field to aggregate."
+                                        }
+                                      },
+                                      "required": [
+                                        "kind",
+                                        "field"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "kind": {
+                                          "type": "string",
+                                          "const": "p95",
+                                          "description": "Find the 95th-percentile numeric field value over matching events."
                                         },
                                         "field": {
                                           "type": "string",
@@ -13982,6 +14180,30 @@
                                         "field"
                                       ],
                                       "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "kind": {
+                                          "type": "string",
+                                          "const": "p95",
+                                          "description": "Find the 95th-percentile numeric field value over matching events."
+                                        },
+                                        "field": {
+                                          "type": "string",
+                                          "enum": [
+                                            "duration",
+                                            "cost",
+                                            "tokens"
+                                          ],
+                                          "description": "Numeric field to aggregate."
+                                        }
+                                      },
+                                      "required": [
+                                        "kind",
+                                        "field"
+                                      ],
+                                      "additionalProperties": false
                                     }
                                   ],
                                   "description": "Metric measured over the monitor target."
@@ -14284,290 +14506,472 @@
             "type": "string",
             "description": "Project slug (human-readable identifier)"
           },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128,
-            "description": "Human-readable name. Used to derive the slug."
-          },
-          "description": {
-            "description": "Optional free-form description.",
-            "type": "string",
-            "maxLength": 2000
-          },
-          "target": {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string",
-                "enum": [
-                  "savedSearch",
-                  "tool",
-                  "user",
-                  "session"
-                ],
-                "description": "Product target category: `savedSearch`, `tool`, `user`, or `session`."
-              },
-              "id": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "minLength": 24,
-                    "maxLength": 24
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "description": "Target entity id, or `null` for project-wide targets."
-              },
-              "filterSet": {
-                "description": "Additional filters applied when evaluating the monitor.",
+          "body": {
+            "oneOf": [
+              {
                 "type": "object",
-                "propertyNames": {
-                  "type": "string"
-                },
-                "additionalProperties": {
-                  "type": "array",
-                  "items": {
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "description": "Human-readable name. Used to derive the slug."
+                  },
+                  "description": {
+                    "description": "Optional free-form description.",
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "target": {
                     "type": "object",
                     "properties": {
-                      "op": {
+                      "type": {
                         "type": "string",
                         "enum": [
-                          "eq",
-                          "neq",
-                          "gt",
-                          "gte",
-                          "lt",
-                          "lte",
-                          "in",
-                          "notIn",
-                          "contains",
-                          "notContains",
-                          "gtePercentile"
+                          "savedSearch",
+                          "tool",
+                          "user",
+                          "session"
                         ],
-                        "description": "Comparison operator to apply to the field."
+                        "description": "Product target category: `savedSearch`, `tool`, `user`, or `session`."
                       },
-                      "value": {
+                      "id": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 24,
+                            "maxLength": 24
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Target entity id, or `null` for project-wide targets."
+                      },
+                      "filterSet": {
+                        "description": "Additional filters applied when evaluating the monitor.",
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "type": "string",
+                                "enum": [
+                                  "eq",
+                                  "neq",
+                                  "gt",
+                                  "gte",
+                                  "lt",
+                                  "lte",
+                                  "in",
+                                  "notIn",
+                                  "contains",
+                                  "notContains",
+                                  "gtePercentile"
+                                ],
+                                "description": "Comparison operator to apply to the field."
+                              },
+                              "value": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "number"
+                                        }
+                                      ]
+                                    },
+                                    "description": "String or numeric values for `in` and `notIn` operators."
+                                  }
+                                ],
+                                "description": "Value to compare with the field."
+                              }
+                            },
+                            "required": [
+                              "op",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "query": {
+                        "description": "Semantic query applied when evaluating inline trace targets.",
                         "anyOf": [
                           {
                             "type": "string"
                           },
                           {
-                            "type": "number"
-                          },
-                          {
-                            "type": "boolean"
-                          },
-                          {
-                            "type": "array",
-                            "items": {
-                              "anyOf": [
-                                {
-                                  "type": "string"
-                                },
-                                {
-                                  "type": "number"
-                                }
-                              ]
-                            },
-                            "description": "String or numeric values for `in` and `notIn` operators."
+                            "type": "null"
                           }
-                        ],
-                        "description": "Value to compare with the field."
+                        ]
                       }
                     },
                     "required": [
-                      "op",
-                      "value"
+                      "type",
+                      "id"
                     ],
-                    "additionalProperties": false
-                  }
-                }
-              }
-            },
-            "required": [
-              "type",
-              "id"
-            ],
-            "additionalProperties": false,
-            "description": "Entity or filter set watched by the monitor."
-          },
-          "trigger": {
-            "type": "string",
-            "enum": [
-              "match",
-              "threshold",
-              "escalating"
-            ],
-            "description": "When the monitor opens incidents: `match`, `threshold`, or `escalating`."
-          },
-          "metric": {
-            "description": "Metric evaluated by threshold and escalating monitor rules.",
-            "oneOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "count",
-                    "description": "Count matching events in each evaluation bucket."
-                  }
-                },
-                "required": [
-                  "kind"
-                ],
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "errorRate",
-                    "description": "Measure the fraction of matching events that errored."
-                  }
-                },
-                "required": [
-                  "kind"
-                ],
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "sum",
-                    "description": "Sum a numeric field over matching events."
+                    "additionalProperties": false,
+                    "description": "Entity or filter set watched by the monitor."
                   },
-                  "field": {
+                  "severity": {
                     "type": "string",
                     "enum": [
-                      "duration",
-                      "cost",
-                      "tokens"
+                      "low",
+                      "medium",
+                      "high"
                     ],
-                    "description": "Numeric field to aggregate."
+                    "description": "Severity assigned to incidents opened by this monitor."
+                  },
+                  "trigger": {
+                    "type": "string",
+                    "const": "match",
+                    "description": "Opens a point incident when any matching event appears."
+                  },
+                  "metric": {
+                    "description": "Metric stored for later rule edits. Match monitors evaluate counts.",
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "count",
+                            "description": "Count matching events in each evaluation bucket."
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "errorRate",
+                            "description": "Measure the fraction of matching events that errored."
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "sum",
+                            "description": "Sum a numeric field over matching events."
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ],
+                            "description": "Numeric field to aggregate."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "min",
+                            "description": "Find the minimum numeric field value over matching events."
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ],
+                            "description": "Numeric field to aggregate."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "max",
+                            "description": "Find the maximum numeric field value over matching events."
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ],
+                            "description": "Numeric field to aggregate."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "avg",
+                            "description": "Average a numeric field over matching events."
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ],
+                            "description": "Numeric field to aggregate."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "median",
+                            "description": "Find the median numeric field value over matching events."
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ],
+                            "description": "Numeric field to aggregate."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "p95",
+                            "description": "Find the 95th-percentile numeric field value over matching events."
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ],
+                            "description": "Numeric field to aggregate."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
                   }
                 },
                 "required": [
-                  "kind",
-                  "field"
+                  "name",
+                  "target",
+                  "severity",
+                  "trigger"
                 ],
                 "additionalProperties": false
               },
               {
                 "type": "object",
                 "properties": {
-                  "kind": {
+                  "name": {
                     "type": "string",
-                    "const": "min",
-                    "description": "Find the minimum numeric field value over matching events."
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "description": "Human-readable name. Used to derive the slug."
                   },
-                  "field": {
+                  "description": {
+                    "description": "Optional free-form description.",
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "target": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "savedSearch",
+                          "tool",
+                          "user",
+                          "session"
+                        ],
+                        "description": "Product target category: `savedSearch`, `tool`, `user`, or `session`."
+                      },
+                      "id": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 24,
+                            "maxLength": 24
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Target entity id, or `null` for project-wide targets."
+                      },
+                      "filterSet": {
+                        "description": "Additional filters applied when evaluating the monitor.",
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "type": "string",
+                                "enum": [
+                                  "eq",
+                                  "neq",
+                                  "gt",
+                                  "gte",
+                                  "lt",
+                                  "lte",
+                                  "in",
+                                  "notIn",
+                                  "contains",
+                                  "notContains",
+                                  "gtePercentile"
+                                ],
+                                "description": "Comparison operator to apply to the field."
+                              },
+                              "value": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "number"
+                                        }
+                                      ]
+                                    },
+                                    "description": "String or numeric values for `in` and `notIn` operators."
+                                  }
+                                ],
+                                "description": "Value to compare with the field."
+                              }
+                            },
+                            "required": [
+                              "op",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "query": {
+                        "description": "Semantic query applied when evaluating inline trace targets.",
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "id"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Entity or filter set watched by the monitor."
+                  },
+                  "severity": {
                     "type": "string",
                     "enum": [
-                      "duration",
-                      "cost",
-                      "tokens"
+                      "low",
+                      "medium",
+                      "high"
                     ],
-                    "description": "Numeric field to aggregate."
-                  }
-                },
-                "required": [
-                  "kind",
-                  "field"
-                ],
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "max",
-                    "description": "Find the maximum numeric field value over matching events."
+                    "description": "Severity assigned to incidents opened by this monitor."
                   },
-                  "field": {
-                    "type": "string",
-                    "enum": [
-                      "duration",
-                      "cost",
-                      "tokens"
-                    ],
-                    "description": "Numeric field to aggregate."
-                  }
-                },
-                "required": [
-                  "kind",
-                  "field"
-                ],
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "avg",
-                    "description": "Average a numeric field over matching events."
-                  },
-                  "field": {
-                    "type": "string",
-                    "enum": [
-                      "duration",
-                      "cost",
-                      "tokens"
-                    ],
-                    "description": "Numeric field to aggregate."
-                  }
-                },
-                "required": [
-                  "kind",
-                  "field"
-                ],
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "median",
-                    "description": "Find the median numeric field value over matching events."
-                  },
-                  "field": {
-                    "type": "string",
-                    "enum": [
-                      "duration",
-                      "cost",
-                      "tokens"
-                    ],
-                    "description": "Numeric field to aggregate."
-                  }
-                },
-                "required": [
-                  "kind",
-                  "field"
-                ],
-                "additionalProperties": false
-              }
-            ]
-          },
-          "condition": {
-            "description": "Condition that controls threshold or escalating incidents.",
-            "oneOf": [
-              {
-                "type": "object",
-                "properties": {
                   "trigger": {
                     "type": "string",
                     "const": "threshold",
-                    "description": "Opens once the measured value crosses the threshold."
+                    "description": "Opens a point incident when the condition is met."
                   },
                   "metric": {
+                    "description": "Metric evaluated by the monitor rule.",
                     "oneOf": [
                       {
                         "type": "object",
@@ -14594,30 +14998,6 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "avg",
-                            "description": "Average a numeric field over matching events."
-                          },
-                          "field": {
-                            "type": "string",
-                            "enum": [
-                              "duration",
-                              "cost",
-                              "tokens"
-                            ],
-                            "description": "Numeric field to aggregate."
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "field"
                         ],
                         "additionalProperties": false
                       },
@@ -14698,6 +15078,30 @@
                         "properties": {
                           "kind": {
                             "type": "string",
+                            "const": "avg",
+                            "description": "Average a numeric field over matching events."
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ],
+                            "description": "Numeric field to aggregate."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
                             "const": "median",
                             "description": "Find the median numeric field value over matching events."
                           },
@@ -14716,185 +15120,535 @@
                           "field"
                         ],
                         "additionalProperties": false
-                      }
-                    ],
-                    "description": "Metric measured over the monitor target."
-                  },
-                  "threshold": {
-                    "oneOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "mode": {
-                            "type": "string",
-                            "const": "absolute",
-                            "description": "Compare the metric against a fixed value; read `value`."
-                          },
-                          "value": {
-                            "type": "number",
-                            "exclusiveMinimum": 0,
-                            "description": "Metric value that opens the incident."
-                          }
-                        },
-                        "required": [
-                          "mode",
-                          "value"
-                        ],
-                        "additionalProperties": false
                       },
                       {
                         "type": "object",
                         "properties": {
-                          "mode": {
+                          "kind": {
                             "type": "string",
-                            "const": "multiplier",
-                            "description": "Compare the metric rate against `factor × baseline`; read `factor` and `baseline`."
+                            "const": "p95",
+                            "description": "Find the 95th-percentile numeric field value over matching events."
                           },
-                          "factor": {
-                            "type": "number",
-                            "exclusiveMinimum": 0,
-                            "description": "Multiple of the baseline rate that opens the incident (e.g. `3` = 3×)."
-                          },
-                          "baseline": {
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ],
+                            "description": "Numeric field to aggregate."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "condition": {
+                    "type": "object",
+                    "properties": {
+                      "trigger": {
+                        "type": "string",
+                        "const": "threshold",
+                        "description": "Opens once the measured value crosses the threshold."
+                      },
+                      "metric": {
+                        "oneOf": [
+                          {
                             "type": "object",
                             "properties": {
                               "kind": {
                                 "type": "string",
-                                "enum": [
-                                  "average",
-                                  "period"
-                                ],
-                                "description": "How the comparison rate is computed. `average` is the rolling rate over the last `lookback`; `period` is the equal-length window immediately before it (e.g. `lookback` of 1 day compares against yesterday) for daily/weekly seasonality."
+                                "const": "count",
+                                "description": "Count matching events in each evaluation bucket."
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "errorRate",
+                                "description": "Measure the fraction of matching events that errored."
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "avg",
+                                "description": "Average a numeric field over matching events."
                               },
-                              "lookback": {
-                                "oneOf": [
-                                  {
-                                    "type": "object",
-                                    "properties": {
-                                      "unit": {
-                                        "type": "string",
-                                        "const": "minutes",
-                                        "description": "The duration is expressed in whole minutes; read `minutes`."
-                                      },
-                                      "minutes": {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0,
-                                        "description": "Number of minutes."
-                                      }
-                                    },
-                                    "required": [
-                                      "unit",
-                                      "minutes"
-                                    ],
-                                    "additionalProperties": false
-                                  },
-                                  {
-                                    "type": "object",
-                                    "properties": {
-                                      "unit": {
-                                        "type": "string",
-                                        "const": "hours",
-                                        "description": "The duration is expressed in whole hours; read `hours`."
-                                      },
-                                      "hours": {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0,
-                                        "description": "Number of hours."
-                                      }
-                                    },
-                                    "required": [
-                                      "unit",
-                                      "hours"
-                                    ],
-                                    "additionalProperties": false
-                                  },
-                                  {
-                                    "type": "object",
-                                    "properties": {
-                                      "unit": {
-                                        "type": "string",
-                                        "const": "days",
-                                        "description": "The duration is expressed in whole days; read `days`."
-                                      },
-                                      "days": {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0,
-                                        "description": "Number of days."
-                                      }
-                                    },
-                                    "required": [
-                                      "unit",
-                                      "days"
-                                    ],
-                                    "additionalProperties": false
-                                  }
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
                                 ],
-                                "description": "Length of the window used to compute the baseline rate."
+                                "description": "Numeric field to aggregate."
                               }
                             },
                             "required": [
                               "kind",
-                              "lookback"
+                              "field"
                             ],
-                            "additionalProperties": false,
-                            "description": "Fixed-window baseline the current rate is compared against."
-                          }
-                        },
-                        "required": [
-                          "mode",
-                          "factor",
-                          "baseline"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "mode": {
-                            "type": "string",
-                            "const": "expected",
-                            "description": "Compare against the seasonally-learned expected value for this time of day/week."
+                            "additionalProperties": false
                           },
-                          "sensitivity": {
-                            "description": "Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted.",
-                            "type": "integer",
-                            "minimum": 1,
-                            "maximum": 6
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "sum",
+                                "description": "Sum a numeric field over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "min",
+                                "description": "Find the minimum numeric field value over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "max",
+                                "description": "Find the maximum numeric field value over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "median",
+                                "description": "Find the median numeric field value over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "p95",
+                                "description": "Find the 95th-percentile numeric field value over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
                           }
-                        },
-                        "required": [
-                          "mode"
                         ],
-                        "additionalProperties": false
+                        "description": "Metric measured over the monitor target."
+                      },
+                      "threshold": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "type": "string",
+                                "const": "absolute",
+                                "description": "Compare the metric against a fixed value; read `value`."
+                              },
+                              "value": {
+                                "type": "number",
+                                "exclusiveMinimum": 0,
+                                "description": "Metric value that opens the incident."
+                              }
+                            },
+                            "required": [
+                              "mode",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "type": "string",
+                                "const": "multiplier",
+                                "description": "Compare the metric rate against `factor × baseline`; read `factor` and `baseline`."
+                              },
+                              "factor": {
+                                "type": "number",
+                                "exclusiveMinimum": 0,
+                                "description": "Multiple of the baseline rate that opens the incident (e.g. `3` = 3×)."
+                              },
+                              "baseline": {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "average",
+                                      "period"
+                                    ],
+                                    "description": "How the comparison rate is computed. `average` is the rolling rate over the last `lookback`; `period` is the equal-length window immediately before it (e.g. `lookback` of 1 day compares against yesterday) for daily/weekly seasonality."
+                                  },
+                                  "lookback": {
+                                    "oneOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "unit": {
+                                            "type": "string",
+                                            "const": "minutes",
+                                            "description": "The duration is expressed in whole minutes; read `minutes`."
+                                          },
+                                          "minutes": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0,
+                                            "description": "Number of minutes."
+                                          }
+                                        },
+                                        "required": [
+                                          "unit",
+                                          "minutes"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "unit": {
+                                            "type": "string",
+                                            "const": "hours",
+                                            "description": "The duration is expressed in whole hours; read `hours`."
+                                          },
+                                          "hours": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0,
+                                            "description": "Number of hours."
+                                          }
+                                        },
+                                        "required": [
+                                          "unit",
+                                          "hours"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "unit": {
+                                            "type": "string",
+                                            "const": "days",
+                                            "description": "The duration is expressed in whole days; read `days`."
+                                          },
+                                          "days": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0,
+                                            "description": "Number of days."
+                                          }
+                                        },
+                                        "required": [
+                                          "unit",
+                                          "days"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ],
+                                    "description": "Length of the window used to compute the baseline rate."
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "lookback"
+                                ],
+                                "additionalProperties": false,
+                                "description": "Fixed-window baseline the current rate is compared against."
+                              }
+                            },
+                            "required": [
+                              "mode",
+                              "factor",
+                              "baseline"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "type": "string",
+                                "const": "expected",
+                                "description": "Compare against the seasonally-learned expected value for this time of day/week."
+                              },
+                              "sensitivity": {
+                                "description": "Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted.",
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 6
+                              }
+                            },
+                            "required": [
+                              "mode"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ],
+                        "description": "How the metric is compared."
+                      },
+                      "direction": {
+                        "description": "Direction that opens the incident. Defaults to `above` when omitted.",
+                        "type": "string",
+                        "enum": [
+                          "above",
+                          "below"
+                        ]
                       }
+                    },
+                    "required": [
+                      "trigger",
+                      "metric",
+                      "threshold"
                     ],
-                    "description": "How the metric is compared."
-                  },
-                  "direction": {
-                    "description": "Direction that opens the incident. Defaults to `above` when omitted.",
-                    "type": "string",
-                    "enum": [
-                      "above",
-                      "below"
-                    ]
+                    "additionalProperties": false,
+                    "description": "Threshold condition that opens point incidents."
                   }
                 },
                 "required": [
+                  "name",
+                  "target",
+                  "severity",
                   "trigger",
-                  "metric",
-                  "threshold"
+                  "condition"
                 ],
                 "additionalProperties": false
               },
               {
                 "type": "object",
                 "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "description": "Human-readable name. Used to derive the slug."
+                  },
+                  "description": {
+                    "description": "Optional free-form description.",
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "target": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "savedSearch",
+                          "tool",
+                          "user",
+                          "session"
+                        ],
+                        "description": "Product target category: `savedSearch`, `tool`, `user`, or `session`."
+                      },
+                      "id": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 24,
+                            "maxLength": 24
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Target entity id, or `null` for project-wide targets."
+                      },
+                      "filterSet": {
+                        "description": "Additional filters applied when evaluating the monitor.",
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "type": "string",
+                                "enum": [
+                                  "eq",
+                                  "neq",
+                                  "gt",
+                                  "gte",
+                                  "lt",
+                                  "lte",
+                                  "in",
+                                  "notIn",
+                                  "contains",
+                                  "notContains",
+                                  "gtePercentile"
+                                ],
+                                "description": "Comparison operator to apply to the field."
+                              },
+                              "value": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "number"
+                                        }
+                                      ]
+                                    },
+                                    "description": "String or numeric values for `in` and `notIn` operators."
+                                  }
+                                ],
+                                "description": "Value to compare with the field."
+                              }
+                            },
+                            "required": [
+                              "op",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "query": {
+                        "description": "Semantic query applied when evaluating inline trace targets.",
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "id"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Entity or filter set watched by the monitor."
+                  },
+                  "severity": {
+                    "type": "string",
+                    "enum": [
+                      "low",
+                      "medium",
+                      "high"
+                    ],
+                    "description": "Severity assigned to incidents opened by this monitor."
+                  },
                   "trigger": {
                     "type": "string",
                     "const": "escalating",
-                    "description": "Opens when the monitor target is escalating or sustained."
+                    "description": "Opens and closes a sustained incident while the condition is met."
                   },
                   "metric": {
+                    "description": "Metric evaluated by the monitor rule.",
                     "oneOf": [
                       {
                         "type": "object",
@@ -14921,30 +15675,6 @@
                         },
                         "required": [
                           "kind"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "avg",
-                            "description": "Average a numeric field over matching events."
-                          },
-                          "field": {
-                            "type": "string",
-                            "enum": [
-                              "duration",
-                              "cost",
-                              "tokens"
-                            ],
-                            "description": "Numeric field to aggregate."
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "field"
                         ],
                         "additionalProperties": false
                       },
@@ -15025,6 +15755,30 @@
                         "properties": {
                           "kind": {
                             "type": "string",
+                            "const": "avg",
+                            "description": "Average a numeric field over matching events."
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ],
+                            "description": "Numeric field to aggregate."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
                             "const": "median",
                             "description": "Find the median numeric field value over matching events."
                           },
@@ -15043,216 +15797,423 @@
                           "field"
                         ],
                         "additionalProperties": false
-                      }
-                    ],
-                    "description": "Metric measured over the monitor target."
-                  },
-                  "threshold": {
-                    "description": "How the metric is compared when threshold-based.",
-                    "oneOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "mode": {
-                            "type": "string",
-                            "const": "absolute",
-                            "description": "Compare the metric against a fixed value; read `value`."
-                          },
-                          "value": {
-                            "type": "number",
-                            "exclusiveMinimum": 0,
-                            "description": "Metric value that opens the incident."
-                          }
-                        },
-                        "required": [
-                          "mode",
-                          "value"
-                        ],
-                        "additionalProperties": false
                       },
                       {
                         "type": "object",
                         "properties": {
-                          "mode": {
+                          "kind": {
                             "type": "string",
-                            "const": "multiplier",
-                            "description": "Compare the metric rate against `factor × baseline`; read `factor` and `baseline`."
+                            "const": "p95",
+                            "description": "Find the 95th-percentile numeric field value over matching events."
                           },
-                          "factor": {
-                            "type": "number",
-                            "exclusiveMinimum": 0,
-                            "description": "Multiple of the baseline rate that opens the incident (e.g. `3` = 3×)."
-                          },
-                          "baseline": {
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ],
+                            "description": "Numeric field to aggregate."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "condition": {
+                    "type": "object",
+                    "properties": {
+                      "trigger": {
+                        "type": "string",
+                        "const": "escalating",
+                        "description": "Opens when the monitor target is escalating or sustained."
+                      },
+                      "metric": {
+                        "oneOf": [
+                          {
                             "type": "object",
                             "properties": {
                               "kind": {
                                 "type": "string",
-                                "enum": [
-                                  "average",
-                                  "period"
-                                ],
-                                "description": "How the comparison rate is computed. `average` is the rolling rate over the last `lookback`; `period` is the equal-length window immediately before it (e.g. `lookback` of 1 day compares against yesterday) for daily/weekly seasonality."
+                                "const": "count",
+                                "description": "Count matching events in each evaluation bucket."
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "errorRate",
+                                "description": "Measure the fraction of matching events that errored."
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "avg",
+                                "description": "Average a numeric field over matching events."
                               },
-                              "lookback": {
-                                "oneOf": [
-                                  {
-                                    "type": "object",
-                                    "properties": {
-                                      "unit": {
-                                        "type": "string",
-                                        "const": "minutes",
-                                        "description": "The duration is expressed in whole minutes; read `minutes`."
-                                      },
-                                      "minutes": {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0,
-                                        "description": "Number of minutes."
-                                      }
-                                    },
-                                    "required": [
-                                      "unit",
-                                      "minutes"
-                                    ],
-                                    "additionalProperties": false
-                                  },
-                                  {
-                                    "type": "object",
-                                    "properties": {
-                                      "unit": {
-                                        "type": "string",
-                                        "const": "hours",
-                                        "description": "The duration is expressed in whole hours; read `hours`."
-                                      },
-                                      "hours": {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0,
-                                        "description": "Number of hours."
-                                      }
-                                    },
-                                    "required": [
-                                      "unit",
-                                      "hours"
-                                    ],
-                                    "additionalProperties": false
-                                  },
-                                  {
-                                    "type": "object",
-                                    "properties": {
-                                      "unit": {
-                                        "type": "string",
-                                        "const": "days",
-                                        "description": "The duration is expressed in whole days; read `days`."
-                                      },
-                                      "days": {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0,
-                                        "description": "Number of days."
-                                      }
-                                    },
-                                    "required": [
-                                      "unit",
-                                      "days"
-                                    ],
-                                    "additionalProperties": false
-                                  }
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
                                 ],
-                                "description": "Length of the window used to compute the baseline rate."
+                                "description": "Numeric field to aggregate."
                               }
                             },
                             "required": [
                               "kind",
-                              "lookback"
+                              "field"
                             ],
-                            "additionalProperties": false,
-                            "description": "Fixed-window baseline the current rate is compared against."
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "sum",
+                                "description": "Sum a numeric field over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "min",
+                                "description": "Find the minimum numeric field value over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "max",
+                                "description": "Find the maximum numeric field value over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "median",
+                                "description": "Find the median numeric field value over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "p95",
+                                "description": "Find the 95th-percentile numeric field value over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
                           }
-                        },
-                        "required": [
-                          "mode",
-                          "factor",
-                          "baseline"
                         ],
-                        "additionalProperties": false
+                        "description": "Metric measured over the monitor target."
                       },
-                      {
+                      "threshold": {
+                        "description": "How the metric is compared when threshold-based.",
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "type": "string",
+                                "const": "absolute",
+                                "description": "Compare the metric against a fixed value; read `value`."
+                              },
+                              "value": {
+                                "type": "number",
+                                "exclusiveMinimum": 0,
+                                "description": "Metric value that opens the incident."
+                              }
+                            },
+                            "required": [
+                              "mode",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "type": "string",
+                                "const": "multiplier",
+                                "description": "Compare the metric rate against `factor × baseline`; read `factor` and `baseline`."
+                              },
+                              "factor": {
+                                "type": "number",
+                                "exclusiveMinimum": 0,
+                                "description": "Multiple of the baseline rate that opens the incident (e.g. `3` = 3×)."
+                              },
+                              "baseline": {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "average",
+                                      "period"
+                                    ],
+                                    "description": "How the comparison rate is computed. `average` is the rolling rate over the last `lookback`; `period` is the equal-length window immediately before it (e.g. `lookback` of 1 day compares against yesterday) for daily/weekly seasonality."
+                                  },
+                                  "lookback": {
+                                    "oneOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "unit": {
+                                            "type": "string",
+                                            "const": "minutes",
+                                            "description": "The duration is expressed in whole minutes; read `minutes`."
+                                          },
+                                          "minutes": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0,
+                                            "description": "Number of minutes."
+                                          }
+                                        },
+                                        "required": [
+                                          "unit",
+                                          "minutes"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "unit": {
+                                            "type": "string",
+                                            "const": "hours",
+                                            "description": "The duration is expressed in whole hours; read `hours`."
+                                          },
+                                          "hours": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0,
+                                            "description": "Number of hours."
+                                          }
+                                        },
+                                        "required": [
+                                          "unit",
+                                          "hours"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "unit": {
+                                            "type": "string",
+                                            "const": "days",
+                                            "description": "The duration is expressed in whole days; read `days`."
+                                          },
+                                          "days": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0,
+                                            "description": "Number of days."
+                                          }
+                                        },
+                                        "required": [
+                                          "unit",
+                                          "days"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ],
+                                    "description": "Length of the window used to compute the baseline rate."
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "lookback"
+                                ],
+                                "additionalProperties": false,
+                                "description": "Fixed-window baseline the current rate is compared against."
+                              }
+                            },
+                            "required": [
+                              "mode",
+                              "factor",
+                              "baseline"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "type": "string",
+                                "const": "expected",
+                                "description": "Compare against the seasonally-learned expected value for this time of day/week."
+                              },
+                              "sensitivity": {
+                                "description": "Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted.",
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 6
+                              }
+                            },
+                            "required": [
+                              "mode"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "direction": {
+                        "description": "Direction that opens the incident. Defaults to `above` when omitted.",
+                        "type": "string",
+                        "enum": [
+                          "above",
+                          "below"
+                        ]
+                      },
+                      "sensitivity": {
+                        "description": "Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted.",
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 6
+                      },
+                      "window": {
                         "type": "object",
                         "properties": {
-                          "mode": {
-                            "type": "string",
-                            "const": "expected",
-                            "description": "Compare against the seasonally-learned expected value for this time of day/week."
-                          },
-                          "sensitivity": {
-                            "description": "Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted.",
+                          "minutes": {
                             "type": "integer",
-                            "minimum": 1,
-                            "maximum": 6
+                            "minimum": 5,
+                            "maximum": 9007199254740991,
+                            "description": "How long the threshold must stay crossed before the incident opens. Minimum 5."
                           }
                         },
                         "required": [
-                          "mode"
+                          "minutes"
                         ],
-                        "additionalProperties": false
-                      }
-                    ]
-                  },
-                  "direction": {
-                    "description": "Direction that opens the incident. Defaults to `above` when omitted.",
-                    "type": "string",
-                    "enum": [
-                      "above",
-                      "below"
-                    ]
-                  },
-                  "sensitivity": {
-                    "description": "Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted.",
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 6
-                  },
-                  "window": {
-                    "type": "object",
-                    "properties": {
-                      "minutes": {
-                        "type": "integer",
-                        "minimum": 5,
-                        "maximum": 9007199254740991,
-                        "description": "How long the threshold must stay crossed before the incident opens. Minimum 5."
+                        "additionalProperties": false,
+                        "description": "Sustained-condition window."
                       }
                     },
                     "required": [
-                      "minutes"
+                      "trigger",
+                      "metric",
+                      "window"
                     ],
                     "additionalProperties": false,
-                    "description": "Sustained-condition window."
+                    "description": "Escalating condition that opens sustained incidents."
                   }
                 },
                 "required": [
+                  "name",
+                  "target",
+                  "severity",
                   "trigger",
-                  "metric",
-                  "window"
+                  "condition"
                 ],
                 "additionalProperties": false
               }
             ]
-          },
-          "severity": {
-            "type": "string",
-            "enum": [
-              "low",
-              "medium",
-              "high"
-            ],
-            "description": "Severity assigned to incidents opened by this monitor."
           }
         },
         "required": [
           "projectSlug",
-          "name",
-          "target",
-          "trigger",
-          "severity"
+          "body"
         ],
         "additionalProperties": false
       },
@@ -15384,6 +16345,17 @@
                     "additionalProperties": false
                   }
                 }
+              },
+              "query": {
+                "description": "Semantic query applied when evaluating inline trace targets.",
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "required": [
@@ -15472,6 +16444,17 @@
                         "additionalProperties": false
                       }
                     }
+                  },
+                  "query": {
+                    "description": "Semantic query applied by inline monitor targets.",
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "metric": {
                     "description": "Metric evaluated by threshold and escalating monitor rules.",
@@ -15607,6 +16590,30 @@
                             "type": "string",
                             "const": "median",
                             "description": "Find the median numeric field value over matching events."
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ],
+                            "description": "Numeric field to aggregate."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "p95",
+                            "description": "Find the 95th-percentile numeric field value over matching events."
                           },
                           "field": {
                             "type": "string",
@@ -15770,6 +16777,30 @@
                                     "type": "string",
                                     "const": "median",
                                     "description": "Find the median numeric field value over matching events."
+                                  },
+                                  "field": {
+                                    "type": "string",
+                                    "enum": [
+                                      "duration",
+                                      "cost",
+                                      "tokens"
+                                    ],
+                                    "description": "Numeric field to aggregate."
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "field"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "p95",
+                                    "description": "Find the 95th-percentile numeric field value over matching events."
                                   },
                                   "field": {
                                     "type": "string",
@@ -16097,6 +17128,30 @@
                                     "type": "string",
                                     "const": "median",
                                     "description": "Find the median numeric field value over matching events."
+                                  },
+                                  "field": {
+                                    "type": "string",
+                                    "enum": [
+                                      "duration",
+                                      "cost",
+                                      "tokens"
+                                    ],
+                                    "description": "Numeric field to aggregate."
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "field"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "p95",
+                                    "description": "Find the 95th-percentile numeric field value over matching events."
                                   },
                                   "field": {
                                     "type": "string",
@@ -16605,6 +17660,17 @@
                           "additionalProperties": false
                         }
                       }
+                    },
+                    "query": {
+                      "description": "Semantic query applied when evaluating inline trace targets.",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": [
@@ -16693,6 +17759,17 @@
                               "additionalProperties": false
                             }
                           }
+                        },
+                        "query": {
+                          "description": "Semantic query applied by inline monitor targets.",
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         },
                         "metric": {
                           "description": "Metric evaluated by threshold and escalating monitor rules.",
@@ -16828,6 +17905,30 @@
                                   "type": "string",
                                   "const": "median",
                                   "description": "Find the median numeric field value over matching events."
+                                },
+                                "field": {
+                                  "type": "string",
+                                  "enum": [
+                                    "duration",
+                                    "cost",
+                                    "tokens"
+                                  ],
+                                  "description": "Numeric field to aggregate."
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "field"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "p95",
+                                  "description": "Find the 95th-percentile numeric field value over matching events."
                                 },
                                 "field": {
                                   "type": "string",
@@ -16991,6 +18092,30 @@
                                           "type": "string",
                                           "const": "median",
                                           "description": "Find the median numeric field value over matching events."
+                                        },
+                                        "field": {
+                                          "type": "string",
+                                          "enum": [
+                                            "duration",
+                                            "cost",
+                                            "tokens"
+                                          ],
+                                          "description": "Numeric field to aggregate."
+                                        }
+                                      },
+                                      "required": [
+                                        "kind",
+                                        "field"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "kind": {
+                                          "type": "string",
+                                          "const": "p95",
+                                          "description": "Find the 95th-percentile numeric field value over matching events."
                                         },
                                         "field": {
                                           "type": "string",
@@ -17318,6 +18443,30 @@
                                           "type": "string",
                                           "const": "median",
                                           "description": "Find the median numeric field value over matching events."
+                                        },
+                                        "field": {
+                                          "type": "string",
+                                          "enum": [
+                                            "duration",
+                                            "cost",
+                                            "tokens"
+                                          ],
+                                          "description": "Numeric field to aggregate."
+                                        }
+                                      },
+                                      "required": [
+                                        "kind",
+                                        "field"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "kind": {
+                                          "type": "string",
+                                          "const": "p95",
+                                          "description": "Find the 95th-percentile numeric field value over matching events."
                                         },
                                         "field": {
                                           "type": "string",
@@ -17758,6 +18907,17 @@
                     "additionalProperties": false
                   }
                 }
+              },
+              "query": {
+                "description": "Semantic query applied when evaluating inline trace targets.",
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "required": [
@@ -17846,6 +19006,17 @@
                         "additionalProperties": false
                       }
                     }
+                  },
+                  "query": {
+                    "description": "Semantic query applied by inline monitor targets.",
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "metric": {
                     "description": "Metric evaluated by threshold and escalating monitor rules.",
@@ -17981,6 +19152,30 @@
                             "type": "string",
                             "const": "median",
                             "description": "Find the median numeric field value over matching events."
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ],
+                            "description": "Numeric field to aggregate."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "p95",
+                            "description": "Find the 95th-percentile numeric field value over matching events."
                           },
                           "field": {
                             "type": "string",
@@ -18144,6 +19339,30 @@
                                     "type": "string",
                                     "const": "median",
                                     "description": "Find the median numeric field value over matching events."
+                                  },
+                                  "field": {
+                                    "type": "string",
+                                    "enum": [
+                                      "duration",
+                                      "cost",
+                                      "tokens"
+                                    ],
+                                    "description": "Numeric field to aggregate."
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "field"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "p95",
+                                    "description": "Find the 95th-percentile numeric field value over matching events."
                                   },
                                   "field": {
                                     "type": "string",
@@ -18471,6 +19690,30 @@
                                     "type": "string",
                                     "const": "median",
                                     "description": "Find the median numeric field value over matching events."
+                                  },
+                                  "field": {
+                                    "type": "string",
+                                    "enum": [
+                                      "duration",
+                                      "cost",
+                                      "tokens"
+                                    ],
+                                    "description": "Numeric field to aggregate."
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "field"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "p95",
+                                    "description": "Find the 95th-percentile numeric field value over matching events."
                                   },
                                   "field": {
                                     "type": "string",
@@ -18870,6 +20113,17 @@
                     "additionalProperties": false
                   }
                 }
+              },
+              "query": {
+                "description": "Semantic query applied when evaluating inline trace targets.",
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "required": [
@@ -19037,6 +20291,30 @@
                   "field"
                 ],
                 "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "p95",
+                    "description": "Find the 95th-percentile numeric field value over matching events."
+                  },
+                  "field": {
+                    "type": "string",
+                    "enum": [
+                      "duration",
+                      "cost",
+                      "tokens"
+                    ],
+                    "description": "Numeric field to aggregate."
+                  }
+                },
+                "required": [
+                  "kind",
+                  "field"
+                ],
+                "additionalProperties": false
               }
             ]
           },
@@ -19184,6 +20462,30 @@
                             "type": "string",
                             "const": "median",
                             "description": "Find the median numeric field value over matching events."
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ],
+                            "description": "Numeric field to aggregate."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "p95",
+                            "description": "Find the 95th-percentile numeric field value over matching events."
                           },
                           "field": {
                             "type": "string",
@@ -19511,6 +20813,30 @@
                             "type": "string",
                             "const": "median",
                             "description": "Find the median numeric field value over matching events."
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ],
+                            "description": "Numeric field to aggregate."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "p95",
+                            "description": "Find the 95th-percentile numeric field value over matching events."
                           },
                           "field": {
                             "type": "string",
@@ -19865,6 +21191,17 @@
                     "additionalProperties": false
                   }
                 }
+              },
+              "query": {
+                "description": "Semantic query applied when evaluating inline trace targets.",
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "required": [
@@ -19953,6 +21290,17 @@
                         "additionalProperties": false
                       }
                     }
+                  },
+                  "query": {
+                    "description": "Semantic query applied by inline monitor targets.",
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "metric": {
                     "description": "Metric evaluated by threshold and escalating monitor rules.",
@@ -20088,6 +21436,30 @@
                             "type": "string",
                             "const": "median",
                             "description": "Find the median numeric field value over matching events."
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ],
+                            "description": "Numeric field to aggregate."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "p95",
+                            "description": "Find the 95th-percentile numeric field value over matching events."
                           },
                           "field": {
                             "type": "string",
@@ -20251,6 +21623,30 @@
                                     "type": "string",
                                     "const": "median",
                                     "description": "Find the median numeric field value over matching events."
+                                  },
+                                  "field": {
+                                    "type": "string",
+                                    "enum": [
+                                      "duration",
+                                      "cost",
+                                      "tokens"
+                                    ],
+                                    "description": "Numeric field to aggregate."
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "field"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "p95",
+                                    "description": "Find the 95th-percentile numeric field value over matching events."
                                   },
                                   "field": {
                                     "type": "string",
@@ -20578,6 +21974,30 @@
                                     "type": "string",
                                     "const": "median",
                                     "description": "Find the median numeric field value over matching events."
+                                  },
+                                  "field": {
+                                    "type": "string",
+                                    "enum": [
+                                      "duration",
+                                      "cost",
+                                      "tokens"
+                                    ],
+                                    "description": "Numeric field to aggregate."
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "field"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "p95",
+                                    "description": "Find the 95th-percentile numeric field value over matching events."
                                   },
                                   "field": {
                                     "type": "string",
@@ -21148,6 +22568,30 @@
                                     "field"
                                   ],
                                   "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "p95",
+                                      "description": "Find the 95th-percentile numeric field value over matching events."
+                                    },
+                                    "field": {
+                                      "type": "string",
+                                      "enum": [
+                                        "duration",
+                                        "cost",
+                                        "tokens"
+                                      ],
+                                      "description": "Numeric field to aggregate."
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "field"
+                                  ],
+                                  "additionalProperties": false
                                 }
                               ],
                               "description": "Metric measured over the monitor target."
@@ -21459,6 +22903,30 @@
                                       "type": "string",
                                       "const": "median",
                                       "description": "Find the median numeric field value over matching events."
+                                    },
+                                    "field": {
+                                      "type": "string",
+                                      "enum": [
+                                        "duration",
+                                        "cost",
+                                        "tokens"
+                                      ],
+                                      "description": "Numeric field to aggregate."
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "field"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "p95",
+                                      "description": "Find the 95th-percentile numeric field value over matching events."
                                     },
                                     "field": {
                                       "type": "string",
@@ -21872,6 +23340,17 @@
                     "additionalProperties": false
                   }
                 }
+              },
+              "query": {
+                "description": "Semantic query applied when evaluating inline trace targets.",
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "required": [
@@ -21960,6 +23439,17 @@
                         "additionalProperties": false
                       }
                     }
+                  },
+                  "query": {
+                    "description": "Semantic query applied by inline monitor targets.",
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "metric": {
                     "description": "Metric evaluated by threshold and escalating monitor rules.",
@@ -22095,6 +23585,30 @@
                             "type": "string",
                             "const": "median",
                             "description": "Find the median numeric field value over matching events."
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ],
+                            "description": "Numeric field to aggregate."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "p95",
+                            "description": "Find the 95th-percentile numeric field value over matching events."
                           },
                           "field": {
                             "type": "string",
@@ -22258,6 +23772,30 @@
                                     "type": "string",
                                     "const": "median",
                                     "description": "Find the median numeric field value over matching events."
+                                  },
+                                  "field": {
+                                    "type": "string",
+                                    "enum": [
+                                      "duration",
+                                      "cost",
+                                      "tokens"
+                                    ],
+                                    "description": "Numeric field to aggregate."
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "field"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "p95",
+                                    "description": "Find the 95th-percentile numeric field value over matching events."
                                   },
                                   "field": {
                                     "type": "string",
@@ -22585,6 +24123,30 @@
                                     "type": "string",
                                     "const": "median",
                                     "description": "Find the median numeric field value over matching events."
+                                  },
+                                  "field": {
+                                    "type": "string",
+                                    "enum": [
+                                      "duration",
+                                      "cost",
+                                      "tokens"
+                                    ],
+                                    "description": "Numeric field to aggregate."
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "field"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "p95",
+                                    "description": "Find the 95th-percentile numeric field value over matching events."
                                   },
                                   "field": {
                                     "type": "string",
@@ -23017,6 +24579,17 @@
                     "additionalProperties": false
                   }
                 }
+              },
+              "query": {
+                "description": "Semantic query applied when evaluating inline trace targets.",
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "required": [
@@ -23105,6 +24678,17 @@
                         "additionalProperties": false
                       }
                     }
+                  },
+                  "query": {
+                    "description": "Semantic query applied by inline monitor targets.",
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "metric": {
                     "description": "Metric evaluated by threshold and escalating monitor rules.",
@@ -23240,6 +24824,30 @@
                             "type": "string",
                             "const": "median",
                             "description": "Find the median numeric field value over matching events."
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ],
+                            "description": "Numeric field to aggregate."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "p95",
+                            "description": "Find the 95th-percentile numeric field value over matching events."
                           },
                           "field": {
                             "type": "string",
@@ -23403,6 +25011,30 @@
                                     "type": "string",
                                     "const": "median",
                                     "description": "Find the median numeric field value over matching events."
+                                  },
+                                  "field": {
+                                    "type": "string",
+                                    "enum": [
+                                      "duration",
+                                      "cost",
+                                      "tokens"
+                                    ],
+                                    "description": "Numeric field to aggregate."
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "field"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "p95",
+                                    "description": "Find the 95th-percentile numeric field value over matching events."
                                   },
                                   "field": {
                                     "type": "string",
@@ -23730,6 +25362,30 @@
                                     "type": "string",
                                     "const": "median",
                                     "description": "Find the median numeric field value over matching events."
+                                  },
+                                  "field": {
+                                    "type": "string",
+                                    "enum": [
+                                      "duration",
+                                      "cost",
+                                      "tokens"
+                                    ],
+                                    "description": "Numeric field to aggregate."
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "field"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "p95",
+                                    "description": "Find the 95th-percentile numeric field value over matching events."
                                   },
                                   "field": {
                                     "type": "string",

@@ -18,10 +18,10 @@ export interface Incident {
     /** ISO-8601 timestamp at which the incident opened. */
     startedAt: string;
     /** ISO-8601 timestamp at which the incident closed, or `null` if still open. */
-    endedAt?: string | undefined;
+    endedAt: string | null;
     /** ISO-8601 timestamp at which the incident row was created. */
     createdAt: string;
-    condition?: LatitudeApi.AlertCondition | undefined;
+    condition: LatitudeApi.AlertCondition | null;
 }
 
 export namespace Incident {

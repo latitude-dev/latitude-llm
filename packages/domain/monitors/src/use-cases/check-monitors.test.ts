@@ -7,6 +7,7 @@ import {
   MonitorId,
   OrganizationId,
   ProjectId,
+  RepositoryError,
   SavedSearchId,
   SqlClient,
 } from "@domain/shared"
@@ -14,6 +15,7 @@ import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { Monitor } from "../entities/monitor.ts"
+import { MetricSeriesReader } from "../ports/metric-series-reader.ts"
 import { MonitorRepository } from "../ports/monitor-repository.ts"
 import {
   createFakeAlertIncidentStore,
@@ -58,6 +60,7 @@ const layersFor = (
   monitors: readonly Monitor[],
   matches: readonly Date[],
   savedSearch: { readonly query: string | null; readonly filterSet: FilterSet } = { query: null, filterSet: {} },
+  metricReaderLayer?: Layer.Layer<MetricSeriesReader>,
 ) => {
   const monitorStore = createFakeMonitorRepository(monitors)
   const incidentStore = createFakeAlertIncidentStore()
@@ -97,7 +100,7 @@ const layersFor = (
       Layer.succeed(MonitorRepository, monitorStore.repo),
       Layer.succeed(SavedSearchRepository, savedSearchStore.repository),
       incidentStore.layer,
-      metricReader.layer,
+      metricReaderLayer ?? metricReader.layer,
       outboxLayer,
       sqlLayer,
       chLayer,
@@ -129,7 +132,7 @@ describe("checkMonitorsUseCase", () => {
 
     const result = await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
 
-    expect(result).toEqual({ checked: 1, evaluated: 1 })
+    expect(result).toEqual({ checked: 1, evaluatable: 1, evaluated: 1, failed: 0 })
     expect(incidents).toHaveLength(1)
     expect(incidents[0]).toMatchObject({
       sourceType: "monitor",
@@ -210,7 +213,7 @@ describe("checkMonitorsUseCase", () => {
 
     const result = await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
 
-    expect(result).toEqual({ checked: 1, evaluated: 1 })
+    expect(result).toEqual({ checked: 1, evaluatable: 1, evaluated: 1, failed: 0 })
     expect(incidents).toHaveLength(1)
     expect(incidents[0]).toMatchObject({
       sourceType: "monitor",
@@ -236,7 +239,86 @@ describe("checkMonitorsUseCase", () => {
 
     const result = await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
 
-    expect(result).toEqual({ checked: 1, evaluated: 0 })
+    expect(result).toEqual({ checked: 1, evaluatable: 0, evaluated: 0, failed: 0 })
     expect(incidents).toHaveLength(0)
+  })
+
+  it("continues evaluating other monitors when one monitor read fails", async () => {
+    const firstMatch = new Date("2026-06-23T11:58:00.000Z")
+    const goodMonitorId = MonitorId(cuid("m-good"))
+    const badMonitorId = MonitorId(cuid("m-bad"))
+    const failingMetricLayer = Layer.succeed(MetricSeriesReader, {
+      valueInWindow: (input) =>
+        input.target.filterSet.userId
+          ? Effect.fail(new RepositoryError({ operation: "read metric series", cause: new Error("reader failed") }))
+          : Effect.succeed(1),
+      firstEventAt: () => Effect.succeed(firstMatch),
+      lastEventAt: () => Effect.succeed(firstMatch),
+      seriesPerBucket: () => Effect.succeed([]),
+    })
+    const { incidents, layer } = layersFor(
+      [
+        monitor({
+          id: badMonitorId,
+          target: {
+            type: "user",
+            id: null,
+            filterSet: { userId: [{ op: "eq", value: "bad-user" }] },
+            kind: "user",
+            stream: "traces",
+            query: null,
+            savedSearchId: null,
+            metric: { kind: "count" },
+          },
+          rule: { trigger: "match", config: {}, severity: "medium" },
+        }),
+        monitor({
+          id: goodMonitorId,
+          target: {
+            type: "user",
+            id: null,
+            filterSet: {},
+            kind: "user",
+            stream: "traces",
+            query: null,
+            savedSearchId: null,
+            metric: { kind: "count" },
+          },
+          rule: { trigger: "match", config: {}, severity: "high" },
+        }),
+      ],
+      [firstMatch],
+      { query: null, filterSet: {} },
+      failingMetricLayer,
+    )
+
+    const result = await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
+
+    expect(result).toEqual({ checked: 2, evaluatable: 2, evaluated: 1, failed: 1 })
+    expect(incidents).toHaveLength(1)
+    expect(incidents[0]?.sourceId).toBe(goodMonitorId)
+  })
+
+  it("reports all monitor failures so the worker can retry systemic outages", async () => {
+    const failingMetricLayer = Layer.succeed(MetricSeriesReader, {
+      valueInWindow: () =>
+        Effect.fail(new RepositoryError({ operation: "read metric series", cause: new Error("reader failed") })),
+      firstEventAt: () => Effect.succeed(null),
+      lastEventAt: () => Effect.succeed(null),
+      seriesPerBucket: () => Effect.succeed([]),
+    })
+    const { layer } = layersFor(
+      [
+        monitor({ id: MonitorId(cuid("m-one")), rule: { trigger: "match", config: {}, severity: "medium" } }),
+        monitor({ id: MonitorId(cuid("m-two")), rule: { trigger: "match", config: {}, severity: "high" } }),
+      ],
+      [],
+      { query: null, filterSet: {} },
+      failingMetricLayer,
+    )
+
+    const result = await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
+
+    expect(result).toEqual({ checked: 2, evaluatable: 2, evaluated: 0, failed: 2 })
   })
 })

@@ -100,6 +100,32 @@ describe("createMonitorUseCase", () => {
     expect(monitors[0]).toEqual(result)
   })
 
+  it("preserves inline target query on creation", async () => {
+    const { repo } = createFakeMonitorRepository()
+
+    const result = await run(
+      createMonitorUseCase({
+        organizationId,
+        projectId,
+        name: "Payment search",
+        target: {
+          type: "user",
+          id: null,
+          filterSet: { userId: [{ op: "eq", value: "user-1" }] },
+          query: "payment failed",
+        },
+        rule: { trigger: "match", severity: "medium", config: {} },
+      }),
+      repo,
+    )
+
+    expect(result.target).toMatchObject({
+      type: "user",
+      filterSet: { userId: [{ op: "eq", value: "user-1" }] },
+      query: "payment failed",
+    })
+  })
+
   it("rejects match monitors with conditions", async () => {
     const { repo } = createFakeMonitorRepository()
 

@@ -11,6 +11,8 @@ export interface MonitorTarget {
     /** Target entity id, or `null` for project-wide targets. */
     id?: string | undefined;
     filterSet?: LatitudeApi.MonitorFilterSet | undefined;
+    /** Semantic query applied when evaluating inline trace targets. */
+    query?: string | null | undefined;
 }
 
 export namespace MonitorTarget {

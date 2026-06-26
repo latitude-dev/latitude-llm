@@ -33,11 +33,15 @@ class IncidentsClient:
         *,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
-        source_type: typing.Optional[IncidentsListRequestSourceType] = None,
-        source_id: typing.Optional[str] = None,
-        severities: typing.Optional[
-            typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]
-        ] = None,
+	        source_type: typing.Optional[IncidentsListRequestSourceType] = None,
+	        source_id: typing.Optional[str] = None,
+	        source_types: typing.Optional[
+	            typing.Union[IncidentsListRequestSourceType, typing.Sequence[IncidentsListRequestSourceType]]
+	        ] = None,
+	        kinds: typing.Optional[typing.Union[str, typing.Sequence[str]]] = None,
+	        severities: typing.Optional[
+	            typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]
+	        ] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> ListIncidentsResponse:
         """
@@ -94,13 +98,15 @@ class IncidentsClient:
         """
         _response = self._raw_client.list(
             project_slug,
-            from_iso=from_iso,
-            to_iso=to_iso,
-            source_type=source_type,
-            source_id=source_id,
-            severities=severities,
-            request_options=request_options,
-        )
+	            from_iso=from_iso,
+	            to_iso=to_iso,
+	            source_type=source_type,
+	            source_id=source_id,
+	            source_types=source_types,
+	            kinds=kinds,
+	            severities=severities,
+	            request_options=request_options,
+	        )
         return _response.data
 
     def resolve(
@@ -164,6 +170,10 @@ class AsyncIncidentsClient:
         to_iso: typing.Optional[dt.datetime] = None,
         source_type: typing.Optional[IncidentsListRequestSourceType] = None,
         source_id: typing.Optional[str] = None,
+        source_types: typing.Optional[
+            typing.Union[IncidentsListRequestSourceType, typing.Sequence[IncidentsListRequestSourceType]]
+        ] = None,
+        kinds: typing.Optional[typing.Union[str, typing.Sequence[str]]] = None,
         severities: typing.Optional[
             typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]
         ] = None,
@@ -234,6 +244,8 @@ class AsyncIncidentsClient:
             to_iso=to_iso,
             source_type=source_type,
             source_id=source_id,
+            source_types=source_types,
+            kinds=kinds,
             severities=severities,
             request_options=request_options,
         )

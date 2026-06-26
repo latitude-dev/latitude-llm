@@ -1,8 +1,10 @@
+import { OutboxEventWriter, type OutboxEventWriterShape, type OutboxWriteEvent } from "@domain/events"
+import { IncidentRepository, type IncidentRepositoryShape } from "@domain/incidents"
 import { type Monitor, MonitorRepository, updateMonitorUseCase } from "@domain/monitors"
 import { createFakeMonitorRepository } from "@domain/monitors/testing"
 import { SavedSearchRepository } from "@domain/saved-searches"
 import { createFakeSavedSearchRepository } from "@domain/saved-searches/testing"
-import { MonitorId, OrganizationId, ProjectId, SqlClient, ValidationError } from "@domain/shared"
+import { AlertIncidentId, MonitorId, OrganizationId, ProjectId, SqlClient, ValidationError } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -38,20 +40,71 @@ const makeMonitor = (overrides: Partial<Monitor> = {}): Monitor => ({
   updatedAt: at,
 })
 
-const provide = (repo: MonitorRepositoryShape) =>
+const createIncidentRepo = (openIncidentId: AlertIncidentId | null = null) => {
+  const closeOpenCalls: Parameters<IncidentRepositoryShape["closeOpen"]>[0][] = []
+  const repo: IncidentRepositoryShape = {
+    insert: () => Effect.void,
+    findById: () => Effect.die("findById not used"),
+    findOpen: () => Effect.succeed(null),
+    closeOpen: (input) =>
+      Effect.sync(() => {
+        closeOpenCalls.push(input)
+        return openIncidentId
+      }),
+    updateExitDwell: () => Effect.void,
+    setEndedAt: () => Effect.void,
+    closeById: () => Effect.succeed(null),
+    listByProjectId: () => Effect.succeed([]),
+    listOpenBySourceType: () => Effect.succeed([]),
+    listByMonitorId: () => Effect.die("listByMonitorId not used"),
+    statsByMonitorId: () => Effect.die("statsByMonitorId not used"),
+  }
+  return { repo, closeOpenCalls }
+}
+
+const createOutbox = () => {
+  const events: OutboxWriteEvent[] = []
+  return {
+    events,
+    writer: OutboxEventWriter.of({
+      write: (event) =>
+        Effect.sync(() => {
+          events.push(event)
+        }),
+    }),
+  }
+}
+
+const provide = (
+  repo: MonitorRepositoryShape,
+  incidentRepo: IncidentRepositoryShape = createIncidentRepo().repo,
+  outbox = createOutbox().writer,
+) =>
   Layer.mergeAll(
     Layer.succeed(MonitorRepository, MonitorRepository.of(repo)),
     Layer.succeed(SavedSearchRepository, SavedSearchRepository.of(createFakeSavedSearchRepository().repository)),
+    Layer.succeed(IncidentRepository, IncidentRepository.of(incidentRepo)),
+    Layer.succeed(OutboxEventWriter, outbox),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
   )
 
 const run = <A, E>(
-  effect: Effect.Effect<A, E, SqlClient | MonitorRepository | SavedSearchRepository>,
+  effect: Effect.Effect<
+    A,
+    E,
+    SqlClient | MonitorRepository | SavedSearchRepository | IncidentRepository | OutboxEventWriter
+  >,
   repo: MonitorRepositoryShape,
-) => Effect.runPromise(effect.pipe(Effect.provide(provide(repo))))
+  incidentRepo?: IncidentRepositoryShape,
+  outbox?: OutboxEventWriterShape,
+) => Effect.runPromise(effect.pipe(Effect.provide(provide(repo, incidentRepo, outbox))))
 
 const runError = <A, E>(
-  effect: Effect.Effect<A, E, SqlClient | MonitorRepository | SavedSearchRepository>,
+  effect: Effect.Effect<
+    A,
+    E,
+    SqlClient | MonitorRepository | SavedSearchRepository | IncidentRepository | OutboxEventWriter
+  >,
   repo: MonitorRepositoryShape,
 ) => Effect.runPromise(effect.pipe(Effect.flip, Effect.provide(provide(repo))))
 
@@ -153,5 +206,84 @@ describe("updateMonitorUseCase", () => {
 
     expect(error).toBeInstanceOf(ValidationError)
     expect(error.message).toBe("Escalating monitors only support count metrics")
+  })
+
+  it("preserves inline target query on rule-only edits", async () => {
+    const { repo } = createFakeMonitorRepository([
+      makeMonitor({
+        target: { ...target, query: "payment failed", filterSet: { userId: [{ op: "eq", value: "user-1" }] } },
+      }),
+    ])
+
+    const result = await run(
+      updateMonitorUseCase({
+        id: monitorId,
+        rule: {
+          trigger: "threshold",
+          severity: "medium",
+          config: {
+            metric: { kind: "count" },
+            condition: {
+              trigger: "threshold",
+              metric: { kind: "count" },
+              threshold: { mode: "absolute", value: 2 },
+            },
+          },
+        },
+      }),
+      repo,
+    )
+
+    expect(result.target.query).toBe("payment failed")
+  })
+
+  it("replaces inline target query on target edits", async () => {
+    const { repo } = createFakeMonitorRepository([makeMonitor({ target: { ...target, query: "old query" } })])
+
+    const result = await run(
+      updateMonitorUseCase({
+        id: monitorId,
+        target: { ...target, query: "new query", filterSet: { userId: [{ op: "eq", value: "user-2" }] } },
+      }),
+      repo,
+    )
+
+    expect(result.target).toMatchObject({
+      query: "new query",
+      filterSet: { userId: [{ op: "eq", value: "user-2" }] },
+    })
+  })
+
+  it("closes an open escalating incident when the rule becomes point-in-time", async () => {
+    const incidentId = AlertIncidentId("i".repeat(24))
+    const incidentRepo = createIncidentRepo(incidentId)
+    const outbox = createOutbox()
+    const escalatingRule = {
+      trigger: "escalating" as const,
+      severity: "high" as const,
+      config: {
+        metric: { kind: "count" as const },
+        condition: { trigger: "escalating" as const, metric: { kind: "count" as const } },
+      },
+    }
+    const { repo } = createFakeMonitorRepository([makeMonitor({ rule: escalatingRule })])
+
+    await run(
+      updateMonitorUseCase({
+        id: monitorId,
+        rule: { trigger: "match", severity: "high", config: {} },
+      }),
+      repo,
+      incidentRepo.repo,
+      outbox.writer,
+    )
+
+    expect(incidentRepo.closeOpenCalls).toMatchObject([{ sourceType: "monitor", sourceId: monitorId }])
+    expect(outbox.events).toHaveLength(1)
+    expect(outbox.events[0]).toMatchObject({
+      eventName: "IncidentClosed",
+      aggregateId: incidentId,
+      payload: { alertIncidentId: incidentId, reason: "resolved", sourceType: "monitor", sourceId: monitorId },
+    })
   })
 })

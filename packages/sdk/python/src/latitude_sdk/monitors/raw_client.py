@@ -33,6 +33,23 @@ from .types.update_monitor_body_trigger import UpdateMonitorBodyTrigger
 OMIT = typing.cast(typing.Any, ...)
 
 
+def _validate_create_monitor_condition(
+    *, trigger: CreateMonitorBodyTrigger, condition: typing.Any
+) -> None:
+    condition_trigger = getattr(condition, "trigger", None) if condition is not OMIT and condition is not None else None
+
+    if trigger == "match":
+        if condition is not OMIT and condition is not None:
+            raise ValueError("Monitor condition must be omitted when trigger is 'match'.")
+        return
+
+    if trigger in ("threshold", "escalating"):
+        if condition is OMIT or condition is None:
+            raise ValueError(f"Monitor condition is required when trigger is '{trigger}'.")
+        if condition_trigger != trigger:
+            raise ValueError(f"Monitor condition trigger must be '{trigger}'.")
+
+
 class RawMonitorsClient:
     def __init__(self, *, client_wrapper: SyncClientWrapper):
         self._client_wrapper = client_wrapper
@@ -176,6 +193,8 @@ class RawMonitorsClient:
         HttpResponse[Monitor]
             Monitor created
         """
+        _validate_create_monitor_condition(trigger=trigger, condition=condition)
+
         _response = self._client_wrapper.httpx_client.request(
             f"v1/projects/{jsonable_encoder(project_slug)}/monitors",
             method="POST",
@@ -990,6 +1009,8 @@ class AsyncRawMonitorsClient:
         AsyncHttpResponse[Monitor]
             Monitor created
         """
+        _validate_create_monitor_condition(trigger=trigger, condition=condition)
+
         _response = await self._client_wrapper.httpx_client.request(
             f"v1/projects/{jsonable_encoder(project_slug)}/monitors",
             method="POST",

@@ -10,22 +10,61 @@ ALTER TABLE "latitude"."monitors" ADD COLUMN "trigger" varchar(32);--> statement
 ALTER TABLE "latitude"."monitors" ADD COLUMN "config" jsonb;--> statement-breakpoint
 ALTER TABLE "latitude"."monitors" ADD COLUMN "severity" varchar(16);--> statement-breakpoint
 ALTER TABLE "latitude"."signals" ADD COLUMN "muted_at" timestamp with time zone;--> statement-breakpoint
-CREATE TEMP TABLE "monitors_consolidation_multi_alert_monitors" AS
-SELECT a.monitor_id
+CREATE TEMP TABLE "monitors_consolidation_split_alerts" AS
+SELECT
+  a.id AS alert_id,
+  a.monitor_id AS original_monitor_id,
+  CASE
+    WHEN row_number() OVER (PARTITION BY a.monitor_id ORDER BY a.created_at DESC, a.id DESC) = 1
+      THEN a.monitor_id
+    ELSE substr(md5(gen_random_uuid()::text), 1, 24)
+  END AS next_monitor_id,
+  row_number() OVER (PARTITION BY a.monitor_id ORDER BY a.created_at DESC, a.id DESC) AS split_rank
 FROM "latitude"."monitor_alerts" a
-WHERE a.deleted_at IS NULL AND a.kind NOT LIKE 'issue.%'
-GROUP BY a.monitor_id
-HAVING count(*) > 1;--> statement-breakpoint
-DELETE FROM "latitude"."incidents" i
-USING "latitude"."monitor_alerts" a, "monitors_consolidation_multi_alert_monitors" m
-WHERE i.monitor_alert_id = a.id AND a.monitor_id = m.monitor_id;--> statement-breakpoint
-DELETE FROM "latitude"."monitor_alerts" a
-USING "monitors_consolidation_multi_alert_monitors" m
-WHERE a.monitor_id = m.monitor_id;--> statement-breakpoint
-DELETE FROM "latitude"."monitors" m
-USING "monitors_consolidation_multi_alert_monitors" multi
-WHERE m.id = multi.monitor_id;--> statement-breakpoint
-DROP TABLE "monitors_consolidation_multi_alert_monitors";--> statement-breakpoint
+WHERE a.deleted_at IS NULL AND a.kind NOT LIKE 'issue.%';--> statement-breakpoint
+INSERT INTO "latitude"."monitors" (
+  id,
+  organization_id,
+  project_id,
+  slug,
+  name,
+  description,
+  system,
+  muted_at,
+  deleted_at,
+  created_at,
+  updated_at,
+  target_stream,
+  target_filter_set,
+  target_query,
+  target_saved_search_id,
+  metric
+)
+SELECT
+  split.next_monitor_id,
+  m.organization_id,
+  m.project_id,
+  LEFT(m.slug, 103) || '-' || split.next_monitor_id,
+  LEFT(m.name || ' ' || split.split_rank, 128),
+  m.description,
+  m.system,
+  m.muted_at,
+  m.deleted_at,
+  m.created_at,
+  m.updated_at,
+  m.target_stream,
+  m.target_filter_set,
+  m.target_query,
+  m.target_saved_search_id,
+  m.metric
+FROM "monitors_consolidation_split_alerts" split
+JOIN "latitude"."monitors" m ON m.id = split.original_monitor_id
+WHERE split.split_rank > 1;--> statement-breakpoint
+UPDATE "latitude"."monitor_alerts" a
+SET monitor_id = split.next_monitor_id
+FROM "monitors_consolidation_split_alerts" split
+WHERE a.id = split.alert_id;--> statement-breakpoint
+DROP TABLE "monitors_consolidation_split_alerts";--> statement-breakpoint
 WITH fold_alerts AS (
   SELECT DISTINCT ON (a.monitor_id)
     a.id,
@@ -59,12 +98,17 @@ monitor_rules AS (
       ELSE 'match'
     END AS trigger,
     jsonb_strip_nulls(jsonb_build_object(
-      'filterSet',
-        CASE
-          WHEN a.kind LIKE 'savedSearch.%' OR m.target_saved_search_id IS NOT NULL THEN NULL
-          ELSE m.target_filter_set
-        END,
-      'metric',
+	      'filterSet',
+	        CASE
+	          WHEN a.kind LIKE 'savedSearch.%' OR m.target_saved_search_id IS NOT NULL THEN NULL
+	          ELSE m.target_filter_set
+	        END,
+	      'query',
+	        CASE
+	          WHEN a.kind LIKE 'savedSearch.%' OR m.target_saved_search_id IS NOT NULL THEN NULL
+	          ELSE m.target_query
+	        END,
+	      'metric',
         CASE
           WHEN a.kind LIKE '%.match' OR a.kind = 'event.matched' THEN NULL
           ELSE COALESCE(a.condition->'metric', m.metric, '{"kind":"count"}'::jsonb)
@@ -167,6 +211,7 @@ ALTER TABLE "latitude"."monitors" ALTER COLUMN "target_type" SET NOT NULL;--> st
 ALTER TABLE "latitude"."monitors" ALTER COLUMN "trigger" SET NOT NULL;--> statement-breakpoint
 ALTER TABLE "latitude"."monitors" ALTER COLUMN "config" SET NOT NULL;--> statement-breakpoint
 ALTER TABLE "latitude"."monitors" ALTER COLUMN "severity" SET NOT NULL;--> statement-breakpoint
+UPDATE "latitude"."signals" SET muted_at = COALESCE(ignored_at, resolved_at) WHERE muted_at IS NULL AND (ignored_at IS NOT NULL OR resolved_at IS NOT NULL);--> statement-breakpoint
 DROP POLICY "monitor_alerts_organization_policy" ON "latitude"."monitor_alerts";--> statement-breakpoint
 DROP TABLE "latitude"."monitor_alerts";--> statement-breakpoint
 ALTER TABLE "latitude"."monitors" DROP COLUMN "target_stream";--> statement-breakpoint

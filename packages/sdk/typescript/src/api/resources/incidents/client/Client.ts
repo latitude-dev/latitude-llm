@@ -54,12 +54,30 @@ export class IncidentsClient {
         request: LatitudeApi.IncidentsListRequest = {},
         requestOptions?: IncidentsClient.RequestOptions,
     ): Promise<core.WithRawResponse<LatitudeApi.ListIncidentsResponse>> {
-        const { fromIso, toIso, source_type: sourceType, source_id: sourceId, severities } = request;
+        const {
+            fromIso,
+            toIso,
+            source_type: sourceType,
+            source_id: sourceId,
+            sourceType: legacySourceType,
+            sourceId: legacySourceId,
+            sourceTypes,
+            kinds,
+            severities,
+        } = request;
         const _queryParams: Record<string, unknown> = {
             fromIso: fromIso != null ? fromIso : undefined,
             toIso: toIso != null ? toIso : undefined,
             source_type: sourceType != null ? sourceType : undefined,
             source_id: sourceId,
+            sourceType: legacySourceType != null ? legacySourceType : undefined,
+            sourceId: legacySourceId,
+            sourceTypes: Array.isArray(sourceTypes)
+                ? sourceTypes.map((item) => item)
+                : sourceTypes != null
+                  ? sourceTypes
+                  : undefined,
+            kinds: Array.isArray(kinds) ? kinds.map((item) => item) : kinds != null ? kinds : undefined,
             severities: Array.isArray(severities)
                 ? severities.map((item) => item)
                 : severities != null

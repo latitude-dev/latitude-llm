@@ -1,7 +1,7 @@
 import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
 import { deleteMonitorUseCase, type Monitor, MonitorRepository } from "@domain/monitors"
 import { createFakeAlertIncidentStore, createFakeMonitorRepository } from "@domain/monitors/testing"
-import { MonitorId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { AlertIncidentId, MonitorId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -37,10 +37,14 @@ const makeMonitor = (overrides: Partial<Monitor> = {}): Monitor => ({
   updatedAt: at,
 })
 
-const provide = (repo: MonitorRepositoryShape, events: OutboxWriteEvent[] = []) =>
+const provide = (
+  repo: MonitorRepositoryShape,
+  events: OutboxWriteEvent[] = [],
+  incidentStore = createFakeAlertIncidentStore(),
+) =>
   Layer.mergeAll(
     Layer.succeed(MonitorRepository, MonitorRepository.of(repo)),
-    createFakeAlertIncidentStore().layer,
+    incidentStore.layer,
     Layer.succeed(
       OutboxEventWriter,
       OutboxEventWriter.of({
@@ -68,5 +72,38 @@ describe("deleteMonitorUseCase", () => {
     )
     expect(error._tag).toBe("SystemMonitorForbiddenError")
     expect(monitors[0]?.deletedAt).toBeNull()
+  })
+
+  it("closes open incidents as manual resolves so recovery notifications are suppressed", async () => {
+    const incidentId = AlertIncidentId("i".repeat(24))
+    const incidentStore = createFakeAlertIncidentStore([
+      {
+        id: incidentId,
+        organizationId,
+        projectId,
+        sourceType: "monitor",
+        sourceId: monitorId,
+        severity: "high",
+        startedAt: at,
+        endedAt: null,
+        createdAt: at,
+        entrySignals: null,
+        exitEligibleSince: null,
+        condition: null,
+      },
+    ])
+    const events: OutboxWriteEvent[] = []
+    const { repo } = createFakeMonitorRepository([makeMonitor({ system: false })])
+
+    await Effect.runPromise(
+      deleteMonitorUseCase({ id: monitorId }).pipe(Effect.provide(provide(repo, events, incidentStore))),
+    )
+
+    expect(incidentStore.incidents[0]?.endedAt).toBeInstanceOf(Date)
+    expect(events[0]).toMatchObject({
+      eventName: "IncidentClosed",
+      aggregateId: incidentId,
+      payload: { reason: "resolved", alertIncidentId: incidentId, sourceType: "monitor", sourceId: monitorId },
+    })
   })
 })

@@ -4816,7 +4816,18 @@
             "description": "ISO-8601 timestamp at which the incident row was created."
           },
           "condition": {
-            "$ref": "#/components/schemas/AlertCondition"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AlertThresholdCondition"
+              },
+              {
+                "$ref": "#/components/schemas/AlertEscalatingCondition"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The monitor rule configuration when the incident opened, or `null` for signal incidents and match monitors."
           }
         },
         "required": [
@@ -4832,102 +4843,36 @@
           "condition"
         ]
       },
-      "AlertCondition": {
-        "oneOf": [
-          {
-            "type": "object",
-            "properties": {
-              "trigger": {
-                "type": "string",
-                "enum": [
-                  "threshold"
-                ],
-                "description": "Opens once the measured value crosses the threshold."
-              },
-              "metric": {
-                "$ref": "#/components/schemas/MonitorMetric"
-              },
-              "threshold": {
-                "$ref": "#/components/schemas/AlertMetricThreshold"
-              },
-              "direction": {
-                "type": "string",
-                "enum": [
-                  "above",
-                  "below"
-                ],
-                "description": "Direction that opens the incident. Defaults to `above` when omitted."
-              }
-            },
-            "required": [
-              "trigger",
-              "metric",
+      "AlertThresholdCondition": {
+        "type": "object",
+        "properties": {
+          "trigger": {
+            "type": "string",
+            "enum": [
               "threshold"
-            ]
+            ],
+            "description": "Opens once the measured value crosses the threshold."
           },
-          {
-            "type": "object",
-            "properties": {
-              "trigger": {
-                "type": "string",
-                "enum": [
-                  "escalating"
-                ],
-                "description": "Opens when the monitor target is escalating or sustained."
-              },
-              "metric": {
-                "$ref": "#/components/schemas/MonitorMetric"
-              },
-              "threshold": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/AlertMetricThreshold"
-                  },
-                  {
-                    "description": "How the metric is compared when threshold-based."
-                  }
-                ]
-              },
-              "direction": {
-                "type": "string",
-                "enum": [
-                  "above",
-                  "below"
-                ],
-                "description": "Direction that opens the incident. Defaults to `above` when omitted."
-              },
-              "sensitivity": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 6,
-                "description": "Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted."
-              },
-              "window": {
-                "type": "object",
-                "properties": {
-                  "minutes": {
-                    "type": "integer",
-                    "minimum": 5,
-                    "description": "How long the threshold must stay crossed before the incident opens. Minimum 5."
-                  }
-                },
-                "required": [
-                  "minutes"
-                ],
-                "description": "Sustained-condition window."
-              }
-            },
-            "required": [
-              "trigger",
-              "metric",
-              "window"
-            ]
+          "metric": {
+            "$ref": "#/components/schemas/MonitorMetric"
           },
-          {
-            "type": "null"
+          "threshold": {
+            "$ref": "#/components/schemas/AlertMetricThreshold"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "above",
+              "below"
+            ],
+            "description": "Direction that opens the incident. Defaults to `above` when omitted."
           }
-        ],
-        "description": "The monitor rule configuration when the incident opened, or `null` for signal incidents and match monitors."
+        },
+        "required": [
+          "trigger",
+          "metric",
+          "threshold"
+        ]
       },
       "MonitorMetric": {
         "oneOf": [
@@ -5070,6 +5015,31 @@
                   "median"
                 ],
                 "description": "Find the median numeric field value over matching events."
+              },
+              "field": {
+                "type": "string",
+                "enum": [
+                  "duration",
+                  "cost",
+                  "tokens"
+                ],
+                "description": "Numeric field to aggregate."
+              }
+            },
+            "required": [
+              "kind",
+              "field"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "p95"
+                ],
+                "description": "Find the 95th-percentile numeric field value over matching events."
               },
               "field": {
                 "type": "string",
@@ -5249,6 +5219,64 @@
           }
         ],
         "description": "Length of the window used to compute the baseline rate."
+      },
+      "AlertEscalatingCondition": {
+        "type": "object",
+        "properties": {
+          "trigger": {
+            "type": "string",
+            "enum": [
+              "escalating"
+            ],
+            "description": "Opens when the monitor target is escalating or sustained."
+          },
+          "metric": {
+            "$ref": "#/components/schemas/MonitorMetric"
+          },
+          "threshold": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AlertMetricThreshold"
+              },
+              {
+                "description": "How the metric is compared when threshold-based."
+              }
+            ]
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "above",
+              "below"
+            ],
+            "description": "Direction that opens the incident. Defaults to `above` when omitted."
+          },
+          "sensitivity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 6,
+            "description": "Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted."
+          },
+          "window": {
+            "type": "object",
+            "properties": {
+              "minutes": {
+                "type": "integer",
+                "minimum": 5,
+                "description": "How long the threshold must stay crossed before the incident opens. Minimum 5."
+              }
+            },
+            "required": [
+              "minutes"
+            ],
+            "description": "Sustained-condition window."
+          }
+        },
+        "required": [
+          "trigger",
+          "metric",
+          "window"
+        ]
       },
       "PaginatedDatasets": {
         "type": "object",
@@ -6645,6 +6673,13 @@
           },
           "filterSet": {
             "$ref": "#/components/schemas/MonitorFilterSet"
+          },
+          "query": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Semantic query applied when evaluating inline trace targets."
           }
         },
         "required": [
@@ -6708,6 +6743,13 @@
               }
             ]
           },
+          "query": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Semantic query applied by inline monitor targets."
+          },
           "metric": {
             "allOf": [
               {
@@ -6719,86 +6761,227 @@
             ]
           },
           "condition": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/AlertCondition"
-              },
-              {
-                "description": "Condition that controls threshold or escalating incidents."
-              }
-            ]
+            "$ref": "#/components/schemas/AlertCondition"
           }
         },
         "description": "Rule configuration used when the monitor is evaluated."
       },
-      "CreateMonitorBody": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128,
-            "description": "Human-readable name. Used to derive the slug."
+      "AlertCondition": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/AlertThresholdCondition"
           },
-          "description": {
-            "type": "string",
-            "maxLength": 2000,
-            "description": "Optional free-form description."
-          },
-          "target": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/MonitorTarget"
-              },
-              {
-                "description": "Entity or filter set watched by the monitor."
-              }
-            ]
-          },
-          "trigger": {
-            "type": "string",
-            "enum": [
-              "match",
-              "threshold",
-              "escalating"
-            ],
-            "description": "When the monitor opens incidents: `match`, `threshold`, or `escalating`."
-          },
-          "metric": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/MonitorMetric"
-              },
-              {
-                "description": "Metric evaluated by threshold and escalating monitor rules."
-              }
-            ]
-          },
-          "condition": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/AlertCondition"
-              },
-              {
-                "description": "Condition that controls threshold or escalating incidents."
-              }
-            ]
-          },
-          "severity": {
-            "type": "string",
-            "enum": [
-              "low",
-              "medium",
-              "high"
-            ],
-            "description": "Severity assigned to incidents opened by this monitor."
+          {
+            "$ref": "#/components/schemas/AlertEscalatingCondition"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "trigger",
+          "mapping": {
+            "threshold": "#/components/schemas/AlertThresholdCondition",
+            "escalating": "#/components/schemas/AlertEscalatingCondition"
           }
         },
-        "required": [
-          "name",
-          "target",
-          "trigger",
-          "severity"
+        "description": "Condition that controls threshold or escalating incidents."
+      },
+      "CreateMonitorBody": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "description": "Human-readable name. Used to derive the slug."
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 2000,
+                "description": "Optional free-form description."
+              },
+              "target": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/MonitorTarget"
+                  },
+                  {
+                    "description": "Entity or filter set watched by the monitor."
+                  }
+                ]
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ],
+                "description": "Severity assigned to incidents opened by this monitor."
+              },
+              "trigger": {
+                "type": "string",
+                "enum": [
+                  "match"
+                ],
+                "description": "Opens a point incident when any matching event appears."
+              },
+              "metric": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/MonitorMetric"
+                  },
+                  {
+                    "description": "Metric stored for later rule edits. Match monitors evaluate counts."
+                  }
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "target",
+              "severity",
+              "trigger"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "description": "Human-readable name. Used to derive the slug."
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 2000,
+                "description": "Optional free-form description."
+              },
+              "target": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/MonitorTarget"
+                  },
+                  {
+                    "description": "Entity or filter set watched by the monitor."
+                  }
+                ]
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ],
+                "description": "Severity assigned to incidents opened by this monitor."
+              },
+              "trigger": {
+                "type": "string",
+                "enum": [
+                  "threshold"
+                ],
+                "description": "Opens a point incident when the condition is met."
+              },
+              "metric": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/MonitorMetric"
+                  },
+                  {
+                    "description": "Metric evaluated by the monitor rule."
+                  }
+                ]
+              },
+              "condition": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/AlertThresholdCondition"
+                  },
+                  {
+                    "description": "Threshold condition that opens point incidents."
+                  }
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "target",
+              "severity",
+              "trigger",
+              "condition"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "description": "Human-readable name. Used to derive the slug."
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 2000,
+                "description": "Optional free-form description."
+              },
+              "target": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/MonitorTarget"
+                  },
+                  {
+                    "description": "Entity or filter set watched by the monitor."
+                  }
+                ]
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ],
+                "description": "Severity assigned to incidents opened by this monitor."
+              },
+              "trigger": {
+                "type": "string",
+                "enum": [
+                  "escalating"
+                ],
+                "description": "Opens and closes a sustained incident while the condition is met."
+              },
+              "metric": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/MonitorMetric"
+                  },
+                  {
+                    "description": "Metric evaluated by the monitor rule."
+                  }
+                ]
+              },
+              "condition": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/AlertEscalatingCondition"
+                  },
+                  {
+                    "description": "Escalating condition that opens sustained incidents."
+                  }
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "target",
+              "severity",
+              "trigger",
+              "condition"
+            ]
+          }
         ]
       },
       "MonitorList": {
@@ -6996,7 +7179,18 @@
             "description": "ISO-8601 timestamp at which the incident row was created."
           },
           "condition": {
-            "$ref": "#/components/schemas/AlertCondition"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AlertThresholdCondition"
+              },
+              {
+                "$ref": "#/components/schemas/AlertEscalatingCondition"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The monitor rule configuration when the incident opened, or `null` for signal incidents and match monitors."
           },
           "notified": {
             "type": "boolean",
@@ -11597,6 +11791,62 @@
             "required": false,
             "description": "Restrict to incidents tied to one source entity id.",
             "name": "source_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "monitor",
+                "signal"
+              ],
+              "description": "Deprecated alias for `source_type`; prefer `source_type`."
+            },
+            "required": false,
+            "description": "Deprecated alias for `source_type`; prefer `source_type`.",
+            "name": "sourceType",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 24,
+              "maxLength": 24,
+              "description": "Deprecated alias for `source_id`; prefer `source_id`."
+            },
+            "required": false,
+            "description": "Deprecated alias for `source_id`; prefer `source_id`.",
+            "name": "sourceId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "monitor",
+                  "signal"
+                ]
+              },
+              "description": "Deprecated alias for `source_type`; prefer `source_type`."
+            },
+            "required": false,
+            "description": "Deprecated alias for `source_type`; prefer `source_type`.",
+            "name": "sourceTypes",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Deprecated filter from the previous incidents model. This endpoint now filters by source and severity."
+            },
+            "required": false,
+            "description": "Deprecated filter from the previous incidents model. This endpoint now filters by source and severity.",
+            "name": "kinds",
             "in": "query"
           },
           {

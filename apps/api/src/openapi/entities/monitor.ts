@@ -51,6 +51,10 @@ export const MonitorMetricSchema = z
       kind: z.literal("median").describe("Find the median numeric field value over matching events."),
       field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
     }),
+    z.object({
+      kind: z.literal("p95").describe("Find the 95th-percentile numeric field value over matching events."),
+      field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
+    }),
   ])
   .openapi("MonitorMetric")
 
@@ -61,12 +65,14 @@ export const MonitorTargetSchema = z
       .describe("Product target category: `savedSearch`, `tool`, `user`, or `session`."),
     id: cuidSchema.nullable().describe("Target entity id, or `null` for project-wide targets."),
     filterSet: FilterSetSchema.optional().describe("Additional filters applied when evaluating the monitor."),
+    query: z.string().nullable().optional().describe("Semantic query applied when evaluating inline trace targets."),
   })
   .openapi("MonitorTarget")
 
 const MonitorConfigSchema = z
   .object({
     filterSet: FilterSetSchema.optional().describe("Filters applied by the monitor rule."),
+    query: z.string().nullable().optional().describe("Semantic query applied by inline monitor targets."),
     metric: MonitorMetricSchema.optional().describe("Metric evaluated by threshold and escalating monitor rules."),
     condition: AlertConditionSchema.optional().describe("Condition that controls threshold or escalating incidents."),
   })

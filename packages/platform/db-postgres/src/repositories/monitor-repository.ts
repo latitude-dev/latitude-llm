@@ -56,6 +56,7 @@ const toMonitor = (row: typeof monitors.$inferSelect): Monitor => {
       ...(filterSet === undefined ? {} : { filterSet }),
       kind: row.targetType,
       stream: monitorStreamForTargetType(row.targetType),
+      query: row.config.query ?? null,
       savedSearchId: row.targetType === "savedSearch" ? row.targetId : null,
       ...(row.config.metric === undefined ? {} : { metric: row.config.metric }),
     },
@@ -75,6 +76,7 @@ const toMonitorConfigRow = (config: MonitorConfig): typeof monitors.$inferInsert
   const parsed = monitorConfigSchema.parse(config)
   return {
     ...(parsed.filterSet === undefined ? {} : { filterSet: parsed.filterSet }),
+    ...(parsed.query === undefined ? {} : { query: parsed.query }),
     ...(parsed.metric === undefined ? {} : { metric: parsed.metric }),
     ...(parsed.condition === undefined ? {} : { condition: parsed.condition }),
   }
@@ -91,7 +93,10 @@ const toMonitorRow = (monitor: Monitor): typeof monitors.$inferInsert => ({
   targetType: monitor.target.type,
   targetId: monitor.target.id,
   trigger: monitor.rule.trigger,
-  config: toMonitorConfigRow(monitor.rule.config),
+  config: toMonitorConfigRow({
+    ...monitor.rule.config,
+    ...(monitor.target.query === null ? {} : { query: monitor.target.query }),
+  }),
   severity: monitor.rule.severity,
   mutedAt: monitor.mutedAt,
   deletedAt: monitor.deletedAt,

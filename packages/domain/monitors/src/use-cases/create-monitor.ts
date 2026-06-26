@@ -31,6 +31,7 @@ interface CreateMonitorTargetInput {
   readonly type: MonitorTargetType
   readonly id: string | null
   readonly filterSet?: MonitorTarget["filterSet"]
+  readonly query?: string | null | undefined
 }
 
 export interface CreateMonitorInput {
@@ -127,7 +128,7 @@ export const createMonitorUseCase = (
             ...(input.target.filterSet !== undefined ? { filterSet: input.target.filterSet } : {}),
             kind: input.target.type,
             stream: monitorStreamForTargetType(input.target.type),
-            query: null,
+            query: input.target.query ?? null,
             savedSearchId: input.target.type === "savedSearch" ? input.target.id : null,
             metric: input.rule.config.metric ?? { kind: "count" },
           },

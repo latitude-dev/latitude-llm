@@ -70,6 +70,10 @@ const MonitorMetricSchema = z
       kind: z.literal("median").describe("Find the median numeric field value over matching events."),
       field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
     }),
+    z.object({
+      kind: z.literal("p95").describe("Find the 95th-percentile numeric field value over matching events."),
+      field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
+    }),
   ])
   .openapi("MonitorMetric")
 
@@ -101,44 +105,51 @@ const AlertMetricThresholdSchema = z
   ])
   .openapi("AlertMetricThreshold")
 
+export const AlertThresholdConditionSchema = z
+  .object({
+    trigger: z.literal("threshold").describe("Opens once the measured value crosses the threshold."),
+    metric: MonitorMetricSchema.describe("Metric measured over the monitor target."),
+    threshold: AlertMetricThresholdSchema.describe("How the metric is compared."),
+    direction: z
+      .enum(["above", "below"])
+      .optional()
+      .describe("Direction that opens the incident. Defaults to `above` when omitted."),
+  })
+  .openapi("AlertThresholdCondition")
+
+export const AlertEscalatingConditionSchema = z
+  .object({
+    trigger: z.literal("escalating").describe("Opens when the monitor target is escalating or sustained."),
+    metric: MonitorMetricSchema.describe("Metric measured over the monitor target."),
+    threshold: AlertMetricThresholdSchema.optional().describe("How the metric is compared when threshold-based."),
+    direction: z
+      .enum(["above", "below"])
+      .optional()
+      .describe("Direction that opens the incident. Defaults to `above` when omitted."),
+    sensitivity: z
+      .number()
+      .int()
+      .min(1)
+      .max(6)
+      .optional()
+      .describe("Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted."),
+    window: z
+      .object({
+        minutes: z
+          .number()
+          .int()
+          .min(5)
+          .describe("How long the threshold must stay crossed before the incident opens. Minimum 5."),
+      })
+      .describe("Sustained-condition window."),
+  })
+  .openapi("AlertEscalatingCondition")
+
 export const AlertConditionSchema = z
-  .discriminatedUnion("trigger", [
-    z.object({
-      trigger: z.literal("threshold").describe("Opens once the measured value crosses the threshold."),
-      metric: MonitorMetricSchema.describe("Metric measured over the monitor target."),
-      threshold: AlertMetricThresholdSchema.describe("How the metric is compared."),
-      direction: z
-        .enum(["above", "below"])
-        .optional()
-        .describe("Direction that opens the incident. Defaults to `above` when omitted."),
-    }),
-    z.object({
-      trigger: z.literal("escalating").describe("Opens when the monitor target is escalating or sustained."),
-      metric: MonitorMetricSchema.describe("Metric measured over the monitor target."),
-      threshold: AlertMetricThresholdSchema.optional().describe("How the metric is compared when threshold-based."),
-      direction: z
-        .enum(["above", "below"])
-        .optional()
-        .describe("Direction that opens the incident. Defaults to `above` when omitted."),
-      sensitivity: z
-        .number()
-        .int()
-        .min(1)
-        .max(6)
-        .optional()
-        .describe("Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted."),
-      window: z
-        .object({
-          minutes: z
-            .number()
-            .int()
-            .min(5)
-            .describe("How long the threshold must stay crossed before the incident opens. Minimum 5."),
-        })
-        .describe("Sustained-condition window."),
-    }),
-  ])
+  .discriminatedUnion("trigger", [AlertThresholdConditionSchema, AlertEscalatingConditionSchema])
   .openapi("AlertCondition")
+
+const IncidentConditionSchema = z.union([AlertConditionSchema, z.null()])
 
 export const incidentFields = {
   id: cuidSchema.describe("Stable incident identifier."),
@@ -154,7 +165,7 @@ export const incidentFields = {
   startedAt: z.string().describe("ISO-8601 timestamp at which the incident opened."),
   endedAt: z.string().nullable().describe("ISO-8601 timestamp at which the incident closed, or `null` if still open."),
   createdAt: z.string().describe("ISO-8601 timestamp at which the incident row was created."),
-  condition: AlertConditionSchema.nullable().describe(
+  condition: IncidentConditionSchema.describe(
     "The monitor rule configuration when the incident opened, or `null` for signal incidents and match monitors.",
   ),
 } as const

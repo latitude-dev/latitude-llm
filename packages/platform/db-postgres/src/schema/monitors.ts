@@ -26,6 +26,7 @@ export const monitors = latitudeSchema.table(
     config: jsonb("config")
       .$type<{
         readonly filterSet?: FilterSet
+        readonly query?: string | null
         readonly metric?: MonitorMetric
         readonly condition?: AlertIncidentCondition
       }>()

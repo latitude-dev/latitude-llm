@@ -270,7 +270,16 @@ export const listMonitorsForTarget = createServerFn({ method: "GET" })
         ...(data.targetKind !== undefined ? { targetType: data.targetKind } : {}),
         filterSetContains: data.filterSetContains,
       }).pipe(
-        withPostgres(Layer.mergeAll(MonitorRepositoryLive, SavedSearchRepositoryLive), getPostgresClient(), orgId),
+        withPostgres(
+          Layer.mergeAll(
+            MonitorRepositoryLive,
+            SavedSearchRepositoryLive,
+            IncidentRepositoryLive,
+            OutboxEventWriterLive,
+          ),
+          getPostgresClient(),
+          orgId,
+        ),
         withTracing,
       ),
     )
@@ -352,7 +361,16 @@ export const getMonitorMetricSeries = createServerFn({ method: "GET" })
         const bucketStartsMs = values.map((_, index) => data.toMs - (count - index) * bucketMs)
         return { bucketStartsMs, values, bucketMs } satisfies MonitorMetricSeriesRecord
       }).pipe(
-        withPostgres(Layer.mergeAll(MonitorRepositoryLive, SavedSearchRepositoryLive), getPostgresClient(), orgId),
+        withPostgres(
+          Layer.mergeAll(
+            MonitorRepositoryLive,
+            SavedSearchRepositoryLive,
+            IncidentRepositoryLive,
+            OutboxEventWriterLive,
+          ),
+          getPostgresClient(),
+          orgId,
+        ),
         withClickHouse(MetricSeriesReaderLive, getClickhouseClient(), orgId),
         withTracing,
       ),
@@ -522,7 +540,16 @@ export const bulkMuteMonitors = createServerFn({ method: "POST" })
         }
         return count
       }).pipe(
-        withPostgres(Layer.mergeAll(MonitorRepositoryLive, SavedSearchRepositoryLive), getPostgresClient(), orgId),
+        withPostgres(
+          Layer.mergeAll(
+            MonitorRepositoryLive,
+            SavedSearchRepositoryLive,
+            IncidentRepositoryLive,
+            OutboxEventWriterLive,
+          ),
+          getPostgresClient(),
+          orgId,
+        ),
         withTracing,
       ),
     )
@@ -658,6 +685,7 @@ export const createMonitor = createServerFn({ method: "POST" })
           type: "savedSearch" as const,
           id: rule.source?.id ?? null,
           filterSet: undefined,
+          query: null,
         }
         const trigger = triggerForAlertKind(rule.kind)
         const metric = data.target?.metric ?? { kind: "count" as const }
@@ -680,7 +708,16 @@ export const createMonitor = createServerFn({ method: "POST" })
         })
       })().pipe(
         // SavedSearchRepository backs the semantic-search monitorability check on the watched search.
-        withPostgres(Layer.mergeAll(MonitorRepositoryLive, SavedSearchRepositoryLive), getPostgresClient(), orgId),
+        withPostgres(
+          Layer.mergeAll(
+            MonitorRepositoryLive,
+            SavedSearchRepositoryLive,
+            IncidentRepositoryLive,
+            OutboxEventWriterLive,
+          ),
+          getPostgresClient(),
+          orgId,
+        ),
         withTracing,
       ),
     )
@@ -705,7 +742,16 @@ export const updateMonitor = createServerFn({ method: "POST" })
         ...(data.name !== undefined ? { name: data.name } : {}),
         ...(data.description !== undefined ? { description: data.description } : {}),
       }).pipe(
-        withPostgres(Layer.mergeAll(MonitorRepositoryLive, SavedSearchRepositoryLive), getPostgresClient(), orgId),
+        withPostgres(
+          Layer.mergeAll(
+            MonitorRepositoryLive,
+            SavedSearchRepositoryLive,
+            IncidentRepositoryLive,
+            OutboxEventWriterLive,
+          ),
+          getPostgresClient(),
+          orgId,
+        ),
         withTracing,
       ),
     )
@@ -784,7 +830,16 @@ export const updateMonitorRule = createServerFn({ method: "POST" })
           },
         })
       }).pipe(
-        withPostgres(Layer.mergeAll(MonitorRepositoryLive, SavedSearchRepositoryLive), getPostgresClient(), orgId),
+        withPostgres(
+          Layer.mergeAll(
+            MonitorRepositoryLive,
+            SavedSearchRepositoryLive,
+            IncidentRepositoryLive,
+            OutboxEventWriterLive,
+          ),
+          getPostgresClient(),
+          orgId,
+        ),
         withTracing,
       ),
     )

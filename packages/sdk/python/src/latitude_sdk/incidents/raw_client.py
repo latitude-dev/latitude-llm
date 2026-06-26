@@ -31,11 +31,15 @@ class RawIncidentsClient:
         *,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
-        source_type: typing.Optional[IncidentsListRequestSourceType] = None,
-        source_id: typing.Optional[str] = None,
-        severities: typing.Optional[
-            typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]
-        ] = None,
+	        source_type: typing.Optional[IncidentsListRequestSourceType] = None,
+	        source_id: typing.Optional[str] = None,
+	        source_types: typing.Optional[
+	            typing.Union[IncidentsListRequestSourceType, typing.Sequence[IncidentsListRequestSourceType]]
+	        ] = None,
+	        kinds: typing.Optional[typing.Union[str, typing.Sequence[str]]] = None,
+	        severities: typing.Optional[
+	            typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]
+	        ] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[ListIncidentsResponse]:
         """
@@ -72,13 +76,15 @@ class RawIncidentsClient:
         _response = self._client_wrapper.httpx_client.request(
             f"v1/projects/{jsonable_encoder(project_slug)}/incidents",
             method="GET",
-            params={
-                "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
-                "toIso": serialize_datetime(to_iso) if to_iso is not None else None,
-                "source_type": source_type,
-                "source_id": source_id,
-                "severities": severities,
-            },
+	            params={
+	                "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
+	                "toIso": serialize_datetime(to_iso) if to_iso is not None else None,
+	                "source_type": source_type,
+	                "source_id": source_id,
+	                "sourceTypes": source_types,
+	                "kinds": kinds,
+	                "severities": severities,
+	            },
             request_options=request_options,
         )
         try:
@@ -217,6 +223,10 @@ class AsyncRawIncidentsClient:
         to_iso: typing.Optional[dt.datetime] = None,
         source_type: typing.Optional[IncidentsListRequestSourceType] = None,
         source_id: typing.Optional[str] = None,
+        source_types: typing.Optional[
+            typing.Union[IncidentsListRequestSourceType, typing.Sequence[IncidentsListRequestSourceType]]
+        ] = None,
+        kinds: typing.Optional[typing.Union[str, typing.Sequence[str]]] = None,
         severities: typing.Optional[
             typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]
         ] = None,
@@ -261,6 +271,8 @@ class AsyncRawIncidentsClient:
                 "toIso": serialize_datetime(to_iso) if to_iso is not None else None,
                 "source_type": source_type,
                 "source_id": source_id,
+                "sourceTypes": source_types,
+                "kinds": kinds,
                 "severities": severities,
             },
             request_options=request_options,

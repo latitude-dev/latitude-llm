@@ -53,7 +53,16 @@ export const createMonitorsWorker = ({
         withPostgres(monitorWorkerRepoLayer, pgClient, OrganizationId(payload.organizationId)),
         withClickHouse(MetricSeriesReaderLive, chClient, OrganizationId(payload.organizationId)),
         Effect.tap((result) =>
-          Effect.sync(() => logger.info(`Monitor check for ${payload.projectId}: checked=${result.checked}`)),
+          Effect.sync(() =>
+            logger.info(
+              `Monitor check for ${payload.projectId}: checked=${result.checked} evaluatable=${result.evaluatable} evaluated=${result.evaluated} failed=${result.failed}`,
+            ),
+          ),
+        ),
+        Effect.flatMap((result) =>
+          result.evaluatable > 0 && result.failed === result.evaluatable
+            ? Effect.fail(new Error(`All monitor evaluations failed for ${payload.projectId}`))
+            : Effect.succeed(result),
         ),
         Effect.tapError((error) =>
           Effect.sync(() => logger.error(`Monitor check failed for ${payload.projectId}`, error)),
@@ -74,7 +83,7 @@ export const createMonitorsWorker = ({
               { organizationId, projectId },
               {
                 dedupeKey: savedSearchMonitorsCheckDedupeKey({ organizationId, projectId }),
-                throttleMs: SAVED_SEARCH_MONITORS_THROTTLE_MS,
+                leadingThrottleMs: SAVED_SEARCH_MONITORS_THROTTLE_MS,
               },
             ),
           { concurrency: 8 },

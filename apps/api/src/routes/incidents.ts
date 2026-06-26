@@ -1,6 +1,6 @@
 import { IncidentRepository, resolveIncidentUseCase } from "@domain/incidents"
 import { ProjectRepository } from "@domain/projects"
-import { AlertIncidentId, cuidSchema, NotFoundError, OrganizationId, ProjectId } from "@domain/shared"
+import { AlertIncidentId, BadRequestError, cuidSchema, NotFoundError, OrganizationId, ProjectId } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import {
   IncidentRepositoryLive,
@@ -57,6 +57,22 @@ const ListIncidentsQuerySchema = z.object({
     .optional()
     .describe("Restrict to incidents triggered by this source type: `monitor` or `signal`."),
   source_id: cuidSchema.optional().describe("Restrict to incidents tied to one source entity id."),
+  sourceType: z
+    .enum(INCIDENT_SOURCE_TYPES)
+    .optional()
+    .describe("Deprecated alias for `source_type`; prefer `source_type`."),
+  sourceId: cuidSchema.optional().describe("Deprecated alias for `source_id`; prefer `source_id`."),
+  sourceTypes: z
+    .preprocess(
+      (val) => (val === undefined || Array.isArray(val) ? val : [val]),
+      z.array(z.enum(INCIDENT_SOURCE_TYPES)),
+    )
+    .optional()
+    .describe("Deprecated alias for `source_type`; prefer `source_type`."),
+  kinds: z
+    .preprocess((val) => (val === undefined || Array.isArray(val) ? val : [val]), z.array(z.string()))
+    .optional()
+    .describe("Deprecated filter from the previous incidents model. This endpoint now filters by source and severity."),
   severities: z
     .preprocess((val) => (val === undefined || Array.isArray(val) ? val : [val]), z.array(z.enum(INCIDENT_SEVERITIES)))
     .optional()
@@ -96,6 +112,13 @@ const listIncidents = incidentEndpoint({
     const query = c.req.valid("query")
     const organizationId = c.var.organization.id
     const { from, to } = resolveIncidentsRange(query.fromIso, query.toIso, new Date())
+    if (query.kinds !== undefined) {
+      throw new BadRequestError({ message: "`kinds` is no longer supported. Use `source_type` and `severities`." })
+    }
+    const sourceTypes = query.source_type
+      ? [query.source_type]
+      : (query.sourceTypes ?? (query.sourceType ? [query.sourceType] : undefined))
+    const sourceId = query.source_id ?? query.sourceId
 
     const incidents = await Effect.runPromise(
       Effect.gen(function* () {
@@ -108,8 +131,8 @@ const listIncidents = incidentEndpoint({
           projectId: ProjectId(project.id as string),
           from,
           to,
-          ...(query.source_type ? { sourceTypes: [query.source_type] } : {}),
-          ...(query.source_id ? { sourceId: query.source_id } : {}),
+          ...(sourceTypes && sourceTypes.length > 0 ? { sourceTypes } : {}),
+          ...(sourceId ? { sourceId } : {}),
           ...(query.severities && query.severities.length > 0 ? { severities: query.severities } : {}),
         })
       }).pipe(

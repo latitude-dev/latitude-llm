@@ -25,7 +25,11 @@ import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineApiEndpoint } from "../mcp/index.ts"
 import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
-import { AlertConditionSchema } from "../openapi/entities/incident.ts"
+import {
+  AlertConditionSchema,
+  AlertEscalatingConditionSchema,
+  AlertThresholdConditionSchema,
+} from "../openapi/entities/incident.ts"
 import {
   decodeMonitorCursor,
   decodeMonitorIncidentCursor,
@@ -64,18 +68,32 @@ const MonitorSlugParamsSchema = ProjectParamsSchema.extend({
 const streamForTargetType = (type: z.infer<typeof MonitorTargetSchema>["type"]) =>
   type === "tool" ? ("spans" as const) : type === "session" ? ("sessions" as const) : ("traces" as const)
 
+const CreateMonitorBaseBodySchema = z.object({
+  name: z.string().min(1).max(NAME_MAX_LENGTH).describe("Human-readable name. Used to derive the slug."),
+  description: z.string().max(DESCRIPTION_MAX_LENGTH).optional().describe("Optional free-form description."),
+  target: MonitorTargetSchema.describe("Entity or filter set watched by the monitor."),
+  severity: z.enum(["low", "medium", "high"]).describe("Severity assigned to incidents opened by this monitor."),
+})
+
 const CreateMonitorBodySchema = z
-  .object({
-    name: z.string().min(1).max(NAME_MAX_LENGTH).describe("Human-readable name. Used to derive the slug."),
-    description: z.string().max(DESCRIPTION_MAX_LENGTH).optional().describe("Optional free-form description."),
-    target: MonitorTargetSchema.describe("Entity or filter set watched by the monitor."),
-    trigger: z
-      .enum(["match", "threshold", "escalating"])
-      .describe("When the monitor opens incidents: `match`, `threshold`, or `escalating`."),
-    metric: MonitorMetricSchema.optional().describe("Metric evaluated by threshold and escalating monitor rules."),
-    condition: AlertConditionSchema.optional().describe("Condition that controls threshold or escalating incidents."),
-    severity: z.enum(["low", "medium", "high"]).describe("Severity assigned to incidents opened by this monitor."),
-  })
+  .discriminatedUnion("trigger", [
+    CreateMonitorBaseBodySchema.extend({
+      trigger: z.literal("match").describe("Opens a point incident when any matching event appears."),
+      metric: MonitorMetricSchema.optional().describe(
+        "Metric stored for later rule edits. Match monitors evaluate counts.",
+      ),
+    }),
+    CreateMonitorBaseBodySchema.extend({
+      trigger: z.literal("threshold").describe("Opens a point incident when the condition is met."),
+      metric: MonitorMetricSchema.optional().describe("Metric evaluated by the monitor rule."),
+      condition: AlertThresholdConditionSchema.describe("Threshold condition that opens point incidents."),
+    }),
+    CreateMonitorBaseBodySchema.extend({
+      trigger: z.literal("escalating").describe("Opens and closes a sustained incident while the condition is met."),
+      metric: MonitorMetricSchema.optional().describe("Metric evaluated by the monitor rule."),
+      condition: AlertEscalatingConditionSchema.describe("Escalating condition that opens sustained incidents."),
+    }),
+  ])
   .openapi("CreateMonitorBody")
 
 const UpdateMonitorBodySchema = z
@@ -95,6 +113,25 @@ const UpdateMonitorBodySchema = z
     metric: MonitorMetricSchema.optional().describe("Replacement metric evaluated by the monitor."),
     condition: AlertConditionSchema.optional().describe("Replacement condition for threshold or escalating monitors."),
     severity: z.enum(["low", "medium", "high"]).optional().describe("Replacement incident severity."),
+  })
+  .superRefine((body, ctx) => {
+    if (body.trigger === "match" && body.condition !== undefined) {
+      ctx.addIssue({ code: "custom", path: ["condition"], message: "Match monitors cannot define a condition." })
+    }
+    if (body.trigger === "threshold" && body.condition !== undefined && body.condition.trigger !== "threshold") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["condition"],
+        message: "Threshold monitor condition must use trigger `threshold`.",
+      })
+    }
+    if (body.trigger === "escalating" && body.condition !== undefined && body.condition.trigger !== "escalating") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["condition"],
+        message: "Escalating monitor condition must use trigger `escalating`.",
+      })
+    }
   })
   .openapi("UpdateMonitorBody")
 
@@ -173,7 +210,13 @@ const listMonitors = monitorEndpoint({
         })
       }).pipe(
         withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive, SavedSearchRepositoryLive),
+          Layer.mergeAll(
+            ProjectRepositoryLive,
+            MonitorRepositoryLive,
+            SavedSearchRepositoryLive,
+            IncidentRepositoryLive,
+            OutboxEventWriterLive,
+          ),
           c.var.postgresClient,
           organizationId,
         ),
@@ -219,7 +262,7 @@ const createMonitor = monitorEndpoint({
             severity: body.severity,
             config: {
               ...(body.metric !== undefined ? { metric: body.metric } : {}),
-              ...(body.condition ? { condition: body.condition } : {}),
+              ...("condition" in body ? { condition: body.condition } : {}),
             },
           },
         })
@@ -355,7 +398,7 @@ const updateMonitor = monitorEndpoint({
                       id: targetPatch.id,
                       kind: targetPatch.type,
                       stream: streamForTargetType(targetPatch.type),
-                      query: null,
+                      query: targetPatch.query ?? null,
                       savedSearchId: targetPatch.type === "savedSearch" ? targetPatch.id : null,
                       ...(targetPatch.filterSet !== undefined
                         ? { filterSet: targetPatch.filterSet }
@@ -372,6 +415,15 @@ const updateMonitor = monitorEndpoint({
           : trigger === "match"
             ? undefined
             : current.rule.config.condition
+        if (trigger === "match" && condition !== undefined) {
+          throw new BadRequestError({ message: "Match monitors cannot define a condition." })
+        }
+        if (trigger === "threshold" && condition?.trigger !== "threshold") {
+          throw new BadRequestError({ message: "Threshold monitors require a threshold condition." })
+        }
+        if (trigger === "escalating" && condition?.trigger !== "escalating") {
+          throw new BadRequestError({ message: "Escalating monitors require an escalating condition." })
+        }
         const rule =
           body.trigger !== undefined || body.metric !== undefined || hasCondition || body.severity !== undefined
             ? (() => {
@@ -396,7 +448,13 @@ const updateMonitor = monitorEndpoint({
         })
       }).pipe(
         withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive, SavedSearchRepositoryLive),
+          Layer.mergeAll(
+            ProjectRepositoryLive,
+            MonitorRepositoryLive,
+            SavedSearchRepositoryLive,
+            IncidentRepositoryLive,
+            OutboxEventWriterLive,
+          ),
           c.var.postgresClient,
           organizationId,
         ),

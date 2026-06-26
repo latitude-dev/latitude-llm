@@ -1,3 +1,5 @@
+import { OutboxEventWriter } from "@domain/events"
+import { IncidentRepository } from "@domain/incidents"
 import type { SavedSearchNotFoundError, SavedSearchRepository } from "@domain/saved-searches"
 import {
   type AlertIncidentCondition,
@@ -88,7 +90,11 @@ const validateRule = (rule: MonitorRule, targetMetric: MonitorMetric): Effect.Ef
 
 export const updateMonitorUseCase = (
   input: UpdateMonitorInput,
-): Effect.Effect<Monitor, UpdateMonitorError, SqlClient | MonitorRepository | SavedSearchRepository> =>
+): Effect.Effect<
+  Monitor,
+  UpdateMonitorError,
+  SqlClient | MonitorRepository | SavedSearchRepository | IncidentRepository | OutboxEventWriter
+> =>
   Effect.gen(function* () {
     const sqlClient = yield* SqlClient
     return yield* sqlClient.transaction(
@@ -148,8 +154,42 @@ export const updateMonitorUseCase = (
           rule: nextRule,
           updatedAt: now,
         }
+        const closesOpenIncident =
+          monitor.rule.trigger === "escalating" &&
+          (JSON.stringify(monitor.target) !== JSON.stringify(nextTarget) ||
+            monitor.rule.trigger !== nextRule.trigger ||
+            JSON.stringify(monitor.rule.config) !== JSON.stringify(nextRule.config))
         yield* repository.save(nextMonitor)
+        if (closesOpenIncident) {
+          const incidentRepository = yield* IncidentRepository
+          const outboxEventWriter = yield* OutboxEventWriter
+          const closedId = yield* incidentRepository.closeOpen({
+            sourceType: "monitor",
+            sourceId: monitor.id,
+            endedAt: now,
+          })
+          if (closedId !== null) {
+            yield* outboxEventWriter.write({
+              eventName: "IncidentClosed",
+              aggregateType: "alert_incident",
+              aggregateId: closedId,
+              organizationId: monitor.organizationId,
+              payload: {
+                organizationId: monitor.organizationId,
+                projectId: monitor.projectId,
+                alertIncidentId: closedId,
+                sourceType: "monitor",
+                sourceId: monitor.id,
+                reason: "resolved",
+              },
+            })
+          }
+        }
         return nextMonitor
       }),
     )
-  })
+  }) as Effect.Effect<
+    Monitor,
+    UpdateMonitorError,
+    SqlClient | MonitorRepository | SavedSearchRepository | IncidentRepository | OutboxEventWriter
+  >

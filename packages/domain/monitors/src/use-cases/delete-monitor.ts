@@ -50,6 +50,7 @@ export const deleteMonitorUseCase = (
               alertIncidentId: closedId,
               sourceType: "monitor",
               sourceId: monitor.id,
+              reason: "resolved",
             },
           })
         }

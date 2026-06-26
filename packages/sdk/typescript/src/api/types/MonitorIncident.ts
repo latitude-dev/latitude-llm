@@ -18,10 +18,10 @@ export interface MonitorIncident {
     /** ISO-8601 timestamp at which the incident opened. */
     startedAt: string;
     /** ISO-8601 timestamp at which the incident closed, or `null` if still open. */
-    endedAt?: string | undefined;
+    endedAt: string | null;
     /** ISO-8601 timestamp at which the incident row was created. */
     createdAt: string;
-    condition?: LatitudeApi.AlertCondition | undefined;
+    condition: LatitudeApi.AlertCondition | null;
     /** `true` when this incident triggered at least one notification. */
     notified: boolean;
 }

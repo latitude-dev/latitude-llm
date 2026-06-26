@@ -39,6 +39,8 @@ export interface CheckMonitorsInput {
 export interface CheckMonitorsResult {
   readonly checked: number
   readonly evaluated: number
+  readonly failed: number
+  readonly evaluatable: number
 }
 
 const monitorCanUseSeasonalEngine = (monitor: Monitor): boolean => {
@@ -245,92 +247,18 @@ export const checkMonitorsUseCase = (input: CheckMonitorsInput) =>
     const monitors = yield* monitorRepository.listActiveMonitors({ projectId: input.projectId })
     const now = new Date()
     const active = monitors.filter((monitor) => monitor.mutedAt === null)
-    const resolved = yield* resolveMonitorTargets(active.filter(monitorCanEvaluate))
-    const pointMonitors = resolved.filter(
-      ({ monitor }) => monitor.rule.trigger === "match" || monitor.rule.trigger === "threshold",
-    )
-    const eligible = resolved.filter(({ monitor }) => monitorCanUseSeasonalEngine(monitor))
-    const targetByMonitorId = new Map(eligible.map((entry) => [entry.monitor.id as string, entry.target]))
-    const seriesReader = makeMetricSeriesReaderSeriesReader(metricReader, {
-      resolveTarget: (sourceId) => {
-        const target = targetByMonitorId.get(sourceId)
-        if (!target) throw new Error(`Monitor ${sourceId} is not eligible for metric series evaluation`)
-        return target
-      },
-    })
+    let evaluated = 0
+    let failed = 0
+    const evaluatable = active.filter(monitorCanEvaluate)
 
-    for (const { monitor, target } of pointMonitors) {
-      const condition = monitorConfigCondition(monitor.rule.config)
-      const point = yield* evaluatePointMonitor(monitor, target, condition, metricReader, now)
-      if (point === null) continue
-      yield* sqlClient.transaction(
-        Effect.gen(function* () {
-          const createdAt = new Date()
-          const incident = {
-            id: AlertIncidentId(generateId()),
-            organizationId: monitor.organizationId,
-            projectId: monitor.projectId,
-            sourceType: "monitor" as const,
-            sourceId: monitor.id,
-            severity: monitor.rule.severity,
-            startedAt: point.startedAt,
-            endedAt: point.startedAt,
-            createdAt,
-            entrySignals: null,
-            exitEligibleSince: null,
-            condition: point.condition,
-          }
-          yield* incidentRepository.insert(incident)
-          yield* outboxEventWriter.write({
-            eventName: "IncidentCreated",
-            aggregateType: "alert_incident",
-            aggregateId: incident.id,
-            organizationId: incident.organizationId,
-            payload: {
-              organizationId: incident.organizationId,
-              projectId: incident.projectId,
-              alertIncidentId: incident.id,
-              sourceType: "monitor",
-              sourceId: monitor.id,
-            },
-          })
-        }),
-      )
-    }
-
-    for (const { monitor } of eligible) {
-      const openIncident = yield* incidentRepository.findOpen({ sourceType: "monitor", sourceId: monitor.id })
-      const condition = monitorConfigCondition(monitor.rule.config)
-      const thresholdSensitivity =
-        condition?.trigger === "escalating" && condition.threshold?.mode === "expected"
-          ? condition.threshold.sensitivity
-          : undefined
-      const sensitivity =
-        condition?.trigger === "escalating"
-          ? (condition.sensitivity ?? thresholdSensitivity ?? DEFAULT_ESCALATION_SENSITIVITY)
-          : DEFAULT_ESCALATION_SENSITIVITY
-      const decision = yield* makeEscalationEngine()
-        .evaluate({
-          organizationId: monitor.organizationId,
-          projectId: monitor.projectId,
-          sourceId: monitor.id,
-          kShort: sensitivity,
-          isNew: false,
-          wasEscalating: openIncident !== null,
-          entrySignals:
-            openIncident && isSignalEscalationEntrySignals(openIncident.entrySignals)
-              ? openIncident.entrySignals
-              : null,
-          startedAt: openIncident?.startedAt ?? null,
-          exitEligibleSince: openIncident?.exitEligibleSince ?? null,
-          now,
-        })
-        .pipe(Effect.provideService(SeriesReader, seriesReader))
-
-      if (decision.transition === "enter") {
+    const checkPointMonitor = (monitor: Monitor, target: MetricSeriesTarget) =>
+      Effect.gen(function* () {
+        const condition = monitorConfigCondition(monitor.rule.config)
+        const point = yield* evaluatePointMonitor(monitor, target, condition, metricReader, now)
+        if (point === null) return
         yield* sqlClient.transaction(
           Effect.gen(function* () {
-            const now = new Date()
+            const createdAt = new Date()
             const incident = {
               id: AlertIncidentId(generateId()),
               organizationId: monitor.organizationId,
@@ -338,12 +266,12 @@ export const checkMonitorsUseCase = (input: CheckMonitorsInput) =>
               sourceType: "monitor" as const,
               sourceId: monitor.id,
               severity: monitor.rule.severity,
-              startedAt: decision.transitionAt ?? now,
-              endedAt: null,
-              createdAt: now,
-              entrySignals: decision.entrySignalsSnapshot ?? null,
+              startedAt: point.startedAt,
+              endedAt: point.startedAt,
+              createdAt,
+              entrySignals: null,
               exitEligibleSince: null,
-              condition,
+              condition: point.condition,
             }
             yield* incidentRepository.insert(incident)
             yield* outboxEventWriter.write({
@@ -361,46 +289,145 @@ export const checkMonitorsUseCase = (input: CheckMonitorsInput) =>
             })
           }),
         )
-      } else if (decision.transition === "exit") {
-        const endedAt = decision.transitionAt ?? new Date()
-        yield* sqlClient.transaction(
-          Effect.gen(function* () {
-            const closedId = yield* incidentRepository.closeOpen({
-              sourceType: "monitor",
-              sourceId: monitor.id,
-              endedAt,
-            })
-            if (closedId !== null) {
-              yield* outboxEventWriter.write({
-                eventName: "IncidentClosed",
-                aggregateType: "alert_incident",
-                aggregateId: closedId,
+      })
+
+    const checkEscalatingMonitor = (monitor: Monitor, target: MetricSeriesTarget) =>
+      Effect.gen(function* () {
+        const seriesReader = makeMetricSeriesReaderSeriesReader(metricReader, {
+          resolveTarget: (sourceId) => {
+            if (sourceId !== monitor.id) {
+              throw new Error(`Monitor ${sourceId} is not eligible for metric series evaluation`)
+            }
+            return target
+          },
+        })
+        const openIncident = yield* incidentRepository.findOpen({ sourceType: "monitor", sourceId: monitor.id })
+        const condition = monitorConfigCondition(monitor.rule.config)
+        const thresholdSensitivity =
+          condition?.trigger === "escalating" && condition.threshold?.mode === "expected"
+            ? condition.threshold.sensitivity
+            : undefined
+        const sensitivity =
+          condition?.trigger === "escalating"
+            ? (condition.sensitivity ?? thresholdSensitivity ?? DEFAULT_ESCALATION_SENSITIVITY)
+            : DEFAULT_ESCALATION_SENSITIVITY
+        const decision = yield* makeEscalationEngine()
+          .evaluate({
+            organizationId: monitor.organizationId,
+            projectId: monitor.projectId,
+            sourceId: monitor.id,
+            kShort: sensitivity,
+            isNew: false,
+            wasEscalating: openIncident !== null,
+            entrySignals:
+              openIncident && isSignalEscalationEntrySignals(openIncident.entrySignals)
+                ? openIncident.entrySignals
+                : null,
+            startedAt: openIncident?.startedAt ?? null,
+            exitEligibleSince: openIncident?.exitEligibleSince ?? null,
+            now,
+          })
+          .pipe(Effect.provideService(SeriesReader, seriesReader))
+
+        if (decision.transition === "enter") {
+          yield* sqlClient.transaction(
+            Effect.gen(function* () {
+              const now = new Date()
+              const incident = {
+                id: AlertIncidentId(generateId()),
                 organizationId: monitor.organizationId,
+                projectId: monitor.projectId,
+                sourceType: "monitor" as const,
+                sourceId: monitor.id,
+                severity: monitor.rule.severity,
+                startedAt: decision.transitionAt ?? now,
+                endedAt: null,
+                createdAt: now,
+                entrySignals: decision.entrySignalsSnapshot ?? null,
+                exitEligibleSince: null,
+                condition,
+              }
+              yield* incidentRepository.insert(incident)
+              yield* outboxEventWriter.write({
+                eventName: "IncidentCreated",
+                aggregateType: "alert_incident",
+                aggregateId: incident.id,
+                organizationId: incident.organizationId,
                 payload: {
-                  organizationId: monitor.organizationId,
-                  projectId: monitor.projectId,
-                  alertIncidentId: closedId,
+                  organizationId: incident.organizationId,
+                  projectId: incident.projectId,
+                  alertIncidentId: incident.id,
                   sourceType: "monitor",
                   sourceId: monitor.id,
-                  reason: decision.reason ?? "threshold",
                 },
               })
-            }
-          }),
-        )
-      } else if (openIncident !== null) {
-        const previous = openIncident.exitEligibleSince?.getTime() ?? null
-        const next = decision.nextExitEligibleSince?.getTime() ?? null
-        if (previous !== next) {
-          yield* incidentRepository.updateExitDwell({
-            id: openIncident.id,
-            exitEligibleSince: decision.nextExitEligibleSince,
-          })
+            }),
+          )
+        } else if (decision.transition === "exit") {
+          const endedAt = decision.transitionAt ?? new Date()
+          yield* sqlClient.transaction(
+            Effect.gen(function* () {
+              const closedId = yield* incidentRepository.closeOpen({
+                sourceType: "monitor",
+                sourceId: monitor.id,
+                endedAt,
+              })
+              if (closedId !== null) {
+                yield* outboxEventWriter.write({
+                  eventName: "IncidentClosed",
+                  aggregateType: "alert_incident",
+                  aggregateId: closedId,
+                  organizationId: monitor.organizationId,
+                  payload: {
+                    organizationId: monitor.organizationId,
+                    projectId: monitor.projectId,
+                    alertIncidentId: closedId,
+                    sourceType: "monitor",
+                    sourceId: monitor.id,
+                    reason: decision.reason ?? "threshold",
+                  },
+                })
+              }
+            }),
+          )
+        } else if (openIncident !== null) {
+          const previous = openIncident.exitEligibleSince?.getTime() ?? null
+          const next = decision.nextExitEligibleSince?.getTime() ?? null
+          if (previous !== next) {
+            yield* incidentRepository.updateExitDwell({
+              id: openIncident.id,
+              exitEligibleSince: decision.nextExitEligibleSince,
+            })
+          }
         }
-      }
+      })
+
+    for (const monitor of evaluatable) {
+      const checked = yield* Effect.gen(function* () {
+        const resolved = yield* resolveMonitorTargets([monitor])
+        const entry = resolved[0]
+        if (entry === undefined) return false
+        if (monitor.rule.trigger === "match" || monitor.rule.trigger === "threshold") {
+          yield* checkPointMonitor(entry.monitor, entry.target)
+          return true
+        }
+        if (monitorCanUseSeasonalEngine(monitor)) {
+          yield* checkEscalatingMonitor(entry.monitor, entry.target)
+          return true
+        }
+        return false
+      }).pipe(
+        Effect.catchCause(() =>
+          Effect.sync(() => {
+            failed += 1
+            return false
+          }),
+        ),
+      )
+      if (checked) evaluated += 1
     }
 
-    return { checked: monitors.length, evaluated: pointMonitors.length + eligible.length }
+    return { checked: monitors.length, evaluatable: evaluatable.length, evaluated, failed }
   }) as Effect.Effect<
     CheckMonitorsResult,
     RepositoryError,

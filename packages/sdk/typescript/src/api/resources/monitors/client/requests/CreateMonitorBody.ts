@@ -13,21 +13,40 @@ import type * as LatitudeApi from "../../../../index.js";
  *         severity: "low"
  *     }
  */
-export interface CreateMonitorBody {
+export type CreateMonitorBody =
+    | CreateMonitorBody.Match
+    | CreateMonitorBody.Threshold
+    | CreateMonitorBody.Escalating;
+
+export namespace CreateMonitorBody {
+    export interface Base {
     /** Human-readable name. Used to derive the slug. */
     name: string;
     /** Optional free-form description. */
     description?: string;
     target: LatitudeApi.MonitorTarget;
-    /** When the monitor opens incidents: `match`, `threshold`, or `escalating`. */
-    trigger: CreateMonitorBody.Trigger;
     metric?: LatitudeApi.MonitorMetric;
-    condition?: LatitudeApi.AlertCondition;
     /** Severity assigned to incidents opened by this monitor. */
     severity: CreateMonitorBody.Severity;
-}
+    }
 
-export namespace CreateMonitorBody {
+    export interface Match extends Base {
+        /** Opens a point incident when any matching event appears. */
+        trigger: "match";
+    }
+
+    export interface Threshold extends Base {
+        /** Opens a point incident when the condition is met. */
+        trigger: "threshold";
+        condition: Extract<LatitudeApi.AlertCondition, { trigger: "threshold" }>;
+    }
+
+    export interface Escalating extends Base {
+        /** Opens and closes a sustained incident while the condition is met. */
+        trigger: "escalating";
+        condition: Extract<LatitudeApi.AlertCondition, { trigger: "escalating" }>;
+    }
+
     /** When the monitor opens incidents: `match`, `threshold`, or `escalating`. */
     export const Trigger = {
         Match: "match",

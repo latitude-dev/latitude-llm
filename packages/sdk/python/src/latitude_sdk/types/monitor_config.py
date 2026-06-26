@@ -17,6 +17,7 @@ class MonitorConfig(UniversalBaseModel):
     """
 
     filter_set: typing_extensions.Annotated[typing.Optional[MonitorFilterSet], FieldMetadata(alias="filterSet")] = None
+    query: typing.Optional[str] = None
     metric: typing.Optional[MonitorMetric] = None
     condition: typing.Optional[AlertCondition] = None
 
