@@ -19,7 +19,7 @@ When you open a project, you'll see the main navigation with these sections:
 - **Search**: Find traces by meaning, and bookmark useful searches for later
 - **Traces**: Every interaction your agent has had, shown as a timeline
 - **Issues**: Failure patterns discovered from your agent's interactions
-- **Datasets**: Saved trace collections for offline analysis and simulations
+- **Datasets**: Saved trace collections for offline analysis
 - **Settings**: Project configuration, including flaggers
 
 ## Exploring Traces
@@ -109,7 +109,7 @@ Scores are the fundamental unit of measurement in Latitude. Every score has:
 - **Feedback** text describing the verdict
 - A **source**: evaluation, annotation (human review), or custom
 
-Scores appear throughout the product: on traces, in evaluation dashboards, in issue details, and in simulation reports.
+Scores appear throughout the product: on traces, in evaluation dashboards, and in issue details.
 
 ## What's Next
 

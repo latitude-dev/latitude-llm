@@ -20,7 +20,7 @@ A score is a verdict attached to a trace. Every score has:
 
 Scores can also carry resource fields such as duration, token count, and cost.
 
-A score is always associated with a **trace**. It can also be associated with a **span**, **session**, **simulation**, or **issue**.
+A score is always associated with a **trace**. It can also be associated with a **span**, **session**, or **issue**.
 
 ## Score Sources
 

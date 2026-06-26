@@ -1,36 +1,32 @@
 ---
 title: How to use Latitude
-description: The recommended workflow for finding, tracking, and fixing production issues in your AI agent.
+description: The recommended workflow for finding, tracking, and fixing production failures in your AI agent.
 ---
 
-Latitude works best as a continuous improvement loop for production agents: observe real traffic, find failure modes, turn them into trackable issues, fix them, and keep monitoring for regressions.
+Latitude works best as a continuous loop for production agents: observe real traffic, understand what is going wrong, and refine your agent until it is fixed and stays fixed. The product is organized around that loop: **Observe, Understand, Refine.**
 
 ## The core workflow
 
 <Steps>
-  <Step title="Connect telemetry">
-    Start by sending traces from your agent to Latitude. Each user interaction becomes a trace with the LLM calls, tool calls, metadata, user id, and session id needed to understand what happened.
+  <Step title="Connect telemetry (Observe)">
+    Send traces from your agent to Latitude. Each interaction becomes a trace of spans (LLM calls, tool calls, retrieval, and more), and multi-turn conversations group into [sessions](../observability/sessions). Send a `userId` and `sessionId` so you can also break activity down per [user](../observability/users) and review reliability, errors, and latency per [tool](../observability/tools).
 
     If you have not connected your app yet, follow [Start tracing](../telemetry/start-tracing).
   </Step>
-  <Step title="Search for behaviours that matter">
-    Use [Search](../search/overview) to find real conversations that match failure modes or user behaviours you care about: frustrated users, failed payments, hallucinated answers, tool loops, policy problems, or any domain-specific issue.
-
-    Save useful searches so your team can revisit them and review matching traces over time.
+  <Step title="Find what matters (Understand)">
+    Use [Search](../search/overview) to find conversations by meaning, exact text, or metadata filters: frustrated users, tool loops, hallucinations, failed workflows, or anything specific to your product. [Behaviours](../search/behaviours) goes further, automatically clustering your sessions into the topics users actually hit, so you discover patterns without writing a query.
   </Step>
-  <Step title="Annotate what is good or bad">
-    Open traces from search results, saved searches, or the trace list and leave [annotations](../annotations/overview). A thumbs-down annotation with clear feedback tells Latitude that this behaviour is an issue worth tracking.
-
-    Latitude's [flaggers](../annotations/flaggers) also annotate common failure categories automatically, such as frustration, refusal, jailbreaking, tool errors, and empty responses.
+  <Step title="Annotate what is good or bad (Understand)">
+    Open traces from search results, behaviours, or the trace list and leave [annotations](../annotations/overview). A thumbs-down with clear feedback tells Latitude this behaviour is worth tracking. [Flaggers](../annotations/flaggers) also annotate common failure categories automatically, such as frustration, refusal, jailbreaking, tool errors, and empty responses.
   </Step>
-  <Step title="Let Latitude cluster issues">
-    Failed annotations, flagger matches, evaluation failures, and custom scores become [scores](../scores/overview). Latitude groups similar failed scores into [issues](../signals/overview): recurring production failure patterns with names, descriptions, examples, trends, and lifecycle states.
+  <Step title="Let Latitude group failures into signals (Understand)">
+    Failed annotations, flagger matches, evaluation failures, and custom scores become [scores](../scores/overview). Latitude groups similar failures into named, prioritized [signals](../signals/overview), each with example traces, affected-user counts, trends, and a lifecycle. Signals created from negative annotations are called issues.
   </Step>
-  <Step title="Track and monitor issues">
-    Use the Issues page to triage new issues, inspect example traces, resolve noise, and generate [evaluations](../evaluations/overview) that continuously monitor the issue on live traffic.
+  <Step title="Triage and monitor (Refine)">
+    Triage signals on the Signals page: set priority, inspect example traces, and resolve noise. [Monitors](../monitors/overview) watch a signal, a saved search, a tool, or your raw traffic and open an incident when something needs attention, notifying you in-app, by email, or in Slack. Generate [evaluations](../evaluations/overview) to keep scoring live traffic for the same failure.
   </Step>
-  <Step title="Fix your agent and repeat">
-    Fix the underlying agent behaviour in your code, prompts, tools, retrieval, or product flow. Resolve the issue when fixed, keep monitoring for regressions, and repeat the loop as new production traffic arrives.
+  <Step title="Fix and prevent regressions (Refine)">
+    Fix the underlying behaviour in your code, prompts, tools, retrieval, or product flow. Turn the failing traces into a [dataset](../datasets/overview) and [regression test](../test-and-fix/regression-testing) the fix, using the [MCP server](./mcp) to drive it from your coding agent so the failure cannot quietly return. Resolve the signal once it is fixed, and the regressed monitor tells you if it comes back. Repeat the loop as new production traffic arrives.
   </Step>
 </Steps>
 
@@ -39,12 +35,17 @@ Latitude works best as a continuous improvement loop for production agents: obse
 If you are setting up Latitude for the first time:
 
 1. Connect tracing for one production agent.
-2. Add `userId` and `sessionId` so traces can be grouped by user and conversation.
-3. Search for one failure mode your team already cares about.
+2. Add `userId` and `sessionId` so traces group by user and conversation.
+3. Search for one failure mode your team already cares about, or browse Behaviours to see what stands out.
 4. Annotate representative traces with specific feedback.
-5. Watch the Issues page for clustered patterns.
-6. Generate evaluations for the issues you want to monitor continuously.
+5. Watch the Signals page for grouped patterns, and let the built-in monitors notify you.
+6. Generate evaluations for the signals you want to score continuously.
+
+## Work with agents and self-host
+
+- **MCP**: manage your workspace straight from Claude, Cursor, and other agents through the [MCP server](./mcp).
+- **Self-hosting**: run Latitude in your own infrastructure, from a [single host](../deployment/overview) to a full cluster.
 
 ## Why this works
 
-Latitude does not require you to define every possible failure upfront. You can discover issues from real traffic, validate them with human review, and then turn important patterns into automated monitoring. Over time, the system becomes a living map of what goes wrong in your agent and whether your fixes are working.
+Latitude does not require you to define every possible failure upfront. You discover failures from real traffic, validate them with human review, and turn important patterns into automated monitoring. Over time, the system becomes a living map of what goes wrong in your agent and whether your fixes are working.
