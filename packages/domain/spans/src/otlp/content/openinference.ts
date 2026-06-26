@@ -120,6 +120,29 @@ function buildMessageContent(
   return plainContent ?? ""
 }
 
+/**
+ * Resolves the id a tool result pairs with — explicit `tool_call_id`, else a name match, else the
+ * oldest pending call (OpenInference, e.g. google-adk, omits the id) — and consumes the matched
+ * entry from `pendingToolCalls`.
+ */
+function resolvePendingToolCallId(
+  explicitId: string | undefined,
+  toolName: string | undefined,
+  pendingToolCalls: { id: string; name: string }[],
+): string | undefined {
+  if (explicitId) {
+    const consumed = pendingToolCalls.findIndex((p) => p.id === explicitId)
+    if (consumed >= 0) pendingToolCalls.splice(consumed, 1)
+    return explicitId
+  }
+  let idx = toolName ? pendingToolCalls.findIndex((p) => p.name === toolName) : -1
+  if (idx === -1 && pendingToolCalls.length > 0) idx = 0
+  if (idx < 0) return undefined
+  const match = pendingToolCalls[idx]
+  pendingToolCalls.splice(idx, 1)
+  return match?.id
+}
+
 /** Builds an ordered array of ReassembledMessages from the three collected maps (fields, tool calls, content parts). */
 function assembleMessages(
   fields: Map<number, Map<string, string>>,
@@ -151,25 +174,28 @@ function assembleMessages(
       })
     }
 
-    if (role === "tool") {
-      const explicitId = msgFields?.get("tool_call_id")
-      if (explicitId) {
-        msg.tool_call_id = explicitId
-        const consumed = pendingToolCalls.findIndex((p) => p.id === explicitId)
-        if (consumed >= 0) pendingToolCalls.splice(consumed, 1)
-      } else {
-        const toolName = msgFields?.get("name")
-        let idx = toolName ? pendingToolCalls.findIndex((p) => p.name === toolName) : -1
-        if (idx === -1 && pendingToolCalls.length > 0) idx = 0
-        const match = idx >= 0 ? pendingToolCalls[idx] : undefined
-        if (match) {
-          msg.tool_call_id = match.id
-          pendingToolCalls.splice(idx, 1)
-        }
-      }
-    }
+    const explicitId = msgFields?.get("tool_call_id")
+    const hasToolCalls = !!msgToolCalls && msgToolCalls.size > 0
+    // A tool result the provider delivered on a non-tool turn — Gemini carries function responses
+    // on a role:"user" turn tagged only with tool_call_id — is EXTRACTED into its own role:"tool"
+    // message (mirroring hoistToolResults) rather than relabeling the turn. Limited to a single
+    // message.content string: a multi-part turn could mix the result with real text the flat
+    // OpenInference shape can't separate, so those are left intact.
+    const extractAsToolResult =
+      role !== "tool" && explicitId !== undefined && !hasToolCalls && typeof content === "string"
 
-    messages.push(msg)
+    if (role === "tool") {
+      const id = resolvePendingToolCallId(explicitId, msgFields?.get("name"), pendingToolCalls)
+      if (id) msg.tool_call_id = id
+      messages.push(msg)
+    } else if (extractAsToolResult) {
+      const toolMsg: ReassembledMessage = { role: "tool", content }
+      const id = resolvePendingToolCallId(explicitId, msgFields?.get("name"), pendingToolCalls)
+      if (id) toolMsg.tool_call_id = id
+      messages.push(toolMsg)
+    } else {
+      messages.push(msg)
+    }
   }
 
   return messages

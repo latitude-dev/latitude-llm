@@ -59,6 +59,9 @@ dev = [
     # which is not compatible with the instrumentation
     "anthropic==0.40.0",
     "litellm[proxy]==1.88.1",
+    # Pinned <2.9.0: openinference-instrumentation-google-genai imports the
+    # google.genai._interactions module, which google-genai removed in 2.9.0.
+    "google-genai==2.8.0",
 ]
 
 [tool.uv]
