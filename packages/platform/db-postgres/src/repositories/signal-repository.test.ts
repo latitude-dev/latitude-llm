@@ -532,6 +532,73 @@ describe("SignalRepositoryLive", () => {
     expect(page2.hasMore).toBe(false)
   })
 
+  it("listTableRows filters and sorts by score activity in the time range, not signals.updatedAt", async () => {
+    const staleMetadata = makeSignal({
+      id: SignalId("ffffffffffffffffffffffff"),
+      projectId: listTestProjectId,
+      name: "Stale metadata, fresh scores",
+      createdAt: new Date("2026-01-01T08:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T08:00:00.000Z"),
+      clusteredAt: new Date("2026-01-01T08:00:00.000Z"),
+    })
+    const freshMetadata = makeSignal({
+      id: SignalId("gggggggggggggggggggggggg"),
+      projectId: listTestProjectId,
+      name: "Fresh metadata, stale scores",
+      createdAt: new Date("2026-03-30T08:00:00.000Z"),
+      updatedAt: new Date("2026-03-30T08:00:00.000Z"),
+      clusteredAt: new Date("2026-03-30T08:00:00.000Z"),
+    })
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* SignalRepository
+        yield* repository.save(staleMetadata)
+        yield* repository.save(freshMetadata)
+      }).pipe(makeProvider(database)),
+    )
+
+    await database.db.insert(scoresTable).values([
+      ...Array.from({ length: MIN_OCCURRENCES_FOR_VISIBILITY }, (_, index) =>
+        makeCustomScoreRow({
+          id: `stalemetadatascore00000${index + 1}`,
+          projectId: listTestProjectId,
+          signalId: staleMetadata.id,
+          createdAt: new Date("2026-03-30T10:00:00.000Z"),
+        }),
+      ),
+      ...Array.from({ length: MIN_OCCURRENCES_FOR_VISIBILITY }, (_, index) =>
+        makeCustomScoreRow({
+          id: `freshmetadatascore00000${index + 1}`,
+          projectId: listTestProjectId,
+          signalId: freshMetadata.id,
+          createdAt: new Date("2026-01-15T10:00:00.000Z"),
+        }),
+      ),
+    ])
+
+    const timeRange = {
+      from: new Date("2026-03-29T00:00:00.000Z"),
+      to: new Date("2026-03-31T23:59:59.999Z"),
+    }
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* SignalRepository
+        return yield* repository.listTableRows({
+          projectId: ProjectId(listTestProjectId),
+          limit: 10,
+          offset: 0,
+          timeRange,
+          sort: { field: "lastSeen", direction: "desc" },
+        })
+      }).pipe(makeProvider(database)),
+    )
+
+    expect(result.items.map((issue) => issue.id)).toEqual([staleMetadata.id])
+    expect(result.totalCount).toBe(1)
+  })
+
   it("can lock an issue row by id inside a transaction", async () => {
     const issue = makeSignal()
 

@@ -294,6 +294,21 @@ const signalRepositoryCoreLive = Layer.effect(
                   : inArray(signals.assigneeId, assigneeIds)
                 : undefined
               const search = searchQuery?.trim()
+              const scoreCreatedFromClause = timeRange?.from
+                ? sql`and ${scores.createdAt} >= ${timeRange.from}`
+                : sql``
+              const scoreCreatedToClause = timeRange?.to ? sql`and ${scores.createdAt} <= ${timeRange.to}` : sql``
+              const hasScoreActivityInTimeRange =
+                timeRange?.from || timeRange?.to
+                  ? sql<boolean>`exists (
+                      select 1
+                      from ${scores}
+                      where ${scores.signalId} = ${signals.id}
+                        and ${scores.draftedAt} is null
+                        ${scoreCreatedFromClause}
+                        ${scoreCreatedToClause}
+                    )`
+                  : undefined
               const where = and(
                 eq(signals.organizationId, organizationId),
                 eq(signals.projectId, projectId),
@@ -304,18 +319,25 @@ const signalRepositoryCoreLive = Layer.effect(
                     ? or(isNotNull(signals.resolvedAt), isNotNull(signals.ignoredAt))
                     : undefined,
                 assigneeConditions,
-                timeRange?.from ? gte(signals.updatedAt, timeRange.from) : undefined,
-                timeRange?.to ? lte(signals.updatedAt, timeRange.to) : undefined,
+                hasScoreActivityInTimeRange,
                 search ? or(ilike(signals.name, `%${search}%`), ilike(signals.description, `%${search}%`)) : undefined,
               )
               const direction = sort?.direction === "asc" ? asc : desc
+              const lastSeenSort = sql<Date>`coalesce((
+                select max(${scores.createdAt})
+                from ${scores}
+                where ${scores.signalId} = ${signals.id}
+                  and ${scores.draftedAt} is null
+                  ${scoreCreatedFromClause}
+                  ${scoreCreatedToClause}
+              ), ${signals.createdAt})`
               const occurrencesSort = sql<number>`(
                 select count(*)
                 from ${scores}
                 where ${scores.signalId} = ${signals.id}
                   and ${scores.draftedAt} is null
-                  ${timeRange?.from ? sql`and ${scores.createdAt} >= ${timeRange.from}` : sql``}
-                  ${timeRange?.to ? sql`and ${scores.createdAt} <= ${timeRange.to}` : sql``}
+                  ${scoreCreatedFromClause}
+                  ${scoreCreatedToClause}
               )`
               const affectedSessionsSort = sql<number>`(
                 select count(distinct ${scores.sessionId})
@@ -324,17 +346,17 @@ const signalRepositoryCoreLive = Layer.effect(
                   and ${scores.draftedAt} is null
                   and ${scores.sessionId} is not null
                   and ${scores.sessionId} != ''
-                  ${timeRange?.from ? sql`and ${scores.createdAt} >= ${timeRange.from}` : sql``}
-                  ${timeRange?.to ? sql`and ${scores.createdAt} <= ${timeRange.to}` : sql``}
+                  ${scoreCreatedFromClause}
+                  ${scoreCreatedToClause}
               )`
               const orderBy =
                 sort?.field === "state"
                   ? [direction(signals.resolvedAt), direction(signals.ignoredAt), direction(signals.updatedAt)]
                   : sort?.field === "occurrences"
-                    ? [direction(occurrencesSort), desc(signals.updatedAt), asc(signals.id)]
+                    ? [direction(occurrencesSort), desc(lastSeenSort), asc(signals.id)]
                     : sort?.field === "affectedSessions"
-                      ? [direction(affectedSessionsSort), desc(signals.updatedAt), asc(signals.id)]
-                      : [direction(signals.updatedAt), direction(signals.createdAt), asc(signals.id)]
+                      ? [direction(affectedSessionsSort), desc(lastSeenSort), asc(signals.id)]
+                      : [direction(lastSeenSort), direction(signals.createdAt), asc(signals.id)]
 
               return Promise.all([
                 db
