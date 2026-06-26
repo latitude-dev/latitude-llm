@@ -294,9 +294,7 @@ const signalRepositoryCoreLive = Layer.effect(
                   : inArray(signals.assigneeId, assigneeIds)
                 : undefined
               const search = searchQuery?.trim()
-              const scoreCreatedFromClause = timeRange?.from
-                ? sql`and ${scores.createdAt} >= ${timeRange.from}`
-                : sql``
+              const scoreCreatedFromClause = timeRange?.from ? sql`and ${scores.createdAt} >= ${timeRange.from}` : sql``
               const scoreCreatedToClause = timeRange?.to ? sql`and ${scores.createdAt} <= ${timeRange.to}` : sql``
               const hasScoreActivityInTimeRange =
                 timeRange?.from || timeRange?.to
