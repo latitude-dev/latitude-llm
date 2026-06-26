@@ -25,12 +25,15 @@ const latitude = new Latitude({
 })
 
 const PROVIDER = "vercel-ai-v7"
-const MODEL = "gpt-4o-mini"
+const MODEL = "gpt-5.5"
+// gpt-5.5 is a reasoning model: budget must cover reasoning + the visible answer.
+const MAX_TOKENS = 2000
+const SYSTEM = "You are a helpful assistant participating in a telemetry QA test. Keep answers concise."
 const SESSION_ID = `${PROVIDER}-${randomUUID().slice(0, 8)}`
 
 function ctx(scenario: string, ...extraTags: string[]) {
   return {
-    tags: ["example", PROVIDER, ...extraTags],
+    tags: ["example", PROVIDER, "vercel-ai-v7-ts", ...extraTags],
     sessionId: SESSION_ID,
     userId: "example-user",
     metadata: { scenario, environment: "local" },
@@ -46,8 +49,9 @@ const weatherTool = tool({
 async function chat() {
   const result = await generateText({
     model: openai(MODEL),
+    instructions: SYSTEM,
     prompt: "Say 'Hello from Vercel AI SDK v7!' in exactly 7 words.",
-    maxOutputTokens: 50,
+    maxOutputTokens: MAX_TOKENS,
   })
   return result.text
 }
@@ -55,8 +59,9 @@ async function chat() {
 async function stream() {
   const result = streamText({
     model: openai(MODEL),
+    instructions: SYSTEM,
     prompt: "Say 'Hello from Vercel AI SDK v7 stream!' in exactly 8 words.",
-    maxOutputTokens: 50,
+    maxOutputTokens: MAX_TOKENS,
   })
   const chunks: string[] = []
   for await (const chunk of result.textStream) chunks.push(chunk)
@@ -66,10 +71,11 @@ async function stream() {
 async function toolConversation() {
   const result = await generateText({
     model: openai(MODEL),
+    instructions: SYSTEM,
     prompt: "What's the weather in San Francisco? Use the getWeather tool, then answer in one short sentence.",
     tools: { getWeather: weatherTool },
     stopWhen: stepCountIs(5),
-    maxOutputTokens: 200,
+    maxOutputTokens: MAX_TOKENS,
   })
   return result.text
 }
@@ -79,8 +85,6 @@ async function main() {
 
   // Must register after Latitude has registered the global tracer provider.
   registerTelemetry(new OpenTelemetry())
-
-  await toolConversation()
 
   await capture("vercel-ai-v7-chat-capture", chat, ctx("chat"))
   await capture("vercel-ai-v7-stream-capture", stream, ctx("stream", "stream"))

@@ -299,6 +299,43 @@ describe("parseGenAIDeprecated — flattened indexed format (gen_ai.prompt.N.* /
     ])
   })
 
+  it("mints an id for an id-less indexed tool_call (Traceloop together) so it renders as a tool_call part", () => {
+    const result = parseContent([
+      str("gen_ai.completion.0.role", "assistant"),
+      str("gen_ai.completion.0.content", ""),
+      str("gen_ai.completion.0.tool_calls.0.name", "get_weather"),
+      str("gen_ai.completion.0.tool_calls.0.arguments", '{"city":"SF"}'),
+    ])
+
+    expect(result.outputMessages).toEqual([
+      {
+        role: "assistant",
+        parts: [
+          { type: "text", content: "" },
+          { type: "tool_call", id: "call_0_0", name: "get_weather", arguments: { city: "SF" } },
+        ],
+      },
+    ])
+  })
+
+  it("mints a shared id to pair an id-less tool_call with its id-less tool result", () => {
+    const result = parseContent([
+      str("gen_ai.prompt.0.role", "assistant"),
+      str("gen_ai.prompt.0.tool_calls.0.name", "get_weather"),
+      str("gen_ai.prompt.0.tool_calls.0.arguments", '{"city":"SF"}'),
+      str("gen_ai.prompt.1.role", "tool"),
+      str("gen_ai.prompt.1.content", "sunny"),
+    ])
+
+    expect(result.inputMessages).toEqual([
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "call_0_0", name: "get_weather", arguments: { city: "SF" } }],
+      },
+      { role: "tool", parts: [{ type: "tool_call_response", id: "call_0_0", response: "sunny" }] },
+    ])
+  })
+
   it("drops an empty leading slot from a sparse indexed tool_calls index", () => {
     const result = parseContent([
       str("gen_ai.completion.0.role", "assistant"),

@@ -152,6 +152,14 @@ describe("resolveAttributes", () => {
       expect(result.provider).toBe("openai")
     })
 
+    it("resolves from OpenInference LangChain metadata (ls_provider)", () => {
+      const attrs: OtlpKeyValue[] = [
+        strAttr("metadata", JSON.stringify({ ls_provider: "openai", ls_model_name: "gpt-5.5" })),
+      ]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.provider).toBe("openai")
+    })
+
     it("case-folds non-canonical provider casing", () => {
       const cases: [string, string, string][] = [
         ["gen_ai.system", "Google", "google"],

@@ -13,6 +13,7 @@ import {
   ATTR_GEN_AI_RESPONSE_FINISH_REASONS,
   ATTR_GEN_AI_RESPONSE_ID,
   ATTR_GEN_AI_RESPONSE_MODEL,
+  ATTR_GEN_AI_TOOL_DEFINITIONS,
   ATTR_GEN_AI_USAGE_INPUT_TOKENS,
   ATTR_GEN_AI_USAGE_OUTPUT_TOKENS,
 } from "@opentelemetry/semantic-conventions/incubating"
@@ -63,6 +64,22 @@ describe("buildRequestAttributes", () => {
     expect(ATTR_GEN_AI_REQUEST_MAX_TOKENS in attrs).toBe(false)
     expect(ATTR_GEN_AI_REQUEST_TEMPERATURE in attrs).toBe(false)
     expect(ATTR_GEN_AI_REQUEST_TOP_P in attrs).toBe(false)
+    expect("gen_ai.request.stream" in attrs).toBe(false)
+    expect(ATTR_GEN_AI_TOOL_DEFINITIONS in attrs).toBe(false)
+  })
+
+  it("flags streaming requests", () => {
+    expect(buildRequestAttributes({ stream: true })["gen_ai.request.stream"]).toBe(true)
+    expect("gen_ai.request.stream" in buildRequestAttributes({ stream: false })).toBe(false)
+  })
+
+  it("serialises tool definitions when provided", () => {
+    const tools = [
+      { type: "function", name: "get_weather", description: "Get weather", parameters: { type: "object" } },
+    ]
+    const attrs = buildRequestAttributes({ model: "x", tools })
+    expect(JSON.parse(attrs[ATTR_GEN_AI_TOOL_DEFINITIONS] as string)).toEqual(tools)
+    expect(ATTR_GEN_AI_TOOL_DEFINITIONS in buildRequestAttributes({ model: "x", tools: [] })).toBe(false)
   })
 })
 
@@ -391,6 +408,25 @@ describe("applyResponseAttributes", () => {
     applyResponseAttributes(span as never, { id: "x", usage: {} })
     expect(ATTR_GEN_AI_USAGE_INPUT_TOKENS in span.attributes).toBe(false)
     expect(ATTR_GEN_AI_USAGE_OUTPUT_TOKENS in span.attributes).toBe(false)
+    expect("gen_ai.usage.reasoning_tokens" in span.attributes).toBe(false)
+  })
+
+  it("emits reasoning tokens from output_tokens_details", () => {
+    const span = makeMockSpan()
+    applyResponseAttributes(span as never, {
+      id: "x",
+      usage: { input_tokens: 10, output_tokens: 50, output_tokens_details: { reasoning_tokens: 35 } },
+    })
+    expect(span.attributes["gen_ai.usage.reasoning_tokens"]).toBe(35)
+  })
+
+  it("does not emit reasoning tokens when zero or absent", () => {
+    const zero = makeMockSpan()
+    applyResponseAttributes(zero as never, {
+      id: "x",
+      usage: { output_tokens: 5, output_tokens_details: { reasoning_tokens: 0 } },
+    })
+    expect("gen_ai.usage.reasoning_tokens" in zero.attributes).toBe(false)
   })
 
   it("does not emit finish_reasons when status is missing", () => {

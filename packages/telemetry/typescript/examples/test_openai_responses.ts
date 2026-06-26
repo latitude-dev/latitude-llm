@@ -7,6 +7,10 @@
  * - OPENAI_API_KEY
  *
  * Install: npm install openai
+ *
+ * The Responses API delivers the system prompt out-of-band via the top-level
+ * `instructions` field (not a `role:"system"` message), so this example also
+ * verifies Latitude lands it in `systemInstructions`.
  */
 
 import { randomUUID } from "node:crypto"
@@ -21,14 +25,17 @@ const latitude = new Latitude({
 })
 
 const PROVIDER = "openai-responses"
-const MODEL = "gpt-4o-mini"
+const MODEL = "gpt-5.5"
+// gpt-5.5 is a reasoning model: budget must cover reasoning + the visible answer.
+const MAX_TOKENS = 2000
+const SYSTEM = "You are a helpful assistant participating in a telemetry QA test. Keep answers concise."
 const SESSION_ID = `${PROVIDER}-${randomUUID().slice(0, 8)}`
 
 const client = new OpenAI()
 
 function ctx(scenario: string, ...extraTags: string[]) {
   return {
-    tags: ["example", PROVIDER, ...extraTags],
+    tags: ["example", PROVIDER, "openai-responses-ts", ...extraTags],
     sessionId: SESSION_ID,
     userId: "example-user",
     metadata: { scenario, environment: "local" },
@@ -38,8 +45,9 @@ function ctx(scenario: string, ...extraTags: string[]) {
 async function chat() {
   const response = await client.responses.create({
     model: MODEL,
+    instructions: SYSTEM,
     input: "Say 'Hello from OpenAI Responses!' in exactly 5 words.",
-    max_output_tokens: 50,
+    max_output_tokens: MAX_TOKENS,
   })
   return response.output_text
 }
@@ -47,8 +55,9 @@ async function chat() {
 async function stream() {
   const stream = await client.responses.create({
     model: MODEL,
+    instructions: SYSTEM,
     input: "Say 'Hello from OpenAI Responses stream!' in exactly 6 words.",
-    max_output_tokens: 50,
+    max_output_tokens: MAX_TOKENS,
     stream: true,
   })
 
@@ -80,7 +89,13 @@ async function toolConversation() {
     },
   ]
 
-  const first = await client.responses.create({ model: MODEL, input, tools, max_output_tokens: 200 })
+  const first = await client.responses.create({
+    model: MODEL,
+    instructions: SYSTEM,
+    input,
+    tools,
+    max_output_tokens: MAX_TOKENS,
+  })
   input.push(...first.output)
   for (const item of first.output) {
     if (item.type === "function_call") {
@@ -92,14 +107,18 @@ async function toolConversation() {
     }
   }
 
-  const second = await client.responses.create({ model: MODEL, input, tools, max_output_tokens: 200 })
+  const second = await client.responses.create({
+    model: MODEL,
+    instructions: SYSTEM,
+    input,
+    tools,
+    max_output_tokens: MAX_TOKENS,
+  })
   return second.output_text
 }
 
 async function main() {
   await latitude.ready
-
-  await toolConversation()
 
   await capture("openai-responses-chat-capture", chat, ctx("chat"))
   await capture("openai-responses-stream-capture", stream, ctx("stream", "stream"))

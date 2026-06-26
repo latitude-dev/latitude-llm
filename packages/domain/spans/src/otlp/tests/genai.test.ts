@@ -635,8 +635,8 @@ describe("TravelPlanner trace — GenAI v1.37+ (current)", () => {
   describe("messages — LLM call 1 (multimodal input, tool call output)", () => {
     it("has system instructions", () => {
       const s = findSpan("llmCall1")
-      expect(s.systemInstructions.length).toBeGreaterThan(0)
-      expect(s.systemInstructions).toEqual([{ type: "text", content: SYSTEM_PROMPT }])
+      expect(s.systemInstructions).toHaveLength(1)
+      expect(s.systemInstructions[0]).toMatchObject({ type: "text", content: SYSTEM_PROMPT })
     })
 
     it("has one input message with role 'user'", () => {

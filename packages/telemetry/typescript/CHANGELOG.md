@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.4.0] - 2026-06-23
+
+### Added
+
+- **OpenAI Agents traces now capture system instructions.** The `openai-agents` instrumentation
+  forwards the agent's `instructions` (echoed on the Responses API `_response.instructions`) as
+  `gen_ai.system_instructions`, so the agent's system prompt populates the System Instructions field.
+
+### Changed
+
+- Bumped `@traceloop/instrumentation-bedrock` 0.26.0 → 0.27.0.
+- Bumped `@traceloop/instrumentation-llamaindex` 0.25.0 → 0.27.0.
+- Bumped `@traceloop/instrumentation-together` 0.25.0 → 0.27.0.
+- **LangChain is now instrumented via OpenInference** (`@arizeai/openinference-instrumentation-langchain`)
+  instead of Traceloop. OpenInference captures tool calls, tool definitions, and tool-call/result pairing
+  (which Traceloop dropped), and patches the callback manager synchronously so the first call in a process
+  is no longer missed. Pass `@langchain/core/callbacks/manager` as the `langchain` instrumentation. Removes
+  the `@traceloop/instrumentation-langchain` dependency.
+
 ## [3.3.0] - 2026-06-22
 
 ### Added

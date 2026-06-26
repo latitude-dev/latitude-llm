@@ -453,7 +453,7 @@ but the namespace form is the recommended shape.
 | `"anthropic"`     | `@anthropic-ai/sdk`               |
 | `"bedrock"`    | `@aws-sdk/client-bedrock-runtime` |
 | `"cohere"`     | `cohere-ai`                       |
-| `"langchain"`  | `langchain`                       |
+| `"langchain"`  | `@langchain/core/callbacks/manager` |
 | `"llamaindex"` | `llamaindex`                      |
 | `"togetherai"` | `together-ai`                     |
 | `"vertexai"`   | `@google-cloud/vertexai`          |

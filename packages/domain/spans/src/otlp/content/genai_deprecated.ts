@@ -180,6 +180,37 @@ function resolveToolDefinitions(attrs: readonly OtlpKeyValue[]): ToolDefinition[
   return raw.map(toToolDefinition).filter(Boolean) as ToolDefinition[]
 }
 
+// Rosetta only renders a tool_call that carries an `id`, and joins a tool result to its call by
+// matching `tool_call_id`. Deprecated emitters (e.g. Traceloop) often omit both, so mint a per-message
+// id for id-less tool_calls and back-fill the matching tool result — mirroring the OpenInference parser.
+// Without this, rosetta drops the tool_calls into `_provider_metadata` and the call never surfaces.
+function linkToolCalls(messages: Record<string, unknown>[]): void {
+  const pending: { id: string; name: string | undefined }[] = []
+  messages.forEach((msg, i) => {
+    const toolCalls = msg.tool_calls
+    if (Array.isArray(toolCalls) && toolCalls.length > 0) {
+      // tool_calls supersede the legacy single `function_call`; drop it so rosetta doesn't double-count.
+      delete msg.function_call
+      toolCalls.forEach((raw, j) => {
+        const tc = raw as Record<string, unknown>
+        if (!tc.id) tc.id = `call_${i}_${j}`
+        const fn = tc.function as Record<string, unknown> | undefined
+        pending.push({ id: tc.id as string, name: typeof fn?.name === "string" ? fn.name : undefined })
+      })
+    }
+    if (msg.role === "tool" && msg.tool_call_id == null && pending.length > 0) {
+      const toolName = typeof msg.tool_name === "string" ? msg.tool_name : undefined
+      let idx = toolName ? pending.findIndex((p) => p.name === toolName) : -1
+      if (idx === -1) idx = 0
+      const match = pending[idx]
+      if (match) {
+        msg.tool_call_id = match.id
+        pending.splice(idx, 1)
+      }
+    }
+  })
+}
+
 function resolveMessages(attrs: readonly OtlpKeyValue[], prefix: string): Record<string, unknown>[] | undefined {
   // Try JSON string format first, then the flattened indexed format.
   const jsonRaw = parseJsonString(attrs, prefix)
@@ -193,6 +224,7 @@ function resolveMessages(attrs: readonly OtlpKeyValue[], prefix: string): Record
   for (const msg of messages) {
     if (msg && typeof msg === "object" && "role" in msg) msg.role = aliasRole(msg.role)
   }
+  linkToolCalls(messages)
   return messages
 }
 
