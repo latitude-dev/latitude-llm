@@ -560,6 +560,12 @@ describe("resolveAttributes", () => {
         expect(result.finishReasons).toEqual([expected])
       }
     })
+
+    it("resolves OpenInference singular llm.finish_reason", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("llm.finish_reason", "tool_calls")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.finishReasons).toEqual(["tool_calls"])
+    })
   })
 
   describe("session ID resolution", () => {
