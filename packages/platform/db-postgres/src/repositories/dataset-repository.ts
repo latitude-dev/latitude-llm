@@ -1,4 +1,11 @@
-import type { Dataset, DatasetListCursor, DatasetListPage, DatasetSearchResult, DatasetVersion } from "@domain/datasets"
+import type {
+  Dataset,
+  DatasetColumn,
+  DatasetListCursor,
+  DatasetListPage,
+  DatasetSearchResult,
+  DatasetVersion,
+} from "@domain/datasets"
 import { type DATASET_LIST_SORT_COLUMNS, DatasetNotFoundError, DatasetRepository } from "@domain/datasets"
 import {
   DatasetId,
@@ -25,6 +32,7 @@ const toDomainDataset = (row: typeof datasets.$inferSelect, latestVersionId?: st
   name: row.name,
   description: row.description ?? null,
   fileKey: row.fileKey ?? null,
+  columns: row.columns ?? null,
   currentVersion: Number(row.currentVersion),
   latestVersionId: latestVersionId ? DatasetVersionId(latestVersionId) : null,
   createdAt: row.createdAt,
@@ -365,6 +373,30 @@ export const DatasetRepositoryLive = Layer.effect(
               cause: new Error("Update affected no rows"),
               operation: "updateFileKey",
             })
+          }
+
+          return toDomainDataset(updated)
+        }),
+
+      updateColumns: (args) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const [updated] = yield* sqlClient.query((db) =>
+            db
+              .update(datasets)
+              .set({ columns: args.columns as DatasetColumn[] })
+              .where(
+                and(
+                  eq(datasets.organizationId, sqlClient.organizationId),
+                  eq(datasets.id, args.id),
+                  isNull(datasets.deletedAt),
+                ),
+              )
+              .returning(),
+          )
+
+          if (!updated) {
+            return yield* new DatasetNotFoundError({ datasetId: args.id })
           }
 
           return toDomainDataset(updated)

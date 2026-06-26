@@ -1,14 +1,21 @@
 import {
+  addColumn,
   addTracesToDataset,
   createDataset,
   type DatasetListCursor,
   DatasetRepository,
   deleteDataset,
   deleteRows,
+  effectiveColumns,
   insertRows,
+  listColumns,
   listDatasets,
   listRows,
   prepareDatasetDownloadUseCase,
+  removeColumn,
+  reorderColumns,
+  restoreColumn,
+  updateColumn,
   updateDatasetDetails,
 } from "@domain/datasets"
 import { exportSelectionSchema } from "@domain/exports"
@@ -49,6 +56,7 @@ import {
   PaginatedDatasetsSchema,
   toDatasetResponse,
 } from "../openapi/entities/dataset.ts"
+import { DatasetColumnSchema, toDatasetColumnResponse } from "../openapi/entities/dataset-column.ts"
 import { DatasetRowSchema, toDatasetRowResponse } from "../openapi/entities/dataset-row.ts"
 import { Paginated, PaginatedQueryParamsSchema } from "../openapi/pagination.ts"
 import {
@@ -420,6 +428,10 @@ const InsertRowBodySchema = z
             "Correct answer for this row. Filled in by curators; usually distinct from `output`.",
           ),
           metadata: InsertRowCellSchema.optional().describe("Row metadata cell."),
+          custom: z
+            .record(z.string(), InsertRowCellSchema)
+            .optional()
+            .describe("Custom column values keyed by column identifier. Removed or unknown columns are rejected."),
         }),
       )
       .min(1)
@@ -546,13 +558,14 @@ const listDatasetRowsEndpoint = datasetEndpoint({
           slug: datasetSlug,
         })
 
-        return yield* listRows({
+        const result = yield* listRows({
           datasetId: DatasetId(dataset.id as string),
           ...(query.search ? { search: query.search } : {}),
           sortDirection: query.sortDirection as SortDirection,
           limit: query.limit,
           ...(cursor ? { cursor } : {}),
         })
+        return { result, columns: dataset.columns }
       }).pipe(
         withPostgres(
           Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
@@ -566,9 +579,9 @@ const listDatasetRowsEndpoint = datasetEndpoint({
 
     return c.json(
       {
-        items: page.rows.map(toDatasetRowResponse),
-        nextCursor: page.nextCursor ? encodeRowCursor(page.nextCursor) : null,
-        hasMore: page.nextCursor !== undefined,
+        items: page.result.rows.map((row) => toDatasetRowResponse(row, page.columns)),
+        nextCursor: page.result.nextCursor ? encodeRowCursor(page.result.nextCursor) : null,
+        hasMore: page.result.nextCursor !== undefined,
       },
       200,
     )
@@ -616,6 +629,7 @@ const insertDatasetRowsEndpoint = datasetEndpoint({
             ...(r.output !== undefined ? { output: r.output } : {}),
             ...(r.expectedOutput !== undefined ? { expectedOutput: r.expectedOutput } : {}),
             ...(r.metadata !== undefined ? { metadata: r.metadata } : {}),
+            ...(r.custom !== undefined ? { custom: r.custom } : {}),
           })),
           source: "api",
         })
@@ -925,6 +939,270 @@ const exportDatasetRowsEndpoint = datasetEndpoint({
 // above covers the common ingestion path, and the JSON-only import shape
 // keeps the SDK + MCP surfaces uniform until we settle on a multipart story.
 
+// ─── Columns ───────────────────────────────────────────────────────────────
+
+const ColumnIdentifierParamsSchema = DatasetSlugParamsSchema.extend({
+  identifier: z.string().min(1).describe("Stable column identifier."),
+})
+
+const ColumnsListResponseSchema = z
+  .object({ columns: z.array(DatasetColumnSchema).describe("Ordered column schema (built-in + custom).") })
+  .openapi("DatasetColumnsList")
+
+const ListColumnsQuerySchema = z.object({
+  includeRemoved: z
+    .enum(["true", "false"])
+    .optional()
+    .describe("When `true`, also returns soft-removed columns (each carrying `removed: true`). Defaults to `false`."),
+})
+
+const AddColumnBodySchema = z
+  .object({ name: z.string().min(1).describe("Display name for the new custom column.") })
+  .openapi("AddDatasetColumnBody")
+
+const ReorderColumnsBodySchema = z
+  .object({
+    order: z
+      .array(z.string().min(1))
+      .min(1)
+      .describe(
+        "Column identifiers in the desired left-to-right order. Identifiers omitted from the list keep their relative order at the end; unknown identifiers are ignored.",
+      ),
+  })
+  .openapi("ReorderDatasetColumnsBody")
+
+const UpdateColumnBodySchema = z
+  .object({
+    name: z.string().min(1).describe("New display name. Works for both built-in and custom columns."),
+  })
+  .openapi("UpdateDatasetColumnBody")
+
+const resolveDatasetId = (projectSlug: string, datasetSlug: string) =>
+  Effect.gen(function* () {
+    const projectRepo = yield* ProjectRepository
+    const project = yield* projectRepo.findBySlug(projectSlug)
+    const datasetRepo = yield* DatasetRepository
+    const dataset = yield* datasetRepo.findBySlug({ projectId: ProjectId(project.id as string), slug: datasetSlug })
+    return DatasetId(dataset.id as string)
+  })
+
+const listDatasetColumnsEndpoint = datasetEndpoint({
+  route: createRoute({
+    method: "get",
+    path: "/{datasetSlug}/columns",
+    name: "listDatasetColumns",
+    tags: ["Datasets"],
+    ...datasetsFernGroup("listColumns"),
+    summary: "List dataset columns",
+    description:
+      "Returns the ordered active column schema — the built-in columns plus any custom columns. Pass `includeRemoved=true` to also return soft-removed columns (so they can be restored).",
+    security: PROTECTED_SECURITY,
+    request: { params: DatasetSlugParamsSchema, query: ListColumnsQuerySchema },
+    responses: openApiResponses({ status: 200, schema: ColumnsListResponseSchema, description: "Column schema" }),
+  }),
+  handler: async (c) => {
+    const { projectSlug, datasetSlug } = c.req.valid("param")
+    const includeRemoved = c.req.valid("query").includeRemoved === "true"
+    const organizationId = c.var.organization.id
+
+    const columns = await Effect.runPromise(
+      resolveDatasetId(projectSlug, datasetSlug)
+        .pipe(Effect.flatMap((datasetId) => listColumns({ datasetId, includeRemoved })))
+        .pipe(
+          withPostgres(
+            Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
+            c.var.postgresClient,
+            organizationId,
+          ),
+          withTracing,
+        ),
+    )
+
+    return c.json({ columns: columns.map(toDatasetColumnResponse) }, 200)
+  },
+})
+
+const addDatasetColumnEndpoint = datasetEndpoint({
+  route: createRoute({
+    method: "post",
+    path: "/{datasetSlug}/columns",
+    name: "addDatasetColumn",
+    tags: ["Datasets"],
+    ...datasetsFernGroup("addColumn"),
+    summary: "Add dataset column",
+    description:
+      "Adds a custom column. The column starts empty on every row; rows are written only when a cell is filled, so the dataset version does not change.",
+    security: PROTECTED_SECURITY,
+    request: { params: DatasetSlugParamsSchema, body: jsonBody(AddColumnBodySchema) },
+    responses: openApiResponses({ status: 201, schema: DatasetColumnSchema, description: "Created column" }),
+  }),
+  handler: async (c) => {
+    const { projectSlug, datasetSlug } = c.req.valid("param")
+    const body = c.req.valid("json")
+    const organizationId = c.var.organization.id
+
+    const column = await Effect.runPromise(
+      resolveDatasetId(projectSlug, datasetSlug)
+        .pipe(Effect.flatMap((datasetId) => addColumn({ datasetId, name: body.name })))
+        .pipe(
+          withPostgres(
+            Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
+            c.var.postgresClient,
+            organizationId,
+          ),
+          withTracing,
+        ),
+    )
+
+    return c.json(toDatasetColumnResponse(column), 201)
+  },
+})
+
+const updateDatasetColumnEndpoint = datasetEndpoint({
+  route: createRoute({
+    method: "patch",
+    path: "/{datasetSlug}/columns/{identifier}",
+    name: "updateDatasetColumn",
+    tags: ["Datasets"],
+    ...datasetsFernGroup("updateColumn"),
+    summary: "Update dataset column",
+    description: "Renames a column. Works for both built-in and custom columns.",
+    security: PROTECTED_SECURITY,
+    request: { params: ColumnIdentifierParamsSchema, body: jsonBody(UpdateColumnBodySchema) },
+    responses: openApiResponses({ status: 200, schema: DatasetColumnSchema, description: "Updated column" }),
+  }),
+  handler: async (c) => {
+    const { projectSlug, datasetSlug, identifier } = c.req.valid("param")
+    const body = c.req.valid("json")
+    const organizationId = c.var.organization.id
+
+    const column = await Effect.runPromise(
+      resolveDatasetId(projectSlug, datasetSlug)
+        .pipe(Effect.flatMap((datasetId) => updateColumn({ datasetId, identifier, name: body.name })))
+        .pipe(
+          withPostgres(
+            Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
+            c.var.postgresClient,
+            organizationId,
+          ),
+          withTracing,
+        ),
+    )
+
+    return c.json(toDatasetColumnResponse(column), 200)
+  },
+})
+
+const deleteDatasetColumnEndpoint = datasetEndpoint({
+  route: createRoute({
+    method: "delete",
+    path: "/{datasetSlug}/columns/{identifier}",
+    name: "deleteDatasetColumn",
+    tags: ["Datasets"],
+    ...datasetsFernGroup("deleteColumn"),
+    summary: "Delete dataset column",
+    description:
+      "Removes a column (built-in or custom) from the active schema. Its data is preserved and the column can be re-added; this does not change the dataset version.",
+    security: PROTECTED_SECURITY,
+    request: { params: ColumnIdentifierParamsSchema },
+    responses: openApiNoContentResponses({ description: "Column removed" }),
+  }),
+  handler: async (c) => {
+    const { projectSlug, datasetSlug, identifier } = c.req.valid("param")
+    const organizationId = c.var.organization.id
+
+    await Effect.runPromise(
+      resolveDatasetId(projectSlug, datasetSlug)
+        .pipe(Effect.flatMap((datasetId) => removeColumn({ datasetId, identifier })))
+        .pipe(
+          withPostgres(
+            Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
+            c.var.postgresClient,
+            organizationId,
+          ),
+          withTracing,
+        ),
+    )
+
+    return c.body(null, 204)
+  },
+})
+
+const reorderDatasetColumnsEndpoint = datasetEndpoint({
+  route: createRoute({
+    method: "post",
+    path: "/{datasetSlug}/columns/reorder",
+    name: "reorderDatasetColumns",
+    tags: ["Datasets"],
+    ...datasetsFernGroup("reorderColumns"),
+    summary: "Reorder dataset columns",
+    description:
+      "Sets the left-to-right order of columns. This is a metadata edit and does not change the dataset version.",
+    security: PROTECTED_SECURITY,
+    request: { params: DatasetSlugParamsSchema, body: jsonBody(ReorderColumnsBodySchema) },
+    responses: openApiResponses({
+      status: 200,
+      schema: ColumnsListResponseSchema,
+      description: "Reordered column schema",
+    }),
+  }),
+  handler: async (c) => {
+    const { projectSlug, datasetSlug } = c.req.valid("param")
+    const body = c.req.valid("json")
+    const organizationId = c.var.organization.id
+
+    const reordered = await Effect.runPromise(
+      resolveDatasetId(projectSlug, datasetSlug)
+        .pipe(Effect.flatMap((datasetId) => reorderColumns({ datasetId, order: body.order })))
+        .pipe(
+          withPostgres(
+            Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
+            c.var.postgresClient,
+            organizationId,
+          ),
+          withTracing,
+        ),
+    )
+
+    return c.json({ columns: effectiveColumns(reordered).map(toDatasetColumnResponse) }, 200)
+  },
+})
+
+const restoreDatasetColumnEndpoint = datasetEndpoint({
+  route: createRoute({
+    method: "post",
+    path: "/{datasetSlug}/columns/{identifier}/restore",
+    name: "restoreDatasetColumn",
+    tags: ["Datasets"],
+    ...datasetsFernGroup("restoreColumn"),
+    summary: "Restore dataset column",
+    description:
+      "Restores a soft-removed column (built-in or custom) to the active schema, reconnecting its preserved data. Find removed identifiers via `listDatasetColumns` with `includeRemoved=true`.",
+    security: PROTECTED_SECURITY,
+    request: { params: ColumnIdentifierParamsSchema },
+    responses: openApiResponses({ status: 200, schema: DatasetColumnSchema, description: "Restored column" }),
+  }),
+  handler: async (c) => {
+    const { projectSlug, datasetSlug, identifier } = c.req.valid("param")
+    const organizationId = c.var.organization.id
+
+    const column = await Effect.runPromise(
+      resolveDatasetId(projectSlug, datasetSlug)
+        .pipe(Effect.flatMap((datasetId) => restoreColumn({ datasetId, identifier })))
+        .pipe(
+          withPostgres(
+            Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
+            c.var.postgresClient,
+            organizationId,
+          ),
+          withTracing,
+        ),
+    )
+
+    return c.json(toDatasetColumnResponse(column), 200)
+  },
+})
+
 export const createDatasetsRoutes = () => {
   const app = new OpenAPIHono<OrganizationScopedEnv>()
   listDatasetsEndpoint.mountHttp(app, createTierRateLimiter("low"))
@@ -937,5 +1215,11 @@ export const createDatasetsRoutes = () => {
   deleteDatasetRowsEndpoint.mountHttp(app, createTierRateLimiter("medium"))
   importRowsFromTracesEndpoint.mountHttp(app, createTierRateLimiter("high"))
   exportDatasetRowsEndpoint.mountHttp(app, createTierRateLimiter("critical"))
+  listDatasetColumnsEndpoint.mountHttp(app, createTierRateLimiter("low"))
+  addDatasetColumnEndpoint.mountHttp(app, createTierRateLimiter("low"))
+  updateDatasetColumnEndpoint.mountHttp(app, createTierRateLimiter("low"))
+  deleteDatasetColumnEndpoint.mountHttp(app, createTierRateLimiter("low"))
+  reorderDatasetColumnsEndpoint.mountHttp(app, createTierRateLimiter("low"))
+  restoreDatasetColumnEndpoint.mountHttp(app, createTierRateLimiter("low"))
   return app
 }

@@ -5,14 +5,16 @@ export interface DatasetRow {
     rowId: string;
     /** Dataset this row belongs to. */
     datasetId: string;
-    /** Free-form cell value: any JSON scalar, array, or object. */
-    input: DatasetRow.Input;
-    /** Free-form cell value: any JSON scalar, array, or object. */
-    output: DatasetRow.Output;
-    /** The correct answer for this row. Curators fill this in by hand; it is not derived from `output`. */
-    expectedOutput: DatasetRow.ExpectedOutput;
-    /** Free-form cell value: any JSON scalar, array, or object. */
-    metadata: DatasetRow.Metadata;
+    /** Input cell. Omitted when the `input` column is removed. */
+    input?: DatasetRow.Input | undefined;
+    /** Output cell. Omitted when the `output` column is removed. */
+    output?: DatasetRow.Output | undefined;
+    /** The correct answer for this row. Curators fill this in by hand; it is not derived from `output`. Omitted when the `expectedOutput` column is removed. */
+    expectedOutput?: DatasetRow.ExpectedOutput | undefined;
+    /** Metadata cell. Omitted when the `metadata` column is removed. */
+    metadata?: DatasetRow.Metadata | undefined;
+    /** Custom column values keyed by column identifier. Removed columns are excluded; `{}` when none. */
+    custom: Record<string, DatasetRow.Custom.Value>;
     /** ISO-8601 timestamp at which the row was inserted. */
     createdAt: string;
     /** Dataset version this row belongs to. */
@@ -21,19 +23,26 @@ export interface DatasetRow {
 
 export namespace DatasetRow {
     /**
-     * Free-form cell value: any JSON scalar, array, or object.
+     * Input cell. Omitted when the `input` column is removed.
      */
     export type Input = string | number | boolean | unknown[] | Record<string, unknown>;
     /**
-     * Free-form cell value: any JSON scalar, array, or object.
+     * Output cell. Omitted when the `output` column is removed.
      */
     export type Output = string | number | boolean | unknown[] | Record<string, unknown>;
     /**
-     * The correct answer for this row. Curators fill this in by hand; it is not derived from `output`.
+     * The correct answer for this row. Curators fill this in by hand; it is not derived from `output`. Omitted when the `expectedOutput` column is removed.
      */
     export type ExpectedOutput = string | number | boolean | unknown[] | Record<string, unknown>;
     /**
-     * Free-form cell value: any JSON scalar, array, or object.
+     * Metadata cell. Omitted when the `metadata` column is removed.
      */
     export type Metadata = string | number | boolean | unknown[] | Record<string, unknown>;
+
+    export namespace Custom {
+        /**
+         * Free-form cell value: any JSON scalar, array, or object.
+         */
+        export type Value = string | number | boolean | unknown[] | Record<string, unknown>;
+    }
 }

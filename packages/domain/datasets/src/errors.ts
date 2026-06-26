@@ -37,3 +37,13 @@ export class RowNotFoundError extends Data.TaggedError("RowNotFoundError")<{
     return `Row ${this.rowId} not found`
   }
 }
+
+export class DatasetColumnNotFoundError extends Data.TaggedError("DatasetColumnNotFoundError")<{
+  readonly datasetId: string
+  readonly identifier: string
+}> {
+  readonly httpStatus = 404
+  get httpMessage() {
+    return `Column ${this.identifier} not found in dataset ${this.datasetId}`
+  }
+}

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import type { DatasetColumn } from "./entities/dataset.ts"
 import type { DatasetRow } from "./entities/dataset-row.ts"
 import { buildDatasetCsvExport, csvExportHeader, rowsToCsvFragment } from "./export-csv.ts"
 
@@ -7,6 +8,7 @@ function row(overrides: Partial<DatasetRow> & Pick<DatasetRow, "input" | "output
     rowId: "row-1" as DatasetRow["rowId"],
     datasetId: "ds-1" as DatasetRow["datasetId"],
     expectedOutput: "",
+    custom: {},
     createdAt: new Date(),
     version: 1,
     ...overrides,
@@ -66,6 +68,27 @@ describe("export-csv", () => {
     it("sanitizes dataset name for filename", () => {
       const { filename } = buildDatasetCsvExport("Unsafe<>Name!", [])
       expect(filename).toMatch(/^[\w_.-]+\.csv$/)
+    })
+  })
+
+  describe("column-aware export", () => {
+    const scoreId = "col_score"
+    const columns: DatasetColumn[] = [
+      { identifier: "input", name: "Input", source: { kind: "builtin", field: "input" } },
+      { identifier: "output", name: "Output", source: { kind: "builtin", field: "output" }, removed: true },
+      { identifier: scoreId, name: "Score", source: { kind: "custom" } },
+    ]
+
+    it("header excludes removed built-ins and includes custom columns by display name", () => {
+      expect(csvExportHeader(columns).trim().split(",")).toEqual(["input", "Score"])
+    })
+
+    it("fragment emits active built-in + custom values and skips removed columns", () => {
+      const r = row({ input: "hi", output: "should-not-appear", metadata: "", custom: { [scoreId]: "0.9" } })
+      const fragment = rowsToCsvFragment([r], columns)
+      expect(fragment).toContain("hi")
+      expect(fragment).toContain("0.9")
+      expect(fragment).not.toContain("should-not-appear")
     })
   })
 })

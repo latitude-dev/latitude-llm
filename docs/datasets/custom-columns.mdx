@@ -1,0 +1,45 @@
+---
+title: Custom columns
+description: Add your own columns to a dataset, rename or reorder them, and remove columns you no longer need without losing data.
+---
+
+<Info>
+  **Where this fits:** Part of **Refine**. Custom columns let a [dataset](./overview) carry fields beyond the four built-ins, so a row can hold exactly the data your tests and workflows need.
+</Info>
+
+Every dataset starts with four built-in columns — **Input**, **Output**, **Expected output**, and **Metadata**. **Custom columns** let you add more fields of your own (for example a `label`, a `category`, or a reference id) alongside them. A newly added column is empty on every existing row; it only gets a value when you fill that cell.
+
+## Manage columns
+
+Open a dataset and click **Columns** in the top bar. From the popover you can:
+
+| Action | What it does |
+| --- | --- |
+| **Add** | Create a new custom column. Use **+ New column**, give it a name. It appears empty on every row. |
+| **Rename** | Edit a column's display name (the pencil icon). Works for built-in and custom columns. Renaming never changes the data. |
+| **Reorder** | Drag a column by its handle to change the left-to-right order in the table. |
+| **Remove** | Soft-delete a column (the trash icon). It disappears from the table, exports, and the API — but its data is kept. |
+| **Re-add** | Restore a removed column from the **Removed columns** group at the bottom of the popover. Its values come back intact. |
+
+<Note>
+  **Remove is always reversible.** Removing a column — built-in or custom — hides it everywhere but preserves its data, so you can re-add it at any time and its values reappear. Built-in columns can be removed too; nothing is permanently deleted.
+</Note>
+
+## Editing custom values
+
+Open any row to edit its cells. Active custom columns show their own editable fields next to the built-in ones, and the values you enter are saved with the row just like the built-ins.
+
+## How columns affect the rest of the dataset
+
+- **Adding, renaming, removing, or reordering a column does not create a new dataset version.** Only writing actual cell data does. So shaping your columns is free to iterate on.
+- **CSV export honors your active columns.** Exports include your custom columns (under their display name) in column order and leave out removed columns. Built-in columns keep their standard `input` / `output` / `expected_output` / `metadata` headers.
+- **Removed columns are excluded** from the table, row reads, the API, and exports until you re-add them.
+
+## Manage columns from your coding agent
+
+Through the [MCP server](../getting-started/mcp), an agent like Claude or Cursor can manage a dataset's columns for you — list columns (including removed ones), add, rename, reorder, remove, and restore them — the same operations available in the UI.
+
+## Next step
+
+- [Add expected output](./expected-output): record the known-good answer for a row.
+- [Regression testing](../test-and-fix/regression-testing): replay the dataset against your agent.

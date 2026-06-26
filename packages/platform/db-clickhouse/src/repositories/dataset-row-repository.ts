@@ -1,5 +1,5 @@
 import type { ClickHouseClient } from "@clickhouse/client"
-import type { DatasetRow } from "@domain/datasets"
+import type { DatasetRow, RowFieldValue } from "@domain/datasets"
 import { DatasetRowRepository, RowNotFoundError } from "@domain/datasets"
 import { ChSqlClient, type ChSqlClientShape, DatasetId, DatasetRowId, TraceId } from "@domain/shared"
 import { parseCHDate, safeParseJson, safeStringifyJson } from "@repo/utils"
@@ -18,12 +18,30 @@ const serializeField = (value: unknown): string => {
   return safeStringifyJson(value)
 }
 
+// Custom column values are stored as a single JSON object keyed by column identifier. An empty map
+// round-trips as "" (the column DEFAULT), so existing rows with no custom data read back as {}.
+const serializeCustom = (custom: Record<string, unknown> | undefined): string => {
+  if (!custom) return ""
+  const normalized: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(custom)) {
+    normalized[key] = value === null ? "" : value
+  }
+  return serializeField(normalized)
+}
+
+const parseCustom = (raw: string): Record<string, RowFieldValue> => {
+  if (raw === "") return {}
+  const parsed = safeParseJson(raw, { fallback: "object" })
+  return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, RowFieldValue>) : {}
+}
+
 type DatasetRowCH = {
   row_id: string
   input: string
   output: string
   expected_output: string
   metadata: string
+  custom: string
   created_at: string
   latest_xact_id: string
 }
@@ -35,13 +53,14 @@ const toDomainRow = (row: DatasetRowCH, datasetId: string): DatasetRow => ({
   output: safeParseJson(row.output, { fallback: "string" }),
   expectedOutput: safeParseJson(row.expected_output, { fallback: "string" }),
   metadata: safeParseJson(row.metadata, { fallback: "string" }),
+  custom: parseCustom(row.custom),
   createdAt: parseCHDate(row.created_at),
   version: Number(row.latest_xact_id),
 })
 
 const buildSearchClause = (search: string | undefined) =>
   search
-    ? "AND (positionCaseInsensitive(input, {search:String}) > 0 OR positionCaseInsensitive(output, {search:String}) > 0 OR positionCaseInsensitive(expected_output, {search:String}) > 0)"
+    ? "AND (positionCaseInsensitive(input, {search:String}) > 0 OR positionCaseInsensitive(output, {search:String}) > 0 OR positionCaseInsensitive(expected_output, {search:String}) > 0 OR positionCaseInsensitive(custom, {search:String}) > 0)"
     : ""
 
 const buildVersionClause = (version: number | undefined) =>
@@ -77,6 +96,7 @@ const buildListDataQueryOffset = (versionClause: string, searchClause: string, s
     argMax(output, xact_id) AS output,
     argMax(expected_output, xact_id) AS expected_output,
     argMax(metadata, xact_id) AS metadata,
+    argMax(custom, xact_id) AS custom,
     min(created_at) AS created_at,
     max(xact_id) AS latest_xact_id
   FROM dataset_rows
@@ -105,6 +125,7 @@ const buildListDataQueryKeyset = (versionClause: string, searchClause: string, s
     argMax(output, xact_id) AS output,
     argMax(expected_output, xact_id) AS expected_output,
     argMax(metadata, xact_id) AS metadata,
+    argMax(custom, xact_id) AS custom,
     min(created_at) AS created_at,
     max(xact_id) AS latest_xact_id
   FROM dataset_rows
@@ -126,7 +147,8 @@ const buildListCountQuery = (versionClause: string, searchClause: string) => `
       row_id,
       argMax(input, xact_id) AS input,
       argMax(output, xact_id) AS output,
-      argMax(expected_output, xact_id) AS expected_output
+      argMax(expected_output, xact_id) AS expected_output,
+      argMax(custom, xact_id) AS custom
     FROM dataset_rows
     WHERE organization_id = {organizationId:String}
       AND dataset_id = {datasetId:String}
@@ -190,6 +212,7 @@ export const DatasetRowRepositoryLive = Layer.effect(
               output: serializeField(row.output),
               expected_output: serializeField(row.expectedOutput),
               metadata: serializeField(row.metadata),
+              custom: serializeCustom(row.custom),
             }))
 
             for (let i = 0; i < values.length; i += INSERT_BATCH_SIZE) {
@@ -375,6 +398,7 @@ export const DatasetRowRepositoryLive = Layer.effect(
                 argMax(output, xact_id) AS output,
                 argMax(expected_output, xact_id) AS expected_output,
                 argMax(metadata, xact_id) AS metadata,
+                argMax(custom, xact_id) AS custom,
                 min(created_at) AS created_at,
                 max(xact_id) AS latest_xact_id
               FROM dataset_rows
@@ -416,6 +440,7 @@ export const DatasetRowRepositoryLive = Layer.effect(
                   output: serializeField(args.output),
                   expected_output: serializeField(args.expectedOutput),
                   metadata: serializeField(args.metadata),
+                  custom: serializeCustom(args.custom),
                 },
               ],
               format: "JSONEachRow",
@@ -437,6 +462,7 @@ export const DatasetRowRepositoryLive = Layer.effect(
               output: "",
               expected_output: "",
               metadata: "",
+              custom: "",
               _object_delete: true,
             }))
 
@@ -492,6 +518,7 @@ export const DatasetRowRepositoryLive = Layer.effect(
               output: "",
               expected_output: "",
               metadata: "",
+              custom: "",
               _object_delete: true,
             }))
 

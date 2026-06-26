@@ -6,6 +6,7 @@ import pydantic
 import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
+from .dataset_column import DatasetColumn
 
 
 class Dataset(UniversalBaseModel):
@@ -37,6 +38,11 @@ class Dataset(UniversalBaseModel):
     description: typing.Optional[str] = pydantic.Field(default=None)
     """
     Free-form description, or `null` when not set.
+    """
+
+    columns: typing.Optional[typing.List[DatasetColumn]] = pydantic.Field(default=None)
+    """
+    Ordered column schema (built-in + custom). `null` means the default schema: the four built-in fields, all visible.
     """
 
     version: int = pydantic.Field()

@@ -10,6 +10,7 @@ const baseRow: Omit<DatasetRow, "input" | "output"> = {
   datasetId: DatasetId("cm000000000000000000ds01"),
   expectedOutput: "",
   metadata: {},
+  custom: {},
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   version: 1,
 }
@@ -22,11 +23,14 @@ describe("DatasetRowSchema", () => {
     ["array", [{ role: "user", content: "hi" }]],
     ["object", { question: "weather" }],
   ])("accepts a %s cell value through toDatasetRowResponse", (_label, value) => {
-    const response = toDatasetRowResponse({
-      ...baseRow,
-      input: value as DatasetRow["input"],
-      output: value as DatasetRow["output"],
-    })
+    const response = toDatasetRowResponse(
+      {
+        ...baseRow,
+        input: value as DatasetRow["input"],
+        output: value as DatasetRow["output"],
+      },
+      null,
+    )
 
     const result = DatasetRowSchema.safeParse(response)
 

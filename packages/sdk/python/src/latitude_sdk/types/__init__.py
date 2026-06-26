@@ -58,7 +58,14 @@ if typing.TYPE_CHECKING:
     from .create_signal_response import CreateSignalResponse
     from .custom_score_response import CustomScoreResponse
     from .dataset import Dataset
+    from .dataset_column import DatasetColumn
+    from .dataset_column_source import DatasetColumnSource, DatasetColumnSource_Builtin, DatasetColumnSource_Custom
+    from .dataset_column_source_builtin import DatasetColumnSourceBuiltin
+    from .dataset_column_source_builtin_field import DatasetColumnSourceBuiltinField
+    from .dataset_column_source_custom import DatasetColumnSourceCustom
+    from .dataset_columns_list import DatasetColumnsList
     from .dataset_row import DatasetRow
+    from .dataset_row_custom_value import DatasetRowCustomValue
     from .dataset_row_expected_output import DatasetRowExpectedOutput
     from .dataset_row_input import DatasetRowInput
     from .dataset_row_metadata import DatasetRowMetadata
@@ -296,7 +303,16 @@ _dynamic_imports: typing.Dict[str, str] = {
     "CreateSignalResponse": ".create_signal_response",
     "CustomScoreResponse": ".custom_score_response",
     "Dataset": ".dataset",
+    "DatasetColumn": ".dataset_column",
+    "DatasetColumnSource": ".dataset_column_source",
+    "DatasetColumnSourceBuiltin": ".dataset_column_source_builtin",
+    "DatasetColumnSourceBuiltinField": ".dataset_column_source_builtin_field",
+    "DatasetColumnSourceCustom": ".dataset_column_source_custom",
+    "DatasetColumnSource_Builtin": ".dataset_column_source",
+    "DatasetColumnSource_Custom": ".dataset_column_source",
+    "DatasetColumnsList": ".dataset_columns_list",
     "DatasetRow": ".dataset_row",
+    "DatasetRowCustomValue": ".dataset_row_custom_value",
     "DatasetRowExpectedOutput": ".dataset_row_expected_output",
     "DatasetRowInput": ".dataset_row_input",
     "DatasetRowMetadata": ".dataset_row_metadata",
@@ -562,7 +578,16 @@ __all__ = [
     "CreateSignalResponse",
     "CustomScoreResponse",
     "Dataset",
+    "DatasetColumn",
+    "DatasetColumnSource",
+    "DatasetColumnSourceBuiltin",
+    "DatasetColumnSourceBuiltinField",
+    "DatasetColumnSourceCustom",
+    "DatasetColumnSource_Builtin",
+    "DatasetColumnSource_Custom",
+    "DatasetColumnsList",
     "DatasetRow",
+    "DatasetRowCustomValue",
     "DatasetRowExpectedOutput",
     "DatasetRowInput",
     "DatasetRowMetadata",

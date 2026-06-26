@@ -27,7 +27,8 @@ export const buildDatasetExportUseCase = Effect.fn("datasets.buildDatasetExport"
   const dataset = yield* datasetRepo.findById(input.datasetId)
 
   const rowRepo = yield* DatasetRowRepository
-  const csvChunks: string[] = [csvExportHeader()]
+  const columns = dataset.columns
+  const csvChunks: string[] = [csvExportHeader(columns)]
 
   if (input.selection.mode !== "all") {
     const allRows = []
@@ -53,7 +54,7 @@ export const buildDatasetExportUseCase = Effect.fn("datasets.buildDatasetExport"
         : allRows.filter((row) => !selectedIds.has(row.rowId))
 
     if (filteredRows.length > 0) {
-      csvChunks.push(rowsToCsvFragment(filteredRows))
+      csvChunks.push(rowsToCsvFragment(filteredRows, columns))
     }
   } else {
     let offset = 0
@@ -66,7 +67,7 @@ export const buildDatasetExportUseCase = Effect.fn("datasets.buildDatasetExport"
       })
       if (rows.length === 0) break
 
-      csvChunks.push(rowsToCsvFragment(rows))
+      csvChunks.push(rowsToCsvFragment(rows, columns))
       if (rows.length < BATCH_SIZE) break
       offset += BATCH_SIZE
     }

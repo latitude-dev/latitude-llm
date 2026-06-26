@@ -1,13 +1,15 @@
+import type { DatasetColumn } from "@domain/datasets"
 import { Button, DetailDrawer, Text, Tooltip } from "@repo/ui"
 import { useHotkey } from "@tanstack/react-hotkeys"
 import { ArrowDownIcon, ArrowUpIcon, Loader2, Save } from "lucide-react"
 import { useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
 import type { DatasetRowRecord } from "../../../../../../domains/datasets/datasets.functions.ts"
-import { RowDetailPanel, type RowDetailPanelSaveRef } from "./row-detail-panel.tsx"
+import { RowDetailPanel, type RowDetailPanelSaveRef, type RowDetailSaveData } from "./row-detail-panel.tsx"
 
 export function RowDetailDrawer({
   row,
+  columns = null,
   onClose,
   onSave,
   saving = false,
@@ -19,8 +21,9 @@ export function RowDetailDrawer({
   rowDisplayIndex,
 }: {
   readonly row: DatasetRowRecord
+  readonly columns?: DatasetColumn[] | null
   readonly onClose: () => void
-  readonly onSave?: (data: { input: string; output: string; expectedOutput: string; metadata: string }) => void
+  readonly onSave?: (data: RowDetailSaveData) => void
   readonly saving?: boolean
   readonly isDraft?: boolean
   readonly canNavigatePrev?: boolean
@@ -105,6 +108,7 @@ export function RowDetailDrawer({
         <RowDetailPanel
           key={row.rowId}
           row={row}
+          columns={columns}
           saveRef={panelSaveRef}
           isDraft={isDraft}
           onSaveVisibilityChange={setSaveVisible}

@@ -24,6 +24,7 @@ const makeDataset = (id: string, projectId: ProjectId, name: string): Dataset =>
   name,
   description: null,
   fileKey: null,
+  columns: null,
   currentVersion: 0,
   latestVersionId: null,
   createdAt: new Date(0),

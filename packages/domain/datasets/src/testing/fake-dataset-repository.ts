@@ -31,6 +31,7 @@ const toPublic = (row: FakeDataset): Dataset => ({
   name: row.name,
   description: row.description,
   fileKey: row.fileKey,
+  columns: row.columns,
   currentVersion: row.currentVersion,
   latestVersionId: row.latestVersionId,
   createdAt: row.createdAt,
@@ -82,6 +83,7 @@ export const createFakeDatasetRepository = (
           name: args.name,
           description: args.description ?? null,
           fileKey: args.fileKey ?? null,
+          columns: null,
           currentVersion: 0,
           latestVersionId: null,
           createdAt: now,
@@ -224,6 +226,15 @@ export const createFakeDatasetRepository = (
           })
         }
         const updated: FakeDataset = { ...row, fileKey: args.fileKey, updatedAt: new Date() }
+        datasets.set(args.id, updated)
+        return toPublic(updated)
+      }),
+
+    updateColumns: (args) =>
+      Effect.gen(function* () {
+        const row = liveById(args.id)
+        if (!row) return yield* new DatasetNotFoundError({ datasetId: args.id })
+        const updated: FakeDataset = { ...row, columns: [...args.columns], updatedAt: new Date() }
         datasets.set(args.id, updated)
         return toPublic(updated)
       }),

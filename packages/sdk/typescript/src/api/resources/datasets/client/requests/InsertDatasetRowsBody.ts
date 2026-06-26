@@ -26,6 +26,8 @@ export namespace InsertDatasetRowsBody {
             expectedOutput?: Item.ExpectedOutput | undefined;
             /** Row metadata cell. */
             metadata?: Item.Metadata | undefined;
+            /** Custom column values keyed by column identifier. Removed or unknown columns are rejected. */
+            custom?: Record<string, Item.Custom.Value> | undefined;
         }
 
         export namespace Item {
@@ -45,6 +47,10 @@ export namespace InsertDatasetRowsBody {
              * Row metadata cell.
              */
             export type Metadata = string | number | boolean | unknown[] | Record<string, unknown>;
+
+            export namespace Custom {
+                export type Value = string | number | boolean | unknown[] | Record<string, unknown>;
+            }
         }
     }
 }

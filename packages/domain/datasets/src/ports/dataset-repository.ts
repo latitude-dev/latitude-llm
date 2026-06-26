@@ -1,6 +1,6 @@
 import type { DatasetId, DatasetVersionId, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
 import { Context, type Effect } from "effect"
-import type { Dataset, DatasetVersion } from "../entities/dataset.ts"
+import type { Dataset, DatasetColumn, DatasetVersion } from "../entities/dataset.ts"
 import type { DatasetNotFoundError } from "../errors.ts"
 
 export const DATASET_LIST_SORT_COLUMNS = ["name", "updatedAt"] as const
@@ -108,6 +108,15 @@ export class DatasetRepository extends Context.Service<
     updateFileKey(args: {
       readonly id: DatasetId
       readonly fileKey: string
+    }): Effect.Effect<Dataset, DatasetNotFoundError | RepositoryError, SqlClient>
+
+    /**
+     * Persists the column schema (dataset-level metadata). Like {@link updateDetails}, this does
+     * NOT bump the row version — adding/removing/hiding a column never writes ClickHouse rows.
+     */
+    updateColumns(args: {
+      readonly id: DatasetId
+      readonly columns: readonly DatasetColumn[]
     }): Effect.Effect<Dataset, DatasetNotFoundError | RepositoryError, SqlClient>
 
     softDelete(id: DatasetId): Effect.Effect<void, DatasetNotFoundError | RepositoryError, SqlClient>
