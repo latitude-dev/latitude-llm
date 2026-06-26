@@ -35,6 +35,10 @@ export interface BackfillSignalScoresResult {
  */
 export const backfillSignalScoresUseCase = (input: BackfillSignalScoresInput) =>
   Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+    yield* Effect.annotateCurrentSpan("signalId", input.signalId)
+    yield* Effect.annotateCurrentSpan("evaluationId", input.evaluationId)
+
     const evaluationRepo = yield* EvaluationRepository
     const traceRepo = yield* TraceRepository
     const publisher = yield* QueuePublisher
