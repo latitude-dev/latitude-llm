@@ -48,27 +48,35 @@ function SeenAtSummaryValue({
   lastSeenAtIso,
   firstSeenAtIso,
 }: {
-  readonly lastSeenAtIso: string
-  readonly firstSeenAtIso: string
+  readonly lastSeenAtIso: string | null
+  readonly firstSeenAtIso: string | null
 }) {
   const { lastSeenLabel, firstSeenLabel } = formatSeenAgeParts(lastSeenAtIso, firstSeenAtIso)
 
   // Flex `div` not `Text`: `Text`'s `display:inline` collapses the `gap-*` around the separator. Bare `<span>` triggers so Radix's hover handlers land on a real DOM node.
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 text-sm leading-5">
-      <Tooltip asChild trigger={<span className="break-words">{lastSeenLabel}</span>}>
-        <div className="flex flex-col gap-0.5">
-          <Text.H6 color="foregroundMuted">Last seen at</Text.H6>
-          <Text.H6B>{new Date(lastSeenAtIso).toLocaleString()}</Text.H6B>
-        </div>
-      </Tooltip>
+      {lastSeenAtIso ? (
+        <Tooltip asChild trigger={<span className="break-words">{lastSeenLabel}</span>}>
+          <div className="flex flex-col gap-0.5">
+            <Text.H6 color="foregroundMuted">Last seen at</Text.H6>
+            <Text.H6B>{new Date(lastSeenAtIso).toLocaleString()}</Text.H6B>
+          </div>
+        </Tooltip>
+      ) : (
+        <span className="break-words">{lastSeenLabel}</span>
+      )}
       <span className="shrink-0 text-muted-foreground">/</span>
-      <Tooltip asChild trigger={<span className="break-words">{firstSeenLabel}</span>}>
-        <div className="flex flex-col gap-0.5">
-          <Text.H6 color="foregroundMuted">First seen at</Text.H6>
-          <Text.H6B>{new Date(firstSeenAtIso).toLocaleString()}</Text.H6B>
-        </div>
-      </Tooltip>
+      {firstSeenAtIso ? (
+        <Tooltip asChild trigger={<span className="break-words">{firstSeenLabel}</span>}>
+          <div className="flex flex-col gap-0.5">
+            <Text.H6 color="foregroundMuted">First seen at</Text.H6>
+            <Text.H6B>{new Date(firstSeenAtIso).toLocaleString()}</Text.H6B>
+          </div>
+        </Tooltip>
+      ) : (
+        <span className="break-words">{firstSeenLabel}</span>
+      )}
     </div>
   )
 }

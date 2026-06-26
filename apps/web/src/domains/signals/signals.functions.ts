@@ -264,8 +264,8 @@ const SIGNAL_DETAIL_TREND_BUCKET_SECONDS = 12 * 60 * 60 // 12h
 const toSignalDetailRecord = (input: {
   readonly issue: Signal
   readonly states: readonly string[]
-  readonly firstSeenAt: Date
-  readonly lastSeenAt: Date
+  readonly firstSeenAt: Date | null
+  readonly lastSeenAt: Date | null
   readonly totalOccurrences: number
   readonly escalationOccurrenceThreshold: number | null
   readonly trend: readonly { readonly bucket: string; readonly count: number }[]
@@ -291,8 +291,8 @@ const toSignalDetailRecord = (input: {
   escalatedAt: input.issue.escalatedAt?.toISOString() ?? null,
   resolvedAt: input.issue.resolvedAt?.toISOString() ?? null,
   ignoredAt: input.issue.ignoredAt?.toISOString() ?? null,
-  firstSeenAt: input.firstSeenAt.toISOString(),
-  lastSeenAt: input.lastSeenAt.toISOString(),
+  firstSeenAt: input.firstSeenAt?.toISOString() ?? null,
+  lastSeenAt: input.lastSeenAt?.toISOString() ?? null,
   totalOccurrences: input.totalOccurrences,
   escalationOccurrenceThreshold: input.escalationOccurrenceThreshold,
   trend: input.trend,
@@ -750,8 +750,8 @@ export const getSignalDetail = createServerFn({ method: "GET" })
             isRegressed: issue.lifecycle.isRegressed,
             now,
           }),
-          firstSeenAt: occurrence?.firstSeenAt ?? issue.createdAt,
-          lastSeenAt: occurrence?.lastSeenAt ?? issue.createdAt,
+          firstSeenAt: occurrence?.firstSeenAt ?? null,
+          lastSeenAt: occurrence?.lastSeenAt ?? null,
           totalOccurrences: occurrence?.totalOccurrences ?? 0,
           escalationOccurrenceThreshold:
             occurrence !== null ? getEscalationOccurrenceThreshold(occurrence.baselineAvgOccurrences) : null,
