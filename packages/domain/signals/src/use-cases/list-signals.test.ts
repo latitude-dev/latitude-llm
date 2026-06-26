@@ -431,7 +431,7 @@ describe("listSignalsUseCase", () => {
     expect(result.offset).toBe(0)
   })
 
-  it("lists signals that have no occurrences yet in the default view", async () => {
+  it("excludes signals with no activity in the selected window from the listing", async () => {
     const now = new Date("2026-04-10T00:00:00.000Z")
     const activeSignal = makeSignal({
       id: SignalId("aaaaaaaaaaaaaaaaaaaaaaaa"),
@@ -440,7 +440,8 @@ describe("listSignalsUseCase", () => {
       clusteredAt: new Date("2026-03-20T08:00:00.000Z"),
     })
     // A freshly created user signal with no scores yet: no window metric and no
-    // full-history occurrence aggregate.
+    // full-history occurrence aggregate. It must not appear in the listing
+    // because it has no activity within the selected window.
     const freshSignal = makeSignal({
       id: SignalId("ffffffffffffffffffffffff"),
       origin: "user",
@@ -488,14 +489,12 @@ describe("listSignalsUseCase", () => {
       ),
     )
 
-    expect(result.totalCount).toBe(2)
-    const occurrencesById = new Map(result.items.map((issue) => [issue.id, issue.occurrences]))
-    expect(occurrencesById.get(freshSignal.id)).toBe(0)
-    expect(occurrencesById.get(activeSignal.id)).toBe(5)
-    const fresh = result.items.find((issue) => issue.id === freshSignal.id)
-    expect(fresh?.firstSeenAt).toEqual(freshSignal.createdAt)
-    expect(fresh?.lastSeenAt).toEqual(freshSignal.createdAt)
-    expect(fresh?.affectedSessionsPercent).toBe(0)
+    expect(result.totalCount).toBe(1)
+    expect(result.items.map((issue) => issue.id)).toEqual([activeSignal.id])
+    expect(result.items[0]?.occurrences).toBe(5)
+    // The project still has signals overall, so the empty-window state stays
+    // distinct from an empty project.
+    expect(result.hasAnySignals).toBe(true)
   })
 
   it("keeps analytics independent from the lifecycle tab and hydrates only visible signal ids", async () => {
