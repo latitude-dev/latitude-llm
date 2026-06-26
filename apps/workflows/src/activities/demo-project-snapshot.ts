@@ -128,7 +128,7 @@ const sha256 = (parts: readonly string[]): string => createHash("sha256").update
 
 const mapObservationId = (sourceId: unknown, scope: SeedScope): unknown =>
   typeof sourceId === "string"
-    ? sha256(["snapshot:taxonomy-observation", scope.projectId, sourceId]).slice(0, 32)
+    ? sha256(["snapshot:taxonomy-observation", scope.projectId, sourceId]).slice(0, 24)
     : sourceId
 
 /**
