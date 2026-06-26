@@ -75,11 +75,14 @@ const selectColumns = `
   indexed_at
 `
 
+const validObservationIdClause = "length(observation_id) = 24"
+
 const latestProjectWindow = `
   SELECT ${selectColumns}
   FROM taxonomy_observations FINAL
   WHERE organization_id = {organizationId:String}
     AND project_id = {projectId:String}
+    AND ${validObservationIdClause}
   ORDER BY start_time DESC, observation_id ASC
   LIMIT {windowLimit:UInt32}
 `
@@ -236,6 +239,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                           FROM taxonomy_observations FINAL
                           WHERE organization_id = {organizationId:String}
                             AND project_id = {projectId:String}
+                            AND ${validObservationIdClause}
                             AND observation_id IN {observationIds:Array(String)}`,
                   query_params: {
                     organizationId: organizationId as string,
@@ -266,6 +270,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                         FROM taxonomy_observations
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
+                          AND ${validObservationIdClause}
                           AND observation_id IN {observationIds:Array(String)}`,
                 query_params: {
                   organizationId: organizationId as string,
@@ -333,6 +338,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                         FROM taxonomy_observations FINAL
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
+                          AND ${validObservationIdClause}
                           AND length(embedding) > 0
                           AND start_time >= {since:DateTime64(9, 'UTC')}
                           AND observation_id IN (
@@ -347,6 +353,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                               FROM taxonomy_observations FINAL
                               WHERE organization_id = {organizationId:String}
                                 AND project_id = {projectId:String}
+                                AND ${validObservationIdClause}
                                 AND length(embedding) > 0
                                 AND start_time >= {since:DateTime64(9, 'UTC')}
                             )
@@ -383,6 +390,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                         FROM taxonomy_observations FINAL
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
+                          AND ${validObservationIdClause}
                           AND length(embedding) > 0
                           AND start_time >= {since:DateTime64(9, 'UTC')}
                           AND observation_id IN (
@@ -397,6 +405,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                               FROM taxonomy_observations FINAL
                               WHERE organization_id = {organizationId:String}
                                 AND project_id = {projectId:String}
+                                AND ${validObservationIdClause}
                                 AND length(embedding) > 0
                                 AND start_time >= {since:DateTime64(9, 'UTC')}
                             )
@@ -502,6 +511,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND session_id = {sessionId:String}
+                          AND ${validObservationIdClause}
                           ${hashClause}
                         ORDER BY start_time ASC, observation_id ASC`,
                 query_params: {
@@ -531,6 +541,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                         FROM taxonomy_observations FINAL
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
+                          AND ${validObservationIdClause}
                           AND start_time >= {since:DateTime64(9, 'UTC')}`,
                 query_params: {
                   organizationId: organizationId as string,
