@@ -34,14 +34,16 @@ function formatCompactElapsed(elapsedMs: number): string {
   return `${Math.max(1, Math.floor(elapsedMs / YEAR_MS))}y`
 }
 
-export function formatSeenAgeParts(lastSeenAtIso: string, firstSeenAtIso: string) {
+export function formatSeenAgeParts(lastSeenAtIso: string | null, firstSeenAtIso: string | null) {
   const now = Date.now()
-  const lastSeenAt = new Date(lastSeenAtIso).getTime()
-  const firstSeenAt = new Date(firstSeenAtIso).getTime()
 
   return {
-    lastSeenLabel: `${formatCompactElapsed(Math.max(0, now - lastSeenAt))} ago`,
-    firstSeenLabel: `${formatCompactElapsed(Math.max(0, now - firstSeenAt))} old`,
+    lastSeenLabel: lastSeenAtIso
+      ? `${formatCompactElapsed(Math.max(0, now - new Date(lastSeenAtIso).getTime()))} ago`
+      : "Never",
+    firstSeenLabel: firstSeenAtIso
+      ? `${formatCompactElapsed(Math.max(0, now - new Date(firstSeenAtIso).getTime()))} old`
+      : "Never",
   }
 }
 

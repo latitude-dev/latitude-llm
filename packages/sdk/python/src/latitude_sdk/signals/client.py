@@ -5,7 +5,9 @@ import typing
 
 from ..core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from ..core.request_options import RequestOptions
+from ..types.create_signal_response import CreateSignalResponse
 from ..types.export_signals_response import ExportSignalsResponse
+from ..types.filter_condition import FilterCondition
 from ..types.monitor_signal_response import MonitorSignalResponse
 from ..types.paginated_signals import PaginatedSignals
 from ..types.paginated_traces import PaginatedTraces
@@ -13,7 +15,10 @@ from ..types.signal_analytics_response import SignalAnalyticsResponse
 from ..types.signal_detail import SignalDetail
 from ..types.signal_histogram import SignalHistogram
 from ..types.signals_lifecycle_response import SignalsLifecycleResponse
+from ..types.update_signal_response import UpdateSignalResponse
 from .raw_client import AsyncRawSignalsClient, RawSignalsClient
+from .types.create_signal_body_evaluation import CreateSignalBodyEvaluation
+from .types.create_signal_body_priority import CreateSignalBodyPriority
 from .types.export_signals_body_lifecycle_group import ExportSignalsBodyLifecycleGroup
 from .types.signals_list_request_lifecycle_group import SignalsListRequestLifecycleGroup
 from .types.signals_list_request_sort_by import SignalsListRequestSortBy
@@ -131,6 +136,214 @@ class SignalsClient:
         )
         return _response.data
 
+    def create(
+        self,
+        project_slug: str,
+        *,
+        name: str,
+        description: str,
+        evaluation: CreateSignalBodyEvaluation,
+        priority: typing.Optional[CreateSignalBodyPriority] = OMIT,
+        filters: typing.Optional[typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]]] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> CreateSignalResponse:
+        """
+        Creates a user-defined signal with its membership detector — a judge from `settings`, or a raw `script` (advanced). The script is validated at save time (422 on a compile error). Deterministic scripts are backfilled over recent history; judges detect forward from creation.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        name : str
+            Human-readable name. Used to derive the slug.
+
+        description : str
+            What this signal captures.
+
+        evaluation : CreateSignalBodyEvaluation
+            The signal's membership detector. Provide exactly one of `settings` or `script`.
+
+        priority : typing.Optional[CreateSignalBodyPriority]
+            Manual triage priority. Null/omitted leaves it unset.
+
+        filters : typing.Optional[typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]]]
+            Row-local pre-gate restricting which traces the evaluation runs against. Omitted = all traces.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        CreateSignalResponse
+            Signal created
+
+        Examples
+        --------
+        from latitude import LatitudeApiClient
+        from latitude.signals import (
+            CreateSignalBodyEvaluationSettings,
+            CreateSignalBodyEvaluationSettingsSettings,
+        )
+
+        client = LatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+        client.signals.create(
+            project_slug="projectSlug",
+            name="name",
+            description="description",
+            evaluation=CreateSignalBodyEvaluationSettings(
+                settings=CreateSignalBodyEvaluationSettingsSettings(
+                    criteria="criteria",
+                ),
+            ),
+        )
+        """
+        _response = self._raw_client.create(
+            project_slug,
+            name=name,
+            description=description,
+            evaluation=evaluation,
+            priority=priority,
+            filters=filters,
+            request_options=request_options,
+        )
+        return _response.data
+
+    def get(
+        self, project_slug: str, signal_slug: str, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> SignalDetail:
+        """
+        Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_slug : str
+            Signal slug.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SignalDetail
+            Signal
+
+        Examples
+        --------
+        from latitude import LatitudeApiClient
+
+        client = LatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+        client.signals.get(
+            project_slug="projectSlug",
+            signal_slug="signalSlug",
+        )
+        """
+        _response = self._raw_client.get(project_slug, signal_slug, request_options=request_options)
+        return _response.data
+
+    def delete(
+        self, project_slug: str, signal_slug: str, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> None:
+        """
+        Soft-deletes a signal and archives its detector so it stops matching new traces. Existing scores are retained but excluded from reads; the slug becomes reusable.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_slug : str
+            Signal slug.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        from latitude import LatitudeApiClient
+
+        client = LatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+        client.signals.delete(
+            project_slug="projectSlug",
+            signal_slug="signalSlug",
+        )
+        """
+        _response = self._raw_client.delete(project_slug, signal_slug, request_options=request_options)
+        return _response.data
+
+    def update(
+        self,
+        project_slug: str,
+        signal_slug: str,
+        *,
+        name: typing.Optional[str] = OMIT,
+        description: typing.Optional[str] = OMIT,
+        filters: typing.Optional[typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]]] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> UpdateSignalResponse:
+        """
+        Updates a signal's name, description, and evaluation pre-gate `filters`. Filter changes apply forward-only — existing membership is never re-evaluated. The slug is stable.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_slug : str
+            Signal slug.
+
+        name : typing.Optional[str]
+            New name. Omitted leaves it unchanged.
+
+        description : typing.Optional[str]
+            New description. Omitted leaves it unchanged.
+
+        filters : typing.Optional[typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]]]
+            New evaluation pre-gate. Explicit `null` clears it; omitted leaves it unchanged.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        UpdateSignalResponse
+            Signal updated
+
+        Examples
+        --------
+        from latitude import LatitudeApiClient
+
+        client = LatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+        client.signals.update(
+            project_slug="projectSlug",
+            signal_slug="signalSlug",
+        )
+        """
+        _response = self._raw_client.update(
+            project_slug,
+            signal_slug,
+            name=name,
+            description=description,
+            filters=filters,
+            request_options=request_options,
+        )
+        return _response.data
+
     def analytics(
         self,
         project_slug: str,
@@ -183,43 +396,6 @@ class SignalsClient:
         _response = self._raw_client.analytics(
             project_slug, from_iso=from_iso, to_iso=to_iso, request_options=request_options
         )
-        return _response.data
-
-    def get(
-        self, project_slug: str, signal_slug: str, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> SignalDetail:
-        """
-        Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.
-
-        Parameters
-        ----------
-        project_slug : str
-            Project slug (human-readable identifier)
-
-        signal_slug : str
-            Signal slug.
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        SignalDetail
-            Signal
-
-        Examples
-        --------
-        from latitude import LatitudeApiClient
-
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
-        )
-        client.signals.get(
-            project_slug="projectSlug",
-            signal_slug="signalSlug",
-        )
-        """
-        _response = self._raw_client.get(project_slug, signal_slug, request_options=request_options)
         return _response.data
 
     def trend(
@@ -748,6 +924,246 @@ class AsyncSignalsClient:
         )
         return _response.data
 
+    async def create(
+        self,
+        project_slug: str,
+        *,
+        name: str,
+        description: str,
+        evaluation: CreateSignalBodyEvaluation,
+        priority: typing.Optional[CreateSignalBodyPriority] = OMIT,
+        filters: typing.Optional[typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]]] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> CreateSignalResponse:
+        """
+        Creates a user-defined signal with its membership detector — a judge from `settings`, or a raw `script` (advanced). The script is validated at save time (422 on a compile error). Deterministic scripts are backfilled over recent history; judges detect forward from creation.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        name : str
+            Human-readable name. Used to derive the slug.
+
+        description : str
+            What this signal captures.
+
+        evaluation : CreateSignalBodyEvaluation
+            The signal's membership detector. Provide exactly one of `settings` or `script`.
+
+        priority : typing.Optional[CreateSignalBodyPriority]
+            Manual triage priority. Null/omitted leaves it unset.
+
+        filters : typing.Optional[typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]]]
+            Row-local pre-gate restricting which traces the evaluation runs against. Omitted = all traces.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        CreateSignalResponse
+            Signal created
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude import AsyncLatitudeApiClient
+        from latitude.signals import (
+            CreateSignalBodyEvaluationSettings,
+            CreateSignalBodyEvaluationSettingsSettings,
+        )
+
+        client = AsyncLatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+
+
+        async def main() -> None:
+            await client.signals.create(
+                project_slug="projectSlug",
+                name="name",
+                description="description",
+                evaluation=CreateSignalBodyEvaluationSettings(
+                    settings=CreateSignalBodyEvaluationSettingsSettings(
+                        criteria="criteria",
+                    ),
+                ),
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.create(
+            project_slug,
+            name=name,
+            description=description,
+            evaluation=evaluation,
+            priority=priority,
+            filters=filters,
+            request_options=request_options,
+        )
+        return _response.data
+
+    async def get(
+        self, project_slug: str, signal_slug: str, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> SignalDetail:
+        """
+        Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_slug : str
+            Signal slug.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SignalDetail
+            Signal
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude import AsyncLatitudeApiClient
+
+        client = AsyncLatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+
+
+        async def main() -> None:
+            await client.signals.get(
+                project_slug="projectSlug",
+                signal_slug="signalSlug",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.get(project_slug, signal_slug, request_options=request_options)
+        return _response.data
+
+    async def delete(
+        self, project_slug: str, signal_slug: str, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> None:
+        """
+        Soft-deletes a signal and archives its detector so it stops matching new traces. Existing scores are retained but excluded from reads; the slug becomes reusable.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_slug : str
+            Signal slug.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude import AsyncLatitudeApiClient
+
+        client = AsyncLatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+
+
+        async def main() -> None:
+            await client.signals.delete(
+                project_slug="projectSlug",
+                signal_slug="signalSlug",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.delete(project_slug, signal_slug, request_options=request_options)
+        return _response.data
+
+    async def update(
+        self,
+        project_slug: str,
+        signal_slug: str,
+        *,
+        name: typing.Optional[str] = OMIT,
+        description: typing.Optional[str] = OMIT,
+        filters: typing.Optional[typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]]] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> UpdateSignalResponse:
+        """
+        Updates a signal's name, description, and evaluation pre-gate `filters`. Filter changes apply forward-only — existing membership is never re-evaluated. The slug is stable.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_slug : str
+            Signal slug.
+
+        name : typing.Optional[str]
+            New name. Omitted leaves it unchanged.
+
+        description : typing.Optional[str]
+            New description. Omitted leaves it unchanged.
+
+        filters : typing.Optional[typing.Dict[str, typing.Optional[typing.Sequence[FilterCondition]]]]
+            New evaluation pre-gate. Explicit `null` clears it; omitted leaves it unchanged.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        UpdateSignalResponse
+            Signal updated
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude import AsyncLatitudeApiClient
+
+        client = AsyncLatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+
+
+        async def main() -> None:
+            await client.signals.update(
+                project_slug="projectSlug",
+                signal_slug="signalSlug",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.update(
+            project_slug,
+            signal_slug,
+            name=name,
+            description=description,
+            filters=filters,
+            request_options=request_options,
+        )
+        return _response.data
+
     async def analytics(
         self,
         project_slug: str,
@@ -807,51 +1223,6 @@ class AsyncSignalsClient:
         _response = await self._raw_client.analytics(
             project_slug, from_iso=from_iso, to_iso=to_iso, request_options=request_options
         )
-        return _response.data
-
-    async def get(
-        self, project_slug: str, signal_slug: str, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> SignalDetail:
-        """
-        Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.
-
-        Parameters
-        ----------
-        project_slug : str
-            Project slug (human-readable identifier)
-
-        signal_slug : str
-            Signal slug.
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        SignalDetail
-            Signal
-
-        Examples
-        --------
-        import asyncio
-
-        from latitude import AsyncLatitudeApiClient
-
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
-        )
-
-
-        async def main() -> None:
-            await client.signals.get(
-                project_slug="projectSlug",
-                signal_slug="signalSlug",
-            )
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.get(project_slug, signal_slug, request_options=request_options)
         return _response.data
 
     async def trend(

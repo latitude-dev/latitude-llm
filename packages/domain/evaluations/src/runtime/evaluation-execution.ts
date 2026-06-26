@@ -1,21 +1,6 @@
-import {
-  AI,
-  AICredentialError,
-  AIError,
-  type formatGenAIConversation,
-  formatGenAIMessage,
-  type GenerateResult,
-  type GenerateTelemetryCapture,
-  resolveGenerationConfig,
-} from "@domain/ai"
+import { type formatGenAIConversation, formatGenAIMessage } from "@domain/ai"
 import { estimateCost } from "@domain/models"
-import { Effect } from "effect"
 import { z } from "zod"
-import { EvaluationExecutionError } from "../errors.ts"
-
-export type EvaluationScriptSchema<T> = z.ZodType<T>
-
-export const evaluationRuntimeZod = z
 
 export const EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL = {
   provider: "amazon-bedrock",
@@ -40,9 +25,6 @@ if (result.passed) {
 } else {
   return Failed(0, result.feedback)
 }`
-
-const INVALID_EVALUATION_SCRIPT_MESSAGE = "Invalid evaluation script: does not match the expected LLM-as-judge template"
-const INTERPOLATION_PATTERN = /\$\{([^}]+)\}/g
 
 export const EVALUATION_CONVERSATION_PLACEHOLDER = ["${", "conversation}"].join("")
 
@@ -79,31 +61,9 @@ export const evaluationExecutionResultSchema = z.object({
 })
 export type EvaluationExecutionResult = z.infer<typeof evaluationExecutionResultSchema>
 
-export type ExecuteEvaluationScriptWithAIError = AIError | AICredentialError | EvaluationExecutionError
-
+// Wraps a judge prompt into the MVP sandbox script (one `llm()` call returning the present-verdict
+// Passed/Failed). The single source of the judge wrapper, shared by baseline + settings codegen.
 export const wrapPromptAsEvaluationScript = (prompt: string): string => MVP_SCRIPT_PREFIX + prompt + MVP_SCRIPT_SUFFIX
-
-export const extractPromptFromEvaluationScript = (script: string): string | null => {
-  const trimmed = script.trim()
-  if (!trimmed.startsWith(MVP_SCRIPT_PREFIX) || !trimmed.endsWith(MVP_SCRIPT_SUFFIX)) {
-    return null
-  }
-
-  return trimmed.slice(MVP_SCRIPT_PREFIX.length, trimmed.length - MVP_SCRIPT_SUFFIX.length)
-}
-
-export const validateEvaluationScript = (script: string): boolean => {
-  const prompt = extractPromptFromEvaluationScript(script)
-  if (prompt === null) return false
-
-  if (prompt.includes("`")) return false
-
-  for (const match of prompt.matchAll(INTERPOLATION_PATTERN)) {
-    if (match[0] !== EVALUATION_CONVERSATION_PLACEHOLDER) return false
-  }
-
-  return true
-}
 
 export const toEvaluationConversationMessages = (
   allMessages: Parameters<typeof formatGenAIConversation>[0],
@@ -112,9 +72,6 @@ export const toEvaluationConversationMessages = (
     role: message.role,
     content: formatGenAIMessage(message),
   }))
-
-export const formatEvaluationConversationForPrompt = (conversation: readonly EvaluationConversationMessage[]): string =>
-  conversation.map((message) => `[${message.role}] ${message.content}`).join("\n")
 
 export const estimateEvaluationScriptCostMicrocents = (
   result: {
@@ -144,94 +101,3 @@ export const toEvaluationExecutionResult = (result: EvaluationScriptExecution): 
     tokens: result.totalTokens,
     cost: result.totalCostMicrocents,
   })
-
-const llmJudgeResultSchema = evaluationRuntimeZod.object({
-  passed: evaluationRuntimeZod.boolean(),
-  feedback: evaluationRuntimeZod.string(),
-})
-
-// TODO(eval-sandbox): replace this extract-and-call approach with a proper sandboxed JS runtime
-// that executes the full script. The current implementation constrains all evaluations to an
-// LLM-as-judge template. When sandbox lands, restore AsyncFunction-based execution with the
-// full runtime contract (conversation, issue, z, llm, Passed, Failed).
-export const executeEvaluationScript = async (input: {
-  readonly script: string
-  readonly conversation: readonly EvaluationConversationMessage[]
-  readonly issue: EvaluationSignalContext
-  readonly generateStructuredObject: <T>(input: {
-    readonly prompt: string
-    readonly schema: EvaluationScriptSchema<T>
-  }) => Promise<GenerateResult<T>>
-  readonly costModel?: { readonly provider: string; readonly model: string }
-}): Promise<EvaluationScriptExecution> => {
-  const promptTemplate = extractPromptFromEvaluationScript(input.script)
-  if (promptTemplate === null) {
-    throw new Error(INVALID_EVALUATION_SCRIPT_MESSAGE)
-  }
-
-  const conversationText = formatEvaluationConversationForPrompt(input.conversation)
-  const resolvedPrompt = promptTemplate.replaceAll(EVALUATION_CONVERSATION_PLACEHOLDER, conversationText)
-
-  const result = await input.generateStructuredObject({
-    prompt: resolvedPrompt,
-    schema: llmJudgeResultSchema,
-  })
-
-  const costMicrocents = estimateEvaluationScriptCostMicrocents(result, input.costModel)
-
-  return {
-    result: {
-      passed: result.object.passed,
-      value: result.object.passed ? 1 : 0,
-      feedback: result.object.feedback,
-    },
-    totalTokens: result.tokens,
-    totalDurationNs: result.duration,
-    totalCostMicrocents: costMicrocents,
-  }
-}
-
-export const executeEvaluationScriptWithAI = Effect.fn("evaluations.executeEvaluationScriptWithAi")(function* (input: {
-  readonly script: string
-  readonly conversation: readonly EvaluationConversationMessage[]
-  readonly issue: EvaluationSignalContext
-  readonly telemetry?: GenerateTelemetryCapture
-}) {
-  yield* Effect.annotateCurrentSpan("evaluation.conversationMessageCount", input.conversation.length)
-
-  const ai = yield* AI
-  const services = yield* Effect.context<never>()
-  const modelConfig = yield* resolveGenerationConfig("EVALUATION_JUDGE", EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL)
-
-  return yield* Effect.tryPromise({
-    try: () =>
-      executeEvaluationScript({
-        script: input.script,
-        conversation: input.conversation,
-        issue: input.issue,
-        costModel: modelConfig,
-        generateStructuredObject: <T>(llmInput: {
-          readonly prompt: string
-          readonly schema: EvaluationScriptSchema<T>
-        }): Promise<GenerateResult<T>> =>
-          Effect.runPromiseWith(services)(
-            ai.generate({
-              ...modelConfig,
-              system: EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
-              prompt: llmInput.prompt,
-              schema: llmInput.schema,
-              ...(input.telemetry ? { telemetry: input.telemetry } : {}),
-            }),
-          ),
-      }),
-    catch: (error) => {
-      if (error instanceof AIError || error instanceof AICredentialError) {
-        return error
-      }
-
-      return new EvaluationExecutionError({
-        message: error instanceof Error ? error.message : "Evaluation execution failed",
-      })
-    },
-  })
-})

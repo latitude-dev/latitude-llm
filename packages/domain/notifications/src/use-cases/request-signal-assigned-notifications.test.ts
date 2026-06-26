@@ -24,6 +24,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   name: "Assigned issue",
   description: "Repeatable failure",
   source: "annotation",
+  origin: "system",
   assigneeId,
   priority: null,
   centroid: createSignalCentroid(),

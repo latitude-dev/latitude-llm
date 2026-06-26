@@ -78,6 +78,7 @@ const makeSignal = (overrides?: Partial<Signal>): Signal => ({
   name: "Token leakage in responses",
   description: "The assistant leaks API tokens in its response.",
   source: "annotation",
+  origin: "system",
   assigneeId: null,
   priority: null,
   centroid: createSignalCentroid(),
@@ -195,7 +196,7 @@ describe("discoverSignalUseCase", () => {
       scoreId: score.id,
     })
     expect(scores.get(score.id)?.signalId).toBeNull()
-    expect(issues.get(existingSignal.id)?.centroid.mass).toBe(0)
+    expect(issues.get(existingSignal.id)?.centroid?.mass).toBe(0)
     expect(inserted).toHaveLength(0)
     expect(fakeAi.calls.embed).toHaveLength(0)
     expect(startedWorkflows).toEqual([
@@ -384,7 +385,7 @@ describe("discoverSignalUseCase", () => {
       scoreId: score.id,
     })
     expect(scores.get(score.id)?.signalId).toBeNull()
-    expect(issues.get(foreignSignal.id)?.centroid.mass).toBe(0)
+    expect(issues.get(foreignSignal.id)?.centroid?.mass).toBe(0)
     expect(inserted).toHaveLength(0)
     expect(startedWorkflows).toHaveLength(1)
   })
@@ -449,7 +450,7 @@ describe("discoverSignalUseCase", () => {
       scoreId: score.id,
     })
     expect(scores.get(score.id)?.signalId).toBeNull()
-    expect(issues.get(foreignSignal.id)?.centroid.mass).toBe(0)
+    expect(issues.get(foreignSignal.id)?.centroid?.mass).toBe(0)
     expect(inserted).toHaveLength(0)
     expect(startedWorkflows).toHaveLength(1)
   })

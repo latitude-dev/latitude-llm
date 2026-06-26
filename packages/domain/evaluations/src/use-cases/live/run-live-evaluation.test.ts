@@ -1,4 +1,4 @@
-import { type AI, AI_GENERATE_TELEMETRY_TAGS, AIError, type GenerateInput, type GenerateResult } from "@domain/ai"
+import type { AI } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import {
   BillingOverrideRepository,
@@ -16,9 +16,7 @@ import {
   seedBillingUsagePeriod,
 } from "@domain/billing/testing"
 import { OutboxEventWriter, type OutboxEventWriterShape } from "@domain/events"
-import { createFeatureFlag, FeatureFlagRepository } from "@domain/feature-flags"
-import { createFakeFeatureFlagRepository } from "@domain/feature-flags/testing"
-import type { DetectorHealthTracker, ScriptRuntime } from "@domain/sandbox"
+import { type DetectorHealthTracker, type ScriptRuntime, ScriptRuntimeError } from "@domain/sandbox"
 import { createFakeDetectorHealthTracker, createFakeScriptRuntime } from "@domain/sandbox/testing"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
@@ -247,7 +245,6 @@ function createUseCaseLayer(input: {
   readonly signalRepository?: ReturnType<typeof createSignalRepository> | undefined
   readonly aiLayer?: ReturnType<typeof createFakeAI>["layer"] | undefined
   readonly billingLayer?: ReturnType<typeof createBillingLayer> | undefined
-  readonly featureFlagRepository?: ReturnType<typeof createFakeFeatureFlagRepository>["repository"] | undefined
   readonly scriptRuntimeLayer?: ReturnType<typeof createFakeScriptRuntime>["layer"] | undefined
   readonly detectorHealthLayer?: ReturnType<typeof createFakeDetectorHealthTracker>["layer"] | undefined
 }): Layer.Layer<
@@ -259,7 +256,6 @@ function createUseCaseLayer(input: {
   | DetectorHealthTracker
   | EvaluationSignalRepository
   | EvaluationRepository
-  | FeatureFlagRepository
   | ScoreAnalyticsRepository
   | OutboxEventWriter
   | ScoreRepository
@@ -282,7 +278,6 @@ function createUseCaseLayer(input: {
     ),
     input.aiLayer ?? createFakeAI().layer,
     input.billingLayer ?? createBillingLayer(),
-    Layer.succeed(FeatureFlagRepository, input.featureFlagRepository ?? createFakeFeatureFlagRepository().repository),
     input.scriptRuntimeLayer ?? createFakeScriptRuntime().layer,
     input.detectorHealthLayer ?? createFakeDetectorHealthTracker().layer,
   )
@@ -692,21 +687,16 @@ describe("runLiveEvaluationUseCase", () => {
           }),
       },
     })
-    const { layer: aiLayer, calls } = createFakeAI({
-      generate: <T>(input: GenerateInput<T>) =>
+    const { layer: aiLayer } = createFakeAI()
+    const scriptRuntime = createFakeScriptRuntime({
+      run: () =>
         Effect.succeed({
-          object: input.schema.parse({
-            passed: true,
-            value: 1,
-            feedback: "The conversation does not exhibit the linked issue.",
-          }),
-          tokens: 120,
+          value: 1,
+          feedback: "The conversation does not exhibit the linked issue.",
           duration: 456_000_000,
-          tokenUsage: {
-            input: 40,
-            output: 80,
-          },
-        } satisfies GenerateResult<T>),
+          tokens: 120,
+          cost: 0,
+        }),
     })
 
     const result = await Effect.runPromise(
@@ -718,6 +708,7 @@ describe("runLiveEvaluationUseCase", () => {
             scoreWriteLayer,
             signalRepository,
             aiLayer,
+            scriptRuntimeLayer: scriptRuntime.layer,
           }),
         ),
       ),
@@ -730,7 +721,7 @@ describe("runLiveEvaluationUseCase", () => {
       traceId: INPUT.traceId,
     })
     expect(duplicateCheckCalls).toBe(2)
-    expect(calls.generate).toHaveLength(1)
+    expect(scriptRuntime.calls.run).toHaveLength(1)
     expect(outboxEvents.map((event) => (event as { eventName: string }).eventName)).toEqual([
       "BillingUsagePeriodUpdated",
     ])
@@ -861,20 +852,18 @@ describe("runLiveEvaluationUseCase", () => {
     const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
     const signalRepository = createSignalRepository(() => Effect.succeed(issue))
     const operations: string[] = []
-    const { layer: aiLayer, calls } = createFakeAI({
-      generate: <T>(input: GenerateInput<T>) =>
+    const { layer: aiLayer } = createFakeAI()
+    const scriptRuntime = createFakeScriptRuntime({
+      run: () =>
         Effect.sync(() => {
-          operations.push("ai-generate")
+          operations.push("script-run")
           return {
-            object: input.schema.parse({
-              passed: true,
-              value: 1,
-              feedback: "The conversation does not exhibit the linked issue.",
-            }),
-            tokens: 12,
+            value: 1,
+            feedback: "The conversation does not exhibit the linked issue.",
             duration: 1,
-            tokenUsage: { input: 6, output: 6 },
-          } satisfies GenerateResult<T>
+            tokens: 12,
+            cost: 0,
+          }
         }),
     })
     const scoreWriteLayer = createScoreWriteLayer({
@@ -896,14 +885,15 @@ describe("runLiveEvaluationUseCase", () => {
             aiLayer,
             billingLayer: createBillingLayer(),
             scoreWriteLayer,
+            scriptRuntimeLayer: scriptRuntime.layer,
           }),
         ),
       ),
     )
 
     expect(result.action).toBe("persisted")
-    expect(operations).toEqual(["ai-generate", "billing-outbox-write", "score-outbox-write"])
-    expect(calls.generate).toHaveLength(1)
+    expect(operations).toEqual(["script-run", "billing-outbox-write", "score-outbox-write"])
+    expect(scriptRuntime.calls.run).toHaveLength(1)
   })
 
   it("persists the live evaluation result through the canonical score write path after hosted execution", async () => {
@@ -929,18 +919,17 @@ describe("runLiveEvaluationUseCase", () => {
       input: 40,
       output: aiTokens - 40,
     }
-    const { layer: aiLayer, calls } = createFakeAI({
-      generate: <T>(input: GenerateInput<T>) =>
+    const cost = estimateEvaluationScriptCostMicrocents({ tokens: aiTokens, tokenUsage: aiTokenUsage })
+    const { layer: aiLayer } = createFakeAI()
+    const scriptRuntime = createFakeScriptRuntime({
+      run: () =>
         Effect.succeed({
-          object: input.schema.parse({
-            passed: true,
-            value: 1,
-            feedback: "The conversation does not exhibit the linked issue.",
-          }),
-          tokens: aiTokens,
+          value: 1,
+          feedback: "The conversation does not exhibit the linked issue.",
           duration: aiDuration,
-          tokenUsage: aiTokenUsage,
-        } satisfies GenerateResult<T>),
+          tokens: aiTokens,
+          cost,
+        }),
     })
 
     const result = await Effect.runPromise(
@@ -952,6 +941,7 @@ describe("runLiveEvaluationUseCase", () => {
             scoreWriteLayer,
             signalRepository,
             aiLayer,
+            scriptRuntimeLayer: scriptRuntime.layer,
           }),
         ),
       ),
@@ -1002,7 +992,7 @@ describe("runLiveEvaluationUseCase", () => {
         passed: true,
         feedback: "The conversation does not exhibit the linked issue.",
         metadata: {
-          evaluationHash: evaluation.alignment.evaluationHash,
+          evaluationHash: evaluation.alignment?.evaluationHash,
         },
         error: null,
         errored: false,
@@ -1022,19 +1012,8 @@ describe("runLiveEvaluationUseCase", () => {
       "BillingUsagePeriodUpdated",
       "ScoreCreated",
     ])
-    expect(calls.generate).toHaveLength(1)
+    expect(scriptRuntime.calls.run).toHaveLength(1)
     expectImmutableAnalyticsSyncOrder(operations)
-    expect(calls.generate[0]?.telemetry).toMatchObject({
-      spanName: "evaluation.judge.live",
-      tags: [...AI_GENERATE_TELEMETRY_TAGS.evaluationJudgeLive],
-      metadata: {
-        organizationId: INPUT.organizationId,
-        projectId: INPUT.projectId,
-        evaluationId: INPUT.evaluationId,
-        signalId: "i".repeat(24),
-        traceId: INPUT.traceId,
-      },
-    })
   })
 
   it("leaves the score unassigned for a failing live evaluation result", async () => {
@@ -1060,18 +1039,17 @@ describe("runLiveEvaluationUseCase", () => {
       input: 30,
       output: aiTokens - 30,
     }
-    const { layer: aiLayer } = createFakeAI({
-      generate: <T>(input: GenerateInput<T>) =>
+    const cost = estimateEvaluationScriptCostMicrocents({ tokens: aiTokens, tokenUsage: aiTokenUsage })
+    const { layer: aiLayer } = createFakeAI()
+    const scriptRuntime = createFakeScriptRuntime({
+      run: () =>
         Effect.succeed({
-          object: input.schema.parse({
-            passed: false,
-            value: 0,
-            feedback: "The conversation exhibits the linked issue.",
-          }),
-          tokens: aiTokens,
+          value: 0,
+          feedback: "The conversation exhibits the linked issue.",
           duration: aiDuration,
-          tokenUsage: aiTokenUsage,
-        } satisfies GenerateResult<T>),
+          tokens: aiTokens,
+          cost,
+        }),
     })
 
     const result = await Effect.runPromise(
@@ -1083,6 +1061,7 @@ describe("runLiveEvaluationUseCase", () => {
             scoreWriteLayer,
             signalRepository,
             aiLayer,
+            scriptRuntimeLayer: scriptRuntime.layer,
           }),
         ),
       ),
@@ -1105,7 +1084,7 @@ describe("runLiveEvaluationUseCase", () => {
       passed: false,
       feedback: "The conversation exhibits the linked issue.",
       metadata: {
-        evaluationHash: evaluation.alignment.evaluationHash,
+        evaluationHash: evaluation.alignment?.evaluationHash,
       },
       error: null,
       errored: false,
@@ -1158,13 +1137,9 @@ describe("runLiveEvaluationUseCase", () => {
       return Effect.succeed(issue)
     })
     const { operations, persistedScores, inserted, outboxEvents, scoreWriteLayer } = createTrackedScoreWriteFixture()
-    const { layer: aiLayer, calls } = createFakeAI({
-      generate: () =>
-        Effect.fail(
-          new AIError({
-            message: "AI generation failed (openai/gpt-5.4): upstream timeout",
-          }),
-        ),
+    const { layer: aiLayer } = createFakeAI()
+    const scriptRuntime = createFakeScriptRuntime({
+      run: () => Effect.fail(new ScriptRuntimeError({ message: "evaluation script failed: upstream timeout" })),
     })
 
     const result = await Effect.runPromise(
@@ -1176,6 +1151,7 @@ describe("runLiveEvaluationUseCase", () => {
             scoreWriteLayer,
             signalRepository,
             aiLayer,
+            scriptRuntimeLayer: scriptRuntime.layer,
           }),
         ),
       ),
@@ -1189,7 +1165,7 @@ describe("runLiveEvaluationUseCase", () => {
 
     expect(result.context.execution).toMatchObject({
       kind: "errored",
-      error: "AI generation failed (openai/gpt-5.4): upstream timeout",
+      error: "evaluation script failed: upstream timeout",
       tokens: 0,
       cost: 0,
     })
@@ -1207,11 +1183,11 @@ describe("runLiveEvaluationUseCase", () => {
       signalId: null,
       value: 0,
       passed: false,
-      feedback: "AI generation failed (openai/gpt-5.4): upstream timeout",
+      feedback: "evaluation script failed: upstream timeout",
       metadata: {
-        evaluationHash: evaluation.alignment.evaluationHash,
+        evaluationHash: evaluation.alignment?.evaluationHash,
       },
-      error: "AI generation failed (openai/gpt-5.4): upstream timeout",
+      error: "evaluation script failed: upstream timeout",
       errored: true,
       duration: result.context.execution.duration,
       tokens: 0,
@@ -1225,13 +1201,13 @@ describe("runLiveEvaluationUseCase", () => {
       "BillingUsagePeriodUpdated",
       "ScoreCreated",
     ])
-    expect(calls.generate).toHaveLength(1)
+    expect(scriptRuntime.calls.run).toHaveLength(1)
     expectImmutableAnalyticsSyncOrder(operations)
   })
 
-  it("executes through the sandbox runtime when the evaluation-sandbox-runtime flag is enabled", async () => {
+  it("executes deterministic (non-template) scripts through the sandbox runtime", async () => {
     const evaluation = makeEvaluation({
-      // Not a template script: only executable by the sandbox runtime.
+      // A deterministic script with no llm() call — only executable by the sandbox runtime.
       script: "return Passed(1, 'no exhibition')",
     })
     const issue = makeSignal({
@@ -1243,11 +1219,6 @@ describe("runLiveEvaluationUseCase", () => {
     })
     const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
     const signalRepository = createSignalRepository(() => Effect.succeed(issue))
-    const featureFlagFixture = createFakeFeatureFlagRepository()
-    featureFlagFixture.featureFlags.set(
-      "evaluation-sandbox-runtime",
-      createFeatureFlag({ identifier: "evaluation-sandbox-runtime", enabledForAll: true }),
-    )
     const scriptRuntime = createFakeScriptRuntime({
       run: () => Effect.succeed({ value: 1, feedback: "no exhibition", duration: 9_000, tokens: 0, cost: 0 }),
     })
@@ -1261,7 +1232,6 @@ describe("runLiveEvaluationUseCase", () => {
             evaluationRepository,
             signalRepository,
             aiLayer,
-            featureFlagRepository: featureFlagFixture.repository,
             scriptRuntimeLayer: scriptRuntime.layer,
           }),
         ),
@@ -1299,13 +1269,9 @@ describe("runLiveEvaluationUseCase", () => {
     const detectorHealth = createFakeDetectorHealthTracker({
       recordRun: () => Effect.succeed({ runs: 20, errors: 11, degraded: true, newlyDegraded: true }),
     })
-    const { layer: aiLayer } = createFakeAI({
-      generate: () =>
-        Effect.fail(
-          new AIError({
-            message: "AI generation failed (openai/gpt-5.4): upstream timeout",
-          }),
-        ),
+    const { layer: aiLayer } = createFakeAI()
+    const scriptRuntime = createFakeScriptRuntime({
+      run: () => Effect.fail(new ScriptRuntimeError({ message: "evaluation script failed: upstream timeout" })),
     })
 
     const result = await Effect.runPromise(
@@ -1318,6 +1284,7 @@ describe("runLiveEvaluationUseCase", () => {
             signalRepository,
             aiLayer,
             detectorHealthLayer: detectorHealth.layer,
+            scriptRuntimeLayer: scriptRuntime.layer,
           }),
         ),
       ),
@@ -1370,15 +1337,9 @@ describe("runLiveEvaluationUseCase", () => {
     const detectorHealth = createFakeDetectorHealthTracker({
       recordRun: () => Effect.fail(new CacheError({ message: "redis unavailable" })),
     })
-    const aiTokenUsage = { input: 40, output: 80 }
-    const { layer: aiLayer } = createFakeAI({
-      generate: <T>(input: GenerateInput<T>) =>
-        Effect.succeed({
-          object: input.schema.parse({ passed: true, value: 1, feedback: "ok" }),
-          tokens: 120,
-          duration: 1_000,
-          tokenUsage: aiTokenUsage,
-        } satisfies GenerateResult<T>),
+    const { layer: aiLayer } = createFakeAI()
+    const scriptRuntime = createFakeScriptRuntime({
+      run: () => Effect.succeed({ value: 1, feedback: "ok", duration: 1_000, tokens: 120, cost: 0 }),
     })
 
     const result = await Effect.runPromise(
@@ -1390,6 +1351,7 @@ describe("runLiveEvaluationUseCase", () => {
             signalRepository,
             aiLayer,
             detectorHealthLayer: detectorHealth.layer,
+            scriptRuntimeLayer: scriptRuntime.layer,
           }),
         ),
       ),

@@ -274,6 +274,9 @@ importers:
       '@platform/queue-bullmq':
         specifier: workspace:*
         version: link:../../packages/platform/queue-bullmq
+      '@platform/sandbox-quickjs':
+        specifier: workspace:*
+        version: link:../../packages/platform/sandbox-quickjs
       '@platform/storage-object':
         specifier: workspace:*
         version: link:../../packages/platform/storage-object
@@ -875,6 +878,9 @@ importers:
       '@platform/queue-bullmq':
         specifier: workspace:*
         version: link:../../packages/platform/queue-bullmq
+      '@platform/sandbox-quickjs':
+        specifier: workspace:*
+        version: link:../../packages/platform/sandbox-quickjs
       '@platform/workflows-temporal':
         specifier: workspace:*
         version: link:../../packages/platform/workflows-temporal
@@ -1270,9 +1276,6 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../events
-      '@domain/feature-flags':
-        specifier: workspace:*
-        version: link:../feature-flags
       '@domain/models':
         specifier: workspace:*
         version: link:../models
@@ -1711,6 +1714,9 @@ importers:
       '@domain/queue':
         specifier: workspace:*
         version: link:../queue
+      '@domain/sandbox':
+        specifier: workspace:*
+        version: link:../sandbox
       '@domain/scores':
         specifier: workspace:*
         version: link:../scores
@@ -2492,13 +2498,6 @@ importers:
       quickjs-emscripten:
         specifier: 'catalog:'
         version: 0.32.0
-    devDependencies:
-      '@domain/ai':
-        specifier: workspace:*
-        version: link:../../domain/ai
-      '@domain/evaluations':
-        specifier: workspace:*
-        version: link:../../domain/evaluations
 
   packages/platform/slack:
     dependencies:

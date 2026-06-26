@@ -26,6 +26,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal =>
     name: "Signal candidate",
     description: "Repeated assistant failure",
     source: "annotation",
+    origin: "system",
     assigneeId: null,
     priority: null,
     centroid: createSignalCentroid(),

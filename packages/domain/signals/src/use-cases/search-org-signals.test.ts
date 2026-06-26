@@ -25,6 +25,7 @@ const makeSignal = (id: string, projectId: ProjectId, name: string, overrides: P
   name,
   description: "",
   source: "annotation",
+  origin: "system",
   assigneeId: null,
   priority: null,
   centroid: createSignalCentroid(),

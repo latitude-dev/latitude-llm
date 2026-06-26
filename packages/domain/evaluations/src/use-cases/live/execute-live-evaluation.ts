@@ -12,17 +12,12 @@ import {
   evaluationExecutionResultPayloadSchema,
   evaluationExecutionResultSchema,
   evaluationSignalContextSchema,
-  executeEvaluationScriptWithAI,
   toEvaluationConversationMessages,
   toEvaluationExecutionResult,
-  validateEvaluationScript,
 } from "../../runtime/evaluation-execution.ts"
 import { executeEvaluationScriptSandboxed } from "../../runtime/sandbox-execution.ts"
 
 export type ExecuteLiveEvaluationError = AIError | AICredentialError | LiveEvaluationExecutionError
-
-const INVALID_LIVE_EVALUATION_SCRIPT_MESSAGE =
-  "Stored evaluation script is not executable by the MVP live evaluation runtime"
 
 export const liveEvaluationSignalContextSchema = evaluationSignalContextSchema
 export type LiveEvaluationSignalContext = EvaluationSignalContext
@@ -39,21 +34,12 @@ const liveEvaluationExecutionTelemetrySchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional(),
 })
 
-/**
- * `legacy` is the template-extraction MVP bridge; `sandbox` compiles and runs
- * the full stored script in the sandbox runtime (`specs/sandbox-runtime.md`).
- * Callers derive the choice from the `evaluation-sandbox-runtime` flag.
- */
-export const liveEvaluationRuntimeSchema = z.enum(["legacy", "sandbox"])
-export type LiveEvaluationRuntime = z.infer<typeof liveEvaluationRuntimeSchema>
-
 export const liveEvaluationExecutionInputSchema = z.object({
   evaluationId: evaluationSchema.shape.id,
   script: evaluationSchema.shape.script,
   issue: liveEvaluationSignalContextSchema,
   conversation: liveEvaluationConversationInputSchema,
   telemetry: liveEvaluationExecutionTelemetrySchema.optional(),
-  runtime: liveEvaluationRuntimeSchema.optional(),
 })
 export type LiveEvaluationExecutionInput = z.infer<typeof liveEvaluationExecutionInputSchema>
 
@@ -75,32 +61,16 @@ const toGenerateTelemetryCapture = (
 export const executeLiveEvaluationUseCase = (input: LiveEvaluationExecutionInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("evaluation.id", input.evaluationId)
-    const runtime = input.runtime ?? "legacy"
-    yield* Effect.annotateCurrentSpan("evaluation.runtime", runtime)
-
-    // The sandbox runtime executes the full script, so the template-only
-    // constraint applies to the legacy extract-and-call bridge alone.
-    if (runtime === "legacy" && !validateEvaluationScript(input.script)) {
-      return yield* new LiveEvaluationExecutionError({
-        evaluationId: input.evaluationId,
-        message: INVALID_LIVE_EVALUATION_SCRIPT_MESSAGE,
-      })
-    }
 
     const conversation = toEvaluationConversationMessages(input.conversation)
     const telemetry = toGenerateTelemetryCapture(input.telemetry)
 
-    const scriptExecutionInput = {
+    const execution = yield* executeEvaluationScriptSandboxed({
       script: input.script,
       conversation,
       issue: input.issue,
       ...(telemetry ? { telemetry } : {}),
-    }
-    const execution = yield* (
-      runtime === "sandbox"
-        ? executeEvaluationScriptSandboxed(scriptExecutionInput)
-        : executeEvaluationScriptWithAI(scriptExecutionInput)
-    ).pipe(
+    }).pipe(
       Effect.catchTag("EvaluationExecutionError", (error) =>
         Effect.fail(
           new LiveEvaluationExecutionError({

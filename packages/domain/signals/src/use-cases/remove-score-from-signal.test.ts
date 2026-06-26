@@ -28,6 +28,7 @@ const makeSignal = (overrides?: Partial<Signal>): Signal => ({
   name: "Token leakage in responses",
   description: "The assistant leaks API tokens in its response.",
   source: "annotation",
+  origin: "system",
   assigneeId: null,
   priority: null,
   centroid: createSignalCentroid(),
@@ -136,7 +137,7 @@ describe("removeScoreFromSignalUseCase", () => {
       createPassthroughSqlClient(),
     )
 
-    expect(signalWithCentroid.centroid.mass).toBeGreaterThan(0)
+    expect(signalWithCentroid.centroid?.mass).toBeGreaterThan(0)
 
     const result = await Effect.runPromise(
       removeScoreFromSignalUseCase({
@@ -154,7 +155,7 @@ describe("removeScoreFromSignalUseCase", () => {
     expect(fakeAi.calls.embed).toHaveLength(1)
 
     const updatedSignal = issues.get(signalId)
-    expect(updatedSignal?.centroid.mass).toBe(0)
+    expect(updatedSignal?.centroid?.mass).toBe(0)
   })
 
   it("keeps remaining centroid mass positive after removing one contribution", async () => {
@@ -203,6 +204,6 @@ describe("removeScoreFromSignalUseCase", () => {
     expect(result).toEqual({ action: "removed" })
 
     const updatedSignal = issues.get(signalId)
-    expect(updatedSignal?.centroid.mass).toBeGreaterThan(0)
+    expect(updatedSignal?.centroid?.mass).toBeGreaterThan(0)
   })
 })

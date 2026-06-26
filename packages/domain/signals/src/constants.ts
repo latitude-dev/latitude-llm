@@ -301,16 +301,6 @@ export const SIGNAL_DETAILS_MAX_OCCURRENCES = 25
 export const SIGNAL_REFRESH_THROTTLE_MS = 8 * 60 * 60 * 1000
 
 // ---------------------------------------------------------------------------
-// Denoising / visibility
-// ---------------------------------------------------------------------------
-
-/**
- * Minimum number of linked scores before a non-annotation-backed issue
- * becomes visible in the main Signals UI.
- */
-export const MIN_OCCURRENCES_FOR_VISIBILITY = 3
-
-// ---------------------------------------------------------------------------
 // Discovery serialization locks
 // ---------------------------------------------------------------------------
 

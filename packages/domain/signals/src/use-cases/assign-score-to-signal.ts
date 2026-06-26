@@ -80,10 +80,27 @@ const buildSignalWithAssignedScore = ({
   readonly normalizedEmbedding: readonly number[]
   readonly assignedAt: Date
 }): { readonly updatedSignal: Signal; readonly isRegression: boolean } => {
+  // Reify regression at write time: a score newer than the issue's resolution
+  // means the issue is no longer resolved. Clearing `resolvedAt` here makes
+  // "is the issue regressed" a stored fact (and gives the regression event
+  // idempotency for free — a subsequent score in the same cycle won't see
+  // resolvedAt != null and won't re-emit).
+  const isRegression =
+    issue.ignoredAt === null && issue.resolvedAt !== null && score.createdAt.getTime() > issue.resolvedAt.getTime()
+
+  // Only discovered signals carry a centroid; this assignment path never runs for a
+  // user-created (centroid-less) signal, but guard for type-safety.
+  if (issue.centroid === null) {
+    return {
+      updatedSignal: { ...issue, resolvedAt: isRegression ? null : issue.resolvedAt, updatedAt: assignedAt },
+      isRegression,
+    }
+  }
+
   const centroid = updateSignalCentroid({
     centroid: {
       ...issue.centroid,
-      clusteredAt: issue.clusteredAt,
+      clusteredAt: issue.clusteredAt ?? assignedAt,
     },
     score: {
       embedding: normalizedEmbedding,
@@ -93,14 +110,6 @@ const buildSignalWithAssignedScore = ({
     operation: "add",
     timestamp: assignedAt,
   })
-
-  // Reify regression at write time: a score newer than the issue's resolution
-  // means the issue is no longer resolved. Clearing `resolvedAt` here makes
-  // "is the issue regressed" a stored fact (and gives the regression event
-  // idempotency for free — a subsequent score in the same cycle won't see
-  // resolvedAt != null and won't re-emit).
-  const isRegression =
-    issue.ignoredAt === null && issue.resolvedAt !== null && score.createdAt.getTime() > issue.resolvedAt.getTime()
 
   return {
     updatedSignal: {

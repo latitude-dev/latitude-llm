@@ -51,6 +51,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   name: "Secret leakage",
   description: "The assistant reveals internal credentials.",
   source: "annotation",
+  origin: "system",
   assigneeId: null,
   priority: null,
   centroid: createSignalCentroid(),

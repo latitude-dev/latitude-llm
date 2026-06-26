@@ -35,14 +35,18 @@ function SeenTile({
   relative,
 }: {
   readonly label: string
-  readonly iso: string
+  readonly iso: string | null
   readonly relative: string
 }) {
   return (
     <Tile label={label}>
-      <Tooltip asChild trigger={<Text.H5 color="foreground">{relative}</Text.H5>}>
-        {new Date(iso).toLocaleString()}
-      </Tooltip>
+      {iso ? (
+        <Tooltip asChild trigger={<Text.H5 color="foreground">{relative}</Text.H5>}>
+          {new Date(iso).toLocaleString()}
+        </Tooltip>
+      ) : (
+        <Text.H5 color="foregroundMuted">{relative}</Text.H5>
+      )}
     </Tile>
   )
 }
@@ -154,6 +158,7 @@ export function SignalSummary({ projectId, signalId }: { readonly projectId: str
           projectId={projectId}
           signalId={signalId}
           signalSource={issue?.source ?? "annotation"}
+          signalOrigin={issue?.origin ?? "system"}
           evaluations={issue?.evaluations ?? []}
           flaggerSlugs={issue?.flaggerSlugs ?? []}
           canMonitorSignal={issue ? issue.resolvedAt === null && issue.ignoredAt === null : false}

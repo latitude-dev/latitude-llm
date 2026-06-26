@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.2.0] - 2026-06-26
+
+### Added
+
+- `client.signals.create`, `client.signals.update`, and `client.signals.delete` on `LatitudeApiClient` and `AsyncLatitudeApiClient` — author signals over the API. `create` registers a signal with its own evaluation (declarative settings, e.g. an LLM judge with `criteria`, or a raw `script`) plus optional `priority` and `filters`; `update` changes a signal's `name`, `description`, and `filters`; `delete` removes a user-authored signal. Adds the `CreateSignalResponse` and `UpdateSignalResponse` types.
+
+### Changed
+
+- `Evaluation.alignment` and `Evaluation.aligned_at` are now optional — they are omitted for raw or deterministic evaluations that are not annotation-aligned.
+
 ## [6.1.0] - 2026-06-17
 
 ### Added

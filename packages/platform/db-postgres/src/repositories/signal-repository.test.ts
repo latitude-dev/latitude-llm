@@ -1,11 +1,5 @@
 import { NotFoundError, OrganizationId, ProjectId, SignalId, SqlClient, toSlug } from "@domain/shared"
-import {
-  createSignalCentroid,
-  MIN_OCCURRENCES_FOR_VISIBILITY,
-  type Signal,
-  SignalRepository,
-  signalSchema,
-} from "@domain/signals"
+import { createSignalCentroid, type Signal, SignalRepository, signalSchema } from "@domain/signals"
 import { Effect } from "effect"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { alertIncidents as alertIncidentsTable } from "../schema/alert-incidents.ts"
@@ -27,11 +21,14 @@ const signalBase = {
   organizationId: organizationId as string,
   projectId: projectId as string,
   source: "annotation" as const,
+  origin: "system" as const,
+  filters: null,
   centroid: createSignalCentroid(),
   clusteredAt: new Date("2026-04-01T00:00:00.000Z"),
   escalatedAt: null,
   resolvedAt: null,
   ignoredAt: null,
+  deletedAt: null,
   assigneeId: null,
   priority: null,
   createdAt: new Date("2026-04-01T00:00:00.000Z"),
@@ -60,36 +57,6 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => {
 
 const makeProvider = (database: InMemoryPostgres) =>
   withPostgres(SignalRepositoryLive, database.appPostgresClient, organizationId)
-
-const makeCustomScoreRow = (input: {
-  readonly id: string
-  readonly projectId: string
-  readonly signalId: string
-  readonly createdAt: Date
-}): typeof scoresTable.$inferInsert => ({
-  id: input.id,
-  organizationId,
-  projectId: input.projectId,
-  sessionId: null,
-  traceId: null,
-  spanId: null,
-  sourceType: "custom",
-  sourceId: `source-${input.id}`,
-  simulationId: null,
-  signalId: input.signalId,
-  value: 0.1,
-  passed: false,
-  feedback: `Feedback for ${input.id}`,
-  metadata: { channel: "api" },
-  error: null,
-  errored: false,
-  duration: 0,
-  tokens: 0,
-  cost: 0,
-  draftedAt: null,
-  createdAt: input.createdAt,
-  updatedAt: input.createdAt,
-})
 
 const makeAnnotationScoreRow = (input: {
   readonly id: string
@@ -407,7 +374,7 @@ describe("SignalRepositoryLive", () => {
     })
   })
 
-  it("lists only visible signals scoped to project, newest-first, and paginates with hasMore", async () => {
+  it("lists all non-deleted signals scoped to project, newest-first, and paginates with hasMore", async () => {
     const older = makeSignal({
       id: SignalId("aaaaaaaaaaaaaaaaaaaaaaaa"),
       projectId: listTestProjectId,
@@ -432,10 +399,12 @@ describe("SignalRepositoryLive", () => {
       updatedAt: new Date("2026-03-30T11:00:00.000Z"),
       clusteredAt: new Date("2026-03-30T11:00:00.000Z"),
     })
-    const hiddenLowEvidence = makeSignal({
+    // No occurrences and no annotations — still listed (e.g. a freshly user-created signal).
+    const noOccurrences = makeSignal({
       id: SignalId("dddddddddddddddddddddddd"),
       projectId: listTestProjectId,
       name: "Single weak occurrence",
+      origin: "user",
       createdAt: new Date("2026-03-30T12:00:00.000Z"),
       updatedAt: new Date("2026-03-30T12:00:00.000Z"),
       clusteredAt: new Date("2026-03-30T12:00:00.000Z"),
@@ -455,51 +424,11 @@ describe("SignalRepositoryLive", () => {
         yield* repository.save(older)
         yield* repository.save(mid)
         yield* repository.save(newest)
-        yield* repository.save(hiddenLowEvidence)
+        yield* repository.save(noOccurrences)
         yield* repository.save(wrongProject)
       }).pipe(makeProvider(database)),
     )
 
-    await database.db.insert(scoresTable).values([
-      ...Array.from({ length: MIN_OCCURRENCES_FOR_VISIBILITY }, (_, index) =>
-        makeCustomScoreRow({
-          id: `oldcustomscore000000000${index + 1}`,
-          projectId: listTestProjectId,
-          signalId: older.id,
-          createdAt: new Date("2026-03-30T08:30:00.000Z"),
-        }),
-      ),
-      ...Array.from({ length: MIN_OCCURRENCES_FOR_VISIBILITY }, (_, index) =>
-        makeCustomScoreRow({
-          id: `newcustomscore000000000${index + 1}`,
-          projectId: listTestProjectId,
-          signalId: newest.id,
-          createdAt: new Date("2026-03-30T11:30:00.000Z"),
-        }),
-      ),
-      makeCustomScoreRow({
-        id: "hiddenlowevidencecustom1",
-        projectId: listTestProjectId,
-        signalId: hiddenLowEvidence.id,
-        createdAt: new Date("2026-03-30T12:30:00.000Z"),
-      }),
-      ...Array.from({ length: MIN_OCCURRENCES_FOR_VISIBILITY }, (_, index) =>
-        makeCustomScoreRow({
-          id: `wrongprojectscore000000${index + 1}`,
-          projectId: otherProjectId,
-          signalId: wrongProject.id,
-          createdAt: new Date("2026-03-30T13:30:00.000Z"),
-        }),
-      ),
-    ])
-    await database.db.insert(scoresTable).values(
-      makeAnnotationScoreRow({
-        id: "midannotationevidence001",
-        projectId: listTestProjectId,
-        signalId: mid.id,
-        createdAt: new Date("2026-03-30T09:30:00.000Z"),
-      }),
-    )
     const page1 = await Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* SignalRepository
@@ -511,8 +440,8 @@ describe("SignalRepositoryLive", () => {
       }).pipe(makeProvider(database)),
     )
 
-    expect(page1.items.map((issue) => issue.id)).toEqual([newest.id, mid.id])
-    expect(page1.items.map((issue) => issue.id)).not.toContain(hiddenLowEvidence.id)
+    // All four in-project signals are visible regardless of occurrence count; wrongProject is excluded.
+    expect(page1.items.map((issue) => issue.id)).toEqual([noOccurrences.id, newest.id])
     expect(page1.hasMore).toBe(true)
     expect(page1.limit).toBe(2)
     expect(page1.offset).toBe(0)
@@ -528,7 +457,8 @@ describe("SignalRepositoryLive", () => {
       }).pipe(makeProvider(database)),
     )
 
-    expect(page2.items.map((issue) => issue.id)).toEqual([older.id])
+    expect(page2.items.map((issue) => issue.id)).toEqual([mid.id, older.id])
+    expect(page2.items.map((issue) => issue.id)).not.toContain(wrongProject.id)
     expect(page2.hasMore).toBe(false)
   })
 
@@ -559,16 +489,16 @@ describe("SignalRepositoryLive", () => {
     )
 
     await database.db.insert(scoresTable).values([
-      ...Array.from({ length: MIN_OCCURRENCES_FOR_VISIBILITY }, (_, index) =>
-        makeCustomScoreRow({
+      ...Array.from({ length: 3 }, (_, index) =>
+        makeAnnotationScoreRow({
           id: `stalemetadatascore00000${index + 1}`,
           projectId: listTestProjectId,
           signalId: staleMetadata.id,
           createdAt: new Date("2026-03-30T10:00:00.000Z"),
         }),
       ),
-      ...Array.from({ length: MIN_OCCURRENCES_FOR_VISIBILITY }, (_, index) =>
-        makeCustomScoreRow({
+      ...Array.from({ length: 3 }, (_, index) =>
+        makeAnnotationScoreRow({
           id: `freshmetadatascore00000${index + 1}`,
           projectId: listTestProjectId,
           signalId: freshMetadata.id,

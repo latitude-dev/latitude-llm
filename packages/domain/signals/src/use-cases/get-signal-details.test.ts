@@ -33,6 +33,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   name: "Sample issue",
   description: "Sample description",
   source: "annotation",
+  origin: "system",
   assigneeId: null,
   priority: null,
   centroid: createSignalCentroid(),
