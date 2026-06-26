@@ -14,11 +14,13 @@ export default function FolderHeader({
   open,
   hasChildren,
   onToggleOpen,
+  promptManagement,
 }: {
   node: Node | TempNode
   open: boolean
   hasChildren: boolean
   onToggleOpen?: () => void
+  promptManagement: boolean
 }) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
@@ -106,6 +108,8 @@ export default function FolderHeader({
   )
   const isEditing = isEditingState
   const actions = useMemo<MenuOption[]>(() => {
+    if (!promptManagement) return []
+
     return [
       {
         label: 'Rename folder',
@@ -162,6 +166,7 @@ export default function FolderHeader({
     deleteTmpFolder,
     setIsEditing,
     onAddNode,
+    promptManagement,
   ])
 
   return (

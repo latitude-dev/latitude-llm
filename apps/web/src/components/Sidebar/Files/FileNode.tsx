@@ -17,12 +17,14 @@ export type FileNodeProps = {
   nodeId: string
   currentUuid: string | undefined
   currentEvaluationUuid: ParamValue
+  promptManagement: boolean
 }
 
 export const FileNode = memo(function FileNode({
   nodeId,
   currentUuid,
   currentEvaluationUuid,
+  promptManagement,
 }: FileNodeProps) {
   const node = useTreeNode(nodeId)
   const open = !!useOpenPaths((state) => state.openPaths[node?.path ?? ''])
@@ -51,6 +53,7 @@ export const FileNode = memo(function FileNode({
         hasChildren={hasChildren}
         onToggleOpen={onToggleOpen}
         currentEvaluationUuid={currentEvaluationUuid}
+        promptManagement={promptManagement}
       />
 
       {node.isFile ? null : (
@@ -59,13 +62,17 @@ export const FileNode = memo(function FileNode({
             hidden: !open,
           })}
         >
-          <TempFolderChildren parentPath={node.path} />
+          <TempFolderChildren
+            parentPath={node.path}
+            promptManagement={promptManagement}
+          />
           {node.children.map((childId) => (
             <li key={childId} className='cursor-pointer'>
               <FileNode
                 nodeId={childId}
                 currentUuid={currentUuid}
                 currentEvaluationUuid={currentEvaluationUuid}
+                promptManagement={promptManagement}
               />
             </li>
           ))}
@@ -82,6 +89,7 @@ function NodeHeader({
   node,
   hasChildren,
   currentEvaluationUuid,
+  promptManagement,
 }: {
   selected: boolean
   open: boolean
@@ -89,6 +97,7 @@ function NodeHeader({
   hasChildren: boolean
   onToggleOpen: () => void
   currentEvaluationUuid: ParamValue
+  promptManagement: boolean
 }) {
   if (node.isFile) {
     return (
@@ -97,6 +106,7 @@ function NodeHeader({
         selected={selected}
         node={node}
         currentEvaluationUuid={currentEvaluationUuid}
+        promptManagement={promptManagement}
       />
     )
   }
@@ -107,11 +117,18 @@ function NodeHeader({
       open={open}
       hasChildren={hasChildren}
       onToggleOpen={onToggleOpen}
+      promptManagement={promptManagement}
     />
   )
 }
 
-export function TempFolderChildren({ parentPath }: { parentPath: string }) {
+export function TempFolderChildren({
+  parentPath,
+  promptManagement,
+}: {
+  parentPath: string
+  promptManagement: boolean
+}) {
   const selector = useCallback(
     (state: { tmpFolders: Record<string, TempNode[]> }) =>
       state.tmpFolders[parentPath] ?? [],
@@ -121,15 +138,17 @@ export function TempFolderChildren({ parentPath }: { parentPath: string }) {
 
   return tempNodes.map((node) => (
     <li key={node.id} className='cursor-pointer'>
-      <TempFolderTreeNode node={node} />
+      <TempFolderTreeNode node={node} promptManagement={promptManagement} />
     </li>
   ))
 }
 
 const TempFolderTreeNode = memo(function TempFolderTreeNode({
   node,
+  promptManagement,
 }: {
   node: TempNode
+  promptManagement: boolean
 }) {
   const openPaths = useOpenPaths((state) => state.openPaths)
   const togglePath = useOpenPaths((state) => state.togglePath)
@@ -149,6 +168,7 @@ const TempFolderTreeNode = memo(function TempFolderTreeNode({
         open={open}
         hasChildren={hasChildren}
         onToggleOpen={onToggleOpen}
+        promptManagement={promptManagement}
       />
       <ul
         className={cn('flex flex-col', {
@@ -157,7 +177,10 @@ const TempFolderTreeNode = memo(function TempFolderTreeNode({
       >
         {node.children.map((childNode) => (
           <li key={childNode.id} className='cursor-pointer'>
-            <TempFolderTreeNode node={childNode} />
+            <TempFolderTreeNode
+              node={childNode}
+              promptManagement={promptManagement}
+            />
           </li>
         ))}
       </ul>
