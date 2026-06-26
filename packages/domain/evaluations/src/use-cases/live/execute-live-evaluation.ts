@@ -1,6 +1,5 @@
 import type { AI, AICredentialError, AIError, GenerateTelemetryCapture } from "@domain/ai"
-import type { ScriptRuntime } from "@domain/sandbox"
-import { type TraceDetail, traceDetailSchema } from "@domain/spans"
+import type { ScriptRuntime, ScriptSessionContext } from "@domain/sandbox"
 import { Effect } from "effect"
 import { z } from "zod"
 import { evaluationSchema } from "../../entities/evaluation.ts"
@@ -12,7 +11,6 @@ import {
   evaluationExecutionResultPayloadSchema,
   evaluationExecutionResultSchema,
   evaluationSignalContextSchema,
-  toEvaluationConversationMessages,
   toEvaluationExecutionResult,
 } from "../../runtime/evaluation-execution.ts"
 import { executeEvaluationScriptSandboxed } from "../../runtime/sandbox-execution.ts"
@@ -21,9 +19,6 @@ export type ExecuteLiveEvaluationError = AIError | AICredentialError | LiveEvalu
 
 export const liveEvaluationSignalContextSchema = evaluationSignalContextSchema
 export type LiveEvaluationSignalContext = EvaluationSignalContext
-
-export const liveEvaluationConversationInputSchema = traceDetailSchema.shape.allMessages
-export type LiveEvaluationConversationInput = TraceDetail["allMessages"]
 
 export const liveEvaluationResultPayloadSchema = evaluationExecutionResultPayloadSchema
 export type LiveEvaluationResultPayload = EvaluationExecutionResultPayload
@@ -37,8 +32,7 @@ const liveEvaluationExecutionTelemetrySchema = z.object({
 export const liveEvaluationExecutionInputSchema = z.object({
   evaluationId: evaluationSchema.shape.id,
   script: evaluationSchema.shape.script,
-  issue: liveEvaluationSignalContextSchema,
-  conversation: liveEvaluationConversationInputSchema,
+  session: z.custom<ScriptSessionContext>((value) => value !== null && typeof value === "object"),
   telemetry: liveEvaluationExecutionTelemetrySchema.optional(),
 })
 export type LiveEvaluationExecutionInput = z.infer<typeof liveEvaluationExecutionInputSchema>
@@ -62,13 +56,11 @@ export const executeLiveEvaluationUseCase = (input: LiveEvaluationExecutionInput
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("evaluation.id", input.evaluationId)
 
-    const conversation = toEvaluationConversationMessages(input.conversation)
     const telemetry = toGenerateTelemetryCapture(input.telemetry)
 
     const execution = yield* executeEvaluationScriptSandboxed({
       script: input.script,
-      conversation,
-      issue: input.issue,
+      session: input.session,
       ...(telemetry ? { telemetry } : {}),
     }).pipe(
       Effect.catchTag("EvaluationExecutionError", (error) =>

@@ -1,3 +1,4 @@
+import { minimalScriptSession } from "@domain/sandbox"
 import { Effect } from "effect"
 import type {
   BaselineEvaluationExampleResult,
@@ -27,11 +28,7 @@ export const evaluateDraftAgainstExamplesUseCase = Effect.fn("evaluations.evalua
     for (const example of examples) {
       const execution = yield* executeEvaluationScriptSandboxed({
         script: input.script,
-        conversation: example.conversation,
-        issue: {
-          name: input.signalName,
-          description: input.signalDescription,
-        },
+        session: minimalScriptSession(example.conversation),
         telemetry: buildEvaluationAlignmentJudgeTelemetryCapture({
           scope: input.judgeTelemetry,
           traceId: String(example.traceId),

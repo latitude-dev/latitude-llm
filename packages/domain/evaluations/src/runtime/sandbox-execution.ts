@@ -1,13 +1,17 @@
 import { AI, AICredentialError, AIError, type GenerateTelemetryCapture, resolveGenerationConfig } from "@domain/ai"
-import { buildSchemaFromDescriptor, type HostLlmFunction, isScoreMatch, ScriptRuntime } from "@domain/sandbox"
+import {
+  buildSchemaFromDescriptor,
+  type HostLlmFunction,
+  isScoreMatch,
+  ScriptRuntime,
+  type ScriptSessionContext,
+} from "@domain/sandbox"
 import { Effect } from "effect"
 import { EvaluationExecutionError } from "../errors.ts"
 import {
   EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL,
   EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
-  type EvaluationConversationMessage,
   type EvaluationScriptExecution,
-  type EvaluationSignalContext,
   estimateEvaluationScriptCostMicrocents,
 } from "./evaluation-execution.ts"
 
@@ -25,11 +29,10 @@ const toExecutionError = (error: { readonly message: string; readonly cause?: un
 export const executeEvaluationScriptSandboxed = Effect.fn("evaluations.executeEvaluationScriptSandboxed")(
   function* (input: {
     readonly script: string
-    readonly conversation: readonly EvaluationConversationMessage[]
-    readonly issue: EvaluationSignalContext
+    readonly session: ScriptSessionContext
     readonly telemetry?: GenerateTelemetryCapture
   }) {
-    yield* Effect.annotateCurrentSpan("evaluation.conversationMessageCount", input.conversation.length)
+    yield* Effect.annotateCurrentSpan("evaluation.conversationMessageCount", input.session.conversation.length)
 
     const runtime = yield* ScriptRuntime
     const ai = yield* AI
@@ -63,7 +66,7 @@ export const executeEvaluationScriptSandboxed = Effect.fn("evaluations.executeEv
     const runResult = yield* runtime
       .run({
         script: compiled,
-        context: { conversation: input.conversation, issue: input.issue },
+        context: { session: input.session },
         llm,
       })
       .pipe(

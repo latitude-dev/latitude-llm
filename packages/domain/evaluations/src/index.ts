@@ -174,12 +174,10 @@ export {
 export {
   type ExecuteLiveEvaluationError,
   executeLiveEvaluationUseCase,
-  type LiveEvaluationConversationInput,
   type LiveEvaluationExecutionInput,
   type LiveEvaluationExecutionResult,
   type LiveEvaluationResultPayload,
   type LiveEvaluationSignalContext,
-  liveEvaluationConversationInputSchema,
   liveEvaluationExecutionInputSchema,
   liveEvaluationExecutionResultSchema,
   liveEvaluationResultPayloadSchema,
