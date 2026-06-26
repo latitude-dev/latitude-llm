@@ -102,7 +102,9 @@ def tool_conversation() -> str | None:
         },
     ]
 
-    first = client.chat.completions.create(model=MODEL, messages=messages, tools=tools, max_completion_tokens=MAX_TOKENS)
+    first = client.chat.completions.create(
+        model=MODEL, messages=messages, tools=tools, max_completion_tokens=MAX_TOKENS
+    )
     tool_call = first.choices[0].message.tool_calls[0]
     messages.append(first.choices[0].message)
     messages.append(
@@ -113,7 +115,9 @@ def tool_conversation() -> str | None:
         }
     )
 
-    second = client.chat.completions.create(model=MODEL, messages=messages, tools=tools, max_completion_tokens=MAX_TOKENS)
+    second = client.chat.completions.create(
+        model=MODEL, messages=messages, tools=tools, max_completion_tokens=MAX_TOKENS
+    )
     return second.choices[0].message.content
 
 
