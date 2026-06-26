@@ -33,13 +33,17 @@ export function FilesTree({
           documents={documents}
         />
         <ul className={cn('flex flex-col pt-1 pb-8')}>
-          <TempFolderChildren parentPath='' />
+          <TempFolderChildren
+            parentPath=''
+            promptManagement={promptManagement}
+          />
           {topLevelNodeIds.map((nodeId) => (
             <li key={nodeId} className='cursor-pointer'>
               <FileNode
                 nodeId={nodeId}
                 currentUuid={currentUuid}
                 currentEvaluationUuid={currentEvaluationUuid}
+                promptManagement={promptManagement}
               />
             </li>
           ))}

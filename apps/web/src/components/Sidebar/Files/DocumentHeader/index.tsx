@@ -35,11 +35,13 @@ export default function DocumentHeader({
   selected,
   node,
   currentEvaluationUuid,
+  promptManagement,
 }: {
   open: boolean
   selected: boolean
   node: Node
   currentEvaluationUuid: ParamValue
+  promptManagement: boolean
 }) {
   const { commit, isHead } = useCurrentCommit()
   const { project } = useCurrentProject()
@@ -129,6 +131,8 @@ export default function DocumentHeader({
     [documentUuid, commit.id],
   )
   const actions = useMemo<MenuOption[]>(() => {
+    if (!promptManagement) return []
+
     return [
       {
         label: 'Rename file',
@@ -176,6 +180,7 @@ export default function DocumentHeader({
     project.id,
     isHead,
     commit.uuid,
+    promptManagement,
   ])
   const icon = useMemo<IconName>(() => {
     const docName = node.name
@@ -193,8 +198,10 @@ export default function DocumentHeader({
       name={node.name}
       isEditing={isEditing}
       setIsEditing={setIsEditing}
-      isMainDocument={mainDocumentUuid === documentUuid}
-      setMainDocument={setMainDocument}
+      isMainDocument={
+        promptManagement ? mainDocumentUuid === documentUuid : undefined
+      }
+      setMainDocument={promptManagement ? setMainDocument : undefined}
       hasChildren={false}
       actions={actions}
       selected={selected}

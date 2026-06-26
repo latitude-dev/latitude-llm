@@ -35,6 +35,7 @@ export default async function CommitLayout({
   let session: SessionData
   let project: Project
   let commit: Commit | undefined
+  let headCommit: Commit | undefined
   let isHead = false
   const { projectId, commitUuid } = await params
   try {
@@ -47,7 +48,7 @@ export default async function CommitLayout({
       workspaceId: workspace.id,
     })
 
-    const headCommit = await getHeadCommitCached({
+    headCommit = await getHeadCommitCached({
       workspace,
       projectId: project.id,
     })
@@ -72,6 +73,14 @@ export default async function CommitLayout({
   }
 
   const productAccess = computeProductAccess(session.workspace)
+
+  if (!productAccess.promptManagement && headCommit && !isHead) {
+    return redirect(
+      ROUTES.projects
+        .detail({ id: project.id })
+        .commits.detail({ uuid: HEAD_COMMIT }).issues.root,
+    )
+  }
 
   return (
     <ProjectProvider project={project}>
