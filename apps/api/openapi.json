@@ -12164,36 +12164,6 @@
               "items": {
                 "type": "string",
                 "enum": [
-                  "monitor",
-                  "signal"
-                ]
-              },
-              "description": "Deprecated alias for `source_type`; prefer `source_type`."
-            },
-            "required": false,
-            "description": "Deprecated alias for `source_type`; prefer `source_type`.",
-            "name": "sourceTypes",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "Deprecated filter from the previous incidents model. This endpoint now filters by source and severity."
-            },
-            "required": false,
-            "description": "Deprecated filter from the previous incidents model. This endpoint now filters by source and severity.",
-            "name": "kinds",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
                   "low",
                   "medium",
                   "high"

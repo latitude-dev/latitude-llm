@@ -291,11 +291,7 @@ if typing.TYPE_CHECKING:
         InsertDatasetRowsBodyRowsItemOutput,
     )
     from .environment import LatitudeApiClientEnvironment
-    from .incidents import (
-        IncidentsListRequestSeveritiesItem,
-        IncidentsListRequestSourceType,
-        IncidentsListRequestSourceTypesItem,
-    )
+    from .incidents import IncidentsListRequestSeveritiesItem, IncidentsListRequestSourceType
     from .members import InviteMemberBodyRole, UpdateMemberRoleBodyRole
     from .monitors import ListMonitorsForTargetBodyTargetType, UpdateMonitorBodySeverity, UpdateMonitorBodyTrigger
     from .projects import UpdateProjectBodyFlaggers
@@ -446,7 +442,6 @@ _dynamic_imports: typing.Dict[str, str] = {
     "IncidentSourceType": ".types",
     "IncidentsListRequestSeveritiesItem": ".incidents",
     "IncidentsListRequestSourceType": ".incidents",
-    "IncidentsListRequestSourceTypesItem": ".incidents",
     "InsertDatasetRowsBodyRowsItem": ".datasets",
     "InsertDatasetRowsBodyRowsItemExpectedOutput": ".datasets",
     "InsertDatasetRowsBodyRowsItemInput": ".datasets",
@@ -790,7 +785,6 @@ __all__ = [
     "IncidentSourceType",
     "IncidentsListRequestSeveritiesItem",
     "IncidentsListRequestSourceType",
-    "IncidentsListRequestSourceTypesItem",
     "InsertDatasetRowsBodyRowsItem",
     "InsertDatasetRowsBodyRowsItemExpectedOutput",
     "InsertDatasetRowsBodyRowsItemInput",

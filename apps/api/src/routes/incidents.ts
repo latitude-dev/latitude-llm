@@ -1,6 +1,6 @@
 import { IncidentRepository, resolveIncidentUseCase } from "@domain/incidents"
 import { ProjectRepository } from "@domain/projects"
-import { AlertIncidentId, BadRequestError, cuidSchema, NotFoundError, OrganizationId, ProjectId } from "@domain/shared"
+import { AlertIncidentId, cuidSchema, NotFoundError, OrganizationId, ProjectId } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import {
   IncidentRepositoryLive,
@@ -57,57 +57,11 @@ const ListIncidentsQuerySchema = z.object({
     "Restrict to incidents triggered by this source type: `monitor` or `signal`.",
   ),
   source_id: cuidSchema.optional().describe("Restrict to incidents tied to one source entity id."),
-  sourceTypes: z
-    .preprocess(
-      (val) => (val === undefined || Array.isArray(val) ? val : [val]),
-      z.array(IncidentSourceTypeQuerySchema),
-    )
-    .optional()
-    .describe("Deprecated alias for `source_type`; prefer `source_type`."),
-  kinds: z
-    .preprocess((val) => (val === undefined || Array.isArray(val) ? val : [val]), z.array(z.string()))
-    .optional()
-    .describe("Deprecated filter from the previous incidents model. This endpoint now filters by source and severity."),
   severities: z
     .preprocess((val) => (val === undefined || Array.isArray(val) ? val : [val]), z.array(z.enum(INCIDENT_SEVERITIES)))
     .optional()
     .describe("Restrict to incidents whose severity matches any value in this list."),
 })
-
-type ListIncidentsQuery = z.infer<typeof ListIncidentsQuerySchema>
-
-const parseLegacySourceType = (sourceType: string | undefined) => {
-  if (sourceType === undefined) return undefined
-  const parsed = IncidentSourceTypeQuerySchema.safeParse(sourceType)
-  if (parsed.success) return parsed.data
-  throw new BadRequestError({ message: "`sourceType` must be `monitor` or `signal`." })
-}
-
-const parseLegacySourceId = (sourceId: string | undefined) => {
-  if (sourceId === undefined) return undefined
-  const parsed = cuidSchema.safeParse(sourceId)
-  if (parsed.success) return parsed.data
-  throw new BadRequestError({ message: "`sourceId` must be a valid id." })
-}
-
-export const resolveListIncidentsFilters = (
-  query: ListIncidentsQuery,
-  legacyQuery: { readonly sourceType?: string | undefined; readonly sourceId?: string | undefined },
-) => {
-  if (query.kinds !== undefined) {
-    throw new BadRequestError({ message: "`kinds` is no longer supported. Use `source_type` and `severities`." })
-  }
-
-  const legacySourceType = parseLegacySourceType(legacyQuery.sourceType)
-  const legacySourceId = parseLegacySourceId(legacyQuery.sourceId)
-
-  return {
-    sourceTypes: query.source_type
-      ? [query.source_type]
-      : (query.sourceTypes ?? (legacySourceType ? [legacySourceType] : undefined)),
-    sourceId: query.source_id ?? legacySourceId,
-  }
-}
 
 const ListIncidentsResponseSchema = z
   .object({
@@ -142,10 +96,7 @@ const listIncidents = incidentEndpoint({
     const query = c.req.valid("query")
     const organizationId = c.var.organization.id
     const { from, to } = resolveIncidentsRange(query.fromIso, query.toIso, new Date())
-    const { sourceTypes, sourceId } = resolveListIncidentsFilters(query, {
-      sourceType: c.req.query("sourceType"),
-      sourceId: c.req.query("sourceId"),
-    })
+    const sourceTypes = query.source_type ? [query.source_type] : undefined
 
     const incidents = await Effect.runPromise(
       Effect.gen(function* () {
@@ -159,7 +110,7 @@ const listIncidents = incidentEndpoint({
           from,
           to,
           ...(sourceTypes && sourceTypes.length > 0 ? { sourceTypes } : {}),
-          ...(sourceId ? { sourceId } : {}),
+          ...(query.source_id ? { sourceId: query.source_id } : {}),
           ...(query.severities && query.severities.length > 0 ? { severities: query.severities } : {}),
         })
       }).pipe(

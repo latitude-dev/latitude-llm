@@ -19,7 +19,6 @@ from ..types.incident import Incident
 from ..types.list_incidents_response import ListIncidentsResponse
 from .types.incidents_list_request_severities_item import IncidentsListRequestSeveritiesItem
 from .types.incidents_list_request_source_type import IncidentsListRequestSourceType
-from .types.incidents_list_request_source_types_item import IncidentsListRequestSourceTypesItem
 
 
 class RawIncidentsClient:
@@ -34,10 +33,6 @@ class RawIncidentsClient:
         to_iso: typing.Optional[dt.datetime] = None,
         source_type: typing.Optional[IncidentsListRequestSourceType] = None,
         source_id: typing.Optional[str] = None,
-        source_types: typing.Optional[
-            typing.Union[IncidentsListRequestSourceTypesItem, typing.Sequence[IncidentsListRequestSourceTypesItem]]
-        ] = None,
-        kinds: typing.Optional[typing.Union[str, typing.Sequence[str]]] = None,
         severities: typing.Optional[
             typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]
         ] = None,
@@ -63,12 +58,6 @@ class RawIncidentsClient:
         source_id : typing.Optional[str]
             Restrict to incidents tied to one source entity id.
 
-        source_types : typing.Optional[typing.Union[IncidentsListRequestSourceTypesItem, typing.Sequence[IncidentsListRequestSourceTypesItem]]]
-            Deprecated alias for `source_type`; prefer `source_type`.
-
-        kinds : typing.Optional[typing.Union[str, typing.Sequence[str]]]
-            Deprecated filter from the previous incidents model. This endpoint now filters by source and severity.
-
         severities : typing.Optional[typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]]
             Restrict to incidents whose severity matches any value in this list.
 
@@ -88,8 +77,6 @@ class RawIncidentsClient:
                 "toIso": serialize_datetime(to_iso) if to_iso is not None else None,
                 "source_type": source_type,
                 "source_id": source_id,
-                "sourceTypes": source_types,
-                "kinds": kinds,
                 "severities": severities,
             },
             request_options=request_options,
@@ -230,10 +217,6 @@ class AsyncRawIncidentsClient:
         to_iso: typing.Optional[dt.datetime] = None,
         source_type: typing.Optional[IncidentsListRequestSourceType] = None,
         source_id: typing.Optional[str] = None,
-        source_types: typing.Optional[
-            typing.Union[IncidentsListRequestSourceTypesItem, typing.Sequence[IncidentsListRequestSourceTypesItem]]
-        ] = None,
-        kinds: typing.Optional[typing.Union[str, typing.Sequence[str]]] = None,
         severities: typing.Optional[
             typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]
         ] = None,
@@ -259,12 +242,6 @@ class AsyncRawIncidentsClient:
         source_id : typing.Optional[str]
             Restrict to incidents tied to one source entity id.
 
-        source_types : typing.Optional[typing.Union[IncidentsListRequestSourceTypesItem, typing.Sequence[IncidentsListRequestSourceTypesItem]]]
-            Deprecated alias for `source_type`; prefer `source_type`.
-
-        kinds : typing.Optional[typing.Union[str, typing.Sequence[str]]]
-            Deprecated filter from the previous incidents model. This endpoint now filters by source and severity.
-
         severities : typing.Optional[typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]]
             Restrict to incidents whose severity matches any value in this list.
 
@@ -284,8 +261,6 @@ class AsyncRawIncidentsClient:
                 "toIso": serialize_datetime(to_iso) if to_iso is not None else None,
                 "source_type": source_type,
                 "source_id": source_id,
-                "sourceTypes": source_types,
-                "kinds": kinds,
                 "severities": severities,
             },
             request_options=request_options,

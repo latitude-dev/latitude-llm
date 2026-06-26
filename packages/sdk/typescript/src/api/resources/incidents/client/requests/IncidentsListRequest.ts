@@ -20,10 +20,6 @@ export interface IncidentsListRequest {
     source_type?: LatitudeApi.IncidentsListRequestSourceType;
     /** Restrict to incidents tied to one source entity id. */
     source_id?: string;
-    /** Deprecated alias for `source_type`; prefer `source_type`. */
-    sourceTypes?: LatitudeApi.IncidentsListRequestSourceType | LatitudeApi.IncidentsListRequestSourceType[];
-    /** Deprecated filter from the previous incidents model. This endpoint now filters by source and severity. */
-    kinds?: string | string[];
     /** Restrict to incidents whose severity matches any value in this list. */
     severities?: LatitudeApi.IncidentsListRequestSeveritiesItem | LatitudeApi.IncidentsListRequestSeveritiesItem[];
 }

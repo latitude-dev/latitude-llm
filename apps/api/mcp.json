@@ -9341,24 +9341,6 @@
             "minLength": 24,
             "maxLength": 24
           },
-          "sourceTypes": {
-            "description": "Deprecated alias for `source_type`; prefer `source_type`.",
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": [
-                "monitor",
-                "signal"
-              ]
-            }
-          },
-          "kinds": {
-            "description": "Deprecated filter from the previous incidents model. This endpoint now filters by source and severity.",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
           "severities": {
             "description": "Restrict to incidents whose severity matches any value in this list.",
             "type": "array",
