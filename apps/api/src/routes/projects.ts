@@ -180,7 +180,7 @@ const toResponse = (project: Project) => ({
   organizationId: project.organizationId as string,
   name: project.name,
   slug: project.slug,
-  settings: ProjectSettingsSchema.nullable().parse(project.settings),
+  settings: ProjectSettingsSchema.nullable().safeParse(project.settings).data ?? null,
   firstTraceAt: project.firstTraceAt ? project.firstTraceAt.toISOString() : null,
   deletedAt: project.deletedAt ? project.deletedAt.toISOString() : null,
   lastEditedAt: project.lastEditedAt.toISOString(),
