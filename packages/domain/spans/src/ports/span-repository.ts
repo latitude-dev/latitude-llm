@@ -27,6 +27,19 @@ export interface SpanMessagesData {
 }
 
 /**
+ * A tool span (`operation = execute_tool`) projected for the evaluation `session` context. `input` /
+ * `output` are the raw tool I/O strings (the caller truncates). Returned by `listToolSpansBySessionId`.
+ */
+export interface SessionToolSpan {
+  readonly traceId: TraceId
+  readonly name: string
+  readonly input: string
+  readonly output: string
+  readonly error: boolean
+  readonly durationNs: number
+}
+
+/**
  * Compound watermark for ingestion-ordered window reads. `ingested_at` is
  * stamped once per ingest request batch, so many spans share an identical
  * millisecond — `spanId` breaks ties so a limit-truncated read can resume
@@ -95,6 +108,17 @@ export interface SpanRepositoryShape {
     readonly startTimeFrom: Date
     readonly startTimeTo: Date
   }): Effect.Effect<readonly SpanMessagesData[], RepositoryError, ChSqlClient>
+
+  /**
+   * The session's tool spans (`operation = execute_tool`), projected to name + I/O + error + duration.
+   * Powers the `session.traces[].tools` evaluation context; membership mirrors `sessions_mv`
+   * (see listBySessionId). The light `Span` projection omits tool I/O, hence this focused read.
+   */
+  listToolSpansBySessionId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly sessionId: SessionId
+  }): Effect.Effect<readonly SessionToolSpan[], RepositoryError, ChSqlClient>
 
   /**
    * Same projection as findMessagesForTrace but across every trace in a

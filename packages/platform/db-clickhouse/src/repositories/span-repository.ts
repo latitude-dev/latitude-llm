@@ -13,7 +13,15 @@ import {
   toRepositoryError,
   TraceId as toTraceId,
 } from "@domain/shared"
-import type { Span, SpanDetail, SpanKind, SpanMessagesData, SpanStatusCode, ToolDefinition } from "@domain/spans"
+import type {
+  SessionToolSpan,
+  Span,
+  SpanDetail,
+  SpanKind,
+  SpanMessagesData,
+  SpanStatusCode,
+  ToolDefinition,
+} from "@domain/spans"
 import { SpanRepository, type SpanRepositoryShape } from "@domain/spans"
 import { normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
@@ -154,6 +162,25 @@ type SpanDetailRow = SpanListRow & {
   tool_input: string
   tool_output: string
 }
+
+interface SessionToolSpanRow {
+  trace_id: string
+  tool_name: string
+  tool_input: string
+  tool_output: string
+  status_code: number
+  error_type: string
+  duration_ns: string
+}
+
+const toSessionToolSpan = (row: SessionToolSpanRow): SessionToolSpan => ({
+  traceId: toTraceId(normalizeCHString(row.trace_id)),
+  name: normalizeCHString(row.tool_name),
+  input: row.tool_input,
+  output: row.tool_output,
+  error: (INT_TO_STATUS_CODE[row.status_code] ?? "unset") === "error" || normalizeCHString(row.error_type) !== "",
+  durationNs: Number(row.duration_ns),
+})
 
 const toBaseFields = (row: SpanListRow) => ({
   organizationId: toOrganizationId(normalizeCHString(row.organization_id)),
@@ -484,6 +511,44 @@ export const SpanRepositoryLive = Layer.effect(
           )
       })
 
+    const listToolSpansBySessionId: SpanRepositoryShape["listToolSpansBySessionId"] = ({
+      organizationId,
+      projectId,
+      sessionId,
+    }) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        return yield* chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              // Session membership mirrors sessions_mv (see listBySessionId); only execute_tool spans.
+              query: `SELECT trace_id, tool_name, tool_input, tool_output, status_code, error_type, duration_ns
+                    FROM (
+                      SELECT span_id, trace_id, tool_name, tool_input, tool_output, status_code, error_type, duration_ns, start_time, ingested_at
+                      FROM spans
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND coalesce(nullIf(session_id, ''), toString(trace_id)) = {sessionId:String}
+                        AND operation = 'execute_tool'
+                      ORDER BY span_id, ingested_at DESC
+                      LIMIT 1 BY span_id
+                    )
+                    ORDER BY start_time ASC`,
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                sessionId: sessionId as string,
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<SessionToolSpanRow>()
+          })
+          .pipe(
+            Effect.map((rows) => rows.map(toSessionToolSpan)),
+            Effect.mapError((error) => toRepositoryError(error, "listToolSpansBySessionId")),
+          )
+      })
+
     const listByIngestedAtWindow: SpanRepositoryShape["listByIngestedAtWindow"] = ({
       organizationId,
       projectId,
@@ -599,6 +664,8 @@ export const SpanRepositoryLive = Layer.effect(
       listByTraceId,
 
       listBySessionId,
+
+      listToolSpansBySessionId,
 
       listByProjectId,
 
