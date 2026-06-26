@@ -63,9 +63,6 @@ jobs:
       - name: Regenerate Fern-emitted TypeScript SDK
         run: ./fern/invoke.sh generate --group local-typescript --local --force
 
-      - name: Postprocess Fern-emitted TypeScript SDK
-        run: pnpm sdk:postprocess:typescript
-
       - name: Fail if packages/sdk/typescript/src drifted
         run: git diff --exit-code packages/sdk/typescript/src
 

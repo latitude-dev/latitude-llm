@@ -8,7 +8,7 @@ import type * as LatitudeApi from "../index.js";
 export interface MonitorConfig {
     filterSet?: LatitudeApi.MonitorFilterSet | undefined;
     /** Semantic query applied by inline monitor targets. */
-    query?: string | null | undefined;
+    query?: string | undefined;
     metric?: LatitudeApi.MonitorMetric | undefined;
     condition?: LatitudeApi.AlertCondition | undefined;
 }

@@ -20,9 +20,9 @@ export interface Monitor {
     target: LatitudeApi.MonitorTarget;
     rule: LatitudeApi.MonitorRule;
     /** ISO-8601 timestamp at which the monitor was muted, or `null` when active. */
-    mutedAt: string | null;
+    mutedAt?: string | undefined;
     /** ISO-8601 timestamp at which the monitor was deleted, or `null`. */
-    deletedAt: string | null;
+    deletedAt?: string | undefined;
     /** ISO-8601 timestamp of creation. */
     createdAt: string;
     /** ISO-8601 timestamp of the last update. */

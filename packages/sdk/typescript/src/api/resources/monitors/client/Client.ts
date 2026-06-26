@@ -137,11 +137,11 @@ export class MonitorsClient {
      *
      * @example
      *     await client.monitors.create("projectSlug", {
+     *         trigger: "match",
      *         name: "name",
      *         target: {
      *             type: "savedSearch"
      *         },
-     *         trigger: "match",
      *         severity: "low"
      *     })
      */

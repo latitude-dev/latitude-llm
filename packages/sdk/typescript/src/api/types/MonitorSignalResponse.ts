@@ -4,5 +4,5 @@ export interface MonitorSignalResponse {
     /** Identifier of the monitor job. */
     jobId: string;
     /** The id of the evaluation being realigned, or `null` when a brand-new evaluation is being generated. */
-    evaluationId: string | null;
+    evaluationId?: string | undefined;
 }

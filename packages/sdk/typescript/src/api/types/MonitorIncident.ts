@@ -18,10 +18,11 @@ export interface MonitorIncident {
     /** ISO-8601 timestamp at which the incident opened. */
     startedAt: string;
     /** ISO-8601 timestamp at which the incident closed, or `null` if still open. */
-    endedAt: string | null;
+    endedAt?: string | undefined;
     /** ISO-8601 timestamp at which the incident row was created. */
     createdAt: string;
-    condition: LatitudeApi.AlertCondition | null;
+    /** The monitor rule configuration when the incident opened, or `null` for signal incidents and match monitors. */
+    condition?: MonitorIncident.Condition | undefined;
     /** `true` when this incident triggered at least one notification. */
     notified: boolean;
 }
@@ -40,4 +41,8 @@ export namespace MonitorIncident {
         High: "high",
     } as const;
     export type Severity = (typeof Severity)[keyof typeof Severity];
+    /**
+     * The monitor rule configuration when the incident opened, or `null` for signal incidents and match monitors.
+     */
+    export type Condition = LatitudeApi.AlertThresholdCondition | LatitudeApi.AlertEscalatingCondition;
 }

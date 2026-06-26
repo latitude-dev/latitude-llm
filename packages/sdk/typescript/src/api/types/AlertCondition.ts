@@ -3,22 +3,16 @@
 import type * as LatitudeApi from "../index.js";
 
 /**
- * The monitor rule configuration when the incident opened, or `null` for signal incidents and match monitors.
+ * Condition that controls threshold or escalating incidents.
  */
-export type AlertCondition =
-    | {
-          trigger: "threshold";
-          metric: LatitudeApi.MonitorMetric;
-          threshold: LatitudeApi.AlertMetricThreshold;
-          direction?: ("above" | "below") | undefined;
-      }
-    | {
-          trigger: "escalating";
-          metric: LatitudeApi.MonitorMetric;
-          threshold?: LatitudeApi.AlertMetricThreshold | undefined;
-          direction?: ("above" | "below") | undefined;
-          sensitivity?: number | undefined;
-          window: {
-              minutes: number;
-          };
-      };
+export type AlertCondition = LatitudeApi.AlertCondition.Threshold | LatitudeApi.AlertCondition.Escalating;
+
+export namespace AlertCondition {
+    export interface Threshold extends LatitudeApi.AlertThresholdCondition {
+        trigger: "threshold";
+    }
+
+    export interface Escalating extends LatitudeApi.AlertEscalatingCondition {
+        trigger: "escalating";
+    }
+}

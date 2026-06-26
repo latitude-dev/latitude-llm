@@ -26,8 +26,7 @@
     "mcp:emit": "pnpm --filter @app/api mcp:emit",
     "mcp:inspect": "pnpm --filter @app/api mcp:inspect",
     "sdk:check": "./fern/invoke.sh check",
-    "sdk:postprocess:typescript": "node ./scripts/postprocess-typescript-sdk.mjs",
-    "generate:sdk": "pnpm openapi:emit && pnpm sdk:check && ./fern/invoke.sh generate --group local-typescript --local --force && pnpm sdk:postprocess:typescript && ./fern/invoke.sh generate --group local-python --local --force",
+    "generate:sdk": "pnpm openapi:emit && pnpm sdk:check && ./fern/invoke.sh generate --group local-typescript --local --force && ./fern/invoke.sh generate --group local-python --local --force",
     "docs:dev": "cd docs && pnpm dlx mint dev",
     "docs:check": "cd docs && pnpm dlx mint broken-links",
     "prepare": "pnpm hooks && effect-language-service patch"
