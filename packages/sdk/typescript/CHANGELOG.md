@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.2.1] - 2026-06-26
+
+### Fixed
+
+- Project list/get/create/update responses now strip internal-only `settings` fields (`isSample`, `onboardingType`, `onboardingCompleted`, `sampling`) that could leak from Postgres and break MCP `listProjects` output validation.
+
 ## [6.2.0] - 2026-06-26
 
 ### Added
