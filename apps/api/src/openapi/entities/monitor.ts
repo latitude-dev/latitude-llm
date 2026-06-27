@@ -1,6 +1,6 @@
 import { ALERT_SEVERITIES } from "@domain/incidents"
 import type { Monitor, MonitorIncidentItem } from "@domain/monitors"
-import { cuidSchema, FILTER_OPERATORS, MONITOR_TARGET_TYPES, MONITOR_TRIGGERS } from "@domain/shared"
+import { cuidSchema, FILTER_OPERATORS, MONITOR_STREAMS, MONITOR_TARGET_TYPES, MONITOR_TRIGGERS } from "@domain/shared"
 import { z } from "@hono/zod-openapi"
 import { AlertConditionSchema, incidentFields, toIncidentResponse } from "./incident.ts"
 
@@ -62,6 +62,13 @@ export const MonitorTargetSchema = z
     id: cuidSchema.nullable().describe("Target entity id, or `null` for project-wide targets."),
     filterSet: FilterSetSchema.optional().describe("Additional filters applied when evaluating the monitor."),
     query: z.string().nullable().optional().describe("Semantic query applied when evaluating inline trace targets."),
+    kind: z.enum(MONITOR_TARGET_TYPES).optional().describe("Normalized target kind returned on persisted monitors."),
+    stream: z.enum(MONITOR_STREAMS).optional().describe("Telemetry stream evaluated by the monitor."),
+    savedSearchId: cuidSchema
+      .nullable()
+      .optional()
+      .describe("Saved-search id for saved-search monitors, or `null` for inline targets."),
+    metric: MonitorMetricSchema.optional().describe("Default metric evaluated for this target."),
   })
   .openapi("MonitorTarget")
 

@@ -296,6 +296,71 @@ describe("requestIncidentNotificationsUseCase", () => {
     expect(disabled).toEqual({ status: "skipped", reason: "kind-disabled" })
   })
 
+  it("applies monitor match and escalating project gates", async () => {
+    const matchIncident = makeIncident({
+      sourceType: "monitor",
+      sourceId: monitorId,
+      endedAt: startedAt,
+      condition: null,
+    })
+    const disabledMatch = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({
+        alertIncidentId: matchIncident.id,
+        transition: "created",
+      }).pipe(
+        Effect.provide(
+          makeLayer({
+            incident: matchIncident,
+            projectSettings: { notifications: { incidents: { "monitor.match": false } } },
+          }),
+        ),
+      ),
+    )
+    expect(disabledMatch).toEqual({ status: "skipped", reason: "kind-disabled" })
+
+    const openedIncident = makeIncident({
+      sourceType: "monitor",
+      sourceId: monitorId,
+      endedAt: null,
+      condition: escalatingCondition,
+    })
+    const disabledOpened = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({
+        alertIncidentId: openedIncident.id,
+        transition: "created",
+      }).pipe(
+        Effect.provide(
+          makeLayer({
+            incident: openedIncident,
+            projectSettings: { notifications: { incidents: { "monitor.escalating": false } } },
+          }),
+        ),
+      ),
+    )
+    expect(disabledOpened).toEqual({ status: "skipped", reason: "kind-disabled" })
+
+    const closedIncident = makeIncident({
+      sourceType: "monitor",
+      sourceId: monitorId,
+      endedAt: new Date("2026-06-18T11:00:00.000Z"),
+      condition: escalatingCondition,
+    })
+    const disabledClosed = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({
+        alertIncidentId: closedIncident.id,
+        transition: "closed",
+      }).pipe(
+        Effect.provide(
+          makeLayer({
+            incident: closedIncident,
+            projectSettings: { notifications: { incidents: { "monitor.escalating": false } } },
+          }),
+        ),
+      ),
+    )
+    expect(disabledClosed).toEqual({ status: "skipped", reason: "kind-disabled" })
+  })
+
   it("skips monitor incidents when the owning monitor is muted", async () => {
     const incident = makeIncident({
       sourceType: "monitor",

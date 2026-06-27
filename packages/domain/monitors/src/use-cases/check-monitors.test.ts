@@ -1,7 +1,9 @@
 import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
+import { type Incident, isSignalEscalationEntrySignals } from "@domain/incidents"
 import { SavedSearchRepository } from "@domain/saved-searches"
 import { createFakeSavedSearchRepository } from "@domain/saved-searches/testing"
 import {
+  AlertIncidentId,
   ChSqlClient,
   type FilterSet,
   MonitorId,
@@ -61,9 +63,10 @@ const layersFor = (
   matches: readonly Date[],
   savedSearch: { readonly query: string | null; readonly filterSet: FilterSet } = { query: null, filterSet: {} },
   metricReaderLayer?: Layer.Layer<MetricSeriesReader>,
+  seedIncidents: readonly Incident[] = [],
 ) => {
   const monitorStore = createFakeMonitorRepository(monitors)
-  const incidentStore = createFakeAlertIncidentStore()
+  const incidentStore = createFakeAlertIncidentStore(seedIncidents)
   const metricReader = createFakeMetricSeriesReader(matches)
   const savedSearchStore = createFakeSavedSearchRepository([
     {
@@ -222,6 +225,118 @@ describe("checkMonitorsUseCase", () => {
       startedAt: firstMatch,
       endedAt: firstMatch,
       condition,
+    })
+  })
+
+  it("opens an escalating monitor incident through the sustained state machine", async () => {
+    const monitorId = MonitorId(cuid("m-esc"))
+    const condition = {
+      trigger: "escalating" as const,
+      metric: { kind: "count" as const },
+      threshold: { mode: "expected" as const, sensitivity: 3 },
+      sensitivity: 3,
+    }
+    const eventsInSpike = Array.from(
+      { length: 6 },
+      (_, index) => new Date(`2026-06-23T10:${String(index).padStart(2, "0")}:00.000Z`),
+    )
+    const eventsInCurrentHour = Array.from(
+      { length: 20 },
+      (_, index) => new Date(`2026-06-23T11:${String(index).padStart(2, "0")}:00.000Z`),
+    )
+    const { events, incidents, layer } = layersFor(
+      [
+        monitor({
+          id: monitorId,
+          rule: {
+            trigger: "escalating",
+            config: { metric: { kind: "count" }, condition },
+            severity: "high",
+          },
+        }),
+      ],
+      [...eventsInSpike, ...eventsInCurrentHour],
+    )
+
+    const result = await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
+
+    expect(result).toEqual({ checked: 1, evaluatable: 1, evaluated: 1, failed: 0 })
+    expect(incidents).toHaveLength(1)
+    expect(incidents[0]).toMatchObject({
+      sourceType: "monitor",
+      sourceId: monitorId,
+      severity: "high",
+      startedAt: new Date("2026-06-23T10:00:00.000Z"),
+      endedAt: null,
+      condition,
+    })
+    const entrySignals = incidents[0]?.entrySignals ?? null
+    expect(isSignalEscalationEntrySignals(entrySignals)).toBe(true)
+    if (isSignalEscalationEntrySignals(entrySignals)) {
+      expect(entrySignals.entryCount24h).toBe(26)
+    }
+    expect(events[0]).toMatchObject({ eventName: "IncidentCreated", aggregateType: "alert_incident" })
+  })
+
+  it("closes an open escalating monitor incident after exit dwell", async () => {
+    const monitorId = MonitorId(cuid("m-exit"))
+    const incidentId = AlertIncidentId(cuid("ai-exit"))
+    const condition = {
+      trigger: "escalating" as const,
+      metric: { kind: "count" as const },
+      threshold: { mode: "expected" as const, sensitivity: 3 },
+      sensitivity: 3,
+    }
+    const openIncident: Incident = {
+      id: incidentId,
+      organizationId,
+      projectId,
+      sourceType: "monitor",
+      sourceId: monitorId,
+      severity: "high",
+      startedAt: new Date("2026-06-23T10:00:00.000Z"),
+      endedAt: null,
+      createdAt: new Date("2026-06-23T10:05:00.000Z"),
+      entrySignals: {
+        expected1h: 0,
+        expected6hPerHour: 0,
+        stddev1h: 0,
+        stddev6hPerHour: 0,
+        kShort: 3,
+        kLong: 2,
+        entryThreshold1h: 0,
+        entryThreshold6hPerHour: 0,
+        entryCount24h: 30,
+      },
+      exitEligibleSince: new Date("2026-06-23T11:29:00.000Z"),
+      condition,
+    }
+    const { events, incidents, layer } = layersFor(
+      [
+        monitor({
+          id: monitorId,
+          rule: {
+            trigger: "escalating",
+            config: { metric: { kind: "count" }, condition },
+            severity: "high",
+          },
+        }),
+      ],
+      [],
+      { query: null, filterSet: {} },
+      undefined,
+      [openIncident],
+    )
+
+    const result = await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
+
+    expect(result).toEqual({ checked: 1, evaluatable: 1, evaluated: 1, failed: 0 })
+    expect(incidents[0]).toMatchObject({ id: incidentId, endedAt: now })
+    expect(events[0]).toMatchObject({
+      eventName: "IncidentClosed",
+      aggregateType: "alert_incident",
+      aggregateId: incidentId,
+      payload: { reason: "absolute-rate-drop", sourceType: "monitor", sourceId: monitorId },
     })
   })
 

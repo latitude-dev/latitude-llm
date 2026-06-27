@@ -7,6 +7,7 @@ import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
 from .monitor_filter_set import MonitorFilterSet
+from .monitor_metric import MonitorMetric
 from .monitor_target_type import MonitorTargetType
 
 
@@ -30,5 +31,22 @@ class MonitorTarget(UniversalBaseModel):
     """
     Semantic query applied when evaluating inline trace targets.
     """
+
+    kind: typing.Optional[MonitorTargetType] = pydantic.Field(default=None)
+    """
+    Normalized target kind returned on persisted monitors.
+    """
+
+    stream: typing.Optional[typing.Literal["traces", "spans", "sessions"]] = pydantic.Field(default=None)
+    """
+    Telemetry stream evaluated by the monitor.
+    """
+
+    saved_search_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="savedSearchId")] = None
+    """
+    Saved-search id for saved-search monitors, or `null` for inline targets.
+    """
+
+    metric: typing.Optional[MonitorMetric] = pydantic.Field(default=None)
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

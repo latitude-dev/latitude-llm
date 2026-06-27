@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.2.1] - 2026-06-26
+
+### Changed
+
+- Monitor target responses now document the normalized fields returned by monitor endpoints (`kind`, `stream`, `saved_search_id`, and `metric`).
+
 ## [6.2.0] - 2026-06-26
 
 ### Added

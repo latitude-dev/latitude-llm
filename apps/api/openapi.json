@@ -6835,6 +6835,44 @@
               "null"
             ],
             "description": "Semantic query applied when evaluating inline trace targets."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "savedSearch",
+              "tool",
+              "user",
+              "session"
+            ],
+            "description": "Normalized target kind returned on persisted monitors."
+          },
+          "stream": {
+            "type": "string",
+            "enum": [
+              "traces",
+              "spans",
+              "sessions"
+            ],
+            "description": "Telemetry stream evaluated by the monitor."
+          },
+          "savedSearchId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Saved-search id for saved-search monitors, or `null` for inline targets."
+          },
+          "metric": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MonitorMetric"
+              },
+              {
+                "description": "Default metric evaluated for this target."
+              }
+            ]
           }
         },
         "required": [
@@ -6997,7 +7035,8 @@
               "target",
               "severity",
               "trigger"
-            ]
+            ],
+            "additionalProperties": false
           },
           {
             "type": "object",

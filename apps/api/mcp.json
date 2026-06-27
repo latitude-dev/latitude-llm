@@ -13631,6 +13631,191 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "kind": {
+                      "description": "Normalized target kind returned on persisted monitors.",
+                      "type": "string",
+                      "enum": [
+                        "savedSearch",
+                        "tool",
+                        "user",
+                        "session"
+                      ]
+                    },
+                    "stream": {
+                      "description": "Telemetry stream evaluated by the monitor.",
+                      "type": "string",
+                      "enum": [
+                        "traces",
+                        "spans",
+                        "sessions"
+                      ]
+                    },
+                    "savedSearchId": {
+                      "description": "Saved-search id for saved-search monitors, or `null` for inline targets.",
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 24,
+                          "maxLength": 24
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "metric": {
+                      "description": "Default metric evaluated for this target.",
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "count",
+                              "description": "Count matching events in each evaluation bucket."
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "errorRate",
+                              "description": "Measure the fraction of matching events that errored."
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "sum",
+                              "description": "Sum a numeric field over matching events."
+                            },
+                            "field": {
+                              "type": "string",
+                              "enum": [
+                                "duration",
+                                "cost",
+                                "tokens"
+                              ],
+                              "description": "Numeric field to aggregate."
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "field"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "min",
+                              "description": "Find the minimum numeric field value over matching events."
+                            },
+                            "field": {
+                              "type": "string",
+                              "enum": [
+                                "duration",
+                                "cost",
+                                "tokens"
+                              ],
+                              "description": "Numeric field to aggregate."
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "field"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "max",
+                              "description": "Find the maximum numeric field value over matching events."
+                            },
+                            "field": {
+                              "type": "string",
+                              "enum": [
+                                "duration",
+                                "cost",
+                                "tokens"
+                              ],
+                              "description": "Numeric field to aggregate."
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "field"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "avg",
+                              "description": "Average a numeric field over matching events."
+                            },
+                            "field": {
+                              "type": "string",
+                              "enum": [
+                                "duration",
+                                "cost",
+                                "tokens"
+                              ],
+                              "description": "Numeric field to aggregate."
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "field"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "median",
+                              "description": "Find the median numeric field value over matching events."
+                            },
+                            "field": {
+                              "type": "string",
+                              "enum": [
+                                "duration",
+                                "cost",
+                                "tokens"
+                              ],
+                              "description": "Numeric field to aggregate."
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "field"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
                     }
                   },
                   "required": [
@@ -14790,6 +14975,191 @@
                             "type": "null"
                           }
                         ]
+                      },
+                      "kind": {
+                        "description": "Normalized target kind returned on persisted monitors.",
+                        "type": "string",
+                        "enum": [
+                          "savedSearch",
+                          "tool",
+                          "user",
+                          "session"
+                        ]
+                      },
+                      "stream": {
+                        "description": "Telemetry stream evaluated by the monitor.",
+                        "type": "string",
+                        "enum": [
+                          "traces",
+                          "spans",
+                          "sessions"
+                        ]
+                      },
+                      "savedSearchId": {
+                        "description": "Saved-search id for saved-search monitors, or `null` for inline targets.",
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 24,
+                            "maxLength": 24
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "metric": {
+                        "description": "Default metric evaluated for this target.",
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "count",
+                                "description": "Count matching events in each evaluation bucket."
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "errorRate",
+                                "description": "Measure the fraction of matching events that errored."
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "sum",
+                                "description": "Sum a numeric field over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "min",
+                                "description": "Find the minimum numeric field value over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "max",
+                                "description": "Find the maximum numeric field value over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "avg",
+                                "description": "Average a numeric field over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "median",
+                                "description": "Find the median numeric field value over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
                       }
                     },
                     "required": [
@@ -15088,6 +15458,191 @@
                           },
                           {
                             "type": "null"
+                          }
+                        ]
+                      },
+                      "kind": {
+                        "description": "Normalized target kind returned on persisted monitors.",
+                        "type": "string",
+                        "enum": [
+                          "savedSearch",
+                          "tool",
+                          "user",
+                          "session"
+                        ]
+                      },
+                      "stream": {
+                        "description": "Telemetry stream evaluated by the monitor.",
+                        "type": "string",
+                        "enum": [
+                          "traces",
+                          "spans",
+                          "sessions"
+                        ]
+                      },
+                      "savedSearchId": {
+                        "description": "Saved-search id for saved-search monitors, or `null` for inline targets.",
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 24,
+                            "maxLength": 24
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "metric": {
+                        "description": "Default metric evaluated for this target.",
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "count",
+                                "description": "Count matching events in each evaluation bucket."
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "errorRate",
+                                "description": "Measure the fraction of matching events that errored."
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "sum",
+                                "description": "Sum a numeric field over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "min",
+                                "description": "Find the minimum numeric field value over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "max",
+                                "description": "Find the maximum numeric field value over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "avg",
+                                "description": "Average a numeric field over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "median",
+                                "description": "Find the median numeric field value over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
                           }
                         ]
                       }
@@ -15717,6 +16272,191 @@
                           },
                           {
                             "type": "null"
+                          }
+                        ]
+                      },
+                      "kind": {
+                        "description": "Normalized target kind returned on persisted monitors.",
+                        "type": "string",
+                        "enum": [
+                          "savedSearch",
+                          "tool",
+                          "user",
+                          "session"
+                        ]
+                      },
+                      "stream": {
+                        "description": "Telemetry stream evaluated by the monitor.",
+                        "type": "string",
+                        "enum": [
+                          "traces",
+                          "spans",
+                          "sessions"
+                        ]
+                      },
+                      "savedSearchId": {
+                        "description": "Saved-search id for saved-search monitors, or `null` for inline targets.",
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 24,
+                            "maxLength": 24
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "metric": {
+                        "description": "Default metric evaluated for this target.",
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "count",
+                                "description": "Count matching events in each evaluation bucket."
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "errorRate",
+                                "description": "Measure the fraction of matching events that errored."
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "sum",
+                                "description": "Sum a numeric field over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "min",
+                                "description": "Find the minimum numeric field value over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "max",
+                                "description": "Find the maximum numeric field value over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "avg",
+                                "description": "Average a numeric field over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "median",
+                                "description": "Find the median numeric field value over matching events."
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "duration",
+                                  "cost",
+                                  "tokens"
+                                ],
+                                "description": "Numeric field to aggregate."
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "field"
+                            ],
+                            "additionalProperties": false
                           }
                         ]
                       }
@@ -16401,6 +17141,191 @@
                   },
                   {
                     "type": "null"
+                  }
+                ]
+              },
+              "kind": {
+                "description": "Normalized target kind returned on persisted monitors.",
+                "type": "string",
+                "enum": [
+                  "savedSearch",
+                  "tool",
+                  "user",
+                  "session"
+                ]
+              },
+              "stream": {
+                "description": "Telemetry stream evaluated by the monitor.",
+                "type": "string",
+                "enum": [
+                  "traces",
+                  "spans",
+                  "sessions"
+                ]
+              },
+              "savedSearchId": {
+                "description": "Saved-search id for saved-search monitors, or `null` for inline targets.",
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 24,
+                    "maxLength": 24
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "metric": {
+                "description": "Default metric evaluated for this target.",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "count",
+                        "description": "Count matching events in each evaluation bucket."
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "errorRate",
+                        "description": "Measure the fraction of matching events that errored."
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "sum",
+                        "description": "Sum a numeric field over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "min",
+                        "description": "Find the minimum numeric field value over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "max",
+                        "description": "Find the maximum numeric field value over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "avg",
+                        "description": "Average a numeric field over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "median",
+                        "description": "Find the median numeric field value over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
                   }
                 ]
               }
@@ -17646,6 +18571,191 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "kind": {
+                      "description": "Normalized target kind returned on persisted monitors.",
+                      "type": "string",
+                      "enum": [
+                        "savedSearch",
+                        "tool",
+                        "user",
+                        "session"
+                      ]
+                    },
+                    "stream": {
+                      "description": "Telemetry stream evaluated by the monitor.",
+                      "type": "string",
+                      "enum": [
+                        "traces",
+                        "spans",
+                        "sessions"
+                      ]
+                    },
+                    "savedSearchId": {
+                      "description": "Saved-search id for saved-search monitors, or `null` for inline targets.",
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 24,
+                          "maxLength": 24
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "metric": {
+                      "description": "Default metric evaluated for this target.",
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "count",
+                              "description": "Count matching events in each evaluation bucket."
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "errorRate",
+                              "description": "Measure the fraction of matching events that errored."
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "sum",
+                              "description": "Sum a numeric field over matching events."
+                            },
+                            "field": {
+                              "type": "string",
+                              "enum": [
+                                "duration",
+                                "cost",
+                                "tokens"
+                              ],
+                              "description": "Numeric field to aggregate."
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "field"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "min",
+                              "description": "Find the minimum numeric field value over matching events."
+                            },
+                            "field": {
+                              "type": "string",
+                              "enum": [
+                                "duration",
+                                "cost",
+                                "tokens"
+                              ],
+                              "description": "Numeric field to aggregate."
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "field"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "max",
+                              "description": "Find the maximum numeric field value over matching events."
+                            },
+                            "field": {
+                              "type": "string",
+                              "enum": [
+                                "duration",
+                                "cost",
+                                "tokens"
+                              ],
+                              "description": "Numeric field to aggregate."
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "field"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "avg",
+                              "description": "Average a numeric field over matching events."
+                            },
+                            "field": {
+                              "type": "string",
+                              "enum": [
+                                "duration",
+                                "cost",
+                                "tokens"
+                              ],
+                              "description": "Numeric field to aggregate."
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "field"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "median",
+                              "description": "Find the median numeric field value over matching events."
+                            },
+                            "field": {
+                              "type": "string",
+                              "enum": [
+                                "duration",
+                                "cost",
+                                "tokens"
+                              ],
+                              "description": "Numeric field to aggregate."
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "field"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
                     }
                   },
                   "required": [
@@ -18821,6 +19931,191 @@
                     "type": "null"
                   }
                 ]
+              },
+              "kind": {
+                "description": "Normalized target kind returned on persisted monitors.",
+                "type": "string",
+                "enum": [
+                  "savedSearch",
+                  "tool",
+                  "user",
+                  "session"
+                ]
+              },
+              "stream": {
+                "description": "Telemetry stream evaluated by the monitor.",
+                "type": "string",
+                "enum": [
+                  "traces",
+                  "spans",
+                  "sessions"
+                ]
+              },
+              "savedSearchId": {
+                "description": "Saved-search id for saved-search monitors, or `null` for inline targets.",
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 24,
+                    "maxLength": 24
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "metric": {
+                "description": "Default metric evaluated for this target.",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "count",
+                        "description": "Count matching events in each evaluation bucket."
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "errorRate",
+                        "description": "Measure the fraction of matching events that errored."
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "sum",
+                        "description": "Sum a numeric field over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "min",
+                        "description": "Find the minimum numeric field value over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "max",
+                        "description": "Find the maximum numeric field value over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "avg",
+                        "description": "Average a numeric field over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "median",
+                        "description": "Find the median numeric field value over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
               }
             },
             "required": [
@@ -19955,6 +21250,191 @@
                     "type": "null"
                   }
                 ]
+              },
+              "kind": {
+                "description": "Normalized target kind returned on persisted monitors.",
+                "type": "string",
+                "enum": [
+                  "savedSearch",
+                  "tool",
+                  "user",
+                  "session"
+                ]
+              },
+              "stream": {
+                "description": "Telemetry stream evaluated by the monitor.",
+                "type": "string",
+                "enum": [
+                  "traces",
+                  "spans",
+                  "sessions"
+                ]
+              },
+              "savedSearchId": {
+                "description": "Saved-search id for saved-search monitors, or `null` for inline targets.",
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 24,
+                    "maxLength": 24
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "metric": {
+                "description": "Default metric evaluated for this target.",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "count",
+                        "description": "Count matching events in each evaluation bucket."
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "errorRate",
+                        "description": "Measure the fraction of matching events that errored."
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "sum",
+                        "description": "Sum a numeric field over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "min",
+                        "description": "Find the minimum numeric field value over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "max",
+                        "description": "Find the maximum numeric field value over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "avg",
+                        "description": "Average a numeric field over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "median",
+                        "description": "Find the median numeric field value over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
               }
             },
             "required": [
@@ -20959,6 +22439,191 @@
                   },
                   {
                     "type": "null"
+                  }
+                ]
+              },
+              "kind": {
+                "description": "Normalized target kind returned on persisted monitors.",
+                "type": "string",
+                "enum": [
+                  "savedSearch",
+                  "tool",
+                  "user",
+                  "session"
+                ]
+              },
+              "stream": {
+                "description": "Telemetry stream evaluated by the monitor.",
+                "type": "string",
+                "enum": [
+                  "traces",
+                  "spans",
+                  "sessions"
+                ]
+              },
+              "savedSearchId": {
+                "description": "Saved-search id for saved-search monitors, or `null` for inline targets.",
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 24,
+                    "maxLength": 24
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "metric": {
+                "description": "Default metric evaluated for this target.",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "count",
+                        "description": "Count matching events in each evaluation bucket."
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "errorRate",
+                        "description": "Measure the fraction of matching events that errored."
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "sum",
+                        "description": "Sum a numeric field over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "min",
+                        "description": "Find the minimum numeric field value over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "max",
+                        "description": "Find the maximum numeric field value over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "avg",
+                        "description": "Average a numeric field over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "median",
+                        "description": "Find the median numeric field value over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
                   }
                 ]
               }
@@ -22990,6 +24655,191 @@
                     "type": "null"
                   }
                 ]
+              },
+              "kind": {
+                "description": "Normalized target kind returned on persisted monitors.",
+                "type": "string",
+                "enum": [
+                  "savedSearch",
+                  "tool",
+                  "user",
+                  "session"
+                ]
+              },
+              "stream": {
+                "description": "Telemetry stream evaluated by the monitor.",
+                "type": "string",
+                "enum": [
+                  "traces",
+                  "spans",
+                  "sessions"
+                ]
+              },
+              "savedSearchId": {
+                "description": "Saved-search id for saved-search monitors, or `null` for inline targets.",
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 24,
+                    "maxLength": 24
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "metric": {
+                "description": "Default metric evaluated for this target.",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "count",
+                        "description": "Count matching events in each evaluation bucket."
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "errorRate",
+                        "description": "Measure the fraction of matching events that errored."
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "sum",
+                        "description": "Sum a numeric field over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "min",
+                        "description": "Find the minimum numeric field value over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "max",
+                        "description": "Find the maximum numeric field value over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "avg",
+                        "description": "Average a numeric field over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "median",
+                        "description": "Find the median numeric field value over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
               }
             },
             "required": [
@@ -24155,6 +26005,191 @@
                   },
                   {
                     "type": "null"
+                  }
+                ]
+              },
+              "kind": {
+                "description": "Normalized target kind returned on persisted monitors.",
+                "type": "string",
+                "enum": [
+                  "savedSearch",
+                  "tool",
+                  "user",
+                  "session"
+                ]
+              },
+              "stream": {
+                "description": "Telemetry stream evaluated by the monitor.",
+                "type": "string",
+                "enum": [
+                  "traces",
+                  "spans",
+                  "sessions"
+                ]
+              },
+              "savedSearchId": {
+                "description": "Saved-search id for saved-search monitors, or `null` for inline targets.",
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 24,
+                    "maxLength": 24
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "metric": {
+                "description": "Default metric evaluated for this target.",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "count",
+                        "description": "Count matching events in each evaluation bucket."
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "errorRate",
+                        "description": "Measure the fraction of matching events that errored."
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "sum",
+                        "description": "Sum a numeric field over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "min",
+                        "description": "Find the minimum numeric field value over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "max",
+                        "description": "Find the maximum numeric field value over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "avg",
+                        "description": "Average a numeric field over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "median",
+                        "description": "Find the median numeric field value over matching events."
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "duration",
+                          "cost",
+                          "tokens"
+                        ],
+                        "description": "Numeric field to aggregate."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ],
+                    "additionalProperties": false
                   }
                 ]
               }

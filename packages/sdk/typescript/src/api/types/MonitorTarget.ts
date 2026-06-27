@@ -13,6 +13,13 @@ export interface MonitorTarget {
     filterSet?: LatitudeApi.MonitorFilterSet | undefined;
     /** Semantic query applied when evaluating inline trace targets. */
     query?: string | undefined;
+    /** Normalized target kind returned on persisted monitors. */
+    kind?: MonitorTarget.Kind | undefined;
+    /** Telemetry stream evaluated by the monitor. */
+    stream?: MonitorTarget.Stream | undefined;
+    /** Saved-search id for saved-search monitors, or `null` for inline targets. */
+    savedSearchId?: string | undefined;
+    metric?: LatitudeApi.MonitorMetric | undefined;
 }
 
 export namespace MonitorTarget {
@@ -24,4 +31,19 @@ export namespace MonitorTarget {
         Session: "session",
     } as const;
     export type Type = (typeof Type)[keyof typeof Type];
+    /** Normalized target kind returned on persisted monitors. */
+    export const Kind = {
+        SavedSearch: "savedSearch",
+        Tool: "tool",
+        User: "user",
+        Session: "session",
+    } as const;
+    export type Kind = (typeof Kind)[keyof typeof Kind];
+    /** Telemetry stream evaluated by the monitor. */
+    export const Stream = {
+        Traces: "traces",
+        Spans: "spans",
+        Sessions: "sessions",
+    } as const;
+    export type Stream = (typeof Stream)[keyof typeof Stream];
 }

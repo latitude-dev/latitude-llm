@@ -82,7 +82,7 @@ const CreateMonitorBodySchema = z
       metric: MonitorMetricSchema.optional().describe(
         "Metric stored for later rule edits. Match monitors evaluate counts.",
       ),
-    }),
+    }).strict(),
     CreateMonitorBaseBodySchema.extend({
       trigger: z.literal("threshold").describe("Opens a point incident when the condition is met."),
       metric: MonitorMetricSchema.optional().describe("Metric evaluated by the monitor rule."),
