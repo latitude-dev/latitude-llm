@@ -1,4 +1,4 @@
-import { cn, Icon, Input } from "@repo/ui"
+import { Button, cn, Icon, Input } from "@repo/ui"
 import { SearchIcon, XIcon } from "lucide-react"
 
 export const CONVERSATION_SEARCH_MAX_LENGTH = 500
@@ -28,14 +28,16 @@ export function ConversationSearchBar({
           className={cn("bg-muted/40 pl-8", value.length > 0 && "pr-8")}
         />
         {value.length > 0 ? (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-xs"
             aria-label="Clear conversation search"
-            className="absolute top-1/2 right-2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="absolute top-1/2 right-1.5 -translate-y-1/2"
             onClick={() => onChange("")}
           >
             <Icon icon={XIcon} size="xs" />
-          </button>
+          </Button>
         ) : null}
       </div>
     </div>
