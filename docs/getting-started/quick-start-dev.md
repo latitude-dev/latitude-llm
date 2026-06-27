@@ -14,7 +14,7 @@ This guide walks you through connecting an existing AI agent to Latitude. By the
 
 ## Step 1: Create a Project
 
-After signing in, create a new project from the dashboard. Projects are the main boundary for all reliability features: issues, evaluations, flaggers, saved searches, and simulations are all scoped to a project.
+After signing in, create a new project from the dashboard. Projects are the main boundary for all reliability features: issues, evaluations, flaggers, and saved searches are all scoped to a project.
 
 Give your project a descriptive name that matches the agent or feature you're monitoring.
 
@@ -69,4 +69,3 @@ Your annotations feed into signal discovery and evaluation alignment alongside t
 - [Flaggers](../annotations/flaggers): Automatic annotators for common failure categories
 - [Evaluations](../evaluations/overview): Set up automated monitoring
 - [Issues](../signals/overview): Understand how failure patterns are discovered
-- [Simulations](../simulations/overview): Test your agent before shipping

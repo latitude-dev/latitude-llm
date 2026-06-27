@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## v0.3.20 - 2026-06-26
+
+### Signals and evaluations
+
+- Added API, MCP, and SDK support for creating, updating, and deleting user-authored signals, including evaluation-setting code generation and signal-origin tracking (ref: #3690).
+- Fixed signal table filtering to use score activity time instead of signal update time, keeping score-based views aligned with their underlying activity (ref: #3697).
+
+### Datasets and behaviours
+
+- Added dataset export flows for Behaviour sessions and Signal sessions, plus supporting taxonomy and demo-project plumbing for session trace IDs (ref: #3685, #3691).
+- Added public dataset documentation, regression-testing guidance, and in-product documentation links, while removing the old simulations docs (ref: #3694, #3700).
+
+### Taxonomy and models
+
+- Made taxonomy retries idempotent and preserved observation identifiers across retry paths (ref: #3698).
+- Updated the bundled `models.dev` provider catalog (ref: #3693).
+
 ## v0.3.19 - 2026-06-25
 
 ### Telemetry

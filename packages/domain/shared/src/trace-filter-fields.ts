@@ -52,7 +52,7 @@ export const TRACE_FILTER_FIELDS = [
   },
   { field: "tags", type: "multiSelect", label: "Tags" },
   { field: "moments", type: "multiSelect", label: "Moments", sessionOnly: true },
-  { field: "topics", type: "multiSelect", label: "Topics", sessionOnly: true },
+  { field: "topics", type: "multiSelect", label: "Behaviors", sessionOnly: true },
   { field: "models", type: "multiSelect", label: "Models" },
   { field: "providers", type: "multiSelect", label: "Providers" },
   { field: "serviceNames", type: "multiSelect", label: "Services" },

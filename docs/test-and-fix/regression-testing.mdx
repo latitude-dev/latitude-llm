@@ -1,0 +1,43 @@
+---
+title: Regression testing
+description: Replay a dataset of real traces against your agent and check the results with the same evaluations that monitor production, so fixed failures cannot quietly return.
+---
+
+<Info>
+  **Where this fits:** This is the verification step of **Refine**. It takes a [dataset](../datasets/overview) built from a fixed [signal](../signals/overview) and proves the fix holds before and after you ship.
+</Info>
+
+A **regression test** replays a set of known inputs against your agent and checks the results, so a failure you already fixed cannot return unnoticed. In Latitude, the inputs come from a [dataset](../datasets/overview) of real traces, and the checks reuse the same [evaluations](../evaluations/overview) that monitor production, so your test quality bar matches your production quality bar.
+
+## Fix and verify with your coding agent
+
+The fastest path today pairs the [MCP server](../getting-started/mcp) with a dataset, so your coding agent does the work:
+
+<Steps>
+  <Step title="Bring the signal into your editor">
+    Connect your coding agent (Claude, Cursor, and others) to Latitude through the [MCP server](../getting-started/mcp). It can read the failing [signal](../signals/overview), inspect the example traces, and propose a fix in the same session.
+  </Step>
+  <Step title="Capture the failing traces as a dataset">
+    Turn the traces behind the signal into a [dataset](../datasets/overview), the seed of your regression test. Your agent can do this through the MCP, or you can [add the traces](../datasets/add-traces) from the UI.
+  </Step>
+  <Step title="Add the expected behaviour">
+    Record what the agent should have done by [adding expected output](../datasets/expected-output) to the rows you want to check precisely.
+  </Step>
+  <Step title="Replay and check">
+    Run your agent against each row's input to produce fresh outputs, then run the signal's [evaluations](../evaluations/overview) against them. The same check that found the failure in production now verifies the fix.
+  </Step>
+  <Step title="Gate and repeat">
+    Pass when the results meet your quality bar; fail to block a regression. Re-run whenever the agent, prompts, tools, or models change.
+  </Step>
+</Steps>
+
+## Run it in CI
+
+You can drive a regression test from a dataset in your own pipeline:
+
+- **Export** a [dataset](../datasets/overview) as CSV and replay its inputs in your own test harness.
+- Submit the results back as [scores](../scores/overview) through the Scores API, so regression results live alongside your production data, and gate the build on the outcome.
+
+## Next step
+
+- [Datasets](../datasets/overview): turn the traces behind a signal into a reusable test set.

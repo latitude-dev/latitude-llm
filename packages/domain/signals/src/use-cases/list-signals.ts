@@ -85,6 +85,7 @@ const listSignalsInputSchema = z.object({
   limit: z.number().int().min(1).max(100).default(50),
   offset: z.number().int().min(0).default(0),
   includeAnalytics: z.boolean().default(true),
+  includeItems: z.boolean().default(true),
   now: z.date().optional(),
 })
 
@@ -493,10 +494,6 @@ const toAnalyticsCounts = (candidates: readonly AnalyticsCandidate[]): SignalLis
   seenOccurrences: candidates.reduce((sum, candidate) => sum + candidate.windowMetric.occurrences, 0),
 })
 
-/** Page size + max pages when loading every active signal for the default listing. */
-const ALL_SIGNALS_PAGE_SIZE = 500
-const MAX_ALL_SIGNALS_PAGES = 40
-
 export const listSignalsUseCase = (
   input: ListSignalsInput,
 ): Effect.Effect<
@@ -511,30 +508,10 @@ export const listSignalsUseCase = (
     const now = parsed.now ?? new Date()
     const selectedTimeRange = toScoreAnalyticsTimeRange(parsed.timeRange)
 
-    // The default listing (no search, no explicit ids) surfaces EVERY active signal in
-    // the project — including ones with no occurrences yet — so a freshly created signal
-    // shows up immediately. Window metrics still drive occurrence stats and are synthesized
-    // to zero for signals without any. Search and explicit-id listings keep their own
-    // candidate selection.
-    const isDefaultListing = parsed.signalIds === undefined && parsed.search === undefined
-    const allActiveSignals: SignalWithLifecycle[] = []
-    if (isDefaultListing) {
-      for (let page = 0; page < MAX_ALL_SIGNALS_PAGES; page += 1) {
-        const signalPage = yield* signalRepository.list({
-          projectId: parsed.projectId,
-          limit: ALL_SIGNALS_PAGE_SIZE,
-          offset: page * ALL_SIGNALS_PAGE_SIZE,
-        })
-        allActiveSignals.push(...signalPage.items)
-        if (!signalPage.hasMore) break
-      }
-    }
-
     let hasAnySignals = parsed.signalIds !== undefined
     if (!parsed.signalIds) {
-      hasAnySignals = isDefaultListing
-        ? allActiveSignals.length > 0
-        : (yield* signalRepository.list({ projectId: parsed.projectId, limit: 1, offset: 0 })).items.length > 0
+      hasAnySignals =
+        (yield* signalRepository.list({ projectId: parsed.projectId, limit: 1, offset: 0 })).items.length > 0
 
       if (!hasAnySignals) {
         const histogramTimeRange = resolveHistogramTimeRange({
@@ -707,14 +684,11 @@ export const listSignalsUseCase = (
     const [windowMetrics, searchCandidates] = yield* Effect.all([windowMetricsEffect, searchCandidatesEffect])
 
     const windowMetricsBySignalId = new Map(windowMetrics.map((metric) => [metric.signalId, metric] as const))
-    const allActiveSignalIds = allActiveSignals.map((issue) => issue.id)
     const baseCandidateIds = parsed.search
       ? searchCandidates
           .map((candidate) => candidate.signalId)
           .filter((signalId) => windowMetricsBySignalId.has(signalId))
-      : isDefaultListing
-        ? allActiveSignalIds
-        : windowMetrics.map((metric) => metric.signalId)
+      : windowMetrics.map((metric) => metric.signalId)
     // When the caller passed an explicit `signalIds` filter, include those
     // issues in the candidate set even if they had no activity in the
     // window — they get synthesized zero `windowMetric` rows below so the
@@ -769,19 +743,13 @@ export const listSignalsUseCase = (
     const searchScoresBySignalId = new Map(
       searchCandidates.map((candidate) => [candidate.signalId, candidate.score] as const),
     )
-    const forceIncludeSignalIds = parsed.signalIds
-      ? new Set<string>(parsed.signalIds)
-      : isDefaultListing
-        ? new Set<string>(allActiveSignalIds)
-        : null
-    const canonicalSignals = isDefaultListing
-      ? allActiveSignals
-      : yield* signalRepository
-          .findByIds({
-            projectId: parsed.projectId,
-            signalIds: candidateSignalIds,
-          })
-          .pipe(Effect.withSpan("issues.listSignals.findByIds"))
+    const forceIncludeSignalIds = parsed.signalIds ? new Set<string>(parsed.signalIds) : null
+    const canonicalSignals = yield* signalRepository
+      .findByIds({
+        projectId: parsed.projectId,
+        signalIds: candidateSignalIds,
+      })
+      .pipe(Effect.withSpan("issues.listSignals.findByIds"))
 
     const matchedSignalIds = canonicalSignals.map((issue) => issue.id)
 
@@ -835,7 +803,7 @@ export const listSignalsUseCase = (
     const priorityCounts = toPriorityCounts(tableCandidates)
 
     const occurrencesSum = tableCandidates.reduce((sum, candidate) => sum + candidate.windowMetric.occurrences, 0)
-    const pageCandidates = tableCandidates.slice(parsed.offset, parsed.offset + parsed.limit)
+    const pageCandidates = parsed.includeItems ? tableCandidates.slice(parsed.offset, parsed.offset + parsed.limit) : []
     const pageSignalIds = pageCandidates.map((candidate) => candidate.issue.id)
     const trendTimeRange = resolveTrendTimeRange({
       timeRange: parsed.timeRange,

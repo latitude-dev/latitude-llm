@@ -324,7 +324,7 @@ type ListSignalsRequest = z.infer<typeof listSignalsInputSchema>
 
 const runSignalsList = async (
   data: ListSignalsRequest,
-  options: { readonly includeAnalytics: boolean },
+  options: { readonly includeAnalytics: boolean; readonly includeItems?: boolean },
 ): Promise<SignalsListResultRecord> => {
   const { organizationId, userId } = await requireSession()
   const orgId = OrganizationId(organizationId)
@@ -377,6 +377,7 @@ const runSignalsList = async (
         ...(data.limit !== undefined ? { limit: data.limit } : {}),
         ...(data.offset !== undefined ? { offset: data.offset } : {}),
         includeAnalytics: options.includeAnalytics,
+        ...(options.includeItems !== undefined ? { includeItems: options.includeItems } : {}),
         ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
         ...(data.assigneeIds?.length ? { assigneeIds: data.assigneeIds } : {}),
         ...(data.sort ? { sort: data.sort } : {}),
@@ -411,7 +412,10 @@ export const listSignals = createServerFn({ method: "GET" })
 
 export const getSignalsAnalytics = createServerFn({ method: "GET" })
   .inputValidator(listSignalsInputSchema)
-  .handler(async ({ data }): Promise<SignalsListResultRecord> => runSignalsList(data, { includeAnalytics: true }))
+  .handler(
+    async ({ data }): Promise<SignalsListResultRecord> =>
+      runSignalsList(data, { includeAnalytics: true, includeItems: false }),
+  )
 
 export const getSignalRowMetrics = createServerFn({ method: "GET" })
   .inputValidator(signalRowMetricsInputSchema)
