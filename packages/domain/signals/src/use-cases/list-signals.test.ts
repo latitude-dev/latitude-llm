@@ -1336,7 +1336,7 @@ describe("listSignalsUseCase", () => {
         ),
       )
 
-      expect(result.items.map((item) => item.id)).toEqual([unsetSignal.id, mediumSignal.id])
+      expect(result.items.map((item) => item.id)).toEqual([mediumSignal.id, lowSignal.id])
       expect(aggregateInputs).toEqual([])
       expect(histogramCalls).toBe(0)
     })

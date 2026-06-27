@@ -1,7 +1,10 @@
 import { NotFoundError } from "@domain/shared"
 import { Effect } from "effect"
-import type { Signal } from "../entities/signal.ts"
+import { SIGNAL_PRIORITY_ORDER } from "../constants.ts"
+import type { Signal, SignalPriority } from "../entities/signal.ts"
 import type { SignalLifecycleFlags, SignalRepositoryShape, SignalWithLifecycle } from "../ports/signal-repository.ts"
+
+const toPriorityGroup = (priority: SignalPriority | null) => priority ?? "none"
 
 const DEFAULT_LIFECYCLE: SignalLifecycleFlags = {
   isEscalating: false,
@@ -182,6 +185,10 @@ export const createFakeSignalRepository = (
             return true
           })
           .sort((a, b) => {
+            const priorityComparison =
+              SIGNAL_PRIORITY_ORDER[toPriorityGroup(a.priority)] - SIGNAL_PRIORITY_ORDER[toPriorityGroup(b.priority)]
+            if (priorityComparison !== 0) return priorityComparison
+
             const direction = sort?.direction === "asc" ? 1 : -1
             const field = sort?.field ?? "lastSeen"
             if (field === "state") return direction * a.name.localeCompare(b.name)

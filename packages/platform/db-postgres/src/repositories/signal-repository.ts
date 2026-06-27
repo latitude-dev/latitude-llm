@@ -297,7 +297,14 @@ const signalRepositoryCoreLive = Layer.effect(
                   ${scoreCreatedFromClause}
                   ${scoreCreatedToClause}
               )`
-              const orderBy =
+              const prioritySort = sql<number>`case ${signals.priority}
+                when 'urgent' then 0
+                when 'high' then 1
+                when 'medium' then 2
+                when 'low' then 3
+                else 4
+              end`
+              const sortWithinPriority =
                 sort?.field === "state"
                   ? [direction(signals.mutedAt), direction(signals.updatedAt)]
                   : sort?.field === "occurrences"
@@ -305,6 +312,7 @@ const signalRepositoryCoreLive = Layer.effect(
                     : sort?.field === "affectedSessions"
                       ? [direction(affectedSessionsSort), desc(lastSeenSort), asc(signals.id)]
                       : [direction(lastSeenSort), direction(signals.createdAt), asc(signals.id)]
+              const orderBy = [asc(prioritySort), ...sortWithinPriority]
 
               return Promise.all([
                 db
