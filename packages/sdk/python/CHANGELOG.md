@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [6.2.1] - 2026-06-26
 
+### Fixed
+
+- Project list/get/create/update responses now strip internal-only `settings` fields (`is_sample`, `onboarding_type`, `onboarding_completed`, `sampling`) that could leak from Postgres and break MCP `listProjects` output validation.
+
 ### Changed
 
 - Monitor target responses now document the normalized fields returned by monitor endpoints (`kind`, `stream`, `saved_search_id`, and `metric`).

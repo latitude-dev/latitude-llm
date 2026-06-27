@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### API
+
+- Fixed `listProjects` MCP output validation by stripping internal-only project `settings` fields (`isSample`, `onboardingType`, `onboardingCompleted`, `sampling`) from API responses (ref: #3703).
+
 ## v0.3.20 - 2026-06-26
 
 ### Signals and evaluations
