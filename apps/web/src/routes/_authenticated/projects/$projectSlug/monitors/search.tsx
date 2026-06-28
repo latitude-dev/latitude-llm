@@ -9,5 +9,5 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/moni
 })
 
 function MonitorsSearchPage() {
-  return <MonitorsListPage system={false} />
+  return <MonitorsListPage />
 }

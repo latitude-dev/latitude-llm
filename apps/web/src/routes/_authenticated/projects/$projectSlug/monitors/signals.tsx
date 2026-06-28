@@ -1,13 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { MonitorsBreadcrumb, MonitorsListPage } from "./-components/monitors-list-page.tsx"
+import { createFileRoute, redirect } from "@tanstack/react-router"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/monitors/signals")({
-  staticData: {
-    breadcrumb: MonitorsBreadcrumb,
+  beforeLoad: ({ params, location }) => {
+    throw redirect({
+      to: "/projects/$projectSlug/monitors/search",
+      params: { projectSlug: params.projectSlug },
+      search: location.search,
+    })
   },
-  component: MonitorsSignalsPage,
+  component: () => null,
 })
-
-function MonitorsSignalsPage() {
-  return <MonitorsListPage system={true} />
-}

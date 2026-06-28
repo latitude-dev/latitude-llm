@@ -1,15 +1,7 @@
-import { Button, Icon, Input, Modal, type TabOption, Tabs, toast, useValueWithDefault } from "@repo/ui"
+import { Button, Icon, Input, Modal, toast, useValueWithDefault } from "@repo/ui"
 import { useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
-import {
-  BellOffIcon,
-  BellPlusIcon,
-  CheckIcon,
-  SearchIcon,
-  ShieldAlertIcon,
-  TextSearchIcon,
-  Trash2Icon,
-} from "lucide-react"
+import { BellOffIcon, BellPlusIcon, CheckIcon, SearchIcon, Trash2Icon } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 import { useRegisterCommands } from "../../../../../../components/command-palette/command-palette-provider.tsx"
 import type { PaletteCommand } from "../../../../../../components/command-palette/types.ts"
@@ -40,13 +32,6 @@ const SORT_COLUMNS = ["name", "status", "lastIncident"] as const satisfies reado
 const SORT_DIRECTIONS = ["asc", "desc"] as const satisfies readonly MonitorsTableSorting["direction"][]
 const SORT_PARAM_PATTERN = /^(name|status|lastIncident):(asc|desc)$/
 
-type MonitorsTab = "search" | "signals"
-
-const MONITORS_TABS: readonly TabOption<MonitorsTab>[] = [
-  { id: "search", label: "Search monitors", icon: <TextSearchIcon className="w-4 h-4" /> },
-  { id: "signals", label: "Signal monitors", icon: <ShieldAlertIcon className="w-4 h-4" /> },
-]
-
 function serializeSorting(sorting: MonitorsTableSorting): string {
   return `${sorting.column}:${sorting.direction}`
 }
@@ -69,37 +54,11 @@ export function MonitorsBreadcrumb() {
   return <BreadcrumbText variant="current">Monitors</BreadcrumbText>
 }
 
-/**
- * Shared monitors listing, one route per tab: `/monitors/search` lists
- * user-created saved-search monitors (`system: false`) and `/monitors/signals`
- * lists the system-managed issue-event monitors (`system: true`).
- */
-export function MonitorsListPage({ system }: { readonly system: boolean }) {
-  return <MonitorsPageContent system={system} />
+export function MonitorsListPage() {
+  return <MonitorsPageContent />
 }
 
-function MonitorsTabs({ system, projectSlug }: { readonly system: boolean; readonly projectSlug: string }) {
-  const navigate = useNavigate()
-  const active: MonitorsTab = system ? "signals" : "search"
-
-  return (
-    <Tabs<MonitorsTab>
-      variant="bordered"
-      size="sm"
-      options={MONITORS_TABS}
-      active={active}
-      onSelect={(tab) => {
-        if (tab === active) return
-        void navigate({
-          to: tab === "signals" ? "/projects/$projectSlug/monitors/signals" : "/projects/$projectSlug/monitors/search",
-          params: { projectSlug },
-        })
-      }}
-    />
-  )
-}
-
-function MonitorsPageContent({ system }: { readonly system: boolean }) {
+function MonitorsPageContent() {
   const project = useRouteProject()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
@@ -125,23 +84,19 @@ function MonitorsPageContent({ system }: { readonly system: boolean }) {
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false)
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
 
-  // Registered only while this page is mounted. Creation is search-tab only (issue monitors are system-provisioned).
   const paletteCommands = useMemo<readonly PaletteCommand[]>(
-    () =>
-      system
-        ? []
-        : [
-            {
-              id: "monitor:create",
-              title: "Create monitor",
-              icon: BellPlusIcon,
-              section: "context",
-              group: "Monitors",
-              keywords: "create monitor new add alert",
-              perform: () => setCreateOpen(true),
-            },
-          ],
-    [system],
+    () => [
+      {
+        id: "monitor:create",
+        title: "Create monitor",
+        icon: BellPlusIcon,
+        section: "context",
+        group: "Monitors",
+        keywords: "create monitor new add alert",
+        perform: () => setCreateOpen(true),
+      },
+    ],
+    [],
   )
   useRegisterCommands(paletteCommands)
 
@@ -158,7 +113,7 @@ function MonitorsPageContent({ system }: { readonly system: boolean }) {
 
   const { rows, totalCount, isLoading, isReloading, infiniteScroll } = useMonitors({
     projectId: project.id,
-    system,
+    system: false,
     ...(searchQuery ? { searchQuery } : {}),
   })
 
@@ -182,10 +137,10 @@ function MonitorsPageContent({ system }: { readonly system: boolean }) {
     return {
       projectId: project.id,
       selection: bulkSelection,
-      system,
+      system: false,
       ...(searchQuery ? { searchQuery } : {}),
     }
-  }, [project.id, searchQuery, selection, system])
+  }, [project.id, searchQuery, selection])
 
   const handleBulkResolveIncidents = useCallback(async () => {
     const data = bulkActionData()
@@ -254,8 +209,7 @@ function MonitorsPageContent({ system }: { readonly system: boolean }) {
 
   const hasMonitors = totalCount > 0
   const hasActiveFilters = Boolean(searchQuery)
-  // Only the search tab invites creation; issue monitors are system-provisioned.
-  const showEmptyState = !system && !isLoading && !hasMonitors && !hasActiveFilters
+  const showEmptyState = !isLoading && !hasMonitors && !hasActiveFilters
 
   const createModal = createOpen ? (
     <MonitorCreateModal
@@ -270,13 +224,6 @@ function MonitorsPageContent({ system }: { readonly system: boolean }) {
     return (
       <Layout>
         <Layout.Content>
-          <Layout.Actions>
-            <Layout.ActionsRow>
-              <Layout.ActionRowItem>
-                <MonitorsTabs system={system} projectSlug={project.slug} />
-              </Layout.ActionRowItem>
-            </Layout.ActionsRow>
-          </Layout.Actions>
           <MonitorsEmptyState onCreate={() => setCreateOpen(true)} />
           {createModal}
         </Layout.Content>
@@ -290,9 +237,6 @@ function MonitorsPageContent({ system }: { readonly system: boolean }) {
         <Layout.Actions>
           <Layout.ActionsRow>
             <Layout.ActionRowItem>
-              <MonitorsTabs system={system} projectSlug={project.slug} />
-            </Layout.ActionRowItem>
-            <Layout.ActionRowItem>
               <div className="relative">
                 <Input
                   value={searchInput}
@@ -303,12 +247,10 @@ function MonitorsPageContent({ system }: { readonly system: boolean }) {
                 />
                 <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               </div>
-              {!system ? (
-                <Button onClick={() => setCreateOpen(true)}>
-                  <Icon icon={BellPlusIcon} size="sm" />
-                  Monitor
-                </Button>
-              ) : null}
+              <Button onClick={() => setCreateOpen(true)}>
+                <Icon icon={BellPlusIcon} size="sm" />
+                Monitor
+              </Button>
             </Layout.ActionRowItem>
           </Layout.ActionsRow>
         </Layout.Actions>
@@ -329,17 +271,15 @@ function MonitorsPageContent({ system }: { readonly system: boolean }) {
               <Icon icon={BellOffIcon} size="sm" />
               Mute ({selection.selectedCount.toLocaleString()})
             </Button>
-            {!system && (
-              <Button
-                variant="destructive-outline"
-                size="sm"
-                onClick={() => setBulkDeleteModalOpen(true)}
-                disabled={bulkActionLoading}
-              >
-                <Icon icon={Trash2Icon} size="sm" />
-                Remove ({selection.selectedCount.toLocaleString()})
-              </Button>
-            )}
+            <Button
+              variant="destructive-outline"
+              size="sm"
+              onClick={() => setBulkDeleteModalOpen(true)}
+              disabled={bulkActionLoading}
+            >
+              <Icon icon={Trash2Icon} size="sm" />
+              Remove ({selection.selectedCount.toLocaleString()})
+            </Button>
           </div>
         )}
         <MonitorsView
