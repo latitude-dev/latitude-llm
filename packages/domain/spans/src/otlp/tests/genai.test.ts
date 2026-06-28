@@ -992,3 +992,70 @@ describe("litellm native OTel — tool call recovery from deprecated attributes"
     expect((parts.find((p) => p.type === "text") as { content: string }).content).toBe("It is sunny.")
   })
 })
+
+describe("OpenRouter Broadcast OTLP", () => {
+  it("parses trace metadata without losing tool definitions or tool calls", () => {
+    const s = litellmSpan([
+      str("gen_ai.operation.name", "chat"),
+      str("gen_ai.provider.name", "openrouter"),
+      str("gen_ai.request.model", "openai/gpt-4o-mini"),
+      str("trace.metadata.environment", "staging"),
+      int("trace.metadata.retry_count", 2),
+      str(
+        "gen_ai.input.messages",
+        JSON.stringify([{ role: "user", parts: [{ type: "text", content: "What's the weather in Paris?" }] }]),
+      ),
+      str(
+        "gen_ai.output.messages",
+        JSON.stringify([
+          {
+            role: "assistant",
+            parts: [
+              {
+                type: "tool_call",
+                id: "call_weather",
+                name: "get_weather",
+                arguments: { city: "Paris" },
+              },
+            ],
+          },
+        ]),
+      ),
+      str(
+        "gen_ai.tool.definitions",
+        JSON.stringify([
+          {
+            type: "function",
+            function: {
+              name: "get_weather",
+              description: "Get current weather for a city",
+              parameters: {
+                type: "object",
+                properties: { city: { type: "string" } },
+                required: ["city"],
+              },
+            },
+          },
+        ]),
+      ),
+    ])
+
+    expect(s.metadata).toEqual({ environment: "staging", retry_count: "2" })
+    expect(s.toolNames).toEqual(["get_weather"])
+    expect(s.toolDefinitions[0]).toMatchObject({
+      name: "get_weather",
+      description: "Get current weather for a city",
+      parameters: {
+        type: "object",
+        properties: { city: { type: "string" } },
+        required: ["city"],
+      },
+    })
+    const assistant = s.outputMessages.find((m) => m.role === "assistant")
+    const parts = (assistant as { parts: { type: string; name?: string; arguments?: unknown }[] }).parts
+    const toolCall = parts.find((p) => p.type === "tool_call")
+    expect(toolCall).toBeDefined()
+    expect((toolCall as { name: string }).name).toBe("get_weather")
+    expect((toolCall as { arguments: { city: string } }).arguments.city).toBe("Paris")
+  })
+})
