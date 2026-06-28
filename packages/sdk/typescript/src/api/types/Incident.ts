@@ -9,12 +9,10 @@ export interface Incident {
     organizationId: string;
     /** Project this incident belongs to. */
     projectId: string;
-    /** Kind of entity that triggered the incident. `issue` for signal-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a search. */
+    /** Kind of entity that triggered the incident: `signal` or `monitor`. */
     sourceType: Incident.SourceType;
     /** Id of the entity that triggered the incident (matches `sourceType`). */
     sourceId: string;
-    /** Reason the incident opened. `issue.new` fires when a new signal is discovered; `issue.regressed` when a resolved signal is detected again; `issue.escalating` when an ongoing signal is being detected more than expected. The `savedSearch.*` kinds are raised by monitors watching a search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when matching traces are detected above a configured threshold, and `savedSearch.escalating` when they stay above the threshold for a sustained window. */
-    kind: Incident.Kind;
     /** Severity bucket assigned to the incident: `low`, `medium`, or `high`. */
     severity: Incident.Severity;
     /** ISO-8601 timestamp at which the incident opened. */
@@ -23,31 +21,17 @@ export interface Incident {
     endedAt?: string | undefined;
     /** ISO-8601 timestamp at which the incident row was created. */
     createdAt: string;
-    /** Id of the monitor alert that opened this incident, or `null` when not attributed to a monitor. */
-    monitorAlertId?: string | undefined;
-    condition?: LatitudeApi.AlertCondition | undefined;
+    /** The monitor rule configuration when the incident opened, or `null` for signal incidents and match monitors. */
+    condition?: Incident.Condition | undefined;
 }
 
 export namespace Incident {
-    /** Kind of entity that triggered the incident. `issue` for signal-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a search. */
+    /** Kind of entity that triggered the incident: `signal` or `monitor`. */
     export const SourceType = {
-        Issue: "issue",
-        SavedSearch: "savedSearch",
+        Monitor: "monitor",
+        Signal: "signal",
     } as const;
     export type SourceType = (typeof SourceType)[keyof typeof SourceType];
-    /** Reason the incident opened. `issue.new` fires when a new signal is discovered; `issue.regressed` when a resolved signal is detected again; `issue.escalating` when an ongoing signal is being detected more than expected. The `savedSearch.*` kinds are raised by monitors watching a search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when matching traces are detected above a configured threshold, and `savedSearch.escalating` when they stay above the threshold for a sustained window. */
-    export const Kind = {
-        IssueNew: "issue.new",
-        IssueRegressed: "issue.regressed",
-        IssueEscalating: "issue.escalating",
-        SavedSearchMatch: "savedSearch.match",
-        SavedSearchThreshold: "savedSearch.threshold",
-        SavedSearchEscalating: "savedSearch.escalating",
-        EventMatched: "event.matched",
-        MetricThreshold: "metric.threshold",
-        MetricEscalating: "metric.escalating",
-    } as const;
-    export type Kind = (typeof Kind)[keyof typeof Kind];
     /** Severity bucket assigned to the incident: `low`, `medium`, or `high`. */
     export const Severity = {
         Low: "low",
@@ -55,4 +39,8 @@ export namespace Incident {
         High: "high",
     } as const;
     export type Severity = (typeof Severity)[keyof typeof Severity];
+    /**
+     * The monitor rule configuration when the incident opened, or `null` for signal incidents and match monitors.
+     */
+    export type Condition = LatitudeApi.AlertThresholdCondition | LatitudeApi.AlertEscalatingCondition;
 }

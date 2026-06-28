@@ -1,44 +1,47 @@
-import { type AlertIncident, AlertIncidentRepository, type AlertIncidentRepositoryShape } from "@domain/alerts"
+import { type Incident, IncidentRepository, type IncidentRepositoryShape } from "@domain/incidents"
 import { Effect, Layer } from "effect"
 
-/**
- * In-memory `AlertIncidentRepository` for the saved-search firing tests. Backs
- * only the methods the state machines touch; everything else dies loudly. Seed
- * via the argument and assert against the returned `incidents` array.
- */
-export const createFakeAlertIncidentStore = (seed: readonly AlertIncident[] = []) => {
-  const incidents: AlertIncident[] = [...seed]
+export const createFakeAlertIncidentStore = (seed: readonly Incident[] = []) => {
+  const incidents: Incident[] = [...seed]
 
-  const patch = (id: string, next: Partial<AlertIncident>) => {
+  const patch = (id: string, next: Partial<Incident>) => {
     const index = incidents.findIndex((incident) => incident.id === id)
     const current = incidents[index]
     if (current) incidents[index] = { ...current, ...next }
   }
 
-  const repo: AlertIncidentRepositoryShape = {
+  const repo: IncidentRepositoryShape = {
     insert: (incident) =>
       Effect.sync(() => {
         incidents.push(incident)
       }),
-    existsByMonitorAlertId: (monitorAlertId) =>
-      Effect.sync(() => incidents.some((incident) => incident.monitorAlertId === monitorAlertId)),
-    findOpenByMonitorAlertId: (monitorAlertId) =>
+    findOpen: ({ sourceType, sourceId }) =>
       Effect.sync(
         () =>
-          incidents.find((incident) => incident.monitorAlertId === monitorAlertId && incident.endedAt === null) ?? null,
+          incidents.find(
+            (incident) =>
+              incident.sourceType === sourceType && incident.sourceId === sourceId && incident.endedAt === null,
+          ) ?? null,
       ),
-    setEndedAt: ({ id, endedAt }) => Effect.sync(() => patch(id, { endedAt })),
+    closeOpen: ({ sourceType, sourceId, endedAt }) =>
+      Effect.sync(() => {
+        const incident = incidents.find(
+          (candidate) =>
+            candidate.sourceType === sourceType && candidate.sourceId === sourceId && candidate.endedAt === null,
+        )
+        if (!incident) return null
+        patch(incident.id, { endedAt })
+        return incident.id
+      }),
     updateExitDwell: ({ id, exitEligibleSince }) => Effect.sync(() => patch(id, { exitEligibleSince })),
-    findById: () => Effect.die("findById not used by saved-search firing"),
-    findOpen: () => Effect.die("findOpen not used by saved-search firing"),
-    closeOpen: () => Effect.die("closeOpen not used by saved-search firing"),
-    closeById: () => Effect.die("closeById not used by saved-search firing"),
-    listByProjectId: () => Effect.die("listByProjectId not used by saved-search firing"),
-    listOpenByKind: () => Effect.die("listOpenByKind not used by saved-search firing"),
-    listByMonitorId: () => Effect.die("listByMonitorId not used by saved-search firing"),
-    statsByMonitorId: () => Effect.die("statsByMonitorId not used by saved-search firing"),
-    listByMonitorAlertId: () => Effect.die("listByMonitorAlertId not used by saved-search firing"),
+    setEndedAt: ({ id, endedAt }) => Effect.sync(() => patch(id, { endedAt })),
+    findById: () => Effect.die("findById not used by monitor firing"),
+    closeById: () => Effect.die("closeById not used by monitor firing"),
+    listByProjectId: () => Effect.die("listByProjectId not used by monitor firing"),
+    listOpenBySourceType: () => Effect.die("listOpenBySourceType not used by monitor firing"),
+    listByMonitorId: () => Effect.die("listByMonitorId not used by monitor firing"),
+    statsByMonitorId: () => Effect.die("statsByMonitorId not used by monitor firing"),
   }
 
-  return { repo, incidents, layer: Layer.succeed(AlertIncidentRepository, repo) }
+  return { repo, incidents, layer: Layer.succeed(IncidentRepository, repo) }
 }

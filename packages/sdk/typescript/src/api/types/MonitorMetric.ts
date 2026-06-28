@@ -9,8 +9,10 @@ export type MonitorMetric =
     | LatitudeApi.MonitorMetric.Count
     | LatitudeApi.MonitorMetric.ErrorRate
     | LatitudeApi.MonitorMetric.Avg
-    | LatitudeApi.MonitorMetric.P95
-    | LatitudeApi.MonitorMetric.Sum;
+    | LatitudeApi.MonitorMetric.Sum
+    | LatitudeApi.MonitorMetric.Min
+    | LatitudeApi.MonitorMetric.Max
+    | LatitudeApi.MonitorMetric.Median;
 
 export namespace MonitorMetric {
     export interface Count {
@@ -37,13 +39,13 @@ export namespace MonitorMetric {
         export type Field = (typeof Field)[keyof typeof Field];
     }
 
-    export interface P95 {
-        kind: "p95";
+    export interface Sum {
+        kind: "sum";
         /** Numeric field to aggregate. */
-        field: MonitorMetricP95.Field;
+        field: MonitorMetricSum.Field;
     }
 
-    export namespace MonitorMetricP95 {
+    export namespace MonitorMetricSum {
         /** Numeric field to aggregate. */
         export const Field = {
             Duration: "duration",
@@ -53,13 +55,45 @@ export namespace MonitorMetric {
         export type Field = (typeof Field)[keyof typeof Field];
     }
 
-    export interface Sum {
-        kind: "sum";
+    export interface Min {
+        kind: "min";
         /** Numeric field to aggregate. */
-        field: MonitorMetricSum.Field;
+        field: MonitorMetricMin.Field;
     }
 
-    export namespace MonitorMetricSum {
+    export namespace MonitorMetricMin {
+        /** Numeric field to aggregate. */
+        export const Field = {
+            Duration: "duration",
+            Cost: "cost",
+            Tokens: "tokens",
+        } as const;
+        export type Field = (typeof Field)[keyof typeof Field];
+    }
+
+    export interface Max {
+        kind: "max";
+        /** Numeric field to aggregate. */
+        field: MonitorMetricMax.Field;
+    }
+
+    export namespace MonitorMetricMax {
+        /** Numeric field to aggregate. */
+        export const Field = {
+            Duration: "duration",
+            Cost: "cost",
+            Tokens: "tokens",
+        } as const;
+        export type Field = (typeof Field)[keyof typeof Field];
+    }
+
+    export interface Median {
+        kind: "median";
+        /** Numeric field to aggregate. */
+        field: MonitorMetricMedian.Field;
+    }
+
+    export namespace MonitorMetricMedian {
         /** Numeric field to aggregate. */
         export const Field = {
             Duration: "duration",

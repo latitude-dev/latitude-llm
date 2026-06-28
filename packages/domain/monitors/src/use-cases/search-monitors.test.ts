@@ -10,6 +10,15 @@ import { searchMonitorsUseCase } from "./search-monitors.ts"
 const organizationId = OrganizationId("o".repeat(24))
 const projectA = ProjectId("a".repeat(24))
 const projectB = ProjectId("b".repeat(24))
+const target = {
+  type: "user",
+  id: null,
+  kind: "user",
+  stream: "traces",
+  query: null,
+  savedSearchId: null,
+  metric: { kind: "count" },
+} as const
 
 const makeMonitor = (id: string, projectId: ProjectId, name: string, overrides: Partial<Monitor> = {}): Monitor => ({
   id: MonitorId(id.padEnd(24, "0")),
@@ -19,8 +28,8 @@ const makeMonitor = (id: string, projectId: ProjectId, name: string, overrides: 
   name,
   description: "",
   system: false,
-  alerts: [],
-  target: null,
+  target,
+  rule: { trigger: "match", config: {}, severity: "low" },
   mutedAt: null,
   deletedAt: null,
   createdAt: new Date("2026-01-01T00:00:00.000Z"),

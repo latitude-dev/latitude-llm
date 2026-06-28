@@ -1,9 +1,12 @@
-import { ALERT_INCIDENT_KINDS, ALERT_INCIDENT_SOURCE_TYPES, ALERT_SEVERITIES, type AlertIncident } from "@domain/alerts"
+import {
+  ALERT_SEVERITIES,
+  INCIDENT_SOURCE_TYPES as INCIDENT_SOURCE_TYPE_VALUES,
+  type Incident,
+} from "@domain/incidents"
 import { cuidSchema } from "@domain/shared"
 import { z } from "@hono/zod-openapi"
 
-export const INCIDENT_KINDS = ALERT_INCIDENT_KINDS
-export const INCIDENT_SOURCE_TYPES = ALERT_INCIDENT_SOURCE_TYPES
+export const INCIDENT_SOURCE_TYPES = INCIDENT_SOURCE_TYPE_VALUES
 export const INCIDENT_SEVERITIES = ALERT_SEVERITIES
 
 // --- Alert condition schemas ------------------------------------------------
@@ -13,7 +16,7 @@ export const INCIDENT_SEVERITIES = ALERT_SEVERITIES
 // types instead of inlining anonymous shapes (the same requirement that drives
 // `FilterSet` / `TraceRef` in `../schemas.ts`). Defined here — the lowest-level
 // entity that references it — so both `Incident` (the frozen snapshot) and
-// `MonitorAlert` (the live config) can share the one component without a cycle.
+// `Monitor` live config can share the one component without a cycle.
 
 const AlertDurationSchema = z
   .discriminatedUnion("unit", [
@@ -43,36 +46,6 @@ const AlertBaselineSchema = z
   })
   .openapi("AlertBaseline")
 
-const AlertCountThresholdSchema = z
-  .discriminatedUnion("mode", [
-    z.object({
-      mode: z.literal("absolute").describe("Compare the match count against a fixed number; read `count`."),
-      count: z.number().int().positive().describe("Number of matching traces that opens the incident."),
-    }),
-    z.object({
-      mode: z
-        .literal("multiplier")
-        .describe("Compare the match rate against `factor × baseline`; read `factor` and `baseline`."),
-      factor: z.number().positive().describe("Multiple of the baseline rate that opens the incident (e.g. `3` = 3×)."),
-      baseline: AlertBaselineSchema.describe("Fixed-window baseline the current rate is compared against."),
-    }),
-    z.object({
-      mode: z
-        .literal("expected")
-        .describe(
-          "Compare against the seasonally-learned expected rate for this time of day/week (the same detector as automatic issue escalation); the only knob is `sensitivity`.",
-        ),
-      sensitivity: z
-        .number()
-        .int()
-        .min(1)
-        .max(6)
-        .optional()
-        .describe("Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted."),
-    }),
-  ])
-  .openapi("AlertCountThreshold")
-
 const MonitorMetricSchema = z
   .discriminatedUnion("kind", [
     z.object({ kind: z.literal("count").describe("Count matching events in each evaluation bucket.") }),
@@ -82,11 +55,19 @@ const MonitorMetricSchema = z
       field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
     }),
     z.object({
-      kind: z.literal("p95").describe("Compute the 95th percentile of a numeric field over matching events."),
+      kind: z.literal("sum").describe("Sum a numeric field over matching events."),
       field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
     }),
     z.object({
-      kind: z.literal("sum").describe("Sum a numeric field over matching events."),
+      kind: z.literal("min").describe("Find the minimum numeric field value over matching events."),
+      field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
+    }),
+    z.object({
+      kind: z.literal("max").describe("Find the maximum numeric field value over matching events."),
+      field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
+    }),
+    z.object({
+      kind: z.literal("median").describe("Find the median numeric field value over matching events."),
       field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
     }),
   ])
@@ -120,72 +101,51 @@ const AlertMetricThresholdSchema = z
   ])
   .openapi("AlertMetricThreshold")
 
+export const AlertThresholdConditionSchema = z
+  .object({
+    trigger: z.literal("threshold").describe("Opens once the measured value crosses the threshold."),
+    metric: MonitorMetricSchema.describe("Metric measured over the monitor target."),
+    threshold: AlertMetricThresholdSchema.describe("How the metric is compared."),
+    direction: z
+      .enum(["above", "below"])
+      .optional()
+      .describe("Direction that opens the incident. Defaults to `above` when omitted."),
+  })
+  .openapi("AlertThresholdCondition")
+
+export const AlertEscalatingConditionSchema = z
+  .object({
+    trigger: z.literal("escalating").describe("Opens when the monitor target is escalating or sustained."),
+    metric: MonitorMetricSchema.describe("Metric measured over the monitor target."),
+    threshold: AlertMetricThresholdSchema.optional().describe("How the metric is compared when threshold-based."),
+    direction: z
+      .enum(["above", "below"])
+      .optional()
+      .describe("Direction that opens the incident. Defaults to `above` when omitted."),
+    sensitivity: z
+      .number()
+      .int()
+      .min(1)
+      .max(6)
+      .optional()
+      .describe("Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted."),
+    window: z
+      .object({
+        minutes: z
+          .number()
+          .int()
+          .min(5)
+          .describe("How long the threshold must stay crossed before the incident opens. Minimum 5."),
+      })
+      .describe("Sustained-condition window."),
+  })
+  .openapi("AlertEscalatingCondition")
+
 export const AlertConditionSchema = z
-  .discriminatedUnion("kind", [
-    z.object({
-      kind: z.literal("savedSearch.threshold").describe("Threshold alert: opens once the count threshold is crossed."),
-      threshold: AlertCountThresholdSchema.describe("How the match count/rate is compared."),
-    }),
-    z.object({
-      kind: z
-        .literal("savedSearch.escalating")
-        .describe("Sustained alert: opens only when the threshold stays crossed for the whole `window`."),
-      threshold: AlertCountThresholdSchema.describe("How the match count/rate is compared."),
-      window: z
-        .object({
-          minutes: z
-            .number()
-            .int()
-            .min(5)
-            .describe(
-              "How long the threshold must stay crossed before the incident opens. The incident stays open while the threshold keeps holding over this window and closes once it no longer does. Minimum 5.",
-            ),
-        })
-        .describe("Sustained-condition window."),
-    }),
-    z.object({
-      kind: z.literal("issue.escalating").describe("System signal-escalation alert; only `sensitivity` is tunable."),
-      sensitivity: z
-        .number()
-        .int()
-        .min(1)
-        .max(6)
-        .optional()
-        .describe("Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted."),
-    }),
-    z.object({
-      kind: z.literal("metric.threshold").describe("Metric alert: opens once the target metric crosses a threshold."),
-      metric: MonitorMetricSchema.describe("Metric measured over the monitor target."),
-      threshold: AlertMetricThresholdSchema.describe("How the metric is compared."),
-      direction: z
-        .enum(["above", "below"])
-        .optional()
-        .describe("Direction that opens the incident. Defaults to `above` when omitted."),
-    }),
-    z.object({
-      kind: z
-        .literal("metric.escalating")
-        .describe(
-          "Sustained metric alert: opens when the target metric stays across threshold for the whole `window`.",
-        ),
-      metric: MonitorMetricSchema.describe("Metric measured over the monitor target."),
-      threshold: AlertMetricThresholdSchema.describe("How the metric is compared."),
-      direction: z
-        .enum(["above", "below"])
-        .optional()
-        .describe("Direction that opens the incident. Defaults to `above` when omitted."),
-      window: z
-        .object({
-          minutes: z
-            .number()
-            .int()
-            .min(5)
-            .describe("How long the threshold must stay crossed before the incident opens. Minimum 5."),
-        })
-        .describe("Sustained-condition window."),
-    }),
-  ])
+  .discriminatedUnion("trigger", [AlertThresholdConditionSchema, AlertEscalatingConditionSchema])
   .openapi("AlertCondition")
+
+const IncidentConditionSchema = z.union([AlertConditionSchema, z.null()])
 
 export const incidentFields = {
   id: cuidSchema.describe("Stable incident identifier."),
@@ -193,42 +153,30 @@ export const incidentFields = {
   projectId: cuidSchema.describe("Project this incident belongs to."),
   sourceType: z
     .enum(INCIDENT_SOURCE_TYPES)
-    .describe(
-      "Kind of entity that triggered the incident. `issue` for signal-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a search.",
-    ),
+    .describe("Kind of entity that triggered the incident: `signal` or `monitor`."),
   sourceId: cuidSchema.describe("Id of the entity that triggered the incident (matches `sourceType`)."),
-  kind: z
-    .enum(INCIDENT_KINDS)
-    .describe(
-      "Reason the incident opened. `issue.new` fires when a new signal is discovered; `issue.regressed` when a resolved signal is detected again; `issue.escalating` when an ongoing signal is being detected more than expected. The `savedSearch.*` kinds are raised by monitors watching a search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when matching traces are detected above a configured threshold, and `savedSearch.escalating` when they stay above the threshold for a sustained window.",
-    ),
   severity: z
     .enum(INCIDENT_SEVERITIES)
     .describe("Severity bucket assigned to the incident: `low`, `medium`, or `high`."),
   startedAt: z.string().describe("ISO-8601 timestamp at which the incident opened."),
   endedAt: z.string().nullable().describe("ISO-8601 timestamp at which the incident closed, or `null` if still open."),
   createdAt: z.string().describe("ISO-8601 timestamp at which the incident row was created."),
-  monitorAlertId: cuidSchema
-    .nullable()
-    .describe("Id of the monitor alert that opened this incident, or `null` when not attributed to a monitor."),
-  condition: AlertConditionSchema.nullable().describe(
-    "The alert's configuration when the incident opened, or `null` for kinds with no parameters.",
+  condition: IncidentConditionSchema.describe(
+    "The monitor rule configuration when the incident opened, or `null` for signal incidents and match monitors.",
   ),
 } as const
 
 export const IncidentSchema = z.object(incidentFields).openapi("Incident")
 
-export const toIncidentResponse = (incident: AlertIncident) => ({
+export const toIncidentResponse = (incident: Incident) => ({
   id: incident.id as string,
   organizationId: incident.organizationId as string,
   projectId: incident.projectId as string,
   sourceType: incident.sourceType,
   sourceId: incident.sourceId,
-  kind: incident.kind,
   severity: incident.severity,
   startedAt: incident.startedAt.toISOString(),
   endedAt: incident.endedAt ? incident.endedAt.toISOString() : null,
   createdAt: incident.createdAt.toISOString(),
-  monitorAlertId: incident.monitorAlertId as string | null,
   condition: incident.condition,
 })

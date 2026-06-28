@@ -56,9 +56,7 @@ function SignalDetailPage() {
   // A trace sheet (from Examples or the Traces table) being open suppresses the
   // J/K prev/next-issue hotkeys so paging a trace never swaps the issue under it.
   const [overlayActive, setOverlayActive] = useState(false)
-  // Cycle prev/next over the issue's own lifecycle group so opening an archived
-  // issue still finds neighbors (the active default list wouldn't contain it).
-  const lifecycleGroup = issue && (issue.resolvedAt !== null || issue.ignoredAt !== null) ? "archived" : "active"
+  const lifecycleGroup = issue?.mutedAt ? "archived" : "active"
 
   return (
     <Layout>

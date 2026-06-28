@@ -1,10 +1,5 @@
 import type { IncidentSampleExcerpt } from "@domain/notifications"
-import {
-  ALERT_INCIDENT_KIND_LABEL,
-  ALERT_INCIDENT_KIND_SOURCE_TYPE,
-  type AlertIncidentKind,
-  type AlertSeverity,
-} from "@domain/shared"
+import { type AlertSeverity, INCIDENT_NOTIFICATION_KEY_LABEL, type IncidentNotificationKey } from "@domain/shared"
 import type { SignalPriority } from "@domain/signals"
 import { Section } from "@react-email/components"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
@@ -29,37 +24,30 @@ import {
   TagsChips,
 } from "../-incident-components.tsx"
 
-const ALERT_KIND_TO_SUBTITLE: Record<AlertIncidentKind, string> = {
-  "issue.new": "We notified everyone watching this project — a new signal was discovered.",
-  "issue.regressed": "We notified everyone watching this project — a resolved signal was detected again.",
-  "issue.escalating":
+const ALERT_KIND_TO_SUBTITLE: Record<IncidentNotificationKey, string> = {
+  "signal.escalating":
     "We notified everyone watching this project — an ongoing signal is being detected more than expected.",
-  "savedSearch.match": "We notified everyone watching this project — a new trace matching the search was detected.",
-  "savedSearch.threshold":
-    "We notified everyone watching this project — traces matching the search were detected above the configured threshold.",
-  "savedSearch.escalating":
-    "We notified everyone watching this project — traces matching the search stayed above the threshold for the configured window.",
-  "event.matched": "We notified everyone watching this project — a new matching event was detected.",
-  "metric.threshold":
+  "monitor.match": "We notified everyone watching this project — a new match was detected.",
+  "monitor.threshold":
     "We notified everyone watching this project — a monitored metric crossed its configured threshold.",
-  "metric.escalating":
+  "monitor.escalating":
     "We notified everyone watching this project — a monitored metric stayed over its threshold for the configured window.",
 }
 
 interface IncidentEventEmailProps {
-  readonly incidentKind: AlertIncidentKind
+  readonly incidentKind: IncidentNotificationKey
   readonly severity: AlertSeverity
   /** Source entity id — issue id or saved search id. Surfaced in the footer for issues only. */
   readonly sourceId: string
   /** Live-resolved source display name (issue title or saved search name). */
   readonly sourceName: string
-  /** Signal description; absent for saved-search sources. */
+  /** Signal description; absent for monitor sources. */
   readonly description: string | undefined
   readonly signalUrl: string | undefined
   readonly notificationCreatedAt: Date
   readonly organizationName: string
   readonly projectName: string | undefined
-  /** Signal triage snapshot at incident time; absent on legacy payloads and saved-search sources. */
+  /** Signal triage snapshot at incident time; absent on legacy payloads and monitor sources. */
   readonly priority: SignalPriority | undefined
   /** Live-resolved assignee display name; absent when unassigned or unresolvable. */
   readonly assigneeName: string | undefined
@@ -86,11 +74,11 @@ export function IncidentEventEmail({
   monitor,
   webAppUrl,
 }: IncidentEventEmailProps) {
-  const heading = ALERT_INCIDENT_KIND_LABEL[incidentKind]
+  const heading = INCIDENT_NOTIFICATION_KEY_LABEL[incidentKind]
   const subtitle = ALERT_KIND_TO_SUBTITLE[incidentKind]
-  const isSavedSearch = ALERT_INCIDENT_KIND_SOURCE_TYPE[incidentKind] === "savedSearch"
+  const isMonitorIncident = incidentKind.startsWith("monitor.")
   const scope = formatScope(organizationName, projectName)
-  const ctaHref = isSavedSearch ? monitor?.url : signalUrl
+  const ctaHref = isMonitorIncident ? monitor?.url : signalUrl
 
   const metadataRows = [
     { label: "Project", value: scope },
@@ -112,7 +100,7 @@ export function IncidentEventEmail({
 
       <MonitorAttribution monitor={monitor} />
 
-      <SectionHeader label={isSavedSearch ? "Saved search" : "Signal"} />
+      <SectionHeader label={isMonitorIncident ? "Monitor target" : "Signal"} />
       <EmailText variant="heading">{sourceName}</EmailText>
       {description ? (
         <EmailText variant="bodySmall" className="text-muted-foreground">
@@ -126,11 +114,11 @@ export function IncidentEventEmail({
 
       {sampleExcerpt ? <SampleExcerptCard excerpt={sampleExcerpt} /> : null}
 
-      {isSavedSearch ? null : <SignalIdFooter signalId={sourceId} />}
+      {isMonitorIncident ? null : <SignalIdFooter signalId={sourceId} />}
 
       {ctaHref ? (
         <Section className={emailDesignTokens.spacing.buttonTop}>
-          <EmailButton href={ctaHref} label={isSavedSearch ? "View monitor" : "View signal"} />
+          <EmailButton href={ctaHref} label={isMonitorIncident ? "View monitor" : "View signal"} />
         </Section>
       ) : null}
     </ContainerLayout>
@@ -138,7 +126,7 @@ export function IncidentEventEmail({
 }
 
 IncidentEventEmail.PreviewProps = {
-  incidentKind: "issue.new",
+  incidentKind: "signal.escalating",
   severity: "medium",
   sourceId: "dds0rt8sqgpuku4u4wabze9r",
   sourceName: "Token leakage in responses",

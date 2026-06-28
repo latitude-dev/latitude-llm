@@ -1,4 +1,4 @@
-import { AlertIncidentRepository } from "@domain/alerts"
+import { IncidentRepository } from "@domain/incidents"
 import type { QueuePublishError } from "@domain/queue"
 import type { RepositoryError, SqlClient } from "@domain/shared"
 import { Effect, Ref } from "effect"
@@ -12,7 +12,7 @@ import { Effect, Ref } from "effect"
 const PUBLISH_CONCURRENCY = 10
 
 /**
- * Callback the use case invokes for each open `issue.escalating` incident.
+ * Callback the use case invokes for each open signal escalation incident.
  * The worker wires this to
  * `QueuePublisher.publish("issues", "checkEscalation", payload, ...)`; tests
  * substitute a capture function.
@@ -35,7 +35,7 @@ export interface SweepEscalatingSignalsResult {
 
 /**
  * Fan-out side of the hourly escalation sweep. The cron fires once an hour;
- * this use case reads every open `issue.escalating` row across the platform
+ * this use case reads every open signal incident row across the platform
  * (via the admin Postgres client → RLS bypass) and enqueues one
  * `checkEscalation` task per incident.
  *
@@ -57,17 +57,14 @@ export interface SweepEscalatingSignalsResult {
  */
 export const sweepEscalatingSignalsUseCase = (deps: SweepEscalatingSignalsDeps) =>
   Effect.gen(function* () {
-    const alertIncidentRepository = yield* AlertIncidentRepository
-    const incidents = yield* alertIncidentRepository.listOpenByKind("issue.escalating")
+    const alertIncidentRepository = yield* IncidentRepository
+    const incidents = yield* alertIncidentRepository.listOpenBySourceType("signal")
 
     const failedRef = yield* Ref.make(0)
 
     yield* Effect.forEach(
       incidents,
       (incident) => {
-        // `issue.escalating` incidents are always issue-sourced; the guard satisfies the
-        // now-nullable incident source type (unified incidents never carry this kind).
-        if (incident.sourceId === null) return Effect.void
         return deps
           .publish({
             organizationId: incident.organizationId,
@@ -91,5 +88,5 @@ export const sweepEscalatingSignalsUseCase = (deps: SweepEscalatingSignalsDeps) 
   }).pipe(Effect.withSpan("issues.sweepEscalatingSignals")) as Effect.Effect<
     SweepEscalatingSignalsResult,
     RepositoryError,
-    SqlClient | AlertIncidentRepository
+    SqlClient | IncidentRepository
   >

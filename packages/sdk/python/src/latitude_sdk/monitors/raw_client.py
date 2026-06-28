@@ -14,22 +14,19 @@ from ..errors.bad_request_error import BadRequestError
 from ..errors.forbidden_error import ForbiddenError
 from ..errors.not_found_error import NotFoundError
 from ..errors.unauthorized_error import UnauthorizedError
-from ..types.create_monitor_alert_body import CreateMonitorAlertBody
+from ..types.alert_condition import AlertCondition
+from ..types.create_monitor_body import CreateMonitorBody
 from ..types.error import Error
 from ..types.monitor import Monitor
-from ..types.monitor_alert import MonitorAlert
-from ..types.monitor_alert_list import MonitorAlertList
 from ..types.monitor_filter_set import MonitorFilterSet
 from ..types.monitor_list import MonitorList
+from ..types.monitor_metric import MonitorMetric
 from ..types.monitor_target import MonitorTarget
 from ..types.paginated_monitor_incidents import PaginatedMonitorIncidents
 from ..types.paginated_monitors import PaginatedMonitors
-from .types.list_monitors_for_target_body_stream import ListMonitorsForTargetBodyStream
-from .types.list_monitors_for_target_body_target_kind import ListMonitorsForTargetBodyTargetKind
-from .types.update_monitor_alert_body_condition import UpdateMonitorAlertBodyCondition
-from .types.update_monitor_alert_body_kind import UpdateMonitorAlertBodyKind
-from .types.update_monitor_alert_body_severity import UpdateMonitorAlertBodySeverity
-from .types.update_monitor_alert_body_source import UpdateMonitorAlertBodySource
+from .types.list_monitors_for_target_body_target_type import ListMonitorsForTargetBodyTargetType
+from .types.update_monitor_body_severity import UpdateMonitorBodySeverity
+from .types.update_monitor_body_trigger import UpdateMonitorBodyTrigger
 
 # this is used as the default value for optional parameters
 OMIT = typing.cast(typing.Any, ...)
@@ -132,33 +129,17 @@ class RawMonitorsClient:
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def create(
-        self,
-        project_slug: str,
-        *,
-        name: str,
-        alerts: typing.Sequence[CreateMonitorAlertBody],
-        description: typing.Optional[str] = OMIT,
-        target: typing.Optional[MonitorTarget] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
+        self, project_slug: str, *, request: CreateMonitorBody, request_options: typing.Optional[RequestOptions] = None
     ) -> HttpResponse[Monitor]:
         """
-        Creates a monitor with one alert. Saved-search alerts use a saved-search source; tool and user alerts use `event.*` or `metric.*` kinds with `source: null` and a `target`. The slug is derived from `name`.
+        Creates a monitor with one rule. The slug is derived from `name`.
 
         Parameters
         ----------
         project_slug : str
             Project slug (human-readable identifier)
 
-        name : str
-            Human-readable name. Used to derive the slug.
-
-        alerts : typing.Sequence[CreateMonitorAlertBody]
-            The monitor's alert. Exactly one.
-
-        description : typing.Optional[str]
-            Optional free-form description.
-
-        target : typing.Optional[MonitorTarget]
+        request : CreateMonitorBody
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -171,16 +152,9 @@ class RawMonitorsClient:
         _response = self._client_wrapper.httpx_client.request(
             f"v1/projects/{jsonable_encoder(project_slug)}/monitors",
             method="POST",
-            json={
-                "name": name,
-                "description": description,
-                "alerts": convert_and_respect_annotation_metadata(
-                    object_=alerts, annotation=typing.Sequence[CreateMonitorAlertBody], direction="write"
-                ),
-                "target": convert_and_respect_annotation_metadata(
-                    object_=target, annotation=MonitorTarget, direction="write"
-                ),
-            },
+            json=convert_and_respect_annotation_metadata(
+                object_=request, annotation=CreateMonitorBody, direction="write"
+            ),
             headers={
                 "content-type": "application/json",
             },
@@ -239,26 +213,22 @@ class RawMonitorsClient:
         self,
         project_slug: str,
         *,
-        stream: ListMonitorsForTargetBodyStream,
-        target_kind: typing.Optional[ListMonitorsForTargetBodyTargetKind] = OMIT,
-        filter_set_contains: typing.Optional[MonitorFilterSet] = OMIT,
+        filter_set_contains: MonitorFilterSet,
+        target_type: typing.Optional[ListMonitorsForTargetBodyTargetType] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[MonitorList]:
         """
-        Returns live unified monitors matching the supplied target kind and/or filter subset. Use `targetKind: user` with `stream: traces` for users, or `targetKind: tool` with `stream: spans` for tools.
+        Returns live monitors matching the supplied target type and/or filter subset.
 
         Parameters
         ----------
         project_slug : str
             Project slug (human-readable identifier)
 
-        stream : ListMonitorsForTargetBodyStream
-            Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`.
+        filter_set_contains : MonitorFilterSet
 
-        target_kind : typing.Optional[ListMonitorsForTargetBodyTargetKind]
-            Optional target kind to match: `user`, `tool`, `session`, or `savedSearch`.
-
-        filter_set_contains : typing.Optional[MonitorFilterSet]
+        target_type : typing.Optional[ListMonitorsForTargetBodyTargetType]
+            Optional target type to match.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -272,8 +242,7 @@ class RawMonitorsClient:
             f"v1/projects/{jsonable_encoder(project_slug)}/monitors/for-target",
             method="POST",
             json={
-                "stream": stream,
-                "targetKind": target_kind,
+                "targetType": target_type,
                 "filterSetContains": convert_and_respect_annotation_metadata(
                     object_=filter_set_contains, annotation=MonitorFilterSet, direction="write"
                 ),
@@ -411,7 +380,7 @@ class RawMonitorsClient:
         self, project_slug: str, monitor_slug: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> HttpResponse[None]:
         """
-        Deletes a monitor and its alerts. System monitors cannot be deleted.
+        Deletes a monitor. System monitors cannot be deleted.
 
         Parameters
         ----------
@@ -470,10 +439,15 @@ class RawMonitorsClient:
         *,
         name: typing.Optional[str] = OMIT,
         description: typing.Optional[str] = OMIT,
+        target: typing.Optional[MonitorTarget] = OMIT,
+        trigger: typing.Optional[UpdateMonitorBodyTrigger] = OMIT,
+        metric: typing.Optional[MonitorMetric] = OMIT,
+        condition: typing.Optional[AlertCondition] = OMIT,
+        severity: typing.Optional[UpdateMonitorBodySeverity] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[Monitor]:
         """
-        Updates a monitor's name and description. System monitors cannot be edited.
+        Updates a monitor's metadata, target, and rule. System monitor edits are restricted.
 
         Parameters
         ----------
@@ -489,6 +463,18 @@ class RawMonitorsClient:
         description : typing.Optional[str]
             New description.
 
+        target : typing.Optional[MonitorTarget]
+
+        trigger : typing.Optional[UpdateMonitorBodyTrigger]
+            Replacement incident trigger for the monitor rule.
+
+        metric : typing.Optional[MonitorMetric]
+
+        condition : typing.Optional[AlertCondition]
+
+        severity : typing.Optional[UpdateMonitorBodySeverity]
+            Replacement incident severity.
+
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
@@ -503,286 +489,15 @@ class RawMonitorsClient:
             json={
                 "name": name,
                 "description": description,
-            },
-            headers={
-                "content-type": "application/json",
-            },
-            request_options=request_options,
-            omit=OMIT,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    Monitor,
-                    parse_obj_as(
-                        type_=Monitor,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return HttpResponse(response=_response, data=_data)
-            if _response.status_code == 400:
-                raise BadRequestError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            if _response.status_code == 401:
-                raise UnauthorizedError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            if _response.status_code == 403:
-                raise ForbiddenError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            if _response.status_code == 404:
-                raise NotFoundError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
-    def list_alerts(
-        self, project_slug: str, monitor_slug: str, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> HttpResponse[MonitorAlertList]:
-        """
-        Returns the monitor's alerts.
-
-        Parameters
-        ----------
-        project_slug : str
-            Project slug (human-readable identifier)
-
-        monitor_slug : str
-            Monitor slug (human-readable identifier within the project).
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        HttpResponse[MonitorAlertList]
-            The monitor's alerts
-        """
-        _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors/{jsonable_encoder(monitor_slug)}/alerts",
-            method="GET",
-            request_options=request_options,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    MonitorAlertList,
-                    parse_obj_as(
-                        type_=MonitorAlertList,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return HttpResponse(response=_response, data=_data)
-            if _response.status_code == 400:
-                raise BadRequestError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            if _response.status_code == 401:
-                raise UnauthorizedError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            if _response.status_code == 404:
-                raise NotFoundError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
-    def get_alert(
-        self,
-        project_slug: str,
-        monitor_slug: str,
-        alert_id: str,
-        *,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> HttpResponse[MonitorAlert]:
-        """
-        Returns a single monitor alert by id.
-
-        Parameters
-        ----------
-        project_slug : str
-            Project slug (human-readable identifier)
-
-        monitor_slug : str
-            Monitor slug (human-readable identifier within the project).
-
-        alert_id : str
-            Monitor-alert identifier.
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        HttpResponse[MonitorAlert]
-            Monitor alert
-        """
-        _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors/{jsonable_encoder(monitor_slug)}/alerts/{jsonable_encoder(alert_id)}",
-            method="GET",
-            request_options=request_options,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    MonitorAlert,
-                    parse_obj_as(
-                        type_=MonitorAlert,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return HttpResponse(response=_response, data=_data)
-            if _response.status_code == 400:
-                raise BadRequestError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            if _response.status_code == 401:
-                raise UnauthorizedError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            if _response.status_code == 404:
-                raise NotFoundError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
-    def update_alert(
-        self,
-        project_slug: str,
-        monitor_slug: str,
-        alert_id: str,
-        *,
-        kind: typing.Optional[UpdateMonitorAlertBodyKind] = OMIT,
-        source: typing.Optional[UpdateMonitorAlertBodySource] = OMIT,
-        condition: typing.Optional[UpdateMonitorAlertBodyCondition] = OMIT,
-        severity: typing.Optional[UpdateMonitorAlertBodySeverity] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> HttpResponse[Monitor]:
-        """
-        Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may. Saved-search alerts use a source; tool and user alerts use `source: null` with the monitor target.
-
-        Parameters
-        ----------
-        project_slug : str
-            Project slug (human-readable identifier)
-
-        monitor_slug : str
-            Monitor slug (human-readable identifier within the project).
-
-        alert_id : str
-            Monitor-alert identifier.
-
-        kind : typing.Optional[UpdateMonitorAlertBodyKind]
-            New alert kind. Not allowed on system monitors. Supply the matching `source` and `condition` when you change it.
-
-        source : typing.Optional[UpdateMonitorAlertBodySource]
-            Replace the saved-search source, or set `null` for unified tool/user alerts. Not allowed on system monitors.
-
-        condition : typing.Optional[UpdateMonitorAlertBodyCondition]
-            Replace the alert's configuration. On system monitors this is the only editable field (e.g. signal-escalation `sensitivity`).
-
-        severity : typing.Optional[UpdateMonitorAlertBodySeverity]
-            Replace the severity. Not allowed on system monitors.
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        HttpResponse[Monitor]
-            Monitor with the updated alert
-        """
-        _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors/{jsonable_encoder(monitor_slug)}/alerts/{jsonable_encoder(alert_id)}",
-            method="PATCH",
-            json={
-                "kind": kind,
-                "source": convert_and_respect_annotation_metadata(
-                    object_=source, annotation=UpdateMonitorAlertBodySource, direction="write"
+                "target": convert_and_respect_annotation_metadata(
+                    object_=target, annotation=MonitorTarget, direction="write"
+                ),
+                "trigger": trigger,
+                "metric": convert_and_respect_annotation_metadata(
+                    object_=metric, annotation=MonitorMetric, direction="write"
                 ),
                 "condition": convert_and_respect_annotation_metadata(
-                    object_=condition, annotation=UpdateMonitorAlertBodyCondition, direction="write"
+                    object_=condition, annotation=AlertCondition, direction="write"
                 ),
                 "severity": severity,
             },
@@ -1190,33 +905,17 @@ class AsyncRawMonitorsClient:
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def create(
-        self,
-        project_slug: str,
-        *,
-        name: str,
-        alerts: typing.Sequence[CreateMonitorAlertBody],
-        description: typing.Optional[str] = OMIT,
-        target: typing.Optional[MonitorTarget] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
+        self, project_slug: str, *, request: CreateMonitorBody, request_options: typing.Optional[RequestOptions] = None
     ) -> AsyncHttpResponse[Monitor]:
         """
-        Creates a monitor with one alert. Saved-search alerts use a saved-search source; tool and user alerts use `event.*` or `metric.*` kinds with `source: null` and a `target`. The slug is derived from `name`.
+        Creates a monitor with one rule. The slug is derived from `name`.
 
         Parameters
         ----------
         project_slug : str
             Project slug (human-readable identifier)
 
-        name : str
-            Human-readable name. Used to derive the slug.
-
-        alerts : typing.Sequence[CreateMonitorAlertBody]
-            The monitor's alert. Exactly one.
-
-        description : typing.Optional[str]
-            Optional free-form description.
-
-        target : typing.Optional[MonitorTarget]
+        request : CreateMonitorBody
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -1229,16 +928,9 @@ class AsyncRawMonitorsClient:
         _response = await self._client_wrapper.httpx_client.request(
             f"v1/projects/{jsonable_encoder(project_slug)}/monitors",
             method="POST",
-            json={
-                "name": name,
-                "description": description,
-                "alerts": convert_and_respect_annotation_metadata(
-                    object_=alerts, annotation=typing.Sequence[CreateMonitorAlertBody], direction="write"
-                ),
-                "target": convert_and_respect_annotation_metadata(
-                    object_=target, annotation=MonitorTarget, direction="write"
-                ),
-            },
+            json=convert_and_respect_annotation_metadata(
+                object_=request, annotation=CreateMonitorBody, direction="write"
+            ),
             headers={
                 "content-type": "application/json",
             },
@@ -1297,26 +989,22 @@ class AsyncRawMonitorsClient:
         self,
         project_slug: str,
         *,
-        stream: ListMonitorsForTargetBodyStream,
-        target_kind: typing.Optional[ListMonitorsForTargetBodyTargetKind] = OMIT,
-        filter_set_contains: typing.Optional[MonitorFilterSet] = OMIT,
+        filter_set_contains: MonitorFilterSet,
+        target_type: typing.Optional[ListMonitorsForTargetBodyTargetType] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[MonitorList]:
         """
-        Returns live unified monitors matching the supplied target kind and/or filter subset. Use `targetKind: user` with `stream: traces` for users, or `targetKind: tool` with `stream: spans` for tools.
+        Returns live monitors matching the supplied target type and/or filter subset.
 
         Parameters
         ----------
         project_slug : str
             Project slug (human-readable identifier)
 
-        stream : ListMonitorsForTargetBodyStream
-            Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`.
+        filter_set_contains : MonitorFilterSet
 
-        target_kind : typing.Optional[ListMonitorsForTargetBodyTargetKind]
-            Optional target kind to match: `user`, `tool`, `session`, or `savedSearch`.
-
-        filter_set_contains : typing.Optional[MonitorFilterSet]
+        target_type : typing.Optional[ListMonitorsForTargetBodyTargetType]
+            Optional target type to match.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -1330,8 +1018,7 @@ class AsyncRawMonitorsClient:
             f"v1/projects/{jsonable_encoder(project_slug)}/monitors/for-target",
             method="POST",
             json={
-                "stream": stream,
-                "targetKind": target_kind,
+                "targetType": target_type,
                 "filterSetContains": convert_and_respect_annotation_metadata(
                     object_=filter_set_contains, annotation=MonitorFilterSet, direction="write"
                 ),
@@ -1469,7 +1156,7 @@ class AsyncRawMonitorsClient:
         self, project_slug: str, monitor_slug: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> AsyncHttpResponse[None]:
         """
-        Deletes a monitor and its alerts. System monitors cannot be deleted.
+        Deletes a monitor. System monitors cannot be deleted.
 
         Parameters
         ----------
@@ -1528,10 +1215,15 @@ class AsyncRawMonitorsClient:
         *,
         name: typing.Optional[str] = OMIT,
         description: typing.Optional[str] = OMIT,
+        target: typing.Optional[MonitorTarget] = OMIT,
+        trigger: typing.Optional[UpdateMonitorBodyTrigger] = OMIT,
+        metric: typing.Optional[MonitorMetric] = OMIT,
+        condition: typing.Optional[AlertCondition] = OMIT,
+        severity: typing.Optional[UpdateMonitorBodySeverity] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[Monitor]:
         """
-        Updates a monitor's name and description. System monitors cannot be edited.
+        Updates a monitor's metadata, target, and rule. System monitor edits are restricted.
 
         Parameters
         ----------
@@ -1547,6 +1239,18 @@ class AsyncRawMonitorsClient:
         description : typing.Optional[str]
             New description.
 
+        target : typing.Optional[MonitorTarget]
+
+        trigger : typing.Optional[UpdateMonitorBodyTrigger]
+            Replacement incident trigger for the monitor rule.
+
+        metric : typing.Optional[MonitorMetric]
+
+        condition : typing.Optional[AlertCondition]
+
+        severity : typing.Optional[UpdateMonitorBodySeverity]
+            Replacement incident severity.
+
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
@@ -1561,286 +1265,15 @@ class AsyncRawMonitorsClient:
             json={
                 "name": name,
                 "description": description,
-            },
-            headers={
-                "content-type": "application/json",
-            },
-            request_options=request_options,
-            omit=OMIT,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    Monitor,
-                    parse_obj_as(
-                        type_=Monitor,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return AsyncHttpResponse(response=_response, data=_data)
-            if _response.status_code == 400:
-                raise BadRequestError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            if _response.status_code == 401:
-                raise UnauthorizedError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            if _response.status_code == 403:
-                raise ForbiddenError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            if _response.status_code == 404:
-                raise NotFoundError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
-    async def list_alerts(
-        self, project_slug: str, monitor_slug: str, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> AsyncHttpResponse[MonitorAlertList]:
-        """
-        Returns the monitor's alerts.
-
-        Parameters
-        ----------
-        project_slug : str
-            Project slug (human-readable identifier)
-
-        monitor_slug : str
-            Monitor slug (human-readable identifier within the project).
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        AsyncHttpResponse[MonitorAlertList]
-            The monitor's alerts
-        """
-        _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors/{jsonable_encoder(monitor_slug)}/alerts",
-            method="GET",
-            request_options=request_options,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    MonitorAlertList,
-                    parse_obj_as(
-                        type_=MonitorAlertList,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return AsyncHttpResponse(response=_response, data=_data)
-            if _response.status_code == 400:
-                raise BadRequestError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            if _response.status_code == 401:
-                raise UnauthorizedError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            if _response.status_code == 404:
-                raise NotFoundError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
-    async def get_alert(
-        self,
-        project_slug: str,
-        monitor_slug: str,
-        alert_id: str,
-        *,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> AsyncHttpResponse[MonitorAlert]:
-        """
-        Returns a single monitor alert by id.
-
-        Parameters
-        ----------
-        project_slug : str
-            Project slug (human-readable identifier)
-
-        monitor_slug : str
-            Monitor slug (human-readable identifier within the project).
-
-        alert_id : str
-            Monitor-alert identifier.
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        AsyncHttpResponse[MonitorAlert]
-            Monitor alert
-        """
-        _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors/{jsonable_encoder(monitor_slug)}/alerts/{jsonable_encoder(alert_id)}",
-            method="GET",
-            request_options=request_options,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    MonitorAlert,
-                    parse_obj_as(
-                        type_=MonitorAlert,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return AsyncHttpResponse(response=_response, data=_data)
-            if _response.status_code == 400:
-                raise BadRequestError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            if _response.status_code == 401:
-                raise UnauthorizedError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            if _response.status_code == 404:
-                raise NotFoundError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
-    async def update_alert(
-        self,
-        project_slug: str,
-        monitor_slug: str,
-        alert_id: str,
-        *,
-        kind: typing.Optional[UpdateMonitorAlertBodyKind] = OMIT,
-        source: typing.Optional[UpdateMonitorAlertBodySource] = OMIT,
-        condition: typing.Optional[UpdateMonitorAlertBodyCondition] = OMIT,
-        severity: typing.Optional[UpdateMonitorAlertBodySeverity] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> AsyncHttpResponse[Monitor]:
-        """
-        Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may. Saved-search alerts use a source; tool and user alerts use `source: null` with the monitor target.
-
-        Parameters
-        ----------
-        project_slug : str
-            Project slug (human-readable identifier)
-
-        monitor_slug : str
-            Monitor slug (human-readable identifier within the project).
-
-        alert_id : str
-            Monitor-alert identifier.
-
-        kind : typing.Optional[UpdateMonitorAlertBodyKind]
-            New alert kind. Not allowed on system monitors. Supply the matching `source` and `condition` when you change it.
-
-        source : typing.Optional[UpdateMonitorAlertBodySource]
-            Replace the saved-search source, or set `null` for unified tool/user alerts. Not allowed on system monitors.
-
-        condition : typing.Optional[UpdateMonitorAlertBodyCondition]
-            Replace the alert's configuration. On system monitors this is the only editable field (e.g. signal-escalation `sensitivity`).
-
-        severity : typing.Optional[UpdateMonitorAlertBodySeverity]
-            Replace the severity. Not allowed on system monitors.
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        AsyncHttpResponse[Monitor]
-            Monitor with the updated alert
-        """
-        _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/monitors/{jsonable_encoder(monitor_slug)}/alerts/{jsonable_encoder(alert_id)}",
-            method="PATCH",
-            json={
-                "kind": kind,
-                "source": convert_and_respect_annotation_metadata(
-                    object_=source, annotation=UpdateMonitorAlertBodySource, direction="write"
+                "target": convert_and_respect_annotation_metadata(
+                    object_=target, annotation=MonitorTarget, direction="write"
+                ),
+                "trigger": trigger,
+                "metric": convert_and_respect_annotation_metadata(
+                    object_=metric, annotation=MonitorMetric, direction="write"
                 ),
                 "condition": convert_and_respect_annotation_metadata(
-                    object_=condition, annotation=UpdateMonitorAlertBodyCondition, direction="write"
+                    object_=condition, annotation=AlertCondition, direction="write"
                 ),
                 "severity": severity,
             },

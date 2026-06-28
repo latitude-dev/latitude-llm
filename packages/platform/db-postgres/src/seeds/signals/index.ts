@@ -1,6 +1,6 @@
 import { AIEmbed, type AIError, EMBEDDING_DIMENSIONS, resolveEmbeddingConfig } from "@domain/ai"
 import { SignalId, toSlug } from "@domain/shared"
-import { SEED_REGRESSED_SIGNAL_IDS, SEED_SIGNAL_FIXTURES, type SeedScope } from "@domain/shared/seeding"
+import { SEED_SIGNAL_FIXTURES, type SeedScope } from "@domain/shared/seeding"
 import { createSignalCentroid, type SignalCentroid, updateSignalCentroid } from "@domain/signals"
 import { AIEmbedLive } from "@platform/ai"
 import { Effect } from "effect"
@@ -26,7 +26,7 @@ const NAMED_SIGNAL_KEYS = [
   "flagger",
 ] as const
 
-export const fixtureScopedId = (index: number, scope: SeedScope): string =>
+const fixtureScopedId = (index: number, scope: SeedScope): string =>
   index < NAMED_SIGNAL_KEYS.length
     ? scope.cuid(`issue:${NAMED_SIGNAL_KEYS[index]}`)
     : scope.cuid(`issue:extra:${index - NAMED_SIGNAL_KEYS.length}`)
@@ -35,11 +35,6 @@ const fixtureScopedUuid = (index: number, scope: SeedScope): string =>
   index < NAMED_SIGNAL_KEYS.length
     ? scope.uuid(`issue:${NAMED_SIGNAL_KEYS[index]}:uuid`)
     : scope.uuid(`issue:extra:${index - NAMED_SIGNAL_KEYS.length}:uuid`)
-
-/** Stable key per fixture index — used to namespace cross-seeder ids
- * (e.g. alert_incidents rows that reference these signals). */
-export const fixtureScopedKey = (index: number): string =>
-  index < NAMED_SIGNAL_KEYS.length ? (NAMED_SIGNAL_KEYS[index] as string) : `extra:${index - NAMED_SIGNAL_KEYS.length}`
 
 function hashString(input: string): number {
   let hash = 1779033703 ^ input.length
@@ -166,7 +161,7 @@ function buildRandomFallbackCentroid(seedKey: string, clusteredAt: Date): Signal
   }
 }
 
-export function signalFixtureDates(scope: SeedScope, issue: (typeof SEED_SIGNAL_FIXTURES)[number]) {
+function signalFixtureDates(scope: SeedScope, issue: (typeof SEED_SIGNAL_FIXTURES)[number]) {
   return {
     createdAt: scope.dateDaysAgo(issue.createdDaysAgo, 14, 15),
     clusteredAt: scope.dateDaysAgo(issue.clusteredDaysAgo, 14, 15),
@@ -208,14 +203,6 @@ function buildSignalRow(input: {
     ].filter((date): date is Date => date !== null),
   )
 
-  // Regression-demo signals are kept un-resolved on purpose: the
-  // `Regressed` derived state requires `resolvedAt IS NULL` plus an
-  // `issue.regressed` alert_incident, which the alert-incidents seeder
-  // inserts for these ids. Production behavior is the same — when
-  // `assign-score-to-signal` reifies a regression it clears `resolvedAt`.
-  const isRegressedDemo = SEED_REGRESSED_SIGNAL_IDS.includes(input.signalId)
-  const resolvedAt = isRegressedDemo ? null : fixtureDates.resolvedAt
-
   return {
     id: SignalId(input.signalId),
     organizationId: input.organizationId,
@@ -229,12 +216,7 @@ function buildSignalRow(input: {
     source: input.issue.source,
     centroid,
     clusteredAt: centroid.clusteredAt,
-    // escalatedAt is intentionally not written: the column is dormant and
-    // "currently escalating" is sourced from open `alert_incidents` rows
-    // by `SignalRepository`.
-    escalatedAt: null,
-    resolvedAt,
-    ignoredAt: fixtureDates.ignoredAt,
+    mutedAt: fixtureDates.ignoredAt,
     createdAt,
     updatedAt,
   }

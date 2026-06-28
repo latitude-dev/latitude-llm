@@ -3,36 +3,16 @@
 import type * as LatitudeApi from "../index.js";
 
 /**
- * The alert's configuration when the incident opened, or `null` for kinds with no parameters.
+ * Condition that controls threshold or escalating incidents.
  */
-export type AlertCondition =
-    | {
-          kind: "savedSearch.threshold";
-          threshold: LatitudeApi.AlertCountThreshold;
-      }
-    | {
-          kind: "savedSearch.escalating";
-          threshold: LatitudeApi.AlertCountThreshold;
-          window: {
-              minutes: number;
-          };
-      }
-    | {
-          kind: "issue.escalating";
-          sensitivity?: number | undefined;
-      }
-    | {
-          kind: "metric.threshold";
-          metric: LatitudeApi.MonitorMetric;
-          threshold: LatitudeApi.AlertMetricThreshold;
-          direction?: ("above" | "below") | undefined;
-      }
-    | {
-          kind: "metric.escalating";
-          metric: LatitudeApi.MonitorMetric;
-          threshold: LatitudeApi.AlertMetricThreshold;
-          direction?: ("above" | "below") | undefined;
-          window: {
-              minutes: number;
-          };
-      };
+export type AlertCondition = LatitudeApi.AlertCondition.Threshold | LatitudeApi.AlertCondition.Escalating;
+
+export namespace AlertCondition {
+    export interface Threshold extends LatitudeApi.AlertThresholdCondition {
+        trigger: "threshold";
+    }
+
+    export interface Escalating extends LatitudeApi.AlertEscalatingCondition {
+        trigger: "escalating";
+    }
+}

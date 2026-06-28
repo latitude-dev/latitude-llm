@@ -24,7 +24,7 @@
     "@hono/node-server": "catalog:",
     "hono": "catalog:",
     "@domain/ai": "workspace:*",
-    "@domain/alerts": "workspace:*",
+    "@domain/incidents": "workspace:*",
     "@domain/annotation-queues": "workspace:*",
     "@domain/annotations": "workspace:*",
     "@domain/api-keys": "workspace:*",

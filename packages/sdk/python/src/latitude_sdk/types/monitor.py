@@ -6,7 +6,7 @@ import pydantic
 import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
-from .monitor_alert import MonitorAlert
+from .monitor_rule import MonitorRule
 from .monitor_target import MonitorTarget
 
 
@@ -43,15 +43,11 @@ class Monitor(UniversalBaseModel):
 
     system: bool = pydantic.Field()
     """
-    `true` for the auto-provisioned system monitors, which can't be deleted or edited; `false` otherwise.
+    `true` for auto-provisioned system monitors, which cannot be deleted or edited; `false` otherwise.
     """
 
-    alerts: typing.List[MonitorAlert] = pydantic.Field()
-    """
-    The monitor's alerts. Always at least one.
-    """
-
-    target: typing.Optional[MonitorTarget] = None
+    target: MonitorTarget
+    rule: MonitorRule
     muted_at: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="mutedAt")] = pydantic.Field(
         default=None
     )

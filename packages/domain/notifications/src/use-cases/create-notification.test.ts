@@ -67,7 +67,7 @@ function setup(opts: SetupOpts = {}) {
 }
 
 const incidentPayload = (alertIncidentId: string) => ({
-  incidentKind: "issue.new" as const,
+  incidentKind: "signal.discovered" as const,
   alertIncidentId,
 })
 

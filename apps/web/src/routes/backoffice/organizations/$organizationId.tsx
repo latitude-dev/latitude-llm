@@ -17,7 +17,7 @@ import {
 import { relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute, notFound, useRouter } from "@tanstack/react-router"
-import { BellRingIcon, Flag, SparklesIcon } from "lucide-react"
+import { Flag, SparklesIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import {
   type AdminOrganizationFeatureFlagDto,
@@ -47,7 +47,6 @@ import {
   StripeCustomerLink,
 } from "../-components/dashboard/index.ts"
 import { CreateDemoProjectButton } from "../-components/organization-actions/create-demo-project.tsx"
-import { ResetSystemMonitorsButton } from "../-components/organization-actions/reset-system-monitors.tsx"
 import { OrganizationActionRow, OrganizationActionsSection } from "../-components/organization-actions/section.tsx"
 import { MemberRoleBadge, PlatformStaffBadge } from "../-components/role-badges.tsx"
 import { ProjectRow, UserRow } from "../-components/rows/index.ts"
@@ -203,12 +202,6 @@ function BackofficeOrganizationDetailPage() {
           title="Create demo project"
           description="Spin up a fresh project on this org seeded with bootstrap content (datasets, evaluations, issues, ~30 days of telemetry). Runs in the background."
           action={<CreateDemoProjectButton organizationId={organization.id} />}
-        />
-        <OrganizationActionRow
-          icon={BellRingIcon}
-          title="Reset system monitors"
-          description="Re-provision the three system monitors to their current definitions on every project in this org. Overwrites their titles, descriptions, and default alert condition values; preserves mute state and incident history."
-          action={<ResetSystemMonitorsButton organizationId={organization.id} />}
         />
       </OrganizationActionsSection>
 

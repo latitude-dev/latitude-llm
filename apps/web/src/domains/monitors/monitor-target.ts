@@ -12,6 +12,8 @@ const firstEqValue = (conditions: readonly FilterCondition[] | undefined): strin
 }
 
 export const toolMonitorTarget = (toolName: string, metric: MonitorMetric = DEFAULT_METRIC): MonitorTarget => ({
+  type: "tool",
+  id: null,
   kind: "tool",
   stream: "spans",
   filterSet: { operation: [{ op: "eq", value: EXECUTE_TOOL_OPERATION }], toolName: [{ op: "eq", value: toolName }] },
@@ -21,6 +23,8 @@ export const toolMonitorTarget = (toolName: string, metric: MonitorMetric = DEFA
 })
 
 export const allToolsMonitorTarget = (metric: MonitorMetric = DEFAULT_METRIC): MonitorTarget => ({
+  type: "tool",
+  id: null,
   kind: "tool",
   stream: "spans",
   filterSet: { operation: [{ op: "eq", value: EXECUTE_TOOL_OPERATION }] },
@@ -30,6 +34,8 @@ export const allToolsMonitorTarget = (metric: MonitorMetric = DEFAULT_METRIC): M
 })
 
 export const userMonitorTarget = (userId: string, metric: MonitorMetric = DEFAULT_METRIC): MonitorTarget => ({
+  type: "user",
+  id: null,
   kind: "user",
   stream: "traces",
   filterSet: { userId: [{ op: "eq", value: userId }] },
@@ -39,6 +45,8 @@ export const userMonitorTarget = (userId: string, metric: MonitorMetric = DEFAUL
 })
 
 export const allUsersMonitorTarget = (metric: MonitorMetric = DEFAULT_METRIC): MonitorTarget => ({
+  type: "user",
+  id: null,
   kind: "user",
   stream: "traces",
   filterSet: {},
@@ -48,6 +56,8 @@ export const allUsersMonitorTarget = (metric: MonitorMetric = DEFAULT_METRIC): M
 })
 
 export const allSessionsMonitorTarget = (metric: MonitorMetric = DEFAULT_METRIC): MonitorTarget => ({
+  type: "session",
+  id: null,
   kind: "session",
   stream: "sessions",
   filterSet: {},
@@ -60,6 +70,8 @@ export const savedSearchMonitorTarget = (
   savedSearchId: string,
   metric: MonitorMetric = DEFAULT_METRIC,
 ): MonitorTarget => ({
+  type: "savedSearch",
+  id: savedSearchId,
   kind: "savedSearch",
   stream: "traces",
   filterSet: null,
@@ -89,7 +101,7 @@ export const describeMonitorTarget = (target: MonitorTarget | null): TargetDescr
     return user ? { label: `User: ${user}`, kind: "user" } : { label: "All users", kind: "allUsers" }
   }
   if (target.kind === "session") return { label: "All sessions", kind: "allSessions" }
-  return { label: target.stream, kind: "stream" }
+  return { label: target.stream ?? target.type, kind: "stream" }
 }
 
 interface MonitorMetricOption {
@@ -174,7 +186,7 @@ export const targetToSessionFilters = (target: MonitorTarget): { filters: Filter
     if (tool) filters.tools = [{ op: "in", value: [tool] }]
     return { filters, query: null }
   }
-  return { filters: target.filterSet ?? {}, query: target.query }
+  return { filters: target.filterSet ?? {}, query: target.query ?? null }
 }
 
 /** Longer noun phrase for the alert preview sentence ("the `search` tool", "all users"). */

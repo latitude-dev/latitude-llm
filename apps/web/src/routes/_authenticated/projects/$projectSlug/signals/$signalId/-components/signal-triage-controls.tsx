@@ -25,8 +25,8 @@ const PRIORITY_OPTIONS: SelectOption<Priority | typeof UNSET>[] = (
 }))
 
 /**
- * Light-triage controls for the issue page: assignee + priority. Status stays
- * the existing resolve/ignore lifecycle (rendered by `SignalLifecycleActions`).
+ * Light-triage controls for the issue page: assignee + priority. Mute stays
+ * in `SignalLifecycleActions`.
  * Reads current values from the issue detail and writes via `updateSignalTriage`.
  *
  * `compact` drops the floating field labels and renders the two pickers inline —

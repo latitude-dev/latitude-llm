@@ -6,13 +6,11 @@ import typing
 from importlib import import_module
 
 if typing.TYPE_CHECKING:
-    from .incidents_list_request_kinds_item import IncidentsListRequestKindsItem
     from .incidents_list_request_severities_item import IncidentsListRequestSeveritiesItem
-    from .incidents_list_request_source_types_item import IncidentsListRequestSourceTypesItem
+    from .incidents_list_request_source_type import IncidentsListRequestSourceType
 _dynamic_imports: typing.Dict[str, str] = {
-    "IncidentsListRequestKindsItem": ".incidents_list_request_kinds_item",
     "IncidentsListRequestSeveritiesItem": ".incidents_list_request_severities_item",
-    "IncidentsListRequestSourceTypesItem": ".incidents_list_request_source_types_item",
+    "IncidentsListRequestSourceType": ".incidents_list_request_source_type",
 }
 
 
@@ -37,4 +35,4 @@ def __dir__():
     return sorted(lazy_attrs)
 
 
-__all__ = ["IncidentsListRequestKindsItem", "IncidentsListRequestSeveritiesItem", "IncidentsListRequestSourceTypesItem"]
+__all__ = ["IncidentsListRequestSeveritiesItem", "IncidentsListRequestSourceType"]

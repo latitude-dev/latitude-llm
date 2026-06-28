@@ -137,6 +137,26 @@ describe("/v1/mcp", () => {
     expect(toolNames).toEqual(expect.arrayContaining(["listTools", "getTool", "getToolCallHistogram", "listToolCalls"]))
   })
 
+  it<ApiTestContext>("tools/list includes the monitor tools", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const res = await sendMcpRequest(app, tenant.apiKeyToken, { jsonrpc: "2.0", id: 24, method: "tools/list" })
+    expect(res.status).toBe(200)
+    const payload = (await readSseJsonRpc(res)) as { result?: { tools?: ReadonlyArray<{ name: string }> } }
+    const toolNames = payload.result?.tools?.map((t) => t.name) ?? []
+    expect(toolNames).toEqual(
+      expect.arrayContaining([
+        "listMonitors",
+        "createMonitor",
+        "getMonitor",
+        "updateMonitor",
+        "listMonitorIncidents",
+        "muteMonitor",
+        "unmuteMonitor",
+        "deleteMonitor",
+      ]),
+    )
+  })
+
   it<ApiTestContext>("tools/list includes the user-analytics tools", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
     const res = await sendMcpRequest(app, tenant.apiKeyToken, { jsonrpc: "2.0", id: 22, method: "tools/list" })
@@ -226,6 +246,56 @@ describe("/v1/mcp", () => {
     for (const key of parsed.apiKeys) {
       expect(key.organizationId).toBe(tenant.organizationId)
     }
+  })
+
+  it<ApiTestContext>("tools/call creates and reads a monitor with structured content", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const project = await insertProject(database, tenant.organizationId)
+
+    const createRes = await sendMcpRequest(app, tenant.apiKeyToken, {
+      jsonrpc: "2.0",
+      id: 25,
+      method: "tools/call",
+      params: {
+        name: "createMonitor",
+        arguments: {
+          projectSlug: project.slug,
+          body: {
+            name: "MCP monitor",
+            description: "Created through MCP transport",
+            target: { type: "session", id: null, filterSet: {}, query: null },
+            trigger: "match",
+            metric: { kind: "count" },
+            severity: "medium",
+          },
+        },
+      },
+    })
+    expect(createRes.status).toBe(200)
+    const createdPayload = (await readSseJsonRpc(createRes)) as {
+      result?: {
+        structuredContent?: { slug?: string; target?: { stream?: string; metric?: { kind?: string } } }
+        content?: ReadonlyArray<{ type: string; text: string }>
+        isError?: boolean
+      }
+    }
+    expect(createdPayload.result?.isError).toBeFalsy()
+    expect(createdPayload.result?.structuredContent?.slug).toBe("mcp-monitor")
+    expect(createdPayload.result?.structuredContent?.target?.stream).toBe("sessions")
+    expect(createdPayload.result?.structuredContent?.target?.metric?.kind).toBe("count")
+
+    const listRes = await sendMcpRequest(app, tenant.apiKeyToken, {
+      jsonrpc: "2.0",
+      id: 26,
+      method: "tools/call",
+      params: { name: "listMonitors", arguments: { projectSlug: project.slug, search: "MCP monitor" } },
+    })
+    expect(listRes.status).toBe(200)
+    const listPayload = (await readSseJsonRpc(listRes)) as {
+      result?: { structuredContent?: { items?: ReadonlyArray<{ slug: string }> }; isError?: boolean }
+    }
+    expect(listPayload.result?.isError).toBeFalsy()
+    expect(listPayload.result?.structuredContent?.items?.map((item) => item.slug)).toContain("mcp-monitor")
   })
 
   it<ApiTestContext>("tools/call with a body-only tool forwards JSON body through the inner request", async ({

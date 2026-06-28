@@ -1,9 +1,9 @@
-import { formatHumanReadableAlert } from "@domain/monitors"
+import { formatHumanReadableRule } from "@domain/monitors"
 import type { IncidentSampleAuthor, IncidentSampleExcerpt } from "@domain/notifications"
 import {
   type AlertIncidentCondition,
-  type AlertIncidentKind,
   type AlertSeverity,
+  type IncidentNotificationKey,
   SEVERITY_BADGE_COLOR,
 } from "@domain/shared"
 import type { SignalPriority } from "@domain/signals"
@@ -50,7 +50,7 @@ export function buildMonitorAttribution(input: {
   readonly projectSlug: string | undefined
   readonly monitorName: string | undefined
   readonly monitorSlug: string | undefined
-  readonly incidentKind: AlertIncidentKind
+  readonly incidentKind: IncidentNotificationKey
   readonly condition: AlertIncidentCondition | null | undefined
 }): MonitorAttributionInfo | undefined {
   if (!input.monitorName) return undefined
@@ -62,7 +62,7 @@ export function buildMonitorAttribution(input: {
         }
       : {}),
     ...(input.condition
-      ? { conditionSummary: formatHumanReadableAlert({ kind: input.incidentKind, condition: input.condition }) }
+      ? { conditionSummary: formatHumanReadableRule({ trigger: input.condition.trigger, condition: input.condition }) }
       : {}),
   }
 }

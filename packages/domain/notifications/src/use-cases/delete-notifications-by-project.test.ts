@@ -33,7 +33,7 @@ const stored = (orgId: string, userId: string, projectId: string | null, key: st
   kind: "incident.opened",
   idempotencyKey: key,
   projectId: projectId === null ? null : (projectId as Notification["projectId"]),
-  payload: { incidentKind: "issue.new", alertIncidentId: cuid("ai") },
+  payload: { incidentKind: "signal.discovered", alertIncidentId: cuid("ai") },
   createdAt: new Date(),
   seenAt: null,
   emailedAt: null,

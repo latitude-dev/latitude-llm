@@ -1,5 +1,5 @@
-import { AlertIncidentRepository, resolveAlertIncidentUseCase } from "@domain/alerts"
 import { exportSelectionSchema } from "@domain/exports"
+import { IncidentRepository, resolveIncidentUseCase } from "@domain/incidents"
 import {
   createMonitorUseCase,
   deleteMonitorUseCase,
@@ -12,26 +12,23 @@ import {
   MetricSeriesReader,
   type MetricSeriesTarget,
   type Monitor,
-  type MonitorAlert,
-  type MonitorAlertInput,
   type MonitorLastIncident,
+  MonitorRepository,
   type MonitorSearchResult,
+  monitorStreamForTargetType,
   monitorTargetSchema,
   muteMonitorUseCase,
   searchMonitorsUseCase,
   unmuteMonitorUseCase,
-  updateMonitorAlertUseCase,
   updateMonitorUseCase,
 } from "@domain/monitors"
 import { listSavedSearches, SavedSearchRepository } from "@domain/saved-searches"
 import {
   AlertIncidentId,
   alertIncidentConditionSchema,
-  alertIncidentKindSchema,
-  alertIncidentSourceTypeSchema,
   alertSeveritySchema,
+  DEFAULT_SEVERITY_FOR_INCIDENT_NOTIFICATION_KEY,
   filterSetSchema,
-  MonitorAlertId,
   MonitorId,
   monitorStreamSchema,
   OrganizationId,
@@ -42,7 +39,7 @@ import {
 import { SignalRepository } from "@domain/signals"
 import { MetricSeriesReaderLive, withClickHouse } from "@platform/db-clickhouse"
 import {
-  AlertIncidentRepositoryLive,
+  IncidentRepositoryLive,
   MonitorRepositoryLive,
   NotificationRepositoryLive,
   OutboxEventWriterLive,
@@ -62,67 +59,116 @@ interface SavedSearchRef {
   readonly slug: string
 }
 
-const toMonitorAlertRecord = (alert: MonitorAlert, savedSearchRefs: ReadonlyMap<string, SavedSearchRef>) => {
-  const ref = alert.source?.id ? savedSearchRefs.get(alert.source.id) : undefined
+type MonitorRuleKind = "monitor.match" | "monitor.threshold" | "monitor.escalating"
+
+export interface MonitorRuleRecord {
+  readonly id: string
+  readonly monitorId: string
+  readonly kind: MonitorRuleKind
+  readonly source: { readonly type: "savedSearch"; readonly id: string | null } | null
+  readonly condition: Monitor["rule"]["config"]["condition"] | null
+  readonly severity: Monitor["rule"]["severity"]
+  readonly summary: string
+  readonly sourceName: string | null
+  readonly sourceSlug: string | null
+  readonly createdAt: string
+}
+
+const monitorMetricForTarget = (monitor: Monitor) =>
+  monitor.target.metric ?? monitor.rule.config.metric ?? { kind: "count" as const }
+
+const normalizedMonitorTarget = (monitor: Monitor) => ({
+  ...monitor.target,
+  kind: monitor.target.kind ?? monitor.target.type,
+  stream: monitorStreamForTargetType(monitor.target.type),
+  filterSet: monitor.target.filterSet ?? null,
+  query: monitor.target.query ?? null,
+  savedSearchId: monitor.target.savedSearchId ?? (monitor.target.type === "savedSearch" ? monitor.target.id : null),
+  metric: monitorMetricForTarget(monitor),
+})
+
+const toMonitorRuleRecord = (
+  monitor: Monitor,
+  savedSearchRefs: ReadonlyMap<string, SavedSearchRef>,
+): MonitorRuleRecord => {
+  const savedSearchId = monitor.target.type === "savedSearch" ? monitor.target.id : null
+  const ref = savedSearchId ? savedSearchRefs.get(savedSearchId) : undefined
+  const kind =
+    monitor.rule.trigger === "match"
+      ? "monitor.match"
+      : monitor.rule.trigger === "threshold"
+        ? "monitor.threshold"
+        : "monitor.escalating"
   return {
-    id: alert.id,
-    monitorId: alert.monitorId,
-    kind: alert.kind,
-    source: alert.source ? { type: alert.source.type, id: alert.source.id } : null,
-    condition: alert.condition,
-    severity: alert.severity,
-    // Rendered server-side so the panel/list don't pull `@domain/monitors` into
-    // the client bundle. Saved-search summaries carry the source name when known.
-    summary: formatHumanReadableAlert(alert, ref ? { savedSearchName: ref.name } : undefined),
+    id: monitor.id,
+    monitorId: monitor.id,
+    kind,
+    source: savedSearchId ? { type: "savedSearch" as const, id: savedSearchId } : null,
+    condition: monitor.rule.config.condition ?? null,
+    severity: monitor.rule.severity,
+    summary: formatHumanReadableAlert(
+      { kind, condition: monitor.rule.config.condition ?? null },
+      ref ? { savedSearchName: ref.name } : undefined,
+    ),
     sourceName: ref?.name ?? null,
     sourceSlug: ref?.slug ?? null,
-    createdAt: alert.createdAt.toISOString(),
+    createdAt: monitor.createdAt.toISOString(),
   }
 }
 
-/** @public Consumed by the M4/M5 alert form + details panel; not yet wired in M2. */
-export type MonitorAlertRecord = ReturnType<typeof toMonitorAlertRecord>
+const userAlertKindSchema = z.enum([
+  "savedSearch.match",
+  "savedSearch.threshold",
+  "savedSearch.escalating",
+  "monitor.match",
+  "monitor.threshold",
+  "monitor.escalating",
+])
 
-const toMonitorRecord = (monitor: Monitor, savedSearchRefs: ReadonlyMap<string, SavedSearchRef>) => ({
-  id: monitor.id,
-  organizationId: monitor.organizationId,
-  projectId: monitor.projectId,
-  slug: monitor.slug,
-  name: monitor.name,
-  description: monitor.description,
-  system: monitor.system,
-  alerts: monitor.alerts.map((alert) => toMonitorAlertRecord(alert, savedSearchRefs)),
-  target: monitor.target,
-  targetSavedSearchName: monitor.target?.savedSearchId
-    ? (savedSearchRefs.get(monitor.target.savedSearchId)?.name ?? null)
-    : null,
-  targetSavedSearchSlug: monitor.target?.savedSearchId
-    ? (savedSearchRefs.get(monitor.target.savedSearchId)?.slug ?? null)
-    : null,
-  mutedAt: monitor.mutedAt?.toISOString() ?? null,
-  deletedAt: monitor.deletedAt?.toISOString() ?? null,
-  createdAt: monitor.createdAt.toISOString(),
-  updatedAt: monitor.updatedAt.toISOString(),
-})
+type UserAlertKind = z.infer<typeof userAlertKindSchema>
+
+const notificationKeyForAlertKind = (kind: UserAlertKind) =>
+  kind.includes("threshold")
+    ? "monitor.threshold"
+    : kind.includes("escalating")
+      ? "monitor.escalating"
+      : "monitor.match"
+
+const toMonitorRecord = (monitor: Monitor, savedSearchRefs: ReadonlyMap<string, SavedSearchRef>) => {
+  const rule = toMonitorRuleRecord(monitor, savedSearchRefs)
+  return {
+    id: monitor.id,
+    organizationId: monitor.organizationId,
+    projectId: monitor.projectId,
+    slug: monitor.slug,
+    name: monitor.name,
+    description: monitor.description,
+    system: monitor.system,
+    rule,
+    target: normalizedMonitorTarget(monitor),
+    targetSavedSearchName:
+      monitor.target.type === "savedSearch" && monitor.target.id
+        ? (savedSearchRefs.get(monitor.target.id)?.name ?? null)
+        : null,
+    targetSavedSearchSlug:
+      monitor.target.type === "savedSearch" && monitor.target.id
+        ? (savedSearchRefs.get(monitor.target.id)?.slug ?? null)
+        : null,
+    mutedAt: monitor.mutedAt?.toISOString() ?? null,
+    deletedAt: monitor.deletedAt?.toISOString() ?? null,
+    createdAt: monitor.createdAt.toISOString(),
+    updatedAt: monitor.updatedAt.toISOString(),
+  }
+}
 
 export type MonitorRecord = ReturnType<typeof toMonitorRecord>
 
-/**
- * Builds an id→{name,slug} map for the saved searches referenced by these
- * monitors' alerts, so `formatHumanReadableAlert` can name the source and the
- * alert records can carry the traces-page deep link. Fetches nothing when no
- * alert watches a saved search (the common all-system-monitors case).
- */
 const resolveSavedSearchRefs = async (
   orgId: OrganizationId,
   projectId: ProjectId,
   monitors: readonly Monitor[],
 ): Promise<ReadonlyMap<string, SavedSearchRef>> => {
-  const referencesSavedSearch = monitors.some(
-    (monitor) =>
-      monitor.target?.savedSearchId ||
-      monitor.alerts.some((alert) => alert.source?.type === "savedSearch" && alert.source.id !== null),
-  )
+  const referencesSavedSearch = monitors.some((monitor) => monitor.target.type === "savedSearch" && monitor.target.id)
   if (!referencesSavedSearch) return new Map()
   const page = await Effect.runPromise(
     listSavedSearches({ projectId }).pipe(
@@ -208,7 +254,7 @@ export const listMonitors = createServerFn({ method: "GET" })
 const listMonitorsForTargetInputSchema = z.object({
   projectId: z.string(),
   stream: monitorStreamSchema,
-  targetKind: monitorTargetSchema.shape.kind.optional(),
+  targetKind: monitorTargetSchema.shape.type.optional(),
   filterSetContains: filterSetSchema,
 })
 
@@ -221,10 +267,21 @@ export const listMonitorsForTarget = createServerFn({ method: "GET" })
     const monitors = await Effect.runPromise(
       listMonitorsForTargetUseCase({
         projectId: ProjectId(data.projectId),
-        stream: data.stream,
-        ...(data.targetKind !== undefined ? { targetKind: data.targetKind } : {}),
+        ...(data.targetKind !== undefined ? { targetType: data.targetKind } : {}),
         filterSetContains: data.filterSetContains,
-      }).pipe(withPostgres(MonitorRepositoryLive, getPostgresClient(), orgId), withTracing),
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(
+            MonitorRepositoryLive,
+            SavedSearchRepositoryLive,
+            IncidentRepositoryLive,
+            OutboxEventWriterLive,
+          ),
+          getPostgresClient(),
+          orgId,
+        ),
+        withTracing,
+      ),
     )
     const refs = await resolveSavedSearchRefs(orgId, ProjectId(data.projectId), monitors)
     return monitors.map((monitor) => toMonitorRecord(monitor, refs))
@@ -247,8 +304,9 @@ interface MonitorMetricSeriesRecord {
 }
 
 /** Resolve a monitor's persisted target to the metric reader's `(stream, filterSet, query, metric)`. */
-const resolveMetricTarget = (target: NonNullable<Monitor["target"]>) =>
+const resolveMetricTarget = (monitor: Monitor) =>
   Effect.gen(function* () {
+    const target = normalizedMonitorTarget(monitor)
     if (target.kind === "savedSearch" && target.savedSearchId !== null) {
       const search = yield* (yield* SavedSearchRepository)
         .findById(SavedSearchId(target.savedSearchId))
@@ -264,7 +322,7 @@ const resolveMetricTarget = (target: NonNullable<Monitor["target"]>) =>
     return {
       stream: target.stream,
       filterSet: target.filterSet ?? {},
-      query: target.query,
+      query: target.query ?? null,
       metric: target.metric,
     } satisfies MetricSeriesTarget
   })
@@ -285,8 +343,8 @@ export const getMonitorMetricSeries = createServerFn({ method: "GET" })
         const monitor = yield* getMonitorBySlugUseCase({ projectId, slug: data.monitorSlug }).pipe(
           Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
         )
-        if (monitor === null || monitor.target === null) return null
-        const target = yield* resolveMetricTarget(monitor.target)
+        if (monitor === null) return null
+        const target = yield* resolveMetricTarget(monitor)
         if (target === null) return null
         const reader = yield* MetricSeriesReader
         const newestFirst = yield* reader.seriesPerBucket({
@@ -303,7 +361,16 @@ export const getMonitorMetricSeries = createServerFn({ method: "GET" })
         const bucketStartsMs = values.map((_, index) => data.toMs - (count - index) * bucketMs)
         return { bucketStartsMs, values, bucketMs } satisfies MonitorMetricSeriesRecord
       }).pipe(
-        withPostgres(Layer.mergeAll(MonitorRepositoryLive, SavedSearchRepositoryLive), getPostgresClient(), orgId),
+        withPostgres(
+          Layer.mergeAll(
+            MonitorRepositoryLive,
+            SavedSearchRepositoryLive,
+            IncidentRepositoryLive,
+            OutboxEventWriterLive,
+          ),
+          getPostgresClient(),
+          orgId,
+        ),
         withClickHouse(MetricSeriesReaderLive, getClickhouseClient(), orgId),
         withTracing,
       ),
@@ -472,7 +539,19 @@ export const bulkMuteMonitors = createServerFn({ method: "POST" })
           count += 1
         }
         return count
-      }).pipe(withPostgres(MonitorRepositoryLive, getPostgresClient(), orgId), withTracing),
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(
+            MonitorRepositoryLive,
+            SavedSearchRepositoryLive,
+            IncidentRepositoryLive,
+            OutboxEventWriterLive,
+          ),
+          getPostgresClient(),
+          orgId,
+        ),
+        withTracing,
+      ),
     )
 
     return { mutedCount }
@@ -501,7 +580,19 @@ export const bulkDeleteMonitors = createServerFn({ method: "POST" })
           if (outcome === "skipped") skippedSystemCount += 1
         }
         return { deletedCount, skippedSystemCount }
-      }).pipe(withPostgres(MonitorRepositoryLive, getPostgresClient(), orgId), withTracing),
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(
+            MonitorRepositoryLive,
+            SavedSearchRepositoryLive,
+            IncidentRepositoryLive,
+            OutboxEventWriterLive,
+          ),
+          getPostgresClient(),
+          orgId,
+        ),
+        withTracing,
+      ),
     )
 
     return counts
@@ -516,19 +607,19 @@ export const bulkResolveMonitorLastIncidents = createServerFn({ method: "POST" }
 
     const resolvedCount = await Effect.runPromise(
       Effect.gen(function* () {
-        const repository = yield* AlertIncidentRepository
+        const repository = yield* IncidentRepository
         let count = 0
         for (const monitorId of monitorIds) {
           // Same ongoing-first pick the dashboard's "Last incident" column shows.
           const page = yield* repository.listByMonitorId({ monitorId: MonitorId(monitorId), limit: 1 })
           const last = page.items[0]
           if (!last || last.endedAt !== null) continue
-          yield* resolveAlertIncidentUseCase({ id: last.id, endedAt: new Date() })
+          yield* resolveIncidentUseCase({ id: last.id, endedAt: new Date() })
           count += 1
         }
         return count
       }).pipe(
-        withPostgres(Layer.mergeAll(AlertIncidentRepositoryLive, OutboxEventWriterLive), getPostgresClient(), orgId),
+        withPostgres(Layer.mergeAll(IncidentRepositoryLive, OutboxEventWriterLive), getPostgresClient(), orgId),
         withTracing,
       ),
     )
@@ -545,8 +636,8 @@ export const resolveMonitorIncident = createServerFn({ method: "POST" })
     const orgId = OrganizationId(organizationId)
 
     const incident = await Effect.runPromise(
-      resolveAlertIncidentUseCase({ id: AlertIncidentId(data.incidentId), endedAt: new Date() }).pipe(
-        withPostgres(Layer.mergeAll(AlertIncidentRepositoryLive, OutboxEventWriterLive), getPostgresClient(), orgId),
+      resolveIncidentUseCase({ id: AlertIncidentId(data.incidentId), endedAt: new Date() }).pipe(
+        withPostgres(Layer.mergeAll(IncidentRepositoryLive, OutboxEventWriterLive), getPostgresClient(), orgId),
         withTracing,
       ),
     )
@@ -558,30 +649,26 @@ export const resolveMonitorIncident = createServerFn({ method: "POST" })
 const NAME_MAX_LENGTH = 128
 const DESCRIPTION_MAX_LENGTH = 2000
 
-const monitorAlertSourceSchema = z.object({ type: alertIncidentSourceTypeSchema, id: z.string().nullable() })
+const monitorRuleSourceSchema = z.object({
+  type: z.enum(["savedSearch", "monitor", "signal"]),
+  id: z.string().nullable(),
+})
 
-/** Shared alert-creation fields; `condition`/`severity` default in the use-case. `source` is null for unified `event.*`/`metric.*` alerts (target on the monitor). */
 const createAlertFieldsSchema = z.object({
-  kind: alertIncidentKindSchema,
-  source: monitorAlertSourceSchema.nullable(),
+  kind: userAlertKindSchema,
+  source: monitorRuleSourceSchema.nullable(),
   condition: alertIncidentConditionSchema.nullish(),
   severity: alertSeveritySchema.optional(),
 })
 
-const toAlertInput = (fields: z.infer<typeof createAlertFieldsSchema>): MonitorAlertInput => ({
-  kind: fields.kind,
-  source: fields.source ? { type: fields.source.type, id: fields.source.id } : null,
-  condition: fields.condition ?? null,
-  ...(fields.severity !== undefined ? { severity: fields.severity } : {}),
-})
+const triggerForAlertKind = (kind: UserAlertKind) =>
+  kind.includes("threshold") ? "threshold" : kind.includes("escalating") ? "escalating" : "match"
 
 const createMonitorInputSchema = z.object({
   projectId: z.string(),
   name: z.string().min(1).max(NAME_MAX_LENGTH),
   description: z.string().max(DESCRIPTION_MAX_LENGTH).optional(),
-  // The app creates a monitor with exactly one alert; alerts are never added afterwards.
-  alerts: z.array(createAlertFieldsSchema).length(1),
-  // Present for unified (tool/user/raw-stream) monitors; absent for saved-search monitors.
+  rule: createAlertFieldsSchema,
   target: monitorTargetSchema.optional(),
 })
 
@@ -592,16 +679,45 @@ export const createMonitor = createServerFn({ method: "POST" })
     const orgId = OrganizationId(organizationId)
 
     const monitor = await Effect.runPromise(
-      createMonitorUseCase({
-        organizationId: orgId,
-        projectId: ProjectId(data.projectId),
-        name: data.name,
-        ...(data.description !== undefined ? { description: data.description } : {}),
-        alerts: data.alerts.map(toAlertInput),
-        ...(data.target !== undefined ? { target: data.target } : {}),
-      }).pipe(
+      (() => {
+        const rule = data.rule
+        const target = data.target ?? {
+          type: "savedSearch" as const,
+          id: rule.source?.id ?? null,
+          filterSet: undefined,
+          query: null,
+        }
+        const trigger = triggerForAlertKind(rule.kind)
+        const metric = data.target?.metric ?? { kind: "count" as const }
+        return createMonitorUseCase({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          name: data.name,
+          ...(data.description !== undefined ? { description: data.description } : {}),
+          target,
+          rule: {
+            trigger,
+            config: {
+              ...(data.target?.filterSet ? { filterSet: data.target.filterSet } : {}),
+              metric,
+              ...(rule.condition ? { condition: rule.condition as never } : {}),
+            },
+            severity:
+              rule.severity ?? DEFAULT_SEVERITY_FOR_INCIDENT_NOTIFICATION_KEY[notificationKeyForAlertKind(rule.kind)],
+          },
+        })
+      })().pipe(
         // SavedSearchRepository backs the semantic-search monitorability check on the watched search.
-        withPostgres(Layer.mergeAll(MonitorRepositoryLive, SavedSearchRepositoryLive), getPostgresClient(), orgId),
+        withPostgres(
+          Layer.mergeAll(
+            MonitorRepositoryLive,
+            SavedSearchRepositoryLive,
+            IncidentRepositoryLive,
+            OutboxEventWriterLive,
+          ),
+          getPostgresClient(),
+          orgId,
+        ),
         withTracing,
       ),
     )
@@ -625,7 +741,19 @@ export const updateMonitor = createServerFn({ method: "POST" })
         id: MonitorId(data.monitorId),
         ...(data.name !== undefined ? { name: data.name } : {}),
         ...(data.description !== undefined ? { description: data.description } : {}),
-      }).pipe(withPostgres(MonitorRepositoryLive, getPostgresClient(), orgId), withTracing),
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(
+            MonitorRepositoryLive,
+            SavedSearchRepositoryLive,
+            IncidentRepositoryLive,
+            OutboxEventWriterLive,
+          ),
+          getPostgresClient(),
+          orgId,
+        ),
+        withTracing,
+      ),
     )
     return toMonitorRecordResolved(orgId, monitor)
   })
@@ -638,39 +766,80 @@ export const deleteMonitor = createServerFn({ method: "POST" })
 
     const monitor = await Effect.runPromise(
       deleteMonitorUseCase({ id: MonitorId(data.monitorId) }).pipe(
-        withPostgres(MonitorRepositoryLive, getPostgresClient(), orgId),
+        withPostgres(
+          Layer.mergeAll(MonitorRepositoryLive, IncidentRepositoryLive, OutboxEventWriterLive),
+          getPostgresClient(),
+          orgId,
+        ),
         withTracing,
       ),
     )
     return { id: monitor.id }
   })
 
-const updateMonitorAlertInputSchema = z.object({
+const updateMonitorRuleInputSchema = z.object({
   monitorId: z.string(),
-  alertId: z.string(),
-  kind: alertIncidentKindSchema.optional(),
-  source: monitorAlertSourceSchema.optional(),
+  kind: userAlertKindSchema.optional(),
+  source: monitorRuleSourceSchema.optional(),
   condition: alertIncidentConditionSchema.nullish(),
   severity: alertSeveritySchema.optional(),
 })
 
-export const updateMonitorAlert = createServerFn({ method: "POST" })
-  .inputValidator(updateMonitorAlertInputSchema)
+const configWithCondition = (
+  config: Monitor["rule"]["config"],
+  condition: Monitor["rule"]["config"]["condition"] | null | undefined,
+) => {
+  const next = { ...config }
+  if (condition === undefined) return next
+  if (condition === null) {
+    delete next.condition
+    return next
+  }
+  next.condition = condition
+  return next
+}
+
+export const updateMonitorRule = createServerFn({ method: "POST" })
+  .inputValidator(updateMonitorRuleInputSchema)
   .handler(async ({ data }): Promise<MonitorRecord> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
 
     const monitor = await Effect.runPromise(
-      updateMonitorAlertUseCase({
-        monitorId: MonitorId(data.monitorId),
-        alertId: MonitorAlertId(data.alertId),
-        ...(data.kind !== undefined ? { kind: data.kind } : {}),
-        ...(data.source !== undefined ? { source: { type: data.source.type, id: data.source.id } } : {}),
-        ...(data.condition !== undefined ? { condition: data.condition } : {}),
-        ...(data.severity !== undefined ? { severity: data.severity } : {}),
+      Effect.gen(function* () {
+        const repository = yield* MonitorRepository
+        const current = yield* repository.findById(MonitorId(data.monitorId))
+        const trigger = data.kind !== undefined ? triggerForAlertKind(data.kind) : current.rule.trigger
+        const condition = data.kind !== undefined && trigger === "match" ? null : data.condition
+        const target =
+          data.source?.type === "savedSearch"
+            ? {
+                ...current.target,
+                type: "savedSearch" as const,
+                id: data.source.id,
+                savedSearchId: data.source.id,
+              }
+            : current.target
+        return yield* updateMonitorUseCase({
+          id: current.id,
+          target,
+          rule: {
+            trigger,
+            config: configWithCondition(current.rule.config, condition),
+            severity: data.severity ?? current.rule.severity,
+          },
+        })
       }).pipe(
-        // SavedSearchRepository backs the semantic-search monitorability check when the source changes.
-        withPostgres(Layer.mergeAll(MonitorRepositoryLive, SavedSearchRepositoryLive), getPostgresClient(), orgId),
+        withPostgres(
+          Layer.mergeAll(
+            MonitorRepositoryLive,
+            SavedSearchRepositoryLive,
+            IncidentRepositoryLive,
+            OutboxEventWriterLive,
+          ),
+          getPostgresClient(),
+          orgId,
+        ),
         withTracing,
       ),
     )
@@ -700,9 +869,9 @@ export const getMonitorIncidentStats = createServerFn({ method: "GET" })
 
       const stats = await Effect.runPromise(
         Effect.gen(function* () {
-          const repository = yield* AlertIncidentRepository
+          const repository = yield* IncidentRepository
           return yield* repository.statsByMonitorId(MonitorId(data.monitorId))
-        }).pipe(withPostgres(AlertIncidentRepositoryLive, getPostgresClient(), orgId), withTracing),
+        }).pipe(withPostgres(IncidentRepositoryLive, getPostgresClient(), orgId), withTracing),
       )
 
       return {
@@ -728,10 +897,10 @@ const toMonitorIncidentRecord = (
       readonly id: string
       readonly startedAt: Date
       readonly endedAt: Date | null
-      readonly kind: string
       readonly sourceType: string | null
       readonly sourceId: string | null
       readonly severity: string
+      readonly condition?: { readonly trigger?: string } | null
     }
     readonly notified: boolean
   },
@@ -741,7 +910,14 @@ const toMonitorIncidentRecord = (
   id: item.incident.id,
   startedAt: item.incident.startedAt.toISOString(),
   endedAt: item.incident.endedAt?.toISOString() ?? null,
-  kind: item.incident.kind,
+  kind:
+    item.incident.sourceType === "signal"
+      ? "signal.escalating"
+      : item.incident.condition?.trigger === "escalating"
+        ? "monitor.escalating"
+        : item.incident.condition?.trigger === "threshold"
+          ? "monitor.threshold"
+          : "monitor.match",
   sourceType: item.incident.sourceType,
   sourceId: item.incident.sourceId,
   severity: item.incident.severity,
@@ -781,7 +957,7 @@ export const listMonitorIncidents = createServerFn({ method: "GET" })
               }
             : {}),
         }).pipe(
-          withPostgres(Layer.mergeAll(AlertIncidentRepositoryLive, NotificationRepositoryLive), pgClient, orgId),
+          withPostgres(Layer.mergeAll(IncidentRepositoryLive, NotificationRepositoryLive), pgClient, orgId),
           withTracing,
         ),
       )
@@ -790,7 +966,7 @@ export const listMonitorIncidents = createServerFn({ method: "GET" })
       const signalIds = [
         ...new Set(
           result.items.flatMap((i) =>
-            i.incident.sourceType === "issue" && i.incident.sourceId !== null ? [i.incident.sourceId] : [],
+            i.incident.sourceType === "signal" && i.incident.sourceId !== null ? [i.incident.sourceId] : [],
           ),
         ),
       ]
@@ -805,21 +981,12 @@ export const listMonitorIncidents = createServerFn({ method: "GET" })
         for (const issue of issues) signalNameById.set(issue.id, issue.name)
       }
 
-      const savedSearchById = new Map<string, { readonly name: string; readonly slug: string }>()
-      if (result.items.some((i) => i.incident.sourceType === "savedSearch")) {
-        const page = await Effect.runPromise(
-          listSavedSearches({ projectId }).pipe(withPostgres(SavedSearchRepositoryLive, pgClient, orgId), withTracing),
-        )
-        for (const search of page.items) savedSearchById.set(search.id, { name: search.name, slug: search.slug })
-      }
-
       return {
         items: result.items.map((item) => {
           const { sourceType, sourceId } = item.incident
-          const saved = sourceType === "savedSearch" && sourceId !== null ? savedSearchById.get(sourceId) : undefined
           const sourceName =
-            sourceType === "issue" && sourceId !== null ? (signalNameById.get(sourceId) ?? null) : (saved?.name ?? null)
-          return toMonitorIncidentRecord(item, sourceName, saved?.slug ?? null)
+            sourceType === "signal" && sourceId !== null ? (signalNameById.get(sourceId) ?? null) : null
+          return toMonitorIncidentRecord(item, sourceName, null)
         }),
         nextCursor: result.nextCursor
           ? { endedAt: result.nextCursor.endedAt?.toISOString() ?? null, id: result.nextCursor.id }

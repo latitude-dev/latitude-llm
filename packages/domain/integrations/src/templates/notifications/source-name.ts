@@ -1,20 +1,11 @@
-import { SavedSearchRepository } from "@domain/saved-searches"
-import { SavedSearchId, SignalId, UserId } from "@domain/shared"
+import { SignalId, UserId } from "@domain/shared"
 import { SignalRepository } from "@domain/signals"
 import { UserRepository } from "@domain/users"
 import { Effect } from "effect"
 
-/** Live-resolve the incident source's display name (issue title or saved search name). `null` if missing/deleted. */
 export const resolveSourceName = (input: { readonly sourceType: string; readonly sourceId: string }) =>
   Effect.gen(function* () {
-    if (input.sourceType === "savedSearch") {
-      const repo = yield* SavedSearchRepository
-      return yield* repo.findById(SavedSearchId(input.sourceId)).pipe(
-        Effect.map((s): string | null => s.name),
-        Effect.catchTag("SavedSearchNotFoundError", () => Effect.succeed(null)),
-        Effect.catchTag("RepositoryError", () => Effect.succeed(null)),
-      )
-    }
+    if (input.sourceType !== "signal") return null
     const repo = yield* SignalRepository
     return yield* repo.findById(SignalId(input.sourceId)).pipe(
       Effect.map((i): string | null => i.name),

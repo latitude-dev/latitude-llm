@@ -225,7 +225,7 @@ export function SignalDetailBody({
     projectId,
     fromIso: trendIncidentRange?.fromIso ?? "",
     toIso: trendIncidentRange?.toIso ?? "",
-    sourceType: "issue",
+    sourceType: "signal",
     sourceId: signalId,
     enabled: incidentsFlagEnabled && trendIncidentRange !== null,
   })
@@ -350,16 +350,10 @@ export function SignalDetailBody({
                     )
                   }
                 />
-                {!isLoading && issue?.resolvedAt ? (
+                {!isLoading && issue?.mutedAt ? (
                   <SummaryField
-                    label="Resolved at"
-                    value={<SignalLifecycleTimestampSummaryValue tooltipHeading="Resolved at" iso={issue.resolvedAt} />}
-                  />
-                ) : null}
-                {!isLoading && issue?.ignoredAt ? (
-                  <SummaryField
-                    label="Ignored at"
-                    value={<SignalLifecycleTimestampSummaryValue tooltipHeading="Ignored at" iso={issue.ignoredAt} />}
+                    label="Muted at"
+                    value={<SignalLifecycleTimestampSummaryValue tooltipHeading="Muted at" iso={issue.mutedAt} />}
                   />
                 ) : null}
                 <SummaryField
@@ -394,7 +388,6 @@ export function SignalDetailBody({
                     maxVisibleBucketLabels={4}
                     barVariant="details"
                     states={issue?.states ?? []}
-                    resolvedAt={issue?.resolvedAt ?? null}
                     escalationThresholds={issue?.trendEscalationThresholds ?? null}
                     incidents={trendIncidents}
                   />
@@ -420,7 +413,6 @@ export function SignalDetailBody({
                     maxVisibleBucketLabels={4}
                     barVariant="details"
                     states={issue?.states ?? []}
-                    resolvedAt={issue?.resolvedAt ?? null}
                     escalationThresholds={issue?.trendEscalationThresholds ?? null}
                     incidents={trendIncidents}
                   />
@@ -445,7 +437,7 @@ export function SignalDetailBody({
                 signalOrigin={issue?.origin ?? "system"}
                 evaluations={issue?.evaluations ?? []}
                 flaggerSlugs={issue?.flaggerSlugs ?? []}
-                canMonitorSignal={issue ? issue.resolvedAt === null && issue.ignoredAt === null : false}
+                canMonitorSignal={issue ? issue.mutedAt === null : false}
                 isSignalLoading={isLoading}
               />
             </DetailSection>

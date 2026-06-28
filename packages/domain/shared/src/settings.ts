@@ -1,6 +1,6 @@
 import { Context, Effect } from "effect"
 import { z } from "zod"
-import { ALERT_INCIDENT_KINDS, type AlertIncidentKind } from "./alert-incident-kinds.ts"
+import { INCIDENT_NOTIFICATION_KEYS, type IncidentNotificationKey } from "./alert-incident-kinds.ts"
 import type { RepositoryError } from "./errors.ts"
 import type { ProjectId } from "./id.ts"
 import type { SqlClient } from "./sql-client.ts"
@@ -14,19 +14,9 @@ export const organizationSettingsSchema = z.object({
     .optional(),
 })
 
-/**
- * Per-alert-kind switch for incident notifications. Missing entries
- * default to `true` (notifications are on by default; users opt out per
- * kind, per project). Built from `ALERT_INCIDENT_KINDS` so adding a new
- * alert kind automatically extends the schema.
- *
- * Modelled as a plain `z.object` rather than a record intersection
- * because `z.record(z.enum(...))` validates keys against the enum and is
- * needlessly strict here — we want explicit per-key types.
- */
 const incidentNotificationsKindShape = Object.fromEntries(
-  ALERT_INCIDENT_KINDS.map((kind) => [kind, z.boolean().optional()] as const),
-) as { [K in AlertIncidentKind]: z.ZodOptional<z.ZodBoolean> }
+  INCIDENT_NOTIFICATION_KEYS.map((kind) => [kind, z.boolean().optional()] as const),
+) as { [K in IncidentNotificationKey]: z.ZodOptional<z.ZodBoolean> }
 
 export const incidentNotificationsSettingSchema = z.object(incidentNotificationsKindShape)
 export type IncidentNotificationsSetting = z.infer<typeof incidentNotificationsSettingSchema>
@@ -41,16 +31,6 @@ export const destinationNotificationsSettingSchema = z.object({
 })
 export type DestinationNotificationsSetting = z.infer<typeof destinationNotificationsSettingSchema>
 
-/**
- * Project-level "should this notification be requested at all" settings,
- * keyed by `NotificationGroup`. Mirrors the user-prefs structure
- * (`users.notification_preferences.<group>`); the per-group inner shape
- * varies by what's useful at the project level — for `incidents`, it's a
- * per-alert-kind opt-out matrix (different alert kinds have different
- * signal-to-noise ratios).
- *
- * Future groups (`wrapped_reports`, etc.) get their own slot.
- */
 export const notificationsSettingSchema = z.object({
   incidents: incidentNotificationsSettingSchema.optional(),
   destinations: destinationNotificationsSettingSchema.optional(),
@@ -93,7 +73,7 @@ export const projectSettingsSchema = z.object({
 
 export const isIncidentNotificationEnabled = (
   settings: ProjectSettings | null | undefined,
-  kind: AlertIncidentKind,
+  kind: IncidentNotificationKey,
 ): boolean => settings?.notifications?.incidents?.[kind] ?? true
 
 /** Project-level gate for `destination.quarantined` notifications. On by default. */

@@ -2,4 +2,4 @@
 
 import typing
 
-MonitorTargetKind = typing.Union[typing.Literal["signal", "tool", "user", "session", "savedSearch"], typing.Any]
+MonitorTargetKind = typing.Union[typing.Literal["savedSearch", "tool", "user", "session"], typing.Any]

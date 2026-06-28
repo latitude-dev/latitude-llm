@@ -178,9 +178,6 @@ importers:
       '@clickhouse/client':
         specifier: 'catalog:'
         version: 1.18.3
-      '@domain/alerts':
-        specifier: workspace:*
-        version: link:../../packages/domain/alerts
       '@domain/annotations':
         specifier: workspace:*
         version: link:../../packages/domain/annotations
@@ -199,6 +196,9 @@ importers:
       '@domain/flaggers':
         specifier: workspace:*
         version: link:../../packages/domain/flaggers
+      '@domain/incidents':
+        specifier: workspace:*
+        version: link:../../packages/domain/incidents
       '@domain/monitors':
         specifier: workspace:*
         version: link:../../packages/domain/monitors
@@ -377,7 +377,7 @@ importers:
     devDependencies:
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(typescript@6.0.3)
 
   apps/web:
     dependencies:
@@ -387,9 +387,6 @@ importers:
       '@domain/admin':
         specifier: workspace:*
         version: link:../../packages/domain/admin
-      '@domain/alerts':
-        specifier: workspace:*
-        version: link:../../packages/domain/alerts
       '@domain/annotations':
         specifier: workspace:*
         version: link:../../packages/domain/annotations
@@ -426,6 +423,9 @@ importers:
       '@domain/flaggers':
         specifier: workspace:*
         version: link:../../packages/domain/flaggers
+      '@domain/incidents':
+        specifier: workspace:*
+        version: link:../../packages/domain/incidents
       '@domain/integrations':
         specifier: workspace:*
         version: link:../../packages/domain/integrations
@@ -649,9 +649,6 @@ importers:
       '@domain/ai':
         specifier: workspace:*
         version: link:../../packages/domain/ai
-      '@domain/alerts':
-        specifier: workspace:*
-        version: link:../../packages/domain/alerts
       '@domain/annotation-queues':
         specifier: workspace:*
         version: link:../../packages/domain/annotation-queues
@@ -688,6 +685,9 @@ importers:
       '@domain/flaggers':
         specifier: workspace:*
         version: link:../../packages/domain/flaggers
+      '@domain/incidents':
+        specifier: workspace:*
+        version: link:../../packages/domain/incidents
       '@domain/integrations':
         specifier: workspace:*
         version: link:../../packages/domain/integrations
@@ -995,25 +995,6 @@ importers:
         specifier: 'catalog:'
         version: 4.3.6
 
-  packages/domain/alerts:
-    dependencies:
-      '@domain/events':
-        specifier: workspace:*
-        version: link:../events
-      '@domain/shared':
-        specifier: workspace:*
-        version: link:../shared
-      effect:
-        specifier: 'catalog:'
-        version: 4.0.0-beta.57
-      zod:
-        specifier: 'catalog:'
-        version: 4.3.6
-    devDependencies:
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@25.9.3)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))
-
   packages/domain/annotation-queues:
     dependencies:
       '@domain/annotations':
@@ -1218,9 +1199,6 @@ importers:
       '@domain/notifications':
         specifier: workspace:*
         version: link:../notifications
-      '@domain/saved-searches':
-        specifier: workspace:*
-        version: link:../saved-searches
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
@@ -1374,6 +1352,25 @@ importers:
         specifier: workspace:*
         version: link:../../platform/ai
 
+  packages/domain/incidents:
+    dependencies:
+      '@domain/events':
+        specifier: workspace:*
+        version: link:../events
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../shared
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.57
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
+    devDependencies:
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@25.9.3)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))
+
   packages/domain/integrations:
     dependencies:
       '@domain/monitors':
@@ -1446,18 +1443,15 @@ importers:
 
   packages/domain/monitors:
     dependencies:
-      '@domain/alerts':
-        specifier: workspace:*
-        version: link:../alerts
       '@domain/events':
         specifier: workspace:*
         version: link:../events
+      '@domain/incidents':
+        specifier: workspace:*
+        version: link:../incidents
       '@domain/notifications':
         specifier: workspace:*
         version: link:../notifications
-      '@domain/queue':
-        specifier: workspace:*
-        version: link:../queue
       '@domain/saved-searches':
         specifier: workspace:*
         version: link:../saved-searches
@@ -1483,12 +1477,12 @@ importers:
 
   packages/domain/notifications:
     dependencies:
-      '@domain/alerts':
-        specifier: workspace:*
-        version: link:../alerts
       '@domain/evaluations':
         specifier: workspace:*
         version: link:../evaluations
+      '@domain/incidents':
+        specifier: workspace:*
+        version: link:../incidents
       '@domain/organizations':
         specifier: workspace:*
         version: link:../organizations
@@ -1696,9 +1690,6 @@ importers:
       '@domain/ai':
         specifier: workspace:*
         version: link:../ai
-      '@domain/alerts':
-        specifier: workspace:*
-        version: link:../alerts
       '@domain/evaluations':
         specifier: workspace:*
         version: link:../evaluations
@@ -1708,6 +1699,9 @@ importers:
       '@domain/exports':
         specifier: workspace:*
         version: link:../exports
+      '@domain/incidents':
+        specifier: workspace:*
+        version: link:../incidents
       '@domain/organizations':
         specifier: workspace:*
         version: link:../organizations
@@ -2188,9 +2182,6 @@ importers:
       '@domain/ai':
         specifier: workspace:*
         version: link:../../domain/ai
-      '@domain/alerts':
-        specifier: workspace:*
-        version: link:../../domain/alerts
       '@domain/annotation-queues':
         specifier: workspace:*
         version: link:../../domain/annotation-queues
@@ -2218,6 +2209,9 @@ importers:
       '@domain/flaggers':
         specifier: workspace:*
         version: link:../../domain/flaggers
+      '@domain/incidents':
+        specifier: workspace:*
+        version: link:../../domain/incidents
       '@domain/integrations':
         specifier: workspace:*
         version: link:../../domain/integrations

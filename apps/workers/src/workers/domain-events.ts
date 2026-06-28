@@ -28,7 +28,6 @@ type EventHandlerFn = (e: DomainEvent) => Effect.Effect<void, unknown>
 // still dispatch instead of dead-lettering on UnhandledEventError.
 const EVENT_NAME_ALIASES: Record<string, keyof EventPayloads> = {
   IssueCreated: "SignalCreated",
-  IssueRegressed: "SignalRegressed",
   IssueEscalated: "SignalEscalated",
   IssueAssigneeChanged: "SignalAssigneeChanged",
   IssueEscalationEnded: "SignalEscalationEnded",
@@ -212,23 +211,28 @@ export const createDomainEventsWorker = ({
       ).pipe(Effect.asVoid),
 
     SignalCreated: (event) =>
-      pub.publish("alert-incidents", "signal-created", event.payload, {
-        dedupeKey: `alert-incidents:issue.new:${event.payload.signalId}`,
-      }),
-
-    SignalRegressed: (event) =>
-      pub.publish("alert-incidents", "signal-regressed", event.payload, {
-        dedupeKey: `alert-incidents:issue.regressed:${event.payload.signalId}:${event.payload.triggerScoreId}`,
-      }),
+      pub.publish(
+        "notifications",
+        "request-signal-discovered-notifications",
+        {
+          organizationId: event.payload.organizationId,
+          projectId: event.payload.projectId,
+          signalId: event.payload.signalId,
+          discoveredAt: event.payload.createdAt,
+        },
+        {
+          dedupeKey: `notifications:request-signal-discovered:${event.payload.signalId}`,
+        },
+      ),
 
     SignalEscalated: (event) =>
       pub.publish("alert-incidents", "signal-escalated", event.payload, {
-        dedupeKey: `alert-incidents:issue.escalating:${event.payload.signalId}:${event.payload.escalatedAt}`,
+        dedupeKey: `alert-incidents:signal.escalating:${event.payload.signalId}:${event.payload.escalatedAt}`,
       }),
 
     SignalEscalationEnded: (event) =>
       pub.publish("alert-incidents", "signal-escalation-ended", event.payload, {
-        dedupeKey: `alert-incidents:issue.escalation-ended:${event.payload.signalId}:${event.payload.endedAt}`,
+        dedupeKey: `alert-incidents:signal.escalation-ended:${event.payload.signalId}:${event.payload.endedAt}`,
       }),
 
     SavedSearchDeleted: (event) =>

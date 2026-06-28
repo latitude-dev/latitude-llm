@@ -6,9 +6,7 @@ const STATE_VARIANTS = {
   new: "outlineAccent",
   escalating: "outlineWarningMuted",
   ongoing: "outline",
-  resolved: "outlineMuted",
   regressed: "outlineDestructiveMuted",
-  ignored: "outlineMuted",
 } as const
 
 interface SignalExtraBadge {

@@ -3,32 +3,43 @@
 import type * as LatitudeApi from "../index.js";
 
 /**
- * Unified query-time target for tool, user, and raw-stream monitors; `null` for legacy saved-search and system monitors.
+ * Entity or filter set watched by this monitor.
  */
 export interface MonitorTarget {
-    /** Product target category: `tool`, `user`, `session`, `savedSearch`, or system `signal`. */
-    kind: MonitorTarget.Kind;
-    /** Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`. */
-    stream: MonitorTarget.Stream;
+    /** Product target category: `savedSearch`, `tool`, `user`, or `session`. */
+    type: MonitorTarget.Type;
+    /** Target entity id, or `null` for project-wide targets. */
+    id?: string | undefined;
     filterSet?: LatitudeApi.MonitorFilterSet | undefined;
-    /** Optional semantic query applied with the filters. Use `null` for user/tool monitors. */
+    /** Semantic query applied when evaluating inline trace targets. */
     query?: string | undefined;
-    /** Saved-search target id, or `null` when `filterSet` and `query` define the target inline. */
+    /** Normalized target kind returned on persisted monitors. */
+    kind?: MonitorTarget.Kind | undefined;
+    /** Telemetry stream evaluated by the monitor. */
+    stream?: MonitorTarget.Stream | undefined;
+    /** Saved-search id for saved-search monitors, or `null` for inline targets. */
     savedSearchId?: string | undefined;
-    metric: LatitudeApi.MonitorMetric;
+    metric?: LatitudeApi.MonitorMetric | undefined;
 }
 
 export namespace MonitorTarget {
-    /** Product target category: `tool`, `user`, `session`, `savedSearch`, or system `signal`. */
-    export const Kind = {
-        Signal: "signal",
+    /** Product target category: `savedSearch`, `tool`, `user`, or `session`. */
+    export const Type = {
+        SavedSearch: "savedSearch",
         Tool: "tool",
         User: "user",
         Session: "session",
+    } as const;
+    export type Type = (typeof Type)[keyof typeof Type];
+    /** Normalized target kind returned on persisted monitors. */
+    export const Kind = {
         SavedSearch: "savedSearch",
+        Tool: "tool",
+        User: "user",
+        Session: "session",
     } as const;
     export type Kind = (typeof Kind)[keyof typeof Kind];
-    /** Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`. */
+    /** Telemetry stream evaluated by the monitor. */
     export const Stream = {
         Traces: "traces",
         Spans: "spans",

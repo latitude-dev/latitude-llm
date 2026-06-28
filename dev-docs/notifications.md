@@ -10,13 +10,13 @@ Multi-channel notification system. Producers fan out to channel-specific workers
 
 | Concept | Where | What it is |
 | --- | --- | --- |
-| **Kind** | `NOTIFICATION_KIND_META` in `@domain/notifications` | Flat enum identifying the event-type (`incident.event`, `incident.opened`, `incident.closed`, `wrapped.report`, `custom.message`, ...). Each kind declares its group and its payload Zod schema. Incidents fan out across three kinds reflecting the alerts lifecycle: `incident.event` for one-shot kinds (issue.new, issue.regressed — `endedAt = startedAt`), `incident.opened` and `incident.closed` for sustained kinds (issue.escalating). `issue.assigned` is the first **personal** (single-recipient) kind — it targets the new assignee only, not the org fan-out. |
+| **Kind** | `NOTIFICATION_KIND_META` in `@domain/notifications` | Flat enum identifying the event-type (`incident.event`, `incident.opened`, `incident.closed`, `wrapped.report`, `custom.message`, ...). Each kind declares its group and its payload Zod schema. Incidents fan out across three delivery kinds: `incident.event` for point incidents (`endedAt = startedAt`), `incident.opened` for sustained incident entry, and `incident.closed` for sustained incident recovery. `issue.assigned` is the first **personal** (single-recipient) kind — it targets the new assignee only, not the org fan-out. |
 | **Group** | `NOTIFICATION_GROUPS` + `NOTIFICATION_GROUP_META` in `@domain/shared` | User-visible category (`incidents`, `wrapped_reports`, `custom_messages`, `personal`). The preferences UI surfaces one toggle per group; adding a kind to an existing group inherits the user's setting automatically. Each group also declares `slackRoutable` — non-routable groups (`personal`) are hidden from the Slack routes settings, rejected by the route-config server fns, and skipped by the worker's Slack fan-out. |
 | **Channel** | `apps/workers/src/workers/notification-*.ts` + per-channel registries | Delivery surface (in-app, email; Slack and others later). Each channel is one queue topic + one worker + one renderer registry keyed on `NotificationKind`. |
 | **Idempotency key** | `idempotency_key` column on `notifications` | Producer-computed (`buildIdempotencyKey` in `@domain/notifications`). The unique index `(organization_id, user_id, idempotency_key)` absorbs at-least-once redelivery from the outbox + queue layers. |
 | **Project anchor** | `project_id` column on `notifications` (nullable) | Cascade anchor for kinds tied to a project (`incident.*`, `wrapped.report`). On `ProjectDeleted` the domain-events worker fires `notifications:delete-by-project`, which removes every row anchored to the deleted project. Per the platform's no-FK rule, referential integrity is application-layer. |
 | **User preferences** | `users.notification_preferences` (jsonb) | Per-user, per-group, per-channel switch (today only `email`). Missing entries default to opt-in (`true`). |
-| **Project-level gate** | `projects.settings.notifications.<group>` (jsonb) | Project-level "should this notification be requested at all" decision. For incidents the leaf is per-`AlertIncidentKind`; other groups get whatever shape is useful at the project level. |
+| **Project-level gate** | `projects.settings.notifications.<group>` (jsonb) | Project-level "should this notification be requested at all" decision. For incidents the leaf is per incident source key: `monitor.match`, `monitor.threshold`, `monitor.escalating`, and `signal.escalating`. Other groups get whatever shape is useful at the project level. |
 
 ## Pipeline
 
@@ -31,12 +31,13 @@ notifications:request-{incident,wrapped-report,signal-assigned}-notifications
        (endedAt = startedAt → incident.event;
         endedAt IS NULL     → incident.opened;
         endedAt > startedAt → incident.closed)
-     – gate (incidents only): projectSettings.notifications.incidents[alertKind]
+     – gate (incidents only): projectSettings.notifications.incidents[incidentNotificationKey]
+     – mute gate (incidents only): skip muted monitor or muted signal sources
      – resolveRecipients (today: all org members)
      – signal-assigned: single recipient (the new assignee); router +
        producer both skip cleared assignments and self-assignments
-     – snapshot trend window (sustained kinds: 3h ending at the
-       transition, 18 buckets × 10min, both occurrence counts and
+     – snapshot trend window (signal-sourced sustained kinds: 14d ending at the
+       transition, UTC-aligned 12h buckets, both occurrence counts and
        per-bucket escalation thresholds via ScoreAnalyticsRepository)
      – publish N create-notification tasks
 notifications:create-notification (one per recipient)
@@ -61,14 +62,25 @@ notifications:delete-by-project
 
 Per-channel **claim-then-act** ordering (stamp `emailed_at` before sending) guarantees zero duplicate emails under at-least-once redelivery, at the cost of dropping the email if SMTP fails mid-claim. Documented trade-off (per design discussion).
 
+Incident source keys are derived in the producer from `incidents.source_type` and the condition snapshot:
+
+| Incident source | Condition | Project gate key |
+| --- | --- | --- |
+| `signal` | any signal escalation incident | `signal.escalating` |
+| `monitor` | `condition.trigger = "threshold"` | `monitor.threshold` |
+| `monitor` | `condition.trigger = "escalating"` | `monitor.escalating` |
+| `monitor` | no condition | `monitor.match` |
+
+The producer also resolves the source row for mute checks. A muted monitor returns `reason: "monitor-muted"`; a muted signal returns `reason: "signal-muted"`. Mute suppresses fan-out before notification rows are created.
+
 ## Incident email payloads + chart
 
-Sustained-incident emails (`incident.opened` / `incident.closed`) embed a server-rendered trend chart sized so recipients can triage from inbox without clicking through. All incident payloads carry a generic source base (`sourceType`, `sourceId`, `incidentKind`, `severity`) plus per-kind extras:
+Sustained-incident emails (`incident.opened` / `incident.closed`) can embed a server-rendered trend chart sized so recipients can triage from inbox without clicking through. All incident payloads carry a generic source base (`sourceType`, `sourceId`, `incidentKind`, `severity`) plus per-kind extras. Signal-sourced incidents carry the signal trend snapshot; monitor-sourced incidents carry monitor attribution when the producer can resolve it.
 
 | Field | Where it lives | Snapshotted on |
 | --- | --- | --- |
-| `trend.points` | Sustained kinds | `incident.opened`, `incident.closed` — 3h × 10-min buckets (18 points) ending at the transition timestamp. Each point has `{ t, count, threshold \| null }`. |
-| `tags` | Top-5 alphabetical | `incident.event`, `incident.opened`. From `ScoreAnalyticsRepository.aggregateTagsByIssues` with a 30-day lookback. Closed skips — the email focuses on recovery. |
+| `trend.points` | Signal-sourced sustained kinds | `incident.opened`, `incident.closed` — 14d × 12h buckets ending at the transition timestamp. Each point has `{ t, count, threshold \| null }`. |
+| `tags` | Top-5 alphabetical | `incident.event`, `incident.opened`. From `ScoreAnalyticsRepository.aggregateTagsBySignals` with a 30-day lookback. Closed skips — the email focuses on recovery. |
 | `sampleExcerpt` | One-shot triage card | `incident.event` and `incident.opened`. Prefers latest annotation `rawFeedback`; falls back to latest evaluation `feedback`. Capped at 200 chars; `truncated: true` when cropped. Carries an `author` discriminated union — `{ kind: "user", name, imageUrl }` (human annotation), `{ kind: "system" }` (Latitude-authored, i.e. `annotatorId IS NULL`), or `{ kind: "evaluation", name }` (eval fallback). The producer snapshots attribution at notification time via `UserRepository`/`EvaluationRepository`, so the email renders without further lookups. Closed kind skips — the recovery email focuses on the descent, not the source. |
 | `breach { triggerRate, baselineRate, threshold }` | Per-hour rates | `incident.opened` only, when the alert incident has `entrySignals`. `baselineRate` = `expected1h`, `threshold` = `entryThreshold1h`, `triggerRate` is derived from the peak trend bucket converted to per-hour. Omitted on legacy incidents missing `entrySignals`. |
 | `recovery.durationMs` | `endedAt - startedAt` | `incident.closed` only. Drives the "elevated for X" copy in the email. |
@@ -77,14 +89,14 @@ Sustained-incident emails (`incident.opened` / `incident.closed`) embed a server
 
 The three incident emails follow a Sentry-style sectioned shape so recipients can scan section labels and drill into the part that matters:
 
-1. **Heading + subtitle** — alert-type heading (`New issue` / `Regressed issue` / `Escalating issue` / `Resolved escalation`) and an audience subtitle that explains who got the email and why.
-2. **`ISSUE` section** — issue name, description (when set on the entity), `{absolute timestamp}   ID: …{shortId}` row, then a 2-column metadata table with Project (`{orgName} / {projectName}`), Severity badge, and Tags chips when present.
+1. **Heading + subtitle** — alert-type heading (`Monitor match` / `Monitor threshold` / `Escalating signal` / `Resolved escalation`) and an audience subtitle that explains who got the email and why.
+2. **`SOURCE` section** — signal or monitor name, description (when set on the entity), `{absolute timestamp}   ID: …{shortId}` row, then a 2-column metadata table with Project (`{orgName} / {projectName}`), Severity badge, and Tags chips when present.
 3. **Per-kind section** — `BREACH` (opened, with breach copy + chart), `RECOVERY` (closed, with elapsed-time copy + chart), or the **sample-excerpt card** (event/opened, no eyebrow — a "From an annotation:" / "From an evaluation:" label outside the card, then an in-app-style author row (avatar + name, or Latitude monogram + "Agent" badge, or just the evaluation name) followed by the quoted feedback text).
-4. **View issue CTA** at the bottom.
+4. **View source CTA** at the bottom.
 
 Shared building blocks live in `packages/domain/email/src/templates/notifications/-incident-components.tsx`: `SectionHeader`, `EmailMetadataTable`, `SeverityBadge`, `TagsChips`, `TimestampIdRow`, `IncidentTrendChartImage`, `SampleExcerptCard`, plus the `formatRatePerHour` / `humanizeDurationMs` / `formatScope` helpers. Renderers consume `ctx.notificationCreatedAt` and `ctx.organization` (threaded through the send-notification-email use case) for the timestamp + "Acme / project-name" scope line.
 
-Subject lines: no `[Latitude]` prefix. The alert-type prefix (`New issue:`, `Escalating:`, `Resolved: escalation on …`) is the actual inbox-skim signal.
+Subject lines: no `[Latitude]` prefix. The alert-type prefix (`Monitor match:`, `Escalating signal:`, `Resolved: escalation on ...`) is the actual inbox-skim signal.
 
 ### Server-rendered trend chart
 
@@ -242,7 +254,7 @@ Producers:
 - Wrapped reports: the wrapped worker passes `payload.projectId` in the `request-wrapped-report-notifications` queue task; the use case threads it through.
 - Project-less kinds (`custom.message`, future cross-project announcements): set `projectId: null`. The cascade ignores those rows; the bell footer omits the project label; the email template gets `project: null`.
 
-**Don't snapshot project name/slug in notification payloads.** Use the row-level `projectId` and let renderers resolve names lazily. The old `wrappedReportPayload.projectName` was removed for this reason — it could go stale and bloated every row with redundant data. Incident payloads only carry a generic `sourceType`/`sourceId` (the issue id today); the bell renderer resolves the project slug from `notification.projectId` via `useProjectsCollection`, and the email renderer reads it from `ctx.project.slug` (looked up once in the email use case). Snapshotting **derived** data like trends, breach numbers, or per-bucket thresholds is fine and encouraged — those are point-in-time facts about the event, not live entity attributes.
+**Don't snapshot project name/slug in notification payloads.** Use the row-level `projectId` and let renderers resolve names lazily. The old `wrappedReportPayload.projectName` was removed for this reason — it could go stale and bloated every row with redundant data. Incident payloads carry the generic incident source (`sourceType`/`sourceId`) plus derived event data; monitor-sourced incidents may also carry monitor display attribution. The bell renderer resolves the project slug from `notification.projectId` via `useProjectsCollection`, and the email renderer reads it from `ctx.project.slug` (looked up once in the email use case). Snapshotting **derived** data like trends, breach numbers, or per-bucket thresholds is fine and encouraged — those are point-in-time facts about the event, not live entity attributes.
 
 No FK constraint on `project_id` (per the database-postgres skill's no-FK rule). The partial index `notifications_org_project_idx` on `(organization_id, project_id) WHERE project_id IS NOT NULL` keeps the cascade query cheap.
 
@@ -251,7 +263,7 @@ No FK constraint on `project_id` (per the database-postgres skill's no-FK rule).
 | Setting | Default | Reason |
 | --- | --- | --- |
 | User's `notification_preferences` | `null` (treated as "all groups: email on") | Opt-out matches the in-app default of "all org members get every notification." |
-| Project's `notifications.incidents[alertKind]` | unset (treated as enabled) | Per-alert-kind project-level opt-out. Lives in `projects.settings`; sibling of `escalation.sensitivity` (which is the detector knob, not a notification toggle). |
+| Project's `notifications.incidents[incidentNotificationKey]` | unset (treated as enabled) | Per-source-trigger project-level opt-out. Current keys are `monitor.match`, `monitor.threshold`, `monitor.escalating`, and `signal.escalating`. Lives in `projects.settings`; sibling of `escalation.sensitivity` (which is the detector knob, not a notification toggle). |
 
 ## Idempotency under outbox redelivery
 
@@ -269,12 +281,12 @@ Each step in the pipeline is therefore idempotent:
 - **Don't gate inside the renderer.** The producer/creator decides whether to send; once the row is written + the email task is published, the channel worker just renders and delivers. Filtering at the renderer is a smell.
 - **Don't put routing info in the kind name.** `incident.event` describes what happened, not who needs to know. Recipient resolution and channel selection live in the producer/creator step.
 - **Don't read user prefs in the producer step.** Prefs are per-channel and live with the channel decision; the producer step doesn't know about channels.
-- **Don't dedupe by source entity id alone.** `notifications.idempotency_key` is per-occurrence — multiple incidents on the same issue must produce multiple notifications. `buildIdempotencyKey` is the single place that enforces this.
+- **Don't dedupe by source entity id alone.** `notifications.idempotency_key` is per-occurrence — multiple incidents on the same signal or monitor must produce multiple notifications. `buildIdempotencyKey` is the single place that enforces this.
 - **Don't add an FK constraint on `project_id`.** Per the database-postgres skill; use the application-layer cascade via `ProjectDeleted` → `delete-by-project`.
 
 ## See also
 
-- [monitors.md](./monitors.md) — monitors are the upstream producer of incident notifications; a monitor's mute gate is the one seam into this pipeline (`request-incident-notifications` skips the fan-out for a muted monitor's incidents).
+- [monitors.md](./monitors.md) — monitors are one upstream producer of incident notifications; monitor incidents use `sourceType = "monitor"` and the `monitor.*` notification keys.
 - Design spec: `specs/notifications-multi-channel.md` (decisions, trade-offs, out-of-scope, full architecture).
 - Skill: `.agents/skills/notifications/SKILL.md` for agent-facing instructions.
 - Skill: `.agents/skills/async-jobs-and-events/SKILL.md` for general queue/worker conventions.

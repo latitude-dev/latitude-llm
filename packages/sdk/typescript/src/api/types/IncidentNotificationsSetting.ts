@@ -4,10 +4,12 @@
  * Per-alert-kind opt-out for incident notifications.
  */
 export interface IncidentNotificationsSetting {
-    /** Send a notification when a new signal is discovered. Defaults to `true` when omitted. */
-    "issue.new"?: boolean | undefined;
-    /** Send a notification when a previously-resolved signal regresses. Defaults to `true` when omitted. */
-    "issue.regressed"?: boolean | undefined;
     /** Send a notification when an active signal is escalating in volume or severity. Defaults to `true` when omitted. */
-    "issue.escalating"?: boolean | undefined;
+    "signal.escalating"?: boolean | undefined;
+    /** Send a notification when a match monitor opens an incident. Defaults to `true` when omitted. */
+    "monitor.match"?: boolean | undefined;
+    /** Send a notification when a threshold monitor opens an incident. Defaults to `true` when omitted. */
+    "monitor.threshold"?: boolean | undefined;
+    /** Send a notification when an escalating monitor opens an incident. Defaults to `true` when omitted. */
+    "monitor.escalating"?: boolean | undefined;
 }

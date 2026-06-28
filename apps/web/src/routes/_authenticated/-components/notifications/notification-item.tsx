@@ -5,6 +5,7 @@ import { CustomMessageNotification } from "./renderers/custom-message-notificati
 import { DestinationQuarantinedNotification } from "./renderers/destination-quarantined-notification.tsx"
 import { IncidentNotification } from "./renderers/incident/index.tsx"
 import { SignalAssignedNotification } from "./renderers/signal-assigned-notification.tsx"
+import { SignalDiscoveredNotification } from "./renderers/signal-discovered-notification.tsx"
 import { WrappedReportNotification } from "./renderers/wrapped-report-notification.tsx"
 
 const RENDERERS: Record<NotificationKind, ComponentType<{ readonly notification: NotificationRecord }>> = {
@@ -14,6 +15,7 @@ const RENDERERS: Record<NotificationKind, ComponentType<{ readonly notification:
   "wrapped.report": WrappedReportNotification,
   "custom.message": CustomMessageNotification,
   "issue.assigned": SignalAssignedNotification,
+  "signal.discovered": SignalDiscoveredNotification,
   "destination.quarantined": DestinationQuarantinedNotification,
 }
 

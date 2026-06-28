@@ -8,10 +8,9 @@ import {
 /**
  * In-memory `MetricSeriesReader` for unit tests: seed matching-event
  * `start_time`s, and the methods window them by `[from, to)` as a `count` metric.
- * `target` is ignored (predicate/metric semantics are the reader's job, covered
- * by the platform test).
  */
 export const createFakeMetricSeriesReader = (matchTimestamps: readonly Date[] = []) => {
+  const calls: Array<MetricSeriesWindowInput | MetricSeriesBucketInput> = []
   const inWindow = (input: MetricSeriesWindowInput) =>
     matchTimestamps.filter((at) => at.getTime() >= input.from.getTime() && at.getTime() < input.to.getTime())
 
@@ -28,15 +27,27 @@ export const createFakeMetricSeriesReader = (matchTimestamps: readonly Date[] = 
   }
 
   const layer = Layer.succeed(MetricSeriesReader, {
-    valueInWindow: (input) => Effect.succeed(inWindow(input).length),
+    valueInWindow: (input) =>
+      Effect.sync(() => {
+        calls.push(input)
+        return inWindow(input).length
+      }),
     firstEventAt: (input) =>
-      Effect.succeed(
-        inWindow(input).reduce<Date | null>((earliest, at) => (earliest && earliest <= at ? earliest : at), null),
-      ),
+      Effect.sync(() => {
+        calls.push(input)
+        return inWindow(input).reduce<Date | null>((earliest, at) => (earliest && earliest <= at ? earliest : at), null)
+      }),
     lastEventAt: (input) =>
-      Effect.succeed(inWindow(input).reduce<Date | null>((latest, at) => (latest && latest >= at ? latest : at), null)),
-    seriesPerBucket: (input) => Effect.succeed(series(input)),
+      Effect.sync(() => {
+        calls.push(input)
+        return inWindow(input).reduce<Date | null>((latest, at) => (latest && latest >= at ? latest : at), null)
+      }),
+    seriesPerBucket: (input) =>
+      Effect.sync(() => {
+        calls.push(input)
+        return series(input)
+      }),
   })
 
-  return { layer }
+  return { layer, calls }
 }

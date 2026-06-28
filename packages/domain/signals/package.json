@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@domain/ai": "workspace:*",
-    "@domain/alerts": "workspace:*",
+    "@domain/incidents": "workspace:*",
     "@domain/events": "workspace:*",
     "@domain/evaluations": "workspace:*",
     "@domain/exports": "workspace:*",

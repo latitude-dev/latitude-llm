@@ -1,6 +1,6 @@
 import { MembershipRepository } from "@domain/organizations"
 import {
-  type AlertIncidentKind,
+  type IncidentNotificationKey,
   type OrganizationId,
   type ProjectId,
   type RepositoryError,
@@ -15,7 +15,7 @@ export interface ResolveRecipientsInput {
   /** Reserved for future per-(user, project) subscriptions; ignored in V1. */
   readonly projectId?: ProjectId | undefined
   /** Reserved for future per-kind opt-out; ignored in V1. Either taxonomy (incident alert kinds or notification kinds). */
-  readonly kind?: AlertIncidentKind | NotificationKind | undefined
+  readonly kind?: IncidentNotificationKey | NotificationKind | undefined
 }
 
 /**

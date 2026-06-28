@@ -4,7 +4,7 @@ Signals are the main observability entities of the reliability system.
 
 They group similar failed, non-errored, non-draft scores into actionable failure patterns.
 
-> **Renamed from "Issues" (Signals spec, Phase 1).** The rename is behavior-preserving, but three identifiers are intentionally **kept** because they are persisted or in-flight: the `issue.*` alert-incident kinds (`alert_incidents.kind`, retired in a later phase, not renamed), the ClickHouse `scores.issue_id` column (kept alongside the new `signal_id` until a later cleanup), and the domain **event names** (`IssueCreated`, `ScoreAssignedToIssue`, …) — these are renamed to `Signal*` in TypeScript, with the persisted `outbox_events.event_name` migrated and a temporary `EVENT_NAME_ALIASES` shim at the `domain-events` dispatcher bridging any in-flight rows. The Postgres `issues` table → `signals` is an in-place rename (brief rollover downtime accepted). See `specs/signals.md` for the full plan.
+> **Renamed from "Issues" (Signals spec, Phase 1).** The product and domain package are now signal-first. Some storage names remain for compatibility, most notably `scores.issue_id`, but alerting no longer uses the old issue alert-kind axis. Signal escalation incidents are first-class `incidents` rows with `source_type = "signal"`.
 
 ## Domain errors (`@domain/signals` reference pattern)
 
@@ -54,7 +54,7 @@ Rules:
 - durable ownership and idempotency stay in Postgres via `scores.issue_id`, not in BullMQ or workflow history
 - signal-generated evaluation creation is also asynchronous: kickoff starts a deterministic-id Temporal workflow and returns nothing to the caller; the frontend polls `getSignalAlignmentState`, which asks Temporal directly (`workflow.describe()` for the initial run, a query handler for in-flight manual-realignment) — there is no Redis-backed job-status key
 
-## Lifecycle
+## Lifecycle and Mute
 
 Signals can be:
 
@@ -62,56 +62,45 @@ Signals can be:
 export const SignalState = {
   New: "new",
   Escalating: "escalating",
-  Resolved: "resolved",
-  Regressed: "regressed",
-  Ignored: "ignored",
+  Ongoing: "ongoing",
 } as const;
 
 export type SignalState = (typeof SignalState)[keyof typeof SignalState];
 ```
 
 - `new`: first discovered less than 7 days ago
-- `escalating`: occurrences in the last day are 33% greater than the average in the previous 7-day baseline
-- `resolved`: no occurrences in the last 14 days, or manually resolved
-- `regressed`: new occurrences appeared after the signal was resolved
-- `ignored`: manually ignored by the user
+- `escalating`: backed by an open signal-sourced incident
+- `ongoing`: existing, non-escalating signal activity
 
 An signal can be in multiple states at the same time, for example `new` and `escalating`.
 
-Conceptually:
+Manual lifecycle control is **mute**, stored as `signals.muted_at`.
 
-- `Active` means not ignored and not resolved
-- `Archived` means ignored or resolved without regression
+- muting a signal suppresses signal escalation notification fan-out
+- unmuting clears `muted_at`
+- discovery, score assignment, centroid updates, linked evaluations, and analytics continue while muted
 
-Lifecycle side effects:
-
-- ignoring an signal archives its linked evaluations immediately
-- manual resolve opens a confirmation modal with a keep-monitoring toggle
-- that toggle defaults from `keepMonitoring`, after project settings fall back to organization settings when project-level `keepMonitoring` is unset, and can be overridden for the specific resolve action
-- the confirmed toggle state decides whether linked evaluations stay active or archive
-- resolving or ignoring an signal closes any open `issue.escalating` incident immediately (emits `SignalEscalationEnded` with reason `resolved`/`ignored`). Ignored and resolved signals no longer drive lifecycle/alerting transitions, so the stale escalation is cleared. This close is silent — unlike an organic de-escalation it does not send a recovery notification
-
-The `escalating` state is backed by an open `issue.escalating` row in `alert_incidents`, not recomputed from the occurrence aggregate. A seasonal detector opens/closes that row; closes fire on the absolute-rate backstop, a band-shape + dwell recovery, or a 72h hard timeout. Signals with no seasonal history (e.g. a normally-silent signal hit by a one-off burst) use the same band-shape + dwell exit on the close side, so they de-escalate shortly after going quiet rather than waiting on the 72h ceiling.
+The `escalating` state is backed by an open incident with `source_type = "signal"` and `source_id = signal.id`. A seasonal detector opens/closes that row through `EscalationEngine`; closes fire on the absolute-rate backstop, a band-shape + dwell recovery, or a hard timeout. Signals with no seasonal history use the same band-shape + dwell exit on the close side, so they de-escalate shortly after going quiet.
 
 Important state timestamps:
 
 - `clusteredAt`: last centroid/cluster refresh
 - `escalatedAt`: latest escalation transition timestamp
-- `resolvedAt`: manual or automatic resolution timestamp
-- `ignoredAt`: manual ignore timestamp
+- `mutedAt`: manual mute timestamp, or `null`
 
 ## Signal Source
 
-The `source` field records the provenance of the **first score** that created the issue. It is immutable for the lifetime of the issue.
+The `source` field records the provenance of the **first score** that created the signal. It is immutable for the lifetime of the signal.
 
 ```typescript
-type SignalSource = "annotation" | "custom";
+type SignalSource = "annotation" | "flagger" | "custom";
 ```
 
-- `"annotation"` — the signal was born from a human annotation (UI, API), a published queue annotation, or a flagger-authored annotation. The creating score carries `source: "annotation"` with `sourceId` equal to `"UI"`, `"API"`, `"SYSTEM"`, or a queue CUID.
+- `"annotation"` — the signal was born from a human annotation (UI, API, or a published queue annotation).
+- `"flagger"` — the signal was born from a Latitude-authored flagger annotation.
 - `"custom"` — the signal was born from a custom score pushed through the API. The creating score carries `source: "custom"`.
 
-> **Note**: `"evaluation"` is intentionally excluded. Evaluation scores are always linked to an existing signal at creation time; they never spawn a brand-new issue.
+> **Note**: `"evaluation"` is intentionally excluded. Evaluation scores are always linked to an existing signal at creation time; they never spawn a brand-new signal.
 
 The derivation rule applied at signal creation time:
 
@@ -119,6 +108,9 @@ The derivation rule applied at signal creation time:
 const deriveSignalSource = (score: Score): SignalSource => {
   if (score.source === "annotation") {
     return "annotation";
+  }
+  if (score.source === "flagger") {
+    return "flagger";
   }
   return "custom";
 };
@@ -210,7 +202,7 @@ Execution rules:
 - each Redis lock acquisition must be non-blocking; if the lock is already held, serialization returns a lock-unavailable result so the workflow sleeps durably and retries at that point instead of holding a database connection while waiting
 - both the create-from-score step and the assign-to-signal step must use a conditional `scores.issue_id` claim so only one concurrent owner wins while the canonical signal row and centroid stay transactionally consistent
 - the assign-to-signal path must lock the canonical signal row before recomputing and saving the centroid so parallel score assignments into the same signal do not lose centroid contributions
-- resolved and ignored signals are still valid discovery match candidates; this preserves regression detection and keeps future matching scores linked to intentionally ignored signals
+- muted signals are still valid discovery match candidates; mute controls notification noise, not score ownership or matching
 
 ### Bounded locked serialization
 
@@ -353,7 +345,7 @@ Required Postgres storage on the signal row:
 - `uuid` column kept as dormant legacy data; it defaults to `gen_random_uuid()` at the DB level and is not part of the `Signal` domain entity or any application read/write path
 - nullable `centroid_embedding vector(2048)` derived from the canonical JSONB centroid; empty/no-evidence centroids store `NULL`
 - generated `search_document` using the `english` text-search configuration over weighted `name` (`A`) and `description` (`B`)
-- btree on `(organization_id, project_id, ignored_at, resolved_at, created_at)` for project-scoped lifecycle filtering and management actions
+- btree on project-scoped signal list columns so list reads can filter by organization/project and order by activity
 - GIN index on `search_document` for lexical boost in hybrid search
 - no IVFFlat/HNSW index on `centroid_embedding`: signals per project are expected in the hundreds to low thousands, and an exact project-scoped sequential scan outperforms an approximate index at that scale
 - do not add JSONB indexes on `centroid`; centroid search is served by derived pgvector state maintained by `SignalRepository.save`
@@ -373,22 +365,22 @@ This matters because discovery combines semantic pgvector similarity and full-te
 - signal text should help scores with different wording or different surrounding details still converge on the same problem
 - titles/descriptions should capture the underlying failure pattern, not memorize incidental facts from one example
 
-## Direct Monitoring
+## Direct Tracking
 
 Signal-linked evaluation creation is explicit:
 
 - signal discovery and signal creation do not automatically create evaluations
 - signals may have several linked evaluations
-- the managed UI exposes `Monitor signal` only from the signal page, and only when the signal currently has no linked evaluations
+- the managed UI exposes `Track signal` only from the signal page, and only when the signal currently has no linked evaluations
 - each trigger starts the `optimize-evaluation` Temporal workflow with a deterministic `evaluations:generate:${signalId}` workflow id for initial generation (or `evaluations:optimize:${evaluationId}` for manual realignment); the server function returns `void`, and the frontend polls `getSignalAlignmentState`, which queries Temporal via `workflow.describe()` until the workflow terminates and the resulting evaluation appears via normal data-fetching
 - once created, automatic throttled realignment continues as new annotations arrive: each new annotation writes `ScoreAssignedToSignal`, which the `domain-events` dispatcher routes to `signals:refresh` (throttled at 8h), which in turn publishes `evaluations:automaticRefreshAlignment` (throttled at 1h, one per active linked evaluation) to kick off `refresh-evaluation-alignment`; that workflow escalates into `optimize-evaluation` via `evaluations:automaticOptimization` (throttled at 8h) when the incremental alignment-metric drop exceeds tolerance. All windows are first-publish-wins so a continuous annotation stream cannot push the fire time forward indefinitely
 
-Once an signal-linked evaluation exists:
+Once a signal-linked evaluation exists:
 
 - failed, non-errored monitor scores that already carried `scores.issue_id` at write time do not re-enter discovery
 - failed, non-errored monitor scores that stayed unowned still flow through the centralized `signals:discovery` task, which resolves the linked signal before similarity search starts and then claims `scores.issue_id`
 - errored monitor scores stay out of discovery entirely because `errored = true` makes them ineligible
-- they can move a resolved signal into `regressed`
+- they continue to refresh signal evidence and trend state
 
 ## Product Surface
 
@@ -402,9 +394,9 @@ The project `Signals` page mirrors the project `Traces` page shell:
 Action-row behavior:
 
 - left side: time range selector and columns selector
-- right side: an assignee filter (multi-select over org members plus an `Unassigned` option), a `My signals` toggle whose count badge reflects the current tab/time/search filters (but not the assignee filter itself), `Active` / `Archived` tabs, plus hybrid search without rerank
+- right side: an assignee filter (multi-select over org members plus an `Unassigned` option), a `My signals` toggle whose count badge reflects the current time/search filters (but not the assignee filter itself), plus hybrid search without rerank
 - the time range filters score `created_at` in ClickHouse, not signal-row timestamps in Postgres
-- the lifecycle tabs affect the signals table only, not the analytics panel
+- mute state affects notification fan-out, not the analytics panel
 - the page does not expose the generic Traces filter builder or filter drawer
 - signal search relies on the shared AI-layer Redis cache for embeddings; the signals domain does not add an extra embedding cache on top
 - the managed Signals surface is web-only for now; there is no public `apps/api` signals contract yet
@@ -412,20 +404,19 @@ Action-row behavior:
 Read orchestration:
 
 - ClickHouse owns score-backed time-range filtering, occurrence analytics, and signal trend metrics
-- Postgres owns canonical signal rows, lifecycle grouping, hybrid search + similarity scoring (pgvector + tsvector), and linked evaluation hydration
+- Postgres owns canonical signal rows, mute state, hybrid search + similarity scoring (pgvector + tsvector), and linked evaluation hydration
 - signal-page reads query ClickHouse first, run `SignalRepository.hybridSearch` only when search text is present, and then hydrate canonical signals through `IN (...)` signal-id clauses
 
 Analytics panel behavior:
 
-- aggregate counts show `new`, `escalating`, `regressed`, `resolved`, and total seen occurrences
+- aggregate counts show `new`, `escalating`, `ongoing`, and total seen occurrences
 - the histogram shows matched signal occurrences by day
 - when no full range is selected, the histogram falls back to a 7-day window ending today or ending at the single selected endpoint
 
 Signals table behavior:
 
 - rows are **always grouped by triage priority** (Linear-style): `Urgent` → `High` → `Medium` → `Low` → `No priority`, with full-width group header rows showing each group's total count over the filtered set. The grouping is the unconditional primary sort key in `listSignalsUseCase`, so exports, bulk pagination, and prev/next signal navigation see the same order; the user-selected sort applies within each group
-- the assignee filter (`assigneeIds`, with an `"unassigned"` sentinel) is honored by the table, bulk lifecycle actions, and CSV exports so select-all always targets the visible set
-- no bulk-selection UI is shown in this revision, even though backend bulk lifecycle actions may still exist for API parity
+- the assignee filter (`assigneeIds`, with an `"unassigned"` sentinel) is honored by the table and CSV exports so exports target the visible set
 - default sorting is last seen descending, then occurrences descending, with search similarity preserved as an additional tie-breaker when search text is present
 - visible columns are `Signal`, `Tags`, `Status`, `Assignee`, `Trend`, `Seen at`, `Occurrences`, and `Affected traces`; `Assignee` hydrates the member's name/avatar client-side from the members collection (the list payload carries only `assigneeId`)
 - `Signal` shows the signal name plus lifecycle tags, with truncation
@@ -437,12 +428,12 @@ Signals table behavior:
 Signal page behavior:
 
 - the dedicated route (`/projects/<slug>/signals/<signalId>`) is the single signal surface; it replaced the former right-side drawer. The list row click navigates here, and the legacy `?signalId=` deep link redirects to it
-- page-level time range, lifecycle-tab, and search controls do not apply on the page; signal reads use full history
-- the header shows the signal name + canonical lifecycle status, the resolve/ignore lifecycle actions, the assignee + priority triage pickers, previous/next-signal navigation (buttons + `J`/`K`, cycling the default-sorted list of the signal's own lifecycle group), and a copyable slug; the description and tags sit in a full-width row below
+- page-level time range and search controls do not apply on the page; signal reads use full history
+- the header shows the signal name + canonical status, mute/unmute action, the assignee + priority triage pickers, previous/next-signal navigation (buttons + `J`/`K`, cycling the default-sorted list), and a copyable slug; the description and tags sit in a full-width row below
 - the command palette gains contextual `Assign to…` (Me / Unassigned / org members) and `Set priority…` drill-down commands while the page is open, running the same `updateSignalTriage` mutation as the pickers
 - triage fields are functional beyond the page: the signals list groups by priority and filters by assignee, incident notification payloads snapshot `assigneeId`/`priority` for email/Slack/in-app rendering, and changing the assignee emits `SignalAssigneeChanged` which notifies the new assignee (`issue.assigned`, in-app + email; see `dev-docs/notifications.md`)
 - the report body includes the impact summary band (occurrences, affected traces/sessions/users, cost), the Patterns section, a 14-day trend histogram, the linked-evaluations section, an Examples carousel (`H`/`L` cycling), and an infinitely paginated traces table; clicking a trace opens it in an overlay sheet on top of the page
 - linked evaluations show name, last alignment date, alignment metric, manual realign, and per-evaluation archive actions; the alignment badge tooltip surfaces the confusion matrix plus a "Advanced statistics" link button that opens a modal with every metric derivable from it (accuracy, recall, specificity, balanced accuracy, precision, F1, MCC)
 - while a realignment is in flight, the UI shows `Aligning...`
-- when an signal has no linked evaluations, the page shows `Monitor signal`; once at least one linked evaluation exists, the managed UI no longer shows another monitor-generation button
+- when a signal has no linked evaluations, the page shows `Track signal`; once at least one linked evaluation exists, the managed UI no longer shows another evaluation-generation button
 - the page's body component (`SignalDetailBody`, drawer-style: header, summary, evaluations, trend, traces) is also reused inside the session-detail panel's signal slot

@@ -19,11 +19,11 @@ const buildSignalUrl = (
 
 export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"> = (payload, ctx) =>
   Effect.gen(function* () {
-    const isSavedSearch = payload.sourceType === "savedSearch"
+    const isMonitorIncident = payload.sourceType === "monitor"
     const source = yield* resolveIncidentSource(payload)
     const assigneeName = yield* resolveAssigneeName(payload.assigneeId)
-    const sourceName = source.name ?? (isSavedSearch ? "a saved search" : "a signal")
-    const signalUrl = isSavedSearch ? undefined : buildSignalUrl(ctx, payload)
+    const sourceName = source.name ?? (isMonitorIncident ? "a monitored target" : "a signal")
+    const signalUrl = isMonitorIncident ? undefined : buildSignalUrl(ctx, payload)
 
     const chartUrl = buildChartUrl({
       notificationId: ctx.notificationId,
@@ -37,7 +37,7 @@ export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"
       incidentKind: payload.incidentKind,
       condition: payload.condition,
     })
-    const ctaUrl = isSavedSearch ? monitor?.url : signalUrl
+    const ctaUrl = isMonitorIncident ? monitor?.url : signalUrl
     const subject = `Escalating: ${sourceName}`
 
     const html = yield* Effect.tryPromise({

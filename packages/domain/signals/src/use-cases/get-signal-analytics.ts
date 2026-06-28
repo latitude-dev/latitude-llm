@@ -37,8 +37,6 @@ export interface GetSignalAnalyticsResult {
   readonly ongoing: SignalAnalyticsCountMetric
   readonly new: SignalAnalyticsCountMetric
   readonly escalating: SignalAnalyticsCountMetric
-  readonly regressed: SignalAnalyticsCountMetric
-  readonly resolved: SignalAnalyticsCountMetric
   readonly occurrences: SignalAnalyticsOccurrencesMetric
 }
 
@@ -95,14 +93,12 @@ const emptyResult = (scaffold: readonly string[]): GetSignalAnalyticsResult => (
   ongoing: { total: 0 },
   new: { total: 0 },
   escalating: { total: 0 },
-  regressed: { total: 0 },
-  resolved: { total: 0 },
   occurrences: { total: 0, buckets: fillBuckets({ scaffold, buckets: [] }) },
 })
 
 /**
  * Returns issue analytics for `[from, to]` — lifecycle counters (ongoing, new,
- * escalating, regressed, resolved) across issues with activity in the window,
+ * escalating) across issues with activity in the window,
  * total occurrences, and a 12-hour UTC-aligned bucket series for occurrences.
  * Range defaults to the trailing 7 days.
  */
@@ -144,25 +140,20 @@ export const getSignalAnalyticsUseCase = (
       signalIds: candidateSignalIds,
     })
 
-    const counts: Record<"ongoing" | "new" | "escalating" | "regressed" | "resolved", number> = {
+    const counts: Record<"ongoing" | "new" | "escalating", number> = {
       ongoing: 0,
       new: 0,
       escalating: 0,
-      regressed: 0,
-      resolved: 0,
     }
     for (const issue of canonicalSignals) {
       const states = deriveSignalLifecycleStates({
         issue,
         isEscalating: issue.lifecycle.isEscalating,
-        isRegressed: issue.lifecycle.isRegressed,
         now,
       })
       if (states.includes(SignalState.New)) counts.new += 1
       if (states.includes(SignalState.Escalating)) counts.escalating += 1
       if (states.includes(SignalState.Ongoing)) counts.ongoing += 1
-      if (states.includes(SignalState.Regressed)) counts.regressed += 1
-      if (states.includes(SignalState.Resolved)) counts.resolved += 1
     }
 
     const rawBuckets = yield* scoreAnalyticsRepository.histogramBySignals({
@@ -179,8 +170,6 @@ export const getSignalAnalyticsUseCase = (
       ongoing: { total: counts.ongoing },
       new: { total: counts.new },
       escalating: { total: counts.escalating },
-      regressed: { total: counts.regressed },
-      resolved: { total: counts.resolved },
       occurrences: { total: occurrencesTotal, buckets },
     } satisfies GetSignalAnalyticsResult
   }).pipe(Effect.withSpan("issues.getSignalAnalytics"))

@@ -3,6 +3,6 @@
 import type * as LatitudeApi from "../index.js";
 
 /**
- * Filters that select the target rows. Use `{}` for all users; use `operation = execute_tool` for all tools.
+ * Additional filters applied when evaluating the monitor.
  */
-export type MonitorFilterSet = Record<string, LatitudeApi.FilterCondition[]> | undefined;
+export type MonitorFilterSet = Record<string, LatitudeApi.FilterCondition[]>;

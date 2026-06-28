@@ -96,8 +96,6 @@ export interface SignalListAnalyticsCounts {
   readonly newSignals: number
   readonly escalatingSignals: number
   readonly ongoingSignals: number
-  readonly regressedSignals: number
-  readonly resolvedSignals: number
   readonly seenOccurrences: number
 }
 
@@ -123,11 +121,9 @@ export interface SignalListItem {
   readonly states: readonly string[]
   readonly assigneeId: string | null
   readonly priority: SignalPriority | null
+  readonly mutedAt: Date | null
   readonly createdAt: Date
   readonly updatedAt: Date
-  readonly escalatedAt: Date | null
-  readonly resolvedAt: Date | null
-  readonly ignoredAt: Date | null
   readonly firstSeenAt: Date
   readonly lastSeenAt: Date
   readonly occurrences: number
@@ -293,7 +289,7 @@ const matchesLifecycleGroup = (
     return true
   }
 
-  const isArchived = candidate.issue.ignoredAt !== null || candidate.lifecycleStates.includes(SignalState.Resolved)
+  const isArchived = candidate.issue.mutedAt !== null
   return lifecycleGroup === "archived" ? isArchived : !isArchived
 }
 
@@ -334,12 +330,9 @@ const compareDesc = (left: number, right: number): number => right - left
 const compareAsc = (left: number, right: number): number => left - right
 
 const LIFECYCLE_STATE_PRIORITY: Record<string, number> = {
-  [SignalState.Regressed]: 0,
-  [SignalState.Escalating]: 1,
-  [SignalState.New]: 2,
-  [SignalState.Ongoing]: 3,
-  [SignalState.Resolved]: 4,
-  [SignalState.Ignored]: 5,
+  [SignalState.Escalating]: 0,
+  [SignalState.New]: 1,
+  [SignalState.Ongoing]: 2,
 }
 
 const UNKNOWN_STATE_PRIORITY = 99
@@ -393,11 +386,6 @@ const sortCandidates = (
         return affectedSessionsComparison
       }
     } else if (input.field === "state") {
-      // Priority numbers go low → high in importance order
-      // (`Regressed = 0`, `Escalating = 1`, …, `Ignored = 5`). The user-
-      // facing convention is "sort by state descending = highest-priority
-      // first", so `desc` keeps the smaller priority number on top and
-      // `asc` flips that — opposite to the raw numeric comparison.
       const leftPriority = getPrimaryStatePriority(left.lifecycleStates)
       const rightPriority = getPrimaryStatePriority(right.lifecycleStates)
       const stateComparison =
@@ -444,7 +432,6 @@ const toCandidate = (input: {
   const lifecycleStates = deriveSignalLifecycleStates({
     issue: input.issue,
     isEscalating: input.issue.lifecycle.isEscalating,
-    isRegressed: input.issue.lifecycle.isRegressed,
     now: input.now,
   })
 
@@ -471,7 +458,6 @@ const toLightListItem = (issue: SignalWithLifecycle, now: Date): SignalListItem 
   const states = deriveSignalLifecycleStates({
     issue,
     isEscalating: issue.lifecycle.isEscalating,
-    isRegressed: issue.lifecycle.isRegressed,
     now,
   })
 
@@ -487,9 +473,7 @@ const toLightListItem = (issue: SignalWithLifecycle, now: Date): SignalListItem 
     priority: issue.priority,
     createdAt: issue.createdAt,
     updatedAt: issue.updatedAt,
-    escalatedAt: issue.escalatedAt,
-    resolvedAt: issue.resolvedAt,
-    ignoredAt: issue.ignoredAt,
+    mutedAt: issue.mutedAt,
     firstSeenAt: issue.createdAt,
     lastSeenAt: issue.updatedAt,
     occurrences: 0,
@@ -507,8 +491,6 @@ const toAnalyticsCounts = (candidates: readonly AnalyticsCandidate[]): SignalLis
   escalatingSignals: candidates.filter((candidate) => candidate.lifecycleStates.includes(SignalState.Escalating))
     .length,
   ongoingSignals: candidates.filter((candidate) => candidate.lifecycleStates.includes(SignalState.Ongoing)).length,
-  regressedSignals: candidates.filter((candidate) => candidate.lifecycleStates.includes(SignalState.Regressed)).length,
-  resolvedSignals: candidates.filter((candidate) => candidate.lifecycleStates.includes(SignalState.Resolved)).length,
   seenOccurrences: candidates.reduce((sum, candidate) => sum + candidate.windowMetric.occurrences, 0),
 })
 
@@ -552,8 +534,6 @@ export const listSignalsUseCase = (
               newSignals: 0,
               escalatingSignals: 0,
               ongoingSignals: 0,
-              regressedSignals: 0,
-              resolvedSignals: 0,
               seenOccurrences: 0,
             },
             histogram: fillBuckets({ scaffold: histogramScaffold, buckets: [] }),
@@ -597,7 +577,6 @@ export const listSignalsUseCase = (
                   lifecycleStates: deriveSignalLifecycleStates({
                     issue,
                     isEscalating: issue.lifecycle.isEscalating,
-                    isRegressed: issue.lifecycle.isRegressed,
                     now,
                   }),
                   similarityScore: null,
@@ -640,8 +619,6 @@ export const listSignalsUseCase = (
             newSignals: 0,
             escalatingSignals: 0,
             ongoingSignals: 0,
-            regressedSignals: 0,
-            resolvedSignals: 0,
             seenOccurrences: 0,
           },
           histogram: fillBuckets({ scaffold: histogramScaffold, buckets: [] }),
@@ -745,8 +722,6 @@ export const listSignalsUseCase = (
             newSignals: 0,
             escalatingSignals: 0,
             ongoingSignals: 0,
-            regressedSignals: 0,
-            resolvedSignals: 0,
             seenOccurrences: 0,
           },
           histogram: fillBuckets({ scaffold: histogramScaffold, buckets: [] }),
@@ -930,11 +905,9 @@ export const listSignalsUseCase = (
           states: candidate.lifecycleStates,
           assigneeId: candidate.issue.assigneeId,
           priority: candidate.issue.priority,
+          mutedAt: candidate.issue.mutedAt,
           createdAt: candidate.issue.createdAt,
           updatedAt: candidate.issue.updatedAt,
-          escalatedAt: candidate.issue.escalatedAt,
-          resolvedAt: candidate.issue.resolvedAt,
-          ignoredAt: candidate.issue.ignoredAt,
           firstSeenAt: occurrence?.firstSeenAt ?? candidate.firstSeenAt,
           lastSeenAt: occurrence?.lastSeenAt ?? candidate.lastSeenAt,
           occurrences: candidate.windowMetric.occurrences,
@@ -945,9 +918,7 @@ export const listSignalsUseCase = (
               : Math.min(candidate.windowMetric.affectedSessions / sessionCount.totalCount, 1),
           escalationOccurrenceThreshold:
             occurrence !== null ? getEscalationOccurrenceThreshold(occurrence.baselineAvgOccurrences) : null,
-          trend: parsed.includeAnalytics
-            ? (trendBySignalId.get(candidate.issue.id) ?? fillBuckets({ scaffold: trendScaffold, buckets: [] }))
-            : [],
+          trend: trendBySignalId.get(candidate.issue.id) ?? fillBuckets({ scaffold: trendScaffold, buckets: [] }),
           evaluations: evaluationsBySignalId.get(candidate.issue.id) ?? [],
           tags: tagsBySignalId.get(candidate.issue.id) ?? [],
         }

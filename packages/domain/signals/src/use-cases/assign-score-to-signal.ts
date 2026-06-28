@@ -79,24 +79,10 @@ const buildSignalWithAssignedScore = ({
   readonly score: Score
   readonly normalizedEmbedding: readonly number[]
   readonly assignedAt: Date
-}): { readonly updatedSignal: Signal; readonly isRegression: boolean } => {
-  // Reify regression at write time: a score newer than the issue's resolution
-  // means the issue is no longer resolved. Clearing `resolvedAt` here makes
-  // "is the issue regressed" a stored fact (and gives the regression event
-  // idempotency for free — a subsequent score in the same cycle won't see
-  // resolvedAt != null and won't re-emit).
-  const isRegression =
-    issue.ignoredAt === null && issue.resolvedAt !== null && score.createdAt.getTime() > issue.resolvedAt.getTime()
-
-  // Only discovered signals carry a centroid; this assignment path never runs for a
-  // user-created (centroid-less) signal, but guard for type-safety.
+}): Signal => {
   if (issue.centroid === null) {
-    return {
-      updatedSignal: { ...issue, resolvedAt: isRegression ? null : issue.resolvedAt, updatedAt: assignedAt },
-      isRegression,
-    }
+    return { ...issue, updatedAt: assignedAt }
   }
-
   const centroid = updateSignalCentroid({
     centroid: {
       ...issue.centroid,
@@ -112,14 +98,10 @@ const buildSignalWithAssignedScore = ({
   })
 
   return {
-    updatedSignal: {
-      ...issue,
-      centroid,
-      clusteredAt: centroid.clusteredAt,
-      resolvedAt: isRegression ? null : issue.resolvedAt,
-      updatedAt: assignedAt,
-    },
-    isRegression,
+    ...issue,
+    centroid,
+    clusteredAt: centroid.clusteredAt,
+    updatedAt: assignedAt,
   }
 }
 
@@ -166,7 +148,7 @@ export const assignScoreToSignalUseCase = (input: AssignScoreToSignalInput) =>
             }
 
             const assignedAt = new Date()
-            const { updatedSignal, isRegression } = buildSignalWithAssignedScore({
+            const updatedSignal = buildSignalWithAssignedScore({
               issue,
               score,
               normalizedEmbedding: input.normalizedEmbedding,
@@ -205,22 +187,6 @@ export const assignScoreToSignalUseCase = (input: AssignScoreToSignalInput) =>
                 signalId: issue.id,
               },
             })
-
-            if (isRegression) {
-              yield* outboxEventWriter.write({
-                eventName: "SignalRegressed",
-                aggregateType: "issue",
-                aggregateId: updatedSignal.id,
-                organizationId: updatedSignal.organizationId,
-                payload: {
-                  organizationId: updatedSignal.organizationId,
-                  projectId: updatedSignal.projectId,
-                  signalId: updatedSignal.id,
-                  regressedAt: score.createdAt.toISOString(),
-                  triggerScoreId: score.id,
-                },
-              })
-            }
 
             return {
               action: "assigned",

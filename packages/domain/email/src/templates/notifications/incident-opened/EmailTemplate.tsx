@@ -1,10 +1,5 @@
 import type { IncidentBreach, IncidentSampleExcerpt } from "@domain/notifications"
-import {
-  ALERT_INCIDENT_KIND_LABEL,
-  ALERT_INCIDENT_KIND_SOURCE_TYPE,
-  type AlertIncidentKind,
-  type AlertSeverity,
-} from "@domain/shared"
+import { type AlertSeverity, INCIDENT_NOTIFICATION_KEY_LABEL, type IncidentNotificationKey } from "@domain/shared"
 import type { SignalPriority } from "@domain/signals"
 import { Section } from "@react-email/components"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
@@ -32,7 +27,7 @@ import {
 } from "../-incident-components.tsx"
 
 interface IncidentOpenedEmailProps {
-  readonly incidentKind: AlertIncidentKind
+  readonly incidentKind: IncidentNotificationKey
   readonly severity: AlertSeverity
   readonly sourceId: string
   readonly sourceName: string
@@ -42,7 +37,7 @@ interface IncidentOpenedEmailProps {
   readonly notificationCreatedAt: Date
   readonly organizationName: string
   readonly projectName: string | undefined
-  /** Signal triage snapshot at incident time; absent on legacy payloads and saved-search sources. */
+  /** Signal triage snapshot at incident time; absent on legacy payloads and monitor sources. */
   readonly priority: SignalPriority | undefined
   /** Live-resolved assignee display name; absent when unassigned or unresolvable. */
   readonly assigneeName: string | undefined
@@ -84,14 +79,14 @@ export function IncidentOpenedEmail({
   monitor,
   webAppUrl,
 }: IncidentOpenedEmailProps) {
-  const isSavedSearch = ALERT_INCIDENT_KIND_SOURCE_TYPE[incidentKind] === "savedSearch"
-  const heading = ALERT_INCIDENT_KIND_LABEL[incidentKind]
-  const subtitle = isSavedSearch
-    ? "We notified everyone watching this project — traces matching the search stayed above the threshold for the configured window."
+  const isMonitorIncident = incidentKind.startsWith("monitor.")
+  const heading = INCIDENT_NOTIFICATION_KEY_LABEL[incidentKind]
+  const subtitle = isMonitorIncident
+    ? "We notified everyone watching this project — the monitor stayed above its configured threshold."
     : "We notified everyone watching this project — an ongoing signal is being detected more than expected."
   const scope = formatScope(organizationName, projectName)
   const breachLine = buildBreachLine(breach)
-  const ctaHref = isSavedSearch ? monitor?.url : signalUrl
+  const ctaHref = isMonitorIncident ? monitor?.url : signalUrl
 
   const metadataRows = [
     { label: "Project", value: scope },
@@ -113,7 +108,7 @@ export function IncidentOpenedEmail({
 
       <MonitorAttribution monitor={monitor} />
 
-      <SectionHeader label={isSavedSearch ? "Saved search" : "Signal"} />
+      <SectionHeader label={isMonitorIncident ? "Monitor target" : "Signal"} />
       <EmailText variant="heading">{sourceName}</EmailText>
       {description ? (
         <EmailText variant="bodySmall" className="text-muted-foreground">
@@ -125,7 +120,7 @@ export function IncidentOpenedEmail({
 
       <EmailMetadataTable rows={metadataRows} />
 
-      {isSavedSearch ? null : (
+      {isMonitorIncident ? null : (
         <>
           <SectionHeader label="Breach" />
           {breachLine ? (
@@ -141,7 +136,7 @@ export function IncidentOpenedEmail({
 
       {ctaHref ? (
         <Section className={emailDesignTokens.spacing.buttonTop}>
-          <EmailButton href={ctaHref} label={isSavedSearch ? "View monitor" : "View signal"} />
+          <EmailButton href={ctaHref} label={isMonitorIncident ? "View monitor" : "View signal"} />
         </Section>
       ) : null}
     </ContainerLayout>
@@ -149,7 +144,7 @@ export function IncidentOpenedEmail({
 }
 
 IncidentOpenedEmail.PreviewProps = {
-  incidentKind: "issue.escalating",
+  incidentKind: "signal.escalating",
   severity: "high",
   sourceId: "dds0rt8sqgpuku4u4wabze9r",
   sourceName: "Token leakage in responses",

@@ -5,20 +5,18 @@ import {
   getMonitorIncidentsUseCase,
   listMonitorsForTargetUseCase,
   listMonitorsUseCase,
-  type MonitorAlertInput,
-  MonitorAlertNotFoundError,
   muteMonitorUseCase,
   unmuteMonitorUseCase,
-  updateMonitorAlertUseCase,
   updateMonitorUseCase,
 } from "@domain/monitors"
 import { ProjectRepository } from "@domain/projects"
-import { AlertIncidentId, BadRequestError, MonitorAlertId, OrganizationId } from "@domain/shared"
+import { AlertIncidentId, BadRequestError, OrganizationId } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import {
-  AlertIncidentRepositoryLive,
+  IncidentRepositoryLive,
   MonitorRepositoryLive,
   NotificationRepositoryLive,
+  OutboxEventWriterLive,
   ProjectRepositoryLive,
   SavedSearchRepositoryLive,
   withPostgres,
@@ -28,20 +26,21 @@ import { Effect, Layer } from "effect"
 import { defineApiEndpoint } from "../mcp/index.ts"
 import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
 import {
-  type AlertIncidentCondition,
-  CreateMonitorAlertBodySchema,
+  AlertConditionSchema,
+  AlertEscalatingConditionSchema,
+  AlertThresholdConditionSchema,
+} from "../openapi/entities/incident.ts"
+import {
   decodeMonitorCursor,
   decodeMonitorIncidentCursor,
   encodeMonitorCursor,
   encodeMonitorIncidentCursor,
-  MonitorAlertSchema,
   MonitorIncidentSchema,
+  MonitorMetricSchema,
   MonitorSchema,
   MonitorTargetSchema,
-  toMonitorAlertResponse,
   toMonitorIncidentResponse,
   toMonitorResponse,
-  UpdateMonitorAlertBodySchema,
 } from "../openapi/entities/monitor.ts"
 import { Paginated } from "../openapi/pagination.ts"
 import {
@@ -66,19 +65,35 @@ const MonitorSlugParamsSchema = ProjectParamsSchema.extend({
   monitorSlug: z.string().describe("Monitor slug (human-readable identifier within the project)."),
 })
 
-const MonitorAlertParamsSchema = MonitorSlugParamsSchema.extend({
-  alertId: z.string().describe("Monitor-alert identifier."),
+const streamForTargetType = (type: z.infer<typeof MonitorTargetSchema>["type"]) =>
+  type === "tool" ? ("spans" as const) : type === "session" ? ("sessions" as const) : ("traces" as const)
+
+const CreateMonitorBaseBodySchema = z.object({
+  name: z.string().min(1).max(NAME_MAX_LENGTH).describe("Human-readable name. Used to derive the slug."),
+  description: z.string().max(DESCRIPTION_MAX_LENGTH).optional().describe("Optional free-form description."),
+  target: MonitorTargetSchema.describe("Entity or filter set watched by the monitor."),
+  severity: z.enum(["low", "medium", "high"]).describe("Severity assigned to incidents opened by this monitor."),
 })
 
 const CreateMonitorBodySchema = z
-  .object({
-    name: z.string().min(1).max(NAME_MAX_LENGTH).describe("Human-readable name. Used to derive the slug."),
-    description: z.string().max(DESCRIPTION_MAX_LENGTH).optional().describe("Optional free-form description."),
-    alerts: z.array(CreateMonitorAlertBodySchema).length(1).describe("The monitor's alert. Exactly one."),
-    target: MonitorTargetSchema.optional().describe(
-      "Target for tool/user monitors. Required for `event.*` and `metric.*` alerts; omit for saved-search alerts.",
-    ),
-  })
+  .discriminatedUnion("trigger", [
+    CreateMonitorBaseBodySchema.extend({
+      trigger: z.literal("match").describe("Opens a point incident when any matching event appears."),
+      metric: MonitorMetricSchema.optional().describe(
+        "Metric stored for later rule edits. Match monitors evaluate counts.",
+      ),
+    }).strict(),
+    CreateMonitorBaseBodySchema.extend({
+      trigger: z.literal("threshold").describe("Opens a point incident when the condition is met."),
+      metric: MonitorMetricSchema.optional().describe("Metric evaluated by the monitor rule."),
+      condition: AlertThresholdConditionSchema.describe("Threshold condition that opens point incidents."),
+    }),
+    CreateMonitorBaseBodySchema.extend({
+      trigger: z.literal("escalating").describe("Opens and closes a sustained incident while the condition is met."),
+      metric: MonitorMetricSchema.optional().describe("Metric evaluated by the monitor rule."),
+      condition: AlertEscalatingConditionSchema.describe("Escalating condition that opens sustained incidents."),
+    }),
+  ])
   .openapi("CreateMonitorBody")
 
 const UpdateMonitorBodySchema = z
@@ -90,6 +105,33 @@ const UpdateMonitorBodySchema = z
       .optional()
       .describe("New name. Renaming may regenerate the slug — re-read the response or rely on `id`."),
     description: z.string().max(DESCRIPTION_MAX_LENGTH).optional().describe("New description."),
+    target: MonitorTargetSchema.optional().describe("Replacement target watched by the monitor."),
+    trigger: z
+      .enum(["match", "threshold", "escalating"])
+      .optional()
+      .describe("Replacement incident trigger for the monitor rule."),
+    metric: MonitorMetricSchema.optional().describe("Replacement metric evaluated by the monitor."),
+    condition: AlertConditionSchema.optional().describe("Replacement condition for threshold or escalating monitors."),
+    severity: z.enum(["low", "medium", "high"]).optional().describe("Replacement incident severity."),
+  })
+  .superRefine((body, ctx) => {
+    if (body.trigger === "match" && body.condition !== undefined) {
+      ctx.addIssue({ code: "custom", path: ["condition"], message: "Match monitors cannot define a condition." })
+    }
+    if (body.trigger === "threshold" && body.condition !== undefined && body.condition.trigger !== "threshold") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["condition"],
+        message: "Threshold monitor condition must use trigger `threshold`.",
+      })
+    }
+    if (body.trigger === "escalating" && body.condition !== undefined && body.condition.trigger !== "escalating") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["condition"],
+        message: "Escalating monitor condition must use trigger `escalating`.",
+      })
+    }
   })
   .openapi("UpdateMonitorBody")
 
@@ -112,11 +154,7 @@ const ListMonitorIncidentsQuerySchema = z.object({
 
 const ListMonitorsForTargetBodySchema = z
   .object({
-    stream: MonitorTargetSchema.shape.stream,
-    targetKind: MonitorTargetSchema.shape.kind
-      .exclude(["signal"])
-      .optional()
-      .describe("Optional target kind to match: `user`, `tool`, `session`, or `savedSearch`."),
+    targetType: MonitorTargetSchema.shape.type.optional().describe("Optional target type to match."),
     filterSetContains: MonitorTargetSchema.shape.filterSet
       .unwrap()
       .describe(
@@ -127,21 +165,10 @@ const ListMonitorsForTargetBodySchema = z
 
 const PaginatedMonitorsSchema = Paginated(MonitorSchema, "PaginatedMonitors")
 const PaginatedMonitorIncidentsSchema = Paginated(MonitorIncidentSchema, "PaginatedMonitorIncidents")
-const MonitorAlertListSchema = z
-  .object({ items: z.array(MonitorAlertSchema).describe("The monitor's alerts.") })
-  .openapi("MonitorAlertList")
 
 const MonitorListSchema = z
   .object({ items: z.array(MonitorSchema).describe("Matching monitors.") })
   .openapi("MonitorList")
-
-/** The validated alert body is structurally identical to the domain input; the condition is cast back to its branded union. */
-const toMonitorAlertInput = (body: z.infer<typeof CreateMonitorAlertBodySchema>): MonitorAlertInput => ({
-  kind: body.kind,
-  source: body.source ? { type: body.source.type, id: body.source.id } : null,
-  condition: (body.condition ?? null) as AlertIncidentCondition | null,
-  ...(body.severity !== undefined ? { severity: body.severity } : {}),
-})
 
 export const monitorsPath = "/projects/:projectSlug/monitors"
 
@@ -183,7 +210,13 @@ const listMonitors = monitorEndpoint({
         })
       }).pipe(
         withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive),
+          Layer.mergeAll(
+            ProjectRepositoryLive,
+            MonitorRepositoryLive,
+            SavedSearchRepositoryLive,
+            IncidentRepositoryLive,
+            OutboxEventWriterLive,
+          ),
           c.var.postgresClient,
           organizationId,
         ),
@@ -204,8 +237,7 @@ const createMonitor = monitorEndpoint({
     tags: ["Monitors"],
     ...monitorsFernGroup("create"),
     summary: "Create monitor",
-    description:
-      "Creates a monitor with one alert. Saved-search alerts use a saved-search source; tool and user alerts use `event.*` or `metric.*` kinds with `source: null` and a `target`. The slug is derived from `name`.",
+    description: "Creates a monitor with one rule. The slug is derived from `name`.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(CreateMonitorBodySchema) },
     responses: openApiResponses({ status: 201, schema: MonitorSchema, description: "Monitor created" }),
@@ -224,8 +256,15 @@ const createMonitor = monitorEndpoint({
           projectId: project.id,
           name: body.name,
           ...(body.description !== undefined ? { description: body.description } : {}),
-          alerts: body.alerts.map(toMonitorAlertInput),
-          ...(body.target !== undefined ? { target: body.target } : {}),
+          target: body.target,
+          rule: {
+            trigger: body.trigger,
+            severity: body.severity,
+            config: {
+              ...(body.metric !== undefined ? { metric: body.metric } : {}),
+              ...("condition" in body ? { condition: body.condition } : {}),
+            },
+          },
         })
       }).pipe(
         withPostgres(
@@ -250,8 +289,7 @@ const listMonitorsForTarget = monitorEndpoint({
     tags: ["Monitors"],
     ...monitorsFernGroup("listForTarget"),
     summary: "List monitors for target",
-    description:
-      "Returns live unified monitors matching the supplied target kind and/or filter subset. Use `targetKind: user` with `stream: traces` for users, or `targetKind: tool` with `stream: spans` for tools.",
+    description: "Returns live monitors matching the supplied target type and/or filter subset.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(ListMonitorsForTargetBodySchema) },
     responses: openApiResponses({ status: 200, schema: MonitorListSchema, description: "Matching monitors" }),
@@ -267,8 +305,7 @@ const listMonitorsForTarget = monitorEndpoint({
         const project = yield* projectRepo.findBySlug(projectSlug)
         return yield* listMonitorsForTargetUseCase({
           projectId: project.id,
-          stream: body.stream,
-          ...(body.targetKind !== undefined ? { targetKind: body.targetKind } : {}),
+          ...(body.targetType !== undefined ? { targetType: body.targetType } : {}),
           filterSetContains: body.filterSetContains,
         })
       }).pipe(
@@ -329,7 +366,7 @@ const updateMonitor = monitorEndpoint({
     tags: ["Monitors"],
     ...monitorsFernGroup("update"),
     summary: "Update monitor",
-    description: "Updates a monitor's name and description. System monitors cannot be edited.",
+    description: "Updates a monitor's metadata, target, and rule. System monitor edits are restricted.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorSlugParamsSchema, body: jsonBody(UpdateMonitorBodySchema) },
     responses: openApiResponses({
@@ -349,14 +386,75 @@ const updateMonitor = monitorEndpoint({
         const projectRepo = yield* ProjectRepository
         const project = yield* projectRepo.findBySlug(projectSlug)
         const current = yield* getMonitorBySlugUseCase({ projectId: project.id, slug: monitorSlug })
+        const targetPatch = body.target
+        const metric = body.metric ?? current.target.metric
+        const target =
+          targetPatch !== undefined || body.metric !== undefined
+            ? {
+                ...current.target,
+                ...(targetPatch
+                  ? {
+                      type: targetPatch.type,
+                      id: targetPatch.id,
+                      kind: targetPatch.type,
+                      stream: streamForTargetType(targetPatch.type),
+                      query: targetPatch.query ?? null,
+                      savedSearchId: targetPatch.type === "savedSearch" ? targetPatch.id : null,
+                      ...(targetPatch.filterSet !== undefined
+                        ? { filterSet: targetPatch.filterSet }
+                        : { filterSet: undefined }),
+                    }
+                  : {}),
+                metric,
+              }
+            : undefined
+        const trigger = body.trigger ?? current.rule.trigger
+        const hasCondition = Object.hasOwn(body, "condition")
+        const condition = hasCondition
+          ? body.condition
+          : trigger === "match"
+            ? undefined
+            : current.rule.config.condition
+        if (trigger === "match" && condition !== undefined) {
+          throw new BadRequestError({ message: "Match monitors cannot define a condition." })
+        }
+        if (trigger === "threshold" && condition?.trigger !== "threshold") {
+          throw new BadRequestError({ message: "Threshold monitors require a threshold condition." })
+        }
+        if (trigger === "escalating" && condition?.trigger !== "escalating") {
+          throw new BadRequestError({ message: "Escalating monitors require an escalating condition." })
+        }
+        const rule =
+          body.trigger !== undefined || body.metric !== undefined || hasCondition || body.severity !== undefined
+            ? (() => {
+                const { condition: _condition, ...currentConfig } = current.rule.config
+                return {
+                  trigger,
+                  severity: body.severity ?? current.rule.severity,
+                  config: {
+                    ...currentConfig,
+                    metric,
+                    ...(condition !== undefined ? { condition } : {}),
+                  },
+                }
+              })()
+            : undefined
         return yield* updateMonitorUseCase({
           id: current.id,
           ...(body.name !== undefined ? { name: body.name } : {}),
           ...(body.description !== undefined ? { description: body.description } : {}),
+          ...(target !== undefined ? { target } : {}),
+          ...(rule !== undefined ? { rule } : {}),
         })
       }).pipe(
         withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive),
+          Layer.mergeAll(
+            ProjectRepositoryLive,
+            MonitorRepositoryLive,
+            SavedSearchRepositoryLive,
+            IncidentRepositoryLive,
+            OutboxEventWriterLive,
+          ),
           c.var.postgresClient,
           organizationId,
         ),
@@ -376,7 +474,7 @@ const deleteMonitor = monitorEndpoint({
     tags: ["Monitors"],
     ...monitorsFernGroup("delete"),
     summary: "Delete monitor",
-    description: "Deletes a monitor and its alerts. System monitors cannot be deleted.",
+    description: "Deletes a monitor. System monitors cannot be deleted.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorSlugParamsSchema },
     responses: openApiNoContentResponses({ description: "Monitor deleted" }),
@@ -393,7 +491,7 @@ const deleteMonitor = monitorEndpoint({
         yield* deleteMonitorUseCase({ id: current.id })
       }).pipe(
         withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive),
+          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive, IncidentRepositoryLive, OutboxEventWriterLive),
           c.var.postgresClient,
           organizationId,
         ),
@@ -402,135 +500,6 @@ const deleteMonitor = monitorEndpoint({
     )
 
     return c.body(null, 204)
-  },
-})
-
-const listMonitorAlerts = monitorEndpoint({
-  route: createRoute({
-    method: "get",
-    path: "/{monitorSlug}/alerts",
-    name: "listMonitorAlerts",
-    tags: ["Monitors"],
-    ...monitorsFernGroup("listAlerts"),
-    summary: "List monitor alerts",
-    description: "Returns the monitor's alerts.",
-    security: PROTECTED_SECURITY,
-    request: { params: MonitorSlugParamsSchema },
-    responses: openApiResponses({ status: 200, schema: MonitorAlertListSchema, description: "The monitor's alerts" }),
-  }),
-  handler: async (c) => {
-    const { projectSlug, monitorSlug } = c.req.valid("param")
-    const organizationId = c.var.organization.id
-
-    const monitor = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        return yield* getMonitorBySlugUseCase({ projectId: project.id, slug: monitorSlug })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
-      ),
-    )
-
-    return c.json({ items: monitor.alerts.map(toMonitorAlertResponse) }, 200)
-  },
-})
-
-const getMonitorAlert = monitorEndpoint({
-  route: createRoute({
-    method: "get",
-    path: "/{monitorSlug}/alerts/{alertId}",
-    name: "getMonitorAlert",
-    tags: ["Monitors"],
-    ...monitorsFernGroup("getAlert"),
-    summary: "Get monitor alert",
-    description: "Returns a single monitor alert by id.",
-    security: PROTECTED_SECURITY,
-    request: { params: MonitorAlertParamsSchema },
-    responses: openApiResponses({ status: 200, schema: MonitorAlertSchema, description: "Monitor alert" }),
-  }),
-  handler: async (c) => {
-    const { projectSlug, monitorSlug, alertId } = c.req.valid("param")
-    const organizationId = c.var.organization.id
-
-    const alert = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const monitor = yield* getMonitorBySlugUseCase({ projectId: project.id, slug: monitorSlug })
-        const found = monitor.alerts.find((candidate) => candidate.id === alertId)
-        if (!found) return yield* new MonitorAlertNotFoundError({ monitorId: monitor.id, alertId })
-        return found
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
-      ),
-    )
-
-    return c.json(toMonitorAlertResponse(alert), 200)
-  },
-})
-
-const updateMonitorAlert = monitorEndpoint({
-  route: createRoute({
-    method: "patch",
-    path: "/{monitorSlug}/alerts/{alertId}",
-    name: "updateMonitorAlert",
-    tags: ["Monitors"],
-    ...monitorsFernGroup("updateAlert"),
-    summary: "Update monitor alert",
-    description:
-      "Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may. Saved-search alerts use a source; tool and user alerts use `source: null` with the monitor target.",
-    security: PROTECTED_SECURITY,
-    request: { params: MonitorAlertParamsSchema, body: jsonBody(UpdateMonitorAlertBodySchema) },
-    responses: openApiResponses({
-      status: 200,
-      schema: MonitorSchema,
-      description: "Monitor with the updated alert",
-      extraErrors: { 403: { description: "Disallowed change on a system monitor" } },
-    }),
-  }),
-  handler: async (c) => {
-    const { projectSlug, monitorSlug, alertId } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
-
-    const monitor = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const current = yield* getMonitorBySlugUseCase({ projectId: project.id, slug: monitorSlug })
-        return yield* updateMonitorAlertUseCase({
-          monitorId: current.id,
-          alertId: MonitorAlertId(alertId),
-          ...(body.kind !== undefined ? { kind: body.kind } : {}),
-          ...(body.source !== undefined
-            ? { source: body.source === null ? null : { type: body.source.type, id: body.source.id } }
-            : {}),
-          ...(body.condition !== undefined ? { condition: body.condition as AlertIncidentCondition | null } : {}),
-          ...(body.severity !== undefined ? { severity: body.severity } : {}),
-        })
-      }).pipe(
-        withPostgres(
-          // SavedSearchRepository backs the semantic-search monitorability check when the source changes.
-          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive, SavedSearchRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
-      ),
-    )
-
-    return c.json(toMonitorResponse(monitor), 200)
   },
 })
 
@@ -579,7 +548,7 @@ const listMonitorIncidents = monitorEndpoint({
           Layer.mergeAll(
             ProjectRepositoryLive,
             MonitorRepositoryLive,
-            AlertIncidentRepositoryLive,
+            IncidentRepositoryLive,
             NotificationRepositoryLive,
           ),
           c.var.postgresClient,
@@ -682,9 +651,6 @@ export const createMonitorsRoutes = () => {
   getMonitor.mountHttp(app, createTierRateLimiter("low"))
   updateMonitor.mountHttp(app, createTierRateLimiter("medium"))
   deleteMonitor.mountHttp(app, createTierRateLimiter("medium"))
-  listMonitorAlerts.mountHttp(app, createTierRateLimiter("low"))
-  getMonitorAlert.mountHttp(app, createTierRateLimiter("low"))
-  updateMonitorAlert.mountHttp(app, createTierRateLimiter("medium"))
   listMonitorIncidents.mountHttp(app, createTierRateLimiter("low"))
   muteMonitor.mountHttp(app, createTierRateLimiter("medium"))
   unmuteMonitor.mountHttp(app, createTierRateLimiter("medium"))

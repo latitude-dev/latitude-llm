@@ -7,7 +7,8 @@ import type * as LatitudeApi from "../../../../index.js";
  *     {
  *         fromIso: "2024-01-15T09:30:00Z",
  *         toIso: "2024-01-15T09:30:00Z",
- *         sourceId: "sourceId"
+ *         source_type: "monitor",
+ *         source_id: "source_id"
  *     }
  */
 export interface IncidentsListRequest {
@@ -15,12 +16,10 @@ export interface IncidentsListRequest {
     fromIso?: string;
     /** Upper bound (inclusive) of the time window. Defaults to now. */
     toIso?: string;
-    /** Restrict to incidents whose source type matches any value in this list. */
-    sourceTypes?: LatitudeApi.IncidentsListRequestSourceTypesItem | LatitudeApi.IncidentsListRequestSourceTypesItem[];
-    /** Restrict to incidents tied to a single source entity (e.g. one issue id). */
-    sourceId?: string;
-    /** Restrict to incidents whose kind matches any value in this list. */
-    kinds?: LatitudeApi.IncidentsListRequestKindsItem | LatitudeApi.IncidentsListRequestKindsItem[];
+    /** Restrict to incidents triggered by this source type: `monitor` or `signal`. */
+    source_type?: LatitudeApi.IncidentsListRequestSourceType;
+    /** Restrict to incidents tied to one source entity id. */
+    source_id?: string;
     /** Restrict to incidents whose severity matches any value in this list. */
     severities?: LatitudeApi.IncidentsListRequestSeveritiesItem | LatitudeApi.IncidentsListRequestSeveritiesItem[];
 }

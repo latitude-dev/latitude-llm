@@ -1,9 +1,9 @@
 import {
   alertIncidentConditionSchema,
-  alertIncidentKindSchema,
-  alertIncidentSourceTypeSchema,
   alertSeveritySchema,
   cuidSchema,
+  incidentNotificationKeySchema,
+  incidentSourceTypeSchema,
   type NotificationGroup,
   notificationIdSchema,
   organizationIdSchema,
@@ -64,11 +64,11 @@ export type IncidentTrend = z.infer<typeof incidentTrendSchema>
  */
 const incidentBasePayloadShape = {
   alertIncidentId: cuidSchema,
-  sourceType: alertIncidentSourceTypeSchema,
+  sourceType: incidentSourceTypeSchema,
   sourceId: cuidSchema,
-  incidentKind: alertIncidentKindSchema,
+  incidentKind: incidentNotificationKeySchema,
   severity: alertSeveritySchema,
-  // Monitor attribution, resolved by the producer when the incident has a `monitor_alert_id`.
+  // Monitor attribution, resolved by the producer for monitor-sourced incidents.
   // `name`/`slug` ride on the payload so templates render the linked "Created by monitor X" line with no round-trip.
   monitorId: cuidSchema.optional(),
   monitorName: z.string().optional(),
@@ -76,8 +76,8 @@ const incidentBasePayloadShape = {
   /** Firing alert's condition snapshot, for the humanised summary. */
   condition: alertIncidentConditionSchema.nullable().optional(),
   /**
-   * Signal triage snapshot at producer time. Present only for issue-sourced
-   * incidents produced after these fields landed; absent for savedSearch
+   * Signal triage snapshot at producer time. Present only for signal-sourced
+   * incidents produced after these fields landed; absent for monitor
    * sources and legacy stored rows (hence optional). `null` means
    * "snapshotted, but unassigned / no priority". The assignee's display
    * name is NOT snapshotted — renderers resolve it live from the id.
@@ -158,9 +158,8 @@ export const incidentRecoverySchema = z.object({
 export type IncidentRecovery = z.infer<typeof incidentRecoverySchema>
 
 /**
- * One-shot incident notifications. Today fires for `issue.new` and
- * `issue.regressed` (the alerts side stamps `endedAt = startedAt` for
- * these). No partner `incident.closed` notification ever lands.
+ * One-shot incident notifications. Point-in-time incidents stamp
+ * `endedAt = startedAt`; no partner `incident.closed` notification lands.
  */
 export const incidentEventPayloadSchema = z.object({
   ...incidentBasePayloadShape,
@@ -171,13 +170,13 @@ export type IncidentEventPayload = z.infer<typeof incidentEventPayloadSchema>
 
 /**
  * Sustained incident opening. Fires when an alert incident enters an open
- * window (`endedAt IS NULL`); today only `issue.escalating`. Carries the
+ * window (`endedAt IS NULL`). Carries the
  * snapshotted trend window leading up to the open so the bell sparkline
  * and the email chart render from one source.
  */
 export const incidentOpenedPayloadSchema = z.object({
   ...incidentBasePayloadShape,
-  // Signal trend snapshot — absent for non-issue sources (e.g. `savedSearch.escalating`).
+  // Signal trend snapshot — absent for monitor-sourced incidents.
   trend: incidentTrendSchema.optional(),
   tags: incidentTagsSchema.optional(),
   /**
@@ -205,7 +204,7 @@ export type IncidentOpenedPayload = z.infer<typeof incidentOpenedPayloadSchema>
  */
 export const incidentClosedPayloadSchema = z.object({
   ...incidentBasePayloadShape,
-  // Signal trend snapshot — absent for non-issue sources (e.g. `savedSearch.escalating`).
+  // Signal trend snapshot — absent for monitor-sourced incidents.
   trend: incidentTrendSchema.optional(),
   recovery: incidentRecoverySchema,
 })
@@ -241,6 +240,12 @@ export const signalAssignedPayloadSchema = z.object({
   assignedAt: z.iso.datetime(),
 })
 export type SignalAssignedPayload = z.infer<typeof signalAssignedPayloadSchema>
+
+export const signalDiscoveredPayloadSchema = z.object({
+  signalId: cuidSchema,
+  discoveredAt: z.iso.datetime(),
+})
+export type SignalDiscoveredPayload = z.infer<typeof signalDiscoveredPayloadSchema>
 
 /**
  * A data destination flipped to `quarantined` (5 consecutive terminal sync
@@ -286,6 +291,7 @@ export const NOTIFICATION_KIND_META = {
     payload: customMessagePayloadSchema,
   },
   "issue.assigned": { group: "personal", payload: signalAssignedPayloadSchema },
+  "signal.discovered": { group: "incidents", payload: signalDiscoveredPayloadSchema },
   "destination.quarantined": {
     group: "destinations",
     payload: destinationQuarantinedPayloadSchema,

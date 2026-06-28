@@ -14,8 +14,6 @@ const COUNT_CARDS = [
   { key: "ongoingSignals", label: "Ongoing" },
   { key: "newSignals", label: "New" },
   { key: "escalatingSignals", label: "Escalating" },
-  { key: "regressedSignals", label: "Regressed" },
-  { key: "resolvedSignals", label: "Resolved" },
   { key: "seenOccurrences", label: "Occurrences" },
 ] as const
 
@@ -93,9 +91,7 @@ export function SignalsAnalyticsPanel({
     projectId,
     fromIso: incidentRange?.fromIso ?? "",
     toIso: incidentRange?.toIso ?? "",
-    // Filter to issue-sourced incidents only — the histogram is about issues, not other future
-    // alert sources (saved-search thresholds, etc.).
-    sourceType: "issue",
+    sourceType: "signal",
     enabled: incidentsActive && incidentRange !== null,
   })
 

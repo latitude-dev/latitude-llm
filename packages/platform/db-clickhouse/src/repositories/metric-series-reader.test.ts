@@ -83,10 +83,8 @@ const t11 = new Date("2026-06-01T11:00:00.000Z")
 // count/bucket assertions above regardless of test ordering.
 const t12 = new Date("2026-06-01T12:00:00.000Z")
 const t13 = new Date("2026-06-01T13:00:00.000Z")
-const t14 = new Date("2026-06-01T14:00:00.000Z")
 const t15 = new Date("2026-06-01T15:00:00.000Z")
 const t16 = new Date("2026-06-01T16:00:00.000Z")
-const t17 = new Date("2026-06-01T17:00:00.000Z")
 
 /** A `traces` + `count` target — the saved-search/match shape this reader supersedes. */
 const countTarget = (filterSet: FilterSet = {}, query: string | null = null): MetricSeriesTarget => ({
@@ -295,27 +293,6 @@ describe("MetricSeriesReaderLive (traces / count)", () => {
     expect(sum).toBe(12_000_000_000) // (2+4+6) s, in ns
   })
 
-  it("computes p95 over the matched traces", async () => {
-    // Uniform durations ⇒ the quantile is exact regardless of the estimator.
-    await Effect.runPromise(
-      insertJsonEachRow(ch.client, "spans", [
-        span(51, t13, [TAG], 3_000),
-        span(52, t13, [TAG], 3_000),
-        span(53, t13, [TAG], 3_000),
-      ]),
-    )
-    const p95 = await runCh(
-      reader.valueInWindow({
-        organizationId: ORG_ID,
-        projectId: PROJECT_ID,
-        from: t13,
-        to: t14,
-        target: metricTarget({ kind: "p95", field: "duration" }),
-      }),
-    )
-    expect(p95).toBe(3_000_000_000)
-  })
-
   it("reads 0 (not nan) for a ratio/aggregate over an empty window", async () => {
     const empty = {
       organizationId: ORG_ID,
@@ -326,9 +303,6 @@ describe("MetricSeriesReaderLive (traces / count)", () => {
     expect(await runCh(reader.valueInWindow({ ...empty, target: metricTarget({ kind: "errorRate" }) }))).toBe(0)
     expect(
       await runCh(reader.valueInWindow({ ...empty, target: metricTarget({ kind: "avg", field: "duration" }) })),
-    ).toBe(0)
-    expect(
-      await runCh(reader.valueInWindow({ ...empty, target: metricTarget({ kind: "p95", field: "duration" }) })),
     ).toBe(0)
   })
 
@@ -381,32 +355,6 @@ describe("MetricSeriesReaderLive (traces / count)", () => {
     expect(
       await runCh(reader.valueInWindow({ ...window, target: spanTarget({ kind: "sum", field: "duration" }, filter) })),
     ).toBe(12_000_000_000)
-  })
-
-  it("computes p95 per tool call (uniform ⇒ exact)", async () => {
-    await Effect.runPromise(
-      insertJsonEachRow(ch.client, "spans", [
-        toolSpan(71, t16, "search", { durationMs: 3_000 }),
-        toolSpan(72, t16, "search", { durationMs: 3_000 }),
-        toolSpan(73, t16, "search", { durationMs: 3_000 }),
-      ]),
-    )
-    const p95 = await runCh(
-      reader.valueInWindow({
-        organizationId: ORG_ID,
-        projectId: PROJECT_ID,
-        from: t16,
-        to: t17,
-        target: spanTarget(
-          { kind: "p95", field: "duration" },
-          {
-            ...EXECUTE_TOOL,
-            toolName: [{ op: "eq", value: "search" }],
-          },
-        ),
-      }),
-    )
-    expect(p95).toBe(3_000_000_000)
   })
 
   it("buckets tool calls newest-first over the spans stream", async () => {

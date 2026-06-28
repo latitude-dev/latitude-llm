@@ -1,11 +1,8 @@
-import { ALERT_INCIDENT_KINDS, ALERT_INCIDENT_SOURCE_TYPES, ALERT_SEVERITIES } from "@domain/alerts"
-import { MONITOR_TARGET_KINDS, type Monitor, type MonitorAlert, type MonitorIncidentItem } from "@domain/monitors"
-import type { AlertIncidentCondition } from "@domain/shared"
-import { cuidSchema, FILTER_OPERATORS, MONITOR_STREAMS } from "@domain/shared"
+import { ALERT_SEVERITIES } from "@domain/incidents"
+import type { Monitor, MonitorIncidentItem } from "@domain/monitors"
+import { cuidSchema, FILTER_OPERATORS, MONITOR_STREAMS, MONITOR_TARGET_TYPES, MONITOR_TRIGGERS } from "@domain/shared"
 import { z } from "@hono/zod-openapi"
 import { AlertConditionSchema, incidentFields, toIncidentResponse } from "./incident.ts"
-
-// --- Monitor + alert response schemas ---------------------------------------
 
 const FilterValueSchema = z
   .union([
@@ -30,20 +27,28 @@ const FilterSetSchema = z
   )
   .openapi("MonitorFilterSet")
 
-const MonitorMetricSchema = z
+export const MonitorMetricSchema = z
   .discriminatedUnion("kind", [
     z.object({ kind: z.literal("count").describe("Count matching events in each evaluation bucket.") }),
     z.object({ kind: z.literal("errorRate").describe("Measure the fraction of matching events that errored.") }),
+    z.object({
+      kind: z.literal("sum").describe("Sum a numeric field over matching events."),
+      field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
+    }),
+    z.object({
+      kind: z.literal("min").describe("Find the minimum numeric field value over matching events."),
+      field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
+    }),
+    z.object({
+      kind: z.literal("max").describe("Find the maximum numeric field value over matching events."),
+      field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
+    }),
     z.object({
       kind: z.literal("avg").describe("Average a numeric field over matching events."),
       field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
     }),
     z.object({
-      kind: z.literal("p95").describe("Compute the 95th percentile of a numeric field over matching events."),
-      field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
-    }),
-    z.object({
-      kind: z.literal("sum").describe("Sum a numeric field over matching events."),
+      kind: z.literal("median").describe("Find the median numeric field value over matching events."),
       field: z.enum(["duration", "cost", "tokens"]).describe("Numeric field to aggregate."),
     }),
   ])
@@ -51,52 +56,42 @@ const MonitorMetricSchema = z
 
 export const MonitorTargetSchema = z
   .object({
-    kind: z
-      .enum(MONITOR_TARGET_KINDS)
-      .describe("Product target category: `tool`, `user`, `session`, `savedSearch`, or system `signal`."),
-    stream: z
-      .enum(MONITOR_STREAMS)
-      .describe(
-        "Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`.",
-      ),
-    filterSet: FilterSetSchema.nullable().describe(
-      "Filters that select the target rows. Use `{}` for all users; use `operation = execute_tool` for all tools.",
-    ),
-    query: z
-      .string()
-      .nullable()
-      .describe("Optional semantic query applied with the filters. Use `null` for user/tool monitors."),
+    type: z
+      .enum(MONITOR_TARGET_TYPES)
+      .describe("Product target category: `savedSearch`, `tool`, `user`, or `session`."),
+    id: cuidSchema.nullable().describe("Target entity id, or `null` for project-wide targets."),
+    filterSet: FilterSetSchema.optional().describe("Additional filters applied when evaluating the monitor."),
+    query: z.string().nullable().optional().describe("Semantic query applied when evaluating inline trace targets."),
+    kind: z.enum(MONITOR_TARGET_TYPES).optional().describe("Normalized target kind returned on persisted monitors."),
+    stream: z.enum(MONITOR_STREAMS).optional().describe("Telemetry stream evaluated by the monitor."),
     savedSearchId: cuidSchema
       .nullable()
-      .describe("Saved-search target id, or `null` when `filterSet` and `query` define the target inline."),
-    metric: MonitorMetricSchema.describe("Default metric measured by this monitor target."),
+      .optional()
+      .describe("Saved-search id for saved-search monitors, or `null` for inline targets."),
+    metric: MonitorMetricSchema.optional().describe("Default metric evaluated for this target."),
   })
   .openapi("MonitorTarget")
 
-const MonitorAlertSourceSchema = z
+const MonitorConfigSchema = z
   .object({
-    type: z.enum(ALERT_INCIDENT_SOURCE_TYPES).describe("Entity the alert watches: `savedSearch` or `issue`."),
-    id: cuidSchema.nullable().describe("Id of the watched entity, or `null` to watch all entities of its `type`."),
+    filterSet: FilterSetSchema.optional().describe("Filters applied by the monitor rule."),
+    query: z.string().nullable().optional().describe("Semantic query applied by inline monitor targets."),
+    metric: MonitorMetricSchema.optional().describe("Metric evaluated by threshold and escalating monitor rules."),
+    condition: AlertConditionSchema.optional().describe("Condition that controls threshold or escalating incidents."),
   })
-  .openapi("MonitorAlertSource")
+  .openapi("MonitorConfig")
 
-const monitorAlertFields = {
-  id: cuidSchema.describe("Stable alert identifier."),
-  monitorId: cuidSchema.describe("Monitor that owns this alert."),
-  kind: z
-    .enum(ALERT_INCIDENT_KINDS)
-    .describe("What the alert fires on. The `savedSearch.*` kinds watch a saved search; `issue.*` are system-only."),
-  source: MonitorAlertSourceSchema.nullable().describe(
-    "The entity this alert watches, or `null` for unified alerts whose target lives on the monitor.",
-  ),
-  condition: AlertConditionSchema.nullable().describe(
-    "Kind-specific configuration, or `null` for kinds with no parameters.",
-  ),
-  severity: z.enum(ALERT_SEVERITIES).describe("Severity of incidents this alert opens: `low`, `medium`, or `high`."),
-  createdAt: z.string().describe("ISO-8601 timestamp of creation."),
-} as const
-
-export const MonitorAlertSchema = z.object(monitorAlertFields).openapi("MonitorAlert")
+const MonitorRuleSchema = z
+  .object({
+    trigger: z
+      .enum(MONITOR_TRIGGERS)
+      .describe("When the monitor opens incidents: `match`, `threshold`, or `escalating`."),
+    config: MonitorConfigSchema.describe("Rule configuration used when the monitor is evaluated."),
+    severity: z
+      .enum(ALERT_SEVERITIES)
+      .describe("Severity of incidents this monitor opens: `low`, `medium`, or `high`."),
+  })
+  .openapi("MonitorRule")
 
 const monitorFields = {
   id: cuidSchema.describe("Stable monitor identifier."),
@@ -107,11 +102,9 @@ const monitorFields = {
   description: z.string().describe("Free-form description. Empty string when not set."),
   system: z
     .boolean()
-    .describe("`true` for the auto-provisioned system monitors, which can't be deleted or edited; `false` otherwise."),
-  alerts: z.array(MonitorAlertSchema).describe("The monitor's alerts. Always at least one."),
-  target: MonitorTargetSchema.nullable().describe(
-    "Unified query-time target for tool, user, and raw-stream monitors; `null` for legacy saved-search and system monitors.",
-  ),
+    .describe("`true` for auto-provisioned system monitors, which cannot be deleted or edited; `false` otherwise."),
+  target: MonitorTargetSchema.describe("Entity or filter set watched by this monitor."),
+  rule: MonitorRuleSchema.describe("Single rule evaluated by this monitor."),
   mutedAt: z.string().nullable().describe("ISO-8601 timestamp at which the monitor was muted, or `null` when active."),
   deletedAt: z.string().nullable().describe("ISO-8601 timestamp at which the monitor was deleted, or `null`."),
   createdAt: z.string().describe("ISO-8601 timestamp of creation."),
@@ -127,18 +120,6 @@ export const MonitorIncidentSchema = z
   })
   .openapi("MonitorIncident")
 
-// --- Response mappers -------------------------------------------------------
-
-export const toMonitorAlertResponse = (alert: MonitorAlert) => ({
-  id: alert.id as string,
-  monitorId: alert.monitorId as string,
-  kind: alert.kind,
-  source: alert.source ? { type: alert.source.type, id: alert.source.id } : null,
-  condition: alert.condition,
-  severity: alert.severity,
-  createdAt: alert.createdAt.toISOString(),
-})
-
 export const toMonitorResponse = (monitor: Monitor) => ({
   id: monitor.id as string,
   organizationId: monitor.organizationId as string,
@@ -147,8 +128,8 @@ export const toMonitorResponse = (monitor: Monitor) => ({
   name: monitor.name,
   description: monitor.description,
   system: monitor.system,
-  alerts: monitor.alerts.map(toMonitorAlertResponse),
   target: monitor.target,
+  rule: monitor.rule,
   mutedAt: monitor.mutedAt ? monitor.mutedAt.toISOString() : null,
   deletedAt: monitor.deletedAt ? monitor.deletedAt.toISOString() : null,
   createdAt: monitor.createdAt.toISOString(),
@@ -160,9 +141,6 @@ export const toMonitorIncidentResponse = (item: MonitorIncidentItem) => ({
   notified: item.notified,
 })
 
-// --- Opaque cursors ---------------------------------------------------------
-
-/** Opaque page cursor for `listMonitors` — base64url JSON of `{ offset }`. */
 export const encodeMonitorCursor = (offset: number): string =>
   Buffer.from(JSON.stringify({ offset }), "utf8").toString("base64url")
 
@@ -177,7 +155,6 @@ export const decodeMonitorCursor = (raw: string): { offset: number } | null => {
   }
 }
 
-/** Opaque keyset cursor for `listMonitorIncidents` — base64url JSON of `{ endedAt, id }`. */
 export const encodeMonitorIncidentCursor = (cursor: { endedAt: Date | null; id: string }): string =>
   Buffer.from(
     JSON.stringify({ endedAt: cursor.endedAt ? cursor.endedAt.toISOString() : null, id: cursor.id }),
@@ -196,61 +173,3 @@ export const decodeMonitorIncidentCursor = (raw: string): { endedAt: Date | null
     return null
   }
 }
-
-/** Shared between the create-monitor body's alert list and the standalone create-alert body. */
-export const CreateMonitorAlertBodySchema = z
-  .object({
-    kind: z
-      .enum([
-        "savedSearch.match",
-        "savedSearch.threshold",
-        "savedSearch.escalating",
-        "event.matched",
-        "metric.threshold",
-        "metric.escalating",
-      ])
-      .describe(
-        "What the alert fires on. `savedSearch.*` kinds require a saved-search `source`; `event.*` and `metric.*` kinds require `source: null` and a monitor `target`.",
-      ),
-    source: MonitorAlertSourceSchema.nullable().describe(
-      "Saved-search source for `savedSearch.*` alerts, or `null` for tool/user alerts whose target lives on the monitor.",
-    ),
-    condition: AlertConditionSchema.nullish().describe(
-      "Kind-specific configuration. Required for threshold and escalating kinds; omit for match kinds.",
-    ),
-    severity: z
-      .enum(ALERT_SEVERITIES)
-      .optional()
-      .describe("Severity of incidents this alert opens. Defaults per kind when omitted."),
-  })
-  .openapi("CreateMonitorAlertBody")
-
-export const UpdateMonitorAlertBodySchema = z
-  .object({
-    kind: z
-      .enum([
-        "savedSearch.match",
-        "savedSearch.threshold",
-        "savedSearch.escalating",
-        "event.matched",
-        "metric.threshold",
-        "metric.escalating",
-      ])
-      .optional()
-      .describe(
-        "New alert kind. Not allowed on system monitors. Supply the matching `source` and `condition` when you change it.",
-      ),
-    source: MonitorAlertSourceSchema.nullable()
-      .optional()
-      .describe(
-        "Replace the saved-search source, or set `null` for unified tool/user alerts. Not allowed on system monitors.",
-      ),
-    condition: AlertConditionSchema.nullish().describe(
-      "Replace the alert's configuration. On system monitors this is the only editable field (e.g. signal-escalation `sensitivity`).",
-    ),
-    severity: z.enum(ALERT_SEVERITIES).optional().describe("Replace the severity. Not allowed on system monitors."),
-  })
-  .openapi("UpdateMonitorAlertBody")
-
-/** Re-exported so the route module casts the validated condition back to the domain type. */
-export type { AlertIncidentCondition }
