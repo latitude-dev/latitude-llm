@@ -173,7 +173,7 @@ function transformSpan({
     sessionId: SessionId(resolved.sessionId),
     userId: ExternalUserId(resolved.userId),
     userEmail: resolved.userEmail,
-    traceId: TraceId(span.traceId),
+    traceId: TraceId(span.traceId.replace(/-/g, "")),
     spanId: SpanId(span.spanId),
     parentSpanId: span.parentSpanId ?? "",
     apiKeyId: context.apiKeyId,
