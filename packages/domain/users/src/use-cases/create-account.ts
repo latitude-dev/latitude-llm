@@ -1,5 +1,5 @@
+import { OutboxEventWriter } from "@domain/events"
 import { OAuthKeyRepository } from "@domain/oauth-keys"
-import type { MembershipRole, Organization } from "@domain/organizations"
 import {
   generateId,
   type OrganizationId,
@@ -8,9 +8,8 @@ import {
   VerificationId,
 } from "@domain/shared"
 import { Effect } from "effect"
-import { OutboxEventWriter } from "@domain/events"
 
-import type { User } from "../entities/user.ts"
+import { UserRepository } from "../ports/user-repository.ts"
 
 export interface CreateAccountInput {
   /** Organization the request is scoped to (the active org for OAuth, the org owning the API key otherwise). */
@@ -25,9 +24,10 @@ export interface CreateAccountInput {
 }
 
 export interface CreateAccountResult {
-  readonly user: User | null
-  readonly organization: Organization
-  readonly role: MembershipRole | null
+  readonly success: boolean
+  readonly email: string
+  readonly message: string
+  readonly token?: string
 }
 
 /**
@@ -46,8 +46,27 @@ export const createAccountUseCase = Effect.fn("users.createAccount")(function* (
 
   const normalizedEmail = input.email.trim().toLowerCase()
 
+  const userRepo = yield* UserRepository
   const oAuthKeyRepo = yield* OAuthKeyRepository
   const outboxEventWriter = yield* OutboxEventWriter
+
+  const user = yield* userRepo.findByEmail(normalizedEmail).pipe(
+    Effect.catchTags({
+      NotFoundError: () => Effect.succeed(undefined),
+      RepositoryError: (err) => {
+        console.log(err)
+        return Effect.fail(err)
+      },
+    }),
+  )
+
+  if (user) {
+    return {
+      success: false,
+      email: normalizedEmail,
+      message: "A user with this email already exists",
+    }
+  }
 
   const verificationToken = generateId()
 
@@ -80,5 +99,10 @@ export const createAccountUseCase = Effect.fn("users.createAccount")(function* (
     })
     .pipe(Effect.mapError((error): RepositoryError => toRepositoryError(error, "write InvitationEmailRequested")))
 
-  return { email: normalizedEmail, token: verificationToken }
+  return {
+    success: true,
+    email: normalizedEmail,
+    message: "A magic link has been sent to this email",
+    token: verificationToken,
+  }
 })

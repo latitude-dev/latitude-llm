@@ -1,5 +1,5 @@
 import type { UserId } from "@domain/shared"
-import { createAccountUseCase, type GetAccountResult, getAccountUseCase } from "@domain/users"
+import { type CreateAccountResult, createAccountUseCase, type GetAccountResult, getAccountUseCase } from "@domain/users"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import {
   MembershipRepositoryLive,
@@ -57,6 +57,14 @@ const CreateAccountSchema = z
     email: z.string().email().describe("The email address in question. This email gets sent the magic link to login."),
   })
   .openapi("CreateAccountBody")
+
+const CreateAccountResponseSchema = z
+  .object({
+    success: z.boolean(),
+    email: z.string().email(),
+    message: z.string(),
+  })
+  .openapi("CreateAccountResponse")
 
 // Fern uses these to derive the SDK shape: `client.account.get()`. See
 // `routes/api-keys.ts` for the longer explanation of why the vendor-extension
@@ -116,14 +124,14 @@ const createAccount = accountEndpoint({
     description: "Creates account for user",
     security: PROTECTED_SECURITY,
     request: { body: jsonBody(CreateAccountSchema) },
-    responses: openApiResponses({ status: 200, schema: AccountResponseSchema, description: "Account snapshot" }),
+    responses: openApiResponses({ status: 200, schema: CreateAccountResponseSchema, description: "Account snapshot" }),
   }),
   handler: async (c) => {
     const { email } = c.req.valid("json")
 
     const webUrl = await Effect.runPromise(parseEnv("LAT_WEB_URL", "string"))
 
-    await Effect.runPromise(
+    const response = await Effect.runPromise(
       Effect.gen(function* () {
         return yield* createAccountUseCase({
           organizationId: c.var.organization.id,
@@ -132,7 +140,7 @@ const createAccount = accountEndpoint({
         })
       }).pipe(
         withPostgres(
-          Layer.mergeAll(OAuthKeyRepositoryLive, OutboxEventWriterLive),
+          Layer.mergeAll(UserRepositoryLive, OAuthKeyRepositoryLive, OutboxEventWriterLive),
           c.var.postgresClient,
           c.var.organization.id,
         ),
@@ -140,7 +148,9 @@ const createAccount = accountEndpoint({
       ),
     )
 
-    return c.json({ success: true }, 200)
+    console.log("response", response)
+
+    return c.json(toCreateAccountResponse(response), 200)
   },
 })
 
@@ -159,6 +169,12 @@ const toResponse = (result: GetAccountResult) => ({
     slug: result.organization.slug,
   },
   role: result.role,
+})
+
+const toCreateAccountResponse = (result: CreateAccountResult) => ({
+  success: result.success,
+  email: result.email,
+  message: result.message,
 })
 
 export const createAccountRoutes = () => {

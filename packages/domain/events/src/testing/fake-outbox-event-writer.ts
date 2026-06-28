@@ -1,9 +1,9 @@
-import { Effect } from "effect"
 import type { OutboxEventWriterShape, OutboxWriteEvent } from "@domain/events"
-
-const writtenEvents: OutboxWriteEvent[] = []
+import { Effect } from "effect"
 
 export const createFakeOutboxEventWriter = () => {
+  const writtenEvents: OutboxWriteEvent[] = []
+
   const outboxEventWriter: OutboxEventWriterShape = {
     write: (event) =>
       Effect.sync(() => {
