@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.2.0] - 2026-06-28
+
+### Added
+
+- `client.account.create` endpoint/method support for creating accounts.
+
 ## [6.1.0] - 2026-06-17
 
 ### Added

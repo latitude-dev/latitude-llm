@@ -1,3 +1,4 @@
+export * from "./account/client/requests/index.js";
 export * as account from "./account/index.js";
 export * from "./annotations/client/requests/index.js";
 export * as annotations from "./annotations/index.js";

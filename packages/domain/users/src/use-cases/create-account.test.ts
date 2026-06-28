@@ -1,4 +1,5 @@
 import { OutboxEventWriter } from "@domain/events"
+import { createFakeOutboxEventWriter } from "@domain/events/testing"
 import { OAuthKeyRepository } from "@domain/oauth-keys"
 import { OrganizationId, SqlClient, UserId } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
@@ -9,7 +10,6 @@ import { UserRepository } from "../ports/user-repository.ts"
 import { createFakeOAuthKeyRepository } from "../testing/fake-oauth-key-repository.ts"
 import { createFakeUserRepository } from "../testing/fake-user-repository.ts"
 import { createAccountUseCase } from "./create-account.ts"
-import { createFakeOutboxEventWriter } from "@domain/events/testing"
 
 const ORG_ID = OrganizationId("iapkf6osmlm7mbw9kulosua4")
 

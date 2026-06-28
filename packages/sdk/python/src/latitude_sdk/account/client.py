@@ -5,7 +5,11 @@ import typing
 from ..core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from ..core.request_options import RequestOptions
 from ..types.account_response import AccountResponse
+from ..types.create_account_response import CreateAccountResponse
 from .raw_client import AsyncRawAccountClient, RawAccountClient
+
+# this is used as the default value for optional parameters
+OMIT = typing.cast(typing.Any, ...)
 
 
 class AccountClient:
@@ -47,6 +51,37 @@ class AccountClient:
         client.account.get()
         """
         _response = self._raw_client.get(request_options=request_options)
+        return _response.data
+
+    def create(self, *, email: str, request_options: typing.Optional[RequestOptions] = None) -> CreateAccountResponse:
+        """
+        Creates account for user
+
+        Parameters
+        ----------
+        email : str
+            The email address in question. This email gets sent the magic link to login.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        CreateAccountResponse
+            Account snapshot
+
+        Examples
+        --------
+        from latitude import LatitudeApiClient
+
+        client = LatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+        client.account.create(
+            email="email",
+        )
+        """
+        _response = self._raw_client.create(email=email, request_options=request_options)
         return _response.data
 
 
@@ -97,4 +132,45 @@ class AsyncAccountClient:
         asyncio.run(main())
         """
         _response = await self._raw_client.get(request_options=request_options)
+        return _response.data
+
+    async def create(
+        self, *, email: str, request_options: typing.Optional[RequestOptions] = None
+    ) -> CreateAccountResponse:
+        """
+        Creates account for user
+
+        Parameters
+        ----------
+        email : str
+            The email address in question. This email gets sent the magic link to login.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        CreateAccountResponse
+            Account snapshot
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude import AsyncLatitudeApiClient
+
+        client = AsyncLatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+
+
+        async def main() -> None:
+            await client.account.create(
+                email="email",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.create(email=email, request_options=request_options)
         return _response.data
