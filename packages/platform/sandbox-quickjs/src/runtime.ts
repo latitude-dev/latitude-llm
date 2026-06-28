@@ -388,4 +388,16 @@ export const createQuickJsScriptRuntime = (): ScriptRuntimeShape => {
   }
 }
 
-export const QuickJsScriptRuntimeLive = Layer.succeed(ScriptRuntime, createQuickJsScriptRuntime())
+// Pre-warm the WASM module at layer construction so a load failure
+// surfaces as a worker startup defect rather than a ScriptCompileError.
+export const QuickJsScriptRuntimeLive = Layer.effect(
+  ScriptRuntime,
+  Effect.tryPromise({
+    try: async () => {
+      await getQuickJS()
+      return createQuickJsScriptRuntime()
+    },
+    catch: (error) =>
+      new Error(`QuickJS WASM initialization failed: ${error instanceof Error ? error.message : String(error)}`),
+  }).pipe(Effect.orDie),
+)
