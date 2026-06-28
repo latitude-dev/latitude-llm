@@ -12,7 +12,7 @@ import {
   putInDisk,
   type StorageDiskPort,
 } from "@domain/shared"
-import { buildSignalsExportUseCase, embedSignalSearchQueryUseCase } from "@domain/signals"
+import { buildSignalsExportUseCase } from "@domain/signals"
 import { buildTracesExportUseCase } from "@domain/spans"
 import { AIEmbedLive, withAi } from "@platform/ai"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
@@ -72,10 +72,7 @@ type SignalsExportInput = {
   readonly selection?: Extract<ExportPayload, { kind: "issues" }>["selection"]
   readonly lifecycleGroup?: "active" | "archived"
   readonly assigneeIds?: readonly string[]
-  readonly search?: {
-    readonly query: string
-    readonly normalizedEmbedding: number[]
-  }
+  readonly searchQuery?: string
   readonly timeRange?: {
     readonly from?: Date
     readonly to?: Date
@@ -161,41 +158,17 @@ function generateSignalsExport(
     ...(input.assigneeIds?.length ? { assigneeIds: input.assigneeIds } : {}),
     ...(input.sort ? { sort: input.sort } : {}),
     ...(timeRange ? { timeRange } : {}),
-  } satisfies Omit<SignalsExportInput, "search">
+    ...(input.searchQuery ? { searchQuery: input.searchQuery } : {}),
+  } satisfies SignalsExportInput
 
-  const trimmedSearchQuery = input.searchQuery?.trim() || undefined
-  if (!trimmedSearchQuery) {
-    return buildSignalsExportUseCase(baseEffectInput).pipe(
-      withPostgres(Layer.mergeAll(EvaluationRepositoryLive, SignalRepositoryLive), getPostgresClient(), organizationId),
-      withClickHouse(
-        Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive, TraceRepositoryLive),
-        getClickhouseClient(),
-        organizationId,
-      ),
-    )
-  }
-
-  return Effect.gen(function* () {
-    const search = yield* embedSignalSearchQueryUseCase({
+  return buildSignalsExportUseCase(baseEffectInput).pipe(
+    withPostgres(Layer.mergeAll(EvaluationRepositoryLive, SignalRepositoryLive), getPostgresClient(), organizationId),
+    withClickHouse(
+      Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive, TraceRepositoryLive),
+      getClickhouseClient(),
       organizationId,
-      projectId,
-      query: trimmedSearchQuery,
-    }).pipe(withAi(AIEmbedLive, getRedisClient()))
-    return yield* buildSignalsExportUseCase({
-      ...baseEffectInput,
-      search: {
-        query: search.query,
-        normalizedEmbedding: search.normalizedEmbedding,
-      },
-    }).pipe(
-      withPostgres(Layer.mergeAll(EvaluationRepositoryLive, SignalRepositoryLive), getPostgresClient(), organizationId),
-      withClickHouse(
-        Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive, TraceRepositoryLive),
-        getClickhouseClient(),
-        organizationId,
-      ),
-    )
-  })
+    ),
+  )
 }
 
 function dispatchExport(payload: ExportPayload) {

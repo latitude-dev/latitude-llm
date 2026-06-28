@@ -13,7 +13,6 @@ import { SignalRepository } from "../ports/signal-repository.ts"
 import { createFakeSignalRepository } from "../testing/fake-signal-repository.ts"
 import { buildSignalsExportUseCase } from "./build-signals-export.ts"
 
-const encoder = new TextEncoder()
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
 
@@ -68,77 +67,20 @@ describe("buildSignalsExportUseCase", () => {
       id: SignalId("b".repeat(24)),
       name: "Archived issue",
       ignoredAt: new Date("2026-04-04T00:00:00.000Z"),
+      updatedAt: new Date("2026-04-05T00:00:00.000Z"),
     })
     const secondArchivedSignal = makeSignal({
       id: SignalId("c".repeat(24)),
       name: "Second archived issue",
       ignoredAt: new Date("2026-04-05T00:00:00.000Z"),
+      updatedAt: new Date("2026-04-04T00:00:00.000Z"),
     })
     const { repository: signalRepository } = createFakeSignalRepository([
       activeSignal,
       archivedSignal,
       secondArchivedSignal,
     ])
-    const timeRangeCalls: Array<{ from?: Date; to?: Date } | undefined> = []
-    const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
-      listSignalWindowMetrics: (input) =>
-        Effect.sync(() => {
-          timeRangeCalls.push(input.timeRange)
-          return [
-            {
-              signalId: activeSignal.id,
-              occurrences: 2,
-              affectedSessions: 2,
-              firstSeenAt: new Date("2026-04-20T00:00:00.000Z"),
-              lastSeenAt: new Date("2026-04-21T00:00:00.000Z"),
-            },
-            {
-              signalId: archivedSignal.id,
-              occurrences: 5,
-              affectedSessions: 5,
-              firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
-              lastSeenAt: new Date("2026-04-05T00:00:00.000Z"),
-            },
-            {
-              signalId: secondArchivedSignal.id,
-              occurrences: 1,
-              affectedSessions: 1,
-              firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
-              lastSeenAt: new Date("2026-04-04T00:00:00.000Z"),
-            },
-          ]
-        }),
-      aggregateBySignals: ({ signalIds }) =>
-        Effect.succeed(
-          [
-            {
-              signalId: activeSignal.id,
-              totalOccurrences: 2,
-              recentOccurrences: 1,
-              baselineAvgOccurrences: 1,
-              firstSeenAt: new Date("2026-04-20T00:00:00.000Z"),
-              lastSeenAt: new Date("2026-04-21T00:00:00.000Z"),
-            },
-            {
-              signalId: archivedSignal.id,
-              totalOccurrences: 5,
-              recentOccurrences: 1,
-              baselineAvgOccurrences: 1,
-              firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
-              lastSeenAt: new Date("2026-04-05T00:00:00.000Z"),
-            },
-            {
-              signalId: secondArchivedSignal.id,
-              totalOccurrences: 1,
-              recentOccurrences: 0,
-              baselineAvgOccurrences: 1,
-              firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
-              lastSeenAt: new Date("2026-04-04T00:00:00.000Z"),
-            },
-          ].filter((occurrence) => signalIds.includes(occurrence.signalId)),
-        ),
-      countDistinctTracesByTimeRange: () => Effect.succeed(10),
-    })
+    const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({})
 
     const result = await Effect.runPromise(
       buildSignalsExportUseCase({
@@ -146,7 +88,7 @@ describe("buildSignalsExportUseCase", () => {
         projectId,
         selection: { mode: "selected", rowIds: [activeSignal.id, secondArchivedSignal.id, archivedSignal.id] },
         lifecycleGroup: "archived",
-        sort: { field: "occurrences", direction: "asc" },
+        sort: { field: "lastSeen", direction: "asc" },
         timeRange: {
           from: new Date("2026-04-01T00:00:00.000Z"),
           to: new Date("2026-04-10T00:00:00.000Z"),
@@ -170,15 +112,9 @@ describe("buildSignalsExportUseCase", () => {
     expect(lines[1]).toContain(secondArchivedSignal.id)
     expect(lines[2]).toContain(archivedSignal.id)
     expect(result.csv).not.toContain(activeSignal.id)
-    expect(timeRangeCalls).toEqual([
-      {
-        from: new Date("2026-04-01T00:00:00.000Z"),
-        to: new Date("2026-04-10T00:00:00.000Z"),
-      },
-    ])
   })
 
-  it("applies search scoping before exporting issues", async () => {
+  it("applies text search scoping before exporting issues", async () => {
     const firstSignal = makeSignal({
       id: SignalId("a".repeat(24)),
       name: "Timeout issue",
@@ -187,17 +123,7 @@ describe("buildSignalsExportUseCase", () => {
       id: SignalId("b".repeat(24)),
       name: "Rate limit issue",
     })
-    const { repository: signalRepository } = createFakeSignalRepository([firstSignal, secondSignal], {
-      hybridSearch: () =>
-        Effect.succeed([
-          {
-            signalId: secondSignal.id,
-            name: secondSignal.name,
-            description: secondSignal.description,
-            score: 0.9,
-          },
-        ]),
-    })
+    const { repository: signalRepository } = createFakeSignalRepository([firstSignal, secondSignal])
     const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
       listSignalWindowMetrics: () =>
         Effect.succeed([
@@ -244,10 +170,7 @@ describe("buildSignalsExportUseCase", () => {
       buildSignalsExportUseCase({
         organizationId,
         projectId,
-        search: {
-          query: "rate limit",
-          normalizedEmbedding: Array.from(encoder.encode("rate-limit"), (value) => value / 255),
-        },
+        searchQuery: "rate limit",
       }).pipe(
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
         Effect.provideService(EvaluationRepository, createEvaluationRepository()),

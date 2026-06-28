@@ -17,10 +17,7 @@ export interface BuildSignalsExportInput {
   readonly selection?: ExportSelection
   readonly lifecycleGroup?: SignalsLifecycleGroup
   readonly assigneeIds?: readonly SignalAssigneeFilter[]
-  readonly search?: {
-    readonly query: string
-    readonly normalizedEmbedding: number[]
-  }
+  readonly searchQuery?: string
   readonly timeRange?: {
     readonly from?: Date
     readonly to?: Date
@@ -65,9 +62,10 @@ export const buildSignalsExportUseCase = Effect.fn("issues.buildSignalsExport")(
       projectId: input.projectId,
       limit: ISSUES_EXPORT_BATCH_SIZE,
       offset,
+      includeAnalytics: false,
       ...(input.lifecycleGroup ? { lifecycleGroup: input.lifecycleGroup } : {}),
       ...(input.assigneeIds?.length ? { assigneeIds: [...input.assigneeIds] } : {}),
-      ...(input.search ? { search: input.search } : {}),
+      ...(input.searchQuery ? { textSearchQuery: input.searchQuery } : {}),
       ...(input.timeRange ? { timeRange: input.timeRange } : {}),
       ...(input.sort ? { sort: input.sort } : {}),
       ...(input.now ? { now: input.now } : {}),
