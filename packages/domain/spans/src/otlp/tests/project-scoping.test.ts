@@ -235,3 +235,73 @@ describe("transformOtlpToSpans per-span project resolution", () => {
     expect(spans[1]?.projectId).toBe("proj-default")
   })
 })
+
+describe("transformOtlpToSpans trace ID normalization", () => {
+  const ctx = {
+    ...baseContext,
+    defaultProjectId: "proj-default",
+    projectIdBySlug: new Map<string, string>(),
+  }
+
+  it("strips hyphens from a UUID-format trace ID", () => {
+    const { spans } = transformOtlpToSpans(
+      {
+        resourceSpans: [
+          {
+            resource: { attributes: [str("service.name", "test")] },
+            scopeSpans: [
+              {
+                scope: { name: "scope", version: "1" },
+                spans: [
+                  {
+                    traceId: "0af76519-16cd-43dd-8448-eb211c80319c",
+                    spanId: "n1",
+                    name: "n1",
+                    startTimeUnixNano: "1710590400000000000",
+                    endTimeUnixNano: "1710590401000000000",
+                    attributes: [],
+                    status: { code: 1 },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      ctx,
+    )
+    expect(spans).toHaveLength(1)
+    expect(spans[0]?.traceId).toBe("0af7651916cd43dd8448eb211c80319c")
+  })
+
+  it("leaves a valid 32-char hex trace ID unchanged", () => {
+    const { spans } = transformOtlpToSpans(
+      {
+        resourceSpans: [
+          {
+            resource: { attributes: [str("service.name", "test")] },
+            scopeSpans: [
+              {
+                scope: { name: "scope", version: "1" },
+                spans: [
+                  {
+                    traceId: "0af7651916cd43dd8448eb211c80319c",
+                    spanId: "n2",
+                    name: "n2",
+                    startTimeUnixNano: "1710590400000000000",
+                    endTimeUnixNano: "1710590401000000000",
+                    attributes: [],
+                    status: { code: 1 },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      ctx,
+    )
+    expect(spans).toHaveLength(1)
+    expect(spans[0]?.traceId).toBe("0af7651916cd43dd8448eb211c80319c")
+  })
+})
