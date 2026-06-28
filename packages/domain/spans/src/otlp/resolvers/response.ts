@@ -13,4 +13,5 @@ export const responseIdCandidates = [
 export const finishReasonsCandidates = [
   fromStringArray("gen_ai.response.finish_reasons"), // OTEL GenAI semconv
   fromString<string[]>("ai.response.finishReason", (v) => [VERCEL_FINISH_REASON[v] ?? v]), // Vercel AI SDK
+  fromString<string[]>("llm.finish_reason", (v) => [v]), // OpenInference / Arize Phoenix (already snake_case)
 ]

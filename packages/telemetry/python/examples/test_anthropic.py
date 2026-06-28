@@ -26,7 +26,10 @@ latitude = Latitude(
 )
 
 PROVIDER = "anthropic"
-MODEL = "claude-haiku-4-5-20251001"
+MODEL = "claude-opus-4-8"
+MAX_TOKENS = 1024
+# `system` is the out-of-band system field — verify it lands in systemInstructions.
+SYSTEM = "You are a helpful assistant participating in a telemetry QA test. Keep answers concise."
 SESSION_ID = f"{PROVIDER}-{uuid.uuid4().hex[:8]}"
 
 client = Anthropic()
@@ -34,7 +37,7 @@ client = Anthropic()
 
 def _ctx(scenario: str, *extra_tags: str) -> dict:
     return {
-        "tags": ["example", PROVIDER, *extra_tags],
+        "tags": ["example", PROVIDER, "anthropic-py", *extra_tags],
         "session_id": SESSION_ID,
         "user_id": "example-user",
         "metadata": {"scenario": scenario, "environment": "local"},
@@ -44,7 +47,8 @@ def _ctx(scenario: str, *extra_tags: str) -> dict:
 def chat() -> str:
     response = client.messages.create(
         model=MODEL,
-        max_tokens=50,
+        max_tokens=MAX_TOKENS,
+        system=SYSTEM,
         messages=[{"role": "user", "content": "Say 'Hello from Anthropic!' in exactly 5 words."}],
     )
     block = response.content[0]
@@ -55,7 +59,8 @@ def stream() -> str:
     chunks: list[str] = []
     with client.messages.stream(
         model=MODEL,
-        max_tokens=50,
+        max_tokens=MAX_TOKENS,
+        system=SYSTEM,
         messages=[{"role": "user", "content": "Say 'Hello from Anthropic stream!' in exactly 6 words."}],
     ) as s:
         for text in s.text_stream:
@@ -82,7 +87,7 @@ def tool_conversation() -> str:
         }
     ]
 
-    first = client.messages.create(model=MODEL, max_tokens=200, tools=tools, messages=messages)
+    first = client.messages.create(model=MODEL, max_tokens=MAX_TOKENS, system=SYSTEM, tools=tools, messages=messages)
     tool_use = next(b for b in first.content if b.type == "tool_use")
     messages.append({"role": "assistant", "content": first.content})
     messages.append(
@@ -98,14 +103,12 @@ def tool_conversation() -> str:
         }
     )
 
-    second = client.messages.create(model=MODEL, max_tokens=200, tools=tools, messages=messages)
+    second = client.messages.create(model=MODEL, max_tokens=MAX_TOKENS, system=SYSTEM, tools=tools, messages=messages)
     block = next((b for b in second.content if b.type == "text"), None)
     return block.text if block else ""
 
 
 if __name__ == "__main__":
-    tool_conversation()
-
     capture("anthropic-chat-capture", chat, _ctx("chat"))
     capture("anthropic-stream-capture", stream, _ctx("stream", "stream"))
     capture("anthropic-tools-capture", tool_conversation, _ctx("tools", "tools"))

@@ -305,7 +305,7 @@ AS SELECT
     argMinIfState(s.input_messages, s.start_time, (s.input_messages != '') AND (s.operation IN ('chat', 'text_completion', 'generate_content'))) AS input_messages,
     argMaxIfState(s.input_messages, s.end_time, (s.output_messages != '') AND (s.operation IN ('chat', 'text_completion', 'generate_content'))) AS last_input_messages,
     argMaxIfState(s.output_messages, s.end_time, (s.output_messages != '') AND (s.operation IN ('chat', 'text_completion', 'generate_content'))) AS output_messages,
-    argMinIfState(s.system_instructions, s.start_time, (s.system_instructions != '') AND (s.operation IN ('chat', 'text_completion', 'generate_content'))) AS system_instructions,
+    argMinIfState(s.system_instructions, s.start_time, (s.system_instructions != '') AND (s.operation IN ('chat', 'text_completion', 'generate_content', 'invoke_agent'))) AS system_instructions,
     max(s.retention_days) AS retention_days
 FROM spans AS s
 GROUP BY
@@ -631,7 +631,7 @@ AS SELECT
     argMinIfState(spans.input_messages, start_time, (spans.input_messages != '') AND (operation IN ('chat', 'text_completion', 'generate_content'))) AS input_messages,
     argMaxIfState(spans.input_messages, end_time, (spans.output_messages != '') AND (operation IN ('chat', 'text_completion', 'generate_content'))) AS last_input_messages,
     argMaxIfState(spans.output_messages, end_time, (spans.output_messages != '') AND (operation IN ('chat', 'text_completion', 'generate_content'))) AS output_messages,
-    argMinIfState(spans.system_instructions, start_time, (spans.system_instructions != '') AND (operation IN ('chat', 'text_completion', 'generate_content'))) AS system_instructions,
+    argMinIfState(spans.system_instructions, start_time, (spans.system_instructions != '') AND (operation IN ('chat', 'text_completion', 'generate_content', 'invoke_agent'))) AS system_instructions,
     max(retention_days) AS retention_days
 FROM spans
 GROUP BY

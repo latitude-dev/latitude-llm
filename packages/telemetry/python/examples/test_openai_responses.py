@@ -26,7 +26,11 @@ latitude = Latitude(
 )
 
 PROVIDER = "openai-responses"
-MODEL = "gpt-4o-mini"
+MODEL = "gpt-5.5"
+# gpt-5.5 is a reasoning model — budget for reasoning + the answer.
+MAX_TOKENS = 2000
+# `instructions` is the out-of-band system field — verify it lands in systemInstructions.
+SYSTEM = "You are a helpful assistant participating in a telemetry QA test. Keep answers concise."
 SESSION_ID = f"{PROVIDER}-{uuid.uuid4().hex[:8]}"
 
 client = OpenAI()
@@ -34,7 +38,7 @@ client = OpenAI()
 
 def _ctx(scenario: str, *extra_tags: str) -> dict:
     return {
-        "tags": ["example", PROVIDER, *extra_tags],
+        "tags": ["example", PROVIDER, "openai-responses-py", *extra_tags],
         "session_id": SESSION_ID,
         "user_id": "example-user",
         "metadata": {"scenario": scenario, "environment": "local"},
@@ -44,8 +48,9 @@ def _ctx(scenario: str, *extra_tags: str) -> dict:
 def chat() -> str:
     response = client.responses.create(
         model=MODEL,
+        instructions=SYSTEM,
         input="Say 'Hello from OpenAI Responses!' in exactly 5 words.",
-        max_output_tokens=50,
+        max_output_tokens=MAX_TOKENS,
     )
     return response.output_text
 
@@ -54,8 +59,9 @@ def stream() -> str:
     chunks: list[str] = []
     for event in client.responses.create(
         model=MODEL,
+        instructions=SYSTEM,
         input="Say 'Hello from OpenAI Responses stream!' in exactly 6 words.",
-        max_output_tokens=50,
+        max_output_tokens=MAX_TOKENS,
         stream=True,
     ):
         if event.type == "response.output_text.delta":
@@ -83,7 +89,9 @@ def tool_conversation() -> str:
         }
     ]
 
-    first = client.responses.create(model=MODEL, input=input_list, tools=tools, max_output_tokens=200)
+    first = client.responses.create(
+        model=MODEL, instructions=SYSTEM, input=input_list, tools=tools, max_output_tokens=MAX_TOKENS
+    )
     input_list += first.output
     for item in first.output:
         if item.type == "function_call":
@@ -95,13 +103,13 @@ def tool_conversation() -> str:
                 }
             )
 
-    second = client.responses.create(model=MODEL, input=input_list, tools=tools, max_output_tokens=200)
+    second = client.responses.create(
+        model=MODEL, instructions=SYSTEM, input=input_list, tools=tools, max_output_tokens=MAX_TOKENS
+    )
     return second.output_text
 
 
 if __name__ == "__main__":
-    tool_conversation()
-
     capture("openai-responses-chat-capture", chat, _ctx("chat"))
     capture("openai-responses-stream-capture", stream, _ctx("stream", "stream"))
     capture("openai-responses-tools-capture", tool_conversation, _ctx("tools", "tools"))

@@ -32,6 +32,7 @@ import {
   type OtelExporterLanguageId,
   PY_PACKAGE_MANAGERS,
   type PyPackageManager,
+  providerUsesLatitudeSdk,
   type SdkLanguage,
   TS_PACKAGE_MANAGERS,
   type TsPackageManager,
@@ -109,6 +110,9 @@ const PROVIDER_ENTRIES: ReadonlyArray<ProviderEntry> = [
   { id: "crewai", name: "CrewAI", icon: "crewai" },
   { id: "haystack", name: "Haystack", icon: "haystack" },
   { id: "dspy", name: "DSPy", icon: "dspy" },
+  { id: "eve", name: "Eve", icon: "eve" },
+  { id: "flue", name: "Flue", icon: "flue" },
+  { id: "elevenlabs", name: "ElevenLabs", icon: "elevenlabs" },
 ]
 
 function OtelExporterLanguageChips({
@@ -223,6 +227,7 @@ function SdkIntegrationInstructions({
   const snippet = getOnboardingSnippet(selectedProviderId, lang, slugForSnippets, defaultApiKeyToken)
 
   const isTs = lang === "typescript"
+  const showLatitudeSdk = providerUsesLatitudeSdk(selectedProviderId)
   const latInstall = isTs ? getLatitudeTelemetryTsInstallCommand(tsPm) : getLatitudeTelemetryPyInstallCommand(pyPm)
   const sdkInstall = isTs
     ? getProviderSdkTsInstallCommand(selectedProviderId, tsPm)
@@ -237,17 +242,19 @@ function SdkIntegrationInstructions({
         </Text.H5>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Text.H5 color="foregroundMuted">Latitude SDK</Text.H5>
-        <InstallCommandField
-          command={latInstall}
-          isTs={isTs}
-          tsPm={tsPm}
-          pyPm={pyPm}
-          onSelectTs={setTsPm}
-          onSelectPy={setPyPm}
-        />
-      </div>
+      {showLatitudeSdk ? (
+        <div className="flex flex-col gap-2">
+          <Text.H5 color="foregroundMuted">Latitude SDK</Text.H5>
+          <InstallCommandField
+            command={latInstall}
+            isTs={isTs}
+            tsPm={tsPm}
+            pyPm={pyPm}
+            onSelectTs={setTsPm}
+            onSelectPy={setPyPm}
+          />
+        </div>
+      ) : null}
       {sdkInstall ? (
         <div className="flex flex-col gap-2">
           <Text.H5 color="foregroundMuted">Provider / framework packages</Text.H5>
@@ -388,7 +395,7 @@ export function TelemetryInstructions({
         ) : (
           <>
             <div className="flex flex-col gap-3">
-              <Text.H5M>Select your LLM provider</Text.H5M>
+              <Text.H5M>Select your provider</Text.H5M>
               <div className="flex flex-row flex-wrap gap-1">
                 {PROVIDER_ENTRIES.map((provider) => (
                   <button

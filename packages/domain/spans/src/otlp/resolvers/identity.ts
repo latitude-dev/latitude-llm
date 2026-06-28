@@ -46,11 +46,25 @@ const aliasProvider = (v: string) => {
   return PROVIDER_ALIASES[lower] ?? lower
 }
 
+// OpenInference's LangChain instrumentation nests the provider in a JSON `metadata` attribute as
+// LangSmith's `ls_provider` (e.g. "openai") rather than emitting llm.system / llm.provider.
+function providerFromOpenInferenceMetadata(attrs: readonly OtlpKeyValue[]): string | undefined {
+  const raw = stringAttr(attrs, "metadata")
+  if (!raw) return undefined
+  try {
+    const meta = JSON.parse(raw) as { ls_provider?: unknown }
+    return typeof meta.ls_provider === "string" ? aliasProvider(meta.ls_provider) : undefined
+  } catch {
+    return undefined
+  }
+}
+
 const providerCandidates: Candidate<string>[] = [
   fromString("gen_ai.provider.name", aliasProvider), // OTEL GenAI v1.37+
   fromString("gen_ai.system", aliasProvider), // OTEL GenAI v1.36 deprecated
   fromString("llm.system", aliasProvider), // OpenInference / Arize Phoenix
   fromString("llm.provider", aliasProvider), // OpenInference (DSPy, LiteLLM) — no llm.system
+  { resolve: (attrs) => providerFromOpenInferenceMetadata(attrs) }, // OpenInference LangChain (LangSmith metadata)
   fromString("ai.model.provider", (v) => aliasProvider(v.replace(VERCEL_PROVIDER_SUFFIX, ""))), // Vercel AI SDK
   { resolve: (attrs) => (stringAttr(attrs, "span.type") === "llm_request" ? "anthropic" : undefined) }, // Claude Code
 ]

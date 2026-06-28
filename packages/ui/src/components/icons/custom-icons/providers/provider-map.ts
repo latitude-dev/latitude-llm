@@ -13,6 +13,8 @@ import {
   CrewaiIcon,
   DeepseekIcon,
   DspyIcon,
+  ElevenlabsIcon,
+  FlueIcon,
   GeminiIcon,
   GitlabIcon,
   GrokIcon,
@@ -63,6 +65,9 @@ export const PROVIDER_ICON_MAP: Record<string, ProviderIconComponent> = {
   crewai: CrewaiIcon,
   deepseek: DeepseekIcon,
   dspy: DspyIcon,
+  elevenlabs: ElevenlabsIcon,
+  eve: VercelIcon, // Eve is a Vercel framework
+  flue: FlueIcon,
   "github-copilot": CopilotIcon,
   gitlab: GitlabIcon,
   google: GeminiIcon,

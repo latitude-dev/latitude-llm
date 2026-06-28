@@ -1,76 +1,114 @@
 /**
- * Project scoping — multi-project per-capture override.
+ * Project scoping — multi-project per-capture override — Latitude telemetry example.
  *
- * `new Latitude({ apiKey })` is initialized *without* a default `project`. Every `capture()`
- * must declare its own `project` and spans are routed per-capture via the
- * `latitude.project` span attribute. Use this when a single process emits to several Latitude
- * projects (e.g. multiple agents sharing one runtime).
+ * `new Latitude({ apiKey })` is initialized *without* a default `project`. Every
+ * `capture()` declares its own `project` and spans are routed per-capture via the
+ * `latitude.project` span attribute. Use this when a single process emits to
+ * several Latitude projects (e.g. multiple agents sharing one runtime).
  *
- * Both projects must exist in the org behind `LATITUDE_API_KEY`. The slugs below default to
- * `primary` / `secondary` to match what `pnpm --filter @tools/live-seeds seed:multi-project-demo`
- * provisions — run that once first and this example works without any UI clicks. Or override
- * via `LATITUDE_PRIMARY_PROJECT_SLUG` / `LATITUDE_SECONDARY_PROJECT_SLUG` to target your own.
+ * Both projects must exist in the org behind `LATITUDE_API_KEY`. The slugs default
+ * to `primary` / `secondary`; override via `LATITUDE_PRIMARY_PROJECT_SLUG` /
+ * `LATITUDE_SECONDARY_PROJECT_SLUG` to target your own.
  *
  * Required env vars:
- *   - LATITUDE_API_KEY
- *   - OPENAI_API_KEY
+ * - LATITUDE_API_KEY
+ * - OPENAI_API_KEY
  *
  * Optional env vars:
- *   - LATITUDE_PRIMARY_PROJECT_SLUG    (defaults to "primary")
- *   - LATITUDE_SECONDARY_PROJECT_SLUG  (defaults to "secondary")
+ * - LATITUDE_PRIMARY_PROJECT_SLUG    (defaults to "primary")
+ * - LATITUDE_SECONDARY_PROJECT_SLUG  (defaults to "secondary")
  *
- * Install:  npm install openai
- * Run from `packages/telemetry/typescript/`:
- *   npx tsx --env-file=examples/.env examples/test_project_scoping_multi.ts
+ * Install: npm install openai
  */
 
+import { randomUUID } from "node:crypto"
 import OpenAI from "openai"
 import { capture, Latitude } from "../src"
 
+// No default `project` here — each capture() must declare its own.
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   disableBatch: true,
   instrumentations: { openai: OpenAI },
 })
 
-const FULL_STACK_AGENT_SLUG = "primary"
-const CALL_SUMMARISER_SLUG = "secondary"
+const openai = new OpenAI()
+
+const MODEL = "gpt-5.5"
+// gpt-5.5 is a reasoning model — budget for reasoning + the answer.
+const MAX_TOKENS = 2000
+const SYSTEM = "You are a helpful assistant participating in a telemetry QA test. Keep answers concise."
+const SESSION_ID = `project-multi-${randomUUID().slice(0, 8)}`
+
+const PRIMARY_SLUG = process.env.LATITUDE_PRIMARY_PROJECT_SLUG ?? "primary"
+const SECONDARY_SLUG = process.env.LATITUDE_SECONDARY_PROJECT_SLUG ?? "secondary"
+
+function ctx(project: string, scenario: string, ...extraTags: string[]) {
+  return {
+    project,
+    tags: ["example", "project-scoping-multi-ts", ...extraTags],
+    sessionId: SESSION_ID,
+    userId: "example-user",
+    metadata: { scenario, project, environment: "local" },
+  }
+}
+
+async function fullStackAgent() {
+  const tools = [
+    {
+      type: "function" as const,
+      function: {
+        name: "get_weather",
+        description: "Get the current weather for a city",
+        parameters: {
+          type: "object",
+          properties: { city: { type: "string" } },
+          required: ["city"],
+        },
+      },
+    },
+  ]
+  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    { role: "system", content: SYSTEM },
+    { role: "user", content: "What's the weather in San Francisco? Use get_weather, then answer in one short sentence." },
+  ]
+
+  const first = await openai.chat.completions.create({ model: MODEL, messages, tools, max_completion_tokens: MAX_TOKENS })
+  const toolCall = first.choices[0]?.message?.tool_calls?.[0]
+  messages.push(first.choices[0]!.message)
+  messages.push({
+    role: "tool",
+    tool_call_id: toolCall!.id,
+    content: JSON.stringify({ city: "San Francisco", temperatureC: 21, conditions: "sunny" }),
+  })
+
+  const second = await openai.chat.completions.create({ model: MODEL, messages, tools, max_completion_tokens: MAX_TOKENS })
+  return second.choices[0]?.message?.content
+}
+
+async function callSummariser() {
+  const r = await openai.chat.completions.create({
+    model: MODEL,
+    messages: [
+      { role: "system", content: SYSTEM },
+      { role: "user", content: "Summarize: 'Customer asked for refund.' in 4 words." },
+    ],
+    max_completion_tokens: MAX_TOKENS,
+  })
+  return r.choices[0]?.message?.content
+}
 
 async function main() {
   await latitude.ready
-  const client = new OpenAI()
 
-  await capture(
-    "full-stack-agent-run",
-    async () => {
-      const r = await client.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: "Ship feature X — what's step 1? Reply in 5 words." }],
-        max_tokens: 30,
-      })
-      console.log(`${FULL_STACK_AGENT_SLUG} →`, r.choices[0]?.message?.content)
-    },
-    { project: FULL_STACK_AGENT_SLUG, tags: ["agent:full-stack"] },
-  )
+  // Each capture routes to a DIFFERENT project via its own `project` option.
+  console.log(`${PRIMARY_SLUG} →`, await capture("full-stack-agent-run", fullStackAgent, ctx(PRIMARY_SLUG, "tools", "tools", "agent:full-stack")))
+  console.log(`${SECONDARY_SLUG} →`, await capture("call-summariser-run", callSummariser, ctx(SECONDARY_SLUG, "chat", "agent:summariser")))
 
-  await capture(
-    "call-summariser-run",
-    async () => {
-      const r = await client.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: "Summarize: 'Customer asked for refund.' in 4 words." }],
-        max_tokens: 30,
-      })
-      console.log(`${CALL_SUMMARISER_SLUG} →`, r.choices[0]?.message?.content)
-    },
-    { project: CALL_SUMMARISER_SLUG, tags: ["agent:summariser"] },
-  )
-
-  // Spans with no `project` AND no constructor default are rejected by the ingest service with
-  // a `partial_success` body — exporters log the rejection but don't retry. Always set a project
-  // either on the constructor or on each `capture()` when running this pattern.
+  // A span with neither a per-capture `project` nor a constructor default is rejected at ingest.
 
   await latitude.flush()
+  await latitude.shutdown()
 }
 
 void main().catch((err) => {

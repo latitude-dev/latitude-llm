@@ -24,6 +24,7 @@ const latitude = new Latitude({
 
 const PROVIDER = "openai-agents"
 const MODEL = "gpt-5.5"
+const SYSTEM = "You are a helpful assistant participating in a telemetry QA test. Keep answers concise."
 const SESSION_ID = `${PROVIDER}-${randomUUID().slice(0, 8)}`
 
 function ctx(scenario: string, ...extraTags: string[]) {
@@ -43,7 +44,7 @@ const getWeather = tool({
 })
 
 async function chat() {
-  const agent = new Agent({ name: "Greeter", instructions: "Answer concisely.", model: MODEL })
+  const agent = new Agent({ name: "Greeter", instructions: SYSTEM, model: MODEL })
   const result = await run(agent, "Say 'Hello from OpenAI Agents!' in exactly 5 words.")
   return result.finalOutput
 }
@@ -51,7 +52,7 @@ async function chat() {
 async function toolConversation() {
   const agent = new Agent({
     name: "Weather agent",
-    instructions: "Answer weather questions concisely. Always call get_weather first.",
+    instructions: `${SYSTEM} Always call get_weather first.`,
     tools: [getWeather],
     model: MODEL,
   })

@@ -3,6 +3,7 @@
  * gen_ai.system_instructions, gen_ai.tool.definitions — structured or JSON string).
  */
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
+import { Provider, safeTranslate } from "rosetta-ai"
 import type { ToolDefinition } from "../../entities/span.ts"
 import type { OtlpAnyValue, OtlpKeyValue } from "../types.ts"
 import { parseGenAIDeprecated } from "./genai_deprecated.ts"
@@ -153,6 +154,24 @@ export function parseGenAICurrent(attrs: readonly OtlpKeyValue[]): ParsedContent
     if (toolDefinitions.length === 0 && deprecated.toolDefinitions.length > 0) {
       toolDefinitions = [...deprecated.toolDefinitions]
     }
+  }
+
+  // Reconcile inline role:"system" turns with any separated gen_ai.system_instructions into
+  // systemInstructions (rosetta keeps mid-conversation system inline).
+  if (inputMessages.length > 0) {
+    const result = safeTranslate(inputMessages, {
+      from: Provider.GenAI,
+      direction: "input",
+      system: systemInstructions,
+    })
+    if (!result.error) {
+      inputMessages = result.messages as GenAIMessage[]
+      systemInstructions = (result.system ?? []) as GenAISystem
+    }
+  }
+  if (outputMessages.length > 0) {
+    const result = safeTranslate(outputMessages, { from: Provider.GenAI, direction: "output" })
+    if (!result.error) outputMessages = result.messages as GenAIMessage[]
   }
 
   return { inputMessages, outputMessages, systemInstructions, toolDefinitions }

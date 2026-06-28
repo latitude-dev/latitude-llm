@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.4.0] - 2026-06-26
+
+### Changed
+
+- **Bumped OpenTelemetry core to 1.42.1** (`opentelemetry-{api,sdk,exporter-otlp-proto-http}` 1.38.0 → 1.42.1, `opentelemetry-instrumentation-threading` 0.59b0 → 0.63b1, pulling `opentelemetry-semantic-conventions` 0.59b0 → 0.63b1). `opentelemetry-instrumentation-bedrock` references `GenAIAttributes.GEN_AI_TOOL_DEFINITIONS`, which only exists in semconv ≥0.60b0; with the previous pin (0.59b0) any Bedrock **Converse** call carrying a `toolConfig` raised `AttributeError` inside the instrumentor — silently swallowed by its `@dont_throw`, dropping the entire conversation, token usage, and cost for tool-enabled turns (plain chat/stream were unaffected). Bedrock tool conversations now capture the full exchange, usage, cost, and tool definitions.
+
 ## [3.3.0] - 2026-06-19
 
 ### Changed

@@ -35,6 +35,9 @@ const T0 = new Date("2026-06-18T10:00:00.000Z")
 const at = (ms: number) => new Date(T0.getTime() + ms)
 const chTime = (d: Date) => d.toISOString().replace("T", " ").replace("Z", "")
 
+// v7/@ai-sdk/otel emits gen_ai.system_instructions ONLY on the invoke_agent
+// wrapper — the chat leaves carry none.
+const WRAPPER_SYSTEM = "WRAPPER_SYSTEM: you are a concise assistant."
 const userMsg = { role: "user", parts: [{ type: "text", content: "What's the weather in SF?" }] }
 const assistantToolCall = {
   role: "assistant",
@@ -64,6 +67,7 @@ function makeSpanRow(opts: {
   costTotalMicrocents?: number
   inputMessages?: unknown[]
   outputMessages?: unknown[]
+  systemInstructions?: string
   toolName?: string
 }): SpanRow {
   return {
@@ -105,7 +109,9 @@ function makeSpanRow(opts: {
     finish_reasons: [],
     input_messages: opts.inputMessages ? JSON.stringify(opts.inputMessages) : "",
     output_messages: opts.outputMessages ? JSON.stringify(opts.outputMessages) : "",
-    system_instructions: "",
+    system_instructions: opts.systemInstructions
+      ? JSON.stringify([{ type: "text", content: opts.systemInstructions }])
+      : "",
     tool_definitions: "",
     tool_call_id: "",
     tool_name: opts.toolName ?? "",
@@ -168,6 +174,7 @@ const VERCEL_SPANS: SpanRow[] = [
     costTotalMicrocents: 1_500,
     inputMessages: [userMsg],
     outputMessages: [wrapperSummary],
+    systemInstructions: WRAPPER_SYSTEM, // only the wrapper carries system (v7 shape)
   }),
 ]
 
@@ -234,9 +241,20 @@ describe("operation-gated rollup", () => {
       const serialized = serialize(detail.allMessages)
       expect(serialized).toContain("LEAF_FINAL")
       expect(serialized).not.toContain("WRAPPER_SUMMARY")
-      expect(detail.allMessages.map((m) => m.role)).toEqual(["user", "assistant", "tool", "assistant"])
+      expect(detail.allMessages.map((m) => m.role)).toEqual(["system", "user", "assistant", "tool", "assistant"])
       expect(serialize(detail.outputMessages)).toContain("LEAF_FINAL")
       expect(serialize(detail.outputMessages)).not.toContain("WRAPPER_SUMMARY")
+    })
+
+    it("surfaces system instructions from the invoke_agent wrapper (v7 leaves carry none)", async () => {
+      const detail = await runCh(
+        traceRepo.findByTraceId({ organizationId: ORG_ID, projectId: PROJECT_ID, traceId: VERCEL_TRACE }),
+      )
+
+      // The wrapper is the only span with system instructions; the gate must let it through.
+      expect(serialize(detail.systemInstructions)).toContain("WRAPPER_SYSTEM")
+      expect(detail.allMessages[0]?.role).toBe("system")
+      expect(serialize(detail.allMessages[0]?.parts)).toContain("WRAPPER_SYSTEM")
     })
 
     it("counts usage on leaves only — the v7 wrapper aggregate is not double-counted", async () => {

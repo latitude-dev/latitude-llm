@@ -42,6 +42,23 @@ function toStringValue(val: unknown): string | undefined {
   return JSON.stringify(val)
 }
 
+function otlpValueToPlain(value: OtlpKeyValue["value"]): unknown {
+  if (!value) return undefined
+  if (value.stringValue !== undefined) return value.stringValue
+  if (value.boolValue !== undefined) return value.boolValue
+  if (value.intValue !== undefined) return Number(value.intValue)
+  if (value.doubleValue !== undefined) return value.doubleValue
+  if (value.arrayValue?.values) return value.arrayValue.values.map(otlpValueToPlain)
+  if (value.kvlistValue?.values) {
+    const result: Record<string, unknown> = {}
+    for (const entry of value.kvlistValue.values) {
+      result[entry.key] = otlpValueToPlain(entry.value)
+    }
+    return result
+  }
+  return undefined
+}
+
 function fromJsonString(key: string): Candidate<Record<string, string>> {
   return {
     resolve: (attrs) => {
@@ -72,12 +89,10 @@ function fromDotFlattened(prefix: string): Candidate<Record<string, string>> {
       const result: Record<string, string> = {}
       const prefixDot = `${prefix}.`
       for (const attr of attrs) {
-        if (attr.key.startsWith(prefixDot)) {
-          const subKey = attr.key.slice(prefixDot.length)
-          if (subKey && attr.value?.stringValue !== undefined) {
-            result[subKey] = attr.value.stringValue
-          }
-        }
+        if (!attr.key.startsWith(prefixDot)) continue
+        const subKey = attr.key.slice(prefixDot.length)
+        const value = toStringValue(otlpValueToPlain(attr.value))
+        if (subKey && value !== undefined) result[subKey] = value
       }
       return Object.keys(result).length > 0 ? result : undefined
     },
@@ -93,6 +108,7 @@ export function resolveMetadata(attrs: readonly OtlpKeyValue[]): Record<string, 
     fromDotFlattened("langfuse.observation.metadata"), // Langfuse (span-level, dot-flattened)
     fromDotFlattened("braintrust.metadata"), // Braintrust (dot-flattened fallback)
     fromDotFlattened("traceloop.association.properties"), // Traceloop / OpenLLMetry (dot-flattened)
+    fromDotFlattened("trace.metadata"), // OpenRouter Broadcast OTLP custom trace metadata
     fromDotFlattened("langsmith.metadata"), // LangSmith (dot-flattened)
     fromDotFlattened("meta.metadata"), // Datadog (dot-flattened)
   ]

@@ -40,6 +40,9 @@ export type OnboardingProviderId =
   | "crewai"
   | "haystack"
   | "dspy"
+  | "eve"
+  | "flue"
+  | "elevenlabs"
 
 export type TsPackageManager = "npm" | "pnpm" | "yarn" | "bun"
 
@@ -87,6 +90,17 @@ export const ONBOARDING_PROVIDER_SNIPPET_CONFIG: Record<OnboardingProviderId, On
   crewai: { id: "crewai", ...pyOnly },
   haystack: { id: "haystack", ...pyOnly },
   dspy: { id: "dspy", ...pyOnly },
+  eve: { id: "eve", ...tsOnly },
+  flue: { id: "flue", ...tsOnly },
+  elevenlabs: { id: "elevenlabs", ...crossTsPy },
+}
+
+// Eve ships its telemetry through @vercel/otel directly, so it does NOT install
+// the Latitude SDK — its packages live entirely in the provider/framework list.
+const PROVIDERS_WITHOUT_LATITUDE_SDK = new Set<OnboardingProviderId>(["eve"])
+
+export function providerUsesLatitudeSdk(id: OnboardingProviderId): boolean {
+  return !PROVIDERS_WITHOUT_LATITUDE_SDK.has(id)
 }
 
 export function getLatitudeTelemetryTsInstallCommand(pm: TsPackageManager): string {
@@ -155,6 +169,9 @@ export function getProviderSdkTsInstallCommand(id: OnboardingProviderId, pm: TsP
     langchain: "@langchain/openai @langchain/core",
     llamaindex: "llamaindex @llamaindex/openai @llamaindex/workflow",
     "openai-agents": "@openai/agents zod",
+    eve: "@vercel/otel @opentelemetry/exporter-trace-otlp-http",
+    flue: "@flue/opentelemetry @opentelemetry/api",
+    elevenlabs: "openai express",
   }
   const pkgs = map[id]
   return pkgs ? tsInstallPackages(pm, pkgs) : null
@@ -187,6 +204,7 @@ export function getProviderSdkPyInstallCommand(id: OnboardingProviderId, pm: PyP
     crewai: "crewai",
     haystack: "haystack-ai",
     dspy: "dspy litellm",
+    elevenlabs: "openai fastapi uvicorn",
   }
   const pkgs = map[id]
   return pkgs ? pyInstallPackages(pm, pkgs) : null
@@ -299,6 +317,15 @@ export function getOnboardingSnippet(
       break
     case "dspy":
       snippet = lang === "python" ? snippetPyDspy() : null
+      break
+    case "eve":
+      snippet = lang === "typescript" ? snippetTsEve() : null
+      break
+    case "flue":
+      snippet = lang === "typescript" ? snippetTsFlue() : null
+      break
+    case "elevenlabs":
+      snippet = lang === "typescript" ? snippetTsElevenlabs() : snippetPyElevenlabs()
       break
     default:
       snippet = null
@@ -1405,6 +1432,118 @@ if __name__ == "__main__":
 `
 }
 
+function snippetTsEve() {
+  return `// agent/instrumentation.ts — Eve auto-discovers this file and runs it at startup.
+import { defineInstrumentation } from "eve/instrumentation"
+import { registerOTel } from "@vercel/otel"
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http"
+
+export default defineInstrumentation({
+  setup: ({ agentName }) =>
+    registerOTel({
+      serviceName: agentName,
+      traceExporter: new OTLPTraceExporter({
+        url: "https://ingest.latitude.so/v1/traces",
+        headers: {
+          Authorization: \`Bearer \${process.env.LATITUDE_API_KEY!}\`,
+          "X-Latitude-Project": process.env.LATITUDE_PROJECT_SLUG!,
+        },
+      }),
+    }),
+})
+`
+}
+
+function snippetTsFlue() {
+  return `import { Latitude, capture } from "@latitude-data/telemetry"
+import { createOpenTelemetryObserver } from "@flue/opentelemetry"
+import { observe } from "@flue/runtime"
+
+new Latitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  project: process.env.LATITUDE_PROJECT_SLUG!,
+  serviceName: "flue-app",
+})
+
+// Flue emits OpenTelemetry spans itself — no instrumentations entry needed.
+observe(createOpenTelemetryObserver())
+
+// Optionally wrap a run to attach user/session/tags to its Flue spans.
+await capture("flue-workflow", async () => {
+  // run your Flue workflow here
+})
+`
+}
+
+function snippetTsElevenlabs() {
+  return `import express from "express"
+import OpenAI from "openai"
+import { Latitude } from "@latitude-data/telemetry"
+
+new Latitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  project: process.env.LATITUDE_PROJECT_SLUG!,
+  instrumentations: { openai: OpenAI },
+})
+
+const app = express()
+app.use(express.json())
+const client = new OpenAI()
+
+// Point your ElevenLabs agent's Custom LLM at this instrumented proxy.
+app.post("/v1/chat/completions", async (req, res) => {
+  const { elevenlabs_extra_body: _extra, ...body } = req.body
+  res.setHeader("Content-Type", "text/event-stream")
+
+  const stream = await client.chat.completions.create({ ...body, stream: true })
+  for await (const chunk of stream) {
+    res.write(\`data: \${JSON.stringify(chunk)}\\n\\n\`)
+  }
+  res.write("data: [DONE]\\n\\n")
+  res.end()
+})
+
+app.listen(8013)
+`
+}
+
+function snippetPyElevenlabs() {
+  return `import os
+
+import openai
+from fastapi import FastAPI, Request
+from fastapi.responses import StreamingResponse
+from openai import AsyncOpenAI
+
+from latitude_telemetry import Latitude
+
+Latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations={"openai": openai},
+)
+
+app = FastAPI()
+client = AsyncOpenAI()
+
+
+# Point your ElevenLabs agent's Custom LLM at this instrumented proxy.
+@app.post("/v1/chat/completions")
+async def chat_completions(request: Request):
+    body = await request.json()
+    body.pop("elevenlabs_extra_body", None)
+    body["stream"] = True
+
+    async def stream():
+        response = await client.chat.completions.create(**body)
+        async for chunk in response:
+            yield f"data: {chunk.model_dump_json()}\\n\\n"
+        yield "data: [DONE]\\n\\n"
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
+`
+}
+
 const OTLP_TRACES_ENDPOINT = "https://ingest.latitude.so/v1/traces"
 
 function sdkEnvExtras(id: OnboardingProviderId): string {
@@ -1463,6 +1602,9 @@ WATSONX_URL=https://us-south.ml.cloud.ibm.com`
     case "crewai":
     case "haystack":
     case "dspy":
+    case "eve":
+    case "flue":
+    case "elevenlabs":
       return "OPENAI_API_KEY=sk-..."
     case "google-adk":
       return "GOOGLE_API_KEY=..."

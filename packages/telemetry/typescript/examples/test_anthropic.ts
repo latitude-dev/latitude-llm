@@ -22,6 +22,7 @@ const latitude = new Latitude({
 
 const PROVIDER = "anthropic"
 const MODEL = "claude-opus-4-8"
+const SYSTEM = "You are a helpful assistant participating in a telemetry QA test. Keep answers concise."
 const SESSION_ID = `${PROVIDER}-${randomUUID().slice(0, 8)}`
 
 const client = new Anthropic()
@@ -39,6 +40,7 @@ async function chat() {
   const response = await client.messages.create({
     model: MODEL,
     max_tokens: 50,
+    system: SYSTEM,
     messages: [{ role: "user", content: "Say 'Hello from Anthropic!' in exactly 5 words." }],
   })
   const block = response.content[0]
@@ -50,6 +52,7 @@ async function stream() {
   const messageStream = client.messages.stream({
     model: MODEL,
     max_tokens: 50,
+    system: SYSTEM,
     messages: [{ role: "user", content: "Say 'Hello from Anthropic stream!' in exactly 6 words." }],
   })
   for await (const event of messageStream) {
@@ -79,7 +82,7 @@ async function toolConversation() {
     },
   ]
 
-  const first = await client.messages.create({ model: MODEL, max_tokens: 200, tools, messages })
+  const first = await client.messages.create({ model: MODEL, max_tokens: 200, system: SYSTEM, tools, messages })
   const toolUse = first.content.find((b) => b.type === "tool_use")
   messages.push({ role: "assistant", content: first.content })
   messages.push({
@@ -93,7 +96,7 @@ async function toolConversation() {
     ],
   })
 
-  const second = await client.messages.create({ model: MODEL, max_tokens: 200, tools, messages })
+  const second = await client.messages.create({ model: MODEL, max_tokens: 200, system: SYSTEM, tools, messages })
   const block = second.content.find((b) => b.type === "text")
   return block?.type === "text" ? block.text : ""
 }

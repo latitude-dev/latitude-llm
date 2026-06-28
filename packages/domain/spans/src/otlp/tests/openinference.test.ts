@@ -692,6 +692,67 @@ describe("OpenInference google-adk — tool call ↔ tool result pairing", () =>
   })
 })
 
+describe("OpenInference google-genai — function response on a role:user turn pairs via tool_call_id", () => {
+  // Gemini has no "tool" role: the openinference-google-genai instrumentor carries the function
+  // response on a role:"user" turn, tagging it only with message.tool_call_id. The parser must
+  // still recognize it as a tool result and pair it with the assistant tool_call.
+  function buildGeminiFinalLlmSpan(): OtlpSpan {
+    return {
+      traceId: "22222222222222222222222222222222",
+      spanId: "2222222222222222",
+      name: "GenerateContent",
+      kind: 1,
+      startTimeUnixNano: "1710590400000000000",
+      endTimeUnixNano: "1710590401000000000",
+      attributes: [
+        str("openinference.span.kind", "LLM"),
+        str("llm.provider", "google"),
+        str("llm.model_name", "gemini-3.5-flash"),
+        str("llm.input_messages.0.message.role", "user"),
+        str("llm.input_messages.0.message.content", "What's the weather in Barcelona?"),
+        str("llm.input_messages.1.message.role", "model"),
+        str("llm.input_messages.1.message.tool_calls.0.tool_call.id", "gem_call_1"),
+        str("llm.input_messages.1.message.tool_calls.0.tool_call.function.name", "get_weather"),
+        str("llm.input_messages.1.message.tool_calls.0.tool_call.function.arguments", '{"city": "Barcelona"}'),
+        // Gemini: the function response is a role:"user" turn carrying only tool_call_id.
+        str("llm.input_messages.2.message.role", "user"),
+        str("llm.input_messages.2.message.content", '{"report": "sunny"}'),
+        str("llm.input_messages.2.message.tool_call_id", "gem_call_1"),
+        str("llm.output_messages.0.message.role", "model"),
+        str("llm.output_messages.0.message.contents.0.message_content.type", "text"),
+        str("llm.output_messages.0.message.contents.0.message_content.text", "It's sunny in Barcelona."),
+      ],
+      status: { code: 1 },
+    }
+  }
+
+  const request: OtlpExportTraceServiceRequest = {
+    resourceSpans: [
+      {
+        resource: { attributes: [str("service.name", "gemini-app")] },
+        scopeSpans: [
+          {
+            scope: { name: "openinference.instrumentation.google_genai", version: "1.1.0" },
+            spans: [buildGeminiFinalLlmSpan()],
+          },
+        ],
+      },
+    ],
+  }
+
+  it("relabels the user-role function response to role:tool and pairs it with the tool_call", () => {
+    const span = transformOtlpToSpans(request, CONTEXT).spans[0]
+    if (!span) throw new Error("span not produced")
+
+    const tool = span.inputMessages.find((m) => m.role === "tool")
+    expect(tool).toBeDefined()
+    const toolResult = (tool as { parts: { type: string; id?: string }[] }).parts.find(
+      (p) => p.type === "tool_call_response",
+    )
+    expect((toolResult as { id?: string } | undefined)?.id).toBe("gem_call_1")
+  })
+})
+
 describe("Latitude openai-agents TS bridge — function span", () => {
   // The TS `openai-agents` bridge tags the tool span with
   // `latitude.span.kind: "agents.function"` and carries the tool data under

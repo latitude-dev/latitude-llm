@@ -134,8 +134,7 @@
       ],
       "ignoreDependencies": [
         "@sentry/node",
-        "dd-trace",
-        "together-ai"
+        "dd-trace"
       ]
     },
     "packages/telemetry/pi": {

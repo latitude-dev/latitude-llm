@@ -336,6 +336,19 @@ describe("parseContent (Vercel) — tool definitions (ai.prompt.tools)", () => {
     ])
   })
 
+  it("reads the AI SDK v5+ inputSchema key as parameters", () => {
+    const schema = { type: "object", properties: { city: { type: "string" } }, required: ["city"] }
+    const v6Tool = { type: "function", name: "get_weather", description: "Get current weather", inputSchema: schema }
+    const result = parseContent([
+      str("ai.prompt.messages", JSON.stringify([{ role: "user", content: "x" }])),
+      strArray("ai.prompt.tools", [JSON.stringify(v6Tool)]),
+    ])
+
+    expect(result.toolDefinitions).toEqual([
+      { name: "get_weather", description: "Get current weather", parameters: schema },
+    ])
+  })
+
   it("unwraps the { function: {...} } variant", () => {
     const wrapped = {
       type: "function",

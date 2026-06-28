@@ -7,6 +7,9 @@ import type { ToolDefinition } from "../../entities/span.ts"
  *  - Wrapped:       { type: "function", function: { name, description, parameters } }
  *  - Flat with type: { type: "function", name, description, parameters }
  *  - Flat:          { name, description, parameters }
+ *
+ * The schema lives under `parameters` (OpenAI/OTEL GenAI) or `inputSchema` (Vercel AI SDK
+ * v5+ `LanguageModelV*FunctionTool`); we read whichever is present.
  */
 export function toToolDefinition(raw: unknown): ToolDefinition | undefined {
   if (!raw || typeof raw !== "object") return undefined
@@ -15,9 +18,9 @@ export function toToolDefinition(raw: unknown): ToolDefinition | undefined {
   if (typeof obj.function === "object" && obj.function !== null) {
     const fn = obj.function as Record<string, unknown>
     if (typeof fn.name !== "string") return undefined
-    return { name: fn.name, description: String(fn.description ?? ""), parameters: fn.parameters }
+    return { name: fn.name, description: String(fn.description ?? ""), parameters: fn.parameters ?? fn.inputSchema }
   }
 
   if (typeof obj.name !== "string") return undefined
-  return { name: obj.name, description: String(obj.description ?? ""), parameters: obj.parameters }
+  return { name: obj.name, description: String(obj.description ?? ""), parameters: obj.parameters ?? obj.inputSchema }
 }

@@ -152,6 +152,14 @@ describe("resolveAttributes", () => {
       expect(result.provider).toBe("openai")
     })
 
+    it("resolves from OpenInference LangChain metadata (ls_provider)", () => {
+      const attrs: OtlpKeyValue[] = [
+        strAttr("metadata", JSON.stringify({ ls_provider: "openai", ls_model_name: "gpt-5.5" })),
+      ]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.provider).toBe("openai")
+    })
+
     it("case-folds non-canonical provider casing", () => {
       const cases: [string, string, string][] = [
         ["gen_ai.system", "Google", "google"],
@@ -551,6 +559,30 @@ describe("resolveAttributes", () => {
         const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
         expect(result.finishReasons).toEqual([expected])
       }
+    })
+
+    it("resolves OpenInference singular llm.finish_reason", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("llm.finish_reason", "tool_calls")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.finishReasons).toEqual(["tool_calls"])
+    })
+  })
+
+  describe("metadata resolution", () => {
+    it("resolves OpenRouter Broadcast trace metadata", () => {
+      const attrs: OtlpKeyValue[] = [
+        strAttr("trace.metadata.environment", "staging"),
+        intAttr("trace.metadata.retry_count", 2),
+        boolAttr("trace.metadata.beta", true),
+        kvlistAttr("trace.metadata.request", { route: "chat", step: 3 }),
+      ]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.metadata).toEqual({
+        environment: "staging",
+        retry_count: "2",
+        beta: "true",
+        request: JSON.stringify({ route: "chat", step: 3 }),
+      })
     })
   })
 

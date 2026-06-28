@@ -11,6 +11,7 @@
 interface ResponseUsage {
   input_tokens?: number
   output_tokens?: number
+  output_tokens_details?: { reasoning_tokens?: number }
 }
 
 interface ResponseOutputBlock {

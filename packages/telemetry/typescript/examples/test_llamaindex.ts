@@ -7,13 +7,18 @@
  * - OPENAI_API_KEY
  *
  * Install: npm install llamaindex @llamaindex/openai @llamaindex/workflow zod
+ *
+ * NOTE: LLM spans are NOT captured here — the upstream Traceloop instrumentor only instruments the
+ * OpenAI LLM when @llamaindex/openai is passed as a second `manuallyInstrument` arg (it lives in its
+ * own package), and it drops agent tool-calls / streaming usage even then. Documented as an upstream
+ * limitation in specs/telemetry-qa.md (#7); kept for when we ship our own instrumentor.
  */
 
 import { randomUUID } from "node:crypto"
 import { openai } from "@llamaindex/openai"
 import { agent } from "@llamaindex/workflow"
 import * as LlamaIndex from "llamaindex"
-import { tool } from "llamaindex"
+import { type ChatMessage, tool } from "llamaindex"
 import { z } from "zod"
 import { capture, Latitude } from "../src"
 
@@ -25,12 +30,13 @@ const latitude = new Latitude({
 })
 
 const PROVIDER = "llamaindex"
-const MODEL = "gpt-4o-mini"
+const MODEL = "gpt-5.5"
+const SYSTEM = "You are a helpful assistant participating in a telemetry QA test. Keep answers concise."
 const SESSION_ID = `${PROVIDER}-${randomUUID().slice(0, 8)}`
 
 function ctx(scenario: string, ...extraTags: string[]) {
   return {
-    tags: ["example", PROVIDER, ...extraTags],
+    tags: ["example", PROVIDER, "llamaindex-ts", ...extraTags],
     sessionId: SESSION_ID,
     userId: "example-user",
     metadata: { scenario, environment: "local" },
@@ -45,27 +51,32 @@ const getWeather = tool({
 })
 
 async function chat() {
-  const llm = openai({ model: MODEL, maxTokens: 50 })
-  const response = await llm.complete({ prompt: "Say 'Hello from LlamaIndex!' in exactly 5 words." })
-  return response.text
+  const llm = openai({ model: MODEL, temperature: 1 })
+  const messages: ChatMessage[] = [
+    { role: "system", content: SYSTEM },
+    { role: "user", content: "Say 'Hello from LlamaIndex!' in exactly 5 words." },
+  ]
+  const response = await llm.chat({ messages })
+  return String(response.message.content)
 }
 
 async function stream() {
-  const llm = openai({ model: MODEL, maxTokens: 50 })
+  const llm = openai({ model: MODEL, temperature: 1 })
+  const messages: ChatMessage[] = [
+    { role: "system", content: SYSTEM },
+    { role: "user", content: "Say 'Hello from LlamaIndex stream!' in exactly 6 words." },
+  ]
   const chunks: string[] = []
-  const stream = await llm.complete({
-    prompt: "Say 'Hello from LlamaIndex stream!' in exactly 6 words.",
-    stream: true,
-  })
-  for await (const chunk of stream) chunks.push(chunk.text)
+  const stream = await llm.chat({ messages, stream: true })
+  for await (const chunk of stream) chunks.push(chunk.delta)
   return chunks.join("")
 }
 
 async function toolConversation() {
   const weatherAgent = agent({
     tools: [getWeather],
-    llm: openai({ model: MODEL }),
-    systemPrompt: "You are a helpful assistant. Use the tools available to you.",
+    llm: openai({ model: MODEL, temperature: 1 }),
+    systemPrompt: SYSTEM,
   })
   const result = await weatherAgent.run(
     "What's the weather in San Francisco? Use get_weather, then answer in one short sentence.",
@@ -75,8 +86,6 @@ async function toolConversation() {
 
 async function main() {
   await latitude.ready
-
-  await toolConversation()
 
   await capture("llamaindex-chat-capture", chat, ctx("chat"))
   await capture("llamaindex-stream-capture", stream, ctx("stream", "stream"))
