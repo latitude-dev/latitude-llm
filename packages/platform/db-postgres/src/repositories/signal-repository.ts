@@ -243,7 +243,9 @@ const signalRepositoryCoreLive = Layer.effect(
                   ? sql<boolean>`exists (
                       select 1
                       from ${scores}
-                      where ${scores.signalId} = ${signals.id}
+                      where ${scores.organizationId} = ${organizationId}
+                        and ${scores.projectId} = ${projectId}
+                        and ${scores.signalId} = ${signals.id}
                         and ${scores.draftedAt} is null
                         ${scoreCreatedFromClause}
                         ${scoreCreatedToClause}
@@ -266,7 +268,9 @@ const signalRepositoryCoreLive = Layer.effect(
               const lastSeenSort = sql<Date>`coalesce((
                 select max(${scores.createdAt})
                 from ${scores}
-                where ${scores.signalId} = ${signals.id}
+                where ${scores.organizationId} = ${organizationId}
+                  and ${scores.projectId} = ${projectId}
+                  and ${scores.signalId} = ${signals.id}
                   and ${scores.draftedAt} is null
                   ${scoreCreatedFromClause}
                   ${scoreCreatedToClause}
@@ -274,7 +278,9 @@ const signalRepositoryCoreLive = Layer.effect(
               const occurrencesSort = sql<number>`(
                 select count(*)
                 from ${scores}
-                where ${scores.signalId} = ${signals.id}
+                where ${scores.organizationId} = ${organizationId}
+                  and ${scores.projectId} = ${projectId}
+                  and ${scores.signalId} = ${signals.id}
                   and ${scores.draftedAt} is null
                   ${scoreCreatedFromClause}
                   ${scoreCreatedToClause}
@@ -282,7 +288,9 @@ const signalRepositoryCoreLive = Layer.effect(
               const affectedSessionsSort = sql<number>`(
                 select count(distinct ${scores.sessionId})
                 from ${scores}
-                where ${scores.signalId} = ${signals.id}
+                where ${scores.organizationId} = ${organizationId}
+                  and ${scores.projectId} = ${projectId}
+                  and ${scores.signalId} = ${signals.id}
                   and ${scores.draftedAt} is null
                   and ${scores.sessionId} is not null
                   and ${scores.sessionId} != ''
