@@ -17,6 +17,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRegisterCommands } from "../../../../../components/command-palette/command-palette-provider.tsx"
 import type { PaletteCommand } from "../../../../../components/command-palette/types.ts"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
+import {
+  addTracesToDatasetFunction,
+  createDatasetFromTracesFunction,
+} from "../../../../../domains/datasets/datasets.functions.ts"
 import { useMonitors } from "../../../../../domains/monitors/monitors.collection.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { useSavedSearchBySlug } from "../../../../../domains/saved-searches/saved-searches.collection.ts"
@@ -66,6 +70,10 @@ import { TracesEmptyState } from "./traces-empty-state.tsx"
 import { TracesView } from "./traces-view.tsx"
 
 export type ExplorerMode = "traces" | "sessions"
+
+/** Default Sessions time window when none is set — keeps listing, counts, and
+ * metrics scoped to what the time filter shows (matches the Signals page). */
+const DEFAULT_SESSION_RANGE_SECONDS = 30 * 24 * 60 * 60
 
 export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string }) {
   const routeProject = useRouteProject()
@@ -191,6 +199,21 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   const traceIdsRef = useRef<string[]>([])
 
   const filters = useMemo(() => parseFilters(rawFilters || undefined), [rawFilters])
+  // In Sessions mode, default the time range to the last month when the user
+  // hasn't set one, so listing, counts, metrics, and the time dropdown all stay
+  // scoped to the same visible window (matches the Signals page). Traces mode
+  // keeps the raw filter set untouched.
+  const sessionFilters = useMemo(() => {
+    if (!isSessions || filters.startTime) return filters
+    // Match how the time dropdown stores a "Last month" preset: an open-ended
+    // `gte` (no `lte`), so the dropdown shows "Last month" instead of a custom
+    // absolute range, and the data still scopes to the last 30 days.
+    const fromMs = Date.now() - DEFAULT_SESSION_RANGE_SECONDS * 1000
+    return {
+      ...filters,
+      startTime: [{ op: "gte" as const, value: new Date(fromMs).toISOString() }],
+    }
+  }, [filters, isSessions])
   // The Sessions surface's hooks (useSessionsInfiniteScroll / useSessionsCount)
   // apply `withSessionDefaults` internally to hide orphan-fragment sessions
   // by default. The trace-side surfaces here (count, export, add-to-dataset)
@@ -213,10 +236,12 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   })
   const hasActiveFilters = Object.keys(filters).length > 0
   const hasSelectedSavedSearch = savedSearchSlug.length > 0
-  const timeFrom = getTimeFilterValue(filters, "gte")
-  const timeTo = getTimeFilterValue(filters, "lte")
+  const timeFrom = getTimeFilterValue(sessionFilters, "gte")
+  const timeTo = getTimeFilterValue(sessionFilters, "lte")
   const sessionsMonitorTarget = useMemo<MonitorTarget>(
     () => ({
+      type: "session",
+      id: loadedSavedSearch?.id ?? null,
       kind: "session",
       stream: "sessions",
       filterSet: filters,
@@ -228,10 +253,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   )
   const savedSearchMonitors = useMemo(
     () =>
-      projectMonitors.filter(
-        (monitor) =>
-          monitor.target?.savedSearchId || monitor.alerts.some((alert) => alert.source?.type === "savedSearch"),
-      ),
+      projectMonitors.filter((monitor) => monitor.target?.savedSearchId || monitor.rule.source?.type === "savedSearch"),
     [projectMonitors],
   )
   const sorting: InfiniteTableSorting = {
@@ -635,7 +657,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
         <TraceAggregationsPanel
           projectId={currentProject.id}
           projectSlug={currentProject.slug}
-          filters={filters}
+          filters={sessionFilters}
           mode={activeTab}
           onTimeRangeSelect={onTimeRangeSelect}
         />
@@ -644,7 +666,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
       {isSessions ? (
         <SessionsView
           projectId={currentProject.id}
-          filters={filters}
+          filters={sessionFilters}
           filtersOpen={filtersOpen}
           activeSessionId={activeSessionId || undefined}
           activeTraceId={activeTraceId || undefined}
@@ -715,11 +737,31 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
             open={addToDatasetOpen}
             onOpenChange={setAddToDatasetOpen}
             projectId={currentProject.id}
-            selection={bulkSelection}
+            itemLabel="trace"
             selectedCount={selectedCount}
+            onAddToExisting={(datasetId) =>
+              addTracesToDatasetFunction({
+                data: {
+                  projectId: currentProject.id,
+                  datasetId,
+                  selection: bulkSelection,
+                  filters: effectiveFilters,
+                  ...(hasSearchQuery ? { searchQuery: query } : {}),
+                },
+              })
+            }
+            onCreateNew={(name) =>
+              createDatasetFromTracesFunction({
+                data: {
+                  projectId: currentProject.id,
+                  name,
+                  selection: bulkSelection,
+                  filters: effectiveFilters,
+                  ...(hasSearchQuery ? { searchQuery: query } : {}),
+                },
+              })
+            }
             onSuccess={clearSelections}
-            filters={effectiveFilters}
-            {...(hasSearchQuery ? { searchQuery: query } : {})}
           />
         </>
       )}

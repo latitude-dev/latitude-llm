@@ -90,6 +90,8 @@ Most LLM observability platforms focus on one narrow part of the production qual
 
 Latitude is built around **LLM signal discovery**. Observability, semantic search, behaviours, annotations, flaggers, scores, and evaluations are designed to work together automatically so teams can track production agent failures with minimal manual setup.
 
+It is also **open source**, where most tools in this space are closed, proprietary SaaS. Latitude is MIT licensed and self-hostable, so you can run it in your own infrastructure, audit exactly how your data is handled, and adapt it to your needs. See [Open source](#open-source) below.
+
 The difference is the combined workflow:
 
 - **Flaggers** detect common failure categories automatically, such as frustration, refusal, jailbreaking, tool errors, and empty responses.
@@ -99,6 +101,17 @@ The difference is the combined workflow:
 - **Signals** bring those findings together into named, prioritized, lifecycle-managed production failure patterns.
 
 Instead of only showing traces, only running evaluations, or only collecting annotations, Latitude combines these primitives into a signal-centric workflow for finding, tracking, fixing, and monitoring AI agent failures in production.
+
+## Open source
+
+Latitude is **fully open source under the MIT license**. The entire platform lives on [GitHub](https://github.com/latitude-dev/latitude-llm), so you can read the code, audit how your data is handled, fork it, and contribute.
+
+You can run it two ways:
+
+- **Self-hosted**: host Latitude yourself for free, from a [single host](../deployment/overview) to a full cluster. Your data stays in your own infrastructure.
+- **Latitude Cloud**: the managed version, so you do not have to operate it.
+
+Both run the same open-source platform, so you are never locked in. Contributions are welcome: pick up a [good first issue](https://github.com/latitude-dev/latitude-llm/contribute) or read the [contributing guide](../development/contributing).
 
 ## Getting started
 

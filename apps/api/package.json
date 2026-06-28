@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@clickhouse/client": "catalog:",
-    "@domain/alerts": "workspace:*",
+    "@domain/incidents": "workspace:*",
     "@domain/annotations": "workspace:*",
     "@domain/api-keys": "workspace:*",
     "@domain/datasets": "workspace:*",
@@ -48,6 +48,7 @@
     "@platform/db-postgres": "workspace:*",
     "@platform/env": "workspace:*",
     "@platform/queue-bullmq": "workspace:*",
+    "@platform/sandbox-quickjs": "workspace:*",
     "@platform/storage-object": "workspace:*",
     "@platform/workflows-temporal": "workspace:*",
     "@repo/observability": "workspace:*",

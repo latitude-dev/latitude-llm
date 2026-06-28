@@ -1,4 +1,4 @@
-import { cuidSchema, evaluationIdSchema, filterSetSchema } from "@domain/shared"
+import { cuidSchema, evaluationIdSchema, evaluationSettingsSchema, filterSetSchema } from "@domain/shared"
 import { z } from "zod"
 
 import { DEFAULT_EVALUATION_SAMPLING, EVALUATION_NAME_MAX_LENGTH, EVALUATION_TURNS } from "../constants.ts"
@@ -99,12 +99,12 @@ export const evaluationSchema = z.object({
   signalId: cuidSchema, // in MVP evaluations are issue-linked; multiple evaluations may link to the same issue
   name: z.string().min(1).max(EVALUATION_NAME_MAX_LENGTH), // unique name within the project among non-deleted rows
   description: z.string(), // generated from the resulting script after alignment
-  // TODO(eval-sandbox): when sandbox is available, this field will hold arbitrary JS; until then
-  // it must conform to the fixed LLM-as-judge template enforced by validateEvaluationScript().
-  script: z.string().min(1),
+  settings: evaluationSettingsSchema.nullish(), // optional declarative config that compiled to `script`; null for a raw / GEPA-generated script
+  script: z.string().min(1), // arbitrary JS executed in the QuickJS sandbox (judge or deterministic)
+  scriptHash: z.string().optional(), // hash of `script`; stamped onto each score's metadata.evaluationHash. Backfilled from alignment.evaluationHash for legacy rows; the mapper falls back to it when unset.
   trigger: evaluationTriggerSchema, // controls when the evaluation runs on live traffic
-  alignment: evaluationAlignmentSchema, // persisted confusion matrix and script hash
-  alignedAt: z.date(), // last time the evaluation was realigned
+  alignment: evaluationAlignmentSchema.nullable(), // confusion matrix + script hash; set only for aligned judge scripts (those that call llm()), NULL otherwise
+  alignedAt: z.date().nullable(), // last realignment time; NULL for unaligned (e.g. raw / deterministic) scripts
   archivedAt: z.date().nullable(), // archived evaluations are still visible in read-only mode
   deletedAt: z.date().nullable(), // deleted evaluations are soft deleted from management UI
   createdAt: z.date(), // evaluation creation time

@@ -1,16 +1,12 @@
-import {
-  type AlertIncident,
-  AlertIncidentRepository,
-  type AlertIncidentSourceType,
-  isSignalEscalationEntrySignals,
-} from "@domain/alerts"
 import { EvaluationRepository } from "@domain/evaluations"
+import { type Incident, IncidentRepository, isSignalEscalationEntrySignals } from "@domain/incidents"
 import type { MembershipRepository } from "@domain/organizations"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import {
   AlertIncidentId,
   type ChSqlClient,
   generateId,
+  type IncidentNotificationKey,
   isIncidentNotificationEnabled,
   type NotFoundError,
   NotificationId,
@@ -77,7 +73,7 @@ export interface IncidentNotificationRequest {
 export type RequestIncidentNotificationsResult =
   | {
       readonly status: "skipped"
-      readonly reason: "kind-disabled" | "no-recipients" | "monitor-muted" | "sourceless-incident"
+      readonly reason: "kind-disabled" | "no-recipients" | "monitor-muted" | "signal-muted"
     }
   | { readonly status: "ok"; readonly requests: readonly IncidentNotificationRequest[] }
 
@@ -90,15 +86,14 @@ export type RequestIncidentNotificationsError = RepositoryError | NotFoundError
  * The window is frozen at incident time (the PNG is immutable/cached), UTC-day-aligned the same
  * way the drawer aligns to "now".
  */
-/**
- * A source-based incident (issue/savedSearch), narrowed so the signal-analytics
- * snapshots + payload read `sourceId`/`sourceType` without a null check. The
- * use-case early-returns for sourceless (unified) incidents before any of these run.
- */
-type SourcedIncident = AlertIncident & { readonly sourceType: AlertIncidentSourceType; readonly sourceId: string }
+type SourcedIncident = Incident
 
-const isSourcedIncident = (incident: AlertIncident): incident is SourcedIncident =>
-  incident.sourceType !== null && incident.sourceId !== null
+const notificationKeyForIncident = (incident: Incident): IncidentNotificationKey => {
+  if (incident.sourceType === "signal") return "signal.escalating"
+  if (incident.condition?.trigger === "threshold") return "monitor.threshold"
+  if (incident.condition?.trigger === "escalating") return "monitor.escalating"
+  return "monitor.match"
+}
 
 const TREND_BUCKET_SECONDS = 12 * 60 * 60
 const TREND_LOOKBACK_DAYS = 14
@@ -123,10 +118,10 @@ const TAGS_TOP_N = 5
 /** History window for tag aggregation. Matches the signal-list/drawer convention. */
 const TAGS_LOOKBACK_DAYS = 30
 
-const resolveKind = (incident: AlertIncident, transition: IncidentTransition): IncidentNotificationKind => {
+const resolveKind = (incident: Incident, transition: IncidentTransition): IncidentNotificationKind => {
   if (transition === "closed") return "incident.closed"
   // "created" — the incident is freshly inserted. `endedAt = startedAt`
-  // means an eventful kind (issue.new / issue.regressed) that collapsed
+  // means an eventful kind that collapsed
   // to a point in time; otherwise it's the open side of a sustained
   // incident.
   return incident.endedAt !== null && incident.endedAt.getTime() === incident.startedAt.getTime()
@@ -357,7 +352,7 @@ interface SignalTriageSnapshot {
 /**
  * Snapshot the signal's triage fields (assignee + priority) so renderers can
  * show who owns the signal and how urgent it was deemed when the incident
- * fired. Only meaningful for issue-sourced incidents; a missing signal row
+ * fired. Only meaningful for signal-sourced incidents; a missing signal row
  * (deleted between the incident and this producer) degrades to `null` so the
  * payload simply omits the fields, like legacy rows.
  */
@@ -381,9 +376,7 @@ const snapshotSignalTriage = (incident: SourcedIncident) =>
  * an hourly rate). The exact instantaneous rate that tripped entry isn't preserved on the
  * incident row, but this peak is the "climbed to" figure the copy describes.
  */
-const buildBreach = (incident: AlertIncident, triggerRatePerHour: number | null): IncidentBreach | undefined => {
-  // Seasonal breach scalars only exist on `issue.escalating` snapshots; saved-search
-  // incidents carry a frozen-threshold snapshot instead and have no such copy.
+const buildBreach = (incident: Incident, triggerRatePerHour: number | null): IncidentBreach | undefined => {
   if (!isSignalEscalationEntrySignals(incident.entrySignals)) return undefined
   return {
     triggerRate: triggerRatePerHour ?? 0,
@@ -397,7 +390,7 @@ const buildBreach = (incident: AlertIncident, triggerRatePerHour: number | null)
  * is `endedAt - startedAt` in ms; the template humanizes ("elevated
  * for 32m").
  */
-const buildRecovery = (incident: AlertIncident): IncidentRecovery => ({
+const buildRecovery = (incident: Incident): IncidentRecovery => ({
   durationMs: incident.endedAt !== null ? Math.max(0, incident.endedAt.getTime() - incident.startedAt.getTime()) : 0,
 })
 
@@ -416,7 +409,7 @@ const buildPayload = (input: {
     alertIncidentId: incident.id,
     sourceType: incident.sourceType,
     sourceId: incident.sourceId,
-    incidentKind: incident.kind,
+    incidentKind: notificationKeyForIncident(incident),
     severity: incident.severity,
   } as const
   // Monitor attribution + condition, spread into every variant; empty on legacy incidents.
@@ -425,7 +418,7 @@ const buildPayload = (input: {
     ...(incident.condition !== null ? { condition: incident.condition } : {}),
   }
   // Signal triage snapshot, spread into every variant (incl. closed — the
-  // recovery email still shows who owns the signal); absent for savedSearch
+  // recovery email still shows who owns the signal); absent for monitor
   // sources and when the signal row vanished.
   const triageFields = triage ? { assigneeId: triage.assigneeId, priority: triage.priority } : {}
 
@@ -443,8 +436,8 @@ const buildPayload = (input: {
       ...(sampleExcerpt ? { sampleExcerpt } : {}),
     }
   }
-  // Sustained kinds carry an issue trend snapshot when the source is an issue;
-  // saved-search incidents omit it (no issue analytics).
+  // Sustained signal incidents carry a signal trend snapshot; monitor incidents
+  // render from their monitor attribution and condition.
   if (kind === "incident.opened") {
     const breach = buildBreach(incident, triggerRatePerHour)
     return {
@@ -489,25 +482,26 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
     yield* Effect.annotateCurrentSpan("alertIncidentId", input.alertIncidentId)
     yield* Effect.annotateCurrentSpan("transition", input.transition)
 
-    const incidentRepo = yield* AlertIncidentRepository
+    const incidentRepo = yield* IncidentRepository
     const incident = yield* incidentRepo.findById(AlertIncidentId(input.alertIncidentId))
 
-    // Unified (target-on-monitor) incidents are sourceless; their notification copy is wired
-    // separately. Narrowing to `SourcedIncident` lets the signal-analytics snapshots + payload
-    // read source without a null check.
-    if (!isSourcedIncident(incident)) {
-      yield* Effect.annotateCurrentSpan("skipped", "sourceless-incident")
-      return { status: "skipped", reason: "sourceless-incident" } as const
-    }
-
-    // Mute gate: resolve the owning monitor once. A muted monitor short-circuits
-    // before the project-level kind gate; the identity also feeds payload attribution.
-    const monitorReader = yield* IncidentMonitorReader
     const monitor =
-      incident.monitorAlertId !== null ? yield* monitorReader.findByAlertId(incident.monitorAlertId) : null
-    if (monitor !== null && monitor.mutedAt !== null) {
+      incident.sourceType === "monitor"
+        ? yield* (yield* IncidentMonitorReader).findByMonitorId(incident.sourceId)
+        : null
+    if (monitor?.mutedAt !== null && monitor?.mutedAt !== undefined) {
       yield* Effect.annotateCurrentSpan("skipped", "monitor-muted")
       return { status: "skipped", reason: "monitor-muted" } as const
+    }
+    const signal =
+      incident.sourceType === "signal"
+        ? yield* (yield* SignalRepository)
+            .findById(SignalId(incident.sourceId))
+            .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+        : null
+    if (signal?.mutedAt !== null && signal?.mutedAt !== undefined) {
+      yield* Effect.annotateCurrentSpan("skipped", "signal-muted")
+      return { status: "skipped", reason: "signal-muted" } as const
     }
 
     const notificationKind = resolveKind(incident, input.transition)
@@ -515,7 +509,8 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
 
     const reader = yield* SettingsReader
     const projectSettings = yield* reader.getProjectSettings(incident.projectId)
-    if (!isIncidentNotificationEnabled(projectSettings, incident.kind)) {
+    const incidentNotificationKey = notificationKeyForIncident(incident)
+    if (!isIncidentNotificationEnabled(projectSettings, incidentNotificationKey)) {
       yield* Effect.annotateCurrentSpan("skipped", "incident-kind-disabled")
       return { status: "skipped", reason: "kind-disabled" } as const
     }
@@ -523,13 +518,12 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
     // Prefer the sensitivity snapshotted on the incident's condition (so the chart's
     // threshold line matches what tripped it); fall back to project settings.
     const snapshotSensitivity =
-      incident.condition?.kind === "issue.escalating" ? incident.condition.sensitivity : undefined
+      incident.condition?.trigger === "escalating" ? incident.condition.sensitivity : undefined
     const kShort = snapshotSensitivity ?? projectSettings?.escalation?.sensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K
-    // Trend / tags / sample-excerpt are all issue-analytics keyed on the signal id,
-    // so they only apply to `issue`-sourced incidents. Saved-search incidents skip
-    // them (the templates render from the kind + monitor attribution + condition).
+    // Trend / tags / sample-excerpt are all keyed on signal analytics; monitor incidents render
+    // from the kind + monitor attribution + condition.
     // Closed kind also skips tags/excerpt: the recovery copy focuses on the descent.
-    const isSignalSource = incident.sourceType === "issue"
+    const isSignalSource = incident.sourceType === "signal"
     const wantsSourceContext = isSignalSource && notificationKind !== "incident.closed"
     const [trend, triggerRatePerHour, tags, sampleExcerpt, triage] = yield* Effect.all(
       [
@@ -548,7 +542,7 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
     const recipients = yield* resolveRecipients({
       organizationId: incident.organizationId,
       projectId: incident.projectId,
-      kind: incident.kind,
+      kind: incidentNotificationKey,
     })
 
     if (recipients.length === 0) {
@@ -596,7 +590,7 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
     RequestIncidentNotificationsError,
     | SqlClient
     | ChSqlClient
-    | AlertIncidentRepository
+    | IncidentRepository
     | EvaluationRepository
     | IncidentMonitorReader
     | SignalRepository

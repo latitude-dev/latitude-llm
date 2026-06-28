@@ -8,7 +8,6 @@ import {
   evaluateOptimizationCandidate,
   type GeneratedEvaluationDraft,
   type HydratedEvaluationAlignmentExample,
-  validateEvaluationScript,
 } from "@domain/evaluations"
 import {
   hashOptimizationCandidateText,
@@ -29,6 +28,7 @@ import {
   GepaOptimizerLive,
   gepaProposalOutputSchema,
 } from "@platform/op-gepa"
+import { QuickJsScriptRuntimeLive } from "@platform/sandbox-quickjs"
 import { withTracing } from "@repo/observability"
 import { Data, Effect } from "effect"
 import { getRedisClient } from "../clients.ts"
@@ -63,13 +63,6 @@ const proposeOptimizationCandidate = (input: {
       yield* Effect.annotateCurrentSpan("jobId", input.jobId)
       yield* Effect.annotateCurrentSpan("evaluation.candidateHash", input.candidate.hash)
 
-      if (!validateEvaluationScript(input.candidate.text)) {
-        return yield* new EvaluationOptimizationActivityError({
-          activity: "optimizeEvaluationDraft",
-          cause: new Error("Current candidate script does not match the expected LLM-as-judge template"),
-        })
-      }
-
       const ai = yield* AI
       const modelConfig = yield* resolveGenerationConfig("GEPA_PROPOSER", GEPA_DEFAULT_PROPOSER_MODEL)
       const result = yield* ai.generate({
@@ -94,13 +87,6 @@ const proposeOptimizationCandidate = (input: {
       })
 
       const script = result.object.script.trim()
-
-      if (!validateEvaluationScript(script)) {
-        return yield* new EvaluationOptimizationActivityError({
-          activity: "optimizeEvaluationDraft",
-          cause: new Error("Proposed evaluation script failed template validation"),
-        })
-      }
 
       return {
         componentId: input.candidate.componentId,
@@ -206,6 +192,7 @@ export const optimizeEvaluationDraft = (input: {
               },
             }).pipe(
               withAi(AIGenerateLive, getRedisClient()),
+              Effect.provide(QuickJsScriptRuntimeLive),
               withTracing,
               Effect.mapError(
                 (cause) =>

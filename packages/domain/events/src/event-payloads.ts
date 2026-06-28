@@ -1,4 +1,4 @@
-import type { AlertIncidentKind, AlertIncidentSourceType } from "@domain/shared"
+import type { IncidentSourceType } from "@domain/shared"
 
 /**
  * NOTE: The *Requested events (MagicLinkEmailRequested, InvitationEmailRequested,
@@ -31,7 +31,7 @@ export interface EventPayloads {
     readonly traceIds: readonly string[]
     /**
      * Resolved once at the top of ingest (`parent_org_id != null`). Consumers
-     * branch on it: the LLM fan-out (flaggers, evaluations, issue-clustering)
+     * branch on it: the LLM fan-out (flaggers, evaluations, signal clustering)
      * does not run for sandbox events. Absent on legacy/replayed events ⇒ live.
      */
     readonly isSandbox?: boolean
@@ -57,8 +57,8 @@ export interface EventPayloads {
     readonly signalId: string
   }
   /**
-   * Emitted by `createSignalFromScoreUseCase` after the issue row is saved.
-   * Drives the alert pipeline's `issue.new` incident creation.
+   * Emitted by `createSignalFromScoreUseCase` after the signal row is saved.
+   * Drives discovery notifications.
    */
   SignalCreated: {
     readonly organizationId: string
@@ -67,23 +67,7 @@ export interface EventPayloads {
     readonly createdAt: string
   }
   /**
-   * Emitted by `assignScoreToSignalUseCase` when assigning a score whose
-   * `lastSeenAt` is later than the issue's `resolvedAt`. The use case clears
-   * `resolvedAt` on the same transaction (reifying the regression as a stored
-   * fact); idempotency on subsequent regression-causing scores is enforced by
-   * the cleared field, so a second event will not be emitted in the same cycle.
-   * `triggerScoreId` discriminates per regression cycle so a future regression
-   * after re-resolution is a distinct event.
-   */
-  SignalRegressed: {
-    readonly organizationId: string
-    readonly projectId: string
-    readonly signalId: string
-    readonly regressedAt: string
-    readonly triggerScoreId: string
-  }
-  /**
-   * Emitted by `updateSignalTriageUseCase` whenever the issue's assignee
+   * Emitted by `updateSignalTriageUseCase` whenever the signal's assignee
    * actually changes (including clears — consumers filter). `assignedAt` is
    * the triage transaction's `now`, frozen into the outbox payload; it is
    * the idempotency anchor for downstream notification dedupe, so a
@@ -102,19 +86,18 @@ export interface EventPayloads {
     readonly assignedAt: string
   }
   /**
-   * Emitted by `checkSignalEscalationUseCase` when an issue transitions into
-   * the escalating state. The use case does not write the issue itself —
+   * Emitted by `checkSignalEscalationUseCase` when a signal transitions into
+   * the escalating state. The use case does not write the incident itself —
    * idempotency comes from `SignalRepository`'s joined `lifecycle.isEscalating`
-   * flag (which reads the open `alert_incidents` row). Drives the
-   * `issue.escalating` incident's open transition (the alert-incidents
-   * worker inserts the new row).
+   * flag (which reads the open incident row). The alert-incidents worker
+   * inserts the new row.
    *
    * `entrySignals` is the snapshot of seasonal-anomaly signals at the moment
    * of entry, persisted onto the new `alert_incidents` row by the worker so
    * the close-side detector can compare against the conditions that tripped
    * open instead of recomputing live. Shape mirrors `EntrySignalsSnapshot`
-   * in `@domain/alerts` — declared inline here to keep `@domain/events`
-   * free of an `@domain/alerts` dependency (which would create a cycle).
+   * in `@domain/incidents` — declared inline here to keep `@domain/events`
+   * free of an `@domain/incidents` dependency (which would create a cycle).
    * `null` only for historical replay of events emitted before the seasonal
    * detector started snapshotting.
    */
@@ -136,7 +119,7 @@ export interface EventPayloads {
     } | null
   }
   /**
-   * Emitted by `checkSignalEscalationUseCase` when an escalating issue exits.
+   * Emitted by `checkSignalEscalationUseCase` when an escalating signal exits.
    * `reason` discriminates the three exit paths so downstream consumers
    * (notifications copy, observability dashboards) can distinguish a
    * natural band-shape recovery from a forced close:
@@ -146,12 +129,8 @@ export interface EventPayloads {
    *     the seasonal baseline caught up — wouldn't close on `threshold` alone).
    *   - `timeout`: the 72h hard ceiling kicked in (backstop against
    *     ghost incidents that never recover their snapshot conditions).
-   *   - `resolved` / `ignored`: the user manually resolved or ignored the
-   *     issue, so the open escalation is stale and closed directly. Emitted
-   *     by `applySignalLifecycleCommandUseCase` (not the detector); these
-   *     close silently — see the notification gate in `domain-events.ts`.
    *
-   * Drives the `issue.escalating` incident's close transition — the
+   * Drives the signal escalation incident's close transition — the
    * alert-incidents worker sets `ended_at` on the open row, which is what
    * flips `lifecycle.isEscalating` back to `false` on subsequent reads.
    */
@@ -171,14 +150,13 @@ export interface EventPayloads {
     readonly organizationId: string
     readonly projectId: string
     readonly alertIncidentId: string
-    readonly kind: AlertIncidentKind
-    readonly sourceType: AlertIncidentSourceType
+    readonly sourceType: IncidentSourceType
     readonly sourceId: string
   }
   /**
    * Emitted by the alert-incidents worker after an `alert_incidents` row's
-   * `ended_at` is set (only sustained kinds — currently `issue.escalating` —
-   * can close). Symmetric to `IncidentCreated`. Consumed by the notifications
+   * `ended_at` is set (only sustained incidents can close). Symmetric to
+   * `IncidentCreated`. Consumed by the notifications
    * worker to fire a "closed" notification for the same incident.
    *
    * `reason` mirrors `SignalEscalationEnded.reason` and is forwarded by the
@@ -191,8 +169,7 @@ export interface EventPayloads {
     readonly organizationId: string
     readonly projectId: string
     readonly alertIncidentId: string
-    readonly kind: AlertIncidentKind
-    readonly sourceType: AlertIncidentSourceType
+    readonly sourceType: IncidentSourceType
     readonly sourceId: string
     readonly reason?: "threshold" | "absolute-rate-drop" | "timeout" | "resolved" | "ignored"
   }

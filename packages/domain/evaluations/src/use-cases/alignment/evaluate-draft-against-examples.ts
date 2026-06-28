@@ -9,10 +9,8 @@ import {
   buildEvaluationAlignmentJudgeTelemetryCapture,
   type EvaluationAlignmentJudgeTelemetryScope,
 } from "../../runtime/ai-telemetry.ts"
-import { executeEvaluationScriptWithAI } from "../../runtime/evaluation-execution.ts"
+import { executeEvaluationScriptSandboxed } from "../../runtime/sandbox-execution.ts"
 
-// TODO(eval-sandbox): when sandbox is available, executeEvaluationScript will run arbitrary JS;
-// this function delegates to it and its structure won't change.
 export const evaluateDraftAgainstExamplesUseCase = Effect.fn("evaluations.evaluateDraftAgainstExamples")(
   function* (input: {
     readonly signalName: string
@@ -27,7 +25,7 @@ export const evaluateDraftAgainstExamplesUseCase = Effect.fn("evaluations.evalua
     const exampleResults: BaselineEvaluationExampleResult[] = []
 
     for (const example of examples) {
-      const execution = yield* executeEvaluationScriptWithAI({
+      const execution = yield* executeEvaluationScriptSandboxed({
         script: input.script,
         conversation: example.conversation,
         issue: {

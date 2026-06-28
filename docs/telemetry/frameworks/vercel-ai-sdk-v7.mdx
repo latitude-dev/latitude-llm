@@ -99,6 +99,20 @@ In v7, OpenTelemetry collection **moved out of the `ai` package** into the separ
 
 </Steps>
 
+<Warning>
+  **Pass your system prompt via the `instructions` field.** AI SDK v7's telemetry drops
+  `role: "system"` messages placed inside `messages`, so they won't appear in your traces. Use the
+  top-level `instructions` field instead — it's captured correctly.
+
+  ```ts
+  await generateText({
+    model: openai("gpt-4o"),
+    instructions: "You are a helpful assistant.", // ✅ shows up in traces
+    prompt: "Hello",
+  })
+  ```
+</Warning>
+
 ### Next.js
 
 Register the integration in your `instrumentation.ts`, alongside your OpenTelemetry provider setup:

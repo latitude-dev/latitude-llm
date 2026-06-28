@@ -59,7 +59,6 @@ export type FlaggerId = Id<"FlaggerId">
 export type SavedSearchId = Id<"SavedSearchId">
 export type AlertIncidentId = Id<"AlertIncidentId">
 export type MonitorId = Id<"MonitorId">
-export type MonitorAlertId = Id<"MonitorAlertId">
 export type NotificationId = Id<"NotificationId">
 export type WrappedReportId = Id<"WrappedReportId">
 export type TaxonomyClusterId = Id<"TaxonomyClusterId">
@@ -108,7 +107,6 @@ export const FlaggerId = (value: string): FlaggerId => value as FlaggerId
 export const SavedSearchId = (value: string): SavedSearchId => value as SavedSearchId
 export const AlertIncidentId = (value: string): AlertIncidentId => value as AlertIncidentId
 export const MonitorId = (value: string): MonitorId => value as MonitorId
-export const MonitorAlertId = (value: string): MonitorAlertId => value as MonitorAlertId
 export const NotificationId = (value: string): NotificationId => value as NotificationId
 export const WrappedReportId = (value: string): WrappedReportId => value as WrappedReportId
 export const TaxonomyClusterId = (value: string): TaxonomyClusterId => value as TaxonomyClusterId
@@ -149,7 +147,6 @@ export const simulationIdSchema = cuidSchema.transform(SimulationId)
 export const savedSearchIdSchema = cuidSchema.transform(SavedSearchId)
 export const alertIncidentIdSchema = cuidSchema.transform(AlertIncidentId)
 export const monitorIdSchema = cuidSchema.transform(MonitorId)
-export const monitorAlertIdSchema = cuidSchema.transform(MonitorAlertId)
 export const notificationIdSchema = cuidSchema.transform(NotificationId)
 export const wrappedReportIdSchema = cuidSchema.transform(WrappedReportId)
 export const taxonomyClusterIdSchema = cuidSchema.transform(TaxonomyClusterId)

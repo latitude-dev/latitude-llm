@@ -3,10 +3,8 @@
 export interface SignalLifecycleItem {
     /** Signal this entry applies to. */
     signalId: string;
-    /** ISO-8601 timestamp at which the signal was resolved, or `null`. */
-    resolvedAt?: string | undefined;
-    /** ISO-8601 timestamp at which the signal was ignored, or `null`. */
-    ignoredAt?: string | undefined;
+    /** ISO-8601 timestamp at which the signal was muted, or `null`. */
+    mutedAt?: string | undefined;
     /** ISO-8601 timestamp of the last update. */
     updatedAt: string;
     /** `true` when this call changed the signal, `false` when it was already in that state. */

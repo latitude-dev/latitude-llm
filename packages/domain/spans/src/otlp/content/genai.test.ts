@@ -339,6 +339,49 @@ describe("parseContent (GenAI current — gen_ai.{input,output}.messages)", () =
 
       expect(result.systemInstructions).toEqual([])
     })
+
+    it("hoists an inline role:system message into systemInstructions", () => {
+      const result = parseContent([
+        str(
+          "gen_ai.input.messages",
+          JSON.stringify([
+            { role: "system", parts: [{ type: "text", content: "You are a QA assistant." }] },
+            { role: "user", parts: [{ type: "text", content: "Hi" }] },
+          ]),
+        ),
+        str(
+          "gen_ai.output.messages",
+          JSON.stringify([{ role: "assistant", parts: [{ type: "text", content: "Hello" }] }]),
+        ),
+      ])
+
+      expect(result.systemInstructions).toHaveLength(1)
+      expect(result.systemInstructions[0]).toMatchObject({ type: "text", content: "You are a QA assistant." })
+      expect(result.inputMessages.map((m) => m.role)).toEqual(["user"])
+    })
+
+    it("reconciles a separated gen_ai.system_instructions with an inline system message", () => {
+      const result = parseContent([
+        str(
+          "gen_ai.input.messages",
+          JSON.stringify([
+            { role: "system", parts: [{ type: "text", content: "Inline system." }] },
+            { role: "user", parts: [{ type: "text", content: "Hi" }] },
+          ]),
+        ),
+        str("gen_ai.system_instructions", JSON.stringify([{ type: "text", content: "Separated system." }])),
+        str(
+          "gen_ai.output.messages",
+          JSON.stringify([{ role: "assistant", parts: [{ type: "text", content: "Hi" }] }]),
+        ),
+      ])
+
+      expect(result.systemInstructions.map((p) => (p as { content: string }).content)).toEqual([
+        "Separated system.",
+        "Inline system.",
+      ])
+      expect(result.inputMessages.map((m) => m.role)).toEqual(["user"])
+    })
   })
 
   describe("tool definitions", () => {

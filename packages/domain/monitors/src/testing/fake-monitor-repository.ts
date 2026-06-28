@@ -1,21 +1,10 @@
 import { NotFoundError } from "@domain/shared"
 import { Effect } from "effect"
-import { type Monitor, type MonitorAlert, monitorTargetKind } from "../entities/monitor.ts"
+import type { Monitor } from "../entities/monitor.ts"
 import type { MonitorListPage, MonitorRepositoryShape } from "../ports/monitor-repository.ts"
 
 const isLive = (monitor: Monitor) => monitor.deletedAt === null
 
-/**
- * In-memory MonitorRepository for unit tests. Seed via the argument and
- * assert against the returned `monitors` array, which mutations write
- * through. Mirrors the live repo's org/slug/deleted-aware semantics: reads
- * ignore soft-deleted rows; `provisionSystemMonitors` inserts only missing
- * `(projectId, slug)`; `countActiveBySlug` excludes the target + deleted rows;
- * `updateAlert` patches the alert across whichever live monitor owns it.
- *
- * The alert-level `deleted_at` cascade on `softDelete` isn't modelled — the
- * `MonitorAlert` entity has no `deletedAt`; the fake just marks the monitor.
- */
 export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
   const monitors: Monitor[] = [...seed]
 
@@ -42,13 +31,8 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
         const all = monitors
           .filter((m) => m.projectId === projectId && isLive(m))
           .filter((m) => (query ? m.name.toLowerCase().includes(query) : true))
-          .sort((a, b) => {
-            if (a.system !== b.system) return a.system ? -1 : 1
-            if (a.createdAt.getTime() !== b.createdAt.getTime()) return b.createdAt.getTime() - a.createdAt.getTime()
-            return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
-          })
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         const items = all.slice(offset, offset + limit)
-        // The fake doesn't model incidents; last-incident behavior is covered by the live repo.
         return {
           items,
           lastIncidentByMonitorId: new Map(),
@@ -58,28 +42,16 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
           offset,
         }
       }),
-    searchOrgWide: ({ searchQuery, preferProjectId, limit }) =>
+    searchOrgWide: ({ searchQuery, limit }) =>
       Effect.sync(() => {
         const query = searchQuery?.trim().toLowerCase()
-        // Preferred project first, then best name match, then system monitors, then newest.
-        const prefer = (projectId: string) => (preferProjectId && projectId === preferProjectId ? 1 : 0)
-        const score = (name: string) =>
-          !query ? 1 : name.toLowerCase() === query ? 3 : name.toLowerCase().startsWith(query) ? 2 : 1
         return monitors
           .filter(isLive)
           .filter((m) => (query ? m.name.toLowerCase().includes(query) : true))
-          .sort((a, b) => {
-            if (prefer(a.projectId) !== prefer(b.projectId)) return prefer(b.projectId) - prefer(a.projectId)
-            if (score(a.name) !== score(b.name)) return score(b.name) - score(a.name)
-            if (a.system !== b.system) return a.system ? -1 : 1
-            if (a.createdAt.getTime() !== b.createdAt.getTime()) return b.createdAt.getTime() - a.createdAt.getTime()
-            return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
-          })
           .slice(0, limit)
           .map((m) => ({
             id: m.id,
             projectId: m.projectId,
-            // Fakes have no `projects` table; synthesize stable project display fields from the id.
             projectSlug: `project-${m.projectId}`,
             projectName: `Project ${m.projectId}`,
             slug: m.slug,
@@ -88,42 +60,15 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
             mutedAt: m.mutedAt,
           }))
       }),
-    provisionSystemMonitors: (toProvision) =>
-      Effect.sync(() => {
-        const inserted: Monitor[] = []
-        for (const monitor of toProvision) {
-          if (monitors.some((m) => m.projectId === monitor.projectId && m.slug === monitor.slug && isLive(m))) continue
-          monitors.push(monitor)
-          inserted.push(monitor)
-        }
-        return inserted
-      }),
-    resetSystemMonitors: (toReset) =>
-      Effect.sync(() => {
-        const reset: Monitor[] = []
-        for (const monitor of toReset) {
-          const existing = monitors.find(
-            (m) => m.projectId === monitor.projectId && m.slug === monitor.slug && isLive(m),
-          )
-          if (existing && !existing.system) continue
-          if (existing) {
-            replace(existing.id, {
-              ...existing,
-              name: monitor.name,
-              description: monitor.description,
-              alerts: monitor.alerts.map((alert) => ({ ...alert, monitorId: existing.id })),
-              updatedAt: new Date(),
-            })
-          } else {
-            monitors.push(monitor)
-          }
-          reset.push(monitor)
-        }
-        return reset
-      }),
     create: (monitor) =>
       Effect.sync(() => {
         monitors.push(monitor)
+      }),
+    save: (monitor) =>
+      Effect.suspend(() => {
+        if (!liveById(monitor.id)) return Effect.fail(new NotFoundError({ entity: "Monitor", id: monitor.id }))
+        replace(monitor.id, monitor)
+        return Effect.void
       }),
     setMuted: ({ id, mutedAt }) =>
       Effect.suspend(() => {
@@ -136,8 +81,7 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
       Effect.suspend(() => {
         const monitor = liveById(id)
         if (!monitor) return Effect.fail(new NotFoundError({ entity: "Monitor", id }))
-        const now = new Date()
-        replace(id, { ...monitor, deletedAt: now, updatedAt: now })
+        replace(id, { ...monitor, deletedAt: new Date(), updatedAt: new Date() })
         return Effect.void
       }),
     updateMetadata: ({ id, name, slug, description }) =>
@@ -147,61 +91,24 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
         replace(id, { ...monitor, name, slug, description, updatedAt: new Date() })
         return Effect.void
       }),
-    updateAlert: ({ alertId, kind, sourceId, condition, severity }) =>
-      Effect.suspend(() => {
-        const monitor = monitors.find((m) => isLive(m) && m.alerts.some((alert) => alert.id === alertId))
-        if (!monitor) return Effect.fail(new NotFoundError({ entity: "MonitorAlert", id: alertId }))
-        replace(monitor.id, {
-          ...monitor,
-          alerts: monitor.alerts.map((alert) =>
-            alert.id === alertId
-              ? { ...alert, kind, source: alert.source ? { ...alert.source, id: sourceId } : null, condition, severity }
-              : alert,
-          ),
-        })
-        return Effect.void
-      }),
-    listActiveAlertsForSourceEvent: ({ projectId, kind, sourceType, sourceId }) =>
+    listActiveMonitors: ({ projectId, targetType, trigger }) =>
+      Effect.sync(() =>
+        monitors.filter(
+          (m) =>
+            m.projectId === projectId &&
+            isLive(m) &&
+            (targetType === undefined || m.target.type === targetType) &&
+            (trigger === undefined || m.rule.trigger === trigger),
+        ),
+      ),
+    lockMonitorForUpdate: () => Effect.void,
+    listMonitorsForTarget: ({ projectId, targetType, filterSetContains }) =>
       Effect.sync(() =>
         monitors
           .filter((m) => m.projectId === projectId && isLive(m))
-          .flatMap((m) => m.alerts)
-          .filter(
-            (alert) =>
-              alert.kind === kind &&
-              alert.source != null &&
-              alert.source.type === sourceType &&
-              (alert.source.id === null || alert.source.id === sourceId),
-          ),
-      ),
-    // Lock is a Postgres-transaction concern; the in-memory fake has nothing to lock.
-    lockAlertForUpdate: () => Effect.void,
-    listActiveSavedSearchAlerts: (projectId) =>
-      Effect.sync(() =>
-        monitors
-          .filter((m) => m.projectId === projectId && isLive(m))
-          .flatMap((m) => m.alerts)
-          .filter((alert) => alert.source?.type === "savedSearch"),
-      ),
-    listActiveMetricMonitorAlerts: (projectId) =>
-      Effect.sync(() =>
-        monitors
-          .filter((m) => m.projectId === projectId && isLive(m) && m.target !== null)
-          .flatMap((m) => m.alerts.map((alert) => ({ alert, target: m.target as NonNullable<typeof m.target> }))),
-      ),
-    listMonitorsForTarget: ({ projectId, stream, targetKind, filterSetContains }) =>
-      Effect.sync(() =>
-        monitors
-          .filter(
-            (m) =>
-              m.projectId === projectId &&
-              isLive(m) &&
-              m.target != null &&
-              m.target.stream === stream &&
-              (targetKind === undefined || monitorTargetKind(m.target) === targetKind),
-          )
+          .filter((m) => targetType === undefined || m.target.type === targetType)
           .filter((m) => {
-            const filterSet = m.target?.filterSet ?? {}
+            const filterSet = m.target.filterSet ?? {}
             return Object.entries(filterSetContains).every(([field, conditions]) =>
               conditions.every((condition) =>
                 (filterSet[field] ?? []).some(
@@ -209,86 +116,38 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
                 ),
               ),
             )
-          })
-          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
+          }),
       ),
     listSavedSearchMonitorSummaries: (projectId) =>
-      Effect.sync(() => {
-        const summaries = new Map<string, { byMonitor: Map<string, Monitor>; severities: MonitorAlert["severity"][] }>()
-        for (const monitor of monitors) {
-          if (monitor.projectId !== projectId || !isLive(monitor)) continue
-          for (const alert of monitor.alerts) {
-            const savedSearchId = alert.source?.type === "savedSearch" ? alert.source.id : null
-            if (!savedSearchId) continue
-            const entry = summaries.get(savedSearchId) ?? {
-              byMonitor: new Map<string, Monitor>(),
-              severities: [],
-            }
-            entry.byMonitor.set(monitor.id, monitor)
-            entry.severities.push(alert.severity)
-            summaries.set(savedSearchId, entry)
-          }
-        }
-        return [...summaries.entries()].flatMap(([savedSearchId, entry]) => {
-          // Earliest-created first, mirroring the live repo's ordering.
-          const ordered = [...entry.byMonitor.values()].sort(
-            (a, b) => a.createdAt.getTime() - b.createdAt.getTime() || (a.id < b.id ? -1 : 1),
-          )
-          const primary = ordered[0]
-          if (!primary) return []
-          return [
-            {
-              savedSearchId,
-              monitorSlug: primary.slug,
-              monitorCount: ordered.length,
-              severities: entry.severities,
-              monitors: ordered.map((m) => ({
-                slug: m.slug,
-                name: m.name,
-                muted: m.mutedAt !== null,
-                severities: m.alerts
-                  .filter((alert) => alert.source?.type === "savedSearch" && alert.source.id === savedSearchId)
-                  .map((alert) => alert.severity),
-              })),
-            },
-          ]
-        })
-      }),
-    listProjectsWithActiveMonitorAlerts: () =>
+      Effect.sync(() =>
+        monitors
+          .filter((m) => m.projectId === projectId && isLive(m) && m.target.type === "savedSearch" && m.target.id)
+          .map((monitor) => ({
+            savedSearchId: monitor.target.id as string,
+            monitorSlug: monitor.slug,
+            monitorCount: 1,
+            severities: [monitor.rule.severity],
+            monitors: [
+              {
+                slug: monitor.slug,
+                name: monitor.name,
+                muted: monitor.mutedAt !== null,
+                severities: [monitor.rule.severity],
+              },
+            ],
+          })),
+      ),
+    listProjectsWithActiveMonitors: () =>
       Effect.sync(() => {
         const seen = new Map<string, { organizationId: Monitor["organizationId"]; projectId: Monitor["projectId"] }>()
         for (const monitor of monitors) {
           if (!isLive(monitor)) continue
-          const hasSavedSearchAlert = monitor.alerts.some((alert) => alert.source?.type === "savedSearch")
-          const isUnified = monitor.target !== null && monitor.alerts.length > 0
-          if (!hasSavedSearchAlert && !isUnified) continue
           seen.set(`${monitor.organizationId}:${monitor.projectId}`, {
             organizationId: monitor.organizationId,
             projectId: monitor.projectId,
           })
         }
         return [...seen.values()]
-      }),
-    cascadeSourceDeletion: ({ sourceType, sourceId }) =>
-      Effect.sync(() => {
-        let deletedAlertCount = 0
-        let deletedMonitorCount = 0
-        const now = new Date()
-        for (const monitor of monitors) {
-          if (!isLive(monitor)) continue
-          const remaining = monitor.alerts.filter(
-            (alert) => !(alert.source?.type === sourceType && alert.source.id === sourceId),
-          )
-          if (remaining.length === monitor.alerts.length) continue
-          deletedAlertCount += monitor.alerts.length - remaining.length
-          if (remaining.length === 0) {
-            replace(monitor.id, { ...monitor, alerts: remaining, deletedAt: now, updatedAt: now })
-            deletedMonitorCount += 1
-          } else {
-            replace(monitor.id, { ...monitor, alerts: remaining, updatedAt: now })
-          }
-        }
-        return { deletedAlertCount, deletedMonitorCount }
       }),
     countActiveBySlug: ({ projectId, slug, excludeId }) =>
       Effect.sync(

@@ -1,11 +1,10 @@
 /**
- * Test manual span creation within capture() boundaries.
+ * Manual span creation within capture() boundaries — Latitude telemetry example.
  *
- * This verifies that manually created spans (using OpenTelemetry's tracer directly)
- * receive latitude.* attributes from the capture() context and pass the smart filter.
- *
- * This is the pattern for adding custom spans around non-LLM operations while keeping
- * them within a Latitude trace.
+ * Verifies that spans created manually with OpenTelemetry's tracer (NOT via an
+ * auto-instrumentation) inherit the latitude.* attributes from the surrounding
+ * capture() context, pass the smart filter, and nest correctly alongside the
+ * auto-instrumented LLM spans + tool calls.
  *
  * Required env vars:
  * - LATITUDE_API_KEY
@@ -15,6 +14,7 @@
  * Install: npm install openai
  */
 
+import { randomUUID } from "node:crypto"
 import { trace } from "@opentelemetry/api"
 import OpenAI from "openai"
 import { capture, Latitude } from "../src"
@@ -26,151 +26,117 @@ const latitude = new Latitude({
   disableBatch: true,
 })
 
-const openai = new OpenAI()
+const PROVIDER = "openai"
+const MODEL = "gpt-5.5"
+// gpt-5.5 is a reasoning model — budget for reasoning + the answer.
+const MAX_TOKENS = 2000
+const SYSTEM = "You are a helpful assistant participating in a telemetry QA test. Keep answers concise."
+const SESSION_ID = `manual-${randomUUID().slice(0, 8)}`
+
+function ctx(scenario: string, ...extraTags: string[]) {
+  return {
+    tags: ["example", PROVIDER, "manual-instrumentation-ts", ...extraTags],
+    sessionId: SESSION_ID,
+    userId: "example-user",
+    metadata: { scenario, environment: "local" },
+  }
+}
+
+const tracer = trace.getTracer("custom.manual.instrumentation")
+
+async function manualSpansWithToolConversation() {
+  const client = new OpenAI()
+  const tools = [
+    {
+      type: "function" as const,
+      function: {
+        name: "get_weather",
+        description: "Get the current weather for a city",
+        parameters: {
+          type: "object",
+          properties: { city: { type: "string" } },
+          required: ["city"],
+        },
+      },
+    },
+  ]
+  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    { role: "system", content: SYSTEM },
+    {
+      role: "user",
+      content: "What's the weather in San Francisco? Use get_weather, then answer in one short sentence.",
+    },
+  ]
+
+  // Manual span (non-LLM): passes the smart filter only because it inherits the capture() latitude.* attrs.
+  await tracer.startActiveSpan("pipeline.prepare", async (span) => {
+    span.setAttribute("prepare.step", "load_user_context")
+    span.setAttribute("prepare.cache_hit", false)
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    span.end()
+  })
+
+  const first = await client.chat.completions.create({
+    model: MODEL,
+    messages,
+    tools,
+    max_completion_tokens: MAX_TOKENS,
+  })
+  const toolCall = first.choices[0]?.message?.tool_calls?.[0]
+  messages.push(first.choices[0]!.message)
+
+  // Manual tool-execution span via the OTEL GenAI semconv: gen_ai.operation.name=execute_tool
+  // classifies it; gen_ai.tool.call.id ties it to the LLM's tool_call.
+  const args = JSON.parse(toolCall!.function.arguments) as { city: string }
+  const toolResult = await tracer.startActiveSpan(`execute_tool ${toolCall!.function.name}`, async (span) => {
+    span.setAttribute("gen_ai.operation.name", "execute_tool")
+    span.setAttribute("gen_ai.tool.name", toolCall!.function.name)
+    span.setAttribute("gen_ai.tool.call.id", toolCall!.id)
+    span.setAttribute("gen_ai.tool.call.arguments", toolCall!.function.arguments)
+
+    const result = { city: args.city, temperatureC: 21, conditions: "sunny" }
+
+    span.setAttribute("gen_ai.tool.call.result", JSON.stringify(result))
+    span.end()
+    return result
+  })
+
+  messages.push({
+    role: "tool",
+    tool_call_id: toolCall!.id,
+    content: JSON.stringify(toolResult),
+  })
+
+  const second = await client.chat.completions.create({
+    model: MODEL,
+    messages,
+    tools,
+    max_completion_tokens: MAX_TOKENS,
+  })
+
+  // Manual span: non-LLM work AFTER the model call.
+  await tracer.startActiveSpan("pipeline.format", async (span) => {
+    span.setAttribute("format.type", "markdown")
+    span.setAttribute("format.includes_citations", false)
+    span.end()
+  })
+
+  return second.choices[0]?.message?.content
+}
 
 async function main() {
-  console.log("=".repeat(60))
-  console.log("Testing Manual Span Creation within Capture()")
-  console.log("=".repeat(60))
+  await latitude.ready
 
-  console.log("\n1. Testing simple capture with manual spans...")
-  const result1 = await capture(
-    "agent-with-custom-spans",
-    async () => {
-      const tracer = trace.getTracer("custom.manual.instrumentation")
-
-      // Manual spans receive latitude.* attributes from LatitudeSpanProcessor and pass the smart filter.
-      await tracer.startActiveSpan("database.query", async (span) => {
-        span.setAttribute("db.system", "postgresql")
-        span.setAttribute("db.statement", "SELECT * FROM users WHERE id = 123")
-
-        await new Promise((resolve) => setTimeout(resolve, 100))
-
-        span.setAttribute("db.rows_affected", 1)
-        span.end()
-      })
-
-      await tracer.startActiveSpan("business.validate", async (span) => {
-        span.setAttribute("validation.rules_applied", ["email_format", "required_fields"])
-        span.setAttribute("validation.result", "success")
-        span.end()
-      })
-
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: "Say 'Custom spans work!' in exactly 3 words." }],
-        max_tokens: 50,
-      })
-
-      await tracer.startActiveSpan("response.format", async (span) => {
-        span.setAttribute("format.type", "markdown")
-        span.setAttribute("format.includes_citations", false)
-        span.end()
-      })
-
-      return response.choices[0].message.content
-    },
-    {
-      tags: ["manual-instrumentation", "test"],
-      sessionId: "manual-test-session",
-      userId: "manual-test-user",
-      metadata: { agent_type: "custom-span-test" },
-    },
+  const result = await capture(
+    "manual-instrumentation-tools",
+    manualSpansWithToolConversation,
+    ctx("tools", "tools"),
   )
-  console.log(`Result: ${result1}`)
-  console.log("Expected spans: database.query, business.validate, response.format (all with latitude.* attributes)")
+  console.log(`Result: ${result}`)
+  console.log("Expected spans: pipeline.prepare, execute_tool get_weather, pipeline.format + 2 openai LLM spans")
 
-  console.log("\n2. Testing nested captures with manual spans...")
-
-  const result2 = await capture(
-    "nested-capture-with-manual-spans",
-    async () => {
-      const tracer = trace.getTracer("custom.manual.instrumentation")
-
-      await tracer.startActiveSpan("outer.preprocess", async (span) => {
-        span.setAttribute("preprocess.step", "data_loading")
-        span.end()
-      })
-
-      const innerResult = await capture(
-        "inner-capture-manual",
-        async () => {
-          const innerTracer = trace.getTracer("custom.manual.instrumentation")
-
-          await innerTracer.startActiveSpan("inner.llm_prep", async (span) => {
-            span.setAttribute("prep.system_prompt_version", "v2.1")
-            span.end()
-          })
-
-          const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [{ role: "user", content: "Say 'Nested manual spans work!' in exactly 4 words." }],
-            max_tokens: 50,
-          })
-
-          return response.choices[0].message.content
-        },
-        {
-          tags: ["inner-manual"],
-          metadata: { inner: true },
-        },
-      )
-
-      await tracer.startActiveSpan("outer.postprocess", async (span) => {
-        span.setAttribute("postprocess.step", "result_formatting")
-        span.end()
-      })
-
-      return innerResult
-    },
-    {
-      tags: ["nested-manual"],
-      sessionId: "nested-session",
-      metadata: { outer: true },
-    },
-  )
-  console.log(`Result: ${result2}`)
-  console.log("Expected spans: outer.preprocess, outer.postprocess, inner.llm_prep (with merged context)")
-
-  console.log("\n3. Testing callback pattern with manual spans...")
-  const result3 = await capture(
-    "callback-manual-test",
-    async () => {
-      const tracer = trace.getTracer("custom.manual.instrumentation")
-
-      await tracer.startActiveSpan("callback.data_fetch", async (span) => {
-        span.setAttribute("data.source", "api")
-        span.setAttribute("data.items_count", 42)
-        span.end()
-      })
-
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: "Say 'Callback manual spans work!' in exactly 4 words." }],
-        max_tokens: 50,
-      })
-
-      return response.choices[0].message.content
-    },
-    {
-      tags: ["callback-manual"],
-      sessionId: "callback-session",
-      metadata: { test_type: "callback" },
-    },
-  )
-  console.log(`Result: ${result3}`)
-  console.log("Expected spans: callback.data_fetch (with latitude.* attributes)")
-
-  console.log("\nFlushing telemetry...")
   await latitude.flush()
-
-  console.log("\n" + "=".repeat(60))
-  console.log("Done! Check Latitude dashboard for verification:")
-  console.log("=".repeat(60))
-  console.log("- All custom spans should appear in the trace")
-  console.log("- Custom spans should have latitude.tags, latitude.metadata attributes")
-  console.log("- Nested spans should have merged context from parent captures")
-  console.log("- Verify smart filter allows these spans through (latitude.* attribute check)")
+  await latitude.shutdown()
 }
 
 main().catch(console.error)

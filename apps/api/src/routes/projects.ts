@@ -6,7 +6,7 @@ import {
   ProjectRepository,
   updateProjectUseCase,
 } from "@domain/projects"
-import type { ALERT_INCIDENT_KINDS } from "@domain/shared"
+import type { INCIDENT_NOTIFICATION_KEYS } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import {
@@ -47,30 +47,33 @@ const projectsFernGroup = (methodName: string) =>
 // individually documented for SDK / MCP consumers.
 const IncidentNotificationsSettingSchema = z
   .object({
-    "issue.new": z
-      .boolean()
-      .optional()
-      .describe("Send a notification when a new signal is discovered. Defaults to `true` when omitted."),
-    "issue.regressed": z
-      .boolean()
-      .optional()
-      .describe("Send a notification when a previously-resolved signal regresses. Defaults to `true` when omitted."),
-    "issue.escalating": z
+    "signal.escalating": z
       .boolean()
       .optional()
       .describe(
         "Send a notification when an active signal is escalating in volume or severity. Defaults to `true` when omitted.",
       ),
+    "monitor.match": z
+      .boolean()
+      .optional()
+      .describe("Send a notification when a match monitor opens an incident. Defaults to `true` when omitted."),
+    "monitor.threshold": z
+      .boolean()
+      .optional()
+      .describe("Send a notification when a threshold monitor opens an incident. Defaults to `true` when omitted."),
+    "monitor.escalating": z
+      .boolean()
+      .optional()
+      .describe("Send a notification when an escalating monitor opens an incident. Defaults to `true` when omitted."),
   })
   .openapi("IncidentNotificationsSetting")
 
-// Compile-time check that this per-project toggle covers every `issue.*` kind.
-// Saved-search kinds are scoped to monitors, not this settings block.
-// TODO: Remove this after releasing monitors for everybody (replaced by per-monitor mute).
-type _SignalAlertKind = Extract<(typeof ALERT_INCIDENT_KINDS)[number], `issue.${string}`>
-type _AlertKindsCovered = Exclude<_SignalAlertKind, keyof z.infer<typeof IncidentNotificationsSettingSchema>>
-const _alertKindsAreCovered: _AlertKindsCovered extends never ? true : false = true
-void _alertKindsAreCovered
+type _IncidentNotificationKeysCovered = Exclude<
+  (typeof INCIDENT_NOTIFICATION_KEYS)[number],
+  keyof z.infer<typeof IncidentNotificationsSettingSchema>
+>
+const _incidentNotificationKeysAreCovered: _IncidentNotificationKeysCovered extends never ? true : false = true
+void _incidentNotificationKeysAreCovered
 
 const DestinationNotificationsSettingSchema = z
   .object({
@@ -180,7 +183,7 @@ const toResponse = (project: Project) => ({
   organizationId: project.organizationId as string,
   name: project.name,
   slug: project.slug,
-  settings: project.settings,
+  settings: ProjectSettingsSchema.nullable().safeParse(project.settings).data ?? null,
   firstTraceAt: project.firstTraceAt ? project.firstTraceAt.toISOString() : null,
   deletedAt: project.deletedAt ? project.deletedAt.toISOString() : null,
   lastEditedAt: project.lastEditedAt.toISOString(),

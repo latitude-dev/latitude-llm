@@ -407,6 +407,11 @@ export function TraceDetailBody({
                 />
               </button>
             ) : null}
+            {!isSandbox ? (
+              <div className="ml-auto shrink-0">
+                <AddTraceToDatasetAction projectId={projectId} traceId={traceId} />
+              </div>
+            ) : null}
           </div>
           <CopyableText value={traceId} displayValue={traceId.slice(0, 7)} size="sm" tooltip="Copy trace ID" />
         </div>
@@ -515,7 +520,6 @@ function TraceDetailDrawerShell({
     readonly closeLabel?: ReactNode
     readonly drawerStoreKey?: string
   }) {
-  const isSandbox = !!use(TraceScopeContext)
   return (
     <DetailDrawer
       storeKey={drawerStoreKey}
@@ -529,7 +533,6 @@ function TraceDetailDrawerShell({
       }
       actions={
         <>
-          {!isSandbox && <AddTraceToDatasetAction projectId={projectId} traceId={traceId} />}
           <Tooltip
             asChild
             side="bottom"

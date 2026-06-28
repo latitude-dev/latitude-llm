@@ -1,12 +1,9 @@
 import type {
-  AlertIncidentCondition,
-  AlertIncidentKind,
-  AlertIncidentSourceType,
   AlertSeverity,
   FilterSet,
-  MonitorAlertId,
   MonitorId,
-  MonitorStream,
+  MonitorTargetType,
+  MonitorTrigger,
   NotFoundError,
   OrganizationId,
   ProjectId,
@@ -14,32 +11,18 @@ import type {
   SqlClient,
 } from "@domain/shared"
 import { Context, type Effect } from "effect"
-import type { Monitor, MonitorAlert, MonitorTarget, MonitorTargetKind } from "../entities/monitor.ts"
+import type { Monitor } from "../entities/monitor.ts"
 
-/** An active unified (`event.*`/`metric.*`) alert paired with its owning monitor's target. */
-export interface MetricMonitorAlert {
-  readonly alert: MonitorAlert
-  readonly target: MonitorTarget
-}
-
-/** An (org, project) pair holding at least one active monitor alert — the sweep's fan-out unit. */
-export interface ProjectWithActiveMonitorAlerts {
+export interface ProjectWithActiveMonitors {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
-}
-
-export interface CascadeSourceDeletionResult {
-  readonly deletedAlertCount: number
-  readonly deletedMonitorCount: number
 }
 
 export interface ListMonitorsRepositoryInput {
   readonly projectId: ProjectId
   readonly limit: number
   readonly offset: number
-  /** Case-insensitive substring match on `name`; caller normalises. Omit to list all. */
   readonly searchQuery?: string
-  /** Filter on the `system` flag; omit to list user and system monitors alike. */
   readonly system?: boolean
 }
 
@@ -51,7 +34,6 @@ export interface MonitorLastIncident {
 
 export interface MonitorListPage {
   readonly items: readonly Monitor[]
-  /** Keyed by `MonitorId`; omits monitors with no incidents. Joins through `monitor_alerts` incl. soft-deleted so history stays attributable. */
   readonly lastIncidentByMonitorId: ReadonlyMap<string, MonitorLastIncident>
   readonly totalCount: number
   readonly hasMore: boolean
@@ -59,12 +41,6 @@ export interface MonitorListPage {
   readonly offset: number
 }
 
-/**
- * Lightweight, org-wide monitor projection for the Command Palette. Carries the owning project's
- * slug/name (for display + navigation) plus the `system`/`mutedAt` status the palette shows in a
- * result's subtitle. Skips the alert join the full {@link Monitor} read does — search doesn't need
- * alerts.
- */
 export interface MonitorSearchResult {
   readonly id: MonitorId
   readonly projectId: ProjectId
@@ -76,15 +52,6 @@ export interface MonitorSearchResult {
   readonly mutedAt: Date | null
 }
 
-/**
- * Per-saved-search monitoring summary. `monitorSlug` is the earliest-created
- * live monitor watching the search (the primary deep-link target);
- * `severities` covers every live alert on such monitors (one UI dot per
- * alert); `monitors` lists each distinct watching monitor (earliest first)
- * so the UI can offer a picker when several watch the same search. Muted
- * monitors are included (flagged via `muted`) — muting silences
- * notifications, it does not sever the saved-search linkage.
- */
 export interface SavedSearchMonitorSummary {
   readonly savedSearchId: string
   readonly monitorSlug: string
@@ -94,133 +61,56 @@ export interface SavedSearchMonitorSummary {
     readonly slug: string
     readonly name: string
     readonly muted: boolean
-    /** Severities of this monitor's live alerts watching the search. */
     readonly severities: readonly AlertSeverity[]
   }[]
 }
 
+export interface ListActiveMonitorsInput {
+  readonly projectId: ProjectId
+  readonly targetType?: MonitorTargetType
+  readonly trigger?: MonitorTrigger
+}
+
+export interface ListMonitorsForTargetInput {
+  readonly projectId: ProjectId
+  readonly targetType?: MonitorTargetType
+  readonly filterSetContains: FilterSet
+}
+
 export interface MonitorRepositoryShape {
   findById(id: MonitorId): Effect.Effect<Monitor, NotFoundError | RepositoryError, SqlClient>
-  /** Point-lookup by `(projectId, slug)` over non-deleted rows. */
   findBySlug(input: {
     readonly projectId: ProjectId
     readonly slug: string
   }): Effect.Effect<Monitor, NotFoundError | RepositoryError, SqlClient>
-  /** Non-deleted monitors for a project, ordered most-recent incident first (no-incident last), tiebroken by `created_at DESC, id`. */
   list(input: ListMonitorsRepositoryInput): Effect.Effect<MonitorListPage, RepositoryError, SqlClient>
-  /**
-   * Org-wide name search across every project in the organization (RLS-scoped to the caller's
-   * org). Powers the Command Palette. `searchQuery` is a case-insensitive substring match on the
-   * monitor name, ordered by match quality (exact > prefix > substring), then system monitors, then
-   * most recent; omit it to list system monitors first, then the most recent. Soft-deleted monitors and monitors in
-   * soft-deleted projects are excluded. When `preferProjectId` is set, that project's monitors are
-   * ranked first (the palette passes the current project so local results lead).
-   */
   searchOrgWide(input: {
     readonly searchQuery?: string
     readonly preferProjectId?: ProjectId
     readonly limit: number
   }): Effect.Effect<readonly MonitorSearchResult[], RepositoryError, SqlClient>
-  /**
-   * Insert each monitor (with its alerts) only when no live row already holds
-   * its `(projectId, slug)`. Atomic and idempotent — returns just the monitors
-   * that were newly inserted, so a re-run on an already-provisioned project
-   * returns `[]`.
-   */
-  provisionSystemMonitors(monitors: readonly Monitor[]): Effect.Effect<readonly Monitor[], RepositoryError, SqlClient>
-  /**
-   * Re-provision system monitors to the given definitions (backoffice reset).
-   * Upserts each by `(projectId, slug)` — updates name/description on an
-   * existing system monitor (preserving its `mutedAt`), inserts when missing,
-   * and resets its alerts to the definition (soft-deleting the old alerts so
-   * incident history stays joinable, then inserting fresh). Skips a slug held
-   * by a non-system monitor. Filters by the entity's `projectId`, so it is safe
-   * to run from the admin/`"system"` (RLS-off) context. Returns the monitors
-   * that were reset.
-   */
-  resetSystemMonitors(monitors: readonly Monitor[]): Effect.Effect<readonly Monitor[], RepositoryError, SqlClient>
-  /** Insert a new monitor and its alerts atomically. The caller pre-resolves the slug. */
   create(monitor: Monitor): Effect.Effect<void, RepositoryError, SqlClient>
-  /** Set or clear `mutedAt` on a live monitor. Fails `NotFoundError` if it doesn't exist. */
+  save(monitor: Monitor): Effect.Effect<void, NotFoundError | RepositoryError, SqlClient>
   setMuted(input: {
     readonly id: MonitorId
     readonly mutedAt: Date | null
   }): Effect.Effect<void, NotFoundError | RepositoryError, SqlClient>
-  /** Soft-delete a live monitor, cascade `deletedAt` to its live alerts (firing stops; history stays joinable), and silently close those alerts' open incidents. */
   softDelete(id: MonitorId): Effect.Effect<void, NotFoundError | RepositoryError, SqlClient>
-  /** Update a live monitor's name/slug/description. Caller resolves the slug. */
   updateMetadata(input: {
     readonly id: MonitorId
     readonly name: string
     readonly slug: string
     readonly description: string
   }): Effect.Effect<void, NotFoundError | RepositoryError, SqlClient>
-  /** Update a live alert's `kind` / `source.id` / `condition` / `severity` in place (source type stays fixed by kind). */
-  updateAlert(input: {
-    readonly alertId: MonitorAlertId
-    readonly kind: AlertIncidentKind
-    readonly sourceId: string | null
-    readonly condition: AlertIncidentCondition | null
-    readonly severity: AlertSeverity
-  }): Effect.Effect<void, NotFoundError | RepositoryError, SqlClient>
-  /**
-   * Active alerts a source event fires: same `kind`/`sourceType`, `source.id`
-   * null ("all") or `= sourceId`. Project-scoped via `monitors`; excludes
-   * soft-deleted alerts + deleted monitors.
-   */
-  listActiveAlertsForSourceEvent(input: {
-    readonly projectId: ProjectId
-    readonly kind: AlertIncidentKind
-    readonly sourceType: AlertIncidentSourceType
-    readonly sourceId: string
-  }): Effect.Effect<readonly MonitorAlert[], RepositoryError, SqlClient>
-  /** `FOR UPDATE` lock on a `monitor_alerts` row inside the caller's transaction — serialises the one-time-threshold read-then-insert against retries. No-ops if the row is gone. */
-  lockAlertForUpdate(alertId: MonitorAlertId): Effect.Effect<void, RepositoryError, SqlClient>
-  /** Active saved-search alerts in a project (live alert + monitor). Org-scoped — the firing orchestrator resolves + evaluates each. */
-  listActiveSavedSearchAlerts(projectId: ProjectId): Effect.Effect<readonly MonitorAlert[], RepositoryError, SqlClient>
-  /** Active unified (`event.*`/`metric.*`) alerts in the project, each with its monitor's target. The firing scan's unit for target-on-monitor monitors. */
-  listActiveMetricMonitorAlerts(
-    projectId: ProjectId,
-  ): Effect.Effect<readonly MetricMonitorAlert[], RepositoryError, SqlClient>
-  /**
-   * Live unified monitors in the project whose target is on `stream`, optionally
-   * belongs to `targetKind`, and whose target filter set contains `filterSetContains`
-   * (jsonb `@>`). Powers the in-context "monitors for this tool/user" lists — pass
-   * the tool/user filter (`{toolName:[{op:"eq",value}]}` / `{userId:[…]}`) to match
-   * the specific target. Newest first.
-   */
-  listMonitorsForTarget(input: {
-    readonly projectId: ProjectId
-    readonly stream: MonitorStream
-    readonly targetKind?: MonitorTargetKind
-    readonly filterSetContains: FilterSet
-  }): Effect.Effect<readonly Monitor[], RepositoryError, SqlClient>
-  /**
-   * For every saved search watched by a live monitor (muted included) in the project: the slug of
-   * the earliest-created such monitor, the distinct monitor count, and the severities of every
-   * live alert watching it. Batched — one call covers all the project's saved searches.
-   */
+  listActiveMonitors(input: ListActiveMonitorsInput): Effect.Effect<readonly Monitor[], RepositoryError, SqlClient>
+  lockMonitorForUpdate(monitorId: MonitorId): Effect.Effect<void, RepositoryError, SqlClient>
+  listMonitorsForTarget(
+    input: ListMonitorsForTargetInput,
+  ): Effect.Effect<readonly Monitor[], RepositoryError, SqlClient>
   listSavedSearchMonitorSummaries(
     projectId: ProjectId,
   ): Effect.Effect<readonly SavedSearchMonitorSummary[], RepositoryError, SqlClient>
-  /** Distinct `(org, project)` pairs with ≥1 active monitor alert — saved-search-sourced or unified (target-on-monitor). **Cross-org** (admin client) — backs the 5-minute sweep's per-project fan-out. */
-  listProjectsWithActiveMonitorAlerts(): Effect.Effect<
-    readonly ProjectWithActiveMonitorAlerts[],
-    RepositoryError,
-    SqlClient
-  >
-  /**
-   * Source-deletion cascade: soft-delete every live alert watching
-   * `(sourceType, sourceId)` in the current org, silently close those alerts'
-   * open incidents, then soft-delete any monitor left with no active alerts (so
-   * firing stops while incident history stays joinable through the soft-deleted
-   * alert). One transaction.
-   */
-  cascadeSourceDeletion(input: {
-    readonly sourceType: AlertIncidentSourceType
-    readonly sourceId: string
-  }): Effect.Effect<CascadeSourceDeletionResult, RepositoryError, SqlClient>
-  /** Count live monitors in a project holding `slug`, excluding `excludeId` — backs slug regeneration. */
+  listProjectsWithActiveMonitors(): Effect.Effect<readonly ProjectWithActiveMonitors[], RepositoryError, SqlClient>
   countActiveBySlug(input: {
     readonly projectId: ProjectId
     readonly slug: string

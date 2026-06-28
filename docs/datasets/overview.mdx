@@ -1,0 +1,53 @@
+---
+title: Datasets
+description: Curate collections of inputs, outputs, and expected outputs from real traces to test and improve your agent.
+---
+
+<Info>
+  **Where this fits:** Datasets are part of **Refine**, after [Signals](../signals/overview). They turn real traces into reusable test cases for [regression testing](../test-and-fix/regression-testing).
+</Info>
+
+A **dataset** is a collection of rows you curate for testing and improving your agent. Each row holds an **input**, the agent's **output**, an optional **expected output**, and arbitrary **metadata**. Teams use them as golden datasets: stable, known-good test sets that a fix has to keep passing.
+
+<Frame caption="The Datasets page lists each dataset with its description and when it was last updated.">
+  <img src="/images/datasets/datasets-list.png" alt="The Datasets page listing golden datasets with name, description, and last updated" />
+</Frame>
+
+## What a dataset row contains
+
+| Column | Description |
+| --- | --- |
+| **Input** | The input your agent received, for example the user message. |
+| **Output** | What your agent actually returned. |
+| **Expected output** | The correct or desired answer, used to check the agent. Optional, see [Add expected output](./expected-output). |
+| **Metadata** | Arbitrary fields carried alongside the row. |
+
+<Frame caption="A dataset's rows, each with an input, the agent's output, and an optional expected output. Import, export, or add rows from the top bar.">
+  <img src="/images/datasets/dataset-detail.png" alt="A dataset detail view showing rows with input, output, and expected output columns" />
+</Frame>
+
+## Create a dataset
+
+You can build a dataset three ways:
+
+<CardGroup cols={2}>
+  <Card title="From real traces" icon="route" href="./add-traces">
+    Select traces from the trace list, search results, or a signal, and add them to a dataset. The most realistic test cases come straight from production.
+  </Card>
+  <Card title="Manually" icon="table">
+    Open **Datasets** in your project, create a new dataset, then **Import** a CSV or **Add row** to enter cases by hand.
+  </Card>
+  <Card title="From your coding agent" icon="robot" href="../getting-started/mcp">
+    Through the [MCP server](../getting-started/mcp), an agent like Claude or Cursor can create datasets and pull in the traces behind a signal for you.
+  </Card>
+</CardGroup>
+
+## How datasets are used
+
+- **Regression testing**: replay a dataset's inputs against your agent and compare results to the expected outputs and your evaluations. See [Regression testing](../test-and-fix/regression-testing).
+- **Curating test sets**: collect representative traces from [Search](../search/overview) and [Signals](../signals/overview) into a stable, reusable set.
+- **Sharing with your harness**: export a dataset as CSV to drive tests in your own pipeline.
+
+## Next step
+
+- [Add traces to a dataset](./add-traces): build a test set from real production traces.

@@ -51,7 +51,7 @@ import { createBillingWorker } from "./workers/billing.ts"
 import { createBillingOverageWorker } from "./workers/billing-overage.ts"
 import { createDestinationsWorker } from "./workers/destinations.ts"
 import { createDeterministicFlaggersWorker } from "./workers/deterministic-flaggers.ts"
-import { createAlertIncidentsWorker } from "./workers/domain-events/alert-incidents.ts"
+import { createIncidentsWorker } from "./workers/domain-events/incidents.ts"
 import { createInvitationEmailWorker } from "./workers/domain-events/invitation-email.ts"
 import { createMagicLinkEmailWorker } from "./workers/domain-events/magic-link-email.ts"
 import { createMarketingContactsWorker } from "./workers/domain-events/marketing-contacts.ts"
@@ -190,7 +190,7 @@ const bootstrap = async () => {
     createInvitationEmailWorker(ctx)
     createUserDeletionWorker(ctx)
     createMarketingContactsWorker(ctx)
-    createAlertIncidentsWorker(ctx)
+    createIncidentsWorker(ctx)
     createNotificationsWorker(ctx)
     createNotificationEmailerWorker(ctx)
     createNotificationSlackWorker(ctx)
@@ -270,7 +270,7 @@ const bootstrap = async () => {
     )
 
     // Hourly escalation sweep. Backs up the `ScoreAssignedToSignal`-driven
-    // throttled check by reconsidering every open `issue.escalating`
+    // throttled check by reconsidering every open signal escalation
     // incident once an hour — closes incidents whose burst has aged out of
     // the 6h window and whose scoring has gone quiet, and lets the 24h
     // backstop + 72h timeout exits fire even when no new scores arrive.

@@ -1,3 +1,4 @@
+import { type SeriesReaderShape, seasonalAnomalyThreshold } from "@domain/incidents"
 import type {
   ChSqlClient,
   FilterSet,
@@ -7,7 +8,8 @@ import type {
   ProjectId,
   RepositoryError,
 } from "@domain/shared"
-import { Context, type Effect } from "effect"
+import { SEASONAL_HISTORY_WEEKS } from "@domain/signals"
+import { Context, Effect } from "effect"
 
 /**
  * A resolved query-time monitor target: the stream + predicate (+ optional
@@ -63,3 +65,146 @@ export interface MetricSeriesReaderShape {
 export class MetricSeriesReader extends Context.Service<MetricSeriesReader, MetricSeriesReaderShape>()(
   "@domain/monitors/MetricSeriesReader",
 ) {}
+
+export interface MetricSeriesReaderAdapterInput {
+  readonly resolveTarget: (sourceId: string) => MetricSeriesTarget
+}
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000
+
+const mean = (values: readonly number[]): number =>
+  values.length === 0 ? 0 : values.reduce((total, value) => total + value, 0) / values.length
+
+const stddev = (values: readonly number[]): number => {
+  if (values.length === 0) return 0
+  const avg = mean(values)
+  return Math.sqrt(values.reduce((total, value) => total + (value - avg) ** 2, 0) / values.length)
+}
+
+const historicalWindows = (from: Date, to: Date) =>
+  Array.from({ length: SEASONAL_HISTORY_WEEKS }, (_, index) => {
+    const shift = (index + 1) * WEEK_MS
+    return {
+      from: new Date(from.getTime() - shift),
+      to: new Date(to.getTime() - shift),
+    }
+  })
+
+const historicalValues = (
+  reader: MetricSeriesReaderShape,
+  input: Omit<MetricSeriesWindowInput, "from" | "to"> & { readonly from: Date; readonly to: Date },
+) =>
+  Effect.all(
+    historicalWindows(input.from, input.to).map((window) =>
+      reader.valueInWindow({ ...input, from: window.from, to: window.to }),
+    ),
+    { concurrency: "unbounded" },
+  )
+
+export const makeMetricSeriesReaderSeriesReader = (
+  reader: MetricSeriesReaderShape,
+  adapter: MetricSeriesReaderAdapterInput,
+): SeriesReaderShape => ({
+  readSeasonalSeries: (input) =>
+    Effect.gen(function* () {
+      const target = adapter.resolveTarget(input.sourceId)
+      const from1h = new Date(input.now.getTime() - 60 * 60 * 1000)
+      const from6h = new Date(input.now.getTime() - 6 * 60 * 60 * 1000)
+      const from24h = new Date(input.now.getTime() - 24 * 60 * 60 * 1000)
+      const [recent1h, recent6h, recent24h] = yield* Effect.all(
+        [
+          reader.valueInWindow({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            target,
+            from: from1h,
+            to: input.now,
+          }),
+          reader.valueInWindow({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            target,
+            from: from6h,
+            to: input.now,
+          }),
+          reader.valueInWindow({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            target,
+            from: from24h,
+            to: input.now,
+          }),
+        ],
+        { concurrency: "unbounded" },
+      )
+      const [history1h, history6h] = yield* Effect.all(
+        [
+          historicalValues(reader, {
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            target,
+            from: from1h,
+            to: input.now,
+          }),
+          historicalValues(reader, {
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            target,
+            from: from6h,
+            to: input.now,
+          }),
+        ],
+        { concurrency: "unbounded" },
+      )
+      const history6hPerHour = history6h.map((value) => value / 6)
+      return {
+        recent1h,
+        recent6h,
+        recent24h,
+        expected1h: mean(history1h),
+        expected6hPerHour: mean(history6hPerHour),
+        stddev1h: stddev(history1h),
+        stddev6hPerHour: stddev(history6hPerHour),
+        samplesCount: history1h.length,
+      }
+    }),
+  readCrossingBuckets: (input) =>
+    Effect.gen(function* () {
+      const target = adapter.resolveTarget(input.sourceId)
+      const values = yield* reader.seriesPerBucket({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        target,
+        from: input.from,
+        to: input.to,
+        bucketMs: input.bucketSeconds * 1000,
+      })
+      const bucketMs = input.bucketSeconds * 1000
+      const thresholds = yield* Effect.all(
+        values.map((_, index) => {
+          const bucketEnd = new Date(input.to.getTime() - index * bucketMs)
+          const bucketStart = new Date(bucketEnd.getTime() - bucketMs)
+          return historicalValues(reader, {
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            target,
+            from: bucketStart,
+            to: bucketEnd,
+          }).pipe(
+            Effect.map((history) => ({
+              bucket: bucketStart.toISOString(),
+              thresholdCount: seasonalAnomalyThreshold(mean(history), stddev(history), input.kShort),
+            })),
+          )
+        }),
+        { concurrency: "unbounded" },
+      )
+      return {
+        counts: values.map((count, index) => ({
+          bucket: new Date(input.to.getTime() - (index + 1) * bucketMs).toISOString(),
+          count,
+        })),
+        thresholds,
+      }
+    }),
+})

@@ -3,15 +3,13 @@ import { SqlClient, type SqlClientShape } from "@domain/shared"
 import { and, eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
-import { monitorAlerts } from "../schema/monitor-alerts.ts"
 import { monitors } from "../schema/monitors.ts"
 
-/** Joins `monitor_alerts` → `monitors`. No `deleted_at` filter — the alert must resolve even after soft-delete so history stays attributable. */
 export const IncidentMonitorReaderLive = Layer.effect(
   IncidentMonitorReader,
   Effect.succeed(
     IncidentMonitorReader.of({
-      findByAlertId: (monitorAlertId) =>
+      findByMonitorId: (monitorId) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const rows = yield* sqlClient.query((db) =>
@@ -22,11 +20,8 @@ export const IncidentMonitorReaderLive = Layer.effect(
                 name: monitors.name,
                 mutedAt: monitors.mutedAt,
               })
-              .from(monitorAlerts)
-              .innerJoin(monitors, eq(monitors.id, monitorAlerts.monitorId))
-              .where(
-                and(eq(monitorAlerts.organizationId, sqlClient.organizationId), eq(monitorAlerts.id, monitorAlertId)),
-              )
+              .from(monitors)
+              .where(and(eq(monitors.organizationId, sqlClient.organizationId), eq(monitors.id, monitorId)))
               .limit(1),
           )
           const row = rows[0]

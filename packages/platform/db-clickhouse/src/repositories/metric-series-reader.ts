@@ -53,7 +53,7 @@ const TRACE_METRIC_COLUMNS: MetricColumns = {
 // (traces_mv / sessions_mv) so wrapper spans don't double-count cost/tokens.
 const BILLABLE_OPERATIONS_SQL = "('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker')"
 
-// cost/tokens are gated to billable operations (NULL otherwise) so sum/avg/p95 ignore
+// cost/tokens are gated to billable operations (NULL otherwise) so sum/avg ignore
 // wrapper + tool spans; count/errorRate/duration still span all rows.
 const SPAN_METRIC_COLUMNS: MetricColumns = {
   duration: "duration_ns",
@@ -91,8 +91,6 @@ const metricAggregate = (
       return `if(count() = 0, 0, avg(${columns[metric.field]}))`
     case "median":
       return `if(count() = 0, 0, quantileTDigest(0.5)(${columns[metric.field]}))`
-    case "p95":
-      return `if(count() = 0, 0, quantileTDigest(0.95)(${columns[metric.field]}))`
   }
 }
 

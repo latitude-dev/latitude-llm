@@ -10,6 +10,15 @@ const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
 const monitorId = MonitorId("m".repeat(24))
 const at = new Date("2026-06-01T10:00:00.000Z")
+const target = {
+  type: "user",
+  id: null,
+  kind: "user",
+  stream: "traces",
+  query: null,
+  savedSearchId: null,
+  metric: { kind: "count" },
+} as const
 
 const makeMonitor = (overrides: Partial<Monitor> = {}): Monitor => ({
   id: monitorId,
@@ -19,8 +28,8 @@ const makeMonitor = (overrides: Partial<Monitor> = {}): Monitor => ({
   name: "My monitor",
   description: "",
   system: overrides.system ?? false,
-  alerts: [],
-  target: overrides.target ?? null,
+  target: overrides.target ?? target,
+  rule: overrides.rule ?? { trigger: "match", config: {}, severity: "low" },
   mutedAt: overrides.mutedAt ?? null,
   deletedAt: null,
   createdAt: at,

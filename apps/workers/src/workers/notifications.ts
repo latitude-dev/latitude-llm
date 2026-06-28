@@ -7,15 +7,16 @@ import {
   requestDestinationQuarantinedNotificationsUseCase,
   requestIncidentNotificationsUseCase,
   requestSignalAssignedNotificationsUseCase,
+  requestSignalDiscoveredNotificationsUseCase,
   requestWrappedReportNotificationsUseCase,
 } from "@domain/notifications"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { NOTIFICATION_GROUP_META, OrganizationId, ProjectId, SignalId, type SqlClient } from "@domain/shared"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
-  AlertIncidentRepositoryLive,
   EvaluationRepositoryLive,
   IncidentMonitorReaderLive,
+  IncidentRepositoryLive,
   MembershipRepositoryLive,
   NotificationRepositoryLive,
   ProjectRepositoryLive,
@@ -38,7 +39,7 @@ interface NotificationsDeps {
 }
 
 const requestLayer = Layer.mergeAll(
-  AlertIncidentRepositoryLive,
+  IncidentRepositoryLive,
   EvaluationRepositoryLive,
   IncidentMonitorReaderLive,
   SignalRepositoryLive,
@@ -292,6 +293,56 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
         Effect.tapError((error) =>
           Effect.sync(() =>
             logger.error(`notifications.request-signal-assigned failed signalId=${payload.signalId}`, error),
+          ),
+        ),
+        withPostgres(requestLayer, pgClient, OrganizationId(payload.organizationId)),
+        Effect.asVoid,
+        withTracing,
+      ),
+
+    "request-signal-discovered-notifications": (payload) =>
+      requestSignalDiscoveredNotificationsUseCase({
+        organizationId: OrganizationId(payload.organizationId),
+        projectId: ProjectId(payload.projectId),
+        signalId: SignalId(payload.signalId),
+        discoveredAt: payload.discoveredAt,
+      }).pipe(
+        Effect.flatMap((result) => {
+          if (result.status === "skipped") {
+            logger.info(
+              `notifications.request-signal-discovered skipped signalId=${payload.signalId} reason=${result.reason}`,
+            )
+            return Effect.void
+          }
+          return Effect.all(
+            [
+              Effect.all(
+                result.requests.map((req) =>
+                  publisher.publish(
+                    "notifications",
+                    "create-notification",
+                    {
+                      organizationId: req.organizationId,
+                      userId: req.userId,
+                      notificationId: req.notificationId,
+                      kind: req.kind,
+                      idempotencyKey: req.idempotencyKey,
+                      projectId: req.projectId,
+                      payload: req.payload,
+                    },
+                    { dedupeKey: `notifications:create:${req.idempotencyKey}:${req.userId}` },
+                  ),
+                ),
+                { concurrency: "unbounded" },
+              ),
+              fanOutSlackRoutes(result.requests, publisher),
+            ],
+            { concurrency: "unbounded" },
+          ).pipe(Effect.asVoid)
+        }),
+        Effect.tapError((error) =>
+          Effect.sync(() =>
+            logger.error(`notifications.request-signal-discovered failed signalId=${payload.signalId}`, error),
           ),
         ),
         withPostgres(requestLayer, pgClient, OrganizationId(payload.organizationId)),

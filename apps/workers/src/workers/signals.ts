@@ -1,4 +1,3 @@
-import { resolveMonitorAlertsForSourceEventUseCase } from "@domain/monitors"
 import {
   type QueueConsumer,
   QueuePublisher,
@@ -7,7 +6,7 @@ import {
   type WorkflowStarterShape,
 } from "@domain/queue"
 import type { ScoreSourceType } from "@domain/scores"
-import { OrganizationId, ProjectId } from "@domain/shared"
+import { OrganizationId } from "@domain/shared"
 import {
   checkSignalEscalationUseCase,
   type DiscoverSignalResult,
@@ -21,8 +20,8 @@ import type { RedisClient } from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
-  AlertIncidentRepositoryLive,
   EvaluationRepositoryLive,
+  IncidentRepositoryLive,
   MonitorRepositoryLive,
   OutboxEventWriterLive,
   type PostgresClient,
@@ -130,24 +129,12 @@ export const createSignalsWorker = async ({
     // hourly `sweepEscalating` cron below (exit detection on quiet issues
     // plus cold-start recovery for already-stuck rows).
     checkEscalation: (payload) =>
-      Effect.gen(function* () {
-        const alerts = yield* resolveMonitorAlertsForSourceEventUseCase({
-          projectId: ProjectId(payload.projectId),
-          kind: "issue.escalating",
-          sourceId: payload.signalId,
-        })
-        const condition = alerts[0]?.condition
-        const escalationSensitivity = condition?.kind === "issue.escalating" ? condition.sensitivity : undefined
-        return yield* checkSignalEscalationUseCase({
-          ...payload,
-          ...(escalationSensitivity !== undefined ? { escalationSensitivity } : {}),
-        })
-      }).pipe(
+      checkSignalEscalationUseCase(payload).pipe(
         withPostgres(
           Layer.mergeAll(
             SignalRepositoryLive,
             OutboxEventWriterLive,
-            AlertIncidentRepositoryLive,
+            IncidentRepositoryLive,
             SettingsReaderLive,
             MonitorRepositoryLive,
           ),
@@ -170,7 +157,7 @@ export const createSignalsWorker = async ({
         withTracing,
         Effect.asVoid,
       ),
-    // Fired by the hourly cron. Reads every open `issue.escalating` row
+    // Fired by the hourly cron. Reads every open signal escalation row
     // (across orgs, via admin Postgres) and enqueues one `checkEscalation`
     // per incident. Separate dedupeKey from the throttled publish so a
     // pending throttled job's jobId doesn't shadow the sweep publish — the
@@ -182,7 +169,7 @@ export const createSignalsWorker = async ({
             dedupeKey: `issues:check-escalation-sweep:${payload.signalId}`,
           }),
       }).pipe(
-        withPostgres(AlertIncidentRepositoryLive, adminPgClient),
+        withPostgres(IncidentRepositoryLive, adminPgClient),
         Effect.tap((result) =>
           Effect.sync(() =>
             logger.info(

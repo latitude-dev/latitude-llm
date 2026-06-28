@@ -30,13 +30,14 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   name: "Signal candidate",
   description: "Repeated assistant failure",
   source: "annotation",
+  origin: "system",
+  filters: null,
   assigneeId: null,
   priority: null,
   centroid: createSignalCentroid(),
   clusteredAt: new Date("2026-03-01T00:00:00.000Z"),
-  escalatedAt: null,
-  resolvedAt: null,
-  ignoredAt: null,
+  mutedAt: null,
+  deletedAt: null,
   createdAt: new Date("2026-03-01T00:00:00.000Z"),
   updatedAt: new Date("2026-03-01T00:00:00.000Z"),
   ...overrides,
@@ -231,7 +232,7 @@ describe("listSignalsUseCase", () => {
     const now = new Date("2026-04-10T00:00:00.000Z")
     const resolvedSignal = makeSignal({
       id: SignalId("r".repeat(24)),
-      resolvedAt: new Date("2026-04-08T00:00:00.000Z"),
+      mutedAt: new Date("2026-04-08T00:00:00.000Z"),
     })
     const { repository: signalRepository } = createFakeSignalRepository([resolvedSignal])
     const { repository: evaluationRepository, listBySignalIdsCalls } = createEvaluationRepository()
@@ -280,7 +281,7 @@ describe("listSignalsUseCase", () => {
     expect(result.items).toEqual([])
     expect(result.totalCount).toBe(0)
     expect(result.hasAnySignals).toBe(true)
-    expect(result.analytics.counts.resolvedSignals).toBe(1)
+    expect(result.analytics.counts.ongoingSignals).toBe(1)
     expect(listBySignalIdsCalls).toEqual([])
   })
 
@@ -294,14 +295,13 @@ describe("listSignalsUseCase", () => {
     })
     const regressedSignal = makeSignal({
       id: SignalId("bbbbbbbbbbbbbbbbbbbbbbbb"),
-      resolvedAt: new Date("2026-04-01T12:00:00.000Z"),
       createdAt: new Date("2026-03-20T08:00:00.000Z"),
       updatedAt: new Date("2026-03-20T08:00:00.000Z"),
       clusteredAt: new Date("2026-03-20T08:00:00.000Z"),
     })
     const ignoredSignal = makeSignal({
       id: SignalId("cccccccccccccccccccccccc"),
-      ignoredAt: new Date("2026-04-02T12:00:00.000Z"),
+      mutedAt: new Date("2026-04-02T12:00:00.000Z"),
       createdAt: new Date("2026-03-10T08:00:00.000Z"),
       updatedAt: new Date("2026-03-10T08:00:00.000Z"),
       clusteredAt: new Date("2026-03-10T08:00:00.000Z"),
@@ -412,22 +412,83 @@ describe("listSignalsUseCase", () => {
         states: [SignalState.New],
       },
       {
-        // The regressed lifecycle state is no longer derived from
-        // (resolvedAt + lastSeenAt) — regression is reified at write time
-        // (which clears resolvedAt) and lives in alert_incidents. An issue
-        // with resolvedAt still set derives as Resolved. The "regressed
-        // recently" view is a UI follow-up against alert_incidents.
         id: regressedSignal.id,
-        states: [SignalState.Resolved],
+        states: [SignalState.Ongoing],
       },
     ])
-    expect(result.analytics.counts.regressedSignals).toBe(0)
+    expect(result.analytics.counts.escalatingSignals).toBe(0)
     expect(result.analytics.counts.seenOccurrences).toBe(12)
     expect(result.totalCount).toBe(3)
     expect(result.hasAnySignals).toBe(true)
     expect(result.hasMore).toBe(true)
     expect(result.limit).toBe(2)
     expect(result.offset).toBe(0)
+  })
+
+  it("excludes signals with no activity in the selected window from the listing", async () => {
+    const now = new Date("2026-04-10T00:00:00.000Z")
+    const activeSignal = makeSignal({
+      id: SignalId("aaaaaaaaaaaaaaaaaaaaaaaa"),
+      createdAt: new Date("2026-03-20T08:00:00.000Z"),
+      updatedAt: new Date("2026-03-20T08:00:00.000Z"),
+      clusteredAt: new Date("2026-03-20T08:00:00.000Z"),
+    })
+    // A freshly created user signal with no scores yet: no window metric and no
+    // full-history occurrence aggregate. It must not appear in the listing
+    // because it has no activity within the selected window.
+    const freshSignal = makeSignal({
+      id: SignalId("ffffffffffffffffffffffff"),
+      origin: "user",
+      source: "custom",
+      centroid: null,
+      clusteredAt: null,
+      createdAt: new Date("2026-04-09T08:00:00.000Z"),
+      updatedAt: new Date("2026-04-09T08:00:00.000Z"),
+    })
+
+    const { repository: signalRepository } = createFakeSignalRepository([activeSignal, freshSignal])
+    const { repository: evaluationRepository } = createEvaluationRepository()
+    const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
+      listSignalWindowMetrics: () =>
+        Effect.succeed([
+          makeWindowMetric({
+            signalId: activeSignal.id,
+            occurrences: 5,
+            firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
+            lastSeenAt: new Date("2026-04-05T00:00:00.000Z"),
+          }),
+        ]),
+      aggregateBySignals: aggregateOccurrences([
+        makeOccurrence({
+          signalId: activeSignal.id,
+          totalOccurrences: 5,
+          firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
+          lastSeenAt: new Date("2026-04-05T00:00:00.000Z"),
+        }),
+      ]),
+    })
+
+    const result = await Effect.runPromise(
+      listSignalsUseCase({ organizationId, projectId, now }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(SignalRepository, signalRepository),
+            Layer.succeed(EvaluationRepository, evaluationRepository),
+            Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+            provideSessionRepository,
+          ),
+        ),
+      ),
+    )
+
+    expect(result.totalCount).toBe(1)
+    expect(result.items.map((issue) => issue.id)).toEqual([activeSignal.id])
+    expect(result.items[0]?.occurrences).toBe(5)
+    // The project still has signals overall, so the empty-window state stays
+    // distinct from an empty project.
+    expect(result.hasAnySignals).toBe(true)
   })
 
   it("keeps analytics independent from the lifecycle tab and hydrates only visible signal ids", async () => {
@@ -439,12 +500,12 @@ describe("listSignalsUseCase", () => {
     const regressedSignal = makeSignal({
       id: SignalId("b".repeat(24)),
       name: "Regressed issue",
-      resolvedAt: new Date("2026-04-05T00:00:00.000Z"),
+      mutedAt: new Date("2026-04-05T00:00:00.000Z"),
     })
     const archivedSignal = makeSignal({
       id: SignalId("c".repeat(24)),
       name: "Archived issue",
-      resolvedAt: new Date("2026-04-07T00:00:00.000Z"),
+      mutedAt: new Date("2026-04-07T00:00:00.000Z"),
     })
 
     const { repository: signalRepository } = createFakeSignalRepository([activeSignal, regressedSignal, archivedSignal])
@@ -567,15 +628,9 @@ describe("listSignalsUseCase", () => {
     )
 
     expect(calls).toEqual([])
-    // Regression is no longer derived; the previously "regressed" fixture
-    // (resolvedAt still set in this fixture) now derives as Resolved and
-    // therefore drops out of the lifecycleGroup="active" page along with
-    // the archived issue. Regression history is reified at write time and
-    // tracked via alert_incidents; UI hydration of "regressed recently"
-    // will use that table as a follow-up.
-    expect(result.analytics.counts.resolvedSignals).toBe(2)
-    expect(result.analytics.counts.regressedSignals).toBe(0)
-    expect(result.analytics.counts.ongoingSignals).toBe(1)
+    expect(result.analytics.counts.newSignals).toBe(0)
+    expect(result.analytics.counts.escalatingSignals).toBe(0)
+    expect(result.analytics.counts.ongoingSignals).toBe(3)
     expect(result.analytics.counts.seenOccurrences).toBe(16)
     expect(result.items.map((item) => item.states)).toEqual([[SignalState.Ongoing]])
     expect(result.items.map((item) => item.id)).toEqual([activeSignal.id])
@@ -1286,6 +1341,69 @@ describe("listSignalsUseCase", () => {
       expect(histogramCalls).toBe(0)
     })
 
+    it("can compute analytics without loading page item enrichments", async () => {
+      const { repository: signalRepository } = createFakeSignalRepository(mixedPrioritySeed.map((entry) => entry.issue))
+      const { repository: evaluationRepository, listBySignalIdsCalls } = createEvaluationRepository()
+      let aggregateCalls = 0
+      let tagsCalls = 0
+      let trendCalls = 0
+      let histogramCalls = 0
+      const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
+        listSignalWindowMetrics: () =>
+          Effect.succeed(mixedPrioritySeed.map((entry) => makeWindowMetric({ signalId: SignalId(entry.issue.id) }))),
+        aggregateBySignals: () =>
+          Effect.sync(() => {
+            aggregateCalls += 1
+            return []
+          }),
+        aggregateTagsBySignals: () =>
+          Effect.sync(() => {
+            tagsCalls += 1
+            return []
+          }),
+        trendBySignals: () =>
+          Effect.sync(() => {
+            trendCalls += 1
+            return []
+          }),
+        histogramBySignals: () =>
+          Effect.sync(() => {
+            histogramCalls += 1
+            return []
+          }),
+      })
+
+      const result = await Effect.runPromise(
+        listSignalsUseCase({
+          organizationId,
+          projectId,
+          now,
+          includeAnalytics: true,
+          includeItems: false,
+        }).pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              Layer.succeed(SignalRepository, signalRepository),
+              Layer.succeed(EvaluationRepository, evaluationRepository),
+              Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+              Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+              Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+              provideSessionRepository,
+            ),
+          ),
+        ),
+      )
+
+      expect(result.items).toEqual([])
+      expect(result.totalCount).toBe(mixedPrioritySeed.length)
+      expect(result.priorityCounts).toEqual({ urgent: 1, high: 1, medium: 1, low: 1, none: 1 })
+      expect(histogramCalls).toBe(1)
+      expect(listBySignalIdsCalls).toEqual([])
+      expect(aggregateCalls).toBe(0)
+      expect(tagsCalls).toBe(0)
+      expect(trendCalls).toBe(0)
+    })
+
     const userA = "1".repeat(24)
     const userB = "2".repeat(24)
     const assignedToA = makeSignal({ id: SignalId("a".repeat(24)), assigneeId: userA, priority: "high" })
@@ -1338,7 +1456,7 @@ describe("listSignalsUseCase", () => {
       const resolvedAssigned = makeSignal({
         id: SignalId("b".repeat(24)),
         assigneeId: userA,
-        resolvedAt: new Date("2026-04-08T00:00:00.000Z"),
+        mutedAt: new Date("2026-04-08T00:00:00.000Z"),
       })
 
       const result = await runTriageList({

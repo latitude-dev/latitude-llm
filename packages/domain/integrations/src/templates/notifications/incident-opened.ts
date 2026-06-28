@@ -16,7 +16,7 @@ import type { SlackNotificationRenderer } from "./types.ts"
 export const incidentOpenedRenderer: SlackNotificationRenderer<"incident.opened"> = (payload, ctx) =>
   Effect.gen(function* () {
     const projectName = ctx.project?.name ?? ctx.organization.name
-    const isSavedSearch = payload.sourceType === "savedSearch"
+    const isMonitorIncident = payload.sourceType === "monitor"
     const signalUrl = ctx.project
       ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals/${payload.sourceId}`
       : ctx.webAppUrl
@@ -39,13 +39,13 @@ export const incidentOpenedRenderer: SlackNotificationRenderer<"incident.opened"
       `${payload.severity} · ${payload.sourceType} · ${projectOrOrgContext(ctx.organization, ctx.project)}${triageContextSuffix({ priority: payload.priority, assigneeName })}`,
     )
 
-    if (isSavedSearch) {
-      const searchRef = sourceName ?? "a saved search"
+    if (isMonitorIncident) {
+      const searchRef = sourceName ?? "a monitored target"
       return {
         text: `Escalating: ${searchRef} in ${projectName}`,
         color: severityColor(payload.severity),
         blocks: [
-          sectionMarkdown(`A saved search started escalating: *${searchRef}*.`),
+          sectionMarkdown(`A monitor started escalating: *${searchRef}*.`),
           ...attribution,
           context,
           actionsLink("View monitor", monitorUrl),

@@ -71,7 +71,6 @@ export const searchOrgSignalsUseCase = (
           ...deriveSignalLifecycleStates({
             issue: hit.issue,
             isEscalating: hit.issue.lifecycle.isEscalating,
-            isRegressed: hit.issue.lifecycle.isRegressed,
             now,
           }),
         ],

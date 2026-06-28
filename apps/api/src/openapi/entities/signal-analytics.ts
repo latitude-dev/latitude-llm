@@ -18,8 +18,6 @@ export const SignalAnalyticsResponseSchema = z
     ongoing: SignalAnalyticsCountMetricSchema("Number of ongoing signals.").openapi("SignalAnalyticsOngoing"),
     new: SignalAnalyticsCountMetricSchema("Number of new signals.").openapi("SignalAnalyticsNew"),
     escalating: SignalAnalyticsCountMetricSchema("Number of escalating signals.").openapi("SignalAnalyticsEscalating"),
-    regressed: SignalAnalyticsCountMetricSchema("Number of regressed signals.").openapi("SignalAnalyticsRegressed"),
-    resolved: SignalAnalyticsCountMetricSchema("Number of resolved signals.").openapi("SignalAnalyticsResolved"),
     occurrences: z
       .object({
         total: z.number().int().nonnegative().describe("Number of signal occurrences in the range."),
@@ -33,8 +31,6 @@ export const toSignalAnalyticsResponse = (analytics: GetSignalAnalyticsResult) =
   ongoing: { total: analytics.ongoing.total },
   new: { total: analytics.new.total },
   escalating: { total: analytics.escalating.total },
-  regressed: { total: analytics.regressed.total },
-  resolved: { total: analytics.resolved.total },
   occurrences: {
     total: analytics.occurrences.total,
     buckets: analytics.occurrences.buckets.map((b) => ({ bucket: b.bucket, value: b.value })),

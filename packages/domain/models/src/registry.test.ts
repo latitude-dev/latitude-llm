@@ -141,6 +141,16 @@ describe("getModelForProvider", () => {
     expect(apac?.id).toBe(base?.id)
   })
 
+  it("resolves a bare Bedrock model id missing the vendor prefix to the base entry", () => {
+    const base = getModelForProvider("amazon_bedrock", "anthropic.claude-opus-4-8")
+    expect(base).toBeDefined()
+
+    // Instrumentations may strip both the region and the vendor prefix.
+    const bare = getModelForProvider("amazon_bedrock", "claude-opus-4-8")
+    expect(bare?.id).toBe(base?.id)
+    expect(getCostSpec("amazon-bedrock", "claude-opus-4-8").costImplemented).toBe(true)
+  })
+
   it("does not strip regional prefix for non-Bedrock providers", () => {
     const model = getModelForProvider("openai", "eu.gpt-4o")
     expect(model).toBeUndefined()

@@ -335,6 +335,12 @@ function applySpanDataAttributes(otelSpan: OtelSpan, data: AgentsSpanData): void
       if (Array.isArray(tools) && tools.length > 0) {
         otelSpan.setAttribute("gen_ai.tool.definitions", JSON.stringify(tools))
       }
+      // The agent's `instructions` (system prompt) are echoed on `_response.instructions`;
+      // forward them as gen_ai.system_instructions so they populate the System Instructions field.
+      const instructions = data._response?.instructions
+      if (typeof instructions === "string" && instructions.length > 0) {
+        otelSpan.setAttribute("gen_ai.system_instructions", JSON.stringify([{ type: "text", content: instructions }]))
+      }
       if (data._input !== undefined) {
         otelSpan.setAttribute("gen_ai.input.messages", JSON.stringify(buildInputMessages({ input: data._input })))
       }

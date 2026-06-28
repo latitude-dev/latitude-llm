@@ -6,41 +6,11 @@ import typing
 from importlib import import_module
 
 if typing.TYPE_CHECKING:
-    from .types import (
-        ListMonitorsForTargetBodyStream,
-        ListMonitorsForTargetBodyTargetKind,
-        UpdateMonitorAlertBodyCondition,
-        UpdateMonitorAlertBodyConditionKind,
-        UpdateMonitorAlertBodyConditionKindDirection,
-        UpdateMonitorAlertBodyConditionKindWindow,
-        UpdateMonitorAlertBodyConditionOne,
-        UpdateMonitorAlertBodyConditionOneWindow,
-        UpdateMonitorAlertBodyConditionSensitivity,
-        UpdateMonitorAlertBodyConditionThree,
-        UpdateMonitorAlertBodyConditionThreeDirection,
-        UpdateMonitorAlertBodyConditionZero,
-        UpdateMonitorAlertBodyKind,
-        UpdateMonitorAlertBodySeverity,
-        UpdateMonitorAlertBodySource,
-        UpdateMonitorAlertBodySourceType,
-    )
+    from .types import ListMonitorsForTargetBodyTargetType, UpdateMonitorBodySeverity, UpdateMonitorBodyTrigger
 _dynamic_imports: typing.Dict[str, str] = {
-    "ListMonitorsForTargetBodyStream": ".types",
-    "ListMonitorsForTargetBodyTargetKind": ".types",
-    "UpdateMonitorAlertBodyCondition": ".types",
-    "UpdateMonitorAlertBodyConditionKind": ".types",
-    "UpdateMonitorAlertBodyConditionKindDirection": ".types",
-    "UpdateMonitorAlertBodyConditionKindWindow": ".types",
-    "UpdateMonitorAlertBodyConditionOne": ".types",
-    "UpdateMonitorAlertBodyConditionOneWindow": ".types",
-    "UpdateMonitorAlertBodyConditionSensitivity": ".types",
-    "UpdateMonitorAlertBodyConditionThree": ".types",
-    "UpdateMonitorAlertBodyConditionThreeDirection": ".types",
-    "UpdateMonitorAlertBodyConditionZero": ".types",
-    "UpdateMonitorAlertBodyKind": ".types",
-    "UpdateMonitorAlertBodySeverity": ".types",
-    "UpdateMonitorAlertBodySource": ".types",
-    "UpdateMonitorAlertBodySourceType": ".types",
+    "ListMonitorsForTargetBodyTargetType": ".types",
+    "UpdateMonitorBodySeverity": ".types",
+    "UpdateMonitorBodyTrigger": ".types",
 }
 
 
@@ -65,21 +35,4 @@ def __dir__():
     return sorted(lazy_attrs)
 
 
-__all__ = [
-    "ListMonitorsForTargetBodyStream",
-    "ListMonitorsForTargetBodyTargetKind",
-    "UpdateMonitorAlertBodyCondition",
-    "UpdateMonitorAlertBodyConditionKind",
-    "UpdateMonitorAlertBodyConditionKindDirection",
-    "UpdateMonitorAlertBodyConditionKindWindow",
-    "UpdateMonitorAlertBodyConditionOne",
-    "UpdateMonitorAlertBodyConditionOneWindow",
-    "UpdateMonitorAlertBodyConditionSensitivity",
-    "UpdateMonitorAlertBodyConditionThree",
-    "UpdateMonitorAlertBodyConditionThreeDirection",
-    "UpdateMonitorAlertBodyConditionZero",
-    "UpdateMonitorAlertBodyKind",
-    "UpdateMonitorAlertBodySeverity",
-    "UpdateMonitorAlertBodySource",
-    "UpdateMonitorAlertBodySourceType",
-]
+__all__ = ["ListMonitorsForTargetBodyTargetType", "UpdateMonitorBodySeverity", "UpdateMonitorBodyTrigger"]

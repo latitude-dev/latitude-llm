@@ -22,6 +22,7 @@ import {
   ATTR_GEN_AI_RESPONSE_FINISH_REASONS,
   ATTR_GEN_AI_RESPONSE_ID,
   ATTR_GEN_AI_RESPONSE_MODEL,
+  ATTR_GEN_AI_TOOL_DEFINITIONS,
   ATTR_GEN_AI_USAGE_INPUT_TOKENS,
   ATTR_GEN_AI_USAGE_OUTPUT_TOKENS,
 } from "@opentelemetry/semantic-conventions/incubating"
@@ -38,11 +39,17 @@ export interface ResponsesParams {
   temperature?: number
   top_p?: number
   stream?: boolean
+  tools?: unknown[]
 }
 
 type ResponsesCreateMethod = (this: unknown, ...args: unknown[]) => unknown
 
 const SPAN_NAME_PREFIX = "openai.response"
+
+// Not exported by @opentelemetry/semantic-conventions/incubating; Latitude's span
+// parser reads these literals.
+const ATTR_GEN_AI_REQUEST_STREAM = "gen_ai.request.stream"
+const ATTR_GEN_AI_USAGE_REASONING_TOKENS = "gen_ai.usage.reasoning_tokens"
 
 /**
  * Drop-in replacement for `OpenAIInstrumentation` that also patches the
@@ -135,6 +142,10 @@ export function buildRequestAttributes(params: ResponsesParams): Attributes {
   if (params.top_p !== undefined) {
     attrs[ATTR_GEN_AI_REQUEST_TOP_P] = params.top_p
   }
+  if (params.stream) attrs[ATTR_GEN_AI_REQUEST_STREAM] = true
+  if (Array.isArray(params.tools) && params.tools.length > 0) {
+    attrs[ATTR_GEN_AI_TOOL_DEFINITIONS] = JSON.stringify(params.tools)
+  }
   attrs[ATTR_GEN_AI_INPUT_MESSAGES] = JSON.stringify(buildInputMessages(params))
   return attrs
 }
@@ -151,6 +162,10 @@ export function applyResponseAttributes(span: Span, response: ResponseObject): v
     }
     if (typeof usage.output_tokens === "number") {
       span.setAttribute(ATTR_GEN_AI_USAGE_OUTPUT_TOKENS, usage.output_tokens)
+    }
+    const reasoning = usage.output_tokens_details?.reasoning_tokens
+    if (typeof reasoning === "number" && reasoning > 0) {
+      span.setAttribute(ATTR_GEN_AI_USAGE_REASONING_TOKENS, reasoning)
     }
   }
 

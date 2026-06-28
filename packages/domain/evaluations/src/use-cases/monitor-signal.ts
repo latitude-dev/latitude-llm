@@ -8,6 +8,7 @@ import {
   type ProjectId,
   type RepositoryError,
   type SignalId,
+  type SignalOrigin,
   type UserId,
 } from "@domain/shared"
 import { Effect } from "effect"
@@ -32,6 +33,14 @@ export interface MonitorSignalInput {
    * allowed so users who opted into manual monitoring can keep tuning it.
    */
   readonly isAutomaticallyMonitored?: boolean
+  /**
+   * Origin of the signal. `user`-authored signals manage their own evaluation
+   * (a raw script created via the API/MCP) and are never realigned by the LLM
+   * optimization workflow, so the use-case rejects them outright — mirroring the
+   * UI, which hides realign for user signals. Omit for callers that only ever
+   * monitor system signals.
+   */
+  readonly signalOrigin?: SignalOrigin
 }
 
 interface MonitorSignalResult {
@@ -74,6 +83,12 @@ const buildOptimizeWorkflowId = (evaluationId: string) => `evaluations:optimize:
 export const monitorSignalUseCase = Effect.fn("evaluations.monitorSignal")(function* (input: MonitorSignalInput) {
   yield* Effect.annotateCurrentSpan("projectId", input.projectId)
   yield* Effect.annotateCurrentSpan("signalId", input.signalId)
+
+  if (input.signalOrigin === "user") {
+    return yield* new BadRequestError({
+      message: "User-authored signals manage their own evaluation and cannot be monitored or realigned",
+    })
+  }
 
   const evaluationRepository = yield* EvaluationRepository
   const activeEvaluations = yield* evaluationRepository

@@ -7,7 +7,9 @@ import typing
 import pydantic
 from ..core.pydantic_utilities import UniversalBaseModel
 from .monitor_metric_avg_field import MonitorMetricAvgField
-from .monitor_metric_p_95_field import MonitorMetricP95Field
+from .monitor_metric_max_field import MonitorMetricMaxField
+from .monitor_metric_median_field import MonitorMetricMedianField
+from .monitor_metric_min_field import MonitorMetricMinField
 from .monitor_metric_sum_field import MonitorMetricSumField
 
 
@@ -42,17 +44,6 @@ class MonitorMetric_Avg(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-class MonitorMetric_P95(UniversalBaseModel):
-    """
-    Metric measured over the monitor target.
-    """
-
-    kind: typing.Literal["p95"] = "p95"
-    field: MonitorMetricP95Field
-
-    model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
-
-
 class MonitorMetric_Sum(UniversalBaseModel):
     """
     Metric measured over the monitor target.
@@ -64,6 +55,45 @@ class MonitorMetric_Sum(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
+class MonitorMetric_Min(UniversalBaseModel):
+    """
+    Metric measured over the monitor target.
+    """
+
+    kind: typing.Literal["min"] = "min"
+    field: MonitorMetricMinField
+
+    model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
+
+
+class MonitorMetric_Max(UniversalBaseModel):
+    """
+    Metric measured over the monitor target.
+    """
+
+    kind: typing.Literal["max"] = "max"
+    field: MonitorMetricMaxField
+
+    model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
+
+
+class MonitorMetric_Median(UniversalBaseModel):
+    """
+    Metric measured over the monitor target.
+    """
+
+    kind: typing.Literal["median"] = "median"
+    field: MonitorMetricMedianField
+
+    model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
+
+
 MonitorMetric = typing.Union[
-    MonitorMetric_Count, MonitorMetric_ErrorRate, MonitorMetric_Avg, MonitorMetric_P95, MonitorMetric_Sum
+    MonitorMetric_Count,
+    MonitorMetric_ErrorRate,
+    MonitorMetric_Avg,
+    MonitorMetric_Sum,
+    MonitorMetric_Min,
+    MonitorMetric_Max,
+    MonitorMetric_Median,
 ]

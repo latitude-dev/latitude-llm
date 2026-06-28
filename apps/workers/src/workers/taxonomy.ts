@@ -12,7 +12,7 @@ import {
 import type { RedisClient } from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import { TaxonomyObservationRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
-import type { PostgresClient } from "@platform/db-postgres"
+import { listGardenableProjectRefs, type PostgresClient } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect } from "effect"
 
@@ -81,12 +81,7 @@ const deterministicProjectDelayMs = (input: {
 
 const listActiveProjects = (adminPostgresClient: PostgresClient) =>
   Effect.tryPromise({
-    try: async () => {
-      const result = await adminPostgresClient.pool.query<ActiveProjectRow>(
-        `SELECT organization_id, id AS project_id FROM latitude.projects WHERE deleted_at IS NULL`,
-      )
-      return result.rows
-    },
+    try: () => listGardenableProjectRefs(adminPostgresClient),
     catch: (cause) => cause,
   })
 

@@ -35,7 +35,7 @@ const makeNotification = (overrides: Partial<Notification> = {}): Notification =
     kind: "incident.opened",
     idempotencyKey: `incident.opened:${"ai".padEnd(24, "0")}`,
     projectId: PROJECT_1,
-    payload: { incidentKind: "issue.new", alertIncidentId: "ai".padEnd(24, "0") },
+    payload: { incidentKind: "signal.escalating", alertIncidentId: "ai".padEnd(24, "0") },
     createdAt: new Date(),
     seenAt: null,
     emailedAt: null,
@@ -86,12 +86,12 @@ describe("NotificationRepositoryLive", () => {
     const opened = makeNotification({
       kind: "incident.opened",
       idempotencyKey: `incident.opened:${incidentId}`,
-      payload: { incidentKind: "issue.escalating", alertIncidentId: incidentId },
+      payload: { incidentKind: "signal.escalating", alertIncidentId: incidentId },
     })
     const closed = makeNotification({
       kind: "incident.closed",
       idempotencyKey: `incident.closed:${incidentId}`,
-      payload: { incidentKind: "issue.escalating", alertIncidentId: incidentId },
+      payload: { incidentKind: "signal.escalating", alertIncidentId: incidentId },
     })
 
     await runWithLive(

@@ -306,7 +306,9 @@ describe("Vercel AI SDK v7 — GenAI OpenTelemetry (@ai-sdk/otel)", () => {
     })
 
     it("resolves system instructions and tool definitions", () => {
-      expect(findSpan("agent").systemInstructions).toEqual([{ type: "text", content: "You are a travel agent." }])
+      const sys = findSpan("agent").systemInstructions
+      expect(sys).toHaveLength(1)
+      expect(sys[0]).toMatchObject({ type: "text", content: "You are a travel agent." })
       expect(findSpan("chat1").toolDefinitions.map((t) => t.name)).toContain("get_weather")
     })
   })

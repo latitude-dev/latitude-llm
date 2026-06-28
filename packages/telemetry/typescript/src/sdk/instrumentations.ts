@@ -72,8 +72,8 @@ const INTEGRATIONS: Record<InstrumentationName, IntegrationDef> = {
     packageName: "@traceloop/instrumentation-cohere",
   },
   langchain: {
-    loadCtor: async () => (await import("@traceloop/instrumentation-langchain")).LangChainInstrumentation,
-    packageName: "@traceloop/instrumentation-langchain",
+    loadCtor: async () => (await import("@arizeai/openinference-instrumentation-langchain")).LangChainInstrumentation,
+    packageName: "@arizeai/openinference-instrumentation-langchain",
   },
   llamaindex: {
     loadCtor: async () => (await import("@traceloop/instrumentation-llamaindex")).LlamaIndexInstrumentation,

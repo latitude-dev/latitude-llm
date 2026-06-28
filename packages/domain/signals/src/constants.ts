@@ -3,7 +3,7 @@ import { DEFAULT_ESCALATION_SENSITIVITY } from "@domain/shared"
 
 export const SIGNAL_NAME_MAX_LENGTH = 128
 
-export const SIGNAL_STATES = ["new", "escalating", "ongoing", "resolved", "regressed", "ignored"] as const
+export const SIGNAL_STATES = ["new", "escalating", "ongoing"] as const
 
 export const SIGNAL_SOURCES = ["annotation", "flagger", "custom"] as const
 
@@ -184,10 +184,10 @@ export const ESCALATION_ABSOLUTE_RATE_EXIT_FACTOR = 0.5
 export const ESCALATION_MAX_DURATION_MS = 72 * 60 * 60 * 1000
 
 /**
- * Throttle window for the per-issue escalation-state recheck task triggered
+ * Throttle window for the per-signal escalation-state recheck task triggered
  * by `ScoreAssignedToSignal`. Caps the rate of `recentOccurrences`
- * recomputation per issue. Trades off detection latency for compute. While
- * an issue is actively receiving scores, the same use case evaluates exit
+ * recomputation per signal. Trades off detection latency for compute. While
+ * a signal is actively receiving scores, the same use case evaluates exit
  * conditions on every tick; once activity stops, the hourly sweep
  * (`ESCALATION_SWEEPER_PATTERN`) takes over.
  */
@@ -202,8 +202,8 @@ export const ESCALATION_SWEEPER_KEY = "issues:escalation-sweep"
 
 /**
  * Cron pattern for the hourly escalation sweep — top of every hour, UTC.
- * The sweep finds every open `issue.escalating` incident and enqueues a
- * per-issue `checkEscalation` task. Covers the "burst then silence" case
+ * The sweep finds every open signal incident and enqueues a
+ * per-signal `checkEscalation` task. Covers the "burst then silence" case
  * that the per-occurrence triggers cannot catch (no event = no check),
  * provides the cold-start backfill for incidents already stuck, and lets
  * the 72h timeout exit actually fire on long-silent rows.
@@ -299,16 +299,6 @@ export const SIGNAL_DETAILS_MAX_OCCURRENCES = 25
  * per 8h, even under a constant annotation stream.
  */
 export const SIGNAL_REFRESH_THROTTLE_MS = 8 * 60 * 60 * 1000
-
-// ---------------------------------------------------------------------------
-// Denoising / visibility
-// ---------------------------------------------------------------------------
-
-/**
- * Minimum number of linked scores before a non-annotation-backed issue
- * becomes visible in the main Signals UI.
- */
-export const MIN_OCCURRENCES_FOR_VISIBILITY = 3
 
 // ---------------------------------------------------------------------------
 // Discovery serialization locks

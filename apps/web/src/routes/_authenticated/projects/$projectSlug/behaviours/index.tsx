@@ -1,6 +1,6 @@
-import { Text } from "@repo/ui"
+import { Button, Icon, Text } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
-import { Loader2Icon, TagsIcon } from "lucide-react"
+import { ExternalLinkIcon, Loader2Icon, TagsIcon } from "lucide-react"
 import { useMemo } from "react"
 import { type BehaviourSegment, useProjectBehaviours } from "../../../../../domains/taxonomy/taxonomy.collection.ts"
 import type {
@@ -156,6 +156,14 @@ function BehavioursPageContent() {
                   : "Live taxonomy behaviors will appear here after sessions have been clustered."}
               </Text.H5>
             </div>
+            {isDemoProject ? null : (
+              <a href="https://docs.latitude.so/search/behaviours" target="_blank" rel="noopener noreferrer">
+                <Button>
+                  <Icon size="sm" icon={ExternalLinkIcon} />
+                  Read the docs
+                </Button>
+              </a>
+            )}
           </div>
         </Layout.Content>
       </Layout>

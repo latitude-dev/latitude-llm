@@ -39,6 +39,7 @@ import {
 import { createFakeChSqlClient } from "@domain/shared/testing"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
+import { QuickJsScriptRuntimeLive } from "@platform/sandbox-quickjs"
 import { silenceLoggerInTests } from "@repo/vitest-config/silence-logger"
 import { Effect, Layer } from "effect"
 import { describe, expect, it, vi } from "vitest"
@@ -365,7 +366,7 @@ describe("evaluation-alignment activities", () => {
           evaluationId: String(evaluationId),
           jobId: "job-baseline",
         },
-      }).pipe(Effect.provide(aiLayer)),
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, QuickJsScriptRuntimeLive))),
     )
 
     expect(result.confusionMatrix).toEqual({
@@ -444,7 +445,7 @@ describe("evaluation-alignment activities", () => {
           evaluationId: String(evaluationId),
           jobId: "job-incremental",
         },
-      }).pipe(Effect.provide(aiLayer)),
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, QuickJsScriptRuntimeLive))),
     )
 
     expect(result.strategy).toBe("no-op")
@@ -515,7 +516,7 @@ describe("evaluation-alignment activities", () => {
           evaluationId: String(evaluationId),
           jobId: "job-incremental",
         },
-      }).pipe(Effect.provide(aiLayer)),
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, QuickJsScriptRuntimeLive))),
     )
 
     expect(result.strategy).toBe("metric-only")
@@ -577,7 +578,7 @@ describe("evaluation-alignment activities", () => {
           evaluationId: String(evaluationId),
           jobId: "job-incremental",
         },
-      }).pipe(Effect.provide(aiLayer)),
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, QuickJsScriptRuntimeLive))),
     )
 
     expect(result.strategy).toBe("full-reoptimization")

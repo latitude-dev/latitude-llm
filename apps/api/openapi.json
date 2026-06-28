@@ -155,17 +155,21 @@
       "IncidentNotificationsSetting": {
         "type": "object",
         "properties": {
-          "issue.new": {
-            "type": "boolean",
-            "description": "Send a notification when a new signal is discovered. Defaults to `true` when omitted."
-          },
-          "issue.regressed": {
-            "type": "boolean",
-            "description": "Send a notification when a previously-resolved signal regresses. Defaults to `true` when omitted."
-          },
-          "issue.escalating": {
+          "signal.escalating": {
             "type": "boolean",
             "description": "Send a notification when an active signal is escalating in volume or severity. Defaults to `true` when omitted."
+          },
+          "monitor.match": {
+            "type": "boolean",
+            "description": "Send a notification when a match monitor opens an incident. Defaults to `true` when omitted."
+          },
+          "monitor.threshold": {
+            "type": "boolean",
+            "description": "Send a notification when a threshold monitor opens an incident. Defaults to `true` when omitted."
+          },
+          "monitor.escalating": {
+            "type": "boolean",
+            "description": "Send a notification when an escalating monitor opens an incident. Defaults to `true` when omitted."
           }
         },
         "description": "Per-alert-kind opt-out for incident notifications."
@@ -4045,27 +4049,17 @@
               "enum": [
                 "new",
                 "escalating",
-                "ongoing",
-                "resolved",
-                "regressed",
-                "ignored"
+                "ongoing"
               ]
             },
             "description": "Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`)."
           },
-          "resolvedAt": {
+          "mutedAt": {
             "type": [
               "string",
               "null"
             ],
-            "description": "ISO-8601 timestamp at which the signal was resolved, or `null`."
-          },
-          "ignoredAt": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "ISO-8601 timestamp at which the signal was ignored, or `null`."
+            "description": "ISO-8601 timestamp at which the signal was muted, or `null`."
           },
           "createdAt": {
             "type": "string",
@@ -4118,8 +4112,7 @@
           "description",
           "source",
           "states",
-          "resolvedAt",
-          "ignoredAt",
+          "mutedAt",
           "createdAt",
           "updatedAt",
           "trend",
@@ -4148,6 +4141,180 @@
           "count"
         ]
       },
+      "CreateSignalResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Created signal id."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe identifier; use it on the other signal endpoints."
+          },
+          "evaluationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Id of the signal's detector evaluation."
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "evaluationId"
+        ]
+      },
+      "CreateSignalBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Human-readable name. Used to derive the slug."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What this signal captures."
+          },
+          "priority": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "urgent",
+              null
+            ],
+            "description": "Manual triage priority. Null/omitted leaves it unset."
+          },
+          "filters": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/FilterCondition"
+              }
+            },
+            "description": "Row-local pre-gate restricting which traces the evaluation runs against. Omitted = all traces."
+          },
+          "evaluation": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "settings": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "judge"
+                        ]
+                      },
+                      "criteria": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Natural-language description of the behavior the judge detects."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "criteria"
+                    ],
+                    "description": "Declarative judge config; compiled to a sandbox script that calls an LLM."
+                  }
+                },
+                "required": [
+                  "settings"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "script": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Raw sandbox evaluation script (advanced). Must compile in the QuickJS runtime."
+                  }
+                },
+                "required": [
+                  "script"
+                ]
+              }
+            ],
+            "description": "The signal's membership detector. Provide exactly one of `settings` or `script`."
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "evaluation"
+        ]
+      },
+      "UpdateSignalResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Updated signal id."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe identifier (stable across updates)."
+          },
+          "changed": {
+            "type": "boolean",
+            "description": "Whether any field actually changed."
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "changed"
+        ]
+      },
+      "UpdateSignalBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "New name. Omitted leaves it unchanged."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New description. Omitted leaves it unchanged."
+          },
+          "filters": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/FilterCondition"
+              }
+            },
+            "description": "New evaluation pre-gate. Explicit `null` clears it; omitted leaves it unchanged."
+          }
+        }
+      },
       "SignalAnalyticsResponse": {
         "type": "object",
         "properties": {
@@ -4160,12 +4327,6 @@
           "escalating": {
             "$ref": "#/components/schemas/SignalAnalyticsEscalating"
           },
-          "regressed": {
-            "$ref": "#/components/schemas/SignalAnalyticsRegressed"
-          },
-          "resolved": {
-            "$ref": "#/components/schemas/SignalAnalyticsResolved"
-          },
           "occurrences": {
             "$ref": "#/components/schemas/SignalAnalyticsOccurrences"
           }
@@ -4174,8 +4335,6 @@
           "ongoing",
           "new",
           "escalating",
-          "regressed",
-          "resolved",
           "occurrences"
         ]
       },
@@ -4212,32 +4371,6 @@
             "type": "integer",
             "minimum": 0,
             "description": "Number of escalating signals."
-          }
-        },
-        "required": [
-          "total"
-        ]
-      },
-      "SignalAnalyticsRegressed": {
-        "type": "object",
-        "properties": {
-          "total": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Number of regressed signals."
-          }
-        },
-        "required": [
-          "total"
-        ]
-      },
-      "SignalAnalyticsResolved": {
-        "type": "object",
-        "properties": {
-          "total": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Number of resolved signals."
           }
         },
         "required": [
@@ -4332,27 +4465,17 @@
               "enum": [
                 "new",
                 "escalating",
-                "ongoing",
-                "resolved",
-                "regressed",
-                "ignored"
+                "ongoing"
               ]
             },
             "description": "Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`)."
           },
-          "resolvedAt": {
+          "mutedAt": {
             "type": [
               "string",
               "null"
             ],
-            "description": "ISO-8601 timestamp at which the signal was resolved, or `null`."
-          },
-          "ignoredAt": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "ISO-8601 timestamp at which the signal was ignored, or `null`."
+            "description": "ISO-8601 timestamp at which the signal was muted, or `null`."
           },
           "createdAt": {
             "type": "string",
@@ -4421,8 +4544,7 @@
           "description",
           "source",
           "states",
-          "resolvedAt",
-          "ignoredAt",
+          "mutedAt",
           "createdAt",
           "updatedAt",
           "trend",
@@ -4453,8 +4575,11 @@
             "description": "Generated description of the evaluation."
           },
           "alignedAt": {
-            "type": "string",
-            "description": "ISO-8601 timestamp at which the evaluation was last realigned."
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp at which the evaluation was last realigned, or `null` if never aligned."
           },
           "archivedAt": {
             "type": [
@@ -4502,7 +4627,10 @@
         ]
       },
       "EvaluationAlignmentMetrics": {
-        "type": "object",
+        "type": [
+          "object",
+          "null"
+        ],
         "properties": {
           "alignmentMetric": {
             "type": "number",
@@ -4552,7 +4680,7 @@
           "balancedAccuracy",
           "matthewsCorrelationCoefficient"
         ],
-        "description": "Alignment metrics computed from the evaluation's confusion matrix."
+        "description": "Alignment metrics computed from the evaluation's confusion matrix, or `null` for an unaligned (e.g. raw / deterministic) evaluation."
       },
       "SignalMonitoringState": {
         "oneOf": [
@@ -4683,19 +4811,12 @@
             "maxLength": 24,
             "description": "Signal this entry applies to."
           },
-          "resolvedAt": {
+          "mutedAt": {
             "type": [
               "string",
               "null"
             ],
-            "description": "ISO-8601 timestamp at which the signal was resolved, or `null`."
-          },
-          "ignoredAt": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "ISO-8601 timestamp at which the signal was ignored, or `null`."
+            "description": "ISO-8601 timestamp at which the signal was muted, or `null`."
           },
           "updatedAt": {
             "type": "string",
@@ -4708,26 +4829,9 @@
         },
         "required": [
           "signalId",
-          "resolvedAt",
-          "ignoredAt",
+          "mutedAt",
           "updatedAt",
           "changed"
-        ]
-      },
-      "ResolveSignalsBody": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/SignalsLifecycleBody"
-          },
-          {
-            "type": "object",
-            "properties": {
-              "keepMonitoring": {
-                "type": "boolean",
-                "description": "When `true`, monitoring continues after the signals are resolved. When `false`, monitoring stops. Defaults to the project setting."
-              }
-            }
-          }
         ]
       },
       "SignalsLifecycleBody": {
@@ -4810,7 +4914,7 @@
               "active",
               "archived"
             ],
-            "description": "`\"active\"` for unresolved/unignored signals; `\"archived\"` for the rest. Omit to include both."
+            "description": "`\"active\"` for unmuted signals; `\"archived\"` for muted signals. Omit to include both."
           }
         },
         "required": [
@@ -4856,31 +4960,16 @@
           "sourceType": {
             "type": "string",
             "enum": [
-              "issue",
-              "savedSearch"
+              "monitor",
+              "signal"
             ],
-            "description": "Kind of entity that triggered the incident. `issue` for signal-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a search."
+            "description": "Kind of entity that triggered the incident: `signal` or `monitor`."
           },
           "sourceId": {
             "type": "string",
             "minLength": 24,
             "maxLength": 24,
             "description": "Id of the entity that triggered the incident (matches `sourceType`)."
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "issue.new",
-              "issue.regressed",
-              "issue.escalating",
-              "savedSearch.match",
-              "savedSearch.threshold",
-              "savedSearch.escalating",
-              "event.matched",
-              "metric.threshold",
-              "metric.escalating"
-            ],
-            "description": "Reason the incident opened. `issue.new` fires when a new signal is discovered; `issue.regressed` when a resolved signal is detected again; `issue.escalating` when an ongoing signal is being detected more than expected. The `savedSearch.*` kinds are raised by monitors watching a search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when matching traces are detected above a configured threshold, and `savedSearch.escalating` when they stay above the threshold for a sustained window."
           },
           "severity": {
             "type": "string",
@@ -4906,17 +4995,19 @@
             "type": "string",
             "description": "ISO-8601 timestamp at which the incident row was created."
           },
-          "monitorAlertId": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "minLength": 24,
-            "maxLength": 24,
-            "description": "Id of the monitor alert that opened this incident, or `null` when not attributed to a monitor."
-          },
           "condition": {
-            "$ref": "#/components/schemas/AlertCondition"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AlertThresholdCondition"
+              },
+              {
+                "$ref": "#/components/schemas/AlertEscalatingCondition"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The monitor rule configuration when the incident opened, or `null` for signal incidents and match monitors."
           }
         },
         "required": [
@@ -4925,334 +5016,43 @@
           "projectId",
           "sourceType",
           "sourceId",
-          "kind",
           "severity",
           "startedAt",
           "endedAt",
           "createdAt",
-          "monitorAlertId",
           "condition"
         ]
       },
-      "AlertCondition": {
-        "oneOf": [
-          {
-            "type": "object",
-            "properties": {
-              "kind": {
-                "type": "string",
-                "enum": [
-                  "savedSearch.threshold"
-                ],
-                "description": "Threshold alert: opens once the count threshold is crossed."
-              },
-              "threshold": {
-                "$ref": "#/components/schemas/AlertCountThreshold"
-              }
-            },
-            "required": [
-              "kind",
-              "threshold"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "kind": {
-                "type": "string",
-                "enum": [
-                  "savedSearch.escalating"
-                ],
-                "description": "Sustained alert: opens only when the threshold stays crossed for the whole `window`."
-              },
-              "threshold": {
-                "$ref": "#/components/schemas/AlertCountThreshold"
-              },
-              "window": {
-                "type": "object",
-                "properties": {
-                  "minutes": {
-                    "type": "integer",
-                    "minimum": 5,
-                    "description": "How long the threshold must stay crossed before the incident opens. The incident stays open while the threshold keeps holding over this window and closes once it no longer does. Minimum 5."
-                  }
-                },
-                "required": [
-                  "minutes"
-                ],
-                "description": "Sustained-condition window."
-              }
-            },
-            "required": [
-              "kind",
-              "threshold",
-              "window"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "kind": {
-                "type": "string",
-                "enum": [
-                  "issue.escalating"
-                ],
-                "description": "System signal-escalation alert; only `sensitivity` is tunable."
-              },
-              "sensitivity": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 6,
-                "description": "Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted."
-              }
-            },
-            "required": [
-              "kind"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "kind": {
-                "type": "string",
-                "enum": [
-                  "metric.threshold"
-                ],
-                "description": "Metric alert: opens once the target metric crosses a threshold."
-              },
-              "metric": {
-                "$ref": "#/components/schemas/MonitorMetric"
-              },
-              "threshold": {
-                "$ref": "#/components/schemas/AlertMetricThreshold"
-              },
-              "direction": {
-                "type": "string",
-                "enum": [
-                  "above",
-                  "below"
-                ],
-                "description": "Direction that opens the incident. Defaults to `above` when omitted."
-              }
-            },
-            "required": [
-              "kind",
-              "metric",
-              "threshold"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "kind": {
-                "type": "string",
-                "enum": [
-                  "metric.escalating"
-                ],
-                "description": "Sustained metric alert: opens when the target metric stays across threshold for the whole `window`."
-              },
-              "metric": {
-                "$ref": "#/components/schemas/MonitorMetric"
-              },
-              "threshold": {
-                "$ref": "#/components/schemas/AlertMetricThreshold"
-              },
-              "direction": {
-                "type": "string",
-                "enum": [
-                  "above",
-                  "below"
-                ],
-                "description": "Direction that opens the incident. Defaults to `above` when omitted."
-              },
-              "window": {
-                "type": "object",
-                "properties": {
-                  "minutes": {
-                    "type": "integer",
-                    "minimum": 5,
-                    "description": "How long the threshold must stay crossed before the incident opens. Minimum 5."
-                  }
-                },
-                "required": [
-                  "minutes"
-                ],
-                "description": "Sustained-condition window."
-              }
-            },
-            "required": [
-              "kind",
-              "metric",
-              "threshold",
-              "window"
-            ]
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "description": "The alert's configuration when the incident opened, or `null` for kinds with no parameters."
-      },
-      "AlertCountThreshold": {
-        "oneOf": [
-          {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "enum": [
-                  "absolute"
-                ],
-                "description": "Compare the match count against a fixed number; read `count`."
-              },
-              "count": {
-                "type": "integer",
-                "exclusiveMinimum": 0,
-                "description": "Number of matching traces that opens the incident."
-              }
-            },
-            "required": [
-              "mode",
-              "count"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "enum": [
-                  "multiplier"
-                ],
-                "description": "Compare the match rate against `factor × baseline`; read `factor` and `baseline`."
-              },
-              "factor": {
-                "type": "number",
-                "exclusiveMinimum": 0,
-                "description": "Multiple of the baseline rate that opens the incident (e.g. `3` = 3×)."
-              },
-              "baseline": {
-                "$ref": "#/components/schemas/AlertBaseline"
-              }
-            },
-            "required": [
-              "mode",
-              "factor",
-              "baseline"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "enum": [
-                  "expected"
-                ],
-                "description": "Compare against the seasonally-learned expected rate for this time of day/week (the same detector as automatic issue escalation); the only knob is `sensitivity`."
-              },
-              "sensitivity": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 6,
-                "description": "Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted."
-              }
-            },
-            "required": [
-              "mode"
-            ]
-          }
-        ],
-        "description": "How the match count/rate is compared."
-      },
-      "AlertBaseline": {
+      "AlertThresholdCondition": {
         "type": "object",
         "properties": {
-          "kind": {
+          "trigger": {
             "type": "string",
             "enum": [
-              "average",
-              "period"
+              "threshold"
             ],
-            "description": "How the comparison rate is computed. `average` is the rolling rate over the last `lookback`; `period` is the equal-length window immediately before it (e.g. `lookback` of 1 day compares against yesterday) for daily/weekly seasonality."
+            "description": "Opens once the measured value crosses the threshold."
           },
-          "lookback": {
-            "$ref": "#/components/schemas/AlertDuration"
+          "metric": {
+            "$ref": "#/components/schemas/MonitorMetric"
+          },
+          "threshold": {
+            "$ref": "#/components/schemas/AlertMetricThreshold"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "above",
+              "below"
+            ],
+            "description": "Direction that opens the incident. Defaults to `above` when omitted."
           }
         },
         "required": [
-          "kind",
-          "lookback"
-        ],
-        "description": "Fixed-window baseline the current rate is compared against."
-      },
-      "AlertDuration": {
-        "oneOf": [
-          {
-            "type": "object",
-            "properties": {
-              "unit": {
-                "type": "string",
-                "enum": [
-                  "minutes"
-                ],
-                "description": "The duration is expressed in whole minutes; read `minutes`."
-              },
-              "minutes": {
-                "type": "number",
-                "exclusiveMinimum": 0,
-                "description": "Number of minutes."
-              }
-            },
-            "required": [
-              "unit",
-              "minutes"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "unit": {
-                "type": "string",
-                "enum": [
-                  "hours"
-                ],
-                "description": "The duration is expressed in whole hours; read `hours`."
-              },
-              "hours": {
-                "type": "number",
-                "exclusiveMinimum": 0,
-                "description": "Number of hours."
-              }
-            },
-            "required": [
-              "unit",
-              "hours"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "unit": {
-                "type": "string",
-                "enum": [
-                  "days"
-                ],
-                "description": "The duration is expressed in whole days; read `days`."
-              },
-              "days": {
-                "type": "number",
-                "exclusiveMinimum": 0,
-                "description": "Number of days."
-              }
-            },
-            "required": [
-              "unit",
-              "days"
-            ]
-          }
-        ],
-        "description": "Length of the window used to compute the baseline rate."
+          "trigger",
+          "metric",
+          "threshold"
+        ]
       },
       "MonitorMetric": {
         "oneOf": [
@@ -5317,9 +5117,9 @@
               "kind": {
                 "type": "string",
                 "enum": [
-                  "p95"
+                  "sum"
                 ],
-                "description": "Compute the 95th percentile of a numeric field over matching events."
+                "description": "Sum a numeric field over matching events."
               },
               "field": {
                 "type": "string",
@@ -5342,9 +5142,59 @@
               "kind": {
                 "type": "string",
                 "enum": [
-                  "sum"
+                  "min"
                 ],
-                "description": "Sum a numeric field over matching events."
+                "description": "Find the minimum numeric field value over matching events."
+              },
+              "field": {
+                "type": "string",
+                "enum": [
+                  "duration",
+                  "cost",
+                  "tokens"
+                ],
+                "description": "Numeric field to aggregate."
+              }
+            },
+            "required": [
+              "kind",
+              "field"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "max"
+                ],
+                "description": "Find the maximum numeric field value over matching events."
+              },
+              "field": {
+                "type": "string",
+                "enum": [
+                  "duration",
+                  "cost",
+                  "tokens"
+                ],
+                "description": "Numeric field to aggregate."
+              }
+            },
+            "required": [
+              "kind",
+              "field"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "median"
+                ],
+                "description": "Find the median numeric field value over matching events."
               },
               "field": {
                 "type": "string",
@@ -5435,6 +5285,153 @@
           }
         ],
         "description": "How the metric is compared."
+      },
+      "AlertBaseline": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "average",
+              "period"
+            ],
+            "description": "How the comparison rate is computed. `average` is the rolling rate over the last `lookback`; `period` is the equal-length window immediately before it (e.g. `lookback` of 1 day compares against yesterday) for daily/weekly seasonality."
+          },
+          "lookback": {
+            "$ref": "#/components/schemas/AlertDuration"
+          }
+        },
+        "required": [
+          "kind",
+          "lookback"
+        ],
+        "description": "Fixed-window baseline the current rate is compared against."
+      },
+      "AlertDuration": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "unit": {
+                "type": "string",
+                "enum": [
+                  "minutes"
+                ],
+                "description": "The duration is expressed in whole minutes; read `minutes`."
+              },
+              "minutes": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Number of minutes."
+              }
+            },
+            "required": [
+              "unit",
+              "minutes"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "unit": {
+                "type": "string",
+                "enum": [
+                  "hours"
+                ],
+                "description": "The duration is expressed in whole hours; read `hours`."
+              },
+              "hours": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Number of hours."
+              }
+            },
+            "required": [
+              "unit",
+              "hours"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "unit": {
+                "type": "string",
+                "enum": [
+                  "days"
+                ],
+                "description": "The duration is expressed in whole days; read `days`."
+              },
+              "days": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Number of days."
+              }
+            },
+            "required": [
+              "unit",
+              "days"
+            ]
+          }
+        ],
+        "description": "Length of the window used to compute the baseline rate."
+      },
+      "AlertEscalatingCondition": {
+        "type": "object",
+        "properties": {
+          "trigger": {
+            "type": "string",
+            "enum": [
+              "escalating"
+            ],
+            "description": "Opens when the monitor target is escalating or sustained."
+          },
+          "metric": {
+            "$ref": "#/components/schemas/MonitorMetric"
+          },
+          "threshold": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AlertMetricThreshold"
+              },
+              {
+                "description": "How the metric is compared when threshold-based."
+              }
+            ]
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "above",
+              "below"
+            ],
+            "description": "Direction that opens the incident. Defaults to `above` when omitted."
+          },
+          "sensitivity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 6,
+            "description": "Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted."
+          },
+          "window": {
+            "type": "object",
+            "properties": {
+              "minutes": {
+                "type": "integer",
+                "minimum": 5,
+                "description": "How long the threshold must stay crossed before the incident opens. Minimum 5."
+              }
+            },
+            "required": [
+              "minutes"
+            ],
+            "description": "Sustained-condition window."
+          }
+        },
+        "required": [
+          "trigger",
+          "metric",
+          "window"
+        ]
       },
       "PaginatedDatasets": {
         "type": "object",
@@ -6793,17 +6790,13 @@
           },
           "system": {
             "type": "boolean",
-            "description": "`true` for the auto-provisioned system monitors, which can't be deleted or edited; `false` otherwise."
-          },
-          "alerts": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MonitorAlert"
-            },
-            "description": "The monitor's alerts. Always at least one."
+            "description": "`true` for auto-provisioned system monitors, which cannot be deleted or edited; `false` otherwise."
           },
           "target": {
             "$ref": "#/components/schemas/MonitorTarget"
+          },
+          "rule": {
+            "$ref": "#/components/schemas/MonitorRule"
           },
           "mutedAt": {
             "type": [
@@ -6836,94 +6829,26 @@
           "name",
           "description",
           "system",
-          "alerts",
           "target",
+          "rule",
           "mutedAt",
           "deletedAt",
           "createdAt",
           "updatedAt"
         ]
       },
-      "MonitorAlert": {
+      "MonitorTarget": {
         "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 24,
-            "maxLength": 24,
-            "description": "Stable alert identifier."
-          },
-          "monitorId": {
-            "type": "string",
-            "minLength": 24,
-            "maxLength": 24,
-            "description": "Monitor that owns this alert."
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "issue.new",
-              "issue.regressed",
-              "issue.escalating",
-              "savedSearch.match",
-              "savedSearch.threshold",
-              "savedSearch.escalating",
-              "event.matched",
-              "metric.threshold",
-              "metric.escalating"
-            ],
-            "description": "What the alert fires on. The `savedSearch.*` kinds watch a saved search; `issue.*` are system-only."
-          },
-          "source": {
-            "$ref": "#/components/schemas/MonitorAlertSource"
-          },
-          "condition": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/AlertCondition"
-              },
-              {
-                "description": "Kind-specific configuration, or `null` for kinds with no parameters."
-              }
-            ]
-          },
-          "severity": {
-            "type": "string",
-            "enum": [
-              "low",
-              "medium",
-              "high"
-            ],
-            "description": "Severity of incidents this alert opens: `low`, `medium`, or `high`."
-          },
-          "createdAt": {
-            "type": "string",
-            "description": "ISO-8601 timestamp of creation."
-          }
-        },
-        "required": [
-          "id",
-          "monitorId",
-          "kind",
-          "source",
-          "condition",
-          "severity",
-          "createdAt"
-        ]
-      },
-      "MonitorAlertSource": {
-        "type": [
-          "object",
-          "null"
-        ],
         "properties": {
           "type": {
             "type": "string",
             "enum": [
-              "issue",
-              "savedSearch"
+              "savedSearch",
+              "tool",
+              "user",
+              "session"
             ],
-            "description": "Entity the alert watches: `savedSearch` or `issue`."
+            "description": "Product target category: `savedSearch`, `tool`, `user`, or `session`."
           },
           "id": {
             "type": [
@@ -6932,40 +6857,7 @@
             ],
             "minLength": 24,
             "maxLength": 24,
-            "description": "Id of the watched entity, or `null` to watch all entities of its `type`."
-          }
-        },
-        "required": [
-          "type",
-          "id"
-        ],
-        "description": "The entity this alert watches, or `null` for unified alerts whose target lives on the monitor."
-      },
-      "MonitorTarget": {
-        "type": [
-          "object",
-          "null"
-        ],
-        "properties": {
-          "kind": {
-            "type": "string",
-            "enum": [
-              "signal",
-              "tool",
-              "user",
-              "session",
-              "savedSearch"
-            ],
-            "description": "Product target category: `tool`, `user`, `session`, `savedSearch`, or system `signal`."
-          },
-          "stream": {
-            "type": "string",
-            "enum": [
-              "traces",
-              "spans",
-              "sessions"
-            ],
-            "description": "Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`."
+            "description": "Target entity id, or `null` for project-wide targets."
           },
           "filterSet": {
             "$ref": "#/components/schemas/MonitorFilterSet"
@@ -6975,7 +6867,26 @@
               "string",
               "null"
             ],
-            "description": "Optional semantic query applied with the filters. Use `null` for user/tool monitors."
+            "description": "Semantic query applied when evaluating inline trace targets."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "savedSearch",
+              "tool",
+              "user",
+              "session"
+            ],
+            "description": "Normalized target kind returned on persisted monitors."
+          },
+          "stream": {
+            "type": "string",
+            "enum": [
+              "traces",
+              "spans",
+              "sessions"
+            ],
+            "description": "Telemetry stream evaluated by the monitor."
           },
           "savedSearchId": {
             "type": [
@@ -6984,7 +6895,7 @@
             ],
             "minLength": 24,
             "maxLength": 24,
-            "description": "Saved-search target id, or `null` when `filterSet` and `query` define the target inline."
+            "description": "Saved-search id for saved-search monitors, or `null` for inline targets."
           },
           "metric": {
             "allOf": [
@@ -6992,254 +6903,41 @@
                 "$ref": "#/components/schemas/MonitorMetric"
               },
               {
-                "description": "Default metric measured by this monitor target."
+                "description": "Default metric evaluated for this target."
               }
             ]
           }
         },
         "required": [
-          "kind",
-          "stream",
-          "filterSet",
-          "query",
-          "savedSearchId",
-          "metric"
+          "type",
+          "id"
         ],
-        "description": "Unified query-time target for tool, user, and raw-stream monitors; `null` for legacy saved-search and system monitors."
+        "description": "Entity or filter set watched by this monitor."
       },
       "MonitorFilterSet": {
-        "type": [
-          "object",
-          "null"
-        ],
+        "type": "object",
         "additionalProperties": {
           "type": "array",
           "items": {
             "$ref": "#/components/schemas/FilterCondition"
           }
         },
-        "description": "Filters that select the target rows. Use `{}` for all users; use `operation = execute_tool` for all tools."
+        "description": "Additional filters applied when evaluating the monitor."
       },
-      "CreateMonitorBody": {
+      "MonitorRule": {
         "type": "object",
         "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128,
-            "description": "Human-readable name. Used to derive the slug."
-          },
-          "description": {
-            "type": "string",
-            "maxLength": 2000,
-            "description": "Optional free-form description."
-          },
-          "alerts": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CreateMonitorAlertBody"
-            },
-            "description": "The monitor's alert. Exactly one."
-          },
-          "target": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/MonitorTarget"
-              },
-              {
-                "description": "Target for tool/user monitors. Required for `event.*` and `metric.*` alerts; omit for saved-search alerts."
-              }
-            ]
-          }
-        },
-        "required": [
-          "name",
-          "alerts"
-        ]
-      },
-      "CreateMonitorAlertBody": {
-        "type": "object",
-        "properties": {
-          "kind": {
+          "trigger": {
             "type": "string",
             "enum": [
-              "savedSearch.match",
-              "savedSearch.threshold",
-              "savedSearch.escalating",
-              "event.matched",
-              "metric.threshold",
-              "metric.escalating"
+              "match",
+              "threshold",
+              "escalating"
             ],
-            "description": "What the alert fires on. `savedSearch.*` kinds require a saved-search `source`; `event.*` and `metric.*` kinds require `source: null` and a monitor `target`."
+            "description": "When the monitor opens incidents: `match`, `threshold`, or `escalating`."
           },
-          "source": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/MonitorAlertSource"
-              },
-              {
-                "description": "Saved-search source for `savedSearch.*` alerts, or `null` for tool/user alerts whose target lives on the monitor."
-              }
-            ]
-          },
-          "condition": {
-            "oneOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "enum": [
-                      "savedSearch.threshold"
-                    ],
-                    "description": "Threshold alert: opens once the count threshold is crossed."
-                  },
-                  "threshold": {
-                    "$ref": "#/components/schemas/AlertCountThreshold"
-                  }
-                },
-                "required": [
-                  "kind",
-                  "threshold"
-                ]
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "enum": [
-                      "savedSearch.escalating"
-                    ],
-                    "description": "Sustained alert: opens only when the threshold stays crossed for the whole `window`."
-                  },
-                  "threshold": {
-                    "$ref": "#/components/schemas/AlertCountThreshold"
-                  },
-                  "window": {
-                    "type": "object",
-                    "properties": {
-                      "minutes": {
-                        "type": "integer",
-                        "minimum": 5,
-                        "description": "How long the threshold must stay crossed before the incident opens. The incident stays open while the threshold keeps holding over this window and closes once it no longer does. Minimum 5."
-                      }
-                    },
-                    "required": [
-                      "minutes"
-                    ],
-                    "description": "Sustained-condition window."
-                  }
-                },
-                "required": [
-                  "kind",
-                  "threshold",
-                  "window"
-                ]
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "enum": [
-                      "issue.escalating"
-                    ],
-                    "description": "System signal-escalation alert; only `sensitivity` is tunable."
-                  },
-                  "sensitivity": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 6,
-                    "description": "Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted."
-                  }
-                },
-                "required": [
-                  "kind"
-                ]
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "enum": [
-                      "metric.threshold"
-                    ],
-                    "description": "Metric alert: opens once the target metric crosses a threshold."
-                  },
-                  "metric": {
-                    "$ref": "#/components/schemas/MonitorMetric"
-                  },
-                  "threshold": {
-                    "$ref": "#/components/schemas/AlertMetricThreshold"
-                  },
-                  "direction": {
-                    "type": "string",
-                    "enum": [
-                      "above",
-                      "below"
-                    ],
-                    "description": "Direction that opens the incident. Defaults to `above` when omitted."
-                  }
-                },
-                "required": [
-                  "kind",
-                  "metric",
-                  "threshold"
-                ]
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "enum": [
-                      "metric.escalating"
-                    ],
-                    "description": "Sustained metric alert: opens when the target metric stays across threshold for the whole `window`."
-                  },
-                  "metric": {
-                    "$ref": "#/components/schemas/MonitorMetric"
-                  },
-                  "threshold": {
-                    "$ref": "#/components/schemas/AlertMetricThreshold"
-                  },
-                  "direction": {
-                    "type": "string",
-                    "enum": [
-                      "above",
-                      "below"
-                    ],
-                    "description": "Direction that opens the incident. Defaults to `above` when omitted."
-                  },
-                  "window": {
-                    "type": "object",
-                    "properties": {
-                      "minutes": {
-                        "type": "integer",
-                        "minimum": 5,
-                        "description": "How long the threshold must stay crossed before the incident opens. Minimum 5."
-                      }
-                    },
-                    "required": [
-                      "minutes"
-                    ],
-                    "description": "Sustained-condition window."
-                  }
-                },
-                "required": [
-                  "kind",
-                  "metric",
-                  "threshold",
-                  "window"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Kind-specific configuration. Required for threshold and escalating kinds; omit for match kinds."
+          "config": {
+            "$ref": "#/components/schemas/MonitorConfig"
           },
           "severity": {
             "type": "string",
@@ -7248,12 +6946,269 @@
               "medium",
               "high"
             ],
-            "description": "Severity of incidents this alert opens. Defaults per kind when omitted."
+            "description": "Severity of incidents this monitor opens: `low`, `medium`, or `high`."
           }
         },
         "required": [
-          "kind",
-          "source"
+          "trigger",
+          "config",
+          "severity"
+        ],
+        "description": "Single rule evaluated by this monitor."
+      },
+      "MonitorConfig": {
+        "type": "object",
+        "properties": {
+          "filterSet": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MonitorFilterSet"
+              },
+              {
+                "description": "Filters applied by the monitor rule."
+              }
+            ]
+          },
+          "query": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Semantic query applied by inline monitor targets."
+          },
+          "metric": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MonitorMetric"
+              },
+              {
+                "description": "Metric evaluated by threshold and escalating monitor rules."
+              }
+            ]
+          },
+          "condition": {
+            "$ref": "#/components/schemas/AlertCondition"
+          }
+        },
+        "description": "Rule configuration used when the monitor is evaluated."
+      },
+      "AlertCondition": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/AlertThresholdCondition"
+          },
+          {
+            "$ref": "#/components/schemas/AlertEscalatingCondition"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "trigger",
+          "mapping": {
+            "threshold": "#/components/schemas/AlertThresholdCondition",
+            "escalating": "#/components/schemas/AlertEscalatingCondition"
+          }
+        },
+        "description": "Condition that controls threshold or escalating incidents."
+      },
+      "CreateMonitorBody": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "description": "Human-readable name. Used to derive the slug."
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 2000,
+                "description": "Optional free-form description."
+              },
+              "target": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/MonitorTarget"
+                  },
+                  {
+                    "description": "Entity or filter set watched by the monitor."
+                  }
+                ]
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ],
+                "description": "Severity assigned to incidents opened by this monitor."
+              },
+              "trigger": {
+                "type": "string",
+                "enum": [
+                  "match"
+                ],
+                "description": "Opens a point incident when any matching event appears."
+              },
+              "metric": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/MonitorMetric"
+                  },
+                  {
+                    "description": "Metric stored for later rule edits. Match monitors evaluate counts."
+                  }
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "target",
+              "severity",
+              "trigger"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "description": "Human-readable name. Used to derive the slug."
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 2000,
+                "description": "Optional free-form description."
+              },
+              "target": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/MonitorTarget"
+                  },
+                  {
+                    "description": "Entity or filter set watched by the monitor."
+                  }
+                ]
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ],
+                "description": "Severity assigned to incidents opened by this monitor."
+              },
+              "trigger": {
+                "type": "string",
+                "enum": [
+                  "threshold"
+                ],
+                "description": "Opens a point incident when the condition is met."
+              },
+              "metric": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/MonitorMetric"
+                  },
+                  {
+                    "description": "Metric evaluated by the monitor rule."
+                  }
+                ]
+              },
+              "condition": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/AlertThresholdCondition"
+                  },
+                  {
+                    "description": "Threshold condition that opens point incidents."
+                  }
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "target",
+              "severity",
+              "trigger",
+              "condition"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "description": "Human-readable name. Used to derive the slug."
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 2000,
+                "description": "Optional free-form description."
+              },
+              "target": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/MonitorTarget"
+                  },
+                  {
+                    "description": "Entity or filter set watched by the monitor."
+                  }
+                ]
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ],
+                "description": "Severity assigned to incidents opened by this monitor."
+              },
+              "trigger": {
+                "type": "string",
+                "enum": [
+                  "escalating"
+                ],
+                "description": "Opens and closes a sustained incident while the condition is met."
+              },
+              "metric": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/MonitorMetric"
+                  },
+                  {
+                    "description": "Metric evaluated by the monitor rule."
+                  }
+                ]
+              },
+              "condition": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/AlertEscalatingCondition"
+                  },
+                  {
+                    "description": "Escalating condition that opens sustained incidents."
+                  }
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "target",
+              "severity",
+              "trigger",
+              "condition"
+            ]
+          }
         ]
       },
       "MonitorList": {
@@ -7274,24 +7229,15 @@
       "ListMonitorsForTargetBody": {
         "type": "object",
         "properties": {
-          "stream": {
+          "targetType": {
             "type": "string",
             "enum": [
-              "traces",
-              "spans",
-              "sessions"
-            ],
-            "description": "Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`."
-          },
-          "targetKind": {
-            "type": "string",
-            "enum": [
+              "savedSearch",
               "tool",
               "user",
-              "session",
-              "savedSearch"
+              "session"
             ],
-            "description": "Optional target kind to match: `user`, `tool`, `session`, or `savedSearch`."
+            "description": "Optional target type to match."
           },
           "filterSetContains": {
             "allOf": [
@@ -7305,7 +7251,6 @@
           }
         },
         "required": [
-          "stream",
           "filterSetContains"
         ]
       },
@@ -7322,227 +7267,45 @@
             "type": "string",
             "maxLength": 2000,
             "description": "New description."
-          }
-        }
-      },
-      "MonitorAlertList": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MonitorAlert"
-            },
-            "description": "The monitor's alerts."
-          }
-        },
-        "required": [
-          "items"
-        ]
-      },
-      "UpdateMonitorAlertBody": {
-        "type": "object",
-        "properties": {
-          "kind": {
+          },
+          "target": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MonitorTarget"
+              },
+              {
+                "description": "Replacement target watched by the monitor."
+              }
+            ]
+          },
+          "trigger": {
             "type": "string",
             "enum": [
-              "savedSearch.match",
-              "savedSearch.threshold",
-              "savedSearch.escalating",
-              "event.matched",
-              "metric.threshold",
-              "metric.escalating"
+              "match",
+              "threshold",
+              "escalating"
             ],
-            "description": "New alert kind. Not allowed on system monitors. Supply the matching `source` and `condition` when you change it."
+            "description": "Replacement incident trigger for the monitor rule."
           },
-          "source": {
-            "type": [
-              "object",
-              "null"
-            ],
-            "properties": {
-              "type": {
-                "type": "string",
-                "enum": [
-                  "issue",
-                  "savedSearch"
-                ],
-                "description": "Entity the alert watches: `savedSearch` or `issue`."
+          "metric": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MonitorMetric"
               },
-              "id": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "minLength": 24,
-                "maxLength": 24,
-                "description": "Id of the watched entity, or `null` to watch all entities of its `type`."
+              {
+                "description": "Replacement metric evaluated by the monitor."
               }
-            },
-            "required": [
-              "type",
-              "id"
-            ],
-            "description": "Replace the saved-search source, or set `null` for unified tool/user alerts. Not allowed on system monitors."
+            ]
           },
           "condition": {
-            "oneOf": [
+            "allOf": [
               {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "enum": [
-                      "savedSearch.threshold"
-                    ],
-                    "description": "Threshold alert: opens once the count threshold is crossed."
-                  },
-                  "threshold": {
-                    "$ref": "#/components/schemas/AlertCountThreshold"
-                  }
-                },
-                "required": [
-                  "kind",
-                  "threshold"
-                ]
+                "$ref": "#/components/schemas/AlertCondition"
               },
               {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "enum": [
-                      "savedSearch.escalating"
-                    ],
-                    "description": "Sustained alert: opens only when the threshold stays crossed for the whole `window`."
-                  },
-                  "threshold": {
-                    "$ref": "#/components/schemas/AlertCountThreshold"
-                  },
-                  "window": {
-                    "type": "object",
-                    "properties": {
-                      "minutes": {
-                        "type": "integer",
-                        "minimum": 5,
-                        "description": "How long the threshold must stay crossed before the incident opens. The incident stays open while the threshold keeps holding over this window and closes once it no longer does. Minimum 5."
-                      }
-                    },
-                    "required": [
-                      "minutes"
-                    ],
-                    "description": "Sustained-condition window."
-                  }
-                },
-                "required": [
-                  "kind",
-                  "threshold",
-                  "window"
-                ]
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "enum": [
-                      "issue.escalating"
-                    ],
-                    "description": "System signal-escalation alert; only `sensitivity` is tunable."
-                  },
-                  "sensitivity": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 6,
-                    "description": "Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted."
-                  }
-                },
-                "required": [
-                  "kind"
-                ]
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "enum": [
-                      "metric.threshold"
-                    ],
-                    "description": "Metric alert: opens once the target metric crosses a threshold."
-                  },
-                  "metric": {
-                    "$ref": "#/components/schemas/MonitorMetric"
-                  },
-                  "threshold": {
-                    "$ref": "#/components/schemas/AlertMetricThreshold"
-                  },
-                  "direction": {
-                    "type": "string",
-                    "enum": [
-                      "above",
-                      "below"
-                    ],
-                    "description": "Direction that opens the incident. Defaults to `above` when omitted."
-                  }
-                },
-                "required": [
-                  "kind",
-                  "metric",
-                  "threshold"
-                ]
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "enum": [
-                      "metric.escalating"
-                    ],
-                    "description": "Sustained metric alert: opens when the target metric stays across threshold for the whole `window`."
-                  },
-                  "metric": {
-                    "$ref": "#/components/schemas/MonitorMetric"
-                  },
-                  "threshold": {
-                    "$ref": "#/components/schemas/AlertMetricThreshold"
-                  },
-                  "direction": {
-                    "type": "string",
-                    "enum": [
-                      "above",
-                      "below"
-                    ],
-                    "description": "Direction that opens the incident. Defaults to `above` when omitted."
-                  },
-                  "window": {
-                    "type": "object",
-                    "properties": {
-                      "minutes": {
-                        "type": "integer",
-                        "minimum": 5,
-                        "description": "How long the threshold must stay crossed before the incident opens. Minimum 5."
-                      }
-                    },
-                    "required": [
-                      "minutes"
-                    ],
-                    "description": "Sustained-condition window."
-                  }
-                },
-                "required": [
-                  "kind",
-                  "metric",
-                  "threshold",
-                  "window"
-                ]
-              },
-              {
-                "type": "null"
+                "description": "Replacement condition for threshold or escalating monitors."
               }
-            ],
-            "description": "Replace the alert's configuration. On system monitors this is the only editable field (e.g. signal-escalation `sensitivity`)."
+            ]
           },
           "severity": {
             "type": "string",
@@ -7551,7 +7314,7 @@
               "medium",
               "high"
             ],
-            "description": "Replace the severity. Not allowed on system monitors."
+            "description": "Replacement incident severity."
           }
         }
       },
@@ -7607,31 +7370,16 @@
           "sourceType": {
             "type": "string",
             "enum": [
-              "issue",
-              "savedSearch"
+              "monitor",
+              "signal"
             ],
-            "description": "Kind of entity that triggered the incident. `issue` for signal-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a search."
+            "description": "Kind of entity that triggered the incident: `signal` or `monitor`."
           },
           "sourceId": {
             "type": "string",
             "minLength": 24,
             "maxLength": 24,
             "description": "Id of the entity that triggered the incident (matches `sourceType`)."
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "issue.new",
-              "issue.regressed",
-              "issue.escalating",
-              "savedSearch.match",
-              "savedSearch.threshold",
-              "savedSearch.escalating",
-              "event.matched",
-              "metric.threshold",
-              "metric.escalating"
-            ],
-            "description": "Reason the incident opened. `issue.new` fires when a new signal is discovered; `issue.regressed` when a resolved signal is detected again; `issue.escalating` when an ongoing signal is being detected more than expected. The `savedSearch.*` kinds are raised by monitors watching a search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when matching traces are detected above a configured threshold, and `savedSearch.escalating` when they stay above the threshold for a sustained window."
           },
           "severity": {
             "type": "string",
@@ -7657,17 +7405,19 @@
             "type": "string",
             "description": "ISO-8601 timestamp at which the incident row was created."
           },
-          "monitorAlertId": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "minLength": 24,
-            "maxLength": 24,
-            "description": "Id of the monitor alert that opened this incident, or `null` when not attributed to a monitor."
-          },
           "condition": {
-            "$ref": "#/components/schemas/AlertCondition"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AlertThresholdCondition"
+              },
+              {
+                "$ref": "#/components/schemas/AlertEscalatingCondition"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The monitor rule configuration when the incident opened, or `null` for signal incidents and match monitors."
           },
           "notified": {
             "type": "boolean",
@@ -7680,12 +7430,10 @@
           "projectId",
           "sourceType",
           "sourceId",
-          "kind",
           "severity",
           "startedAt",
           "endedAt",
           "createdAt",
-          "monitorAlertId",
           "condition",
           "notified"
         ]
@@ -11344,10 +11092,10 @@
                 "active",
                 "archived"
               ],
-              "description": "`\"active\"` for unresolved/unignored signals; `\"archived\"` for the rest. Omit to include both."
+              "description": "`\"active\"` for unmuted signals; `\"archived\"` for muted signals. Omit to include both."
             },
             "required": false,
-            "description": "`\"active\"` for unresolved/unignored signals; `\"archived\"` for the rest. Omit to include both.",
+            "description": "`\"active\"` for unmuted signals; `\"archived\"` for muted signals. Omit to include both.",
             "name": "lifecycleGroup",
             "in": "query"
           },
@@ -11447,6 +11195,297 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "Signals"
+        ],
+        "x-fern-sdk-group-name": "signals",
+        "x-fern-sdk-method-name": "create",
+        "summary": "Create signal",
+        "description": "Creates a user-defined signal with its membership detector — a judge from `settings`, or a raw `script` (advanced). The script is validated at save time (422 on a compile error). Deterministic scripts are backfilled over recent history; judges detect forward from creation.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "createSignal",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSignalBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Signal created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateSignalResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/signals/{signalSlug}": {
+      "patch": {
+        "tags": [
+          "Signals"
+        ],
+        "x-fern-sdk-group-name": "signals",
+        "x-fern-sdk-method-name": "update",
+        "summary": "Update signal",
+        "description": "Updates a signal's name, description, and evaluation pre-gate `filters`. Filter changes apply forward-only — existing membership is never re-evaluated. The slug is stable.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "updateSignal",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Signal slug."
+            },
+            "required": true,
+            "description": "Signal slug.",
+            "name": "signalSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSignalBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signal updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateSignalResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Signals"
+        ],
+        "x-fern-sdk-group-name": "signals",
+        "x-fern-sdk-method-name": "delete",
+        "summary": "Delete signal",
+        "description": "Soft-deletes a signal and archives its detector so it stops matching new traces. Existing scores are retained but excluded from reads; the slug becomes reusable.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "deleteSignal",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Signal slug."
+            },
+            "required": true,
+            "description": "Signal slug.",
+            "name": "signalSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Signal deleted"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Signals"
+        ],
+        "x-fern-sdk-group-name": "signals",
+        "x-fern-sdk-method-name": "get",
+        "summary": "Get project signal",
+        "description": "Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getSignal",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Signal slug."
+            },
+            "required": true,
+            "description": "Signal slug.",
+            "name": "signalSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Signal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/projects/{projectSlug}/signals/analytics": {
@@ -11457,7 +11496,7 @@
         "x-fern-sdk-group-name": "signals",
         "x-fern-sdk-method-name": "analytics",
         "summary": "Get project signal analytics",
-        "description": "Returns signal analytics for the project: counts of ongoing, new, escalating, regressed, and resolved signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
+        "description": "Returns signal analytics for the project: counts of ongoing, new, and escalating signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -11505,87 +11544,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SignalAnalyticsResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/projects/{projectSlug}/signals/{signalSlug}": {
-      "get": {
-        "tags": [
-          "Signals"
-        ],
-        "x-fern-sdk-group-name": "signals",
-        "x-fern-sdk-method-name": "get",
-        "summary": "Get project signal",
-        "description": "Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.",
-        "security": [
-          {
-            "ApiKeyAuth": []
-          }
-        ],
-        "operationId": "getSignal",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Project slug (human-readable identifier)"
-            },
-            "required": true,
-            "description": "Project slug (human-readable identifier)",
-            "name": "projectSlug",
-            "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Signal slug."
-            },
-            "required": true,
-            "description": "Signal slug.",
-            "name": "signalSlug",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Signal",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SignalDetail"
                 }
               }
             }
@@ -11830,102 +11788,21 @@
         }
       }
     },
-    "/v1/projects/{projectSlug}/signals/resolve": {
+    "/v1/projects/{projectSlug}/signals/mute": {
       "post": {
         "tags": [
           "Signals"
         ],
         "x-fern-sdk-group-name": "signals",
-        "x-fern-sdk-method-name": "resolve",
-        "summary": "Resolve signals",
-        "description": "Marks each signal in `signalIds` as resolved. When `keepMonitoring` is `false`, monitoring is also stopped for each resolved signal; when omitted, the project's default applies.",
+        "x-fern-sdk-method-name": "mute",
+        "summary": "Mute signals",
+        "description": "Mutes each signal in `signalIds`.",
         "security": [
           {
             "ApiKeyAuth": []
           }
         ],
-        "operationId": "resolveSignals",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Project slug (human-readable identifier)"
-            },
-            "required": true,
-            "description": "Project slug (human-readable identifier)",
-            "name": "projectSlug",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ResolveSignalsBody"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Per-signal result",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SignalsLifecycleResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/projects/{projectSlug}/signals/unresolve": {
-      "post": {
-        "tags": [
-          "Signals"
-        ],
-        "x-fern-sdk-group-name": "signals",
-        "x-fern-sdk-method-name": "unresolve",
-        "summary": "Unresolve signals",
-        "description": "Reverts each signal in `signalIds` to the unresolved state.",
-        "security": [
-          {
-            "ApiKeyAuth": []
-          }
-        ],
-        "operationId": "unresolveSignals",
+        "operationId": "muteSignals",
         "parameters": [
           {
             "schema": {
@@ -11992,102 +11869,21 @@
         }
       }
     },
-    "/v1/projects/{projectSlug}/signals/ignore": {
+    "/v1/projects/{projectSlug}/signals/unmute": {
       "post": {
         "tags": [
           "Signals"
         ],
         "x-fern-sdk-group-name": "signals",
-        "x-fern-sdk-method-name": "ignore",
-        "summary": "Ignore signals",
-        "description": "Marks each signal in `signalIds` as ignored. Monitoring is also stopped for each ignored signal.",
+        "x-fern-sdk-method-name": "unmute",
+        "summary": "Unmute signals",
+        "description": "Reverts each signal in `signalIds` to an unmuted state.",
         "security": [
           {
             "ApiKeyAuth": []
           }
         ],
-        "operationId": "ignoreSignals",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Project slug (human-readable identifier)"
-            },
-            "required": true,
-            "description": "Project slug (human-readable identifier)",
-            "name": "projectSlug",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SignalsLifecycleBody"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Per-signal result",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SignalsLifecycleResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/projects/{projectSlug}/signals/unignore": {
-      "post": {
-        "tags": [
-          "Signals"
-        ],
-        "x-fern-sdk-group-name": "signals",
-        "x-fern-sdk-method-name": "unignore",
-        "summary": "Unignore signals",
-        "description": "Reverts each signal in `signalIds` to a non-ignored state.",
-        "security": [
-          {
-            "ApiKeyAuth": []
-          }
-        ],
-        "operationId": "unignoreSignals",
+        "operationId": "unmuteSignals",
         "parameters": [
           {
             "schema": {
@@ -12410,19 +12206,16 @@
           },
           {
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "issue",
-                  "savedSearch"
-                ]
-              },
-              "description": "Restrict to incidents whose source type matches any value in this list."
+              "type": "string",
+              "enum": [
+                "monitor",
+                "signal"
+              ],
+              "description": "Restrict to incidents triggered by this source type: `monitor` or `signal`."
             },
             "required": false,
-            "description": "Restrict to incidents whose source type matches any value in this list.",
-            "name": "sourceTypes",
+            "description": "Restrict to incidents triggered by this source type: `monitor` or `signal`.",
+            "name": "source_type",
             "in": "query"
           },
           {
@@ -12430,35 +12223,11 @@
               "type": "string",
               "minLength": 24,
               "maxLength": 24,
-              "description": "Restrict to incidents tied to a single source entity (e.g. one issue id)."
+              "description": "Restrict to incidents tied to one source entity id."
             },
             "required": false,
-            "description": "Restrict to incidents tied to a single source entity (e.g. one issue id).",
-            "name": "sourceId",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "issue.new",
-                  "issue.regressed",
-                  "issue.escalating",
-                  "savedSearch.match",
-                  "savedSearch.threshold",
-                  "savedSearch.escalating",
-                  "event.matched",
-                  "metric.threshold",
-                  "metric.escalating"
-                ]
-              },
-              "description": "Restrict to incidents whose kind matches any value in this list."
-            },
-            "required": false,
-            "description": "Restrict to incidents whose kind matches any value in this list.",
-            "name": "kinds",
+            "description": "Restrict to incidents tied to one source entity id.",
+            "name": "source_id",
             "in": "query"
           },
           {
@@ -14585,7 +14354,7 @@
         "x-fern-sdk-group-name": "monitors",
         "x-fern-sdk-method-name": "create",
         "summary": "Create monitor",
-        "description": "Creates a monitor with one alert. Saved-search alerts use a saved-search source; tool and user alerts use `event.*` or `metric.*` kinds with `source: null` and a `target`. The slug is derived from `name`.",
+        "description": "Creates a monitor with one rule. The slug is derived from `name`.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -14666,7 +14435,7 @@
         "x-fern-sdk-group-name": "monitors",
         "x-fern-sdk-method-name": "listForTarget",
         "summary": "List monitors for target",
-        "description": "Returns live unified monitors matching the supplied target kind and/or filter subset. Use `targetKind: user` with `stream: traces` for users, or `targetKind: tool` with `stream: spans` for tools.",
+        "description": "Returns live monitors matching the supplied target type and/or filter subset.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -14826,7 +14595,7 @@
         "x-fern-sdk-group-name": "monitors",
         "x-fern-sdk-method-name": "update",
         "summary": "Update monitor",
-        "description": "Updates a monitor's name and description. System monitors cannot be edited.",
+        "description": "Updates a monitor's metadata, target, and rule. System monitor edits are restricted.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -14925,7 +14694,7 @@
         "x-fern-sdk-group-name": "monitors",
         "x-fern-sdk-method-name": "delete",
         "summary": "Delete monitor",
-        "description": "Deletes a monitor and its alerts. System monitors cannot be deleted.",
+        "description": "Deletes a monitor. System monitors cannot be deleted.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -14960,287 +14729,6 @@
           },
           "401": {
             "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/projects/{projectSlug}/monitors/{monitorSlug}/alerts": {
-      "get": {
-        "tags": [
-          "Monitors"
-        ],
-        "x-fern-sdk-group-name": "monitors",
-        "x-fern-sdk-method-name": "listAlerts",
-        "summary": "List monitor alerts",
-        "description": "Returns the monitor's alerts.",
-        "security": [
-          {
-            "ApiKeyAuth": []
-          }
-        ],
-        "operationId": "listMonitorAlerts",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Project slug (human-readable identifier)"
-            },
-            "required": true,
-            "description": "Project slug (human-readable identifier)",
-            "name": "projectSlug",
-            "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Monitor slug (human-readable identifier within the project)."
-            },
-            "required": true,
-            "description": "Monitor slug (human-readable identifier within the project).",
-            "name": "monitorSlug",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The monitor's alerts",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MonitorAlertList"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/projects/{projectSlug}/monitors/{monitorSlug}/alerts/{alertId}": {
-      "get": {
-        "tags": [
-          "Monitors"
-        ],
-        "x-fern-sdk-group-name": "monitors",
-        "x-fern-sdk-method-name": "getAlert",
-        "summary": "Get monitor alert",
-        "description": "Returns a single monitor alert by id.",
-        "security": [
-          {
-            "ApiKeyAuth": []
-          }
-        ],
-        "operationId": "getMonitorAlert",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Project slug (human-readable identifier)"
-            },
-            "required": true,
-            "description": "Project slug (human-readable identifier)",
-            "name": "projectSlug",
-            "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Monitor slug (human-readable identifier within the project)."
-            },
-            "required": true,
-            "description": "Monitor slug (human-readable identifier within the project).",
-            "name": "monitorSlug",
-            "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Monitor-alert identifier."
-            },
-            "required": true,
-            "description": "Monitor-alert identifier.",
-            "name": "alertId",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Monitor alert",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MonitorAlert"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "Monitors"
-        ],
-        "x-fern-sdk-group-name": "monitors",
-        "x-fern-sdk-method-name": "updateAlert",
-        "summary": "Update monitor alert",
-        "description": "Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may. Saved-search alerts use a source; tool and user alerts use `source: null` with the monitor target.",
-        "security": [
-          {
-            "ApiKeyAuth": []
-          }
-        ],
-        "operationId": "updateMonitorAlert",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Project slug (human-readable identifier)"
-            },
-            "required": true,
-            "description": "Project slug (human-readable identifier)",
-            "name": "projectSlug",
-            "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Monitor slug (human-readable identifier within the project)."
-            },
-            "required": true,
-            "description": "Monitor slug (human-readable identifier within the project).",
-            "name": "monitorSlug",
-            "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Monitor-alert identifier."
-            },
-            "required": true,
-            "description": "Monitor-alert identifier.",
-            "name": "alertId",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateMonitorAlertBody"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Monitor with the updated alert",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Monitor"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Disallowed change on a system monitor",
             "content": {
               "application/json": {
                 "schema": {

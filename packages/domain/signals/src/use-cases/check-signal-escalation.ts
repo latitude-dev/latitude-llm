@@ -1,5 +1,11 @@
-import { AlertIncidentRepository, isSignalEscalationEntrySignals } from "@domain/alerts"
 import { OutboxEventWriter } from "@domain/events"
+import {
+  DEFAULT_ESCALATION_SENSITIVITY_K,
+  IncidentRepository,
+  isSignalEscalationEntrySignals,
+  makeEscalationEngine,
+  SeriesReader,
+} from "@domain/incidents"
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import {
   type ChSqlClient,
@@ -12,105 +18,16 @@ import {
   SqlClient,
 } from "@domain/shared"
 import { Effect } from "effect"
-import { DEFAULT_ESCALATION_SENSITIVITY_K } from "../constants.ts"
 import { SignalNotFoundForEscalationCheckError } from "../errors.ts"
-import { evaluateSeasonalEscalation, isSignalNew } from "../helpers.ts"
+import { isSignalNew } from "../helpers.ts"
+import { makeScoreOccurrenceReader } from "../ports/score-occurrence-reader.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
 
 export interface CheckSignalEscalationInput {
   readonly organizationId: string
   readonly projectId: string
   readonly signalId: string
-  /**
-   * Flag-on override resolved by the caller (`@domain/signals` can't import
-   * `@domain/monitors`): the system monitor's sensitivity. Omitted → project settings.
-   */
-  readonly escalationSensitivity?: number
 }
-
-/** Look-back window + bucket for `started_at` / `ended_at` backtracking on the escalation enter/exit transitions. */
-const BACKTRACK_WINDOW_MS = 24 * 60 * 60 * 1000
-const BACKTRACK_BUCKET_SECONDS = 60 * 60
-
-interface BacktrackInput {
-  readonly organizationId: OrganizationId
-  readonly projectId: ProjectId
-  readonly signalId: SignalId
-  readonly kShort: number
-  readonly now: Date
-}
-
-/** The issue's occurrence histogram over the backtrack window as ascending `{bucket,count}` rows, paired with a per-bucket seasonal-threshold lookup (same `kShort`). */
-const escalationCrossingBuckets = (input: BacktrackInput) =>
-  Effect.gen(function* () {
-    const analytics = yield* ScoreAnalyticsRepository
-    const to = input.now
-    const from = new Date(to.getTime() - BACKTRACK_WINDOW_MS)
-    const [counts, thresholds] = yield* Effect.all(
-      [
-        analytics.histogramBySignals({
-          organizationId: input.organizationId,
-          projectId: input.projectId,
-          signalIds: [input.signalId],
-          timeRange: { from, to },
-          bucketSeconds: BACKTRACK_BUCKET_SECONDS,
-        }),
-        analytics.escalationThresholdHistogramBySignals({
-          organizationId: input.organizationId,
-          projectId: input.projectId,
-          signalIds: [input.signalId],
-          timeRange: { from, to },
-          bucketSeconds: BACKTRACK_BUCKET_SECONDS,
-          kShort: input.kShort,
-        }),
-      ],
-      { concurrency: "unbounded" },
-    )
-
-    const thresholdByBucket = new Map<string, number>()
-    for (const entry of thresholds[0]?.buckets ?? []) {
-      if (Number.isFinite(entry.thresholdCount)) thresholdByBucket.set(entry.bucket, entry.thresholdCount)
-    }
-
-    const ascending = [...counts].sort((a, b) => a.bucket.localeCompare(b.bucket))
-    return { ascending, thresholdByBucket }
-  })
-
-/**
- * The detector flags late (the band must hold a while), so backtrack: return the
- * first bucket whose count cleared the seasonal threshold (same `kShort`). No
- * crossing in the window → the event time (`now`).
- */
-const backtrackEscalationStart = (input: BacktrackInput) =>
-  Effect.gen(function* () {
-    const { ascending, thresholdByBucket } = yield* escalationCrossingBuckets(input)
-    for (const bucket of ascending) {
-      const threshold = thresholdByBucket.get(bucket.bucket)
-      if (threshold !== undefined && bucket.count >= threshold) {
-        const ts = new Date(bucket.bucket)
-        if (!Number.isNaN(ts.getTime())) return ts
-      }
-    }
-    return input.now
-  })
-
-/**
- * Mirror of {@link backtrackEscalationStart} for the close: the detector exits late
- * (dwell), so backtrack `ended_at` to the **last** bucket whose count was still above
- * the seasonal threshold. No crossing in the window → the event time (`now`).
- */
-const backtrackEscalationEnd = (input: BacktrackInput) =>
-  Effect.gen(function* () {
-    const { ascending, thresholdByBucket } = yield* escalationCrossingBuckets(input)
-    for (const bucket of [...ascending].reverse()) {
-      const threshold = thresholdByBucket.get(bucket.bucket)
-      if (threshold !== undefined && bucket.count >= threshold) {
-        const ts = new Date(bucket.bucket)
-        if (!Number.isNaN(ts.getTime())) return ts
-      }
-    }
-    return input.now
-  })
 
 export type CheckSignalEscalationTransition = "entered" | "exited" | "none"
 
@@ -152,7 +69,7 @@ export const checkSignalEscalationUseCase = (input: CheckSignalEscalationInput) 
     const signalRepository = yield* SignalRepository
     const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
     const outboxEventWriter = yield* OutboxEventWriter
-    const alertIncidentRepository = yield* AlertIncidentRepository
+    const alertIncidentRepository = yield* IncidentRepository
     const settingsReader = yield* SettingsReader
     const sqlClient = yield* SqlClient
 
@@ -167,78 +84,45 @@ export const checkSignalEscalationUseCase = (input: CheckSignalEscalationInput) 
     const wasEscalating = signalWithLifecycle.lifecycle.isEscalating
     const now = new Date()
 
-    // Ignored issues keep accepting score assignments for analytics / matching,
-    // but user intent is that they no longer drive automated lifecycle changes
-    // or alerting transitions.
-    if (signalWithLifecycle.ignoredAt !== null) {
+    if (signalWithLifecycle.mutedAt !== null) {
       return { transition: "none", currentlyEscalating: wasEscalating } satisfies CheckSignalEscalationResult
     }
 
-    const [signals, projectSettings, openIncident] = yield* Effect.all(
+    const [projectSettings, openIncident] = yield* Effect.all(
       [
-        scoreAnalyticsRepository
-          .escalationSignalsBySignals({
-            organizationId: OrganizationId(input.organizationId),
-            projectId: ProjectId(input.projectId),
-            signalIds: [SignalId(input.signalId)],
-            now,
-          })
-          .pipe(Effect.map((entries) => entries[0])),
         settingsReader.getProjectSettings(ProjectId(input.projectId)),
         wasEscalating
           ? alertIncidentRepository.findOpen({
-              sourceType: "issue",
+              sourceType: "signal",
               sourceId: input.signalId,
-              kind: "issue.escalating",
             })
           : Effect.succeed(null),
       ],
       { concurrency: "unbounded" },
     )
 
-    if (!signals) {
-      // No analytics row at all — equivalent to recent=0. Helper returns "none"
-      // and we no-op rather than threading conditionals down the path.
-      return { transition: "none", currentlyEscalating: wasEscalating } satisfies CheckSignalEscalationResult
-    }
+    const kShort = projectSettings?.escalation?.sensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K
 
-    // Flag-on override (system monitor) → else project settings → default.
-    const kShort =
-      input.escalationSensitivity ?? projectSettings?.escalation?.sensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K
-
-    const decision = evaluateSeasonalEscalation({
-      signals,
-      kShort,
-      isNew: isSignalNew(signalWithLifecycle.createdAt, now),
-      wasEscalating,
-      // Narrow the now-polymorphic snapshot to the seasonal shape.
-      entrySignals:
-        openIncident && isSignalEscalationEntrySignals(openIncident.entrySignals) ? openIncident.entrySignals : null,
-      startedAt: openIncident?.startedAt ?? null,
-      exitEligibleSince: openIncident?.exitEligibleSince ?? null,
-      now,
-    })
-
-    if (decision.transition === "enter") {
-      // Backtrack the start; the worker forwards `escalatedAt` as the incident's `occurredAt`.
-      const startedAt = yield* backtrackEscalationStart({
+    const decision = yield* makeEscalationEngine()
+      .evaluate({
         organizationId: OrganizationId(input.organizationId),
         projectId: ProjectId(input.projectId),
-        signalId: SignalId(input.signalId),
+        sourceId: input.signalId,
         kShort,
+        isNew: isSignalNew(signalWithLifecycle.createdAt, now),
+        wasEscalating,
+        // Narrow the now-polymorphic snapshot to the seasonal shape.
+        entrySignals:
+          openIncident && isSignalEscalationEntrySignals(openIncident.entrySignals) ? openIncident.entrySignals : null,
+        startedAt: openIncident?.startedAt ?? null,
+        exitEligibleSince: openIncident?.exitEligibleSince ?? null,
         now,
       })
+      .pipe(Effect.provideService(SeriesReader, makeScoreOccurrenceReader(scoreAnalyticsRepository)))
 
+    if (decision.transition === "enter") {
       yield* sqlClient.transaction(
         Effect.gen(function* () {
-          if (signalWithLifecycle.resolvedAt !== null) {
-            yield* signalRepository.save({
-              ...signalWithLifecycle,
-              resolvedAt: null,
-              updatedAt: now,
-            })
-          }
-
           yield* outboxEventWriter.write({
             eventName: "SignalEscalated",
             aggregateType: "issue",
@@ -248,7 +132,7 @@ export const checkSignalEscalationUseCase = (input: CheckSignalEscalationInput) 
               organizationId: signalWithLifecycle.organizationId,
               projectId: signalWithLifecycle.projectId,
               signalId: signalWithLifecycle.id,
-              escalatedAt: startedAt.toISOString(),
+              escalatedAt: (decision.transitionAt ?? now).toISOString(),
               entrySignals: decision.entrySignalsSnapshot ?? null,
             },
           })
@@ -258,17 +142,6 @@ export const checkSignalEscalationUseCase = (input: CheckSignalEscalationInput) 
     }
 
     if (decision.transition === "exit") {
-      // Backtrack the end to the last bucket still above the seasonal threshold (mirror of the
-      // enter-side backtrack), so the incident's `ended_at` reflects when the escalation actually
-      // subsided rather than the dwell-delayed detection tick.
-      const endedAt = yield* backtrackEscalationEnd({
-        organizationId: OrganizationId(input.organizationId),
-        projectId: ProjectId(input.projectId),
-        signalId: SignalId(input.signalId),
-        kShort,
-        now,
-      })
-
       yield* outboxEventWriter.write({
         eventName: "SignalEscalationEnded",
         aggregateType: "issue",
@@ -278,7 +151,7 @@ export const checkSignalEscalationUseCase = (input: CheckSignalEscalationInput) 
           organizationId: signalWithLifecycle.organizationId,
           projectId: signalWithLifecycle.projectId,
           signalId: signalWithLifecycle.id,
-          endedAt: endedAt.toISOString(),
+          endedAt: (decision.transitionAt ?? now).toISOString(),
           reason: decision.reason ?? "threshold",
         },
       })
@@ -309,6 +182,6 @@ export const checkSignalEscalationUseCase = (input: CheckSignalEscalationInput) 
     | SignalRepository
     | ScoreAnalyticsRepository
     | OutboxEventWriter
-    | AlertIncidentRepository
+    | IncidentRepository
     | SettingsReader
   >

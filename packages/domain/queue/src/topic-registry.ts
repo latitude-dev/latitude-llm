@@ -129,6 +129,17 @@ const _registry = {
       readonly assignedAt: string
     }
     /**
+     * Producer step for signal discovery. Fired by the domain-events router
+     * on `SignalCreated`; the consumer resolves org-member recipients and
+     * emits one `create-notification` task per recipient.
+     */
+    "request-signal-discovered-notifications": {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly signalId: string
+      readonly discoveredAt: string
+    }
+    /**
      * Producer step for destination quarantine. Fired directly by the
      * destinations worker when a `(destination, source)` sync flip
      * quarantines the destination (5 consecutive terminal failures). The
@@ -225,19 +236,6 @@ const _registry = {
   }>(),
 
   "alert-incidents": payloads<{
-    "signal-created": {
-      readonly organizationId: string
-      readonly projectId: string
-      readonly signalId: string
-      readonly createdAt: string
-    }
-    "signal-regressed": {
-      readonly organizationId: string
-      readonly projectId: string
-      readonly signalId: string
-      readonly regressedAt: string
-      readonly triggerScoreId: string
-    }
     "signal-escalated": {
       readonly organizationId: string
       readonly projectId: string
@@ -282,8 +280,8 @@ const _registry = {
       readonly signalId: string
     }
     /**
-     * Fired by the hourly cron — finds every open `issue.escalating` incident
-     * and fans out one `checkEscalation` per issue. Recovers stuck-open
+     * Fired by the hourly cron — finds every open signal incident
+     * and fans out one `checkEscalation` per signal. Recovers stuck-open
      * incidents whose 1h debounce already fired once and decided "still
      * escalating" while the burst was still inside the 6h window.
      */
@@ -302,20 +300,20 @@ const _registry = {
 
   monitors: payloads<{
     /**
-     * Run the saved-search firing pipeline for one project. Published throttled
+     * Run the monitor firing pipeline for one project. Published throttled
      * (per project) on trace-end and fanned out by the 5-minute sweep. The
-     * handler lists active saved-search alerts and runs each one's state machine.
+     * handler lists active monitors and runs each one's state machine.
      */
     checkSavedSearchMonitors: {
       readonly organizationId: string
       readonly projectId: string
     }
-    /** Fired by the 5-minute cron — fans out one `checkSavedSearchMonitors` per project with active alerts. */
+    /** Fired by the 5-minute cron — fans out one `checkSavedSearchMonitors` per project with active monitors. */
     sweepSavedSearchMonitors: Record<string, never>
     /**
      * Source-deletion cascade. Fired by the domain-events router on
-     * `SavedSearchDeleted`. Soft-deletes alerts watching the source and prunes
-     * now-empty monitors.
+     * `SavedSearchDeleted`. Soft-deletes monitors watching the source and closes
+     * open monitor incidents.
      */
     onSourceDeleted: {
       readonly organizationId: string

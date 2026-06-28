@@ -30,6 +30,24 @@ function stripBedrockRegionPrefix(modelId: string): string {
 }
 
 /**
+ * Some Bedrock instrumentations report the bare foundation model id without the
+ * `<vendor>.` prefix that models.dev keys on (e.g. `claude-opus-4-8` instead of
+ * `anthropic.claude-opus-4-8`). Match on the `<vendor>.<modelId>` suffix,
+ * preferring the non-regional base entry whose pricing is canonical.
+ */
+function findBedrockModelByBareId(models: Model[], modelId: string): Model | undefined {
+  const suffix = `.${modelId.toLowerCase()}`
+  let fallback: Model | undefined
+  for (const m of models) {
+    const id = m.id.toLowerCase()
+    if (!id.endsWith(suffix)) continue
+    fallback ??= m
+    if (!id.slice(0, -suffix.length).includes(".")) return m
+  }
+  return fallback
+}
+
+/**
  * Return the full list of bundled LLM models from models.dev.
  *
  * The result is cached after the first call.
@@ -103,8 +121,10 @@ export function getModelForProvider(provider: string, modelId: string): Model | 
   if (resolvedProvider === "amazon-bedrock") {
     const stripped = stripBedrockRegionPrefix(modelId)
     if (stripped !== modelId) {
-      return findModel(models, stripped)
+      const strippedMatch = findModel(models, stripped)
+      if (strippedMatch) return strippedMatch
     }
+    return findBedrockModelByBareId(models, stripped)
   }
 
   return undefined

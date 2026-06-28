@@ -26,7 +26,7 @@ interface ToolMonitorPreset {
 
 const presetDraft = (target: MonitorTarget, overrides: Partial<AlertDraft>): AlertDraft =>
   targetAlertDraft(target, {
-    kind: "metric.escalating",
+    kind: "monitor.escalating",
     comparison: "timesMoreThan",
     baselineKind: "expected",
     amount: 3,
@@ -49,9 +49,9 @@ const toolMonitorPresets = (target: MonitorTarget): readonly ToolMonitorPreset[]
       {
         id: "latency-increased",
         name: "Tool latency increased",
-        description: "Opens an incident when p95 latency across tool calls stays higher than expected.",
+        description: "Opens an incident when median latency across tool calls stays higher than expected.",
         icon: GaugeIcon,
-        draft: presetDraft(target, { metric: { kind: "p95", field: "duration" }, severity: "medium" }),
+        draft: presetDraft(target, { metric: { kind: "median", field: "duration" }, severity: "medium" }),
       },
       {
         id: "usage-spike",
@@ -93,9 +93,9 @@ const toolMonitorPresets = (target: MonitorTarget): readonly ToolMonitorPreset[]
     {
       id: "slow",
       name: "Tool is slow",
-      description: "Opens an incident when p95 latency stays higher than expected.",
+      description: "Opens an incident when median latency stays higher than expected.",
       icon: GaugeIcon,
-      draft: presetDraft(target, { metric: { kind: "p95", field: "duration" }, severity: "medium" }),
+      draft: presetDraft(target, { metric: { kind: "median", field: "duration" }, severity: "medium" }),
     },
     {
       id: "usage-spike",
@@ -156,13 +156,13 @@ export function ToolMonitorCreateModal({
   const createPreset = async () => {
     const preset = presets.find((entry) => entry.id === selectedPresetId)
     if (!preset) return
-    const alertTarget = draftToTarget(preset.draft)
+    const presetTarget = draftToTarget(preset.draft)
     try {
       await create.mutateAsync({
         name: `${preset.name} — ${targetName}`,
         description: preset.description,
-        alerts: [draftToAlertDraft(preset.draft)],
-        ...(alertTarget ? { target: alertTarget } : {}),
+        rule: draftToAlertDraft(preset.draft),
+        ...(presetTarget ? { target: presetTarget } : {}),
       })
       toast({ description: "Monitor created." })
       onClose()
@@ -182,7 +182,7 @@ export function ToolMonitorCreateModal({
       await create.mutateAsync({
         name: trimmedName,
         ...(advancedValue.description.trim() ? { description: advancedValue.description.trim() } : {}),
-        alerts: [draftToAlertDraft(advancedValue.alert)],
+        rule: draftToAlertDraft(advancedValue.alert),
         ...(target ? { target } : {}),
       })
       toast({ description: "Monitor created." })
@@ -190,7 +190,7 @@ export function ToolMonitorCreateModal({
     } catch (error) {
       const fieldErrors = extractFieldErrors(error)
       const nameErr = fieldErrors?.name?.[0]
-      const errors = alertFieldErrorsFrom(fieldErrors, 0)
+      const errors = alertFieldErrorsFrom(fieldErrors, null)
       if (nameErr || hasAlertFieldErrors(errors)) {
         setAdvancedValue({ ...advancedValue, ...(nameErr ? { nameError: nameErr } : {}), alertErrors: errors })
         return

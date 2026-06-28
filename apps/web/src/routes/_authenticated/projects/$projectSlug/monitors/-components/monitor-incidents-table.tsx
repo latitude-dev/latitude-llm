@@ -10,24 +10,19 @@ import { listingLayoutIntrinsicScroll } from "../../../../../../layouts/ListingL
 import { IncidentResolveConfirmModal } from "./incident-resolve-confirm-modal.tsx"
 import { IncidentStatus } from "./incident-status.tsx"
 
-/** Human-readable, lowercased source-type labels for the deleted-source fallback. */
-const SOURCE_TYPE_LABEL: Record<"issue" | "savedSearch", string> = {
-  issue: "signal",
-  savedSearch: "saved search",
-}
-
 /** Shows the resolved source name, or an italic "Deleted <type>" once the source is gone. */
 function SourceCell({ incident }: { readonly incident: MonitorIncidentRecord }) {
+  if (incident.sourceType === "monitor") {
+    return (
+      <Text.H6 color="foregroundMuted" noWrap ellipsis>
+        This monitor
+      </Text.H6>
+    )
+  }
   if (!incident.sourceName) {
-    // Unified (target-on-monitor) incidents have no source — the firing PR opens them; the
-    // in-context UI PR renders their target. Until then fall back to a neutral label.
-    const label =
-      incident.sourceType === "issue" || incident.sourceType === "savedSearch"
-        ? SOURCE_TYPE_LABEL[incident.sourceType]
-        : "source"
     return (
       <Text.H6 color="foregroundMuted" noWrap ellipsis className="italic">
-        Deleted {label}
+        Deleted signal
       </Text.H6>
     )
   }
@@ -119,26 +114,15 @@ export function MonitorIncidentsTable({
   const { incidents, isLoading, infiniteScroll } = useMonitorIncidents({ projectId, monitorId })
   const [resolveTarget, setResolveTarget] = useState<string | null>(null)
 
-  // Rows whose source was deleted (or can't be deep-linked) return null and aren't navigable.
+  // Rows whose producer was deleted (or can't be deep-linked) return null and aren't navigable.
   const renderRowLink = useCallback(
     (incident: MonitorIncidentRecord, props: { className: string }): ReactNode => {
-      if (incident.sourceType === "issue" && incident.sourceName) {
+      if (incident.sourceType === "signal" && incident.sourceName) {
         return (
           <Link
             to="/projects/$projectSlug/signals/$signalId"
             params={{ projectSlug, signalId: incident.sourceId }}
-            aria-label={`Open issue ${incident.sourceName}`}
-            {...props}
-          />
-        )
-      }
-      if (incident.sourceType === "savedSearch" && incident.sourceSlug) {
-        return (
-          <Link
-            to="/projects/$projectSlug"
-            params={{ projectSlug }}
-            search={{ savedSearch: incident.sourceSlug }}
-            aria-label={`Open saved search ${incident.sourceName ?? incident.sourceSlug}`}
+            aria-label={`Open signal ${incident.sourceName}`}
             {...props}
           />
         )

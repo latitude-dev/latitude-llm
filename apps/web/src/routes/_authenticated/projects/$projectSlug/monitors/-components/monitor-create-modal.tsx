@@ -175,7 +175,7 @@ export function MonitorCreateModal({
       const monitor = await create.mutateAsync({
         name: trimmedName,
         ...(description.trim() ? { description: description.trim() } : {}),
-        alerts: [draftToAlertDraft(alert)],
+        rule: draftToAlertDraft(alert),
         ...(target ? { target } : {}),
       })
       toast({ description: "Monitor created." })
@@ -185,7 +185,7 @@ export function MonitorCreateModal({
       // Surface Zod field errors under the offending control; toast non-field errors.
       const fieldErrors = extractFieldErrors(error)
       const nameErr = fieldErrors?.name?.[0]
-      const errors = alertFieldErrorsFrom(fieldErrors, 0)
+      const errors = alertFieldErrorsFrom(fieldErrors, null)
       if (nameErr || hasAlertFieldErrors(errors)) {
         if (nameErr) setNameError(nameErr)
         setAlertErrors(errors)

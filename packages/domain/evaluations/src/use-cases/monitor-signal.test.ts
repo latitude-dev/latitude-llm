@@ -121,6 +121,25 @@ const buildLayer = (input: {
 }
 
 describe("monitorSignalUseCase", () => {
+  describe("user-origin signals", () => {
+    it("rejects monitoring a user-authored signal without starting any workflow", async () => {
+      // Seed an active evaluation so the realign path would otherwise run — the
+      // origin guard must short-circuit before any workflow or outbox write.
+      const { started, events, layer } = buildLayer({ activeEvaluations: [makeEvaluation()] })
+
+      await expect(
+        Effect.runPromise(
+          monitorSignalUseCase({ organizationId, projectId, signalId, actorUserId, signalOrigin: "user" }).pipe(
+            Effect.provide(layer),
+          ),
+        ),
+      ).rejects.toMatchObject({ _tag: "BadRequestError" })
+
+      expect(started).toEqual([])
+      expect(events).toEqual([])
+    })
+  })
+
   describe("start path (no active evaluation)", () => {
     it("kicks off the generation workflow and emits `EvaluationCreated`", async () => {
       const { started, events, layer } = buildLayer({})

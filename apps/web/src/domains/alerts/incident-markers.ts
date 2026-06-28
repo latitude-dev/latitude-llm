@@ -1,5 +1,5 @@
-import type { AlertIncidentKind, AlertSeverity } from "@domain/alerts"
-import { ALERT_INCIDENT_KIND_LABEL, SEVERITY_COLOR } from "@domain/shared"
+import type { AlertSeverity } from "@domain/incidents"
+import { INCIDENT_NOTIFICATION_KEY_LABEL, type IncidentNotificationKey, SEVERITY_COLOR } from "@domain/shared"
 import type { BarChartOverlay, BarChartOverlayArea, BarChartOverlayLine } from "@repo/ui"
 import type { AlertIncidentRecord } from "./alerts.functions.ts"
 
@@ -8,20 +8,11 @@ type TopSymbol = NonNullable<BarChartOverlayLine["topSymbol"]>
 // Markers are paint-only — interactivity lives at the bucket level via the histogram's hover
 // popover, not on the marker itself. Sizes are picked so each kind reads distinctly at a
 // glance against a busy bar chart background.
-const KIND_TOP_SYMBOL: Record<AlertIncidentKind, TopSymbol> = {
-  "issue.new": { shape: "circle", size: 9 },
-  "issue.regressed": { shape: "diamond", size: 10 },
-  // Escalating typically renders as an area, but we still render a tiny tick at the start so a
-  // 1-bucket escalation that snaps to a single cell stays visible.
-  "issue.escalating": { shape: "rect", size: 7 },
-  // Unused until M7 wires saved-search firing; shapes mirror the issue analogues.
-  "savedSearch.match": { shape: "triangle", size: 9 },
-  "savedSearch.threshold": { shape: "diamond", size: 10 },
-  "savedSearch.escalating": { shape: "rect", size: 7 },
-  // Unified query-time kinds — same glyphs as the saved-search analogues they supersede.
-  "event.matched": { shape: "triangle", size: 9 },
-  "metric.threshold": { shape: "diamond", size: 10 },
-  "metric.escalating": { shape: "rect", size: 7 },
+const KIND_TOP_SYMBOL: Record<IncidentNotificationKey, TopSymbol> = {
+  "monitor.match": { shape: "triangle", size: 9 },
+  "monitor.threshold": { shape: "diamond", size: 10 },
+  "monitor.escalating": { shape: "rect", size: 7 },
+  "signal.escalating": { shape: "rect", size: 7 },
 }
 
 export const SEVERITY_LABELS: Record<AlertSeverity, string> = {
@@ -201,7 +192,7 @@ export function buildIncidentMarkers({
       lines.push({
         categoryIndex: bucketIndex,
         color: SEVERITY_COLOR[incident.severity],
-        dashed: incident.kind === "issue.regressed",
+        dashed: false,
         topSymbol: KIND_TOP_SYMBOL[incident.kind],
       })
     }
@@ -223,6 +214,6 @@ export function buildIncidentMarkers({
   }
 }
 
-export function formatIncidentKindLabel(kind: AlertIncidentKind): string {
-  return ALERT_INCIDENT_KIND_LABEL[kind]
+export function formatIncidentKindLabel(kind: IncidentNotificationKey): string {
+  return INCIDENT_NOTIFICATION_KEY_LABEL[kind]
 }

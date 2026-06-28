@@ -1,21 +1,27 @@
 ---
 title: Core Concepts
-description: "Understand Latitude's core concepts: projects, spans, traces, sessions, search, scores, evaluations, and issues."
+description: "Latitude's core concepts: projects, spans, traces, sessions, users, tools, search, behaviours, scores, signals, evaluations, and monitors."
 ---
 
 # Core Concepts
 
-Latitude is organized around a small set of concepts that connect production telemetry to signal discovery. A project receives agent activity as spans, traces, and sessions; search helps you find relevant traces; scores record judgments about trace quality; evaluations monitor known behaviours; and issues group repeated failures into trackable problems.
+Latitude is organized around a small set of concepts, grouped by the loop you work in: **Observe** what your agent did, **Understand** what matters, and **Refine** with monitoring and tests.
 
 ```text
 Project
-├─ Sessions
-│  └─ Traces
-│     └─ Spans
-├─ Search over traces
-├─ Scores attached to traces
-├─ Evaluations monitoring traces
-└─ Issues grouped from failed scores
+├─ Observe
+│  ├─ Sessions
+│  │  └─ Traces
+│  │     └─ Spans (LLM calls, tool calls, retrieval, and more)
+│  ├─ Users
+│  └─ Tools
+├─ Understand
+│  ├─ Search and Behaviours over traces
+│  ├─ Scores attached to traces
+│  └─ Signals grouped from failed scores
+└─ Refine
+   ├─ Evaluations that score live traffic
+   └─ Monitors that alert on signals, searches, or raw traffic
 ```
 
 ## Projects
@@ -25,21 +31,18 @@ A **project** is the main workspace for one agent, application, or AI feature. P
 Project-scoped data includes:
 
 - spans, traces, and sessions
-- search and saved searches
+- users and tools
+- search, saved searches, and behaviours
 - scores from annotations, evaluations, flaggers, and custom checks
-- issues discovered from failed scores
-- evaluations and simulations
+- signals grouped from failed scores
+- evaluations and monitors
 - project settings such as monitoring behaviour
-
-<Frame>
-  <img src="/images/getting-started/projects.png" alt="Projects page showing a list of projects with issues, datasets, and trace counts" />
-</Frame>
 
 Projects belong to organizations. Organization membership, API keys, and settings control who can access a project and how defaults cascade.
 
 ## Spans
 
-A **span** is the smallest unit of captured work. It represents one operation inside an agent run, such as an LLM call, tool invocation, retrieval step, HTTP request, or custom instrumented operation.
+A **span** is the smallest unit of captured work. It represents one operation inside an agent run, such as an LLM call, tool call, retrieval step, HTTP request, or custom instrumented operation.
 
 Spans can capture:
 
@@ -61,7 +64,7 @@ Traces are the main unit used across Latitude:
 - search returns matching traces
 - annotations, scores, and evaluations attach to traces
 - flaggers run on completed traces
-- issues group related failed trace signals
+- failed scores on traces feed signal discovery
 
 Latitude waits for a trace to stop receiving new spans before treating it as complete. Downstream workflows such as search indexing, flaggers, evaluations, scores, and signal discovery run on completed traces so they do not act on partial executions.
 
@@ -71,16 +74,17 @@ A **session** groups related traces into a multi-turn conversation or workflow. 
 
 Use sessions when multiple traces belong to the same user conversation, support ticket, workflow, or agent task. For example, each chat turn can be one trace while the whole conversation shares one session.
 
-Sessions help teams:
+## Users
 
-- review full conversation context across turns
-- group traces by a stable conversation id
-- investigate user-level or workflow-level behaviour
-- understand whether a failure was isolated or part of a longer interaction
+A **user** is an end user of your agent, identified by the `userId` you send with telemetry. The Users view groups everything one user did: their sessions, errors, cost, and activity over time, along with the signals affecting them. Use it to see who is impacted by a problem and who is most active.
+
+## Tools
+
+A **tool** is a function your agent can call. Latitude discovers every tool from your telemetry and tracks per-tool usage, error rate, and latency in the Tools view, so you can see which tools are heavily used, failing, or never called.
 
 ## Search
 
-**Search** finds traces by meaning, exact text, metadata filters, or a combination of all three. It is the discovery layer for behaviours your team wants to inspect, review, and track.
+**Search** finds traces by meaning, exact text, metadata filters, or a combination of all three. It is the discovery layer for behaviours your team wants to inspect, review, and track. Saved searches let teams bookmark useful cohorts and review them repeatedly.
 
 Use search to find traces such as:
 
@@ -90,7 +94,9 @@ Use search to find traces such as:
 - hallucinated or incomplete answers
 - traces from a specific user, model, release, environment, tag, or metadata value
 
-Saved searches let teams bookmark useful behavioural cohorts and review them repeatedly.
+## Behaviours
+
+A **behaviour** is a topic Latitude automatically discovers by clustering your sessions by meaning. Behaviours surface what your users are actually doing, with trends and outcome metrics, so you find patterns you did not know to search for. Where search starts from a query, behaviours start from a map of your traffic.
 
 ## Scores
 
@@ -100,24 +106,26 @@ Scores answer questions such as:
 
 - Did this trace pass or fail a quality check?
 - What feedback explains the verdict?
-- Which signal source produced the verdict?
+- Which source produced the verdict?
 - Should this failure contribute to signal discovery?
 
 Failed, eligible scores are the primary input for signal discovery. Scores also power analytics and help teams compare automated judgments with human feedback.
 
-## Issues
+## Signals
 
-An **issue** is a recurring failure pattern discovered from failed scores. Instead of leaving failures as isolated examples, Latitude groups similar failures into named issues with examples, trends, affected users, lifecycle states, and linked evaluations.
+A **signal** is a recurring failure pattern Latitude tracks. Instead of leaving failures as isolated examples, Latitude groups similar failed scores into named signals with example traces, trends, affected users, lifecycle states, and linked evaluations.
 
-Issues help teams:
+Signals created from negative human annotations are also called **issues**; the word is still used in that narrower context.
+
+Signals help teams:
 
 - triage new and escalating production problems
 - inspect representative traces for the failure pattern
-- decide whether a cluster is real, noise, resolved, or ignored
+- decide whether a pattern is real, noise, resolved, or ignored
 - generate evaluations that monitor the same failure mode on future traces
 - catch regressions after a fix ships
 
-Issue states include **new**, **escalating**, **resolved**, **regressed**, and **ignored**. An issue can have multiple states at once, such as new and escalating.
+Signal states include **new**, **escalating**, **resolved**, **regressed**, and **ignored**. A signal can have multiple states at once, such as new and escalating.
 
 ## Evaluations
 
@@ -127,27 +135,30 @@ Evaluations help teams:
 
 - monitor known failure modes on live traffic
 - measure whether a fix reduced or eliminated a behaviour
-- catch regressions after an issue is resolved
-- turn important issues into ongoing monitors
+- catch regressions after a signal is resolved
+- turn important signals into ongoing monitors
 - compare automated judgments with human annotations through alignment metrics
 
-Latitude can generate evaluations from issues, then use human feedback to keep those evaluations aligned with the team's judgment.
+Latitude can generate evaluations from signals, then use human feedback to keep those evaluations aligned with the team's judgment.
+
+## Monitors
+
+A **monitor** watches a target, such as a signal, a saved search, a tool, or your raw traffic, and opens an **incident** when a condition is met. When an incident opens, Latitude notifies you in-app, by email, or in Slack. Every project comes with system monitors that watch the signal lifecycle, and you can create your own.
 
 ## How the concepts fit together
 
 1. A **project** receives telemetry from your agent.
 2. Agent operations arrive as **spans**.
-3. Related spans form completed **traces**.
-4. Related traces can be grouped into **sessions**.
-5. **Search** finds traces that match behaviours your team cares about.
-6. Annotations, flaggers, **evaluations**, and custom checks create **scores** on traces.
-7. **Evaluations** monitor known behaviours and can be generated from important issues.
-8. Failed scores cluster into **issues** that your team can triage, monitor, and fix.
+3. Related spans form completed **traces**, and related traces group into **sessions**.
+4. **Search** and **Behaviours** help you find the traces and topics that matter; **Users** and **Tools** break the same activity down by end user and by tool.
+5. Annotations, flaggers, **evaluations**, and custom checks create **scores** on traces.
+6. Failed scores cluster into **signals** you can triage, monitor, and fix. Signals from negative annotations are called issues.
+7. **Monitors** watch signals (and searches, tools, or raw traffic) and open incidents that alert you when something needs attention.
 
 ## Next steps
 
 - [Start tracing](../telemetry/start-tracing): send your first spans and traces to Latitude.
-- [Observability](../observability/overview): inspect traces, sessions, and telemetry metadata.
-- [Search](../search/overview): find traces by meaning, exact text, and filters.
-- [Evaluations](../evaluations/overview): monitor known behaviours and issue patterns.
-- [Signal Discovery](../signals/overview): understand how failed scores become issues.
+- [Observability](../observability/overview): inspect traces, sessions, users, and tools.
+- [Search](../search/overview) and [Behaviours](../search/behaviours): find the traffic that matters.
+- [Signals](../signals/overview): understand how failed scores become tracked signals.
+- [Monitors](../monitors/overview): get alerted when something needs attention.

@@ -6,8 +6,7 @@ import pydantic
 import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
-from .alert_condition import AlertCondition
-from .monitor_incident_kind import MonitorIncidentKind
+from .monitor_incident_condition import MonitorIncidentCondition
 from .monitor_incident_severity import MonitorIncidentSeverity
 from .monitor_incident_source_type import MonitorIncidentSourceType
 
@@ -32,17 +31,12 @@ class MonitorIncident(UniversalBaseModel):
         pydantic.Field()
     )
     """
-    Kind of entity that triggered the incident. `issue` for signal-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a search.
+    Kind of entity that triggered the incident: `signal` or `monitor`.
     """
 
     source_id: typing_extensions.Annotated[str, FieldMetadata(alias="sourceId")] = pydantic.Field()
     """
     Id of the entity that triggered the incident (matches `sourceType`).
-    """
-
-    kind: MonitorIncidentKind = pydantic.Field()
-    """
-    Reason the incident opened. `issue.new` fires when a new signal is discovered; `issue.regressed` when a resolved signal is detected again; `issue.escalating` when an ongoing signal is being detected more than expected. The `savedSearch.*` kinds are raised by monitors watching a search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when matching traces are detected above a configured threshold, and `savedSearch.escalating` when they stay above the threshold for a sustained window.
     """
 
     severity: MonitorIncidentSeverity = pydantic.Field()
@@ -67,14 +61,11 @@ class MonitorIncident(UniversalBaseModel):
     ISO-8601 timestamp at which the incident row was created.
     """
 
-    monitor_alert_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="monitorAlertId")] = (
-        pydantic.Field(default=None)
-    )
+    condition: typing.Optional[MonitorIncidentCondition] = pydantic.Field(default=None)
     """
-    Id of the monitor alert that opened this incident, or `null` when not attributed to a monitor.
+    The monitor rule configuration when the incident opened, or `null` for signal incidents and match monitors.
     """
 
-    condition: typing.Optional[AlertCondition] = None
     notified: bool = pydantic.Field()
     """
     `true` when this incident triggered at least one notification.

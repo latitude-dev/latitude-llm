@@ -13,25 +13,32 @@ class IncidentNotificationsSetting(UniversalBaseModel):
     Per-alert-kind opt-out for incident notifications.
     """
 
-    issue_new: typing_extensions.Annotated[typing.Optional[bool], FieldMetadata(alias="issue.new")] = pydantic.Field(
-        default=None
-    )
-    """
-    Send a notification when a new signal is discovered. Defaults to `true` when omitted.
-    """
-
-    issue_regressed: typing_extensions.Annotated[typing.Optional[bool], FieldMetadata(alias="issue.regressed")] = (
-        pydantic.Field(default=None)
-    )
-    """
-    Send a notification when a previously-resolved signal regresses. Defaults to `true` when omitted.
-    """
-
-    issue_escalating: typing_extensions.Annotated[typing.Optional[bool], FieldMetadata(alias="issue.escalating")] = (
+    signal_escalating: typing_extensions.Annotated[typing.Optional[bool], FieldMetadata(alias="signal.escalating")] = (
         pydantic.Field(default=None)
     )
     """
     Send a notification when an active signal is escalating in volume or severity. Defaults to `true` when omitted.
+    """
+
+    monitor_match: typing_extensions.Annotated[typing.Optional[bool], FieldMetadata(alias="monitor.match")] = (
+        pydantic.Field(default=None)
+    )
+    """
+    Send a notification when a match monitor opens an incident. Defaults to `true` when omitted.
+    """
+
+    monitor_threshold: typing_extensions.Annotated[typing.Optional[bool], FieldMetadata(alias="monitor.threshold")] = (
+        pydantic.Field(default=None)
+    )
+    """
+    Send a notification when a threshold monitor opens an incident. Defaults to `true` when omitted.
+    """
+
+    monitor_escalating: typing_extensions.Annotated[
+        typing.Optional[bool], FieldMetadata(alias="monitor.escalating")
+    ] = pydantic.Field(default=None)
+    """
+    Send a notification when an escalating monitor opens an incident. Defaults to `true` when omitted.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

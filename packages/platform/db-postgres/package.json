@@ -34,7 +34,7 @@
     "@better-auth/stripe": "catalog:",
     "@domain/admin": "workspace:*",
     "@domain/ai": "workspace:*",
-    "@domain/alerts": "workspace:*",
+    "@domain/incidents": "workspace:*",
     "@domain/annotation-queues": "workspace:*",
     "@domain/api-keys": "workspace:*",
     "@domain/billing": "workspace:*",

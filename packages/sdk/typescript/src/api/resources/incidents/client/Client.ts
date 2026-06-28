@@ -37,7 +37,8 @@ export class IncidentsClient {
      *     await client.incidents.list("projectSlug", {
      *         fromIso: "2024-01-15T09:30:00Z",
      *         toIso: "2024-01-15T09:30:00Z",
-     *         sourceId: "sourceId"
+     *         source_type: "monitor",
+     *         source_id: "source_id"
      *     })
      */
     public list(
@@ -53,17 +54,12 @@ export class IncidentsClient {
         request: LatitudeApi.IncidentsListRequest = {},
         requestOptions?: IncidentsClient.RequestOptions,
     ): Promise<core.WithRawResponse<LatitudeApi.ListIncidentsResponse>> {
-        const { fromIso, toIso, sourceTypes, sourceId, kinds, severities } = request;
+        const { fromIso, toIso, source_type: sourceType, source_id: sourceId, severities } = request;
         const _queryParams: Record<string, unknown> = {
             fromIso: fromIso != null ? fromIso : undefined,
             toIso: toIso != null ? toIso : undefined,
-            sourceTypes: Array.isArray(sourceTypes)
-                ? sourceTypes.map((item) => item)
-                : sourceTypes != null
-                  ? sourceTypes
-                  : undefined,
-            sourceId,
-            kinds: Array.isArray(kinds) ? kinds.map((item) => item) : kinds != null ? kinds : undefined,
+            source_type: sourceType != null ? sourceType : undefined,
+            source_id: sourceId,
             severities: Array.isArray(severities)
                 ? severities.map((item) => item)
                 : severities != null

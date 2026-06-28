@@ -7,11 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [6.2.0] - 2026-06-28
+## [6.2.2] - 2026-06-28
 
 ### Added
 
 - `client.account.create` endpoint/method support for creating accounts.
+
+## [6.2.1] - 2026-06-26
+
+### Fixed
+
+- Project list/get/create/update responses now strip internal-only `settings` fields (`is_sample`, `onboarding_type`, `onboarding_completed`, `sampling`) that could leak from Postgres and break MCP `listProjects` output validation.
+
+### Changed
+
+- Monitor target responses now document the normalized fields returned by monitor endpoints (`kind`, `stream`, `saved_search_id`, and `metric`).
+
+## [6.2.0] - 2026-06-26
+
+### Added
+
+- `client.signals.create`, `client.signals.update`, and `client.signals.delete` on `LatitudeApiClient` and `AsyncLatitudeApiClient` — author signals over the API. `create` registers a signal with its own evaluation (declarative settings, e.g. an LLM judge with `criteria`, or a raw `script`) plus optional `priority` and `filters`; `update` changes a signal's `name`, `description`, and `filters`; `delete` removes a user-authored signal. Adds the `CreateSignalResponse` and `UpdateSignalResponse` types.
+
+### Changed
+
+- `Evaluation.alignment` and `Evaluation.aligned_at` are now optional — they are omitted for raw or deterministic evaluations that are not annotation-aligned.
 
 ## [6.1.0] - 2026-06-17
 

@@ -5,31 +5,27 @@ import type * as LatitudeApi from "../../../../index.js";
 /**
  * @example
  *     {
- *         stream: "traces"
+ *         filterSetContains: {
+ *             "key": [{
+ *                     op: "eq",
+ *                     value: "value"
+ *                 }]
+ *         }
  *     }
  */
 export interface ListMonitorsForTargetBody {
-    /** Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`. */
-    stream: ListMonitorsForTargetBody.Stream;
-    /** Optional target kind to match: `user`, `tool`, `session`, or `savedSearch`. */
-    targetKind?: ListMonitorsForTargetBody.TargetKind;
-    filterSetContains?: LatitudeApi.MonitorFilterSet | undefined;
+    /** Optional target type to match. */
+    targetType?: ListMonitorsForTargetBody.TargetType;
+    filterSetContains: LatitudeApi.MonitorFilterSet;
 }
 
 export namespace ListMonitorsForTargetBody {
-    /** Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`. */
-    export const Stream = {
-        Traces: "traces",
-        Spans: "spans",
-        Sessions: "sessions",
-    } as const;
-    export type Stream = (typeof Stream)[keyof typeof Stream];
-    /** Optional target kind to match: `user`, `tool`, `session`, or `savedSearch`. */
-    export const TargetKind = {
+    /** Optional target type to match. */
+    export const TargetType = {
+        SavedSearch: "savedSearch",
         Tool: "tool",
         User: "user",
         Session: "session",
-        SavedSearch: "savedSearch",
     } as const;
-    export type TargetKind = (typeof TargetKind)[keyof typeof TargetKind];
+    export type TargetType = (typeof TargetType)[keyof typeof TargetType];
 }

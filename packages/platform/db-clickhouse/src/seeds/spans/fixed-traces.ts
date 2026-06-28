@@ -76,6 +76,14 @@ function estimateTau2Tokens(messages: readonly Tau2Message[]): number {
   return Math.max(12, Math.ceil(JSON.stringify(messages).length / 4))
 }
 
+// Empty message lists must serialize to "" (not "[]") to match the real span
+// writer's contract: the traces/sessions rollups select messages with
+// `input_messages != ''`, so a "[]" leading-greeting span would otherwise win
+// the earliest-span tie and blank out the whole trace's Input.
+function serializeMessages(messages: readonly Tau2Message[]): string {
+  return messages.length > 0 ? JSON.stringify(messages) : ""
+}
+
 function createTau2LlmSpan(opts: {
   scope: SeedScope
   traceId: string
@@ -135,8 +143,8 @@ function createTau2LlmSpan(opts: {
     is_streaming: hasToolCall ? 0 : 1,
     response_id: `seed-${opts.spanId}`,
     finish_reasons: [hasToolCall ? "tool_calls" : "stop"],
-    input_messages: JSON.stringify(opts.inputMessages),
-    output_messages: JSON.stringify([opts.outputMessage]),
+    input_messages: serializeMessages(opts.inputMessages),
+    output_messages: serializeMessages([opts.outputMessage]),
     system_instructions: JSON.stringify([{ type: "text", content: opts.systemInstruction }]),
     tool_definitions: JSON.stringify(
       opts.toolDefinitions.map((name) => ({ name, description: TAU2_TOOL_DESCRIPTIONS[name] ?? `${name} tool` })),
@@ -585,7 +593,7 @@ function buildLargeConversationSpans(scope: SeedScope): SpanRow[] {
   return LARGE_CONVERSATION_SPECS.map((spec) => createLargeConversationChatSpan({ scope, spec }))
 }
 
-function buildTau2TrajectorySpans(scope: SeedScope, maxTrajectories = TAU2_SEED_TRAJECTORIES.length): SpanRow[] {
+export function buildTau2TrajectorySpans(scope: SeedScope, maxTrajectories = TAU2_SEED_TRAJECTORIES.length): SpanRow[] {
   const spans: SpanRow[] = []
 
   TAU2_SEED_TRAJECTORIES.slice(0, maxTrajectories).forEach((trajectory, trajectoryIndex) => {
@@ -758,8 +766,8 @@ function buildTau2TrajectorySpans(scope: SeedScope, maxTrajectories = TAU2_SEED_
     root.cost_input_microcents = rootInputTokens * 25
     root.cost_output_microcents = rootOutputTokens * 100
     root.cost_total_microcents = root.cost_input_microcents + root.cost_output_microcents
-    root.input_messages = JSON.stringify(rootInputMessages)
-    root.output_messages = JSON.stringify(rootOutputMessages)
+    root.input_messages = serializeMessages(rootInputMessages)
+    root.output_messages = serializeMessages(rootOutputMessages)
     root.end_time = formatClickHouseTimestamp(new Date(cursor.getTime() + 50))
   })
 

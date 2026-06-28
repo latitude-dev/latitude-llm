@@ -1,3 +1,4 @@
+import { MOMENT_KINDS } from "@domain/conversation-intelligence"
 import type { Dataset, DatasetRow } from "@domain/datasets"
 import {
   addTracesToDataset,
@@ -12,6 +13,7 @@ import {
   insertRows,
   listDatasets,
   listRows,
+  MAX_TRACES_PER_DATASET_IMPORT,
   parseDatasetCsv,
   prepareDatasetExportUseCase,
   searchDatasets,
@@ -31,17 +33,25 @@ import {
   putInDisk,
   SignalId,
   sortDirectionSchema,
+  TaxonomyClusterId,
   TraceId,
   UnauthorizedError,
 } from "@domain/shared"
+import { listClusterSessionTraceIdsUseCase } from "@domain/taxonomy"
 import { AIEmbedLive, withAi } from "@platform/ai"
 import {
   DatasetRowRepositoryLive,
   ScoreAnalyticsRepositoryLive,
+  TaxonomyClusterIntelligenceRepositoryLive,
   TraceRepositoryLive,
   withClickHouse,
 } from "@platform/db-clickhouse"
-import { DatasetRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
+import {
+  DatasetRepositoryLive,
+  OutboxEventWriterLive,
+  TaxonomyClusterRepositoryLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
@@ -763,3 +773,150 @@ export const createDatasetFromTracesFunction = createServerFn({
       }
     },
   )
+
+const clusterSourceSchema = z.object({
+  clusterId: z.string(),
+  filter: z.enum(["all", ...MOMENT_KINDS]).optional(),
+  momentRange: z
+    .object({
+      metric: z.enum(["frequency", "escalation", "resolution", "churnRisk", "wins"]),
+      fromTurn: z.number().int().min(0),
+      toTurn: z.number().int().min(0),
+    })
+    .optional(),
+  timeFromIso: z.string().optional(),
+  timeToIso: z.string().optional(),
+})
+
+export type ClusterSource = z.infer<typeof clusterSourceSchema>
+type ClusterSourceInput = ClusterSource
+
+// Resolve a behaviour selection to explicit trace ids. "selected" uses the
+// checked rows verbatim (the table already holds their trace ids); "all" /
+// "allExcept" resolve the cluster (its subtree) to one trace id per session
+// honouring the drawer's active filters, capped one above the import limit so
+// the domain surfaces TooManyTracesError when the selection is too large.
+function resolveClusterTraceIds(
+  orgId: OrganizationId,
+  projectId: ProjectId,
+  cluster: ClusterSourceInput,
+  selection: z.infer<typeof rowSelectionSchema>,
+) {
+  return Effect.gen(function* () {
+    if (selection.mode === "selected") return selection.rowIds.map(TraceId)
+    const all = yield* listClusterSessionTraceIdsUseCase({
+      organizationId: orgId,
+      projectId,
+      clusterId: TaxonomyClusterId(cluster.clusterId),
+      ...(cluster.filter ? { filter: cluster.filter } : {}),
+      ...(cluster.momentRange ? { momentRange: cluster.momentRange } : {}),
+      ...(cluster.timeFromIso ? { startTimeFrom: new Date(cluster.timeFromIso) } : {}),
+      ...(cluster.timeToIso ? { startTimeTo: new Date(cluster.timeToIso) } : {}),
+      limit: MAX_TRACES_PER_DATASET_IMPORT + 1,
+    })
+    if (selection.mode === "all") return all
+    const excluded = new Set<string>(selection.rowIds)
+    return all.filter((id) => !excluded.has(id as string))
+  })
+}
+
+export const addClusterSessionsToDatasetFunction = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      datasetId: z.string(),
+      cluster: clusterSourceSchema,
+      selection: rowSelectionSchema,
+    }),
+  )
+  .handler(async ({ data }): Promise<{ versionId: string; version: number; rowCount: number }> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const projectId = ProjectId(data.projectId)
+    const chClient = getClickhouseClient()
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const traceIds = yield* resolveClusterTraceIds(orgId, projectId, data.cluster, data.selection)
+        return yield* addTracesToDataset({
+          projectId,
+          datasetId: DatasetId(data.datasetId),
+          source: { kind: "project" },
+          selection: { mode: "selected", traceIds },
+        })
+      }).pipe(
+        withPostgres(Layer.mergeAll(DatasetRepositoryLive, TaxonomyClusterRepositoryLive), getPostgresClient(), orgId),
+        withClickHouse(
+          Layer.mergeAll(
+            DatasetRowRepositoryLive,
+            TraceRepositoryLive,
+            ScoreAnalyticsRepositoryLive,
+            TaxonomyClusterIntelligenceRepositoryLive,
+          ),
+          chClient,
+          orgId,
+        ),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
+    )
+
+    return {
+      versionId: result.versionId as string,
+      version: result.version,
+      rowCount: result.rowIds.length,
+    }
+  })
+
+export const createDatasetFromClusterSessionsFunction = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      name: z.string().min(1),
+      cluster: clusterSourceSchema,
+      selection: rowSelectionSchema,
+    }),
+  )
+  .handler(async ({ data }): Promise<{ datasetId: string; versionId: string; version: number; rowCount: number }> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const projectId = ProjectId(data.projectId)
+    const chClient = getClickhouseClient()
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const traceIds = yield* resolveClusterTraceIds(orgId, projectId, data.cluster, data.selection)
+        return yield* createDatasetFromTraces({
+          projectId,
+          name: data.name,
+          source: { kind: "project" },
+          selection: { mode: "selected", traceIds },
+        })
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(DatasetRepositoryLive, OutboxEventWriterLive, TaxonomyClusterRepositoryLive),
+          getPostgresClient(),
+          orgId,
+        ),
+        withClickHouse(
+          Layer.mergeAll(
+            DatasetRowRepositoryLive,
+            TraceRepositoryLive,
+            ScoreAnalyticsRepositoryLive,
+            TaxonomyClusterIntelligenceRepositoryLive,
+          ),
+          chClient,
+          orgId,
+        ),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
+    )
+
+    return {
+      datasetId: result.datasetId as string,
+      versionId: result.versionId as string,
+      version: result.version,
+      rowCount: result.rowIds.length,
+    }
+  })

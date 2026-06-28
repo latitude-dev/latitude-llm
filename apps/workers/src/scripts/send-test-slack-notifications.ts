@@ -34,9 +34,9 @@ loadDevelopmentEnvironments(new URL("../server.ts", import.meta.url).href)
 // idempotency keys and the delivery repo doesn't skip them as duplicates.
 const makeIncidentBase = (alertIncidentId: string) => ({
   alertIncidentId,
-  sourceType: "issue" as const,
+  sourceType: "signal" as const,
   sourceId: generateId(),
-  incidentKind: "issue.escalating" as const,
+  incidentKind: "signal.escalating" as const,
   severity: "high" as const,
 })
 
@@ -50,7 +50,7 @@ const buildSyntheticPayloads = (): Record<string, unknown> => {
   return {
     "incident.event": {
       ...makeIncidentBase(generateId()),
-      incidentKind: "issue.new",
+      incidentKind: "signal.discovered",
       severity: "high",
       sampleExcerpt: {
         text: "The model returned 'cancel' but the workflow expected 'proceed'",

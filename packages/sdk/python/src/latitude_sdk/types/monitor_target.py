@@ -10,36 +10,47 @@ from .monitor_filter_set import MonitorFilterSet
 from .monitor_metric import MonitorMetric
 from .monitor_target_kind import MonitorTargetKind
 from .monitor_target_stream import MonitorTargetStream
+from .monitor_target_type import MonitorTargetType
 
 
 class MonitorTarget(UniversalBaseModel):
     """
-    Unified query-time target for tool, user, and raw-stream monitors; `null` for legacy saved-search and system monitors.
+    Entity or filter set watched by this monitor.
     """
 
-    kind: MonitorTargetKind = pydantic.Field()
+    type: MonitorTargetType = pydantic.Field()
     """
-    Product target category: `tool`, `user`, `session`, `savedSearch`, or system `signal`.
+    Product target category: `savedSearch`, `tool`, `user`, or `session`.
     """
 
-    stream: MonitorTargetStream = pydantic.Field()
+    id: typing.Optional[str] = pydantic.Field(default=None)
     """
-    Internal telemetry query stream derived from the product target category: `traces`, `spans`, or `sessions`.
+    Target entity id, or `null` for project-wide targets.
     """
 
     filter_set: typing_extensions.Annotated[typing.Optional[MonitorFilterSet], FieldMetadata(alias="filterSet")] = None
     query: typing.Optional[str] = pydantic.Field(default=None)
     """
-    Optional semantic query applied with the filters. Use `null` for user/tool monitors.
+    Semantic query applied when evaluating inline trace targets.
+    """
+
+    kind: typing.Optional[MonitorTargetKind] = pydantic.Field(default=None)
+    """
+    Normalized target kind returned on persisted monitors.
+    """
+
+    stream: typing.Optional[MonitorTargetStream] = pydantic.Field(default=None)
+    """
+    Telemetry stream evaluated by the monitor.
     """
 
     saved_search_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="savedSearchId")] = (
         pydantic.Field(default=None)
     )
     """
-    Saved-search target id, or `null` when `filterSet` and `query` define the target inline.
+    Saved-search id for saved-search monitors, or `null` for inline targets.
     """
 
-    metric: MonitorMetric
+    metric: typing.Optional[MonitorMetric] = None
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -95,40 +95,13 @@ function LastIncidentCell({
   )
 }
 
-function savedSearchTargets(alerts: MonitorRecord["alerts"]): readonly [string, string][] {
-  const watched = new Map<string, string>()
-  for (const alert of alerts) {
-    if (
-      alert.source?.type === "savedSearch" &&
-      alert.sourceSlug &&
-      alert.sourceName &&
-      !watched.has(alert.sourceSlug)
-    ) {
-      watched.set(alert.sourceSlug, alert.sourceName)
-    }
-  }
-  return [...watched.entries()]
-}
-
-function ConditionCell({ alerts }: { readonly alerts: MonitorRecord["alerts"] }) {
-  const [first, ...rest] = alerts
-  if (!first) {
-    return (
-      <Text.H6 color="foregroundMuted" noWrap>
-        —
-      </Text.H6>
-    )
-  }
+function ConditionCell({ rule }: { readonly rule: MonitorRecord["rule"] | null }) {
+  if (!rule) return <Text.H6 color="foregroundMuted">—</Text.H6>
   return (
     <div className="flex min-w-0 items-center gap-2">
       <Text.H5 className="min-w-0" noWrap ellipsis>
-        {first.summary}
+        {rule.summary}
       </Text.H5>
-      {rest.length > 0 ? (
-        <Badge variant="noBorderMuted" className="shrink-0" aria-label={`${rest.length} more conditions`}>
-          +{rest.length}
-        </Badge>
-      ) : null}
     </div>
   )
 }
@@ -140,10 +113,9 @@ function TargetCell({
   readonly monitor: MonitorRecord
   readonly onOpenSearch: (slug: string) => void
 }) {
-  const savedSearches = savedSearchTargets(monitor.alerts)
-  const [first, ...rest] = savedSearches
-  if (first) {
-    const [slug, name] = first
+  const savedSearchSlug = monitor.targetSavedSearchSlug
+  const savedSearchName = monitor.targetSavedSearchName
+  if (savedSearchSlug && savedSearchName) {
     return (
       <div className="flex min-w-0 items-center gap-2">
         <Tooltip
@@ -152,25 +124,20 @@ function TargetCell({
             <button
               type="button"
               className="min-w-0 cursor-pointer"
-              aria-label={`Open saved search ${name} on the traces page`}
+              aria-label={`Open saved search ${savedSearchName} on the traces page`}
               onClick={(event) => {
                 event.stopPropagation()
-                onOpenSearch(slug)
+                onOpenSearch(savedSearchSlug)
               }}
             >
               <Badge variant="muted" ellipsis className="max-w-full">
-                {name}
+                {savedSearchName}
               </Badge>
             </button>
           }
         >
           View matching traces
         </Tooltip>
-        {rest.length > 0 ? (
-          <Badge variant="noBorderMuted" className="shrink-0" aria-label={`${rest.length} more saved searches`}>
-            +{rest.length}
-          </Badge>
-        ) : null}
       </div>
     )
   }
@@ -296,7 +263,7 @@ export function MonitorsView({
       width: 340,
       minWidth: 200,
       maxWidth: 340,
-      render: (row) => <ConditionCell alerts={row.monitor.alerts} />,
+      render: (row) => <ConditionCell rule={row.monitor.rule} />,
     },
     optionsColumn<MonitorsTableRow>({
       getOptions: (row): MenuOption[] => {

@@ -111,9 +111,7 @@ const toSignalRecord = (issue: SignalListItem) => ({
   priority: issue.priority,
   createdAt: issue.createdAt.toISOString(),
   updatedAt: issue.updatedAt.toISOString(),
-  escalatedAt: issue.escalatedAt?.toISOString() ?? null,
-  resolvedAt: issue.resolvedAt?.toISOString() ?? null,
-  ignoredAt: issue.ignoredAt?.toISOString() ?? null,
+  mutedAt: issue.mutedAt?.toISOString() ?? null,
   firstSeenAt: issue.firstSeenAt.toISOString(),
   lastSeenAt: issue.lastSeenAt.toISOString(),
   occurrences: issue.occurrences,
@@ -184,9 +182,7 @@ const toSignalSummaryRecord = (issue: Signal) => ({
   source: issue.source,
   createdAt: issue.createdAt.toISOString(),
   updatedAt: issue.updatedAt.toISOString(),
-  escalatedAt: issue.escalatedAt?.toISOString() ?? null,
-  resolvedAt: issue.resolvedAt?.toISOString() ?? null,
-  ignoredAt: issue.ignoredAt?.toISOString() ?? null,
+  mutedAt: issue.mutedAt?.toISOString() ?? null,
 })
 
 export type SignalSummaryRecord = ReturnType<typeof toSignalSummaryRecord>
@@ -264,8 +260,8 @@ const SIGNAL_DETAIL_TREND_BUCKET_SECONDS = 12 * 60 * 60 // 12h
 const toSignalDetailRecord = (input: {
   readonly issue: Signal
   readonly states: readonly string[]
-  readonly firstSeenAt: Date
-  readonly lastSeenAt: Date
+  readonly firstSeenAt: Date | null
+  readonly lastSeenAt: Date | null
   readonly totalOccurrences: number
   readonly escalationOccurrenceThreshold: number | null
   readonly trend: readonly { readonly bucket: string; readonly count: number }[]
@@ -282,16 +278,15 @@ const toSignalDetailRecord = (input: {
   name: input.issue.name,
   description: input.issue.description,
   source: input.issue.source,
+  origin: input.issue.origin,
   assigneeId: input.issue.assigneeId,
   priority: input.issue.priority,
   states: input.states,
   createdAt: input.issue.createdAt.toISOString(),
   updatedAt: input.issue.updatedAt.toISOString(),
-  escalatedAt: input.issue.escalatedAt?.toISOString() ?? null,
-  resolvedAt: input.issue.resolvedAt?.toISOString() ?? null,
-  ignoredAt: input.issue.ignoredAt?.toISOString() ?? null,
-  firstSeenAt: input.firstSeenAt.toISOString(),
-  lastSeenAt: input.lastSeenAt.toISOString(),
+  mutedAt: input.issue.mutedAt?.toISOString() ?? null,
+  firstSeenAt: input.firstSeenAt?.toISOString() ?? null,
+  lastSeenAt: input.lastSeenAt?.toISOString() ?? null,
   totalOccurrences: input.totalOccurrences,
   escalationOccurrenceThreshold: input.escalationOccurrenceThreshold,
   trend: input.trend,
@@ -317,8 +312,7 @@ const toSignalLifecycleCommandRecord = (result: ApplySignalLifecycleCommandResul
   keepMonitoring: result.keepMonitoring,
   items: result.items.map((item) => ({
     signalId: item.signalId,
-    resolvedAt: item.resolvedAt?.toISOString() ?? null,
-    ignoredAt: item.ignoredAt?.toISOString() ?? null,
+    mutedAt: item.mutedAt?.toISOString() ?? null,
     updatedAt: item.updatedAt.toISOString(),
     changed: item.changed,
   })),
@@ -330,7 +324,7 @@ type ListSignalsRequest = z.infer<typeof listSignalsInputSchema>
 
 const runSignalsList = async (
   data: ListSignalsRequest,
-  options: { readonly includeAnalytics: boolean },
+  options: { readonly includeAnalytics: boolean; readonly includeItems?: boolean },
 ): Promise<SignalsListResultRecord> => {
   const { organizationId, userId } = await requireSession()
   const orgId = OrganizationId(organizationId)
@@ -383,6 +377,7 @@ const runSignalsList = async (
         ...(data.limit !== undefined ? { limit: data.limit } : {}),
         ...(data.offset !== undefined ? { offset: data.offset } : {}),
         includeAnalytics: options.includeAnalytics,
+        ...(options.includeItems !== undefined ? { includeItems: options.includeItems } : {}),
         ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
         ...(data.assigneeIds?.length ? { assigneeIds: data.assigneeIds } : {}),
         ...(data.sort ? { sort: data.sort } : {}),
@@ -417,7 +412,10 @@ export const listSignals = createServerFn({ method: "GET" })
 
 export const getSignalsAnalytics = createServerFn({ method: "GET" })
   .inputValidator(listSignalsInputSchema)
-  .handler(async ({ data }): Promise<SignalsListResultRecord> => runSignalsList(data, { includeAnalytics: true }))
+  .handler(
+    async ({ data }): Promise<SignalsListResultRecord> =>
+      runSignalsList(data, { includeAnalytics: true, includeItems: false }),
+  )
 
 export const getSignalRowMetrics = createServerFn({ method: "GET" })
   .inputValidator(signalRowMetricsInputSchema)
@@ -535,7 +533,7 @@ const toOrgSignalSearchRecord = (item: OrgSignalSearchItem): OrgSignalSearchReco
  * analytics pipeline), this is a lightweight search across every project in the caller's
  * organization. The lexical tier runs always; the semantic tier runs only when `semantic` is set
  * (the debounced call), embedding the query first. Each result carries its owning project's
- * slug/name and derived lifecycle states. Resolved/ignored issues are excluded.
+ * slug/name and derived lifecycle states. Muted issues are excluded.
  */
 export const searchOrgSignals = createServerFn({ method: "GET" })
   .inputValidator(
@@ -631,7 +629,6 @@ export const getSignalLifecycleSummary = createServerFn({ method: "GET" })
         const states = deriveSignalLifecycleStates({
           issue,
           isEscalating: issue.lifecycle.isEscalating,
-          isRegressed: issue.lifecycle.isRegressed,
           now,
         })
         return { id: issue.id, name: issue.name, states: [...states] }
@@ -746,11 +743,10 @@ export const getSignalDetail = createServerFn({ method: "GET" })
           states: deriveSignalLifecycleStates({
             issue,
             isEscalating: issue.lifecycle.isEscalating,
-            isRegressed: issue.lifecycle.isRegressed,
             now,
           }),
-          firstSeenAt: occurrence?.firstSeenAt ?? issue.createdAt,
-          lastSeenAt: occurrence?.lastSeenAt ?? issue.createdAt,
+          firstSeenAt: occurrence?.firstSeenAt ?? null,
+          lastSeenAt: occurrence?.lastSeenAt ?? null,
           totalOccurrences: occurrence?.totalOccurrences ?? 0,
           escalationOccurrenceThreshold:
             occurrence !== null ? getEscalationOccurrenceThreshold(occurrence.baselineAvgOccurrences) : null,
@@ -825,6 +821,24 @@ export const listSignalSessions = createServerFn({ method: "GET" })
     )
 
     return toSignalSessionPageRecord(result)
+  })
+
+export const countSignalSessions = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), signalId: z.string() }))
+  .handler(async ({ data }): Promise<number> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
+        return yield* scoreAnalyticsRepository.countSessionsBySignal({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          signalId: SignalId(data.signalId),
+        })
+      }).pipe(withClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), orgId)),
+    )
   })
 
 export const getSignalImpact = createServerFn({ method: "GET" })
@@ -1210,7 +1224,7 @@ export const applyBulkSignalLifecycleAction = createServerFn({ method: "POST" })
     if (signalIds.length === 0) {
       return {
         command: data.command,
-        keepMonitoring: null,
+        keepMonitoring: true,
         items: [],
       }
     }

@@ -2,4 +2,4 @@
 
 import typing
 
-IncidentSourceType = typing.Union[typing.Literal["issue", "savedSearch"], typing.Any]
+IncidentSourceType = typing.Union[typing.Literal["monitor", "signal"], typing.Any]

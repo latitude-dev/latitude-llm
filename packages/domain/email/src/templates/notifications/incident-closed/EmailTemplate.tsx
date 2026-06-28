@@ -1,5 +1,5 @@
 import type { IncidentRecovery } from "@domain/notifications"
-import { ALERT_INCIDENT_KIND_SOURCE_TYPE, type AlertIncidentKind, type AlertSeverity } from "@domain/shared"
+import type { AlertSeverity, IncidentNotificationKey } from "@domain/shared"
 import type { SignalPriority } from "@domain/signals"
 import { Section } from "@react-email/components"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
@@ -25,7 +25,7 @@ import {
 } from "../-incident-components.tsx"
 
 interface IncidentClosedEmailProps {
-  readonly incidentKind: AlertIncidentKind
+  readonly incidentKind: IncidentNotificationKey
   readonly severity: AlertSeverity
   readonly sourceId: string
   readonly sourceName: string
@@ -35,7 +35,7 @@ interface IncidentClosedEmailProps {
   readonly notificationCreatedAt: Date
   readonly organizationName: string
   readonly projectName: string | undefined
-  /** Signal triage snapshot at incident time; absent on legacy payloads and saved-search sources. */
+  /** Signal triage snapshot at incident time; absent on legacy payloads and monitor sources. */
   readonly priority: SignalPriority | undefined
   /** Live-resolved assignee display name; absent when unassigned or unresolvable. */
   readonly assigneeName: string | undefined
@@ -61,17 +61,17 @@ export function IncidentClosedEmail({
   monitor,
   webAppUrl,
 }: IncidentClosedEmailProps) {
-  const isSavedSearch = ALERT_INCIDENT_KIND_SOURCE_TYPE[incidentKind] === "savedSearch"
+  const isMonitorIncident = incidentKind.startsWith("monitor.")
   const heading = "Resolved escalation"
-  const subtitle = isSavedSearch
-    ? "We notified everyone watching this project — matching traces have returned below the threshold."
+  const subtitle = isMonitorIncident
+    ? "We notified everyone watching this project — the monitored target has returned below the threshold."
     : "We notified everyone watching this project — the occurrence rate has returned to baseline."
   const scope = formatScope(organizationName, projectName)
   const duration = humanizeDurationMs(recovery.durationMs)
-  const recoveryLine = isSavedSearch
-    ? `Elevated for ${duration} — no further action needed unless matching traces climb again.`
+  const recoveryLine = isMonitorIncident
+    ? `Elevated for ${duration} — no further action needed unless the monitored target climbs again.`
     : `Elevated for ${duration} — no further action needed unless the signal regresses again.`
-  const ctaHref = isSavedSearch ? monitor?.url : signalUrl
+  const ctaHref = isMonitorIncident ? monitor?.url : signalUrl
 
   const metadataRows = [
     { label: "Project", value: scope },
@@ -92,7 +92,7 @@ export function IncidentClosedEmail({
 
       <MonitorAttribution monitor={monitor} />
 
-      <SectionHeader label={isSavedSearch ? "Saved search" : "Signal"} />
+      <SectionHeader label={isMonitorIncident ? "Monitor target" : "Signal"} />
       <EmailText variant="heading">{sourceName}</EmailText>
       {description ? (
         <EmailText variant="bodySmall" className="text-muted-foreground">
@@ -108,7 +108,7 @@ export function IncidentClosedEmail({
       <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
         {recoveryLine}
       </EmailText>
-      {isSavedSearch ? null : (
+      {isMonitorIncident ? null : (
         <>
           <IncidentTrendChartImage src={chartUrl} />
           <SignalIdFooter signalId={sourceId} />
@@ -117,7 +117,7 @@ export function IncidentClosedEmail({
 
       {ctaHref ? (
         <Section className={emailDesignTokens.spacing.buttonTop}>
-          <EmailButton href={ctaHref} label={isSavedSearch ? "View monitor" : "View signal"} />
+          <EmailButton href={ctaHref} label={isMonitorIncident ? "View monitor" : "View signal"} />
         </Section>
       ) : null}
     </ContainerLayout>
@@ -125,7 +125,7 @@ export function IncidentClosedEmail({
 }
 
 IncidentClosedEmail.PreviewProps = {
-  incidentKind: "issue.escalating",
+  incidentKind: "signal.escalating",
   severity: "high",
   sourceId: "dds0rt8sqgpuku4u4wabze9r",
   sourceName: "Token leakage in responses",

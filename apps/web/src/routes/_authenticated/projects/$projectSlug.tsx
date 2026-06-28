@@ -174,7 +174,7 @@ function ProjectLayout() {
 
   if (project.settings.isSample) {
     return (
-      <div className="flex h-screen flex-col overflow-hidden bg-primary">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-primary">
         <SampleProjectStrip />
         <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-t-2xl bg-background">
           <ProjectSidebar project={project} projectSlug={projectSlug} />

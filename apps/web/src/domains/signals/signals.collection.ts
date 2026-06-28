@@ -18,6 +18,7 @@ import type {
   UpdateSignalTriageRecord,
 } from "./signals.functions.ts"
 import {
+  countSignalSessions,
   getRelatedSignals,
   getSignal,
   getSignalDetail,
@@ -41,8 +42,6 @@ const EMPTY_ISSUES_ANALYTICS: SignalsListResultRecord["analytics"] = {
     newSignals: 0,
     escalatingSignals: 0,
     ongoingSignals: 0,
-    regressedSignals: 0,
-    resolvedSignals: 0,
     seenOccurrences: 0,
   },
   histogram: [],
@@ -293,7 +292,7 @@ const ORG_SEARCH_LIMIT = 10
  * Org-wide issue search for the Command Palette. One tier per call: pass `semantic: false` for the
  * instant lexical tier and `semantic: true` for the debounced semantic tier. Results span every
  * project in the organization, each carrying its owning project's slug/name and derived states.
- * Resolved/ignored issues are excluded so the palette recommends active issues only.
+ * Muted issues are excluded so the palette recommends active issues only.
  * `preferProjectId` (the current project, when inside one) ranks that project's issues first.
  */
 export function useSignalsOrgSearch(
@@ -447,6 +446,24 @@ export function useUpdateSignalTriage(projectId: string, signalId: string) {
       }),
     onSuccess: () => invalidateSignalQueries(projectId, signalId),
   })
+}
+
+export function useSignalSessionsCount({
+  projectId,
+  signalId,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly signalId: string
+  readonly enabled?: boolean
+}) {
+  const { data } = useQuery({
+    queryKey: getSignalSessionsCountQueryKey(projectId, signalId),
+    queryFn: () => countSignalSessions({ data: { projectId, signalId } }),
+    staleTime: ISSUES_QUERY_STALE_TIME_MS,
+    enabled: enabled && projectId.length > 0 && signalId.length > 0,
+  })
+  return data ?? 0
 }
 
 export function useSignalSessionsInfiniteScroll({

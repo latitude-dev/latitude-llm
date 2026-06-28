@@ -14,18 +14,11 @@ class SignalLifecycleItem(UniversalBaseModel):
     Signal this entry applies to.
     """
 
-    resolved_at: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="resolvedAt")] = pydantic.Field(
+    muted_at: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="mutedAt")] = pydantic.Field(
         default=None
     )
     """
-    ISO-8601 timestamp at which the signal was resolved, or `null`.
-    """
-
-    ignored_at: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="ignoredAt")] = pydantic.Field(
-        default=None
-    )
-    """
-    ISO-8601 timestamp at which the signal was ignored, or `null`.
+    ISO-8601 timestamp at which the signal was muted, or `null`.
     """
 
     updated_at: typing_extensions.Annotated[str, FieldMetadata(alias="updatedAt")] = pydantic.Field()

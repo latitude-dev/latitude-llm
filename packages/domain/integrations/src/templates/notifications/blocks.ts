@@ -1,5 +1,5 @@
-import { formatHumanReadableAlert } from "@domain/monitors"
-import { type AlertIncidentCondition, type AlertIncidentKind, SEVERITY_COLOR } from "@domain/shared"
+import { formatHumanReadableRule } from "@domain/monitors"
+import { type AlertIncidentCondition, type IncidentNotificationKey, SEVERITY_COLOR } from "@domain/shared"
 import type { SignalPriority } from "@domain/signals"
 import type { ActionsBlock, HeaderBlock, KnownBlock, SectionBlock } from "@slack/web-api"
 
@@ -41,7 +41,7 @@ const PRIORITY_EMOJI: Record<SignalPriority, string> = {
 /**
  * " · 🟠 High · Assigned to Anna" suffix for the incident context line.
  * Empty string when the payload carries no triage snapshot (legacy rows,
- * savedSearch sources) so the line renders exactly as before.
+ * monitor sources) so the line renders exactly as before.
  */
 export const triageContextSuffix = (input: {
   readonly priority: SignalPriority | null | undefined
@@ -79,7 +79,7 @@ export const monitorAttributionBlocks = (input: {
   readonly projectSlug: string | undefined
   readonly monitorName: string | undefined
   readonly monitorSlug: string | undefined
-  readonly incidentKind: AlertIncidentKind
+  readonly incidentKind: IncidentNotificationKey
   readonly condition: AlertIncidentCondition | null | undefined
 }): KnownBlock[] => {
   if (!input.monitorName) return []
@@ -87,7 +87,10 @@ export const monitorAttributionBlocks = (input: {
   const name = url ? `<${url}|${input.monitorName}>` : `*${input.monitorName}*`
   const blocks: KnownBlock[] = [contextLine(`Created by monitor ${name}`)]
   if (input.condition) {
-    blocks.push(contextLine(formatHumanReadableAlert({ kind: input.incidentKind, condition: input.condition })))
+    const trigger = input.incidentKind.replace("monitor.", "")
+    if (trigger === "match" || trigger === "threshold" || trigger === "escalating") {
+      blocks.push(contextLine(formatHumanReadableRule({ trigger, condition: input.condition })))
+    }
   }
   return blocks
 }

@@ -62,7 +62,7 @@ function IncidentRow({
 }) {
   // Signals link to the issue; everything else with a monitor (saved-search AND
   // unified target-on-monitor incidents) links to that monitor's page.
-  const isSignal = incident.sourceType === "issue"
+  const isSignal = incident.sourceType === "signal"
   const signalTarget = isSignal && incident.sourceId !== null ? incident.sourceId : null
   const monitorTarget = !isSignal && incident.monitorSlug !== null ? incident.monitorSlug : null
   const primaryLabel = isSignal ? incident.signalName : incident.savedSearchName

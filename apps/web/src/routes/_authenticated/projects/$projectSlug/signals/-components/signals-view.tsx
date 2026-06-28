@@ -248,7 +248,6 @@ export function SignalsView({
             emptyLabel={metrics ? "-" : ""}
             showLabels={false}
             states={issue.states}
-            resolvedAt={issue.resolvedAt}
             escalationOccurrenceThreshold={issue.escalationOccurrenceThreshold}
           />
         )
@@ -268,7 +267,12 @@ export function SignalsView({
       width: 114,
       minWidth: 114,
       sortKey: "lastSeen",
-      render: (issue) => <SeenAtCell lastSeenAtIso={issue.lastSeenAt} firstSeenAtIso={issue.firstSeenAt} />,
+      render: (issue) => {
+        const metrics = rowMetricsBySignalId[issue.id]
+        if (!metrics) return <AnalyticsCellSkeleton />
+        if (metrics.occurrences === 0) return <span className="truncate text-muted-foreground">Never</span>
+        return <SeenAtCell lastSeenAtIso={issue.lastSeenAt} firstSeenAtIso={issue.firstSeenAt} />
+      },
     },
     {
       key: "occurrences",
@@ -319,11 +323,6 @@ export function SignalsView({
           isLoading={isLoading}
           columns={columns}
           getRowKey={(issue) => issue.id}
-          getRowClassName={(issue, context) =>
-            issue.states.includes("regressed") && !context.isActive
-              ? "bg-rose-500/7 hover:bg-rose-500/10 dark:bg-rose-500/15 dark:hover:bg-rose-500/19"
-              : undefined
-          }
           selection={selection}
           getRowGroup={(issue) => issue.priority ?? "none"}
           renderGroupHeader={(groupKey) => (

@@ -1,8 +1,9 @@
 import { createMonitorUseCase, MonitorRepository } from "@domain/monitors"
 import { createFakeMonitorRepository } from "@domain/monitors/testing"
-import { type SavedSearch, SavedSearchRepository } from "@domain/saved-searches"
+import type { SavedSearch } from "@domain/saved-searches"
+import { SavedSearchRepository } from "@domain/saved-searches"
 import { createFakeSavedSearchRepository } from "@domain/saved-searches/testing"
-import { OrganizationId, ProjectId, SavedSearchId, SqlClient } from "@domain/shared"
+import { OrganizationId, ProjectId, SavedSearchId, SqlClient, ValidationError } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -10,248 +11,221 @@ import type { MonitorRepositoryShape } from "../ports/monitor-repository.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
-const savedSearchId = "s".repeat(24)
-const semanticSearchId = "z".repeat(24)
-const at = new Date("2026-06-01T10:00:00.000Z")
-
-const makeSavedSearch = (id: string, query: string | null): SavedSearch => ({
-  id: SavedSearchId(id),
+const savedSearchId = SavedSearchId("s".repeat(24))
+const savedSearch: SavedSearch = {
+  id: savedSearchId,
   organizationId,
   projectId,
-  slug: `search-${id.slice(0, 4)}`,
-  name: `Search ${id.slice(0, 4)}`,
-  query,
+  slug: "payment-failures",
+  name: "Payment failures",
+  query: '"payment"',
   filterSet: {},
   deletedAt: null,
-  createdAt: at,
-  updatedAt: at,
-})
-
-// One exact-match search (monitorable) and one with a semantic part (not).
-const SEEDED_SEARCHES: readonly SavedSearch[] = [
-  makeSavedSearch(savedSearchId, '"500 Internal Server Error"'),
-  makeSavedSearch(semanticSearchId, 'checkout failed "500"'),
-]
+  createdAt: new Date("2026-06-20T00:00:00.000Z"),
+  updatedAt: new Date("2026-06-20T00:00:00.000Z"),
+}
 
 const provide = (repo: MonitorRepositoryShape) =>
   Layer.mergeAll(
     Layer.succeed(MonitorRepository, MonitorRepository.of(repo)),
     Layer.succeed(
       SavedSearchRepository,
-      SavedSearchRepository.of(createFakeSavedSearchRepository(SEEDED_SEARCHES).repository),
+      SavedSearchRepository.of(createFakeSavedSearchRepository([savedSearch]).repository),
     ),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
   )
 
-type UseCaseContext = SqlClient | MonitorRepository | SavedSearchRepository
+const run = <A, E>(
+  effect: Effect.Effect<A, E, SqlClient | MonitorRepository | SavedSearchRepository>,
+  repo: MonitorRepositoryShape,
+) => Effect.runPromise(effect.pipe(Effect.provide(provide(repo))))
 
-const run = <A, E>(effect: Effect.Effect<A, E, UseCaseContext>, repo: MonitorRepositoryShape) =>
-  Effect.runPromise(effect.pipe(Effect.provide(provide(repo))))
-
-const runError = <A, E>(effect: Effect.Effect<A, E, UseCaseContext>, repo: MonitorRepositoryShape) =>
-  Effect.runPromise(effect.pipe(Effect.flip, Effect.provide(provide(repo))))
-
-const matchAlert = { kind: "savedSearch.match" as const, source: { type: "savedSearch" as const, id: savedSearchId } }
+const runError = <A, E>(
+  effect: Effect.Effect<A, E, SqlClient | MonitorRepository | SavedSearchRepository>,
+  repo: MonitorRepositoryShape,
+) => Effect.runPromise(effect.pipe(Effect.flip, Effect.provide(provide(repo))))
 
 describe("createMonitorUseCase", () => {
-  it("creates a non-system monitor with its alerts and a derived slug", async () => {
+  it("creates a collapsed monitor with inline target, rule, config, and severity", async () => {
     const { repo, monitors } = createFakeMonitorRepository()
-    const monitor = await run(
+
+    const result = await run(
       createMonitorUseCase({
         organizationId,
         projectId,
-        name: "5xx spikes",
-        description: "  Watch the error endpoints  ",
-        alerts: [
-          matchAlert,
-          {
-            kind: "savedSearch.threshold",
-            source: { type: "savedSearch", id: savedSearchId },
-            condition: { kind: "savedSearch.threshold", threshold: { mode: "absolute", count: 100 } },
+        name: "Payment failures",
+        description: "Watch saved search matches",
+        target: { type: "savedSearch", id: savedSearchId, filterSet: { status: [{ op: "eq", value: "error" }] } },
+        rule: {
+          trigger: "threshold",
+          severity: "high",
+          config: {
+            metric: { kind: "count" },
+            condition: {
+              trigger: "threshold",
+              metric: { kind: "count" },
+              threshold: { mode: "absolute", value: 3 },
+              direction: "above",
+            },
           },
-        ],
+        },
       }),
       repo,
     )
 
-    expect(monitor).toMatchObject({
-      slug: "5xx-spikes",
-      name: "5xx spikes",
+    expect(result).toMatchObject({
+      organizationId,
+      projectId,
+      slug: "payment-failures",
+      name: "Payment failures",
+      description: "Watch saved search matches",
       system: false,
-      description: "Watch the error endpoints",
+      target: {
+        type: "savedSearch",
+        id: savedSearchId,
+        kind: "savedSearch",
+        stream: "traces",
+        query: null,
+        savedSearchId,
+        metric: { kind: "count" },
+      },
+      rule: {
+        trigger: "threshold",
+        severity: "high",
+      },
+      mutedAt: null,
+      deletedAt: null,
     })
-    expect(monitor.alerts.map((a) => a.kind)).toEqual(["savedSearch.match", "savedSearch.threshold"])
     expect(monitors).toHaveLength(1)
-    expect(monitors[0]?.alerts).toHaveLength(2)
+    expect(monitors[0]).toEqual(result)
   })
 
-  it("appends a unique suffix when the slug is already taken", async () => {
+  it("preserves inline target query on creation", async () => {
     const { repo } = createFakeMonitorRepository()
-    const first = await run(
-      createMonitorUseCase({ organizationId, projectId, name: "Latency", alerts: [matchAlert] }),
+
+    const result = await run(
+      createMonitorUseCase({
+        organizationId,
+        projectId,
+        name: "Payment search",
+        target: {
+          type: "user",
+          id: null,
+          filterSet: { userId: [{ op: "eq", value: "user-1" }] },
+          query: "payment failed",
+        },
+        rule: { trigger: "match", severity: "medium", config: {} },
+      }),
       repo,
     )
-    const second = await run(
-      createMonitorUseCase({ organizationId, projectId, name: "Latency", alerts: [matchAlert] }),
-      repo,
-    )
-    expect(first.slug).toBe("latency")
-    expect(second.slug).not.toBe("latency")
-    expect(second.slug.startsWith("latency-")).toBe(true)
+
+    expect(result.target).toMatchObject({
+      type: "user",
+      filterSet: { userId: [{ op: "eq", value: "user-1" }] },
+      query: "payment failed",
+    })
   })
 
-  it("rejects an empty alert list", async () => {
-    const { repo, monitors } = createFakeMonitorRepository()
-    const error = await runError(createMonitorUseCase({ organizationId, projectId, name: "Empty", alerts: [] }), repo)
-    expect(error._tag).toBe("ValidationError")
-    expect((error as { field: string }).field).toBe("alerts")
-    expect(monitors).toHaveLength(0)
-  })
-
-  it("rejects a blank name", async () => {
+  it("rejects match monitors with conditions", async () => {
     const { repo } = createFakeMonitorRepository()
-    const error = await runError(
-      createMonitorUseCase({ organizationId, projectId, name: "   ", alerts: [matchAlert] }),
-      repo,
-    )
-    expect(error._tag).toBe("ValidationError")
-    expect((error as { field: string }).field).toBe("name")
-  })
 
-  it("rejects an alert whose kind is not user-creatable", async () => {
-    const { repo, monitors } = createFakeMonitorRepository()
     const error = await runError(
       createMonitorUseCase({
         organizationId,
         projectId,
-        name: "Bad",
-        alerts: [{ kind: "issue.new", source: { type: "issue", id: null } }],
-      }),
-      repo,
-    )
-    expect(error._tag).toBe("ValidationError")
-    expect((error as { field: string }).field).toBe("kind")
-    expect(monitors).toHaveLength(0)
-  })
-
-  it("rejects an alert watching a saved search with a semantic part", async () => {
-    const { repo, monitors } = createFakeMonitorRepository()
-    const error = await runError(
-      createMonitorUseCase({
-        organizationId,
-        projectId,
-        name: "Semantic watch",
-        alerts: [{ kind: "savedSearch.match", source: { type: "savedSearch", id: semanticSearchId } }],
-      }),
-      repo,
-    )
-    expect(error._tag).toBe("ValidationError")
-    expect((error as { field: string }).field).toBe("source")
-    expect(monitors).toHaveLength(0)
-  })
-
-  it("rejects an alert watching a saved search that does not exist", async () => {
-    const { repo, monitors } = createFakeMonitorRepository()
-    const error = await runError(
-      createMonitorUseCase({
-        organizationId,
-        projectId,
-        name: "Ghost watch",
-        alerts: [{ kind: "savedSearch.match", source: { type: "savedSearch", id: "g".repeat(24) } }],
-      }),
-      repo,
-    )
-    expect(error._tag).toBe("SavedSearchNotFoundError")
-    expect(monitors).toHaveLength(0)
-  })
-
-  const toolTarget = {
-    kind: "tool" as const,
-    stream: "spans" as const,
-    filterSet: { operation: [{ op: "eq" as const, value: "execute_tool" }] },
-    query: null,
-    savedSearchId: null,
-    metric: { kind: "errorRate" as const },
-  }
-
-  it("creates a unified target-on-monitor with a sourceless alert", async () => {
-    const { repo, monitors } = createFakeMonitorRepository()
-    const monitor = await run(
-      createMonitorUseCase({
-        organizationId,
-        projectId,
-        name: "Tool errors",
-        target: toolTarget,
-        alerts: [
-          {
-            kind: "metric.threshold",
+        name: "Match",
+        target: { type: "user", id: null },
+        rule: {
+          trigger: "match",
+          severity: "medium",
+          config: {
             condition: {
-              kind: "metric.threshold",
-              metric: { kind: "errorRate" },
-              threshold: { mode: "absolute", value: 0.1 },
+              trigger: "threshold",
+              metric: { kind: "count" },
+              threshold: { mode: "absolute", value: 1 },
             },
           },
-        ],
+        },
       }),
       repo,
     )
-    expect(monitor.target).toEqual(toolTarget)
-    expect(monitor.alerts[0]?.source).toBeNull()
-    expect(monitor.alerts[0]?.kind).toBe("metric.threshold")
-    expect(monitors).toHaveLength(1)
+
+    expect(error).toBeInstanceOf(ValidationError)
+    expect(error.message).toBe("Match monitors cannot define a condition")
   })
 
-  it("rejects a unified alert without a target", async () => {
-    const { repo, monitors } = createFakeMonitorRepository()
+  it("rejects conditions whose trigger does not match the monitor rule", async () => {
+    const { repo } = createFakeMonitorRepository()
+
     const error = await runError(
       createMonitorUseCase({
         organizationId,
         projectId,
-        name: "No target",
-        alerts: [{ kind: "event.matched" }],
-      }),
-      repo,
-    )
-    expect(error._tag).toBe("ValidationError")
-    expect((error as { field: string }).field).toBe("target")
-    expect(monitors).toHaveLength(0)
-  })
-
-  it("rejects mixing a saved-search alert and a unified alert on one monitor", async () => {
-    const { repo, monitors } = createFakeMonitorRepository()
-    const error = await runError(
-      createMonitorUseCase({
-        organizationId,
-        projectId,
-        name: "Mixed kinds",
-        target: toolTarget,
-        alerts: [
-          matchAlert,
-          {
-            kind: "metric.threshold",
+        name: "Threshold",
+        target: { type: "user", id: null },
+        rule: {
+          trigger: "threshold",
+          severity: "medium",
+          config: {
             condition: {
-              kind: "metric.threshold",
-              metric: { kind: "errorRate" },
-              threshold: { mode: "absolute", value: 0.1 },
+              trigger: "escalating",
+              metric: { kind: "count" },
             },
           },
-        ],
+        },
       }),
       repo,
     )
-    expect(error._tag).toBe("ValidationError")
-    expect((error as { field: string }).field).toBe("alerts")
-    expect(monitors).toHaveLength(0)
+
+    expect(error).toBeInstanceOf(ValidationError)
+    expect(error.message).toBe("Condition trigger must match monitor trigger")
   })
 
-  it("rejects a legacy saved-search alert paired with a target", async () => {
-    const { repo, monitors } = createFakeMonitorRepository()
-    const error = await runError(
-      createMonitorUseCase({ organizationId, projectId, name: "Mixed", target: toolTarget, alerts: [matchAlert] }),
+  it("rejects unsupported escalating metric and threshold shapes", async () => {
+    const { repo } = createFakeMonitorRepository()
+
+    const metricError = await runError(
+      createMonitorUseCase({
+        organizationId,
+        projectId,
+        name: "Escalating average",
+        target: { type: "user", id: null },
+        rule: {
+          trigger: "escalating",
+          severity: "high",
+          config: {
+            metric: { kind: "avg", field: "duration" },
+            condition: { trigger: "escalating", metric: { kind: "avg", field: "duration" } },
+          },
+        },
+      }),
       repo,
     )
-    expect(error._tag).toBe("ValidationError")
-    expect((error as { field: string }).field).toBe("target")
-    expect(monitors).toHaveLength(0)
+    expect(metricError).toBeInstanceOf(ValidationError)
+    expect(metricError.message).toBe("Escalating monitors only support count metrics")
+
+    const thresholdError = await runError(
+      createMonitorUseCase({
+        organizationId,
+        projectId,
+        name: "Escalating absolute",
+        target: { type: "user", id: null },
+        rule: {
+          trigger: "escalating",
+          severity: "high",
+          config: {
+            metric: { kind: "count" },
+            condition: {
+              trigger: "escalating",
+              metric: { kind: "count" },
+              threshold: { mode: "absolute", value: 10 },
+            },
+          },
+        },
+      }),
+      repo,
+    )
+    expect(thresholdError).toBeInstanceOf(ValidationError)
+    expect(thresholdError.message).toBe("Escalating monitors only support expected thresholds")
   })
 })

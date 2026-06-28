@@ -110,9 +110,7 @@ const makeSignalRow = (input?: { readonly id?: string; readonly projectId?: stri
   source: "annotation" as const,
   centroid: createSignalCentroid(),
   clusteredAt: TIMESTAMP,
-  escalatedAt: null,
-  resolvedAt: null,
-  ignoredAt: null,
+  mutedAt: null,
   createdAt: TIMESTAMP,
   updatedAt: TIMESTAMP,
 })
@@ -303,24 +301,39 @@ describe("runSignalsMatchJob", () => {
 describe("runSignalsMatchJob", () => {
   it("selects active evaluations and publishes execute jobs for survivors", async () => {
     await insertTraceRows([makeTraceRow()])
-    await pg.db.insert(signals).values([makeSignalRow()])
+    // One active evaluation per signal (active-detector index), so each evaluation
+    // gets its own signal; the worker scans active evaluations project-wide.
+    await pg.db
+      .insert(signals)
+      .values([
+        makeSignalRow({ id: "i".repeat(24), uuid: "11111111-1111-4111-8111-111111111111" }),
+        makeSignalRow({ id: "m".repeat(24), uuid: "44444444-4444-4444-8444-444444444444" }),
+        makeSignalRow({ id: "n".repeat(24), uuid: "55555555-5555-4555-8555-555555555555" }),
+      ])
     await pg.db.insert(evaluations).values([
       makeEvaluationRow({
         id: "e".repeat(24),
+        signalId: "i".repeat(24),
         filter: { tags: [{ op: "in", value: ["lifecycle"] }] },
       }),
       makeEvaluationRow({
         id: "f".repeat(24),
+        signalId: "m".repeat(24),
         filter: { tags: [{ op: "in", value: ["lifecycle"] }] },
         turn: "first",
       }),
       makeEvaluationRow({
         id: "g".repeat(24),
+        signalId: "n".repeat(24),
         filter: { tags: [{ op: "in", value: ["lifecycle"] }] },
         sampling: 0,
       }),
     ])
-    const { sourceType, ...scoreRow } = makeScoreRow({ id: "z".repeat(24), evaluationId: "f".repeat(24) })
+    const { sourceType, ...scoreRow } = makeScoreRow({
+      id: "z".repeat(24),
+      evaluationId: "f".repeat(24),
+      signalId: "m".repeat(24),
+    })
     await pg.db.insert(scores).values([{ ...scoreRow, sourceType: sourceType }])
 
     const { publisher, published } = createFakeQueuePublisher()

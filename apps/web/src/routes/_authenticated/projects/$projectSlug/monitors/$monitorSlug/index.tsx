@@ -1,4 +1,4 @@
-import { ALERT_INCIDENT_KIND_LABEL } from "@domain/shared"
+import { INCIDENT_NOTIFICATION_KEY_LABEL } from "@domain/shared"
 import {
   Button,
   DropdownMenuContent,
@@ -22,18 +22,18 @@ import { type ReactNode, useMemo, useState } from "react"
 import { SeverityStatus } from "../../../../../../domains/alerts/severity-selector.tsx"
 import { describeMonitorTarget, targetToSessionFilters } from "../../../../../../domains/monitors/monitor-target.ts"
 import { useMonitor, useMonitorIncidentStats } from "../../../../../../domains/monitors/monitors.collection.ts"
-import type { MonitorAlertRecord } from "../../../../../../domains/monitors/monitors.functions.ts"
+import type { MonitorRuleRecord } from "../../../../../../domains/monitors/monitors.functions.ts"
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbLink, BreadcrumbSeparator, BreadcrumbText } from "../../../../-components/breadcrumb-ui.tsx"
 import { serializeFilters } from "../../-components/trace-page-state.ts"
 import { useRouteProject } from "../../-route-data.ts"
-import { MonitorAlertEditModal } from "../-components/monitor-alert-edit-modal.tsx"
 import { MonitorDeleteConfirmModal } from "../-components/monitor-delete-confirm-modal.tsx"
 import { MonitorIncidentsTable } from "../-components/monitor-incidents-table.tsx"
 import { MonitorMatchingTraces } from "../-components/monitor-matching-traces.tsx"
 import { MonitorMetricChart } from "../-components/monitor-metric-chart.tsx"
 import { MonitorMuteConfirmModal } from "../-components/monitor-mute-confirm-modal.tsx"
+import { MonitorRuleEditModal } from "../-components/monitor-rule-edit-modal.tsx"
 import { MonitorSensitivityEditModal } from "../-components/monitor-sensitivity-edit-modal.tsx"
 
 const monitorRoute = getRouteApi("/_authenticated/projects/$projectSlug/monitors/$monitorSlug/")
@@ -107,8 +107,8 @@ function MonitorDetailPage() {
 
   const [muteConfirmOpen, setMuteConfirmOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [alertModal, setAlertModal] = useState<MonitorAlertRecord | null>(null)
-  const [sensitivityAlert, setSensitivityAlert] = useState<MonitorAlertRecord | null>(null)
+  const [ruleModal, setRuleModal] = useState<MonitorRuleRecord | null>(null)
+  const [sensitivityRule, setSensitivityRule] = useState<MonitorRuleRecord | null>(null)
 
   const window = useMemo(() => {
     const spec = RANGE_SPEC[range]
@@ -133,15 +133,14 @@ function MonitorDetailPage() {
     )
   }
 
-  // One alert per monitor (the app never adds more); the page renders the first.
-  const alert = monitor?.alerts[0]
+  const rule = monitor?.rule
   const target = monitor?.target ?? null
   const muted = monitor?.mutedAt != null
   const description = describeMonitorTarget(target)
   const savedSearchTarget = target?.savedSearchId
     ? { slug: monitor?.targetSavedSearchSlug ?? null, name: monitor?.targetSavedSearchName ?? "Saved search" }
-    : alert?.source?.type === "savedSearch"
-      ? { slug: alert.sourceSlug, name: alert.sourceName ?? "Saved search" }
+    : rule?.source?.type === "savedSearch"
+      ? { slug: rule.sourceSlug, name: rule.sourceName ?? "Saved search" }
       : null
   const sessionTarget = target?.stream === "sessions" && !savedSearchTarget ? targetToSessionFilters(target) : null
   const sessionTargetFilters = sessionTarget ? serializeFilters(sessionTarget.filters) : undefined
@@ -152,12 +151,12 @@ function MonitorDetailPage() {
         ...(sessionTarget.query ? { query: sessionTarget.query } : {}),
       }
     : null
-  const canEditAlert = monitor ? !monitor.system || alert?.kind === "issue.escalating" : false
+  const canEditRule = monitor ? !monitor.system || rule?.kind === "monitor.escalating" : false
   const canDeleteMonitor = monitor ? !monitor.system : false
-  const onEditAlert = () => {
-    if (!alert) return
-    if (alert.kind === "issue.escalating") setSensitivityAlert(alert)
-    else setAlertModal(alert)
+  const onEditRule = () => {
+    if (!rule) return
+    if (rule.kind === "monitor.escalating") setSensitivityRule(rule)
+    else setRuleModal(rule)
   }
 
   return (
@@ -189,7 +188,7 @@ function MonitorDetailPage() {
               )}
             </div>
           }
-          description={alert?.summary ?? undefined}
+          description={rule?.summary ?? undefined}
           actions={
             monitor ? (
               <>
@@ -205,7 +204,7 @@ function MonitorDetailPage() {
                   <Icon icon={muted ? BellIcon : BellOffIcon} size="sm" />
                   {muted ? "Unmute" : "Mute"}
                 </Button>
-                {canEditAlert || canDeleteMonitor ? (
+                {canEditRule || canDeleteMonitor ? (
                   <DropdownMenuRoot modal={false}>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm" className="h-7 w-7 p-0" aria-label="Monitor actions">
@@ -214,13 +213,13 @@ function MonitorDetailPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuPortal>
                       <DropdownMenuContent align="end" className="w-48">
-                        {canEditAlert ? (
-                          <DropdownMenuItem className="cursor-pointer items-center gap-2" onSelect={onEditAlert}>
+                        {canEditRule ? (
+                          <DropdownMenuItem className="cursor-pointer items-center gap-2" onSelect={onEditRule}>
                             <Icon icon={PencilIcon} size="sm" color="foregroundMuted" />
                             <Text.H5>Edit monitor</Text.H5>
                           </DropdownMenuItem>
                         ) : null}
-                        {canEditAlert ? <DropdownMenuSeparator /> : null}
+                        {canEditRule ? <DropdownMenuSeparator /> : null}
                         <DropdownMenuItem
                           className="cursor-pointer items-center gap-2"
                           disabled={!canDeleteMonitor}
@@ -277,11 +276,11 @@ function MonitorDetailPage() {
                         )}
                       </ConfigField>
                     ) : null}
-                    {alert ? (
+                    {rule ? (
                       <ConfigField label="Trigger">
                         <SeverityStatus
-                          severity={alert.severity}
-                          label={`${ALERT_INCIDENT_KIND_LABEL[alert.kind]} · ${alert.severity}`}
+                          severity={rule.severity}
+                          label={`${INCIDENT_NOTIFICATION_KEY_LABEL[rule.kind]} · ${rule.severity}`}
                         />
                       </ConfigField>
                     ) : null}
@@ -333,23 +332,23 @@ function MonitorDetailPage() {
           }}
         />
 
-        {alertModal && monitor ? (
-          <MonitorAlertEditModal
+        {ruleModal && monitor ? (
+          <MonitorRuleEditModal
             projectId={project.id}
             projectSlug={projectSlug}
             monitorId={monitor.id}
-            alert={alertModal}
+            rule={ruleModal}
             target={monitor.target}
-            onClose={() => setAlertModal(null)}
+            onClose={() => setRuleModal(null)}
           />
         ) : null}
 
-        {sensitivityAlert && monitor ? (
+        {sensitivityRule && monitor ? (
           <MonitorSensitivityEditModal
             projectId={project.id}
             monitorId={monitor.id}
-            alert={sensitivityAlert}
-            onClose={() => setSensitivityAlert(null)}
+            alert={sensitivityRule}
+            onClose={() => setSensitivityRule(null)}
           />
         ) : null}
       </Layout.Content>

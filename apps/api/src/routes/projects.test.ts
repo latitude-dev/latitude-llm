@@ -108,6 +108,38 @@ describe("Projects Routes Integration", () => {
     expect(body.items.find((p) => p.id === live.id)).toBeUndefined()
   })
 
+  it<ApiTestContext>("GET /v1/projects strips internal-only settings fields from the response", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const project = await createProjectRecord(database, tenant.organizationId, "Internal Settings")
+
+    await database.db
+      .update(projects)
+      .set({
+        settings: {
+          keepMonitoring: false,
+          isSample: true,
+          onboardingType: "prod-traces",
+          onboardingCompleted: true,
+        },
+      })
+      .where(eq(projects.id, project.id))
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/projects`, {
+        headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as PaginatedProjects
+    const listed = body.items.find((row) => row.id === project.id)
+    expect(listed).toBeDefined()
+    expect(listed?.settings).toEqual({ keepMonitoring: false })
+  })
+
   it<ApiTestContext>("PATCH /v1/projects/:projectSlug updates settings and keeps the slug stable on rename", async ({
     app,
     database,

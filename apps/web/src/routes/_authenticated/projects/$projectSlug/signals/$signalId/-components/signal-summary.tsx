@@ -35,14 +35,18 @@ function SeenTile({
   relative,
 }: {
   readonly label: string
-  readonly iso: string
+  readonly iso: string | null
   readonly relative: string
 }) {
   return (
     <Tile label={label}>
-      <Tooltip asChild trigger={<Text.H5 color="foreground">{relative}</Text.H5>}>
-        {new Date(iso).toLocaleString()}
-      </Tooltip>
+      {iso ? (
+        <Tooltip asChild trigger={<Text.H5 color="foreground">{relative}</Text.H5>}>
+          {new Date(iso).toLocaleString()}
+        </Tooltip>
+      ) : (
+        <Text.H5 color="foregroundMuted">{relative}</Text.H5>
+      )}
     </Tile>
   )
 }
@@ -56,7 +60,7 @@ function SeenTile({
  * - **Evaluations** (fixed ~500px): the issue-evaluations component at its native
  *   width, so it neither wraps (too narrow) nor stretches (too wide).
  *
- * Triage (assignee / priority) and the resolve/ignore lifecycle live in the
+ * Triage (assignee / priority) and mute action live in the
  * page header, tracker-style. "Affected users" is hidden when there's no user
  * attribution (count 0).
  */
@@ -154,9 +158,10 @@ export function SignalSummary({ projectId, signalId }: { readonly projectId: str
           projectId={projectId}
           signalId={signalId}
           signalSource={issue?.source ?? "annotation"}
+          signalOrigin={issue?.origin ?? "system"}
           evaluations={issue?.evaluations ?? []}
           flaggerSlugs={issue?.flaggerSlugs ?? []}
-          canMonitorSignal={issue ? issue.resolvedAt === null && issue.ignoredAt === null : false}
+          canMonitorSignal={issue ? issue.mutedAt === null : false}
           isSignalLoading={isLoading}
         />
       </div>

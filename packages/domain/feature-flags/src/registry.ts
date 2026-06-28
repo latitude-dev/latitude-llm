@@ -17,12 +17,6 @@ export const FEATURE_FLAGS = {
     description:
       "Lets org owners/admins configure SAML or OIDC single sign-on and (optionally) enforce it for their verified email domain.",
   },
-  "evaluation-sandbox-runtime": {
-    emoji: "🧰",
-    name: "Sandboxed evaluation runtime",
-    description:
-      "Executes evaluation scripts in the QuickJS sandbox runtime (full script execution) instead of the template-extraction MVP bridge.",
-  },
 } as const satisfies Record<
   string,
   {
