@@ -31,6 +31,8 @@ import {
   getWorkflowStarter,
 } from "../../server/clients.ts"
 
+const normalizeTraceId = z.string().transform((s) => s.replace(/-/g, ""))
+
 const toRecord = (score: AnnotationScore) => ({
   id: score.id as string,
   organizationId: score.organizationId,
@@ -90,7 +92,7 @@ export const createAnnotation = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string().length(32),
+      traceId: normalizeTraceId,
       spanId: z.string().optional(),
       sessionId: z.string().optional(),
       queueId: z.string().optional(),
@@ -143,7 +145,7 @@ export const updateAnnotation = createServerFn({ method: "POST" })
     z.object({
       scoreId: z.string(),
       projectId: z.string(),
-      traceId: z.string().length(32),
+      traceId: normalizeTraceId,
       queueId: z.string().optional(),
       value: z.number(),
       passed: z.boolean(),
@@ -205,7 +207,7 @@ export const listAnnotationsByTrace = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: normalizeTraceId,
       limit: z.number().optional(),
       offset: z.number().optional(),
       draftMode: scoreDraftModeSchema.optional(),
@@ -238,7 +240,7 @@ export const listAnnotationsBySession = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceIds: z.array(z.string().length(32)).max(500),
+      traceIds: z.array(normalizeTraceId).max(500),
       limit: z.number().optional(),
       offset: z.number().optional(),
       draftMode: scoreDraftModeSchema.optional(),
@@ -275,7 +277,7 @@ export const listAnnotationCountsByTraceIds = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceIds: z.array(z.string().length(32)).max(500),
+      traceIds: z.array(normalizeTraceId).max(500),
       draftMode: scoreDraftModeSchema.optional(),
     }),
   )

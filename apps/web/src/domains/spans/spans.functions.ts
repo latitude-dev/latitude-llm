@@ -14,6 +14,8 @@ const dateTimeParamSchema = z
   .datetime()
   .transform((value) => new Date(value))
 
+const normalizeTraceId = z.string().transform((s) => s.replace(/-/g, ""))
+
 export interface SpanRecord {
   readonly organizationId: string
   readonly projectId: string
@@ -148,7 +150,7 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
     z.object({
       sandboxOrgId: z.string().optional(),
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: normalizeTraceId,
       startTimeFrom: dateTimeParamSchema.optional(),
       startTimeTo: dateTimeParamSchema.optional(),
     }),
@@ -226,7 +228,7 @@ export const listConversationMessageSpans = createServerFn({ method: "GET" })
     z.object({
       sandboxOrgId: z.string().optional(),
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: normalizeTraceId,
       startTime: dateTimeParamSchema,
     }),
   )
@@ -279,7 +281,7 @@ export const getSpanDetail = createServerFn({ method: "GET" })
     z.object({
       sandboxOrgId: z.string().optional(),
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: normalizeTraceId,
       spanId: z.string(),
       startTimeFrom: dateTimeParamSchema.optional(),
       startTimeTo: dateTimeParamSchema.optional(),

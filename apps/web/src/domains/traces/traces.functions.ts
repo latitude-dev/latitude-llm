@@ -164,10 +164,12 @@ export interface TraceConversationChunkRecord {
   readonly payloadBytes: number
 }
 
+const normalizeTraceId = z.string().transform((s) => s.replace(/-/g, ""))
+
 const traceListCursorSchema = z.object({
   sortValue: z.string(),
   secondaryValue: z.string().optional(),
-  traceId: z.string(),
+  traceId: normalizeTraceId,
 })
 
 interface TraceListResult {
@@ -353,7 +355,7 @@ export const getTraceSearchHighlights = createServerFn({ method: "GET" })
     z.object({
       sandboxOrgId: z.string().optional(),
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: normalizeTraceId,
       searchQuery: z.string().max(500),
     }),
   )
@@ -437,7 +439,7 @@ export const getSessionMomentIntelligence = createServerFn({ method: "GET" })
   })
 
 export const getTraceDetail = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ sandboxOrgId: z.string().optional(), projectId: z.string(), traceId: z.string() }))
+  .inputValidator(z.object({ sandboxOrgId: z.string().optional(), projectId: z.string(), traceId: normalizeTraceId }))
   .handler(async ({ data }) => {
     const orgId = await resolveOrgScope(data)
 
@@ -467,7 +469,7 @@ export const getTraceConversationChunk = createServerFn({ method: "GET" })
     z.object({
       sandboxOrgId: z.string().optional(),
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: normalizeTraceId,
       offset: z.number().int().nonnegative().optional(),
       limit: z.number().int().positive().max(100).optional(),
     }),
