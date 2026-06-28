@@ -2,9 +2,27 @@
 
 ## Unreleased
 
-### API
+## v0.3.21 - 2026-06-28
 
-- Fixed `listProjects` MCP output validation by stripping internal-only project `settings` fields (`isSample`, `onboardingType`, `onboardingCompleted`, `sampling`) from API responses (ref: #3703).
+### Monitors and incidents
+
+- Consolidated monitor alerts into the source-keyed incident and monitor-rule model, including live saved-search targets, normalized API/MCP/SDK responses, incident lifecycle fixes, notification fan-out updates, and a one-open-incident-per-source database guard (ref: #3665).
+- Removed the obsolete signal monitors tab and redirected the old route to the main monitors list now that signal escalation is owned by signals (ref: cbea6a3fa).
+
+### Telemetry and ingestion
+
+- Completed an end-to-end telemetry integration QA pass, fixing GenAI/OpenInference parsing, tool-call pairing, OpenRouter metadata, Bedrock cost lookup, Vercel AI SDK v7 system-instruction rollups, and refreshing TypeScript/Python telemetry examples and onboarding snippets (ref: #3711).
+- Normalized hyphenated UUID trace IDs during OTLP ingest so non-compliant SDKs no longer break ClickHouse FixedString lookups (ref: #3717).
+
+### Signals and web
+
+- Sped up signal list loading by keeping table rows, counts, and analytics scoped to the visible time range, and defaulted Sessions mode to the last 30 days (ref: #3708).
+- Aligned Behaviors/Moments naming across filters and detail views, and restored the Settings entry in sample-project sidebars (ref: #3704, #3706).
+
+### API and operations
+
+- Fixed `listProjects` MCP output validation by stripping internal-only project `settings` fields from API responses (ref: #3703).
+- Eagerly initialized QuickJS WASM at worker startup so infrastructure load failures surface immediately instead of being masked as evaluation compile errors (ref: #3714).
 
 ## v0.3.20 - 2026-06-26
 
