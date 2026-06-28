@@ -148,8 +148,6 @@ const createAccount = accountEndpoint({
       ),
     )
 
-    console.log("response", response)
-
     return c.json(toCreateAccountResponse(response), 200)
   },
 })
