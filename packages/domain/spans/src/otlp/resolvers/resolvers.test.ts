@@ -568,6 +568,24 @@ describe("resolveAttributes", () => {
     })
   })
 
+  describe("metadata resolution", () => {
+    it("resolves OpenRouter Broadcast trace metadata", () => {
+      const attrs: OtlpKeyValue[] = [
+        strAttr("trace.metadata.environment", "staging"),
+        intAttr("trace.metadata.retry_count", 2),
+        boolAttr("trace.metadata.beta", true),
+        kvlistAttr("trace.metadata.request", { route: "chat", step: 3 }),
+      ]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.metadata).toEqual({
+        environment: "staging",
+        retry_count: "2",
+        beta: "true",
+        request: JSON.stringify({ route: "chat", step: 3 }),
+      })
+    })
+  })
+
   describe("session ID resolution", () => {
     it("resolves from gen_ai.conversation.id", () => {
       const attrs: OtlpKeyValue[] = [strAttr("gen_ai.conversation.id", "conv-123")]
