@@ -50,6 +50,41 @@ class TestCaptureFunction:
         with pytest.raises(ValueError, match="test error"):
             capture("error-test", failing_function, {"tags": ["error-test"]})
 
+    def test_capture_lifecycle_explicit_scope(self):
+        scope = capture.start("lifecycle-test", {"tags": ["lifecycle"], "session_id": "session-1"})
+
+        active_ctx = get_latitude_context(otel_context.get_current())
+        assert active_ctx is not None
+        assert active_ctx.name == "lifecycle-test"
+        assert active_ctx.tags == ["lifecycle"]
+        assert active_ctx.session_id == "session-1"
+
+        capture.end(scope)
+
+        assert get_latitude_context(otel_context.get_current()) is None
+
+    def test_capture_lifecycle_stack_end(self):
+        outer = capture.start("outer", {"tags": ["outer"], "metadata": {"shared": "outer"}})
+        capture.start("inner", {"tags": ["inner"], "metadata": {"shared": "inner", "local": "yes"}})
+
+        inner_ctx = get_latitude_context(otel_context.get_current())
+        assert inner_ctx is not None
+        assert inner_ctx.name == "inner"
+        assert inner_ctx.tags == ["outer", "inner"]
+        assert inner_ctx.metadata == {"shared": "inner", "local": "yes"}
+
+        capture.end()
+
+        outer_ctx = get_latitude_context(otel_context.get_current())
+        assert outer_ctx is not None
+        assert outer_ctx.name == "outer"
+        assert outer_ctx.tags == ["outer"]
+        assert outer_ctx.metadata == {"shared": "outer"}
+
+        outer.end()
+
+        assert get_latitude_context(otel_context.get_current()) is None
+
 
 class TestCaptureContextPropagation:
     """Tests for context propagation within capture()."""

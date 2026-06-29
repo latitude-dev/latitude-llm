@@ -290,7 +290,36 @@ function capture<T>(
   fn: () => T | Promise<T>,
   options?: ContextOptions,
 ): T | Promise<T>;
+
+type CaptureScope = {
+  end(error?: unknown): void;
+};
+
+capture.start(name: string, options?: ContextOptions): CaptureScope;
+capture.end(scope?: CaptureScope, error?: unknown): void;
+capture.end(error?: unknown): void;
 ```
+
+Use lifecycle mode when callback wrapping does not fit the shape of your code:
+
+```typescript
+const scope = capture.start("support-agent-turn", {
+  userId: user.id,
+  sessionId: session.id,
+  tags: ["support"],
+});
+
+try {
+  await runAgent();
+} catch (error) {
+  capture.end(scope, error);
+  throw error;
+}
+
+capture.end(scope);
+```
+
+You can also call `capture.end()` without a scope to end the currently active lifecycle capture.
 
 **Nested `capture()` behavior:**
 

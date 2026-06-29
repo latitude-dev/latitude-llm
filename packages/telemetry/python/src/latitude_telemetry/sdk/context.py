@@ -1,19 +1,18 @@
-"""
-Context management and capture() implementation using OpenTelemetry's Context API.
-"""
-
 import functools
 import inspect
+from contextvars import Token
 from typing import Any, Callable, Coroutine, TypeVar, overload
 
 from opentelemetry import context as otel_context
 from opentelemetry import trace
 from opentelemetry.context import Context
+from opentelemetry.trace import Span
 
 from latitude_telemetry.sdk._deprecation import warn_project_slug_deprecated
 from latitude_telemetry.sdk.types import ContextOptions
 
 LATITUDE_CONTEXT_KEY = "latitude-internal-context"
+LATITUDE_CAPTURE_SCOPE_KEY = "latitude-internal-capture-scope"
 CAPTURE_TRACER_NAME = "so.latitude.instrumentation.capture"
 
 T = TypeVar("T")
@@ -56,6 +55,20 @@ class _LatitudeContextData:
         self.project = project
 
 
+class CaptureScope:
+    def __init__(
+        self,
+        token: Token[Context] | None,
+        span: Span | None,
+    ):
+        self._token = token
+        self._span = span
+        self._ended = False
+
+    def end(self, error: BaseException | None = None) -> None:
+        _end_capture_scope(self, error)
+
+
 def get_latitude_context(ctx: Context) -> _LatitudeContextData | None:
     data = ctx.get(LATITUDE_CONTEXT_KEY, None)
     if data is None:
@@ -68,15 +81,9 @@ def _should_reuse_active_latitude_trace(current_context: Context) -> bool:
 
 
 def _set_capture_context(name: str, base_context: Context, options: ContextOptions | None = None) -> Context:
-    """Set up the capture context and return the new OTel context."""
     opts = options or {}
     existing_data = get_latitude_context(base_context)
 
-    # Merge logic matching TypeScript SDK:
-    # - name: options.name takes precedence over capture name
-    # - tags: merge and deduplicate
-    # - metadata: shallow merge (child overrides parent for same keys)
-    # - session_id/user_id/user_email: last-write-wins (child overrides parent)
     parent_metadata = (existing_data.metadata if existing_data else None) or {}
     child_metadata = opts.get("metadata") or {}
     merged_metadata: dict[str, object] = {**parent_metadata, **child_metadata}
@@ -98,156 +105,127 @@ def _set_capture_context(name: str, base_context: Context, options: ContextOptio
     return otel_context.set_value(LATITUDE_CONTEXT_KEY, merged_data, base_context)
 
 
-def _execute_with_context(name: str, fn: Callable[[], T], options: ContextOptions | None = None) -> T:
-    """Execute within capture context, reusing only Latitude-owned active traces."""
+def _start_capture_scope(name: str, options: ContextOptions | None = None) -> CaptureScope:
     current_context = otel_context.get_current()
     should_reuse_trace = _should_reuse_active_latitude_trace(current_context)
     base_context = (
         current_context if should_reuse_trace else trace.set_span_in_context(trace.INVALID_SPAN, current_context)
     )
     new_context = _set_capture_context(name, base_context, options)
-
     existing_span = trace.get_current_span(current_context)
+    span: Span | None = None
 
     if existing_span and existing_span.is_recording() and should_reuse_trace:
-        return _execute_with_existing_context(fn, new_context)
+        scope = CaptureScope(None, None)
+        token = otel_context.attach(otel_context.set_value(LATITUDE_CAPTURE_SCOPE_KEY, scope, new_context))
+        scope._token = token
+        return scope
 
-    return _execute_with_new_parent_span(name, fn, new_context)
-
-
-def _execute_with_existing_context(fn: Callable[[], T], context: Context) -> T:
-    """Execute function with existing context - no parent span creation."""
-    # Check if fn is async
-    if inspect.iscoroutinefunction(fn):
-
-        async def async_wrapper() -> T:
-            token = otel_context.attach(context)
-            try:
-                return await fn()
-            finally:
-                otel_context.detach(token)
-
-        return async_wrapper()  # type: ignore[return-value]
-
-    # Sync function
-    token = otel_context.attach(context)
-    try:
-        return fn()
-    finally:
-        otel_context.detach(token)
-
-
-def _execute_with_new_parent_span(name: str, fn: Callable[[], T], ctx: Context) -> T:
-    """Execute function with a new parent span to establish trace continuity."""
     tracer = trace.get_tracer(CAPTURE_TRACER_NAME)
+    span = tracer.start_span(
+        name,
+        context=new_context,
+        attributes={"latitude.capture.root": True},
+    )
+    new_context = trace.set_span_in_context(span, new_context)
+    scope = CaptureScope(None, span)
+    token = otel_context.attach(otel_context.set_value(LATITUDE_CAPTURE_SCOPE_KEY, scope, new_context))
+    scope._token = token
+    return scope
 
-    # Check if fn is async
-    if inspect.iscoroutinefunction(fn):
+
+def _get_active_capture_scope() -> CaptureScope | None:
+    scope = otel_context.get_current().get(LATITUDE_CAPTURE_SCOPE_KEY, None)
+    return scope if isinstance(scope, CaptureScope) else None
+
+
+def _end_capture_scope(
+    scope_or_error: CaptureScope | BaseException | None = None, error: BaseException | None = None
+) -> None:
+    if isinstance(scope_or_error, CaptureScope):
+        scope = scope_or_error
+        captured_error = error
+    else:
+        scope = _get_active_capture_scope()
+        captured_error = scope_or_error
+
+    if scope is None or scope._ended:
+        return
+
+    if captured_error is not None and scope._span is not None:
+        scope._span.record_exception(captured_error)
+
+    if scope._span is not None:
+        scope._span.end()
+    scope._ended = True
+    if scope._token is not None:
+        otel_context.detach(scope._token)
+
+
+def _execute_with_context(name: str, fn: Callable[[], T], options: ContextOptions | None = None) -> T:
+    scope = _start_capture_scope(name, options)
+    try:
+        result = fn()
+    except Exception as e:
+        _end_capture_scope(scope, e)
+        raise
+
+    if inspect.isawaitable(result):
 
         async def async_wrapper() -> T:
-            # Attach latitude context first, then create span
-            token = otel_context.attach(ctx)
             try:
-                with tracer.start_as_current_span(
-                    name,
-                    attributes={"latitude.capture.root": True},
-                ) as span:
-                    try:
-                        return await fn()
-                    except Exception as e:
-                        span.record_exception(e)
-                        raise
+                return await result
+            except Exception as e:
+                _end_capture_scope(scope, e)
+                raise
             finally:
-                otel_context.detach(token)
+                _end_capture_scope(scope)
 
         return async_wrapper()  # type: ignore[return-value]
 
-    # Sync function
-    token = otel_context.attach(ctx)
-    try:
-        with tracer.start_as_current_span(
-            name,
-            attributes={"latitude.capture.root": True},
-        ) as span:
-            try:
-                return fn()
-            except Exception as e:
-                span.record_exception(e)
-                raise
-    finally:
-        otel_context.detach(token)
+    _end_capture_scope(scope)
+    return result
 
 
-# Overload 1: Used as decorator factory: @capture("name") or @capture("name", {...})
-@overload
-def capture(
-    name: str,
-    fn_or_options: ContextOptions | None = None,
-) -> Callable[[F], F]: ...
+class _CaptureAPI:
+    @overload
+    def __call__(
+        self,
+        name: str,
+        fn_or_options: ContextOptions | None = None,
+    ) -> Callable[[F], F]: ...
+
+    @overload
+    def __call__(
+        self,
+        name: str,
+        fn_or_options: Callable[[], T],
+        options: ContextOptions | None = None,
+    ) -> T: ...
+
+    def __call__(
+        self,
+        name: str,
+        fn_or_options: Callable[[], object] | ContextOptions | None = None,
+        options: ContextOptions | None = None,
+    ) -> object:
+        if fn_or_options is None:
+            return _create_decorator(name, None)
+
+        if callable(fn_or_options):
+            return _execute_with_context(name, fn_or_options, options)
+
+        opts = fn_or_options if isinstance(fn_or_options, dict) else None
+        return _create_decorator(name, opts)
+
+    def start(self, name: str, options: ContextOptions | None = None) -> CaptureScope:
+        return _start_capture_scope(name, options)
+
+    def end(self, scope: CaptureScope | BaseException | None = None, error: BaseException | None = None) -> None:
+        _end_capture_scope(scope, error)
 
 
-# Overload 2: Used as direct wrapper: capture("name", lambda: ..., {...})
-@overload
-def capture(
-    name: str,
-    fn_or_options: Callable[[], T],
-    options: ContextOptions | None = None,
-) -> T: ...
-
-
-def capture(
-    name: str,
-    fn_or_options: Callable[[], object] | ContextOptions | None = None,
-    options: ContextOptions | None = None,
-) -> object:
-    """
-    Capture context for Latitude telemetry. Can be used as a decorator or direct wrapper.
-
-    As a decorator:
-        @capture("agent-run", {"tags": ["prod"], "user_id": "user_123"})
-        def my_agent():
-            return agent.process(input)
-
-        @capture("async-agent")  # minimal usage
-        async def async_agent():
-            return await agent.process(input)
-
-    As a direct wrapper:
-        result = capture("agent-run", lambda: agent.process(input), {"tags": ["prod"]})
-
-    The context includes tags, metadata, session_id, user_id, and user_email
-    which are stamped onto all spans via the LatitudeSpanProcessor.on_start() method.
-
-    If no active Latitude trace exists, capture() creates a parent span to
-    establish trace continuity. Nested Latitude capture() calls reuse the
-    existing Latitude trace instead of creating another root span.
-
-    Args:
-        name: Name for the capture context (stored as latitude.capture.name attribute)
-        fn_or_options: When used as decorator, this is the options dict.
-                       When used as wrapper, this is the function to execute.
-        options: Optional additional context (only used in wrapper mode)
-
-    Returns:
-        Decorated function (decorator mode) or result of fn() (wrapper mode)
-    """
-    # Determine if we're being called as a decorator factory or direct wrapper
-    # In decorator mode: capture("name") or capture("name", {...})
-    # In wrapper mode: capture("name", fn) or capture("name", fn, {...})
-
-    if fn_or_options is None:
-        # @capture("name") with no second arg - decorator mode
-        return _create_decorator(name, None)
-
-    if callable(fn_or_options):
-        # capture("name", fn) or capture("name", fn, {...}) - wrapper mode
-        fn = fn_or_options
-        return _execute_with_context(name, fn, options)  # type: ignore[return-value]
-
-    # fn_or_options is a dict - decorator mode with options
-    # @capture("name", {"tags": [...]})
-    opts = fn_or_options if isinstance(fn_or_options, dict) else None
-    return _create_decorator(name, opts)
+capture = _CaptureAPI()
 
 
 def _create_decorator(name: str, options: ContextOptions | None) -> Callable[[F], F]:
@@ -284,37 +262,14 @@ async def _execute_with_context_async(
     kwargs: dict[str, object],
     options: ContextOptions | None,
 ) -> object:
-    """Execute async function with capture context."""
-    current_context = otel_context.get_current()
-    should_reuse_trace = _should_reuse_active_latitude_trace(current_context)
-    base_context = (
-        current_context if should_reuse_trace else trace.set_span_in_context(trace.INVALID_SPAN, current_context)
-    )
-    new_context = _set_capture_context(name, base_context, options)
-
-    existing_span = trace.get_current_span(current_context)
-
-    if existing_span and existing_span.is_recording() and should_reuse_trace:
-        token = otel_context.attach(new_context)
-        try:
-            return await fn(*args, **kwargs)
-        finally:
-            otel_context.detach(token)
-
-    tracer = trace.get_tracer(CAPTURE_TRACER_NAME)
-    token = otel_context.attach(new_context)
+    scope = _start_capture_scope(name, options)
     try:
-        with tracer.start_as_current_span(
-            name,
-            attributes={"latitude.capture.root": True},
-        ) as span:
-            try:
-                return await fn(*args, **kwargs)
-            except Exception as e:
-                span.record_exception(e)
-                raise
+        return await fn(*args, **kwargs)
+    except Exception as e:
+        _end_capture_scope(scope, e)
+        raise
     finally:
-        otel_context.detach(token)
+        _end_capture_scope(scope)
 
 
 def _execute_with_context_sync(
@@ -324,34 +279,11 @@ def _execute_with_context_sync(
     kwargs: dict[str, object],
     options: ContextOptions | None,
 ) -> object:
-    """Execute sync function with capture context."""
-    current_context = otel_context.get_current()
-    should_reuse_trace = _should_reuse_active_latitude_trace(current_context)
-    base_context = (
-        current_context if should_reuse_trace else trace.set_span_in_context(trace.INVALID_SPAN, current_context)
-    )
-    new_context = _set_capture_context(name, base_context, options)
-
-    existing_span = trace.get_current_span(current_context)
-
-    if existing_span and existing_span.is_recording() and should_reuse_trace:
-        token = otel_context.attach(new_context)
-        try:
-            return fn(*args, **kwargs)
-        finally:
-            otel_context.detach(token)
-
-    tracer = trace.get_tracer(CAPTURE_TRACER_NAME)
-    token = otel_context.attach(new_context)
+    scope = _start_capture_scope(name, options)
     try:
-        with tracer.start_as_current_span(
-            name,
-            attributes={"latitude.capture.root": True},
-        ) as span:
-            try:
-                return fn(*args, **kwargs)
-            except Exception as e:
-                span.record_exception(e)
-                raise
+        return fn(*args, **kwargs)
+    except Exception as e:
+        _end_capture_scope(scope, e)
+        raise
     finally:
-        otel_context.detach(token)
+        _end_capture_scope(scope)

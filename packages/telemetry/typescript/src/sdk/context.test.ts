@@ -195,4 +195,38 @@ describe("capture", () => {
       )
     })
   })
+
+  it("supports lifecycle capture with an explicit scope", () => {
+    const scope = capture.start("lifecycle-test", { tags: ["lifecycle"], sessionId: "session-1" })
+
+    const activeData = getLatitudeContext(context.active())
+    expect(activeData?.name).toBe("lifecycle-test")
+    expect(activeData?.tags).toEqual(["lifecycle"])
+    expect(activeData?.sessionId).toBe("session-1")
+
+    capture.end(scope)
+
+    expect(getLatitudeContext(context.active())).toBeUndefined()
+  })
+
+  it("supports nested lifecycle capture with stack-style end", () => {
+    const outer = capture.start("outer", { tags: ["outer"], metadata: { shared: "outer" } })
+    capture.start("inner", { tags: ["inner"], metadata: { shared: "inner", local: "yes" } })
+
+    const innerData = getLatitudeContext(context.active())
+    expect(innerData?.name).toBe("inner")
+    expect(innerData?.tags).toEqual(["outer", "inner"])
+    expect(innerData?.metadata).toEqual({ shared: "inner", local: "yes" })
+
+    capture.end()
+
+    const outerData = getLatitudeContext(context.active())
+    expect(outerData?.name).toBe("outer")
+    expect(outerData?.tags).toEqual(["outer"])
+    expect(outerData?.metadata).toEqual({ shared: "outer" })
+
+    outer.end()
+
+    expect(getLatitudeContext(context.active())).toBeUndefined()
+  })
 })

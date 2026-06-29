@@ -89,6 +89,27 @@ latitude.shutdown()
 
 `capture()` does not create spans by itself. It only adds context to spans created by auto-instrumentation inside the callback. In most apps, wrap the outer request handler, conversation turn, or agent entrypoint once.
 
+If callback wrapping does not fit your control flow, use lifecycle mode:
+
+```python
+scope = capture.start(
+    "handle-user-request",
+    {
+        "user_id": "user_123",
+        "session_id": "session_abc",
+        "project": "support-agent",
+    },
+)
+
+try:
+    run_agent()
+except Exception as error:
+    capture.end(scope, error)
+    raise
+
+capture.end(scope)
+```
+
 Nested `capture()` calls inherit parent context and can override local values. Metadata is shallow-merged, and tags are appended and deduplicated.
 
 ## Existing OpenTelemetry setup
