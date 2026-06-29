@@ -824,7 +824,7 @@ const createSignal = signalEndpoint({
     ...signalsFernGroup("create"),
     summary: "Create signal",
     description:
-      "Creates a user-defined signal with its membership detector — a judge from `settings`, or a raw `script` (advanced). The script is validated at save time (422 on a compile error). Deterministic scripts are backfilled over recent history; judges detect forward from creation.",
+      "Creates a user-defined signal with its membership detector — from `settings` (a `judge` LLM detector or a deterministic `rule`), or a raw `script` (advanced). The script is validated at save time (422 on a compile error). Deterministic scripts are backfilled over recent history; judges detect forward from creation.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(CreateSignalBodySchema) },
     responses: openApiResponses({ status: 201, schema: CreateSignalResponseSchema, description: "Signal created" }),
