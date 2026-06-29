@@ -62,17 +62,11 @@ This records Think model calls, tools, latency, tokens, prompts, and responses.
       LATITUDE_PROJECT_SLUG: string
     }
 
-    let latitude: Latitude | undefined
-
-    function getLatitude(env: Env) {
-      latitude ??= new Latitude({
-        apiKey: env.LATITUDE_API_KEY,
-        project: env.LATITUDE_PROJECT_SLUG,
-        serviceName: "cloudflare-think-agent",
-      })
-
-      return latitude
-    }
+    const latitude = new Latitude({
+      apiKey: process.env.LATITUDE_API_KEY!,
+      project: process.env.LATITUDE_PROJECT_SLUG!,
+      serviceName: "cloudflare-think-agent",
+    })
 
     export class MyAgent extends Think<Env> {
       getModel() {
@@ -83,27 +77,37 @@ This records Think model calls, tools, latency, tokens, prompts, and responses.
         return {
           experimental_telemetry: {
             isEnabled: true,
-            tracer: getLatitude(this.env).getTracer("cloudflare-think"),
+            tracer: latitude.getTracer("cloudflare-think"),
             functionId: "think-turn",
             metadata: { framework: "cloudflare-think" },
           },
         }
       }
+
+      async onChatResponse() {
+        await latitude.flush()
+      }
+
+      onChatError(error: unknown) {
+        this.ctx.waitUntil(latitude.flush())
+        return error
+      }
     }
 
     export default {
-      async fetch(request: Request, env: Env, ctx: ExecutionContext) {
-        const latitude = getLatitude(env)
+      async fetch(request: Request, env: Env) {
         const response =
           (await routeAgentRequest(request, env)) ??
           new Response("Not found", { status: 404 })
-
-        ctx.waitUntil(latitude.flush())
 
         return response
       },
     } satisfies ExportedHandler<Env>
     ```
+
+    If your Worker does not expose secrets through `process.env`, keep a single
+    `Latitude` instance created from Worker `env` bindings. The runnable example
+    shows that wiring.
   </Step>
 </Steps>
 
@@ -141,7 +145,7 @@ export class MyAgent extends Think<Env> {
     return {
       experimental_telemetry: {
         isEnabled: true,
-        tracer: getLatitude(this.env).getTracer("cloudflare-think", context),
+        tracer: latitude.getTracer("cloudflare-think", context),
         functionId: "think-turn",
       },
     }
@@ -184,7 +188,7 @@ beforeTurn(): TurnConfig {
   return {
     experimental_telemetry: {
       isEnabled: true,
-      tracer: getLatitude(this.env).getTracer("cloudflare-think"),
+      tracer: latitude.getTracer("cloudflare-think"),
       functionId: "think-turn",
     },
   }
@@ -212,7 +216,7 @@ async beforeTurn(): Promise<TurnConfig> {
   return {
     experimental_telemetry: {
       isEnabled: true,
-      tracer: getLatitude(this.env).getTracer("cloudflare-think", {
+      tracer: latitude.getTracer("cloudflare-think", {
         userId,
         sessionId,
         tags: ["cloudflare-think"],
