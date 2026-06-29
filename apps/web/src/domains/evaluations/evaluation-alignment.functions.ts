@@ -227,7 +227,7 @@ export const updateSignalScopeFilters = createServerFn({ method: "POST" })
         return { signalId: result.signalId }
       }).pipe(
         withPostgres(
-          Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive, OutboxEventWriterLive),
+          Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive),
           client,
           OrganizationId(organizationId),
         ),

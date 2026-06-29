@@ -1,5 +1,5 @@
 import { AIEmbed, type AIError, EMBEDDING_DIMENSIONS, resolveEmbeddingConfig } from "@domain/ai"
-import { SignalId, type FilterSet, toSlug } from "@domain/shared"
+import { type FilterSet, SignalId, toSlug } from "@domain/shared"
 import { SEED_SIGNAL_FIXTURES, type SeedScope } from "@domain/shared/seeding"
 import { createSignalCentroid, type SignalCentroid, updateSignalCentroid } from "@domain/signals"
 import { AIEmbedLive } from "@platform/ai"

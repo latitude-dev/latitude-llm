@@ -7,6 +7,7 @@ import {
 } from "@domain/evaluations"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { evaluationScoreSchema } from "@domain/scores"
+import type { FilterSet } from "@domain/shared"
 import { createSignalCentroid } from "@domain/signals"
 import type { RedisClient } from "@platform/cache-redis"
 import { evaluations } from "@platform/db-postgres/schema/evaluations"
@@ -103,7 +104,7 @@ const makeSignalRow = (input?: {
   readonly id?: string
   readonly projectId?: string
   readonly uuid?: string
-  readonly filters?: Record<string, unknown> | null
+  readonly filters?: FilterSet | null
 }) => ({
   id: input?.id ?? SIGNAL_ID,
   uuid: input?.uuid ?? "11111111-1111-4111-8111-111111111111",

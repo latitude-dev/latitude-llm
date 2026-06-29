@@ -109,6 +109,35 @@ describe("updateSignalUseCase", () => {
     expect(issues.get(signalId)?.name).toBe("Slow checkout")
   })
 
+  it("updates filters on the signal only and does not touch linked evaluations", async () => {
+    const { repository, issues } = createFakeSignalRepository([makeUserSignal()])
+    const evaluation = {
+      id: "eeeeeeeeeeeeeeeeeeeeeeee",
+      signalId,
+      projectId,
+      name: "Slow checkout",
+      deletedAt: null,
+      archivedAt: null,
+      trigger: { turn: "every", debounce: 0, sampling: 100 },
+    } as unknown as Evaluation
+    const { repository: evaluationRepository, saved } = makeEvaluationRepository([evaluation])
+    const nextFilters = { "tags.service": [{ op: "in" as const, value: ["checkout"] }] }
+
+    await Effect.runPromise(
+      updateSignalUseCase({
+        projectId,
+        signalId: SignalId(signalId),
+        filters: nextFilters,
+      }).pipe(
+        provide(repository, evaluationRepository),
+        Effect.provideService(SqlClient, createPassthroughSqlClient()),
+      ),
+    )
+
+    expect(issues.get(signalId)?.filters).toEqual(nextFilters)
+    expect(saved).toHaveLength(0)
+  })
+
   it("syncs the active evaluation's name when the signal is renamed", async () => {
     const { repository } = createFakeSignalRepository([makeUserSignal()])
     const evaluation = {

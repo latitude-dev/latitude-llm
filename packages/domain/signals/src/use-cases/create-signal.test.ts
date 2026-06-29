@@ -88,8 +88,8 @@ describe("createSignalUseCase", () => {
     expect(evaluation?.alignment ?? null).toBeNull()
   })
 
-  it("persists signal filters as the evaluation pre-gate source of truth", async () => {
-    const { layer, issues } = buildLayer()
+  it("persists signal filters without copying them onto the evaluation trigger", async () => {
+    const { layer, issues, evaluations } = buildLayer()
     const filters = { "tags.service": [{ op: "in" as const, value: ["checkout"] }] }
 
     const result = await run(
@@ -105,6 +105,10 @@ describe("createSignalUseCase", () => {
 
     const signal = issues.get(result.signalId)
     expect(signal?.filters).toEqual(filters)
+
+    const evaluation = evaluations.get(result.evaluationId)
+    expect(evaluation).toBeDefined()
+    expect(evaluation?.trigger).not.toHaveProperty("filter")
   })
 
   it("creates a judge evaluation from settings", async () => {
