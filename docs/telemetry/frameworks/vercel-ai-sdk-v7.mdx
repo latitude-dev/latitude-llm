@@ -134,16 +134,127 @@ Telemetry is opt-out. To disable it for a specific call, set `telemetry: { isEna
 
 ---
 
-## Voice agents (STT → LLM → TTS)
+## STT → LLM → TTS
 
-Vercel AI SDK 7 ships stable [`transcribe()`](https://sdk.vercel.ai/docs/reference/ai-sdk-core/transcribe) and [`generateSpeech()`](https://sdk.vercel.ai/docs/reference/ai-sdk-core/generate-speech) alongside text APIs — including on [AI Gateway](https://vercel.com/docs/ai-gateway). `@ai-sdk/otel` traces **`generateText` / `streamText` and tool loops automatically**, but does not yet emit spans for `transcribe()` or `generateSpeech()`.
+AI SDK 7 ships stable [`transcribe()`](https://sdk.vercel.ai/docs/reference/ai-sdk-core/transcribe) and [`generateSpeech()`](https://sdk.vercel.ai/docs/reference/ai-sdk-core/generate-speech) on [AI Gateway](https://vercel.com/docs/ai-gateway). A typical voice turn chains all three:
 
-For a full voice pipeline, wrap STT and TTS in manual OpenTelemetry spans inside a `capture()` boundary. See the [Voice agents](/telemetry/voice-agents) guide for a complete STT → LLM → TTS example, session grouping, and how this compares to [LiveKit](/telemetry/frameworks/livekit) and [ElevenLabs](/telemetry/frameworks/elevenlabs).
+1. **STT** — `transcribe()` converts incoming audio to text
+2. **LLM** — `generateText()` (or `streamText()`) produces a reply
+3. **TTS** — `generateSpeech()` synthesizes the reply as audio
+
+`@ai-sdk/otel` traces the **LLM step automatically**. It does not yet emit spans for `transcribe()` or `generateSpeech()` — wrap those calls in manual OpenTelemetry spans inside a `capture()` boundary so all three stages appear in one trace.
+
+```mermaid
+sequenceDiagram
+  participant Client
+  participant Server
+  participant STT as transcribe()
+  participant LLM as generateText()
+  participant TTS as generateSpeech()
+
+  Client->>Server: audio
+  Server->>STT: transcribe
+  STT-->>Server: transcript
+  Server->>LLM: generateText(prompt)
+  LLM-->>Server: reply text
+  Server->>TTS: generateSpeech(text)
+  TTS-->>Server: audio
+  Server-->>Client: audio
+```
+
+### One voice turn
+
+```ts
+import { readFile } from "node:fs/promises"
+import { trace } from "@opentelemetry/api"
+import { openai } from "@ai-sdk/openai"
+import { generateSpeech, generateText, transcribe } from "ai"
+import { capture } from "@latitude-data/telemetry"
+
+const tracer = trace.getTracer("voice.pipeline")
+
+async function handleVoiceTurn(audioPath: string, sessionId: string) {
+  return capture(
+    "voice-turn",
+    async () => {
+      const audio = await readFile(audioPath)
+
+      const { text: transcript } = await tracer.startActiveSpan(
+        "transcribe whisper-1",
+        async (span) => {
+          span.setAttribute("gen_ai.operation.name", "transcribe")
+          span.setAttribute("gen_ai.provider.name", "openai")
+          span.setAttribute("gen_ai.request.model", "whisper-1")
+
+          const result = await transcribe({
+            model: openai.transcription("whisper-1"),
+            audio,
+          })
+
+          span.setAttribute(
+            "gen_ai.output.messages",
+            JSON.stringify([
+              {
+                role: "assistant",
+                parts: [{ type: "text", content: result.text }],
+              },
+            ]),
+          )
+          span.end()
+          return result
+        },
+      )
+
+      const { text: reply } = await generateText({
+        model: openai("gpt-4o"),
+        instructions: "You are a concise voice assistant.",
+        prompt: transcript,
+      })
+
+      await tracer.startActiveSpan("speech tts-1", async (span) => {
+        span.setAttribute("gen_ai.operation.name", "speech")
+        span.setAttribute("gen_ai.provider.name", "openai")
+        span.setAttribute("gen_ai.request.model", "tts-1")
+        span.setAttribute(
+          "gen_ai.input.messages",
+          JSON.stringify([
+            { role: "user", parts: [{ type: "text", content: reply }] },
+          ]),
+        )
+
+        const { audio: speechAudio } = await generateSpeech({
+          model: openai.speech("tts-1"),
+          text: reply,
+          voice: "alloy",
+        })
+
+        span.setAttribute("voice.output.bytes", speechAudio.uint8Array.byteLength)
+        span.end()
+        return speechAudio
+      })
+    },
+    { sessionId, tags: ["voice", "stt-llm-tts"] },
+  )
+}
+```
+
+Pass a stable `sessionId` on every `capture()` call to group voice turns into a conversation in Latitude.
+
+### What you see in Latitude
+
+| Stage | Traced by | Span operation |
+| --- | --- | --- |
+| STT | Manual span | `transcribe` — transcript in output messages |
+| LLM | `@ai-sdk/otel` | `chat` — full input/output, tokens, latency |
+| TTS | Manual span | `speech` — input text, model, audio byte count |
+
+Models on AI Gateway (e.g. `openai/whisper-1`, `openai/tts-1`) resolve for cost tracking the same way as chat models.
 
 <Note>
-  `experimental_useRealtime` (browser WebSocket voice) does not produce server-side
-  `@ai-sdk/otel` spans. Use LiveKit or backend `capture()` around tool routes for
-  realtime observability.
+  `experimental_useRealtime` (browser WebSocket voice) does not produce
+  server-side `@ai-sdk/otel` spans. For realtime voice observability, use
+  [LiveKit Agents](/telemetry/frameworks/livekit) or wrap backend tool routes in
+  `capture()`.
 </Note>
 
 ---

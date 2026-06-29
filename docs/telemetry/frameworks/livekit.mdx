@@ -9,8 +9,6 @@ This guide shows you how to send traces from a [**LiveKit Agents**](https://docs
 
 LiveKit Agents ships with built-in OpenTelemetry support and owns its own tracer provider. Instead of bootstrapping telemetry with the `Latitude` class, you attach a **`LatitudeSpanProcessor`** to LiveKit's provider — Latitude then receives the same spans LiveKit emits for LLM, agent, and tool activity. This works the same way for the **Python** (`livekit-agents`) and **Node.js** (`@livekit/agents`) SDKs.
 
-LiveKit is Latitude's **turnkey voice-agent integration**: STT, LLM, and TTS all run in one pipeline with native tracing. See the [Voice agents](/telemetry/voice-agents) guide for how this compares to [Vercel AI SDK v7](/telemetry/frameworks/vercel-ai-sdk-v7) and [ElevenLabs](/telemetry/frameworks/elevenlabs).
-
 <Check>
   You'll keep building your LiveKit agent exactly as you do today. Latitude
   observes the LLM spans the framework already produces.
@@ -132,6 +130,63 @@ LiveKit is Latitude's **turnkey voice-agent integration**: STT, LLM, and TTS all
 
 ---
 
+## STT → LLM → TTS
+
+LiveKit Agents runs the full voice pipeline — speech-to-text, an LLM turn, and text-to-speech — inside `AgentSession`. LiveKit emits OpenTelemetry spans for each stage; Latitude receives them through `LatitudeSpanProcessor`.
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant LiveKit as LiveKit AgentSession
+  participant STT as STT plugin
+  participant LLM as LLM
+  participant TTS as TTS plugin
+
+  User->>LiveKit: audio
+  LiveKit->>STT: transcribe
+  STT-->>LiveKit: transcript
+  LiveKit->>LLM: generate
+  LLM-->>LiveKit: reply text
+  LiveKit->>TTS: synthesize
+  TTS-->>LiveKit: audio
+  LiveKit-->>User: audio
+```
+
+### What gets traced
+
+| Stage | Traced by default | Content in Latitude |
+| --- | --- | --- |
+| **STT** | No (smart filter) | Enable with `disableSmartFilter` |
+| **LLM** | Yes | Prompts, completions, tools, tokens via `gen_ai.*` and `lk.*` |
+| **TTS** | No (smart filter) | Enable with `disableSmartFilter` |
+
+By default, Latitude's smart filter forwards **LLM spans only**. To include STT, TTS, and VAD spans in every trace, disable the filter when creating the processor:
+
+<CodeGroup>
+  ```python Python
+  from latitude_telemetry import LatitudeSpanProcessor, LatitudeSpanProcessorOptions
+
+  LatitudeSpanProcessor(
+      api_key,
+      project,
+      LatitudeSpanProcessorOptions(disable_smart_filter=True),
+  )
+  ```
+
+  ```ts TypeScript
+  new LatitudeSpanProcessor(apiKey, project, { disableSmartFilter: true })
+  ```
+</CodeGroup>
+
+LiveKit serializes conversation content in `lk.*` attributes. Latitude parses those alongside `gen_ai.*` metadata — STT transcripts in `audio_content` items are normalized to text parts.
+
+<Note>
+  Using ElevenLabs as the TTS/STT plugin inside LiveKit? Instrument LiveKit on
+  this page — not the [ElevenLabs Agents](/telemetry/frameworks/elevenlabs) guide.
+</Note>
+
+---
+
 ## What you get
 
 ### LLM turns (default)
@@ -145,32 +200,6 @@ LiveKit's LLM spans carry both `gen_ai.*` metadata and the conversation content 
 - **Tool definitions** — the function tools available to the agent
 
 Audio in the chat context (e.g. STT transcripts in `audio_content` items) is normalized to text parts in Latitude.
-
-### STT and TTS spans
-
-LiveKit also emits spans for speech-to-text, text-to-speech, and voice-activity detection. To include the full **STT → LLM → TTS** pipeline in every trace, disable the smart filter:
-
-<Note>
-  By default the span processor forwards only LLM-relevant spans. Pass
-  `disable_smart_filter=True` (Python) or `disableSmartFilter: true` (TypeScript)
-  to export STT, TTS, and VAD spans as well:
-
-  <CodeGroup>
-    ```python Python
-    from latitude_telemetry import LatitudeSpanProcessor, LatitudeSpanProcessorOptions
-
-    LatitudeSpanProcessor(
-        api_key,
-        project,
-        LatitudeSpanProcessorOptions(disable_smart_filter=True),
-    )
-    ```
-
-    ```ts TypeScript
-    new LatitudeSpanProcessor(apiKey, project, { disableSmartFilter: true })
-    ```
-  </CodeGroup>
-</Note>
 
 ---
 

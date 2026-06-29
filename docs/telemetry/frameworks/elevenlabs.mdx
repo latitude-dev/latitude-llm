@@ -11,8 +11,6 @@ ElevenLabs Agents is a fully hosted **voice platform**: speech-to-text, the LLM 
 
 The way in is ElevenLabs' [**Custom LLM**](https://elevenlabs.io/docs/eleven-agents/customization/llm/custom-llm) feature: point your agent at an OpenAI-compatible server **you** run, and instrument that server with Latitude. Your server receives the real LLM traffic — system prompt, full conversation history, and tool definitions — so Latitude captures every turn with actual prompts, completions, token usage, and latency.
 
-For a comparison of voice observability across providers, see [Voice agents](/telemetry/voice-agents). If you need full **STT → LLM → TTS** tracing, consider [LiveKit Agents](/telemetry/frameworks/livekit) or a self-hosted [Vercel AI SDK v7](/telemetry/frameworks/vercel-ai-sdk-v7) pipeline instead.
-
 <Check>
   Your server is a thin streaming proxy in front of any OpenAI-compatible
   provider. The agent keeps running on ElevenLabs exactly as before — only the
@@ -174,6 +172,48 @@ For a comparison of voice observability across providers, see [Voice agents](/te
 
 ---
 
+## STT → LLM → TTS
+
+ElevenLabs Agents runs the full voice loop on its own infrastructure:
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant ElevenLabs as ElevenLabs Agents
+  participant STT as ElevenLabs STT
+  participant LLM as Custom LLM proxy
+  participant TTS as ElevenLabs TTS
+
+  User->>ElevenLabs: audio
+  ElevenLabs->>STT: transcribe
+  STT-->>ElevenLabs: transcript
+  ElevenLabs->>LLM: chat/completions
+  LLM-->>ElevenLabs: reply text
+  ElevenLabs->>TTS: synthesize
+  TTS-->>ElevenLabs: audio
+  ElevenLabs-->>User: audio
+```
+
+### What gets traced
+
+| Stage | Visible in Latitude | How |
+| --- | --- | --- |
+| **STT** | No | Runs on ElevenLabs — not exported |
+| **LLM** | Yes | Via your Custom LLM proxy (steps below) |
+| **TTS** | No | Runs on ElevenLabs — not exported |
+
+Latitude only sees the **LLM step** — the `/v1/chat/completions` calls ElevenLabs forwards to your instrumented server. STT and TTS stay inside ElevenLabs and never reach your proxy.
+
+For full **STT → LLM → TTS** tracing in Latitude, use [LiveKit Agents](/telemetry/frameworks/livekit) (native spans for all three stages) or a self-hosted [Vercel AI SDK v7](/telemetry/frameworks/vercel-ai-sdk-v7) pipeline with manual STT/TTS spans.
+
+<Note>
+  Using ElevenLabs only as the **TTS/STT plugin inside LiveKit Agents**? Instrument
+  [LiveKit](/telemetry/frameworks/livekit) instead — LiveKit exports STT and TTS spans
+  when the smart filter is disabled.
+</Note>
+
+---
+
 ## What you get
 
 Because your server receives the exact requests ElevenLabs builds for the model, Latitude shows each conversation turn as a real LLM call:
@@ -182,12 +222,6 @@ Because your server receives the exact requests ElevenLabs builds for the model,
 - **Output messages** — the assistant response text and any tool calls the model emitted
 - **Tool definitions** — your agent tools and ElevenLabs system tools, as sent in the request
 - **Model, token usage, and latency** — from the provider's streamed response
-
-<Warning>
-  **STT and TTS are not traced.** ElevenLabs handles speech recognition and
-  synthesis on its own infrastructure. Latitude only sees the LLM calls that flow
-  through your Custom LLM proxy — not the audio pipeline before or after.
-</Warning>
 
 ---
 
