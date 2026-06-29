@@ -24,7 +24,8 @@ const truncate = (value: string): string =>
 
 const distinct = (values: readonly string[]): string[] => [...new Set(values.filter((value) => value !== ""))]
 
-const sessionDuration = (start: Date, end: Date): number => (end.getTime() - start.getTime()) * 1_000_000
+const MS_TO_NS = 1_000_000
+const rootDurationNs = (start: Date, end: Date): number => (end.getTime() - start.getTime()) * MS_TO_NS
 
 /**
  * Deduped, session-wide readable transcript: opening system instructions + the last responsive trace's
@@ -78,7 +79,12 @@ const buildTraces = (spans: readonly Span[], toolSpans: readonly SessionToolSpan
       cacheRead: group.reduce((sum, s) => sum + s.tokensCacheRead, 0),
       cacheCreate: group.reduce((sum, s) => sum + s.tokensCacheCreate, 0),
       reasoning: group.reduce((sum, s) => sum + s.tokensReasoning, 0),
-      total: group.reduce((sum, s) => sum + s.tokensInput + s.tokensOutput, 0),
+      // total = sum of all components so the per-trace breakdown is self-consistent and matches the
+      // session rollup's `tokensTotal` semantics (not just input + output).
+      total: group.reduce(
+        (sum, s) => sum + s.tokensInput + s.tokensOutput + s.tokensCacheRead + s.tokensCacheCreate + s.tokensReasoning,
+        0,
+      ),
     }
     return {
       id: traceId,
@@ -86,7 +92,7 @@ const buildTraces = (spans: readonly Span[], toolSpans: readonly SessionToolSpan
       status: group.some((s) => s.statusCode === "error") ? "error" : "ok",
       errorCount: group.filter((s) => s.statusCode === "error").length,
       spanCount: group.length,
-      duration: root ? sessionDuration(root.startTime, root.endTime) : 0,
+      duration: root ? rootDurationNs(root.startTime, root.endTime) : 0,
       timeToFirstToken: root?.timeToFirstTokenNs ?? 0,
       cost,
       tokens,
@@ -185,11 +191,15 @@ export const loadScriptSessionContext = (input: {
     const sessionRepository = yield* SessionRepository
     const spanRepository = yield* SpanRepository
 
-    const sessionDetail = yield* sessionRepository
-      .findBySessionId(scope)
-      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-    const spans = yield* spanRepository.listBySessionId(scope)
-    const toolSpans = yield* spanRepository.listToolSpansBySessionId(scope)
+    // The three reads are independent; run them concurrently to keep the per-eval load cost down.
+    const [sessionDetail, spans, toolSpans] = yield* Effect.all(
+      [
+        sessionRepository.findBySessionId(scope).pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
+        spanRepository.listBySessionId(scope),
+        spanRepository.listToolSpansBySessionId(scope),
+      ],
+      { concurrency: "unbounded" },
+    )
 
     const traces = buildTraces(spans, toolSpans)
     const conversation = sessionDetail
