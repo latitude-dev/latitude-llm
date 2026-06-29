@@ -9,6 +9,7 @@ import { Skeleton } from "../skeleton/skeleton.tsx"
 import { Text } from "../text/text.tsx"
 import { Tooltip } from "../tooltip/tooltip.tsx"
 import { DataRow } from "./data-row.tsx"
+import { buildDisplayRows, type DisplayRow } from "./display-rows.ts"
 import { HeaderCell } from "./headers/header-cell.tsx"
 import type { InfiniteTableColumn, InfiniteTableProps } from "./types.ts"
 import { useHeaderLayoutLock } from "./use-header-layout-lock.ts"
@@ -18,15 +19,6 @@ const GROUP_HEADER_ROW_HEIGHT = 36
 const SKELETON_ROW_COUNT = 8
 const EXPANDED_SKELETON_COUNT = 3
 const SELECTION_COLUMN_WIDTH = 48
-
-/**
- * Virtualized row model: data rows interleaved with injected group header
- * rows (see `getRowGroup`). Data entries point back into `data` by index so
- * selection/active-row/render contracts keep operating on data positions.
- */
-type DisplayRow =
-  | { readonly kind: "group"; readonly groupKey: string }
-  | { readonly kind: "data"; readonly dataIndex: number }
 
 const EXPANDED_SKELETON_CELL_CLASS =
   "px-4 py-2 first:rounded-l-lg last:rounded-r-lg overflow-hidden align-middle text-sm leading-5"
@@ -111,23 +103,10 @@ export function InfiniteTable<T>({
   const hasMore = infiniteScroll?.hasMore ?? false
 
   const hasGrouping = !!getRowGroup && !!renderGroupHeader
-  const displayRows = useMemo<readonly DisplayRow[]>(() => {
-    if (!hasGrouping || !getRowGroup) {
-      return data.map((_, dataIndex) => ({ kind: "data", dataIndex }))
-    }
-
-    const rows: DisplayRow[] = []
-    let previousGroup: string | null = null
-    data.forEach((row, dataIndex) => {
-      const groupKey = getRowGroup(row)
-      if (groupKey !== previousGroup) {
-        rows.push({ kind: "group", groupKey })
-        previousGroup = groupKey
-      }
-      rows.push({ kind: "data", dataIndex })
-    })
-    return rows
-  }, [data, getRowGroup, hasGrouping])
+  const displayRows = useMemo<readonly DisplayRow[]>(
+    () => buildDisplayRows(data, getRowGroup, hasGrouping),
+    [data, getRowGroup, hasGrouping],
+  )
 
   const totalVirtualRows = displayRows.length + (hasMore || (isLoading && data.length === 0) ? SKELETON_ROW_COUNT : 0)
 
@@ -181,10 +160,22 @@ export function InfiniteTable<T>({
     [sorting, defaultSorting, onSortChange],
   )
 
+  const rowKeys = useMemo(() => data.map(getRowKey), [data, getRowKey])
+
+  // Identity-stable keys (not the array index) so measured row heights survive
+  // page growth and reorders during infinite scroll; index-keyed measurements
+  // get mis-attributed when displayRows shifts, painting rows/headers at stale
+  // offsets (empty/duplicated group headers).
   const virtualizer = useVirtualizer({
     count: totalVirtualRows,
     getScrollElement: () => scrollContainerRef.current,
     estimateSize: (index) => (displayRows[index]?.kind === "group" ? GROUP_HEADER_ROW_HEIGHT : ROW_HEIGHT),
+    getItemKey: (index) => {
+      if (index >= displayRows.length) return `skeleton-${index - displayRows.length}`
+      const displayRow = displayRows[index]
+      if (!displayRow) return `empty-${index}`
+      return displayRow.kind === "group" ? `group-${displayRow.groupKey}` : `row-${rowKeys[displayRow.dataIndex]}`
+    },
     overscan: 10,
   })
 
@@ -220,8 +211,6 @@ export function InfiniteTable<T>({
     const dataRow = data[displayRow.dataIndex]
     return dataRow === undefined ? null : getRowGroup(dataRow)
   }, [data, displayRows, getRowGroup, hasGrouping, scrollTop, virtualRows])
-
-  const rowKeys = useMemo(() => data.map(getRowKey), [data, getRowKey])
 
   const activeRowIndex = useMemo(() => {
     if (activeRowKey == null || activeRowKey === "") return -1

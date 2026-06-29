@@ -255,7 +255,21 @@ export function useSignals(input: {
     }),
   })
 
-  const data = useMemo(() => pages.flatMap((page) => page.items), [pages])
+  // Dedupe by id: offset pagination over a live, re-sorted set can return the
+  // same signal in adjacent pages, which would otherwise yield duplicate React
+  // keys and repeated rows. Earlier page wins to keep the top-of-list order.
+  const data = useMemo(() => {
+    const seen = new Set<string>()
+    const deduped: SignalRecord[] = []
+    for (const page of pages) {
+      for (const item of page.items) {
+        if (seen.has(item.id)) continue
+        seen.add(item.id)
+        deduped.push(item)
+      }
+    }
+    return deduped
+  }, [pages])
   const rowMetricsBySignalId = useMemo(
     () =>
       Object.assign(
