@@ -25,7 +25,6 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
             readonly script: string
             readonly evaluationHash: string
             readonly trigger: {
-              readonly filter: Record<string, unknown>
               readonly turn: "first" | "every" | "last"
               readonly debounce: number
               readonly sampling: number
