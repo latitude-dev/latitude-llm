@@ -42,7 +42,10 @@ import { MessageAnnotationTrigger } from "../../annotations/message-annotation-t
 import { findNearestMessageAnchor, flashElement } from "../../conversation-timeline/flash-highlight.ts"
 import { TimelineBar } from "../../conversation-timeline/timeline-bar.tsx"
 import { useViewportBand } from "../../conversation-timeline/use-viewport-band.ts"
-import { computeLoadedConversationHighlights } from "./compute-loaded-conversation-highlights.ts"
+import {
+  computeLoadedConversationHighlights,
+  formatConversationSearchForBackend,
+} from "./compute-loaded-conversation-highlights.ts"
 import { ConversationSearchBar } from "./conversation-search-bar.tsx"
 import { getNavigableSearchHighlights, toSearchHighlightRanges } from "./navigable-search-highlights.ts"
 import { scrollToHighlightMatch } from "./scroll-to-highlight-match.ts"
@@ -295,22 +298,53 @@ function ConversationContent({
   }, [])
 
   const effectiveSearchQuery = searchQuery ?? ""
-  const { data: remoteSearchHighlightsData } = useTraceSearchHighlights({
-    projectId,
-    traceId: traceDetail.traceId,
-    searchQuery: effectiveSearchQuery,
-    enabled: debouncedConversationSearch.length === 0,
-  })
-
   const loadedConversationHighlights = useMemo(
     () => computeLoadedConversationHighlights(messages, debouncedConversationSearch),
     [debouncedConversationSearch, messages],
   )
 
+  const localNavigableMatches = useMemo(
+    () => getNavigableSearchHighlights(loadedConversationHighlights.highlights),
+    [loadedConversationHighlights],
+  )
+
+  const needsRemoteSearchFallback =
+    debouncedConversationSearch.length > 0 && localNavigableMatches.length === 0 && hasMoreMessages
+
+  const backendConversationSearchQuery = useMemo(
+    () => formatConversationSearchForBackend(debouncedConversationSearch),
+    [debouncedConversationSearch],
+  )
+
+  const { data: projectSearchHighlightsData } = useTraceSearchHighlights({
+    projectId,
+    traceId: traceDetail.traceId,
+    searchQuery: effectiveSearchQuery,
+    enabled: debouncedConversationSearch.length === 0 && effectiveSearchQuery.length > 0,
+  })
+
+  const { data: remoteFallbackHighlightsData, isFetching: isRemoteSearchFallbackFetching } = useTraceSearchHighlights({
+    projectId,
+    traceId: traceDetail.traceId,
+    searchQuery: backendConversationSearchQuery,
+    enabled: needsRemoteSearchFallback && backendConversationSearchQuery.length > 0,
+  })
+
   const searchHighlightsData = useMemo<TraceSearchHighlightsResult | undefined>(() => {
-    if (debouncedConversationSearch.length > 0) return loadedConversationHighlights
-    return remoteSearchHighlightsData
-  }, [debouncedConversationSearch, loadedConversationHighlights, remoteSearchHighlightsData])
+    if (debouncedConversationSearch.length > 0) {
+      if (localNavigableMatches.length > 0) return loadedConversationHighlights
+      if (needsRemoteSearchFallback && remoteFallbackHighlightsData) return remoteFallbackHighlightsData
+      return loadedConversationHighlights
+    }
+    return projectSearchHighlightsData
+  }, [
+    debouncedConversationSearch,
+    loadedConversationHighlights,
+    localNavigableMatches.length,
+    needsRemoteSearchFallback,
+    projectSearchHighlightsData,
+    remoteFallbackHighlightsData,
+  ])
 
   const navigableMatches = useMemo(
     () => getNavigableSearchHighlights(searchHighlightsData?.highlights ?? []),
@@ -320,6 +354,14 @@ function ConversationContent({
   const activeSearchQuery =
     debouncedConversationSearch.length > 0 ? debouncedConversationSearch : effectiveSearchQuery.trim()
   const searchNavigationActive = activeSearchQuery.length > 0 && navigableMatches.length > 0
+  const remoteFallbackFirstMatch = useMemo(() => {
+    if (!needsRemoteSearchFallback || !remoteFallbackHighlightsData) return null
+    return getNavigableSearchHighlights(remoteFallbackHighlightsData.highlights)[0] ?? null
+  }, [needsRemoteSearchFallback, remoteFallbackHighlightsData])
+  const isSearchingUnloadedConversation =
+    needsRemoteSearchFallback &&
+    (isRemoteSearchFallbackFetching ||
+      (remoteFallbackFirstMatch != null && remoteFallbackFirstMatch.messageIndex >= messages.length))
 
   useHotkeys([
     {
@@ -374,6 +416,13 @@ function ConversationContent({
     loadMoreMessages()
   }, [debouncedConversationSearch, firstMatchHint, messages.length, loadMoreMessages])
 
+  // TODO(frontend-use-effect-policy): loads conversation chunks until a remote lexical match is in view.
+  useEffect(() => {
+    if (!needsRemoteSearchFallback || !remoteFallbackFirstMatch) return
+    if (remoteFallbackFirstMatch.messageIndex < messages.length) return
+    loadMoreMessages()
+  }, [needsRemoteSearchFallback, remoteFallbackFirstMatch, messages.length, loadMoreMessages])
+
   useEffect(() => {
     if (focusMessageIndex === undefined || focusMessageIndex < messages.length) return
     loadMoreMessages()
@@ -425,6 +474,11 @@ function ConversationContent({
       <div className="shrink-0 border-b border-border bg-background px-4 py-2">
         <div className="flex items-center gap-2">
           <ConversationSearchBar className="min-w-0 flex-1" onDebouncedQueryChange={handleDebouncedSearchQueryChange} />
+          {isSearchingUnloadedConversation ? (
+            <Text.H6 color="foregroundMuted" className="shrink-0">
+              Searching…
+            </Text.H6>
+          ) : null}
           <div className="flex shrink-0 items-center gap-1.5">
             <StaffConversationDownloadButton traceId={traceDetail.traceId} messages={messages} />
             {searchNavigationActive ? (

@@ -18,6 +18,19 @@ function parseLoadedConversationSearchQuery(raw: string): ParsedSearchQuery {
   return parsed
 }
 
+export function formatConversationSearchForBackend(raw: string): string {
+  const trimmed = raw.trim()
+  if (trimmed.length === 0) return ""
+  const parsed = parseLoadedConversationSearchQuery(trimmed)
+  if (parsed.literalPhrases.length === 1 && parsed.tokenPhrases.length === 0 && parsed.semanticPrompt.length === 0) {
+    const phrase = parsed.literalPhrases[0]
+    if (phrase !== undefined && !trimmed.includes('"') && !trimmed.includes("`")) {
+      return `"${phrase}"`
+    }
+  }
+  return trimmed
+}
+
 export function computeLoadedConversationHighlights(
   messages: readonly GenAIMessage[],
   query: string,
