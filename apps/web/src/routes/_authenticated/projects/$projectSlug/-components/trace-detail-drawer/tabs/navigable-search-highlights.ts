@@ -15,22 +15,24 @@ export function toSearchHighlightRanges(
 ): readonly HighlightRange[] {
   if (!result || result.highlights.length === 0) return []
 
-  const navigable = getNavigableSearchHighlights(result.highlights)
-  const active = activeNavigableIndex != null && activeNavigableIndex >= 0 ? navigable[activeNavigableIndex] : undefined
+  let navigableIdx = 0
+  return result.highlights.map((highlight) => {
+    const isNavigable =
+      (highlight.type === "search-literal" || highlight.type === "search-token") &&
+      highlight.endOffset > highlight.startOffset
 
-  return result.highlights.map((highlight) => ({
-    messageIndex: highlight.messageIndex,
-    partIndex: highlight.partIndex,
-    startOffset: highlight.startOffset,
-    endOffset: highlight.endOffset,
-    type: highlight.type,
-    ...(active &&
-    highlight.messageIndex === active.messageIndex &&
-    highlight.partIndex === active.partIndex &&
-    highlight.startOffset === active.startOffset &&
-    highlight.endOffset === active.endOffset &&
-    highlight.type === active.type
-      ? { searchActive: true }
-      : {}),
-  }))
+    const range: HighlightRange = {
+      messageIndex: highlight.messageIndex,
+      partIndex: highlight.partIndex,
+      startOffset: highlight.startOffset,
+      endOffset: highlight.endOffset,
+      type: highlight.type,
+    }
+
+    if (!isNavigable) return range
+
+    const isActive = activeNavigableIndex != null && activeNavigableIndex >= 0 && navigableIdx === activeNavigableIndex
+    navigableIdx++
+    return isActive ? { ...range, searchActive: true } : range
+  })
 }

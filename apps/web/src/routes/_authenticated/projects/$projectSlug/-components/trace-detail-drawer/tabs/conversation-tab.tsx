@@ -53,13 +53,7 @@ import { SearchMatchNavigator } from "./search-match-navigator.tsx"
 
 const LOAD_MORE_THRESHOLD_PX = 1200
 
-/**
- * Latitude-staff-only "download conversation as JSON" affordance: visible to
- * admins and impersonating admins (support), plus local dev builds for
- * convenience — never to regular customers. The session comes from
- * `useAuthSession` (tree-agnostic), so it works the same in the sandbox tree,
- * which has no `_authenticated` match.
- */
+// Staff-only (admins + impersonating + DEV) — never shown to regular customers.
 function StaffConversationDownloadButton({
   traceId,
   messages,

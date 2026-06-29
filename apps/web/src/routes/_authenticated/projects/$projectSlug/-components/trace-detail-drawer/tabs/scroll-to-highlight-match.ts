@@ -23,10 +23,7 @@ export function scrollToHighlightMatch(
   }
 
   if (tryScroll()) {
-    done = true
-    return () => {
-      done = true
-    }
+    return () => {}
   }
 
   const observer = new MutationObserver(() => {

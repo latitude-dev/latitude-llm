@@ -38,4 +38,16 @@ describe("toSearchHighlightRanges", () => {
     expect(ranges[0]?.searchActive).toBeUndefined()
     expect(ranges[1]?.searchActive).toBe(true)
   })
+
+  it("marks the second identical navigable match active by index", () => {
+    const highlights = [
+      highlight({ type: "search-literal", startOffset: 0, endOffset: 4 }),
+      highlight({ type: "search-literal", startOffset: 0, endOffset: 4 }),
+    ]
+
+    const ranges = toSearchHighlightRanges({ highlights, firstMatchIndex: 0 }, 1)
+
+    expect(ranges[0]?.searchActive).toBeUndefined()
+    expect(ranges[1]?.searchActive).toBe(true)
+  })
 })

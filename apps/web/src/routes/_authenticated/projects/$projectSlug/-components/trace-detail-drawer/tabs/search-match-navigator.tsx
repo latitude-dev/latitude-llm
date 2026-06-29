@@ -1,5 +1,6 @@
 import { Button, Icon, Text, Tooltip } from "@repo/ui"
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react"
+import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
 
 export function SearchMatchNavigator({
   activeIndex,
@@ -39,7 +40,7 @@ export function SearchMatchNavigator({
           </Button>
         }
       >
-        Previous match
+        Previous match <HotkeyBadge hotkey="P" />
       </Tooltip>
       <Tooltip
         side="bottom"
@@ -57,7 +58,7 @@ export function SearchMatchNavigator({
           </Button>
         }
       >
-        Next match
+        Next match <HotkeyBadge hotkey="N" />
       </Tooltip>
     </div>
   )
