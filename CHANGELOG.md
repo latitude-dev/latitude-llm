@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v0.3.22 - 2026-06-29
+
+### Signals
+
+- Scoped signal score lookup and sort subqueries by organization and project so signal lists, occurrence counts, last-seen ordering, and affected-session counts stay tenant-safe (ref: e3f25cfa2).
+
 ## v0.3.21 - 2026-06-28
 
 ### Monitors and incidents
