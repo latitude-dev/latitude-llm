@@ -170,6 +170,65 @@ describe("Latitude", () => {
     await result.shutdown()
   })
 
+  it("creates explicit tracers from the Latitude-owned fallback provider", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+    const latitudeExporter = new InMemorySpanExporter()
+    const opaqueProvider = { getTracer: () => ({}) as Tracer } satisfies TracerProvider
+
+    const result = new Latitude({
+      apiKey: "test-key",
+      project: "test-project",
+      tracerProvider: opaqueProvider,
+      exporter: latitudeExporter,
+      disableBatch: true,
+    })
+
+    const span = result.getTracer("vercelai").startSpan("ai-sdk-call")
+    span.end()
+
+    await result.flush()
+
+    const finished = latitudeExporter.getFinishedSpans()
+    expect(finished).toHaveLength(1)
+    expect(finished[0]?.instrumentationScope.name).toBe("so.latitude.instrumentation.vercelai")
+
+    warnSpy.mockRestore()
+    await result.shutdown()
+  })
+
+  it("builds AI SDK telemetry settings from the active Latitude provider", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+    const latitudeExporter = new InMemorySpanExporter()
+    const opaqueProvider = { getTracer: () => ({}) as Tracer } satisfies TracerProvider
+
+    const result = new Latitude({
+      apiKey: "test-key",
+      project: "test-project",
+      tracerProvider: opaqueProvider,
+      exporter: latitudeExporter,
+      disableBatch: true,
+    })
+
+    const telemetry = result.getAiSdkTelemetry({
+      functionId: "cloudflare-think-turn",
+      metadata: { framework: "cloudflare-think" },
+    })
+
+    expect(telemetry.isEnabled).toBe(true)
+    expect(telemetry.functionId).toBe("cloudflare-think-turn")
+    expect(telemetry.metadata).toEqual({ framework: "cloudflare-think" })
+
+    const span = telemetry.tracer.startSpan("ai-sdk-call")
+    span.end()
+
+    await result.flush()
+
+    expect(latitudeExporter.getFinishedSpans()).toHaveLength(1)
+
+    warnSpy.mockRestore()
+    await result.shutdown()
+  })
+
   it("applies serviceName to exported spans as a resource attribute, not a span attribute", async () => {
     const latitudeExporter = new InMemorySpanExporter()
 

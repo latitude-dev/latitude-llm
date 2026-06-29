@@ -59,7 +59,7 @@ The Vercel AI SDK can emit OpenTelemetry spans through its `experimental_telemet
   </Step>
 
   <Step title="Initialize and use">
-    Initialize Latitude **without** an `instrumentations` array. The Vercel AI SDK emits its own OpenTelemetry spans. Set `experimental_telemetry.isEnabled` to `true` on your AI SDK calls.
+    Initialize Latitude **without** an `instrumentations` array. The Vercel AI SDK emits its own OpenTelemetry spans. Pass `latitude.getAiSdkTelemetry()` to each AI SDK call.
 
     ```ts
     import { Latitude, capture } from "@latitude-data/telemetry"
@@ -75,9 +75,7 @@ The Vercel AI SDK can emit OpenTelemetry spans through its `experimental_telemet
       const { text } = await generateText({
         model: openai("gpt-4o"),
         prompt: "Hello",
-        experimental_telemetry: {
-          isEnabled: true,
-        },
+        experimental_telemetry: latitude.getAiSdkTelemetry(),
       })
       return text
     })
@@ -86,8 +84,9 @@ The Vercel AI SDK can emit OpenTelemetry spans through its `experimental_telemet
     ```
 
     <Note>
-      The `experimental_telemetry.isEnabled` flag must be set to `true` on each
-      Vercel AI SDK call (`generateText`, `streamText`, etc.) for spans to be emitted.
+      `latitude.getAiSdkTelemetry()` enables AI SDK telemetry and passes a Latitude-owned tracer.
+      This keeps traces flowing even in runtimes that already registered a global OpenTelemetry
+      provider that Latitude cannot attach to.
     </Note>
   </Step>
 

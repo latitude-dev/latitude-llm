@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "latitude-cloudflare-think-example",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-06-29",
+  "compatibility_flags": ["nodejs_compat"],
+  "ai": {
+    "binding": "AI"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "MyAgent",
+        "class_name": "MyAgent"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["MyAgent"]
+    }
+  ],
+  "vars": {
+    "LATITUDE_PROJECT_SLUG": "default-project",
+    "LATITUDE_TELEMETRY_URL": "http://localhost:3002"
+  }
+}

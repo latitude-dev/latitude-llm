@@ -1,0 +1,20 @@
+{
+  "name": "latitude-cloudflare-think-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev src/worker.ts",
+    "verify:local": "node scripts/verify-local.mjs"
+  },
+  "dependencies": {
+    "@cloudflare/think": "^0.11.1",
+    "@latitude-data/telemetry": "file:../..",
+    "agents": "^0.17.1",
+    "ai": "^6.0.214",
+    "workers-ai-provider": "^3.2.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "wrangler": "^4.105.0"
+  }
+}

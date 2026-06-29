@@ -1,9 +1,18 @@
-import { context, ProxyTracerProvider, propagation, type TracerProvider, trace } from "@opentelemetry/api"
+import {
+  type AttributeValue,
+  context,
+  ProxyTracerProvider,
+  propagation,
+  type Tracer,
+  type TracerProvider,
+  trace,
+} from "@opentelemetry/api"
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks"
 import { CompositePropagator, W3CBaggagePropagator, W3CTraceContextPropagator } from "@opentelemetry/core"
 import { resourceFromAttributes } from "@opentelemetry/resources"
 import { NodeTracerProvider, type SpanProcessor } from "@opentelemetry/sdk-trace-node"
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions"
+import { SCOPE_LATITUDE } from "../constants/scope.ts"
 import { warnProjectSlugDeprecated } from "./_deprecation.ts"
 import { registerLatitudeInstrumentations } from "./instrumentations.ts"
 import { LatitudeSpanProcessor } from "./processor.ts"
@@ -23,6 +32,20 @@ interface ProviderWithSpanProcessor extends TracerProvider {
   _activeProcessor?: {
     _processors?: SpanProcessor[]
   }
+}
+
+export type AiSdkTelemetryOptions = {
+  isEnabled?: boolean
+  recordInputs?: boolean
+  recordOutputs?: boolean
+  functionId?: string
+  metadata?: Record<string, AttributeValue>
+  integrations?: unknown | unknown[]
+}
+
+export type AiSdkTelemetrySettings = AiSdkTelemetryOptions & {
+  isEnabled: boolean
+  tracer: Tracer
 }
 
 function getRegisteredTracerProvider(): TracerProvider | undefined {
@@ -177,6 +200,20 @@ export class Latitude {
     }
 
     await this.latitudeProcessor.forceFlush()
+  }
+
+  getTracer(scope: string): Tracer {
+    const tracerName =
+      scope === SCOPE_LATITUDE || scope.startsWith(`${SCOPE_LATITUDE}.`) ? scope : `${SCOPE_LATITUDE}.${scope}`
+    return this.provider.getTracer(tracerName)
+  }
+
+  getAiSdkTelemetry(options: AiSdkTelemetryOptions = {}): AiSdkTelemetrySettings {
+    return {
+      ...options,
+      isEnabled: options.isEnabled ?? true,
+      tracer: this.getTracer("vercelai"),
+    }
   }
 
   private async handleShutdown(): Promise<void> {

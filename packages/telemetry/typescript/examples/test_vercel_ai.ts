@@ -27,7 +27,7 @@ const MODEL = "gpt-5.5"
 const MAX_TOKENS = 2000
 const SYSTEM = "You are a helpful assistant participating in a telemetry QA test. Keep answers concise."
 const SESSION_ID = `${PROVIDER}-${randomUUID().slice(0, 8)}`
-const telemetry = { isEnabled: true }
+const telemetry = latitude.getAiSdkTelemetry()
 
 function ctx(scenario: string, ...extraTags: string[]) {
   return {

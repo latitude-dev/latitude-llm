@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `Latitude#getAiSdkTelemetry()` returns the Vercel AI SDK v6 `experimental_telemetry`
+  settings with a Latitude-owned tracer, so AI SDK calls still reach Latitude when a host
+  runtime's global OpenTelemetry provider cannot accept another span processor.
+- `Latitude#getTracer(scope)` returns a tracer from the provider Latitude is exporting from,
+  prefixing scopes with `so.latitude.instrumentation.` when needed.
+
 ## [3.4.0] - 2026-06-23
 
 ### Added

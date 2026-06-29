@@ -1,5 +1,5 @@
 export { type CaptureScope, capture } from "./context.ts"
-export { initLatitude, Latitude } from "./init.ts"
+export { type AiSdkTelemetryOptions, type AiSdkTelemetrySettings, initLatitude, Latitude } from "./init.ts"
 export type { InstrumentationName, InstrumentationsInput } from "./instrumentations.ts"
 export { registerLatitudeInstrumentations } from "./instrumentations.ts"
 export { LatitudeSpanProcessor } from "./processor.ts"

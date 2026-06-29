@@ -8,6 +8,8 @@ packages:
   - "!packages/telemetry/typescript/examples/flue-app/**"
   - "!packages/telemetry/typescript/examples/eve-app"
   - "!packages/telemetry/typescript/examples/eve-app/**"
+  - "!packages/telemetry/typescript/examples/cloudflare-think-app"
+  - "!packages/telemetry/typescript/examples/cloudflare-think-app/**"
   - infra
   - tools/*
 

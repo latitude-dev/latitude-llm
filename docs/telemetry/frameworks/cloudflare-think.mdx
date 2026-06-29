@@ -1,0 +1,222 @@
+---
+title: Cloudflare Think
+description: Connect Cloudflare Think agents to Latitude for observability.
+---
+
+## Overview
+
+Cloudflare Think is built on the Vercel AI SDK. Think owns the internal
+`streamText` call, so enable Latitude telemetry from the `beforeTurn` hook
+instead of passing `experimental_telemetry` at a direct model call site.
+
+Use the quick setup first. Add capture lifecycle hooks only when you want to
+attach user ids, session ids, tags, metadata, or per-turn project routing.
+
+<Note>
+  This guide targets Think versions whose `TurnConfig` accepts
+  `experimental_telemetry`. If your installed Think version does not expose this
+  field, update `@cloudflare/think`.
+</Note>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A Cloudflare Workers project using `@cloudflare/think`
+- The `nodejs_compat` compatibility flag enabled in your Worker
+- `LATITUDE_API_KEY` and `LATITUDE_PROJECT_SLUG` configured as Worker secrets or variables
+
+---
+
+## Quick Start
+
+This is the fastest way to see Think model calls in Latitude. It does not use
+`capture`; AI SDK telemetry creates the spans.
+
+<Steps>
+
+  <Step title="Install">
+    <CodeGroup>
+      ```bash npm
+      npm install @latitude-data/telemetry
+      ```
+
+      ```bash pnpm
+      pnpm add @latitude-data/telemetry
+      ```
+
+      ```bash yarn
+      yarn add @latitude-data/telemetry
+      ```
+
+      ```bash bun
+      bun add @latitude-data/telemetry
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Initialize Latitude once">
+    Create the Latitude instance lazily from the Worker environment. Then return
+    `latitude.getAiSdkTelemetry()` from `beforeTurn` so Think forwards a
+    Latitude-owned tracer to the AI SDK.
+
+    ```ts
+    import { Think, type TurnConfig } from "@cloudflare/think"
+    import { Latitude } from "@latitude-data/telemetry"
+    import { routeAgentRequest } from "agents"
+    import { createWorkersAI } from "workers-ai-provider"
+
+    type Env = {
+      AI: Ai
+      LATITUDE_API_KEY: string
+      LATITUDE_PROJECT_SLUG: string
+    }
+
+    let latitude: Latitude | undefined
+
+    function getLatitude(env: Env) {
+      latitude ??= new Latitude({
+        apiKey: env.LATITUDE_API_KEY,
+        project: env.LATITUDE_PROJECT_SLUG,
+        serviceName: "cloudflare-think-agent",
+      })
+
+      return latitude
+    }
+
+    export class MyAgent extends Think<Env> {
+      getModel() {
+        return createWorkersAI({ binding: this.env.AI })("@cf/meta/llama-3.1-8b-instruct")
+      }
+
+      beforeTurn(): TurnConfig {
+        const latitude = getLatitude(this.env)
+
+        return {
+          experimental_telemetry: latitude.getAiSdkTelemetry({
+            functionId: "think-turn",
+            metadata: { framework: "cloudflare-think" },
+          }),
+        }
+      }
+    }
+
+    export default {
+      async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+        const latitude = getLatitude(env)
+        const response =
+          (await routeAgentRequest(request, env)) ??
+          new Response("Not found", { status: 404 })
+
+        ctx.waitUntil(latitude.flush())
+
+        return response
+      },
+    } satisfies ExportedHandler<Env>
+    ```
+
+    <Note>
+      `latitude.getAiSdkTelemetry()` enables AI SDK telemetry and passes a tracer
+      from Latitude's active provider. This is required in runtimes where another
+      OpenTelemetry provider is already registered and Latitude logs that it is
+      falling back to a Latitude-owned provider.
+    </Note>
+  </Step>
+
+</Steps>
+
+---
+
+## Add Capture Context
+
+Use `capture.start()` and `capture.end()` when you want each Think turn to carry
+Latitude context such as `userId`, `sessionId`, `tags`, `metadata`, or a per-turn
+`project`. Capture does not create AI SDK spans by itself; keep
+`latitude.getAiSdkTelemetry()` in `beforeTurn`.
+
+Start the capture in `beforeTurn`, then end it in both terminal hooks:
+
+```ts
+import {
+  Think,
+  type ChatErrorContext,
+  type ChatResponseResult,
+  type TurnConfig,
+  type TurnContext,
+} from "@cloudflare/think"
+import { capture, type CaptureScope } from "@latitude-data/telemetry"
+
+function stringFromBody(body: Record<string, unknown> | undefined, key: string) {
+  const value = body?.[key]
+  return typeof value === "string" && value.length > 0 ? value : undefined
+}
+
+export class MyAgent extends Think<Env> {
+  private latitudeCapture?: CaptureScope
+
+  beforeTurn(ctx: TurnContext): TurnConfig {
+    const latitude = getLatitude(this.env)
+
+    this.latitudeCapture?.end()
+    this.latitudeCapture = capture.start("cloudflare-think-turn", {
+      userId: stringFromBody(ctx.body, "userId"),
+      sessionId: stringFromBody(ctx.body, "sessionId"),
+      tags: ["cloudflare-think"],
+      metadata: {
+        continuation: ctx.continuation,
+        messageCount: ctx.messages.length,
+      },
+    })
+
+    return {
+      experimental_telemetry: latitude.getAiSdkTelemetry({
+        functionId: "think-turn",
+        metadata: { framework: "cloudflare-think" },
+      }),
+    }
+  }
+
+  onChatResponse(result: ChatResponseResult) {
+    const error =
+      result.status === "error" ? new Error(result.error ?? "Think turn failed") : undefined
+    this.latitudeCapture?.end(error)
+    this.latitudeCapture = undefined
+  }
+
+  onChatError(error: unknown, _ctx?: ChatErrorContext) {
+    this.latitudeCapture?.end(error)
+    this.latitudeCapture = undefined
+    return error
+  }
+}
+```
+
+<Warning>
+  The example stores one active capture scope on the agent instance, which
+  matches Think's default queued turn execution. If your agent allows parallel
+  turns, store scopes in a `Map` keyed by your own request id and end the
+  matching scope in `onChatResponse` and `onChatError`.
+</Warning>
+
+---
+
+## Runnable Example
+
+The Latitude repository includes a runnable Think example at
+`packages/telemetry/typescript/examples/cloudflare-think-app`. It includes a
+Worker entrypoint with a `getWeather` tool and a local verifier that sends a
+deterministic Think-like AI SDK turn to `http://localhost:3002`, flushes
+Latitude, and polls ClickHouse until both the model spans and the `ai.toolCall`
+span arrive.
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Send a message to your Think agent
+3. The turn appears with the model call, input/output messages, latency, token usage, and errors
