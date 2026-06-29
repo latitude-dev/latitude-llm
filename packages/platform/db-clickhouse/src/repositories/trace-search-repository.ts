@@ -114,7 +114,7 @@ export const TraceSearchRepositoryLive = Layer.effect(
             query_params: {
               organizationId: organizationId as string,
               projectId: projectId as string,
-              traceId,
+              traceId: (traceId as string).replace(/-/g, ""),
               chunkIndex,
               contentHash,
             },
@@ -149,7 +149,7 @@ export const TraceSearchRepositoryLive = Layer.effect(
             query_params: {
               organizationId: args.organizationId as string,
               projectId: args.projectId as string,
-              traceId: args.traceId,
+              traceId: (args.traceId as string).replace(/-/g, ""),
               queryEmbedding: [...args.queryEmbedding],
             },
             format: "JSONEachRow",
@@ -223,7 +223,7 @@ export const TraceSearchRepositoryLive = Layer.effect(
             query_params: {
               organizationId: args.organizationId as string,
               projectId: args.projectId as string,
-              traceId: args.traceId,
+              traceId: (args.traceId as string).replace(/-/g, ""),
               embeddingModel: resolveSharedEmbeddingModel(),
               queryEmbedding: [...args.queryEmbedding],
               ...BOILERPLATE_FILTER_PARAMS,

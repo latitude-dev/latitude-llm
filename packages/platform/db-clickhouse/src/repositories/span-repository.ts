@@ -374,7 +374,7 @@ export const SpanRepositoryLive = Layer.effect(
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
-                traceId,
+                traceId: (traceId as string).replace(/-/g, ""),
                 ...(startTimeFrom ? { startTimeFrom: toClickhouseDateTime(startTimeFrom) } : {}),
                 ...(startTimeTo ? { startTimeTo: toClickhouseDateTime(startTimeTo) } : {}),
               },
@@ -702,7 +702,7 @@ export const SpanRepositoryLive = Layer.effect(
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
-                  traceId,
+                  traceId: (traceId as string).replace(/-/g, ""),
                   spanId,
                   ...(startTimeFrom ? { startTimeFrom: toClickhouseDateTime(startTimeFrom) } : {}),
                   ...(startTimeTo ? { startTimeTo: toClickhouseDateTime(startTimeTo) } : {}),
@@ -753,7 +753,7 @@ export const SpanRepositoryLive = Layer.effect(
                   projectId: projectId as string,
                   startTimeFrom: toClickhouseDateTime(startTimeFrom),
                   startTimeTo: toClickhouseDateTime(startTimeTo),
-                  traceId,
+                  traceId: (traceId as string).replace(/-/g, ""),
                 },
                 format: "JSONEachRow",
               })

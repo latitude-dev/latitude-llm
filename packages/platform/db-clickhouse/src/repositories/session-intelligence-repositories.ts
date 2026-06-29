@@ -318,7 +318,11 @@ export const SessionSemanticMomentRepositoryLive = Layer.effect(
                           AND project_id = {projectId:String}
                           AND trace_id = {traceId:FixedString(32)}
                         ORDER BY first_message_index ASC, moment_id ASC`,
-                query_params: { organizationId: organizationId as string, projectId: projectId as string, traceId },
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  traceId: (traceId as string).replace(/-/g, ""),
+                },
                 format: "JSONEachRow",
               })
               return ((await result.json()) as SemanticMomentRow[]).map(toDomainSemanticMoment)

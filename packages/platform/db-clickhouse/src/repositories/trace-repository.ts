@@ -940,7 +940,7 @@ export const TraceRepositoryLive = Layer.effect(
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
-                traceId,
+                traceId: (traceId as string).replace(/-/g, ""),
                 ...filterParams,
               },
               format: "JSONEachRow",
@@ -976,7 +976,7 @@ export const TraceRepositoryLive = Layer.effect(
         const queryParams: Record<string, unknown> = {
           organizationId: organizationId as string,
           projectId: projectId as string,
-          traceId,
+          traceId: (traceId as string).replace(/-/g, ""),
         }
 
         const matchExpressions = resolvedSets.map(({ filterId, filters }, index) => {
@@ -1448,7 +1448,7 @@ export const TraceRepositoryLive = Layer.effect(
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
-                  traceId,
+                  traceId: (traceId as string).replace(/-/g, ""),
                 },
                 format: "JSONEachRow",
               })
@@ -1482,7 +1482,7 @@ export const TraceRepositoryLive = Layer.effect(
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
-                  traceId,
+                  traceId: (traceId as string).replace(/-/g, ""),
                 },
                 format: "JSONEachRow",
               })
@@ -1538,7 +1538,7 @@ export const TraceRepositoryLive = Layer.effect(
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
-                  traceId,
+                  traceId: (traceId as string).replace(/-/g, ""),
                   offset,
                   limit,
                 },
