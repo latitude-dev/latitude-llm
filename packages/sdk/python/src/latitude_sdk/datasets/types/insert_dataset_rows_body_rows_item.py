@@ -6,6 +6,7 @@ import pydantic
 import typing_extensions
 from ...core.pydantic_utilities import UniversalBaseModel
 from ...core.serialization import FieldMetadata
+from .insert_dataset_rows_body_rows_item_custom_value import InsertDatasetRowsBodyRowsItemCustomValue
 from .insert_dataset_rows_body_rows_item_expected_output import InsertDatasetRowsBodyRowsItemExpectedOutput
 from .insert_dataset_rows_body_rows_item_input import InsertDatasetRowsBodyRowsItemInput
 from .insert_dataset_rows_body_rows_item_metadata import InsertDatasetRowsBodyRowsItemMetadata
@@ -38,6 +39,13 @@ class InsertDatasetRowsBodyRowsItem(UniversalBaseModel):
     metadata: typing.Optional[InsertDatasetRowsBodyRowsItemMetadata] = pydantic.Field(default=None)
     """
     Row metadata cell.
+    """
+
+    custom: typing.Optional[typing.Dict[str, typing.Optional[InsertDatasetRowsBodyRowsItemCustomValue]]] = (
+        pydantic.Field(default=None)
+    )
+    """
+    Custom column values keyed by column identifier. Removed or unknown columns are rejected.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

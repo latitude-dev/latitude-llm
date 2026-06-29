@@ -140,7 +140,7 @@ export function AlignmentStatsModal({
       title="Alignment stats"
       description="All metrics derivable from the stored confusion matrix. Balanced accuracy is the main alignment metric used in the system, the rest are exposed here for reference."
     >
-      {evaluation && evaluation.alignment ? (
+      {evaluation?.alignment ? (
         <div className="flex flex-col gap-6">
           <ConfusionMatrixBlock evaluation={evaluation} />
           <div className="flex flex-col">

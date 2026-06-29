@@ -1,6 +1,7 @@
 import { MOMENT_KINDS } from "@domain/conversation-intelligence"
-import type { Dataset, DatasetRow } from "@domain/datasets"
+import type { Dataset, DatasetColumn, DatasetRow } from "@domain/datasets"
 import {
+  addColumn,
   addTracesToDataset,
   createDataset,
   createDatasetFromTraces,
@@ -16,9 +17,13 @@ import {
   MAX_TRACES_PER_DATASET_IMPORT,
   parseDatasetCsv,
   prepareDatasetExportUseCase,
+  removeColumn,
+  reorderColumns,
+  restoreColumn,
   searchDatasets,
   type TraceSelection,
   type TraceSource,
+  updateColumn,
   updateDatasetDetails,
   updateRow,
 } from "@domain/datasets"
@@ -101,6 +106,7 @@ export interface DatasetRecord {
   readonly name: string
   readonly description: string | null
   readonly fileKey: string | null
+  readonly columns: DatasetColumn[] | null
   readonly currentVersion: number
   readonly latestVersionId: string | null
   readonly createdAt: string
@@ -116,6 +122,7 @@ export interface DatasetRowRecord {
   readonly output: string | Record<string, JsonValue>
   readonly expectedOutput: string | Record<string, JsonValue>
   readonly metadata: string | Record<string, JsonValue>
+  readonly custom: Record<string, string | Record<string, JsonValue>>
   readonly createdAt: string
   readonly version: number
 }
@@ -128,20 +135,24 @@ const toDatasetRecord = (d: Dataset): DatasetRecord => ({
   name: d.name,
   description: d.description,
   fileKey: d.fileKey,
+  columns: d.columns,
   currentVersion: d.currentVersion,
   latestVersionId: d.latestVersionId,
   createdAt: d.createdAt.toISOString(),
   updatedAt: d.updatedAt.toISOString(),
 })
 
+const toCell = (v: DatasetRow["input"]): string | Record<string, JsonValue> =>
+  typeof v === "string" ? v : (v as Record<string, JsonValue>)
+
 const toRowRecord = (r: DatasetRow): DatasetRowRecord => ({
   rowId: r.rowId,
   datasetId: r.datasetId,
-  input: typeof r.input === "string" ? r.input : (r.input as Record<string, JsonValue>),
-  output: typeof r.output === "string" ? r.output : (r.output as Record<string, JsonValue>),
-  expectedOutput:
-    typeof r.expectedOutput === "string" ? r.expectedOutput : (r.expectedOutput as Record<string, JsonValue>),
-  metadata: typeof r.metadata === "string" ? r.metadata : (r.metadata as Record<string, JsonValue>),
+  input: toCell(r.input),
+  output: toCell(r.output),
+  expectedOutput: toCell(r.expectedOutput),
+  metadata: toCell(r.metadata),
+  custom: Object.fromEntries(Object.entries(r.custom).map(([k, v]) => [k, toCell(v)])),
   createdAt: r.createdAt.toISOString(),
   version: r.version,
 })
@@ -552,6 +563,7 @@ export const insertDatasetRow = createServerFn({ method: "POST" })
       output: z.string(),
       expectedOutput: z.string(),
       metadata: z.string(),
+      custom: z.record(z.string(), z.string()).optional(),
     }),
   )
   .handler(
@@ -574,6 +586,7 @@ export const insertDatasetRow = createServerFn({ method: "POST" })
               output: data.output,
               expectedOutput: data.expectedOutput,
               metadata: data.metadata,
+              ...(data.custom ? { custom: data.custom } : {}),
             },
           ],
           source: "web",
@@ -606,6 +619,7 @@ export const updateDatasetRow = createServerFn({ method: "POST" })
       output: z.string(),
       expectedOutput: z.string(),
       metadata: z.string(),
+      custom: z.record(z.string(), z.string()).optional(),
     }),
   )
   .handler(async ({ data }) => {
@@ -620,6 +634,7 @@ export const updateDatasetRow = createServerFn({ method: "POST" })
         output: data.output,
         expectedOutput: data.expectedOutput,
         metadata: data.metadata,
+        ...(data.custom ? { custom: data.custom } : {}),
       }).pipe(
         withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
@@ -919,4 +934,75 @@ export const createDatasetFromClusterSessionsFunction = createServerFn({ method:
       version: result.version,
       rowCount: result.rowIds.length,
     }
+  })
+
+export const addDatasetColumn = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ datasetId: z.string(), name: z.string().min(1) }))
+  .handler(async ({ data }): Promise<DatasetColumn> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    return Effect.runPromise(
+      addColumn({ datasetId: DatasetId(data.datasetId), name: data.name }).pipe(
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withTracing,
+      ),
+    )
+  })
+
+export const updateDatasetColumn = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ datasetId: z.string(), identifier: z.string().min(1), name: z.string().min(1) }))
+  .handler(async ({ data }): Promise<DatasetColumn> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    return Effect.runPromise(
+      updateColumn({ datasetId: DatasetId(data.datasetId), identifier: data.identifier, name: data.name }).pipe(
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withTracing,
+      ),
+    )
+  })
+
+export const removeDatasetColumn = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ datasetId: z.string(), identifier: z.string().min(1) }))
+  .handler(async ({ data }): Promise<{ ok: true }> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    await Effect.runPromise(
+      removeColumn({ datasetId: DatasetId(data.datasetId), identifier: data.identifier }).pipe(
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withTracing,
+      ),
+    )
+    return { ok: true }
+  })
+
+export const reorderDatasetColumns = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ datasetId: z.string(), order: z.array(z.string().min(1)) }))
+  .handler(async ({ data }): Promise<DatasetColumn[]> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    return Effect.runPromise(
+      reorderColumns({ datasetId: DatasetId(data.datasetId), order: data.order }).pipe(
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withTracing,
+      ),
+    )
+  })
+
+export const restoreDatasetColumn = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ datasetId: z.string(), identifier: z.string().min(1) }))
+  .handler(async ({ data }): Promise<DatasetColumn> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    return Effect.runPromise(
+      restoreColumn({ datasetId: DatasetId(data.datasetId), identifier: data.identifier }).pipe(
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withTracing,
+      ),
+    )
   })

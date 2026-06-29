@@ -224,7 +224,8 @@
             "pages": [
               "datasets/overview",
               "datasets/add-traces",
-              "datasets/expected-output"
+              "datasets/expected-output",
+              "datasets/custom-columns"
             ]
           },
           "test-and-fix/regression-testing"

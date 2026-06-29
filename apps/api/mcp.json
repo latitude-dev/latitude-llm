@@ -11029,6 +11029,84 @@
                   ],
                   "description": "Free-form description, or `null` when not set."
                 },
+                "columns": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "identifier": {
+                            "type": "string",
+                            "description": "Stable, immutable column id. The key under which custom values are stored on each row."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Display name. Editable; the identifier never changes."
+                          },
+                          "source": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "builtin",
+                                    "description": "A built-in field (`input`, `output`, `expectedOutput`, or `metadata`)."
+                                  },
+                                  "field": {
+                                    "type": "string",
+                                    "enum": [
+                                      "input",
+                                      "output",
+                                      "expectedOutput",
+                                      "metadata"
+                                    ],
+                                    "description": "Which built-in field this column projects."
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "field"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "custom",
+                                    "description": "A user-added column; its values live under the row's `custom` store."
+                                  }
+                                },
+                                "required": [
+                                  "kind"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ],
+                            "description": "Where the column's values come from."
+                          },
+                          "removed": {
+                            "description": "`true` for soft-removed columns (only returned when listing with `includeRemoved`). Removed columns are excluded from rows and the default schema, but keep their data and can be restored.",
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "identifier",
+                          "name",
+                          "source"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Ordered column schema (built-in + custom). `null` means the default schema: the four built-in fields, all visible."
+                },
                 "version": {
                   "type": "integer",
                   "minimum": 0,
@@ -11051,6 +11129,7 @@
                 "slug",
                 "name",
                 "description",
+                "columns",
                 "version",
                 "createdAt",
                 "updatedAt"
@@ -11147,6 +11226,84 @@
             ],
             "description": "Free-form description, or `null` when not set."
           },
+          "columns": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "identifier": {
+                      "type": "string",
+                      "description": "Stable, immutable column id. The key under which custom values are stored on each row."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Display name. Editable; the identifier never changes."
+                    },
+                    "source": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "builtin",
+                              "description": "A built-in field (`input`, `output`, `expectedOutput`, or `metadata`)."
+                            },
+                            "field": {
+                              "type": "string",
+                              "enum": [
+                                "input",
+                                "output",
+                                "expectedOutput",
+                                "metadata"
+                              ],
+                              "description": "Which built-in field this column projects."
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "field"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "custom",
+                              "description": "A user-added column; its values live under the row's `custom` store."
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "Where the column's values come from."
+                    },
+                    "removed": {
+                      "description": "`true` for soft-removed columns (only returned when listing with `includeRemoved`). Removed columns are excluded from rows and the default schema, but keep their data and can be restored.",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "identifier",
+                    "name",
+                    "source"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Ordered column schema (built-in + custom). `null` means the default schema: the four built-in fields, all visible."
+          },
           "version": {
             "type": "integer",
             "minimum": 0,
@@ -11169,6 +11326,7 @@
           "slug",
           "name",
           "description",
+          "columns",
           "version",
           "createdAt",
           "updatedAt"
@@ -11245,6 +11403,84 @@
             ],
             "description": "Free-form description, or `null` when not set."
           },
+          "columns": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "identifier": {
+                      "type": "string",
+                      "description": "Stable, immutable column id. The key under which custom values are stored on each row."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Display name. Editable; the identifier never changes."
+                    },
+                    "source": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "builtin",
+                              "description": "A built-in field (`input`, `output`, `expectedOutput`, or `metadata`)."
+                            },
+                            "field": {
+                              "type": "string",
+                              "enum": [
+                                "input",
+                                "output",
+                                "expectedOutput",
+                                "metadata"
+                              ],
+                              "description": "Which built-in field this column projects."
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "field"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "custom",
+                              "description": "A user-added column; its values live under the row's `custom` store."
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "Where the column's values come from."
+                    },
+                    "removed": {
+                      "description": "`true` for soft-removed columns (only returned when listing with `includeRemoved`). Removed columns are excluded from rows and the default schema, but keep their data and can be restored.",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "identifier",
+                    "name",
+                    "source"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Ordered column schema (built-in + custom). `null` means the default schema: the four built-in fields, all visible."
+          },
           "version": {
             "type": "integer",
             "minimum": 0,
@@ -11267,6 +11503,7 @@
           "slug",
           "name",
           "description",
+          "columns",
           "version",
           "createdAt",
           "updatedAt"
@@ -11354,6 +11591,84 @@
             ],
             "description": "Free-form description, or `null` when not set."
           },
+          "columns": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "identifier": {
+                      "type": "string",
+                      "description": "Stable, immutable column id. The key under which custom values are stored on each row."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Display name. Editable; the identifier never changes."
+                    },
+                    "source": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "builtin",
+                              "description": "A built-in field (`input`, `output`, `expectedOutput`, or `metadata`)."
+                            },
+                            "field": {
+                              "type": "string",
+                              "enum": [
+                                "input",
+                                "output",
+                                "expectedOutput",
+                                "metadata"
+                              ],
+                              "description": "Which built-in field this column projects."
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "field"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "custom",
+                              "description": "A user-added column; its values live under the row's `custom` store."
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "Where the column's values come from."
+                    },
+                    "removed": {
+                      "description": "`true` for soft-removed columns (only returned when listing with `includeRemoved`). Removed columns are excluded from rows and the default schema, but keep their data and can be restored.",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "identifier",
+                    "name",
+                    "source"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Ordered column schema (built-in + custom). `null` means the default schema: the four built-in fields, all visible."
+          },
           "version": {
             "type": "integer",
             "minimum": 0,
@@ -11376,6 +11691,7 @@
           "slug",
           "name",
           "description",
+          "columns",
           "version",
           "createdAt",
           "updatedAt"
@@ -11478,6 +11794,7 @@
                   "description": "Dataset this row belongs to."
                 },
                 "input": {
+                  "description": "Input cell. Omitted when the `input` column is removed.",
                   "anyOf": [
                     {
                       "type": "string"
@@ -11499,10 +11816,10 @@
                       },
                       "additionalProperties": {}
                     }
-                  ],
-                  "description": "Free-form cell value: any JSON scalar, array, or object."
+                  ]
                 },
                 "output": {
+                  "description": "Output cell. Omitted when the `output` column is removed.",
                   "anyOf": [
                     {
                       "type": "string"
@@ -11524,10 +11841,10 @@
                       },
                       "additionalProperties": {}
                     }
-                  ],
-                  "description": "Free-form cell value: any JSON scalar, array, or object."
+                  ]
                 },
                 "expectedOutput": {
+                  "description": "The correct answer for this row. Curators fill this in by hand; it is not derived from `output`. Omitted when the `expectedOutput` column is removed.",
                   "anyOf": [
                     {
                       "type": "string"
@@ -11549,10 +11866,10 @@
                       },
                       "additionalProperties": {}
                     }
-                  ],
-                  "description": "The correct answer for this row. Curators fill this in by hand; it is not derived from `output`."
+                  ]
                 },
                 "metadata": {
+                  "description": "Metadata cell. Omitted when the `metadata` column is removed.",
                   "anyOf": [
                     {
                       "type": "string"
@@ -11574,8 +11891,39 @@
                       },
                       "additionalProperties": {}
                     }
-                  ],
-                  "description": "Free-form cell value: any JSON scalar, array, or object."
+                  ]
+                },
+                "custom": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "array",
+                        "items": {}
+                      },
+                      {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      }
+                    ],
+                    "description": "Free-form cell value: any JSON scalar, array, or object."
+                  },
+                  "description": "Custom column values keyed by column identifier. Removed columns are excluded; `{}` when none."
                 },
                 "createdAt": {
                   "type": "string",
@@ -11591,10 +11939,7 @@
               "required": [
                 "rowId",
                 "datasetId",
-                "input",
-                "output",
-                "expectedOutput",
-                "metadata",
+                "custom",
                 "createdAt",
                 "version"
               ],
@@ -11765,6 +12110,40 @@
                       "type": "null"
                     }
                   ]
+                },
+                "custom": {
+                  "description": "Custom column values keyed by column identifier. Removed or unknown columns are rejected.",
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "array",
+                        "items": {}
+                      },
+                      {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
                 }
               },
               "required": [
@@ -12237,6 +12616,564 @@
         "required": [
           "status",
           "rowCount"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "listDatasetColumns",
+      "title": "List dataset columns",
+      "description": "Returns the ordered active column schema — the built-in columns plus any custom columns. Pass `includeRemoved=true` to also return soft-removed columns (so they can be restored).",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "datasetSlug": {
+            "type": "string",
+            "description": "Dataset slug (human-readable identifier within the project)."
+          },
+          "includeRemoved": {
+            "description": "When `true`, also returns soft-removed columns (each carrying `removed: true`). Defaults to `false`.",
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ]
+          }
+        },
+        "required": [
+          "projectSlug",
+          "datasetSlug"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "identifier": {
+                  "type": "string",
+                  "description": "Stable, immutable column id. The key under which custom values are stored on each row."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Display name. Editable; the identifier never changes."
+                },
+                "source": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "builtin",
+                          "description": "A built-in field (`input`, `output`, `expectedOutput`, or `metadata`)."
+                        },
+                        "field": {
+                          "type": "string",
+                          "enum": [
+                            "input",
+                            "output",
+                            "expectedOutput",
+                            "metadata"
+                          ],
+                          "description": "Which built-in field this column projects."
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "field"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "custom",
+                          "description": "A user-added column; its values live under the row's `custom` store."
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ],
+                  "description": "Where the column's values come from."
+                },
+                "removed": {
+                  "description": "`true` for soft-removed columns (only returned when listing with `includeRemoved`). Removed columns are excluded from rows and the default schema, but keep their data and can be restored.",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "identifier",
+                "name",
+                "source"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Ordered column schema (built-in + custom)."
+          }
+        },
+        "required": [
+          "columns"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "addDatasetColumn",
+      "title": "Add dataset column",
+      "description": "Adds a custom column. The column starts empty on every row; rows are written only when a cell is filled, so the dataset version does not change.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "datasetSlug": {
+            "type": "string",
+            "description": "Dataset slug (human-readable identifier within the project)."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Display name for the new custom column."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "datasetSlug",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "Stable, immutable column id. The key under which custom values are stored on each row."
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name. Editable; the identifier never changes."
+          },
+          "source": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "builtin",
+                    "description": "A built-in field (`input`, `output`, `expectedOutput`, or `metadata`)."
+                  },
+                  "field": {
+                    "type": "string",
+                    "enum": [
+                      "input",
+                      "output",
+                      "expectedOutput",
+                      "metadata"
+                    ],
+                    "description": "Which built-in field this column projects."
+                  }
+                },
+                "required": [
+                  "kind",
+                  "field"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "custom",
+                    "description": "A user-added column; its values live under the row's `custom` store."
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              }
+            ],
+            "description": "Where the column's values come from."
+          },
+          "removed": {
+            "description": "`true` for soft-removed columns (only returned when listing with `includeRemoved`). Removed columns are excluded from rows and the default schema, but keep their data and can be restored.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "identifier",
+          "name",
+          "source"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "updateDatasetColumn",
+      "title": "Update dataset column",
+      "description": "Renames a column. Works for both built-in and custom columns.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "datasetSlug": {
+            "type": "string",
+            "description": "Dataset slug (human-readable identifier within the project)."
+          },
+          "identifier": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Stable column identifier."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New display name. Works for both built-in and custom columns."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "datasetSlug",
+          "identifier",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "Stable, immutable column id. The key under which custom values are stored on each row."
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name. Editable; the identifier never changes."
+          },
+          "source": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "builtin",
+                    "description": "A built-in field (`input`, `output`, `expectedOutput`, or `metadata`)."
+                  },
+                  "field": {
+                    "type": "string",
+                    "enum": [
+                      "input",
+                      "output",
+                      "expectedOutput",
+                      "metadata"
+                    ],
+                    "description": "Which built-in field this column projects."
+                  }
+                },
+                "required": [
+                  "kind",
+                  "field"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "custom",
+                    "description": "A user-added column; its values live under the row's `custom` store."
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              }
+            ],
+            "description": "Where the column's values come from."
+          },
+          "removed": {
+            "description": "`true` for soft-removed columns (only returned when listing with `includeRemoved`). Removed columns are excluded from rows and the default schema, but keep their data and can be restored.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "identifier",
+          "name",
+          "source"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "deleteDatasetColumn",
+      "title": "Delete dataset column",
+      "description": "Removes a column (built-in or custom) from the active schema. Its data is preserved and the column can be re-added; this does not change the dataset version.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "datasetSlug": {
+            "type": "string",
+            "description": "Dataset slug (human-readable identifier within the project)."
+          },
+          "identifier": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Stable column identifier."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "datasetSlug",
+          "identifier"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "reorderDatasetColumns",
+      "title": "Reorder dataset columns",
+      "description": "Sets the left-to-right order of columns. This is a metadata edit and does not change the dataset version.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "datasetSlug": {
+            "type": "string",
+            "description": "Dataset slug (human-readable identifier within the project)."
+          },
+          "order": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Column identifiers in the desired left-to-right order. Identifiers omitted from the list keep their relative order at the end; unknown identifiers are ignored."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "datasetSlug",
+          "order"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "identifier": {
+                  "type": "string",
+                  "description": "Stable, immutable column id. The key under which custom values are stored on each row."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Display name. Editable; the identifier never changes."
+                },
+                "source": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "builtin",
+                          "description": "A built-in field (`input`, `output`, `expectedOutput`, or `metadata`)."
+                        },
+                        "field": {
+                          "type": "string",
+                          "enum": [
+                            "input",
+                            "output",
+                            "expectedOutput",
+                            "metadata"
+                          ],
+                          "description": "Which built-in field this column projects."
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "field"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "custom",
+                          "description": "A user-added column; its values live under the row's `custom` store."
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ],
+                  "description": "Where the column's values come from."
+                },
+                "removed": {
+                  "description": "`true` for soft-removed columns (only returned when listing with `includeRemoved`). Removed columns are excluded from rows and the default schema, but keep their data and can be restored.",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "identifier",
+                "name",
+                "source"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Ordered column schema (built-in + custom)."
+          }
+        },
+        "required": [
+          "columns"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "restoreDatasetColumn",
+      "title": "Restore dataset column",
+      "description": "Restores a soft-removed column (built-in or custom) to the active schema, reconnecting its preserved data. Find removed identifiers via `listDatasetColumns` with `includeRemoved=true`.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "datasetSlug": {
+            "type": "string",
+            "description": "Dataset slug (human-readable identifier within the project)."
+          },
+          "identifier": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Stable column identifier."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "datasetSlug",
+          "identifier"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "Stable, immutable column id. The key under which custom values are stored on each row."
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name. Editable; the identifier never changes."
+          },
+          "source": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "builtin",
+                    "description": "A built-in field (`input`, `output`, `expectedOutput`, or `metadata`)."
+                  },
+                  "field": {
+                    "type": "string",
+                    "enum": [
+                      "input",
+                      "output",
+                      "expectedOutput",
+                      "metadata"
+                    ],
+                    "description": "Which built-in field this column projects."
+                  }
+                },
+                "required": [
+                  "kind",
+                  "field"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "custom",
+                    "description": "A user-added column; its values live under the row's `custom` store."
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              }
+            ],
+            "description": "Where the column's values come from."
+          },
+          "removed": {
+            "description": "`true` for soft-removed columns (only returned when listing with `includeRemoved`). Removed columns are excluded from rows and the default schema, but keep their data and can be restored.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "identifier",
+          "name",
+          "source"
         ],
         "additionalProperties": false
       }

@@ -1,7 +1,25 @@
+export {
+  defaultBuiltinColumns,
+  effectiveColumns,
+  materializeColumns,
+  type VisibleRow,
+  visibleRow,
+  type WritableColumns,
+  writableColumns,
+} from "./columns.ts"
 export { DATASET_DOWNLOAD_DIRECT_THRESHOLD, MAX_TRACES_PER_DATASET_IMPORT } from "./constants.ts"
-export type { Dataset, DatasetVersion } from "./entities/dataset.ts"
+export {
+  BUILTIN_FIELDS,
+  type BuiltinField,
+  type Dataset,
+  type DatasetColumn,
+  type DatasetColumnSource,
+  type DatasetVersion,
+  datasetColumnSchema,
+} from "./entities/dataset.ts"
 export type { DatasetRow, RowFieldValue } from "./entities/dataset-row.ts"
 export {
+  DatasetColumnNotFoundError,
   DatasetNotFoundError,
   DuplicateDatasetNameError,
   RowNotFoundError,
@@ -9,12 +27,11 @@ export {
 } from "./errors.ts"
 export {
   buildDatasetCsvExport,
-  type CsvRow,
   csvExportHeader,
   type DatasetCsvExport,
+  exportColumns,
   type ParsedDatasetCsv,
   parseDatasetCsv,
-  rowsToCsvData,
   rowsToCsvFragment,
   sanitizeDatasetFilename,
 } from "./export-csv.ts"
@@ -47,6 +64,14 @@ export { getRowDetail } from "./use-cases/get-row-detail.ts"
 export { insertRows } from "./use-cases/insert-rows.ts"
 export { listDatasets } from "./use-cases/list-datasets.ts"
 export { listRows } from "./use-cases/list-rows.ts"
+export {
+  addColumn,
+  listColumns,
+  removeColumn,
+  reorderColumns,
+  restoreColumn,
+  updateColumn,
+} from "./use-cases/manage-columns.ts"
 export {
   type PrepareDatasetDownloadInput,
   type PrepareDatasetDownloadResult,

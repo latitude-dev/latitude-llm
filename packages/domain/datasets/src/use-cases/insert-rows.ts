@@ -1,5 +1,6 @@
-import type { DatasetId, DatasetRowId } from "@domain/shared"
+import { type DatasetId, type DatasetRowId, ValidationError } from "@domain/shared"
 import { Effect } from "effect"
+import { writableColumns } from "../columns.ts"
 import type { InsertRowFieldValue } from "../entities/dataset-row.ts"
 import { DatasetRepository } from "../ports/dataset-repository.ts"
 import { DatasetRowRepository } from "../ports/dataset-row-repository.ts"
@@ -13,6 +14,7 @@ export const insertRows = Effect.fn("datasets.insertRows")(function* (args: {
     readonly output?: InsertRowFieldValue
     readonly expectedOutput?: InsertRowFieldValue
     readonly metadata?: InsertRowFieldValue
+    readonly custom?: Record<string, InsertRowFieldValue>
   }[]
   readonly source?: string
 }) {
@@ -24,6 +26,19 @@ export const insertRows = Effect.fn("datasets.insertRows")(function* (args: {
 
   const datasetRepo = yield* DatasetRepository
   const rowRepo = yield* DatasetRowRepository
+
+  const dataset = yield* datasetRepo.findById(args.datasetId)
+  const { writableCustomIds } = writableColumns(dataset.columns)
+  for (const row of resolvedRows) {
+    for (const key of Object.keys(row.custom ?? {})) {
+      if (!writableCustomIds.has(key)) {
+        return yield* new ValidationError({
+          field: "custom",
+          message: `Unknown or removed column "${key}"`,
+        })
+      }
+    }
+  }
 
   const version = yield* datasetRepo.incrementVersion({
     id: args.datasetId,

@@ -27,6 +27,7 @@ const buildRow = (i: number): DatasetRow => ({
   output: `output ${i}`,
   expectedOutput: "",
   metadata: "",
+  custom: {},
   createdAt: new Date(0),
   version: 1,
 })
@@ -56,6 +57,7 @@ const seedDataset = () =>
         name: "My Dataset",
         description: null,
         fileKey: null,
+        columns: null,
         currentVersion: 1,
         latestVersionId: null,
         createdAt: new Date(0),
@@ -104,7 +106,7 @@ describe("prepareDatasetExportUseCase", () => {
       if (result.kind !== "direct") throw new Error(`expected "direct", got "${result.kind}"`)
       expect(result.filename).toBe("My_Dataset.csv")
       expect(result.exportName).toBe("My Dataset")
-      expect(result.csv.startsWith("expected_output,input,output,metadata")).toBe(true)
+      expect(result.csv.startsWith("input,output,expected_output,metadata")).toBe(true)
       expect(result.csv).toContain("input 1")
       expect(result.csv).toContain("input 2")
     })

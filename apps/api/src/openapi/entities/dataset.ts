@@ -1,7 +1,8 @@
-import type { Dataset } from "@domain/datasets"
+import { type Dataset, effectiveColumns } from "@domain/datasets"
 import { cuidSchema } from "@domain/shared"
 import { z } from "@hono/zod-openapi"
 import { Paginated } from "../pagination.ts"
+import { DatasetColumnSchema, toDatasetColumnResponse } from "./dataset-column.ts"
 
 export const DATASET_SORT_FIELDS = ["name", "updatedAt"] as const
 
@@ -13,6 +14,12 @@ const DatasetSchema = z
     slug: z.string().describe("URL-safe slug derived from `name`. Unique within the project."),
     name: z.string().describe("Human-readable name."),
     description: z.string().nullable().describe("Free-form description, or `null` when not set."),
+    columns: z
+      .array(DatasetColumnSchema)
+      .nullable()
+      .describe(
+        "Ordered column schema (built-in + custom). `null` means the default schema: the four built-in fields, all visible.",
+      ),
     version: z.number().int().nonnegative().describe("Current dataset version."),
     createdAt: z.string().describe("ISO-8601 timestamp of creation."),
     updatedAt: z.string().describe("ISO-8601 timestamp of the last update."),
@@ -28,6 +35,7 @@ export const toDatasetResponse = (dataset: Dataset) => ({
   slug: dataset.slug,
   name: dataset.name,
   description: dataset.description,
+  columns: dataset.columns ? effectiveColumns(dataset.columns).map(toDatasetColumnResponse) : null,
   version: dataset.currentVersion,
   createdAt: dataset.createdAt.toISOString(),
   updatedAt: dataset.updatedAt.toISOString(),

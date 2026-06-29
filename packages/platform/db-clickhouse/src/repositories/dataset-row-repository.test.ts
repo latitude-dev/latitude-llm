@@ -51,6 +51,7 @@ describe("DatasetRowClickHouseRepository", () => {
           output: { text: "v2" },
           expectedOutput: { text: "golden" },
           metadata: {},
+          custom: {},
         }),
       )
 
@@ -83,6 +84,7 @@ describe("DatasetRowClickHouseRepository", () => {
             output: {},
             expectedOutput: {},
             metadata: {},
+            custom: {},
           }),
         )
       }
@@ -244,6 +246,7 @@ describe("DatasetRowClickHouseRepository", () => {
           output: "plain text output",
           expectedOutput: "",
           metadata: "",
+          custom: {},
         }),
       )
 
@@ -513,6 +516,7 @@ describe("DatasetRowClickHouseRepository", () => {
           output: {},
           expectedOutput: {},
           metadata: {},
+          custom: {},
         }),
       )
 

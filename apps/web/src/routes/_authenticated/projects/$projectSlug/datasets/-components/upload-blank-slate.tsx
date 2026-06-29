@@ -7,7 +7,7 @@ import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout
 import type { ParsedCsv } from "./csv-import-view.tsx"
 import { createDraftRowRecord } from "./dataset-draft-row.ts"
 import { DatasetActionsMenu, DatasetTitleBlock } from "./dataset-name-edit.tsx"
-import { RowDetailPanel, type RowDetailPanelSaveRef } from "./row-detail-panel.tsx"
+import { RowDetailPanel, type RowDetailPanelSaveRef, type RowDetailSaveData } from "./row-detail-panel.tsx"
 
 export function UploadBlankSlate({
   dataset,
@@ -16,7 +16,7 @@ export function UploadBlankSlate({
 }: {
   dataset: DatasetRecord
   onParsed: (csv: ParsedCsv) => void
-  onInsertFirstRow: (data: { input: string; output: string; expectedOutput: string; metadata: string }) => Promise<void>
+  onInsertFirstRow: (data: RowDetailSaveData) => Promise<void>
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const addRowPanelSaveRef = useRef<RowDetailPanelSaveRef | null>(null)
@@ -32,7 +32,7 @@ export function UploadBlankSlate({
   }, [dataset.id])
 
   const handleSaveNewRow = useCallback(
-    async (data: { input: string; output: string; expectedOutput: string; metadata: string }) => {
+    async (data: RowDetailSaveData) => {
       setAddRowSaving(true)
       try {
         await onInsertFirstRow(data)
@@ -179,6 +179,7 @@ export function UploadBlankSlate({
         <RowDetailPanel
           key={addRowDraft.rowId}
           row={addRowDraft}
+          columns={dataset.columns}
           isDraft
           onSave={handleSaveNewRow}
           saveRef={addRowPanelSaveRef}

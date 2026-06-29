@@ -702,4 +702,118 @@ describe("Datasets Routes Integration", () => {
     const body = (await res.json()) as { rowIds: string[] }
     expect(body.rowIds).toEqual([])
   })
+
+  // ─── Columns ─────────────────────────────────────────────────────────────
+
+  type ColumnResponse = {
+    identifier: string
+    name: string
+    source: { kind: string; field?: string }
+    removed?: boolean
+  }
+
+  it<ApiTestContext>("supports the full column lifecycle: create, list, rename, reorder, delete", async ({
+    app,
+    database,
+  }) => {
+    const { tenant, projectSlug, datasetSlug } = await createDatasetForRows(
+      app,
+      database,
+      "eeeeeeeeeeee2222bbbbbbbb",
+      "Columns Lifecycle",
+    )
+    const base = `http://localhost/v1/projects/${projectSlug}/datasets/${datasetSlug}/columns`
+    const headers = { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" }
+
+    // List: a fresh dataset reports the four active built-in columns, all custom-free.
+    const listed = await app.fetch(new Request(base, { headers: createApiKeyAuthHeaders(tenant.apiKeyToken) }))
+    expect(listed.status).toBe(200)
+    const listedBody = (await listed.json()) as { columns: ColumnResponse[] }
+    expect(listedBody.columns.map((c) => c.identifier)).toEqual(["input", "output", "expectedOutput", "metadata"])
+
+    // Create a custom column.
+    const created = await app.fetch(
+      new Request(base, { method: "POST", headers, body: JSON.stringify({ name: "Score" }) }),
+    )
+    expect(created.status).toBe(201)
+    const createdCol = (await created.json()) as ColumnResponse
+    expect(createdCol.source.kind).toBe("custom")
+
+    // Rename it.
+    const renamed = await app.fetch(
+      new Request(`${base}/${createdCol.identifier}`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ name: "Rating" }),
+      }),
+    )
+    expect(renamed.status).toBe(200)
+    expect(((await renamed.json()) as ColumnResponse).name).toBe("Rating")
+
+    // Reorder: move the custom column to the front.
+    const reordered = await app.fetch(
+      new Request(`${base}/reorder`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ order: [createdCol.identifier, "input", "output", "expectedOutput", "metadata"] }),
+      }),
+    )
+    expect(reordered.status).toBe(200)
+    const reorderedBody = (await reordered.json()) as { columns: ColumnResponse[] }
+    expect(reorderedBody.columns[0]?.identifier).toBe(createdCol.identifier)
+
+    // Soft-delete: the column drops out of the active schema.
+    const deleted = await app.fetch(
+      new Request(`${base}/${createdCol.identifier}`, {
+        method: "DELETE",
+        headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
+      }),
+    )
+    expect(deleted.status).toBe(204)
+
+    const afterDelete = await app.fetch(new Request(base, { headers: createApiKeyAuthHeaders(tenant.apiKeyToken) }))
+    const afterBody = (await afterDelete.json()) as { columns: ColumnResponse[] }
+    expect(afterBody.columns.some((c) => c.identifier === createdCol.identifier)).toBe(false)
+
+    // includeRemoved surfaces the soft-removed column, flagged so it can be restored.
+    const withRemoved = await app.fetch(
+      new Request(`${base}?includeRemoved=true`, { headers: createApiKeyAuthHeaders(tenant.apiKeyToken) }),
+    )
+    const withRemovedBody = (await withRemoved.json()) as { columns: ColumnResponse[] }
+    const removedCol = withRemovedBody.columns.find((c) => c.identifier === createdCol.identifier)
+    expect(removedCol?.removed).toBe(true)
+
+    // Restore brings it back into the active schema.
+    const restored = await app.fetch(
+      new Request(`${base}/${createdCol.identifier}/restore`, { method: "POST", headers }),
+    )
+    expect(restored.status).toBe(200)
+    expect(((await restored.json()) as ColumnResponse).identifier).toBe(createdCol.identifier)
+
+    const afterRestore = await app.fetch(new Request(base, { headers: createApiKeyAuthHeaders(tenant.apiKeyToken) }))
+    const afterRestoreBody = (await afterRestore.json()) as { columns: ColumnResponse[] }
+    expect(afterRestoreBody.columns.some((c) => c.identifier === createdCol.identifier)).toBe(true)
+  })
+
+  it<ApiTestContext>("soft-deletes a built-in column, excluding it from the active schema", async ({
+    app,
+    database,
+  }) => {
+    const { tenant, projectSlug, datasetSlug } = await createDatasetForRows(
+      app,
+      database,
+      "ffffffffffff3333cccccccc",
+      "Remove Builtin",
+    )
+    const base = `http://localhost/v1/projects/${projectSlug}/datasets/${datasetSlug}/columns`
+
+    const deleted = await app.fetch(
+      new Request(`${base}/metadata`, { method: "DELETE", headers: createApiKeyAuthHeaders(tenant.apiKeyToken) }),
+    )
+    expect(deleted.status).toBe(204)
+
+    const listed = await app.fetch(new Request(base, { headers: createApiKeyAuthHeaders(tenant.apiKeyToken) }))
+    const body = (await listed.json()) as { columns: ColumnResponse[] }
+    expect(body.columns.some((c) => c.identifier === "metadata")).toBe(false)
+  })
 })

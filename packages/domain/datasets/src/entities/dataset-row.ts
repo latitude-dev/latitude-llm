@@ -24,6 +24,7 @@ const datasetRowSchema = z.object({
   output: rowFieldValueSchema,
   expectedOutput: rowFieldValueSchema,
   metadata: rowFieldValueSchema,
+  custom: z.record(z.string(), rowFieldValueSchema), // custom column values keyed by stable column identifier; {} when none.
   createdAt: z.date(),
   version: z.number().int().nonnegative(),
 })

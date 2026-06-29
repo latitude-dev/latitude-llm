@@ -6,6 +6,7 @@ import pydantic
 import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
+from .dataset_row_custom_value import DatasetRowCustomValue
 from .dataset_row_expected_output import DatasetRowExpectedOutput
 from .dataset_row_input import DatasetRowInput
 from .dataset_row_metadata import DatasetRowMetadata
@@ -23,26 +24,31 @@ class DatasetRow(UniversalBaseModel):
     Dataset this row belongs to.
     """
 
-    input: DatasetRowInput = pydantic.Field()
+    input: typing.Optional[DatasetRowInput] = pydantic.Field(default=None)
     """
-    Free-form cell value: any JSON scalar, array, or object.
-    """
-
-    output: DatasetRowOutput = pydantic.Field()
-    """
-    Free-form cell value: any JSON scalar, array, or object.
+    Input cell. Omitted when the `input` column is removed.
     """
 
-    expected_output: typing_extensions.Annotated[DatasetRowExpectedOutput, FieldMetadata(alias="expectedOutput")] = (
-        pydantic.Field()
-    )
+    output: typing.Optional[DatasetRowOutput] = pydantic.Field(default=None)
     """
-    The correct answer for this row. Curators fill this in by hand; it is not derived from `output`.
+    Output cell. Omitted when the `output` column is removed.
     """
 
-    metadata: DatasetRowMetadata = pydantic.Field()
+    expected_output: typing_extensions.Annotated[
+        typing.Optional[DatasetRowExpectedOutput], FieldMetadata(alias="expectedOutput")
+    ] = pydantic.Field(default=None)
     """
-    Free-form cell value: any JSON scalar, array, or object.
+    The correct answer for this row. Curators fill this in by hand; it is not derived from `output`. Omitted when the `expectedOutput` column is removed.
+    """
+
+    metadata: typing.Optional[DatasetRowMetadata] = pydantic.Field(default=None)
+    """
+    Metadata cell. Omitted when the `metadata` column is removed.
+    """
+
+    custom: typing.Dict[str, DatasetRowCustomValue] = pydantic.Field()
+    """
+    Custom column values keyed by column identifier. Removed columns are excluded; `{}` when none.
     """
 
     created_at: typing_extensions.Annotated[str, FieldMetadata(alias="createdAt")] = pydantic.Field()

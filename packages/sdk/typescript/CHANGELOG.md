@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.3.0] - 2026-06-29
+
+### Added
+
+- `client.datasets.listColumns`, `addColumn`, `updateColumn`, `deleteColumn`, `reorderColumns`, and `restoreColumn` — manage a dataset's column schema over the API. List the columns (pass `includeRemoved` to include soft-removed ones), add custom columns, rename any column, soft-delete a column (built-in or custom; its data is preserved), reorder columns, and restore a removed column. Adds the `DatasetColumn` and `DatasetColumnSource` types and a `columns` field on `Dataset`.
+- Row writes accept custom column values: `client.datasets.insertRows` takes a `custom` map keyed by column identifier, and `DatasetRow` now carries a `custom` field on reads (removed columns are omitted).
+
 ## [6.2.1] - 2026-06-26
 
 ### Fixed

@@ -26,6 +26,7 @@ const buildRow = (i: number): DatasetRow => ({
   output: `output ${i}`,
   expectedOutput: "",
   metadata: "",
+  custom: {},
   createdAt: new Date(0),
   version: 1,
 })
@@ -55,6 +56,7 @@ const seedDataset = () =>
         name: "My Dataset",
         description: null,
         fileKey: null,
+        columns: null,
         currentVersion: 1,
         latestVersionId: null,
         createdAt: new Date(0),

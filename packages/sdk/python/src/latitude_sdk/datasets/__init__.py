@@ -7,6 +7,7 @@ from importlib import import_module
 
 if typing.TYPE_CHECKING:
     from .types import (
+        DatasetsListColumnsRequestIncludeRemoved,
         DatasetsListRequestSortBy,
         DatasetsListRequestSortDirection,
         DatasetsListRowsRequestSortDirection,
@@ -25,12 +26,14 @@ if typing.TYPE_CHECKING:
         ExportDatasetRowsBodySelection_AllExcept,
         ExportDatasetRowsBodySelection_Selected,
         InsertDatasetRowsBodyRowsItem,
+        InsertDatasetRowsBodyRowsItemCustomValue,
         InsertDatasetRowsBodyRowsItemExpectedOutput,
         InsertDatasetRowsBodyRowsItemInput,
         InsertDatasetRowsBodyRowsItemMetadata,
         InsertDatasetRowsBodyRowsItemOutput,
     )
 _dynamic_imports: typing.Dict[str, str] = {
+    "DatasetsListColumnsRequestIncludeRemoved": ".types",
     "DatasetsListRequestSortBy": ".types",
     "DatasetsListRequestSortDirection": ".types",
     "DatasetsListRowsRequestSortDirection": ".types",
@@ -49,6 +52,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "ExportDatasetRowsBodySelection_AllExcept": ".types",
     "ExportDatasetRowsBodySelection_Selected": ".types",
     "InsertDatasetRowsBodyRowsItem": ".types",
+    "InsertDatasetRowsBodyRowsItemCustomValue": ".types",
     "InsertDatasetRowsBodyRowsItemExpectedOutput": ".types",
     "InsertDatasetRowsBodyRowsItemInput": ".types",
     "InsertDatasetRowsBodyRowsItemMetadata": ".types",
@@ -78,6 +82,7 @@ def __dir__():
 
 
 __all__ = [
+    "DatasetsListColumnsRequestIncludeRemoved",
     "DatasetsListRequestSortBy",
     "DatasetsListRequestSortDirection",
     "DatasetsListRowsRequestSortDirection",
@@ -96,6 +101,7 @@ __all__ = [
     "ExportDatasetRowsBodySelection_AllExcept",
     "ExportDatasetRowsBodySelection_Selected",
     "InsertDatasetRowsBodyRowsItem",
+    "InsertDatasetRowsBodyRowsItemCustomValue",
     "InsertDatasetRowsBodyRowsItemExpectedOutput",
     "InsertDatasetRowsBodyRowsItemInput",
     "InsertDatasetRowsBodyRowsItemMetadata",

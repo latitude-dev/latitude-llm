@@ -6,6 +6,7 @@ import typing
 from importlib import import_module
 
 if typing.TYPE_CHECKING:
+    from .datasets_list_columns_request_include_removed import DatasetsListColumnsRequestIncludeRemoved
     from .datasets_list_request_sort_by import DatasetsListRequestSortBy
     from .datasets_list_request_sort_direction import DatasetsListRequestSortDirection
     from .datasets_list_rows_request_sort_direction import DatasetsListRowsRequestSortDirection
@@ -28,11 +29,13 @@ if typing.TYPE_CHECKING:
     from .export_dataset_rows_body_selection_all_except import ExportDatasetRowsBodySelectionAllExcept
     from .export_dataset_rows_body_selection_selected import ExportDatasetRowsBodySelectionSelected
     from .insert_dataset_rows_body_rows_item import InsertDatasetRowsBodyRowsItem
+    from .insert_dataset_rows_body_rows_item_custom_value import InsertDatasetRowsBodyRowsItemCustomValue
     from .insert_dataset_rows_body_rows_item_expected_output import InsertDatasetRowsBodyRowsItemExpectedOutput
     from .insert_dataset_rows_body_rows_item_input import InsertDatasetRowsBodyRowsItemInput
     from .insert_dataset_rows_body_rows_item_metadata import InsertDatasetRowsBodyRowsItemMetadata
     from .insert_dataset_rows_body_rows_item_output import InsertDatasetRowsBodyRowsItemOutput
 _dynamic_imports: typing.Dict[str, str] = {
+    "DatasetsListColumnsRequestIncludeRemoved": ".datasets_list_columns_request_include_removed",
     "DatasetsListRequestSortBy": ".datasets_list_request_sort_by",
     "DatasetsListRequestSortDirection": ".datasets_list_request_sort_direction",
     "DatasetsListRowsRequestSortDirection": ".datasets_list_rows_request_sort_direction",
@@ -51,6 +54,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "ExportDatasetRowsBodySelection_AllExcept": ".export_dataset_rows_body_selection",
     "ExportDatasetRowsBodySelection_Selected": ".export_dataset_rows_body_selection",
     "InsertDatasetRowsBodyRowsItem": ".insert_dataset_rows_body_rows_item",
+    "InsertDatasetRowsBodyRowsItemCustomValue": ".insert_dataset_rows_body_rows_item_custom_value",
     "InsertDatasetRowsBodyRowsItemExpectedOutput": ".insert_dataset_rows_body_rows_item_expected_output",
     "InsertDatasetRowsBodyRowsItemInput": ".insert_dataset_rows_body_rows_item_input",
     "InsertDatasetRowsBodyRowsItemMetadata": ".insert_dataset_rows_body_rows_item_metadata",
@@ -80,6 +84,7 @@ def __dir__():
 
 
 __all__ = [
+    "DatasetsListColumnsRequestIncludeRemoved",
     "DatasetsListRequestSortBy",
     "DatasetsListRequestSortDirection",
     "DatasetsListRowsRequestSortDirection",
@@ -98,6 +103,7 @@ __all__ = [
     "ExportDatasetRowsBodySelection_AllExcept",
     "ExportDatasetRowsBodySelection_Selected",
     "InsertDatasetRowsBodyRowsItem",
+    "InsertDatasetRowsBodyRowsItemCustomValue",
     "InsertDatasetRowsBodyRowsItemExpectedOutput",
     "InsertDatasetRowsBodyRowsItemInput",
     "InsertDatasetRowsBodyRowsItemMetadata",

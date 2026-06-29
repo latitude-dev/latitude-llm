@@ -5497,6 +5497,16 @@
             ],
             "description": "Free-form description, or `null` when not set."
           },
+          "columns": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/DatasetColumn"
+            },
+            "description": "Ordered column schema (built-in + custom). `null` means the default schema: the four built-in fields, all visible."
+          },
           "version": {
             "type": "integer",
             "minimum": 0,
@@ -5518,9 +5528,78 @@
           "slug",
           "name",
           "description",
+          "columns",
           "version",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "DatasetColumn": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "Stable, immutable column id. The key under which custom values are stored on each row."
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name. Editable; the identifier never changes."
+          },
+          "source": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "builtin"
+                    ],
+                    "description": "A built-in field (`input`, `output`, `expectedOutput`, or `metadata`)."
+                  },
+                  "field": {
+                    "type": "string",
+                    "enum": [
+                      "input",
+                      "output",
+                      "expectedOutput",
+                      "metadata"
+                    ],
+                    "description": "Which built-in field this column projects."
+                  }
+                },
+                "required": [
+                  "kind",
+                  "field"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "custom"
+                    ],
+                    "description": "A user-added column; its values live under the row's `custom` store."
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              }
+            ],
+            "description": "Where the column's values come from."
+          },
+          "removed": {
+            "type": "boolean",
+            "description": "`true` for soft-removed columns (only returned when listing with `includeRemoved`). Removed columns are excluded from rows and the default schema, but keep their data and can be restored."
+          }
+        },
+        "required": [
+          "identifier",
+          "name",
+          "source"
         ]
       },
       "CreateDatasetBody": {
@@ -5618,7 +5697,7 @@
                 "additionalProperties": {}
               }
             ],
-            "description": "Free-form cell value: any JSON scalar, array, or object."
+            "description": "Input cell. Omitted when the `input` column is removed."
           },
           "output": {
             "anyOf": [
@@ -5640,7 +5719,7 @@
                 "additionalProperties": {}
               }
             ],
-            "description": "Free-form cell value: any JSON scalar, array, or object."
+            "description": "Output cell. Omitted when the `output` column is removed."
           },
           "expectedOutput": {
             "anyOf": [
@@ -5662,7 +5741,7 @@
                 "additionalProperties": {}
               }
             ],
-            "description": "The correct answer for this row. Curators fill this in by hand; it is not derived from `output`."
+            "description": "The correct answer for this row. Curators fill this in by hand; it is not derived from `output`. Omitted when the `expectedOutput` column is removed."
           },
           "metadata": {
             "anyOf": [
@@ -5684,7 +5763,33 @@
                 "additionalProperties": {}
               }
             ],
-            "description": "Free-form cell value: any JSON scalar, array, or object."
+            "description": "Metadata cell. Omitted when the `metadata` column is removed."
+          },
+          "custom": {
+            "type": "object",
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "array",
+                  "items": {}
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              ],
+              "description": "Free-form cell value: any JSON scalar, array, or object."
+            },
+            "description": "Custom column values keyed by column identifier. Removed columns are excluded; `{}` when none."
           },
           "createdAt": {
             "type": "string",
@@ -5699,10 +5804,7 @@
         "required": [
           "rowId",
           "datasetId",
-          "input",
-          "output",
-          "expectedOutput",
-          "metadata",
+          "custom",
           "createdAt",
           "version"
         ]
@@ -5846,6 +5948,34 @@
                     }
                   ],
                   "description": "Row metadata cell."
+                },
+                "custom": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "array",
+                        "items": {}
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": {}
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "description": "Custom column values keyed by column identifier. Removed or unknown columns are rejected."
                 }
               },
               "required": [
@@ -6166,6 +6296,64 @@
             "description": "Email address to send the download link to when the export is too large for the synchronous path. Must belong to a member of the requesting organization. Ignored when the export fits the synchronous path; required for the async email flow."
           }
         }
+      },
+      "DatasetColumnsList": {
+        "type": "object",
+        "properties": {
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DatasetColumn"
+            },
+            "description": "Ordered column schema (built-in + custom)."
+          }
+        },
+        "required": [
+          "columns"
+        ]
+      },
+      "AddDatasetColumnBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Display name for the new custom column."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateDatasetColumnBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New display name. Works for both built-in and custom columns."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "ReorderDatasetColumnsBody": {
+        "type": "object",
+        "properties": {
+          "order": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "description": "Column identifiers in the desired left-to-right order. Identifiers omitted from the list keep their relative order at the end; unknown identifiers are ignored."
+          }
+        },
+        "required": [
+          "order"
+        ]
       },
       "ApiKey": {
         "type": "object",
@@ -13282,6 +13470,548 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ExportDatasetRowsTooLargeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/datasets/{datasetSlug}/columns": {
+      "get": {
+        "tags": [
+          "Datasets"
+        ],
+        "x-fern-sdk-group-name": "datasets",
+        "x-fern-sdk-method-name": "listColumns",
+        "summary": "List dataset columns",
+        "description": "Returns the ordered active column schema — the built-in columns plus any custom columns. Pass `includeRemoved=true` to also return soft-removed columns (so they can be restored).",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listDatasetColumns",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Dataset slug (human-readable identifier within the project)."
+            },
+            "required": true,
+            "description": "Dataset slug (human-readable identifier within the project).",
+            "name": "datasetSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "When `true`, also returns soft-removed columns (each carrying `removed: true`). Defaults to `false`."
+            },
+            "required": false,
+            "description": "When `true`, also returns soft-removed columns (each carrying `removed: true`). Defaults to `false`.",
+            "name": "includeRemoved",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Column schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetColumnsList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Datasets"
+        ],
+        "x-fern-sdk-group-name": "datasets",
+        "x-fern-sdk-method-name": "addColumn",
+        "summary": "Add dataset column",
+        "description": "Adds a custom column. The column starts empty on every row; rows are written only when a cell is filled, so the dataset version does not change.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "addDatasetColumn",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Dataset slug (human-readable identifier within the project)."
+            },
+            "required": true,
+            "description": "Dataset slug (human-readable identifier within the project).",
+            "name": "datasetSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddDatasetColumnBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created column",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetColumn"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/datasets/{datasetSlug}/columns/{identifier}": {
+      "patch": {
+        "tags": [
+          "Datasets"
+        ],
+        "x-fern-sdk-group-name": "datasets",
+        "x-fern-sdk-method-name": "updateColumn",
+        "summary": "Update dataset column",
+        "description": "Renames a column. Works for both built-in and custom columns.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "updateDatasetColumn",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Dataset slug (human-readable identifier within the project)."
+            },
+            "required": true,
+            "description": "Dataset slug (human-readable identifier within the project).",
+            "name": "datasetSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Stable column identifier."
+            },
+            "required": true,
+            "description": "Stable column identifier.",
+            "name": "identifier",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDatasetColumnBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated column",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetColumn"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Datasets"
+        ],
+        "x-fern-sdk-group-name": "datasets",
+        "x-fern-sdk-method-name": "deleteColumn",
+        "summary": "Delete dataset column",
+        "description": "Removes a column (built-in or custom) from the active schema. Its data is preserved and the column can be re-added; this does not change the dataset version.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "deleteDatasetColumn",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Dataset slug (human-readable identifier within the project)."
+            },
+            "required": true,
+            "description": "Dataset slug (human-readable identifier within the project).",
+            "name": "datasetSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Stable column identifier."
+            },
+            "required": true,
+            "description": "Stable column identifier.",
+            "name": "identifier",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Column removed"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/datasets/{datasetSlug}/columns/reorder": {
+      "post": {
+        "tags": [
+          "Datasets"
+        ],
+        "x-fern-sdk-group-name": "datasets",
+        "x-fern-sdk-method-name": "reorderColumns",
+        "summary": "Reorder dataset columns",
+        "description": "Sets the left-to-right order of columns. This is a metadata edit and does not change the dataset version.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "reorderDatasetColumns",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Dataset slug (human-readable identifier within the project)."
+            },
+            "required": true,
+            "description": "Dataset slug (human-readable identifier within the project).",
+            "name": "datasetSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderDatasetColumnsBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reordered column schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetColumnsList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/datasets/{datasetSlug}/columns/{identifier}/restore": {
+      "post": {
+        "tags": [
+          "Datasets"
+        ],
+        "x-fern-sdk-group-name": "datasets",
+        "x-fern-sdk-method-name": "restoreColumn",
+        "summary": "Restore dataset column",
+        "description": "Restores a soft-removed column (built-in or custom) to the active schema, reconnecting its preserved data. Find removed identifiers via `listDatasetColumns` with `includeRemoved=true`.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "restoreDatasetColumn",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Dataset slug (human-readable identifier within the project)."
+            },
+            "required": true,
+            "description": "Dataset slug (human-readable identifier within the project).",
+            "name": "datasetSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Stable column identifier."
+            },
+            "required": true,
+            "description": "Stable column identifier.",
+            "name": "identifier",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Restored column",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetColumn"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }

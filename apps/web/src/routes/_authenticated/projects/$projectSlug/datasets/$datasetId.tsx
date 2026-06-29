@@ -1,4 +1,9 @@
-import { DATASET_DOWNLOAD_DIRECT_THRESHOLD, parseDatasetCsv } from "@domain/datasets"
+import {
+  DATASET_DOWNLOAD_DIRECT_THRESHOLD,
+  type DatasetColumn,
+  effectiveColumns,
+  parseDatasetCsv,
+} from "@domain/datasets"
 import {
   Button,
   Container,
@@ -39,10 +44,12 @@ import { BreadcrumbLink, BreadcrumbSeparator, BreadcrumbText } from "../../../-c
 import { ExportConfirmationModal } from "../-components/export-confirmation-modal.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { CsvImportView, type ParsedCsv } from "./-components/csv-import-view.tsx"
+import { DatasetColumnsSelector } from "./-components/dataset-columns-selector.tsx"
 import { createDraftRowRecord, isDatasetDraftRowId } from "./-components/dataset-draft-row.ts"
 import { DatasetActionsMenu, DatasetTitleBlock } from "./-components/dataset-name-edit.tsx"
 import { DeleteRowsModal } from "./-components/delete-rows-modal.tsx"
 import { RowDetailDrawer } from "./-components/row-detail-drawer.tsx"
+import type { RowDetailSaveData } from "./-components/row-detail-panel.tsx"
 import { UploadBlankSlate } from "./-components/upload-blank-slate.tsx"
 
 const datasetDetailRoute = getRouteApi("/_authenticated/projects/$projectSlug/datasets/$datasetId")
@@ -113,37 +120,57 @@ function ExpectedOutputCell({ value }: { value: string | Record<string, unknown>
   return <Text.Mono>{formatCellValue(value)}</Text.Mono>
 }
 
-const rowColumns: InfiniteTableColumn<DatasetRowRecord>[] = [
-  {
-    key: "rowIndex",
-    header: "#",
-    align: "end",
-    minWidth: 52,
-    resizable: false,
-    render: (_, rowIndex) => `#${rowIndex + 1}`,
-  },
-  {
-    key: "createdAt",
-    header: "Created",
-    sortKey: "createdAt",
-    render: (r) => relativeTime(r.createdAt),
-  },
-  {
-    key: "input",
-    header: "Input",
-    render: (r) => <Text.Mono>{formatCellValue(r.input)}</Text.Mono>,
-  },
-  {
-    key: "output",
-    header: "Output",
-    render: (r) => <Text.Mono>{formatCellValue(r.output)}</Text.Mono>,
-  },
-  {
-    key: "expectedOutput",
-    header: "Expected output",
-    render: (r) => <ExpectedOutputCell value={r.expectedOutput} />,
-  },
-]
+// Built-in fields shown as table columns (matches the historical layout). `metadata` stays
+// drawer-only. Custom columns are appended after these in schema order.
+const TABLE_BUILTINS = new Set(["input", "output", "expectedOutput"])
+
+function buildRowColumns(columns: DatasetColumn[] | null): InfiniteTableColumn<DatasetRowRecord>[] {
+  const leading: InfiniteTableColumn<DatasetRowRecord>[] = [
+    {
+      key: "rowIndex",
+      header: "#",
+      align: "end",
+      minWidth: 52,
+      resizable: false,
+      render: (_, rowIndex) => `#${rowIndex + 1}`,
+    },
+    {
+      key: "createdAt",
+      header: "Created",
+      sortKey: "createdAt",
+      render: (r) => relativeTime(r.createdAt),
+    },
+  ]
+
+  const dynamic: InfiniteTableColumn<DatasetRowRecord>[] = []
+  for (const col of effectiveColumns(columns)) {
+    if (col.source.kind === "builtin") {
+      const field = col.source.field
+      if (!TABLE_BUILTINS.has(field)) continue
+      if (field === "expectedOutput") {
+        dynamic.push({
+          key: col.identifier,
+          header: col.name,
+          render: (r) => <ExpectedOutputCell value={r.expectedOutput} />,
+        })
+      } else {
+        dynamic.push({
+          key: col.identifier,
+          header: col.name,
+          render: (r) => <Text.Mono>{formatCellValue(r[field])}</Text.Mono>,
+        })
+      }
+    } else {
+      dynamic.push({
+        key: col.identifier,
+        header: col.name,
+        render: (r) => <Text.Mono>{formatCellValue(r.custom[col.identifier] ?? "")}</Text.Mono>,
+      })
+    }
+  }
+
+  return [...leading, ...dynamic]
+}
 
 function DatasetDetailPage() {
   const { datasetId } = Route.useParams()
@@ -173,7 +200,7 @@ function DatasetDetailPage() {
   const [parsedCsv, setParsedCsv] = useState<ParsedCsv | null>(null)
 
   const handleInsertFirstRow = useCallback(
-    async (data: { input: string; output: string; expectedOutput: string; metadata: string }) => {
+    async (data: RowDetailSaveData) => {
       try {
         const result = await insertDatasetRow({
           data: {
@@ -182,6 +209,7 @@ function DatasetDetailPage() {
             output: data.output,
             expectedOutput: data.expectedOutput,
             metadata: data.metadata,
+            ...(Object.keys(data.custom).length > 0 ? { custom: data.custom } : {}),
           },
         })
         const qc = getQueryClient()
@@ -354,6 +382,8 @@ function DatasetRowsView({
   } | null>(null)
   const [draftRow, setDraftRow] = useState<DatasetRowRecord | null>(null)
 
+  const rowColumns = useMemo(() => buildRowColumns(dataset.columns), [dataset.columns])
+
   const {
     data: rows,
     isLoading,
@@ -468,7 +498,7 @@ function DatasetRowsView({
   }
 
   const handleSaveRow = useCallback(
-    async (data: { input: string; output: string; expectedOutput: string; metadata: string }) => {
+    async (data: RowDetailSaveData) => {
       if (!rid) return
       setSaving(true)
       try {
@@ -480,6 +510,7 @@ function DatasetRowsView({
               output: data.output,
               expectedOutput: data.expectedOutput,
               metadata: data.metadata,
+              ...(Object.keys(data.custom).length > 0 ? { custom: data.custom } : {}),
             },
           })
           setDraftRow(null)
@@ -507,6 +538,7 @@ function DatasetRowsView({
             output: data.output,
             expectedOutput: data.expectedOutput,
             metadata: data.metadata,
+            ...(Object.keys(data.custom).length > 0 ? { custom: data.custom } : {}),
           },
         })
         getQueryClient().invalidateQueries({
@@ -694,6 +726,7 @@ function DatasetRowsView({
                     <Icon icon={Download} size="sm" />
                     <Text.H6>Export</Text.H6>
                   </Button>
+                  <DatasetColumnsSelector datasetId={datasetId} projectId={projectId} columns={dataset.columns} />
                   <Button size="sm" className="shrink-0 whitespace-nowrap" onClick={handleAddRow} disabled={saving}>
                     <Icon icon={CirclePlus} size="sm" />
                     Add row
@@ -751,6 +784,7 @@ function DatasetRowsView({
             <RowDetailDrawer
               key={selectedRow.rowId}
               row={selectedRow}
+              columns={dataset.columns}
               onClose={closeRow}
               onSave={handleSaveRow}
               saving={saving}

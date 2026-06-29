@@ -5,6 +5,8 @@ import typing
 from ..core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from ..core.request_options import RequestOptions
 from ..types.dataset import Dataset
+from ..types.dataset_column import DatasetColumn
+from ..types.dataset_columns_list import DatasetColumnsList
 from ..types.delete_dataset_rows_response import DeleteDatasetRowsResponse
 from ..types.export_dataset_rows_ready_response import ExportDatasetRowsReadyResponse
 from ..types.import_rows_from_traces_response import ImportRowsFromTracesResponse
@@ -13,6 +15,7 @@ from ..types.paginated_dataset_rows import PaginatedDatasetRows
 from ..types.paginated_datasets import PaginatedDatasets
 from ..types.traces_ref import TracesRef
 from .raw_client import AsyncRawDatasetsClient, RawDatasetsClient
+from .types.datasets_list_columns_request_include_removed import DatasetsListColumnsRequestIncludeRemoved
 from .types.datasets_list_request_sort_by import DatasetsListRequestSortBy
 from .types.datasets_list_request_sort_direction import DatasetsListRequestSortDirection
 from .types.datasets_list_rows_request_sort_direction import DatasetsListRowsRequestSortDirection
@@ -541,6 +544,296 @@ class DatasetsClient:
         """
         _response = self._raw_client.export_rows(
             project_slug, dataset_slug, selection=selection, recipient=recipient, request_options=request_options
+        )
+        return _response.data
+
+    def list_columns(
+        self,
+        project_slug: str,
+        dataset_slug: str,
+        *,
+        include_removed: typing.Optional[DatasetsListColumnsRequestIncludeRemoved] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> DatasetColumnsList:
+        """
+        Returns the ordered active column schema — the built-in columns plus any custom columns. Pass `includeRemoved=true` to also return soft-removed columns (so they can be restored).
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        dataset_slug : str
+            Dataset slug (human-readable identifier within the project).
+
+        include_removed : typing.Optional[DatasetsListColumnsRequestIncludeRemoved]
+            When `true`, also returns soft-removed columns (each carrying `removed: true`). Defaults to `false`.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        DatasetColumnsList
+            Column schema
+
+        Examples
+        --------
+        from latitude import LatitudeApiClient
+
+        client = LatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+        client.datasets.list_columns(
+            project_slug="projectSlug",
+            dataset_slug="datasetSlug",
+            include_removed="true",
+        )
+        """
+        _response = self._raw_client.list_columns(
+            project_slug, dataset_slug, include_removed=include_removed, request_options=request_options
+        )
+        return _response.data
+
+    def add_column(
+        self,
+        project_slug: str,
+        dataset_slug: str,
+        *,
+        name: str,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> DatasetColumn:
+        """
+        Adds a custom column. The column starts empty on every row; rows are written only when a cell is filled, so the dataset version does not change.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        dataset_slug : str
+            Dataset slug (human-readable identifier within the project).
+
+        name : str
+            Display name for the new custom column.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        DatasetColumn
+            Created column
+
+        Examples
+        --------
+        from latitude import LatitudeApiClient
+
+        client = LatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+        client.datasets.add_column(
+            project_slug="projectSlug",
+            dataset_slug="datasetSlug",
+            name="name",
+        )
+        """
+        _response = self._raw_client.add_column(project_slug, dataset_slug, name=name, request_options=request_options)
+        return _response.data
+
+    def delete_column(
+        self,
+        project_slug: str,
+        dataset_slug: str,
+        identifier: str,
+        *,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> None:
+        """
+        Removes a column (built-in or custom) from the active schema. Its data is preserved and the column can be re-added; this does not change the dataset version.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        dataset_slug : str
+            Dataset slug (human-readable identifier within the project).
+
+        identifier : str
+            Stable column identifier.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        from latitude import LatitudeApiClient
+
+        client = LatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+        client.datasets.delete_column(
+            project_slug="projectSlug",
+            dataset_slug="datasetSlug",
+            identifier="identifier",
+        )
+        """
+        _response = self._raw_client.delete_column(
+            project_slug, dataset_slug, identifier, request_options=request_options
+        )
+        return _response.data
+
+    def update_column(
+        self,
+        project_slug: str,
+        dataset_slug: str,
+        identifier: str,
+        *,
+        name: str,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> DatasetColumn:
+        """
+        Renames a column. Works for both built-in and custom columns.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        dataset_slug : str
+            Dataset slug (human-readable identifier within the project).
+
+        identifier : str
+            Stable column identifier.
+
+        name : str
+            New display name. Works for both built-in and custom columns.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        DatasetColumn
+            Updated column
+
+        Examples
+        --------
+        from latitude import LatitudeApiClient
+
+        client = LatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+        client.datasets.update_column(
+            project_slug="projectSlug",
+            dataset_slug="datasetSlug",
+            identifier="identifier",
+            name="name",
+        )
+        """
+        _response = self._raw_client.update_column(
+            project_slug, dataset_slug, identifier, name=name, request_options=request_options
+        )
+        return _response.data
+
+    def reorder_columns(
+        self,
+        project_slug: str,
+        dataset_slug: str,
+        *,
+        order: typing.Sequence[str],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> DatasetColumnsList:
+        """
+        Sets the left-to-right order of columns. This is a metadata edit and does not change the dataset version.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        dataset_slug : str
+            Dataset slug (human-readable identifier within the project).
+
+        order : typing.Sequence[str]
+            Column identifiers in the desired left-to-right order. Identifiers omitted from the list keep their relative order at the end; unknown identifiers are ignored.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        DatasetColumnsList
+            Reordered column schema
+
+        Examples
+        --------
+        from latitude import LatitudeApiClient
+
+        client = LatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+        client.datasets.reorder_columns(
+            project_slug="projectSlug",
+            dataset_slug="datasetSlug",
+            order=["order"],
+        )
+        """
+        _response = self._raw_client.reorder_columns(
+            project_slug, dataset_slug, order=order, request_options=request_options
+        )
+        return _response.data
+
+    def restore_column(
+        self,
+        project_slug: str,
+        dataset_slug: str,
+        identifier: str,
+        *,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> DatasetColumn:
+        """
+        Restores a soft-removed column (built-in or custom) to the active schema, reconnecting its preserved data. Find removed identifiers via `listDatasetColumns` with `includeRemoved=true`.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        dataset_slug : str
+            Dataset slug (human-readable identifier within the project).
+
+        identifier : str
+            Stable column identifier.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        DatasetColumn
+            Restored column
+
+        Examples
+        --------
+        from latitude import LatitudeApiClient
+
+        client = LatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+        client.datasets.restore_column(
+            project_slug="projectSlug",
+            dataset_slug="datasetSlug",
+            identifier="identifier",
+        )
+        """
+        _response = self._raw_client.restore_column(
+            project_slug, dataset_slug, identifier, request_options=request_options
         )
         return _response.data
 
@@ -1144,5 +1437,345 @@ class AsyncDatasetsClient:
         """
         _response = await self._raw_client.export_rows(
             project_slug, dataset_slug, selection=selection, recipient=recipient, request_options=request_options
+        )
+        return _response.data
+
+    async def list_columns(
+        self,
+        project_slug: str,
+        dataset_slug: str,
+        *,
+        include_removed: typing.Optional[DatasetsListColumnsRequestIncludeRemoved] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> DatasetColumnsList:
+        """
+        Returns the ordered active column schema — the built-in columns plus any custom columns. Pass `includeRemoved=true` to also return soft-removed columns (so they can be restored).
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        dataset_slug : str
+            Dataset slug (human-readable identifier within the project).
+
+        include_removed : typing.Optional[DatasetsListColumnsRequestIncludeRemoved]
+            When `true`, also returns soft-removed columns (each carrying `removed: true`). Defaults to `false`.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        DatasetColumnsList
+            Column schema
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude import AsyncLatitudeApiClient
+
+        client = AsyncLatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+
+
+        async def main() -> None:
+            await client.datasets.list_columns(
+                project_slug="projectSlug",
+                dataset_slug="datasetSlug",
+                include_removed="true",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.list_columns(
+            project_slug, dataset_slug, include_removed=include_removed, request_options=request_options
+        )
+        return _response.data
+
+    async def add_column(
+        self,
+        project_slug: str,
+        dataset_slug: str,
+        *,
+        name: str,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> DatasetColumn:
+        """
+        Adds a custom column. The column starts empty on every row; rows are written only when a cell is filled, so the dataset version does not change.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        dataset_slug : str
+            Dataset slug (human-readable identifier within the project).
+
+        name : str
+            Display name for the new custom column.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        DatasetColumn
+            Created column
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude import AsyncLatitudeApiClient
+
+        client = AsyncLatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+
+
+        async def main() -> None:
+            await client.datasets.add_column(
+                project_slug="projectSlug",
+                dataset_slug="datasetSlug",
+                name="name",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.add_column(
+            project_slug, dataset_slug, name=name, request_options=request_options
+        )
+        return _response.data
+
+    async def delete_column(
+        self,
+        project_slug: str,
+        dataset_slug: str,
+        identifier: str,
+        *,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> None:
+        """
+        Removes a column (built-in or custom) from the active schema. Its data is preserved and the column can be re-added; this does not change the dataset version.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        dataset_slug : str
+            Dataset slug (human-readable identifier within the project).
+
+        identifier : str
+            Stable column identifier.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude import AsyncLatitudeApiClient
+
+        client = AsyncLatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+
+
+        async def main() -> None:
+            await client.datasets.delete_column(
+                project_slug="projectSlug",
+                dataset_slug="datasetSlug",
+                identifier="identifier",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.delete_column(
+            project_slug, dataset_slug, identifier, request_options=request_options
+        )
+        return _response.data
+
+    async def update_column(
+        self,
+        project_slug: str,
+        dataset_slug: str,
+        identifier: str,
+        *,
+        name: str,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> DatasetColumn:
+        """
+        Renames a column. Works for both built-in and custom columns.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        dataset_slug : str
+            Dataset slug (human-readable identifier within the project).
+
+        identifier : str
+            Stable column identifier.
+
+        name : str
+            New display name. Works for both built-in and custom columns.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        DatasetColumn
+            Updated column
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude import AsyncLatitudeApiClient
+
+        client = AsyncLatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+
+
+        async def main() -> None:
+            await client.datasets.update_column(
+                project_slug="projectSlug",
+                dataset_slug="datasetSlug",
+                identifier="identifier",
+                name="name",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.update_column(
+            project_slug, dataset_slug, identifier, name=name, request_options=request_options
+        )
+        return _response.data
+
+    async def reorder_columns(
+        self,
+        project_slug: str,
+        dataset_slug: str,
+        *,
+        order: typing.Sequence[str],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> DatasetColumnsList:
+        """
+        Sets the left-to-right order of columns. This is a metadata edit and does not change the dataset version.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        dataset_slug : str
+            Dataset slug (human-readable identifier within the project).
+
+        order : typing.Sequence[str]
+            Column identifiers in the desired left-to-right order. Identifiers omitted from the list keep their relative order at the end; unknown identifiers are ignored.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        DatasetColumnsList
+            Reordered column schema
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude import AsyncLatitudeApiClient
+
+        client = AsyncLatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+
+
+        async def main() -> None:
+            await client.datasets.reorder_columns(
+                project_slug="projectSlug",
+                dataset_slug="datasetSlug",
+                order=["order"],
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.reorder_columns(
+            project_slug, dataset_slug, order=order, request_options=request_options
+        )
+        return _response.data
+
+    async def restore_column(
+        self,
+        project_slug: str,
+        dataset_slug: str,
+        identifier: str,
+        *,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> DatasetColumn:
+        """
+        Restores a soft-removed column (built-in or custom) to the active schema, reconnecting its preserved data. Find removed identifiers via `listDatasetColumns` with `includeRemoved=true`.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        dataset_slug : str
+            Dataset slug (human-readable identifier within the project).
+
+        identifier : str
+            Stable column identifier.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        DatasetColumn
+            Restored column
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude import AsyncLatitudeApiClient
+
+        client = AsyncLatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+
+
+        async def main() -> None:
+            await client.datasets.restore_column(
+                project_slug="projectSlug",
+                dataset_slug="datasetSlug",
+                identifier="identifier",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.restore_column(
+            project_slug, dataset_slug, identifier, request_options=request_options
         )
         return _response.data

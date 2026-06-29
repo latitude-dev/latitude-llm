@@ -1,4 +1,5 @@
-import { bigint, index, text, unique, varchar } from "drizzle-orm/pg-core"
+import type { DatasetColumn } from "@domain/datasets"
+import { bigint, index, jsonb, text, unique, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
 export const datasets = latitudeSchema.table(
@@ -11,6 +12,7 @@ export const datasets = latitudeSchema.table(
     name: varchar("name", { length: 256 }).notNull(),
     description: text("description"),
     fileKey: text("file_key"),
+    columns: jsonb("columns").$type<DatasetColumn[]>(), // null ⇒ implicit four built-in fields (today's behavior). Ordered descriptor list once a column is added/hidden.
     currentVersion: bigint("current_version", { mode: "number" }).notNull().default(0),
     deletedAt: tzTimestamp("deleted_at"),
     ...timestamps(),
