@@ -5990,6 +5990,157 @@
           "rows"
         ]
       },
+      "UpdateDatasetRowResponse": {
+        "type": "object",
+        "properties": {
+          "versionId": {
+            "type": "string",
+            "description": "New dataset version id."
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "New dataset version number."
+          }
+        },
+        "required": [
+          "versionId",
+          "version"
+        ]
+      },
+      "UpdateDatasetRowBody": {
+        "type": "object",
+        "properties": {
+          "input": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "array",
+                "items": {}
+              },
+              {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "New input cell. Omit to leave it unchanged."
+          },
+          "output": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "array",
+                "items": {}
+              },
+              {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "New output cell. Omit to leave it unchanged."
+          },
+          "expectedOutput": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "array",
+                "items": {}
+              },
+              {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "New correct answer for this row. Filled in by curators; usually distinct from `output`. Omit to leave it unchanged."
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "array",
+                "items": {}
+              },
+              {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "New metadata cell. Omit to leave it unchanged."
+          },
+          "custom": {
+            "type": "object",
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "array",
+                  "items": {}
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": {}
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "description": "Custom column values to set, keyed by column identifier. Merged onto the row's existing custom values — columns you omit are left unchanged. Unknown or removed columns are rejected."
+          }
+        }
+      },
       "DeleteDatasetRowsResponse": {
         "type": "object",
         "properties": {
@@ -13238,6 +13389,108 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DeleteDatasetRowsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/datasets/{datasetSlug}/rows/{rowId}": {
+      "patch": {
+        "tags": [
+          "Datasets"
+        ],
+        "x-fern-sdk-group-name": "datasets",
+        "x-fern-sdk-method-name": "updateRow",
+        "summary": "Update a dataset row",
+        "description": "Partially updates a single row. Only the cells you send are changed; omitted cells keep their current value. Use this to fill in an `expectedOutput` (or any other cell) after rows were imported. Bumps the dataset version.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "updateDatasetRow",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Dataset slug (human-readable identifier within the project)."
+            },
+            "required": true,
+            "description": "Dataset slug (human-readable identifier within the project).",
+            "name": "datasetSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Stable row identifier (from `listDatasetRows`)."
+            },
+            "required": true,
+            "description": "Stable row identifier (from `listDatasetRows`).",
+            "name": "rowId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDatasetRowBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Row updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateDatasetRowResponse"
                 }
               }
             }

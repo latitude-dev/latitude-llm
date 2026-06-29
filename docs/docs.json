@@ -225,7 +225,8 @@
               "datasets/overview",
               "datasets/add-traces",
               "datasets/expected-output",
-              "datasets/custom-columns"
+              "datasets/custom-columns",
+              "datasets/edit-rows"
             ]
           },
           "test-and-fix/regression-testing"

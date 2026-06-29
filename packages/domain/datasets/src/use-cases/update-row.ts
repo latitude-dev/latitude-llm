@@ -1,7 +1,7 @@
 import { type DatasetId, type DatasetRowId, ValidationError } from "@domain/shared"
 import { Effect } from "effect"
 import { writableColumns } from "../columns.ts"
-import type { RowFieldValue } from "../entities/dataset-row.ts"
+import type { InsertRowFieldValue } from "../entities/dataset-row.ts"
 import { DatasetRepository } from "../ports/dataset-repository.ts"
 import { DatasetRowRepository } from "../ports/dataset-row-repository.ts"
 
@@ -11,11 +11,12 @@ import { DatasetRowRepository } from "../ports/dataset-row-repository.ts"
 export const updateRow = Effect.fn("datasets.updateRow")(function* (args: {
   readonly datasetId: DatasetId
   readonly rowId: DatasetRowId
-  readonly input: RowFieldValue
-  readonly output: RowFieldValue
-  readonly expectedOutput: RowFieldValue
-  readonly metadata: RowFieldValue
-  readonly custom?: Record<string, RowFieldValue>
+  readonly input?: InsertRowFieldValue
+  readonly output?: InsertRowFieldValue
+  readonly expectedOutput?: InsertRowFieldValue
+  readonly metadata?: InsertRowFieldValue
+  readonly custom?: Record<string, InsertRowFieldValue>
+  readonly source?: string
 }) {
   yield* Effect.annotateCurrentSpan("datasetId", args.datasetId)
   yield* Effect.annotateCurrentSpan("rowId", args.rowId)
@@ -42,7 +43,7 @@ export const updateRow = Effect.fn("datasets.updateRow")(function* (args: {
   const version = yield* datasetRepo.incrementVersion({
     id: args.datasetId,
     rowsUpdated: 1,
-    source: "web",
+    source: args.source ?? "web",
   })
 
   yield* rowRepo
@@ -50,10 +51,10 @@ export const updateRow = Effect.fn("datasets.updateRow")(function* (args: {
       datasetId: args.datasetId,
       rowId: args.rowId,
       version: version.version,
-      input: args.input,
-      output: args.output,
-      expectedOutput: args.expectedOutput,
-      metadata: args.metadata,
+      input: args.input !== undefined ? args.input : existing.input,
+      output: args.output !== undefined ? args.output : existing.output,
+      expectedOutput: args.expectedOutput !== undefined ? args.expectedOutput : existing.expectedOutput,
+      metadata: args.metadata !== undefined ? args.metadata : existing.metadata,
       custom,
     })
     .pipe(

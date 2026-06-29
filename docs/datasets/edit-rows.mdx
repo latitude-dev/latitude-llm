@@ -1,0 +1,109 @@
+---
+title: Edit row contents
+description: Update the cells of an existing dataset row — over the API, the SDKs, or an MCP agent — to fill in expected output or correct any field after a row was created.
+---
+
+<Info>
+  **Where this fits:** Part of **Refine**. Editing rows lets you curate a [dataset](./overview) after it is built — most commonly to add [expected output](./expected-output) to rows imported [from traces](./add-traces).
+</Info>
+
+Every [dataset](./overview) row is made of cells: the four built-in fields — **Input**, **Output**, **Expected output**, and **Metadata** — plus any [custom columns](./custom-columns) you have added. You can edit those cells by hand in the UI, or programmatically over the API, the SDKs, or an [MCP](../getting-started/mcp) agent.
+
+## Edit a row in the UI
+
+Open a dataset and open any row to edit its cells inline. Built-in fields and active custom columns each show their own editable field; the values you enter are saved with the row. See [Add expected output](./expected-output) for the most common case.
+
+## Edit a row programmatically
+
+Updates are **partial**: you send only the cells you want to change, and every cell you omit keeps its current value. This makes it safe to, for example, set `expectedOutput` on a row without resending its input or output.
+
+How cells are addressed:
+
+- **Built-in cells** use their field name: `input`, `output`, `expectedOutput`, `metadata`.
+- **Custom columns** are set through a `custom` map keyed by the column's **stable identifier** (not its display name). Custom values are merged onto the row's existing ones, so columns you omit are left untouched. Unknown or [removed](./custom-columns) columns are rejected.
+
+A successful edit creates a new dataset version and returns its id.
+
+<Note>
+  You need the row's **id** and, for custom columns, the column **identifiers**. List rows to get their ids, and list the dataset's columns to get identifiers — both built-in (`input`, `output`, …) and custom. These are available in the API, every SDK, and over MCP.
+</Note>
+
+### HTTP API
+
+```
+PATCH /v1/projects/{projectSlug}/datasets/{datasetSlug}/rows/{rowId}
+```
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `input` | any JSON | No | New input cell. Omit to leave unchanged. |
+| `output` | any JSON | No | New output cell. Omit to leave unchanged. |
+| `expectedOutput` | any JSON | No | New correct answer for the row. Omit to leave unchanged. |
+| `metadata` | any JSON | No | New metadata cell. Omit to leave unchanged. |
+| `custom` | object | No | Custom column values keyed by column identifier. Merged onto existing values. |
+
+```bash
+curl -X PATCH \
+  https://api.latitude.so/v1/projects/my-project/datasets/my-dataset/rows/ROW_ID \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "expectedOutput": "The correct answer",
+    "custom": { "COLUMN_IDENTIFIER": "high" }
+  }'
+```
+
+The response carries the new dataset version:
+
+```json
+{ "versionId": "os4gxr0mhcocrydibwupq4jk", "version": 10 }
+```
+
+### SDKs
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```typescript
+    import { LatitudeApiClient } from "@latitude-data/sdk";
+
+    const client = new LatitudeApiClient({ token: process.env.LATITUDE_API_KEY! });
+
+    const { version } = await client.datasets.updateRow(
+      "my-project",
+      "my-dataset",
+      "ROW_ID",
+      {
+        expectedOutput: "The correct answer",
+        custom: { COLUMN_IDENTIFIER: "high" },
+      },
+    );
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    import os
+
+    from latitude_sdk import LatitudeApiClient
+
+    client = LatitudeApiClient(token=os.environ["LATITUDE_API_KEY"])
+
+    result = client.datasets.update_row(
+        "my-project",
+        "my-dataset",
+        "ROW_ID",
+        expected_output="The correct answer",
+        custom={"COLUMN_IDENTIFIER": "high"},
+    )
+    ```
+  </Tab>
+</Tabs>
+
+### From your coding agent (MCP)
+
+Through the [MCP server](../getting-started/mcp), an agent like Claude or Cursor can edit a row for you — for example, *"in my dataset From Traces Drawer, set the expected output of the failing row to …"*. The agent lists the dataset's rows and columns to resolve the ids, then applies the same partial update described above. For the live tool list and full schemas, see the [API reference](https://api.latitude.so/docs).
+
+## Next step
+
+- [Add expected output](./expected-output): the most common reason to edit a row.
+- [Custom columns](./custom-columns): add, rename, reorder, and remove the columns a row can hold.
+- [Regression testing](../test-and-fix/regression-testing): replay the curated dataset against your agent.

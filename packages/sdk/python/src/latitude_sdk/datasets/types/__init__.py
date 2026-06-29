@@ -34,6 +34,11 @@ if typing.TYPE_CHECKING:
     from .insert_dataset_rows_body_rows_item_input import InsertDatasetRowsBodyRowsItemInput
     from .insert_dataset_rows_body_rows_item_metadata import InsertDatasetRowsBodyRowsItemMetadata
     from .insert_dataset_rows_body_rows_item_output import InsertDatasetRowsBodyRowsItemOutput
+    from .update_dataset_row_body_custom_value import UpdateDatasetRowBodyCustomValue
+    from .update_dataset_row_body_expected_output import UpdateDatasetRowBodyExpectedOutput
+    from .update_dataset_row_body_input import UpdateDatasetRowBodyInput
+    from .update_dataset_row_body_metadata import UpdateDatasetRowBodyMetadata
+    from .update_dataset_row_body_output import UpdateDatasetRowBodyOutput
 _dynamic_imports: typing.Dict[str, str] = {
     "DatasetsListColumnsRequestIncludeRemoved": ".datasets_list_columns_request_include_removed",
     "DatasetsListRequestSortBy": ".datasets_list_request_sort_by",
@@ -59,6 +64,11 @@ _dynamic_imports: typing.Dict[str, str] = {
     "InsertDatasetRowsBodyRowsItemInput": ".insert_dataset_rows_body_rows_item_input",
     "InsertDatasetRowsBodyRowsItemMetadata": ".insert_dataset_rows_body_rows_item_metadata",
     "InsertDatasetRowsBodyRowsItemOutput": ".insert_dataset_rows_body_rows_item_output",
+    "UpdateDatasetRowBodyCustomValue": ".update_dataset_row_body_custom_value",
+    "UpdateDatasetRowBodyExpectedOutput": ".update_dataset_row_body_expected_output",
+    "UpdateDatasetRowBodyInput": ".update_dataset_row_body_input",
+    "UpdateDatasetRowBodyMetadata": ".update_dataset_row_body_metadata",
+    "UpdateDatasetRowBodyOutput": ".update_dataset_row_body_output",
 }
 
 
@@ -108,4 +118,9 @@ __all__ = [
     "InsertDatasetRowsBodyRowsItemInput",
     "InsertDatasetRowsBodyRowsItemMetadata",
     "InsertDatasetRowsBodyRowsItemOutput",
+    "UpdateDatasetRowBodyCustomValue",
+    "UpdateDatasetRowBodyExpectedOutput",
+    "UpdateDatasetRowBodyInput",
+    "UpdateDatasetRowBodyMetadata",
+    "UpdateDatasetRowBodyOutput",
 ]

@@ -31,6 +31,11 @@ if typing.TYPE_CHECKING:
         InsertDatasetRowsBodyRowsItemInput,
         InsertDatasetRowsBodyRowsItemMetadata,
         InsertDatasetRowsBodyRowsItemOutput,
+        UpdateDatasetRowBodyCustomValue,
+        UpdateDatasetRowBodyExpectedOutput,
+        UpdateDatasetRowBodyInput,
+        UpdateDatasetRowBodyMetadata,
+        UpdateDatasetRowBodyOutput,
     )
 _dynamic_imports: typing.Dict[str, str] = {
     "DatasetsListColumnsRequestIncludeRemoved": ".types",
@@ -57,6 +62,11 @@ _dynamic_imports: typing.Dict[str, str] = {
     "InsertDatasetRowsBodyRowsItemInput": ".types",
     "InsertDatasetRowsBodyRowsItemMetadata": ".types",
     "InsertDatasetRowsBodyRowsItemOutput": ".types",
+    "UpdateDatasetRowBodyCustomValue": ".types",
+    "UpdateDatasetRowBodyExpectedOutput": ".types",
+    "UpdateDatasetRowBodyInput": ".types",
+    "UpdateDatasetRowBodyMetadata": ".types",
+    "UpdateDatasetRowBodyOutput": ".types",
 }
 
 
@@ -106,4 +116,9 @@ __all__ = [
     "InsertDatasetRowsBodyRowsItemInput",
     "InsertDatasetRowsBodyRowsItemMetadata",
     "InsertDatasetRowsBodyRowsItemOutput",
+    "UpdateDatasetRowBodyCustomValue",
+    "UpdateDatasetRowBodyExpectedOutput",
+    "UpdateDatasetRowBodyInput",
+    "UpdateDatasetRowBodyMetadata",
+    "UpdateDatasetRowBodyOutput",
 ]

@@ -235,6 +235,7 @@ if typing.TYPE_CHECKING:
     from .traces_ref import TracesRef, TracesRef_Filters, TracesRef_Ids
     from .traces_ref_filters import TracesRefFilters
     from .traces_ref_ids import TracesRefIds
+    from .update_dataset_row_response import UpdateDatasetRowResponse
     from .update_signal_response import UpdateSignalResponse
     from .user_activity_bucket import UserActivityBucket
     from .user_activity_response import UserActivityResponse
@@ -486,6 +487,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "TracesRefIds": ".traces_ref_ids",
     "TracesRef_Filters": ".traces_ref",
     "TracesRef_Ids": ".traces_ref",
+    "UpdateDatasetRowResponse": ".update_dataset_row_response",
     "UpdateSignalResponse": ".update_signal_response",
     "UserActivityBucket": ".user_activity_bucket",
     "UserActivityResponse": ".user_activity_response",
@@ -761,6 +763,7 @@ __all__ = [
     "TracesRefIds",
     "TracesRef_Filters",
     "TracesRef_Ids",
+    "UpdateDatasetRowResponse",
     "UpdateSignalResponse",
     "UserActivityBucket",
     "UserActivityResponse",

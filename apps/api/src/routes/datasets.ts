@@ -17,6 +17,7 @@ import {
   restoreColumn,
   updateColumn,
   updateDatasetDetails,
+  updateRow,
 } from "@domain/datasets"
 import { exportSelectionSchema } from "@domain/exports"
 import { MembershipRepository } from "@domain/organizations"
@@ -447,6 +448,34 @@ const InsertRowsResponseSchema = z
   })
   .openapi("InsertDatasetRowsResponse")
 
+const DatasetRowParamsSchema = DatasetSlugParamsSchema.extend({
+  rowId: z.string().min(1).describe("Stable row identifier (from `listDatasetRows`)."),
+})
+
+const UpdateRowBodySchema = z
+  .object({
+    input: InsertRowCellSchema.optional().describe("New input cell. Omit to leave it unchanged."),
+    output: InsertRowCellSchema.optional().describe("New output cell. Omit to leave it unchanged."),
+    expectedOutput: InsertRowCellSchema.optional().describe(
+      "New correct answer for this row. Filled in by curators; usually distinct from `output`. Omit to leave it unchanged.",
+    ),
+    metadata: InsertRowCellSchema.optional().describe("New metadata cell. Omit to leave it unchanged."),
+    custom: z
+      .record(z.string(), InsertRowCellSchema)
+      .optional()
+      .describe(
+        "Custom column values to set, keyed by column identifier. Merged onto the row's existing custom values — columns you omit are left unchanged. Unknown or removed columns are rejected.",
+      ),
+  })
+  .openapi("UpdateDatasetRowBody")
+
+const UpdateRowResponseSchema = z
+  .object({
+    versionId: z.string().describe("New dataset version id."),
+    version: z.number().int().nonnegative().describe("New dataset version number."),
+  })
+  .openapi("UpdateDatasetRowResponse")
+
 const DeleteRowsBodySchema = z
   .object({
     selection: exportSelectionSchema.describe("Rows to delete."),
@@ -652,6 +681,56 @@ const insertDatasetRowsEndpoint = datasetEndpoint({
       },
       201,
     )
+  },
+})
+
+const updateDatasetRowEndpoint = datasetEndpoint({
+  route: createRoute({
+    method: "patch",
+    path: "/{datasetSlug}/rows/{rowId}",
+    name: "updateDatasetRow",
+    tags: ["Datasets"],
+    ...datasetsFernGroup("updateRow"),
+    summary: "Update a dataset row",
+    description:
+      "Partially updates a single row. Only the cells you send are changed; omitted cells keep their current value. Use this to fill in an `expectedOutput` (or any other cell) after rows were imported. Bumps the dataset version.",
+    security: PROTECTED_SECURITY,
+    request: { params: DatasetRowParamsSchema, body: jsonBody(UpdateRowBodySchema) },
+    responses: openApiResponses({ status: 200, schema: UpdateRowResponseSchema, description: "Row updated" }),
+  }),
+  handler: async (c) => {
+    const { projectSlug, datasetSlug, rowId } = c.req.valid("param")
+    const body = c.req.valid("json")
+    const organizationId = c.var.organization.id
+
+    const result = await Effect.runPromise(
+      resolveDatasetId(projectSlug, datasetSlug)
+        .pipe(
+          Effect.flatMap((datasetId) =>
+            updateRow({
+              datasetId,
+              rowId: DatasetRowId(rowId),
+              ...(body.input !== undefined ? { input: body.input } : {}),
+              ...(body.output !== undefined ? { output: body.output } : {}),
+              ...(body.expectedOutput !== undefined ? { expectedOutput: body.expectedOutput } : {}),
+              ...(body.metadata !== undefined ? { metadata: body.metadata } : {}),
+              ...(body.custom !== undefined ? { custom: body.custom } : {}),
+              source: "api",
+            }),
+          ),
+        )
+        .pipe(
+          withPostgres(
+            Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive),
+            c.var.postgresClient,
+            organizationId,
+          ),
+          withClickHouse(DatasetRowRepositoryLive, c.var.clickhouse, organizationId),
+          withTracing,
+        ),
+    )
+
+    return c.json({ versionId: result.versionId as string, version: result.version }, 200)
   },
 })
 
@@ -1212,6 +1291,7 @@ export const createDatasetsRoutes = () => {
   deleteDatasetEndpoint.mountHttp(app, createTierRateLimiter("low"))
   listDatasetRowsEndpoint.mountHttp(app, createTierRateLimiter("low"))
   insertDatasetRowsEndpoint.mountHttp(app, createTierRateLimiter("medium"))
+  updateDatasetRowEndpoint.mountHttp(app, createTierRateLimiter("medium"))
   deleteDatasetRowsEndpoint.mountHttp(app, createTierRateLimiter("medium"))
   importRowsFromTracesEndpoint.mountHttp(app, createTierRateLimiter("high"))
   exportDatasetRowsEndpoint.mountHttp(app, createTierRateLimiter("critical"))

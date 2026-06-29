@@ -790,6 +790,104 @@ export class DatasetsClient {
     }
 
     /**
+     * Partially updates a single row. Only the cells you send are changed; omitted cells keep their current value. Use this to fill in an `expectedOutput` (or any other cell) after rows were imported. Bumps the dataset version.
+     *
+     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} datasetSlug - Dataset slug (human-readable identifier within the project).
+     * @param {string} rowId - Stable row identifier (from `listDatasetRows`).
+     * @param {LatitudeApi.UpdateDatasetRowBody} request
+     * @param {DatasetsClient.RequestOptions} requestOptions - Request-specific configuration.
+     *
+     * @throws {@link LatitudeApi.BadRequestError}
+     * @throws {@link LatitudeApi.UnauthorizedError}
+     * @throws {@link LatitudeApi.NotFoundError}
+     *
+     * @example
+     *     await client.datasets.updateRow("projectSlug", "datasetSlug", "rowId")
+     */
+    public updateRow(
+        projectSlug: string,
+        datasetSlug: string,
+        rowId: string,
+        request: LatitudeApi.UpdateDatasetRowBody = {},
+        requestOptions?: DatasetsClient.RequestOptions,
+    ): core.HttpResponsePromise<LatitudeApi.UpdateDatasetRowResponse> {
+        return core.HttpResponsePromise.fromPromise(
+            this.__updateRow(projectSlug, datasetSlug, rowId, request, requestOptions),
+        );
+    }
+
+    private async __updateRow(
+        projectSlug: string,
+        datasetSlug: string,
+        rowId: string,
+        request: LatitudeApi.UpdateDatasetRowBody = {},
+        requestOptions?: DatasetsClient.RequestOptions,
+    ): Promise<core.WithRawResponse<LatitudeApi.UpdateDatasetRowResponse>> {
+        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
+        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
+            _authRequest.headers,
+            this._options?.headers,
+            requestOptions?.headers,
+        );
+        const _response = await core.fetcher({
+            url: core.url.join(
+                (await core.Supplier.get(this._options.baseUrl)) ??
+                    (await core.Supplier.get(this._options.environment)) ??
+                    environments.LatitudeApiEnvironment.Production,
+                `v1/projects/${core.url.encodePathParam(projectSlug)}/datasets/${core.url.encodePathParam(datasetSlug)}/rows/${core.url.encodePathParam(rowId)}`,
+            ),
+            method: "PATCH",
+            headers: _headers,
+            contentType: "application/json",
+            queryParameters: requestOptions?.queryParams,
+            requestType: "json",
+            body: request,
+            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
+            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
+            abortSignal: requestOptions?.abortSignal,
+            fetchFn: this._options?.fetch,
+            logging: this._options.logging,
+        });
+        if (_response.ok) {
+            return { data: _response.body as LatitudeApi.UpdateDatasetRowResponse, rawResponse: _response.rawResponse };
+        }
+
+        if (_response.error.reason === "status-code") {
+            switch (_response.error.statusCode) {
+                case 400:
+                    throw new LatitudeApi.BadRequestError(
+                        _response.error.body as LatitudeApi.Error_,
+                        _response.rawResponse,
+                    );
+                case 401:
+                    throw new LatitudeApi.UnauthorizedError(
+                        _response.error.body as LatitudeApi.Error_,
+                        _response.rawResponse,
+                    );
+                case 404:
+                    throw new LatitudeApi.NotFoundError(
+                        _response.error.body as LatitudeApi.Error_,
+                        _response.rawResponse,
+                    );
+                default:
+                    throw new errors.LatitudeApiError({
+                        statusCode: _response.error.statusCode,
+                        body: _response.error.body,
+                        rawResponse: _response.rawResponse,
+                    });
+            }
+        }
+
+        return handleNonStatusCodeError(
+            _response.error,
+            _response.rawResponse,
+            "PATCH",
+            "/v1/projects/{projectSlug}/datasets/{datasetSlug}/rows/{rowId}",
+        );
+    }
+
+    /**
      * Imports one row per trace matched by `traces`.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)

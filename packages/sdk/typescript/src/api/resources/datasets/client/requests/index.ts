@@ -10,3 +10,4 @@ export type { InsertDatasetRowsBody } from "./InsertDatasetRowsBody.js";
 export type { ReorderDatasetColumnsBody } from "./ReorderDatasetColumnsBody.js";
 export type { UpdateDatasetBody } from "./UpdateDatasetBody.js";
 export type { UpdateDatasetColumnBody } from "./UpdateDatasetColumnBody.js";
+export type { UpdateDatasetRowBody } from "./UpdateDatasetRowBody.js";

@@ -130,6 +130,7 @@ export * from "./TraceDetail.js";
 export * from "./TraceRef.js";
 export * from "./TraceSpans.js";
 export * from "./TracesRef.js";
+export * from "./UpdateDatasetRowResponse.js";
 export * from "./UpdateSignalResponse.js";
 export * from "./UserActivityBucket.js";
 export * from "./UserActivityResponse.js";
