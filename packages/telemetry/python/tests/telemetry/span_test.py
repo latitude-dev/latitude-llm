@@ -9,6 +9,7 @@ from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+from opentelemetry.trace import Tracer
 
 from latitude_telemetry import Latitude, init_latitude
 from latitude_telemetry.constants import ATTRIBUTES, SCOPE_LATITUDE
@@ -65,6 +66,8 @@ class TestTracerAccess:
         )
 
         tracer = lat.get_tracer("cloudflare-think")
+        assert isinstance(tracer, Tracer)
+
         with tracer.start_as_current_span("ai-call"):
             pass
 
@@ -252,4 +255,21 @@ class TestProjectArgRename:
             )
 
         assert not any("deprecated" in r.message for r in caplog.records)
+        lat.shutdown()
+
+    def test_get_tracer_project_slug_logs_get_tracer_deprecation(self, caplog):
+        with (
+            patch("latitude_telemetry.telemetry.latitude_span_processor.create_exporter"),
+            caplog.at_level(logging.WARNING, logger="latitude_telemetry.sdk._deprecation"),
+        ):
+            lat = Latitude(
+                api_key="test-api-key",
+                project="my-project",
+                disable_batch=True,
+                tracer_provider=TracerProvider(),
+            )
+            lat.get_tracer("test", {"project_slug": "legacy-slug"})
+
+        assert any("`project_slug` on get_tracer() is deprecated" in r.message for r in caplog.records)
+        assert not any("`project_slug` on capture() is deprecated" in r.message for r in caplog.records)
         lat.shutdown()
