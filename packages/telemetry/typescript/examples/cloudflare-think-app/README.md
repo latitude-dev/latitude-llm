@@ -5,8 +5,8 @@ server-side tool calls.
 
 The React page uses Think's default WebSocket chat path through
 `useAgentChat({ body })`. The Worker reads that body in `beforeTurn()` and passes
-the user/session context to `latitude.getAiSdkTracer(context)`, so the AI SDK
-model and tool spans are stored with `user_id` and `session_id`.
+the user/session context to `latitude.getTracer("cloudflare-think", context)`,
+so the AI SDK model and tool spans are stored with `user_id` and `session_id`.
 
 ## Run as a Worker
 
@@ -55,7 +55,7 @@ npm run verify:local
 ```
 
 The verifier uses AI SDK's mock model, forces a `getWeather` tool call, sends
-spans with `latitude.getAiSdkTracer(context)`, flushes the Latitude SDK, and
-polls local ClickHouse for the generated session. It exits non-zero if spans do
-not arrive, if no `ai.toolCall` span is stored, or if any span misses the
+spans with `latitude.getTracer("cloudflare-think", context)`, flushes the
+Latitude SDK, and polls local ClickHouse for the generated session. It exits
+non-zero if spans do not arrive, if no `ai.toolCall` span is stored, or if any span misses the
 expected user/session context.

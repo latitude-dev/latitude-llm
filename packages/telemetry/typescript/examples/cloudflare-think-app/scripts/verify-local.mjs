@@ -93,7 +93,7 @@ async function runThinkTurn() {
       stopWhen: stepCountIs(2),
       experimental_telemetry: {
         isEnabled: true,
-        tracer: latitude.getAiSdkTracer({
+        tracer: latitude.getTracer("cloudflare-think", {
           userId: "local-think-user",
           sessionId,
           tags: ["cloudflare-think", "local-e2e"],

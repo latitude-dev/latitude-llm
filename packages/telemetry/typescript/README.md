@@ -233,14 +233,13 @@ type LatitudeOptions = {
 class Latitude {
   constructor(options: LatitudeOptions);
   provider: TracerProvider; // Existing provider when detected, otherwise Latitude's NodeTracerProvider
-  getTracer(scope: string): Tracer;
-  getAiSdkTracer(): Tracer;
+  getTracer(scope: string, context?: ContextOptions): Tracer;
   flush(): Promise<void>;
   shutdown(): Promise<void>;
 }
 ```
 
-Use `getAiSdkTracer()` with Vercel AI SDK v6 calls:
+Use `getTracer()` with Vercel AI SDK v6 calls:
 
 ```typescript
 await generateText({
@@ -248,13 +247,13 @@ await generateText({
   prompt: "Hello",
   experimental_telemetry: {
     isEnabled: true,
-    tracer: latitude.getAiSdkTracer(),
+    tracer: latitude.getTracer("vercelai"),
     functionId: "support-agent-turn",
   },
 });
 ```
 
-The helper returns a tracer from the provider Latitude is actually exporting from. That matters when another runtime or observability SDK already registered a global OpenTelemetry provider that Latitude cannot attach to.
+The helper returns a tracer from the provider Latitude is actually exporting from. That matters when another runtime or observability SDK already registered a global OpenTelemetry provider that Latitude cannot attach to. Pass context as the second argument when you want spans created by that tracer to carry `userId`, `sessionId`, `tags`, `metadata`, or `project`.
 
 ### `LatitudeSpanProcessor`
 

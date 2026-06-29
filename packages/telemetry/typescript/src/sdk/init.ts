@@ -181,14 +181,10 @@ export class Latitude {
     await this.latitudeProcessor.forceFlush()
   }
 
-  getTracer(scope: string): Tracer {
+  getTracer(scope: string, context?: ContextOptions): Tracer {
     const tracerName =
       scope === SCOPE_LATITUDE || scope.startsWith(`${SCOPE_LATITUDE}.`) ? scope : `${SCOPE_LATITUDE}.${scope}`
-    return this.provider.getTracer(tracerName)
-  }
-
-  getAiSdkTracer(context?: ContextOptions): Tracer {
-    const tracer = this.getTracer("vercelai")
+    const tracer = this.provider.getTracer(tracerName)
     if (context === undefined) return tracer
     return withLatitudeAttributes(tracer, latitudeAttributesFromContext(context))
   }

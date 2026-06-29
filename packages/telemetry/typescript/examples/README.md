@@ -90,11 +90,11 @@ These examples use `LatitudeTelemetry` — the simplest way to get started.
 | Together AI | `test_together.ts` | `together-ai` | `"togetherai"` |
 | AWS Bedrock | `test_bedrock.ts` | `@aws-sdk/client-bedrock-runtime` | `"bedrock"` |
 | Google Vertex AI | `test_vertex.ts` | `@google-cloud/vertexai` | `"vertexai"` |
-| Vercel AI SDK | `test_vercel_ai.ts` | `ai`, `@ai-sdk/openai` | `latitude.getAiSdkTracer()` |
+| Vercel AI SDK | `test_vercel_ai.ts` | `ai`, `@ai-sdk/openai` | `latitude.getTracer("vercelai")` |
 | LangChain | `test_langchain.ts` | `langchain`, `@langchain/openai` | `"langchain"` |
 | LlamaIndex | `test_llamaindex.ts` | `llamaindex` | `"llamaindex"` |
 
-The Vercel AI SDK example uses the stable `experimental_telemetry` hook with `latitude.getAiSdkTracer()`. It does not require a Latitude auto-instrumentation entry.
+The Vercel AI SDK example uses the stable `experimental_telemetry` hook with `latitude.getTracer("vercelai")`. It does not require a Latitude auto-instrumentation entry.
 
 ### Running Provider Examples
 

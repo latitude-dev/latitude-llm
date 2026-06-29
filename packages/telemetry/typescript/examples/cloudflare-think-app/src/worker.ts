@@ -59,7 +59,7 @@ export class MyAgent extends Think<Env> {
     return {
       experimental_telemetry: {
         isEnabled: true,
-        tracer: getLatitude(this.env).getAiSdkTracer({
+        tracer: getLatitude(this.env).getTracer("cloudflare-think", {
           userId: stringFromBody(ctx.body, "userId"),
           sessionId: stringFromBody(ctx.body, "sessionId"),
           tags: ["cloudflare-think"],

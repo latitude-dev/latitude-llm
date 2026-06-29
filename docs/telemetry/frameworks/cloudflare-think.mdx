@@ -83,7 +83,7 @@ This records Think model calls, tools, latency, tokens, prompts, and responses.
         return {
           experimental_telemetry: {
             isEnabled: true,
-            tracer: getLatitude(this.env).getAiSdkTracer(),
+            tracer: getLatitude(this.env).getTracer("cloudflare-think"),
             functionId: "think-turn",
             metadata: { framework: "cloudflare-think" },
           },
@@ -128,7 +128,7 @@ const { messages, sendMessage } = useAgentChat({
 })
 ```
 
-Then read that context in `beforeTurn()` and pass it to `getAiSdkTracer()`:
+Then read that context in `beforeTurn()` and pass it to `getTracer()`:
 
 ```ts
 import { Think, type TurnConfig, type TurnContext } from "@cloudflare/think"
@@ -141,7 +141,7 @@ export class MyAgent extends Think<Env> {
     return {
       experimental_telemetry: {
         isEnabled: true,
-        tracer: getLatitude(this.env).getAiSdkTracer(context),
+        tracer: getLatitude(this.env).getTracer("cloudflare-think", context),
         functionId: "think-turn",
       },
     }
@@ -177,14 +177,14 @@ export class MyAgent extends Think<Env> {
 }
 ```
 
-Keep `getAiSdkTracer()` in `beforeTurn()`:
+Keep `getTracer()` in `beforeTurn()`:
 
 ```ts
 beforeTurn(): TurnConfig {
   return {
     experimental_telemetry: {
       isEnabled: true,
-      tracer: getLatitude(this.env).getAiSdkTracer(),
+      tracer: getLatitude(this.env).getTracer("cloudflare-think"),
       functionId: "think-turn",
     },
   }
@@ -200,7 +200,7 @@ beforeTurn(): TurnConfig {
 
 ## If You Cannot Wrap The Turn
 
-If you cannot wrap the turn, pass context directly to the AI SDK tracer from
+If you cannot wrap the turn, pass context directly to the tracer from
 `beforeTurn()`. The context can come from agent state, Durable Object storage,
 auth state, or any place your agent can read during the turn.
 
@@ -212,7 +212,7 @@ async beforeTurn(): Promise<TurnConfig> {
   return {
     experimental_telemetry: {
       isEnabled: true,
-      tracer: getLatitude(this.env).getAiSdkTracer({
+      tracer: getLatitude(this.env).getTracer("cloudflare-think", {
         userId,
         sessionId,
         tags: ["cloudflare-think"],

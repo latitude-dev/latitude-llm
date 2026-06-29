@@ -196,7 +196,7 @@ describe("Latitude", () => {
     await result.shutdown()
   })
 
-  it("creates an AI SDK tracer from the active Latitude provider", async () => {
+  it("creates scoped tracers from the active Latitude provider", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
     const latitudeExporter = new InMemorySpanExporter()
     const opaqueProvider = { getTracer: () => ({}) as Tracer } satisfies TracerProvider
@@ -209,7 +209,7 @@ describe("Latitude", () => {
       disableBatch: true,
     })
 
-    const tracer = result.getAiSdkTracer()
+    const tracer = result.getTracer("cloudflare-think")
     const span = tracer.startSpan("ai-sdk-call")
     span.end()
 
@@ -221,7 +221,7 @@ describe("Latitude", () => {
     await result.shutdown()
   })
 
-  it("stamps per-turn Latitude context onto every span from getAiSdkTracer(context)", async () => {
+  it("stamps per-turn Latitude context onto every span from getTracer(scope, context)", async () => {
     const latitudeExporter = new InMemorySpanExporter()
 
     const result = new Latitude({
@@ -231,7 +231,7 @@ describe("Latitude", () => {
       disableBatch: true,
     })
 
-    const tracer = result.getAiSdkTracer({
+    const tracer = result.getTracer("cloudflare-think", {
       sessionId: "sess-1",
       userId: "user-1",
       tags: ["cloudflare-think"],
@@ -248,6 +248,7 @@ describe("Latitude", () => {
     const finished = latitudeExporter.getFinishedSpans()
     expect(finished).toHaveLength(2)
     for (const span of finished) {
+      expect(span.instrumentationScope.name).toBe("so.latitude.instrumentation.cloudflare-think")
       expect(span.attributes["session.id"]).toBe("sess-1")
       expect(span.attributes["user.id"]).toBe("user-1")
       expect(span.attributes["latitude.tags"]).toBe(JSON.stringify(["cloudflare-think"]))
