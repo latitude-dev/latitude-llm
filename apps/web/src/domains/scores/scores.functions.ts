@@ -1,5 +1,11 @@
-import { listScoresByTraceIdsUseCase, listTraceScoresUseCase, type Score, scoreDraftModeSchema } from "@domain/scores"
-import { ProjectId } from "@domain/shared"
+import {
+  listScoresByTraceIdsUseCase,
+  listTraceScoresUseCase,
+  type Score,
+  type ScoreListPage,
+  type ScoreSourceType,
+  scoreDraftModeSchema,
+} from "@domain/scores"
 import { ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
@@ -8,40 +14,59 @@ import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient } from "../../server/clients.ts"
 
-const toRecord = (score: Score) => ({
+export interface ScoreRecord {
+  readonly id: string
+  readonly organizationId: string
+  readonly projectId: string
+  readonly sessionId: string | null
+  readonly traceId: string | null
+  readonly spanId: string | null
+  readonly source: ScoreSourceType
+  readonly sourceId: string
+  readonly simulationId: string | null
+  readonly signalId: string | null
+  readonly value: number
+  readonly passed: boolean
+  readonly feedback: string
+  readonly metadata: { readonly [key: string]: {} }
+  readonly error: string | null
+  readonly errored: boolean
+  readonly duration: number
+  readonly tokens: number
+  readonly cost: number
+  readonly draftedAt: string | null
+  readonly annotatorId: string | null
+  readonly createdAt: string
+  readonly updatedAt: string
+}
+
+const toRecord = (score: Score): ScoreRecord => ({
   id: score.id as string,
-  organizationId: score.organizationId,
-  projectId: score.projectId,
-  sessionId: score.sessionId,
-  traceId: score.traceId,
-  spanId: score.spanId,
+  organizationId: score.organizationId as string,
+  projectId: score.projectId as string,
+  sessionId: score.sessionId ? (score.sessionId as string) : null,
+  traceId: score.traceId ? (score.traceId as string) : null,
+  spanId: score.spanId ? (score.spanId as string) : null,
   source: score.sourceType,
   sourceId: score.sourceId,
-  simulationId: score.simulationId,
-  signalId: score.signalId,
+  simulationId: score.simulationId ? (score.simulationId as string) : null,
+  signalId: score.signalId ? (score.signalId as string) : null,
   value: score.value,
   passed: score.passed,
   feedback: score.feedback,
-  metadata: score.metadata,
+  metadata: score.metadata as { [key: string]: {} },
   error: score.error,
   errored: score.errored,
   duration: score.duration,
   tokens: score.tokens,
   cost: score.cost,
   draftedAt: score.draftedAt ? score.draftedAt.toISOString() : null,
-  annotatorId: score.annotatorId,
+  annotatorId: score.annotatorId ? (score.annotatorId as string) : null,
   createdAt: score.createdAt.toISOString(),
   updatedAt: score.updatedAt.toISOString(),
 })
 
-export type ScoreRecord = ReturnType<typeof toRecord>
-
-const toListResult = (page: {
-  readonly items: readonly Score[]
-  readonly hasMore: boolean
-  readonly limit: number
-  readonly offset: number
-}) => ({
+const toListResult = (page: ScoreListPage) => ({
   items: page.items.map(toRecord),
   hasMore: page.hasMore,
   limit: page.limit,

@@ -5,7 +5,6 @@ import {
 } from "../../../../../../domains/annotations/annotations.collection.ts"
 import type { AnnotationRecord } from "../../../../../../domains/annotations/annotations.functions.ts"
 import { useScoresBySession } from "../../../../../../domains/scores/scores.collection.ts"
-import type { ScoreRecord } from "../../../../../../domains/scores/scores.functions.ts"
 import { ScoreList } from "../scores/score-list.tsx"
 import type { OpenTraceOptions } from "../session-detail-drawer.tsx"
 

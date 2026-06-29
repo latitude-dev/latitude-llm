@@ -8,9 +8,11 @@ import type { AnnotationSaveData } from "../annotations/annotation-list.tsx"
 import { isGlobalAnnotation } from "../annotations/hooks/use-annotation-navigation.ts"
 import { ReadOnlyScoreCard } from "./score-card.tsx"
 
-function isAnnotationScore(score: ScoreRecord): score is AnnotationRecord {
+function isAnnotationScore(score: ScoreRecord): boolean {
   return score.source === "annotation"
 }
+
+const asAnnotationRecord = (score: ScoreRecord): AnnotationRecord => score as unknown as AnnotationRecord
 
 /**
  * Presentational scores surface shared by the trace drawer and session panel:
@@ -79,7 +81,7 @@ export function ScoreList({
           <div className="flex flex-col gap-2 pt-4">
             {sortedScores.map((score) => {
               const isSelected = selectedScoreId === score.id
-              const annotation = isAnnotationScore(score) ? score : null
+              const annotation = isAnnotationScore(score) ? asAnnotationRecord(score) : null
               const isGlobal = annotation ? isGlobalAnnotation(annotation) : false
               const clickable = annotation !== null && !isGlobal && onScoreClick !== undefined
 

@@ -1,11 +1,13 @@
 import { createFakeScoreRepository } from "@domain/scores/testing"
-import { ProjectId, ScoreId, TraceId } from "@domain/shared"
+import { OrganizationId, ProjectId, ScoreId, SqlClient, TraceId } from "@domain/shared"
+import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { scoreSchema } from "../entities/score.ts"
 import { ScoreRepository } from "../ports/score-repository.ts"
 import { listScoresByTraceIdsUseCase, listTraceScoresUseCase } from "./list-trace-scores.ts"
 
+const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
 const traceId = TraceId("t".repeat(32))
 const otherTraceId = TraceId("u".repeat(32))
@@ -13,7 +15,7 @@ const otherTraceId = TraceId("u".repeat(32))
 const makeScore = (overrides: Record<string, unknown> = {}) =>
   scoreSchema.parse({
     id: ScoreId("s".repeat(24)),
-    organizationId: "o".repeat(24),
+    organizationId: organizationId as string,
     projectId,
     sessionId: null,
     traceId,
@@ -46,6 +48,14 @@ const listScoresForTraces = (scores: Map<string, ReturnType<typeof makeScore>>, 
   return { items, hasMore: false, limit: 50, offset: 0 }
 }
 
+const provideTestServices =
+  (repository: ReturnType<typeof createFakeScoreRepository>["repository"]) =>
+  <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+    effect.pipe(
+      Effect.provideService(ScoreRepository, repository),
+      Effect.provideService(SqlClient, createFakeSqlClient({ organizationId })),
+    )
+
 describe("listTraceScoresUseCase", () => {
   it("returns every score source for a trace", async () => {
     const custom = makeScore({ id: ScoreId("a".repeat(24)), sourceType: "custom", sourceId: "api" })
@@ -71,7 +81,7 @@ describe("listTraceScoresUseCase", () => {
     scores.set(annotation.id, annotation)
 
     const page = await Effect.runPromise(
-      listTraceScoresUseCase({ projectId, traceId }).pipe(Effect.provideService(ScoreRepository, repository)),
+      listTraceScoresUseCase({ projectId, traceId }).pipe(provideTestServices(repository)),
     )
 
     expect(page.items).toHaveLength(3)
@@ -99,7 +109,7 @@ describe("listScoresByTraceIdsUseCase", () => {
 
     const page = await Effect.runPromise(
       listScoresByTraceIdsUseCase({ projectId, traceIds: [traceId, otherTraceId] }).pipe(
-        Effect.provideService(ScoreRepository, repository),
+        provideTestServices(repository),
       ),
     )
 
