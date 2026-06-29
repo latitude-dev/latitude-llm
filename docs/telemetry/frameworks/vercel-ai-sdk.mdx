@@ -82,15 +82,6 @@ The Vercel AI SDK can emit OpenTelemetry spans through its `experimental_telemet
 
     await latitude.shutdown()
     ```
-
-    <Note>
-      `latitude.getAiSdkTelemetry()` passes a tracer from the provider Latitude actually exports
-      from, so it always routes spans correctly. When Latitude owns the global provider or attaches
-      its processor to an existing one, a plain `experimental_telemetry: { isEnabled: true }` works
-      too — but `getAiSdkTelemetry()` is also what keeps traces flowing in the fallback case where
-      Latitude logged that it could not attach to an already-registered provider. To wire the tracer
-      yourself instead, use `experimental_telemetry: { isEnabled: true, tracer: latitude.getTracer("vercelai") }`.
-    </Note>
   </Step>
 
 </Steps>

@@ -116,14 +116,6 @@ This is the fastest way to see Think model calls in Latitude. It does not use
       },
     } satisfies ExportedHandler<Env>
     ```
-
-    <Note>
-      `latitude.getAiSdkTelemetry()` passes a tracer from the provider Latitude exports from, so it
-      always routes spans correctly. It is strictly required only when Latitude logs that it fell
-      back to a Latitude-owned provider (it could not attach to an already-registered one);
-      otherwise a plain `experimental_telemetry: { isEnabled: true }` also works. To pass the tracer
-      manually instead, use `latitude.getTracer("vercelai")`.
-    </Note>
   </Step>
 
 </Steps>
