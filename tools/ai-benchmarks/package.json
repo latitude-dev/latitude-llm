@@ -34,7 +34,7 @@
     "diff": "8.0.4",
     "effect": "catalog:",
     "esbuild": "0.28.1",
-    "ink": "7.0.4",
+    "ink": "7.1.0",
     "listr2": "9.0.5",
     "papaparse": "5.5.3",
     "react": "catalog:",
