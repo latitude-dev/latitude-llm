@@ -105,9 +105,27 @@ This records Think model calls, tools, latency, tokens, prompts, and responses.
     } satisfies ExportedHandler<Env>
     ```
 
-    If your Worker does not expose secrets through `process.env`, keep a single
-    `Latitude` instance created from Worker `env` bindings. The runnable example
-    shows that wiring.
+    If your Worker exposes secrets through `process.env`, this is all you need.
+    Most Workers receive secrets through `env` bindings instead. In that case,
+    keep one `Latitude` instance per Worker isolate:
+
+    ```ts
+    let latitude: Latitude | undefined
+
+    function getLatitude(env: Env) {
+      latitude ??= new Latitude({
+        apiKey: env.LATITUDE_API_KEY,
+        project: env.LATITUDE_PROJECT_SLUG,
+        serviceName: "cloudflare-think-agent",
+      })
+
+      return latitude
+    }
+    ```
+
+    Then use `getLatitude(this.env).getTracer("cloudflare-think")` in
+    `beforeTurn()` and `getLatitude(this.env).flush()` in `onChatResponse()` /
+    `onChatError()`. Do not create `new Latitude()` inside `beforeTurn()`.
   </Step>
 </Steps>
 
