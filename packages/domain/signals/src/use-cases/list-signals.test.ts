@@ -17,7 +17,12 @@ import { type Signal, SignalState } from "../entities/signal.ts"
 import { createSignalCentroid } from "../helpers.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
 import { createFakeSignalRepository } from "../testing/fake-signal-repository.ts"
-import { type ListSignalsInput, listSignalsUseCase } from "./list-signals.ts"
+import {
+  type ListSignalsInput,
+  listSignalsAnalyticsUseCase,
+  listSignalsUseCase,
+  listSignalsWithAnalyticsUseCase,
+} from "./list-signals.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
@@ -201,7 +206,7 @@ describe("listSignalsUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      listSignalsUseCase({ organizationId, projectId, now }).pipe(
+      listSignalsWithAnalyticsUseCase({ organizationId, projectId, now }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(SignalRepository, signalRepository),
@@ -259,7 +264,7 @@ describe("listSignalsUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      listSignalsUseCase({
+      listSignalsWithAnalyticsUseCase({
         organizationId,
         projectId,
         lifecycleGroup: "active",
@@ -372,7 +377,7 @@ describe("listSignalsUseCase", () => {
     const { calls } = createSignalSearch([])
 
     const result = await Effect.runPromise(
-      listSignalsUseCase({
+      listSignalsWithAnalyticsUseCase({
         organizationId,
         projectId,
         limit: 2,
@@ -475,7 +480,7 @@ describe("listSignalsUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      listSignalsUseCase({ organizationId, projectId, now }).pipe(
+      listSignalsWithAnalyticsUseCase({ organizationId, projectId, now }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(SignalRepository, signalRepository),
@@ -614,7 +619,7 @@ describe("listSignalsUseCase", () => {
     sessionCount = 10
 
     const result = await Effect.runPromise(
-      listSignalsUseCase({
+      listSignalsWithAnalyticsUseCase({
         organizationId,
         projectId,
         lifecycleGroup: "active",
@@ -700,7 +705,7 @@ describe("listSignalsUseCase", () => {
     createSignalSearch([])
 
     const result = await Effect.runPromise(
-      listSignalsUseCase({ organizationId, projectId, now }).pipe(
+      listSignalsWithAnalyticsUseCase({ organizationId, projectId, now }).pipe(
         Effect.provide(
           Layer.mergeAll(
             Layer.succeed(SignalRepository, signalRepository),
@@ -752,7 +757,7 @@ describe("listSignalsUseCase", () => {
     const selectedTo = new Date("2026-04-08T23:59:59.999Z")
 
     await Effect.runPromise(
-      listSignalsUseCase({
+      listSignalsWithAnalyticsUseCase({
         organizationId,
         projectId,
         now,
@@ -898,7 +903,7 @@ describe("listSignalsUseCase", () => {
       sessionCount = 3
 
       const result = await Effect.runPromise(
-        listSignalsUseCase({
+        listSignalsWithAnalyticsUseCase({
           organizationId,
           projectId,
           ...(timeRange ? { timeRange } : {}),
@@ -1009,7 +1014,7 @@ describe("listSignalsUseCase", () => {
     sessionCount = 20
 
     const result = await Effect.runPromise(
-      listSignalsUseCase({
+      listSignalsWithAnalyticsUseCase({
         organizationId,
         projectId,
         search: {
@@ -1101,7 +1106,7 @@ describe("listSignalsUseCase", () => {
     sessionCount = 5
 
     const result = await Effect.runPromise(
-      listSignalsUseCase({
+      listSignalsWithAnalyticsUseCase({
         organizationId,
         projectId,
         sort: {
@@ -1174,7 +1179,7 @@ describe("listSignalsUseCase", () => {
     sessionCount = 4
 
     const result = await Effect.runPromise(
-      listSignalsUseCase({
+      listSignalsWithAnalyticsUseCase({
         organizationId,
         projectId,
         sort: {
@@ -1235,7 +1240,7 @@ describe("listSignalsUseCase", () => {
       sessionCount = 10
 
       return Effect.runPromise(
-        listSignalsUseCase({ organizationId, projectId, now, ...input.options }).pipe(
+        listSignalsWithAnalyticsUseCase({ organizationId, projectId, now, ...input.options }).pipe(
           Effect.provide(
             Layer.mergeAll(
               Layer.succeed(SignalRepository, signalRepository),
@@ -1333,7 +1338,6 @@ describe("listSignalsUseCase", () => {
           now,
           limit: 2,
           offset: 2,
-          includeAnalytics: false,
         }).pipe(
           Effect.provide(
             Layer.mergeAll(
@@ -1386,12 +1390,10 @@ describe("listSignalsUseCase", () => {
       })
 
       const result = await Effect.runPromise(
-        listSignalsUseCase({
+        listSignalsAnalyticsUseCase({
           organizationId,
           projectId,
           now,
-          includeAnalytics: true,
-          includeItems: false,
         }).pipe(
           Effect.provide(
             Layer.mergeAll(

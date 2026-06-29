@@ -11,7 +11,7 @@ import {
   getSignalAnalyticsUseCase,
   getSignalDetailsUseCase,
   getSignalTrendUseCase,
-  listSignalsUseCase,
+  listSignalsWithAnalyticsUseCase,
   listSignalTracesUseCase,
   SIGNAL_PRIORITIES,
   type SignalLifecycleCommand,
@@ -353,7 +353,7 @@ const listSignals = signalEndpoint({
             })
           : undefined
 
-        const result = yield* listSignalsUseCase({
+        const result = yield* listSignalsWithAnalyticsUseCase({
           organizationId: orgId,
           projectId: project.id,
           limit: query.limit,

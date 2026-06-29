@@ -62,7 +62,6 @@ export const buildSignalsExportUseCase = Effect.fn("issues.buildSignalsExport")(
       projectId: input.projectId,
       limit: ISSUES_EXPORT_BATCH_SIZE,
       offset,
-      includeAnalytics: false,
       ...(input.lifecycleGroup ? { lifecycleGroup: input.lifecycleGroup } : {}),
       ...(input.assigneeIds?.length ? { assigneeIds: [...input.assigneeIds] } : {}),
       ...(input.searchQuery ? { textSearchQuery: input.searchQuery } : {}),
