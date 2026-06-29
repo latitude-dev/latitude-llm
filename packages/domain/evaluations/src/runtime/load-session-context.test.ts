@@ -1,5 +1,12 @@
 import { ChSqlClient, ExternalUserId, OrganizationId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
-import { SessionRepository, type SessionToolSpan, type Span, SpanRepository, type TraceDetail } from "@domain/spans"
+import {
+  type SessionDetail,
+  SessionRepository,
+  type SessionToolSpan,
+  type Span,
+  SpanRepository,
+  type TraceDetail,
+} from "@domain/spans"
 import { createFakeSessionRepository, createFakeSpanRepository, stubListSpan } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -66,8 +73,52 @@ const traceDetail: TraceDetail = {
 
 const longInput = "x".repeat(5_000)
 
-const runLoader = (input: { spans: readonly Span[]; toolSpans: readonly SessionToolSpan[] }) => {
-  const { repository: sessionRepository } = createFakeSessionRepository()
+const sessionDetail: SessionDetail = {
+  organizationId,
+  projectId,
+  sessionId,
+  traceCount: 2,
+  traceIds: [traceA as string],
+  spanCount: 5,
+  errorCount: 0,
+  startTime: new Date("2026-01-01T00:00:00.000Z"),
+  endTime: new Date("2026-01-01T00:00:02.000Z"),
+  lastActivityTime: new Date("2026-01-01T00:00:02.000Z"),
+  durationNs: 2_000_000_000,
+  timeToFirstTokenNs: 100,
+  tokensInput: 200,
+  tokensOutput: 100,
+  tokensCacheRead: 0,
+  tokensCacheCreate: 0,
+  tokensReasoning: 0,
+  tokensTotal: 300,
+  costInputMicrocents: 600,
+  costOutputMicrocents: 399,
+  costTotalMicrocents: 999,
+  userId: ExternalUserId("rollup-user"),
+  userEmail: "",
+  simulationId: "",
+  tags: ["rollup"],
+  metadata: { src: "rollup" },
+  models: ["gpt-4o"],
+  providers: ["openai"],
+  serviceNames: ["web"],
+  rootSpanId: "",
+  rootSpanName: "root",
+  systemInstructions: [],
+  inputMessages: [],
+  lastInputMessages: [{ role: "user", parts: [{ type: "text", content: "rollup question" }] }],
+  outputMessages: [{ role: "assistant", parts: [{ type: "text", content: "rollup answer" }] }],
+}
+
+const runLoader = (input: {
+  spans: readonly Span[]
+  toolSpans: readonly SessionToolSpan[]
+  sessionDetail?: SessionDetail
+}) => {
+  const { repository: sessionRepository } = createFakeSessionRepository(
+    input.sessionDetail ? { findBySessionId: () => Effect.succeed(input.sessionDetail as SessionDetail) } : undefined,
+  )
   const { repository: spanRepository } = createFakeSpanRepository({
     listBySessionId: () => Effect.succeed(input.spans),
     listToolSpansBySessionId: () => Effect.succeed(input.toolSpans),
@@ -92,6 +143,43 @@ describe("loadScriptSessionContext", () => {
       { role: "user", content: "summarize the deploy" },
       { role: "assistant", content: "migrations, rollback, dashboards" },
     ])
+  })
+
+  it("builds conversation and aggregates from the session rollup when present", async () => {
+    const session = await runLoader({
+      sessionDetail,
+      spans: [span({ traceId: traceA, spanId: SpanId("a1".padEnd(16, "0")) })],
+      toolSpans: [],
+    })
+    // conversation comes from the rollup reconstruction (system + lastInput + outputs), not the trace
+    expect(session.conversation).toEqual([
+      { role: "user", content: "rollup question" },
+      { role: "assistant", content: "rollup answer" },
+    ])
+    // session-level aggregates come from the rollup, not the trace fallback (traceCount 1 / cost 75 / tokens 200)
+    expect(session.id).toBe("session-1")
+    expect(session.traceCount).toBe(2)
+    expect(session.cost.total).toBe(999)
+    expect(session.tokens.total).toBe(300)
+    expect(session.tags).toEqual(["rollup"])
+    // per-trace rollups are still assembled from the session's spans
+    expect(session.traces).toHaveLength(1)
+  })
+
+  it("falls back to the earliest span for per-trace duration when no root span is present", async () => {
+    const session = await runLoader({
+      spans: [
+        span({
+          traceId: traceA,
+          spanId: SpanId("a1".padEnd(16, "0")),
+          parentSpanId: "p".repeat(16), // no span with parentSpanId === "" → root falls back to group[0]
+          startTime: new Date("2026-01-01T00:00:00.000Z"),
+          endTime: new Date("2026-01-01T00:00:00.250Z"),
+        }),
+      ],
+      toolSpans: [],
+    })
+    expect(session.traces[0]?.duration).toBe(250_000_000)
   })
 
   it("groups spans into per-trace rollups (metrics, models, providers, finish reasons, status)", async () => {
