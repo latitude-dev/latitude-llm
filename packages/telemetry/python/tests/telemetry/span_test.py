@@ -1,5 +1,6 @@
 """Tests for tracer access via Latitude bootstrap."""
 
+import json
 import logging
 from unittest.mock import patch
 
@@ -10,6 +11,7 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 from latitude_telemetry import Latitude, init_latitude
+from latitude_telemetry.constants import ATTRIBUTES, SCOPE_LATITUDE
 from latitude_telemetry.sdk._deprecation import reset_project_slug_deprecation_warning_for_testing
 
 
@@ -51,6 +53,66 @@ class TestTracerAccess:
         with tracer.start_as_current_span("test-span") as span:
             assert span is not None
             span.set_attribute("test.key", "test-value")
+
+    def test_get_tracer_prefixes_latitude_scope(self):
+        latitude_exporter = InMemorySpanExporter()
+        lat = Latitude(
+            api_key="test-api-key",
+            project="test-project",
+            disable_batch=True,
+            tracer_provider=TracerProvider(),
+            exporter=latitude_exporter,
+        )
+
+        tracer = lat.get_tracer("cloudflare-think")
+        with tracer.start_as_current_span("ai-call"):
+            pass
+
+        lat.flush()
+
+        spans = latitude_exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert spans[0].instrumentation_scope.name == f"{SCOPE_LATITUDE}.cloudflare-think"
+
+        lat.shutdown()
+
+    def test_get_tracer_stamps_latitude_context_on_spans(self):
+        latitude_exporter = InMemorySpanExporter()
+        lat = Latitude(
+            api_key="test-api-key",
+            project="test-project",
+            disable_batch=True,
+            tracer_provider=TracerProvider(),
+            exporter=latitude_exporter,
+        )
+
+        tracer = lat.get_tracer(
+            "cloudflare-think",
+            {
+                "user_id": "user-1",
+                "session_id": "session-1",
+                "tags": ["think", "tool"],
+                "metadata": {"turn": 1},
+                "project": "project-override",
+            },
+        )
+        span = tracer.start_span("ai-call")
+        span.end()
+        with tracer.start_as_current_span("active-ai-call"):
+            pass
+        lat.flush()
+
+        spans = {span.name: span for span in latitude_exporter.get_finished_spans()}
+        assert set(spans) == {"ai-call", "active-ai-call"}
+        for finished_span in spans.values():
+            attrs = finished_span.attributes
+            assert attrs[ATTRIBUTES.user_id] == "user-1"
+            assert attrs[ATTRIBUTES.session_id] == "session-1"
+            assert json.loads(attrs[ATTRIBUTES.tags]) == ["think", "tool"]
+            assert json.loads(attrs[ATTRIBUTES.metadata]) == {"turn": 1}
+            assert attrs[ATTRIBUTES.project] == "project-override"
+
+        lat.shutdown()
 
     def test_init_latitude_keeps_dict_compatibility(self):
         """Test that init_latitude keeps the previous dict return shape."""

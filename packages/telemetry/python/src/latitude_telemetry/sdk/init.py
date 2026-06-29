@@ -15,12 +15,13 @@ from opentelemetry.propagators.composite import CompositePropagator
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 from opentelemetry.sdk.trace.export import SpanExporter
-from opentelemetry.trace import NoOpTracerProvider, ProxyTracerProvider
+from opentelemetry.trace import NoOpTracerProvider, ProxyTracerProvider, Tracer
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
 from latitude_telemetry.sdk._deprecation import warn_project_slug_deprecated
 from latitude_telemetry.sdk.instrumentations import register_latitude_instrumentations
-from latitude_telemetry.sdk.types import InstrumentationsInput, SmartFilterOptions
+from latitude_telemetry.sdk.tracer import get_latitude_tracer
+from latitude_telemetry.sdk.types import ContextOptions, InstrumentationsInput, SmartFilterOptions
 from latitude_telemetry.telemetry.latitude_span_processor import LatitudeSpanProcessor, LatitudeSpanProcessorOptions
 from latitude_telemetry.telemetry.redact_span_processor import RedactSpanProcessorOptions
 
@@ -176,6 +177,9 @@ class Latitude:
             return
 
         self._latitude_processor.shutdown()
+
+    def get_tracer(self, scope: str, context: ContextOptions | None = None) -> Tracer:
+        return get_latitude_tracer(self.provider, scope, context)
 
     def _register_shutdown_handlers(self) -> None:
         global _shutdown_handlers_registered
