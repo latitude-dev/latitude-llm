@@ -1,10 +1,10 @@
 import json
-from collections.abc import Generator, Sequence
-from contextlib import contextmanager
-from typing import Any, cast
+from collections.abc import Iterator, Sequence
+from typing import Any
 
 from opentelemetry.context import Context
 from opentelemetry.trace import Link, Span, SpanKind, Tracer
+from opentelemetry.util._decorator import _agnosticcontextmanager
 from opentelemetry.util.types import Attributes, AttributeValue
 
 from latitude_telemetry.constants import ATTRIBUTES, SCOPE_LATITUDE
@@ -23,7 +23,7 @@ def latitude_attributes_from_context(options: ContextOptions) -> LatitudeAttribu
     attributes: LatitudeAttributes = {}
     project = options.get("project")
     if project is None and "project_slug" in options:
-        warn_project_slug_deprecated("capture")
+        warn_project_slug_deprecated("get_tracer")
         project = options.get("project_slug")
 
     tags = options.get("tags")
@@ -47,7 +47,7 @@ def latitude_attributes_from_context(options: ContextOptions) -> LatitudeAttribu
     return attributes
 
 
-class _LatitudeTracer:
+class _LatitudeTracer(Tracer):
     def __init__(self, tracer: Tracer, attributes: LatitudeAttributes):
         self._tracer = tracer
         self._attributes = attributes
@@ -76,7 +76,7 @@ class _LatitudeTracer:
         span.set_attributes(self._attributes)
         return span
 
-    @contextmanager
+    @_agnosticcontextmanager
     def start_as_current_span(
         self,
         name: str,
@@ -88,7 +88,7 @@ class _LatitudeTracer:
         record_exception: bool = True,
         set_status_on_exception: bool = True,
         end_on_exit: bool = True,
-    ) -> Generator[Span, None, None]:
+    ) -> Iterator[Span]:
         with self._tracer.start_as_current_span(
             name,
             context=context,
@@ -110,7 +110,7 @@ class _LatitudeTracer:
 def with_latitude_attributes(tracer: Tracer, attributes: LatitudeAttributes) -> Tracer:
     if not attributes:
         return tracer
-    return cast(Tracer, _LatitudeTracer(tracer, attributes))
+    return _LatitudeTracer(tracer, attributes)
 
 
 def get_latitude_tracer(provider: Any, scope: str, context: ContextOptions | None = None) -> Tracer:

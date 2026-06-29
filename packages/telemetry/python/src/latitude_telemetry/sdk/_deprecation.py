@@ -25,7 +25,11 @@ def warn_project_slug_deprecated(site: str) -> None:
     if _project_slug_deprecation_warned:
         return
     _project_slug_deprecation_warned = True
-    option = "`project_slug`" if site == "constructor" else "`project_slug` on capture()"
+    option = {
+        "constructor": "`project_slug`",
+        "capture": "`project_slug` on capture()",
+        "get_tracer": "`project_slug` on get_tracer()",
+    }.get(site, f"`project_slug` on {site}")
     logger.warning(
         "[Latitude] %s is deprecated and will be removed in a future release — rename it to "
         "`project`. Both work for now; when both are passed, `project` wins.",
