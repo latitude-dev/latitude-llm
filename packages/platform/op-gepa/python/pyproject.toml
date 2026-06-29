@@ -13,7 +13,7 @@ dependencies = [
 dev = [
     "pytest-asyncio==1.4.0",
     "pytest-xdist==3.8.0",
-    "pytest==9.0.3",
+    "pytest==9.1.1",
     "respx==0.23.1",
     "pyright==1.1.409",
     "ruff==0.15.18",
