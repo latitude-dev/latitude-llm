@@ -9,6 +9,8 @@ This guide shows you how to send traces from a [**LiveKit Agents**](https://docs
 
 LiveKit Agents ships with built-in OpenTelemetry support and owns its own tracer provider. Instead of bootstrapping telemetry with the `Latitude` class, you attach a **`LatitudeSpanProcessor`** to LiveKit's provider — Latitude then receives the same spans LiveKit emits for LLM, agent, and tool activity. This works the same way for the **Python** (`livekit-agents`) and **Node.js** (`@livekit/agents`) SDKs.
 
+LiveKit is Latitude's **turnkey voice-agent integration**: STT, LLM, and TTS all run in one pipeline with native tracing. See the [Voice agents](/telemetry/voice-agents) guide for how this compares to [Vercel AI SDK v7](/telemetry/frameworks/vercel-ai-sdk-v7) and [ElevenLabs](/telemetry/frameworks/elevenlabs).
+
 <Check>
   You'll keep building your LiveKit agent exactly as you do today. Latitude
   observes the LLM spans the framework already produces.
@@ -132,6 +134,8 @@ LiveKit Agents ships with built-in OpenTelemetry support and owns its own tracer
 
 ## What you get
 
+### LLM turns (default)
+
 LiveKit's LLM spans carry both `gen_ai.*` metadata and the conversation content in custom `lk.*` attributes. Latitude parses both, so each LLM turn shows up with:
 
 - **Model and provider** — from `gen_ai.request.model` / `gen_ai.provider.name`
@@ -140,10 +144,16 @@ LiveKit's LLM spans carry both `gen_ai.*` metadata and the conversation content 
 - **Output messages** — the assistant response text and any tool calls the model emitted
 - **Tool definitions** — the function tools available to the agent
 
+Audio in the chat context (e.g. STT transcripts in `audio_content` items) is normalized to text parts in Latitude.
+
+### STT and TTS spans
+
+LiveKit also emits spans for speech-to-text, text-to-speech, and voice-activity detection. To include the full **STT → LLM → TTS** pipeline in every trace, disable the smart filter:
+
 <Note>
-  LiveKit produces many non-LLM spans (STT, TTS, VAD). By default the span
-  processor's smart filter forwards only LLM-relevant spans to keep your traces
-  focused. To export every LiveKit span, pass options:
+  By default the span processor forwards only LLM-relevant spans. Pass
+  `disable_smart_filter=True` (Python) or `disableSmartFilter: true` (TypeScript)
+  to export STT, TTS, and VAD spans as well:
 
   <CodeGroup>
     ```python Python

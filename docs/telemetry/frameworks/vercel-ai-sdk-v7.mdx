@@ -134,6 +134,20 @@ Telemetry is opt-out. To disable it for a specific call, set `telemetry: { isEna
 
 ---
 
+## Voice agents (STT → LLM → TTS)
+
+Vercel AI SDK 7 ships stable [`transcribe()`](https://sdk.vercel.ai/docs/reference/ai-sdk-core/transcribe) and [`generateSpeech()`](https://sdk.vercel.ai/docs/reference/ai-sdk-core/generate-speech) alongside text APIs — including on [AI Gateway](https://vercel.com/docs/ai-gateway). `@ai-sdk/otel` traces **`generateText` / `streamText` and tool loops automatically**, but does not yet emit spans for `transcribe()` or `generateSpeech()`.
+
+For a full voice pipeline, wrap STT and TTS in manual OpenTelemetry spans inside a `capture()` boundary. See the [Voice agents](/telemetry/voice-agents) guide for a complete STT → LLM → TTS example, session grouping, and how this compares to [LiveKit](/telemetry/frameworks/livekit) and [ElevenLabs](/telemetry/frameworks/elevenlabs).
+
+<Note>
+  `experimental_useRealtime` (browser WebSocket voice) does not produce server-side
+  `@ai-sdk/otel` spans. Use LiveKit or backend `capture()` around tool routes for
+  realtime observability.
+</Note>
+
+---
+
 ## Seeing Your Traces
 
 Once connected, traces appear automatically in Latitude:

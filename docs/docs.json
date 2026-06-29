@@ -78,6 +78,12 @@
         "pages": [
           "telemetry/start-tracing",
           {
+            "group": "Voice agents",
+            "pages": [
+              "telemetry/voice-agents"
+            ]
+          },
+          {
             "group": "SDKs",
             "pages": [
               "telemetry/typescript",
