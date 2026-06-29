@@ -86,8 +86,7 @@ export const updateSignalUseCase = (input: UpdateSignalInput) =>
         })
 
         if (nameChanged || parsed.filters !== undefined) {
-          const nextFilter =
-            parsed.filters !== undefined ? filterSetSchema.parse(nextFilters ?? {}) : undefined
+          const nextFilter = parsed.filters !== undefined ? filterSetSchema.parse(nextFilters ?? {}) : undefined
           yield* Effect.forEach(
             active.items,
             (evaluation) => {
