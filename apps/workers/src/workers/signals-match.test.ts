@@ -309,25 +309,23 @@ describe("runSignalsMatchJob", () => {
     await insertTraceRows([makeTraceRow()])
     // One active evaluation per signal (active-detector index), so each evaluation
     // gets its own signal; the worker scans active evaluations project-wide.
-    await pg.db
-      .insert(signals)
-      .values([
-        makeSignalRow({
-          id: "i".repeat(24),
-          uuid: "11111111-1111-4111-8111-111111111111",
-          filters: { tags: [{ op: "in", value: ["lifecycle"] }] },
-        }),
-        makeSignalRow({
-          id: "m".repeat(24),
-          uuid: "44444444-4444-4444-8444-444444444444",
-          filters: { tags: [{ op: "in", value: ["lifecycle"] }] },
-        }),
-        makeSignalRow({
-          id: "n".repeat(24),
-          uuid: "55555555-5555-4555-8555-555555555555",
-          filters: { tags: [{ op: "in", value: ["lifecycle"] }] },
-        }),
-      ])
+    await pg.db.insert(signals).values([
+      makeSignalRow({
+        id: "i".repeat(24),
+        uuid: "11111111-1111-4111-8111-111111111111",
+        filters: { tags: [{ op: "in", value: ["lifecycle"] }] },
+      }),
+      makeSignalRow({
+        id: "m".repeat(24),
+        uuid: "44444444-4444-4444-8444-444444444444",
+        filters: { tags: [{ op: "in", value: ["lifecycle"] }] },
+      }),
+      makeSignalRow({
+        id: "n".repeat(24),
+        uuid: "55555555-5555-4555-8555-555555555555",
+        filters: { tags: [{ op: "in", value: ["lifecycle"] }] },
+      }),
+    ])
     await pg.db.insert(evaluations).values([
       makeEvaluationRow({
         id: "e".repeat(24),

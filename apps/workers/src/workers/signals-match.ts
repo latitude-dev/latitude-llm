@@ -119,9 +119,7 @@ export const runSignalsMatchJob =
       const signalRepository = yield* SignalRepository
       const signalIds = [...new Set(activeEvaluations.map((evaluation) => SignalId(evaluation.signalId)))]
       const signals =
-        signalIds.length > 0
-          ? yield* signalRepository.findByIds({ projectId: traceDetail.projectId, signalIds })
-          : []
+        signalIds.length > 0 ? yield* signalRepository.findByIds({ projectId: traceDetail.projectId, signalIds }) : []
       const signalFiltersBySignalId = new Map(signals.map((signal) => [signal.id, signal.filters ?? null]))
       const evalBuilt = buildTraceEndEvaluationSelectionInputs(activeEvaluations, signalFiltersBySignalId)
 

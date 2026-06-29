@@ -72,7 +72,14 @@ export function EvaluationFilterModal({
   readonly signalId: string
   readonly onClose: () => void
 }) {
-  return <EvaluationFilterModalForm signalFilters={signalFilters} projectId={projectId} signalId={signalId} onClose={onClose} />
+  return (
+    <EvaluationFilterModalForm
+      signalFilters={signalFilters}
+      projectId={projectId}
+      signalId={signalId}
+      onClose={onClose}
+    />
+  )
 }
 
 function EvaluationFilterModalForm({
