@@ -5,38 +5,30 @@ description: Connect Cloudflare Think agents to Latitude for observability.
 
 ## Overview
 
-Cloudflare Think is built on the Vercel AI SDK. Think owns the internal
-`streamText` call, so enable Latitude telemetry from the `beforeTurn` hook
-instead of passing `experimental_telemetry` at a direct model call site.
+Cloudflare Think uses the Vercel AI SDK internally. Think owns the `streamText`
+call, so add Latitude telemetry in `beforeTurn()` instead of at a model call
+site.
 
-Use the quick setup first. Add capture lifecycle hooks only when you want to
-attach user ids, session ids, tags, metadata, or per-turn project routing.
-
-<Note>
-  This guide targets Think versions whose `TurnConfig` accepts
-  `experimental_telemetry`. If your installed Think version does not expose this
-  field, update `@cloudflare/think`.
-</Note>
+Start with the basic setup. Add user and session context only if you need traces
+to be attributed to a user or chat session.
 
 ---
 
 ## Requirements
 
-- A **Latitude account** and **API key**
-- A **Latitude project slug**
+- A Latitude API key
+- A Latitude project slug
 - A Cloudflare Workers project using `@cloudflare/think`
 - The `nodejs_compat` compatibility flag enabled in your Worker
 - `LATITUDE_API_KEY` and `LATITUDE_PROJECT_SLUG` configured as Worker secrets or variables
 
 ---
 
-## Quick Start
+## Basic Telemetry
 
-This is the fastest way to see Think model calls in Latitude. It does not use
-`capture`; AI SDK telemetry creates the spans.
+This records Think model calls, tools, latency, tokens, prompts, and responses.
 
 <Steps>
-
   <Step title="Install">
     <CodeGroup>
       ```bash npm
@@ -58,10 +50,6 @@ This is the fastest way to see Think model calls in Latitude. It does not use
   </Step>
 
   <Step title="Initialize Latitude once">
-    Create the Latitude instance lazily from the Worker environment. Then return
-    `experimental_telemetry` from `beforeTurn` with a Latitude-owned tracer so
-    Think forwards it to the AI SDK.
-
     ```ts
     import { Think, type TurnConfig } from "@cloudflare/think"
     import { Latitude } from "@latitude-data/telemetry"
@@ -92,12 +80,10 @@ This is the fastest way to see Think model calls in Latitude. It does not use
       }
 
       beforeTurn(): TurnConfig {
-        const latitude = getLatitude(this.env)
-
         return {
           experimental_telemetry: {
             isEnabled: true,
-            tracer: latitude.getAiSdkTracer(),
+            tracer: getLatitude(this.env).getAiSdkTracer(),
             functionId: "think-turn",
             metadata: { framework: "cloudflare-think" },
           },
@@ -119,42 +105,31 @@ This is the fastest way to see Think model calls in Latitude. It does not use
     } satisfies ExportedHandler<Env>
     ```
   </Step>
-
 </Steps>
 
 ---
 
-## Add Capture Context
+## Add User And Session Context
 
-Use `capture()` when you want each Think turn to carry Latitude context such as
-`userId`, `sessionId`, `tags`, `metadata`, or a per-turn `project`. Capture does
-not create AI SDK spans by itself; keep `latitude.getAiSdkTracer()` in
-`beforeTurn`.
+If your app uses Think's default WebSocket chat entrypoint, pass context from the
+client with `useAgentChat({ body })`.
 
-<Warning>
-  Do not use the `capture.start()` / `scope.end()` lifecycle API on Cloudflare
-  Workers. It relies on `AsyncLocalStorage.enterWith()`, which the Workers runtime
-  [does not implement](https://developers.cloudflare.com/workers/runtime-apis/nodejs/asynclocalstorage/)
-  and which throws at runtime. Use the callback form shown below — it relies on
-  `AsyncLocalStorage.run()`, which Workers does support.
-</Warning>
+```tsx
+import { useAgentChat } from "@cloudflare/think/react"
 
-Wrap the whole turn with the callback form of `capture()` before calling
-`super.runTurn()`. Think runs `beforeTurn` and the model call inside
-`super.runTurn`, so the AI SDK spans land under the active Latitude context:
+const { messages, sendMessage } = useAgentChat({
+  agent,
+  body: () => ({
+    userId: currentUser.id,
+    sessionId: session.id,
+  }),
+})
+```
+
+Then read that context in `beforeTurn()` and pass it to `getAiSdkTracer()`:
 
 ```ts
-import {
-  Think,
-  type RunTurnOptions,
-  type RunTurnStream,
-  type RunTurnSubmit,
-  type RunTurnWait,
-  type SubmitMessagesResult,
-  type TurnConfig,
-  type TurnResult,
-} from "@cloudflare/think"
-import { capture } from "@latitude-data/telemetry"
+import { Think, type TurnConfig, type TurnContext } from "@cloudflare/think"
 
 function stringFromBody(body: Record<string, unknown> | undefined, key: string) {
   const value = body?.[key]
@@ -162,44 +137,99 @@ function stringFromBody(body: Record<string, unknown> | undefined, key: string) 
 }
 
 export class MyAgent extends Think<Env> {
-  beforeTurn(): TurnConfig {
+  beforeTurn(ctx: TurnContext): TurnConfig {
     return {
       experimental_telemetry: {
         isEnabled: true,
-        tracer: getLatitude(this.env).getAiSdkTracer(),
+        tracer: getLatitude(this.env).getAiSdkTracer({
+          userId: stringFromBody(ctx.body, "userId"),
+          sessionId: stringFromBody(ctx.body, "sessionId"),
+          tags: ["cloudflare-think"],
+          metadata: { framework: "cloudflare-think" },
+        }),
         functionId: "think-turn",
-        metadata: { framework: "cloudflare-think" },
       },
     }
   }
+}
+```
 
-  runTurn(options: RunTurnWait): Promise<TurnResult>
-  runTurn(options: RunTurnSubmit): Promise<SubmitMessagesResult>
-  runTurn(options: RunTurnStream): Promise<void>
-  runTurn(options: RunTurnOptions): Promise<TurnResult | SubmitMessagesResult | void> {
-    const body = "body" in options ? options.body : undefined
-    const runParent = () =>
-      (super.runTurn as (opts: RunTurnOptions) => Promise<TurnResult | SubmitMessagesResult | void>)(options)
+This is the recommended setup for most Think apps.
 
-    return Promise.resolve(
-      capture("cloudflare-think-turn", runParent, {
-        userId: stringFromBody(body, "userId"),
-        sessionId: stringFromBody(body, "sessionId"),
+---
+
+## Programmatic Turns
+
+If your app starts Think turns with your own `runTurn()` call, wrap that call
+with `capture()`.
+
+```ts
+import { capture } from "@latitude-data/telemetry"
+
+export class MyAgent extends Think<Env> {
+  async runSupportTurn(input: string, userId: string, sessionId: string) {
+    return capture(
+      "cloudflare-think-turn",
+      () => this.runTurn({ input }),
+      {
+        userId,
+        sessionId,
         tags: ["cloudflare-think"],
-        metadata: { continuation: "continuation" in options ? Boolean(options.continuation) : false },
-      }),
+        metadata: { framework: "cloudflare-think" },
+      },
     )
   }
 }
 ```
 
-<Note>
-  `userId`/`sessionId` are read from the `options.body` passed to your
-  wrapper/override before calling `super.runTurn()`. Do not rely on
-  `beforeTurn(ctx.body)` for normal programmatic `wait` turns; current Think
-  versions accept `body` on `runTurn()` but do not forward it into `beforeTurn`
-  on that path.
-</Note>
+Keep `getAiSdkTracer()` in `beforeTurn()`:
+
+```ts
+beforeTurn(): TurnConfig {
+  return {
+    experimental_telemetry: {
+      isEnabled: true,
+      tracer: getLatitude(this.env).getAiSdkTracer(),
+      functionId: "think-turn",
+    },
+  }
+}
+```
+
+<Warning>
+  Do not use `capture.start()` / `scope.end()` on Cloudflare Workers. Use
+  `capture()` as a callback wrapper instead.
+</Warning>
+
+---
+
+## If You Cannot Wrap The Turn
+
+If you cannot wrap the turn, pass context directly to the AI SDK tracer from
+`beforeTurn()`. The context can come from agent state, Durable Object storage,
+auth state, or any place your agent can read during the turn.
+
+```ts
+async beforeTurn(): Promise<TurnConfig> {
+  const userId = await this.ctx.storage.get<string>("userId")
+  const sessionId = await this.ctx.storage.get<string>("sessionId")
+
+  return {
+    experimental_telemetry: {
+      isEnabled: true,
+      tracer: getLatitude(this.env).getAiSdkTracer({
+        userId,
+        sessionId,
+        tags: ["cloudflare-think"],
+      }),
+      functionId: "think-turn",
+    },
+  }
+}
+```
+
+This records the model and tool spans with the right context. It does not add a
+separate parent `cloudflare-think-turn` span.
 
 ---
 
@@ -207,11 +237,8 @@ export class MyAgent extends Think<Env> {
 
 The Latitude repository includes a runnable Think example at
 [`examples/cloudflare-think-app`](https://github.com/latitude-dev/latitude-llm/tree/development/packages/telemetry/typescript/examples/cloudflare-think-app).
-It includes a
-Worker entrypoint with a `getWeather` tool and a local verifier that sends a
-deterministic Think-like AI SDK turn to `http://localhost:3002`, flushes
-Latitude, and polls ClickHouse until both the model spans and the `ai.toolCall`
-span arrive.
+It includes a `getWeather` tool, a small QA page, and a local verifier that
+checks model spans, tool spans, `userId`, and `sessionId` against local Latitude.
 
 ---
 
@@ -219,6 +246,6 @@ span arrive.
 
 Once connected, traces appear automatically in Latitude:
 
-1. Open your **project** in the Latitude dashboard
+1. Open your project in the Latitude dashboard
 2. Send a message to your Think agent
-3. The turn appears with the model call, input/output messages, latency, token usage, and errors
+3. The turn appears with model calls, tool calls, messages, latency, token usage, and errors
