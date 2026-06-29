@@ -550,6 +550,124 @@ describe("SpanRepository", () => {
     })
   })
 
+  describe("listToolSpansBySessionId", () => {
+    const SESSION_ID = SessionId("tool-session")
+    const TRACE_A = TraceId("11111111111111111111111111111111")
+    const TRACE_B = TraceId("22222222222222222222222222222222")
+    const ORPHAN_TRACE = TraceId("33333333333333333333333333333333")
+
+    const insertToolFixture = () =>
+      runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          // trace A: the same tool span re-ingested — newest ingested_at (output "NEW") must win
+          makeSpanRow({
+            session_id: SESSION_ID,
+            trace_id: TRACE_A,
+            span_id: "aaaa111111111111",
+            operation: "execute_tool",
+            tool_name: "search",
+            tool_input: '{"q":"x"}',
+            tool_output: "OLD",
+            status_code: 1,
+            start_time: "2026-03-01 00:00:00.000000000",
+            end_time: "2026-03-01 00:00:00.500000000",
+            ingested_at: "2026-03-01 00:00:00.000",
+          }),
+          makeSpanRow({
+            session_id: SESSION_ID,
+            trace_id: TRACE_A,
+            span_id: "aaaa111111111111",
+            operation: "execute_tool",
+            tool_name: "search",
+            tool_input: '{"q":"x"}',
+            tool_output: "NEW",
+            status_code: 1,
+            start_time: "2026-03-01 00:00:00.000000000",
+            end_time: "2026-03-01 00:00:00.500000000",
+            ingested_at: "2026-03-01 00:00:01.000",
+          }),
+          // trace A: a non-tool span — excluded (operation != execute_tool)
+          makeSpanRow({
+            session_id: SESSION_ID,
+            trace_id: TRACE_A,
+            span_id: "aaaa222222222222",
+            operation: "chat",
+            start_time: "2026-03-01 00:00:02.000000000",
+            end_time: "2026-03-01 00:00:03.000000000",
+            ingested_at: "2026-03-01 00:00:02.000",
+          }),
+          // trace B: a failing tool span (status error)
+          makeSpanRow({
+            session_id: SESSION_ID,
+            trace_id: TRACE_B,
+            span_id: "bbbb111111111111",
+            operation: "execute_tool",
+            tool_name: "delete",
+            tool_input: "{}",
+            tool_output: "boom",
+            status_code: 2,
+            error_type: "ToolError",
+            start_time: "2026-03-01 00:01:00.000000000",
+            end_time: "2026-03-01 00:01:00.100000000",
+            ingested_at: "2026-03-01 00:01:00.000",
+          }),
+          // tool span in a different session — excluded
+          makeSpanRow({
+            session_id: "session-other",
+            trace_id: TraceId("44444444444444444444444444444444"),
+            span_id: "cccc111111111111",
+            operation: "execute_tool",
+            tool_name: "leak",
+            start_time: "2026-03-01 00:02:00.000000000",
+            end_time: "2026-03-01 00:02:01.000000000",
+            ingested_at: "2026-03-01 00:02:00.000",
+          }),
+          // orphan single-trace session (empty session_id), keyed by trace id
+          makeSpanRow({
+            session_id: "",
+            trace_id: ORPHAN_TRACE,
+            span_id: "dddd111111111111",
+            operation: "execute_tool",
+            tool_name: "orphan_tool",
+            start_time: "2026-03-01 00:03:00.000000000",
+            end_time: "2026-03-01 00:03:00.250000000",
+            ingested_at: "2026-03-01 00:03:00.000",
+          }),
+        ]),
+      )
+
+    it("returns the session's execute_tool spans, deduped, ordered by start time, with mapped I/O and error", async () => {
+      await insertToolFixture()
+      const tools = await runCh(
+        repo.listToolSpansBySessionId({ organizationId: ORG_ID, projectId: PROJECT_ID, sessionId: SESSION_ID }),
+      )
+
+      expect(tools.map((t) => t.name)).toEqual(["search", "delete"])
+      expect(tools[0]).toMatchObject({
+        traceId: TRACE_A,
+        name: "search",
+        input: '{"q":"x"}',
+        output: "NEW",
+        error: false,
+      })
+      expect(tools[0]?.durationNs).toBeGreaterThan(0)
+      expect(tools[1]).toMatchObject({ traceId: TRACE_B, name: "delete", error: true })
+    })
+
+    it("matches orphan single-trace sessions keyed by trace id", async () => {
+      await insertToolFixture()
+      const tools = await runCh(
+        repo.listToolSpansBySessionId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          sessionId: SessionId(ORPHAN_TRACE as string),
+        }),
+      )
+
+      expect(tools.map((t) => t.name)).toEqual(["orphan_tool"])
+    })
+  })
+
   describe("findBySpanId", () => {
     it("scopes by project and returns the latest ingested row without FINAL", async () => {
       await runCh(

@@ -1,5 +1,5 @@
 import { createFakeAI } from "@domain/ai/testing"
-import { ScriptRuntimeError } from "@domain/sandbox"
+import { minimalScriptSession, ScriptRuntimeError } from "@domain/sandbox"
 import { createFakeScriptRuntime } from "@domain/sandbox/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -13,16 +13,10 @@ import {
 
 const evaluationId = "eeeeeeeeeeeeeeeeeeeeeeee"
 
-const allMessages = [
-  {
-    role: "user",
-    parts: [{ type: "text", content: "Please summarize the deployment checklist." }],
-  },
-  {
-    role: "assistant",
-    parts: [{ type: "text", content: "Verify migrations, rollback steps, and dashboards after deploy." }],
-  },
-] as const
+const session = minimalScriptSession([
+  { role: "user", content: "Please summarize the deployment checklist." },
+  { role: "assistant", content: "Verify migrations, rollback steps, and dashboards after deploy." },
+])
 
 const validScript = wrapPromptAsEvaluationScript(
   [
@@ -38,11 +32,7 @@ const validScript = wrapPromptAsEvaluationScript(
 const validInput = liveEvaluationExecutionInputSchema.parse({
   evaluationId,
   script: validScript,
-  issue: {
-    name: "Deployment checklist omission",
-    description: "The assistant fails to mention key deployment steps.",
-  },
-  conversation: allMessages,
+  session,
 })
 
 describe("executeLiveEvaluationUseCase", () => {
@@ -52,17 +42,14 @@ describe("executeLiveEvaluationUseCase", () => {
     expect(
       liveEvaluationExecutionInputSchema.safeParse({
         ...validInput,
-        issue: {
-          name: "",
-          description: validInput.issue.description,
-        },
+        script: "",
       }).success,
     ).toBe(false)
 
     expect(
       liveEvaluationExecutionInputSchema.safeParse({
         ...validInput,
-        conversation: ["not-a-message"],
+        session: "not-a-session",
       }).success,
     ).toBe(false)
   })
@@ -132,8 +119,7 @@ describe("executeLiveEvaluationUseCase", () => {
     )
     expect(fakeRuntime.calls.compile).toHaveLength(1)
     expect(fakeRuntime.calls.run).toHaveLength(1)
-    expect(fakeRuntime.calls.run[0]?.context.conversation[0]?.role).toBe("user")
-    expect(fakeRuntime.calls.run[0]?.context.issue?.name).toBe("Deployment checklist omission")
+    expect(fakeRuntime.calls.run[0]?.context.session.conversation[0]?.role).toBe("user")
     expect(aiCalls.generate).toHaveLength(0)
   })
 

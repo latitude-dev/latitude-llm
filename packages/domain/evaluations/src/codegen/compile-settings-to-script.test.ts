@@ -25,4 +25,11 @@ describe("compileSettingsToScript", () => {
     const interpolations = script.match(/\$\{[^}]+\}/g) ?? []
     expect(interpolations).toEqual([EVALUATION_CONVERSATION_PLACEHOLDER])
   })
+
+  it("interpolates session.conversation, not the legacy bare conversation global", () => {
+    expect(EVALUATION_CONVERSATION_PLACEHOLDER).toBe("${session.conversation}")
+    const script = compileSettingsToScript({ kind: "judge", criteria: "x" })
+    expect(script).toContain("${session.conversation}")
+    expect(script).not.toContain("${conversation}")
+  })
 })

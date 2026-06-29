@@ -1,4 +1,5 @@
 import type { OptimizationCandidate, OptimizationTrajectory } from "@domain/optimizations"
+import { minimalScriptSession } from "@domain/sandbox"
 import { Effect } from "effect"
 import type { HydratedEvaluationAlignmentExample } from "../../alignment/types.ts"
 import {
@@ -19,11 +20,7 @@ export const evaluateOptimizationCandidate = Effect.fn("evaluations.evaluateOpti
 
   const execution = yield* executeEvaluationScriptSandboxed({
     script: input.candidate.text,
-    conversation: input.example.conversation,
-    issue: {
-      name: input.signalName,
-      description: input.signalDescription,
-    },
+    session: minimalScriptSession(input.example.conversation),
     telemetry: buildEvaluationOptimizationJudgeTelemetryCapture({
       scope: input.judgeTelemetry,
       candidateHash: input.candidate.hash,

@@ -5,13 +5,13 @@
  *
  * - `__hostLlm(call)`   — async host bridge behind `llm()` (only for llm-capability runs)
  * - `__hostParse(v, d)` — sync host bridge behind `parse()` (real Zod runs host-side)
- * - `__contextData`     — `{ conversation, issue?, signal? }` plain data
+ * - `__contextData`     — `{ session }` plain data (the only runtime context)
  *
  * The `z` builders produce serializable schema descriptors (see
  * `@domain/sandbox` `schema-descriptor.ts`), not real Zod schemas: schemas
  * only exist to cross the boundary into `llm()` and `parse()`, both performed
- * by the host. `conversation` stringifies as `[role] content` lines so stored
- * judge templates interpolating `${conversation}` keep their exact prompt.
+ * by the host. `session.conversation` stringifies as `[role] content` lines so
+ * judge templates interpolating `${session.conversation}` keep their exact prompt.
  */
 export const SANDBOX_PRELUDE = `;(() => {
   "use strict"
@@ -89,14 +89,21 @@ export const SANDBOX_PRELUDE = `;(() => {
     }
   }
 
-  const conversation = (bootstrap && bootstrap.conversation) || []
+  const deepFreeze = (value) => {
+    if (value && typeof value === "object" && !Object.isFrozen(value)) {
+      Object.freeze(value)
+      for (const key of Object.keys(value)) deepFreeze(value[key])
+    }
+    return value
+  }
+
+  const session = (bootstrap && bootstrap.session) || { conversation: [], traces: [] }
+  const conversation = session.conversation || []
   Object.defineProperty(conversation, "toString", {
     value: () => conversation.map((message) => "[" + message.role + "] " + message.content).join("\\n"),
   })
-  for (const message of conversation) Object.freeze(message)
-  Object.freeze(conversation)
-  globalThis.conversation = conversation
-  if (bootstrap && bootstrap.issue) globalThis.issue = Object.freeze(bootstrap.issue)
-  if (bootstrap && bootstrap.signal) globalThis.signal = Object.freeze(bootstrap.signal)
+  session.conversation = conversation
+  // Deep-freeze the whole payload so a script cannot mutate the session (traces, tools, metrics) it reads.
+  globalThis.session = deepFreeze(session)
 })()
 `

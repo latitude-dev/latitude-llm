@@ -141,6 +141,7 @@ export {
   toEvaluationExecutionResult,
   wrapPromptAsEvaluationScript,
 } from "./runtime/evaluation-execution.ts"
+export { loadScriptSessionContext } from "./runtime/load-session-context.ts"
 export { executeEvaluationScriptSandboxed } from "./runtime/sandbox-execution.ts"
 export { collectAlignmentExamplesUseCase } from "./use-cases/alignment/collect-alignment-examples.ts"
 export { evaluateBaselineDraftUseCase } from "./use-cases/alignment/evaluate-baseline-draft.ts"
@@ -173,12 +174,10 @@ export {
 export {
   type ExecuteLiveEvaluationError,
   executeLiveEvaluationUseCase,
-  type LiveEvaluationConversationInput,
   type LiveEvaluationExecutionInput,
   type LiveEvaluationExecutionResult,
   type LiveEvaluationResultPayload,
   type LiveEvaluationSignalContext,
-  liveEvaluationConversationInputSchema,
   liveEvaluationExecutionInputSchema,
   liveEvaluationExecutionResultSchema,
   liveEvaluationResultPayloadSchema,

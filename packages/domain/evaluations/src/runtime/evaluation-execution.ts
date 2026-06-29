@@ -26,7 +26,7 @@ if (result.passed) {
   return Failed(0, result.feedback)
 }`
 
-export const EVALUATION_CONVERSATION_PLACEHOLDER = ["${", "conversation}"].join("")
+export const EVALUATION_CONVERSATION_PLACEHOLDER = ["${", "session.conversation}"].join("")
 
 export interface EvaluationConversationMessage {
   readonly role: string

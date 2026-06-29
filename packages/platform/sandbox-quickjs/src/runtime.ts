@@ -279,11 +279,7 @@ export const createQuickJsScriptRuntime = (): ScriptRuntimeShape => {
       }
       installHostParse(context)
 
-      const contextData = jsonToHandle(context, {
-        conversation: input.context.conversation,
-        ...(input.context.issue !== undefined ? { issue: input.context.issue } : {}),
-        ...(input.context.signal !== undefined ? { signal: input.context.signal } : {}),
-      })
+      const contextData = jsonToHandle(context, { session: input.context.session })
       context.setProp(context.global, "__contextData", contextData)
       contextData.dispose()
 

@@ -11,6 +11,8 @@ import {
 import {
   type ClickHouseClient,
   ScoreAnalyticsRepositoryLive,
+  SessionRepositoryLive,
+  SpanRepositoryLive,
   TraceRepositoryLive,
   withClickHouse,
 } from "@platform/db-clickhouse"
@@ -161,7 +163,7 @@ export const createLiveEvaluationsWorker = ({
       Effect.provide(RedisBillingSpendReservationLive(rdClient)),
       Effect.provide(RedisDetectorHealthTrackerLive(rdClient)),
       withClickHouse(
-        Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),
+        Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive, SessionRepositoryLive, SpanRepositoryLive),
         chClient,
         OrganizationId(payload.organizationId),
       ),

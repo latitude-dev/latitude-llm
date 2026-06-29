@@ -29,13 +29,14 @@ import {
   type SqlClient,
   TraceId,
 } from "@domain/shared"
-import { type TraceDetail, TraceRepository } from "@domain/spans"
+import { type SessionRepository, type SpanRepository, type TraceDetail, TraceRepository } from "@domain/spans"
 import { Cause, Effect, Exit } from "effect"
 import type { Evaluation } from "../../entities/evaluation.ts"
 import { getLiveEvaluationEligibility } from "../../helpers.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
 import { EvaluationSignalRepository } from "../../ports/evaluation-signal-repository.ts"
 import { buildEvaluationJudgeLiveTelemetryCapture } from "../../runtime/ai-telemetry.ts"
+import { loadScriptSessionContext } from "../../runtime/load-session-context.ts"
 import {
   executeLiveEvaluationUseCase,
   type LiveEvaluationExecutionResult,
@@ -239,12 +240,17 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       } satisfies RunLiveEvaluationResult
     }
 
+    const session = yield* loadScriptSessionContext({
+      organizationId: OrganizationId(input.organizationId),
+      projectId,
+      traceDetail,
+    })
+
     const executionStartedAt = performance.now()
     const execution = yield* executeLiveEvaluationUseCase({
       evaluationId: evaluation.id,
       script: evaluation.script,
-      issue: signalContext,
-      conversation: traceDetail.allMessages,
+      session,
       telemetry: buildEvaluationJudgeLiveTelemetryCapture({
         organizationId: input.organizationId,
         projectId: input.projectId,
@@ -410,7 +416,9 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     | ScoreAnalyticsRepository
     | ScoreRepository
     | ScriptRuntime
+    | SessionRepository
     | SettingsReader
+    | SpanRepository
     | SqlClient
     | StripeSubscriptionLookup
     | TraceRepository

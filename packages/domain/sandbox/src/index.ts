@@ -41,11 +41,15 @@ export {
   type HostLlmFunction,
   type HostLlmResult,
   type ScriptConversationMessage,
+  type ScriptCostBreakdown,
   type ScriptRunContext,
   type ScriptRunInput,
   ScriptRuntime,
   type ScriptRuntimeShape,
-  type ScriptSubjectContext,
+  type ScriptSessionContext,
+  type ScriptTokenBreakdown,
+  type ScriptToolContext,
+  type ScriptTraceContext,
 } from "./ports/script-runtime.ts"
 export {
   type BaseSchemaDescriptor,
@@ -53,3 +57,4 @@ export {
   type SchemaDescriptor,
   schemaDescriptorSchema,
 } from "./schema-descriptor.ts"
+export { minimalScriptSession } from "./script-session.ts"
