@@ -15,18 +15,12 @@ import {
 } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  GroupIcon,
-  ListTreeIcon,
-  MessageSquareIcon,
-  MessagesSquareIcon,
-} from "lucide-react"
+import { ArrowDownIcon, ArrowUpIcon, GaugeIcon, GroupIcon, ListTreeIcon, MessagesSquareIcon } from "lucide-react"
 import { type ReactNode, use, useCallback, useEffect, useMemo, useState } from "react"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
-import { useAnnotationsByTrace } from "../../../../../domains/annotations/annotations.collection.ts"
 import type { AnnotationRecord } from "../../../../../domains/annotations/annotations.functions.ts"
+import { useScoresByTrace } from "../../../../../domains/scores/scores.collection.ts"
+import type { ScoreRecord } from "../../../../../domains/scores/scores.functions.ts"
 import { useSpansByTraceCollection } from "../../../../../domains/spans/spans.collection.ts"
 import { TraceScopeContext } from "../../../../../domains/traces/trace-scope.tsx"
 import { useTraceDetail } from "../../../../../domains/traces/traces.collection.ts"
@@ -35,18 +29,24 @@ import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { AddTraceToDatasetAction } from "./add-trace-to-dataset-action.tsx"
 import { isGlobalAnnotation } from "./annotations/hooks/use-annotation-navigation.ts"
 import { useConversationAnnotationFocus } from "./annotations/hooks/use-conversation-annotation-focus.ts"
-import { TraceAnnotationsList } from "./annotations/trace-annotations-list.tsx"
 import { useTraceTimeline } from "./conversation-timeline/use-trace-timeline.ts"
+import { TraceScoresList } from "./scores/trace-scores-list.tsx"
 import { ConversationTab } from "./trace-detail-drawer/tabs/conversation-tab.tsx"
 import { useSpanFilters } from "./trace-detail-drawer/tabs/spans-tab/use-span-filters.ts"
 import { SpansTab } from "./trace-detail-drawer/tabs/spans-tab.tsx"
 import { TraceTab } from "./trace-detail-drawer/tabs/trace-tab.tsx"
 import { TraceCommandPaletteContributor } from "./trace-detail-drawer/trace-command-palette-contributor.tsx"
 
-export type TraceDetailTabId = "trace" | "conversation" | "spans" | "annotations"
+export type TraceDetailTabId = "trace" | "conversation" | "spans" | "scores"
 
 export function isTraceDetailTab(value: string): value is TraceDetailTabId {
-  return value === "trace" || value === "conversation" || value === "spans" || value === "annotations"
+  if (value === "annotations") return true
+  return value === "trace" || value === "conversation" || value === "spans" || value === "scores"
+}
+
+export function normalizeTraceDetailTab(value: string): TraceDetailTabId {
+  if (value === "annotations") return "scores"
+  return isTraceDetailTab(value) ? value : "trace"
 }
 
 type TabId = TraceDetailTabId
@@ -68,34 +68,34 @@ const TABS: TabOption<TabId>[] = [
     icon: <Icon icon={ListTreeIcon} size="sm" />,
   },
   {
-    id: "annotations",
-    label: "Annotations",
-    icon: <Icon icon={MessageSquareIcon} size="sm" />,
+    id: "scores",
+    label: "Scores",
+    icon: <Icon icon={GaugeIcon} size="sm" />,
   },
 ]
 
 const tabCountPillClass =
   "inline-flex min-h-5 min-w-[1.125rem] shrink-0 items-center justify-center rounded-full bg-muted px-1.5 text-[0.6875rem] font-medium leading-none text-muted-foreground"
 
-function getAnnotationTabSuffix({
-  annotationsByTraceError,
-  annotationsByTraceLoading,
-  annotationCount,
+function getScoresTabSuffix({
+  scoresByTraceError,
+  scoresByTraceLoading,
+  scoreCount,
 }: {
-  readonly annotationsByTraceError: boolean
-  readonly annotationsByTraceLoading: boolean
-  readonly annotationCount: number
+  readonly scoresByTraceError: boolean
+  readonly scoresByTraceLoading: boolean
+  readonly scoreCount: number
 }): ReactNode {
-  if (annotationsByTraceError) {
+  if (scoresByTraceError) {
     return <span className={tabCountPillClass}>–</span>
   }
-  if (annotationsByTraceLoading) {
+  if (scoresByTraceLoading) {
     return null
   }
-  if (annotationCount === 0) {
+  if (scoreCount === 0) {
     return null
   }
-  return <span className={cn(tabCountPillClass, "tabular-nums")}>{annotationCount}</span>
+  return <span className={cn(tabCountPillClass, "tabular-nums")}>{scoreCount}</span>
 }
 
 function getSpansTabSuffix(spanCount: number | undefined): ReactNode {
@@ -153,9 +153,10 @@ function TraceDetailDrawerWithUrlTabs(props: Omit<TraceDetailDrawerProps, "urlSy
   // Default to Conversation when arriving from an active search so the
   // search-match autoscroll/highlight lands on a hit instead of the trace tab.
   const defaultTab = (props.searchQuery?.length ?? 0) > 0 ? "conversation" : "trace"
-  const [activeTab, setActiveTab] = useParamState("detailTab", defaultTab, {
+  const [rawActiveTab, setActiveTab] = useParamState("detailTab", defaultTab, {
     validate: isTraceDetailTab,
   })
+  const activeTab = normalizeTraceDetailTab(rawActiveTab)
   const [selectedSpanId, setSelectedSpanId] = useParamState("spanId", "")
   return (
     <TraceDetailDrawerShell
@@ -175,7 +176,7 @@ function TraceDetailDrawerWithUrlTabs(props: Omit<TraceDetailDrawerProps, "urlSy
 
 function TraceDetailDrawerWithLocalTabs(props: Omit<TraceDetailDrawerProps, "urlSyncedTabs">) {
   const { initialTab, initialSpanId, closeLabel, drawerStoreKey, ...rest } = props
-  const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? "trace")
+  const [activeTab, setActiveTab] = useState<TabId>(normalizeTraceDetailTab(initialTab ?? "trace"))
   const [selectedSpanId, setSelectedSpanId] = useState(initialSpanId ?? "")
   return (
     <TraceDetailDrawerShell
@@ -234,31 +235,31 @@ export function TraceDetailBody({
   searchQuery,
 }: TraceDetailBodyProps) {
   const isSandbox = !!use(TraceScopeContext)
-  const annotationsEnabled = !isSandbox
+  const scoresEnabled = !isSandbox
   const commandPaletteEnabled = !isSandbox
   const { data: traceDetail, isLoading: isDetailLoading } = useTraceDetail({
     projectId,
     traceId,
   })
   const {
-    data: annotationsByTraceData,
-    isLoading: annotationsByTraceLoading,
-    isError: annotationsByTraceError,
-  } = useAnnotationsByTrace({
+    data: scoresByTraceData,
+    isLoading: scoresByTraceLoading,
+    isError: scoresByTraceError,
+  } = useScoresByTrace({
     projectId,
     traceId,
     draftMode: "include",
-    enabled: annotationsEnabled,
+    enabled: scoresEnabled,
   })
-  const annotationCount = annotationsByTraceData?.items?.length ?? 0
-  const annotationTabSuffix = useMemo(
+  const scoreCount = scoresByTraceData?.items?.length ?? 0
+  const scoresTabSuffix = useMemo(
     () =>
-      getAnnotationTabSuffix({
-        annotationsByTraceError,
-        annotationsByTraceLoading,
-        annotationCount,
+      getScoresTabSuffix({
+        scoresByTraceError,
+        scoresByTraceLoading,
+        scoreCount,
       }),
-    [annotationsByTraceError, annotationsByTraceLoading, annotationCount],
+    [scoresByTraceError, scoresByTraceLoading, scoreCount],
   )
   const isRecordLoading = !trace && !traceDetail
   const traceRecord: TraceRecord | undefined = traceDetail ?? trace
@@ -273,12 +274,12 @@ export function TraceDetailBody({
   const spansTabSuffix = useMemo(() => getSpansTabSuffix(traceRecord?.spanCount), [traceRecord?.spanCount])
   const tabsWithCounts = useMemo<TabOption<TabId>[]>(
     () =>
-      TABS.filter((tab) => annotationsEnabled || tab.id !== "annotations").map((tab) => {
-        if (tab.id === "annotations") return { ...tab, suffix: annotationTabSuffix }
+      TABS.filter((tab) => scoresEnabled || tab.id !== "scores").map((tab) => {
+        if (tab.id === "scores") return { ...tab, suffix: scoresTabSuffix }
         if (tab.id === "spans") return { ...tab, suffix: spansTabSuffix }
         return tab
       }),
-    [annotationsEnabled, annotationTabSuffix, spansTabSuffix],
+    [scoresEnabled, scoresTabSuffix, spansTabSuffix],
   )
   const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<TabId>>(() => new Set([activeTab]))
   const { openWithErrors, openWithModel } = useSpanFilters()
@@ -298,7 +299,7 @@ export function TraceDetailBody({
     traceRecord,
     traceDetail,
     spans,
-    annotationsEnabled,
+    annotationsEnabled: scoresEnabled,
   })
 
   // H/L cycle the trace tabs (J/K are reserved for prev/next trace and, on the
@@ -329,14 +330,16 @@ export function TraceDetailBody({
     focusAnnotationId,
     isConversationActive: activeTab === "conversation",
     onActivateConversation: () => handleSetActiveTab("conversation"),
-    annotationsEnabled,
+    annotationsEnabled: scoresEnabled,
   })
 
   useEffect(() => {
     setVisitedTabs((prev) => new Set([...prev, activeTab]))
   }, [activeTab])
 
-  function handleAnnotationClick(annotation: AnnotationRecord) {
+  function handleScoreClick(score: ScoreRecord) {
+    if (score.source !== "annotation") return
+    const annotation = score as AnnotationRecord
     if (isGlobalAnnotation(annotation)) return
     scrollToAnnotation(annotation)
   }
@@ -452,7 +455,7 @@ export function TraceDetailBody({
             navigateToSpan={navigateToSpan}
             projectId={projectId}
             isActive={activeTab === "conversation"}
-            annotationsEnabled={annotationsEnabled}
+            annotationsEnabled={scoresEnabled}
             scrollContainerRef={scrollContainerRef}
             textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
             timeline={timeline}
@@ -477,19 +480,14 @@ export function TraceDetailBody({
           />
         )}
       </div>
-      {annotationsEnabled ? (
+      {scoresEnabled ? (
         <div
           className={cn("flex flex-col flex-1 overflow-hidden", {
-            hidden: activeTab !== "annotations",
+            hidden: activeTab !== "scores",
           })}
         >
-          {visitedTabs.has("annotations") && (
-            <TraceAnnotationsList
-              projectId={projectId}
-              traceId={traceId}
-              hideAnnotationIntro
-              onAnnotationClick={handleAnnotationClick}
-            />
+          {visitedTabs.has("scores") && (
+            <TraceScoresList projectId={projectId} traceId={traceId} hideIntro onScoreClick={handleScoreClick} />
           )}
         </div>
       ) : null}

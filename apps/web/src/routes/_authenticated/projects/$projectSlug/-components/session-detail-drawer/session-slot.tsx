@@ -3,9 +3,9 @@ import type { FilterSet } from "@domain/shared"
 import { CopyableText, Icon, ProviderIcon, Status, type TabOption, Tabs, Text, Tooltip } from "@repo/ui"
 import { formatCount, relativeTime } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { GroupIcon, ListTreeIcon, MessageSquareIcon, MessagesSquareIcon, ShieldAlertIcon } from "lucide-react"
+import { GaugeIcon, GroupIcon, ListTreeIcon, MessagesSquareIcon, ShieldAlertIcon } from "lucide-react"
 import { use, useEffect, useMemo, useState } from "react"
-import { useAnnotationsBySession } from "../../../../../../domains/annotations/annotations.collection.ts"
+import { useScoresBySession } from "../../../../../../domains/scores/scores.collection.ts"
 import { deriveSessionStatus, useSessionSignals } from "../../../../../../domains/sessions/sessions.collection.ts"
 import type { SessionDetailRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
 import { TraceScopeContext } from "../../../../../../domains/traces/trace-scope.tsx"
@@ -15,22 +15,24 @@ import { AddTraceToDatasetAction } from "../add-trace-to-dataset-action.tsx"
 import type { OpenTraceOptions } from "../session-detail-drawer.tsx"
 import { useSpanFilters } from "../trace-detail-drawer/tabs/spans-tab/use-span-filters.ts"
 import { SpansTab } from "../trace-detail-drawer/tabs/spans-tab.tsx"
-import { AnnotationsTab } from "./annotations-tab.tsx"
 import { ConversationTab } from "./conversation-tab.tsx"
 import { MetadataTab } from "./metadata-tab.tsx"
+import { ScoresTab } from "./scores-tab.tsx"
 import { SessionStatusPill } from "./session-status-pill.tsx"
 import { SignalsTab } from "./signals-tab.tsx"
 
-export type SessionTabId = "session" | "conversation" | "spans" | "annotations" | "issues"
+export type SessionTabId = "session" | "conversation" | "spans" | "scores" | "issues"
 
 export function isSessionTab(value: string): value is SessionTabId {
+  if (value === "annotations") return true
   return (
-    value === "session" ||
-    value === "conversation" ||
-    value === "spans" ||
-    value === "annotations" ||
-    value === "issues"
+    value === "session" || value === "conversation" || value === "spans" || value === "scores" || value === "issues"
   )
+}
+
+export function normalizeSessionTab(value: string): SessionTabId {
+  if (value === "annotations") return "scores"
+  return isSessionTab(value) ? value : "session"
 }
 
 const tabCountPillClass =
@@ -82,16 +84,16 @@ export function SessionSlot({
   // Annotations and issues are analysis/feedback features the sandbox doesn't
   // produce — both off under a sandbox scope: hide the tabs and skip the fetches.
   const isSandbox = !!use(TraceScopeContext)
-  const annotationsEnabled = !isSandbox
+  const scoresEnabled = !isSandbox
   const signalsEnabled = !isSandbox
   // A single-trace session can surface its spans inline
   const singleTrace = traces.length === 1 ? traces[0] : undefined
   const [selectedSpanId, setSelectedSpanId] = useParamState("spanId", "")
   const { openWithErrors, openWithModel } = useSpanFilters()
-  const requestedTab: SessionTabId = activeTab === "spans" && !singleTrace ? "session" : activeTab
+  const requestedTab: SessionTabId = activeTab === "spans" && !singleTrace ? "session" : normalizeSessionTab(activeTab)
   // A deep-linked tab for a feature that's off (sandbox) falls back to Session.
   const effectiveActiveTab: SessionTabId =
-    (requestedTab === "annotations" && !annotationsEnabled) || (requestedTab === "issues" && !signalsEnabled)
+    (requestedTab === "scores" && !scoresEnabled) || (requestedTab === "issues" && !signalsEnabled)
       ? "session"
       : requestedTab
   const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<SessionTabId>>(() => new Set([effectiveActiveTab]))
@@ -128,13 +130,13 @@ export function SessionSlot({
 
   // Badge counts. Both queries are shared (same key) with the tab panes, so
   // mounting a tab doesn't refetch.
-  const { data: annotationsData } = useAnnotationsBySession({
+  const { data: scoresData } = useScoresBySession({
     projectId,
     traceIds,
-    enabled: annotationsEnabled,
+    enabled: scoresEnabled,
   })
   const { data: issues } = useSessionSignals({ projectId, traceIds, enabled: signalsEnabled })
-  const annotationCount = annotationsData?.items.length ?? 0
+  const scoreCount = scoresData?.items.length ?? 0
   const signalCount = issues?.length ?? 0
 
   const traceNumberById = useMemo(() => {
@@ -169,12 +171,12 @@ export function SessionSlot({
         suffix: countSuffix(singleTrace.spanCount),
       })
     }
-    if (annotationsEnabled) {
+    if (scoresEnabled) {
       all.push({
-        id: "annotations",
-        label: "Annotations",
-        icon: <Icon icon={MessageSquareIcon} size="sm" />,
-        suffix: countSuffix(annotationCount),
+        id: "scores",
+        label: "Scores",
+        icon: <Icon icon={GaugeIcon} size="sm" />,
+        suffix: countSuffix(scoreCount),
       })
     }
     if (signalsEnabled) {
@@ -186,7 +188,7 @@ export function SessionSlot({
       })
     }
     return all
-  }, [annotationsEnabled, signalsEnabled, annotationCount, signalCount, singleTrace])
+  }, [scoresEnabled, signalsEnabled, scoreCount, signalCount, singleTrace])
 
   // H/L cycle the session tabs (wrapping), matching the trace drawer. Disabled
   // while a trace/issue slot is shown so they don't collide with the trace slot.
@@ -323,9 +325,9 @@ export function SessionSlot({
             />
           </div>
         )}
-        {annotationsEnabled && visitedTabs.has("annotations") && (
-          <div className={effectiveActiveTab === "annotations" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
-            <AnnotationsTab
+        {scoresEnabled && visitedTabs.has("scores") && (
+          <div className={effectiveActiveTab === "scores" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
+            <ScoresTab
               projectId={projectId}
               traceIds={traceIds}
               latestTraceId={latestTraceId}

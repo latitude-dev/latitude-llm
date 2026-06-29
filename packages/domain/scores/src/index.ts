@@ -92,6 +92,15 @@ export {
   listSourceScoresUseCase,
 } from "./use-cases/list-scores.ts"
 export {
+  type ListScoresByTraceIdsInput,
+  type ListTraceScoresError,
+  type ListTraceScoresInput,
+  listScoresByTraceIdsInputSchema,
+  listScoresByTraceIdsUseCase,
+  listTraceScoresInputSchema,
+  listTraceScoresUseCase,
+} from "./use-cases/list-trace-scores.ts"
+export {
   type SyncScoreAnalyticsInput,
   syncScoreAnalyticsUseCase,
 } from "./use-cases/save-score-analytics.ts"

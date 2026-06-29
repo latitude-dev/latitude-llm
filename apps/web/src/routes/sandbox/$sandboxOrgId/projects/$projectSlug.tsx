@@ -96,8 +96,8 @@ function SandboxTracesContent({ sandboxOrgId, projectSlug }: { sandboxOrgId: str
     direction: sortDirection,
   }
   const [detailTab] = useParamState("detailTab", "trace", {
-    validate: (v): v is "trace" | "conversation" | "spans" | "annotations" =>
-      v === "trace" || v === "conversation" || v === "spans" || v === "annotations",
+    validate: (v): v is "trace" | "conversation" | "spans" | "scores" | "annotations" =>
+      v === "trace" || v === "conversation" || v === "spans" || v === "scores" || v === "annotations",
   })
 
   const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)

@@ -191,8 +191,8 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
     validate: (v): v is SortDirection | "" => v === "asc" || v === "desc" || v === "",
   })
   const [traceDetailTab] = useParamState("detailTab", "trace", {
-    validate: (v): v is "trace" | "conversation" | "spans" | "annotations" =>
-      v === "trace" || v === "conversation" || v === "spans" || v === "annotations",
+    validate: (v): v is "trace" | "conversation" | "spans" | "scores" | "annotations" =>
+      v === "trace" || v === "conversation" || v === "spans" || v === "scores" || v === "annotations",
   })
 
   // Ref to the ordered list of trace IDs from the currently loaded table page
