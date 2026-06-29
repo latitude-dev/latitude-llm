@@ -15,6 +15,7 @@ import {
   SIGNAL_DISCOVERY_MIN_VECTOR_SIMILARITY,
   SIGNAL_DISCOVERY_SEARCH_CANDIDATES,
   SIGNAL_DISCOVERY_SEARCH_RATIO,
+  SIGNAL_PRIORITY_ORDER,
   type Signal,
   type SignalLifecycleFlags,
   SignalRepository,
@@ -297,7 +298,18 @@ const signalRepositoryCoreLive = Layer.effect(
                   ${scoreCreatedFromClause}
                   ${scoreCreatedToClause}
               )`
-              const orderBy =
+              // Priority group is the unconditional primary order key so every
+              // page arrives grouped Urgent → … → No priority, matching the
+              // web list's sections; the selected sort applies within each
+              // group. Mirrors `sortCandidates` in the analytics path.
+              const priorityRank = sql<number>`case ${signals.priority}
+                when 'urgent' then ${SIGNAL_PRIORITY_ORDER.urgent}
+                when 'high' then ${SIGNAL_PRIORITY_ORDER.high}
+                when 'medium' then ${SIGNAL_PRIORITY_ORDER.medium}
+                when 'low' then ${SIGNAL_PRIORITY_ORDER.low}
+                else ${SIGNAL_PRIORITY_ORDER.none}
+              end`
+              const secondaryOrderBy =
                 sort?.field === "state"
                   ? [direction(signals.mutedAt), direction(signals.updatedAt)]
                   : sort?.field === "occurrences"
@@ -305,6 +317,7 @@ const signalRepositoryCoreLive = Layer.effect(
                     : sort?.field === "affectedSessions"
                       ? [direction(affectedSessionsSort), desc(lastSeenSort), asc(signals.id)]
                       : [direction(lastSeenSort), direction(signals.createdAt), asc(signals.id)]
+              const orderBy = [asc(priorityRank), ...secondaryOrderBy]
 
               return Promise.all([
                 db

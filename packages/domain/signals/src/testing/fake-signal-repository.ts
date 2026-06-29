@@ -1,5 +1,6 @@
 import { NotFoundError } from "@domain/shared"
 import { Effect } from "effect"
+import { SIGNAL_PRIORITY_ORDER } from "../constants.ts"
 import type { Signal } from "../entities/signal.ts"
 import type { SignalLifecycleFlags, SignalRepositoryShape, SignalWithLifecycle } from "../ports/signal-repository.ts"
 
@@ -182,6 +183,8 @@ export const createFakeSignalRepository = (
             return true
           })
           .sort((a, b) => {
+            const groupDiff = SIGNAL_PRIORITY_ORDER[a.priority ?? "none"] - SIGNAL_PRIORITY_ORDER[b.priority ?? "none"]
+            if (groupDiff !== 0) return groupDiff
             const direction = sort?.direction === "asc" ? 1 : -1
             const field = sort?.field ?? "lastSeen"
             if (field === "state") return direction * a.name.localeCompare(b.name)

@@ -1336,7 +1336,9 @@ describe("listSignalsUseCase", () => {
         ),
       )
 
-      expect(result.items.map((item) => item.id)).toEqual([unsetSignal.id, mediumSignal.id])
+      // Table-row path is priority-grouped like the analytics path, so the
+      // offset-2 slice lands inside the medium → low run (not [none, medium]).
+      expect(result.items.map((item) => item.id)).toEqual([mediumSignal.id, lowSignal.id])
       expect(aggregateInputs).toEqual([])
       expect(histogramCalls).toBe(0)
     })
