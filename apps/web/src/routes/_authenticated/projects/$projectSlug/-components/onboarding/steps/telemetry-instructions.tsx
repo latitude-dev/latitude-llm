@@ -40,12 +40,6 @@ import {
   TS_PACKAGE_MANAGERS,
   type TsPackageManager,
 } from "../../onboarding-integration-snippets.ts"
-import {
-  ONBOARDING_CLAUDE_CODE_LOGO_SRC,
-  ONBOARDING_HERMES_LOGO_SRC,
-  ONBOARDING_OPENCLAW_LOGO_SRC,
-  ONBOARDING_PI_LOGO_SRC,
-} from "../assets.ts"
 
 type TelemetrySetupMode = "coding-agent" | "manual"
 type IntegrationPanel = "typescript" | "python" | "opentelemetry"
@@ -59,8 +53,7 @@ const SETUP_MODE_TAB_OPTIONS = [
 interface ProviderEntry {
   readonly id: TelemetryProviderId
   readonly name: string
-  readonly icon?: string
-  readonly logoSrc?: string
+  readonly icon: string
 }
 
 function isCodingMachineProvider(id: TelemetryProviderId): id is CodingMachineAgentId {
@@ -69,10 +62,10 @@ function isCodingMachineProvider(id: TelemetryProviderId): id is CodingMachineAg
 
 /** Order matches docs.latitude.so telemetry providers, then frameworks (see /telemetry/overview). */
 const PROVIDER_ENTRIES: ReadonlyArray<ProviderEntry> = [
-  { id: "claude-code", name: "Claude Code", logoSrc: ONBOARDING_CLAUDE_CODE_LOGO_SRC },
-  { id: "openclaw", name: "OpenClaw", logoSrc: ONBOARDING_OPENCLAW_LOGO_SRC },
-  { id: "hermes", name: "Hermes", logoSrc: ONBOARDING_HERMES_LOGO_SRC },
-  { id: "pi", name: "Pi", logoSrc: ONBOARDING_PI_LOGO_SRC },
+  { id: "claude-code", name: "Claude Code", icon: "claude-code" },
+  { id: "openclaw", name: "OpenClaw", icon: "openclaw" },
+  { id: "hermes", name: "Hermes", icon: "hermes" },
+  { id: "pi", name: "Pi", icon: "pi" },
   { id: "openai", name: "OpenAI", icon: "openai" },
   { id: "anthropic", name: "Anthropic", icon: "anthropic" },
   { id: "gemini", name: "Gemini", icon: "google" },
@@ -106,20 +99,7 @@ const PROVIDER_ENTRIES: ReadonlyArray<ProviderEntry> = [
 ]
 
 function ProviderChipIcon({ provider }: { readonly provider: ProviderEntry }) {
-  if (provider.logoSrc) {
-    return (
-      <img
-        src={provider.logoSrc}
-        alt=""
-        width={12}
-        height={12}
-        decoding="async"
-        className="h-3 w-3 shrink-0 rounded-sm object-contain"
-        aria-hidden
-      />
-    )
-  }
-  return <ProviderIcon provider={provider.icon ?? "openai"} size="xs" />
+  return <ProviderIcon provider={provider.icon} size="xs" />
 }
 
 function OtelExporterLanguageChips({
@@ -401,7 +381,7 @@ function CodingMachineInstructions({
 export function TelemetryInstructions({ projectSlug }: { readonly projectSlug: string }) {
   const [telemetrySetupMode, setTelemetrySetupMode] = useState<TelemetrySetupMode>("coding-agent")
   const [selectedProvider, setSelectedProvider] = useState<ProviderEntry>(
-    PROVIDER_ENTRIES[0] ?? { id: "claude-code", name: "Claude Code", logoSrc: ONBOARDING_CLAUDE_CODE_LOGO_SRC },
+    PROVIDER_ENTRIES[0] ?? { id: "claude-code", name: "Claude Code", icon: "claude-code" },
   )
   const [integrationPanel, setIntegrationPanel] = useState<IntegrationPanel>("typescript")
   const [otelExporterLanguage, setOtelExporterLanguage] = useState<OtelExporterLanguageId>("go")

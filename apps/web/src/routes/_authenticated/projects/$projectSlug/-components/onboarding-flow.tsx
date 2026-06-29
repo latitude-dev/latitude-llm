@@ -106,7 +106,6 @@ export function OnboardingFlow({
 
   const [projectName, setProjectName] = useState(initialProjectName)
   const [selectedFlaggerSlugs, setSelectedFlaggerSlugs] = useState<ReadonlySet<string> | null>(null)
-  const [flaggerCheckOrder, setFlaggerCheckOrder] = useState<ReadonlyArray<string>>([])
   const [isSavingFlaggers, setIsSavingFlaggers] = useState(false)
   const { data: allProjects = [] } = useProjectsCollection()
   const sampleProject = allProjects.find((project) => project.id !== projectId && project.settings.isSample === true)
@@ -152,10 +151,8 @@ export function OnboardingFlow({
     selectedFlaggerSlugs ?? (projectFlaggers.length > 0 ? currentEnabledFlaggerSlugs : new Set(availableFlaggerSlugs))
 
   const toggleFlaggerSelection = (slug: string) => {
-    let enabling = false
     setSelectedFlaggerSlugs((current) => {
       const next = new Set(current ?? enabledFlaggerSlugs)
-      enabling = !next.has(slug)
       if (next.has(slug)) {
         next.delete(slug)
       } else {
@@ -163,14 +160,10 @@ export function OnboardingFlow({
       }
       return next
     })
-    if (enabling) {
-      setFlaggerCheckOrder((order) => [slug, ...order.filter((s) => s !== slug)])
-    }
   }
 
   const applyFlaggerPreset = (enabledSlugs: ReadonlyArray<FlaggerPresetSlug>) => {
     setSelectedFlaggerSlugs(new Set(enabledSlugs))
-    setFlaggerCheckOrder([...enabledSlugs].reverse())
   }
 
   const handleConfigureFlaggers = async () => {
@@ -325,7 +318,6 @@ export function OnboardingFlow({
               ) : slide === "flaggers" ? (
                 <FlaggersStep.Right
                   enabledFlaggerSlugs={enabledFlaggerSlugs}
-                  flaggerCheckOrder={flaggerCheckOrder}
                   availableFlaggers={availableFlaggers}
                 />
               ) : slide === "slack" ? (

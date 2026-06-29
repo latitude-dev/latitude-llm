@@ -185,20 +185,10 @@ export function Left({
 
 export function Right({
   enabledFlaggerSlugs,
-  flaggerCheckOrder,
   availableFlaggers,
 }: {
   readonly enabledFlaggerSlugs: ReadonlySet<string>
-  readonly flaggerCheckOrder: ReadonlyArray<string>
   readonly availableFlaggers: ReadonlyArray<AvailableFlagger>
 }) {
-  return (
-    <div className="flex h-full min-h-0 w-full items-center justify-center">
-      <MockSignalsFeed
-        enabledFlaggerSlugs={enabledFlaggerSlugs}
-        flaggerCheckOrder={flaggerCheckOrder}
-        availableFlaggers={availableFlaggers}
-      />
-    </div>
-  )
+  return <MockSignalsFeed enabledFlaggerSlugs={enabledFlaggerSlugs} availableFlaggers={availableFlaggers} />
 }
