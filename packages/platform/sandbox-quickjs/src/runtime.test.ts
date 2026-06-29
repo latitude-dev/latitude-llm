@@ -208,7 +208,13 @@ describe("run: host-controlled globals", () => {
         t.finishReasons[0] === "length" &&
         tool.name === "search" &&
         tool.error === true &&
-        tool.duration === 42
+        tool.duration === 42 &&
+        // the whole payload is deep-frozen — traces, their arrays, and tools are immutable
+        Object.isFrozen(session.traces) &&
+        Object.isFrozen(t) &&
+        Object.isFrozen(t.models) &&
+        Object.isFrozen(t.tools) &&
+        Object.isFrozen(tool)
       return Score(ok ? 1 : 0, JSON.stringify({ tools: t.tools.length, model: t.models[0] }))
     `)
     const result = await run({ script, context: { session } })

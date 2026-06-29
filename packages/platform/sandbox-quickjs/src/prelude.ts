@@ -89,14 +89,21 @@ export const SANDBOX_PRELUDE = `;(() => {
     }
   }
 
+  const deepFreeze = (value) => {
+    if (value && typeof value === "object" && !Object.isFrozen(value)) {
+      Object.freeze(value)
+      for (const key of Object.keys(value)) deepFreeze(value[key])
+    }
+    return value
+  }
+
   const session = (bootstrap && bootstrap.session) || { conversation: [], traces: [] }
   const conversation = session.conversation || []
   Object.defineProperty(conversation, "toString", {
     value: () => conversation.map((message) => "[" + message.role + "] " + message.content).join("\\n"),
   })
-  for (const message of conversation) Object.freeze(message)
-  Object.freeze(conversation)
   session.conversation = conversation
-  globalThis.session = Object.freeze(session)
+  // Deep-freeze the whole payload so a script cannot mutate the session (traces, tools, metrics) it reads.
+  globalThis.session = deepFreeze(session)
 })()
 `
