@@ -49,7 +49,7 @@ dev = [
     "pytest==9.0.3",
     "pyright==1.1.409",
     "ruff==0.15.15",
-    "sh==2.2.2",
+    "sh==2.3.0",
     "openai==2.41.1",
     # Host SDK for the openai-agents integration (example/tests only). The
     # instrumentor (openinference-instrumentation-openai-agents) is the runtime
