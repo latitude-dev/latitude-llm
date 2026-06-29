@@ -38,7 +38,6 @@ function ProjectOnboardingPage() {
         projectSlug={project.slug}
         projectName={suggestedProjectName}
         persistedProjectName={project.name}
-        onboardingType={project.settings.onboardingType}
         slackEnvConfigured={slackEnvConfigured}
         initialStep={search.step}
         flashInstalled={search.installed}

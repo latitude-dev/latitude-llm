@@ -4,16 +4,9 @@ import { useQueryClient } from "@tanstack/react-query"
 import { ArrowRightIcon, CheckIcon, Loader2Icon, TelescopeIcon, XIcon } from "lucide-react"
 import { use, useMemo, useRef, useState } from "react"
 import { useApiKeysCollection } from "../../../../../domains/api-keys/api-keys.collection.ts"
-import type { ProjectRecord } from "../../../../../domains/projects/projects.functions.ts"
 import { TraceScopeContext, traceScopeData, traceScopeKey } from "../../../../../domains/traces/trace-scope.tsx"
 import { countTracesByProject } from "../../../../../domains/traces/traces.functions.ts"
-import type { StackChoice } from "./onboarding/steps/stack-step.tsx"
 import { TelemetryInstructions } from "./onboarding/steps/telemetry-instructions.tsx"
-
-/** Map the project's persisted onboarding type to the telemetry-step stack variant. */
-function stackChoiceFromOnboardingType(onboardingType: ProjectRecord["settings"]["onboardingType"]): StackChoice {
-  return onboardingType === "code-agents" ? "coding-agent-machine" : "production-agent"
-}
 
 /**
  * Empty state for a project that has never received a trace. Keeps the surface
@@ -29,13 +22,11 @@ function stackChoiceFromOnboardingType(onboardingType: ProjectRecord["settings"]
 export function TracesEmptyOnboarding({
   projectId,
   projectSlug,
-  onboardingType,
   orgHasConnectedProjects,
   apiKeyToken,
 }: {
   readonly projectId: string
   readonly projectSlug: string
-  readonly onboardingType?: ProjectRecord["settings"]["onboardingType"]
   readonly orgHasConnectedProjects: boolean
   /**
    * Explicit API-key token to display (sandbox passes its `lat_sandbox_` key).
@@ -48,7 +39,6 @@ export function TracesEmptyOnboarding({
   // sandbox org (not the session's live org), so the empty state correctly waits
   // for the *sandbox's* first trace and transitions when it lands.
   const scope = use(TraceScopeContext)
-  const stackChoice = stackChoiceFromOnboardingType(onboardingType)
 
   const [traceReceived, setTraceReceived] = useState(false)
   const [setupOpen, setSetupOpen] = useState(false)
@@ -132,12 +122,7 @@ export function TracesEmptyOnboarding({
           apiKeyToken={apiKeyToken}
         />
       </div>
-      <TracesSetupSheet
-        open={setupOpen}
-        onClose={() => setSetupOpen(false)}
-        stackChoice={stackChoice}
-        projectSlug={projectSlug}
-      />
+      <TracesSetupSheet open={setupOpen} onClose={() => setSetupOpen(false)} projectSlug={projectSlug} />
     </div>
   )
 }
@@ -276,12 +261,10 @@ function TraceWaitingIndicator({ traceReceived }: { readonly traceReceived: bool
 function TracesSetupSheet({
   open,
   onClose,
-  stackChoice,
   projectSlug,
 }: {
   readonly open: boolean
   readonly onClose: () => void
-  readonly stackChoice: StackChoice
   readonly projectSlug: string
 }) {
   return (
@@ -294,7 +277,7 @@ function TracesSetupSheet({
           </Button>
         </div>
         <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6">
-          <TelemetryInstructions stackChoice={stackChoice} projectSlug={projectSlug} />
+          <TelemetryInstructions projectSlug={projectSlug} />
         </div>
       </div>
     </Sheet>
