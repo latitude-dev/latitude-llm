@@ -148,7 +148,7 @@ class SignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> CreateSignalResponse:
         """
-        Creates a user-defined signal with its membership detector — a judge from `settings`, or a raw `script` (advanced). The script is validated at save time (422 on a compile error). Deterministic scripts are backfilled over recent history; judges detect forward from creation.
+        Creates a user-defined signal with its membership detector — from `settings` (a `judge` LLM detector or a deterministic `rule`), or a raw `script` (advanced). The script is validated at save time (422 on a compile error). Deterministic scripts are backfilled over recent history; judges detect forward from creation.
 
         Parameters
         ----------
@@ -183,7 +183,7 @@ class SignalsClient:
         from latitude import LatitudeApiClient
         from latitude.signals import (
             CreateSignalBodyEvaluationSettings,
-            CreateSignalBodyEvaluationSettingsSettings,
+            CreateSignalBodyEvaluationSettingsSettings_Judge,
         )
 
         client = LatitudeApiClient(
@@ -194,7 +194,7 @@ class SignalsClient:
             name="name",
             description="description",
             evaluation=CreateSignalBodyEvaluationSettings(
-                settings=CreateSignalBodyEvaluationSettingsSettings(
+                settings=CreateSignalBodyEvaluationSettingsSettings_Judge(
                     criteria="criteria",
                 ),
             ),
@@ -848,7 +848,7 @@ class AsyncSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> CreateSignalResponse:
         """
-        Creates a user-defined signal with its membership detector — a judge from `settings`, or a raw `script` (advanced). The script is validated at save time (422 on a compile error). Deterministic scripts are backfilled over recent history; judges detect forward from creation.
+        Creates a user-defined signal with its membership detector — from `settings` (a `judge` LLM detector or a deterministic `rule`), or a raw `script` (advanced). The script is validated at save time (422 on a compile error). Deterministic scripts are backfilled over recent history; judges detect forward from creation.
 
         Parameters
         ----------
@@ -885,7 +885,7 @@ class AsyncSignalsClient:
         from latitude import AsyncLatitudeApiClient
         from latitude.signals import (
             CreateSignalBodyEvaluationSettings,
-            CreateSignalBodyEvaluationSettingsSettings,
+            CreateSignalBodyEvaluationSettingsSettings_Judge,
         )
 
         client = AsyncLatitudeApiClient(
@@ -899,7 +899,7 @@ class AsyncSignalsClient:
                 name="name",
                 description="description",
                 evaluation=CreateSignalBodyEvaluationSettings(
-                    settings=CreateSignalBodyEvaluationSettingsSettings(
+                    settings=CreateSignalBodyEvaluationSettingsSettings_Judge(
                         criteria="criteria",
                     ),
                 ),

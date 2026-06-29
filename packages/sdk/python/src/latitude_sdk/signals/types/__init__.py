@@ -9,7 +9,86 @@ if typing.TYPE_CHECKING:
     from .create_signal_body_evaluation import CreateSignalBodyEvaluation
     from .create_signal_body_evaluation_script import CreateSignalBodyEvaluationScript
     from .create_signal_body_evaluation_settings import CreateSignalBodyEvaluationSettings
-    from .create_signal_body_evaluation_settings_settings import CreateSignalBodyEvaluationSettingsSettings
+    from .create_signal_body_evaluation_settings_settings import (
+        CreateSignalBodyEvaluationSettingsSettings,
+        CreateSignalBodyEvaluationSettingsSettings_Judge,
+        CreateSignalBodyEvaluationSettingsSettings_Rule,
+    )
+    from .create_signal_body_evaluation_settings_settings_judge import CreateSignalBodyEvaluationSettingsSettingsJudge
+    from .create_signal_body_evaluation_settings_settings_rule import CreateSignalBodyEvaluationSettingsSettingsRule
+    from .create_signal_body_evaluation_settings_settings_rule_conditions_item import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_EmptyOutput,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Error,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_FinishReason,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_JsonOutput,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Metric,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_OutputLength,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_TextMatch,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolCallCount,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolFailed,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolUsed,
+    )
+    from .create_signal_body_evaluation_settings_settings_rule_conditions_item_empty_output import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemEmptyOutput,
+    )
+    from .create_signal_body_evaluation_settings_settings_rule_conditions_item_error import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemError,
+    )
+    from .create_signal_body_evaluation_settings_settings_rule_conditions_item_finish_reason import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemFinishReason,
+    )
+    from .create_signal_body_evaluation_settings_settings_rule_conditions_item_json_output import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemJsonOutput,
+    )
+    from .create_signal_body_evaluation_settings_settings_rule_conditions_item_json_output_expectation import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemJsonOutputExpectation,
+    )
+    from .create_signal_body_evaluation_settings_settings_rule_conditions_item_metric import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemMetric,
+    )
+    from .create_signal_body_evaluation_settings_settings_rule_conditions_item_metric_aggregation import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemMetricAggregation,
+    )
+    from .create_signal_body_evaluation_settings_settings_rule_conditions_item_metric_field import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemMetricField,
+    )
+    from .create_signal_body_evaluation_settings_settings_rule_conditions_item_metric_operator import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemMetricOperator,
+    )
+    from .create_signal_body_evaluation_settings_settings_rule_conditions_item_output_length import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemOutputLength,
+    )
+    from .create_signal_body_evaluation_settings_settings_rule_conditions_item_output_length_operator import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemOutputLengthOperator,
+    )
+    from .create_signal_body_evaluation_settings_settings_rule_conditions_item_output_length_unit import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemOutputLengthUnit,
+    )
+    from .create_signal_body_evaluation_settings_settings_rule_conditions_item_text_match import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemTextMatch,
+    )
+    from .create_signal_body_evaluation_settings_settings_rule_conditions_item_text_match_operator import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemTextMatchOperator,
+    )
+    from .create_signal_body_evaluation_settings_settings_rule_conditions_item_text_match_scope import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemTextMatchScope,
+    )
+    from .create_signal_body_evaluation_settings_settings_rule_conditions_item_tool_call_count import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemToolCallCount,
+    )
+    from .create_signal_body_evaluation_settings_settings_rule_conditions_item_tool_call_count_operator import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemToolCallCountOperator,
+    )
+    from .create_signal_body_evaluation_settings_settings_rule_conditions_item_tool_failed import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemToolFailed,
+    )
+    from .create_signal_body_evaluation_settings_settings_rule_conditions_item_tool_used import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemToolUsed,
+    )
+    from .create_signal_body_evaluation_settings_settings_rule_match import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleMatch,
+    )
     from .create_signal_body_priority import CreateSignalBodyPriority
     from .export_signals_body_lifecycle_group import ExportSignalsBodyLifecycleGroup
     from .signals_list_request_lifecycle_group import SignalsListRequestLifecycleGroup
@@ -20,6 +99,41 @@ _dynamic_imports: typing.Dict[str, str] = {
     "CreateSignalBodyEvaluationScript": ".create_signal_body_evaluation_script",
     "CreateSignalBodyEvaluationSettings": ".create_signal_body_evaluation_settings",
     "CreateSignalBodyEvaluationSettingsSettings": ".create_signal_body_evaluation_settings_settings",
+    "CreateSignalBodyEvaluationSettingsSettingsJudge": ".create_signal_body_evaluation_settings_settings_judge",
+    "CreateSignalBodyEvaluationSettingsSettingsRule": ".create_signal_body_evaluation_settings_settings_rule",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemEmptyOutput": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_empty_output",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemError": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_error",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemFinishReason": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_finish_reason",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemJsonOutput": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_json_output",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemJsonOutputExpectation": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_json_output_expectation",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemMetric": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_metric",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemMetricAggregation": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_metric_aggregation",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemMetricField": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_metric_field",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemMetricOperator": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_metric_operator",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemOutputLength": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_output_length",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemOutputLengthOperator": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_output_length_operator",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemOutputLengthUnit": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_output_length_unit",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemTextMatch": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_text_match",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemTextMatchOperator": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_text_match_operator",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemTextMatchScope": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_text_match_scope",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemToolCallCount": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_tool_call_count",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemToolCallCountOperator": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_tool_call_count_operator",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemToolFailed": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_tool_failed",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemToolUsed": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_tool_used",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_EmptyOutput": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Error": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_FinishReason": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_JsonOutput": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Metric": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_OutputLength": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_TextMatch": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolCallCount": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolFailed": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolUsed": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleMatch": ".create_signal_body_evaluation_settings_settings_rule_match",
+    "CreateSignalBodyEvaluationSettingsSettings_Judge": ".create_signal_body_evaluation_settings_settings",
+    "CreateSignalBodyEvaluationSettingsSettings_Rule": ".create_signal_body_evaluation_settings_settings",
     "CreateSignalBodyPriority": ".create_signal_body_priority",
     "ExportSignalsBodyLifecycleGroup": ".export_signals_body_lifecycle_group",
     "SignalsListRequestLifecycleGroup": ".signals_list_request_lifecycle_group",
@@ -54,6 +168,41 @@ __all__ = [
     "CreateSignalBodyEvaluationScript",
     "CreateSignalBodyEvaluationSettings",
     "CreateSignalBodyEvaluationSettingsSettings",
+    "CreateSignalBodyEvaluationSettingsSettingsJudge",
+    "CreateSignalBodyEvaluationSettingsSettingsRule",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemEmptyOutput",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemError",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemFinishReason",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemJsonOutput",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemJsonOutputExpectation",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemMetric",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemMetricAggregation",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemMetricField",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemMetricOperator",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemOutputLength",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemOutputLengthOperator",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemOutputLengthUnit",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemTextMatch",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemTextMatchOperator",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemTextMatchScope",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemToolCallCount",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemToolCallCountOperator",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemToolFailed",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemToolUsed",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_EmptyOutput",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Error",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_FinishReason",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_JsonOutput",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Metric",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_OutputLength",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_TextMatch",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolCallCount",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolFailed",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolUsed",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleMatch",
+    "CreateSignalBodyEvaluationSettingsSettings_Judge",
+    "CreateSignalBodyEvaluationSettingsSettings_Rule",
     "CreateSignalBodyPriority",
     "ExportSignalsBodyLifecycleGroup",
     "SignalsListRequestLifecycleGroup",

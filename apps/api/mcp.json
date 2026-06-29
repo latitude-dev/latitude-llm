@@ -7782,7 +7782,7 @@
     {
       "name": "createSignal",
       "title": "Create signal",
-      "description": "Creates a user-defined signal with its membership detector — a judge from `settings`, or a raw `script` (advanced). The script is validated at save time (422 on a compile error). Deterministic scripts are backfilled over recent history; judges detect forward from creation.",
+      "description": "Creates a user-defined signal with its membership detector — from `settings` (a `judge` LLM detector or a deterministic `rule`), or a raw `script` (advanced). The script is validated at save time (422 on a compile error). Deterministic scripts are backfilled over recent history; judges detect forward from creation.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -7896,24 +7896,323 @@
                 "type": "object",
                 "properties": {
                   "settings": {
-                    "type": "object",
-                    "properties": {
-                      "kind": {
-                        "type": "string",
-                        "const": "judge"
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "judge"
+                          },
+                          "criteria": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "criteria"
+                        ],
+                        "additionalProperties": false
                       },
-                      "criteria": {
-                        "type": "string",
-                        "minLength": 1,
-                        "description": "Natural-language description of the behavior the judge detects."
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "rule"
+                          },
+                          "match": {
+                            "default": "all",
+                            "type": "string",
+                            "enum": [
+                              "all",
+                              "any"
+                            ]
+                          },
+                          "conditions": {
+                            "minItems": 1,
+                            "maxItems": 10,
+                            "type": "array",
+                            "items": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "const": "text_match"
+                                    },
+                                    "scope": {
+                                      "default": "last_assistant",
+                                      "type": "string",
+                                      "enum": [
+                                        "last_assistant",
+                                        "any_assistant",
+                                        "any_user",
+                                        "any_tool",
+                                        "conversation"
+                                      ]
+                                    },
+                                    "operator": {
+                                      "type": "string",
+                                      "enum": [
+                                        "contains",
+                                        "not_contains",
+                                        "matches_regex",
+                                        "not_matches_regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "caseSensitive": {
+                                      "default": false,
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "scope",
+                                    "operator",
+                                    "value",
+                                    "caseSensitive"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "const": "empty_output"
+                                    }
+                                  },
+                                  "required": [
+                                    "type"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "const": "output_length"
+                                    },
+                                    "unit": {
+                                      "default": "chars",
+                                      "type": "string",
+                                      "enum": [
+                                        "chars",
+                                        "words"
+                                      ]
+                                    },
+                                    "operator": {
+                                      "type": "string",
+                                      "enum": [
+                                        "gt",
+                                        "gte",
+                                        "lt",
+                                        "lte"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "unit",
+                                    "operator",
+                                    "value"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "const": "json_output"
+                                    },
+                                    "expectation": {
+                                      "type": "string",
+                                      "enum": [
+                                        "valid",
+                                        "invalid"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "expectation"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "const": "metric"
+                                    },
+                                    "field": {
+                                      "type": "string",
+                                      "enum": [
+                                        "duration",
+                                        "cost",
+                                        "tokensTotal",
+                                        "tokensInput",
+                                        "tokensOutput",
+                                        "errorCount",
+                                        "traceCount",
+                                        "spanCount"
+                                      ]
+                                    },
+                                    "aggregation": {
+                                      "default": "session",
+                                      "type": "string",
+                                      "enum": [
+                                        "session",
+                                        "anyTrace",
+                                        "allTraces"
+                                      ]
+                                    },
+                                    "operator": {
+                                      "type": "string",
+                                      "enum": [
+                                        "gt",
+                                        "gte",
+                                        "lt",
+                                        "lte"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "number",
+                                      "minimum": 0
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "field",
+                                    "aggregation",
+                                    "operator",
+                                    "value"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "const": "tool_used"
+                                    },
+                                    "toolName": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "toolName"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "const": "tool_failed"
+                                    },
+                                    "toolName": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "required": [
+                                    "type"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "const": "tool_call_count"
+                                    },
+                                    "operator": {
+                                      "type": "string",
+                                      "enum": [
+                                        "gt",
+                                        "gte",
+                                        "lt",
+                                        "lte"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "operator",
+                                    "value"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "const": "error"
+                                    }
+                                  },
+                                  "required": [
+                                    "type"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "const": "finish_reason"
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "value"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "match",
+                          "conditions"
+                        ],
+                        "additionalProperties": false
                       }
-                    },
-                    "required": [
-                      "kind",
-                      "criteria"
                     ],
-                    "additionalProperties": false,
-                    "description": "Declarative judge config; compiled to a sandbox script that calls an LLM."
+                    "description": "Declarative detector config. `judge` compiles to an LLM script; `rule` compiles to a deterministic script over the session."
                   }
                 },
                 "required": [

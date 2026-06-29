@@ -4214,25 +4214,328 @@
                 "type": "object",
                 "properties": {
                   "settings": {
-                    "type": "object",
-                    "properties": {
-                      "kind": {
-                        "type": "string",
-                        "enum": [
-                          "judge"
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "judge"
+                            ]
+                          },
+                          "criteria": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "criteria"
                         ]
                       },
-                      "criteria": {
-                        "type": "string",
-                        "minLength": 1,
-                        "description": "Natural-language description of the behavior the judge detects."
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "rule"
+                            ]
+                          },
+                          "match": {
+                            "type": "string",
+                            "enum": [
+                              "all",
+                              "any"
+                            ],
+                            "default": "all"
+                          },
+                          "conditions": {
+                            "type": "array",
+                            "items": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "text_match"
+                                      ]
+                                    },
+                                    "scope": {
+                                      "type": "string",
+                                      "enum": [
+                                        "last_assistant",
+                                        "any_assistant",
+                                        "any_user",
+                                        "any_tool",
+                                        "conversation"
+                                      ],
+                                      "default": "last_assistant"
+                                    },
+                                    "operator": {
+                                      "type": "string",
+                                      "enum": [
+                                        "contains",
+                                        "not_contains",
+                                        "matches_regex",
+                                        "not_matches_regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean",
+                                      "default": false
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "operator",
+                                    "value"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "empty_output"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "type"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "output_length"
+                                      ]
+                                    },
+                                    "unit": {
+                                      "type": "string",
+                                      "enum": [
+                                        "chars",
+                                        "words"
+                                      ],
+                                      "default": "chars"
+                                    },
+                                    "operator": {
+                                      "type": "string",
+                                      "enum": [
+                                        "gt",
+                                        "gte",
+                                        "lt",
+                                        "lte"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "operator",
+                                    "value"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "json_output"
+                                      ]
+                                    },
+                                    "expectation": {
+                                      "type": "string",
+                                      "enum": [
+                                        "valid",
+                                        "invalid"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "expectation"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "metric"
+                                      ]
+                                    },
+                                    "field": {
+                                      "type": "string",
+                                      "enum": [
+                                        "duration",
+                                        "cost",
+                                        "tokensTotal",
+                                        "tokensInput",
+                                        "tokensOutput",
+                                        "errorCount",
+                                        "traceCount",
+                                        "spanCount"
+                                      ]
+                                    },
+                                    "aggregation": {
+                                      "type": "string",
+                                      "enum": [
+                                        "session",
+                                        "anyTrace",
+                                        "allTraces"
+                                      ],
+                                      "default": "session"
+                                    },
+                                    "operator": {
+                                      "type": "string",
+                                      "enum": [
+                                        "gt",
+                                        "gte",
+                                        "lt",
+                                        "lte"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "number",
+                                      "minimum": 0
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "field",
+                                    "operator",
+                                    "value"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tool_used"
+                                      ]
+                                    },
+                                    "toolName": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "toolName"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tool_failed"
+                                      ]
+                                    },
+                                    "toolName": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "required": [
+                                    "type"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tool_call_count"
+                                      ]
+                                    },
+                                    "operator": {
+                                      "type": "string",
+                                      "enum": [
+                                        "gt",
+                                        "gte",
+                                        "lt",
+                                        "lte"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "operator",
+                                    "value"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "error"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "type"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "finish_reason"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "value"
+                                  ]
+                                }
+                              ]
+                            },
+                            "minItems": 1,
+                            "maxItems": 10
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "conditions"
+                        ]
                       }
-                    },
-                    "required": [
-                      "kind",
-                      "criteria"
                     ],
-                    "description": "Declarative judge config; compiled to a sandbox script that calls an LLM."
+                    "description": "Declarative detector config. `judge` compiles to an LLM script; `rule` compiles to a deterministic script over the session."
                   }
                 },
                 "required": [
@@ -11524,7 +11827,7 @@
         "x-fern-sdk-group-name": "signals",
         "x-fern-sdk-method-name": "create",
         "summary": "Create signal",
-        "description": "Creates a user-defined signal with its membership detector — a judge from `settings`, or a raw `script` (advanced). The script is validated at save time (422 on a compile error). Deterministic scripts are backfilled over recent history; judges detect forward from creation.",
+        "description": "Creates a user-defined signal with its membership detector — from `settings` (a `judge` LLM detector or a deterministic `rule`), or a raw `script` (advanced). The script is validated at save time (422 on a compile error). Deterministic scripts are backfilled over recent history; judges detect forward from creation.",
         "security": [
           {
             "ApiKeyAuth": []
