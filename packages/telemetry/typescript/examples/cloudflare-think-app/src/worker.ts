@@ -1,18 +1,14 @@
-import {
-  Think,
-  type ChatErrorContext,
-  type ChatResponseResult,
-  type TurnConfig,
-  type TurnContext,
-} from "@cloudflare/think"
-import { Latitude, capture, type CaptureScope } from "@latitude-data/telemetry"
-import { routeAgentRequest } from "agents"
+import { Think, type TurnConfig, type TurnResult } from "@cloudflare/think"
+import { Latitude, capture, type ContextOptions } from "@latitude-data/telemetry"
+import { getAgentByName, routeAgentRequest } from "agents"
 import { tool } from "ai"
 import { createWorkersAI } from "workers-ai-provider"
 import { z } from "zod"
+import { CHAT_PAGE } from "./chat-page"
 
 type Env = {
   AI: Ai
+  MyAgent: DurableObjectNamespace<MyAgent>
   LATITUDE_API_KEY: string
   LATITUDE_PROJECT_SLUG: string
   LATITUDE_TELEMETRY_URL?: string
@@ -34,9 +30,24 @@ function getLatitude(env: Env) {
   return latitude
 }
 
-function stringFromBody(body: Record<string, unknown> | undefined, key: string) {
-  const value = body?.[key]
-  return typeof value === "string" && value.length > 0 ? value : undefined
+function turnText(result: TurnResult): string {
+  const parts = (result.message?.parts ?? []) as Array<{ type?: string; text?: string }>
+  return parts
+    .filter((part) => part.type === "text" && typeof part.text === "string")
+    .map((part) => part.text)
+    .join("")
+}
+
+function captureOptions(meta: { userId?: string; sessionId?: string }): ContextOptions {
+  const options: ContextOptions = {
+    tags: ["cloudflare-think"],
+    metadata: { framework: "cloudflare-think", continuation: false },
+  }
+
+  if (meta.userId) options.userId = meta.userId
+  if (meta.sessionId) options.sessionId = meta.sessionId
+
+  return options
 }
 
 const getWeather = tool({
@@ -52,62 +63,64 @@ const getWeather = tool({
 })
 
 export class MyAgent extends Think<Env> {
-  private latitudeCapture?: CaptureScope
-
   getModel() {
-    return createWorkersAI({ binding: this.env.AI })("@cf/meta/llama-3.1-8b-instruct")
+    return createWorkersAI({ binding: this.env.AI })("@cf/meta/llama-4-scout-17b-16e-instruct")
   }
 
   getTools() {
     return { getWeather }
   }
 
-  beforeTurn(ctx: TurnContext): TurnConfig {
-    const latitude = getLatitude(this.env)
-
-    this.latitudeCapture?.end()
-    this.latitudeCapture = capture.start("cloudflare-think-turn", {
-      userId: stringFromBody(ctx.body, "userId"),
-      sessionId: stringFromBody(ctx.body, "sessionId"),
-      tags: ["cloudflare-think"],
-      metadata: {
-        continuation: ctx.continuation,
-        messageCount: ctx.messages.length,
-      },
-    })
-
+  beforeTurn(): TurnConfig {
     return {
       experimental_telemetry: {
         isEnabled: true,
-        tracer: latitude.getAiSdkTracer(),
+        tracer: getLatitude(this.env).getAiSdkTracer(),
         functionId: "think-turn",
         metadata: { framework: "cloudflare-think" },
       },
     }
   }
 
-  onChatResponse(result: ChatResponseResult) {
-    const error = result.status === "error" ? new Error(result.error ?? "Think turn failed") : undefined
-    this.latitudeCapture?.end(error)
-    this.latitudeCapture = undefined
-  }
-
-  onChatError(error: unknown, _ctx?: ChatErrorContext) {
-    this.latitudeCapture?.end(error)
-    this.latitudeCapture = undefined
-    return error
+  async runChatTurn(input: string, meta: { userId?: string; sessionId?: string }): Promise<{ text: string }> {
+    try {
+      const result = await capture("cloudflare-think-turn", () => this.runTurn({ input }), captureOptions(meta))
+      return { text: turnText(result) }
+    } finally {
+      await getLatitude(this.env).flush()
+    }
   }
 }
 
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext) {
-    const latitude = getLatitude(env)
-    const response =
-      (await routeAgentRequest(request, env)) ??
-      new Response("Not found", { status: 404 })
+  async fetch(request: Request, env: Env) {
+    const url = new URL(request.url)
 
-    ctx.waitUntil(latitude.flush())
+    if (request.method === "GET" && url.pathname === "/") {
+      return new Response(CHAT_PAGE, { headers: { "content-type": "text/html; charset=utf-8" } })
+    }
 
-    return response
+    if (request.method === "POST" && url.pathname === "/api/chat") {
+      const { message, sessionId, userId } = (await request.json()) as {
+        message?: string
+        sessionId?: string
+        userId?: string
+      }
+      if (!message || !sessionId) {
+        return Response.json({ error: "message and sessionId are required" }, { status: 400 })
+      }
+
+      const agent = await getAgentByName(env.MyAgent, sessionId)
+      try {
+        const meta: { userId?: string; sessionId?: string } = { sessionId }
+        if (userId) meta.userId = userId
+        const result = await agent.runChatTurn(message, meta)
+        return Response.json(result)
+      } catch (error) {
+        return Response.json({ error: error instanceof Error ? error.message : String(error) }, { status: 500 })
+      }
+    }
+
+    return (await routeAgentRequest(request, env)) ?? new Response("Not found", { status: 404 })
   },
 } satisfies ExportedHandler<Env>

@@ -8,7 +8,8 @@ import { SCOPE_LATITUDE } from "../constants/scope.ts"
 import { warnProjectSlugDeprecated } from "./_deprecation.ts"
 import { registerLatitudeInstrumentations } from "./instrumentations.ts"
 import { LatitudeSpanProcessor } from "./processor.ts"
-import type { InitLatitudeOptions, LatitudeOptions } from "./types.ts"
+import { latitudeAttributesFromContext, withLatitudeAttributes } from "./tracer.ts"
+import type { ContextOptions, InitLatitudeOptions, LatitudeOptions } from "./types.ts"
 
 const SERVICE_NAME = process.env.npm_package_name || "unknown"
 const DETECT_PROBE = "@latitude-data/telemetry-detect"
@@ -186,8 +187,10 @@ export class Latitude {
     return this.provider.getTracer(tracerName)
   }
 
-  getAiSdkTracer(): Tracer {
-    return this.getTracer("vercelai")
+  getAiSdkTracer(context?: ContextOptions): Tracer {
+    const tracer = this.getTracer("vercelai")
+    if (context === undefined) return tracer
+    return withLatitudeAttributes(tracer, latitudeAttributesFromContext(context))
   }
 
   private async handleShutdown(): Promise<void> {

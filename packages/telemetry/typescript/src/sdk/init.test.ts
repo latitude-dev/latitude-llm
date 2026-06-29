@@ -221,6 +221,42 @@ describe("Latitude", () => {
     await result.shutdown()
   })
 
+  it("stamps per-turn Latitude context onto every span from getAiSdkTracer(context)", async () => {
+    const latitudeExporter = new InMemorySpanExporter()
+
+    const result = new Latitude({
+      apiKey: "test-key",
+      project: "test-project",
+      exporter: latitudeExporter,
+      disableBatch: true,
+    })
+
+    const tracer = result.getAiSdkTracer({
+      sessionId: "sess-1",
+      userId: "user-1",
+      tags: ["cloudflare-think"],
+      metadata: { framework: "cloudflare-think" },
+    })
+
+    tracer.startSpan("ai.streamText").end()
+    tracer.startActiveSpan("ai.toolCall", (span) => {
+      span.end()
+    })
+
+    await result.flush()
+
+    const finished = latitudeExporter.getFinishedSpans()
+    expect(finished).toHaveLength(2)
+    for (const span of finished) {
+      expect(span.attributes["session.id"]).toBe("sess-1")
+      expect(span.attributes["user.id"]).toBe("user-1")
+      expect(span.attributes["latitude.tags"]).toBe(JSON.stringify(["cloudflare-think"]))
+      expect(span.attributes["latitude.metadata"]).toBe(JSON.stringify({ framework: "cloudflare-think" }))
+    }
+
+    await result.shutdown()
+  })
+
   it("applies serviceName to exported spans as a resource attribute, not a span attribute", async () => {
     const latitudeExporter = new InMemorySpanExporter()
 

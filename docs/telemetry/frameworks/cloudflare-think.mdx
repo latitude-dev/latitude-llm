@@ -88,7 +88,7 @@ This is the fastest way to see Think model calls in Latitude. It does not use
 
     export class MyAgent extends Think<Env> {
       getModel() {
-        return createWorkersAI({ binding: this.env.AI })("@cf/meta/llama-3.1-8b-instruct")
+        return createWorkersAI({ binding: this.env.AI })("@cf/meta/llama-4-scout-17b-16e-instruct")
       }
 
       beforeTurn(): TurnConfig {
@@ -126,22 +126,35 @@ This is the fastest way to see Think model calls in Latitude. It does not use
 
 ## Add Capture Context
 
-Use `capture.start()` and `capture.end()` when you want each Think turn to carry
-Latitude context such as `userId`, `sessionId`, `tags`, `metadata`, or a per-turn
-`project`. Capture does not create AI SDK spans by itself; keep
-`latitude.getAiSdkTracer()` in `beforeTurn`.
+Use `capture()` when you want each Think turn to carry Latitude context such as
+`userId`, `sessionId`, `tags`, `metadata`, or a per-turn `project`. Capture does
+not create AI SDK spans by itself; keep `latitude.getAiSdkTracer()` in
+`beforeTurn`.
 
-Start the capture in `beforeTurn`, then end it in both terminal hooks:
+<Warning>
+  Do not use the `capture.start()` / `scope.end()` lifecycle API on Cloudflare
+  Workers. It relies on `AsyncLocalStorage.enterWith()`, which the Workers runtime
+  [does not implement](https://developers.cloudflare.com/workers/runtime-apis/nodejs/asynclocalstorage/)
+  and which throws at runtime. Use the callback form shown below — it relies on
+  `AsyncLocalStorage.run()`, which Workers does support.
+</Warning>
+
+Wrap the whole turn with the callback form of `capture()` before calling
+`super.runTurn()`. Think runs `beforeTurn` and the model call inside
+`super.runTurn`, so the AI SDK spans land under the active Latitude context:
 
 ```ts
 import {
   Think,
-  type ChatErrorContext,
-  type ChatResponseResult,
+  type RunTurnOptions,
+  type RunTurnStream,
+  type RunTurnSubmit,
+  type RunTurnWait,
+  type SubmitMessagesResult,
   type TurnConfig,
-  type TurnContext,
+  type TurnResult,
 } from "@cloudflare/think"
-import { capture, type CaptureScope } from "@latitude-data/telemetry"
+import { capture } from "@latitude-data/telemetry"
 
 function stringFromBody(body: Record<string, unknown> | undefined, key: string) {
   const value = body?.[key]
@@ -149,53 +162,44 @@ function stringFromBody(body: Record<string, unknown> | undefined, key: string) 
 }
 
 export class MyAgent extends Think<Env> {
-  private latitudeCapture?: CaptureScope
-
-  beforeTurn(ctx: TurnContext): TurnConfig {
-    const latitude = getLatitude(this.env)
-
-    this.latitudeCapture?.end()
-    this.latitudeCapture = capture.start("cloudflare-think-turn", {
-      userId: stringFromBody(ctx.body, "userId"),
-      sessionId: stringFromBody(ctx.body, "sessionId"),
-      tags: ["cloudflare-think"],
-      metadata: {
-        continuation: ctx.continuation,
-        messageCount: ctx.messages.length,
-      },
-    })
-
+  beforeTurn(): TurnConfig {
     return {
       experimental_telemetry: {
         isEnabled: true,
-        tracer: latitude.getAiSdkTracer(),
+        tracer: getLatitude(this.env).getAiSdkTracer(),
         functionId: "think-turn",
         metadata: { framework: "cloudflare-think" },
       },
     }
   }
 
-  onChatResponse(result: ChatResponseResult) {
-    const error =
-      result.status === "error" ? new Error(result.error ?? "Think turn failed") : undefined
-    this.latitudeCapture?.end(error)
-    this.latitudeCapture = undefined
-  }
+  runTurn(options: RunTurnWait): Promise<TurnResult>
+  runTurn(options: RunTurnSubmit): Promise<SubmitMessagesResult>
+  runTurn(options: RunTurnStream): Promise<void>
+  runTurn(options: RunTurnOptions): Promise<TurnResult | SubmitMessagesResult | void> {
+    const body = "body" in options ? options.body : undefined
+    const runParent = () =>
+      (super.runTurn as (opts: RunTurnOptions) => Promise<TurnResult | SubmitMessagesResult | void>)(options)
 
-  onChatError(error: unknown, _ctx?: ChatErrorContext) {
-    this.latitudeCapture?.end(error)
-    this.latitudeCapture = undefined
-    return error
+    return Promise.resolve(
+      capture("cloudflare-think-turn", runParent, {
+        userId: stringFromBody(body, "userId"),
+        sessionId: stringFromBody(body, "sessionId"),
+        tags: ["cloudflare-think"],
+        metadata: { continuation: "continuation" in options ? Boolean(options.continuation) : false },
+      }),
+    )
   }
 }
 ```
 
-<Warning>
-  The example stores one active capture scope on the agent instance, which
-  matches Think's default queued turn execution. If your agent allows parallel
-  turns, store scopes in a `Map` keyed by your own request id and end the
-  matching scope in `onChatResponse` and `onChatError`.
-</Warning>
+<Note>
+  `userId`/`sessionId` are read from the `options.body` passed to your
+  wrapper/override before calling `super.runTurn()`. Do not rely on
+  `beforeTurn(ctx.body)` for normal programmatic `wait` turns; current Think
+  versions accept `body` on `runTurn()` but do not forward it into `beforeTurn`
+  on that path.
+</Note>
 
 ---
 

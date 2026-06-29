@@ -15,6 +15,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/node": "^22.10.0",
     "wrangler": "^4.105.0"
   }
 }

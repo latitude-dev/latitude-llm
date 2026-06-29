@@ -1,4 +1,4 @@
-import { type Context, context, createContextKey, type Span, trace } from "@opentelemetry/api"
+import { type Context, context, createContextKey, type Span, SpanStatusCode, trace } from "@opentelemetry/api"
 import { warnProjectSlugDeprecated } from "./_deprecation.ts"
 import type { ContextOptions } from "./types.ts"
 
@@ -10,6 +10,7 @@ const CAPTURE_SCOPE_BRAND = Symbol("latitude-capture-scope")
 function recordSpanExceptionForDatadog(span: Span, error: unknown): void {
   const err = error instanceof Error ? error : new Error(String(error))
   span.recordException(err)
+  span.setStatus({ code: SpanStatusCode.ERROR, message: err.message })
   span.setAttributes({
     "error.message": err.message,
     "error.stack": err.stack ?? "",

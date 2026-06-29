@@ -27,7 +27,7 @@ function makeThinkModel() {
 
   return new MockLanguageModelV3({
     provider: "cloudflare-workers-ai",
-    modelId: "@cf/meta/llama-3.1-8b-instruct",
+    modelId: "@cf/meta/llama-4-scout-17b-16e-instruct",
     doStream: async () => {
       calls += 1
 
@@ -38,7 +38,7 @@ function makeThinkModel() {
               {
                 type: "response-metadata",
                 id: `resp_${randomUUID()}`,
-                modelId: "@cf/meta/llama-3.1-8b-instruct",
+                modelId: "@cf/meta/llama-4-scout-17b-16e-instruct",
                 timestamp: new Date(),
               },
               {
@@ -54,7 +54,7 @@ function makeThinkModel() {
               {
                 type: "response-metadata",
                 id: `resp_${randomUUID()}`,
-                modelId: "@cf/meta/llama-3.1-8b-instruct",
+                modelId: "@cf/meta/llama-4-scout-17b-16e-instruct",
                 timestamp: new Date(),
               },
               { type: "text-start", id: "text-1" },
@@ -84,42 +84,46 @@ const getWeather = tool({
 
 async function runThinkTurn() {
   const sessionId = `cloudflare-think-local-${randomUUID()}`
-  const scope = capture.start("cloudflare-think-turn", {
-    userId: "local-think-user",
-    sessionId,
-    tags: ["cloudflare-think", "local-e2e"],
-    metadata: {
-      verifier: "cloudflare-think-app",
-      continuation: false,
-      messageCount: 1,
-    },
-  })
 
   try {
-    const result = streamText({
-      model: makeThinkModel(),
-      messages: [{ role: "user", content: "What is the weather in Barcelona? Use the weather tool." }],
-      tools: { getWeather },
-      stopWhen: stepCountIs(2),
-      experimental_telemetry: {
-        isEnabled: true,
-        tracer: latitude.getAiSdkTracer(),
-        functionId: "think-turn",
-        metadata: { framework: "cloudflare-think", verifier: "local-e2e" },
+    const text = await capture(
+      "cloudflare-think-turn",
+      async () => {
+        const result = streamText({
+          model: makeThinkModel(),
+          messages: [{ role: "user", content: "What is the weather in Barcelona? Use the weather tool." }],
+          tools: { getWeather },
+          stopWhen: stepCountIs(2),
+          experimental_telemetry: {
+            isEnabled: true,
+            tracer: latitude.getAiSdkTracer(),
+            functionId: "think-turn",
+            metadata: { framework: "cloudflare-think", verifier: "local-e2e" },
+          },
+        })
+
+        let text = ""
+        for await (const delta of result.textStream) text += delta
+
+        return text
       },
-    })
-
-    let text = ""
-    for await (const delta of result.textStream) text += delta
-
-    scope.end()
-    await latitude.flush()
+      {
+        userId: "local-think-user",
+        sessionId,
+        tags: ["cloudflare-think", "local-e2e"],
+        metadata: {
+          verifier: "cloudflare-think-app",
+          continuation: false,
+          messageCount: 1,
+        },
+      },
+    )
 
     return { sessionId, text }
   } catch (error) {
-    scope.end(error)
-    await latitude.flush()
     throw error
+  } finally {
+    await latitude.flush()
   }
 }
 
@@ -145,7 +149,11 @@ async function queryClickHouse(sql) {
 async function waitForSpans(sessionId) {
   const escaped = sessionId.replaceAll("'", "''")
   const sql = `
-    SELECT count(), countIf(name ILIKE '%tool%')
+    SELECT
+      count(),
+      countIf(name ILIKE '%tool%'),
+      countIf(user_id = 'local-think-user'),
+      countIf(provider != '')
     FROM spans
     WHERE session_id = '${escaped}'
       AND has(tags, 'cloudflare-think')
@@ -154,17 +162,23 @@ async function waitForSpans(sessionId) {
   `
 
   for (let attempt = 1; attempt <= 20; attempt += 1) {
-    const [spanCountRaw, toolSpanCountRaw] = (await queryClickHouse(sql)).split("\t")
+    const [spanCountRaw, toolSpanCountRaw, identifiedSpanCountRaw, providerSpanCountRaw] = (
+      await queryClickHouse(sql)
+    ).split("\t")
     const spanCount = Number(spanCountRaw)
     const toolSpanCount = Number(toolSpanCountRaw)
-    if (spanCount > 0 && toolSpanCount > 0) return { spanCount, toolSpanCount }
+    const identifiedSpanCount = Number(identifiedSpanCountRaw)
+    const providerSpanCount = Number(providerSpanCountRaw)
+    if (spanCount > 0 && toolSpanCount > 0 && identifiedSpanCount === spanCount && providerSpanCount > 0) {
+      return { spanCount, toolSpanCount, identifiedSpanCount, providerSpanCount }
+    }
     await sleep(500)
   }
 
-  throw new Error(`No tool spans found in ClickHouse for session ${sessionId}`)
+  throw new Error(`Expected identified model and tool spans in ClickHouse for session ${sessionId}`)
 }
 
 const { sessionId, text } = await runThinkTurn()
-const { spanCount, toolSpanCount } = await waitForSpans(sessionId)
+const { spanCount, toolSpanCount, identifiedSpanCount, providerSpanCount } = await waitForSpans(sessionId)
 
-console.log(JSON.stringify({ ok: true, sessionId, text, spanCount, toolSpanCount }, null, 2))
+console.log(JSON.stringify({ ok: true, sessionId, text, spanCount, toolSpanCount, identifiedSpanCount, providerSpanCount }, null, 2))

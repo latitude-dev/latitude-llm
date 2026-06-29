@@ -29,6 +29,8 @@ const PROVIDER_ALIASES: Record<string, string> = {
   mistral_ai: "mistral",
   together_ai: "togetherai",
   fireworks_ai: "fireworks-ai",
+  workersai: "cloudflare-workers-ai",
+  "workersai.chat": "cloudflare-workers-ai",
   // OTel GenAI well-known names from Vercel AI SDK v7's @ai-sdk/otel.
   "gcp.vertex_ai": "google-vertex",
   "gcp.gemini": "google",

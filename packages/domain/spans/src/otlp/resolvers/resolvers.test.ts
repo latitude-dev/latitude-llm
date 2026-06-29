@@ -186,9 +186,11 @@ describe("resolveAttributes", () => {
         ["gen_ai.system", "vertexai", "google-vertex"],
         ["gen_ai.system", "mistralai", "mistral"],
         ["gen_ai.system", "mistral_ai", "mistral"],
+        ["gen_ai.system", "workersai.chat", "cloudflare-workers-ai"],
         ["ai.model.provider", "google.vertex.chat", "google-vertex"],
         ["ai.model.provider", "anthropic.messages", "anthropic"],
         ["ai.model.provider", "google.generative-ai", "google"],
+        ["ai.model.provider", "workersai.chat", "cloudflare-workers-ai"],
         // Vercel AI SDK v7 (@ai-sdk/otel) OTel GenAI well-known provider names
         ["gen_ai.provider.name", "gcp.vertex_ai", "google-vertex"],
         ["gen_ai.provider.name", "gcp.gemini", "google"],

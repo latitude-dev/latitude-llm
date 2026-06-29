@@ -1,5 +1,6 @@
 """Tests for the capture() function and context propagation."""
 
+import asyncio
 import logging
 
 import pytest
@@ -45,6 +46,25 @@ class TestCaptureFunction:
 
         result = await capture("async-capture", my_async_function, {"session_id": "sess-1"})
         assert result == "async result"
+
+    @pytest.mark.asyncio
+    async def test_capture_async_wrapper_runs_concurrently(self):
+        """capture() wrapping async fns must work when the coroutines are driven by gather()."""
+
+        async def task_a():
+            ctx = get_latitude_context(otel_context.get_current())
+            assert ctx is not None
+            assert ctx.name == "a"
+            return "a"
+
+        async def task_b():
+            ctx = get_latitude_context(otel_context.get_current())
+            assert ctx is not None
+            assert ctx.name == "b"
+            return "b"
+
+        results = await asyncio.gather(capture("a", task_a), capture("b", task_b))
+        assert sorted(results) == ["a", "b"]
 
     def test_capture_preserves_exception(self):
         """Test that capture() re-raises exceptions."""

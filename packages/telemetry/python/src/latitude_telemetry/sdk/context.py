@@ -164,6 +164,20 @@ def _end_capture_scope(
 
 
 def _execute_with_context(name: str, fn: Callable[[], T], options: ContextOptions | None = None) -> T:
+    if inspect.iscoroutinefunction(fn):
+
+        async def async_wrapper() -> T:
+            scope = _start_capture_scope(name, options)
+            try:
+                return await fn()
+            except Exception as e:
+                _end_capture_scope(scope, e)
+                raise
+            finally:
+                _end_capture_scope(scope)
+
+        return async_wrapper()  # type: ignore[return-value]
+
     scope = _start_capture_scope(name, options)
     try:
         result = fn()
@@ -173,7 +187,7 @@ def _execute_with_context(name: str, fn: Callable[[], T], options: ContextOption
 
     if inspect.isawaitable(result):
 
-        async def async_wrapper() -> T:
+        async def await_result() -> T:
             try:
                 return await result
             except Exception as e:
@@ -182,7 +196,7 @@ def _execute_with_context(name: str, fn: Callable[[], T], options: ContextOption
             finally:
                 _end_capture_scope(scope)
 
-        return async_wrapper()  # type: ignore[return-value]
+        return await_result()  # type: ignore[return-value]
 
     _end_capture_scope(scope)
     return result
