@@ -149,3 +149,4 @@ workflow-test-output.txt
 # schema and better auth's default schema.
 packages/platform/db-postgres/better-auth.schema.reference.ts
 __pycache__/
+.conductor/
