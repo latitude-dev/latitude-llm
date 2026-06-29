@@ -32,7 +32,6 @@ import {
   visibleRangeToBand,
 } from "../../../../../../../lib/conversation-timeline/message-windows.ts"
 import { wallToTimeline } from "../../../../../../../lib/conversation-timeline/timeline-scale.ts"
-import { useDebounce } from "../../../../../../../lib/hooks/useDebounce.ts"
 import { AnnotationPopover } from "../../annotations/annotation-popover.tsx"
 import {
   type TextSelectionPopoverControls,
@@ -50,7 +49,6 @@ import { scrollToHighlightMatch } from "./scroll-to-highlight-match.ts"
 import { SearchMatchNavigator } from "./search-match-navigator.tsx"
 
 const LOAD_MORE_THRESHOLD_PX = 1200
-const CONVERSATION_SEARCH_DEBOUNCE_MS = 200
 
 /**
  * Latitude-staff-only "download conversation as JSON" affordance: visible to
@@ -289,17 +287,12 @@ function ConversationContent({
     ],
   )
 
-  const [conversationSearch, setConversationSearch] = useState("")
   const [debouncedConversationSearch, setDebouncedConversationSearch] = useState("")
   const [activeMatchIndex, setActiveMatchIndex] = useState(0)
 
-  useDebounce(
-    () => {
-      setDebouncedConversationSearch(conversationSearch.trim())
-    },
-    CONVERSATION_SEARCH_DEBOUNCE_MS,
-    [conversationSearch],
-  )
+  const handleDebouncedSearchQueryChange = useCallback((query: string) => {
+    setDebouncedConversationSearch(query)
+  }, [])
 
   const effectiveSearchQuery = searchQuery ?? ""
   const { data: remoteSearchHighlightsData } = useTraceSearchHighlights({
@@ -431,11 +424,7 @@ function ConversationContent({
     <div className="relative flex-1 min-h-0 flex flex-col">
       <div className="shrink-0 border-b border-border bg-background px-4 py-2">
         <div className="flex items-center gap-2">
-          <ConversationSearchBar
-            className="min-w-0 flex-1"
-            value={conversationSearch}
-            onChange={setConversationSearch}
-          />
+          <ConversationSearchBar className="min-w-0 flex-1" onDebouncedQueryChange={handleDebouncedSearchQueryChange} />
           <div className="flex shrink-0 items-center gap-1.5">
             <StaffConversationDownloadButton traceId={traceDetail.traceId} messages={messages} />
             {searchNavigationActive ? (
