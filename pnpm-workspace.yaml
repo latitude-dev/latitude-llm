@@ -67,7 +67,7 @@ catalog:
   protobufjs: 8.6.0
   tsdown: 0.21.9
   tsx: 4.21.0
-  turbo: 2.9.14
+  turbo: 2.9.18
   typescript: 6.0.3
   vite: 8.0.5
   vitest: 4.1.8
