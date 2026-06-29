@@ -4,6 +4,11 @@ import logging
 
 import pytest
 from opentelemetry import context as otel_context
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+from opentelemetry.trace import StatusCode
 
 from latitude_telemetry import capture, get_latitude_context
 from latitude_telemetry.sdk._deprecation import reset_project_slug_deprecation_warning_for_testing
@@ -84,6 +89,39 @@ class TestCaptureFunction:
         outer.end()
 
         assert get_latitude_context(otel_context.get_current()) is None
+
+
+class TestCaptureErrorStatus:
+    """capture() must mark its span as ERROR when the captured work raises."""
+
+    @pytest.fixture
+    def exporter(self, monkeypatch):
+        exporter = InMemorySpanExporter()
+        provider = TracerProvider()
+        provider.add_span_processor(SimpleSpanProcessor(exporter))
+        monkeypatch.setattr(trace, "_TRACER_PROVIDER", provider)
+        return exporter
+
+    def test_wrapper_sets_error_status_on_exception(self, exporter):
+        def failing_function():
+            raise ValueError("boom")
+
+        with pytest.raises(ValueError, match="boom"):
+            capture("error-status", failing_function)
+
+        spans = exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert spans[0].status.status_code == StatusCode.ERROR
+        assert any(event.name == "exception" for event in spans[0].events)
+
+    def test_lifecycle_end_sets_error_status(self, exporter):
+        scope = capture.start("lifecycle-error")
+        scope.end(ValueError("kaboom"))
+
+        spans = exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert spans[0].status.status_code == StatusCode.ERROR
+        assert any(event.name == "exception" for event in spans[0].events)
 
 
 class TestCaptureContextPropagation:

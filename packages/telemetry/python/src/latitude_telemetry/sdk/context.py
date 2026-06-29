@@ -6,7 +6,7 @@ from typing import Any, Callable, Coroutine, TypeVar, overload
 from opentelemetry import context as otel_context
 from opentelemetry import trace
 from opentelemetry.context import Context
-from opentelemetry.trace import Span
+from opentelemetry.trace import Span, Status, StatusCode
 
 from latitude_telemetry.sdk._deprecation import warn_project_slug_deprecated
 from latitude_telemetry.sdk.types import ContextOptions
@@ -154,6 +154,7 @@ def _end_capture_scope(
 
     if captured_error is not None and scope._span is not None:
         scope._span.record_exception(captured_error)
+        scope._span.set_status(Status(StatusCode.ERROR, str(captured_error)))
 
     if scope._span is not None:
         scope._span.end()
