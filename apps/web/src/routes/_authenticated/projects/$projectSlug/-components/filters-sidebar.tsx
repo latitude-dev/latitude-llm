@@ -19,9 +19,11 @@ import {
 import { PercentileFilter } from "../../../../../components/filters-builder/percentile-filter.tsx"
 import { StatusFilter, type StatusFilterValue } from "../../../../../components/filters-builder/status-filter.tsx"
 import type { DistinctColumn } from "../../../../../components/filters-builder/types.ts"
+import { useMembersCollection } from "../../../../../domains/members/members.collection.ts"
 import { useTopicFilterOptions } from "../../../../../domains/taxonomy/taxonomy.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
+import { useAuthenticatedUser } from "../../../-route-data.ts"
 
 export type { FilterMode }
 
@@ -69,6 +71,20 @@ function toWireUnit(value: number | undefined, displayScale: number | undefined)
 function getPercentileValue(filters: FilterSet, field: string): number | undefined {
   const cond = filters[field]?.find((c) => c.op === "gtePercentile")
   return typeof cond?.value === "number" ? cond.value : undefined
+}
+
+const ANNOTATOR_FIELD = "score.annotatorId"
+
+/**
+ * The "Has annotations" toggle stores a single `annotator_id != ''` condition on
+ * the shared `score.annotatorId` field. `annotator_id` is non-empty only for human
+ * annotations (evaluation/flagger/custom rows leave it blank), so this alone means
+ * "has at least one human annotation" — no source filter needed. It coexists with
+ * the people picker's `in` condition on the same field; both are AND'd in the score
+ * rollup subquery, and each control edits only its own condition op.
+ */
+function getHasAnnotationsOn(filters: FilterSet): boolean {
+  return (filters[ANNOTATOR_FIELD] ?? []).some((c) => c.op === "neq")
 }
 
 const STATUS_VALUES: readonly StatusFilterValue[] = ["ok", "error"]
@@ -470,6 +486,34 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
     [setField],
   )
 
+  const me = useAuthenticatedUser()
+  const { data: members } = useMembersCollection()
+  const annotatorItems = useMemo<readonly StaticFilterItem[]>(() => {
+    const active = (members ?? []).filter((m) => m.status === "active" && m.userId)
+    const others = active
+      .filter((m) => m.userId !== me.id)
+      .map((m) => ({ value: m.userId as string, label: m.name?.trim() || m.email }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+    // Current user pinned on top as "Your scores", regardless of member-list ordering.
+    return [{ value: me.id, label: "Your scores" }, ...others]
+  }, [members, me.id])
+
+  const setAnnotatedBy = useCallback(
+    (values: string[]) => {
+      const others = (filters[ANNOTATOR_FIELD] ?? []).filter((c) => c.op !== "in")
+      setField(ANNOTATOR_FIELD, values.length > 0 ? [{ op: "in", value: values }, ...others] : [...others])
+    },
+    [filters, setField],
+  )
+
+  const setHasAnnotations = useCallback(
+    (on: boolean) => {
+      const others = (filters[ANNOTATOR_FIELD] ?? []).filter((c) => c.op !== "neq")
+      setField(ANNOTATOR_FIELD, on ? [...others, { op: "neq", value: "" }] : [...others])
+    },
+    [filters, setField],
+  )
+
   const metadataEntries = useMemo(() => {
     const entries: { key: string; value: string }[] = []
     for (const [field, conditions] of Object.entries(filters)) {
@@ -590,6 +634,32 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
             />
           )
         })}
+
+        <CollapsibleSection label="Annotated by" defaultOpen={getInValues(filters, ANNOTATOR_FIELD).length > 0}>
+          <MultiSelectFilter
+            mode={mode}
+            projectId={projectId}
+            column={"annotatorId" as DistinctColumn}
+            selected={getInValues(filters, ANNOTATOR_FIELD)}
+            onChange={setAnnotatedBy}
+            staticItems={annotatorItems}
+            placeholder="Search members..."
+          />
+        </CollapsibleSection>
+
+        <CollapsibleSection label="Has annotations" defaultOpen={getHasAnnotationsOn(filters)}>
+          <div className="flex items-center justify-between gap-2">
+            <Text.H7 color="foregroundMuted">
+              {getHasAnnotationsOn(filters)
+                ? "Showing only items with a human annotation."
+                : "Off — annotations don't filter results."}
+            </Text.H7>
+            <Switch
+              checked={getHasAnnotationsOn(filters)}
+              onCheckedChange={(next) => setHasAnnotations(next === true)}
+            />
+          </div>
+        </CollapsibleSection>
 
         <CollapsibleSection label="Metadata" defaultOpen={metadataEntries.length > 0}>
           <MetadataFilter entries={metadataEntries} onChange={handleMetadataChange} />

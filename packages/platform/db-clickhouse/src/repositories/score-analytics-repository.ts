@@ -80,6 +80,7 @@ const toAnalyticsRow = (score: Score) => ({
   span_id: score.spanId ?? "",
   source: score.sourceType,
   source_id: score.sourceId,
+  annotator_id: score.annotatorId ?? "",
   simulation_id: score.simulationId ?? "",
   signal_id: score.signalId ?? "",
   // Dual-write the legacy column so reads/rollback stay correct until issue_id is dropped (Phase 9).

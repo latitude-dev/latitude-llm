@@ -43,6 +43,16 @@ describe("splitScoreFilters", () => {
     const { scoreFilters } = splitScoreFilters(filters)
     expect(scoreFilters).toBeUndefined()
   })
+
+  it("routes score.annotatorId into score filters", () => {
+    const filters: FilterSet = {
+      name: [{ op: "contains", value: "foo" }],
+      "score.annotatorId": [{ op: "in", value: ["user-a", "user-b"] }],
+    }
+    const { telemetryFilters, scoreFilters } = splitScoreFilters(filters)
+    expect(telemetryFilters).toEqual({ name: [{ op: "contains", value: "foo" }] })
+    expect(scoreFilters).toEqual({ "score.annotatorId": [{ op: "in", value: ["user-a", "user-b"] }] })
+  })
 })
 
 describe("buildScoreRollupSubquery", () => {
@@ -94,6 +104,33 @@ describe("buildScoreRollupSubquery", () => {
     const { subquery } = buildScoreRollupSubquery("trace_id", scoreFilters, false)
 
     expect(subquery).not.toContain("simulation_id = ''")
+  })
+
+  it("filters by annotator on the session subquery (people selector)", () => {
+    const scoreFilters: FilterSet = {
+      "score.annotatorId": [{ op: "in", value: ["user-a", "user-b"] }],
+    }
+
+    const { subquery, params } = buildScoreRollupSubquery("session_id", scoreFilters, false)
+
+    expect(subquery).toContain("session_id IN")
+    expect(subquery).toContain("annotator_id")
+    expect(Object.values(params)).toContainEqual(["user-a", "user-b"])
+  })
+
+  it("expresses has-human-annotations as annotator_id != '' (people picker + toggle compose)", () => {
+    const scoreFilters: FilterSet = {
+      "score.annotatorId": [
+        { op: "in", value: ["user-a"] },
+        { op: "neq", value: "" },
+      ],
+    }
+
+    const { subquery } = buildScoreRollupSubquery("trace_id", scoreFilters, false)
+
+    expect(subquery).toContain("annotator_id")
+    // Both conditions land in one subquery, AND'd together.
+    expect(subquery.match(/annotator_id/g)?.length).toBe(2)
   })
 
   it("uses a custom parameter prefix when requested", () => {
