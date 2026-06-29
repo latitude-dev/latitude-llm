@@ -199,26 +199,46 @@ function CollapsibleRow({
   )
 }
 
+function sortMockRows(
+  rows: ReadonlyArray<AvailableFlagger>,
+  enabledFlaggerSlugs: ReadonlySet<string>,
+  flaggerCheckOrder: ReadonlyArray<string>,
+): ReadonlyArray<AvailableFlagger> {
+  const checkOrderIndex = new Map(flaggerCheckOrder.map((slug, index) => [slug, index]))
+  const stableIndex = new Map(rows.map((row, index) => [row.slug, index]))
+
+  return [...rows].sort((a, b) => {
+    const aEnabled = enabledFlaggerSlugs.has(a.slug)
+    const bEnabled = enabledFlaggerSlugs.has(b.slug)
+    if (aEnabled !== bEnabled) return aEnabled ? -1 : 1
+    if (aEnabled && bEnabled) {
+      const aRank = checkOrderIndex.get(a.slug) ?? Number.POSITIVE_INFINITY
+      const bRank = checkOrderIndex.get(b.slug) ?? Number.POSITIVE_INFINITY
+      if (aRank !== bRank) return aRank - bRank
+    }
+    return (stableIndex.get(a.slug) ?? 0) - (stableIndex.get(b.slug) ?? 0)
+  })
+}
+
 export function MockSignalsFeed({
   enabledFlaggerSlugs,
+  flaggerCheckOrder,
   availableFlaggers,
 }: {
   readonly enabledFlaggerSlugs: ReadonlySet<string>
+  readonly flaggerCheckOrder: ReadonlyArray<string>
   readonly availableFlaggers: ReadonlyArray<AvailableFlagger>
 }) {
-  // Stable, fixed render order — every available flagger we have a mock issue for is always
-  // mounted. Rows collapse/expand in place via grid-rows, so the list never remounts and
-  // never reorders; toggling only flips a row's open state.
-  const mockRows = useMemo(
-    () => availableFlaggers.filter((f) => MOCK_ISSUES_BY_FLAGGER[f.slug] !== undefined),
-    [availableFlaggers],
-  )
+  const mockRows = useMemo(() => {
+    const rows = availableFlaggers.filter((f) => MOCK_ISSUES_BY_FLAGGER[f.slug] !== undefined)
+    return sortMockRows(rows, enabledFlaggerSlugs, flaggerCheckOrder)
+  }, [availableFlaggers, enabledFlaggerSlugs, flaggerCheckOrder])
 
   const openCount = mockRows.filter((f) => enabledFlaggerSlugs.has(f.slug)).length
 
   return (
-    <div className="flex h-fit w-full max-w-[591px] flex-col gap-4 self-center">
-      <div className="flex flex-col gap-1">
+    <div className="flex h-[80%] max-h-[80%] w-full max-w-[591px] min-h-0 flex-col gap-4 self-center overflow-hidden">
+      <div className="flex shrink-0 flex-col gap-1">
         <Text.H5M>Signals you'd see in your project</Text.H5M>
         <Text.H6 color="foregroundMuted">
           {openCount > 0
@@ -227,30 +247,35 @@ export function MockSignalsFeed({
         </Text.H6>
       </div>
 
-      <div className="flex w-full flex-col">
-        {mockRows.map((flagger, index) => {
-          const issue = MOCK_ISSUES_BY_FLAGGER[flagger.slug]
-          if (!issue) return null
-          // Static per-position delay: a preset (bulk toggle) cascades top-to-bottom, while a
-          // single toggle keeps a barely-perceptible delay — no need to track prior open state.
-          return (
-            <CollapsibleRow
-              key={flagger.slug}
-              open={enabledFlaggerSlugs.has(flagger.slug)}
-              delayMs={Math.min(index * STAGGER_STEP_MS, STAGGER_MAX_MS)}
-            >
-              <SignalCard issue={issue} />
-            </CollapsibleRow>
-          )
-        })}
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        <div className="flex w-full flex-col">
+          {mockRows.map((flagger, index) => {
+            const issue = MOCK_ISSUES_BY_FLAGGER[flagger.slug]
+            if (!issue) return null
+            return (
+              <CollapsibleRow
+                key={flagger.slug}
+                open={enabledFlaggerSlugs.has(flagger.slug)}
+                delayMs={Math.min(index * STAGGER_STEP_MS, STAGGER_MAX_MS)}
+              >
+                <SignalCard issue={issue} />
+              </CollapsibleRow>
+            )
+          })}
 
-        <CollapsibleRow open={openCount === 0} delayMs={0}>
-          <div className="rounded-lg border border-dashed border-border bg-card/50 p-4">
-            <Text.H6 color="foregroundMuted" align="center">
-              Pick a flagger to see what kinds of issues it would surface.
-            </Text.H6>
-          </div>
-        </CollapsibleRow>
+          <CollapsibleRow open={openCount === 0} delayMs={0}>
+            <div className="rounded-lg border border-dashed border-border bg-card/50 p-4">
+              <Text.H6 color="foregroundMuted" align="center">
+                Pick a flagger to see what kinds of issues it would surface.
+              </Text.H6>
+            </div>
+          </CollapsibleRow>
+        </div>
+
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-secondary from-25% to-transparent"
+        />
       </div>
     </div>
   )

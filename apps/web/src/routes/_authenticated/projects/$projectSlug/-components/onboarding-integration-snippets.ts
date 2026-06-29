@@ -1773,16 +1773,51 @@ export function getCodingAgentTelemetryPrompt(): string {
   return "Read the Latitude Telemetry AI skill from https://raw.githubusercontent.com/latitude-dev/skills/refs/heads/main/skills/latitude-telemetry/SKILL.md and add tracing to this application."
 }
 
-export type CodingMachineAgentId = "claude-code" | "openclaw"
+export type CodingMachineAgentId = "claude-code" | "openclaw" | "hermes" | "pi"
 
 export function getCodingMachineTelemetryInstallCommand(agent: CodingMachineAgentId): string {
-  return agent === "claude-code"
-    ? "npx -y @latitude-data/claude-code-telemetry install"
-    : ["npx -y @latitude-data/openclaw-telemetry install", "openclaw gateway restart"].join("\n")
+  switch (agent) {
+    case "claude-code":
+      return "npx -y @latitude-data/claude-code-telemetry install"
+    case "openclaw":
+      return ["npx -y @latitude-data/openclaw-telemetry install", "openclaw gateway restart"].join("\n")
+    case "hermes":
+      return "pip install latitude-telemetry-hermes"
+    case "pi":
+      return "npx -y @latitude-data/pi-telemetry install"
+  }
+}
+
+export function getPiTelemetryInstallCommand(projectSlug: string, apiKey: string | null): string {
+  const key = apiKey ?? "lat_xxx"
+  const slug = projectSlug.trim() || "your-project-slug"
+  return [
+    "npx -y @latitude-data/pi-telemetry install \\",
+    `  --api-key=${key} \\`,
+    `  --project=${slug} \\`,
+    "  --yes",
+  ].join("\n")
+}
+
+export function getHermesConfigYamlBlock(): string {
+  return ["plugins:", "  enabled:", "    - latitude"].join("\n")
+}
+
+export function getHermesEnvBlock(projectSlug: string, apiKey: string | null): string {
+  const slug = projectSlug.trim() || "your-project-slug"
+  const key = apiKey ?? "lat_xxx"
+  return `LATITUDE_API_KEY=${key}\nLATITUDE_PROJECT=${slug}`
 }
 
 export function getCodingMachineInstallDescription(agent: CodingMachineAgentId): string {
-  return agent === "claude-code"
-    ? "Run the command in your terminal and follow the instructions. Telemetry will be set up for Claude Code in the CLI, IDE, and Desktop app."
-    : "Run the install command in your terminal and follow the prompts, then run the gateway restart command so the plugin loads."
+  switch (agent) {
+    case "claude-code":
+      return "Run the command in your terminal and follow the instructions. Telemetry will be set up for Claude Code in the CLI, IDE, and Desktop app."
+    case "openclaw":
+      return "Run the install command in your terminal and follow the prompts, then run the gateway restart command so the plugin loads."
+    case "hermes":
+      return "Install into the Python that runs Hermes (use `~/.hermes/bin/uv pip install --python ~/.hermes/hermes-agent/venv/bin/python latitude-telemetry-hermes` if Hermes uses its own venv), enable the plugin in `~/.hermes/config.yaml`, and set credentials in `~/.hermes/.env`."
+    case "pi":
+      return "Run the installer with your API key and project slug, then restart pi so the extension loads."
+  }
 }

@@ -19,11 +19,14 @@ import {
   getCodingMachineInstallDescription,
   getCodingMachineTelemetryInstallCommand,
   getEnvBlock,
+  getHermesConfigYamlBlock,
+  getHermesEnvBlock,
   getLatitudeTelemetryPyInstallCommand,
   getLatitudeTelemetryTsInstallCommand,
   getOnboardingSnippet,
   getOtelCurlVerifySnippet,
   getOtelExporterLanguageSnippet,
+  getPiTelemetryInstallCommand,
   getProviderSdkPyInstallCommand,
   getProviderSdkTsInstallCommand,
   ONBOARDING_PROVIDER_SNIPPET_CONFIG,
@@ -37,7 +40,12 @@ import {
   TS_PACKAGE_MANAGERS,
   type TsPackageManager,
 } from "../../onboarding-integration-snippets.ts"
-import { ONBOARDING_CLAUDE_CODE_LOGO_SRC, ONBOARDING_OPENCLAW_LOGO_SRC } from "../assets.ts"
+import {
+  ONBOARDING_CLAUDE_CODE_LOGO_SRC,
+  ONBOARDING_HERMES_LOGO_SRC,
+  ONBOARDING_OPENCLAW_LOGO_SRC,
+  ONBOARDING_PI_LOGO_SRC,
+} from "../assets.ts"
 
 type TelemetrySetupMode = "coding-agent" | "manual"
 type IntegrationPanel = "typescript" | "python" | "opentelemetry"
@@ -56,13 +64,15 @@ interface ProviderEntry {
 }
 
 function isCodingMachineProvider(id: TelemetryProviderId): id is CodingMachineAgentId {
-  return id === "claude-code" || id === "openclaw"
+  return id === "claude-code" || id === "openclaw" || id === "hermes" || id === "pi"
 }
 
 /** Order matches docs.latitude.so telemetry providers, then frameworks (see /telemetry/overview). */
 const PROVIDER_ENTRIES: ReadonlyArray<ProviderEntry> = [
   { id: "claude-code", name: "Claude Code", logoSrc: ONBOARDING_CLAUDE_CODE_LOGO_SRC },
   { id: "openclaw", name: "OpenClaw", logoSrc: ONBOARDING_OPENCLAW_LOGO_SRC },
+  { id: "hermes", name: "Hermes", logoSrc: ONBOARDING_HERMES_LOGO_SRC },
+  { id: "pi", name: "Pi", logoSrc: ONBOARDING_PI_LOGO_SRC },
   { id: "openai", name: "OpenAI", icon: "openai" },
   { id: "anthropic", name: "Anthropic", icon: "anthropic" },
   { id: "gemini", name: "Gemini", icon: "google" },
@@ -294,6 +304,55 @@ function CodingMachineInstructions({
   readonly projectSlugForCopy: string
   readonly defaultApiKeyToken: string | null
 }) {
+  if (agent === "hermes") {
+    return (
+      <>
+        <div className="flex flex-col gap-2">
+          <Text.H5M>Install</Text.H5M>
+          <Text.H5 color="foregroundMuted">{getCodingMachineInstallDescription(agent)}</Text.H5>
+          <CodeBlock value={getCodingMachineTelemetryInstallCommand(agent)} copyable />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Text.H5M>Enable in `~/.hermes/config.yaml`</Text.H5M>
+          <Text.H5 color="foregroundMuted">
+            Add <code className="text-xs">latitude</code> under <code className="text-xs">plugins.enabled</code> — do
+            not use <code className="text-xs">hermes plugins enable</code> for pip-installed plugins.
+          </Text.H5>
+          <CodeBlock value={getHermesConfigYamlBlock()} copyable />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Text.H5M>Credentials in `~/.hermes/.env`</Text.H5M>
+          <Text.H5 color="foregroundMuted">
+            Hermes loads this file at startup. Send a message after setup and check Traces in Latitude.
+          </Text.H5>
+          <CodeBlock value={getHermesEnvBlock(projectSlugForCopy, defaultApiKeyToken)} copyable />
+        </div>
+      </>
+    )
+  }
+
+  if (agent === "pi") {
+    return (
+      <>
+        <div className="flex flex-col gap-2">
+          <Text.H5M>Install</Text.H5M>
+          <Text.H5 color="foregroundMuted">{getCodingMachineInstallDescription(agent)}</Text.H5>
+          <CodeBlock value={getPiTelemetryInstallCommand(projectSlugForCopy, defaultApiKeyToken)} copyable />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Text.H5M>Restart and verify</Text.H5M>
+          <Text.H5 color="foregroundMuted">
+            Restart pi so it loads the extension, send a prompt that uses the model or a tool, then open Traces in
+            Latitude — the new trace should appear within a few seconds.
+          </Text.H5>
+        </div>
+      </>
+    )
+  }
+
   return (
     <>
       <div className="flex flex-col gap-2">
