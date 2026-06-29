@@ -2,7 +2,7 @@
 SDK module public exports.
 """
 
-from latitude_telemetry.sdk.context import capture, get_latitude_context
+from latitude_telemetry.sdk.context import CaptureScope, capture, get_latitude_context
 from latitude_telemetry.sdk.init import Latitude, init_latitude
 from latitude_telemetry.sdk.instrumentations import register_latitude_instrumentations
 from latitude_telemetry.sdk.types import (
@@ -18,6 +18,7 @@ from latitude_telemetry.sdk.types import (
 
 __all__ = [
     "capture",
+    "CaptureScope",
     "get_latitude_context",
     "Latitude",
     "init_latitude",

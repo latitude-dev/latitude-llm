@@ -43,6 +43,7 @@ Example (Advanced - Existing OTel Setup):
 
 from latitude_telemetry.constants import ATTRIBUTES
 from latitude_telemetry.sdk import (
+    CaptureScope,
     ContextOptions,
     InitLatitudeOptions,
     InstrumentationName,
@@ -83,6 +84,7 @@ __all__ = [
     "get_latitude_context",
     # Types
     "ContextOptions",
+    "CaptureScope",
     "InitLatitudeOptions",
     "InstrumentationName",
     "InstrumentationsInput",

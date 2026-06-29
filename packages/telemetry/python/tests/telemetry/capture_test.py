@@ -1,9 +1,15 @@
 """Tests for the capture() function and context propagation."""
 
+import asyncio
 import logging
 
 import pytest
 from opentelemetry import context as otel_context
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+from opentelemetry.trace import StatusCode
 
 from latitude_telemetry import capture, get_latitude_context
 from latitude_telemetry.sdk._deprecation import reset_project_slug_deprecation_warning_for_testing
@@ -41,6 +47,45 @@ class TestCaptureFunction:
         result = await capture("async-capture", my_async_function, {"session_id": "sess-1"})
         assert result == "async result"
 
+    @pytest.mark.asyncio
+    async def test_capture_async_wrapper_runs_concurrently(self):
+        """capture() wrapping async fns must work when the coroutines are driven by gather()."""
+
+        async def task_a():
+            ctx = get_latitude_context(otel_context.get_current())
+            assert ctx is not None
+            assert ctx.name == "a"
+            return "a"
+
+        async def task_b():
+            ctx = get_latitude_context(otel_context.get_current())
+            assert ctx is not None
+            assert ctx.name == "b"
+            return "b"
+
+        results = await asyncio.gather(capture("a", task_a), capture("b", task_b))
+        assert sorted(results) == ["a", "b"]
+
+    @pytest.mark.asyncio
+    async def test_capture_sync_callable_returning_coroutine_runs_concurrently(self):
+        """capture() wrapping coroutine-returning sync fns must not leak context before gather()."""
+
+        async def task(expected_name: str):
+            ctx = get_latitude_context(otel_context.get_current())
+            assert ctx is not None
+            assert ctx.name == expected_name
+            return expected_name
+
+        coroutines = [
+            capture("a", lambda: task("a")),
+            capture("b", lambda: task("b")),
+        ]
+
+        assert get_latitude_context(otel_context.get_current()) is None
+
+        results = await asyncio.gather(*coroutines)
+        assert sorted(results) == ["a", "b"]
+
     def test_capture_preserves_exception(self):
         """Test that capture() re-raises exceptions."""
 
@@ -49,6 +94,74 @@ class TestCaptureFunction:
 
         with pytest.raises(ValueError, match="test error"):
             capture("error-test", failing_function, {"tags": ["error-test"]})
+
+    def test_capture_lifecycle_explicit_scope(self):
+        scope = capture.start("lifecycle-test", {"tags": ["lifecycle"], "session_id": "session-1"})
+
+        active_ctx = get_latitude_context(otel_context.get_current())
+        assert active_ctx is not None
+        assert active_ctx.name == "lifecycle-test"
+        assert active_ctx.tags == ["lifecycle"]
+        assert active_ctx.session_id == "session-1"
+
+        capture.end(scope)
+
+        assert get_latitude_context(otel_context.get_current()) is None
+
+    def test_capture_lifecycle_stack_end(self):
+        outer = capture.start("outer", {"tags": ["outer"], "metadata": {"shared": "outer"}})
+        capture.start("inner", {"tags": ["inner"], "metadata": {"shared": "inner", "local": "yes"}})
+
+        inner_ctx = get_latitude_context(otel_context.get_current())
+        assert inner_ctx is not None
+        assert inner_ctx.name == "inner"
+        assert inner_ctx.tags == ["outer", "inner"]
+        assert inner_ctx.metadata == {"shared": "inner", "local": "yes"}
+
+        capture.end()
+
+        outer_ctx = get_latitude_context(otel_context.get_current())
+        assert outer_ctx is not None
+        assert outer_ctx.name == "outer"
+        assert outer_ctx.tags == ["outer"]
+        assert outer_ctx.metadata == {"shared": "outer"}
+
+        outer.end()
+
+        assert get_latitude_context(otel_context.get_current()) is None
+
+
+class TestCaptureErrorStatus:
+    """capture() must mark its span as ERROR when the captured work raises."""
+
+    @pytest.fixture
+    def exporter(self, monkeypatch):
+        exporter = InMemorySpanExporter()
+        provider = TracerProvider()
+        provider.add_span_processor(SimpleSpanProcessor(exporter))
+        monkeypatch.setattr(trace, "_TRACER_PROVIDER", provider)
+        return exporter
+
+    def test_wrapper_sets_error_status_on_exception(self, exporter):
+        def failing_function():
+            raise ValueError("boom")
+
+        with pytest.raises(ValueError, match="boom"):
+            capture("error-status", failing_function)
+
+        spans = exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert spans[0].status.status_code == StatusCode.ERROR
+        assert any(event.name == "exception" for event in spans[0].events)
+
+    def test_lifecycle_end_sets_error_status(self, exporter):
+        scope = capture.start("lifecycle-error")
+        scope.end(ValueError("kaboom"))
+
+        spans = exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert spans[0].status.status_code == StatusCode.ERROR
+        assert any(event.name == "exception" for event in spans[0].events)
 
 
 class TestCaptureContextPropagation:

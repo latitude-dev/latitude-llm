@@ -1,5 +1,6 @@
-import { context } from "@opentelemetry/api"
+import { context, SpanStatusCode, trace } from "@opentelemetry/api"
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks"
+import { InMemorySpanExporter, NodeTracerProvider, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-node"
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import { resetProjectSlugDeprecationWarningForTesting } from "./_deprecation.ts"
 import { capture, getLatitudeContext } from "./context.ts"
@@ -194,5 +195,74 @@ describe("capture", () => {
         { name: "custom-name" },
       )
     })
+  })
+
+  it("supports lifecycle capture with an explicit scope", () => {
+    const scope = capture.start("lifecycle-test", { tags: ["lifecycle"], sessionId: "session-1" })
+
+    const activeData = getLatitudeContext(context.active())
+    expect(activeData?.name).toBe("lifecycle-test")
+    expect(activeData?.tags).toEqual(["lifecycle"])
+    expect(activeData?.sessionId).toBe("session-1")
+
+    capture.end(scope)
+
+    expect(getLatitudeContext(context.active())).toBeUndefined()
+  })
+
+  it("supports nested lifecycle capture with stack-style end", () => {
+    const outer = capture.start("outer", { tags: ["outer"], metadata: { shared: "outer" } })
+    capture.start("inner", { tags: ["inner"], metadata: { shared: "inner", local: "yes" } })
+
+    const innerData = getLatitudeContext(context.active())
+    expect(innerData?.name).toBe("inner")
+    expect(innerData?.tags).toEqual(["outer", "inner"])
+    expect(innerData?.metadata).toEqual({ shared: "inner", local: "yes" })
+
+    capture.end()
+
+    const outerData = getLatitudeContext(context.active())
+    expect(outerData?.name).toBe("outer")
+    expect(outerData?.tags).toEqual(["outer"])
+    expect(outerData?.metadata).toEqual({ shared: "outer" })
+
+    outer.end()
+
+    expect(getLatitudeContext(context.active())).toBeUndefined()
+  })
+})
+
+describe("capture error status", () => {
+  const exporter = new InMemorySpanExporter()
+
+  beforeAll(() => {
+    context.setGlobalContextManager(new AsyncLocalStorageContextManager())
+    trace.setGlobalTracerProvider(new NodeTracerProvider({ spanProcessors: [new SimpleSpanProcessor(exporter)] }))
+  })
+  beforeEach(() => {
+    exporter.reset()
+  })
+
+  it("marks the wrapper span as ERROR when the work throws", () => {
+    expect(() =>
+      capture("error-status", () => {
+        throw new Error("boom")
+      }),
+    ).toThrow("boom")
+
+    const spans = exporter.getFinishedSpans()
+    expect(spans).toHaveLength(1)
+    expect(spans[0]?.status.code).toBe(SpanStatusCode.ERROR)
+    expect(spans[0]?.events.some((event) => event.name === "exception")).toBe(true)
+  })
+
+  it("marks the lifecycle span as ERROR when ended with an error", () => {
+    const scope = capture.start("lifecycle-error")
+    scope.end(new Error("kaboom"))
+
+    const spans = exporter.getFinishedSpans()
+    expect(spans).toHaveLength(1)
+    expect(spans[0]?.status.code).toBe(SpanStatusCode.ERROR)
+    expect(spans[0]?.events.some((event) => event.name === "exception")).toBe(true)
   })
 })

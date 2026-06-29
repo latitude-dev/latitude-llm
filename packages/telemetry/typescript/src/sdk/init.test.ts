@@ -170,6 +170,94 @@ describe("Latitude", () => {
     await result.shutdown()
   })
 
+  it("creates explicit tracers from the Latitude-owned fallback provider", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+    const latitudeExporter = new InMemorySpanExporter()
+    const opaqueProvider = { getTracer: () => ({}) as Tracer } satisfies TracerProvider
+
+    const result = new Latitude({
+      apiKey: "test-key",
+      project: "test-project",
+      tracerProvider: opaqueProvider,
+      exporter: latitudeExporter,
+      disableBatch: true,
+    })
+
+    const span = result.getTracer("vercelai").startSpan("ai-sdk-call")
+    span.end()
+
+    await result.flush()
+
+    const finished = latitudeExporter.getFinishedSpans()
+    expect(finished).toHaveLength(1)
+    expect(finished[0]?.instrumentationScope.name).toBe("so.latitude.instrumentation.vercelai")
+
+    warnSpy.mockRestore()
+    await result.shutdown()
+  })
+
+  it("creates scoped tracers from the active Latitude provider", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+    const latitudeExporter = new InMemorySpanExporter()
+    const opaqueProvider = { getTracer: () => ({}) as Tracer } satisfies TracerProvider
+
+    const result = new Latitude({
+      apiKey: "test-key",
+      project: "test-project",
+      tracerProvider: opaqueProvider,
+      exporter: latitudeExporter,
+      disableBatch: true,
+    })
+
+    const tracer = result.getTracer("cloudflare-think")
+    const span = tracer.startSpan("ai-sdk-call")
+    span.end()
+
+    await result.flush()
+
+    expect(latitudeExporter.getFinishedSpans()).toHaveLength(1)
+
+    warnSpy.mockRestore()
+    await result.shutdown()
+  })
+
+  it("stamps per-turn Latitude context onto every span from getTracer(scope, context)", async () => {
+    const latitudeExporter = new InMemorySpanExporter()
+
+    const result = new Latitude({
+      apiKey: "test-key",
+      project: "test-project",
+      exporter: latitudeExporter,
+      disableBatch: true,
+    })
+
+    const tracer = result.getTracer("cloudflare-think", {
+      sessionId: "sess-1",
+      userId: "user-1",
+      tags: ["cloudflare-think"],
+      metadata: { framework: "cloudflare-think" },
+    })
+
+    tracer.startSpan("ai.streamText").end()
+    tracer.startActiveSpan("ai.toolCall", (span) => {
+      span.end()
+    })
+
+    await result.flush()
+
+    const finished = latitudeExporter.getFinishedSpans()
+    expect(finished).toHaveLength(2)
+    for (const span of finished) {
+      expect(span.instrumentationScope.name).toBe("so.latitude.instrumentation.cloudflare-think")
+      expect(span.attributes["session.id"]).toBe("sess-1")
+      expect(span.attributes["user.id"]).toBe("user-1")
+      expect(span.attributes["latitude.tags"]).toBe(JSON.stringify(["cloudflare-think"]))
+      expect(span.attributes["latitude.metadata"]).toBe(JSON.stringify({ framework: "cloudflare-think" }))
+    }
+
+    await result.shutdown()
+  })
+
   it("applies serviceName to exported spans as a resource attribute, not a span attribute", async () => {
     const latitudeExporter = new InMemorySpanExporter()
 

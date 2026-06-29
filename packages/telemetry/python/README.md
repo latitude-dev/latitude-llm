@@ -248,6 +248,14 @@ def capture(
 ) -> T:
     ...
 
+class CaptureScope:
+    def end(self, error: BaseException | None = None) -> None:
+        ...
+
+capture.start(name: str, options: ContextOptions | None = None) -> CaptureScope
+capture.end(scope: CaptureScope, error: BaseException | None = None) -> None
+capture.end(error: BaseException | None = None) -> None
+
 # ContextOptions:
 # {
 #     "name": str | None,        # Override the capture name
@@ -260,6 +268,25 @@ def capture(
 #     "project_slug": str | None, # DEPRECATED alias for `project`. Still accepted.
 # }
 ```
+
+Use lifecycle mode when callback wrapping does not fit the shape of your code:
+
+```python
+scope = capture.start(
+    "support-agent-turn",
+    {"user_id": user.id, "session_id": session.id, "tags": ["support"]},
+)
+
+try:
+    run_agent()
+except Exception as error:
+    capture.end(scope, error)
+    raise
+
+capture.end(scope)
+```
+
+You can also call `capture.end()` without a scope to end the currently active lifecycle capture.
 
 **Nested `capture()` behavior:**
 

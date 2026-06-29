@@ -233,10 +233,27 @@ type LatitudeOptions = {
 class Latitude {
   constructor(options: LatitudeOptions);
   provider: TracerProvider; // Existing provider when detected, otherwise Latitude's NodeTracerProvider
+  getTracer(scope: string, context?: ContextOptions): Tracer;
   flush(): Promise<void>;
   shutdown(): Promise<void>;
 }
 ```
+
+Use `getTracer()` with Vercel AI SDK v6 calls:
+
+```typescript
+await generateText({
+  model,
+  prompt: "Hello",
+  experimental_telemetry: {
+    isEnabled: true,
+    tracer: latitude.getTracer("vercelai"),
+    functionId: "support-agent-turn",
+  },
+});
+```
+
+The helper returns a tracer from the provider Latitude is actually exporting from. That matters when another runtime or observability SDK already registered a global OpenTelemetry provider that Latitude cannot attach to. Pass context as the second argument when you want spans created by that tracer to carry `userId`, `sessionId`, `tags`, `metadata`, or `project`.
 
 ### `LatitudeSpanProcessor`
 
@@ -290,7 +307,36 @@ function capture<T>(
   fn: () => T | Promise<T>,
   options?: ContextOptions,
 ): T | Promise<T>;
+
+type CaptureScope = {
+  end(error?: unknown): void;
+};
+
+capture.start(name: string, options?: ContextOptions): CaptureScope;
+capture.end(scope?: CaptureScope, error?: unknown): void;
+capture.end(error?: unknown): void;
 ```
+
+Use lifecycle mode when callback wrapping does not fit the shape of your code:
+
+```typescript
+const scope = capture.start("support-agent-turn", {
+  userId: user.id,
+  sessionId: session.id,
+  tags: ["support"],
+});
+
+try {
+  await runAgent();
+} catch (error) {
+  capture.end(scope, error);
+  throw error;
+}
+
+capture.end(scope);
+```
+
+You can also call `capture.end()` without a scope to end the currently active lifecycle capture.
 
 **Nested `capture()` behavior:**
 

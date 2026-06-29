@@ -1,0 +1,268 @@
+---
+title: Cloudflare Think
+description: Connect Cloudflare Think agents to Latitude for observability.
+---
+
+## Overview
+
+Cloudflare Think uses the Vercel AI SDK internally. Think owns the `streamText`
+call, so add Latitude telemetry in `beforeTurn()` instead of at a model call
+site.
+
+Start with the basic setup. Add context only if you need traces to include
+user, session, tags, or metadata from your app.
+
+---
+
+## Requirements
+
+- A Latitude API key
+- A Latitude project slug
+- A Cloudflare Workers project using `@cloudflare/think`
+- The `nodejs_compat` compatibility flag enabled in your Worker
+- `LATITUDE_API_KEY` and `LATITUDE_PROJECT_SLUG` configured as Worker secrets or variables
+
+---
+
+## Basic Telemetry
+
+This records Think model calls, tools, latency, tokens, prompts, and responses.
+
+<Steps>
+  <Step title="Install">
+    <CodeGroup>
+      ```bash npm
+      npm install @latitude-data/telemetry
+      ```
+
+      ```bash pnpm
+      pnpm add @latitude-data/telemetry
+      ```
+
+      ```bash yarn
+      yarn add @latitude-data/telemetry
+      ```
+
+      ```bash bun
+      bun add @latitude-data/telemetry
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Initialize Latitude once">
+    ```ts
+    import { Think, type TurnConfig } from "@cloudflare/think"
+    import { Latitude } from "@latitude-data/telemetry"
+    import { routeAgentRequest } from "agents"
+    import { createWorkersAI } from "workers-ai-provider"
+
+    type Env = {
+      AI: Ai
+      LATITUDE_API_KEY: string
+      LATITUDE_PROJECT_SLUG: string
+    }
+
+    const latitude = new Latitude({
+      apiKey: process.env.LATITUDE_API_KEY!,
+      project: process.env.LATITUDE_PROJECT_SLUG!,
+      serviceName: "cloudflare-think-agent",
+    })
+
+    export class MyAgent extends Think<Env> {
+      getModel() {
+        return createWorkersAI({ binding: this.env.AI })("@cf/meta/llama-4-scout-17b-16e-instruct")
+      }
+
+      beforeTurn(): TurnConfig {
+        return {
+          experimental_telemetry: {
+            isEnabled: true,
+            tracer: latitude.getTracer("cloudflare-think"),
+            functionId: "think-turn",
+            metadata: { framework: "cloudflare-think" },
+          },
+        }
+      }
+
+      async onChatResponse() {
+        await latitude.flush()
+      }
+
+      onChatError(error: unknown) {
+        this.ctx.waitUntil(latitude.flush())
+        return error
+      }
+    }
+
+    export default {
+      async fetch(request: Request, env: Env) {
+        const response =
+          (await routeAgentRequest(request, env)) ??
+          new Response("Not found", { status: 404 })
+
+        return response
+      },
+    } satisfies ExportedHandler<Env>
+    ```
+
+    If your Worker exposes secrets through `process.env`, this is all you need.
+    Most Workers receive secrets through `env` bindings instead. In that case,
+    keep one `Latitude` instance per Worker isolate:
+
+    ```ts
+    let latitude: Latitude | undefined
+
+    function getLatitude(env: Env) {
+      latitude ??= new Latitude({
+        apiKey: env.LATITUDE_API_KEY,
+        project: env.LATITUDE_PROJECT_SLUG,
+        serviceName: "cloudflare-think-agent",
+      })
+
+      return latitude
+    }
+    ```
+
+    Then use `getLatitude(this.env).getTracer("cloudflare-think")` in
+    `beforeTurn()` and `getLatitude(this.env).flush()` in `onChatResponse()` /
+    `onChatError()`. Do not create `new Latitude()` inside `beforeTurn()`.
+  </Step>
+</Steps>
+
+---
+
+## Add App Context
+
+If your app uses Think's default WebSocket chat entrypoint, pass the same context
+you would normally pass to `capture()` through `useAgentChat({ body })`.
+
+```tsx
+import { useAgentChat } from "@cloudflare/think/react"
+
+const { messages, sendMessage } = useAgentChat({
+  agent,
+  body: {
+    userId: currentUser.id,
+    sessionId: session.id,
+    tags: ["cloudflare-think"],
+    metadata: { plan: currentUser.plan },
+  },
+})
+```
+
+Then read that context in `beforeTurn()` and pass it to `getTracer()`:
+
+```ts
+import { Think, type TurnConfig, type TurnContext } from "@cloudflare/think"
+import type { ContextOptions } from "@latitude-data/telemetry"
+
+export class MyAgent extends Think<Env> {
+  beforeTurn(ctx: TurnContext): TurnConfig {
+    const context = (ctx.body ?? {}) as ContextOptions
+
+    return {
+      experimental_telemetry: {
+        isEnabled: true,
+        tracer: latitude.getTracer("cloudflare-think", context),
+        functionId: "think-turn",
+      },
+    }
+  }
+}
+```
+
+This is the recommended setup for most Think apps.
+
+---
+
+## Programmatic Turns
+
+If your app starts Think turns with your own `runTurn()` call, wrap that call
+with `capture()`.
+
+```ts
+import { capture } from "@latitude-data/telemetry"
+
+export class MyAgent extends Think<Env> {
+  async runSupportTurn(input: string, userId: string, sessionId: string) {
+    return capture(
+      "cloudflare-think-turn",
+      () => this.runTurn({ input }),
+      {
+        userId,
+        sessionId,
+        tags: ["cloudflare-think"],
+        metadata: { framework: "cloudflare-think" },
+      },
+    )
+  }
+}
+```
+
+Keep `getTracer()` in `beforeTurn()`:
+
+```ts
+beforeTurn(): TurnConfig {
+  return {
+    experimental_telemetry: {
+      isEnabled: true,
+      tracer: latitude.getTracer("cloudflare-think"),
+      functionId: "think-turn",
+    },
+  }
+}
+```
+
+<Warning>
+  Do not use `capture.start()` / `scope.end()` on Cloudflare Workers. Use
+  `capture()` as a callback wrapper instead.
+</Warning>
+
+---
+
+## If You Cannot Wrap The Turn
+
+If you cannot wrap the turn, pass context directly to the tracer from
+`beforeTurn()`. The context can come from agent state, Durable Object storage,
+auth state, or any place your agent can read during the turn.
+
+```ts
+async beforeTurn(): Promise<TurnConfig> {
+  const userId = await this.ctx.storage.get<string>("userId")
+  const sessionId = await this.ctx.storage.get<string>("sessionId")
+
+  return {
+    experimental_telemetry: {
+      isEnabled: true,
+      tracer: latitude.getTracer("cloudflare-think", {
+        userId,
+        sessionId,
+        tags: ["cloudflare-think"],
+      }),
+      functionId: "think-turn",
+    },
+  }
+}
+```
+
+This records the model and tool spans with the right context. It does not add a
+separate parent `cloudflare-think-turn` span.
+
+---
+
+## Runnable Example
+
+The Latitude repository includes a runnable Think example at
+[`examples/cloudflare-think-app`](https://github.com/latitude-dev/latitude-llm/tree/development/packages/telemetry/typescript/examples/cloudflare-think-app).
+It includes a `getWeather` tool, a small QA page, and a local verifier that
+checks model spans, tool spans, `userId`, and `sessionId` against local Latitude.
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your project in the Latitude dashboard
+2. Send a message to your Think agent
+3. The turn appears with model calls, tool calls, messages, latency, token usage, and errors

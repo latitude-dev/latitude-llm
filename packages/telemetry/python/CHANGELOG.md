@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.5.0] - 2026-06-29
+
+### Added
+
+- `capture.start()` and `capture.end()` support lifecycle capture boundaries for flows that cannot
+  wrap their work in a callback. `CaptureScope` can be ended directly, or `capture.end()` can end the
+  currently active lifecycle capture.
+
+### Fixed
+
+- Capture root spans now record exceptions and set `ERROR` status when captured work raises or a
+  lifecycle capture ends with an error.
+- `capture()` now keeps context isolated when a synchronous callable returns a coroutine, so
+  concurrent wrapper-mode captures such as `asyncio.gather(capture("a", lambda: task_a()), ...)`
+  do not leak the last capture context into every task.
+
 ## [3.4.0] - 2026-06-26
 
 ### Changed
