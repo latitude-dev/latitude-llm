@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+## v0.3.24 - 2026-06-29
+
+### Signals and evaluations
+
+- Added deterministic rule-based signal evaluations across the API, MCP, TypeScript SDK, and Python SDK, including validated condition schemas and generated pure evaluation scripts (ref: #3739).
+- Kept legacy cached clients working by coercing incident `sourceType: "issue"` requests to signals instead of rejecting them (ref: #3741).
+
+### Scores and trace filtering
+
+- Added trace and session filters for human annotation author and "has annotations", backed by ClickHouse `annotator_id` score analytics for new score rows (ref: #3742).
+
+### Telemetry SDKs and docs
+
+- Added telemetry capture lifecycle APIs, simplified AI SDK tracer usage, fixed Python wrapper-mode coroutine context isolation, and documented Cloudflare Think setup paths (ref: 5db2ba85e).
+
 ## v0.3.23 - 2026-06-29
 
 ### Datasets
