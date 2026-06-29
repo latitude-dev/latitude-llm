@@ -66,6 +66,26 @@ class TestCaptureFunction:
         results = await asyncio.gather(capture("a", task_a), capture("b", task_b))
         assert sorted(results) == ["a", "b"]
 
+    @pytest.mark.asyncio
+    async def test_capture_sync_callable_returning_coroutine_runs_concurrently(self):
+        """capture() wrapping coroutine-returning sync fns must not leak context before gather()."""
+
+        async def task(expected_name: str):
+            ctx = get_latitude_context(otel_context.get_current())
+            assert ctx is not None
+            assert ctx.name == expected_name
+            return expected_name
+
+        coroutines = [
+            capture("a", lambda: task("a")),
+            capture("b", lambda: task("b")),
+        ]
+
+        assert get_latitude_context(otel_context.get_current()) is None
+
+        results = await asyncio.gather(*coroutines)
+        assert sorted(results) == ["a", "b"]
+
     def test_capture_preserves_exception(self):
         """Test that capture() re-raises exceptions."""
 

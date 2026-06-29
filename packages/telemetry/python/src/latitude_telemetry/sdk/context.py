@@ -60,9 +60,11 @@ class CaptureScope:
         self,
         token: Token[Context] | None,
         span: Span | None,
+        context: Context | None = None,
     ):
         self._token = token
         self._span = span
+        self._context = context
         self._ended = False
 
     def end(self, error: BaseException | None = None) -> None:
@@ -117,8 +119,10 @@ def _start_capture_scope(name: str, options: ContextOptions | None = None) -> Ca
 
     if existing_span and existing_span.is_recording() and should_reuse_trace:
         scope = CaptureScope(None, None)
-        token = otel_context.attach(otel_context.set_value(LATITUDE_CAPTURE_SCOPE_KEY, scope, new_context))
+        scope_context = otel_context.set_value(LATITUDE_CAPTURE_SCOPE_KEY, scope, new_context)
+        token = otel_context.attach(scope_context)
         scope._token = token
+        scope._context = scope_context
         return scope
 
     tracer = trace.get_tracer(CAPTURE_TRACER_NAME)
@@ -129,8 +133,10 @@ def _start_capture_scope(name: str, options: ContextOptions | None = None) -> Ca
     )
     new_context = trace.set_span_in_context(span, new_context)
     scope = CaptureScope(None, span)
-    token = otel_context.attach(otel_context.set_value(LATITUDE_CAPTURE_SCOPE_KEY, scope, new_context))
+    scope_context = otel_context.set_value(LATITUDE_CAPTURE_SCOPE_KEY, scope, new_context)
+    token = otel_context.attach(scope_context)
     scope._token = token
+    scope._context = scope_context
     return scope
 
 
@@ -161,6 +167,18 @@ def _end_capture_scope(
     scope._ended = True
     if scope._token is not None:
         otel_context.detach(scope._token)
+        scope._token = None
+
+
+def _detach_capture_scope(scope: CaptureScope) -> None:
+    if scope._token is not None:
+        otel_context.detach(scope._token)
+        scope._token = None
+
+
+def _attach_capture_scope(scope: CaptureScope) -> None:
+    if scope._context is not None and scope._token is None:
+        scope._token = otel_context.attach(scope._context)
 
 
 def _execute_with_context(name: str, fn: Callable[[], T], options: ContextOptions | None = None) -> T:
@@ -186,8 +204,10 @@ def _execute_with_context(name: str, fn: Callable[[], T], options: ContextOption
         raise
 
     if inspect.isawaitable(result):
+        _detach_capture_scope(scope)
 
         async def await_result() -> T:
+            _attach_capture_scope(scope)
             try:
                 return await result
             except Exception as e:
