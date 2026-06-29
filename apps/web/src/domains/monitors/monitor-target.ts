@@ -112,7 +112,9 @@ interface MonitorMetricOption {
 
 /** Stable select key for a metric ("errorRate", "avg:duration", "sum:cost"). */
 export const metricOptionId = (metric: MonitorMetric): string =>
-  metric.kind === "count" || metric.kind === "errorRate" ? metric.kind : `${metric.kind}:${metric.field}`
+  metric.kind === "count" || metric.kind === "errorRate" || metric.kind === "cacheHitRate"
+    ? metric.kind
+    : `${metric.kind}:${metric.field}`
 
 const buildOptions = (options: readonly { label: string; metric: MonitorMetric }[]): readonly MonitorMetricOption[] =>
   options.map((option) => ({ id: metricOptionId(option.metric), ...option }))
@@ -150,6 +152,7 @@ export const targetMetricOptions = (stream: MonitorStream): readonly MonitorMetr
       ...numericMetricOptions("duration", "latency"),
       ...numericMetricOptions("cost", "cost"),
       ...numericMetricOptions("tokens", "tokens"),
+      { label: "Cache hit rate", metric: { kind: "cacheHitRate" } },
     ])
   }
   if (stream === "sessions") {
@@ -159,6 +162,7 @@ export const targetMetricOptions = (stream: MonitorStream): readonly MonitorMetr
       ...numericMetricOptions("duration", "latency"),
       ...numericMetricOptions("cost", "cost"),
       ...numericMetricOptions("tokens", "tokens"),
+      { label: "Cache hit rate", metric: { kind: "cacheHitRate" } },
     ])
   }
   return buildOptions([{ label: "Count", metric: { kind: "count" } }])
@@ -166,7 +170,7 @@ export const targetMetricOptions = (stream: MonitorStream): readonly MonitorMetr
 
 /** The unit label shown next to an absolute threshold input for a metric. */
 export const metricThresholdUnitLabel = (metric: MonitorMetric, stream: MonitorStream): string => {
-  if (metric.kind === "errorRate") return "%"
+  if (metric.kind === "errorRate" || metric.kind === "cacheHitRate") return "%"
   if (metric.kind === "count") return stream === "spans" ? "calls" : "sessions"
   switch (metric.field) {
     case "duration":

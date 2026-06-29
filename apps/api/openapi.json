@@ -5092,6 +5092,21 @@
               "kind": {
                 "type": "string",
                 "enum": [
+                  "cacheHitRate"
+                ],
+                "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
                   "avg"
                 ],
                 "description": "Average a numeric field over matching events."

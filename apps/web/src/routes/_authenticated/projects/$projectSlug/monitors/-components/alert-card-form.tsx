@@ -3,6 +3,7 @@ import { Button, cn, Icon, Input, Select, type TabOption, Tabs, Text } from "@re
 import {
   ActivityIcon,
   CircleDollarSignIcon,
+  DatabaseZapIcon,
   EqualApproximately,
   GaugeIcon,
   HashIcon,
@@ -61,19 +62,45 @@ const isMatchKind = (kind: UserAlertKind): boolean => kind === "savedSearch.matc
 const isEscalatingKind = (kind: UserAlertKind): boolean =>
   kind === "savedSearch.escalating" || kind === "monitor.escalating"
 
-type MetricDimension = "count" | "errorRate" | "duration" | "cost" | "tokens"
+type MetricDimension = "count" | "errorRate" | "cacheHitRate" | "duration" | "cost" | "tokens"
 
 const DIMENSION_META: Record<MetricDimension, { label: string; description: string; icon: typeof HashIcon }> = {
-  count: { label: "Volume", description: "How many matching sessions happen", icon: HashIcon },
-  errorRate: { label: "Errors", description: "Share of matching sessions that fail", icon: ActivityIcon },
-  duration: { label: "Latency", description: "How long matching sessions take", icon: TimerIcon },
-  cost: { label: "Cost", description: "Spend across matching sessions", icon: CircleDollarSignIcon },
-  tokens: { label: "Tokens", description: "Token usage across matching sessions", icon: GaugeIcon },
+  count: {
+    label: "Volume",
+    description: "How many matching sessions happen",
+    icon: HashIcon,
+  },
+  errorRate: {
+    label: "Errors",
+    description: "Share of matching sessions that fail",
+    icon: ActivityIcon,
+  },
+  cacheHitRate: {
+    label: "Cache hit rate",
+    description: "Share of input tokens served from cache",
+    icon: DatabaseZapIcon,
+  },
+  duration: {
+    label: "Latency",
+    description: "How long matching sessions take",
+    icon: TimerIcon,
+  },
+  cost: {
+    label: "Cost",
+    description: "Spend across matching sessions",
+    icon: CircleDollarSignIcon,
+  },
+  tokens: {
+    label: "Tokens",
+    description: "Token usage across matching sessions",
+    icon: GaugeIcon,
+  },
 }
 
 const aggregationLabel = (metric: MonitorMetric): string => {
   if (metric.kind === "count") return "Count"
   if (metric.kind === "errorRate") return "Rate"
+  if (metric.kind === "cacheHitRate") return "Rate"
   if (metric.kind === "sum") return "Sum"
   if (metric.kind === "min") return "Min"
   if (metric.kind === "max") return "Max"
@@ -82,9 +109,12 @@ const aggregationLabel = (metric: MonitorMetric): string => {
 }
 
 const metricDimension = (metric: MonitorMetric): MetricDimension => {
-  if (metric.kind === "count" || metric.kind === "errorRate") return metric.kind
+  if (metric.kind === "count" || metric.kind === "errorRate" || metric.kind === "cacheHitRate") return metric.kind
   return metric.field
 }
+
+const canonicalDirection = (dimension: MetricDimension): MetricDirection =>
+  dimension === "cacheHitRate" ? "below" : "above"
 
 function MetricSelector({
   value,
@@ -94,13 +124,13 @@ function MetricSelector({
 }: {
   readonly value: MonitorMetric
   readonly stream: NonNullable<AlertDraft["target"]>["stream"]
-  readonly onChange: (metric: MonitorMetric) => void
+  readonly onChange: (metric: MonitorMetric, direction?: MetricDirection) => void
   readonly disabled?: boolean
 }) {
   const options = targetMetricOptions(stream)
   const selectedDimension = metricDimension(value)
-  const dimensions = (["count", "errorRate", "duration", "cost", "tokens"] as const).filter((dimension) =>
-    options.some((option) => metricDimension(option.metric) === dimension),
+  const dimensions = (["count", "errorRate", "cacheHitRate", "duration", "cost", "tokens"] as const).filter(
+    (dimension) => options.some((option) => metricDimension(option.metric) === dimension),
   )
   const aggregations = options.filter((option) => metricDimension(option.metric) === selectedDimension)
 
@@ -125,7 +155,7 @@ function MetricSelector({
               )}
               onClick={() => {
                 const next = options.find((option) => metricDimension(option.metric) === dimension)
-                if (next) onChange(next.metric)
+                if (next) onChange(next.metric, canonicalDirection(dimension))
               }}
             >
               <Icon icon={meta.icon} size="sm" color={active ? "primary" : "foregroundMuted"} className="shrink-0" />
@@ -143,7 +173,10 @@ function MetricSelector({
           <Tabs<string>
             variant="bordered"
             size="sm"
-            options={aggregations.map((option) => ({ id: option.id, label: aggregationLabel(option.metric) }))}
+            options={aggregations.map((option) => ({
+              id: option.id,
+              label: aggregationLabel(option.metric),
+            }))}
             active={metricOptionId(value)}
             onSelect={(id) => {
               const next = aggregations.find((option) => option.id === id)
@@ -275,7 +308,10 @@ function ThresholdWindowForm({
   }
 
   const onLookbackUnitChange = (lookbackUnit: LookbackUnit) => {
-    onChange({ lookbackUnit, lookbackAmount: Math.min(value.lookbackAmount, LOOKBACK_MAX_BY_UNIT[lookbackUnit]) })
+    onChange({
+      lookbackUnit,
+      lookbackAmount: Math.min(value.lookbackAmount, LOOKBACK_MAX_BY_UNIT[lookbackUnit]),
+    })
   }
 
   return (
@@ -342,7 +378,9 @@ function ThresholdWindowForm({
               step={1}
               value={value.lookbackAmount}
               onChange={(event) =>
-                onChange({ lookbackAmount: Math.max(1, Math.min(Number(event.target.value), lookbackMax)) })
+                onChange({
+                  lookbackAmount: Math.max(1, Math.min(Number(event.target.value), lookbackMax)),
+                })
               }
               onFocus={(event) => event.currentTarget.select()}
               size="sm"
@@ -430,7 +468,9 @@ export function AlertCardForm({
   readonly metricReadonly?: boolean
 }) {
   const targetMode = value.target !== null
-  const { data: savedSearches } = useSavedSearchesList(projectId, { enabled: showSourcePicker && !targetMode })
+  const { data: savedSearches } = useSavedSearchesList(projectId, {
+    enabled: showSourcePicker && !targetMode,
+  })
   const savedSearchName =
     sourceName ?? (value.sourceId ? savedSearches.find((search) => search.id === value.sourceId)?.name : undefined)
 
@@ -470,7 +510,7 @@ export function AlertCardForm({
         <MetricSelector
           value={value.metric}
           stream={value.target.stream}
-          onChange={(metric) => set({ metric })}
+          onChange={(metric, direction) => set(direction ? { metric, direction } : { metric })}
           {...(disabled || metricReadonly ? { disabled: true } : {})}
         />
       ) : null}

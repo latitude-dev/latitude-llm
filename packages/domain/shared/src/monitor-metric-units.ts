@@ -15,7 +15,7 @@ const MICROCENTS_PER_DOLLAR = 100_000_000
 const ERROR_RATE_PER_PERCENT = 100
 
 export const metricUnit = (metric: MonitorMetric): MetricUnit => {
-  if (metric.kind === "errorRate") return "%"
+  if (metric.kind === "errorRate" || metric.kind === "cacheHitRate") return "%"
   if (metric.kind === "count") return "count"
   switch (metric.field) {
     case "duration":

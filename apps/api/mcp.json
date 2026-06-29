@@ -9475,6 +9475,20 @@
                                   "properties": {
                                     "kind": {
                                       "type": "string",
+                                      "const": "cacheHitRate",
+                                      "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                                    }
+                                  },
+                                  "required": [
+                                    "kind"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
                                       "const": "avg",
                                       "description": "Average a numeric field over matching events."
                                     },
@@ -9790,6 +9804,20 @@
                                       "type": "string",
                                       "const": "errorRate",
                                       "description": "Measure the fraction of matching events that errored."
+                                    }
+                                  },
+                                  "required": [
+                                    "kind"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "cacheHitRate",
+                                      "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
                                     }
                                   },
                                   "required": [
@@ -10276,6 +10304,20 @@
                             "properties": {
                               "kind": {
                                 "type": "string",
+                                "const": "cacheHitRate",
+                                "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
                                 "const": "avg",
                                 "description": "Average a numeric field over matching events."
                               },
@@ -10591,6 +10633,20 @@
                                 "type": "string",
                                 "const": "errorRate",
                                 "description": "Measure the fraction of matching events that errored."
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "cacheHitRate",
+                                "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
                               }
                             },
                             "required": [
@@ -14834,6 +14890,20 @@
                           "properties": {
                             "kind": {
                               "type": "string",
+                              "const": "cacheHitRate",
+                              "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
                               "const": "sum",
                               "description": "Sum a numeric field over matching events."
                             },
@@ -15086,6 +15156,20 @@
                               "properties": {
                                 "kind": {
                                   "type": "string",
+                                  "const": "cacheHitRate",
+                                  "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                                }
+                              },
+                              "required": [
+                                "kind"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
                                   "const": "sum",
                                   "description": "Sum a numeric field over matching events."
                                 },
@@ -15237,6 +15321,20 @@
                                           "type": "string",
                                           "const": "errorRate",
                                           "description": "Measure the fraction of matching events that errored."
+                                        }
+                                      },
+                                      "required": [
+                                        "kind"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "kind": {
+                                          "type": "string",
+                                          "const": "cacheHitRate",
+                                          "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
                                         }
                                       },
                                       "required": [
@@ -15564,6 +15662,20 @@
                                           "type": "string",
                                           "const": "errorRate",
                                           "description": "Measure the fraction of matching events that errored."
+                                        }
+                                      },
+                                      "required": [
+                                        "kind"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "kind": {
+                                          "type": "string",
+                                          "const": "cacheHitRate",
+                                          "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
                                         }
                                       },
                                       "required": [
@@ -16178,6 +16290,20 @@
                             "properties": {
                               "kind": {
                                 "type": "string",
+                                "const": "cacheHitRate",
+                                "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
                                 "const": "sum",
                                 "description": "Sum a numeric field over matching events."
                               },
@@ -16341,6 +16467,20 @@
                             "type": "string",
                             "const": "errorRate",
                             "description": "Measure the fraction of matching events that errored."
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "cacheHitRate",
+                            "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
                           }
                         },
                         "required": [
@@ -16663,6 +16803,20 @@
                             "properties": {
                               "kind": {
                                 "type": "string",
+                                "const": "cacheHitRate",
+                                "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
                                 "const": "sum",
                                 "description": "Sum a numeric field over matching events."
                               },
@@ -16838,6 +16992,20 @@
                         "properties": {
                           "kind": {
                             "type": "string",
+                            "const": "cacheHitRate",
+                            "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
                             "const": "sum",
                             "description": "Sum a numeric field over matching events."
                           },
@@ -16986,6 +17154,20 @@
                                 "type": "string",
                                 "const": "errorRate",
                                 "description": "Measure the fraction of matching events that errored."
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "cacheHitRate",
+                                "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
                               }
                             },
                             "required": [
@@ -17477,6 +17659,20 @@
                             "properties": {
                               "kind": {
                                 "type": "string",
+                                "const": "cacheHitRate",
+                                "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
                                 "const": "sum",
                                 "description": "Sum a numeric field over matching events."
                               },
@@ -17652,6 +17848,20 @@
                         "properties": {
                           "kind": {
                             "type": "string",
+                            "const": "cacheHitRate",
+                            "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
                             "const": "sum",
                             "description": "Sum a numeric field over matching events."
                           },
@@ -17800,6 +18010,20 @@
                                 "type": "string",
                                 "const": "errorRate",
                                 "description": "Measure the fraction of matching events that errored."
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "cacheHitRate",
+                                "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
                               }
                             },
                             "required": [
@@ -18346,6 +18570,20 @@
                     "properties": {
                       "kind": {
                         "type": "string",
+                        "const": "cacheHitRate",
+                        "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
                         "const": "sum",
                         "description": "Sum a numeric field over matching events."
                       },
@@ -18598,6 +18836,20 @@
                         "properties": {
                           "kind": {
                             "type": "string",
+                            "const": "cacheHitRate",
+                            "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
                             "const": "sum",
                             "description": "Sum a numeric field over matching events."
                           },
@@ -18749,6 +19001,20 @@
                                     "type": "string",
                                     "const": "errorRate",
                                     "description": "Measure the fraction of matching events that errored."
+                                  }
+                                },
+                                "required": [
+                                  "kind"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "cacheHitRate",
+                                    "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
                                   }
                                 },
                                 "required": [
@@ -19076,6 +19342,20 @@
                                     "type": "string",
                                     "const": "errorRate",
                                     "description": "Measure the fraction of matching events that errored."
+                                  }
+                                },
+                                "required": [
+                                  "kind"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "cacheHitRate",
+                                    "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
                                   }
                                 },
                                 "required": [
@@ -19774,6 +20054,20 @@
                           "properties": {
                             "kind": {
                               "type": "string",
+                              "const": "cacheHitRate",
+                              "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
                               "const": "sum",
                               "description": "Sum a numeric field over matching events."
                             },
@@ -20026,6 +20320,20 @@
                               "properties": {
                                 "kind": {
                                   "type": "string",
+                                  "const": "cacheHitRate",
+                                  "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                                }
+                              },
+                              "required": [
+                                "kind"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
                                   "const": "sum",
                                   "description": "Sum a numeric field over matching events."
                                 },
@@ -20177,6 +20485,20 @@
                                           "type": "string",
                                           "const": "errorRate",
                                           "description": "Measure the fraction of matching events that errored."
+                                        }
+                                      },
+                                      "required": [
+                                        "kind"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "kind": {
+                                          "type": "string",
+                                          "const": "cacheHitRate",
+                                          "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
                                         }
                                       },
                                       "required": [
@@ -20504,6 +20826,20 @@
                                           "type": "string",
                                           "const": "errorRate",
                                           "description": "Measure the fraction of matching events that errored."
+                                        }
+                                      },
+                                      "required": [
+                                        "kind"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "kind": {
+                                          "type": "string",
+                                          "const": "cacheHitRate",
+                                          "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
                                         }
                                       },
                                       "required": [
@@ -21134,6 +21470,20 @@
                     "properties": {
                       "kind": {
                         "type": "string",
+                        "const": "cacheHitRate",
+                        "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
                         "const": "sum",
                         "description": "Sum a numeric field over matching events."
                       },
@@ -21386,6 +21736,20 @@
                         "properties": {
                           "kind": {
                             "type": "string",
+                            "const": "cacheHitRate",
+                            "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
                             "const": "sum",
                             "description": "Sum a numeric field over matching events."
                           },
@@ -21537,6 +21901,20 @@
                                     "type": "string",
                                     "const": "errorRate",
                                     "description": "Measure the fraction of matching events that errored."
+                                  }
+                                },
+                                "required": [
+                                  "kind"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "cacheHitRate",
+                                    "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
                                   }
                                 },
                                 "required": [
@@ -21864,6 +22242,20 @@
                                     "type": "string",
                                     "const": "errorRate",
                                     "description": "Measure the fraction of matching events that errored."
+                                  }
+                                },
+                                "required": [
+                                  "kind"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "cacheHitRate",
+                                    "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
                                   }
                                 },
                                 "required": [
@@ -22453,6 +22845,20 @@
                     "properties": {
                       "kind": {
                         "type": "string",
+                        "const": "cacheHitRate",
+                        "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
                         "const": "sum",
                         "description": "Sum a numeric field over matching events."
                       },
@@ -22622,6 +23028,20 @@
                 "properties": {
                   "kind": {
                     "type": "string",
+                    "const": "cacheHitRate",
+                    "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
                     "const": "sum",
                     "description": "Sum a numeric field over matching events."
                   },
@@ -22773,6 +23193,20 @@
                             "type": "string",
                             "const": "errorRate",
                             "description": "Measure the fraction of matching events that errored."
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "cacheHitRate",
+                            "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
                           }
                         },
                         "required": [
@@ -23100,6 +23534,20 @@
                             "type": "string",
                             "const": "errorRate",
                             "description": "Measure the fraction of matching events that errored."
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "cacheHitRate",
+                            "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
                           }
                         },
                         "required": [
@@ -23644,6 +24092,20 @@
                     "properties": {
                       "kind": {
                         "type": "string",
+                        "const": "cacheHitRate",
+                        "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
                         "const": "sum",
                         "description": "Sum a numeric field over matching events."
                       },
@@ -23896,6 +24358,20 @@
                         "properties": {
                           "kind": {
                             "type": "string",
+                            "const": "cacheHitRate",
+                            "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
                             "const": "sum",
                             "description": "Sum a numeric field over matching events."
                           },
@@ -24047,6 +24523,20 @@
                                     "type": "string",
                                     "const": "errorRate",
                                     "description": "Measure the fraction of matching events that errored."
+                                  }
+                                },
+                                "required": [
+                                  "kind"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "cacheHitRate",
+                                    "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
                                   }
                                 },
                                 "required": [
@@ -24374,6 +24864,20 @@
                                     "type": "string",
                                     "const": "errorRate",
                                     "description": "Measure the fraction of matching events that errored."
+                                  }
+                                },
+                                "required": [
+                                  "kind"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "cacheHitRate",
+                                    "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
                                   }
                                 },
                                 "required": [
@@ -24940,6 +25444,20 @@
                                   "properties": {
                                     "kind": {
                                       "type": "string",
+                                      "const": "cacheHitRate",
+                                      "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                                    }
+                                  },
+                                  "required": [
+                                    "kind"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
                                       "const": "avg",
                                       "description": "Average a numeric field over matching events."
                                     },
@@ -25255,6 +25773,20 @@
                                       "type": "string",
                                       "const": "errorRate",
                                       "description": "Measure the fraction of matching events that errored."
+                                    }
+                                  },
+                                  "required": [
+                                    "kind"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "cacheHitRate",
+                                      "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
                                     }
                                   },
                                   "required": [
@@ -25858,6 +26390,20 @@
                     "properties": {
                       "kind": {
                         "type": "string",
+                        "const": "cacheHitRate",
+                        "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
                         "const": "sum",
                         "description": "Sum a numeric field over matching events."
                       },
@@ -26110,6 +26656,20 @@
                         "properties": {
                           "kind": {
                             "type": "string",
+                            "const": "cacheHitRate",
+                            "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
                             "const": "sum",
                             "description": "Sum a numeric field over matching events."
                           },
@@ -26261,6 +26821,20 @@
                                     "type": "string",
                                     "const": "errorRate",
                                     "description": "Measure the fraction of matching events that errored."
+                                  }
+                                },
+                                "required": [
+                                  "kind"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "cacheHitRate",
+                                    "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
                                   }
                                 },
                                 "required": [
@@ -26588,6 +27162,20 @@
                                     "type": "string",
                                     "const": "errorRate",
                                     "description": "Measure the fraction of matching events that errored."
+                                  }
+                                },
+                                "required": [
+                                  "kind"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "cacheHitRate",
+                                    "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
                                   }
                                 },
                                 "required": [
@@ -27210,6 +27798,20 @@
                     "properties": {
                       "kind": {
                         "type": "string",
+                        "const": "cacheHitRate",
+                        "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
                         "const": "sum",
                         "description": "Sum a numeric field over matching events."
                       },
@@ -27462,6 +28064,20 @@
                         "properties": {
                           "kind": {
                             "type": "string",
+                            "const": "cacheHitRate",
+                            "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
                             "const": "sum",
                             "description": "Sum a numeric field over matching events."
                           },
@@ -27613,6 +28229,20 @@
                                     "type": "string",
                                     "const": "errorRate",
                                     "description": "Measure the fraction of matching events that errored."
+                                  }
+                                },
+                                "required": [
+                                  "kind"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "cacheHitRate",
+                                    "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
                                   }
                                 },
                                 "required": [
@@ -27940,6 +28570,20 @@
                                     "type": "string",
                                     "const": "errorRate",
                                     "description": "Measure the fraction of matching events that errored."
+                                  }
+                                },
+                                "required": [
+                                  "kind"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "cacheHitRate",
+                                    "description": "Token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens), a 0..1 fraction."
                                   }
                                 },
                                 "required": [

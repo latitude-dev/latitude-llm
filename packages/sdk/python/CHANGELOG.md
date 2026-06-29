@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.5.0] - 2026-06-29
+
+### Added
+
+- `MonitorMetricCacheHitRate` / `MonitorMetric_CacheHitRate` (`kind="cacheHitRate"`) — a new monitor metric kind that measures the token-weighted prompt-cache hit rate (cache-read tokens over total input-side tokens, a 0..1 fraction). Pair it with a `below` threshold on `metric.threshold` / `metric.escalating` to alert when caching degrades.
+
 ## [6.4.0] - 2026-06-29
 
 ### Added
