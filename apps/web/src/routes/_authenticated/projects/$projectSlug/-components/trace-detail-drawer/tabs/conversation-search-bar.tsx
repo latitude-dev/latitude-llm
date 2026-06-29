@@ -44,7 +44,7 @@ export function ConversationSearchBar({
     >
       <Icon icon={SearchIcon} size="sm" color="foregroundMuted" className="shrink-0" />
       <input
-        type="search"
+        type="text"
         value={value}
         onChange={(event) => handleChange(event.target.value)}
         placeholder="Search in conversation…"
