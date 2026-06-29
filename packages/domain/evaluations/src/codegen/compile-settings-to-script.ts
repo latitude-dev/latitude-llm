@@ -1,5 +1,5 @@
 import { type ScriptCompileError, ScriptRuntime } from "@domain/sandbox"
-import type { EvaluationRuleCondition, EvaluationSettings } from "@domain/shared"
+import type { EvaluationRuleCondition, EvaluationSettings, MessageScope, MetricField } from "@domain/shared"
 import { Effect } from "effect"
 import { generateJudgePromptText } from "../alignment/baseline-prompt.ts"
 import { wrapPromptAsEvaluationScript } from "../runtime/evaluation-execution.ts"
@@ -46,14 +46,14 @@ const OP_PHRASE: Record<"gt" | "gte" | "lt" | "lte", string> = {
   lt: "less than",
   lte: "at most",
 }
-const SCOPE_LABEL: Record<string, string> = {
+const SCOPE_LABEL: Record<MessageScope, string> = {
   last_assistant: "Last assistant message",
   any_assistant: "Any assistant message",
   any_user: "Any user message",
   any_tool: "Any tool message",
   conversation: "The conversation",
 }
-const METRIC: Record<string, { session: string; trace: string | null; label: string }> = {
+const METRIC: Record<MetricField, { session: string; trace: string | null; label: string }> = {
   duration: { session: "session.duration", trace: "t.duration", label: "duration" },
   cost: { session: "session.cost.total", trace: "t.cost.total", label: "cost" },
   tokensTotal: { session: "session.tokens.total", trace: "t.tokens.total", label: "total tokens" },
@@ -160,9 +160,11 @@ const compileCondition = (c: EvaluationRuleCondition, helpers: Set<HelperName>):
       let expr: string
       if (c.aggregation === "session" || field.trace === null) {
         expr = `${field.session} ${OP[c.operator]} ${lit(c.value)}`
+      } else if (c.aggregation === "anyTrace") {
+        expr = `session.traces.some((t) => ${field.trace} ${OP[c.operator]} ${lit(c.value)})`
       } else {
-        const fn = c.aggregation === "anyTrace" ? "some" : "every"
-        expr = `session.traces.${fn}((t) => ${field.trace} ${OP[c.operator]} ${lit(c.value)})`
+        // `[].every(...)` is vacuously true; require at least one trace so an empty session is not a pass.
+        expr = `session.traces.length > 0 && session.traces.every((t) => ${field.trace} ${OP[c.operator]} ${lit(c.value)})`
       }
       return {
         expr,

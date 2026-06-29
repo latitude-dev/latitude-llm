@@ -135,6 +135,36 @@ describe("compileSettingsToScript — rule", () => {
     expect(result).toEqual({ passed: true, feedback: "All conditions matched" })
   })
 
+  it("swaps positive/negative feedback for negated operators", () => {
+    const result = runRule(
+      rule("any", [
+        {
+          type: "text_match",
+          scope: "last_assistant",
+          operator: "not_contains",
+          value: "refund",
+          caseSensitive: false,
+        },
+      ]),
+      makeSession(),
+    )
+    expect(result).toEqual({ passed: false, feedback: "No condition matched" })
+
+    const matched = runRule(
+      rule("all", [
+        {
+          type: "text_match",
+          scope: "last_assistant",
+          operator: "not_contains",
+          value: "refund",
+          caseSensitive: false,
+        },
+      ]),
+      makeSession(),
+    )
+    expect(matched.feedback).toBe('Last assistant message contains "refund"')
+  })
+
   const cases: ReadonlyArray<{ name: string; condition: EvaluationRuleCondition; session?: unknown; passed: boolean }> =
     [
       {
@@ -218,6 +248,57 @@ describe("compileSettingsToScript — rule", () => {
       { name: "error true", condition: { type: "error" }, session: makeSession({ errorCount: 2 }), passed: true },
       { name: "finish_reason stop", condition: { type: "finish_reason", value: "stop" }, passed: true },
       { name: "finish_reason miss", condition: { type: "finish_reason", value: "content_filter" }, passed: false },
+      {
+        name: "not_contains true when absent",
+        condition: {
+          type: "text_match",
+          scope: "last_assistant",
+          operator: "not_contains",
+          value: "delete",
+          caseSensitive: false,
+        },
+        passed: true,
+      },
+      {
+        name: "not_matches_regex true when no match",
+        condition: {
+          type: "text_match",
+          scope: "last_assistant",
+          operator: "not_matches_regex",
+          value: "zzz+",
+          caseSensitive: false,
+        },
+        passed: true,
+      },
+      {
+        name: "tool_failed with matching toolName",
+        condition: { type: "tool_failed", toolName: "x" },
+        session: makeSession({
+          traces: [makeTrace({ tools: [{ name: "x", input: "", output: "boom", error: true, duration: 1 }] })],
+        }),
+        passed: true,
+      },
+      {
+        name: "tool_failed with non-matching toolName",
+        condition: { type: "tool_failed", toolName: "other" },
+        session: makeSession({
+          traces: [makeTrace({ tools: [{ name: "x", input: "", output: "boom", error: true, duration: 1 }] })],
+        }),
+        passed: false,
+      },
+      {
+        // `empty_output` also treats a single repeated character ("...", "----") as empty.
+        name: "empty_output true on repeated-char output",
+        condition: { type: "empty_output" },
+        session: makeSession({ conversation: [{ role: "assistant", content: "..." }] }),
+        passed: true,
+      },
+      {
+        name: "metric allTraces is not a vacuous pass on an empty session",
+        condition: { type: "metric", field: "errorCount", aggregation: "allTraces", operator: "lte", value: 0 },
+        session: makeSession({ traces: [] }),
+        passed: false,
+      },
     ]
 
   it.each(cases)("evaluates $name", ({ condition, session, passed }) => {
