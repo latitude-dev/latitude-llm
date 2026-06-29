@@ -9,7 +9,12 @@ import { useSessionDetail } from "../../../../../domains/sessions/sessions.colle
 import { TraceScopeContext } from "../../../../../domains/traces/trace-scope.tsx"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { SignalLifecycleActions } from "../signals/-components/signal-lifecycle-actions.tsx"
-import { isSessionTab, SessionSlot, type SessionTabId } from "./session-detail-drawer/session-slot.tsx"
+import {
+  isSessionTab,
+  normalizeSessionTab,
+  SessionSlot,
+  type SessionTabId,
+} from "./session-detail-drawer/session-slot.tsx"
 import { SignalSlot } from "./session-detail-drawer/signal-slot.tsx"
 import { type DetailSlotKind, SlotTransition } from "./session-detail-drawer/slot-transition.tsx"
 import { isTraceDetailTab, type TraceDetailTabId, TraceSlot } from "./session-detail-drawer/trace-slot.tsx"
@@ -54,9 +59,10 @@ export function SessionDetailDrawer({
   // conversation tab's search-match autoscroll/highlight has something to scroll to.
   const defaultSessionTab =
     defaultTab ?? ((searchQuery?.length ?? q.length) > 0 || focusMomentKind ? "conversation" : "session")
-  const [activeTab, setActiveTab] = useParamState("sessionTab", defaultSessionTab, {
+  const [rawActiveTab, setActiveTab] = useParamState("sessionTab", defaultSessionTab, {
     validate: isSessionTab,
   })
+  const activeTab = normalizeSessionTab(rawActiveTab)
   // Owned by `TraceSlot` once it mounts, but written here when sliding into a
   // trace so the slot lands on the requested tab (Signals → "trace",
   // Annotations → "conversation"). Kept distinct from `sessionTab` so the two

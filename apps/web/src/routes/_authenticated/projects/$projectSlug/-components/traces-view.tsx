@@ -110,7 +110,7 @@ export function TracesView({
   const handleAnnotationClick = useCallback(
     (trace: TraceRecord) => {
       onActiveTraceChange(trace.traceId)
-      setTraceDetailTab("annotations")
+      setTraceDetailTab("scores")
     },
     [onActiveTraceChange, setTraceDetailTab],
   )

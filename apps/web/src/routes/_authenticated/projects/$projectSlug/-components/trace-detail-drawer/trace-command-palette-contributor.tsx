@@ -1,6 +1,6 @@
 import { useToast } from "@repo/ui"
 import { useNavigate } from "@tanstack/react-router"
-import { CopyIcon, LayersIcon, ListTreeIcon, MessageSquareIcon, MessagesSquareIcon } from "lucide-react"
+import { CopyIcon, GaugeIcon, LayersIcon, ListTreeIcon, MessagesSquareIcon } from "lucide-react"
 import { useMemo } from "react"
 import { useRegisterCommands } from "../../../../../../components/command-palette/command-palette-provider.tsx"
 import { useCurrentProject } from "../../../../../../components/command-palette/commands/use-current-project.ts"
@@ -53,13 +53,13 @@ export function TraceCommandPaletteContributor({
         perform: () => onGoToTab("spans"),
       },
       {
-        id: `trace:${traceId}:annotations`,
-        title: "View annotations",
-        icon: MessageSquareIcon,
+        id: `trace:${traceId}:scores`,
+        title: "View scores",
+        icon: GaugeIcon,
         section: "context",
         group: "Trace",
-        keywords: "annotations notes scores",
-        perform: () => onGoToTab("annotations"),
+        keywords: "scores annotations evaluations custom",
+        perform: () => onGoToTab("scores"),
       },
     ]
 

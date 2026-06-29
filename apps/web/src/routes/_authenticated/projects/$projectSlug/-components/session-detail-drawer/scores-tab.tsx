@@ -1,21 +1,19 @@
 import { Text } from "@repo/ui"
 import {
-  useAnnotationsBySession,
   useCreateAnnotation,
   useUpdateAnnotation,
 } from "../../../../../../domains/annotations/annotations.collection.ts"
-import { AnnotationList } from "../annotations/annotation-list.tsx"
+import type { AnnotationRecord } from "../../../../../../domains/annotations/annotations.functions.ts"
+import { useScoresBySession } from "../../../../../../domains/scores/scores.collection.ts"
+import { ScoreList } from "../scores/score-list.tsx"
 import type { OpenTraceOptions } from "../session-detail-drawer.tsx"
 
 /**
- * Session-wide annotations — the same surface as the trace drawer's
- * `TraceAnnotationsList`, reusing `AnnotationList`. Annotations attach to a
- * trace, so the create form targets the session's *latest* trace (its current
- * conversation); editing targets each annotation's own trace. A "Trace N" label
- * marks which trace each annotation belongs to, and a click routes to the
- * Conversation tab (latest trace) or slides into an older trace's slot.
+ * Session-wide scores — every score source across the session's traces.
+ * Annotation create still targets the latest trace; editing targets each
+ * annotation's own trace.
  */
-export function AnnotationsTab({
+export function ScoresTab({
   projectId,
   traceIds,
   latestTraceId,
@@ -27,19 +25,17 @@ export function AnnotationsTab({
   readonly traceIds: readonly string[]
   readonly latestTraceId: string
   readonly traceNumberById: ReadonlyMap<string, number>
-  /** Inline annotation on the latest trace → switch to the Conversation tab. */
   readonly onOpenInConversation: (annotationId: string) => void
-  /** Inline annotation on an older trace → slide into its trace slot, focused on it. */
   readonly onOpenTrace: (traceId: string, options?: OpenTraceOptions) => void
 }) {
-  const { data, isLoading, isError } = useAnnotationsBySession({ projectId, traceIds })
+  const { data, isLoading, isError } = useScoresBySession({ projectId, traceIds })
   const createMutation = useCreateAnnotation()
   const updateMutation = useUpdateAnnotation()
 
   return (
-    <AnnotationList
+    <ScoreList
       projectId={projectId}
-      annotations={data?.items ?? []}
+      scores={data?.items ?? []}
       isLoading={isLoading}
       isError={isError}
       showCreateForm={latestTraceId.length > 0}
@@ -56,7 +52,7 @@ export function AnnotationsTab({
         })
       }}
       updatePending={updateMutation.isPending}
-      onUpdate={(annotation, annotationData) => {
+      onUpdate={(annotation: AnnotationRecord, annotationData) => {
         const traceId = annotation.traceId ?? ""
         if (!traceId) return
         updateMutation.mutate({
@@ -69,14 +65,15 @@ export function AnnotationsTab({
           signalId: annotationData.signalId ?? undefined,
         })
       }}
-      onAnnotationClick={(annotation) => {
-        const traceId = annotation.traceId ?? ""
+      onScoreClick={(score) => {
+        if (score.source !== "annotation") return
+        const traceId = score.traceId ?? ""
         if (!traceId) return
-        if (traceId === latestTraceId) onOpenInConversation(annotation.id)
-        else onOpenTrace(traceId, { focusAnnotationId: annotation.id })
+        if (traceId === latestTraceId) onOpenInConversation(score.id)
+        else onOpenTrace(traceId, { focusAnnotationId: score.id })
       }}
-      renderItemAccessory={(annotation) => {
-        const traceNumber = traceNumberById.get(annotation.traceId ?? "")
+      renderItemAccessory={(score) => {
+        const traceNumber = traceNumberById.get(score.traceId ?? "")
         return traceNumber !== undefined ? (
           <Text.H6 color="foregroundMuted" className="px-3 pt-1">
             Trace {traceNumber}
