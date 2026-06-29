@@ -194,26 +194,6 @@ await client.chat.completions.create({
 
 Avoid importing one SDK module for instrumentation and using a different wrapper or separately loaded copy for the LLM call.
 
-#### Use `getAiSdkTelemetry()` with Vercel AI SDK v6
-
-Vercel AI SDK v6 does not use a Latitude `instrumentations` entry. Pass
-`latitude.getAiSdkTelemetry()` to each AI SDK call:
-
-```ts
-const result = await generateText({
-  model,
-  prompt: "Hello",
-  experimental_telemetry: latitude.getAiSdkTelemetry({
-    functionId: "support-agent-turn",
-  }),
-})
-```
-
-If Latitude logs that it could not attach `LatitudeSpanProcessor` to the global
-OpenTelemetry provider, `experimental_telemetry: { isEnabled: true }` is not enough.
-That setting uses the global provider, while `getAiSdkTelemetry()` passes a tracer
-from the provider Latitude is actually exporting from.
-
 #### Flush before short-lived processes exit
 
 Servers can usually export spans in the background. Scripts, CLIs, tests, and jobs that exit immediately should flush before shutdown:
