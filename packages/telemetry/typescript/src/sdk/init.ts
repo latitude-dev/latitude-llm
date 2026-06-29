@@ -1,12 +1,4 @@
-import {
-  type AttributeValue,
-  context,
-  ProxyTracerProvider,
-  propagation,
-  type Tracer,
-  type TracerProvider,
-  trace,
-} from "@opentelemetry/api"
+import { context, ProxyTracerProvider, propagation, type Tracer, type TracerProvider, trace } from "@opentelemetry/api"
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks"
 import { CompositePropagator, W3CBaggagePropagator, W3CTraceContextPropagator } from "@opentelemetry/core"
 import { resourceFromAttributes } from "@opentelemetry/resources"
@@ -32,20 +24,6 @@ interface ProviderWithSpanProcessor extends TracerProvider {
   _activeProcessor?: {
     _processors?: SpanProcessor[]
   }
-}
-
-export type AiSdkTelemetryOptions = {
-  isEnabled?: boolean
-  recordInputs?: boolean
-  recordOutputs?: boolean
-  functionId?: string
-  metadata?: Record<string, AttributeValue>
-  integrations?: unknown | unknown[]
-}
-
-export type AiSdkTelemetrySettings = AiSdkTelemetryOptions & {
-  isEnabled: boolean
-  tracer: Tracer
 }
 
 function getRegisteredTracerProvider(): TracerProvider | undefined {
@@ -208,12 +186,8 @@ export class Latitude {
     return this.provider.getTracer(tracerName)
   }
 
-  getAiSdkTelemetry(options: AiSdkTelemetryOptions = {}): AiSdkTelemetrySettings {
-    return {
-      ...options,
-      isEnabled: options.isEnabled ?? true,
-      tracer: this.getTracer("vercelai"),
-    }
+  getAiSdkTracer(): Tracer {
+    return this.getTracer("vercelai")
   }
 
   private async handleShutdown(): Promise<void> {

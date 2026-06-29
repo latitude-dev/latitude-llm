@@ -196,7 +196,7 @@ describe("Latitude", () => {
     await result.shutdown()
   })
 
-  it("builds AI SDK telemetry settings from the active Latitude provider", async () => {
+  it("creates an AI SDK tracer from the active Latitude provider", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
     const latitudeExporter = new InMemorySpanExporter()
     const opaqueProvider = { getTracer: () => ({}) as Tracer } satisfies TracerProvider
@@ -209,16 +209,8 @@ describe("Latitude", () => {
       disableBatch: true,
     })
 
-    const telemetry = result.getAiSdkTelemetry({
-      functionId: "cloudflare-think-turn",
-      metadata: { framework: "cloudflare-think" },
-    })
-
-    expect(telemetry.isEnabled).toBe(true)
-    expect(telemetry.functionId).toBe("cloudflare-think-turn")
-    expect(telemetry.metadata).toEqual({ framework: "cloudflare-think" })
-
-    const span = telemetry.tracer.startSpan("ai-sdk-call")
+    const tracer = result.getAiSdkTracer()
+    const span = tracer.startSpan("ai-sdk-call")
     span.end()
 
     await result.flush()

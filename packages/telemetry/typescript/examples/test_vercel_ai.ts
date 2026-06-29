@@ -27,7 +27,7 @@ const MODEL = "gpt-5.5"
 const MAX_TOKENS = 2000
 const SYSTEM = "You are a helpful assistant participating in a telemetry QA test. Keep answers concise."
 const SESSION_ID = `${PROVIDER}-${randomUUID().slice(0, 8)}`
-const telemetry = latitude.getAiSdkTelemetry()
+const aiSdkTracer = latitude.getAiSdkTracer()
 
 function ctx(scenario: string, ...extraTags: string[]) {
   return {
@@ -50,7 +50,7 @@ async function chat() {
     system: SYSTEM,
     prompt: "Say 'Hello from Vercel AI SDK!' in exactly 6 words.",
     maxOutputTokens: MAX_TOKENS,
-    experimental_telemetry: telemetry,
+    experimental_telemetry: { isEnabled: true, tracer: aiSdkTracer },
   })
   return result.text
 }
@@ -61,7 +61,7 @@ async function stream() {
     system: SYSTEM,
     prompt: "Say 'Hello from Vercel AI SDK stream!' in exactly 7 words.",
     maxOutputTokens: MAX_TOKENS,
-    experimental_telemetry: telemetry,
+    experimental_telemetry: { isEnabled: true, tracer: aiSdkTracer },
   })
   const chunks: string[] = []
   for await (const chunk of result.textStream) chunks.push(chunk)
@@ -76,7 +76,7 @@ async function toolConversation() {
     tools: { getWeather: weatherTool },
     stopWhen: stepCountIs(5),
     maxOutputTokens: MAX_TOKENS,
-    experimental_telemetry: telemetry,
+    experimental_telemetry: { isEnabled: true, tracer: aiSdkTracer },
   })
   return result.text
 }

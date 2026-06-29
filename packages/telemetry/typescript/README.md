@@ -234,25 +234,27 @@ class Latitude {
   constructor(options: LatitudeOptions);
   provider: TracerProvider; // Existing provider when detected, otherwise Latitude's NodeTracerProvider
   getTracer(scope: string): Tracer;
-  getAiSdkTelemetry(options?: AiSdkTelemetryOptions): AiSdkTelemetrySettings;
+  getAiSdkTracer(): Tracer;
   flush(): Promise<void>;
   shutdown(): Promise<void>;
 }
 ```
 
-Use `getAiSdkTelemetry()` with Vercel AI SDK v6 calls:
+Use `getAiSdkTracer()` with Vercel AI SDK v6 calls:
 
 ```typescript
 await generateText({
   model,
   prompt: "Hello",
-  experimental_telemetry: latitude.getAiSdkTelemetry({
+  experimental_telemetry: {
+    isEnabled: true,
+    tracer: latitude.getAiSdkTracer(),
     functionId: "support-agent-turn",
-  }),
+  },
 });
 ```
 
-The helper enables AI SDK telemetry and passes a tracer from the provider Latitude is actually exporting from. That matters when another runtime or observability SDK already registered a global OpenTelemetry provider that Latitude cannot attach to.
+The helper returns a tracer from the provider Latitude is actually exporting from. That matters when another runtime or observability SDK already registered a global OpenTelemetry provider that Latitude cannot attach to.
 
 ### `LatitudeSpanProcessor`
 

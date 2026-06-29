@@ -77,10 +77,12 @@ export class MyAgent extends Think<Env> {
     })
 
     return {
-      experimental_telemetry: latitude.getAiSdkTelemetry({
+      experimental_telemetry: {
+        isEnabled: true,
+        tracer: latitude.getAiSdkTracer(),
         functionId: "think-turn",
         metadata: { framework: "cloudflare-think" },
-      }),
+      },
     }
   }
 

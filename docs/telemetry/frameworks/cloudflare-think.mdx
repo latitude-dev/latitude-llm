@@ -59,8 +59,8 @@ This is the fastest way to see Think model calls in Latitude. It does not use
 
   <Step title="Initialize Latitude once">
     Create the Latitude instance lazily from the Worker environment. Then return
-    `latitude.getAiSdkTelemetry()` from `beforeTurn` so Think forwards a
-    Latitude-owned tracer to the AI SDK.
+    `experimental_telemetry` from `beforeTurn` with a Latitude-owned tracer so
+    Think forwards it to the AI SDK.
 
     ```ts
     import { Think, type TurnConfig } from "@cloudflare/think"
@@ -95,10 +95,12 @@ This is the fastest way to see Think model calls in Latitude. It does not use
         const latitude = getLatitude(this.env)
 
         return {
-          experimental_telemetry: latitude.getAiSdkTelemetry({
+          experimental_telemetry: {
+            isEnabled: true,
+            tracer: latitude.getAiSdkTracer(),
             functionId: "think-turn",
             metadata: { framework: "cloudflare-think" },
-          }),
+          },
         }
       }
     }
@@ -127,7 +129,7 @@ This is the fastest way to see Think model calls in Latitude. It does not use
 Use `capture.start()` and `capture.end()` when you want each Think turn to carry
 Latitude context such as `userId`, `sessionId`, `tags`, `metadata`, or a per-turn
 `project`. Capture does not create AI SDK spans by itself; keep
-`latitude.getAiSdkTelemetry()` in `beforeTurn`.
+`latitude.getAiSdkTracer()` in `beforeTurn`.
 
 Start the capture in `beforeTurn`, then end it in both terminal hooks:
 
@@ -164,10 +166,12 @@ export class MyAgent extends Think<Env> {
     })
 
     return {
-      experimental_telemetry: latitude.getAiSdkTelemetry({
+      experimental_telemetry: {
+        isEnabled: true,
+        tracer: latitude.getAiSdkTracer(),
         functionId: "think-turn",
         metadata: { framework: "cloudflare-think" },
-      }),
+      },
     }
   }
 
@@ -198,7 +202,7 @@ export class MyAgent extends Think<Env> {
 ## Runnable Example
 
 The Latitude repository includes a runnable Think example at
-[`examples/cloudflare-think-app`](https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/typescript/examples/cloudflare-think-app).
+[`examples/cloudflare-think-app`](https://github.com/latitude-dev/latitude-llm/tree/development/packages/telemetry/typescript/examples/cloudflare-think-app).
 It includes a
 Worker entrypoint with a `getWeather` tool and a local verifier that sends a
 deterministic Think-like AI SDK turn to `http://localhost:3002`, flushes

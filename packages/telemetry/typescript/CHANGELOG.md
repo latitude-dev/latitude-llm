@@ -7,13 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.5.0] - 2026-06-29
+
 ### Added
 
-- `Latitude#getAiSdkTelemetry()` returns the Vercel AI SDK v6 `experimental_telemetry`
-  settings with a Latitude-owned tracer, so AI SDK calls still reach Latitude when a host
-  runtime's global OpenTelemetry provider cannot accept another span processor.
+- `capture.start()` and `capture.end()` support lifecycle capture boundaries for flows that cannot
+  wrap their work in a callback. `CaptureScope` can be ended directly, or `capture.end()` can end the
+  currently active lifecycle capture.
+- `Latitude#getAiSdkTracer()` returns a Latitude-owned tracer to pass to the Vercel AI SDK v6
+  `experimental_telemetry.tracer` field, so AI SDK calls still reach Latitude when a host runtime's
+  global OpenTelemetry provider cannot accept another span processor.
 - `Latitude#getTracer(scope)` returns a tracer from the provider Latitude is exporting from,
   prefixing scopes with `so.latitude.instrumentation.` when needed.
+
+### Fixed
+
+- Capture root spans now record exceptions and set `ERROR` status when captured work raises or a
+  lifecycle capture ends with an error.
 
 ## [3.4.0] - 2026-06-23
 

@@ -101,10 +101,12 @@ async function runThinkTurn() {
       messages: [{ role: "user", content: "What is the weather in Barcelona? Use the weather tool." }],
       tools: { getWeather },
       stopWhen: stepCountIs(2),
-      experimental_telemetry: latitude.getAiSdkTelemetry({
+      experimental_telemetry: {
+        isEnabled: true,
+        tracer: latitude.getAiSdkTracer(),
         functionId: "think-turn",
         metadata: { framework: "cloudflare-think", verifier: "local-e2e" },
-      }),
+      },
     })
 
     let text = ""

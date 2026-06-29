@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.5.0] - 2026-06-29
+
+### Added
+
+- `capture.start()` and `capture.end()` support lifecycle capture boundaries for flows that cannot
+  wrap their work in a callback. `CaptureScope` can be ended directly, or `capture.end()` can end the
+  currently active lifecycle capture.
+
+### Fixed
+
+- Capture root spans now record exceptions and set `ERROR` status when captured work raises or a
+  lifecycle capture ends with an error.
+
 ## [3.4.0] - 2026-06-26
 
 ### Changed
