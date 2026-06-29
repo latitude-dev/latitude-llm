@@ -3,7 +3,7 @@ import { setTimeout as sleep } from "node:timers/promises"
 import { stepCountIs, streamText, tool } from "ai"
 import { MockLanguageModelV3, simulateReadableStream } from "ai/test"
 import { z } from "zod"
-import { Latitude, capture } from "../../../dist/index.js"
+import { Latitude } from "../../../dist/index.js"
 
 const ingestUrl = process.env.LATITUDE_TELEMETRY_URL ?? "http://localhost:3002"
 const apiKey = process.env.LATITUDE_API_KEY ?? "lat_seed_default_api_key_token"
@@ -86,38 +86,30 @@ async function runThinkTurn() {
   const sessionId = `cloudflare-think-local-${randomUUID()}`
 
   try {
-    const text = await capture(
-      "cloudflare-think-turn",
-      async () => {
-        const result = streamText({
-          model: makeThinkModel(),
-          messages: [{ role: "user", content: "What is the weather in Barcelona? Use the weather tool." }],
-          tools: { getWeather },
-          stopWhen: stepCountIs(2),
-          experimental_telemetry: {
-            isEnabled: true,
-            tracer: latitude.getAiSdkTracer(),
-            functionId: "think-turn",
-            metadata: { framework: "cloudflare-think", verifier: "local-e2e" },
+    const result = streamText({
+      model: makeThinkModel(),
+      messages: [{ role: "user", content: "What is the weather in Barcelona? Use the weather tool." }],
+      tools: { getWeather },
+      stopWhen: stepCountIs(2),
+      experimental_telemetry: {
+        isEnabled: true,
+        tracer: latitude.getAiSdkTracer({
+          userId: "local-think-user",
+          sessionId,
+          tags: ["cloudflare-think", "local-e2e"],
+          metadata: {
+            verifier: "cloudflare-think-app",
+            continuation: false,
+            messageCount: 1,
           },
-        })
-
-        let text = ""
-        for await (const delta of result.textStream) text += delta
-
-        return text
+        }),
+        functionId: "think-turn",
+        metadata: { framework: "cloudflare-think", verifier: "local-e2e" },
       },
-      {
-        userId: "local-think-user",
-        sessionId,
-        tags: ["cloudflare-think", "local-e2e"],
-        metadata: {
-          verifier: "cloudflare-think-app",
-          continuation: false,
-          messageCount: 1,
-        },
-      },
-    )
+    })
+
+    let text = ""
+    for await (const delta of result.textStream) text += delta
 
     return { sessionId, text }
   } catch (error) {

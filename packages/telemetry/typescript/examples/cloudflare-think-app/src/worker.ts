@@ -1,10 +1,9 @@
-import { Think, type TurnConfig, type TurnResult } from "@cloudflare/think"
-import { Latitude, capture, type ContextOptions } from "@latitude-data/telemetry"
-import { getAgentByName, routeAgentRequest } from "agents"
+import { Think, type TurnConfig, type TurnContext } from "@cloudflare/think"
+import { Latitude } from "@latitude-data/telemetry"
+import { routeAgentRequest } from "agents"
 import { tool } from "ai"
 import { createWorkersAI } from "workers-ai-provider"
 import { z } from "zod"
-import { CHAT_PAGE } from "./chat-page"
 
 type Env = {
   AI: Ai
@@ -30,24 +29,9 @@ function getLatitude(env: Env) {
   return latitude
 }
 
-function turnText(result: TurnResult): string {
-  const parts = (result.message?.parts ?? []) as Array<{ type?: string; text?: string }>
-  return parts
-    .filter((part) => part.type === "text" && typeof part.text === "string")
-    .map((part) => part.text)
-    .join("")
-}
-
-function captureOptions(meta: { userId?: string; sessionId?: string }): ContextOptions {
-  const options: ContextOptions = {
-    tags: ["cloudflare-think"],
-    metadata: { framework: "cloudflare-think", continuation: false },
-  }
-
-  if (meta.userId) options.userId = meta.userId
-  if (meta.sessionId) options.sessionId = meta.sessionId
-
-  return options
+function stringFromBody(body: Record<string, unknown> | undefined, key: string) {
+  const value = body?.[key]
+  return typeof value === "string" && value.length > 0 ? value : undefined
 }
 
 const getWeather = tool({
@@ -71,56 +55,33 @@ export class MyAgent extends Think<Env> {
     return { getWeather }
   }
 
-  beforeTurn(): TurnConfig {
+  beforeTurn(ctx: TurnContext): TurnConfig {
     return {
       experimental_telemetry: {
         isEnabled: true,
-        tracer: getLatitude(this.env).getAiSdkTracer(),
+        tracer: getLatitude(this.env).getAiSdkTracer({
+          userId: stringFromBody(ctx.body, "userId"),
+          sessionId: stringFromBody(ctx.body, "sessionId"),
+          tags: ["cloudflare-think"],
+          metadata: { framework: "cloudflare-think", continuation: ctx.continuation },
+        }),
         functionId: "think-turn",
-        metadata: { framework: "cloudflare-think" },
       },
     }
   }
 
-  async runChatTurn(input: string, meta: { userId?: string; sessionId?: string }): Promise<{ text: string }> {
-    try {
-      const result = await capture("cloudflare-think-turn", () => this.runTurn({ input }), captureOptions(meta))
-      return { text: turnText(result) }
-    } finally {
-      await getLatitude(this.env).flush()
-    }
+  async onChatResponse() {
+    await getLatitude(this.env).flush()
+  }
+
+  onChatError(error: unknown) {
+    this.ctx.waitUntil(getLatitude(this.env).flush())
+    return error
   }
 }
 
 export default {
   async fetch(request: Request, env: Env) {
-    const url = new URL(request.url)
-
-    if (request.method === "GET" && url.pathname === "/") {
-      return new Response(CHAT_PAGE, { headers: { "content-type": "text/html; charset=utf-8" } })
-    }
-
-    if (request.method === "POST" && url.pathname === "/api/chat") {
-      const { message, sessionId, userId } = (await request.json()) as {
-        message?: string
-        sessionId?: string
-        userId?: string
-      }
-      if (!message || !sessionId) {
-        return Response.json({ error: "message and sessionId are required" }, { status: 400 })
-      }
-
-      const agent = await getAgentByName(env.MyAgent, sessionId)
-      try {
-        const meta: { userId?: string; sessionId?: string } = { sessionId }
-        if (userId) meta.userId = userId
-        const result = await agent.runChatTurn(message, meta)
-        return Response.json(result)
-      } catch (error) {
-        return Response.json({ error: error instanceof Error ? error.message : String(error) }, { status: 500 })
-      }
-    }
-
     return (await routeAgentRequest(request, env)) ?? new Response("Not found", { status: 404 })
   },
 } satisfies ExportedHandler<Env>

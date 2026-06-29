@@ -3,11 +3,10 @@
 Minimal Cloudflare Think project for validating Latitude telemetry, including
 server-side tool calls.
 
-The Worker wraps each QA chat turn with the callback form of `capture()`.
-Cloudflare Workers' `AsyncLocalStorage` does not implement `enterWith()`, so the
-`capture.start()`/`scope.end()` lifecycle API throws on Workers; the callback
-form relies on `AsyncLocalStorage.run()`, which Workers supports, keeping the AI
-SDK spans under an active Latitude context.
+The React page uses Think's default WebSocket chat path through
+`useAgentChat({ body })`. The Worker reads that body in `beforeTurn()` and passes
+the user/session context to `latitude.getAiSdkTracer(context)`, so the AI SDK
+model and tool spans are stored with `user_id` and `session_id`.
 
 ## Run as a Worker
 
@@ -16,7 +15,7 @@ pnpm --filter @latitude-data/telemetry build
 cd packages/telemetry/typescript/examples/cloudflare-think-app
 npm install
 
-# Local secrets for `wrangler dev` (gitignored). LATITUDE_API_KEY is a secret,
+# Local secrets for Vite/Wrangler dev (gitignored). LATITUDE_API_KEY is a secret,
 # so it lives here rather than in wrangler.jsonc:
 cp .dev.vars.example .dev.vars
 
@@ -26,10 +25,9 @@ npx wrangler login
 npm run dev
 ```
 
-Then open the printed URL (e.g. `http://localhost:8787`) in a browser — the
-Worker serves a small chat page at `/` that runs one agent turn per message and
-shows the session id, so you can find the trace in Latitude. (`GET /` is the only
-HTML route; everything else is the agent protocol, so other paths return 404.)
+Then open the printed URL (e.g. `http://localhost:8787`) in a browser. The page
+shows the user id and session id it sends through `useAgentChat({ body })`, so
+you can find the trace in Latitude.
 
 `LATITUDE_PROJECT_SLUG` and `LATITUDE_TELEMETRY_URL` are set as `vars` in
 `wrangler.jsonc`. `LATITUDE_TELEMETRY_URL` is only needed for local/self-hosted
@@ -57,6 +55,7 @@ npm run verify:local
 ```
 
 The verifier uses AI SDK's mock model, forces a `getWeather` tool call, sends
-spans to the local ingest service, flushes the Latitude SDK, and polls local
-ClickHouse for the generated session. It exits non-zero if spans do not arrive
-or if no `ai.toolCall` span is stored.
+spans with `latitude.getAiSdkTracer(context)`, flushes the Latitude SDK, and
+polls local ClickHouse for the generated session. It exits non-zero if spans do
+not arrive, if no `ai.toolCall` span is stored, or if any span misses the
+expected user/session context.
