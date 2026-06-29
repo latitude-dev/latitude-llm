@@ -23,11 +23,11 @@ import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient } from "../../server/clients.ts"
 
-const listProjectAlertIncidentsInRangeInputSchema = z.object({
+export const listProjectAlertIncidentsInRangeInputSchema = z.object({
   projectId: z.string(),
   fromIso: z.iso.datetime(),
   toIso: z.iso.datetime(),
-  sourceType: incidentSourceTypeSchema.optional(),
+  sourceType: z.preprocess((v) => (v === "issue" ? "signal" : v), incidentSourceTypeSchema).optional(),
   sourceId: z.string().min(1).optional(),
 })
 
