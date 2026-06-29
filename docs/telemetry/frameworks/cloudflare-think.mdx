@@ -118,10 +118,11 @@ This is the fastest way to see Think model calls in Latitude. It does not use
     ```
 
     <Note>
-      `latitude.getAiSdkTelemetry()` enables AI SDK telemetry and passes a tracer
-      from Latitude's active provider. This is required in runtimes where another
-      OpenTelemetry provider is already registered and Latitude logs that it is
-      falling back to a Latitude-owned provider.
+      `latitude.getAiSdkTelemetry()` passes a tracer from the provider Latitude exports from, so it
+      always routes spans correctly. It is strictly required only when Latitude logs that it fell
+      back to a Latitude-owned provider (it could not attach to an already-registered one);
+      otherwise a plain `experimental_telemetry: { isEnabled: true }` also works. To pass the tracer
+      manually instead, use `latitude.getTracer("vercelai")`.
     </Note>
   </Step>
 
