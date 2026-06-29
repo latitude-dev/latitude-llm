@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.4.0] - 2026-06-29
+
+### Added
+
+- `client.datasets.updateRow` — partially update a single dataset row by id. Send only the cells you want to change (`input`, `output`, `expectedOutput`, `metadata`, or `custom` values keyed by column identifier); omitted cells keep their current value. Custom values are merged onto the row's existing ones and validated against the dataset's active columns. Adds the `UpdateDatasetRowBody` and `UpdateDatasetRowResponse` types.
+
 ## [6.3.0] - 2026-06-29
 
 ### Added

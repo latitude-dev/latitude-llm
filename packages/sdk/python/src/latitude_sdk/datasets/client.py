@@ -14,6 +14,7 @@ from ..types.insert_dataset_rows_response import InsertDatasetRowsResponse
 from ..types.paginated_dataset_rows import PaginatedDatasetRows
 from ..types.paginated_datasets import PaginatedDatasets
 from ..types.traces_ref import TracesRef
+from ..types.update_dataset_row_response import UpdateDatasetRowResponse
 from .raw_client import AsyncRawDatasetsClient, RawDatasetsClient
 from .types.datasets_list_columns_request_include_removed import DatasetsListColumnsRequestIncludeRemoved
 from .types.datasets_list_request_sort_by import DatasetsListRequestSortBy
@@ -22,6 +23,11 @@ from .types.datasets_list_rows_request_sort_direction import DatasetsListRowsReq
 from .types.delete_dataset_rows_body_selection import DeleteDatasetRowsBodySelection
 from .types.export_dataset_rows_body_selection import ExportDatasetRowsBodySelection
 from .types.insert_dataset_rows_body_rows_item import InsertDatasetRowsBodyRowsItem
+from .types.update_dataset_row_body_custom_value import UpdateDatasetRowBodyCustomValue
+from .types.update_dataset_row_body_expected_output import UpdateDatasetRowBodyExpectedOutput
+from .types.update_dataset_row_body_input import UpdateDatasetRowBodyInput
+from .types.update_dataset_row_body_metadata import UpdateDatasetRowBodyMetadata
+from .types.update_dataset_row_body_output import UpdateDatasetRowBodyOutput
 
 # this is used as the default value for optional parameters
 OMIT = typing.cast(typing.Any, ...)
@@ -440,6 +446,82 @@ class DatasetsClient:
         """
         _response = self._raw_client.delete_rows(
             project_slug, dataset_slug, selection=selection, request_options=request_options
+        )
+        return _response.data
+
+    def update_row(
+        self,
+        project_slug: str,
+        dataset_slug: str,
+        row_id: str,
+        *,
+        input: typing.Optional[UpdateDatasetRowBodyInput] = OMIT,
+        output: typing.Optional[UpdateDatasetRowBodyOutput] = OMIT,
+        expected_output: typing.Optional[UpdateDatasetRowBodyExpectedOutput] = OMIT,
+        metadata: typing.Optional[UpdateDatasetRowBodyMetadata] = OMIT,
+        custom: typing.Optional[typing.Dict[str, typing.Optional[UpdateDatasetRowBodyCustomValue]]] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> UpdateDatasetRowResponse:
+        """
+        Partially updates a single row. Only the cells you send are changed; omitted cells keep their current value. Use this to fill in an `expectedOutput` (or any other cell) after rows were imported. Bumps the dataset version.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        dataset_slug : str
+            Dataset slug (human-readable identifier within the project).
+
+        row_id : str
+            Stable row identifier (from `listDatasetRows`).
+
+        input : typing.Optional[UpdateDatasetRowBodyInput]
+            New input cell. Omit to leave it unchanged.
+
+        output : typing.Optional[UpdateDatasetRowBodyOutput]
+            New output cell. Omit to leave it unchanged.
+
+        expected_output : typing.Optional[UpdateDatasetRowBodyExpectedOutput]
+            New correct answer for this row. Filled in by curators; usually distinct from `output`. Omit to leave it unchanged.
+
+        metadata : typing.Optional[UpdateDatasetRowBodyMetadata]
+            New metadata cell. Omit to leave it unchanged.
+
+        custom : typing.Optional[typing.Dict[str, typing.Optional[UpdateDatasetRowBodyCustomValue]]]
+            Custom column values to set, keyed by column identifier. Merged onto the row's existing custom values — columns you omit are left unchanged. Unknown or removed columns are rejected.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        UpdateDatasetRowResponse
+            Row updated
+
+        Examples
+        --------
+        from latitude import LatitudeApiClient
+
+        client = LatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+        client.datasets.update_row(
+            project_slug="projectSlug",
+            dataset_slug="datasetSlug",
+            row_id="rowId",
+        )
+        """
+        _response = self._raw_client.update_row(
+            project_slug,
+            dataset_slug,
+            row_id,
+            input=input,
+            output=output,
+            expected_output=expected_output,
+            metadata=metadata,
+            custom=custom,
+            request_options=request_options,
         )
         return _response.data
 
@@ -1317,6 +1399,90 @@ class AsyncDatasetsClient:
         """
         _response = await self._raw_client.delete_rows(
             project_slug, dataset_slug, selection=selection, request_options=request_options
+        )
+        return _response.data
+
+    async def update_row(
+        self,
+        project_slug: str,
+        dataset_slug: str,
+        row_id: str,
+        *,
+        input: typing.Optional[UpdateDatasetRowBodyInput] = OMIT,
+        output: typing.Optional[UpdateDatasetRowBodyOutput] = OMIT,
+        expected_output: typing.Optional[UpdateDatasetRowBodyExpectedOutput] = OMIT,
+        metadata: typing.Optional[UpdateDatasetRowBodyMetadata] = OMIT,
+        custom: typing.Optional[typing.Dict[str, typing.Optional[UpdateDatasetRowBodyCustomValue]]] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> UpdateDatasetRowResponse:
+        """
+        Partially updates a single row. Only the cells you send are changed; omitted cells keep their current value. Use this to fill in an `expectedOutput` (or any other cell) after rows were imported. Bumps the dataset version.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        dataset_slug : str
+            Dataset slug (human-readable identifier within the project).
+
+        row_id : str
+            Stable row identifier (from `listDatasetRows`).
+
+        input : typing.Optional[UpdateDatasetRowBodyInput]
+            New input cell. Omit to leave it unchanged.
+
+        output : typing.Optional[UpdateDatasetRowBodyOutput]
+            New output cell. Omit to leave it unchanged.
+
+        expected_output : typing.Optional[UpdateDatasetRowBodyExpectedOutput]
+            New correct answer for this row. Filled in by curators; usually distinct from `output`. Omit to leave it unchanged.
+
+        metadata : typing.Optional[UpdateDatasetRowBodyMetadata]
+            New metadata cell. Omit to leave it unchanged.
+
+        custom : typing.Optional[typing.Dict[str, typing.Optional[UpdateDatasetRowBodyCustomValue]]]
+            Custom column values to set, keyed by column identifier. Merged onto the row's existing custom values — columns you omit are left unchanged. Unknown or removed columns are rejected.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        UpdateDatasetRowResponse
+            Row updated
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude import AsyncLatitudeApiClient
+
+        client = AsyncLatitudeApiClient(
+            token="YOUR_TOKEN",
+        )
+
+
+        async def main() -> None:
+            await client.datasets.update_row(
+                project_slug="projectSlug",
+                dataset_slug="datasetSlug",
+                row_id="rowId",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.update_row(
+            project_slug,
+            dataset_slug,
+            row_id,
+            input=input,
+            output=output,
+            expected_output=expected_output,
+            metadata=metadata,
+            custom=custom,
+            request_options=request_options,
         )
         return _response.data
 

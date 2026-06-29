@@ -399,6 +399,78 @@ describe("Datasets Routes Integration", () => {
     expect(res.status).toBe(400)
   })
 
+  it<ApiTestContext>("PATCH /{datasetSlug}/rows/{rowId} updates only the cells sent and bumps the version", async ({
+    app,
+    database,
+  }) => {
+    const { tenant, projectSlug, datasetSlug } = await createDatasetForRows(
+      app,
+      database,
+      "aaaaaaaa1111bbbb2222cccc",
+      "Update Row",
+    )
+    const headers = { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" }
+    const rowsUrl = `http://localhost/v1/projects/${projectSlug}/datasets/${datasetSlug}/rows`
+
+    const inserted = await app.fetch(
+      new Request(rowsUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ rows: [{ input: "what is two plus two", output: "four" }] }),
+      }),
+    )
+    const insertedBody = (await inserted.json()) as { version: number; rowIds: string[] }
+    const [rowId] = insertedBody.rowIds
+
+    // Add a custom column so we can exercise the custom-merge path too.
+    const createdCol = (await (
+      await app.fetch(
+        new Request(`http://localhost/v1/projects/${projectSlug}/datasets/${datasetSlug}/columns`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ name: "Score" }),
+        }),
+      )
+    ).json()) as { identifier: string }
+
+    const updated = await app.fetch(
+      new Request(`${rowsUrl}/${rowId}`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ expectedOutput: "exactly four", custom: { [createdCol.identifier]: "high" } }),
+      }),
+    )
+    expect(updated.status).toBe(200)
+    const updatedBody = (await updated.json()) as { versionId: string; version: number }
+    expect(updatedBody.version).toBeGreaterThan(insertedBody.version)
+
+    const listed = await app.fetch(new Request(rowsUrl, { headers: createApiKeyAuthHeaders(tenant.apiKeyToken) }))
+    const row = ((await listed.json()) as { items: Record<string, unknown>[] }).items.find((r) => r.rowId === rowId)
+    expect(row?.input).toBe("what is two plus two")
+    expect(row?.output).toBe("four")
+    expect(row?.expectedOutput).toBe("exactly four")
+    expect(row?.custom).toEqual({ [createdCol.identifier]: "high" })
+  })
+
+  it<ApiTestContext>("PATCH /{datasetSlug}/rows/{rowId} returns 404 for an unknown row", async ({ app, database }) => {
+    const { tenant, projectSlug, datasetSlug } = await createDatasetForRows(
+      app,
+      database,
+      "aaaaaaaa1111bbbb2222dddd",
+      "Update Missing Row",
+    )
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${projectSlug}/datasets/${datasetSlug}/rows/does-not-exist`, {
+        method: "PATCH",
+        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ expectedOutput: "4" }),
+      }),
+    )
+
+    expect(res.status).toBe(404)
+  })
+
   it<ApiTestContext>("DELETE /{datasetSlug}/rows with `mode: all` clears the dataset and reports deletedCount", async ({
     app,
     database,

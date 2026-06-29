@@ -26,6 +26,7 @@ from ..types.insert_dataset_rows_response import InsertDatasetRowsResponse
 from ..types.paginated_dataset_rows import PaginatedDatasetRows
 from ..types.paginated_datasets import PaginatedDatasets
 from ..types.traces_ref import TracesRef
+from ..types.update_dataset_row_response import UpdateDatasetRowResponse
 from .types.datasets_list_columns_request_include_removed import DatasetsListColumnsRequestIncludeRemoved
 from .types.datasets_list_request_sort_by import DatasetsListRequestSortBy
 from .types.datasets_list_request_sort_direction import DatasetsListRequestSortDirection
@@ -33,6 +34,11 @@ from .types.datasets_list_rows_request_sort_direction import DatasetsListRowsReq
 from .types.delete_dataset_rows_body_selection import DeleteDatasetRowsBodySelection
 from .types.export_dataset_rows_body_selection import ExportDatasetRowsBodySelection
 from .types.insert_dataset_rows_body_rows_item import InsertDatasetRowsBodyRowsItem
+from .types.update_dataset_row_body_custom_value import UpdateDatasetRowBodyCustomValue
+from .types.update_dataset_row_body_expected_output import UpdateDatasetRowBodyExpectedOutput
+from .types.update_dataset_row_body_input import UpdateDatasetRowBodyInput
+from .types.update_dataset_row_body_metadata import UpdateDatasetRowBodyMetadata
+from .types.update_dataset_row_body_output import UpdateDatasetRowBodyOutput
 
 # this is used as the default value for optional parameters
 OMIT = typing.cast(typing.Any, ...)
@@ -699,6 +705,132 @@ class RawDatasetsClient:
                     DeleteDatasetRowsResponse,
                     parse_obj_as(
                         type_=DeleteDatasetRowsResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def update_row(
+        self,
+        project_slug: str,
+        dataset_slug: str,
+        row_id: str,
+        *,
+        input: typing.Optional[UpdateDatasetRowBodyInput] = OMIT,
+        output: typing.Optional[UpdateDatasetRowBodyOutput] = OMIT,
+        expected_output: typing.Optional[UpdateDatasetRowBodyExpectedOutput] = OMIT,
+        metadata: typing.Optional[UpdateDatasetRowBodyMetadata] = OMIT,
+        custom: typing.Optional[typing.Dict[str, typing.Optional[UpdateDatasetRowBodyCustomValue]]] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[UpdateDatasetRowResponse]:
+        """
+        Partially updates a single row. Only the cells you send are changed; omitted cells keep their current value. Use this to fill in an `expectedOutput` (or any other cell) after rows were imported. Bumps the dataset version.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        dataset_slug : str
+            Dataset slug (human-readable identifier within the project).
+
+        row_id : str
+            Stable row identifier (from `listDatasetRows`).
+
+        input : typing.Optional[UpdateDatasetRowBodyInput]
+            New input cell. Omit to leave it unchanged.
+
+        output : typing.Optional[UpdateDatasetRowBodyOutput]
+            New output cell. Omit to leave it unchanged.
+
+        expected_output : typing.Optional[UpdateDatasetRowBodyExpectedOutput]
+            New correct answer for this row. Filled in by curators; usually distinct from `output`. Omit to leave it unchanged.
+
+        metadata : typing.Optional[UpdateDatasetRowBodyMetadata]
+            New metadata cell. Omit to leave it unchanged.
+
+        custom : typing.Optional[typing.Dict[str, typing.Optional[UpdateDatasetRowBodyCustomValue]]]
+            Custom column values to set, keyed by column identifier. Merged onto the row's existing custom values — columns you omit are left unchanged. Unknown or removed columns are rejected.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[UpdateDatasetRowResponse]
+            Row updated
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/rows/{jsonable_encoder(row_id)}",
+            method="PATCH",
+            json={
+                "input": convert_and_respect_annotation_metadata(
+                    object_=input, annotation=UpdateDatasetRowBodyInput, direction="write"
+                ),
+                "output": convert_and_respect_annotation_metadata(
+                    object_=output, annotation=UpdateDatasetRowBodyOutput, direction="write"
+                ),
+                "expectedOutput": convert_and_respect_annotation_metadata(
+                    object_=expected_output, annotation=UpdateDatasetRowBodyExpectedOutput, direction="write"
+                ),
+                "metadata": convert_and_respect_annotation_metadata(
+                    object_=metadata, annotation=UpdateDatasetRowBodyMetadata, direction="write"
+                ),
+                "custom": convert_and_respect_annotation_metadata(
+                    object_=custom,
+                    annotation=typing.Dict[str, typing.Optional[UpdateDatasetRowBodyCustomValue]],
+                    direction="write",
+                ),
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    UpdateDatasetRowResponse,
+                    parse_obj_as(
+                        type_=UpdateDatasetRowResponse,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -2113,6 +2245,132 @@ class AsyncRawDatasetsClient:
                     DeleteDatasetRowsResponse,
                     parse_obj_as(
                         type_=DeleteDatasetRowsResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def update_row(
+        self,
+        project_slug: str,
+        dataset_slug: str,
+        row_id: str,
+        *,
+        input: typing.Optional[UpdateDatasetRowBodyInput] = OMIT,
+        output: typing.Optional[UpdateDatasetRowBodyOutput] = OMIT,
+        expected_output: typing.Optional[UpdateDatasetRowBodyExpectedOutput] = OMIT,
+        metadata: typing.Optional[UpdateDatasetRowBodyMetadata] = OMIT,
+        custom: typing.Optional[typing.Dict[str, typing.Optional[UpdateDatasetRowBodyCustomValue]]] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[UpdateDatasetRowResponse]:
+        """
+        Partially updates a single row. Only the cells you send are changed; omitted cells keep their current value. Use this to fill in an `expectedOutput` (or any other cell) after rows were imported. Bumps the dataset version.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        dataset_slug : str
+            Dataset slug (human-readable identifier within the project).
+
+        row_id : str
+            Stable row identifier (from `listDatasetRows`).
+
+        input : typing.Optional[UpdateDatasetRowBodyInput]
+            New input cell. Omit to leave it unchanged.
+
+        output : typing.Optional[UpdateDatasetRowBodyOutput]
+            New output cell. Omit to leave it unchanged.
+
+        expected_output : typing.Optional[UpdateDatasetRowBodyExpectedOutput]
+            New correct answer for this row. Filled in by curators; usually distinct from `output`. Omit to leave it unchanged.
+
+        metadata : typing.Optional[UpdateDatasetRowBodyMetadata]
+            New metadata cell. Omit to leave it unchanged.
+
+        custom : typing.Optional[typing.Dict[str, typing.Optional[UpdateDatasetRowBodyCustomValue]]]
+            Custom column values to set, keyed by column identifier. Merged onto the row's existing custom values — columns you omit are left unchanged. Unknown or removed columns are rejected.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[UpdateDatasetRowResponse]
+            Row updated
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/rows/{jsonable_encoder(row_id)}",
+            method="PATCH",
+            json={
+                "input": convert_and_respect_annotation_metadata(
+                    object_=input, annotation=UpdateDatasetRowBodyInput, direction="write"
+                ),
+                "output": convert_and_respect_annotation_metadata(
+                    object_=output, annotation=UpdateDatasetRowBodyOutput, direction="write"
+                ),
+                "expectedOutput": convert_and_respect_annotation_metadata(
+                    object_=expected_output, annotation=UpdateDatasetRowBodyExpectedOutput, direction="write"
+                ),
+                "metadata": convert_and_respect_annotation_metadata(
+                    object_=metadata, annotation=UpdateDatasetRowBodyMetadata, direction="write"
+                ),
+                "custom": convert_and_respect_annotation_metadata(
+                    object_=custom,
+                    annotation=typing.Dict[str, typing.Optional[UpdateDatasetRowBodyCustomValue]],
+                    direction="write",
+                ),
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    UpdateDatasetRowResponse,
+                    parse_obj_as(
+                        type_=UpdateDatasetRowResponse,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
