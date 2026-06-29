@@ -107,4 +107,31 @@ describe("createSignalUseCase", () => {
 
     expect(events.some((e) => e.eventName === "SignalCreated")).toBe(true)
   })
+
+  it("creates a rule evaluation from settings, compiling to a pure script", async () => {
+    const { layer, evaluations, events } = buildLayer()
+
+    const result = await run(
+      createSignalUseCase({
+        organizationId,
+        projectId,
+        name: "Empty output",
+        description: "The assistant returned nothing useful",
+        evaluation: {
+          settings: {
+            kind: "rule",
+            match: "any",
+            conditions: [{ type: "empty_output" }, { type: "tool_failed" }],
+          },
+        },
+      }).pipe(Effect.provide(layer), Effect.provideService(SqlClient, createPassthroughSqlClient())),
+    )
+
+    const evaluation = evaluations.get(result.evaluationId)
+    expect(evaluation?.settings).toMatchObject({ kind: "rule", match: "any" })
+    expect(evaluation?.script).toContain("return Passed(")
+    expect(evaluation?.script).not.toContain("await llm(")
+
+    expect(events.some((e) => e.eventName === "SignalCreated")).toBe(true)
+  })
 })
