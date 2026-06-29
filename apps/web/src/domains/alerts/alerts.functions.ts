@@ -27,6 +27,7 @@ export const listProjectAlertIncidentsInRangeInputSchema = z.object({
   projectId: z.string(),
   fromIso: z.iso.datetime(),
   toIso: z.iso.datetime(),
+  // TODO: remove once old browser bundles (pre-June-2026 issues→signals rename) are fully cycled out
   sourceType: z.preprocess((v) => (v === "issue" ? "signal" : v), incidentSourceTypeSchema).optional(),
   sourceId: z.string().min(1).optional(),
 })
