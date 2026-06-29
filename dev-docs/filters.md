@@ -126,9 +126,27 @@ Translates a `FilterSet` into parameterized SQL clauses. Behavior:
 | errorCount | error_count | UInt64 | |
 | tokensInput | tokens_input | UInt64 | |
 | tokensOutput | tokens_output | UInt64 | |
+| cacheHitRate | synthetic | — | token-weighted prompt-cache hit rate; filter wire values are integer percentages (0–100), SQL divides by 100 |
 | startTime | start_time | DateTime64 | |
 
 Plus any `metadata.*` key (dynamic, no registry entry needed).
+
+## Score-scoped filter keys
+
+When filtering traces or sessions by score-derived properties, keys use the `score.*` prefix and are split out of the main `FilterSet` before the trace/session registry is applied. The score subquery reads the ClickHouse `scores` analytics table via `SCORE_FIELD_REGISTRY` (`packages/platform/db-clickhouse/src/registries/score-fields.ts`).
+
+| Field | CH Column | Type | Notes |
+| --- | --- | --- | --- |
+| score.passed | passed | Bool | |
+| score.errored | errored | Bool | |
+| score.value | value | Float32 | |
+| score.source | source | FixedString(32) | |
+| score.sourceId | source_id | FixedString(128) | |
+| score.annotatorId | annotator_id | FixedString(24) | human annotator user id; `neq ''` means "has human annotation" |
+| score.signalId | signal_id | FixedString(24) | |
+| score.simulationId | simulation_id | FixedString(24) | |
+
+See [`scores.md`](./scores.md) for annotator semantics and publication rules.
 
 ## URL Serialization
 

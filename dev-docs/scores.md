@@ -46,6 +46,7 @@ Core fields:
 - `errored`: boolean helper maintained on write
 - `draftedAt`: nullable timestamp indicating that the score is still a draft
 - `duration`, `tokens`, `cost`: resource usage, where `duration` is stored in nanoseconds and `cost` is stored in microcents
+- `annotatorId`: nullable user id for human-authored annotation scores; `null` for system-generated scores (evaluations, flaggers, custom uploads)
 
 `feedback` deserves special emphasis.
 
@@ -272,8 +273,24 @@ Spans, traces, and sessions should be filterable by score-derived properties suc
 - state
 - value thresholds
 - failed count
-- issue id
+- signal id (stored as `score.signalId` in filters; column `signal_id` in analytics)
+- annotation author (`score.annotatorId`)
 - source
+
+Score-scoped filter keys use the `score.*` prefix and route into a ClickHouse subquery over the `scores` analytics table (`SCORE_FIELD_REGISTRY` in `@platform/db-clickhouse`). Supported keys:
+
+| Filter key | Meaning |
+| --- | --- |
+| `score.passed` | boolean pass/fail |
+| `score.errored` | boolean errored state |
+| `score.value` | normalized score value |
+| `score.source` | `evaluation` / `annotation` / `custom` |
+| `score.sourceId` | evaluation id, annotation queue id, or custom source id |
+| `score.annotatorId` | human annotator user id; use `neq ''` for "has human annotations" |
+| `score.signalId` | linked signal id |
+| `score.simulationId` | simulation id |
+
+`score.annotatorId` filters traces and sessions to those with at least one matching published annotation score. The traces/sessions UI exposes this as an "Annotated by" member picker plus a "Has annotations" toggle (`annotator_id != ''`).
 
 Score-aware telemetry filtering should use materializations rather than hot joins against canonical Postgres score rows, but the exact tables are still pending precise definition.
 

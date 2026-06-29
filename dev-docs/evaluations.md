@@ -48,6 +48,20 @@ The important invariants are:
 - the runtime must enforce resource limits and stay portable across executors
 - issue-generated evaluations may often be simple `llm()`-as-judge scripts, but the runtime is not limited to that subset
 
+## Session runtime context
+
+Every evaluation script runs against a single `session` global (`ScriptSessionContext` in `@domain/sandbox`). The host loads it from the triggering trace's session via `loadScriptSessionContext` in `@domain/evaluations`.
+
+The object exposes:
+
+- session-level aggregates: `traceCount`, `spanCount`, `errorCount`, `duration` (ns), `timeToFirstToken` (ns), `cost` (microcents), `tokens`, `startTime`, `endTime`, `userId`, `tags`, `metadata`
+- `conversation` — deduped, session-wide transcript (system instructions + last responsive trace input/outputs). `llm()` and judge scripts stringify this; deterministic rules read scoped slices through generated helpers
+- `traces` — per-trace rollups with models, providers, finish reasons, and a `tools` projection (`name`, truncated `input`/`output`, `error`, `duration`)
+
+There is no raw per-span array. Orphan sessions (no session rollup row) fall back to the single triggering trace.
+
+Deterministic `rule` settings compile to pure scripts that read `session` and `session.traces` directly. Judge settings compile to `llm(\`${session.conversation}\` …)` scripts. Both share the same loader and sandbox contract.
+
 ## Evaluation Model
 
 An evaluation optionally carries a declarative `settings` payload that compiles to its `script`; `settings` is null for a raw or GEPA-generated script.
@@ -86,12 +100,21 @@ Evaluation rows live in Postgres with:
 
 Membership is recorded as `scores.signal_id`, never `passed`. An evaluation run's `passed` is host-derived by thresholding the script's `value`; the writer stamps `signal_id` when the behavior is _present_ (`passed = true`). The baseline judge prompt and GEPA proposer set `passed = true` when the behavior is present, so generated and re-optimized judges follow this convention.
 
-`EvaluationSettings` (in `@domain/shared`) is the declarative config a user edits in the builder; it compiles deterministically to `script`. The judge form is the first kind:
+`EvaluationSettings` (in `@domain/shared`) is the declarative config a user edits in the builder; it compiles deterministically to `script`. Supported kinds:
 
 ```typescript
-type EvaluationSettings = { kind: "judge"; criteria: string }
-// future kinds compile to a script too: deterministic rule comparators, semantic similarity (Phase 7)
+type EvaluationSettings =
+  | { kind: "judge"; criteria: string }
+  | {
+      kind: "rule"
+      match: "all" | "any"
+      conditions: EvaluationRuleCondition[] // 1..10
+    }
 ```
+
+`rule` conditions are deterministic checks over the `session` object. Supported condition types include `text_match`, `empty_output`, `output_length`, `json_output`, `metric` (with `session` / `anyTrace` / `allTraces` aggregation), `tool_used`, `tool_failed`, `tool_call_count`, `error`, and `finish_reason`. Metric values use base units (`duration` ns, `cost` microcents, counts otherwise). Invalid regex patterns are rejected at settings parse time so codegen does not emit scripts that throw on every trace.
+
+Semantic-similarity rule conditions remain a future extension.
 
 `compileSettingsToScript` (in `@domain/evaluations`, not `@domain/sandbox` — sandbox is the lower-level runtime contract and must not depend on the judge template) turns settings into a script. The judge form reuses the single-sourced baseline judge wrapper (`generateJudgePromptText` + `wrapPromptAsEvaluationScript`), so a settings-authored judge is the same shape as a discovered one and `llm()` capability detection holds. `validateEvaluationScriptCompiles` compiles the result in the QuickJS sandbox and surfaces a `ScriptCompileError` (HTTP 422) for an invalid script. `createEvaluationUseCase` ties these together: compile/validate → stamp `script_hash` → detect capability → persist unaligned.
 
@@ -265,16 +288,17 @@ Trigger semantics:
 
 Live evaluation triggering is incremental:
 
-- whenever a `TracesIngested` domain event is observed for a project, the `domain-events` dispatcher fans out one debounced `trace-end:run` publish per deduped trace id, and that runtime lists all active evaluations in the project, meaning rows with `archivedAt = null` and `deletedAt = null`
+- whenever a `TracesIngested` domain event is observed for a project, the `domain-events` dispatcher fans out one debounced `signals:match` publish per deduped trace id (alongside `trace-end:run` for queues, flaggers, and other trace-end work)
+- the `signals:match` worker (`apps/workers/src/workers/signals-match.ts`) owns evaluation selection and execution fan-out; `trace-end:run` no longer publishes `live-evaluations:execute`
+- the worker lists all active evaluations in the project (`archivedAt = null` and `deletedAt = null`), runs trigger checks against the incoming trace, and publishes `live-evaluations:execute` for each passing `(evaluationId, traceId)` pair
 - trigger checks run against the incoming trace rather than rescanning historical traces on each read
 - trigger evaluation order is deterministic `sampling` first, then shared batched `filter`, then `turn` / `debounce`
-- `trace-end:run` keeps selection separate from side effects: it finishes all evaluation, live-queue, and system-queue decisions before publishing any `live-evaluations:execute` task, so newly written evaluation scores cannot affect queue selection for the same trace-end run
-- when an evaluation passes those trigger checks, `trace-end:run` publishes one `live-evaluations:execute` task for that `(evaluationId, traceId)` pair; that task later runs the evaluation, writes the resulting score, keeps passed results unowned, immediately claims `scores.issue_id` for failed non-errored issue-linked monitor results, and persists execution failures as canonical errored evaluation scores
+- selection stays separate from side effects: the worker finishes all evaluation decisions before publishing execute tasks, so newly written evaluation scores cannot affect selection for the same trace
+- `live-evaluations:execute` later runs the evaluation against the loaded `session` context, writes the resulting score, stamps `signal_id` when the behavior is present (`passed = true`), and persists execution failures as canonical errored evaluation scores
 - the execute path still rechecks canonical duplicate state before running hosted AI work, and Postgres also enforces that only one non-draft canonical evaluation score can exist for the same `(evaluationId, traceId)` pair, so concurrent workers cannot persist duplicate monitor results
 - the hosted AI call inside `live-evaluations:execute` runs inside a stable telemetry capture span named `evaluation.live.execute` with queued identity metadata including `organizationId`, `projectId`, `evaluationId`, and `traceId`
-- `trace-end:run` batches live-evaluation and live-queue filter checks together instead of using separate queue tasks
 - trigger filters participate in the same live incremental model through the shared trace-filter semantics defined in `./filters.md`
-- in code, the evaluation side of that shared pass lives in `@domain/evaluations`: `buildTraceEndEvaluationSelectionInputs` builds selection specs and eligible rows, and `orchestrateTraceEndLiveEvaluationExecutesUseCase` applies turn rules, checks canonical score state via `ScoreRepository`, and enqueues `live-evaluations:execute` through an injected publish callback (the worker binds the real BullMQ publisher)
+- in code, the evaluation side lives in `@domain/evaluations`: `buildTraceEndEvaluationSelectionInputs` builds selection specs and eligible rows, and `orchestrateTraceEndLiveEvaluationExecutesUseCase` applies turn rules, checks canonical score state via `ScoreRepository`, and enqueues `live-evaluations:execute` through an injected publish callback (the `signals:match` worker binds the real BullMQ publisher)
 
 ## Lifecycle
 
