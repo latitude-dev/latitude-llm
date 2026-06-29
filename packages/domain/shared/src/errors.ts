@@ -265,6 +265,29 @@ export const findPostgresUniqueViolationConstraint = (error: unknown): string | 
   return null
 }
 
+/**
+ * Walks `error` and nested `cause` chains for a transient TCP connection reset —
+ * `ECONNRESET` / `EPIPE` / a "socket hang up". These surface when a pooled
+ * keep-alive socket is reused in the narrow window after the server (or an
+ * intervening load balancer) has already closed it: the request never reaches
+ * the server, so the operation is safe to retry.
+ */
+export const causesIncludeConnectionReset = (error: unknown): boolean => {
+  const seen = new Set<unknown>()
+  let current: unknown = error
+
+  while (current !== null && current !== undefined && !seen.has(current)) {
+    seen.add(current)
+    if (isRecord(current)) {
+      if (current.code === "ECONNRESET" || current.code === "EPIPE") return true
+      if (typeof current.message === "string" && current.message.includes("socket hang up")) return true
+    }
+    current = isRecord(current) ? current.cause : undefined
+  }
+
+  return false
+}
+
 export const isNotFoundError = (error: unknown): error is NotFoundError => error instanceof NotFoundError
 
 export const isConflictError = (error: unknown): error is ConflictError => error instanceof ConflictError

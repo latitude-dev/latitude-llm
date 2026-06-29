@@ -15,6 +15,14 @@ type CreateClickhouseClientError = MissingEnvValueError | InvalidEnvValueError
 const DEFAULT_REQUEST_TIMEOUT_MS = 30_000
 /** Default max open connections (sockets per host). */
 const DEFAULT_MAX_OPEN_CONNECTIONS = 10
+/**
+ * Discard a pooled keep-alive socket after this long idle. Must stay below the
+ * server's (and any load balancer's) keep-alive timeout so the client never
+ * reuses a socket the peer is about to close — that race surfaces as
+ * `ECONNRESET`. ClickHouse's default `keep_alive_timeout` is 3s; 2.5s leaves a
+ * safety margin. Retries in `ch-sql-client` cover the residual race.
+ */
+const KEEP_ALIVE_IDLE_SOCKET_TTL_MS = 2_500
 
 export const createClickhouseClientEffect = (
   config: ClickhouseConfig = {},
@@ -31,10 +39,7 @@ export const createClickhouseClientEffect = (
         username: resolvedConfig.username,
         password: resolvedConfig.password,
         database: resolvedConfig.database,
-        // Keep-alive enabled so the HTTP agent reuses sockets, but stale
-        // sockets are discarded automatically by Node's HTTP agent when the
-        // server closes the connection (e.g. after a restart).
-        keep_alive: { enabled: true },
+        keep_alive: { enabled: true, idle_socket_ttl: KEEP_ALIVE_IDLE_SOCKET_TTL_MS },
         request_timeout: DEFAULT_REQUEST_TIMEOUT_MS,
         max_open_connections: DEFAULT_MAX_OPEN_CONNECTIONS,
       }
