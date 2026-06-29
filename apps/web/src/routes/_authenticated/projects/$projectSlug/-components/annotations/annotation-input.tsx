@@ -80,7 +80,7 @@ const SignalSelector = memo(function SignalSelector({
     <Select<string>
       name="issue"
       placeholderIcon={<Icon icon={SparklesIcon} size="sm" />}
-      placeholder="Discover issue"
+      placeholder="Auto-detected signal"
       options={signalOptions}
       value={value ?? undefined}
       searchable
