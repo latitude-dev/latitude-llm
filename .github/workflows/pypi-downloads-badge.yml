@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository == 'latitude-dev/latitude-llm' }}
     steps:
-      - uses: actions/checkout@v6.0.3
+      - uses: actions/checkout@v7.0.0
 
       - name: Compute total monthly PyPI downloads
         run: |
