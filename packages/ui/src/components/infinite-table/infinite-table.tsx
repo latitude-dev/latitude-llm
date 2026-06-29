@@ -96,6 +96,7 @@ export function InfiniteTable<T>({
   hideExpandedRowSeparator = false,
   getRowGroup,
   renderGroupHeader,
+  groupOrder,
 }: InfiniteTableProps<T>) {
   const hasExpansion = !!expandedRowKeys && !!getExpandedRows
   const colCount = columns.length + (selection ? 1 : 0) + (hasExpansion ? 1 : 0)
@@ -104,8 +105,8 @@ export function InfiniteTable<T>({
 
   const hasGrouping = !!getRowGroup && !!renderGroupHeader
   const displayRows = useMemo<readonly DisplayRow[]>(
-    () => buildDisplayRows(data, getRowGroup, hasGrouping),
-    [data, getRowGroup, hasGrouping],
+    () => buildDisplayRows(data, getRowGroup, hasGrouping, groupOrder),
+    [data, getRowGroup, hasGrouping, groupOrder],
   )
 
   const totalVirtualRows = displayRows.length + (hasMore || (isLoading && data.length === 0) ? SKELETON_ROW_COUNT : 0)

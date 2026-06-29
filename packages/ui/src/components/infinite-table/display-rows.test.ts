@@ -40,6 +40,25 @@ describe("buildDisplayRows", () => {
     expect(dataIndices(rows)).toEqual([0, 2, 4, 1, 3])
   })
 
+  it("orders sections by groupOrder regardless of data arrival, sort within section follows data", () => {
+    // Priority sections must always be urgent → high → medium → low → none even
+    // when the (paginated) data arrives in a different group order.
+    const order = ["urgent", "high", "medium", "low", "none"]
+    const data = [row("m1", "medium"), row("n1", "none"), row("n2", "none"), row("h1", "high"), row("l1", "low")]
+    const rows = buildDisplayRows(data, byGroup, true, order)
+
+    // No "urgent" bucket exists, so no empty header for it.
+    expect(groupKeys(rows)).toEqual(["high", "medium", "low", "none"])
+    expect(dataIndices(rows)).toEqual([3, 0, 4, 1, 2])
+  })
+
+  it("appends groups missing from groupOrder last, in first-appearance order", () => {
+    const data = [row("x1", "mystery"), row("h1", "high")]
+    const rows = buildDisplayRows(data, byGroup, true, ["high", "none"])
+
+    expect(groupKeys(rows)).toEqual(["high", "mystery"])
+  })
+
   it("returns plain data rows with no headers when grouping is disabled", () => {
     const data = [row("a", "high"), row("b", "none")]
 

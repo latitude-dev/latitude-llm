@@ -14,6 +14,7 @@ import { formatCount } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
 import { CircleDashedIcon } from "lucide-react"
 import {
+  SIGNAL_PRIORITY_GROUP_ORDER,
   SIGNAL_PRIORITY_META,
   type SignalPriorityGroupId,
 } from "../../../../../../components/signals/signal-priority-meta.tsx"
@@ -325,6 +326,7 @@ export function SignalsView({
           getRowKey={(issue) => issue.id}
           selection={selection}
           getRowGroup={(issue) => issue.priority ?? "none"}
+          groupOrder={SIGNAL_PRIORITY_GROUP_ORDER}
           renderGroupHeader={(groupKey) => (
             <PriorityGroupHeader
               group={groupKey as SignalPriorityGroupId}
