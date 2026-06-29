@@ -10,7 +10,7 @@ from .create_signal_body_evaluation_settings_settings import CreateSignalBodyEva
 class CreateSignalBodyEvaluationSettings(UniversalBaseModel):
     settings: CreateSignalBodyEvaluationSettingsSettings = pydantic.Field()
     """
-    Declarative judge config; compiled to a sandbox script that calls an LLM.
+    Declarative detector config. `judge` compiles to an LLM script; `rule` compiles to a deterministic script over the session.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

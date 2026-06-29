@@ -2,7 +2,15 @@ import { monitorSignalUseCase, unmonitorSignalUseCase } from "@domain/evaluation
 import { MembershipRepository } from "@domain/organizations"
 import { ProjectRepository } from "@domain/projects"
 import { QueuePublisher, WorkflowQuerier, WorkflowStarter } from "@domain/queue"
-import { BadRequestError, cuidSchema, OrganizationId, ProjectId, SignalId, UserId } from "@domain/shared"
+import {
+  BadRequestError,
+  cuidSchema,
+  evaluationSettingsSchema,
+  OrganizationId,
+  ProjectId,
+  SignalId,
+  UserId,
+} from "@domain/shared"
 import {
   applySignalLifecycleCommandUseCase,
   createSignalUseCase,
@@ -756,12 +764,9 @@ const unmonitorSignal = signalEndpoint({
 const SignalEvaluationBodySchema = z
   .union([
     z.object({
-      settings: z
-        .object({
-          kind: z.literal("judge"),
-          criteria: z.string().min(1).describe("Natural-language description of the behavior the judge detects."),
-        })
-        .describe("Declarative judge config; compiled to a sandbox script that calls an LLM."),
+      settings: evaluationSettingsSchema.describe(
+        "Declarative detector config. `judge` compiles to an LLM script; `rule` compiles to a deterministic script over the session.",
+      ),
     }),
     z.object({
       script: z

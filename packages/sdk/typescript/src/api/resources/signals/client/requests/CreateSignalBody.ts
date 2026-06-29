@@ -42,10 +42,7 @@ export namespace CreateSignalBody {
      */
     export type Evaluation =
         | {
-              settings: {
-                  kind: "judge";
-                  criteria: string;
-              };
+              settings: LatitudeApi.CreateSignalBodyEvaluationSettingsSettings;
           }
         | {
               script: string;

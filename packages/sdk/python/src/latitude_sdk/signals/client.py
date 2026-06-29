@@ -183,7 +183,7 @@ class SignalsClient:
         from latitude import LatitudeApiClient
         from latitude.signals import (
             CreateSignalBodyEvaluationSettings,
-            CreateSignalBodyEvaluationSettingsSettings,
+            CreateSignalBodyEvaluationSettingsSettings_Judge,
         )
 
         client = LatitudeApiClient(
@@ -194,7 +194,7 @@ class SignalsClient:
             name="name",
             description="description",
             evaluation=CreateSignalBodyEvaluationSettings(
-                settings=CreateSignalBodyEvaluationSettingsSettings(
+                settings=CreateSignalBodyEvaluationSettingsSettings_Judge(
                     criteria="criteria",
                 ),
             ),
@@ -885,7 +885,7 @@ class AsyncSignalsClient:
         from latitude import AsyncLatitudeApiClient
         from latitude.signals import (
             CreateSignalBodyEvaluationSettings,
-            CreateSignalBodyEvaluationSettingsSettings,
+            CreateSignalBodyEvaluationSettingsSettings_Judge,
         )
 
         client = AsyncLatitudeApiClient(
@@ -899,7 +899,7 @@ class AsyncSignalsClient:
                 name="name",
                 description="description",
                 evaluation=CreateSignalBodyEvaluationSettings(
-                    settings=CreateSignalBodyEvaluationSettingsSettings(
+                    settings=CreateSignalBodyEvaluationSettingsSettings_Judge(
                         criteria="criteria",
                     ),
                 ),
