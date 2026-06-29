@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   BadRequestError,
   ConflictError,
+  causesIncludeConnectionReset,
   NotFoundError,
   PermissionError,
   RepositoryError,
@@ -94,6 +95,40 @@ describe("dynamic httpMessage", () => {
     const err = new PermissionError({ message: "Forbidden", organizationId: "org1" })
     expect(err.httpStatus).toBe(403)
     expect(err.httpMessage).toBe("Forbidden")
+  })
+})
+
+describe("causesIncludeConnectionReset", () => {
+  it("detects an ECONNRESET code at the top level", () => {
+    expect(causesIncludeConnectionReset(Object.assign(new Error("read ECONNRESET"), { code: "ECONNRESET" }))).toBe(true)
+  })
+
+  it("detects EPIPE", () => {
+    expect(causesIncludeConnectionReset(Object.assign(new Error("write EPIPE"), { code: "EPIPE" }))).toBe(true)
+  })
+
+  it("detects a socket hang up by message", () => {
+    expect(causesIncludeConnectionReset(new Error("socket hang up"))).toBe(true)
+  })
+
+  it("walks nested cause chains, e.g. a wrapped RepositoryError", () => {
+    const reset = Object.assign(new Error("read ECONNRESET"), { code: "ECONNRESET" })
+    const wrapped = new RepositoryError({ cause: reset, operation: "query" })
+    const outer = new RepositoryError({ cause: wrapped, operation: "findByTraceId" })
+    expect(causesIncludeConnectionReset(outer)).toBe(true)
+  })
+
+  it("returns false for unrelated errors", () => {
+    expect(causesIncludeConnectionReset(new Error("Code: 159. DB::Exception: Timeout exceeded"))).toBe(false)
+    expect(causesIncludeConnectionReset(Object.assign(new Error("nope"), { code: "ENOENT" }))).toBe(false)
+    expect(causesIncludeConnectionReset(null)).toBe(false)
+  })
+
+  it("terminates on circular cause chains", () => {
+    const a: { message: string; cause?: unknown } = { message: "a" }
+    const b: { message: string; cause?: unknown } = { message: "b", cause: a }
+    a.cause = b
+    expect(causesIncludeConnectionReset(a)).toBe(false)
   })
 })
 
