@@ -3,6 +3,8 @@ import type { ScriptCompileError, ScriptRuntime } from "@domain/sandbox"
 import {
   BadRequestError,
   type EvaluationSettings,
+  type FilterSet,
+  filterSetSchema,
   generateId,
   type RepositoryError,
   type SqlClient,
@@ -21,6 +23,7 @@ export interface CreateEvaluationInput {
   /** Exactly one of `settings` or `script`. `settings` compiles to the script; `script` is raw (advanced). */
   readonly settings?: EvaluationSettings
   readonly script?: string
+  readonly filter?: FilterSet | null
   readonly now?: Date
 }
 
@@ -55,6 +58,7 @@ export const createEvaluationUseCase = (input: CreateEvaluationInput) =>
       catch: () => new BadRequestError({ message: "Failed to hash evaluation script" }),
     })
     const now = input.now ?? new Date()
+    const trigger = defaultEvaluationTrigger()
     const evaluation = evaluationSchema.parse({
       id: generateId<"EvaluationId">(),
       organizationId: input.organizationId,
@@ -65,7 +69,10 @@ export const createEvaluationUseCase = (input: CreateEvaluationInput) =>
       settings,
       script,
       scriptHash,
-      trigger: defaultEvaluationTrigger(),
+      trigger: {
+        ...trigger,
+        filter: filterSetSchema.parse(input.filter ?? {}),
+      },
       alignment: null,
       alignedAt: null,
       archivedAt: null,

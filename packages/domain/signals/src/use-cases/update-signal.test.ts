@@ -70,7 +70,17 @@ const provide = (
 describe("updateSignalUseCase", () => {
   it("updates name, description, and filters; keeps the slug stable", async () => {
     const { repository, issues } = createFakeSignalRepository([makeUserSignal()])
-    const { repository: evaluationRepository } = makeEvaluationRepository()
+    const evaluation = {
+      id: "eeeeeeeeeeeeeeeeeeeeeeee",
+      signalId,
+      projectId,
+      name: "Slow checkout",
+      deletedAt: null,
+      archivedAt: null,
+      trigger: { filter: {}, turn: "every", debounce: 0, sampling: 100 },
+    } as unknown as Evaluation
+    const { repository: evaluationRepository, saved } = makeEvaluationRepository([evaluation])
+    const nextFilters = { "tags.service": [{ op: "in" as const, value: ["checkout"] }] }
 
     const result = await Effect.runPromise(
       updateSignalUseCase({
@@ -78,7 +88,7 @@ describe("updateSignalUseCase", () => {
         signalId: SignalId(signalId),
         name: "Checkout latency",
         description: "Checkout is slow",
-        filters: { "tags.service": [{ op: "in", value: ["checkout"] }] },
+        filters: nextFilters,
       }).pipe(
         provide(repository, evaluationRepository),
         Effect.provideService(SqlClient, createPassthroughSqlClient()),
@@ -89,8 +99,11 @@ describe("updateSignalUseCase", () => {
     const signal = issues.get(signalId)
     expect(signal?.name).toBe("Checkout latency")
     expect(signal?.description).toBe("Checkout is slow")
-    expect(signal?.filters).not.toBeNull()
+    expect(signal?.filters).toEqual(nextFilters)
     expect(signal?.slug).toBe("slow-checkout")
+    expect(saved).toHaveLength(1)
+    expect(saved[0]?.name).toBe("Checkout latency")
+    expect(saved[0]?.trigger.filter).toEqual(nextFilters)
   })
 
   it("is a no-op when no fields are provided", async () => {
@@ -115,6 +128,8 @@ describe("updateSignalUseCase", () => {
       signalId,
       projectId,
       name: "Slow checkout",
+      deletedAt: null,
+      archivedAt: null,
     } as unknown as Evaluation
     const { repository: evaluationRepository, saved } = makeEvaluationRepository([evaluation])
 

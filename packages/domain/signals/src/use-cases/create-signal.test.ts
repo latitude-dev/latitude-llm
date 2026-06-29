@@ -88,6 +88,25 @@ describe("createSignalUseCase", () => {
     expect(evaluation?.alignment ?? null).toBeNull()
   })
 
+  it("copies signal filters onto the evaluation trigger pre-gate", async () => {
+    const { layer, evaluations } = buildLayer()
+    const filters = { "tags.service": [{ op: "in" as const, value: ["checkout"] }] }
+
+    const result = await run(
+      createSignalUseCase({
+        organizationId,
+        projectId,
+        name: "Slow checkout",
+        description: "Checkout responses take too long",
+        filters,
+        evaluation: { script: "return Passed(1, 'ok')" },
+      }).pipe(Effect.provide(layer), Effect.provideService(SqlClient, createPassthroughSqlClient())),
+    )
+
+    const evaluation = evaluations.get(result.evaluationId)
+    expect(evaluation?.trigger.filter).toEqual(filters)
+  })
+
   it("creates a judge evaluation from settings", async () => {
     const { layer, evaluations, events } = buildLayer()
 
