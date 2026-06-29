@@ -81,45 +81,30 @@ const accessRecoveryMonitorScript = buildJudgeScript(
 )
 
 const warrantyTrigger: EvaluationTrigger = {
-  filter: {
-    serviceNames: [{ op: "eq", value: "acme-support-agent" }],
-  },
   turn: "last",
   debounce: 30,
   sampling: 20,
 }
 
 const warrantyArchivedTrigger: EvaluationTrigger = {
-  filter: {
-    "metadata.story": [{ op: "eq", value: "issue-annotation-corpus" }],
-  },
   turn: "every",
   debounce: 120,
   sampling: 100,
 }
 
 const combinationTrigger: EvaluationTrigger = {
-  filter: {
-    serviceNames: [{ op: "eq", value: "acme-support-agent" }],
-  },
   turn: "every",
   debounce: 45,
   sampling: 35,
 }
 
 const returnsTrigger: EvaluationTrigger = {
-  filter: {
-    serviceNames: [{ op: "eq", value: "acme-support-agent" }],
-  },
   turn: "every",
   debounce: 60,
   sampling: 30,
 }
 
 const accessTrigger: EvaluationTrigger = {
-  filter: {
-    serviceNames: [{ op: "eq", value: "acme-support-agent" }],
-  },
   turn: "last",
   debounce: 20,
   sampling: 25,

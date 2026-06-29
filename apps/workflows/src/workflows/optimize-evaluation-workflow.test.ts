@@ -49,7 +49,6 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
         script: "/* Evaluate the conversation for the issue. */",
         evaluationHash: "hash-existing",
         trigger: {
-          filter: {},
           turn: "every",
           debounce: 0,
           sampling: 100,
@@ -121,7 +120,6 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
         script: "/* Placeholder evaluation prompt. */",
         evaluationHash: "hash-1",
         trigger: {
-          filter: {},
           turn: "every" as const,
           debounce: 0,
           sampling: 100,

@@ -1,4 +1,4 @@
-import { EvaluationRepository, updateEvaluationTriggerFilter } from "@domain/evaluations"
+import { EvaluationRepository } from "@domain/evaluations"
 import {
   BadRequestError,
   type ConcurrentSqlTransactionError,
@@ -78,27 +78,16 @@ export const updateSignalUseCase = (input: UpdateSignalInput) =>
           updatedAt: now,
         })
 
-        const evaluationRepository = yield* EvaluationRepository
-        const active = yield* evaluationRepository.listBySignalId({
-          projectId: parsed.projectId,
-          signalId: parsed.signalId,
-          options: { lifecycle: "active" },
-        })
-
-        if (nameChanged || parsed.filters !== undefined) {
-          const nextFilter = parsed.filters !== undefined ? filterSetSchema.parse(nextFilters ?? {}) : undefined
+        if (nameChanged) {
+          const evaluationRepository = yield* EvaluationRepository
+          const active = yield* evaluationRepository.listBySignalId({
+            projectId: parsed.projectId,
+            signalId: parsed.signalId,
+            options: { lifecycle: "active" },
+          })
           yield* Effect.forEach(
             active.items,
-            (evaluation) => {
-              let next = evaluation
-              if (nextFilter !== undefined) {
-                next = updateEvaluationTriggerFilter({ evaluation: next, filter: nextFilter, updatedAt: now })
-              }
-              if (nameChanged) {
-                next = { ...next, name: nextName, updatedAt: now }
-              }
-              return evaluationRepository.save(next)
-            },
+            (evaluation) => evaluationRepository.save({ ...evaluation, name: nextName, updatedAt: now }),
             { discard: true },
           )
         }

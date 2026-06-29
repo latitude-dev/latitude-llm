@@ -236,6 +236,7 @@ export function SignalDrawerEvaluations({
   signalId,
   signalSource,
   signalOrigin,
+  signalFilters,
   evaluations,
   flaggerSlugs,
   canMonitorSignal,
@@ -245,6 +246,7 @@ export function SignalDrawerEvaluations({
   readonly signalId: string
   readonly signalSource: "annotation" | "custom" | "flagger"
   readonly signalOrigin: "user" | "system"
+  readonly signalFilters: FilterSet | null
   readonly evaluations: readonly EvaluationSummaryRecord[]
   readonly flaggerSlugs?: readonly string[]
   readonly canMonitorSignal: boolean
@@ -258,7 +260,7 @@ export function SignalDrawerEvaluations({
   const [deleteEvaluationId, setDeleteEvaluationId] = useState<string | null>(null)
   const [statsEvaluation, setStatsEvaluation] = useState<EvaluationSummaryRecord | null>(null)
   const [samplingEvaluation, setSamplingEvaluation] = useState<EvaluationSummaryRecord | null>(null)
-  const [filterEvaluation, setFilterEvaluation] = useState<EvaluationSummaryRecord | null>(null)
+  const [filterModalOpen, setFilterModalOpen] = useState(false)
   const [isStartingGenerate, setIsStartingGenerate] = useState(false)
   const [isStartingRealign, setIsStartingRealign] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -561,7 +563,7 @@ export function SignalDrawerEvaluations({
               <SummaryField
                 label="Scope"
                 value={(() => {
-                  const conditionCount = countFilterConditions(primaryEvaluation.trigger.filter)
+                  const conditionCount = countFilterConditions(signalFilters ?? {})
                   const summary =
                     conditionCount === 0 ? "All traces" : `${conditionCount} filter${conditionCount === 1 ? "" : "s"}`
                   return (
@@ -570,7 +572,7 @@ export function SignalDrawerEvaluations({
                       trigger={
                         <button
                           type="button"
-                          onClick={() => setFilterEvaluation(primaryEvaluation)}
+                          onClick={() => setFilterModalOpen(true)}
                           disabled={isActionPending}
                           className="inline-flex h-5 cursor-pointer items-center gap-1 bg-transparent p-0 disabled:cursor-not-allowed disabled:opacity-50"
                         >
@@ -677,12 +679,14 @@ export function SignalDrawerEvaluations({
         onClose={() => setSamplingEvaluation(null)}
       />
 
-      <EvaluationFilterModal
-        evaluation={filterEvaluation}
-        projectId={projectId}
-        signalId={signalId}
-        onClose={() => setFilterEvaluation(null)}
-      />
+      {filterModalOpen ? (
+        <EvaluationFilterModal
+          signalFilters={signalFilters}
+          projectId={projectId}
+          signalId={signalId}
+          onClose={() => setFilterModalOpen(false)}
+        />
+      ) : null}
     </>
   )
 }

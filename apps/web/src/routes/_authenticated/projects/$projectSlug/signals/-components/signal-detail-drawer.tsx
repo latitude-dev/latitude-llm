@@ -435,6 +435,7 @@ export function SignalDetailBody({
                 signalId={signalId}
                 signalSource={issue?.source ?? "annotation"}
                 signalOrigin={issue?.origin ?? "system"}
+                signalFilters={issue?.filters ?? null}
                 evaluations={issue?.evaluations ?? []}
                 flaggerSlugs={issue?.flaggerSlugs ?? []}
                 canMonitorSignal={issue ? issue.mutedAt === null : false}

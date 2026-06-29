@@ -121,6 +121,7 @@ export interface SignalListItem {
   readonly states: readonly string[]
   readonly assigneeId: string | null
   readonly priority: SignalPriority | null
+  readonly filters: FilterSet | null
   readonly mutedAt: Date | null
   readonly createdAt: Date
   readonly updatedAt: Date
@@ -471,6 +472,7 @@ const toLightListItem = (issue: SignalWithLifecycle, now: Date): SignalListItem 
     states,
     assigneeId: issue.assigneeId,
     priority: issue.priority,
+    filters: issue.filters ?? null,
     createdAt: issue.createdAt,
     updatedAt: issue.updatedAt,
     mutedAt: issue.mutedAt,
@@ -905,6 +907,7 @@ export const listSignalsUseCase = (
           states: candidate.lifecycleStates,
           assigneeId: candidate.issue.assigneeId,
           priority: candidate.issue.priority,
+          filters: candidate.issue.filters ?? null,
           mutedAt: candidate.issue.mutedAt,
           createdAt: candidate.issue.createdAt,
           updatedAt: candidate.issue.updatedAt,

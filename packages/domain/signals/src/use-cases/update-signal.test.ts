@@ -70,16 +70,7 @@ const provide = (
 describe("updateSignalUseCase", () => {
   it("updates name, description, and filters; keeps the slug stable", async () => {
     const { repository, issues } = createFakeSignalRepository([makeUserSignal()])
-    const evaluation = {
-      id: "eeeeeeeeeeeeeeeeeeeeeeee",
-      signalId,
-      projectId,
-      name: "Slow checkout",
-      deletedAt: null,
-      archivedAt: null,
-      trigger: { filter: {}, turn: "every", debounce: 0, sampling: 100 },
-    } as unknown as Evaluation
-    const { repository: evaluationRepository, saved } = makeEvaluationRepository([evaluation])
+    const { repository: evaluationRepository } = makeEvaluationRepository()
     const nextFilters = { "tags.service": [{ op: "in" as const, value: ["checkout"] }] }
 
     const result = await Effect.runPromise(
@@ -101,9 +92,6 @@ describe("updateSignalUseCase", () => {
     expect(signal?.description).toBe("Checkout is slow")
     expect(signal?.filters).toEqual(nextFilters)
     expect(signal?.slug).toBe("slow-checkout")
-    expect(saved).toHaveLength(1)
-    expect(saved[0]?.name).toBe("Checkout latency")
-    expect(saved[0]?.trigger.filter).toEqual(nextFilters)
   })
 
   it("is a no-op when no fields are provided", async () => {

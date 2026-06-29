@@ -4,10 +4,7 @@ import { type RefObject, useCallback, useMemo, useState } from "react"
 import { MetadataFilter } from "../../../../../../components/filters-builder/metadata-filter/metadata-filter.tsx"
 import { MultiSelectFilter } from "../../../../../../components/filters-builder/multi-select-filter.tsx"
 import type { DistinctColumn } from "../../../../../../components/filters-builder/types.ts"
-import {
-  type EvaluationSummaryRecord,
-  updateSignalEvaluationTriggerFilter,
-} from "../../../../../../domains/evaluations/evaluation-alignment.functions.ts"
+import { updateSignalScopeFilters } from "../../../../../../domains/evaluations/evaluation-alignment.functions.ts"
 import { invalidateSignalQueries } from "../../../../../../domains/signals/signals.collection.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 
@@ -65,35 +62,32 @@ function applyMetadataEntries(filter: FilterSet, entries: readonly { key: string
 }
 
 export function EvaluationFilterModal({
-  evaluation,
+  signalFilters,
   projectId,
   signalId,
   onClose,
 }: {
-  readonly evaluation: EvaluationSummaryRecord | null
+  readonly signalFilters: FilterSet | null
   readonly projectId: string
   readonly signalId: string
   readonly onClose: () => void
 }) {
-  if (evaluation === null) return null
-  return (
-    <EvaluationFilterModalForm evaluation={evaluation} projectId={projectId} signalId={signalId} onClose={onClose} />
-  )
+  return <EvaluationFilterModalForm signalFilters={signalFilters} projectId={projectId} signalId={signalId} onClose={onClose} />
 }
 
 function EvaluationFilterModalForm({
-  evaluation,
+  signalFilters,
   projectId,
   signalId,
   onClose,
 }: {
-  readonly evaluation: EvaluationSummaryRecord
+  readonly signalFilters: FilterSet | null
   readonly projectId: string
   readonly signalId: string
   readonly onClose: () => void
 }) {
   const { toast } = useToast()
-  const [draft, setDraft] = useState<FilterSet>(evaluation.trigger.filter)
+  const [draft, setDraft] = useState<FilterSet>(signalFilters ?? {})
   const [isSaving, setIsSaving] = useState(false)
   const [popoverContainerEl, setPopoverContainerEl] = useState<HTMLDivElement | null>(null)
   const popoverContainerRef = useMemo<RefObject<HTMLElement | null>>(
@@ -114,12 +108,11 @@ function EvaluationFilterModalForm({
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      await updateSignalEvaluationTriggerFilter({
+      await updateSignalScopeFilters({
         data: {
           projectId,
           signalId,
-          evaluationId: evaluation.id,
-          filter: draft,
+          filters: Object.keys(draft).length === 0 ? null : draft,
         },
       })
       await invalidateSignalQueries(projectId, signalId)

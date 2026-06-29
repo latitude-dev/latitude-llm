@@ -4,7 +4,8 @@ import {
   orchestrateTraceEndLiveEvaluationExecutesUseCase,
 } from "@domain/evaluations"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
-import { OrganizationId } from "@domain/shared"
+import { OrganizationId, SignalId } from "@domain/shared"
+import { SignalRepository } from "@domain/signals"
 import {
   loadTraceForTraceEndUseCase,
   selectTraceEndItemsUseCase,
@@ -23,6 +24,7 @@ import {
   OutboxEventWriterLive,
   type PostgresClient,
   ScoreRepositoryLive,
+  SignalRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
@@ -114,7 +116,14 @@ export const runSignalsMatchJob =
       const traceDetail = loaded.traceDetail
 
       const activeEvaluations = yield* listAllActiveEvaluations({ projectId: traceDetail.projectId })
-      const evalBuilt = buildTraceEndEvaluationSelectionInputs(activeEvaluations)
+      const signalRepository = yield* SignalRepository
+      const signalIds = [...new Set(activeEvaluations.map((evaluation) => SignalId(evaluation.signalId)))]
+      const signals =
+        signalIds.length > 0
+          ? yield* signalRepository.findByIds({ projectId: traceDetail.projectId, signalIds })
+          : []
+      const signalFiltersBySignalId = new Map(signals.map((signal) => [signal.id, signal.filters ?? null]))
+      const evalBuilt = buildTraceEndEvaluationSelectionInputs(activeEvaluations, signalFiltersBySignalId)
 
       const decisions = yield* selectTraceEndItemsUseCase({
         organizationId: payload.organizationId,
@@ -169,7 +178,7 @@ export const runSignalsMatchJob =
       } satisfies SignalsMatchRunResult
     }).pipe(
       withPostgres(
-        Layer.mergeAll(EvaluationRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive),
+        Layer.mergeAll(EvaluationRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive, SignalRepositoryLive),
         postgresClient,
         OrganizationId(payload.organizationId),
       ),

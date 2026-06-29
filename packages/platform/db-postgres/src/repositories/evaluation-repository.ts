@@ -1,5 +1,5 @@
 import type { Evaluation, EvaluationAlignment, EvaluationListOptions, EvaluationTrigger } from "@domain/evaluations"
-import { EvaluationRepository, evaluationSchema } from "@domain/evaluations"
+import { EvaluationRepository, evaluationSchema, evaluationTriggerSchema } from "@domain/evaluations"
 import {
   type EvaluationId,
   NotFoundError,
@@ -26,7 +26,7 @@ const toDomainEvaluation = (row: typeof evaluations.$inferSelect): Evaluation =>
     // script_hash is backfilled for every row; the alignment fallback covers the brief
     // migration→deploy window where old code inserted a row before script_hash existed.
     scriptHash: row.scriptHash ?? row.alignment?.evaluationHash ?? undefined,
-    trigger: row.trigger as EvaluationTrigger,
+    trigger: evaluationTriggerSchema.parse(row.trigger as EvaluationTrigger & { filter?: unknown }),
     alignment: (row.alignment as EvaluationAlignment | null) ?? null,
     alignedAt: row.alignedAt,
     archivedAt: row.archivedAt,

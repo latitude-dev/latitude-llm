@@ -32,7 +32,6 @@ export {
   deriveEvaluationAlignmentMetrics,
   softDeleteEvaluation,
   updateEvaluationSampling,
-  updateEvaluationTriggerFilter,
 } from "./helpers.ts"
 export {
   DEFAULT_ALIGNMENT_EXAMPLE_LIMIT,

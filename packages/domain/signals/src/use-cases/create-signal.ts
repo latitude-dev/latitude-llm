@@ -86,7 +86,6 @@ export const createSignalUseCase = (input: CreateSignalInput) =>
           signalId: signal.id,
           name: parsed.name,
           description: parsed.description,
-          filter: parsed.filters ?? {},
           ...("settings" in parsed.evaluation
             ? { settings: parsed.evaluation.settings }
             : { script: parsed.evaluation.script }),

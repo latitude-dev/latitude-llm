@@ -28,7 +28,6 @@ const makeEvaluation = (
     description: "Detects when the agent leaks secrets.",
     script: wrapPromptAsEvaluationScript("Check for secret leakage in the conversation."),
     trigger: {
-      filter: {},
       turn: "every",
       debounce: 0,
       sampling: 10,

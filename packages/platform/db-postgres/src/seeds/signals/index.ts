@@ -1,5 +1,5 @@
 import { AIEmbed, type AIError, EMBEDDING_DIMENSIONS, resolveEmbeddingConfig } from "@domain/ai"
-import { SignalId, toSlug } from "@domain/shared"
+import { SignalId, type FilterSet, toSlug } from "@domain/shared"
 import { SEED_SIGNAL_FIXTURES, type SeedScope } from "@domain/shared/seeding"
 import { createSignalCentroid, type SignalCentroid, updateSignalCentroid } from "@domain/signals"
 import { AIEmbedLive } from "@platform/ai"
@@ -25,6 +25,13 @@ const NAMED_SIGNAL_KEYS = [
   "installation",
   "flagger",
 ] as const
+
+const SEED_SIGNAL_SCOPE_FILTERS: Partial<Record<(typeof NAMED_SIGNAL_KEYS)[number], FilterSet>> = {
+  "warranty-fab": { serviceNames: [{ op: "eq", value: "acme-support-agent" }] },
+  combination: { serviceNames: [{ op: "eq", value: "acme-support-agent" }] },
+  returns: { serviceNames: [{ op: "eq", value: "acme-support-agent" }] },
+  access: { serviceNames: [{ op: "eq", value: "acme-support-agent" }] },
+}
 
 const fixtureScopedId = (index: number, scope: SeedScope): string =>
   index < NAMED_SIGNAL_KEYS.length
@@ -181,6 +188,7 @@ function buildSignalRow(input: {
   readonly projectId: string
   readonly signalScores: readonly SignalLinkedScoreSeedRow[]
   readonly embeddedSignalScores: readonly EmbeddedSignalLinkedScoreSeedRow[] | null
+  readonly filters?: FilterSet | null
 }): typeof signals.$inferInsert {
   const fixtureDates = signalFixtureDates(input.scope, input.issue)
   const sortedSignalScores = [...input.signalScores].sort(
@@ -214,6 +222,7 @@ function buildSignalRow(input: {
     name: input.issue.name,
     description: input.issue.description,
     source: input.issue.source,
+    filters: input.filters ?? null,
     centroid,
     clusteredAt: centroid.clusteredAt,
     mutedAt: fixtureDates.ignoredAt,
@@ -277,6 +286,8 @@ const seedSignals: Seeder = {
                   } satisfies EmbeddedSignalLinkedScoreSeedRow
                 })
 
+          const signalKey = index < NAMED_SIGNAL_KEYS.length ? NAMED_SIGNAL_KEYS[index] : undefined
+
           return buildSignalRow({
             scope: ctx.scope,
             issue,
@@ -286,6 +297,7 @@ const seedSignals: Seeder = {
             projectId: ctx.scope.projectId,
             signalScores,
             embeddedSignalScores,
+            filters: signalKey ? (SEED_SIGNAL_SCOPE_FILTERS[signalKey] ?? null) : null,
           })
         })
 

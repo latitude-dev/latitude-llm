@@ -78,7 +78,6 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
         script: "/* Evaluate the conversation for the issue. */",
         evaluationHash: "hash-existing",
         trigger: {
-          filter: {},
           turn: "every",
           debounce: 0,
           sampling: 100,
@@ -423,7 +422,6 @@ describe("refreshEvaluationAlignmentWorkflow", () => {
             script: "/* Evaluate the conversation for the issue. */",
             evaluationHash: "stale-hash-from-previous-script",
             trigger: {
-              filter: {},
               turn: "every" as const,
               debounce: 0,
               sampling: 100,

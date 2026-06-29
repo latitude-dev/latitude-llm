@@ -1,4 +1,4 @@
-import { cuidSchema, evaluationIdSchema, evaluationSettingsSchema, filterSetSchema } from "@domain/shared"
+import { cuidSchema, evaluationIdSchema, evaluationSettingsSchema } from "@domain/shared"
 import { z } from "zod"
 
 import { DEFAULT_EVALUATION_SAMPLING, EVALUATION_NAME_MAX_LENGTH, EVALUATION_TURNS } from "../constants.ts"
@@ -29,7 +29,6 @@ function validateEvaluationTrigger(
 
 export const evaluationTriggerSchema = z
   .object({
-    filter: filterSetSchema, // trace/session filter over the shared trace field registry; `{}` matches all traces
     turn: evaluationTurnSchema, // runs on the first, every, or last ingested trace/turn
     debounce: z.number().int().nonnegative(), // debounce time in seconds
     sampling: z.number().min(0).max(100), // percentage [0, 100]
@@ -38,13 +37,8 @@ export const evaluationTriggerSchema = z
 
 export type EvaluationTrigger = z.infer<typeof evaluationTriggerSchema>
 
-/**
- * Build a default trigger for a newly generated issue-linked evaluation.
- * Uses the shared FilterSet from `@domain/shared` for the filter field.
- */
 export function defaultEvaluationTrigger(): EvaluationTrigger {
   return {
-    filter: filterSetSchema.parse({}),
     turn: "every",
     debounce: 0,
     sampling: DEFAULT_EVALUATION_SAMPLING,

@@ -99,7 +99,12 @@ const makeTraceRow = (input?: {
   scope_version: "1.0.0",
 })
 
-const makeSignalRow = (input?: { readonly id?: string; readonly projectId?: string; readonly uuid?: string }) => ({
+const makeSignalRow = (input?: {
+  readonly id?: string
+  readonly projectId?: string
+  readonly uuid?: string
+  readonly filters?: Record<string, unknown> | null
+}) => ({
   id: input?.id ?? SIGNAL_ID,
   uuid: input?.uuid ?? "11111111-1111-4111-8111-111111111111",
   organizationId: ORGANIZATION_ID,
@@ -108,6 +113,8 @@ const makeSignalRow = (input?: { readonly id?: string; readonly projectId?: stri
   name: "Signals match worker issue",
   description: "Signal context for signals-match worker tests",
   source: "annotation" as const,
+  origin: "system" as const,
+  filters: input?.filters ?? null,
   centroid: createSignalCentroid(),
   clusteredAt: TIMESTAMP,
   mutedAt: null,
@@ -117,7 +124,6 @@ const makeSignalRow = (input?: { readonly id?: string; readonly projectId?: stri
 
 const makeEvaluationRow = (input: {
   readonly id: string
-  readonly filter?: Record<string, unknown>
   readonly sampling?: number
   readonly turn?: EvaluationTurn
   readonly projectId?: string
@@ -133,7 +139,6 @@ const makeEvaluationRow = (input: {
     script: "export default async function evaluate() { return { value: 1 } }",
     trigger: {
       ...defaultEvaluationTrigger(),
-      filter: input.filter ?? {},
       sampling: input.sampling ?? 100,
       turn: input.turn ?? "every",
       debounce: 0,
@@ -306,26 +311,35 @@ describe("runSignalsMatchJob", () => {
     await pg.db
       .insert(signals)
       .values([
-        makeSignalRow({ id: "i".repeat(24), uuid: "11111111-1111-4111-8111-111111111111" }),
-        makeSignalRow({ id: "m".repeat(24), uuid: "44444444-4444-4444-8444-444444444444" }),
-        makeSignalRow({ id: "n".repeat(24), uuid: "55555555-5555-4555-8555-555555555555" }),
+        makeSignalRow({
+          id: "i".repeat(24),
+          uuid: "11111111-1111-4111-8111-111111111111",
+          filters: { tags: [{ op: "in", value: ["lifecycle"] }] },
+        }),
+        makeSignalRow({
+          id: "m".repeat(24),
+          uuid: "44444444-4444-4444-8444-444444444444",
+          filters: { tags: [{ op: "in", value: ["lifecycle"] }] },
+        }),
+        makeSignalRow({
+          id: "n".repeat(24),
+          uuid: "55555555-5555-4555-8555-555555555555",
+          filters: { tags: [{ op: "in", value: ["lifecycle"] }] },
+        }),
       ])
     await pg.db.insert(evaluations).values([
       makeEvaluationRow({
         id: "e".repeat(24),
         signalId: "i".repeat(24),
-        filter: { tags: [{ op: "in", value: ["lifecycle"] }] },
       }),
       makeEvaluationRow({
         id: "f".repeat(24),
         signalId: "m".repeat(24),
-        filter: { tags: [{ op: "in", value: ["lifecycle"] }] },
         turn: "first",
       }),
       makeEvaluationRow({
         id: "g".repeat(24),
         signalId: "n".repeat(24),
-        filter: { tags: [{ op: "in", value: ["lifecycle"] }] },
         sampling: 0,
       }),
     ])
@@ -414,12 +428,12 @@ describe("createRunHandler", () => {
         id: signalId,
         projectId,
         uuid: "22222222-2222-4222-8222-222222222222",
+        filters: { tags: [{ op: "in", value: ["lifecycle"] }] },
       }),
     ])
     await pg.db.insert(evaluations).values([
       makeEvaluationRow({
         id: "h".repeat(24),
-        filter: { tags: [{ op: "in", value: ["lifecycle"] }] },
         projectId,
         signalId,
       }),

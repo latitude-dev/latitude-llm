@@ -6,7 +6,10 @@ import { getLiveEvaluationEligibility } from "../../helpers.ts"
 
 export const buildLiveTraceEndEvaluationSelectionKey = (evaluationId: string) => `live-evaluation:${evaluationId}`
 
-export const buildTraceEndEvaluationSelectionInputs = (activeEvaluations: readonly Evaluation[]) => {
+export const buildTraceEndEvaluationSelectionInputs = (
+  activeEvaluations: readonly Evaluation[],
+  signalFiltersBySignalId: ReadonlyMap<string, FilterSet | null | undefined>,
+) => {
   const evaluationEligibility = activeEvaluations.map((evaluation) => ({
     evaluation,
     eligibility: getLiveEvaluationEligibility(evaluation),
@@ -25,9 +28,10 @@ export const buildTraceEndEvaluationSelectionInputs = (activeEvaluations: readon
   for (const evaluation of eligibleEvaluations) {
     const key = buildLiveTraceEndEvaluationSelectionKey(evaluation.id)
     evaluationByKey.set(key, evaluation)
+    const signalFilter = signalFiltersBySignalId.get(evaluation.signalId) ?? null
     items[key] = {
       sampling: evaluation.trigger.sampling,
-      ...(evaluation.trigger.filter ? { filter: evaluation.trigger.filter as FilterSet } : {}),
+      ...(signalFilter ? { filter: signalFilter as FilterSet } : {}),
       sampleKey: evaluation.id,
     }
   }

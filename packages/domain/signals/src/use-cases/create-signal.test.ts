@@ -88,8 +88,8 @@ describe("createSignalUseCase", () => {
     expect(evaluation?.alignment ?? null).toBeNull()
   })
 
-  it("copies signal filters onto the evaluation trigger pre-gate", async () => {
-    const { layer, evaluations } = buildLayer()
+  it("persists signal filters as the evaluation pre-gate source of truth", async () => {
+    const { layer, issues } = buildLayer()
     const filters = { "tags.service": [{ op: "in" as const, value: ["checkout"] }] }
 
     const result = await run(
@@ -103,8 +103,8 @@ describe("createSignalUseCase", () => {
       }).pipe(Effect.provide(layer), Effect.provideService(SqlClient, createPassthroughSqlClient())),
     )
 
-    const evaluation = evaluations.get(result.evaluationId)
-    expect(evaluation?.trigger.filter).toEqual(filters)
+    const signal = issues.get(result.signalId)
+    expect(signal?.filters).toEqual(filters)
   })
 
   it("creates a judge evaluation from settings", async () => {
