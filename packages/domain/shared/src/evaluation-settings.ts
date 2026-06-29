@@ -16,8 +16,6 @@ const metricFieldSchema = z.enum([
   "spanCount",
 ])
 
-const finishReasonSchema = z.enum(["length", "content_filter", "error", "stop", "tool_call"])
-
 /**
  * A single deterministic check over the evaluation `session` object. Each condition compiles to a
  * readable, pure (no `llm()`) line in the generated rule script (see `compileSettingsToScript`).
@@ -55,7 +53,9 @@ export const evaluationRuleConditionSchema = z.discriminatedUnion("type", [
     value: z.number().int().nonnegative(),
   }),
   z.object({ type: z.literal("error") }),
-  z.object({ type: z.literal("finish_reason"), value: finishReasonSchema }),
+  // Finish reasons are provider-specific raw strings (e.g. "stop", "tool_calls", "length", "end_turn"),
+  // so this is a free string rather than a fixed enum.
+  z.object({ type: z.literal("finish_reason"), value: z.string().min(1) }),
 ])
 export type EvaluationRuleCondition = z.infer<typeof evaluationRuleConditionSchema>
 
