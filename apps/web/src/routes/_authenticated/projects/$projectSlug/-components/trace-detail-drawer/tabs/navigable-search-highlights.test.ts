@@ -35,7 +35,7 @@ describe("toSearchHighlightRanges", () => {
 
     const ranges = toSearchHighlightRanges({ highlights, firstMatchIndex: 0 }, 1)
 
-    expect(ranges[0]?.searchActive).toBe(false)
+    expect(ranges[0]?.searchActive).toBeUndefined()
     expect(ranges[1]?.searchActive).toBe(true)
   })
 })
