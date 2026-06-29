@@ -210,13 +210,10 @@ export {
   listSignalTracesUseCase,
 } from "./use-cases/list-signal-traces.ts"
 export {
-  type ListSignalsAnalyticsInput,
   type ListSignalsError,
   type ListSignalsInput,
   type ListSignalsResult,
-  listSignalsAnalyticsUseCase,
   listSignalsUseCase,
-  listSignalsWithAnalyticsUseCase,
   type SignalAssigneeFilter,
   type SignalListAnalytics,
   type SignalListAnalyticsCounts,
