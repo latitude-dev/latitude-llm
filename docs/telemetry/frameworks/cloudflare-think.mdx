@@ -9,8 +9,8 @@ Cloudflare Think uses the Vercel AI SDK internally. Think owns the `streamText`
 call, so add Latitude telemetry in `beforeTurn()` instead of at a model call
 site.
 
-Start with the basic setup. Add user and session context only if you need traces
-to be attributed to a user or chat session.
+Start with the basic setup. Add context only if you need traces to include
+user, session, tags, or metadata from your app.
 
 ---
 
@@ -109,20 +109,22 @@ This records Think model calls, tools, latency, tokens, prompts, and responses.
 
 ---
 
-## Add User And Session Context
+## Add App Context
 
-If your app uses Think's default WebSocket chat entrypoint, pass context from the
-client with `useAgentChat({ body })`.
+If your app uses Think's default WebSocket chat entrypoint, pass the same context
+you would normally pass to `capture()` through `useAgentChat({ body })`.
 
 ```tsx
 import { useAgentChat } from "@cloudflare/think/react"
 
 const { messages, sendMessage } = useAgentChat({
   agent,
-  body: () => ({
+  body: {
     userId: currentUser.id,
     sessionId: session.id,
-  }),
+    tags: ["cloudflare-think"],
+    metadata: { plan: currentUser.plan },
+  },
 })
 ```
 
@@ -130,23 +132,16 @@ Then read that context in `beforeTurn()` and pass it to `getAiSdkTracer()`:
 
 ```ts
 import { Think, type TurnConfig, type TurnContext } from "@cloudflare/think"
-
-function stringFromBody(body: Record<string, unknown> | undefined, key: string) {
-  const value = body?.[key]
-  return typeof value === "string" && value.length > 0 ? value : undefined
-}
+import type { ContextOptions } from "@latitude-data/telemetry"
 
 export class MyAgent extends Think<Env> {
   beforeTurn(ctx: TurnContext): TurnConfig {
+    const context = (ctx.body ?? {}) as ContextOptions
+
     return {
       experimental_telemetry: {
         isEnabled: true,
-        tracer: getLatitude(this.env).getAiSdkTracer({
-          userId: stringFromBody(ctx.body, "userId"),
-          sessionId: stringFromBody(ctx.body, "sessionId"),
-          tags: ["cloudflare-think"],
-          metadata: { framework: "cloudflare-think" },
-        }),
+        tracer: getLatitude(this.env).getAiSdkTracer(context),
         functionId: "think-turn",
       },
     }
