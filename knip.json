@@ -162,7 +162,11 @@
   },
   "ignoreBinaries": [
     "tmuxinator",
-    "pulumi"
+    "pulumi",
+    "tsx",
+    "tsdown",
+    "mcp-inspector",
+    "email"
   ],
   "ignoreDependencies": [
     "@pulumi/awsx",
@@ -171,7 +175,11 @@
     "@pulumi/datadog",
     "@pulumi/random",
     "fern-api",
-    "chdb"
+    "chdb",
+    "tsx",
+    "zod",
+    "@modelcontextprotocol/inspector",
+    "react-email"
   ],
   "tags": [
     "-knipignore"
