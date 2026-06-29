@@ -63,4 +63,40 @@ describe("evaluationSettingsSchema", () => {
     ).toBe(false)
     expect(evaluationSettingsSchema.safeParse({ kind: "rule", conditions: [{ type: "nope" }] }).success).toBe(false)
   })
+
+  it("rejects an invalid regex at parse time but accepts a valid one", () => {
+    const bad = evaluationSettingsSchema.safeParse({
+      kind: "rule",
+      conditions: [{ type: "text_match", operator: "matches_regex", value: "(" }],
+    })
+    expect(bad.success).toBe(false)
+    expect(
+      evaluationSettingsSchema.safeParse({
+        kind: "rule",
+        conditions: [{ type: "text_match", operator: "not_matches_regex", value: "ab.*c" }],
+      }).success,
+    ).toBe(true)
+    // A bad pattern is fine when the operator is a plain substring match — it is never compiled to a RegExp.
+    expect(
+      evaluationSettingsSchema.safeParse({
+        kind: "rule",
+        conditions: [{ type: "text_match", operator: "contains", value: "(" }],
+      }).success,
+    ).toBe(true)
+  })
+
+  it("restricts traceCount to the session aggregation", () => {
+    expect(
+      evaluationSettingsSchema.safeParse({
+        kind: "rule",
+        conditions: [{ type: "metric", field: "traceCount", aggregation: "anyTrace", operator: "gt", value: 1 }],
+      }).success,
+    ).toBe(false)
+    expect(
+      evaluationSettingsSchema.safeParse({
+        kind: "rule",
+        conditions: [{ type: "metric", field: "traceCount", aggregation: "session", operator: "gt", value: 1 }],
+      }).success,
+    ).toBe(true)
+  })
 })

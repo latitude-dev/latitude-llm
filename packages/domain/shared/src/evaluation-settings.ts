@@ -15,6 +15,7 @@ const metricFieldSchema = z.enum([
   "traceCount",
   "spanCount",
 ])
+export type MetricField = z.infer<typeof metricFieldSchema>
 
 /**
  * A single deterministic check over the evaluation `session` object. Each condition compiles to a
@@ -22,41 +23,65 @@ const metricFieldSchema = z.enum([
  * `metric.value` is in base units — `duration` ns, `cost` microcents, everything else raw counts —
  * matching what the `session` object exposes (the builder converts friendly units on save).
  */
-export const evaluationRuleConditionSchema = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("text_match"),
-    scope: messageScopeSchema.default("last_assistant"),
-    operator: z.enum(["contains", "not_contains", "matches_regex", "not_matches_regex"]),
-    value: z.string().min(1),
-    caseSensitive: z.boolean().default(false),
-  }),
-  z.object({ type: z.literal("empty_output") }),
-  z.object({
-    type: z.literal("output_length"),
-    unit: z.enum(["chars", "words"]).default("chars"),
-    operator: comparisonOperatorSchema,
-    value: z.number().int().nonnegative(),
-  }),
-  z.object({ type: z.literal("json_output"), expectation: z.enum(["valid", "invalid"]) }),
-  z.object({
-    type: z.literal("metric"),
-    field: metricFieldSchema,
-    aggregation: z.enum(["session", "anyTrace", "allTraces"]).default("session"),
-    operator: comparisonOperatorSchema,
-    value: z.number().nonnegative(),
-  }),
-  z.object({ type: z.literal("tool_used"), toolName: z.string().min(1) }),
-  z.object({ type: z.literal("tool_failed"), toolName: z.string().min(1).optional() }),
-  z.object({
-    type: z.literal("tool_call_count"),
-    operator: comparisonOperatorSchema,
-    value: z.number().int().nonnegative(),
-  }),
-  z.object({ type: z.literal("error") }),
-  // Finish reasons are provider-specific raw strings (e.g. "stop", "tool_calls", "length", "end_turn"),
-  // so this is a free string rather than a fixed enum.
-  z.object({ type: z.literal("finish_reason"), value: z.string().min(1) }),
-])
+export const evaluationRuleConditionSchema = z
+  .discriminatedUnion("type", [
+    z.object({
+      type: z.literal("text_match"),
+      scope: messageScopeSchema.default("last_assistant"),
+      operator: z.enum(["contains", "not_contains", "matches_regex", "not_matches_regex"]),
+      value: z.string().min(1),
+      caseSensitive: z.boolean().default(false),
+    }),
+    z.object({ type: z.literal("empty_output") }),
+    z.object({
+      type: z.literal("output_length"),
+      unit: z.enum(["chars", "words"]).default("chars"),
+      operator: comparisonOperatorSchema,
+      value: z.number().int().nonnegative(),
+    }),
+    z.object({ type: z.literal("json_output"), expectation: z.enum(["valid", "invalid"]) }),
+    z.object({
+      type: z.literal("metric"),
+      field: metricFieldSchema,
+      aggregation: z.enum(["session", "anyTrace", "allTraces"]).default("session"),
+      operator: comparisonOperatorSchema,
+      value: z.number().nonnegative(),
+    }),
+    z.object({ type: z.literal("tool_used"), toolName: z.string().min(1) }),
+    z.object({ type: z.literal("tool_failed"), toolName: z.string().min(1).optional() }),
+    z.object({
+      type: z.literal("tool_call_count"),
+      operator: comparisonOperatorSchema,
+      value: z.number().int().nonnegative(),
+    }),
+    z.object({ type: z.literal("error") }),
+    // Finish reasons are provider-specific raw strings (e.g. "stop", "tool_calls", "length", "end_turn"),
+    // so this is a free string rather than a fixed enum.
+    z.object({ type: z.literal("finish_reason"), value: z.string().min(1) }),
+  ])
+  .superRefine((condition, ctx) => {
+    // Reject a malformed regex at parse time (400) — codegen would otherwise compile fine and throw on
+    // every trace at evaluation time, since `validateEvaluationScriptCompiles` only compiles, never runs.
+    if (
+      condition.type === "text_match" &&
+      (condition.operator === "matches_regex" || condition.operator === "not_matches_regex")
+    ) {
+      try {
+        new RegExp(condition.value)
+      } catch {
+        ctx.addIssue({ code: "custom", message: "Invalid regular expression", path: ["value"] })
+      }
+    }
+    // `traceCount` has no per-trace projection, so codegen always reads `session.traceCount`; reject the
+    // per-trace aggregations rather than silently evaluating them at the session level.
+    if (condition.type === "metric" && condition.field === "traceCount" && condition.aggregation !== "session") {
+      ctx.addIssue({
+        code: "custom",
+        message: 'traceCount supports only the "session" aggregation',
+        path: ["aggregation"],
+      })
+    }
+  })
 export type EvaluationRuleCondition = z.infer<typeof evaluationRuleConditionSchema>
 
 /**
