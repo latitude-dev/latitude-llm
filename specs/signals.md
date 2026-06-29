@@ -661,3 +661,18 @@ Settings-defined deterministic conditions that compile to a script over the `ses
 - [ ] **P7-d** Flagger consolidation: where a flagger overlaps a semantic signal (e.g. `frustration`), make the semantic evaluation canonical and retire the overlapping flagger; non-overlapping flaggers keep feeding system-created signals via discovery.
 
 **Exit gate:** an evaluation script can call `similarity()`; moments run as semantic evaluations through the matching pipeline; overlapping flaggers retired, others unchanged.
+
+### Phase 8 — GEPA optimizes arbitrary evaluation scripts `[FUTURE]`
+
+**Deps:** PR4b (the `rule` codegen + the rich `session` payload). Not part of the MVP.
+
+Today GEPA is locked to the **LLM-as-judge wrapper**: it only rewrites the prompt text inside the single `llm()` call, and the only interpolation it may use is `${session.conversation}` (`GEPA_PROPOSER_SYSTEM_PROMPT` in `packages/platform/op-gepa/src/prompts/proposer.ts`; the `TODO(eval-sandbox)` there marks this constraint). So generation/optimization can improve *judge wording* but cannot author or tune deterministic checks, nor reason over the rest of the `session` payload (metrics, tools, finishReasons).
+
+**Ships:** GEPA generates and optimizes the *entire* `script` — deterministic `rule` scripts, judge scripts, and hybrids that read the full `session` object — not just the judge prompt.
+
+- [ ] **P8-a** Relax the proposer contract: allow emitting/rewriting the whole script body (not only the `llm()` prompt text). Teach the proposer the `session` payload surface (conversation + per-trace metrics/models/providers/finishReasons/tools) and the sandbox host API (`Passed()`/`Failed()`/`Score()`, `llm()`, `similarity()`).
+- [ ] **P8-b** Compile + validate every candidate (`validateEvaluationScriptCompiles`) and score it through the sandbox against the alignment set as today; reject non-compiling candidates so a malformed rewrite can never win.
+- [ ] **P8-c** Capability-aware optimization: detect each candidate's capability (pure / llm / embedding) from the script and account cost/lane per candidate; keep the optimizer within the sandbox contract (script-size and allowed-globals guardrails).
+- [ ] **P8-d** Decide the search space for non-judge scripts (e.g. seed from the `settings` `rule` codegen vs. free-form) and how alignment scoring applies to deterministic candidates (which never call `llm()`).
+
+**Exit gate:** GEPA can produce and improve deterministic, judge, and hybrid scripts that read the `session` payload, each validated by compile + alignment scoring — not just judge-prompt rewrites.
