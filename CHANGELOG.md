@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+## v0.3.23 - 2026-06-29
+
+### Datasets
+
+- Added dataset custom columns with web, API, MCP, CSV export, and SDK support, including column add, rename, reorder, soft-delete, restore, and custom row cell editing (ref: #3686, #3696).
+- Added API, MCP, TypeScript SDK, and Python SDK support for partially editing dataset rows, including custom-column merges that preserve omitted cells (ref: #3687, #3695).
+
+### Evaluations and scores
+
+- Moved evaluation scripts to the session runtime context so judges read the frozen `session` payload, including session-wide conversation, trace rollups, metrics, models, providers, finish reasons, and tool projections (ref: #3734).
+- Replaced the Annotations tab in trace and session drawers with a Scores tab that lists annotation, custom, and evaluation scores while preserving annotation editing and legacy tab links (ref: #3737).
+
+### Monitors and telemetry
+
+- Added a cache-hit-rate monitor metric for token analytics so trace monitors can alert when prompt cache reads drop below a threshold (ref: #3654).
+- Updated the bundled `models.dev` provider catalog (ref: #3712).
+
+### Operations
+
+- Refreshed CI, workflow, and runtime dependencies including ClickHouse, Turbo, Radix Select, AWS S3 presigning, Python tooling, and GitHub Actions runners (ref: #3718-#3733).
+
 ## v0.3.22 - 2026-06-29
 
 ### Signals
