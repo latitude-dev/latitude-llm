@@ -91,13 +91,13 @@ Constraints:
 
 **A signal's membership detector is an `evaluations` row**, linked 1:1 via `evaluations.signal_id` — exactly one active evaluation per signal. **An evaluation is always a script** that runs in the shared QuickJS sandbox (`specs/sandbox-runtime.md`); there is no detector taxonomy and no second engine. Its shape is defined once in [Data model → Shared contracts](#shared-contracts-domainshared-domainscores).
 
-- **One engine, three ways to author the same script.** Every evaluation produces one `script` artifact, and that is exactly what executes: write it from a declarative **`settings`** object (compiled **deterministically** by the settings→script compiler `compileSettingsToScript`, built in PR3 — the `judge` shape shipped then, the `rule`/condition shapes in PR4b), generate and align it with **GEPA** (`optimize-evaluation`), or hand-write a **raw** script (advanced). `settings` is optional (NULL for a raw or GEPA-generated script); `script` is always present. Every compiled script runs against the mandatory `session` runtime object ([Shared contract — the `session` runtime object](#shared-contract--the-session-runtime-object-domainsandbox-pr4a)).
+- **One engine, three ways to author the same script.** Every evaluation produces one `script` artifact, and that is exactly what executes: write it from a declarative **`settings`** object (compiled **deterministically** by the settings→script compiler `compileSettingsToScript`, built in PR3 — the `judge` shape shipped then, the `rule`/condition shapes in PR4b, #3739), generate and align it with **GEPA** (`optimize-evaluation`), or hand-write a **raw** script (advanced). `settings` is optional (NULL for a raw or GEPA-generated script); `script` is always present. Every compiled script runs against the mandatory `session` runtime object ([Shared contract — the `session` runtime object](#shared-contract--the-session-runtime-object-domainsandbox-pr4a)).
 - **A judge is just a script that calls `llm()`.** "LLM-as-judge" is not a distinct type — it is the common case of a generated script whose body calls `llm()` (`const result = await llm(\`…\`, { schema }); return result.passed ? Passed() : Failed()`), running on the sandbox behind the `evaluation-sandbox-runtime` flag exactly as today. The `optimize-evaluation` workflow and alignment state (`alignment`/`aligned_at`) apply to these judge scripts; both arise when a user authors a judge directly (criteria → generated/aligned script) and via the discovery → tracking path ([Discovery](#discovery-and-tracking)), and are NULL for scripts that never call `llm()`.
 - **The script returns a score and optional reasoning; the host derives the verdict.** Each run yields `value` (a normalized score ∈ [0,1], for sort/confidence/display) and optional `feedback`; the host derives the run's verdict by thresholding `value` (`isScoreMatch` against `DEFAULT_SCRIPT_SCORE_THRESHOLD` = 0.5). Membership is recorded as `signal_id`, not `passed` (see [Score](#score--the-membership-ledger)); the writer stamps the evaluation's signal when the behavior is *present* (`passed = true`). Definition edits (script or settings) apply **forward only** — a definition-changed marker appears on charts, and existing scores are never re-evaluated.
 - **Type is a property of the `settings`, not the script.** A script can mix `llm()`, deterministic checks, and (later) semantic similarity, so an arbitrary script has no single type. The type lives in the **`settings`** of templated evaluations and drives the builder form; raw and GEPA-generated scripts are simply custom. "How many evaluations use `llm()` / semantic / code" is a separate, **multi-valued capability** question — answered by inspecting what the script does, not by a single type label (post-MVP analytics).
 - **Every score is stored the same way.** There is no per-type or per-capability storage split: every evaluation's scores go to Postgres (canonical) and ClickHouse (analytics), exactly like annotations (see [Score](#score--the-membership-ledger)).
 
-> **Semantic similarity is an on-demand host function (PR4b), not a separate engine.** A `rule` condition can call a `similarity(a, b)` host function that embeds both strings at eval time and returns their cosine — usable directly from the builder. This is on-demand (per-run embeddings, metered like `llm()`), so it works on the TraceEnd path with no embeddings-lane change. The **native batch-runner optimization** (one pass over a trace's chunk embeddings against all anchor sets) and folding the existing conversation-intelligence anchor matching (moments) + overlapping flaggers into signal evaluations remain [Phase 7](#phase-7--semantic-similarity-evaluations-future). Every evaluation is still a sandbox script reading the `session` object.
+> **Semantic similarity is a deferred [R3](#r3--semantic-similarity-for-rule-evals-future) addition, not a separate engine.** When it lands, a `rule` condition will match on semantic similarity to an anchor; the sandbox execution mechanism (an on-demand per-run embedding vs a batch lane over precomputed embeddings) is open design. Every evaluation is still a sandbox script reading the `session` object.
 
 ### Score — the membership ledger
 
@@ -160,7 +160,7 @@ Today's write-time machinery is evaluation-oriented (`EvaluationTrigger`: filter
 
 A run writes a score (matched or not) with `signal_id`, `source_type = 'evaluation'`, `source_id` = the evaluation id, persisted to Postgres + ClickHouse like any score (see [Score](#score--the-membership-ledger)). Signals with no evaluation are not in this pipeline — their membership comes only from annotations.
 
-*(Semantic-similarity detection is an on-demand `similarity()` host function the script calls (PR4b); the native batch-runner optimization for the pure-similarity case stays [Phase 7](#phase-7--semantic-similarity-evaluations-future).)*
+*(Semantic-similarity detection is deferred to [R3](#r3--semantic-similarity-for-rule-evals-future); its sandbox execution model is open design.)*
 
 ## Main flows
 
@@ -249,8 +249,8 @@ export const SIGNAL_ORIGINS = ["user", "system"] as const
 //   system — auto-generated by discovery; annotation-assignable, even after it's tracked with an evaluation
 // `origin` is set at creation and never changes — the durable "auto-generated?" marker, distinct from the
 // mutable "has no evaluation yet" state, and the gate for annotation assignment.
-// (POST-MVP: once system-PROVISIONED detector signals exist — e.g. moments, Phase 7 — split `system` into
-//  `discovered` vs `provisioned` so provisioned detector signals are not annotation-assignable.)
+// (POST-MVP: if system-PROVISIONED detector signals ever exist — e.g. moments, out of scope — split `system`
+//  into `discovered` vs `provisioned` so provisioned detector signals are not annotation-assignable.)
 
 // An evaluation is ALWAYS a script (evaluations.script) that runs in the QuickJS sandbox
 // (specs/sandbox-runtime.md). There is no `type` or `capability` column on the row:
@@ -262,34 +262,32 @@ export const SIGNAL_ORIGINS = ["user", "system"] as const
 // `settings` is the OPTIONAL declarative config a user edits in the builder; it compiles to `script`
 // (deterministic codegen for `rule` options, or the single-sourced judge template for a `judge`) and is
 // NULL when the script is hand-written (advanced). The judge kind shipped in PR3; the `rule` kind +
-// conditions ship in PR4b. The runtime contract every compiled script reads is the `session` object
-// (PR4a) — see "Shared contract — the `session` runtime object" below.
+// conditions shipped in PR4b (#3739). The runtime contract every compiled script reads is the `session`
+// object (PR4a, #3734) — see "Shared contract — the `session` runtime object" below.
 export type EvaluationSettings =
   | { kind: "judge"; criteria: string }   // PR3 — a script that calls llm(`${session.conversation}` …), generated + aligned via optimize-evaluation
   | {                                       // PR4b — deterministic conditions compiled to a pure script over `session`
       kind: "rule"
-      match: "all" | "any"                 // AND / OR across the conditions
+      match: "all" | "any"                 // AND / OR across the 1–10 conditions
       conditions: Condition[]
     }
 
-// Condition kinds (PR4b). Content conditions read session.conversation by role; metric reads session/
-// per-trace aggregates; tool/finish read session.traces[].{tools,finishReasons}; semantic uses the
-// on-demand similarity() host fn (cosine of two embedded strings).
+// Condition kinds (PR4b, #3739). Content conditions read session.conversation by role; metric reads
+// session/per-trace aggregates (base units); tool/finish read session.traces[].{tools,finishReasons}.
 type MessageScope = "last_assistant" | "any_assistant" | "any_user" | "any_tool" | "conversation"
 type Condition =
   | { type: "text_match"; scope: MessageScope; operator: "contains" | "not_contains" | "matches_regex" | "not_matches_regex"; value: string; caseSensitive?: boolean }
   | { type: "empty_output" }
   | { type: "output_length"; unit: "chars" | "words"; operator: "gt" | "gte" | "lt" | "lte"; value: number }
   | { type: "json_output"; expectation: "valid" | "invalid" }
-  | { type: "metric"; field: "duration" | "cost" | "tokensTotal" | "tokensInput" | "tokensOutput" | "errorCount" | "traceCount" | "spanCount"; aggregation: "session" | "anyTrace" | "allTraces"; operator: "gt" | "gte" | "lt" | "lte"; value: number }
+  | { type: "metric"; field: "duration" | "cost" | "tokensTotal" | "tokensInput" | "tokensOutput" | "errorCount" | "traceCount" | "spanCount"; aggregation: "session" | "anyTrace" | "allTraces"; operator: "gt" | "gte" | "lt" | "lte"; value: number }  // traceCount: session only
   | { type: "tool_used"; toolName: string }
-  | { type: "tool_failed"; toolName?: string }
+  | { type: "tool_failed"; toolName?: string }   // span-status only (not tool-output payload)
   | { type: "tool_call_count"; operator: "gt" | "gte" | "lt" | "lte"; value: number }
   | { type: "error" }
-  | { type: "finish_reason"; value: "length" | "content_filter" | "error" | "stop" | "tool_call" }
-  | { type: "semantic_similarity"; scope: MessageScope; anchor: string; threshold: number }
-
-// The native batch-runner optimization for pure-similarity and moments/flagger consolidation stay Phase 7.
+  | { type: "finish_reason"; value: string }   // provider-specific free string ("stop", "tool_calls", "length", …)
+// R3 adds: { type: "semantic_similarity"; scope: MessageScope; anchor: string; threshold: number }
+// — the condition + its sandbox execution model (open design). Moments/flagger consolidation is out of scope.
 
 // CHANGED (@domain/scores): renames SCORE_SOURCES `source`→`source_type` and splits annotation→flagger/user.
 // `evaluation` is KEPT (a signal's detector is an evaluation), so existing evaluation-sourced scores need
@@ -369,7 +367,7 @@ signals                                  -- was `issues`
 
 The detector is no longer a `signals` column — it is the linked `evaluations` row (one active per signal; a system-created signal may have none). "List active detectors" for the matching pipeline reads `evaluations` (the supporting partial index lives there — see below) and joins back to `signals` to apply signal-level lifecycle gating (`deleted_at`). Muted signals still record scores and can be matched by discovery; mute only gates notifications.
 
-(Semantic-similarity anchors and their Redis-cached embeddings are deferred to [Phase 7](#phase-7--semantic-similarity-evaluations-future); the MVP detector is always a sandbox script.)
+(Semantic-similarity anchors and their embeddings are deferred to [R3](#r3--semantic-similarity-for-rule-evals-future); the MVP detector is always a sandbox script.)
 
 ### Postgres: `scores` (rename `issue_id`, widen the source)
 
@@ -460,7 +458,7 @@ Definition (evaluation + filters), signal trend, escalation incidents, mute stat
 
 ### Creating a signal
 
-One builder (PR4c), three entry points (Signals list, "Create signal from this search", annotation flow), one rule: **never let users define membership blind** — the builder always shows a live preview (`previewEvaluationUseCase`: compile + run against recent sample sessions, no persist). It edits a declarative `settings` form via three tabs — **Rules** (deterministic conditions over the `session` object, incl. `semantic_similarity`), **Judge** (`criteria` → a script that calls `llm(\`${session.conversation}\` …)`), and **Advanced** (raw `script`) — plus a `filters` scope editor (which writes through to `evaluation.trigger.filter`). Editing a settings-defined signal recompiles its detector (archive active + create new); raw-script and `origin=system` signals are not settings-editable.
+One builder ([R1](#r1--builder-ui-mvp)), three entry points (Signals list, "Create signal from this search", annotation flow), one rule: **never let users define membership blind** — the builder always shows a live preview (`previewEvaluationUseCase`: compile + run against recent sample sessions, no persist). It edits a declarative `settings` form via three tabs — **Rules** (deterministic conditions over the `session` object; `semantic_similarity` is an [R3](#r3--semantic-similarity-for-rule-evals-future) addition), **Judge** (`criteria` → a script that calls `llm(\`${session.conversation}\` …)`), and **Advanced** (raw `script`, with AI "describe your eval" generation in [R2](#r2--ai-authored-evaluations-the-advanced-tab-post-mvp)) — plus a `filters` scope editor (which writes through to `evaluation.trigger.filter`). Editing a settings-defined signal recompiles its detector (archive active + create new); raw-script and `origin=system` signals are not settings-editable.
 
 ### Monitoring
 
@@ -486,7 +484,7 @@ Signals are exposed as a public REST surface under `/v1/projects/{projectSlug}/s
 - **Issues → signals, in place.** Rename `issues` → `signals` (keep rows, centroid, embeddings); existing issues become `origin = 'system'` (auto-generated, annotation-assignable as today) — those with no linked evaluation keep none, those with a generated evaluation keep it; either way `origin` stays `system`. Issue-linked evaluations stay as they are (they are already judge scripts that call `llm()`): set `evaluations.signal_id` and **dedupe to one active per signal** (keep the most-recently-aligned active, archive the rest) so the active-detector unique index can be created. `scores.issue_id` → `signal_id` (Phase 1); `source` → `source_type` (Phase 2/PR1, PG only — the CH column stays `source`; `evaluation` is kept; `annotation` splits into `flagger`/`user` in Phase 6).
 - **System alerting** becomes signal escalation incidents using `source_type = "signal"` and notification key `signal.escalating`.
 - **Flaggers** stay as the trace-end auto-annotation engine feeding system-created signals (flow C), unchanged.
-- **Semantic moments** stay as the conversation-intelligence anchor matching they are today; folding them into signal evaluations (and consolidating overlapping flaggers) is deferred to [Phase 7](#phase-7--semantic-similarity-evaluations-future), once semantic detection is added.
+- **Semantic moments** and the annotation **flaggers** stay as the separate conversation-intelligence / annotation systems they are today. Consolidating them with signal evaluations (re-expressing moments as `origin=system` evaluations, retiring overlapping flaggers) is **out of scope** for the signals roadmap.
 
 ## Decisions
 
@@ -499,7 +497,7 @@ Signals are exposed as a public REST surface under `/v1/projects/{projectSlug}/s
 5. **Evaluations write every run** (present and absent), mirroring how judges persist pass and fail today; occurrences are the rows carrying `signal_id`. **All scores are stored the same way** — Postgres-canonical + ClickHouse mirror, no per-type or per-capability split. → [Score](#score--the-membership-ledger)
 6. **Users cannot create evaluation-less signals** — only `system`-origin signals may have no evaluation, which removes the pure-filter write-amplification footgun; `filters` is only an evaluation pre-gate; plain filter tracking stays saved searches + monitors. → [Signal](#signal)
 7. **Mute stays on the signal row** for the MVP; escalation is represented by source-keyed incidents, not by a default monitor. → [Signal](#signal)
-8. **Script evaluations are the MVP detector; the judge is a generated script that calls `llm()`.** Both arise from the builder (settings → script, or raw script) and from the discovery → tracking path. **There is no tunable threshold**: the script returns `Passed`/`Failed`, so the cutoff is written into the script; `value` is only confidence/sort. **Semantic similarity** ships in PR4b as an on-demand `similarity(a, b)` host function (per-run embeddings) usable from a `rule` condition; the native batch-runner optimization stays [Phase 7](#phase-7--semantic-similarity-optimization--momentsflagger-consolidation-future). **Custom-source scores** (`/scores` accepting `signal_id`) are POST-MVP.
+8. **Script evaluations are the MVP detector; the judge is a generated script that calls `llm()`.** Both arise from the builder (settings → script, or raw script) and from the discovery → tracking path. **There is no tunable threshold**: the script returns `Passed`/`Failed`, so the cutoff is written into the script; `value` is only confidence/sort. **Semantic similarity** is deferred to [R3](#r3--semantic-similarity-for-rule-evals-future) — the `semantic_similarity` rule condition plus an open-design sandbox execution model (PR4b shipped only pure conditions). **Custom-source scores** (`/scores` accepting `signal_id`) are POST-MVP.
 9. **No per-project signal cap.** Evaluation matching cost and score write volume are bounded by the shared selection pre-gate (sampling / turn / filter) and the single `signals:match` pipeline, not by an arbitrary count limit.
 10. **A signal's behavior is present when `passed = true`.** Membership is `signal_id`; the writer stamps it when an evaluation's verdict is present (`passed = true`), and the generated-judge convention (baseline prompt + GEPA proposer) sets `passed = true` when the behavior is present. `passed` is host-derived per run, so the convention lives in the runtime sites (writer, discovery eligibility, alignment scoring) and the judge prompt — no stored flag, no `scores` migration. → [Evaluation](#evaluation-the-detector) / [Score](#score--the-membership-ledger) / [Phase 2 PR2](#phase-2--evaluation-substrate--script-evaluations-mvp)
 
@@ -524,7 +522,7 @@ Signals are exposed as a public REST surface under `/v1/projects/{projectSlug}/s
 > 3. **KEEP wire-level tokens** (rename surrounding code, keep the string + a TODO): BullMQ queue/topic `"issues"` + ops + dedupe-key prefixes, Temporal workflow type names, Redis lock keys (`org:*:issues:*`, `issue:${id}`), export `kind:"issues"`, the `issue.*` alert kinds + source type `'issue'` (these are *retired*, not renamed, in later phases), and the CH `issue_id` column. Renaming them needs a coordinated drain, not a rename, and buys nothing user-visible.
 
 - [x] **P1-a** PG **in-place RENAME** migration (hand-written via `pg:generate:custom` — Drizzle has no `RENAME COLUMN` precedent and interactive rename detection is unavailable in CI): `ALTER TABLE issues RENAME TO signals`; `scores`/`evaluations` `RENAME COLUMN issue_id → signal_id`; `ALTER INDEX … RENAME`; `ALTER POLICY issues_organization_policy → signals_organization_policy`. Plus the **outbox value migration** for correction (1): `UPDATE outbox_events SET event_name = 'Signal…' WHERE event_name = 'Issue…' AND published = false` (×6) and `aggregate_type 'issue'→'signal'`. Verify `snapshot.json` + data-preservation on a copy.
-- [x] **P1-b** CH **EXPAND** (`pnpm --filter @platform/db-clickhouse ch:create`, append-only): `ALTER TABLE scores ADD COLUMN signal_id FixedString(24) DEFAULT ''`; `ALTER TABLE scores UPDATE signal_id = issue_id WHERE issue_id != ''`; rebuild the `scores_hourly_buckets` MV keyed on `signal_id` (DROP VIEW→DROP TABLE→CREATE→full re-aggregate backfill); `score-fields.ts` adds `score.signalId`; `score-analytics-repository.ts` reads `if(signal_id != '', signal_id, issue_id)` during the async mutation. **Keep `issue_id` until Phase 9.**
+- [x] **P1-b** CH **EXPAND** (`pnpm --filter @platform/db-clickhouse ch:create`, append-only): `ALTER TABLE scores ADD COLUMN signal_id FixedString(24) DEFAULT ''`; `ALTER TABLE scores UPDATE signal_id = issue_id WHERE issue_id != ''`; rebuild the `scores_hourly_buckets` MV keyed on `signal_id` (DROP VIEW→DROP TABLE→CREATE→full re-aggregate backfill); `score-fields.ts` adds `score.signalId`; `score-analytics-repository.ts` reads `if(signal_id != '', signal_id, issue_id)` during the async mutation. **Keep `issue_id` until the [Cleanup](#cleanup--legacy-storage-retirement-post-mvp) roadmap item.**
 - [x] **P1-c** Domain rename `@domain/issues`→`@domain/signals`: folder + package name + tsconfig path alias + all imports; `Issue*`→`Signal*` types/ports/use-cases; `IssueId` brand → `SignalId` (`@domain/shared/id.ts`); `Score.issueId`→`signalId` (`@domain/scores`); also rename `EvaluationIssueRepository` in `@domain/evaluations`. **Events:** rename `EventPayloads` keys + literals + handler-map keys + payload types together, **and** add the `EVENT_NAME_ALIASES` shim at the dispatcher (`apps/workers/src/workers/domain-events.ts`) per correction (1). **Keep alert-kind strings `issue.*`** (persisted; *retired* later) — only relabel `ALERT_INCIDENT_KIND_LABEL`.
 - [x] **P1-d** Platform: `@platform/db-postgres` `issue-repository`→`signal-repository`, schema `issues.ts`→`signals.ts`, mappers, seeds, export `IssueRepositoryLive`→`SignalRepositoryLive`. Plus the rest of the importers (workers, workflows, `@domain/{notifications,monitors,integrations,email}`, web server-fns) — flip import path + symbol; KEEP wire-token strings.
 - [x] **P1-e** API: `apps/api/src/routes/issues.ts`→`signals.ts`; parameterize the Fern-group + op-id factory so one definition set mounts at `/projects/:projectSlug/signals` (group `signals`, op-ids `listSignals…`) **and** `/projects/:projectSlug/issues` (group `issues`, op-ids `listIssues…`, `deprecated:true`, TODO to remove). `pnpm generate:sdk` (emits openapi/mcp + Fern TS+Python) → both `client.signals.*` and deprecated `client.issues.*` generate.
@@ -534,11 +532,11 @@ Signals are exposed as a public REST surface under `/v1/projects/{projectSlug}/s
 
 **Exit gate:** full suite green; `/issues` URLs + `?issueId=` deep links redirect; both `client.issues.*` (deprecated) and `client.signals.*` SDK groups resolve; an emitted score still routes through the renamed dispatch (incl. a legacy `IssueCreated`-named outbox row via the alias) and opens an `alert_incidents` row; PG migration data-preserving; `grep -rl "@domain/issues"` empty. Brief rollover downtime is the only behavioral diff.
 
-> **Post-deploy cleanup (later phase):** remove `EVENT_NAME_ALIASES`, the `/issues` API alias + `issues` SDK group, the CH `issue_id` column, and retire the `issue.*` alert kinds (Phase 9).
+> **Post-deploy cleanup (later phase):** remove `EVENT_NAME_ALIASES`, the `/issues` API alias + `issues` SDK group, the CH `issue_id` column, and retire the `issue.*` alert kinds — the [Cleanup](#cleanup--legacy-storage-retirement-post-mvp) roadmap item.
 
 ### Phase 2 — Evaluation substrate + script evaluations `[MVP]`
 
-> **Delivered as self-contained PRs (big-bang cutover, no feature flag).** **PR1 — engine cutover** (membership = `signal_id`, `signals:match`, `source_type` rename, sandbox `value` contract), **PR2 — present-verdict convention** (present ⇒ `passed = true`, #3661), and **PR3 — user-created signals over the API + MCP** (#3690) are **shipped**. The remaining builder work expanded into three PRs: **PR4a — session runtime context** (evaluations run against a rich `session` object), **PR4b — conditions contract + codegen** (settings-defined deterministic conditions, incl. on-demand semantic similarity), and **PR4c — builder UI**. Phase 5 (unify judge execution onto the matching pipeline) is **folded into PR1**.
+> **Delivered as self-contained PRs (big-bang cutover, no feature flag).** **PR1 — engine cutover** (membership = `signal_id`, `signals:match`, `source_type` rename, sandbox `value` contract), **PR2 — present-verdict convention** (present ⇒ `passed = true`, #3661), and **PR3 — user-created signals over the API + MCP** (#3690) are **shipped**. The remaining builder work expanded into three PRs: **PR4a — session runtime context** (#3734, evaluations run against a rich `session` object) and **PR4b — conditions contract + codegen** (#3739, settings-defined deterministic conditions, all pure) are **shipped**; the builder UI is the one remaining Phase 2 piece, tracked (and expanded) as **R1** in the [roadmap](#roadmap--remaining-work) below. Phase 5 (unify judge execution onto the matching pipeline) is **folded into PR1**.
 
 **Deps:** P1.
 
@@ -570,52 +568,42 @@ PR1 shipped one present-verdict convention: behavior *present* ⇒ `passed = fal
 
 #### PR3 — User-created signals (API + MCP) `[x] complete (#3690)`
 
-- [x] Contracts: `SIGNAL_ORIGINS`, `EvaluationSettings` zod (`@domain/shared`) — judge-only at this point; the `rule`/condition kinds land in PR4b.
+- [x] Contracts: `SIGNAL_ORIGINS`, `EvaluationSettings` zod (`@domain/shared`) — judge-only at this point; the `rule`/condition kinds landed in PR4b (#3739).
 - [x] Additive PG migration: `signals` — `origin` (backfill `'system'`), `filters`, `deleted_at`, nullable `centroid`/`clustered_at`, partial-unique slug; `evaluations` — `settings`, nullable `alignment`/`aligned_at`, dedupe-then-active-detector partial-unique index `(signal_id) WHERE deleted_at IS NULL AND archived_at IS NULL` + lookup btree. Make `toCentroidEmbedding` + the API evaluation response mapper null-safe; handle the un-renamed `issues_centroid_embedding_consistency_check` constraint (survived Phase 1's rename, untracked by Drizzle).
-- [x] **Settings → script codegen** (`@domain/evaluations/src/codegen/compile-settings-to-script.ts`, **net-new** — note: landed in `@domain/evaluations`, not `@domain/sandbox`): `compileSettingsToScript` + `validateEvaluationScriptCompiles` (compile-on-save, `ScriptCompileError` → 422), single-sourcing the judge template (`wrapPromptAsEvaluationScript` + `generateJudgePromptText`) so capability detection (`llm(`) and parity hold. Generated scripts use the present-verdict convention (`Passed()` when the behavior is present). (PR4b extends the `switch` with the `rule` kind.)
+- [x] **Settings → script codegen** (`@domain/evaluations/src/codegen/compile-settings-to-script.ts`, **net-new** — note: landed in `@domain/evaluations`, not `@domain/sandbox`): `compileSettingsToScript` + `validateEvaluationScriptCompiles` (compile-on-save, `ScriptCompileError` → 422), single-sourcing the judge template (`wrapPromptAsEvaluationScript` + `generateJudgePromptText`) so capability detection (`llm(`) and parity hold. Generated scripts use the present-verdict convention (`Passed()` when the behavior is present). (PR4b extended the `switch` with the `rule` kind, #3739.)
 - [x] **`evaluations.script_hash`** column, filled for all evaluations — the writer reads it for the score's `metadata.evaluationHash` instead of the now-nullable `alignment.evaluationHash` (only needed once `alignment` becomes nullable).
-- [x] `createSignal`/`updateSignal`/`deleteSignal` use-cases + API routes (monitors template) + MCP/SDK regen; reject evaluation-less `origin=user`. `deleteSignal` = PG **soft-delete** + archive the linked evaluation (auto write-stop via the active-detector scan); **no CH cleanup** — deleted-signal scores are excluded read-side via PG lifecycle. **No per-project signal cap.** Signal escalation is handled by source-keyed incidents, not default monitors. (Note: `updateSignal` edits name/description/`filters` only — editing the evaluation's `settings` is added in PR4c.)
+- [x] `createSignal`/`updateSignal`/`deleteSignal` use-cases + API routes (monitors template) + MCP/SDK regen; reject evaluation-less `origin=user`. `deleteSignal` = PG **soft-delete** + archive the linked evaluation (auto write-stop via the active-detector scan); **no CH cleanup** — deleted-signal scores are excluded read-side via PG lifecycle. **No per-project signal cap.** Signal escalation is handled by source-keyed incidents, not default monitors. (Note: `updateSignal` edits name/description/`filters` only — editing the evaluation's `settings` is added in [R1](#r1--builder-ui-mvp).)
 - [x] ~~`signals:backfill`~~ **Dropped — collect forward only.** A backfill worker was built then removed (`da4d75130`); new signals score forward via the normal `signals:match` → `live-evaluations:execute` pipeline (no historical backfill). `createSignal` enqueues nothing.
 
-#### PR4a — Session runtime context `[~] in progress`
+#### PR4a — Session runtime context `[x] complete (#3734)`
 
-Every evaluation now runs against a single mandatory **`session`** object (replacing the old `conversation`/`issue`/`signal` globals), so conditions can read metrics, tools, status, and content — not just text. **Triggering stays on TraceEnd / per-trace membership** (no pipeline/dedupe/analytics change); the `session` is assembled at eval time from all traces of the trigger trace's session. (Assumes no prod evaluations on the old context → no script migration; a follow-up may move triggering to session-settle — see [Phase 7](#phase-7--semantic-similarity-evaluations-future) neighborhood / future tasks.)
+Every evaluation now runs against a single mandatory **`session`** object (replacing the old `conversation`/`issue`/`signal` globals), so conditions can read metrics, tools, status, and content — not just text. **Triggering stays on TraceEnd / per-trace membership** (no pipeline/dedupe/analytics change); the `session` is assembled at eval time from all traces of the trigger trace's session. (Assumes no prod evaluations on the old context → no script migration; a follow-up may move triggering to session-settle — future work.)
 
-- [ ] **Runtime contract** (`@domain/sandbox` `ports/script-runtime.ts`): `ScriptRunContext = { session: ScriptSessionContext }` — define `ScriptSessionContext`/`ScriptTraceContext`/`ScriptToolContext` (+ cost/token breakdowns); drop `conversation`/`issue`/`signal` and `ScriptSubjectContext`. `session.conversation` is the deduped, session-wide `{role,content}[]` (with `toString()`); per-trace `models`/`providers`/`finishReasons` + a `tools:[{name,input,output,error,duration}]` projection — no raw per-span array; tool I/O truncated.
-- [ ] **QuickJS binding** (`@platform/sandbox-quickjs`): `runtime.ts` serializes only `session` into `__contextData`; `prelude.ts` binds the frozen `session` global and attaches `toString()` to `session.conversation`. Remove the old globals.
-- [ ] **Session loader** (`@domain/evaluations` `runtime/load-session-context.ts`): aggregates + deduped conversation from `SessionRepository.findBySessionId` (system + `lastInputMessages` + `outputMessages`); per-trace rollups + tool name/error/duration from `SpanRepository.listBySessionId`; tool input/output from a focused tool-span detail read (light `Span` omits them). Reuse `formatGenAIMessage`/`toEvaluationConversationMessages`. Export `minimalScriptSession(conversation)` for the alignment paths.
-- [ ] **Thread `session`**: `sandbox-execution.ts` (`context:{ session }`), `execute-live-evaluation.ts` (input carries `session`), `run-live-evaluation.ts` (assemble + pass; add `SessionRepository`/`SpanRepository` reqs + the `apps/workers` layer).
-- [ ] **Judge generation + GEPA → `session.conversation`**: `EVALUATION_CONVERSATION_PLACEHOLDER` + `wrapPromptAsEvaluationScript` + `generateJudgePromptText`; GEPA `GEPA_PROPOSER_SYSTEM_PROMPT` allowed placeholder becomes `${session.conversation}`.
-- [ ] **Alignment/optimization**: `evaluate-draft-against-examples` + `evaluate-optimization-candidate` pass `minimalScriptSession(example.conversation)`.
+- [x] **Runtime contract** (`@domain/sandbox` `ports/script-runtime.ts`): `ScriptRunContext = { session: ScriptSessionContext }` — define `ScriptSessionContext`/`ScriptTraceContext`/`ScriptToolContext` (+ cost/token breakdowns); drop `conversation`/`issue`/`signal` and `ScriptSubjectContext`. `session.conversation` is the deduped, session-wide `{role,content}[]` (with `toString()`); per-trace `models`/`providers`/`finishReasons` + a `tools:[{name,input,output,error,duration}]` projection — no raw per-span array; tool I/O truncated.
+- [x] **QuickJS binding** (`@platform/sandbox-quickjs`): `runtime.ts` serializes only `session` into `__contextData`; `prelude.ts` binds the frozen `session` global and attaches `toString()` to `session.conversation`. Remove the old globals.
+- [x] **Session loader** (`@domain/evaluations` `runtime/load-session-context.ts`): aggregates + deduped conversation from `SessionRepository.findBySessionId` (system + `lastInputMessages` + `outputMessages`); per-trace rollups + tool name/error/duration from `SpanRepository.listBySessionId`; tool input/output from a focused tool-span detail read (light `Span` omits them). Reuse `formatGenAIMessage`/`toEvaluationConversationMessages`. Export `minimalScriptSession(conversation)` for the alignment paths.
+- [x] **Thread `session`**: `sandbox-execution.ts` (`context:{ session }`), `execute-live-evaluation.ts` (input carries `session`), `run-live-evaluation.ts` (assemble + pass; add `SessionRepository`/`SpanRepository` reqs + the `apps/workers` layer).
+- [x] **Judge generation + GEPA → `session.conversation`**: `EVALUATION_CONVERSATION_PLACEHOLDER` + `wrapPromptAsEvaluationScript` + `generateJudgePromptText`; GEPA `GEPA_PROPOSER_SYSTEM_PROMPT` allowed placeholder becomes `${session.conversation}`.
+- [x] **Alignment/optimization**: `evaluate-draft-against-examples` + `evaluate-optimization-candidate` pass `minimalScriptSession(example.conversation)`.
 
-#### PR4b — Conditions contract + codegen `[ ] pending`
+#### PR4b — Conditions contract + codegen `[x] complete (#3739)`
 
-Settings-defined deterministic conditions that compile to a script over the `session` object.
+Settings-defined deterministic conditions that compile to a pure script over the `session` object. **Semantic similarity was deferred out of this PR** — the `semantic_similarity` condition + its sandbox execution moved to [R3](#r3--semantic-similarity-for-rule-evals-future). Every rule shipped here is pure (no `llm()`).
 
-- [ ] **Contract** (`@domain/shared/evaluation-settings.ts`): add the `rule` kind — `{ kind:"rule", match:"all"|"any", conditions: Condition[] }` — with conditions `text_match` (role-scoped contains/regex), `empty_output`, `output_length`, `json_output`, `metric` (session/anyTrace/allTraces over duration/cost/tokens/errorCount/…), `tool_used`/`tool_failed`/`tool_call_count`, `error`, `finish_reason`, and `semantic_similarity` (scope + anchor + threshold).
-- [ ] **Codegen** (`compile-settings-to-script.ts`): `case "rule"` → a pure (non-`llm`) script = JSON condition literal + a fixed **async** interpreter over `session` returning `Passed()`/`Failed()`; user values go in the data literal, never code positions (regex via `new RegExp`).
-- [ ] **On-demand `similarity(a, b)`** host fn (`@platform/sandbox-quickjs`): embeds both strings via an embeddings model, returns cosine ∈ [0,1], metered like `llm()`; add `similarity(`/`embedding(` to capability detection (non-pure lane). The **native batch-runner** optimization + moments/flagger consolidation stay [Phase 7](#phase-7--semantic-similarity-evaluations-future).
+- [x] **Contract** (`@domain/shared/evaluation-settings.ts`): added the `rule` kind — `{ kind:"rule", match:"all"|"any", conditions: Condition[] }` (1–10 conditions) — with conditions `text_match` (role-scoped contains/regex), `empty_output`, `output_length`, `json_output`, `metric` (session/anyTrace/allTraces over duration/cost/tokens/errorCount/…), `tool_used`/`tool_failed`/`tool_call_count`, `error`, and `finish_reason` (a **free string** — finish reasons are provider-specific). `metric.value` is in base units (codegen compares directly). A `superRefine` rejects an invalid regex at parse time (400) and restricts `traceCount` to `aggregation:"session"` (no per-trace projection).
+- [x] **Codegen** (`compile-settings-to-script.ts`): `case "rule"` → a **readable, pure, synchronous** per-condition script — one commented `if` per condition that short-circuits to the verdict (`match:any` returns `Passed()` on the first satisfied condition; `match:all` returns `Failed()` on the first unmet one), so the score's feedback names exactly which condition decided it. User strings/numbers cross in only via `JSON.stringify` literals (never a code position); operators/scopes/fields come from validated enums; `validateEvaluationScriptCompiles` backstops at save (422). `allTraces` guards against the empty-session vacuous pass.
+- [x] **API surface**: the `create-signal` route schema references the shared `evaluationSettingsSchema` so `kind:"rule"` is accepted; OpenAPI/MCP manifests + Fern TS/Python SDKs regenerated. (CodeQL flagged the `JSON.stringify`-into-script pattern; dismissed as false positive — the script is fully sandboxed and the same endpoint already accepts an arbitrary raw `{ script }`.)
+- [x] **Tests**: zod contract (every condition, defaults, bounds, the two refinements) + codegen executed against crafted sessions (verdict + deciding-condition feedback + pureness, all operators incl. negations, the empty-session guard) + the rule path through `createSignalUseCase`.
 
-#### PR4c — Builder UI `[ ] pending`
+#### PR4c — Builder UI → moved to the roadmap
 
-- [ ] **Backend for web**: `previewEvaluationUseCase` (compile + run against recent sample sessions, **no persist**); `updateSignalEvaluationUseCase` (user-origin, `settings IS NOT NULL` only — archive active + create new in one tx); **filters-gate fix** — propagate the signal's `filters` into `evaluation.trigger.filter` (today `createSignal` leaves it `{}`, so signal filters don't actually gate). Web `createServerFn` handlers + `signals.collection.ts` hooks (no REST/SDK regen — UI leads).
-- [ ] **UI** (`apps/web`): create/edit signal builder modal with `Rules` / `Judge` / `Advanced` tabs + a conditions editor + `filters` (scope) editor + a **live preview** (deterministic live; judge/semantic on-demand). Entry points: "New signal" (signals list), "Create signal from this search" (saved-search surface), and **Edit** on the signal detail page (replace the "Editing its settings is coming soon" note for `origin=user` & `settings≠null`); delete action.
-- [ ] **Cleanup**: drop the dead `QueuePublisher` layer on `createSignal` and fix the stale backfill prose in `apps/api/src/routes/signals.ts`.
+The builder UI is the only remaining Phase 2 work. It is tracked (and expanded — it absorbs the former judge-builder phase) as [R1 — Builder UI](#r1--builder-ui-mvp) in the roadmap below.
 
-**Exit gate (PR4a–c):** evaluations run against the `session` object; users create/edit rule, judge & raw-script signals from the UI with a live preview; settings edits recompile the detector; new in-scope traces produce evaluation scores visible on the signal page.
+**Exit gate (PR4a–b):** evaluations run against the `session` object; rule + judge detectors compile and run; the `rule` kind is accepted on the create-signal API/SDK. (The UI exit gate moves to R1.)
 
-### Phase 3 — User-created LLM-as-judge signals `[MVP]`
+### Phase 3 — User-created LLM-as-judge signals `[FOLDED INTO R1]`
 
-**Deps:** P2.
-**Ships:** a builder option to author a judge signal (describe the behavior + optional example traces → generated judge script that calls `llm()`), running on the **existing** evaluation execution path.
-**Safe because:** it reuses the proven evaluation generation/alignment/execution stack; additive UI. **Mostly pre-existing** — `llm_as_judge` already ships as a templated sandbox script (behind `evaluation-sandbox-runtime`) and GEPA already generates scripts, so P3-a/P3-b/P3-d are largely wiring; only **P3-c** (judge builder UI) is genuinely new.
-
-- [ ] **P3-a** Standalone evaluation creation (`@domain/evaluations`): allow creating a judge evaluation (a script that calls `llm()`) linked to a fresh signal, not only via the discovery → tracking path; set `evaluations.signal_id`.
-- [ ] **P3-b** Generation reuse: drive the existing `optimize-evaluation` workflow (`evaluations:generate:${signalId}`) from the builder; with example traces → aligned (reuse `collectAlignmentExamples` + `evaluateDraftAgainstExamples`); without → unaligned start, alignment accrues as annotations land.
-- [ ] **P3-c** Builder UI (judge): description + optional example-trace picker (reuse the annotation-flow picker); preview via the sandbox dry-run harness; alignment polled via `workflow.describe()` (reuse `getSignalAlignmentState`).
-- [ ] **P3-d** Execution linkage: verify the `EvaluationTrigger` path writes `signal_id`-bearing scores for a user-created (non-discovered) signal — the writer stamps `signal_id` when the behavior is present (`passed = true`).
-
-**Exit gate:** create a judge signal → it runs on live traffic via `EvaluationTrigger` → writes signal-linked scores → alignment shows accruing/aligned.
+> Authoring a judge from the UI is just the **Judge** tab of the builder — folded into [R1 — Builder UI](#r1--builder-ui-mvp). The stack it relies on already ships: `llm()` runs as a templated sandbox script, `optimize-evaluation` generates + aligns judges, and the `EvaluationTrigger` path writes `signal_id`-bearing scores. R1 is the remaining wiring + UI.
 
 ### Phase 4 — Monitors on signals `[MVP]` (hard-req 4)
 
@@ -629,7 +617,7 @@ Settings-defined deterministic conditions that compile to a script over the `ses
 
 **Exit gate:** a signal escalation opens/closes a `signal` incident, respects signal mute, and fans out under the `signal.escalating` gate.
 
-> **— MVP line: Phases 1–4 —**
+> **— MVP line: Phases 1–4 + roadmap R1 (builder UI) —**
 
 ### Phase 5 — Unify judge execution onto the evaluation matching pipeline `[FOLDED INTO PR1 · complete]`
 
@@ -645,34 +633,47 @@ Settings-defined deterministic conditions that compile to a script over the `ses
 - [x] **P6-b** Incident notification keys are `monitor.match`, `monitor.threshold`, `monitor.escalating`, and `signal.escalating`.
 - [x] **P6-c** Monitor UI/API use a single `rule`, with target-mode drafts mapped to `monitor.*`.
 - [x] **P6-d** Signal lifecycle actions are mute/unmute; resolved/ignored/regressed UI copy is retired.
-- [ ] **P6-e** Dormant storage names such as `scores.issue_id` can be cleaned up later as a compatibility-only migration.
+- **P6-e** → moved to the [Cleanup](#cleanup--legacy-storage-retirement-post-mvp) roadmap item: dropping dormant storage from the rename (`scores.issue_id`, retired `issue.*` kinds) as a compatibility-only migration.
 
 **Exit gate:** monitor and signal incidents use the final source taxonomy; the old alert-kind axis is absent from the shipped monitor/signal UI and notification producer.
 
-### Phase 7 — Semantic similarity optimization + moments/flagger consolidation `[FUTURE]`
+## Roadmap — remaining work
 
-**Deps:** PR4b (the on-demand `similarity()` host function). Not part of the MVP.
-**Ships:** a **native batch-runner optimization** for pure-similarity evaluations, then folds the existing conversation-intelligence anchor matching (moments) and overlapping flaggers into signal evaluations.
-**Open design (resolve before building):** the on-demand `similarity(a, b)` host fn (PR4b) embeds per run, which is fine at low volume but costs an embedding call per evaluation. The optimization is a **native batch-runner** for the pure-similarity case (one pass over a trace's chunk embeddings against all anchor sets, instead of a per-run isolate + per-run embedding). That needs an **embeddings-ready execution lane** (chunk embeddings exist only on the later `trace_search_embeddings` hop, not at trace-end) — a coordinated `specs/sandbox-runtime.md` edit and a precedence rule for a script that calls both `similarity()` and `llm()`.
+> Phases 1–6 above are shipped. **R1–R3 + Cleanup below are the only open work.** Status legend as above. Out of scope for this roadmap: moments→evaluations + flagger consolidation, and the pure-similarity batch-runner *optimization* (the similarity execution question itself lives in R3).
 
-- [x] **P7-a** ~~Add the `similarity()`/`embedding()` sandbox host function~~ — **shipped in PR4b** as the on-demand `similarity(a, b)` host bridge (per-run embeddings, metered like `llm()`).
-- [ ] **P7-b** Decide + (if warranted) implement the native batch-runner optimization for pure-similarity evaluations (the embeddings-ready lane).
-- [ ] **P7-c** Moments → signal evaluations: express the 8 `MOMENT_KINDS` as `origin=system` semantic evaluations (anchors + their static gates), so moment labeling runs through the one matching pipeline.
-- [ ] **P7-d** Flagger consolidation: where a flagger overlaps a semantic signal (e.g. `frustration`), make the semantic evaluation canonical and retire the overlapping flagger; non-overlapping flaggers keep feeding system-created signals via discovery.
+### R1 — Builder UI `[MVP]`
 
-**Exit gate:** an evaluation script can call `similarity()`; moments run as semantic evaluations through the matching pipeline; overlapping flaggers retired, others unchanged.
+The one builder that completes the MVP: create and edit signals from the UI with a live preview, across three tabs. Absorbs the former judge-builder phase — authoring a judge is just the Judge tab, and the generation/alignment/execution stack it needs already ships. **Deps:** PR4a/PR4b.
 
-### Phase 8 — GEPA optimizes arbitrary evaluation scripts `[FUTURE]`
+- [ ] **Backend for web**: `previewEvaluationUseCase` (compile + run against recent sample sessions, **no persist**); `updateSignalEvaluationUseCase` (user-origin, `settings IS NOT NULL` only — archive active + create new in one tx); **filters-gate fix** — propagate the signal's `filters` into `evaluation.trigger.filter` (today `createSignal` leaves it `{}`, so signal filters don't actually gate). Web `createServerFn` handlers + `signals.collection.ts` hooks (no REST/SDK regen — UI leads).
+- [ ] **UI** (`apps/web`): create/edit signal builder modal with three tabs — **Rules** (deterministic conditions editor over `session`), **Judge** (`criteria` → generated `llm()` script; reuse the example-trace picker + `getSignalAlignmentState` polling), and **Advanced** (raw `script` editor, with a "describe your eval" affordance **present but disabled** — wired in R2) — plus a `filters` (scope) editor and a **live preview** (deterministic runs live; judge on-demand). Entry points: "New signal" (signals list), "Create signal from this search" (saved-search surface), and **Edit** on the signal detail page (replace the "Editing its settings is coming soon" note for `origin=user` & `settings≠null`); delete action.
+- [ ] **Judge wiring** (mostly pre-existing, from the former Phase 3): drive `optimize-evaluation` from the builder (`evaluations:generate:${signalId}`; with example traces → aligned via `collectAlignmentExamples`/`evaluateDraftAgainstExamples`, without → unaligned start); verify the `EvaluationTrigger` path writes `signal_id`-bearing scores for a non-discovered user signal.
+- [ ] **Cleanup**: drop the dead `QueuePublisher` layer on `createSignal`; fix the stale "backfilled over recent history" prose in `apps/api/src/routes/signals.ts` (backfill was dropped in PR3 — collect forward only).
 
-**Deps:** PR4b (the `rule` codegen + the rich `session` payload). Not part of the MVP.
+**Exit gate:** users create/edit rule, judge & raw-script signals from the UI with a live preview; settings edits recompile the detector; new in-scope traces produce evaluation scores on the signal page. **Completes the MVP.**
 
-Today GEPA is locked to the **LLM-as-judge wrapper**: it only rewrites the prompt text inside the single `llm()` call, and the only interpolation it may use is `${session.conversation}` (`GEPA_PROPOSER_SYSTEM_PROMPT` in `packages/platform/op-gepa/src/prompts/proposer.ts`; the `TODO(eval-sandbox)` there marks this constraint). So generation/optimization can improve *judge wording* but cannot author or tune deterministic checks, nor reason over the rest of the `session` payload (metrics, tools, finishReasons).
+### R2 — AI-authored evaluations (the Advanced tab) `[POST-MVP]`
 
-**Ships:** GEPA generates and optimizes the *entire* `script` — deterministic `rule` scripts, judge scripts, and hybrids that read the full `session` object — not just the judge prompt.
+Enable the Advanced tab's "describe your eval": the user describes a behavior in natural language and Latitude's own AI authors a raw sandbox `script` over the `session` object — any mix of deterministic checks + `llm()`, not just a judge prompt or a declarative rule. The same muscle then powers optimization: GEPA, today locked to rewriting only the judge prompt, learns to author and tune the whole script. **Deps:** R1; PR4b (`rule` codegen + `session` payload).
 
-- [ ] **P8-a** Relax the proposer contract: allow emitting/rewriting the whole script body (not only the `llm()` prompt text). Teach the proposer the `session` payload surface (conversation + per-trace metrics/models/providers/finishReasons/tools) and the sandbox host API (`Passed()`/`Failed()`/`Score()`, `llm()`, `similarity()`).
-- [ ] **P8-b** Compile + validate every candidate (`validateEvaluationScriptCompiles`) and score it through the sandbox against the alignment set as today; reject non-compiling candidates so a malformed rewrite can never win.
-- [ ] **P8-c** Capability-aware optimization: detect each candidate's capability (pure / llm / embedding) from the script and account cost/lane per candidate; keep the optimizer within the sandbox contract (script-size and allowed-globals guardrails).
-- [ ] **P8-d** Decide the search space for non-judge scripts (e.g. seed from the `settings` `rule` codegen vs. free-form) and how alignment scoring applies to deterministic candidates (which never call `llm()`).
+- [ ] **Describe → script generation**: from the Advanced tab, a generation pass that emits a compiling raw `script` from an NL description; teach the generator the `session` payload surface (conversation + per-trace metrics/models/providers/finishReasons/tools) and the sandbox host API (`Passed()`/`Failed()`/`Score()`, `llm()`). Validate every candidate via `validateEvaluationScriptCompiles` (reject non-compiling output, 422).
+- [ ] **GEPA over arbitrary scripts**: relax the proposer contract (`GEPA_PROPOSER_SYSTEM_PROMPT`, the `TODO(eval-sandbox)` in `packages/platform/op-gepa/src/prompts/proposer.ts`) to emit/rewrite the whole script body — deterministic, judge, and hybrid — not just the `llm()` prompt; score each candidate through the sandbox against the alignment set; capability-aware cost/lane accounting; decide the search space (seed from `rule` codegen vs. free-form) and how alignment scoring applies to deterministic candidates (which never call `llm()`).
 
-**Exit gate:** GEPA can produce and improve deterministic, judge, and hybrid scripts that read the `session` payload, each validated by compile + alignment scoring — not just judge-prompt rewrites.
+**Exit gate:** a user describes an eval and gets a working raw script; GEPA can produce and improve deterministic, judge, and hybrid scripts that read the `session` payload, each validated by compile + alignment scoring.
+
+### R3 — Semantic similarity for rule evals `[FUTURE]`
+
+A `semantic_similarity` rule condition (`{ scope, anchor, threshold }`) plus the runtime mechanism to evaluate it on the QuickJS sandbox, surfaced in the builder's Rules tab. **Deps:** R1.
+
+**The execution mechanism is open design** — the previously-sketched approaches are candidates, *not* decisions, and likely need rethinking:
+- *On-demand `similarity(a, b)` host fn* (embed both strings per run, metered like `llm()`): simplest, but an embedding call per evaluation per trace — likely too costly at volume.
+- *Native batch-runner* (one pass over a trace's precomputed chunk embeddings against all anchors): cheaper, but those embeddings exist only at the later `trace_search_embeddings` hop, so it needs an embeddings-ready execution lane and a `specs/sandbox-runtime.md` change.
+
+- [ ] **Design** the sandbox execution model for semantic similarity (host fn vs. batch lane vs. other) — cost, latency, and where in the pipeline it runs.
+- [ ] **Implement** the chosen mechanism + the `semantic_similarity` rule condition (contract, codegen, capability detection) and surface it in the builder's Rules tab.
+
+**Exit gate:** a rule can match on semantic similarity to an anchor, with an execution model that holds at production volume.
+
+### Cleanup — legacy storage retirement `[POST-MVP]`
+
+- [ ] Drop dormant compatibility carried through the issues→signals rename, once nothing reads it — the ClickHouse `scores.issue_id` column, the `EVENT_NAME_ALIASES` shim, the `/issues` API alias + `issues` SDK group, and the retired `issue.*` alert-kind strings — as a compatibility-only migration.
