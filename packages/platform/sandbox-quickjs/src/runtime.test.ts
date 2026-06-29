@@ -8,6 +8,7 @@ import {
   type ScriptRunError,
   type ScriptRunInput,
   type ScriptRunLimits,
+  type ScriptSessionContext,
 } from "@domain/sandbox"
 import { Cause, Effect, Exit } from "effect"
 import { describe, expect, it } from "vitest"
@@ -157,6 +158,61 @@ describe("run: host-controlled globals", () => {
     )
     const result = await run({ script, context: { session: minimalScriptSession() } })
     expect(result.value).toBe(1)
+  })
+
+  it("serializes the full session payload (metrics, per-trace rollups, tools) into the script", async () => {
+    const session: ScriptSessionContext = {
+      id: "session-1",
+      traceCount: 1,
+      spanCount: 2,
+      errorCount: 1,
+      duration: 1_500,
+      timeToFirstToken: 50,
+      cost: { input: 1, output: 2, total: 3 },
+      tokens: { input: 10, output: 20, total: 30, cacheRead: 0, cacheCreate: 0, reasoning: 0 },
+      startTime: "2026-01-01T00:00:00.000Z",
+      endTime: "2026-01-01T00:00:01.500Z",
+      userId: "user-1",
+      tags: ["checkout"],
+      metadata: { env: "prod" },
+      conversation: [{ role: "assistant", content: "done" }],
+      traces: [
+        {
+          id: "trace-1",
+          name: "root",
+          status: "error",
+          errorCount: 1,
+          spanCount: 2,
+          duration: 1_500,
+          timeToFirstToken: 50,
+          cost: { input: 1, output: 2, total: 3 },
+          tokens: { input: 10, output: 20, total: 30, cacheRead: 0, cacheCreate: 0, reasoning: 0 },
+          models: ["gpt-4o"],
+          providers: ["openai"],
+          finishReasons: ["length"],
+          tools: [{ name: "search", input: "{q:1}", output: "[]", error: true, duration: 42 }],
+        },
+      ],
+    }
+    const script = await compile(`
+      const t = session.traces[0]
+      const tool = t.tools[0]
+      const ok =
+        session.errorCount === 1 &&
+        session.tags[0] === "checkout" &&
+        session.metadata.env === "prod" &&
+        t.status === "error" &&
+        t.cost.total === 3 &&
+        t.tokens.input === 10 &&
+        t.models[0] === "gpt-4o" &&
+        t.finishReasons[0] === "length" &&
+        tool.name === "search" &&
+        tool.error === true &&
+        tool.duration === 42
+      return Score(ok ? 1 : 0, JSON.stringify({ tools: t.tools.length, model: t.models[0] }))
+    `)
+    const result = await run({ script, context: { session } })
+    expect(result).toMatchObject({ value: 1, feedback: '{"tools":1,"model":"gpt-4o"}' })
   })
 
   it("validates values host-side through parse()", async () => {
