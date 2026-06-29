@@ -42,28 +42,18 @@ import { MessageAnnotationTrigger } from "../../annotations/message-annotation-t
 import { findNearestMessageAnchor, flashElement } from "../../conversation-timeline/flash-highlight.ts"
 import { TimelineBar } from "../../conversation-timeline/timeline-bar.tsx"
 import { useViewportBand } from "../../conversation-timeline/use-viewport-band.ts"
-import { useScrollToFirstHighlight } from "./use-scroll-to-first-highlight.ts"
+import {
+  computeLoadedConversationHighlights,
+  formatConversationSearchForBackend,
+} from "./compute-loaded-conversation-highlights.ts"
+import { ConversationSearchBar } from "./conversation-search-bar.tsx"
+import { getNavigableSearchHighlights, toSearchHighlightRanges } from "./navigable-search-highlights.ts"
+import { scrollToHighlightMatch } from "./scroll-to-highlight-match.ts"
+import { SearchMatchNavigator } from "./search-match-navigator.tsx"
 
 const LOAD_MORE_THRESHOLD_PX = 1200
 
-function toSearchHighlightRanges(result: TraceSearchHighlightsResult | undefined): readonly HighlightRange[] {
-  if (!result || result.highlights.length === 0) return []
-  return result.highlights.map((h) => ({
-    messageIndex: h.messageIndex,
-    partIndex: h.partIndex,
-    startOffset: h.startOffset,
-    endOffset: h.endOffset,
-    type: h.type,
-  }))
-}
-
-/**
- * Latitude-staff-only "download conversation as JSON" affordance: visible to
- * admins and impersonating admins (support), plus local dev builds for
- * convenience — never to regular customers. The session comes from
- * `useAuthSession` (tree-agnostic), so it works the same in the sandbox tree,
- * which has no `_authenticated` match.
- */
+// Staff-only (admins + impersonating + DEV) — never shown to regular customers.
 function StaffConversationDownloadButton({
   traceId,
   messages,
@@ -162,19 +152,6 @@ function ConversationContent({
         : null,
     [timeline, hoveredMessageIndex],
   )
-
-  useHotkeys([
-    {
-      hotkey: "N",
-      callback: () => navigatorRef.current?.navigate("down"),
-      options: { enabled: isActive, ignoreInputs: true },
-    },
-    {
-      hotkey: "P",
-      callback: () => navigatorRef.current?.navigate("up"),
-      options: { enabled: isActive, ignoreInputs: true },
-    },
-  ])
 
   const getSpanIdForMessage = useCallback((messageIndex: number) => spanMaps?.messageSpanMap[messageIndex], [spanMaps])
 
@@ -307,14 +284,113 @@ function ConversationContent({
     ],
   )
 
+  const [debouncedConversationSearch, setDebouncedConversationSearch] = useState("")
+  const [activeMatchIndex, setActiveMatchIndex] = useState(0)
+
+  const handleDebouncedSearchQueryChange = useCallback((query: string) => {
+    setDebouncedConversationSearch(query)
+  }, [])
+
   const effectiveSearchQuery = searchQuery ?? ""
-  const { data: searchHighlightsData } = useTraceSearchHighlights({
+  const loadedConversationHighlights = useMemo(
+    () => computeLoadedConversationHighlights(messages, debouncedConversationSearch),
+    [debouncedConversationSearch, messages],
+  )
+
+  const localNavigableMatches = useMemo(
+    () => getNavigableSearchHighlights(loadedConversationHighlights.highlights),
+    [loadedConversationHighlights],
+  )
+
+  const needsRemoteSearchFallback =
+    debouncedConversationSearch.length > 0 && localNavigableMatches.length === 0 && hasMoreMessages
+
+  const backendConversationSearchQuery = useMemo(
+    () => formatConversationSearchForBackend(debouncedConversationSearch),
+    [debouncedConversationSearch],
+  )
+
+  const { data: projectSearchHighlightsData } = useTraceSearchHighlights({
     projectId,
     traceId: traceDetail.traceId,
     searchQuery: effectiveSearchQuery,
+    enabled: debouncedConversationSearch.length === 0 && effectiveSearchQuery.length > 0,
   })
 
-  const searchHighlightRanges = useMemo(() => toSearchHighlightRanges(searchHighlightsData), [searchHighlightsData])
+  const { data: remoteFallbackHighlightsData, isFetching: isRemoteSearchFallbackFetching } = useTraceSearchHighlights({
+    projectId,
+    traceId: traceDetail.traceId,
+    searchQuery: backendConversationSearchQuery,
+    enabled: needsRemoteSearchFallback && backendConversationSearchQuery.length > 0,
+  })
+
+  const searchHighlightsData = useMemo<TraceSearchHighlightsResult | undefined>(() => {
+    if (debouncedConversationSearch.length > 0) {
+      if (localNavigableMatches.length > 0) return loadedConversationHighlights
+      if (needsRemoteSearchFallback && remoteFallbackHighlightsData) return remoteFallbackHighlightsData
+      return loadedConversationHighlights
+    }
+    return projectSearchHighlightsData
+  }, [
+    debouncedConversationSearch,
+    loadedConversationHighlights,
+    localNavigableMatches.length,
+    needsRemoteSearchFallback,
+    projectSearchHighlightsData,
+    remoteFallbackHighlightsData,
+  ])
+
+  const navigableMatches = useMemo(
+    () => getNavigableSearchHighlights(searchHighlightsData?.highlights ?? []),
+    [searchHighlightsData],
+  )
+
+  const activeSearchQuery =
+    debouncedConversationSearch.length > 0 ? debouncedConversationSearch : effectiveSearchQuery.trim()
+  const searchNavigationActive = activeSearchQuery.length > 0 && navigableMatches.length > 0
+  const remoteFallbackFirstMatch = useMemo(() => {
+    if (!needsRemoteSearchFallback || !remoteFallbackHighlightsData) return null
+    return getNavigableSearchHighlights(remoteFallbackHighlightsData.highlights)[0] ?? null
+  }, [needsRemoteSearchFallback, remoteFallbackHighlightsData])
+  const isSearchingUnloadedConversation =
+    needsRemoteSearchFallback &&
+    (isRemoteSearchFallbackFetching ||
+      (remoteFallbackFirstMatch != null && remoteFallbackFirstMatch.messageIndex >= messages.length))
+
+  useHotkeys([
+    {
+      hotkey: "N",
+      callback: () => {
+        if (searchNavigationActive) {
+          setActiveMatchIndex((index) => Math.min(index + 1, navigableMatches.length - 1))
+          return
+        }
+        navigatorRef.current?.navigate("down")
+      },
+      options: { enabled: isActive, ignoreInputs: true },
+    },
+    {
+      hotkey: "P",
+      callback: () => {
+        if (searchNavigationActive) {
+          setActiveMatchIndex((index) => Math.max(index - 1, 0))
+          return
+        }
+        navigatorRef.current?.navigate("up")
+      },
+      options: { enabled: isActive, ignoreInputs: true },
+    },
+  ])
+
+  // TODO(frontend-use-effect-policy): resets the active match when the debounced query changes.
+  useEffect(() => {
+    setActiveMatchIndex(0)
+  }, [activeSearchQuery])
+
+  const searchHighlightRanges = useMemo(
+    () => toSearchHighlightRanges(searchHighlightsData, searchNavigationActive ? activeMatchIndex : null),
+    [activeMatchIndex, searchHighlightsData, searchNavigationActive],
+  )
 
   const mergedHighlightRanges = useMemo<readonly HighlightRange[]>(
     () => [...annotationHighlightRanges, ...searchHighlightRanges],
@@ -322,30 +398,40 @@ function ConversationContent({
   )
 
   const firstMatchHint = useMemo<FirstMatchHint | null>(() => {
-    if (!searchHighlightsData || searchHighlightsData.firstMatchIndex < 0) return null
-    const first = searchHighlightsData.highlights[searchHighlightsData.firstMatchIndex]
+    const first = navigableMatches[0]
     if (!first) return null
     return { messageIndex: first.messageIndex, partIndex: first.partIndex }
-  }, [searchHighlightsData])
+  }, [navigableMatches])
 
   // TODO(frontend-use-effect-policy): loading search target pages is a query-side effect keyed by async highlight results.
   useEffect(() => {
+    if (debouncedConversationSearch.length > 0) return
     if (!firstMatchHint || firstMatchHint.messageIndex < messages.length) return
     loadMoreMessages()
-  }, [firstMatchHint, messages.length, loadMoreMessages])
+  }, [debouncedConversationSearch, firstMatchHint, messages.length, loadMoreMessages])
+
+  // TODO(frontend-use-effect-policy): loads conversation chunks until a remote lexical match is in view.
+  useEffect(() => {
+    if (!needsRemoteSearchFallback || !remoteFallbackFirstMatch) return
+    if (remoteFallbackFirstMatch.messageIndex < messages.length) return
+    loadMoreMessages()
+  }, [needsRemoteSearchFallback, remoteFallbackFirstMatch, messages.length, loadMoreMessages])
 
   useEffect(() => {
     if (focusMessageIndex === undefined || focusMessageIndex < messages.length) return
     loadMoreMessages()
   }, [focusMessageIndex, messages.length, loadMoreMessages])
 
-  useScrollToFirstHighlight({
-    scrollRef,
-    traceId: traceDetail.traceId,
-    searchQuery: effectiveSearchQuery,
-    highlightsData: searchHighlightsData,
-    loadedMessageCount: messages.length,
-  })
+  // TODO(frontend-use-effect-policy): scrolls to the active search match after highlight DOM mounts.
+  useEffect(() => {
+    const container = scrollRef.current
+    const match = navigableMatches[activeMatchIndex]
+    if (!container || !match || !searchNavigationActive) return
+    return scrollToHighlightMatch(container, {
+      messageIndex: match.messageIndex,
+      startOffset: match.startOffset,
+    })
+  }, [activeMatchIndex, navigableMatches, scrollRef, searchNavigationActive])
 
   if (textSelectionPopoverControlsRef) {
     textSelectionPopoverControlsRef.current = {
@@ -379,6 +465,43 @@ function ConversationContent({
 
   return (
     <div className="relative flex-1 min-h-0 flex flex-col">
+      <div className="shrink-0 border-b border-border bg-background px-4 py-2">
+        <div className="flex items-center gap-2">
+          <ConversationSearchBar className="min-w-0 flex-1" onDebouncedQueryChange={handleDebouncedSearchQueryChange} />
+          {isSearchingUnloadedConversation ? (
+            <Text.H6 color="foregroundMuted" className="shrink-0">
+              Searching…
+            </Text.H6>
+          ) : null}
+          <div className="flex shrink-0 items-center gap-1.5">
+            <StaffConversationDownloadButton traceId={traceDetail.traceId} messages={messages} />
+            {searchNavigationActive ? (
+              <SearchMatchNavigator
+                activeIndex={activeMatchIndex}
+                matchCount={navigableMatches.length}
+                onPrevious={() => setActiveMatchIndex((index) => Math.max(index - 1, 0))}
+                onNext={() => setActiveMatchIndex((index) => Math.min(index + 1, navigableMatches.length - 1))}
+              />
+            ) : (
+              <ScrollNavigator
+                ref={navigatorRef}
+                scrollContainerRef={scrollRef}
+                itemRefs={navItemRefs}
+                prevLabel={
+                  <>
+                    Previous <HotkeyBadge hotkey="P" />
+                  </>
+                }
+                nextLabel={
+                  <>
+                    Next <HotkeyBadge hotkey="N" />
+                  </>
+                }
+              />
+            )}
+          </div>
+        </div>
+      </div>
       <div
         ref={scrollRef}
         className="flex min-w-0 flex-col py-8 px-4 overflow-y-auto overflow-x-hidden flex-1"
@@ -456,24 +579,6 @@ function ConversationContent({
             }}
           />
         ) : null}
-      </div>
-      <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-        <StaffConversationDownloadButton traceId={traceDetail.traceId} messages={messages} />
-        <ScrollNavigator
-          ref={navigatorRef}
-          scrollContainerRef={scrollRef}
-          itemRefs={navItemRefs}
-          prevLabel={
-            <>
-              Previous <HotkeyBadge hotkey="P" />
-            </>
-          }
-          nextLabel={
-            <>
-              Next <HotkeyBadge hotkey="N" />
-            </>
-          }
-        />
       </div>
       {timeline === null && (
         <div className="border-t border-border bg-background px-4 py-3">

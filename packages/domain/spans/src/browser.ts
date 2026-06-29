@@ -126,6 +126,11 @@ export {
 } from "./ports/trace-repository.ts"
 export type { TraceSearchBudgetShape } from "./ports/trace-search-budget.ts"
 export { TraceSearchBudget } from "./ports/trace-search-budget.ts"
+export type {
+  TraceHighlight,
+  TraceSearchHighlightsResult,
+} from "./use-cases/compute-trace-search-highlights.ts"
+export { computeTraceSearchHighlights } from "./use-cases/compute-trace-search-highlights.ts"
 export type { GetSessionCohortSummaryInput } from "./use-cases/get-session-cohort-summary.ts"
 export { getSessionCohortSummaryUseCase } from "./use-cases/get-session-cohort-summary.ts"
 export type { GetTraceCohortSummaryInput } from "./use-cases/get-trace-cohort-summary.ts"
