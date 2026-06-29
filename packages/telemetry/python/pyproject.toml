@@ -46,7 +46,7 @@ dependencies = [
 dev = [
     "pytest-asyncio==1.4.0",
     "pytest-xdist==3.8.0",
-    "pytest==9.0.3",
+    "pytest==9.1.1",
     "pyright==1.1.410",
     "ruff==0.15.15",
     "sh==2.3.0",
