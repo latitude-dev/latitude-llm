@@ -185,3 +185,19 @@ describe("isLexicalSearchHighlight", () => {
     expect(isLexicalSearchHighlight(range("selection"))).toBe(false)
   })
 })
+
+describe("highlightAttributes searchActive", () => {
+  it("emphasizes the active navigated search match", () => {
+    const attrs = highlightAttributes({
+      messageIndex: 0,
+      partIndex: 0,
+      startOffset: 0,
+      endOffset: 4,
+      type: "search-literal",
+      searchActive: true,
+    })
+
+    expect(attrs.className).toContain("ring-primary")
+    expect(attrs["data-search-match"]).toBe("literal")
+  })
+})

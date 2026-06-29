@@ -18,6 +18,8 @@ export interface HighlightRange {
   type: "annotation" | "selection" | "search-literal" | "search-token" | "search-semantic-region" | "search-container"
   passed?: boolean
   id?: string
+  /** Emphasizes the search match the user is currently navigated to. */
+  searchActive?: boolean
 }
 
 export interface FirstMatchHint {
