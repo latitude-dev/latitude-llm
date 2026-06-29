@@ -205,9 +205,28 @@ class Latitude:
         ...
 
     provider: TracerProvider
+    def get_tracer(self, scope: str, context: ContextOptions | None = None) -> Tracer: ...
     def flush(self) -> None: ...
     def shutdown(self) -> None: ...
 ```
+
+Use `get_tracer()` when a framework accepts an OpenTelemetry tracer directly:
+
+```python
+tracer = latitude.get_tracer(
+    "my-agent-framework",
+    {
+        "user_id": "user_123",
+        "session_id": "session_456",
+        "tags": ["support"],
+        "metadata": {"queue": "priority"},
+        "project": "support-agent",
+    },
+)
+```
+
+The scope is exported under `so.latitude.instrumentation.*`, and the optional context stamps every
+span started by that tracer with the same Latitude attributes accepted by `capture()`.
 
 `init_latitude()` remains available as a backwards-compatible wrapper that returns `{"provider", "flush", "shutdown"}`.
 

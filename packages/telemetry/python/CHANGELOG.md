@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `Latitude.get_tracer(scope, context=None)` returns a tracer from the provider Latitude is exporting
+  from, prefixing scopes with `so.latitude.instrumentation.` when needed. Pass the optional context
+  to stamp spans with the same Latitude context accepted by `capture()` (`user_id`, `session_id`,
+  `tags`, `metadata`, and `project`).
+
 ## [3.5.0] - 2026-06-29
 
 ### Added
