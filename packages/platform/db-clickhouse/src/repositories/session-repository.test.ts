@@ -2390,4 +2390,117 @@ describe("SessionRepository", () => {
       expect(values).toEqual(["defined_only_tool"])
     })
   })
+
+  describe("annotation author filtering (score.annotatorId)", () => {
+    const ALICE = "annotator-alice-0001"
+    const BOB = "annotator-bob-0001"
+    const start = new Date(Date.UTC(2026, 0, 1, 10, 0, 0))
+
+    const insertScores = (rows: Array<Record<string, unknown>>) =>
+      Effect.runPromise(insertJsonEachRow(ch.client, "scores", rows))
+
+    const scoreRow = (overrides: Record<string, unknown>) => ({
+      id: overrides.id,
+      organization_id: ORG_ID as string,
+      project_id: PROJECT_ID as string,
+      session_id: overrides.session_id ?? "",
+      trace_id: overrides.trace_id ?? "",
+      span_id: "",
+      source: overrides.source ?? "annotation",
+      source_id: overrides.source_id ?? "UI",
+      annotator_id: overrides.annotator_id ?? "",
+      simulation_id: "",
+      signal_id: "",
+      value: overrides.value ?? 1,
+      passed: overrides.passed ?? true,
+      errored: false,
+      duration: 0,
+      tokens: 0,
+      cost: 0,
+      created_at: toClickHouseDateTime(start),
+    })
+
+    const sessionIdsFor = async (filters: Record<string, unknown>) => {
+      const page = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: { limit: 50, filters: filters as never },
+        }),
+      )
+      return page.items.map((s) => s.sessionId).sort()
+    }
+
+    const seed = async () => {
+      // Three LLM sessions; alice annotated one, bob another, the third is unannotated
+      // and carries only an evaluation score (annotator_id = '').
+      await insertSpans([
+        makeSpanRow({
+          traceId: "a".repeat(32),
+          spanId: "a".repeat(16),
+          sessionId: "sess-alice",
+          startTime: start,
+          model: "gpt-4",
+        }),
+        makeSpanRow({
+          traceId: "b".repeat(32),
+          spanId: "b".repeat(16),
+          sessionId: "sess-bob",
+          startTime: start,
+          model: "gpt-4",
+        }),
+        makeSpanRow({
+          traceId: "c".repeat(32),
+          spanId: "c".repeat(16),
+          sessionId: "sess-none",
+          startTime: start,
+          model: "gpt-4",
+        }),
+      ])
+      await insertScores([
+        scoreRow({
+          id: "score-alice-000000000001",
+          session_id: "sess-alice",
+          trace_id: "a".repeat(32),
+          annotator_id: ALICE,
+        }),
+        scoreRow({
+          id: "score-bob-00000000000002",
+          session_id: "sess-bob",
+          trace_id: "b".repeat(32),
+          annotator_id: BOB,
+        }),
+        scoreRow({
+          id: "score-eval-0000000000003",
+          session_id: "sess-none",
+          trace_id: "c".repeat(32),
+          source: "evaluation",
+          source_id: "eval",
+          passed: false,
+          value: 0,
+        }),
+      ])
+    }
+
+    it("returns only sessions annotated by the selected member", async () => {
+      await seed()
+      expect(await sessionIdsFor({ "score.annotatorId": [{ op: "in", value: [ALICE] }] })).toEqual(["sess-alice"])
+    })
+
+    it("returns the union when multiple members are selected", async () => {
+      await seed()
+      expect(await sessionIdsFor({ "score.annotatorId": [{ op: "in", value: [ALICE, BOB] }] })).toEqual([
+        "sess-alice",
+        "sess-bob",
+      ])
+    })
+
+    it("has-annotations (annotator_id != '') excludes evaluation-only sessions", async () => {
+      await seed()
+      expect(await sessionIdsFor({ "score.annotatorId": [{ op: "neq", value: "" }] })).toEqual([
+        "sess-alice",
+        "sess-bob",
+      ])
+    })
+  })
 })
