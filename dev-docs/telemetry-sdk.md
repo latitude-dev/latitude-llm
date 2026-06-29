@@ -8,14 +8,87 @@ Latitude's TypeScript and Python telemetry SDKs expose a class-based bootstrap A
 - Python uses `Latitude(...)` from `latitude_telemetry`.
 - The bootstrap object exposes the OpenTelemetry tracer provider as `provider` and lifecycle methods for flushing and shutdown.
 - TypeScript also exposes `ready: Promise<void>` because instrumentation registration is asynchronous; Python registration is synchronous and does not expose `ready`.
+- Both SDKs expose `getTracer(scope, context?)` on the bootstrap instance. The returned tracer is scoped under `so.latitude.<scope>` and, when `context` is provided, stamps every span it starts with the same `latitude.*` attributes that `capture()` would attach.
 
 The bootstrap class is responsible for:
 
-- validating `apiKey` / `api_key` and `projectSlug` / `project_slug`
+- validating `apiKey` / `api_key` and `project` / `project_slug`
 - configuring the Latitude span processor and exporter
 - registering requested LLM instrumentations
 - installing W3C trace-context and baggage propagation when the SDK owns the provider
 - registering graceful shutdown handling
+
+`project` is the preferred option name. `projectSlug` / `project_slug` remain accepted for backwards compatibility; when both are set, `project` wins and a deprecation warning is logged.
+
+## Capture
+
+`capture()` is the primary way to attach Latitude context to a unit of work. Both SDKs use the same call-style signature:
+
+```typescript
+capture(name, fn, options?)
+```
+
+```python
+capture(name, fn, options?)
+# or as a decorator: @capture("agent-run", {"tags": ["prod"]})
+```
+
+`options` (`ContextOptions`) carries:
+
+- `tags` — string tags, merged and deduplicated across nested captures
+- `metadata` — shallow-merged JSON metadata
+- `sessionId`, `userId`, `userEmail` — last-write-wins across nesting
+- `project` — per-capture project override (see project scoping below)
+
+Nested captures merge context rather than replacing it:
+
+- tags accumulate and dedupe
+- metadata shallow-merges child over parent
+- `sessionId`, `userId`, `userEmail`, and `project` follow last-write-wins
+- when a nested capture runs inside an active Latitude context, it reuses the existing trace instead of starting a new capture root span
+
+Each non-nested capture creates a root span named after the capture. Sync functions end the span when the function returns; async functions end it in `finally` and record exceptions on the span before rethrowing.
+
+### Capture lifecycle API
+
+TypeScript also exposes an imperative lifecycle API for frameworks that cannot wrap work in a single callback:
+
+```typescript
+const scope = capture.start("agent-run", { sessionId: "sess-1", tags: ["prod"] })
+try {
+  await runAgent()
+} catch (error) {
+  capture.end(scope, error) // records the exception and ends the root span
+  throw error
+}
+capture.end(scope)
+```
+
+`capture.start()` requires the Node async-hooks OpenTelemetry context manager (`context._asyncLocalStorage.enterWith`). It is not available on runtimes whose AsyncLocalStorage lacks `enterWith()`, such as Cloudflare Workers — use call-style `capture()` or the tracer helpers below on those runtimes.
+
+`capture.end()` accepts either `(scope, error?)` or `(error?)` when ending the active scope.
+
+## Manual instrumentation and AI SDK tracers
+
+For manual spans or framework-owned tracers (for example Vercel AI SDK `experimental_telemetry.tracer`), use the bootstrap `getTracer()` method or the lower-level helpers exported from TypeScript:
+
+- `getLatitudeTracer(scope)` — returns a tracer under `so.latitude.<scope>` that passes the smart export filter
+- `latitudeAttributesFromContext(options)` — builds the `latitude.*` attribute map from `ContextOptions`
+- `withLatitudeAttributes(tracer, attributes)` — wraps any tracer so every span it starts carries fixed attributes
+
+Python mirrors the same helpers on `latitude_telemetry.sdk.tracer` (`get_latitude_tracer`, `latitude_attributes_from_context`, `with_latitude_attributes`) and exposes `Latitude.get_tracer(scope, context?)` on the bootstrap instance.
+
+Spans carrying `latitude.*` attributes directly are indistinguishable from `capture()`-scoped spans on ingest. This matters on edge runtimes where ambient OTel context cannot be entered across async boundaries.
+
+## Project scoping
+
+Project routing uses three layers, highest precedence first:
+
+1. per-span attribute `latitude.project` (set by per-capture `project` or tracer context)
+2. OpenTelemetry resource attribute `latitude.project`
+3. `X-Latitude-Project` header from the constructor default `project`
+
+When the constructor omits `project`, every `capture()` call must set its own `project` (or rely on a per-span/resource attribute). This supports multi-project processes that emit to different Latitude projects from one service.
 
 ## Existing OpenTelemetry providers
 

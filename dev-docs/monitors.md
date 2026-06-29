@@ -76,7 +76,10 @@ Supported metrics are:
 
 - `count`
 - `errorRate`
+- `cacheHitRate` — token-weighted prompt-cache hit rate: `cacheReadTokens / (inputTokens + cacheReadTokens + cacheCreateTokens)`, stored and compared as a 0..1 fraction; UI and monitor copy display it as a percentage
 - `sum`, `min`, `max`, `avg`, and `median` over `duration`, `cost`, or `tokens`
+
+`cacheHitRate` is most useful with a `below` threshold to alert when caching degrades on large sessions. It is available on all target streams (`traces`, `spans`, `sessions`).
 
 There is no p95 monitor metric in the current contract.
 
