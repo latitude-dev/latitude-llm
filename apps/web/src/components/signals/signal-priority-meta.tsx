@@ -33,3 +33,11 @@ export const SIGNAL_PRIORITY_META: Record<SignalPriorityGroupId, SignalPriorityM
   low: { label: "Low", icon: SignalLowIcon, iconColor: "foregroundMuted" },
   none: { label: "No priority", icon: MinusIcon, iconColor: "foregroundMuted" },
 }
+
+/**
+ * Fixed section order for the grouped issues list: most urgent first, "no
+ * priority" last. Section order is independent of the selected sort (which
+ * applies within each section). Mirrors `SIGNAL_PRIORITY_GROUPS` in
+ * `@domain/signals`.
+ */
+export const SIGNAL_PRIORITY_GROUP_ORDER: readonly SignalPriorityGroupId[] = ["urgent", "high", "medium", "low", "none"]

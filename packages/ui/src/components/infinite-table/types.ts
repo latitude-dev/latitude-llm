@@ -104,11 +104,10 @@ export interface InfiniteTableSharedProps<T> {
   /** Hide the horizontal separator rendered after expanded sub-rows. */
   hideExpandedRowSeparator?: boolean
   /**
-   * Stable group key per row. Whenever consecutive rows return different keys,
-   * a full-width group header row (rendered by `renderGroupHeader`) is injected
-   * above the run. Headers live outside the data array: they are not
-   * selectable, not clickable, and invisible to `getRowKey`/selection — the
-   * caller only guarantees `data` arrives ordered by group. Requires
+   * Stable group key per row. Rows are bucketed by key into one contiguous
+   * section per group (header rendered by `renderGroupHeader`), so `data` need
+   * not arrive grouped. Headers live outside the data array: they are not
+   * selectable, not clickable, and invisible to `getRowKey`/selection. Requires
    * `renderGroupHeader`.
    *
    * Headers are viewport-pinned on both axes: they render at the container's
@@ -121,6 +120,13 @@ export interface InfiniteTableSharedProps<T> {
   getRowGroup?: (row: T) => string
   /** Renders the content of an injected group header row (see `getRowGroup`). */
   renderGroupHeader?: (groupKey: string) => ReactNode
+  /**
+   * Fixed section order for grouping. Sections render in this order regardless
+   * of where each group first appears in `data`; row order *within* a section
+   * still follows `data`. Groups present in `data` but absent here render last,
+   * in first-appearance order. Without it, sections follow first-appearance.
+   */
+  groupOrder?: readonly string[]
 }
 
 export type InfiniteTableProps<T> =
