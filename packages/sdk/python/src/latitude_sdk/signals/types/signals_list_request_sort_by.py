@@ -2,4 +2,6 @@
 
 import typing
 
-SignalsListRequestSortBy = typing.Union[typing.Literal["lastSeen", "occurrences", "state"], typing.Any]
+SignalsListRequestSortBy = typing.Union[
+    typing.Literal["lastSeen", "occurrences", "affectedSessions", "state"], typing.Any
+]

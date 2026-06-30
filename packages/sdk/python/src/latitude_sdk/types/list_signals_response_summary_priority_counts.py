@@ -6,15 +6,11 @@ import pydantic
 from ..core.pydantic_utilities import UniversalBaseModel
 
 
-class SignalAnalyticsBucket(UniversalBaseModel):
-    bucket: str = pydantic.Field()
-    """
-    ISO-8601 UTC timestamp of the bucket's start.
-    """
-
-    value: int = pydantic.Field()
-    """
-    Number of occurrences in this bucket.
-    """
+class ListSignalsResponseSummaryPriorityCounts(UniversalBaseModel):
+    urgent: int
+    high: int
+    medium: int
+    low: int
+    none: int
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -4,6 +4,7 @@ import type { BaseClientOptions, BaseRequestOptions } from "../../../../BaseClie
 import { type NormalizedClientOptionsWithAuth, normalizeClientOptionsWithAuth } from "../../../../BaseClient.js";
 import { mergeHeaders } from "../../../../core/headers.js";
 import * as core from "../../../../core/index.js";
+import { toJson } from "../../../../core/json.js";
 import * as environments from "../../../../environments.js";
 import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCodeError.js";
 import * as errors from "../../../../errors/index.js";
@@ -49,7 +50,7 @@ export class SignalsClient {
         projectSlug: string,
         request: LatitudeApi.SignalsListRequest = {},
         requestOptions?: SignalsClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.PaginatedSignals> {
+    ): core.HttpResponsePromise<LatitudeApi.ListSignalsResponse> {
         return core.HttpResponsePromise.fromPromise(this.__list(projectSlug, request, requestOptions));
     }
 
@@ -57,13 +58,20 @@ export class SignalsClient {
         projectSlug: string,
         request: LatitudeApi.SignalsListRequest = {},
         requestOptions?: SignalsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.PaginatedSignals>> {
-        const { cursor, limit, query, lifecycleGroup, sortBy, sortDirection, fromIso, toIso } = request;
+    ): Promise<core.WithRawResponse<LatitudeApi.ListSignalsResponse>> {
+        const { cursor, limit, query, lifecycleGroup, assigneeIds, sortBy, sortDirection, fromIso, toIso } = request;
         const _queryParams: Record<string, unknown> = {
             cursor,
             limit,
             query,
             lifecycleGroup: lifecycleGroup != null ? lifecycleGroup : undefined,
+            assigneeIds: Array.isArray(assigneeIds)
+                ? assigneeIds.map((item) => (typeof item === "string" ? item : toJson(item)))
+                : assigneeIds != null
+                  ? typeof assigneeIds === "string"
+                      ? assigneeIds
+                      : toJson(assigneeIds)
+                  : undefined,
             sortBy: sortBy != null ? sortBy : undefined,
             sortDirection: sortDirection != null ? sortDirection : undefined,
             fromIso: fromIso != null ? fromIso : undefined,
@@ -97,7 +105,7 @@ export class SignalsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.PaginatedSignals, rawResponse: _response.rawResponse };
+            return { data: _response.body as LatitudeApi.ListSignalsResponse, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
@@ -475,106 +483,6 @@ export class SignalsClient {
             _response.rawResponse,
             "PATCH",
             "/v1/projects/{projectSlug}/signals/{signalSlug}",
-        );
-    }
-
-    /**
-     * Returns signal analytics for the project: counts of ongoing, new, and escalating signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
-     *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
-     * @param {LatitudeApi.SignalsAnalyticsRequest} request
-     * @param {SignalsClient.RequestOptions} requestOptions - Request-specific configuration.
-     *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
-     *
-     * @example
-     *     await client.signals.analytics("projectSlug", {
-     *         fromIso: "2024-01-15T09:30:00Z",
-     *         toIso: "2024-01-15T09:30:00Z"
-     *     })
-     */
-    public analytics(
-        projectSlug: string,
-        request: LatitudeApi.SignalsAnalyticsRequest = {},
-        requestOptions?: SignalsClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.SignalAnalyticsResponse> {
-        return core.HttpResponsePromise.fromPromise(this.__analytics(projectSlug, request, requestOptions));
-    }
-
-    private async __analytics(
-        projectSlug: string,
-        request: LatitudeApi.SignalsAnalyticsRequest = {},
-        requestOptions?: SignalsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.SignalAnalyticsResponse>> {
-        const { fromIso, toIso } = request;
-        const _queryParams: Record<string, unknown> = {
-            fromIso: fromIso != null ? fromIso : undefined,
-            toIso: toIso != null ? toIso : undefined,
-        };
-        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
-        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
-            _authRequest.headers,
-            this._options?.headers,
-            requestOptions?.headers,
-        );
-        const _response = await core.fetcher({
-            url: core.url.join(
-                (await core.Supplier.get(this._options.baseUrl)) ??
-                    (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
-                `v1/projects/${core.url.encodePathParam(projectSlug)}/signals/analytics`,
-            ),
-            method: "GET",
-            headers: _headers,
-            queryParameters: { ..._queryParams, ...requestOptions?.queryParams },
-            queryString: core.url
-                .queryBuilder()
-                .addMany(_queryParams)
-                .mergeAdditional(requestOptions?.queryParams)
-                .build(),
-            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
-            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
-            abortSignal: requestOptions?.abortSignal,
-            fetchFn: this._options?.fetch,
-            logging: this._options.logging,
-        });
-        if (_response.ok) {
-            return { data: _response.body as LatitudeApi.SignalAnalyticsResponse, rawResponse: _response.rawResponse };
-        }
-
-        if (_response.error.reason === "status-code") {
-            switch (_response.error.statusCode) {
-                case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
-                case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
-                case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
-                default:
-                    throw new errors.LatitudeApiError({
-                        statusCode: _response.error.statusCode,
-                        body: _response.error.body,
-                        rawResponse: _response.rawResponse,
-                    });
-            }
-        }
-
-        return handleNonStatusCodeError(
-            _response.error,
-            _response.rawResponse,
-            "GET",
-            "/v1/projects/{projectSlug}/signals/analytics",
         );
     }
 

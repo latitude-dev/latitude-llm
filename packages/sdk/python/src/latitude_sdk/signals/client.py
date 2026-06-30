@@ -8,10 +8,9 @@ from ..core.request_options import RequestOptions
 from ..types.create_signal_response import CreateSignalResponse
 from ..types.export_signals_response import ExportSignalsResponse
 from ..types.filter_condition import FilterCondition
+from ..types.list_signals_response import ListSignalsResponse
 from ..types.monitor_signal_response import MonitorSignalResponse
-from ..types.paginated_signals import PaginatedSignals
 from ..types.paginated_traces import PaginatedTraces
-from ..types.signal_analytics_response import SignalAnalyticsResponse
 from ..types.signal_detail import SignalDetail
 from ..types.signal_histogram import SignalHistogram
 from ..types.signals_lifecycle_response import SignalsLifecycleResponse
@@ -20,6 +19,7 @@ from .raw_client import AsyncRawSignalsClient, RawSignalsClient
 from .types.create_signal_body_evaluation import CreateSignalBodyEvaluation
 from .types.create_signal_body_priority import CreateSignalBodyPriority
 from .types.export_signals_body_lifecycle_group import ExportSignalsBodyLifecycleGroup
+from .types.signals_list_request_assignee_ids_item import SignalsListRequestAssigneeIdsItem
 from .types.signals_list_request_lifecycle_group import SignalsListRequestLifecycleGroup
 from .types.signals_list_request_sort_by import SignalsListRequestSortBy
 from .types.signals_list_request_sort_direction import SignalsListRequestSortDirection
@@ -51,12 +51,15 @@ class SignalsClient:
         limit: typing.Optional[int] = None,
         query: typing.Optional[str] = None,
         lifecycle_group: typing.Optional[SignalsListRequestLifecycleGroup] = None,
+        assignee_ids: typing.Optional[
+            typing.Union[SignalsListRequestAssigneeIdsItem, typing.Sequence[SignalsListRequestAssigneeIdsItem]]
+        ] = None,
         sort_by: typing.Optional[SignalsListRequestSortBy] = None,
         sort_direction: typing.Optional[SignalsListRequestSortDirection] = None,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
         request_options: typing.Optional[RequestOptions] = None,
-    ) -> PaginatedSignals:
+    ) -> ListSignalsResponse:
         """
         Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `trend`, and `tags`.
 
@@ -77,8 +80,11 @@ class SignalsClient:
         lifecycle_group : typing.Optional[SignalsListRequestLifecycleGroup]
             `"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both.
 
+        assignee_ids : typing.Optional[typing.Union[SignalsListRequestAssigneeIdsItem, typing.Sequence[SignalsListRequestAssigneeIdsItem]]]
+            Filter by assignee user ids. Include `"unassigned"` to match signals with no assignee.
+
         sort_by : typing.Optional[SignalsListRequestSortBy]
-            Sort field. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority.
+            Sort field within each priority group. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority; `affectedSessions` by affected session share.
 
         sort_direction : typing.Optional[SignalsListRequestSortDirection]
             Sort direction. Defaults to `desc`.
@@ -94,7 +100,7 @@ class SignalsClient:
 
         Returns
         -------
-        PaginatedSignals
+        ListSignalsResponse
             Page of signals
 
         Examples
@@ -128,6 +134,7 @@ class SignalsClient:
             limit=limit,
             query=query,
             lifecycle_group=lifecycle_group,
+            assignee_ids=assignee_ids,
             sort_by=sort_by,
             sort_direction=sort_direction,
             from_iso=from_iso,
@@ -341,60 +348,6 @@ class SignalsClient:
             description=description,
             filters=filters,
             request_options=request_options,
-        )
-        return _response.data
-
-    def analytics(
-        self,
-        project_slug: str,
-        *,
-        from_iso: typing.Optional[dt.datetime] = None,
-        to_iso: typing.Optional[dt.datetime] = None,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> SignalAnalyticsResponse:
-        """
-        Returns signal analytics for the project: counts of ongoing, new, and escalating signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
-
-        Parameters
-        ----------
-        project_slug : str
-            Project slug (human-readable identifier)
-
-        from_iso : typing.Optional[dt.datetime]
-            Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.
-
-        to_iso : typing.Optional[dt.datetime]
-            Upper bound (inclusive) of the time range. Defaults to now.
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        SignalAnalyticsResponse
-            Signal analytics
-
-        Examples
-        --------
-        import datetime
-
-        from latitude import LatitudeApiClient
-
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
-        )
-        client.signals.analytics(
-            project_slug="projectSlug",
-            from_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            to_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-        )
-        """
-        _response = self._raw_client.analytics(
-            project_slug, from_iso=from_iso, to_iso=to_iso, request_options=request_options
         )
         return _response.data
 
@@ -744,12 +697,15 @@ class AsyncSignalsClient:
         limit: typing.Optional[int] = None,
         query: typing.Optional[str] = None,
         lifecycle_group: typing.Optional[SignalsListRequestLifecycleGroup] = None,
+        assignee_ids: typing.Optional[
+            typing.Union[SignalsListRequestAssigneeIdsItem, typing.Sequence[SignalsListRequestAssigneeIdsItem]]
+        ] = None,
         sort_by: typing.Optional[SignalsListRequestSortBy] = None,
         sort_direction: typing.Optional[SignalsListRequestSortDirection] = None,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
         request_options: typing.Optional[RequestOptions] = None,
-    ) -> PaginatedSignals:
+    ) -> ListSignalsResponse:
         """
         Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `trend`, and `tags`.
 
@@ -770,8 +726,11 @@ class AsyncSignalsClient:
         lifecycle_group : typing.Optional[SignalsListRequestLifecycleGroup]
             `"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both.
 
+        assignee_ids : typing.Optional[typing.Union[SignalsListRequestAssigneeIdsItem, typing.Sequence[SignalsListRequestAssigneeIdsItem]]]
+            Filter by assignee user ids. Include `"unassigned"` to match signals with no assignee.
+
         sort_by : typing.Optional[SignalsListRequestSortBy]
-            Sort field. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority.
+            Sort field within each priority group. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority; `affectedSessions` by affected session share.
 
         sort_direction : typing.Optional[SignalsListRequestSortDirection]
             Sort direction. Defaults to `desc`.
@@ -787,7 +746,7 @@ class AsyncSignalsClient:
 
         Returns
         -------
-        PaginatedSignals
+        ListSignalsResponse
             Page of signals
 
         Examples
@@ -828,6 +787,7 @@ class AsyncSignalsClient:
             limit=limit,
             query=query,
             lifecycle_group=lifecycle_group,
+            assignee_ids=assignee_ids,
             sort_by=sort_by,
             sort_direction=sort_direction,
             from_iso=from_iso,
@@ -1073,67 +1033,6 @@ class AsyncSignalsClient:
             description=description,
             filters=filters,
             request_options=request_options,
-        )
-        return _response.data
-
-    async def analytics(
-        self,
-        project_slug: str,
-        *,
-        from_iso: typing.Optional[dt.datetime] = None,
-        to_iso: typing.Optional[dt.datetime] = None,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> SignalAnalyticsResponse:
-        """
-        Returns signal analytics for the project: counts of ongoing, new, and escalating signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
-
-        Parameters
-        ----------
-        project_slug : str
-            Project slug (human-readable identifier)
-
-        from_iso : typing.Optional[dt.datetime]
-            Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.
-
-        to_iso : typing.Optional[dt.datetime]
-            Upper bound (inclusive) of the time range. Defaults to now.
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        SignalAnalyticsResponse
-            Signal analytics
-
-        Examples
-        --------
-        import asyncio
-        import datetime
-
-        from latitude import AsyncLatitudeApiClient
-
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
-        )
-
-
-        async def main() -> None:
-            await client.signals.analytics(
-                project_slug="projectSlug",
-                from_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                to_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-            )
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.analytics(
-            project_slug, from_iso=from_iso, to_iso=to_iso, request_options=request_options
         )
         return _response.data
 

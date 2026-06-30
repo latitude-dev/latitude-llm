@@ -19,10 +19,9 @@ from ..types.create_signal_response import CreateSignalResponse
 from ..types.error import Error
 from ..types.export_signals_response import ExportSignalsResponse
 from ..types.filter_condition import FilterCondition
+from ..types.list_signals_response import ListSignalsResponse
 from ..types.monitor_signal_response import MonitorSignalResponse
-from ..types.paginated_signals import PaginatedSignals
 from ..types.paginated_traces import PaginatedTraces
-from ..types.signal_analytics_response import SignalAnalyticsResponse
 from ..types.signal_detail import SignalDetail
 from ..types.signal_histogram import SignalHistogram
 from ..types.signals_lifecycle_response import SignalsLifecycleResponse
@@ -30,6 +29,7 @@ from ..types.update_signal_response import UpdateSignalResponse
 from .types.create_signal_body_evaluation import CreateSignalBodyEvaluation
 from .types.create_signal_body_priority import CreateSignalBodyPriority
 from .types.export_signals_body_lifecycle_group import ExportSignalsBodyLifecycleGroup
+from .types.signals_list_request_assignee_ids_item import SignalsListRequestAssigneeIdsItem
 from .types.signals_list_request_lifecycle_group import SignalsListRequestLifecycleGroup
 from .types.signals_list_request_sort_by import SignalsListRequestSortBy
 from .types.signals_list_request_sort_direction import SignalsListRequestSortDirection
@@ -50,12 +50,15 @@ class RawSignalsClient:
         limit: typing.Optional[int] = None,
         query: typing.Optional[str] = None,
         lifecycle_group: typing.Optional[SignalsListRequestLifecycleGroup] = None,
+        assignee_ids: typing.Optional[
+            typing.Union[SignalsListRequestAssigneeIdsItem, typing.Sequence[SignalsListRequestAssigneeIdsItem]]
+        ] = None,
         sort_by: typing.Optional[SignalsListRequestSortBy] = None,
         sort_direction: typing.Optional[SignalsListRequestSortDirection] = None,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
         request_options: typing.Optional[RequestOptions] = None,
-    ) -> HttpResponse[PaginatedSignals]:
+    ) -> HttpResponse[ListSignalsResponse]:
         """
         Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `trend`, and `tags`.
 
@@ -76,8 +79,11 @@ class RawSignalsClient:
         lifecycle_group : typing.Optional[SignalsListRequestLifecycleGroup]
             `"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both.
 
+        assignee_ids : typing.Optional[typing.Union[SignalsListRequestAssigneeIdsItem, typing.Sequence[SignalsListRequestAssigneeIdsItem]]]
+            Filter by assignee user ids. Include `"unassigned"` to match signals with no assignee.
+
         sort_by : typing.Optional[SignalsListRequestSortBy]
-            Sort field. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority.
+            Sort field within each priority group. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority; `affectedSessions` by affected session share.
 
         sort_direction : typing.Optional[SignalsListRequestSortDirection]
             Sort direction. Defaults to `desc`.
@@ -93,7 +99,7 @@ class RawSignalsClient:
 
         Returns
         -------
-        HttpResponse[PaginatedSignals]
+        HttpResponse[ListSignalsResponse]
             Page of signals
         """
         _response = self._client_wrapper.httpx_client.request(
@@ -104,6 +110,7 @@ class RawSignalsClient:
                 "limit": limit,
                 "query": query,
                 "lifecycleGroup": lifecycle_group,
+                "assigneeIds": assignee_ids,
                 "sortBy": sort_by,
                 "sortDirection": sort_direction,
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -114,9 +121,9 @@ class RawSignalsClient:
         try:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
-                    PaginatedSignals,
+                    ListSignalsResponse,
                     parse_obj_as(
-                        type_=PaginatedSignals,  # type: ignore
+                        type_=ListSignalsResponse,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -442,93 +449,6 @@ class RawSignalsClient:
                     UpdateSignalResponse,
                     parse_obj_as(
                         type_=UpdateSignalResponse,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return HttpResponse(response=_response, data=_data)
-            if _response.status_code == 400:
-                raise BadRequestError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            if _response.status_code == 401:
-                raise UnauthorizedError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            if _response.status_code == 404:
-                raise NotFoundError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
-    def analytics(
-        self,
-        project_slug: str,
-        *,
-        from_iso: typing.Optional[dt.datetime] = None,
-        to_iso: typing.Optional[dt.datetime] = None,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> HttpResponse[SignalAnalyticsResponse]:
-        """
-        Returns signal analytics for the project: counts of ongoing, new, and escalating signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
-
-        Parameters
-        ----------
-        project_slug : str
-            Project slug (human-readable identifier)
-
-        from_iso : typing.Optional[dt.datetime]
-            Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.
-
-        to_iso : typing.Optional[dt.datetime]
-            Upper bound (inclusive) of the time range. Defaults to now.
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        HttpResponse[SignalAnalyticsResponse]
-            Signal analytics
-        """
-        _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/analytics",
-            method="GET",
-            params={
-                "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
-                "toIso": serialize_datetime(to_iso) if to_iso is not None else None,
-            },
-            request_options=request_options,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    SignalAnalyticsResponse,
-                    parse_obj_as(
-                        type_=SignalAnalyticsResponse,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -1143,12 +1063,15 @@ class AsyncRawSignalsClient:
         limit: typing.Optional[int] = None,
         query: typing.Optional[str] = None,
         lifecycle_group: typing.Optional[SignalsListRequestLifecycleGroup] = None,
+        assignee_ids: typing.Optional[
+            typing.Union[SignalsListRequestAssigneeIdsItem, typing.Sequence[SignalsListRequestAssigneeIdsItem]]
+        ] = None,
         sort_by: typing.Optional[SignalsListRequestSortBy] = None,
         sort_direction: typing.Optional[SignalsListRequestSortDirection] = None,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
         request_options: typing.Optional[RequestOptions] = None,
-    ) -> AsyncHttpResponse[PaginatedSignals]:
+    ) -> AsyncHttpResponse[ListSignalsResponse]:
         """
         Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `trend`, and `tags`.
 
@@ -1169,8 +1092,11 @@ class AsyncRawSignalsClient:
         lifecycle_group : typing.Optional[SignalsListRequestLifecycleGroup]
             `"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both.
 
+        assignee_ids : typing.Optional[typing.Union[SignalsListRequestAssigneeIdsItem, typing.Sequence[SignalsListRequestAssigneeIdsItem]]]
+            Filter by assignee user ids. Include `"unassigned"` to match signals with no assignee.
+
         sort_by : typing.Optional[SignalsListRequestSortBy]
-            Sort field. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority.
+            Sort field within each priority group. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority; `affectedSessions` by affected session share.
 
         sort_direction : typing.Optional[SignalsListRequestSortDirection]
             Sort direction. Defaults to `desc`.
@@ -1186,7 +1112,7 @@ class AsyncRawSignalsClient:
 
         Returns
         -------
-        AsyncHttpResponse[PaginatedSignals]
+        AsyncHttpResponse[ListSignalsResponse]
             Page of signals
         """
         _response = await self._client_wrapper.httpx_client.request(
@@ -1197,6 +1123,7 @@ class AsyncRawSignalsClient:
                 "limit": limit,
                 "query": query,
                 "lifecycleGroup": lifecycle_group,
+                "assigneeIds": assignee_ids,
                 "sortBy": sort_by,
                 "sortDirection": sort_direction,
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -1207,9 +1134,9 @@ class AsyncRawSignalsClient:
         try:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
-                    PaginatedSignals,
+                    ListSignalsResponse,
                     parse_obj_as(
-                        type_=PaginatedSignals,  # type: ignore
+                        type_=ListSignalsResponse,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -1535,93 +1462,6 @@ class AsyncRawSignalsClient:
                     UpdateSignalResponse,
                     parse_obj_as(
                         type_=UpdateSignalResponse,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return AsyncHttpResponse(response=_response, data=_data)
-            if _response.status_code == 400:
-                raise BadRequestError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            if _response.status_code == 401:
-                raise UnauthorizedError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            if _response.status_code == 404:
-                raise NotFoundError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        Error,
-                        parse_obj_as(
-                            type_=Error,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
-    async def analytics(
-        self,
-        project_slug: str,
-        *,
-        from_iso: typing.Optional[dt.datetime] = None,
-        to_iso: typing.Optional[dt.datetime] = None,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> AsyncHttpResponse[SignalAnalyticsResponse]:
-        """
-        Returns signal analytics for the project: counts of ongoing, new, and escalating signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
-
-        Parameters
-        ----------
-        project_slug : str
-            Project slug (human-readable identifier)
-
-        from_iso : typing.Optional[dt.datetime]
-            Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.
-
-        to_iso : typing.Optional[dt.datetime]
-            Upper bound (inclusive) of the time range. Defaults to now.
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        AsyncHttpResponse[SignalAnalyticsResponse]
-            Signal analytics
-        """
-        _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/signals/analytics",
-            method="GET",
-            params={
-                "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
-                "toIso": serialize_datetime(to_iso) if to_iso is not None else None,
-            },
-            request_options=request_options,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    SignalAnalyticsResponse,
-                    parse_obj_as(
-                        type_=SignalAnalyticsResponse,  # type: ignore
                         object_=_response.json(),
                     ),
                 )

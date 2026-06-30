@@ -24,7 +24,9 @@ export interface SignalsListRequest {
     query?: string;
     /** `"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both. */
     lifecycleGroup?: LatitudeApi.SignalsListRequestLifecycleGroup;
-    /** Sort field. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority. */
+    /** Filter by assignee user ids. Include `"unassigned"` to match signals with no assignee. */
+    assigneeIds?: LatitudeApi.SignalsListRequestAssigneeIdsItem | LatitudeApi.SignalsListRequestAssigneeIdsItem[];
+    /** Sort field within each priority group. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority; `affectedSessions` by affected session share. */
     sortBy?: LatitudeApi.SignalsListRequestSortBy;
     /** Sort direction. Defaults to `desc`. */
     sortDirection?: LatitudeApi.SignalsListRequestSortDirection;

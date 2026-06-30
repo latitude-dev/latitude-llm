@@ -103,6 +103,10 @@ if typing.TYPE_CHECKING:
     from .invited_member import InvitedMember
     from .invited_member_role import InvitedMemberRole
     from .list_incidents_response import ListIncidentsResponse
+    from .list_signals_response import ListSignalsResponse
+    from .list_signals_response_summary import ListSignalsResponseSummary
+    from .list_signals_response_summary_analytics import ListSignalsResponseSummaryAnalytics
+    from .list_signals_response_summary_priority_counts import ListSignalsResponseSummaryPriorityCounts
     from .member import Member, Member_Active, Member_Invited
     from .member_list import MemberList
     from .monitor import Monitor
@@ -155,7 +159,6 @@ if typing.TYPE_CHECKING:
     from .paginated_monitors import PaginatedMonitors
     from .paginated_projects import PaginatedProjects
     from .paginated_saved_searches import PaginatedSavedSearches
-    from .paginated_signals import PaginatedSignals
     from .paginated_tool_calls import PaginatedToolCalls
     from .paginated_trace_annotations import PaginatedTraceAnnotations
     from .paginated_traces import PaginatedTraces
@@ -167,18 +170,13 @@ if typing.TYPE_CHECKING:
     from .saved_search import SavedSearch
     from .score_response import ScoreResponse, ScoreResponse_Custom, ScoreResponse_Evaluation
     from .signal import Signal
-    from .signal_analytics_bucket import SignalAnalyticsBucket
-    from .signal_analytics_escalating import SignalAnalyticsEscalating
-    from .signal_analytics_new import SignalAnalyticsNew
-    from .signal_analytics_occurrences import SignalAnalyticsOccurrences
-    from .signal_analytics_ongoing import SignalAnalyticsOngoing
-    from .signal_analytics_response import SignalAnalyticsResponse
     from .signal_detail import SignalDetail
     from .signal_detail_source import SignalDetailSource
     from .signal_detail_states_item import SignalDetailStatesItem
     from .signal_histogram import SignalHistogram
     from .signal_histogram_bucket import SignalHistogramBucket
     from .signal_lifecycle_item import SignalLifecycleItem
+    from .signal_list_analytics_counts import SignalListAnalyticsCounts
     from .signal_monitoring_state import (
         SignalMonitoringState,
         SignalMonitoringState_Automatic,
@@ -353,6 +351,10 @@ _dynamic_imports: typing.Dict[str, str] = {
     "InvitedMember": ".invited_member",
     "InvitedMemberRole": ".invited_member_role",
     "ListIncidentsResponse": ".list_incidents_response",
+    "ListSignalsResponse": ".list_signals_response",
+    "ListSignalsResponseSummary": ".list_signals_response_summary",
+    "ListSignalsResponseSummaryAnalytics": ".list_signals_response_summary_analytics",
+    "ListSignalsResponseSummaryPriorityCounts": ".list_signals_response_summary_priority_counts",
     "Member": ".member",
     "MemberList": ".member_list",
     "Member_Active": ".member",
@@ -405,7 +407,6 @@ _dynamic_imports: typing.Dict[str, str] = {
     "PaginatedMonitors": ".paginated_monitors",
     "PaginatedProjects": ".paginated_projects",
     "PaginatedSavedSearches": ".paginated_saved_searches",
-    "PaginatedSignals": ".paginated_signals",
     "PaginatedToolCalls": ".paginated_tool_calls",
     "PaginatedTraceAnnotations": ".paginated_trace_annotations",
     "PaginatedTraces": ".paginated_traces",
@@ -419,18 +420,13 @@ _dynamic_imports: typing.Dict[str, str] = {
     "ScoreResponse_Custom": ".score_response",
     "ScoreResponse_Evaluation": ".score_response",
     "Signal": ".signal",
-    "SignalAnalyticsBucket": ".signal_analytics_bucket",
-    "SignalAnalyticsEscalating": ".signal_analytics_escalating",
-    "SignalAnalyticsNew": ".signal_analytics_new",
-    "SignalAnalyticsOccurrences": ".signal_analytics_occurrences",
-    "SignalAnalyticsOngoing": ".signal_analytics_ongoing",
-    "SignalAnalyticsResponse": ".signal_analytics_response",
     "SignalDetail": ".signal_detail",
     "SignalDetailSource": ".signal_detail_source",
     "SignalDetailStatesItem": ".signal_detail_states_item",
     "SignalHistogram": ".signal_histogram",
     "SignalHistogramBucket": ".signal_histogram_bucket",
     "SignalLifecycleItem": ".signal_lifecycle_item",
+    "SignalListAnalyticsCounts": ".signal_list_analytics_counts",
     "SignalMonitoringState": ".signal_monitoring_state",
     "SignalMonitoringStateAutomatic": ".signal_monitoring_state_automatic",
     "SignalMonitoringStateGenerating": ".signal_monitoring_state_generating",
@@ -631,6 +627,10 @@ __all__ = [
     "InvitedMember",
     "InvitedMemberRole",
     "ListIncidentsResponse",
+    "ListSignalsResponse",
+    "ListSignalsResponseSummary",
+    "ListSignalsResponseSummaryAnalytics",
+    "ListSignalsResponseSummaryPriorityCounts",
     "Member",
     "MemberList",
     "Member_Active",
@@ -683,7 +683,6 @@ __all__ = [
     "PaginatedMonitors",
     "PaginatedProjects",
     "PaginatedSavedSearches",
-    "PaginatedSignals",
     "PaginatedToolCalls",
     "PaginatedTraceAnnotations",
     "PaginatedTraces",
@@ -697,18 +696,13 @@ __all__ = [
     "ScoreResponse_Custom",
     "ScoreResponse_Evaluation",
     "Signal",
-    "SignalAnalyticsBucket",
-    "SignalAnalyticsEscalating",
-    "SignalAnalyticsNew",
-    "SignalAnalyticsOccurrences",
-    "SignalAnalyticsOngoing",
-    "SignalAnalyticsResponse",
     "SignalDetail",
     "SignalDetailSource",
     "SignalDetailStatesItem",
     "SignalHistogram",
     "SignalHistogramBucket",
     "SignalLifecycleItem",
+    "SignalListAnalyticsCounts",
     "SignalMonitoringState",
     "SignalMonitoringStateAutomatic",
     "SignalMonitoringStateGenerating",
