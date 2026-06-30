@@ -22,8 +22,8 @@ import type { DistinctColumn } from "../../../../../components/filters-builder/t
 import { useMembersCollection } from "../../../../../domains/members/members.collection.ts"
 import { useTopicFilterOptions } from "../../../../../domains/taxonomy/taxonomy.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
+import { authClient } from "../../../../../lib/auth-client.ts"
 import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
-import { useAuthenticatedUser } from "../../../-route-data.ts"
 
 export type { FilterMode }
 
@@ -486,17 +486,21 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
     [setField],
   )
 
-  const me = useAuthenticatedUser()
+  // Read the current user from the auth client (not the `/_authenticated` route
+  // loader) so the score filters work in the sandbox shell too, where a dev can
+  // create scores via the API. `meId` is undefined until the session resolves.
+  const { data: session } = authClient.useSession()
+  const meId = session?.user.id
   const { data: members } = useMembersCollection()
   const annotatorItems = useMemo<readonly StaticFilterItem[]>(() => {
     const active = (members ?? []).filter((m) => m.status === "active" && m.userId)
     const others = active
-      .filter((m) => m.userId !== me.id)
+      .filter((m) => m.userId !== meId)
       .map((m) => ({ value: m.userId as string, label: m.name?.trim() || m.email }))
       .sort((a, b) => a.label.localeCompare(b.label))
-    // Current user pinned on top as "Your scores", regardless of member-list ordering.
-    return [{ value: me.id, label: "Your scores" }, ...others]
-  }, [members, me.id])
+    // Current user pinned on top as "Your scores" once the session resolves.
+    return meId ? [{ value: meId, label: "Your scores" }, ...others] : others
+  }, [members, meId])
 
   const setAnnotatedBy = useCallback(
     (values: string[]) => {
@@ -635,7 +639,7 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
           )
         })}
 
-        <CollapsibleSection label="Annotated by" defaultOpen={getInValues(filters, ANNOTATOR_FIELD).length > 0}>
+        <CollapsibleSection label="Scored by" defaultOpen={getInValues(filters, ANNOTATOR_FIELD).length > 0}>
           <MultiSelectFilter
             mode={mode}
             projectId={projectId}
@@ -647,12 +651,12 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
           />
         </CollapsibleSection>
 
-        <CollapsibleSection label="Has annotations" defaultOpen={getHasAnnotationsOn(filters)}>
+        <CollapsibleSection label="Has scores" defaultOpen={getHasAnnotationsOn(filters)}>
           <div className="flex items-center justify-between gap-2">
             <Text.H7 color="foregroundMuted">
               {getHasAnnotationsOn(filters)
-                ? "Showing only items with a human annotation."
-                : "Off — annotations don't filter results."}
+                ? "Showing only items with a human score."
+                : "Off — scores don't filter results."}
             </Text.H7>
             <Switch
               checked={getHasAnnotationsOn(filters)}

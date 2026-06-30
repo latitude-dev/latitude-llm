@@ -13,6 +13,7 @@ import { useProjectsCollection } from "../../../domains/projects/projects.collec
 import { type ProjectRecord, rememberLastProjectSlug, toRecord } from "../../../domains/projects/projects.functions.ts"
 import { getLatestWrappedReportForProject } from "../../../domains/wrapped/wrapped.functions.ts"
 import { AppSidebar, NavItem } from "../../../layouts/AppSidebar/index.tsx"
+import { ContentErrorBoundary } from "../../../lib/client-error-reporting.tsx"
 import { requireSession } from "../../../server/auth.ts"
 import { getPostgresClient } from "../../../server/clients.ts"
 import { ChangelogSidebarEntry } from "../-components/changelog/changelog-sidebar-entry.tsx"
@@ -179,7 +180,9 @@ function ProjectLayout() {
         <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-t-2xl bg-background">
           <ProjectSidebar project={project} projectSlug={projectSlug} />
           <main className="flex-1 min-w-0 overflow-y-auto">
-            <Outlet />
+            <ContentErrorBoundary>
+              <Outlet />
+            </ContentErrorBoundary>
           </main>
         </div>
       </div>
@@ -190,7 +193,9 @@ function ProjectLayout() {
     <div className="flex h-full">
       <ProjectSidebar project={project} projectSlug={projectSlug} />
       <main className="flex-1 min-w-0 overflow-y-auto">
-        <Outlet />
+        <ContentErrorBoundary>
+          <Outlet />
+        </ContentErrorBoundary>
       </main>
     </div>
   )

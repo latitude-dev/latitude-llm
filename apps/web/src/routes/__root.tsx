@@ -21,7 +21,7 @@ const AgentationToolbar = import.meta.env.DEV
 
 export const Route = createRootRoute({
   errorComponent: ({ error, info, reset }) => (
-    <ErrorFallback error={error} componentStack={info?.componentStack ?? null} reset={reset} />
+    <ErrorFallback error={error} componentStack={info?.componentStack ?? null} reset={reset} variant="fullscreen" />
   ),
   loader: async () => {
     const theme = await getThemePreference()

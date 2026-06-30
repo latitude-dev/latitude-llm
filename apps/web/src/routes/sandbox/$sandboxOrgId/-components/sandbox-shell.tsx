@@ -1,13 +1,14 @@
 import { Button, CopyableText, cn, Icon, Text, useToast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { getRouteApi, Link, Outlet, useParams, useRouter, useRouterState } from "@tanstack/react-router"
-import { ArrowLeftRight, TextAlignStartIcon } from "lucide-react"
+import { ArrowLeftRight, MessagesSquareIcon } from "lucide-react"
 import { useState } from "react"
 import { SandboxToggle } from "../../../../components/sandbox-toggle.tsx"
 import { useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
 import { useSandboxLifecycleMutations } from "../../../../domains/sandbox/sandbox.collection.ts"
 import { useSandboxProjects } from "../../../../domains/sandbox/sandbox-projects.collection.ts"
 import { AppSidebar, NavItem } from "../../../../layouts/AppSidebar/index.tsx"
+import { ContentErrorBoundary } from "../../../../lib/client-error-reporting.tsx"
 import { toUserMessage } from "../../../../lib/errors.ts"
 import { SandboxConfigModal } from "./sandbox-config-modal.tsx"
 import { SandboxNavHeader } from "./sandbox-nav-header.tsx"
@@ -143,8 +144,8 @@ export function SandboxShell() {
     }
   }
 
-  const tracesTo = projectSlug ? `/sandbox/${sandboxOrgId}/projects/${projectSlug}` : `/sandbox/${sandboxOrgId}`
-  const tracesActive = pathname.startsWith(`/sandbox/${sandboxOrgId}/projects/`)
+  const sessionsTo = projectSlug ? `/sandbox/${sandboxOrgId}/projects/${projectSlug}` : `/sandbox/${sandboxOrgId}`
+  const sessionsActive = pathname.startsWith(`/sandbox/${sandboxOrgId}/projects/`)
 
   return (
     <div className={cn("flex h-screen flex-col overflow-hidden", isArchived ? "bg-muted-foreground" : "bg-primary")}>
@@ -179,16 +180,18 @@ export function SandboxShell() {
           >
             {({ collapsed }) => (
               <NavItem
-                icon={TextAlignStartIcon}
-                label="Traces"
-                to={tracesTo}
-                active={tracesActive}
+                icon={MessagesSquareIcon}
+                label="Sessions"
+                to={sessionsTo}
+                active={sessionsActive}
                 collapsed={collapsed}
               />
             )}
           </AppSidebar>
           <main className="min-w-0 flex-1 overflow-y-auto">
-            <Outlet />
+            <ContentErrorBoundary>
+              <Outlet />
+            </ContentErrorBoundary>
           </main>
         </div>
       </div>
