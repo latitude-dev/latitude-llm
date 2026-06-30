@@ -71,6 +71,7 @@ import { createSandboxesWorker } from "./workers/sandboxes.ts"
 import { createScoresWorker } from "./workers/scores.ts"
 import { createSignalsWorker } from "./workers/signals.ts"
 import { createSignalsMatchWorker } from "./workers/signals-match.ts"
+import { createSignalsPreviewWorker } from "./workers/signals-preview.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 import { createStartFlaggerWorkflowWorker } from "./workers/start-flagger-workflow.ts"
 import { createTaxonomyWorker } from "./workers/taxonomy.ts"
@@ -222,6 +223,7 @@ const bootstrap = async () => {
     createAnnotationQueuesWorker(ctx)
     createTraceEndWorker(ctx)
     createSignalsMatchWorker(ctx)
+    createSignalsPreviewWorker(ctx)
     createDeterministicFlaggersWorker(ctx)
     createStartFlaggerWorkflowWorker(ctx)
     createProjectsWorker(ctx)

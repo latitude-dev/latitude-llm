@@ -148,6 +148,11 @@ export {
 } from "./runtime/evaluation-execution.ts"
 export { loadScriptSessionContext } from "./runtime/load-session-context.ts"
 export { executeEvaluationScriptSandboxed } from "./runtime/sandbox-execution.ts"
+export {
+  buildSignalPreviewResultKey,
+  SIGNAL_PREVIEW_RESULT_TTL_SECONDS,
+  type SignalPreviewResult,
+} from "./runtime/signal-preview-result.ts"
 export { collectAlignmentExamplesUseCase } from "./use-cases/alignment/collect-alignment-examples.ts"
 export { evaluateBaselineDraftUseCase } from "./use-cases/alignment/evaluate-baseline-draft.ts"
 export { evaluateDraftAgainstExamplesUseCase } from "./use-cases/alignment/evaluate-draft-against-examples.ts"
