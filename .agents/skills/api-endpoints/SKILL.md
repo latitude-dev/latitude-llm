@@ -79,6 +79,7 @@ const createWidget = widgetEndpoint({
     name: "createWidget", // ← camelCase. Becomes OpenAPI `operationId` AND MCP tool name.
     summary: "Create widget", // ← short label; falls through to MCP tool `title`.
     description: "Creates a widget in the caller's organization. Returns the persisted record.",
+    annotations: { readOnlyHint: false, destructiveHint: false }, // ← required for MCP tools; see "Tool annotations" below.
     tags: ["Widgets"],
     security: PROTECTED_SECURITY,
     request: { body: jsonBody(CreateWidgetBody) },
@@ -98,6 +99,7 @@ const listWidgets = widgetEndpoint({
     name: "listWidgets",
     summary: "List widgets",
     description: "Returns every widget in the caller's organization, ordered by creation date.",
+    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Widgets"],
     security: PROTECTED_SECURITY,
     responses: {
@@ -257,6 +259,34 @@ Don't be harsh. A tighter tier doesn't make the API safer in any meaningful way 
 - **`description`** on the route is the single-line tool/method blurb. Treat it as the first sentence an SDK user or AI agent sees when discovering the operation.
 - **`summary`** is optional, shorter, and becomes the MCP tool `title`. Falls back to `name` when omitted.
 
+## Tool annotations — declare read/destructive intent
+
+Every tool-eligible endpoint **must** carry an `annotations` object on its `createRoute` config (alongside `name` / `summary` / `description`). It maps to the MCP spec's [`ToolAnnotations`](https://modelcontextprotocol.io/specification) and tells MCP clients how cautious to be before calling the tool. `readOnlyHint` and `destructiveHint` are **required** — TypeScript won't let you define an endpoint without them; the other two hints are optional. (`title` is intentionally not settable here — it's already derived from `summary`/`name`.)
+
+```ts
+annotations: { readOnlyHint: false, destructiveHint: true },
+```
+
+**The spec's framing for `destructiveHint`.** The MCP spec splits writes into **additive** vs **destructive**: a write is *destructive* if it can **delete or overwrite** existing values (the prior value is lost), and *additive* if it only adds without touching what's already there. That's why an in-place `update*` is `destructiveHint: true` even though it isn't a delete — overwriting a stored name/settings/cell replaces the previous value. The spec also says `destructiveHint` is **only meaningful when `readOnlyHint` is `false`**, and it **defaults to `true`** — so when you're unsure about a non-additive write, prefer `true`.
+
+| Hint | Meaning | Set it to… |
+| --- | --- | --- |
+| `readOnlyHint` (required) | The tool only reads; it never writes/mutates anything. | `true` for pure reads (GET lists, gets, analytics, histograms — even when the request uses POST for a complex query body). `false` for anything with a side effect: writes, deletes, enqueued jobs, emails, generated export artifacts. |
+| `destructiveHint` (required) | A write may delete or overwrite existing data. Only meaningful when `readOnlyHint` is `false`. | `true` for deletes/revokes/removes and in-place updates that overwrite prior values. `false` for purely additive creates/inserts, and for reversible state toggles (mute/unmute, monitor/unmonitor, resolve, restore, reorder). For read-only tools, set `false`. |
+| `idempotentHint` (optional) | Repeating an identical call has no effect beyond the first. | Usually omit. |
+| `openWorldHint` (optional) | The tool touches entities outside the caller's Latitude organization. | Usually omit (our surface is org-scoped). |
+
+Rules of thumb:
+
+- **Reads** (`GET`, or `POST` used only to carry a search/filter body) → `{ readOnlyHint: true, destructiveHint: false }`.
+- **Creates / inserts / additive actions** (`create*`, `insert*`, `add*`, `invite*`, `import*`) → `{ readOnlyHint: false, destructiveHint: false }`.
+- **In-place updates** (`update*`, edits that overwrite stored values) → `{ readOnlyHint: false, destructiveHint: true }`.
+- **Deletes / revokes / removes** → `{ readOnlyHint: false, destructiveHint: true }`.
+- **Reversible state toggles** (`mute*`/`unmute*`, `monitor*`/`unmonitor*`, `resolve*`, `restore*`, `reorder*`) → `{ readOnlyHint: false, destructiveHint: false }` — they change state but don't destroy data.
+- **Exports** that enqueue a job, send an email, or write an artifact are **not** read-only → `{ readOnlyHint: false, destructiveHint: false }`.
+
+When you add or modify a tool endpoint, set these to match what the handler actually does — a wrong `readOnlyHint`/`destructiveHint` misleads agents about how risky the call is. The annotations are stripped before the route reaches the OpenAPI generator, so they appear only in `mcp.json` and the live MCP transport, never in `openapi.json`.
+
 ## Opting out of MCP per-route
 
 Some routes shouldn't be tools — they make sense for HTTP/SDK clients but not for AI agents (e.g. internal lifecycle endpoints, web-only callbacks). Pass `tool: false`:
@@ -280,7 +310,7 @@ pnpm openapi:emit && git diff --exit-code apps/api/openapi.json   # no drift
 pnpm mcp:emit && git diff --exit-code apps/api/mcp.json           # no drift
 ```
 
-Spot-check both manifests by hand: open `apps/api/mcp.json` and `apps/api/openapi.json`, find your operation, confirm every field has a `description`. If something is missing, it'll silently degrade SDK docs and agent UX — fix it at the Zod schema, not in the JSON output.
+Spot-check both manifests by hand: open `apps/api/mcp.json` and `apps/api/openapi.json`, find your operation, confirm every field has a `description`. If something is missing, it'll silently degrade SDK docs and agent UX — fix it at the Zod schema, not in the JSON output. In `mcp.json`, also confirm your tool's `annotations.readOnlyHint` / `annotations.destructiveHint` match what the handler actually does (see "Tool annotations" above).
 
 And glance at your `createXxxRoutes()` factory — every `mountHttp(app, …)` call should pass a `createTierRateLimiter("…")` as its second argument. A bare `ep.mountHttp(app)` leaves the endpoint uncapped per-org.
 

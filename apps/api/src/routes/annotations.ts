@@ -62,6 +62,7 @@ const createAnnotation = annotationEndpoint({
     method: "post",
     path: "/",
     name: "createAnnotation",
+    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Annotations"],
     ...annotationsFernGroup("create"),
     summary: "Create project annotation",

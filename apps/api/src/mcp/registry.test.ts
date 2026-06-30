@@ -16,6 +16,7 @@ const listItems = itemEndpoint({
     path: "/",
     name: "listItems",
     description: "List items",
+    annotations: { readOnlyHint: true, destructiveHint: false },
     responses: {
       200: {
         content: { "application/json": { schema: z.object({ items: z.array(ItemSchema) }) } },
@@ -32,6 +33,7 @@ const getItem = itemEndpoint({
     path: "/{id}",
     name: "getItem",
     description: "Get one item",
+    annotations: { readOnlyHint: true, destructiveHint: false },
     request: { params: z.object({ id: z.string() }) },
     responses: {
       200: { content: { "application/json": { schema: ItemSchema } }, description: "OK" },
@@ -46,6 +48,7 @@ const deleteItem = itemEndpoint({
     path: "/{id}",
     name: "deleteItem",
     description: "Delete one item",
+    annotations: { readOnlyHint: false, destructiveHint: true },
     request: { params: z.object({ id: z.string() }) },
     responses: { 204: { description: "Deleted" } },
   }),
@@ -58,6 +61,7 @@ const hiddenItem = itemEndpoint({
     path: "/internal",
     name: "internalOp",
     description: "HTTP-only — not an MCP tool",
+    annotations: { readOnlyHint: true, destructiveHint: false },
     responses: { 200: { description: "OK" } },
   }),
   handler: async (c) => c.body(null, 200),
@@ -70,6 +74,7 @@ const getWidget = widgetEndpoint({
     path: "/{id}",
     name: "getWidget",
     description: "Get a widget",
+    annotations: { readOnlyHint: true, destructiveHint: false },
     request: { params: z.object({ id: z.string() }) },
     responses: {
       200: { content: { "application/json": { schema: ItemSchema } }, description: "OK" },
@@ -147,6 +152,22 @@ describe("registry", () => {
       expect(tool?.httpMethod).toBe("get")
       expect(tool && Object.keys(tool.input.schema.shape)).toEqual(["id"])
       expect(tool?.output).toBeTruthy()
+    })
+
+    it("carries the route's annotations through to the descriptor", () => {
+      const sub = new OpenAPIHono<TestEnv>()
+      getItem.mountHttp(sub)
+      deleteItem.mountHttp(sub)
+
+      const tools = collectToolDescriptors()
+      expect(tools.find((t) => t.name === "getItem")?.annotations).toEqual({
+        readOnlyHint: true,
+        destructiveHint: false,
+      })
+      expect(tools.find((t) => t.name === "deleteItem")?.annotations).toEqual({
+        readOnlyHint: false,
+        destructiveHint: true,
+      })
     })
 
     it("returns undefined `output` for routes whose success response has no body (204)", () => {

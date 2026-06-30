@@ -75,6 +75,7 @@ export const registerMcpRoute = ({
         {
           title: descriptor.title,
           description: descriptor.description,
+          annotations: descriptor.annotations,
           inputSchema: descriptor.input.schema.shape as z.ZodRawShape,
           outputSchema: descriptor.output?.schema.shape as z.ZodRawShape,
         },

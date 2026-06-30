@@ -5,11 +5,8 @@ import { registerEndpoint } from "./registry.ts"
 
 /**
  * Internal route config shape used through the codebase. Extends `@hono/zod-openapi`'s
- * {@link RouteConfig} with one required field:
- *
- * - `name` — camelCase identifier (e.g. `"listApiKeys"`). Drives both the OpenAPI
- *   `operationId` and the MCP tool name. Required so MCP tool naming is deterministic
- *   and discoverable from the same source as the HTTP route.
+ * {@link RouteConfig} with the per-endpoint fields our MCP/OpenAPI machinery needs
+ * (`name`, `annotations`), each documented inline below.
  *
  * `operationId` is dropped from the public surface — {@link defineApiEndpoint} sets it
  * from `name` internally, removing the foot-gun where the two could drift apart.
@@ -18,7 +15,42 @@ import { registerEndpoint } from "./registry.ts"
  * MCP tool generation can rely on it (the tool description is taken verbatim).
  */
 export type AppRouteConfig = Omit<RouteConfig, "operationId"> & {
+  /**
+   * camelCase identifier (e.g. `"listApiKeys"`). Drives both the OpenAPI
+   * `operationId` and the MCP tool name, and is stripped before the route reaches
+   * the OpenAPI generator. Required so MCP tool naming is deterministic and
+   * discoverable from the same source as the HTTP route.
+   */
   readonly name: string
+  /**
+   * MCP tool annotations (see {@link McpToolAnnotations}). Declared alongside the
+   * other route fields and stripped before the route reaches the OpenAPI
+   * generator, so it surfaces only in `mcp.json` / the live MCP transport — never
+   * in `openapi.json`.
+   */
+  readonly annotations: McpToolAnnotations
+}
+
+/**
+ * MCP tool annotations declared per endpoint. Maps to the MCP spec's
+ * `ToolAnnotations`, but the tool `title` is intentionally omitted — it's
+ * derived from the route's `summary`/`name` (see {@link collectToolDescriptors}),
+ * so there's nothing to redefine here.
+ *
+ * `readOnlyHint` and `destructiveHint` are required: every tool author must
+ * make an explicit call about whether the operation reads or writes, and
+ * whether a write can destroy/overwrite existing data. The remaining hints are
+ * optional and default to the MCP spec's behaviour when omitted.
+ */
+export interface McpToolAnnotations {
+  /** `true` when the tool only reads — it never modifies organization data. */
+  readonly readOnlyHint: boolean
+  /** `true` when a write may delete or overwrite existing data. Meaningful only when `readOnlyHint` is `false`. */
+  readonly destructiveHint: boolean
+  /** `true` when repeating an identical call has no effect beyond the first. */
+  readonly idempotentHint?: boolean
+  /** `true` when the tool interacts with entities outside the caller's Latitude organization. */
+  readonly openWorldHint?: boolean
 }
 
 /**
@@ -96,6 +128,7 @@ export interface AnyApiEndpoint {
  *     path: "/",
  *     name: "listApiKeys",
  *     description: "List all API keys for the organization.",
+ *     annotations: { readOnlyHint: true, destructiveHint: false },
  *     responses: { 200: jsonResponse(ListSchema, "OK") },
  *   }),
  *   handler: async (c) => c.json({ items: [] }, 200),
@@ -117,10 +150,11 @@ export const defineApiEndpoint =
     tool?: boolean
   }): ApiEndpoint<R, E> => {
     const { route, handler, tool = true } = args
-    // Strip `name` from what reaches the OpenAPI generator (non-standard field) and
-    // set `operationId` from it, so a single source of truth (`name`) drives both
-    // the OpenAPI spec and the MCP tool registry.
-    const { name, ...rest } = route
+    // Strip `name` and `annotations` from what reaches the OpenAPI generator (both
+    // are non-standard fields the generator would otherwise spread into the
+    // operation), and set `operationId` from `name`, so a single source of truth
+    // (`name`) drives both the OpenAPI spec and the MCP tool registry.
+    const { name, annotations: _annotations, ...rest } = route
     const routeForHono = { ...rest, operationId: name } as unknown as R
     // Canonicalize the mount prefix to OpenAPI form (`{param}`) for the registry —
     // the dispatcher in server.ts only knows how to substitute that shape. Hono's
