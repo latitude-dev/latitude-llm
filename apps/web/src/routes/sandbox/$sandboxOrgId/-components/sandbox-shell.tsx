@@ -1,7 +1,7 @@
 import { Button, CopyableText, cn, Icon, Text, useToast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { getRouteApi, Link, Outlet, useParams, useRouter, useRouterState } from "@tanstack/react-router"
-import { ArrowLeftRight, TextAlignStartIcon } from "lucide-react"
+import { ArrowLeftRight, MessagesSquareIcon } from "lucide-react"
 import { useState } from "react"
 import { SandboxToggle } from "../../../../components/sandbox-toggle.tsx"
 import { useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
@@ -143,8 +143,8 @@ export function SandboxShell() {
     }
   }
 
-  const tracesTo = projectSlug ? `/sandbox/${sandboxOrgId}/projects/${projectSlug}` : `/sandbox/${sandboxOrgId}`
-  const tracesActive = pathname.startsWith(`/sandbox/${sandboxOrgId}/projects/`)
+  const sessionsTo = projectSlug ? `/sandbox/${sandboxOrgId}/projects/${projectSlug}` : `/sandbox/${sandboxOrgId}`
+  const sessionsActive = pathname.startsWith(`/sandbox/${sandboxOrgId}/projects/`)
 
   return (
     <div className={cn("flex h-screen flex-col overflow-hidden", isArchived ? "bg-muted-foreground" : "bg-primary")}>
@@ -179,10 +179,10 @@ export function SandboxShell() {
           >
             {({ collapsed }) => (
               <NavItem
-                icon={TextAlignStartIcon}
-                label="Traces"
-                to={tracesTo}
-                active={tracesActive}
+                icon={MessagesSquareIcon}
+                label="Sessions"
+                to={sessionsTo}
+                active={sessionsActive}
                 collapsed={collapsed}
               />
             )}

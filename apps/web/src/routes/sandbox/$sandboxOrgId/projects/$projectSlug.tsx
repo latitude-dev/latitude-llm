@@ -206,7 +206,7 @@ function SandboxTracesContent({ sandboxOrgId, projectSlug }: { sandboxOrgId: str
   if (projectsLoading) {
     return (
       <Layout>
-        <Layout.Header title="Traces" />
+        <Layout.Header title="Sessions" />
       </Layout>
     )
   }
@@ -236,7 +236,7 @@ function SandboxTracesContent({ sandboxOrgId, projectSlug }: { sandboxOrgId: str
 
   return (
     <Layout>
-      <Layout.Header title={project?.name ?? "Traces"} />
+      <Layout.Header title={project?.name ?? "Sessions"} />
       <Layout.Actions>
         <Layout.ActionsRow>
           <Layout.ActionRowItem>
