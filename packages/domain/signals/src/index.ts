@@ -22,3 +22,9 @@ export {
   type UpdateSignalResult,
   updateSignalUseCase,
 } from "./use-cases/update-signal.ts"
+export {
+  type UpdateSignalEvaluationError,
+  type UpdateSignalEvaluationInput,
+  type UpdateSignalEvaluationResult,
+  updateSignalEvaluationUseCase,
+} from "./use-cases/update-signal-evaluation.ts"

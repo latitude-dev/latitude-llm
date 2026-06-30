@@ -1,5 +1,12 @@
+import { hashOptimizationCandidateText } from "@domain/optimizations"
 import { type ScriptCompileError, ScriptRuntime } from "@domain/sandbox"
-import type { EvaluationRuleCondition, EvaluationSettings, MessageScope, MetricField } from "@domain/shared"
+import {
+  BadRequestError,
+  type EvaluationRuleCondition,
+  type EvaluationSettings,
+  type MessageScope,
+  type MetricField,
+} from "@domain/shared"
 import { Effect } from "effect"
 import { generateJudgePromptText } from "../alignment/baseline-prompt.ts"
 import { wrapPromptAsEvaluationScript } from "../runtime/evaluation-execution.ts"
@@ -30,6 +37,21 @@ export const validateEvaluationScriptCompiles = (
   Effect.gen(function* () {
     const runtime = yield* ScriptRuntime
     yield* runtime.compile({ source: script })
+  })
+
+/**
+ * Validates that `script` compiles in the sandbox and returns its content hash (stamped onto each
+ * score's `metadata.evaluationHash`). Shared by evaluation creation and signal-settings recompile.
+ */
+export const validateAndHashEvaluationScript = (
+  script: string,
+): Effect.Effect<string, ScriptCompileError | BadRequestError, ScriptRuntime> =>
+  Effect.gen(function* () {
+    yield* validateEvaluationScriptCompiles(script)
+    return yield* Effect.tryPromise({
+      try: () => hashOptimizationCandidateText(script),
+      catch: () => new BadRequestError({ message: "Failed to hash evaluation script" }),
+    })
   })
 
 // ---------------------------------------------------------------------------

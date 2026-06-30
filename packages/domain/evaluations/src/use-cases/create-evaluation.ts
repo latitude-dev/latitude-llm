@@ -1,4 +1,3 @@
-import { hashOptimizationCandidateText } from "@domain/optimizations"
 import type { ScriptCompileError, ScriptRuntime } from "@domain/sandbox"
 import {
   BadRequestError,
@@ -8,7 +7,7 @@ import {
   type SqlClient,
 } from "@domain/shared"
 import { Effect } from "effect"
-import { compileSettingsToScript, validateEvaluationScriptCompiles } from "../codegen/compile-settings-to-script.ts"
+import { compileSettingsToScript, validateAndHashEvaluationScript } from "../codegen/compile-settings-to-script.ts"
 import { defaultEvaluationTrigger, evaluationSchema } from "../entities/evaluation.ts"
 import { EvaluationRepository } from "../ports/evaluation-repository.ts"
 
@@ -48,12 +47,7 @@ export const createEvaluationUseCase = (input: CreateEvaluationInput) =>
     const settings = input.settings ?? null
     const script = settings ? compileSettingsToScript(settings) : (input.script as string)
 
-    yield* validateEvaluationScriptCompiles(script)
-
-    const scriptHash = yield* Effect.tryPromise({
-      try: () => hashOptimizationCandidateText(script),
-      catch: () => new BadRequestError({ message: "Failed to hash evaluation script" }),
-    })
+    const scriptHash = yield* validateAndHashEvaluationScript(script)
     const now = input.now ?? new Date()
     const evaluation = evaluationSchema.parse({
       id: generateId<"EvaluationId">(),
