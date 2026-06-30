@@ -43,6 +43,7 @@ export {
   EvaluationDeletedError,
   EvaluationExecutionError,
   EvaluationNotFoundError,
+  EvaluationScriptGenerationError,
   LiveEvaluationExecutionError,
   LiveEvaluationQueuePublishError,
 } from "./errors.ts"
@@ -160,6 +161,12 @@ export {
   type CreateEvaluationResult,
   createEvaluationUseCase,
 } from "./use-cases/create-evaluation.ts"
+export {
+  type CreateScriptFromPromptError,
+  type CreateScriptFromPromptInput,
+  type CreateScriptFromPromptResult,
+  createScriptFromPromptUseCase,
+} from "./use-cases/create-script-from-prompt.ts"
 export {
   deriveSignalAlignmentState,
   type GetSignalAlignmentStateError,

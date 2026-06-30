@@ -35,6 +35,16 @@ export class LiveEvaluationExecutionError extends Data.TaggedError("LiveEvaluati
   }
 }
 
+export class EvaluationScriptGenerationError extends Data.TaggedError("EvaluationScriptGenerationError")<{
+  readonly attempts: number
+  readonly message: string | null
+}> {
+  readonly httpStatus = 422
+  get httpMessage() {
+    return this.message ?? "Could not generate a runnable evaluation script"
+  }
+}
+
 export class LiveEvaluationQueuePublishError extends Data.TaggedError("LiveEvaluationQueuePublishError")<{
   readonly evaluationId: string
   readonly traceId: string
