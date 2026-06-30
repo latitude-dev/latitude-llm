@@ -1,7 +1,7 @@
 import { Button, CopyableText, Skeleton, TagList, Text, Tooltip } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router"
-import { ArrowLeftIcon } from "lucide-react"
+import { ArrowLeftIcon, PencilIcon } from "lucide-react"
 import { useState } from "react"
 import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
 import { useSignalDetail } from "../../../../../../domains/signals/signals.collection.ts"
@@ -11,6 +11,7 @@ import { useRouteProject } from "../../-route-data.ts"
 import { SignalDetailBody } from "../-components/signal-detail-drawer.tsx"
 import { SignalLifecycleActions } from "../-components/signal-lifecycle-actions.tsx"
 import { SignalLifecycleStatuses } from "../-components/signal-lifecycle-statuses.tsx"
+import { SignalRenameModal } from "../-components/signal-rename-modal.tsx"
 import { SignalExamples } from "./-components/signal-examples.tsx"
 import { SignalNeighborNav } from "./-components/signal-neighbor-nav.tsx"
 import { SignalPatterns } from "./-components/signal-patterns.tsx"
@@ -56,6 +57,7 @@ function SignalDetailPage() {
   // A trace sheet (from Examples or the Traces table) being open suppresses the
   // J/K prev/next-issue hotkeys so paging a trace never swaps the issue under it.
   const [overlayActive, setOverlayActive] = useState(false)
+  const [renameOpen, setRenameOpen] = useState(false)
   const lifecycleGroup = issue?.mutedAt ? "archived" : "active"
 
   return (
@@ -110,6 +112,24 @@ function SignalDetailPage() {
           }
           actions={
             <>
+              {issue?.origin === "user" ? (
+                <Tooltip
+                  asChild
+                  side="bottom"
+                  trigger={
+                    <Button
+                      variant="ghost"
+                      className="h-7 w-7 p-0"
+                      aria-label="Edit signal name and description"
+                      onClick={() => setRenameOpen(true)}
+                    >
+                      <PencilIcon className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  }
+                >
+                  Edit name & description
+                </Tooltip>
+              ) : null}
               <SignalTriageControls projectId={project.id} signalId={signalId} compact />
               <SignalLifecycleActions projectId={project.id} signalId={signalId} compact />
             </>
@@ -139,6 +159,15 @@ function SignalDetailPage() {
           }
           append={<SignalRelated projectId={project.id} projectSlug={projectSlug} signalId={signalId} />}
         />
+        {renameOpen && issue ? (
+          <SignalRenameModal
+            projectId={project.id}
+            signalId={signalId}
+            name={issue.name}
+            description={issue.description}
+            onClose={() => setRenameOpen(false)}
+          />
+        ) : null}
       </Layout.Content>
     </Layout>
   )
