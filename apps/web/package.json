@@ -59,6 +59,7 @@
     "@platform/env": "workspace:*",
     "@platform/oauth-token-auth": "workspace:*",
     "@platform/queue-bullmq": "workspace:*",
+    "@platform/sandbox-quickjs": "workspace:*",
     "@platform/slack": "workspace:*",
     "@platform/storage-object": "workspace:*",
     "@platform/workflows-temporal": "workspace:*",
