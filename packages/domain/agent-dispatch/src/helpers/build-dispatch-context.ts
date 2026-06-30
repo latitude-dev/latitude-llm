@@ -3,13 +3,7 @@ import { isSignalEscalationEntrySignals } from "@domain/incidents"
 import { OrganizationRepository } from "@domain/organizations"
 import { ProjectRepository } from "@domain/projects"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
-import {
-  type ChSqlClient,
-  type OrganizationId,
-  type ProjectId,
-  SignalId,
-  type SqlClient,
-} from "@domain/shared"
+import { type ChSqlClient, type OrganizationId, type ProjectId, SignalId, type SqlClient } from "@domain/shared"
 import { SignalRepository } from "@domain/signals"
 import { Effect } from "effect"
 import { SAMPLE_EXCERPT_MAX_CHARS, SAMPLE_TRACE_IDS_LIMIT } from "../constants.ts"
