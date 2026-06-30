@@ -8,6 +8,7 @@ import { useProjectsCollection } from "../../../../domains/projects/projects.col
 import { useSandboxLifecycleMutations } from "../../../../domains/sandbox/sandbox.collection.ts"
 import { useSandboxProjects } from "../../../../domains/sandbox/sandbox-projects.collection.ts"
 import { AppSidebar, NavItem } from "../../../../layouts/AppSidebar/index.tsx"
+import { ContentErrorBoundary } from "../../../../lib/client-error-reporting.tsx"
 import { toUserMessage } from "../../../../lib/errors.ts"
 import { SandboxConfigModal } from "./sandbox-config-modal.tsx"
 import { SandboxNavHeader } from "./sandbox-nav-header.tsx"
@@ -188,7 +189,9 @@ export function SandboxShell() {
             )}
           </AppSidebar>
           <main className="min-w-0 flex-1 overflow-y-auto">
-            <Outlet />
+            <ContentErrorBoundary>
+              <Outlet />
+            </ContentErrorBoundary>
           </main>
         </div>
       </div>

@@ -1,7 +1,8 @@
 import { createLogger, recordSpanExceptionForDatadog, SpanStatusCode, trace } from "@repo/observability"
-import { Button, CopyableText, Text, useMountEffect } from "@repo/ui"
+import { Button, CopyableText, cn, Text, useMountEffect } from "@repo/ui"
+import { CatchBoundary, useRouterState } from "@tanstack/react-router"
 import { createServerFn } from "@tanstack/react-start"
-import { useMemo } from "react"
+import { type ReactNode, useMemo } from "react"
 import { z } from "zod"
 
 const logger = createLogger("client-error")
@@ -44,10 +45,12 @@ export function ErrorFallback({
   error,
   componentStack,
   reset,
+  variant,
 }: {
   error: Error
   componentStack?: string | null
   reset: () => void
+  variant: "fullscreen" | "contained"
 }) {
   const errorId = useMemo(() => generateErrorId(), [])
 
@@ -63,7 +66,12 @@ export function ErrorFallback({
   })
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+    <div
+      className={cn("flex flex-col items-center justify-center gap-4 p-8", {
+        "min-h-screen": variant === "fullscreen",
+        "h-full min-h-0": variant === "contained",
+      })}
+    >
       <Text.H3>Something went wrong</Text.H3>
       <Text.H5 color="foregroundMuted">
         If this error persists, please contact support and reference this error ID:
@@ -73,5 +81,23 @@ export function ErrorFallback({
       </div>
       <Button onClick={reset}>Try again</Button>
     </div>
+  )
+}
+
+/**
+ * Scopes render errors to a content region: the fallback renders in place of
+ * `children` while the surrounding shell (sidebar, nav) stays interactive,
+ * instead of the error bubbling to the root boundary and replacing the whole
+ * app. Resets automatically on navigation (the pathname is the reset key).
+ */
+export function ContentErrorBoundary({ children }: { children: ReactNode }) {
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
+  return (
+    <CatchBoundary
+      getResetKey={() => pathname}
+      errorComponent={({ error, reset }) => <ErrorFallback error={error} reset={reset} variant="contained" />}
+    >
+      {children}
+    </CatchBoundary>
   )
 }

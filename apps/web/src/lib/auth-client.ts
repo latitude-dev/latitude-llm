@@ -1,6 +1,6 @@
 import { ssoClient } from "@better-auth/sso/client"
-import { createAuthClient } from "better-auth/client"
 import { magicLinkClient, organizationClient } from "better-auth/client/plugins"
+import { createAuthClient } from "better-auth/react"
 import { AUTH_BASE_PATH } from "./auth-config.ts"
 
 // No `baseURL`: Better Auth's client resolves `window.location.origin` in the
