@@ -4,7 +4,8 @@ import {
   orchestrateTraceEndLiveEvaluationExecutesUseCase,
 } from "@domain/evaluations"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
-import { OrganizationId } from "@domain/shared"
+import { type FilterSet, OrganizationId, ProjectId, SignalId } from "@domain/shared"
+import { SignalRepository } from "@domain/signals"
 import {
   loadTraceForTraceEndUseCase,
   selectTraceEndItemsUseCase,
@@ -23,6 +24,7 @@ import {
   OutboxEventWriterLive,
   type PostgresClient,
   ScoreRepositoryLive,
+  SignalRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
@@ -114,7 +116,20 @@ export const runSignalsMatchJob =
       const traceDetail = loaded.traceDetail
 
       const activeEvaluations = yield* listAllActiveEvaluations({ projectId: traceDetail.projectId })
-      const evalBuilt = buildTraceEndEvaluationSelectionInputs(activeEvaluations)
+
+      // The filter pre-gate is the owning signal's `filters` (canonical), not the retired
+      // `evaluation.trigger.filter`. Batch-load the signals once for the scanned evaluations.
+      const signalRepository = yield* SignalRepository
+      const signalIds = [...new Set(activeEvaluations.map((evaluation) => evaluation.signalId))].map(SignalId)
+      const signals =
+        signalIds.length > 0
+          ? yield* signalRepository.findByIds({ projectId: ProjectId(traceDetail.projectId), signalIds })
+          : []
+      const filtersBySignalId = new Map<string, FilterSet | null>(
+        signals.map((signal) => [signal.id, signal.filters ?? null]),
+      )
+
+      const evalBuilt = buildTraceEndEvaluationSelectionInputs(activeEvaluations, filtersBySignalId)
 
       const decisions = yield* selectTraceEndItemsUseCase({
         organizationId: payload.organizationId,
@@ -169,7 +184,7 @@ export const runSignalsMatchJob =
       } satisfies SignalsMatchRunResult
     }).pipe(
       withPostgres(
-        Layer.mergeAll(EvaluationRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive),
+        Layer.mergeAll(EvaluationRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive, SignalRepositoryLive),
         postgresClient,
         OrganizationId(payload.organizationId),
       ),

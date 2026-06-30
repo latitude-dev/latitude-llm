@@ -6,7 +6,15 @@ import { getLiveEvaluationEligibility } from "../../helpers.ts"
 
 export const buildLiveTraceEndEvaluationSelectionKey = (evaluationId: string) => `live-evaluation:${evaluationId}`
 
-export const buildTraceEndEvaluationSelectionInputs = (activeEvaluations: readonly Evaluation[]) => {
+/**
+ * The live filter pre-gate reads the owning signal's `filters` (canonical), not the evaluation's
+ * `trigger.filter` (retired). `filtersBySignalId` carries each active evaluation's signal filters;
+ * a missing entry or null means no pre-gate (match all traces).
+ */
+export const buildTraceEndEvaluationSelectionInputs = (
+  activeEvaluations: readonly Evaluation[],
+  filtersBySignalId: ReadonlyMap<string, FilterSet | null>,
+) => {
   const evaluationEligibility = activeEvaluations.map((evaluation) => ({
     evaluation,
     eligibility: getLiveEvaluationEligibility(evaluation),
@@ -25,9 +33,10 @@ export const buildTraceEndEvaluationSelectionInputs = (activeEvaluations: readon
   for (const evaluation of eligibleEvaluations) {
     const key = buildLiveTraceEndEvaluationSelectionKey(evaluation.id)
     evaluationByKey.set(key, evaluation)
+    const filter = filtersBySignalId.get(evaluation.signalId) ?? null
     items[key] = {
       sampling: evaluation.trigger.sampling,
-      ...(evaluation.trigger.filter ? { filter: evaluation.trigger.filter as FilterSet } : {}),
+      ...(filter ? { filter } : {}),
       sampleKey: evaluation.id,
     }
   }
