@@ -105,5 +105,7 @@ export const SANDBOX_PRELUDE = `;(() => {
   session.conversation = conversation
   // Deep-freeze the whole payload so a script cannot mutate the session (traces, tools, metrics) it reads.
   globalThis.session = deepFreeze(session)
+  // Alias for backwards-compatibility: scripts written before session scoping can reference conversation directly.
+  globalThis.conversation = session.conversation
 })()
 `
