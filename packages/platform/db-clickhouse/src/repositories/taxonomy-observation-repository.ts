@@ -122,6 +122,9 @@ const toDomainObservation = (row: TaxonomyObservationRow): TaxonomyMomentObserva
   taxonomyMomentObservationSchema.parse({
     organizationId: OrganizationId(row.organization_id),
     projectId: ProjectId(row.project_id),
+    // Legacy rows written before the write path gained .slice(0,24) carry full-length
+    // hash strings; truncate so they pass cuidSchema. TODO: remove once retention
+    // has expired all pre-fix rows from taxonomy_observations.
     observationId: row.observation_id.slice(0, 24),
     sessionId: SessionId(row.session_id),
     analysisHash: row.analysis_hash,
