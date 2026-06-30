@@ -359,6 +359,11 @@ export const SEED_LATITUDE_TAXONOMY_PROJECT_ID = ProjectId("taxonomypr06afjbcb7g
 export const SEED_LATITUDE_TAXONOMY_PROJECT_NAME = "Latitude Taxonomy"
 export const SEED_LATITUDE_TAXONOMY_PROJECT_SLUG = LATITUDE_TELEMETRY_PROJECT_SLUGS.taxonomy
 
+export const SEED_LATITUDE_EVALUATION_SCRIPT_GENERATION_PROJECT_ID = ProjectId("evalscript07afjbcb7gzwlg")
+export const SEED_LATITUDE_EVALUATION_SCRIPT_GENERATION_PROJECT_NAME = "Latitude Evaluation Script Generation"
+export const SEED_LATITUDE_EVALUATION_SCRIPT_GENERATION_PROJECT_SLUG =
+  LATITUDE_TELEMETRY_PROJECT_SLUGS.evaluationScriptGeneration
+
 // ---------------------------------------------------------------------------
 // Test Mode — second org (empty-sandbox state) and Acme sandboxes
 // ---------------------------------------------------------------------------

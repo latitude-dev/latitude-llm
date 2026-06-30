@@ -14,6 +14,7 @@ Each feature is dogfooded into its own Latitude project (one project per AI feat
 | Annotation Enrichment | `latitude-annotation-enrichment` |
 | Flagger Instruction Extraction / Classification / Drafting | `latitude-flaggers` |
 | Evaluation Judge (live / alignment / optimization) | `latitude-evaluations` |
+| Evaluation Script Generation | `latitude-evaluation-script-generation` |
 | Optimization Proposal (GEPA) | `latitude-optimizations` |
 | Taxonomy Naming (propose themes / name cluster) | `latitude-taxonomy` |
 
@@ -190,6 +191,22 @@ Each feature is dogfooded into its own Latitude project (one project per AI feat
 >
 > - `packages/domain/evaluations/src/use-cases/optimization/evaluate-optimization-candidate.ts`
 > - `apps/workflows/src/activities/evaluation-optimization-activities.ts`
+
+> **Evaluation Script Generation**
+> Generates an arbitrary sandbox evaluation script from a freeform user prompt, teaching the model the frozen `session` schema. Each candidate is smoke-tested in the sandbox against one representative project session; on failure the sandbox error is fed back and the script is regenerated (up to 3 attempts). Model resolves under feature `EVALUATION_SCRIPT_GENERATOR`.
+> **Tags:** `eval:script-generation`
+> **Metadata:**
+>
+> ```json
+> {
+>   "organizationId": "",
+>   "projectId": ""
+> }
+> ```
+>
+> **Called from:**
+>
+> - `packages/domain/evaluations/src/use-cases/create-script-from-prompt.ts`
 
 ## GEPA / optimization
 
