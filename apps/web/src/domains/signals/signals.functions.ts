@@ -1,35 +1,19 @@
-import { EvaluationRepository } from "@domain/evaluations"
 import { exportSelectionSchema } from "@domain/exports"
-import {
-  ScoreAnalyticsRepository,
-  ScoreRepository,
-  type SignalDimension,
-  type SignalEscalationThresholdBucket,
-} from "@domain/scores"
-import {
-  type FilterCondition,
-  type FilterSet,
-  OrganizationId,
-  ProjectId,
-  resolveSettings,
-  SettingsReader,
-  SignalId,
-} from "@domain/shared"
+import { WorkflowQuerier } from "@domain/queue"
+import { ScoreAnalyticsRepository, type SignalDimension, type SignalEscalationThresholdBucket } from "@domain/scores"
+import { OrganizationId, ProjectId, SignalId } from "@domain/shared"
 import {
   type ApplySignalLifecycleCommandResult,
   applySignalLifecycleCommandUseCase,
-  buildHistogramBucketScaffold,
-  DEFAULT_ESCALATION_SENSITIVITY_K,
   type DimensionPattern,
   deriveSignalLifecycleStates,
   embedSignalSearchQueryUseCase,
-  fillBuckets,
-  getEscalationOccurrenceThreshold,
-  getRelatedSignalsUseCase,
+  getSignalDetailPageUseCase,
   type ListSignalsResult,
   listSignalsUseCase,
   type OrgSignalSearchItem,
-  rankDimensionValues,
+  resolvedListSearchFilters,
+  resolveSignalListSearchUseCase,
   type Signal,
   type SignalListItem,
   SignalRepository,
@@ -40,10 +24,9 @@ import {
   signalsLifecycleGroupSchema,
   signalsSortDirectionSchema,
   signalsSortFieldSchema,
-  TAG_AGGREGATION_FALLBACK_DAYS,
   updateSignalTriageUseCase,
 } from "@domain/signals"
-import { SessionRepository, TraceRepository } from "@domain/spans"
+import { SessionRepository } from "@domain/spans"
 import { AIEmbedLive, withAi } from "@platform/ai"
 import {
   ScoreAnalyticsRepositoryLive,
@@ -67,7 +50,13 @@ import { z } from "zod"
 import { enforceExportRequestRateLimit } from "../../domains/exports/export-rate-limit.ts"
 import { ensureSession } from "../../domains/sessions/session.functions.ts"
 import { getSessionOrganizationId, requireSession } from "../../server/auth.ts"
-import { getClickhouseClient, getPostgresClient, getQueuePublisher, getRedisClient } from "../../server/clients.ts"
+import {
+  getClickhouseClient,
+  getPostgresClient,
+  getQueuePublisher,
+  getRedisClient,
+  getWorkflowQuerier,
+} from "../../server/clients.ts"
 import {
   type EvaluationSummaryRecord,
   toEvaluationSummaryRecord,
@@ -148,27 +137,6 @@ const toSignalsListResultRecord = (result: ListSignalsResult, viewerUserId: stri
 
 export type SignalsListResultRecord = ReturnType<typeof toSignalsListResultRecord>
 
-const signalRowMetricsInputSchema = z.object({
-  projectId: z.string(),
-  signalIds: z.array(z.string()).min(1).max(100),
-  timeRange: z
-    .object({
-      fromIso: z.iso.datetime().optional(),
-      toIso: z.iso.datetime().optional(),
-    })
-    .optional(),
-})
-
-export interface SignalRowMetricRecord {
-  readonly occurrences: number
-  readonly affectedSessionsPercent: number
-  readonly trend: readonly ReturnType<typeof toSignalsBucketRecord>[]
-}
-
-export interface SignalRowMetricsRecord {
-  readonly metricsBySignalId: Readonly<Record<string, SignalRowMetricRecord>>
-}
-
 const signalInputSchema = z.object({
   projectId: z.string(),
   signalId: z.string(),
@@ -247,16 +215,6 @@ const relatedSignalsInputSchema = z.object({
   signalId: z.string(),
 })
 
-// Cap on how many pinpointed example occurrences the carousel loads. Examples
-// are for eyeballing a few representative failures, not exhaustive browsing
-// (the Traces section covers full enumeration).
-const SIGNAL_EXAMPLES_LIMIT = 30
-
-const toUtcDayEnd = (value: Date): Date =>
-  new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate(), 23, 59, 59, 999))
-
-const SIGNAL_DETAIL_TREND_BUCKET_SECONDS = 12 * 60 * 60 // 12h
-
 const toSignalDetailRecord = (input: {
   readonly issue: Signal
   readonly states: readonly string[]
@@ -322,10 +280,7 @@ type SignalLifecycleCommandRecord = ReturnType<typeof toSignalLifecycleCommandRe
 
 type ListSignalsRequest = z.infer<typeof listSignalsInputSchema>
 
-const runSignalsList = async (
-  data: ListSignalsRequest,
-  options: { readonly includeAnalytics: boolean; readonly includeItems?: boolean },
-): Promise<SignalsListResultRecord> => {
+const runSignalsList = async (data: ListSignalsRequest): Promise<SignalsListResultRecord> => {
   const { organizationId, userId } = await requireSession()
   const orgId = OrganizationId(organizationId)
   const pgClient = getPostgresClient()
@@ -335,33 +290,11 @@ const runSignalsList = async (
 
   const result = await Effect.runPromise(
     Effect.gen(function* () {
-      const directMatch = trimmedSearchQuery
-        ? yield* Effect.gen(function* () {
-            const signalRepo = yield* SignalRepository
-            const [byId, bySlug] = yield* Effect.all(
-              [
-                signalRepo
-                  .findById(SignalId(trimmedSearchQuery))
-                  .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
-                signalRepo
-                  .findBySlug({ projectId: ProjectId(data.projectId), slug: trimmedSearchQuery })
-                  .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
-              ],
-              { concurrency: 2 },
-            )
-            const idMatch = byId && byId.projectId === data.projectId ? byId : null
-            return idMatch ?? bySlug
-          })
-        : null
-
-      const search =
-        options.includeAnalytics && trimmedSearchQuery && !directMatch
-          ? yield* embedSignalSearchQueryUseCase({
-              organizationId,
-              projectId: data.projectId,
-              query: trimmedSearchQuery,
-            })
-          : undefined
+      const resolvedSearch = yield* resolveSignalListSearchUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        ...(trimmedSearchQuery ? { searchQuery: trimmedSearchQuery } : {}),
+      })
 
       const timeRange =
         data.timeRange?.fromIso || data.timeRange?.toIso
@@ -376,24 +309,12 @@ const runSignalsList = async (
         projectId: data.projectId,
         ...(data.limit !== undefined ? { limit: data.limit } : {}),
         ...(data.offset !== undefined ? { offset: data.offset } : {}),
-        includeAnalytics: options.includeAnalytics,
-        ...(options.includeItems !== undefined ? { includeItems: options.includeItems } : {}),
+        include: ["items", "summary"],
         ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
         ...(data.assigneeIds?.length ? { assigneeIds: data.assigneeIds } : {}),
         ...(data.sort ? { sort: data.sort } : {}),
         ...(timeRange ? { timeRange } : {}),
-        ...(directMatch
-          ? { signalIds: [directMatch.id] }
-          : search
-            ? {
-                search: {
-                  query: search.query,
-                  normalizedEmbedding: search.normalizedEmbedding,
-                },
-              }
-            : trimmedSearchQuery
-              ? { textSearchQuery: trimmedSearchQuery }
-              : {}),
+        ...resolvedListSearchFilters(resolvedSearch),
       })
     }).pipe(
       withPostgres(Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive), pgClient, orgId),
@@ -408,105 +329,29 @@ const runSignalsList = async (
 
 export const listSignals = createServerFn({ method: "GET" })
   .inputValidator(listSignalsInputSchema)
-  .handler(async ({ data }): Promise<SignalsListResultRecord> => runSignalsList(data, { includeAnalytics: false }))
+  .handler(async ({ data }): Promise<SignalsListResultRecord> => runSignalsList(data))
 
-export const getSignalsAnalytics = createServerFn({ method: "GET" })
-  .inputValidator(listSignalsInputSchema)
-  .handler(
-    async ({ data }): Promise<SignalsListResultRecord> =>
-      runSignalsList(data, { includeAnalytics: true, includeItems: false }),
-  )
+const runSignalDetailPage = async <A>(
+  organizationId: OrganizationId,
+  program: Effect.Effect<A, unknown, unknown>,
+): Promise<A> => {
+  const pgClient = getPostgresClient()
+  const chClient = getClickhouseClient()
+  const workflowQuerier = await getWorkflowQuerier()
 
-export const getSignalRowMetrics = createServerFn({ method: "GET" })
-  .inputValidator(signalRowMetricsInputSchema)
-  .handler(async ({ data }): Promise<SignalRowMetricsRecord> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
-    const chClient = getClickhouseClient()
-    const timeRange =
-      data.timeRange?.fromIso || data.timeRange?.toIso
-        ? {
-            ...(data.timeRange?.fromIso ? { from: new Date(data.timeRange.fromIso) } : {}),
-            ...(data.timeRange?.toIso ? { to: new Date(data.timeRange.toIso) } : {}),
-          }
-        : undefined
-
-    const trendTo = new Date(timeRange?.to ?? timeRange?.from ?? new Date())
-    trendTo.setUTCHours(23, 59, 59, 999)
-    const trendFrom = new Date(trendTo)
-    trendFrom.setUTCDate(trendFrom.getUTCDate() - 13)
-    trendFrom.setUTCHours(0, 0, 0, 0)
-    const trendScaffold: string[] = []
-    const trendCursor = new Date(trendFrom)
-    while (trendCursor.getTime() <= trendTo.getTime()) {
-      trendScaffold.push(trendCursor.toISOString().slice(0, 10))
-      trendCursor.setUTCDate(trendCursor.getUTCDate() + 1)
-    }
-
-    return Effect.runPromise(
-      Effect.gen(function* () {
-        const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
-        const sessionRepository = yield* SessionRepository
-        const startTimeConditions: FilterCondition[] = []
-        if (timeRange?.from) startTimeConditions.push({ op: "gte", value: timeRange.from.toISOString() })
-        if (timeRange?.to) startTimeConditions.push({ op: "lte", value: timeRange.to.toISOString() })
-        const sessionCountFilters: FilterSet | undefined =
-          startTimeConditions.length > 0 ? { startTime: startTimeConditions } : undefined
-        const signalIds = data.signalIds.map(SignalId)
-        const [metrics, sessionCount, trendSeries] = yield* Effect.all([
-          scoreAnalyticsRepository.listSignalWindowMetrics({
-            organizationId: orgId,
-            projectId: ProjectId(data.projectId),
-            signalIds,
-            ...(timeRange ? { timeRange } : {}),
-          }),
-          sessionRepository.countByProjectId({
-            organizationId: orgId,
-            projectId: ProjectId(data.projectId),
-            ...(sessionCountFilters ? { filters: sessionCountFilters } : {}),
-          }),
-          scoreAnalyticsRepository.trendBySignals({
-            organizationId: orgId,
-            projectId: ProjectId(data.projectId),
-            signalIds,
-            timeRange: { from: trendFrom, to: trendTo },
-          }),
-        ])
-
-        const metricsBySignalId = new Map(metrics.map((metric) => [metric.signalId as string, metric] as const))
-        const trendBySignalId = new Map(
-          trendSeries.map((series) => [
-            series.signalId as string,
-            fillBuckets({ scaffold: trendScaffold, buckets: series.buckets }).map(toSignalsBucketRecord),
-          ]),
-        )
-
-        return {
-          metricsBySignalId: Object.fromEntries(
-            data.signalIds.map((signalId) => {
-              const metric = metricsBySignalId.get(signalId)
-              return [
-                signalId,
-                {
-                  occurrences: metric?.occurrences ?? 0,
-                  affectedSessionsPercent:
-                    !metric || sessionCount.totalCount === 0
-                      ? 0
-                      : Math.min(metric.affectedSessions / sessionCount.totalCount, 1),
-                  trend:
-                    trendBySignalId.get(signalId) ??
-                    fillBuckets({ scaffold: trendScaffold, buckets: [] }).map(toSignalsBucketRecord),
-                },
-              ]
-            }),
-          ),
-        } satisfies SignalRowMetricsRecord
-      }).pipe(
-        withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive), chClient, orgId),
-        withTracing,
+  return Effect.runPromise(
+    program.pipe(
+      withPostgres(
+        Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive, ScoreRepositoryLive, SettingsReaderLive),
+        pgClient,
+        organizationId,
       ),
-    )
-  })
+      withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive), chClient, organizationId),
+      Effect.provide(Layer.succeed(WorkflowQuerier, workflowQuerier)),
+      withTracing,
+    ) as Effect.Effect<A, unknown, never>,
+  )
+}
 
 export interface OrgSignalSearchRecord {
   readonly id: string
@@ -569,7 +414,11 @@ export const searchOrgSignals = createServerFn({ method: "GET" })
           ...(data.preferProjectId !== undefined ? { preferProjectId: ProjectId(data.preferProjectId) } : {}),
           ...(data.limit !== undefined ? { limit: data.limit } : {}),
         })
-      }).pipe(withPostgres(SignalRepositoryLive, pgClient, orgId), withAi(AIEmbedLive, redisClient), withTracing),
+      }).pipe(
+        withPostgres(SignalRepositoryLive, pgClient, orgId),
+        withAi(AIEmbedLive, redisClient),
+        withTracing,
+      ) as Effect.Effect<readonly OrgSignalSearchItem[], unknown, never>,
     )
 
     return results.map(toOrgSignalSearchRecord)
@@ -641,134 +490,35 @@ export const getSignalDetail = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<SignalDetailRecord | null> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
-    const pgClient = getPostgresClient()
-    const chClient = getClickhouseClient()
-    const projectId = ProjectId(data.projectId)
-    const signalId = SignalId(data.signalId)
-    const now = new Date()
 
-    return Effect.runPromise(
-      Effect.gen(function* () {
-        const signalRepository = yield* SignalRepository
-        const evaluationRepository = yield* EvaluationRepository
-        const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
-        const scoreRepository = yield* ScoreRepository
-        const settingsReader = yield* SettingsReader
-
-        const issues = yield* signalRepository.findByIds({
-          projectId,
-          signalIds: [signalId],
-        })
-        const issue = issues[0]
-
-        if (!issue) {
-          return null
-        }
-
-        const trendTo = toUtcDayEnd(now)
-        const trendFrom = new Date(trendTo)
-        trendFrom.setUTCDate(trendFrom.getUTCDate() - 13)
-        trendFrom.setUTCHours(0, 0, 0, 0)
-        const trendScaffold = buildHistogramBucketScaffold({
-          from: trendFrom,
-          to: trendTo,
-          bucketSeconds: SIGNAL_DETAIL_TREND_BUCKET_SECONDS,
-        })
-
-        // Match the listSignalsUseCase tag-aggregation window so the drawer
-        // and the table show a consistent set of tags for the same issue.
-        const tagsFrom = new Date(now)
-        tagsFrom.setUTCDate(tagsFrom.getUTCDate() - TAG_AGGREGATION_FALLBACK_DAYS)
-
-        // `escalation.sensitivity` is the user-facing `k_short` knob on the
-        // seasonal detector — read raw here (not via `resolveSettings`) since
-        // the cascade only surfaces `keepMonitoring` today.
-        // TODO: Remove this after releasing monitors for everybody — the knob
-        // moves onto the system "Signal escalating" monitor's alert condition.
-        const projectSettings = yield* settingsReader.getProjectSettings(projectId)
-        const kShort = projectSettings?.escalation?.sensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K
-
-        // Only flagger-sourced issues need the slug query — annotation/custom issues
-        // never carry a `metadata.flaggerSlug` so we skip the Postgres read entirely.
-        const flaggerSlugsEffect =
-          issue.source === "flagger"
-            ? scoreRepository.listFlaggerSlugsBySignalId({ projectId, signalId: issue.id })
-            : Effect.succeed<readonly string[]>([])
-
-        const [occurrences, trend, thresholdSeries, evaluationPage, tagsAggregates, flaggerSlugs, settings] =
-          yield* Effect.all([
-            scoreAnalyticsRepository.aggregateBySignals({
-              organizationId: orgId,
-              projectId,
-              signalIds: [issue.id],
-            }),
-            scoreAnalyticsRepository.trendBySignal({
-              organizationId: orgId,
-              projectId,
-              signalId: issue.id,
-              days: 14,
-              bucketSeconds: SIGNAL_DETAIL_TREND_BUCKET_SECONDS,
-            }),
-            scoreAnalyticsRepository.escalationThresholdHistogramBySignals({
-              organizationId: orgId,
-              projectId,
-              signalIds: [issue.id],
-              timeRange: { from: trendFrom, to: trendTo },
-              bucketSeconds: SIGNAL_DETAIL_TREND_BUCKET_SECONDS,
-              kShort,
-            }),
-            evaluationRepository.listBySignalId({
-              projectId,
-              signalId: issue.id,
-              options: {
-                lifecycle: "active",
-                limit: 1000,
-              },
-            }),
-            scoreAnalyticsRepository.aggregateTagsBySignals({
-              organizationId: orgId,
-              projectId,
-              signalIds: [issue.id],
-              timeRange: { from: tagsFrom, to: now },
-            }),
-            flaggerSlugsEffect,
-            resolveSettings({ projectId }),
-          ])
-
-        const occurrence = occurrences[0] ?? null
-        const thresholdBuckets = thresholdSeries[0]?.buckets ?? []
-
-        return toSignalDetailRecord({
-          issue,
-          states: deriveSignalLifecycleStates({
-            issue,
-            isEscalating: issue.lifecycle.isEscalating,
-            now,
-          }),
-          firstSeenAt: occurrence?.firstSeenAt ?? null,
-          lastSeenAt: occurrence?.lastSeenAt ?? null,
-          totalOccurrences: occurrence?.totalOccurrences ?? 0,
-          escalationOccurrenceThreshold:
-            occurrence !== null ? getEscalationOccurrenceThreshold(occurrence.baselineAvgOccurrences) : null,
-          trend: fillBuckets({
-            scaffold: trendScaffold,
-            buckets: trend,
-          }),
-          trendBucketSeconds: SIGNAL_DETAIL_TREND_BUCKET_SECONDS,
-          trendEscalationThresholds: thresholdBuckets,
-          evaluations: evaluationPage.items.map(toEvaluationSummaryRecord),
-          tags: tagsAggregates[0]?.tags ?? [],
-          flaggerSlugs,
-          keepMonitoringDefault: settings.keepMonitoring,
-        })
+    return runSignalDetailPage(
+      orgId,
+      getSignalDetailPageUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        signalId: SignalId(data.signalId),
+        sections: ["core"],
       }).pipe(
-        withPostgres(
-          Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive, ScoreRepositoryLive, SettingsReaderLive),
-          pgClient,
-          orgId,
+        Effect.map((page) =>
+          page.core
+            ? toSignalDetailRecord({
+                issue: page.core.issue,
+                states: page.core.states,
+                firstSeenAt: page.core.firstSeenAt,
+                lastSeenAt: page.core.lastSeenAt,
+                totalOccurrences: page.core.totalOccurrences,
+                escalationOccurrenceThreshold: page.core.escalationOccurrenceThreshold,
+                trend: page.core.trend,
+                trendBucketSeconds: page.core.trendBucketSeconds,
+                trendEscalationThresholds: page.core.trendEscalationThresholds,
+                evaluations: page.core.evaluations.map(toEvaluationSummaryRecord),
+                tags: page.core.tags,
+                flaggerSlugs: page.core.flaggerSlugs,
+                keepMonitoringDefault: page.core.keepMonitoringDefault,
+              })
+            : null,
         ),
-        withClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId),
-        withTracing,
+        Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
       ),
     )
   })
@@ -846,38 +596,23 @@ export const getSignalImpact = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<SignalImpactRecord> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
-    const chClient = getClickhouseClient()
-    const projectId = ProjectId(data.projectId)
-    const signalId = SignalId(data.signalId)
 
-    return Effect.runPromise(
-      Effect.gen(function* () {
-        const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
-        const traceRepository = yield* TraceRepository
-
-        const [impact, totalProjectTraces] = yield* Effect.all([
-          scoreAnalyticsRepository.aggregateImpactBySignal({ organizationId: orgId, projectId, signalId }),
-          traceRepository.countByProjectId({ organizationId: orgId, projectId }),
-        ])
-
-        const affectedTracesPercent =
-          totalProjectTraces === 0 ? 0 : Math.min(impact.affectedTraces / totalProjectTraces, 1)
-
-        return {
-          occurrences: impact.occurrences,
-          affectedTraces: impact.affectedTraces,
-          affectedSessions: impact.affectedSessions,
-          affectedUsers: impact.affectedUsers,
-          costMicrocents: impact.costMicrocents,
-          tokens: impact.tokens,
-          totalProjectTraces,
-          affectedTracesPercent,
-        } satisfies SignalImpactRecord
+    const impact = await runSignalDetailPage(
+      orgId,
+      getSignalDetailPageUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        signalId: SignalId(data.signalId),
+        sections: ["impact"],
       }).pipe(
-        withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive), chClient, orgId),
-        withTracing,
+        Effect.map((page) => page.impact),
+        Effect.flatMap((impact) =>
+          impact ? Effect.succeed(impact) : Effect.fail(new Error("Signal impact unavailable")),
+        ),
       ),
     )
+
+    return impact satisfies SignalImpactRecord
   })
 
 export interface SignalDimensionsRecord {
@@ -894,28 +629,23 @@ export const getSignalDimensions = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<SignalDimensionsRecord> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
-    const chClient = getClickhouseClient()
-    const projectId = ProjectId(data.projectId)
-    const signalId = SignalId(data.signalId)
 
-    const comparison = await Effect.runPromise(
-      Effect.gen(function* () {
-        const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
-        return yield* scoreAnalyticsRepository.aggregateDimensionBySignal({
-          organizationId: orgId,
-          projectId,
-          signalId,
-          dimension: data.dimension,
-        })
-      }).pipe(withClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId), withTracing),
+    const pattern = await runSignalDetailPage(
+      orgId,
+      getSignalDetailPageUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        signalId: SignalId(data.signalId),
+        sections: ["patterns"],
+      }).pipe(
+        Effect.flatMap((page) => {
+          const match = page.patterns?.find((entry) => entry.dimension === data.dimension)
+          return match ? Effect.succeed(match) : Effect.fail(new Error("Signal dimension unavailable"))
+        }),
+      ),
     )
 
-    return {
-      dimension: comparison.dimension,
-      baseRate: comparison.baseRate,
-      signalAffectedTraces: comparison.signalAffectedTraces,
-      patterns: rankDimensionValues(comparison),
-    }
+    return pattern satisfies SignalDimensionsRecord
   })
 
 /** One Related-list row: why another issue relates to this one, plus identity to render/link it. */
@@ -947,19 +677,15 @@ export const getRelatedSignals = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<readonly RelatedSignalRecord[]> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
-    const pgClient = getPostgresClient()
-    const chClient = getClickhouseClient()
 
-    const related = await Effect.runPromise(
-      getRelatedSignalsUseCase({
+    const related = await runSignalDetailPage(
+      orgId,
+      getSignalDetailPageUseCase({
         organizationId: orgId,
         projectId: ProjectId(data.projectId),
         signalId: SignalId(data.signalId),
-      }).pipe(
-        withPostgres(SignalRepositoryLive, pgClient, orgId),
-        withClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId),
-        withTracing,
-      ),
+        sections: ["related"],
+      }).pipe(Effect.map((page) => page.related ?? [])),
     )
 
     return related.map(
@@ -1007,49 +733,28 @@ export const getSignalOccurrences = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<{ readonly items: readonly SignalOccurrenceRecord[] }> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
-    const pgClient = getPostgresClient()
-    const projectId = ProjectId(data.projectId)
-    const signalId = SignalId(data.signalId)
 
-    const page = await Effect.runPromise(
-      Effect.gen(function* () {
-        const scoreRepository = yield* ScoreRepository
-        return yield* scoreRepository.listBySignalId({
-          projectId,
-          signalId,
-          source: "annotation",
-          options: { limit: SIGNAL_EXAMPLES_LIMIT, draftMode: "exclude" },
-        })
-      }).pipe(withPostgres(ScoreRepositoryLive, pgClient, orgId), withTracing),
+    const occurrences = await runSignalDetailPage(
+      orgId,
+      getSignalDetailPageUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        signalId: SignalId(data.signalId),
+        sections: ["occurrences"],
+      }).pipe(Effect.map((page) => page.occurrences ?? [])),
     )
 
-    const items = page.items.flatMap((score): SignalOccurrenceRecord[] => {
-      // Only annotation scores carry message anchors; skip occurrences without a
-      // trace to render or without a pinpointed message.
-      if (score.sourceType !== "annotation" || score.traceId === null || score.metadata.messageIndex === undefined) {
-        return []
-      }
-      const { messageIndex, partIndex, startOffset, endOffset, textFormat, flaggerSlug } = score.metadata
-      return [
-        {
-          scoreId: score.id,
-          traceId: score.traceId,
-          feedback: score.feedback,
-          createdAt: score.createdAt.toISOString(),
-          annotatorId: score.annotatorId,
-          flaggerSlug: flaggerSlug ?? null,
-          anchor: {
-            messageIndex,
-            partIndex: partIndex ?? null,
-            startOffset: startOffset ?? null,
-            endOffset: endOffset ?? null,
-            textFormat: textFormat ?? null,
-          },
-        },
-      ]
-    })
-
-    return { items }
+    return {
+      items: occurrences.map((occurrence) => ({
+        scoreId: occurrence.scoreId,
+        traceId: occurrence.traceId,
+        feedback: occurrence.feedback,
+        createdAt: occurrence.createdAt.toISOString(),
+        annotatorId: occurrence.annotatorId,
+        flaggerSlug: occurrence.flaggerSlug,
+        anchor: occurrence.anchor,
+      })),
+    }
   })
 
 export interface UpdateSignalTriageRecord {
@@ -1162,13 +867,11 @@ export const applyBulkSignalLifecycleAction = createServerFn({ method: "POST" })
 
       await Effect.runPromise(
         Effect.gen(function* () {
-          const search = trimmedSearchQuery
-            ? yield* embedSignalSearchQueryUseCase({
-                organizationId,
-                projectId: data.projectId,
-                query: trimmedSearchQuery,
-              })
-            : undefined
+          const resolvedSearch = yield* resolveSignalListSearchUseCase({
+            organizationId: orgId,
+            projectId: ProjectId(data.projectId),
+            ...(trimmedSearchQuery ? { searchQuery: trimmedSearchQuery } : {}),
+          })
 
           const timeRange =
             data.timeRange?.fromIso || data.timeRange?.toIso
@@ -1185,19 +888,12 @@ export const applyBulkSignalLifecycleAction = createServerFn({ method: "POST" })
               projectId: data.projectId,
               limit: BULK_ACTION_BATCH_SIZE,
               offset,
-              includeAnalytics: false,
+              include: ["items"],
               ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
               ...(data.assigneeIds?.length ? { assigneeIds: data.assigneeIds } : {}),
               ...(data.sort ? { sort: data.sort } : {}),
               ...(timeRange ? { timeRange } : {}),
-              ...(search
-                ? {
-                    search: {
-                      query: search.query,
-                      normalizedEmbedding: search.normalizedEmbedding,
-                    },
-                  }
-                : {}),
+              ...resolvedListSearchFilters(resolvedSearch),
             })
 
             if (page.items.length === 0) break

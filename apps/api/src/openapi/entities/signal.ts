@@ -2,7 +2,6 @@ import { cuidSchema } from "@domain/shared"
 import type { GetSignalTrendResult, SignalDetails, SignalListItem } from "@domain/signals"
 import { SIGNAL_SOURCES, SIGNAL_STATES } from "@domain/signals"
 import { z } from "@hono/zod-openapi"
-import { Paginated } from "../pagination.ts"
 import { EvaluationSchema, toEvaluationResponse } from "./evaluation.ts"
 
 const TrendBucketSchema = z
@@ -115,7 +114,42 @@ const SignalSchema = z.object(signalListFields).openapi("Signal")
 
 export const SignalDetailSchema = z.object(signalDetailFields).openapi("SignalDetail")
 
-export const PaginatedSignalsSchema = Paginated(SignalSchema, "PaginatedSignals")
+const SignalListAnalyticsCountsSchema = z
+  .object({
+    newSignals: z.number().int().nonnegative(),
+    escalatingSignals: z.number().int().nonnegative(),
+    ongoingSignals: z.number().int().nonnegative(),
+    seenOccurrences: z.number().int().nonnegative(),
+  })
+  .openapi("SignalListAnalyticsCounts")
+
+export const ListSignalsResponseSchema = z
+  .object({
+    items: z.array(SignalSchema).describe("Signals in the current page."),
+    summary: z
+      .object({
+        totalCount: z.number().int().nonnegative(),
+        hasAnySignals: z.boolean(),
+        occurrencesSum: z.number().int().nonnegative(),
+        priorityCounts: z.object({
+          urgent: z.number().int().nonnegative(),
+          high: z.number().int().nonnegative(),
+          medium: z.number().int().nonnegative(),
+          low: z.number().int().nonnegative(),
+          none: z.number().int().nonnegative(),
+        }),
+        analytics: z.object({
+          counts: SignalListAnalyticsCountsSchema,
+          histogram: z.array(SignalHistogramBucketSchema),
+          histogramBucketSeconds: z.number().int().positive(),
+          totalSessions: z.number().int().nonnegative(),
+        }),
+      })
+      .describe("Aggregate counts and histogram for the filtered signal set."),
+    nextCursor: z.string().nullable(),
+    hasMore: z.boolean(),
+  })
+  .openapi("ListSignalsResponse")
 
 export const toSignalResponse = (item: SignalListItem, organizationId: string) => ({
   id: item.id,

@@ -169,7 +169,7 @@ export function SignalDetailBody({
     signalId,
     enabled: issue !== null,
   })
-  const totalSessionCount = useSignalSessionsCount({ projectId, signalId, enabled: issue !== null })
+  const { data: totalSessionCount = 0 } = useSignalSessionsCount({ projectId, signalId, enabled: issue !== null })
   const [sessionSheetSessionId, setSessionSheetSessionId] = useState<string | null>(null)
   const [sessionSheetOpen, setSessionSheetOpen] = useState(false)
   const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)

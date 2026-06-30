@@ -192,6 +192,19 @@ export {
   type SignalAnalyticsOccurrencesMetric,
 } from "./use-cases/get-signal-analytics.ts"
 export {
+  type GetSignalDetailPageError,
+  type GetSignalDetailPageInput,
+  type GetSignalDetailPageResult,
+  getSignalDetailPageUseCase,
+  type SignalDetailCore,
+  type SignalDetailImpact,
+  type SignalDetailOccurrence,
+  type SignalDetailPattern,
+  type SignalDetailSection,
+  type SignalDetailSessions,
+  signalDetailSectionSchema,
+} from "./use-cases/get-signal-detail-page.ts"
+export {
   type GetSignalDetailsError,
   type GetSignalDetailsInput,
   getSignalDetailsUseCase,
@@ -211,8 +224,10 @@ export {
 } from "./use-cases/list-signal-traces.ts"
 export {
   type ListSignalsError,
+  type ListSignalsInclude,
   type ListSignalsInput,
   type ListSignalsResult,
+  listSignalsIncludeSchema,
   listSignalsUseCase,
   type SignalAssigneeFilter,
   type SignalListAnalytics,
@@ -254,6 +269,12 @@ export {
   type RetrievalResult,
   rerankSignalCandidatesUseCase,
 } from "./use-cases/rerank-signal-candidates.ts"
+export {
+  type ResolvedSignalListSearch,
+  type ResolveSignalListSearchInput,
+  resolvedListSearchFilters,
+  resolveSignalListSearchUseCase,
+} from "./use-cases/resolve-signal-list-search.ts"
 export {
   type OrgSignalSearchItem,
   type SearchOrgSignalsInput,

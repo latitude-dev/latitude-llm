@@ -19,11 +19,7 @@ import {
 } from "../../../../../../components/signals/signal-priority-meta.tsx"
 import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
 import type { MemberRecord } from "../../../../../../domains/members/members.functions.ts"
-import type {
-  SignalRecord,
-  SignalRowMetricsRecord,
-  SignalsListResultRecord,
-} from "../../../../../../domains/signals/signals.functions.ts"
+import type { SignalRecord, SignalsListResultRecord } from "../../../../../../domains/signals/signals.functions.ts"
 import {
   ListingLayout as Layout,
   listingLayoutIntrinsicScroll,
@@ -144,7 +140,6 @@ export interface SignalsTableSorting {
 
 export function SignalsView({
   issues,
-  rowMetricsBySignalId,
   isLoading,
   infiniteScroll,
   sorting,
@@ -156,7 +151,6 @@ export function SignalsView({
   projectSlug,
 }: {
   readonly issues: readonly SignalRecord[]
-  readonly rowMetricsBySignalId: SignalRowMetricsRecord["metricsBySignalId"]
   readonly isLoading: boolean
   readonly infiniteScroll: InfiniteTableInfiniteScroll
   readonly sorting: SignalsTableSorting
@@ -239,19 +233,16 @@ export function SignalsView({
       header: "Trend",
       width: 176,
       minWidth: 176,
-      render: (issue) => {
-        const metrics = rowMetricsBySignalId[issue.id]
-        return (
-          <SignalTrendBar
-            buckets={metrics?.trend ?? []}
-            height={36}
-            emptyLabel={metrics ? "-" : ""}
-            showLabels={false}
-            states={issue.states}
-            escalationOccurrenceThreshold={issue.escalationOccurrenceThreshold}
-          />
-        )
-      },
+      render: (issue) => (
+        <SignalTrendBar
+          buckets={issue.trend}
+          height={36}
+          emptyLabel={issue.occurrences === 0 ? "-" : ""}
+          showLabels={false}
+          states={issue.states}
+          escalationOccurrenceThreshold={issue.escalationOccurrenceThreshold}
+        />
+      ),
       renderSubheader: () => (
         <div className="flex min-w-0 w-full items-center gap-0.5">
           <Text.H6 color="foregroundMuted" className="min-w-0 truncate tabular-nums">
@@ -268,9 +259,8 @@ export function SignalsView({
       minWidth: 114,
       sortKey: "lastSeen",
       render: (issue) => {
-        const metrics = rowMetricsBySignalId[issue.id]
-        if (!metrics) return <AnalyticsCellSkeleton />
-        if (metrics.occurrences === 0) return <span className="truncate text-muted-foreground">Never</span>
+        if (isLoading) return <AnalyticsCellSkeleton />
+        if (issue.occurrences === 0) return <span className="truncate text-muted-foreground">Never</span>
         return <SeenAtCell lastSeenAtIso={issue.lastSeenAt} firstSeenAtIso={issue.firstSeenAt} />
       },
     },
@@ -281,10 +271,7 @@ export function SignalsView({
       minWidth: 76,
       align: "end",
       sortKey: "occurrences",
-      render: (issue) => {
-        const metrics = rowMetricsBySignalId[issue.id]
-        return metrics ? formatCount(metrics.occurrences) : <AnalyticsCellSkeleton />
-      },
+      render: (issue) => (isLoading ? <AnalyticsCellSkeleton /> : formatCount(issue.occurrences)),
       renderSubheader: () => (
         <div className="flex min-w-0 w-full items-center justify-end gap-0.5">
           <Text.H6 color="foregroundMuted" className="min-w-0 truncate text-center tabular-nums">
@@ -301,10 +288,7 @@ export function SignalsView({
       minWidth: 76,
       align: "end",
       sortKey: "affectedSessions",
-      render: (issue) => {
-        const metrics = rowMetricsBySignalId[issue.id]
-        return metrics ? formatPercent(metrics.affectedSessionsPercent) : <AnalyticsCellSkeleton />
-      },
+      render: (issue) => (isLoading ? <AnalyticsCellSkeleton /> : formatPercent(issue.affectedSessionsPercent)),
     },
   ]
 

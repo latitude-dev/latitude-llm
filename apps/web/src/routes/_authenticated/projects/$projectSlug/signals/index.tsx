@@ -215,7 +215,6 @@ function SignalsPage() {
 
   const {
     data: signalsData,
-    rowMetricsBySignalId,
     analytics,
     occurrencesSum,
     priorityCounts,
@@ -449,7 +448,6 @@ function SignalsPage() {
         </div>
         <SignalsView
           issues={issues}
-          rowMetricsBySignalId={rowMetricsBySignalId}
           isLoading={showSkeletons}
           infiniteScroll={infiniteScroll}
           sorting={sorting}

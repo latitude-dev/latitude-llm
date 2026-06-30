@@ -34,17 +34,18 @@ export function useSignalSearchCommands(query: string): {
   useDebounce(() => setDebouncedQuery(query.trim()), SEMANTIC_DEBOUNCE_MS, [query])
 
   // Lexical tier — instant, fires on every keystroke.
-  const { data: lexicalSignals } = useSignalsOrgSearch(liveQuery, {
+  const { data: lexicalSignals = [] } = useSignalsOrgSearch({
+    query: liveQuery,
     semantic: false,
     enabled: liveQuery.length > 0,
-    preferProjectId: project?.id,
+    ...(project?.id ? { preferProjectId: project.id } : {}),
   })
 
-  // Semantic tier — debounced; embeds the query server-side.
-  const { data: semanticSignals, isLoading: semanticLoading } = useSignalsOrgSearch(debouncedQuery, {
+  const { data: semanticSignals = [], isLoading: semanticLoading } = useSignalsOrgSearch({
+    query: debouncedQuery,
     semantic: true,
     enabled: debouncedQuery.length > 0,
-    preferProjectId: project?.id,
+    ...(project?.id ? { preferProjectId: project.id } : {}),
   })
 
   const commands = useMemo<readonly PaletteCommand[]>(() => {

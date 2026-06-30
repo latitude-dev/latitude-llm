@@ -1294,7 +1294,7 @@ describe("listSignalsUseCase", () => {
       expect(result.priorityCounts).toEqual({ urgent: 1, high: 1, medium: 1, low: 1, none: 1 })
     })
 
-    it("uses the table-row path without analytics on non-analytics reads", async () => {
+    it("loads only items when summary is excluded", async () => {
       const { repository: signalRepository } = createFakeSignalRepository(mixedPrioritySeed.map((entry) => entry.issue))
       const { repository: evaluationRepository } = createEvaluationRepository()
       const aggregateInputs: Array<{ readonly signalIds: readonly string[] }> = []
@@ -1321,7 +1321,7 @@ describe("listSignalsUseCase", () => {
           now,
           limit: 2,
           offset: 2,
-          includeAnalytics: false,
+          include: ["items"],
         }).pipe(
           Effect.provide(
             Layer.mergeAll(
@@ -1337,11 +1337,13 @@ describe("listSignalsUseCase", () => {
       )
 
       expect(result.items.map((item) => item.id)).toEqual([mediumSignal.id, lowSignal.id])
-      expect(aggregateInputs).toEqual([])
+      expect(aggregateInputs.length).toBeGreaterThan(0)
       expect(histogramCalls).toBe(0)
+      expect(result.occurrencesSum).toBe(0)
+      expect(result.priorityCounts).toEqual({ urgent: 0, high: 0, medium: 0, low: 0, none: 0 })
     })
 
-    it("can compute analytics without loading page item enrichments", async () => {
+    it("loads summary without item enrichments when items are excluded", async () => {
       const { repository: signalRepository } = createFakeSignalRepository(mixedPrioritySeed.map((entry) => entry.issue))
       const { repository: evaluationRepository, listBySignalIdsCalls } = createEvaluationRepository()
       let aggregateCalls = 0
@@ -1378,8 +1380,7 @@ describe("listSignalsUseCase", () => {
           organizationId,
           projectId,
           now,
-          includeAnalytics: true,
-          includeItems: false,
+          include: ["summary"],
         }).pipe(
           Effect.provide(
             Layer.mergeAll(

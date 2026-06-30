@@ -15,15 +15,16 @@ import {
   applySignalLifecycleCommandUseCase,
   createSignalUseCase,
   deleteSignalUseCase,
-  embedSignalSearchQueryUseCase,
-  getSignalAnalyticsUseCase,
   getSignalDetailsUseCase,
   getSignalTrendUseCase,
   listSignalsUseCase,
   listSignalTracesUseCase,
+  resolvedListSearchFilters,
+  resolveSignalListSearchUseCase,
   SIGNAL_PRIORITIES,
   type SignalLifecycleCommand,
   SignalRepository,
+  signalAssigneeFilterSchema,
   updateSignalUseCase,
 } from "@domain/signals"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
@@ -50,14 +51,13 @@ import { Effect, Layer } from "effect"
 import { defineApiEndpoint } from "../mcp/index.ts"
 import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
 import {
-  PaginatedSignalsSchema,
+  ListSignalsResponseSchema,
   SignalDetailSchema,
   SignalHistogramSchema,
   toSignalDetailResponse,
   toSignalHistogramResponse,
   toSignalResponse,
 } from "../openapi/entities/signal.ts"
-import { SignalAnalyticsResponseSchema, toSignalAnalyticsResponse } from "../openapi/entities/signal-analytics.ts"
 import { fetchTraceIndicators, PaginatedTracesSchema, toTraceResponse } from "../openapi/entities/trace.ts"
 import { PaginatedQueryParamsSchema } from "../openapi/pagination.ts"
 import {
@@ -252,7 +252,7 @@ const unmuteSignals = buildLifecycleEndpoint({
 })
 
 const SIGNAL_LIFECYCLE_GROUP_VALUES = ["active", "archived"] as const
-const ISSUES_SORT_FIELDS = ["lastSeen", "occurrences", "state"] as const
+const ISSUES_SORT_FIELDS = ["lastSeen", "occurrences", "affectedSessions", "state"] as const
 
 const ListSignalsQuerySchema = PaginatedQueryParamsSchema.extend({
   query: z
@@ -265,11 +265,16 @@ const ListSignalsQuerySchema = PaginatedQueryParamsSchema.extend({
     .enum(SIGNAL_LIFECYCLE_GROUP_VALUES)
     .optional()
     .describe('`"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both.'),
+  assigneeIds: z
+    .array(signalAssigneeFilterSchema)
+    .min(1)
+    .optional()
+    .describe('Filter by assignee user ids. Include `"unassigned"` to match signals with no assignee.'),
   sortBy: z
     .enum(ISSUES_SORT_FIELDS)
     .default("lastSeen")
     .describe(
-      "Sort field. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority.",
+      "Sort field within each priority group. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority; `affectedSessions` by affected session share.",
     ),
   sortDirection: z.enum(["asc", "desc"]).default("desc").describe("Sort direction. Defaults to `desc`."),
   fromIso: z.iso.datetime().optional().describe("Lower bound (inclusive) of the time window. Defaults to ~6 days ago."),
@@ -288,7 +293,7 @@ const listSignals = signalEndpoint({
       "Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `trend`, and `tags`.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, query: ListSignalsQuerySchema },
-    responses: openApiResponses({ status: 200, schema: PaginatedSignalsSchema, description: "Page of signals" }),
+    responses: openApiResponses({ status: 200, schema: ListSignalsResponseSchema, description: "Page of signals" }),
   }),
   handler: async (c) => {
     const { projectSlug } = c.req.valid("param")
@@ -318,23 +323,23 @@ const listSignals = signalEndpoint({
               }
             : undefined
 
-        const search = query.query
-          ? yield* embedSignalSearchQueryUseCase({
-              organizationId: orgId,
-              projectId: project.id,
-              query: query.query,
-            })
-          : undefined
+        const resolvedSearch = yield* resolveSignalListSearchUseCase({
+          organizationId: orgId,
+          projectId: project.id,
+          ...(query.query ? { searchQuery: query.query } : {}),
+        })
 
         const result = yield* listSignalsUseCase({
           organizationId: orgId,
           projectId: project.id,
           limit: query.limit,
           offset,
+          include: ["items", "summary"],
           sort: { field: query.sortBy, direction: query.sortDirection },
           ...(query.lifecycleGroup ? { lifecycleGroup: query.lifecycleGroup } : {}),
+          ...(query.assigneeIds?.length ? { assigneeIds: query.assigneeIds } : {}),
           ...(timeRange ? { timeRange } : {}),
-          ...(search ? { search } : {}),
+          ...resolvedListSearchFilters(resolvedSearch),
         })
         return { result, offset }
       }).pipe(
@@ -356,68 +361,26 @@ const listSignals = signalEndpoint({
     return c.json(
       {
         items: page.result.items.map((item) => toSignalResponse(item, organizationId as string)),
+        summary: {
+          totalCount: page.result.totalCount,
+          hasAnySignals: page.result.hasAnySignals,
+          occurrencesSum: page.result.occurrencesSum,
+          priorityCounts: page.result.priorityCounts,
+          analytics: {
+            counts: page.result.analytics.counts,
+            histogram: page.result.analytics.histogram.map((bucket) => ({
+              bucket: bucket.bucket,
+              count: bucket.count,
+            })),
+            histogramBucketSeconds: page.result.analytics.histogramBucketSeconds,
+            totalSessions: page.result.analytics.totalSessions,
+          },
+        },
         nextCursor: page.result.hasMore ? encodeSignalOffsetCursor(page.offset + page.result.items.length) : null,
         hasMore: page.result.hasMore,
       },
       200,
     )
-  },
-})
-
-const SignalAnalyticsQuerySchema = z.object({
-  fromIso: z.iso
-    .datetime()
-    .optional()
-    .describe("Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`."),
-  toIso: z.iso.datetime().optional().describe("Upper bound (inclusive) of the time range. Defaults to now."),
-})
-
-const getSignalAnalytics = signalEndpoint({
-  route: createRoute({
-    method: "get",
-    path: "/analytics",
-    name: "getSignalAnalytics",
-    tags: ["Signals"],
-    ...signalsFernGroup("analytics"),
-    summary: "Get project signal analytics",
-    description:
-      "Returns signal analytics for the project: counts of ongoing, new, and escalating signals, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
-    security: PROTECTED_SECURITY,
-    request: { params: ProjectParamsSchema, query: SignalAnalyticsQuerySchema },
-    responses: openApiResponses({
-      status: 200,
-      schema: SignalAnalyticsResponseSchema,
-      description: "Signal analytics",
-    }),
-  }),
-  handler: async (c) => {
-    const { projectSlug } = c.req.valid("param")
-    const { fromIso, toIso } = c.req.valid("query")
-    const organizationId = c.var.organization.id
-
-    if (fromIso && toIso && Date.parse(toIso) < Date.parse(fromIso)) {
-      return c.json({ error: "`toIso` must be greater than or equal to `fromIso`." }, 400)
-    }
-
-    const analytics = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-
-        return yield* getSignalAnalyticsUseCase({
-          organizationId: OrganizationId(organizationId as string),
-          projectId: ProjectId(project.id as string),
-          ...(fromIso ? { from: new Date(fromIso) } : {}),
-          ...(toIso ? { to: new Date(toIso) } : {}),
-        })
-      }).pipe(
-        withPostgres(Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive), c.var.postgresClient, organizationId),
-        withClickHouse(ScoreAnalyticsRepositoryLive, c.var.clickhouse, organizationId),
-        withTracing,
-      ),
-    )
-
-    return c.json(toSignalAnalyticsResponse(analytics), 200)
   },
 })
 
@@ -954,7 +917,6 @@ export const createSignalsRoutes = () => {
   createSignal.mountHttp(app, createTierRateLimiter("critical"))
   updateSignal.mountHttp(app, createTierRateLimiter("medium"))
   deleteSignal.mountHttp(app, createTierRateLimiter("medium"))
-  getSignalAnalytics.mountHttp(app, createTierRateLimiter("medium"))
   getSignal.mountHttp(app, createTierRateLimiter("low"))
   getSignalTrend.mountHttp(app, createTierRateLimiter("medium"))
   listSignalTraces.mountHttp(app, createTierRateLimiter("medium"))

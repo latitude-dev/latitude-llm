@@ -65,8 +65,22 @@ describe("Signals Routes Integration", () => {
     )
 
     expect(res.status).toBe(200)
-    const body = (await res.json()) as { items: unknown[]; nextCursor: string | null; hasMore: boolean }
+    const body = (await res.json()) as {
+      items: unknown[]
+      summary: {
+        totalCount: number
+        hasAnySignals: boolean
+        analytics: { counts: { newSignals: number; escalatingSignals: number; ongoingSignals: number } }
+      }
+      nextCursor: string | null
+      hasMore: boolean
+    }
     expect(body.items).toEqual([])
+    expect(body.summary.totalCount).toBe(0)
+    expect(body.summary.hasAnySignals).toBe(false)
+    expect(body.summary.analytics.counts.newSignals).toBe(0)
+    expect(body.summary.analytics.counts.escalatingSignals).toBe(0)
+    expect(body.summary.analytics.counts.ongoingSignals).toBe(0)
     expect(body.nextCursor).toBeNull()
     expect(body.hasMore).toBe(false)
   })
@@ -303,48 +317,46 @@ describe("Signals Routes Integration", () => {
     expect(res.status).toBe(404)
   })
 
-  it<ApiTestContext>("GET /analytics rejects unauthenticated requests with 401", async ({ app }) => {
-    const res = await app.fetch(new Request("http://localhost/v1/projects/foo/signals/analytics"))
-    expect(res.status).toBe(401)
-  })
-
-  it<ApiTestContext>("GET /analytics returns zeroed counters and empty buckets on an empty project", async ({
-    app,
-    database,
-  }) => {
+  it<ApiTestContext>("GET / returns zeroed summary analytics on an empty project", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "7777777777777777aaaaaaaa"
     const slug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const res = await app.fetch(
-      new Request(`http://localhost/v1/projects/${slug}/signals/analytics`, {
+      new Request(`http://localhost/v1/projects/${slug}/signals`, {
         headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
       }),
     )
 
     expect(res.status).toBe(200)
     const body = (await res.json()) as {
-      ongoing: { total: number }
-      new: { total: number }
-      escalating: { total: number }
-      occurrences: { total: number; buckets: ReadonlyArray<{ bucket: string; value: number }> }
+      summary: {
+        analytics: {
+          counts: { newSignals: number; escalatingSignals: number; ongoingSignals: number; seenOccurrences: number }
+          histogram: ReadonlyArray<{ bucket: string; count: number }>
+          totalSessions: number
+        }
+        occurrencesSum: number
+      }
     }
-    expect(body.ongoing.total).toBe(0)
-    expect(body.new.total).toBe(0)
-    expect(body.escalating.total).toBe(0)
-    expect(body.occurrences.total).toBe(0)
-    expect(body.occurrences.buckets.every((b) => b.value === 0)).toBe(true)
-    expect(body.occurrences.buckets.length).toBeGreaterThanOrEqual(14)
+    expect(body.summary.analytics.counts.newSignals).toBe(0)
+    expect(body.summary.analytics.counts.escalatingSignals).toBe(0)
+    expect(body.summary.analytics.counts.ongoingSignals).toBe(0)
+    expect(body.summary.analytics.counts.seenOccurrences).toBe(0)
+    expect(body.summary.occurrencesSum).toBe(0)
+    expect(body.summary.analytics.totalSessions).toBe(0)
+    expect(body.summary.analytics.histogram.every((b) => b.count === 0)).toBe(true)
+    expect(body.summary.analytics.histogram.length).toBeGreaterThanOrEqual(14)
   })
 
-  it<ApiTestContext>("GET /analytics rejects an inverted date range with 400", async ({ app, database }) => {
+  it<ApiTestContext>("GET / rejects an inverted date range with 400", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "8888888888888888aaaaaaaa"
     const slug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const res = await app.fetch(
       new Request(
-        `http://localhost/v1/projects/${slug}/signals/analytics?fromIso=2026-04-15T00:00:00.000Z&toIso=2026-04-14T00:00:00.000Z`,
+        `http://localhost/v1/projects/${slug}/signals?fromIso=2026-04-15T00:00:00.000Z&toIso=2026-04-14T00:00:00.000Z`,
         { headers: createApiKeyAuthHeaders(tenant.apiKeyToken) },
       ),
     )
@@ -352,23 +364,22 @@ describe("Signals Routes Integration", () => {
     expect(res.status).toBe(400)
   })
 
-  it<ApiTestContext>("GET /analytics scopes the bucket series to the requested range", async ({ app, database }) => {
+  it<ApiTestContext>("GET / scopes the summary histogram to the requested range", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "9999999999999999aaaaaaaa"
     const slug = await createProjectRecord(database, tenant.organizationId, projectId)
 
     const res = await app.fetch(
       new Request(
-        `http://localhost/v1/projects/${slug}/signals/analytics?fromIso=2026-04-15T00:00:00.000Z&toIso=2026-04-16T00:00:00.000Z`,
+        `http://localhost/v1/projects/${slug}/signals?fromIso=2026-04-15T00:00:00.000Z&toIso=2026-04-16T00:00:00.000Z`,
         { headers: createApiKeyAuthHeaders(tenant.apiKeyToken) },
       ),
     )
 
     expect(res.status).toBe(200)
-    const body = (await res.json()) as { occurrences: { buckets: ReadonlyArray<{ bucket: string }> } }
-    // 24h range with 12h UTC-aligned buckets → 3 bucket slots (start-inclusive, end-aligned).
-    expect(body.occurrences.buckets.length).toBeGreaterThanOrEqual(2)
-    expect(body.occurrences.buckets.length).toBeLessThanOrEqual(4)
-    expect(body.occurrences.buckets[0]?.bucket.startsWith("2026-04-15")).toBe(true)
+    const body = (await res.json()) as { summary: { analytics: { histogram: ReadonlyArray<{ bucket: string }> } } }
+    expect(body.summary.analytics.histogram.length).toBeGreaterThanOrEqual(2)
+    expect(body.summary.analytics.histogram.length).toBeLessThanOrEqual(4)
+    expect(body.summary.analytics.histogram[0]?.bucket.startsWith("2026-04-15")).toBe(true)
   })
 })
