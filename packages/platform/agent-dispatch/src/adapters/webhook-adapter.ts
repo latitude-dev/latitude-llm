@@ -2,10 +2,11 @@ import { createHmac } from "node:crypto"
 import type { AgentDispatchAdapter } from "@domain/agent-dispatch"
 import { DispatchAdapterError } from "@domain/agent-dispatch"
 import { Effect } from "effect"
+import { type HostLookup, resolvePublicWebhookUrl } from "../host-guard.ts"
 
 const signPayload = (secret: string, body: string): string => createHmac("sha256", secret).update(body).digest("hex")
 
-export const createWebhookAdapter = (): AgentDispatchAdapter => ({
+export const createWebhookAdapter = (lookupHost?: HostLookup): AgentDispatchAdapter => ({
   kind: "webhook",
   dispatch: ({ idempotencyKey, prompt, context, config, credential }) =>
     Effect.gen(function* () {
@@ -15,13 +16,23 @@ export const createWebhookAdapter = (): AgentDispatchAdapter => ({
         return yield* Effect.fail(new DispatchAdapterError({ reason: "config", cause: "missing webhook secret" }))
       }
 
+      const url = yield* Effect.tryPromise({
+        try: () => resolvePublicWebhookUrl(target.webhookUrl, lookupHost),
+        catch: (cause) =>
+          new DispatchAdapterError({
+            reason: cause instanceof Error && cause.message.startsWith("webhook_") ? "config" : "transport",
+            cause,
+          }),
+      })
+
       const body = JSON.stringify({ trigger: context.trigger, context, prompt })
       const signature = signPayload(secret, body)
 
       const response = yield* Effect.tryPromise({
         try: () =>
-          fetch(target.webhookUrl, {
+          fetch(url, {
             method: "POST",
+            redirect: "error",
             headers: {
               "Content-Type": "application/json",
               "X-Latitude-Signature": `sha256=${signature}`,

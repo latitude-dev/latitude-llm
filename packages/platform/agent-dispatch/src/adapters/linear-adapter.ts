@@ -2,17 +2,12 @@ import type { AgentDispatchAdapter } from "@domain/agent-dispatch"
 import { DispatchAdapterError } from "@domain/agent-dispatch"
 import { Effect } from "effect"
 
-const buildIssueMutation = (input: {
-  readonly teamId: string
-  readonly title: string
-  readonly description: string
-  readonly labelIds?: readonly string[]
-  readonly assigneeId?: string
-}) => {
-  const labelPart = input.labelIds?.length ? `, labelIds: [${input.labelIds.map((id) => `"${id}"`).join(", ")}]` : ""
-  const assigneePart = input.assigneeId ? `, assigneeId: "${input.assigneeId}"` : ""
-  return `mutation { issueCreate(input: { teamId: "${input.teamId}", title: ${JSON.stringify(input.title)}, description: ${JSON.stringify(input.description)}${labelPart}${assigneePart} }) { success issue { id url identifier } } }`
-}
+const ISSUE_CREATE_MUTATION = `mutation IssueCreate($input: IssueCreateInput!) {
+  issueCreate(input: $input) {
+    success
+    issue { id url identifier }
+  }
+}`
 
 export const createLinearAdapter = (): AgentDispatchAdapter => ({
   kind: "linear",
@@ -38,13 +33,16 @@ export const createLinearAdapter = (): AgentDispatchAdapter => ({
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              query: buildIssueMutation({
-                teamId: target.teamId,
-                title,
-                description,
-                ...(target.labelIds !== undefined ? { labelIds: target.labelIds } : {}),
-                ...(target.assigneeId !== undefined ? { assigneeId: target.assigneeId } : {}),
-              }),
+              query: ISSUE_CREATE_MUTATION,
+              variables: {
+                input: {
+                  teamId: target.teamId,
+                  title,
+                  description,
+                  ...(target.labelIds?.length ? { labelIds: [...target.labelIds] } : {}),
+                  ...(target.assigneeId !== undefined ? { assigneeId: target.assigneeId } : {}),
+                },
+              },
             }),
           }),
         catch: (cause) => new DispatchAdapterError({ reason: "transport", cause }),

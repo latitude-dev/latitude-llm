@@ -18,7 +18,7 @@ describe("createWebhookAdapter", () => {
       }),
     )
 
-    const adapter = createWebhookAdapter()
+    const adapter = createWebhookAdapter(async () => ["8.8.8.8"])
     const context = {
       trigger: "incident.opened" as const,
       organizationName: "Acme",
@@ -40,9 +40,11 @@ describe("createWebhookAdapter", () => {
     )
 
     expect(calls).toHaveLength(1)
-    const expectedSig = createHmac("sha256", secret).update(calls[0]!.body).digest("hex")
-    expect(calls[0]!.headers.get("X-Latitude-Signature")).toBe(`sha256=${expectedSig}`)
-    expect(calls[0]!.headers.get("X-Latitude-Delivery")).toBe("webhook:incident.opened:src1")
+    const call = calls[0]
+    if (!call) throw new Error("expected fetch call")
+    const expectedSig = createHmac("sha256", secret).update(call.body).digest("hex")
+    expect(call.headers.get("X-Latitude-Signature")).toBe(`sha256=${expectedSig}`)
+    expect(call.headers.get("X-Latitude-Delivery")).toBe("webhook:incident.opened:src1")
 
     vi.unstubAllGlobals()
   })
