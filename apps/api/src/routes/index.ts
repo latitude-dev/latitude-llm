@@ -6,6 +6,7 @@ import { createOrganizationContextMiddleware } from "../middleware/organization-
 import { validationErrorMiddleware } from "../middleware/validation.ts"
 import type { ApiOptions, AppEnv, ProtectedEnv } from "../types.ts"
 import { accountPath, createAccountRoutes } from "./account.ts"
+import { analyticsPath, createAnalyticsRoutes } from "./analytics.ts"
 import { annotationsPath, createAnnotationsRoutes } from "./annotations.ts"
 import { apiKeysPath, createApiKeysRoutes } from "./api-keys.ts"
 import { createDatasetsRoutes, datasetsPath } from "./datasets.ts"
@@ -70,6 +71,7 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
   routes.route(accountPath, createAccountRoutes())
   routes.route(membersPath, createMembersRoutes())
   routes.route(monitorsPath, createMonitorsRoutes())
+  routes.route(analyticsPath, createAnalyticsRoutes())
 
   // Back-compat: the Issues API moved to /signals. 307 preserves method + body so
   // already-published SDKs calling /issues keep working at runtime.

@@ -33,6 +33,105 @@ if typing.TYPE_CHECKING:
     from .alert_metric_threshold_multiplier import AlertMetricThresholdMultiplier
     from .alert_threshold_condition import AlertThresholdCondition
     from .alert_threshold_condition_direction import AlertThresholdConditionDirection
+    from .analytics_query import AnalyticsQuery, AnalyticsQuery_Sessions, AnalyticsQuery_Spans, AnalyticsQuery_Traces
+    from .analytics_query_sessions import AnalyticsQuerySessions
+    from .analytics_query_sessions_breakdown import AnalyticsQuerySessionsBreakdown
+    from .analytics_query_sessions_metric import (
+        AnalyticsQuerySessionsMetric,
+        AnalyticsQuerySessionsMetric_Avg,
+        AnalyticsQuerySessionsMetric_CacheHitRate,
+        AnalyticsQuerySessionsMetric_Count,
+        AnalyticsQuerySessionsMetric_ErrorRate,
+        AnalyticsQuerySessionsMetric_Max,
+        AnalyticsQuerySessionsMetric_Median,
+        AnalyticsQuerySessionsMetric_Min,
+        AnalyticsQuerySessionsMetric_Sum,
+    )
+    from .analytics_query_sessions_metric_avg import AnalyticsQuerySessionsMetricAvg
+    from .analytics_query_sessions_metric_avg_field import AnalyticsQuerySessionsMetricAvgField
+    from .analytics_query_sessions_metric_cache_hit_rate import AnalyticsQuerySessionsMetricCacheHitRate
+    from .analytics_query_sessions_metric_count import AnalyticsQuerySessionsMetricCount
+    from .analytics_query_sessions_metric_error_rate import AnalyticsQuerySessionsMetricErrorRate
+    from .analytics_query_sessions_metric_max import AnalyticsQuerySessionsMetricMax
+    from .analytics_query_sessions_metric_max_field import AnalyticsQuerySessionsMetricMaxField
+    from .analytics_query_sessions_metric_median import AnalyticsQuerySessionsMetricMedian
+    from .analytics_query_sessions_metric_median_field import AnalyticsQuerySessionsMetricMedianField
+    from .analytics_query_sessions_metric_min import AnalyticsQuerySessionsMetricMin
+    from .analytics_query_sessions_metric_min_field import AnalyticsQuerySessionsMetricMinField
+    from .analytics_query_sessions_metric_sum import AnalyticsQuerySessionsMetricSum
+    from .analytics_query_sessions_metric_sum_field import AnalyticsQuerySessionsMetricSumField
+    from .analytics_query_sessions_order_by import AnalyticsQuerySessionsOrderBy
+    from .analytics_query_sessions_order_by_by import AnalyticsQuerySessionsOrderByBy
+    from .analytics_query_sessions_order_by_direction import AnalyticsQuerySessionsOrderByDirection
+    from .analytics_query_sessions_range import AnalyticsQuerySessionsRange
+    from .analytics_query_sessions_time_bucket import AnalyticsQuerySessionsTimeBucket
+    from .analytics_query_sessions_time_bucket_unit import AnalyticsQuerySessionsTimeBucketUnit
+    from .analytics_query_spans import AnalyticsQuerySpans
+    from .analytics_query_spans_breakdown import AnalyticsQuerySpansBreakdown
+    from .analytics_query_spans_metric import (
+        AnalyticsQuerySpansMetric,
+        AnalyticsQuerySpansMetric_Avg,
+        AnalyticsQuerySpansMetric_CacheHitRate,
+        AnalyticsQuerySpansMetric_Count,
+        AnalyticsQuerySpansMetric_ErrorRate,
+        AnalyticsQuerySpansMetric_Max,
+        AnalyticsQuerySpansMetric_Median,
+        AnalyticsQuerySpansMetric_Min,
+        AnalyticsQuerySpansMetric_Sum,
+    )
+    from .analytics_query_spans_metric_avg import AnalyticsQuerySpansMetricAvg
+    from .analytics_query_spans_metric_avg_field import AnalyticsQuerySpansMetricAvgField
+    from .analytics_query_spans_metric_cache_hit_rate import AnalyticsQuerySpansMetricCacheHitRate
+    from .analytics_query_spans_metric_count import AnalyticsQuerySpansMetricCount
+    from .analytics_query_spans_metric_error_rate import AnalyticsQuerySpansMetricErrorRate
+    from .analytics_query_spans_metric_max import AnalyticsQuerySpansMetricMax
+    from .analytics_query_spans_metric_max_field import AnalyticsQuerySpansMetricMaxField
+    from .analytics_query_spans_metric_median import AnalyticsQuerySpansMetricMedian
+    from .analytics_query_spans_metric_median_field import AnalyticsQuerySpansMetricMedianField
+    from .analytics_query_spans_metric_min import AnalyticsQuerySpansMetricMin
+    from .analytics_query_spans_metric_min_field import AnalyticsQuerySpansMetricMinField
+    from .analytics_query_spans_metric_sum import AnalyticsQuerySpansMetricSum
+    from .analytics_query_spans_metric_sum_field import AnalyticsQuerySpansMetricSumField
+    from .analytics_query_spans_order_by import AnalyticsQuerySpansOrderBy
+    from .analytics_query_spans_order_by_by import AnalyticsQuerySpansOrderByBy
+    from .analytics_query_spans_order_by_direction import AnalyticsQuerySpansOrderByDirection
+    from .analytics_query_spans_range import AnalyticsQuerySpansRange
+    from .analytics_query_spans_time_bucket import AnalyticsQuerySpansTimeBucket
+    from .analytics_query_spans_time_bucket_unit import AnalyticsQuerySpansTimeBucketUnit
+    from .analytics_query_traces import AnalyticsQueryTraces
+    from .analytics_query_traces_breakdown import AnalyticsQueryTracesBreakdown
+    from .analytics_query_traces_metric import (
+        AnalyticsQueryTracesMetric,
+        AnalyticsQueryTracesMetric_Avg,
+        AnalyticsQueryTracesMetric_CacheHitRate,
+        AnalyticsQueryTracesMetric_Count,
+        AnalyticsQueryTracesMetric_ErrorRate,
+        AnalyticsQueryTracesMetric_Max,
+        AnalyticsQueryTracesMetric_Median,
+        AnalyticsQueryTracesMetric_Min,
+        AnalyticsQueryTracesMetric_Sum,
+    )
+    from .analytics_query_traces_metric_avg import AnalyticsQueryTracesMetricAvg
+    from .analytics_query_traces_metric_avg_field import AnalyticsQueryTracesMetricAvgField
+    from .analytics_query_traces_metric_cache_hit_rate import AnalyticsQueryTracesMetricCacheHitRate
+    from .analytics_query_traces_metric_count import AnalyticsQueryTracesMetricCount
+    from .analytics_query_traces_metric_error_rate import AnalyticsQueryTracesMetricErrorRate
+    from .analytics_query_traces_metric_max import AnalyticsQueryTracesMetricMax
+    from .analytics_query_traces_metric_max_field import AnalyticsQueryTracesMetricMaxField
+    from .analytics_query_traces_metric_median import AnalyticsQueryTracesMetricMedian
+    from .analytics_query_traces_metric_median_field import AnalyticsQueryTracesMetricMedianField
+    from .analytics_query_traces_metric_min import AnalyticsQueryTracesMetricMin
+    from .analytics_query_traces_metric_min_field import AnalyticsQueryTracesMetricMinField
+    from .analytics_query_traces_metric_sum import AnalyticsQueryTracesMetricSum
+    from .analytics_query_traces_metric_sum_field import AnalyticsQueryTracesMetricSumField
+    from .analytics_query_traces_order_by import AnalyticsQueryTracesOrderBy
+    from .analytics_query_traces_order_by_by import AnalyticsQueryTracesOrderByBy
+    from .analytics_query_traces_order_by_direction import AnalyticsQueryTracesOrderByDirection
+    from .analytics_query_traces_range import AnalyticsQueryTracesRange
+    from .analytics_query_traces_time_bucket import AnalyticsQueryTracesTimeBucket
+    from .analytics_query_traces_time_bucket_unit import AnalyticsQueryTracesTimeBucketUnit
+    from .analytics_series import AnalyticsSeries
+    from .analytics_series_series_item import AnalyticsSeriesSeriesItem
     from .annotation import Annotation
     from .annotation_anchor import AnnotationAnchor
     from .annotation_metadata import AnnotationMetadata
@@ -283,6 +382,102 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AlertMetricThreshold_Multiplier": ".alert_metric_threshold",
     "AlertThresholdCondition": ".alert_threshold_condition",
     "AlertThresholdConditionDirection": ".alert_threshold_condition_direction",
+    "AnalyticsQuery": ".analytics_query",
+    "AnalyticsQuerySessions": ".analytics_query_sessions",
+    "AnalyticsQuerySessionsBreakdown": ".analytics_query_sessions_breakdown",
+    "AnalyticsQuerySessionsMetric": ".analytics_query_sessions_metric",
+    "AnalyticsQuerySessionsMetricAvg": ".analytics_query_sessions_metric_avg",
+    "AnalyticsQuerySessionsMetricAvgField": ".analytics_query_sessions_metric_avg_field",
+    "AnalyticsQuerySessionsMetricCacheHitRate": ".analytics_query_sessions_metric_cache_hit_rate",
+    "AnalyticsQuerySessionsMetricCount": ".analytics_query_sessions_metric_count",
+    "AnalyticsQuerySessionsMetricErrorRate": ".analytics_query_sessions_metric_error_rate",
+    "AnalyticsQuerySessionsMetricMax": ".analytics_query_sessions_metric_max",
+    "AnalyticsQuerySessionsMetricMaxField": ".analytics_query_sessions_metric_max_field",
+    "AnalyticsQuerySessionsMetricMedian": ".analytics_query_sessions_metric_median",
+    "AnalyticsQuerySessionsMetricMedianField": ".analytics_query_sessions_metric_median_field",
+    "AnalyticsQuerySessionsMetricMin": ".analytics_query_sessions_metric_min",
+    "AnalyticsQuerySessionsMetricMinField": ".analytics_query_sessions_metric_min_field",
+    "AnalyticsQuerySessionsMetricSum": ".analytics_query_sessions_metric_sum",
+    "AnalyticsQuerySessionsMetricSumField": ".analytics_query_sessions_metric_sum_field",
+    "AnalyticsQuerySessionsMetric_Avg": ".analytics_query_sessions_metric",
+    "AnalyticsQuerySessionsMetric_CacheHitRate": ".analytics_query_sessions_metric",
+    "AnalyticsQuerySessionsMetric_Count": ".analytics_query_sessions_metric",
+    "AnalyticsQuerySessionsMetric_ErrorRate": ".analytics_query_sessions_metric",
+    "AnalyticsQuerySessionsMetric_Max": ".analytics_query_sessions_metric",
+    "AnalyticsQuerySessionsMetric_Median": ".analytics_query_sessions_metric",
+    "AnalyticsQuerySessionsMetric_Min": ".analytics_query_sessions_metric",
+    "AnalyticsQuerySessionsMetric_Sum": ".analytics_query_sessions_metric",
+    "AnalyticsQuerySessionsOrderBy": ".analytics_query_sessions_order_by",
+    "AnalyticsQuerySessionsOrderByBy": ".analytics_query_sessions_order_by_by",
+    "AnalyticsQuerySessionsOrderByDirection": ".analytics_query_sessions_order_by_direction",
+    "AnalyticsQuerySessionsRange": ".analytics_query_sessions_range",
+    "AnalyticsQuerySessionsTimeBucket": ".analytics_query_sessions_time_bucket",
+    "AnalyticsQuerySessionsTimeBucketUnit": ".analytics_query_sessions_time_bucket_unit",
+    "AnalyticsQuerySpans": ".analytics_query_spans",
+    "AnalyticsQuerySpansBreakdown": ".analytics_query_spans_breakdown",
+    "AnalyticsQuerySpansMetric": ".analytics_query_spans_metric",
+    "AnalyticsQuerySpansMetricAvg": ".analytics_query_spans_metric_avg",
+    "AnalyticsQuerySpansMetricAvgField": ".analytics_query_spans_metric_avg_field",
+    "AnalyticsQuerySpansMetricCacheHitRate": ".analytics_query_spans_metric_cache_hit_rate",
+    "AnalyticsQuerySpansMetricCount": ".analytics_query_spans_metric_count",
+    "AnalyticsQuerySpansMetricErrorRate": ".analytics_query_spans_metric_error_rate",
+    "AnalyticsQuerySpansMetricMax": ".analytics_query_spans_metric_max",
+    "AnalyticsQuerySpansMetricMaxField": ".analytics_query_spans_metric_max_field",
+    "AnalyticsQuerySpansMetricMedian": ".analytics_query_spans_metric_median",
+    "AnalyticsQuerySpansMetricMedianField": ".analytics_query_spans_metric_median_field",
+    "AnalyticsQuerySpansMetricMin": ".analytics_query_spans_metric_min",
+    "AnalyticsQuerySpansMetricMinField": ".analytics_query_spans_metric_min_field",
+    "AnalyticsQuerySpansMetricSum": ".analytics_query_spans_metric_sum",
+    "AnalyticsQuerySpansMetricSumField": ".analytics_query_spans_metric_sum_field",
+    "AnalyticsQuerySpansMetric_Avg": ".analytics_query_spans_metric",
+    "AnalyticsQuerySpansMetric_CacheHitRate": ".analytics_query_spans_metric",
+    "AnalyticsQuerySpansMetric_Count": ".analytics_query_spans_metric",
+    "AnalyticsQuerySpansMetric_ErrorRate": ".analytics_query_spans_metric",
+    "AnalyticsQuerySpansMetric_Max": ".analytics_query_spans_metric",
+    "AnalyticsQuerySpansMetric_Median": ".analytics_query_spans_metric",
+    "AnalyticsQuerySpansMetric_Min": ".analytics_query_spans_metric",
+    "AnalyticsQuerySpansMetric_Sum": ".analytics_query_spans_metric",
+    "AnalyticsQuerySpansOrderBy": ".analytics_query_spans_order_by",
+    "AnalyticsQuerySpansOrderByBy": ".analytics_query_spans_order_by_by",
+    "AnalyticsQuerySpansOrderByDirection": ".analytics_query_spans_order_by_direction",
+    "AnalyticsQuerySpansRange": ".analytics_query_spans_range",
+    "AnalyticsQuerySpansTimeBucket": ".analytics_query_spans_time_bucket",
+    "AnalyticsQuerySpansTimeBucketUnit": ".analytics_query_spans_time_bucket_unit",
+    "AnalyticsQueryTraces": ".analytics_query_traces",
+    "AnalyticsQueryTracesBreakdown": ".analytics_query_traces_breakdown",
+    "AnalyticsQueryTracesMetric": ".analytics_query_traces_metric",
+    "AnalyticsQueryTracesMetricAvg": ".analytics_query_traces_metric_avg",
+    "AnalyticsQueryTracesMetricAvgField": ".analytics_query_traces_metric_avg_field",
+    "AnalyticsQueryTracesMetricCacheHitRate": ".analytics_query_traces_metric_cache_hit_rate",
+    "AnalyticsQueryTracesMetricCount": ".analytics_query_traces_metric_count",
+    "AnalyticsQueryTracesMetricErrorRate": ".analytics_query_traces_metric_error_rate",
+    "AnalyticsQueryTracesMetricMax": ".analytics_query_traces_metric_max",
+    "AnalyticsQueryTracesMetricMaxField": ".analytics_query_traces_metric_max_field",
+    "AnalyticsQueryTracesMetricMedian": ".analytics_query_traces_metric_median",
+    "AnalyticsQueryTracesMetricMedianField": ".analytics_query_traces_metric_median_field",
+    "AnalyticsQueryTracesMetricMin": ".analytics_query_traces_metric_min",
+    "AnalyticsQueryTracesMetricMinField": ".analytics_query_traces_metric_min_field",
+    "AnalyticsQueryTracesMetricSum": ".analytics_query_traces_metric_sum",
+    "AnalyticsQueryTracesMetricSumField": ".analytics_query_traces_metric_sum_field",
+    "AnalyticsQueryTracesMetric_Avg": ".analytics_query_traces_metric",
+    "AnalyticsQueryTracesMetric_CacheHitRate": ".analytics_query_traces_metric",
+    "AnalyticsQueryTracesMetric_Count": ".analytics_query_traces_metric",
+    "AnalyticsQueryTracesMetric_ErrorRate": ".analytics_query_traces_metric",
+    "AnalyticsQueryTracesMetric_Max": ".analytics_query_traces_metric",
+    "AnalyticsQueryTracesMetric_Median": ".analytics_query_traces_metric",
+    "AnalyticsQueryTracesMetric_Min": ".analytics_query_traces_metric",
+    "AnalyticsQueryTracesMetric_Sum": ".analytics_query_traces_metric",
+    "AnalyticsQueryTracesOrderBy": ".analytics_query_traces_order_by",
+    "AnalyticsQueryTracesOrderByBy": ".analytics_query_traces_order_by_by",
+    "AnalyticsQueryTracesOrderByDirection": ".analytics_query_traces_order_by_direction",
+    "AnalyticsQueryTracesRange": ".analytics_query_traces_range",
+    "AnalyticsQueryTracesTimeBucket": ".analytics_query_traces_time_bucket",
+    "AnalyticsQueryTracesTimeBucketUnit": ".analytics_query_traces_time_bucket_unit",
+    "AnalyticsQuery_Sessions": ".analytics_query",
+    "AnalyticsQuery_Spans": ".analytics_query",
+    "AnalyticsQuery_Traces": ".analytics_query",
+    "AnalyticsSeries": ".analytics_series",
+    "AnalyticsSeriesSeriesItem": ".analytics_series_series_item",
     "Annotation": ".annotation",
     "AnnotationAnchor": ".annotation_anchor",
     "AnnotationMetadata": ".annotation_metadata",
@@ -561,6 +756,102 @@ __all__ = [
     "AlertMetricThreshold_Multiplier",
     "AlertThresholdCondition",
     "AlertThresholdConditionDirection",
+    "AnalyticsQuery",
+    "AnalyticsQuerySessions",
+    "AnalyticsQuerySessionsBreakdown",
+    "AnalyticsQuerySessionsMetric",
+    "AnalyticsQuerySessionsMetricAvg",
+    "AnalyticsQuerySessionsMetricAvgField",
+    "AnalyticsQuerySessionsMetricCacheHitRate",
+    "AnalyticsQuerySessionsMetricCount",
+    "AnalyticsQuerySessionsMetricErrorRate",
+    "AnalyticsQuerySessionsMetricMax",
+    "AnalyticsQuerySessionsMetricMaxField",
+    "AnalyticsQuerySessionsMetricMedian",
+    "AnalyticsQuerySessionsMetricMedianField",
+    "AnalyticsQuerySessionsMetricMin",
+    "AnalyticsQuerySessionsMetricMinField",
+    "AnalyticsQuerySessionsMetricSum",
+    "AnalyticsQuerySessionsMetricSumField",
+    "AnalyticsQuerySessionsMetric_Avg",
+    "AnalyticsQuerySessionsMetric_CacheHitRate",
+    "AnalyticsQuerySessionsMetric_Count",
+    "AnalyticsQuerySessionsMetric_ErrorRate",
+    "AnalyticsQuerySessionsMetric_Max",
+    "AnalyticsQuerySessionsMetric_Median",
+    "AnalyticsQuerySessionsMetric_Min",
+    "AnalyticsQuerySessionsMetric_Sum",
+    "AnalyticsQuerySessionsOrderBy",
+    "AnalyticsQuerySessionsOrderByBy",
+    "AnalyticsQuerySessionsOrderByDirection",
+    "AnalyticsQuerySessionsRange",
+    "AnalyticsQuerySessionsTimeBucket",
+    "AnalyticsQuerySessionsTimeBucketUnit",
+    "AnalyticsQuerySpans",
+    "AnalyticsQuerySpansBreakdown",
+    "AnalyticsQuerySpansMetric",
+    "AnalyticsQuerySpansMetricAvg",
+    "AnalyticsQuerySpansMetricAvgField",
+    "AnalyticsQuerySpansMetricCacheHitRate",
+    "AnalyticsQuerySpansMetricCount",
+    "AnalyticsQuerySpansMetricErrorRate",
+    "AnalyticsQuerySpansMetricMax",
+    "AnalyticsQuerySpansMetricMaxField",
+    "AnalyticsQuerySpansMetricMedian",
+    "AnalyticsQuerySpansMetricMedianField",
+    "AnalyticsQuerySpansMetricMin",
+    "AnalyticsQuerySpansMetricMinField",
+    "AnalyticsQuerySpansMetricSum",
+    "AnalyticsQuerySpansMetricSumField",
+    "AnalyticsQuerySpansMetric_Avg",
+    "AnalyticsQuerySpansMetric_CacheHitRate",
+    "AnalyticsQuerySpansMetric_Count",
+    "AnalyticsQuerySpansMetric_ErrorRate",
+    "AnalyticsQuerySpansMetric_Max",
+    "AnalyticsQuerySpansMetric_Median",
+    "AnalyticsQuerySpansMetric_Min",
+    "AnalyticsQuerySpansMetric_Sum",
+    "AnalyticsQuerySpansOrderBy",
+    "AnalyticsQuerySpansOrderByBy",
+    "AnalyticsQuerySpansOrderByDirection",
+    "AnalyticsQuerySpansRange",
+    "AnalyticsQuerySpansTimeBucket",
+    "AnalyticsQuerySpansTimeBucketUnit",
+    "AnalyticsQueryTraces",
+    "AnalyticsQueryTracesBreakdown",
+    "AnalyticsQueryTracesMetric",
+    "AnalyticsQueryTracesMetricAvg",
+    "AnalyticsQueryTracesMetricAvgField",
+    "AnalyticsQueryTracesMetricCacheHitRate",
+    "AnalyticsQueryTracesMetricCount",
+    "AnalyticsQueryTracesMetricErrorRate",
+    "AnalyticsQueryTracesMetricMax",
+    "AnalyticsQueryTracesMetricMaxField",
+    "AnalyticsQueryTracesMetricMedian",
+    "AnalyticsQueryTracesMetricMedianField",
+    "AnalyticsQueryTracesMetricMin",
+    "AnalyticsQueryTracesMetricMinField",
+    "AnalyticsQueryTracesMetricSum",
+    "AnalyticsQueryTracesMetricSumField",
+    "AnalyticsQueryTracesMetric_Avg",
+    "AnalyticsQueryTracesMetric_CacheHitRate",
+    "AnalyticsQueryTracesMetric_Count",
+    "AnalyticsQueryTracesMetric_ErrorRate",
+    "AnalyticsQueryTracesMetric_Max",
+    "AnalyticsQueryTracesMetric_Median",
+    "AnalyticsQueryTracesMetric_Min",
+    "AnalyticsQueryTracesMetric_Sum",
+    "AnalyticsQueryTracesOrderBy",
+    "AnalyticsQueryTracesOrderByBy",
+    "AnalyticsQueryTracesOrderByDirection",
+    "AnalyticsQueryTracesRange",
+    "AnalyticsQueryTracesTimeBucket",
+    "AnalyticsQueryTracesTimeBucketUnit",
+    "AnalyticsQuery_Sessions",
+    "AnalyticsQuery_Spans",
+    "AnalyticsQuery_Traces",
+    "AnalyticsSeries",
+    "AnalyticsSeriesSeriesItem",
     "Annotation",
     "AnnotationAnchor",
     "AnnotationMetadata",

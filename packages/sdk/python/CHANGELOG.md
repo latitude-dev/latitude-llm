@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.7.0] - 2026-07-01
+
+### Added
+
+- `query` on `client.analytics` (sync and async) — run a composable analytics query: a metric over a filtered stream, optionally broken down by a dimension and/or bucketed over time, returning a tidy series (`key` / `bucket_start` / `value` items) for charts and dashboards. The request is discriminated on `stream`: `traces` accepts a semantic `query` and a `breakdown` (`model`, `provider`, `service`, `tool`, `tag`, `name`, `userId`, `status`); `sessions` accepts a semantic `query` and the same breakdowns minus `name`; `spans` accepts a `breakdown` (the scalar dims plus the span-only `operation`). Metrics are `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`. Adds the `AnalyticsQuery` request and `AnalyticsSeries` response types. Result `value`s are in display units — seconds for `duration`, dollars for `cost`, a 0–1 ratio for `errorRate`/`cacheHitRate`, otherwise a raw count/token total.
+
 ## [6.6.0] - 2026-06-30
 
 ### Changed

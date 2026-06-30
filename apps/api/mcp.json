@@ -29637,6 +29637,1075 @@
         "readOnlyHint": false,
         "destructiveHint": false
       }
+    },
+    {
+      "name": "queryAnalytics",
+      "title": "Run an analytics query",
+      "description": "Compute a metric over a filtered stream (`traces`/`sessions`/`spans`), optionally broken down by a dimension and/or bucketed over time. Returns a tidy series — one point per breakdown value and/or time bucket — suitable for charts and dashboards.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "body": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "stream": {
+                    "type": "string",
+                    "const": "traces"
+                  },
+                  "query": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500,
+                    "description": "Semantic search query, combined with `filters` via AND. Ranks/filters by relevance."
+                  },
+                  "breakdown": {
+                    "description": "Dimension to group by, one row per value.",
+                    "type": "string",
+                    "enum": [
+                      "model",
+                      "provider",
+                      "service",
+                      "tool",
+                      "tag",
+                      "name",
+                      "userId",
+                      "status"
+                    ]
+                  },
+                  "filters": {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "eq",
+                              "neq",
+                              "gt",
+                              "gte",
+                              "lt",
+                              "lte",
+                              "in",
+                              "notIn",
+                              "contains",
+                              "notContains",
+                              "gtePercentile"
+                            ],
+                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                          }
+                        },
+                        "required": [
+                          "op",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "metric": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "count"
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "errorRate"
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "cacheHitRate"
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "sum"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "min"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "max"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "avg"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "median"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ],
+                    "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`."
+                  },
+                  "timeBucket": {
+                    "description": "Bucket the metric over time. Omit for a single aggregate.",
+                    "type": "object",
+                    "properties": {
+                      "unit": {
+                        "type": "string",
+                        "enum": [
+                          "hour",
+                          "day",
+                          "week"
+                        ],
+                        "description": "Bucket granularity."
+                      },
+                      "size": {
+                        "default": 1,
+                        "description": "Number of units per bucket (e.g. `2` weeks).",
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 365
+                      }
+                    },
+                    "required": [
+                      "unit",
+                      "size"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "range": {
+                    "type": "object",
+                    "properties": {
+                      "fromIso": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                        "description": "Inclusive lower bound (ISO-8601)."
+                      },
+                      "toIso": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                        "description": "Exclusive upper bound (ISO-8601). Must be after `fromIso`."
+                      }
+                    },
+                    "required": [
+                      "fromIso",
+                      "toIso"
+                    ],
+                    "additionalProperties": false,
+                    "description": "The time window."
+                  },
+                  "orderBy": {
+                    "description": "Sort for breakdown results. Defaults to value-desc.",
+                    "type": "object",
+                    "properties": {
+                      "by": {
+                        "default": "value",
+                        "type": "string",
+                        "enum": [
+                          "value",
+                          "key"
+                        ]
+                      },
+                      "direction": {
+                        "default": "desc",
+                        "type": "string",
+                        "enum": [
+                          "asc",
+                          "desc"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "by",
+                      "direction"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "limit": {
+                    "default": 50,
+                    "description": "Maximum rows returned. Defaults to 50; max 500.",
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 500
+                  }
+                },
+                "required": [
+                  "stream",
+                  "metric",
+                  "range",
+                  "limit"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stream": {
+                    "type": "string",
+                    "const": "sessions"
+                  },
+                  "query": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500,
+                    "description": "Semantic search query, combined with `filters` via AND. Ranks/filters by relevance."
+                  },
+                  "breakdown": {
+                    "description": "Dimension to group by, one row per value.",
+                    "type": "string",
+                    "enum": [
+                      "model",
+                      "provider",
+                      "service",
+                      "tool",
+                      "tag",
+                      "userId",
+                      "status"
+                    ]
+                  },
+                  "filters": {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "eq",
+                              "neq",
+                              "gt",
+                              "gte",
+                              "lt",
+                              "lte",
+                              "in",
+                              "notIn",
+                              "contains",
+                              "notContains",
+                              "gtePercentile"
+                            ],
+                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                          }
+                        },
+                        "required": [
+                          "op",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "metric": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "count"
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "errorRate"
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "cacheHitRate"
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "sum"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "min"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "max"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "avg"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "median"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ],
+                    "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`."
+                  },
+                  "timeBucket": {
+                    "description": "Bucket the metric over time. Omit for a single aggregate.",
+                    "type": "object",
+                    "properties": {
+                      "unit": {
+                        "type": "string",
+                        "enum": [
+                          "hour",
+                          "day",
+                          "week"
+                        ],
+                        "description": "Bucket granularity."
+                      },
+                      "size": {
+                        "default": 1,
+                        "description": "Number of units per bucket (e.g. `2` weeks).",
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 365
+                      }
+                    },
+                    "required": [
+                      "unit",
+                      "size"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "range": {
+                    "type": "object",
+                    "properties": {
+                      "fromIso": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                        "description": "Inclusive lower bound (ISO-8601)."
+                      },
+                      "toIso": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                        "description": "Exclusive upper bound (ISO-8601). Must be after `fromIso`."
+                      }
+                    },
+                    "required": [
+                      "fromIso",
+                      "toIso"
+                    ],
+                    "additionalProperties": false,
+                    "description": "The time window."
+                  },
+                  "orderBy": {
+                    "description": "Sort for breakdown results. Defaults to value-desc.",
+                    "type": "object",
+                    "properties": {
+                      "by": {
+                        "default": "value",
+                        "type": "string",
+                        "enum": [
+                          "value",
+                          "key"
+                        ]
+                      },
+                      "direction": {
+                        "default": "desc",
+                        "type": "string",
+                        "enum": [
+                          "asc",
+                          "desc"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "by",
+                      "direction"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "limit": {
+                    "default": 50,
+                    "description": "Maximum rows returned. Defaults to 50; max 500.",
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 500
+                  }
+                },
+                "required": [
+                  "stream",
+                  "metric",
+                  "range",
+                  "limit"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stream": {
+                    "type": "string",
+                    "const": "spans"
+                  },
+                  "breakdown": {
+                    "description": "Dimension to group by, one row per value.",
+                    "type": "string",
+                    "enum": [
+                      "model",
+                      "provider",
+                      "service",
+                      "tool",
+                      "tag",
+                      "operation",
+                      "status"
+                    ]
+                  },
+                  "filters": {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`).",
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "eq",
+                              "neq",
+                              "gt",
+                              "gte",
+                              "lt",
+                              "lte",
+                              "in",
+                              "notIn",
+                              "contains",
+                              "notContains",
+                              "gtePercentile"
+                            ],
+                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                          }
+                        },
+                        "required": [
+                          "op",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "metric": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "count"
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "errorRate"
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "cacheHitRate"
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "sum"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "min"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "max"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "avg"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "median"
+                          },
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "duration",
+                              "cost",
+                              "tokens"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "field"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ],
+                    "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`."
+                  },
+                  "timeBucket": {
+                    "description": "Bucket the metric over time. Omit for a single aggregate.",
+                    "type": "object",
+                    "properties": {
+                      "unit": {
+                        "type": "string",
+                        "enum": [
+                          "hour",
+                          "day",
+                          "week"
+                        ],
+                        "description": "Bucket granularity."
+                      },
+                      "size": {
+                        "default": 1,
+                        "description": "Number of units per bucket (e.g. `2` weeks).",
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 365
+                      }
+                    },
+                    "required": [
+                      "unit",
+                      "size"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "range": {
+                    "type": "object",
+                    "properties": {
+                      "fromIso": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                        "description": "Inclusive lower bound (ISO-8601)."
+                      },
+                      "toIso": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                        "description": "Exclusive upper bound (ISO-8601). Must be after `fromIso`."
+                      }
+                    },
+                    "required": [
+                      "fromIso",
+                      "toIso"
+                    ],
+                    "additionalProperties": false,
+                    "description": "The time window."
+                  },
+                  "orderBy": {
+                    "description": "Sort for breakdown results. Defaults to value-desc.",
+                    "type": "object",
+                    "properties": {
+                      "by": {
+                        "default": "value",
+                        "type": "string",
+                        "enum": [
+                          "value",
+                          "key"
+                        ]
+                      },
+                      "direction": {
+                        "default": "desc",
+                        "type": "string",
+                        "enum": [
+                          "asc",
+                          "desc"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "by",
+                      "direction"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "limit": {
+                    "default": 50,
+                    "description": "Maximum rows returned. Defaults to 50; max 500.",
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 500
+                  }
+                },
+                "required": [
+                  "stream",
+                  "metric",
+                  "range",
+                  "limit"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "required": [
+          "projectSlug",
+          "body"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "series": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "description": "The breakdown value, present when `breakdown` was set.",
+                  "type": "string"
+                },
+                "bucketStart": {
+                  "description": "ISO-8601 start of the time bucket, present when `timeBucket` was set.",
+                  "type": "string"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "The metric value: seconds for `duration`, dollars for `cost`, a 0–1 ratio for `errorRate`/`cacheHitRate`, otherwise a raw count/token total."
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Tidy series: one point per breakdown key and/or time bucket."
+          }
+        },
+        "required": [
+          "series"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
     }
   ]
 }
