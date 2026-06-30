@@ -439,45 +439,45 @@ A feature flag (`AGENT_DISPATCH_FLAG = "agent-dispatch"`, off by default, per-or
 
 ### Phase 1 — Foundation: fan-out, ledger, webhook adapter
 
-- [ ] **P1-1**: `@domain/agent-dispatch` package — entities, `AgentDispatchContext`, ports (`AgentDispatchAdapter`, repositories), errors (`Data.TaggedError` per `dev-docs/effect-and-errors`).
-- [ ] **P1-2**: PG migration — `agent_dispatch_configs`, `agent_dispatch_credentials`, `agent_dispatches`; extend `integrations.kind` enum; RLS policies (api-keys/slack template); no FKs.
-- [ ] **P1-3**: Domain-events fan-out — publish `agent-dispatch:request` from `SignalCreated` and `IncidentCreated`, parallel to notifications, dedupe-keyed; behind `AGENT_DISPATCH_FLAG`.
-- [ ] **P1-4**: `requestAgentDispatchUseCase` (producer) — config lookup, trigger/mute/guardrail gates, prompt-context snapshot (reuse the incident-notification snapshot source), enqueue `agent-dispatch:send`.
-- [ ] **P1-5**: `sendAgentDispatchUseCase` (consumer) — ledger claim, adapter dispatch, record external ids/url, failure-category mapping.
-- [ ] **P1-6**: Webhook adapter — HMAC signing, idempotency header, retry/backoff. Encrypted `webhook_secret`.
-- [ ] **P1-7**: `apps/workers` wiring — new `agent-dispatch` worker (request + send), topic registry entries, layer composition.
-- [ ] **P1-8**: **Dispatch history UI (MVP)** — Settings → Integrations audit log over the `agent_dispatches` ledger: trigger, signal/incident, time, status, and the adapter deep link. Ships with the foundation; adapters add their own deep-link labels.
-- [ ] **P1-9**: Tests — producer gate matrix (trigger/mute/guardrail), ledger idempotency under redelivery, webhook signing + retry (PGlite testkit; no `vi.mock` for repos per `dev-docs`/testing skill).
+- [x] **P1-1**: `@domain/agent-dispatch` package — entities, `AgentDispatchContext`, ports (`AgentDispatchAdapter`, repositories), errors (`Data.TaggedError` per `dev-docs/effect-and-errors`).
+- [x] **P1-2**: PG migration — `agent_dispatch_configs`, `agent_dispatch_credentials`, `agent_dispatches`; extend `integrations.kind` enum; RLS policies (api-keys/slack template); no FKs.
+- [x] **P1-3**: Domain-events fan-out — publish `agent-dispatch:request` from `SignalCreated` and `IncidentCreated`, parallel to notifications, dedupe-keyed; behind `AGENT_DISPATCH_FLAG`.
+- [x] **P1-4**: `requestAgentDispatchUseCase` (producer) — config lookup, trigger/mute/guardrail gates, prompt-context snapshot (reuse the incident-notification snapshot source), enqueue `agent-dispatch:send`.
+- [x] **P1-5**: `sendAgentDispatchUseCase` (consumer) — ledger claim, adapter dispatch, record success/failure, failure-category mapping.
+- [x] **P1-6**: Webhook adapter — HMAC signing, idempotency header, retry/backoff. Encrypted `webhook_secret`.
+- [x] **P1-7**: `apps/workers` wiring — new `agent-dispatch` worker (request + send), topic registry entries, layer composition.
+- [x] **P1-8**: **Dispatch history UI (MVP)** — Settings → Integrations audit log over the `agent_dispatches` ledger: trigger, signal/incident, time, status, and the adapter deep link. Ships with the foundation; adapters add their own deep-link labels.
+- [x] **P1-9**: Tests — producer gate matrix (trigger/mute/guardrail), ledger idempotency under redelivery, webhook signing + retry (PGlite testkit; no `vi.mock` for repos per `dev-docs`/testing skill).
 
-**Exit gate**: a signal escalation in a flagged org fires a single signed webhook with the rendered prompt + context; redelivery does not double-fire; mute and guardrails suppress correctly; the dispatch shows up in the history UI.
+**Exit gate**: a signal escalation in a flagged org fires a single signed webhook with the rendered prompt; redelivery does not double-fire; mute and guardrails suppress correctly; the dispatch shows up in the history UI.
 
 ### Phase 2 — Cursor adapter (primary)
 
-- [ ] **P2-1**: `CursorAdapter` — `POST /v1/agents` with `agentId` idempotency, `repos`, `autoCreatePR: true`, `mode: "agent"`, `env.name`; map `409` to success; store `agent.id`/`run.id`/`agent.url`. **No MCP creds in payload.**
-- [ ] **P2-2**: Credential storage — encrypted `cursor_api_key`; connect/disconnect flow.
-- [ ] **P2-3**: Config — repo url + starting ref + optional environment name; `mode: "agent"` and draft-`autoCreatePR` defaults (no plan mode).
-- [ ] **P2-4**: Tests — payload shape, idempotency conflict handling, auth/transport/config error categories (adapter HTTP mocked at the boundary, not the repos).
+- [x] **P2-1**: `CursorAdapter` — `POST /v1/agents` with `agentId` idempotency, `repos`, `autoCreatePR: true`, `mode: "agent"`, `env.name`; map `409` to success; store `agent.id`/`run.id`/`agent.url`. **No MCP creds in payload.**
+- [x] **P2-2**: Credential storage — encrypted `cursor_api_key`; connect/disconnect flow.
+- [x] **P2-3**: Config — repo url + starting ref + optional environment name; `mode: "agent"` and draft-`autoCreatePR` defaults (no plan mode).
+- [x] **P2-4**: Tests — payload shape, idempotency conflict handling, auth/transport/config error categories (adapter HTTP mocked at the boundary, not the repos).
 
 **Exit gate**: an escalation starts a Cursor cloud agent in `agent` mode (idempotently) that runs to a draft PR; the ledger holds the clickable `agent.url`; re-firing the same incident does not create a second agent.
 
 ### Phase 3 — Claude Code adapter (routines)
 
-- [ ] **P3-1**: `ClaudeRoutineAdapter` — `POST /v1/claude_code/routines/{trig}/fire` with beta + version headers; ledger-claim dedup (no native idempotency); store session id/url.
-- [ ] **P3-2**: Credential + config — encrypted routine token + routine trigger id; connect flow; MCP-checklist reminder copy.
-- [ ] **P3-3**: Tests — fire payload (freeform `text`), header correctness, claim-before-POST dedup.
+- [x] **P3-1**: `ClaudeRoutineAdapter` — `POST /v1/claude_code/routines/{trig}/fire` with beta + version headers; ledger-claim dedup (no native idempotency); store session id/url.
+- [x] **P3-2**: Credential + config — encrypted routine token + routine trigger id; connect flow; MCP-checklist reminder copy.
+- [x] **P3-3**: Tests — fire payload (freeform `text`), header correctness, claim-before-POST dedup.
 
 **Exit gate**: an escalation fires a Claude routine exactly once per source; the ledger holds the session deep link.
 
 ### Phase 4 — Linear adapter (broker)
 
-- [ ] **P4-1**: `LinearAdapter` — `issueCreate` GraphQL mutation from the dispatch context (title + description + optional team/label/assignee); store issue `id` + `url`. Ledger-claim dedup before the mutation.
-- [ ] **P4-2**: Credential + config — encrypted `linear_api_key`/OAuth + team selection; connect flow; copy explaining the customer must set a Linear triage rule (Delegate → their agent) for the downstream agent to start.
-- [ ] **P4-3**: Tests — mutation shape, dedup, auth/config error categories.
+- [x] **P4-1**: `LinearAdapter` — `issueCreate` GraphQL mutation from the dispatch context (title + description + optional team/label/assignee); store issue `id` + `url`. Ledger-claim dedup before the mutation.
+- [x] **P4-2**: Credential + config — encrypted `linear_api_key`/OAuth + team selection; connect flow; copy explaining the customer must set a Linear triage rule (Delegate → their agent) for the downstream agent to start.
+- [x] **P4-3**: Tests — mutation shape, dedup, auth/config error categories.
 
 **Exit gate**: an escalation creates exactly one Linear issue carrying the context + deep link; the ledger holds the issue url. (Downstream agent start is the customer's triage rule — out of Latitude's scope, per [D7](#decisions).)
 
 ### Docs
 
-- [ ] **DOC-1**: Author `dev-docs/agent-dispatch.md` (architecture, adapters, data model, idempotency) once Phase 1–2 stabilize; cross-link from `dev-docs/notifications.md`, `dev-docs/slack-integration.md`, `dev-docs/signals.md`.
+- [x] **DOC-1**: Author `dev-docs/agent-dispatch.md` (architecture, adapters, data model, idempotency) once Phase 1–2 stabilize; cross-link from `dev-docs/notifications.md`, `dev-docs/slack-integration.md`, `dev-docs/signals.md`.
 - [ ] **DOC-2**: Public docs under `docs/` — "Wake a coding agent on a signal" (Cursor + Claude + Linear setup, webhook for self-host), and the MCP pre-provisioning prerequisite.
 - [ ] **DOC-3**: Update the skill glossary / `AGENTS.md` only if a new repo-wide rule emerges (e.g. "dispatcher must never handle MCP creds").

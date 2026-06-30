@@ -55,6 +55,9 @@ export {
   AgentDispatchIntegrationRepository,
   AgentDispatchRepository,
 } from "./ports/repositories.ts"
+export type { ConnectAgentDispatchIntegrationInput } from "./use-cases/connect-agent-dispatch-integration.ts"
+export { connectAgentDispatchIntegrationUseCase } from "./use-cases/connect-agent-dispatch-integration.ts"
+export { disconnectAgentDispatchIntegrationUseCase } from "./use-cases/disconnect-agent-dispatch-integration.ts"
 export type {
   AgentDispatchRequestSource,
   AgentDispatchSendRequest,
@@ -63,3 +66,5 @@ export type {
 export { requestAgentDispatchUseCase } from "./use-cases/request-agent-dispatch.ts"
 export type { SendAgentDispatchInput, SendAgentDispatchOutcome } from "./use-cases/send-agent-dispatch.ts"
 export { sendAgentDispatchUseCase } from "./use-cases/send-agent-dispatch.ts"
+export type { UpsertAgentDispatchConfigInput } from "./use-cases/upsert-agent-dispatch-config.ts"
+export { upsertAgentDispatchConfigUseCase } from "./use-cases/upsert-agent-dispatch-config.ts"

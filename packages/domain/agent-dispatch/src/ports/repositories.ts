@@ -9,6 +9,13 @@ export interface AgentDispatchConfigRepositoryShape {
   readonly listEnabledByProject: (
     projectId: ProjectId,
   ) => Effect.Effect<readonly AgentDispatchConfig[], RepositoryError, SqlClient>
+  readonly listByProject: (
+    projectId: ProjectId,
+  ) => Effect.Effect<readonly AgentDispatchConfig[], RepositoryError, SqlClient>
+  readonly findByProjectAndIntegration: (input: {
+    readonly projectId: ProjectId
+    readonly integrationId: string
+  }) => Effect.Effect<AgentDispatchConfig | null, RepositoryError, SqlClient>
   readonly listByOrganization: () => Effect.Effect<readonly AgentDispatchConfig[], RepositoryError, SqlClient>
   readonly findById: (id: string) => Effect.Effect<AgentDispatchConfig, RepositoryError, SqlClient>
   readonly upsert: (config: AgentDispatchConfig) => Effect.Effect<AgentDispatchConfig, RepositoryError, SqlClient>

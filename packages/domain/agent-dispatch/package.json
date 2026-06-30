@@ -18,6 +18,7 @@
   "dependencies": {
     "@domain/feature-flags": "workspace:*",
     "@domain/incidents": "workspace:*",
+    "@domain/notifications": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/scores": "workspace:*",

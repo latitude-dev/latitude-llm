@@ -49,6 +49,46 @@ export const AgentDispatchConfigRepositoryLive = Layer.succeed(AgentDispatchConf
       return rows.map(toDomainConfig)
     }),
 
+  listByProject: (projectId) =>
+    Effect.gen(function* () {
+      const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+      const rows = yield* sqlClient
+        .query((db, organizationId) =>
+          db
+            .select()
+            .from(agentDispatchConfigs)
+            .where(
+              and(
+                eq(agentDispatchConfigs.projectId, projectId),
+                eq(agentDispatchConfigs.organizationId, organizationId),
+              ),
+            ),
+        )
+        .pipe(Effect.mapError((e) => toRepositoryError(e, "listAgentDispatchConfigsByProject")))
+      return rows.map(toDomainConfig)
+    }),
+
+  findByProjectAndIntegration: ({ projectId, integrationId }) =>
+    Effect.gen(function* () {
+      const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+      const rows = yield* sqlClient
+        .query((db, organizationId) =>
+          db
+            .select()
+            .from(agentDispatchConfigs)
+            .where(
+              and(
+                eq(agentDispatchConfigs.projectId, projectId),
+                eq(agentDispatchConfigs.integrationId, integrationId),
+                eq(agentDispatchConfigs.organizationId, organizationId),
+              ),
+            )
+            .limit(1),
+        )
+        .pipe(Effect.mapError((e) => toRepositoryError(e, "findAgentDispatchConfigByProjectIntegration")))
+      return rows[0] ? toDomainConfig(rows[0]) : null
+    }),
+
   listByOrganization: () =>
     Effect.gen(function* () {
       const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

@@ -1,5 +1,6 @@
 import { hasFeatureFlagUseCase } from "@domain/feature-flags"
 import { IncidentRepository } from "@domain/incidents"
+import { IncidentMonitorReader } from "@domain/notifications"
 import { isSandbox, OrganizationRepository } from "@domain/organizations"
 import { type OrganizationId, type ProjectId, SignalId, type SqlClient } from "@domain/shared"
 import { SignalRepository } from "@domain/signals"
@@ -147,6 +148,13 @@ export const requestAgentDispatchUseCase = (input: {
     const trigger = resolveIncidentTrigger(incident)
     if (trigger === null) return { status: "skipped", reason: "unsupported-source" } as const
 
+    if (incident.sourceType === "monitor") {
+      const monitor = yield* (yield* IncidentMonitorReader).findByMonitorId(incident.sourceId)
+      if (monitor?.mutedAt !== null && monitor?.mutedAt !== undefined) {
+        return { status: "skipped", reason: "monitor-muted" } as const
+      }
+    }
+
     if (incident.sourceType === "signal") {
       const signals = yield* SignalRepository
       const signal = yield* signals
@@ -181,7 +189,12 @@ export const requestAgentDispatchUseCase = (input: {
   }).pipe(Effect.withSpan("agentDispatch.request")) as Effect.Effect<
     RequestAgentDispatchResult,
     unknown,
-    SqlClient | AgentDispatchConfigRepository | IncidentRepository | SignalRepository | OrganizationRepository
+    | SqlClient
+    | AgentDispatchConfigRepository
+    | IncidentRepository
+    | IncidentMonitorReader
+    | SignalRepository
+    | OrganizationRepository
   >
 
 const checkGuardrails = (

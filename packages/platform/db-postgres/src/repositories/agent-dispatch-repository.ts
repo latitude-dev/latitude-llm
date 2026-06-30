@@ -55,8 +55,26 @@ export const AgentDispatchRepositoryLive = Layer.succeed(AgentDispatchRepository
         )
         .pipe(Effect.mapError((e) => toRepositoryError(e, "claimAgentDispatch")))
 
-      if (rows.length === 0) return { claimed: false, dispatchId: null }
-      return { claimed: true, dispatchId: rows[0]!.id }
+      if (rows.length > 0) return { claimed: true, dispatchId: rows[0]!.id }
+
+      const existing = yield* sqlClient
+        .query((db, organizationId) =>
+          db
+            .select({ id: agentDispatches.id, status: agentDispatches.status })
+            .from(agentDispatches)
+            .where(
+              and(
+                eq(agentDispatches.organizationId, organizationId),
+                eq(agentDispatches.idempotencyKey, idempotencyKey),
+              ),
+            )
+            .limit(1),
+        )
+        .pipe(Effect.mapError((e) => toRepositoryError(e, "findAgentDispatchClaim")))
+
+      const row = existing[0]
+      if (row?.status === "claimed") return { claimed: true, dispatchId: row.id }
+      return { claimed: false, dispatchId: null }
     }),
 
   markDispatched: ({ dispatchId, externalAgentId, externalRunId, externalUrl }) =>
