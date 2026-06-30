@@ -67,12 +67,15 @@ export function SignalBuilderModal({
   projectSlug,
   mode,
   initial,
+  initialFilters,
   onClose,
 }: {
   readonly projectId: string
   readonly projectSlug: string
   readonly mode: "create" | "edit"
   readonly initial?: SignalBuilderInitial
+  /** Create-mode seed (e.g. from "Create signal from this search"); ignored in edit mode. */
+  readonly initialFilters?: FilterSet | null
   readonly onClose: () => void
 }) {
   const { toast } = useToast()
@@ -85,7 +88,7 @@ export function SignalBuilderModal({
   const [stepIndex, setStepIndex] = useState(0)
   const step = steps[stepIndex] ?? "scope"
 
-  const [filters, setFilters] = useState<FilterSet>(initial?.filters ?? {})
+  const [filters, setFilters] = useState<FilterSet>(initial?.filters ?? initialFilters ?? {})
   const [tab, setTab] = useState<DetectorTab>(() => (initial?.settings?.kind === "judge" ? "llm" : "rules"))
   const [ruleDraft, setRuleDraft] = useState<RuleDraft>(() =>
     initial?.settings?.kind === "rule"
