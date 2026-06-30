@@ -77,11 +77,11 @@ const signalListFields = {
   firstSeenAt: z.string().describe("ISO-8601 timestamp of the earliest occurrence in the time window."),
   lastSeenAt: z.string().describe("ISO-8601 timestamp of the latest occurrence in the time window."),
   occurrences: z.number().int().nonnegative().describe("Number of occurrences in the time window."),
-  affectedTracesPercent: z
+  affectedSessionsPercent: z
     .number()
     .min(0)
     .max(1)
-    .describe("Fraction of project traces affected by this signal in the time window, in `[0, 1]`."),
+    .describe("Fraction of project sessions affected by this signal in the time window, in `[0, 1]`."),
 } as const
 
 // Detail-endpoint fields: full-history versions of every list stat plus
@@ -98,11 +98,11 @@ const signalDetailFields = {
     .nullable()
     .describe("ISO-8601 timestamp of the latest occurrence over the signal's lifetime, or `null` if none yet."),
   occurrences: z.number().int().nonnegative().describe("Lifetime occurrence count."),
-  affectedTracesPercent: z
+  affectedSessionsPercent: z
     .number()
     .min(0)
     .max(1)
-    .describe("Lifetime fraction of project traces affected by this signal, in `[0, 1]`."),
+    .describe("Lifetime fraction of project sessions affected by this signal, in `[0, 1]`."),
   evaluations: z
     .array(EvaluationSchema)
     .describe("Active evaluations monitoring the signal. Archived and deleted evaluations are excluded."),
@@ -132,7 +132,7 @@ export const toSignalResponse = (item: SignalListItem, organizationId: string) =
   firstSeenAt: item.firstSeenAt.toISOString(),
   lastSeenAt: item.lastSeenAt.toISOString(),
   occurrences: item.occurrences,
-  affectedTracesPercent: item.affectedSessionsPercent,
+  affectedSessionsPercent: item.affectedSessionsPercent,
   trend: item.trend.map((bucket) => ({ bucket: bucket.bucket, count: bucket.count })),
   tags: [...item.tags],
 })
@@ -152,7 +152,7 @@ export const toSignalDetailResponse = (details: SignalDetails, organizationId: s
   firstSeenAt: details.firstSeenAt ? details.firstSeenAt.toISOString() : null,
   lastSeenAt: details.lastSeenAt ? details.lastSeenAt.toISOString() : null,
   occurrences: details.occurrences,
-  affectedTracesPercent: details.affectedTracesPercent,
+  affectedSessionsPercent: details.affectedSessionsPercent,
   tags: [...details.tags],
   trend: details.trend.map((bucket) => ({ bucket: bucket.bucket, count: bucket.count })),
   evaluations: details.evaluations.map(toEvaluationResponse),

@@ -67,12 +67,15 @@ function buildTau2SignalAnalyticsRows(scope: SeedScope, maxTrajectories = TAU2_S
 
     return Array.from({ length: occurrenceCount }, (_, occurrenceIndex) => {
       const trajectoryIndex = candidateIndexes[(signalIndex + occurrenceIndex) % candidateIndexes.length] ?? 0
+      const traceId = scope.traceHex("tau2-trajectory", trajectoryIndex)
       return {
         id: ScoreId(scope.cuid(`score:tau2-issue:${signalIndex}:${occurrenceIndex}`)),
         organization_id: orgId,
         project_id: projectId,
-        session_id: "",
-        trace_id: scope.traceHex("tau2-trajectory", trajectoryIndex),
+        // Matches the session the trajectory's spans roll up to (sessions_mv keys
+        // session-less spans by trace_id), so the affected-sessions metric counts them.
+        session_id: traceId,
+        trace_id: traceId,
         span_id: scope.spanHex("tau2-trajectory-root", trajectoryIndex),
         source: "custom",
         source_id: "tau2-seed-classifier",
@@ -102,7 +105,7 @@ export function buildLifecycleAnalyticsRows(scope: SeedScope) {
       id: ScoreId(scope.cuid("score:passed")),
       organization_id: orgId,
       project_id: projectId,
-      session_id: "",
+      session_id: scope.traceHex("lifecycle", 2),
       trace_id: scope.traceHex("lifecycle", 2),
       span_id: scope.spanHex("lifecycle", 2),
       source: "evaluation",
@@ -121,7 +124,7 @@ export function buildLifecycleAnalyticsRows(scope: SeedScope) {
       id: ScoreId(scope.cuid("score:errored")),
       organization_id: orgId,
       project_id: projectId,
-      session_id: "",
+      session_id: scope.traceHex("lifecycle", 3),
       trace_id: scope.traceHex("lifecycle", 3),
       span_id: scope.spanHex("lifecycle", 3),
       source: "evaluation",
@@ -140,7 +143,7 @@ export function buildLifecycleAnalyticsRows(scope: SeedScope) {
       id: ScoreId(scope.cuid("score:api-reviewed")),
       organization_id: orgId,
       project_id: projectId,
-      session_id: "",
+      session_id: scope.traceHex("lifecycle", 3),
       trace_id: scope.traceHex("lifecycle", 3),
       span_id: "",
       source: "annotation",
@@ -159,7 +162,7 @@ export function buildLifecycleAnalyticsRows(scope: SeedScope) {
       id: ScoreId(scope.cuid("score:pending")),
       organization_id: orgId,
       project_id: projectId,
-      session_id: "",
+      session_id: scope.traceHex("lifecycle", 4),
       trace_id: scope.traceHex("lifecycle", 4),
       span_id: "",
       source: "custom",

@@ -35,8 +35,8 @@ export interface SignalDetail {
     lastSeenAt?: string | undefined;
     /** Lifetime occurrence count. */
     occurrences: number;
-    /** Lifetime fraction of project traces affected by this signal, in `[0, 1]`. */
-    affectedTracesPercent: number;
+    /** Lifetime fraction of project sessions affected by this signal, in `[0, 1]`. */
+    affectedSessionsPercent: number;
     /** Active evaluations monitoring the signal. Archived and deleted evaluations are excluded. */
     evaluations: LatitudeApi.Evaluation[];
     monitoringState: LatitudeApi.SignalMonitoringState;

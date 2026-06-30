@@ -4096,11 +4096,11 @@
             "minimum": 0,
             "description": "Number of occurrences in the time window."
           },
-          "affectedTracesPercent": {
+          "affectedSessionsPercent": {
             "type": "number",
             "minimum": 0,
             "maximum": 1,
-            "description": "Fraction of project traces affected by this signal in the time window, in `[0, 1]`."
+            "description": "Fraction of project sessions affected by this signal in the time window, in `[0, 1]`."
           }
         },
         "required": [
@@ -4120,7 +4120,7 @@
           "firstSeenAt",
           "lastSeenAt",
           "occurrences",
-          "affectedTracesPercent"
+          "affectedSessionsPercent"
         ]
       },
       "SignalTrendBucket": {
@@ -4821,11 +4821,11 @@
             "minimum": 0,
             "description": "Lifetime occurrence count."
           },
-          "affectedTracesPercent": {
+          "affectedSessionsPercent": {
             "type": "number",
             "minimum": 0,
             "maximum": 1,
-            "description": "Lifetime fraction of project traces affected by this signal, in `[0, 1]`."
+            "description": "Lifetime fraction of project sessions affected by this signal, in `[0, 1]`."
           },
           "evaluations": {
             "type": "array",
@@ -4855,7 +4855,7 @@
           "firstSeenAt",
           "lastSeenAt",
           "occurrences",
-          "affectedTracesPercent",
+          "affectedSessionsPercent",
           "evaluations",
           "monitoringState"
         ]
@@ -11656,7 +11656,7 @@
         "x-fern-sdk-group-name": "signals",
         "x-fern-sdk-method-name": "list",
         "summary": "List project signals",
-        "description": "Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `trend`, and `tags`.",
+        "description": "Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `trend`, and `tags`.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -12039,7 +12039,7 @@
         "x-fern-sdk-group-name": "signals",
         "x-fern-sdk-method-name": "get",
         "summary": "Get project signal",
-        "description": "Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.",
+        "description": "Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.",
         "security": [
           {
             "ApiKeyAuth": []

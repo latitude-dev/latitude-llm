@@ -184,6 +184,7 @@ type SessionRollupRow = {
 type SignalOccurrenceRow = {
   signal_id: string
   total_occurrences: string
+  affected_sessions: string
   recent_occurrences: string
   baseline_avg_occurrences: string
   first_seen_at: string
@@ -351,6 +352,7 @@ const toSessionRollup = (row: SessionRollupRow): SessionScoreRollup => ({
 const toSignalOccurrence = (row: SignalOccurrenceRow): SignalOccurrenceAggregate => ({
   signalId: toSignalId(normalizeCHString(row.signal_id)),
   totalOccurrences: Number(row.total_occurrences),
+  affectedSessions: Number(row.affected_sessions),
   recentOccurrences: Number(row.recent_occurrences),
   baselineAvgOccurrences: Number(row.baseline_avg_occurrences),
   firstSeenAt: parseCHDate(row.first_seen_at),
@@ -1012,6 +1014,7 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
                 query: `SELECT
                         signal_id,
                         count()                                                AS total_occurrences,
+                        uniqExactIf(session_id, session_id != '')              AS affected_sessions,
                         countIf(created_at >= now() - INTERVAL 1 DAY)          AS recent_occurrences,
                         -- average daily occurrences over the previous 7-day baseline (days 1-8 ago)
                         countIf(

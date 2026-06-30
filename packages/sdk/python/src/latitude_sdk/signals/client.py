@@ -58,7 +58,7 @@ class SignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> PaginatedSignals:
         """
-        Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `trend`, and `tags`.
+        Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `trend`, and `tags`.
 
         Parameters
         ----------
@@ -215,7 +215,7 @@ class SignalsClient:
         self, project_slug: str, signal_slug: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> SignalDetail:
         """
-        Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.
+        Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.
 
         Parameters
         ----------
@@ -751,7 +751,7 @@ class AsyncSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> PaginatedSignals:
         """
-        Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `trend`, and `tags`.
+        Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `trend`, and `tags`.
 
         Parameters
         ----------
@@ -923,7 +923,7 @@ class AsyncSignalsClient:
         self, project_slug: str, signal_slug: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> SignalDetail:
         """
-        Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.
+        Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.
 
         Parameters
         ----------

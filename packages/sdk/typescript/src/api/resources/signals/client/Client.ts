@@ -23,7 +23,7 @@ export class SignalsClient {
     }
 
     /**
-     * Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `trend`, and `tags`.
+     * Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `trend`, and `tags`.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {LatitudeApi.SignalsListRequest} request
@@ -234,7 +234,7 @@ export class SignalsClient {
     }
 
     /**
-     * Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.
+     * Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} signalSlug - Signal slug.

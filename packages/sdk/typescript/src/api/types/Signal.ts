@@ -35,8 +35,8 @@ export interface Signal {
     lastSeenAt: string;
     /** Number of occurrences in the time window. */
     occurrences: number;
-    /** Fraction of project traces affected by this signal in the time window, in `[0, 1]`. */
-    affectedTracesPercent: number;
+    /** Fraction of project sessions affected by this signal in the time window, in `[0, 1]`. */
+    affectedSessionsPercent: number;
 }
 
 export namespace Signal {

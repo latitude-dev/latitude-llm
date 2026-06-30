@@ -100,11 +100,11 @@ class SignalDetail(UniversalBaseModel):
     Lifetime occurrence count.
     """
 
-    affected_traces_percent: typing_extensions.Annotated[float, FieldMetadata(alias="affectedTracesPercent")] = (
+    affected_sessions_percent: typing_extensions.Annotated[float, FieldMetadata(alias="affectedSessionsPercent")] = (
         pydantic.Field()
     )
     """
-    Lifetime fraction of project traces affected by this signal, in `[0, 1]`.
+    Lifetime fraction of project sessions affected by this signal, in `[0, 1]`.
     """
 
     evaluations: typing.List[Evaluation] = pydantic.Field()

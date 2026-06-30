@@ -94,11 +94,11 @@ class Signal(UniversalBaseModel):
     Number of occurrences in the time window.
     """
 
-    affected_traces_percent: typing_extensions.Annotated[float, FieldMetadata(alias="affectedTracesPercent")] = (
+    affected_sessions_percent: typing_extensions.Annotated[float, FieldMetadata(alias="affectedSessionsPercent")] = (
         pydantic.Field()
     )
     """
-    Fraction of project traces affected by this signal in the time window, in `[0, 1]`.
+    Fraction of project sessions affected by this signal in the time window, in `[0, 1]`.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

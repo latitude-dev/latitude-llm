@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.6.0] - 2026-06-30
+
+### Changed
+
+- Renamed `affected_traces_percent` → `affected_sessions_percent` on the `Signal` (list) and `SignalDetail` (detail) response models (JSON alias `affectedSessionsPercent`). The value is the fraction of project sessions affected by the signal, in `[0, 1]` (sessions are the platform's primary unit); the previous name mislabeled a sessions-based ratio as traces. Update any code reading `signal.affected_traces_percent` to `signal.affected_sessions_percent`.
+
 ## [6.5.0] - 2026-06-29
 
 ### Added
