@@ -4,7 +4,6 @@ import { OrganizationRepository } from "@domain/organizations"
 import { ProjectRepository } from "@domain/projects"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import {
-  AlertIncidentId,
   type ChSqlClient,
   type OrganizationId,
   type ProjectId,
