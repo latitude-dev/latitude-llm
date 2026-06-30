@@ -316,10 +316,7 @@ export function OnboardingFlow({
               {slide === "intro" ? (
                 <OnboardingGallery />
               ) : slide === "flaggers" ? (
-                <FlaggersStep.Right
-                  enabledFlaggerSlugs={enabledFlaggerSlugs}
-                  availableFlaggers={availableFlaggers}
-                />
+                <FlaggersStep.Right enabledFlaggerSlugs={enabledFlaggerSlugs} availableFlaggers={availableFlaggers} />
               ) : slide === "slack" ? (
                 <SlackStep.Right isActive={step === "slack"} />
               ) : (
