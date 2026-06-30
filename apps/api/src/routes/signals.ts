@@ -301,6 +301,10 @@ const listSignals = signalEndpoint({
     const organizationId = c.var.organization.id
     const orgId = OrganizationId(organizationId as string)
 
+    if (query.fromIso && query.toIso && Date.parse(query.toIso) < Date.parse(query.fromIso)) {
+      return c.json({ error: "`toIso` must be greater than or equal to `fromIso`." }, 400)
+    }
+
     const page = await Effect.runPromise(
       Effect.gen(function* () {
         let offset = 0

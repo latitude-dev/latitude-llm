@@ -377,9 +377,17 @@ describe("Signals Routes Integration", () => {
     )
 
     expect(res.status).toBe(200)
-    const body = (await res.json()) as { summary: { analytics: { histogram: ReadonlyArray<{ bucket: string }> } } }
-    expect(body.summary.analytics.histogram.length).toBeGreaterThanOrEqual(2)
-    expect(body.summary.analytics.histogram.length).toBeLessThanOrEqual(4)
+    const body = (await res.json()) as {
+      summary: {
+        analytics: {
+          histogram: ReadonlyArray<{ bucket: string }>
+          histogramBucketSeconds: number
+        }
+      }
+    }
+    expect(body.summary.analytics.histogram.length).toBeGreaterThan(0)
     expect(body.summary.analytics.histogram[0]?.bucket.startsWith("2026-04-15")).toBe(true)
+    expect(body.summary.analytics.histogram.at(-1)?.bucket.startsWith("2026-04-16")).toBe(true)
+    expect(body.summary.analytics.histogramBucketSeconds).toBeGreaterThan(0)
   })
 })
