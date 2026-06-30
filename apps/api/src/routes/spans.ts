@@ -1,6 +1,11 @@
 import { ProjectRepository } from "@domain/projects"
-import { OrganizationId, ProjectId } from "@domain/shared"
-import { SpanRepository } from "@domain/spans"
+import { OrganizationId, ProjectId, SpanId } from "@domain/shared"
+import {
+  type SpanListCursor,
+  type SpanListOrderDirection,
+  type SpanListOrderField,
+  SpanRepository,
+} from "@domain/spans"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
@@ -28,18 +33,35 @@ const spansFernGroup = (methodName: string) =>
 
 const spanEndpoint = defineApiEndpoint<OrganizationScopedEnv>(spansPath)
 
-// Opaque offset cursor — the underlying span read is offset-based; encoding the
-// offset keeps the public shape (`{ items, nextCursor, hasMore }`) consistent
-// with the rest of the surface.
-const encodeOffsetCursor = (offset: number): string =>
-  Buffer.from(JSON.stringify({ offset }), "utf8").toString("base64url")
+// Opaque keyset cursor — encodes the last row's `(field, direction, sortValue,
+// spanId)` so the next page resumes strictly after it. Keyset (not offset) so a
+// span landing mid-pagination can't shift the window and skip/duplicate rows.
+const ORDER_FIELDS: readonly SpanListOrderField[] = ["startTime", "duration", "cost"]
+const ORDER_DIRECTIONS: readonly SpanListOrderDirection[] = ["asc", "desc"]
 
-const decodeOffsetCursor = (raw: string): number | null => {
+const encodeSpanListCursor = (cursor: SpanListCursor): string =>
+  Buffer.from(
+    JSON.stringify({ f: cursor.field, d: cursor.direction, v: cursor.sortValue, s: cursor.spanId }),
+    "utf8",
+  ).toString("base64url")
+
+const decodeSpanListCursor = (raw: string): SpanListCursor | null => {
   try {
-    const parsed = JSON.parse(Buffer.from(raw, "base64url").toString("utf8")) as unknown
-    const offset = (parsed as { offset?: unknown })?.offset
-    if (typeof offset !== "number" || !Number.isInteger(offset) || offset < 0) return null
-    return offset
+    const p = JSON.parse(Buffer.from(raw, "base64url").toString("utf8")) as {
+      f?: unknown
+      d?: unknown
+      v?: unknown
+      s?: unknown
+    }
+    if (!ORDER_FIELDS.includes(p.f as SpanListOrderField)) return null
+    if (!ORDER_DIRECTIONS.includes(p.d as SpanListOrderDirection)) return null
+    if (typeof p.v !== "string" || typeof p.s !== "string") return null
+    return {
+      field: p.f as SpanListOrderField,
+      direction: p.d as SpanListOrderDirection,
+      sortValue: p.v,
+      spanId: SpanId(p.s),
+    }
   } catch {
     return null
   }
@@ -48,8 +70,17 @@ const decodeOffsetCursor = (raw: string): number | null => {
 const QuerySpansBodySchema = z
   .object({
     filters: FilterSetSchema.optional().describe(
-      "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `duration`, `cost`, `tokensInput`/`tokensOutput`.",
+      "Row-local span filter set (same DSL as `listTraces`) over span fields — `operation`, `toolName`, `model`, `provider`, `sessionId`, `traceId`, `tags`, `status` (`error`/`ok`/`unset`), `duration`, `cost`, `tokensInput`/`tokensOutput`.",
     ),
+    orderBy: z
+      .object({
+        field: z.enum(["startTime", "duration", "cost"]).default("startTime").describe("Sort key."),
+        direction: z.enum(["asc", "desc"]).default("desc").describe("Sort direction."),
+      })
+      .optional()
+      .describe(
+        "Sort order. Defaults to newest first (`startTime` desc); use `duration`/`cost` desc for top-N slowest/costliest.",
+      ),
     range: z
       .object({
         fromIso: z.iso
@@ -105,18 +136,24 @@ const querySpans = spanEndpoint({
     const body = c.req.valid("json")
     const organizationId = c.var.organization.id
 
-    let offset = 0
+    const orderBy = body.orderBy ?? { field: "startTime" as const, direction: "desc" as const }
+
+    let cursor: SpanListCursor | undefined
     if (body.cursor) {
-      const decoded = decodeOffsetCursor(body.cursor)
+      const decoded = decodeSpanListCursor(body.cursor)
       if (decoded === null) return c.json({ error: "Invalid `cursor` value." }, 400)
-      offset = decoded
+      // The cursor is pinned to the ordering it was minted under; replaying it
+      // under a different `orderBy` would page incoherently.
+      if (decoded.field !== orderBy.field || decoded.direction !== orderBy.direction) {
+        return c.json({ error: "`cursor` does not match `orderBy`; restart pagination without the cursor." }, 400)
+      }
+      cursor = decoded
     }
     if (body.range && new Date(body.range.fromIso).getTime() >= new Date(body.range.toIso).getTime()) {
       return c.json({ error: "`range.fromIso` must be strictly before `range.toIso`." }, 400)
     }
 
-    // Over-fetch one row to learn whether a next page exists without a count.
-    const spans = await Effect.runPromise(
+    const page = await Effect.runPromise(
       Effect.gen(function* () {
         const projectRepo = yield* ProjectRepository
         const project = yield* projectRepo.findBySlug(projectSlug)
@@ -126,8 +163,9 @@ const querySpans = spanEndpoint({
           organizationId: OrganizationId(organizationId as string),
           projectId: ProjectId(project.id as string),
           options: {
-            limit: body.limit + 1,
-            offset,
+            limit: body.limit,
+            orderBy,
+            ...(cursor ? { cursor } : {}),
             ...(body.filters ? { filters: body.filters } : {}),
             ...(body.range
               ? { startTimeFrom: new Date(body.range.fromIso), startTimeTo: new Date(body.range.toIso) }
@@ -141,13 +179,11 @@ const querySpans = spanEndpoint({
       ),
     )
 
-    const hasMore = spans.length > body.limit
-    const items = hasMore ? spans.slice(0, body.limit) : spans
     return c.json(
       {
-        items: items.map(toSpanResponse),
-        nextCursor: hasMore ? encodeOffsetCursor(offset + body.limit) : null,
-        hasMore,
+        items: page.items.map(toSpanResponse),
+        nextCursor: page.nextCursor ? encodeSpanListCursor(page.nextCursor) : null,
+        hasMore: page.nextCursor !== null,
       },
       200,
     )

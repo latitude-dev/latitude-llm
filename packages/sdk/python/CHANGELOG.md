@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.4.0] - 2026-07-03
+
+### Added
+
+- `client.spans.query` gains `order_by` (`startTime`/`duration`/`cost`, asc/desc) and a `status` span filter (`error`/`ok`/`unset`) — enabling "top-N slowest/costliest spans" and error-only drill-downs.
+- `client.analytics.query` breakdown results now include a `label` — the human name for opaque `signalId`/`cluster` keys (the signal name / behavior-cluster name), so by-signal and by-behavior series are self-describing.
+
+### Changed
+
+- `client.analytics.query` percentile metric is now `{ "kind": "percentile", "field": ..., "p": ... }` (`p` in [1,99]) instead of the fixed `p95`. Use `p: 95` for the previous `p95` behavior.
+
 ## [7.3.0] - 2026-07-03
 
 ### Added

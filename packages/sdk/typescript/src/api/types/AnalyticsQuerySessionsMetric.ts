@@ -3,7 +3,7 @@
 import type * as Latitude from "../index.js";
 
 /**
- * The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+ * The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
  */
 export type AnalyticsQuerySessionsMetric =
     | Latitude.AnalyticsQuerySessionsMetric.Count
@@ -14,7 +14,7 @@ export type AnalyticsQuerySessionsMetric =
     | Latitude.AnalyticsQuerySessionsMetric.Max
     | Latitude.AnalyticsQuerySessionsMetric.Avg
     | Latitude.AnalyticsQuerySessionsMetric.Median
-    | Latitude.AnalyticsQuerySessionsMetric.P95;
+    | Latitude.AnalyticsQuerySessionsMetric.Percentile;
 
 export namespace AnalyticsQuerySessionsMetric {
     export interface Count {
@@ -99,12 +99,13 @@ export namespace AnalyticsQuerySessionsMetric {
         export type Field = (typeof Field)[keyof typeof Field];
     }
 
-    export interface P95 {
-        kind: "p95";
-        field: AnalyticsQuerySessionsMetricP95.Field;
+    export interface Percentile {
+        kind: "percentile";
+        field: AnalyticsQuerySessionsMetricPercentile.Field;
+        p: number;
     }
 
-    export namespace AnalyticsQuerySessionsMetricP95 {
+    export namespace AnalyticsQuerySessionsMetricPercentile {
         export const Field = {
             Duration: "duration",
             Cost: "cost",

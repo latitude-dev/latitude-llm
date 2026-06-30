@@ -41,6 +41,24 @@ export const monitorRuleSchema = z.object({
 })
 export type MonitorRule = z.infer<typeof monitorRuleSchema>
 
+/**
+ * Legacy persisted `{kind:"p95"}` metrics → the `percentile` form that replaced
+ * the removed fixed `p95` kind. Applied on the DB-read path so pre-existing monitor
+ * rows keep loading without a data migration; new writes always use `percentile`.
+ * A no-op for every current metric, so it's safe to run on every read.
+ */
+export const normalizeLegacyMetricConfig = (config: MonitorConfig): MonitorConfig => {
+  const isP95 = (m: unknown): boolean => !!m && typeof m === "object" && (m as { kind?: unknown }).kind === "p95"
+  const toPercentile = (m: unknown) => ({ ...(m as object), kind: "percentile", p: 95 })
+  const cond = config.condition as { metric?: unknown } | null | undefined
+  if (!isP95(config.metric) && !(cond && isP95(cond.metric))) return config
+  return {
+    ...config,
+    ...(isP95(config.metric) ? { metric: toPercentile(config.metric) } : {}),
+    ...(cond && isP95(cond.metric) ? { condition: { ...cond, metric: toPercentile(cond.metric) } } : {}),
+  } as MonitorConfig
+}
+
 export const monitorConfigCondition = (config: MonitorConfig): AlertIncidentCondition | null =>
   alertIncidentConditionSchema.nullable().parse(config.condition ?? null)
 

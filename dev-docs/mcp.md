@@ -142,4 +142,5 @@ Better Auth's MCP plugin has no `/revoke` endpoint. Revocation is implemented on
 - [`api.md`](./api.md) — REST surface, middleware ring, rate-limit tiers.
 - [`sdk.md`](./sdk.md) — TS SDK generation pipeline.
 - [`authentication.md`](./authentication.md) — web-side Better Auth, sessions, social login.
+- [`agent-data-access.md`](./agent-data-access.md) — the `queryAnalytics` / `querySpans` read surface agents use to investigate and build dashboards.
 - [`api-endpoints` skill](../.agents/skills/api-endpoints/SKILL.md) — how to add routes that surface as MCP tools.

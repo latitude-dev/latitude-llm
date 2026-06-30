@@ -1,15 +1,30 @@
 import type { ClickHouseClient } from "@clickhouse/client"
-import { type MetricSeriesBucketInput, MetricSeriesReader, type MetricSeriesReaderShape } from "@domain/monitors"
+import {
+  type MetricSeriesBucketInput,
+  MetricSeriesReader,
+  type MetricSeriesReaderShape,
+  type MetricSeriesWindowInput,
+} from "@domain/monitors"
 import { ChSqlClient, type ChSqlClientShape, toRepositoryError } from "@domain/shared"
 import { Effect, Layer } from "effect"
 import { streamFor } from "../metric-sql/index.ts"
+
+const toSqlInput = (input: MetricSeriesWindowInput) => ({
+  organizationId: input.organizationId,
+  projectId: input.projectId,
+  filterSet: input.target.filterSet,
+  query: input.target.query,
+  metric: input.target.metric,
+  from: input.from,
+  to: input.to,
+})
 
 const make = (): MetricSeriesReaderShape => ({
   valueInWindow: (input) =>
     Effect.gen(function* () {
       const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
       const descriptor = streamFor(input.target.stream)
-      const inner = yield* descriptor.buildInner(input)
+      const inner = yield* descriptor.buildInner(toSqlInput(input))
       const aggregate = descriptor.aggregate(input.target.metric)
       return yield* chSqlClient
         .query(async (client) => {
@@ -30,7 +45,7 @@ const make = (): MetricSeriesReaderShape => ({
     Effect.gen(function* () {
       const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
       const descriptor = streamFor(input.target.stream)
-      const inner = yield* descriptor.buildInner(input)
+      const inner = yield* descriptor.buildInner(toSqlInput(input))
       return yield* chSqlClient
         .query(async (client) => {
           const result = await client.query({
@@ -57,7 +72,7 @@ const make = (): MetricSeriesReaderShape => ({
     Effect.gen(function* () {
       const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
       const descriptor = streamFor(input.target.stream)
-      const inner = yield* descriptor.buildInner(input)
+      const inner = yield* descriptor.buildInner(toSqlInput(input))
       return yield* chSqlClient
         .query(async (client) => {
           const result = await client.query({
@@ -84,7 +99,7 @@ const make = (): MetricSeriesReaderShape => ({
     Effect.gen(function* () {
       const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
       const descriptor = streamFor(input.target.stream)
-      const inner = yield* descriptor.buildInner(input)
+      const inner = yield* descriptor.buildInner(toSqlInput(input))
       const aggregate = descriptor.aggregate(input.target.metric)
       const bucketCount = Math.max(0, Math.floor((input.to.getTime() - input.from.getTime()) / input.bucketMs))
       // Bucket each matching trace by how far its `start_time` sits before `to`,

@@ -52,7 +52,8 @@ describe("AgentDispatchRepositoryLive", () => {
     await run(
       Effect.gen(function* () {
         const repo = yield* AgentDispatchRepository
-        return yield* repo.markDispatched({ dispatchId: first.dispatchId! })
+        if (first.dispatchId === null) throw new Error("unreachable")
+        return yield* repo.markDispatched({ dispatchId: first.dispatchId })
       }),
     )
 

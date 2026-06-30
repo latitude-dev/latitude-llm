@@ -21,16 +21,35 @@ describe("analyticsQuerySchema", () => {
     expect(parsed).toMatchObject({ stream: "traces", breakdown: "model", timeBucket: { unit: "week", size: 1 } })
   })
 
-  it("accepts p95 over a trace-family field, but not on scores (its own vocabulary)", () => {
+  it("rejects the removed fixed `p95` kind (superseded by `percentile`)", () => {
+    // `percentile` is the supported form; the old fixed `p95` no longer parses.
+    expect(
+      analyticsQuerySchema.safeParse({
+        stream: "traces",
+        metric: { kind: "percentile", field: "duration", p: 95 },
+        range,
+      }).success,
+    ).toBe(true)
     expect(
       analyticsQuerySchema.safeParse({ stream: "traces", metric: { kind: "p95", field: "duration" }, range }).success,
-    ).toBe(true)
-    // p95 requires a field, like the other stat metrics.
-    expect(analyticsQuerySchema.safeParse({ stream: "traces", metric: { kind: "p95" }, range }).success).toBe(false)
-    // scores/behaviors/moments have their own metric schemas without p95.
-    expect(
-      analyticsQuerySchema.safeParse({ stream: "scores", metric: { kind: "p95", field: "value" }, range }).success,
     ).toBe(false)
+    // `percentile` is a trace-family metric; scores have their own vocabulary.
+    expect(
+      analyticsQuerySchema.safeParse({ stream: "scores", metric: { kind: "percentile", field: "value", p: 95 }, range })
+        .success,
+    ).toBe(false)
+  })
+
+  it("accepts an arbitrary percentile with a bounded `p`", () => {
+    const ok = (metric: unknown) => analyticsQuerySchema.safeParse({ stream: "traces", metric, range }).success
+    expect(ok({ kind: "percentile", field: "duration", p: 90 })).toBe(true)
+    expect(ok({ kind: "percentile", field: "cost", p: 99 })).toBe(true)
+    expect(ok({ kind: "percentile", field: "duration", p: 10 })).toBe(true)
+    // `p` is bounded to [1, 99] (quantileTDigest is unreliable at the extreme tail).
+    expect(ok({ kind: "percentile", field: "duration", p: 100 })).toBe(false)
+    expect(ok({ kind: "percentile", field: "duration", p: 0 })).toBe(false)
+    // requires a field, like the other stat metrics.
+    expect(ok({ kind: "percentile", p: 90 })).toBe(false)
   })
 
   it("rejects an unknown breakdown for traces", () => {

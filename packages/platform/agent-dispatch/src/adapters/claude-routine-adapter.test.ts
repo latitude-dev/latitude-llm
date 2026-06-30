@@ -12,9 +12,15 @@ describe("createClaudeRoutineAdapter", () => {
           headers: new Headers(init?.headers),
           body: init?.body as string,
         })
-        return new Response(JSON.stringify({ session_id: "sess1", url: "https://claude.ai/code/sess1" }), {
-          status: 200,
-        })
+        return new Response(
+          JSON.stringify({
+            session_id: "sess1",
+            url: "https://claude.ai/code/sess1",
+          }),
+          {
+            status: 200,
+          },
+        )
       }),
     )
 
@@ -38,9 +44,10 @@ describe("createClaudeRoutineAdapter", () => {
 
     expect(result.status).toBe("accepted")
     expect(result.externalAgentId).toBe("sess1")
-    expect(calls[0]!.url).toBe("https://api.anthropic.com/v1/claude_code/routines/trig_abc/fire")
-    expect(calls[0]!.headers.get("anthropic-beta")).toBe("experimental-cc-routine-2026-04-01")
-    expect(JSON.parse(calls[0]!.body)).toEqual({ text: "investigate signal" })
+    const payload = calls[0]
+    expect(payload.url).toBe("https://api.anthropic.com/v1/claude_code/routines/trig_abc/fire")
+    expect(payload.headers.get("anthropic-beta")).toBe("experimental-cc-routine-2026-04-01")
+    expect(JSON.parse(payload.body)).toEqual({ text: "investigate signal" })
 
     vi.unstubAllGlobals()
   })

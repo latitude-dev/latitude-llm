@@ -1,0 +1,89 @@
+---
+title: Build a dashboard from Latitude data
+description: Give an agent arbitrarily sliceable analytics and let it render a self-contained HTML dashboard.
+---
+
+Latitude doesn't ship a dashboard builder. Instead it exposes one composable analytics tool,
+`queryAnalytics`, over the [MCP connection](/getting-started/mcp). You ask your agent for a dashboard;
+the agent makes a handful of `queryAnalytics` calls and renders a **self-contained HTML page** from the
+results. Latitude provides the data; the agent renders it.
+
+## The shape of every widget
+
+Every chart is the same three-part query over a filtered stream:
+
+- **Metric** — the number each row reduces to (`count`, `errorRate`, `percentile(duration)`, `avg(cost)`, …).
+- **Breakdown** — the dimension to split across, one row per value (by `model`, `tool`, `signalId`, …).
+- **Time bucket** — optional granularity (`hour` / `day` / `week`) that turns a number into a trend.
+
+So "error rate by model, weekly" = metric `errorRate` × breakdown `model` × bucket `week`. Swap any
+axis for the next chart — no new endpoint.
+
+## Streams and metrics
+
+| Stream | What it measures | Metrics | Break down by |
+| --- | --- | --- | --- |
+| `traces` / `sessions` / `spans` | requests, conversations, operations | `count`, `errorRate`, `cacheHitRate`, `sum`/`min`/`max`/`avg`/`median` of `duration`\|`cost`\|`tokens`, plus `percentile` (`{ kind: "percentile", field, p }`, `p` 1–99) | `model`, `provider`, `service`, `tool`, `tag`, `status` (+ `name`/`userId` on traces, `operation` on spans) |
+| `scores` (signals) | scored occurrences | `count`, `passRate`, `errorRate`, `avg`/`min`/`max`/`median` of `value` | `signalId`, `source`, `model`, `provider`, `service`, `tool`, `tag` |
+| `behaviors` | clustered behaviors | `count`, `avg`/`min`/`max`/`median` of `confidence` | `cluster`, `session`, `method` |
+| `moments` | labeled conversation moments | `count`, `avg`/`min`/`max`/`median` of `confidence`\|`coherence` | `kind`, `actor`, `session` |
+
+Values are returned in human units: `duration` in **seconds**, `cost` in **dollars**, and rates
+(`errorRate`, `cacheHitRate`, `passRate`) as a **0–1 fraction**.
+
+## Example calls
+
+```jsonc
+// Error rate by model, weekly, last 30 days
+queryAnalytics({
+  stream: "traces", metric: { kind: "errorRate" }, breakdown: "model",
+  timeBucket: { unit: "week" },
+  range: { fromIso: "2026-05-31T00:00:00Z", toIso: "2026-06-30T00:00:00Z" }
+})
+
+// 95th-percentile latency by tool
+queryAnalytics({
+  stream: "traces", metric: { kind: "percentile", field: "duration", p: 95 }, breakdown: "tool",
+  range: { fromIso: "2026-06-23T00:00:00Z", toIso: "2026-06-30T00:00:00Z" }
+})
+
+// Cost by provider
+queryAnalytics({
+  stream: "traces", metric: { kind: "sum", field: "cost" }, breakdown: "provider",
+  range: { fromIso: "2026-06-23T00:00:00Z", toIso: "2026-06-30T00:00:00Z" }
+})
+
+// Conversation fallout: moment count by kind
+queryAnalytics({
+  stream: "moments", metric: { kind: "count" }, breakdown: "kind",
+  range: { fromIso: "2026-06-23T00:00:00Z", toIso: "2026-06-30T00:00:00Z" }
+})
+```
+
+Each returns a tidy series — `[{ key?, bucketStart?, value }]` — small enough to embed inline no matter
+how many traces it spans.
+
+## Row-level widgets
+
+For a "top 10 slowest tool calls" style table (rows, not an aggregate), use `querySpans` to list the
+individual spans across traces:
+
+```jsonc
+querySpans({
+  filters: { operation: [{ op: "eq", value: "execute_tool" }] },
+  range: { fromIso: "2026-06-23T00:00:00Z", toIso: "2026-06-30T00:00:00Z" },
+  limit: 10
+})
+```
+
+## Rendering
+
+The agent embeds the returned series directly into a **self-contained HTML file** (an inline chart
+library, data baked in) and commits it to your repo or hosts it wherever you like. Nothing is rendered
+by Latitude — which keeps the data portable and the setup dependency-free.
+
+A good prompt is simply: *"Build a self-contained HTML dashboard of this project's LLM reliability and
+cost over the last 30 days."* The agent discovers the right `queryAnalytics` calls on its own.
+
+See [Agent dispatch](/agent-dispatch/overview#investigate-a-signal) for the investigation counterpart —
+how an agent uses these same tools to root-cause a signal.

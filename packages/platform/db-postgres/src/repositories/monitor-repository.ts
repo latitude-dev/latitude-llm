@@ -6,6 +6,7 @@ import {
   monitorConfigFilterSet,
   monitorSchema,
   monitorStreamForTargetType,
+  normalizeLegacyMetricConfig,
   type SavedSearchMonitorSummary,
 } from "@domain/monitors"
 import {
@@ -41,7 +42,10 @@ import { projects } from "../schema/projects.ts"
 import { nameMatchScore, preferProjectFirst } from "./org-search.ts"
 
 const toMonitor = (row: typeof monitors.$inferSelect): Monitor => {
-  const filterSet = monitorConfigFilterSet(row.config) ?? undefined
+  // Normalize legacy `{kind:"p95"}` metrics before schema validation (the fixed
+  // `p95` kind was removed in favor of `percentile`); no-op for all current rows.
+  const config = normalizeLegacyMetricConfig(row.config)
+  const filterSet = monitorConfigFilterSet(config) ?? undefined
   return monitorSchema.parse({
     id: row.id,
     organizationId: row.organizationId,
@@ -56,13 +60,13 @@ const toMonitor = (row: typeof monitors.$inferSelect): Monitor => {
       ...(filterSet === undefined ? {} : { filterSet }),
       kind: row.targetType,
       stream: monitorStreamForTargetType(row.targetType),
-      query: row.config.query ?? null,
+      query: config.query ?? null,
       savedSearchId: row.targetType === "savedSearch" ? row.targetId : null,
-      ...(row.config.metric === undefined ? {} : { metric: row.config.metric }),
+      ...(config.metric === undefined ? {} : { metric: config.metric }),
     },
     rule: {
       trigger: row.trigger,
-      config: row.config,
+      config,
       severity: row.severity,
     },
     mutedAt: row.mutedAt,

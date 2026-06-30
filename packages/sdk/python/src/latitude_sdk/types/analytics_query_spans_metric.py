@@ -11,13 +11,13 @@ from .analytics_query_spans_metric_avg_field import AnalyticsQuerySpansMetricAvg
 from .analytics_query_spans_metric_max_field import AnalyticsQuerySpansMetricMaxField
 from .analytics_query_spans_metric_median_field import AnalyticsQuerySpansMetricMedianField
 from .analytics_query_spans_metric_min_field import AnalyticsQuerySpansMetricMinField
-from .analytics_query_spans_metric_p95field import AnalyticsQuerySpansMetricP95Field
+from .analytics_query_spans_metric_percentile_field import AnalyticsQuerySpansMetricPercentileField
 from .analytics_query_spans_metric_sum_field import AnalyticsQuerySpansMetricSumField
 
 
 class AnalyticsQuerySpansMetric_Count(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["count"] = "count"
@@ -27,7 +27,7 @@ class AnalyticsQuerySpansMetric_Count(UniversalBaseModel):
 
 class AnalyticsQuerySpansMetric_ErrorRate(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["errorRate"] = "errorRate"
@@ -37,7 +37,7 @@ class AnalyticsQuerySpansMetric_ErrorRate(UniversalBaseModel):
 
 class AnalyticsQuerySpansMetric_CacheHitRate(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["cacheHitRate"] = "cacheHitRate"
@@ -47,7 +47,7 @@ class AnalyticsQuerySpansMetric_CacheHitRate(UniversalBaseModel):
 
 class AnalyticsQuerySpansMetric_Sum(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["sum"] = "sum"
@@ -58,7 +58,7 @@ class AnalyticsQuerySpansMetric_Sum(UniversalBaseModel):
 
 class AnalyticsQuerySpansMetric_Min(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["min"] = "min"
@@ -69,7 +69,7 @@ class AnalyticsQuerySpansMetric_Min(UniversalBaseModel):
 
 class AnalyticsQuerySpansMetric_Max(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["max"] = "max"
@@ -80,7 +80,7 @@ class AnalyticsQuerySpansMetric_Max(UniversalBaseModel):
 
 class AnalyticsQuerySpansMetric_Avg(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["avg"] = "avg"
@@ -91,7 +91,7 @@ class AnalyticsQuerySpansMetric_Avg(UniversalBaseModel):
 
 class AnalyticsQuerySpansMetric_Median(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
     kind: typing.Literal["median"] = "median"
@@ -100,13 +100,14 @@ class AnalyticsQuerySpansMetric_Median(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-class AnalyticsQuerySpansMetric_P95(UniversalBaseModel):
+class AnalyticsQuerySpansMetric_Percentile(UniversalBaseModel):
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`, or `{kind:'percentile',field,p}` for an arbitrary percentile (`p` in [1,99]; e.g. `p:95`).
     """
 
-    kind: typing.Literal["p95"] = "p95"
-    field: AnalyticsQuerySpansMetricP95Field
+    kind: typing.Literal["percentile"] = "percentile"
+    field: AnalyticsQuerySpansMetricPercentileField
+    p: float
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
@@ -121,7 +122,7 @@ AnalyticsQuerySpansMetric = typing_extensions.Annotated[
         AnalyticsQuerySpansMetric_Max,
         AnalyticsQuerySpansMetric_Avg,
         AnalyticsQuerySpansMetric_Median,
-        AnalyticsQuerySpansMetric_P95,
+        AnalyticsQuerySpansMetric_Percentile,
     ],
     pydantic.Field(discriminator="kind"),
 ]

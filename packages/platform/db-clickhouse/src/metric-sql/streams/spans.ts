@@ -37,7 +37,7 @@ const BREAKDOWN = {
  * tool-analytics over `execute_tool` spans).
  */
 const buildInner = (input: MetricSqlInput): InnerQuery => {
-  const { whereClauses, params: filterParams } = buildSpanFilterClauses(input.target.filterSet)
+  const { whereClauses, params: filterParams } = buildSpanFilterClauses(input.filterSet)
   const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
   return {
     sql: `SELECT span_id, start_time, status_code, operation, model, provider, service_name, tool_name, tags, duration_ns, cost_total_microcents, tokens_input, tokens_output, tokens_cache_read, tokens_cache_create

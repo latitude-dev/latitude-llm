@@ -22,23 +22,28 @@ export type MetricForStream<S extends AnalyticsStream> = S extends "scores"
       : MonitorMetric
 
 /**
- * The minimal window input the SQL builders need: a resolved stream + predicate
- * (+ optional semantic query) and the metric to compute. Generic over the stream
- * so `metric` is exactly the vocabulary that stream accepts — invalid stream+metric
- * pairings don't compile. Structurally a subset of `MetricSeriesWindowInput`
- * (monitors) and the analytics-query input; the monitor firing path only ever
- * uses the trace-family streams + `MonitorMetric`.
+ * The window input the SQL builders need: a predicate (+ optional semantic
+ * query) and the metric to compute. Generic over the stream so `metric` is
+ * exactly the vocabulary that stream accepts — invalid stream+metric pairings
+ * don't compile. There is deliberately no `stream` field: the caller has already
+ * resolved the descriptor via `streamFor(...)`, so the descriptor *is* the
+ * stream. The monitor firing path (`MetricSeriesWindowInput`) and the analytics
+ * query both unbundle their own shape into this on the way in.
  */
 export interface MetricSqlInput<S extends AnalyticsStream = AnalyticsStream> {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
-  readonly target: {
-    readonly stream: S
-    readonly filterSet: FilterSet
-    /** Semantic search query — `traces`/`sessions` only; `null` otherwise. */
-    readonly query: string | null
-    readonly metric: MetricForStream<S>
-  }
+  readonly filterSet: FilterSet
+  /** Semantic search query — `traces`/`sessions` only; `null` otherwise. */
+  readonly query: string | null
+  readonly metric: MetricForStream<S>
+  /**
+   * The requested breakdown field, if any. Lets a stream's `buildInner` prune
+   * work it doesn't need for this breakdown — e.g. `scores` skips the traces
+   * join unless the breakdown is a trace dimension. The engine still applies
+   * the actual `GROUP BY` itself.
+   */
+  readonly breakdown?: string
   /** Inclusive lower bound on the row's time axis. */
   readonly from: Date
   /** Exclusive upper bound. */
