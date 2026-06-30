@@ -46,7 +46,7 @@ Latitude already owns everything left of the dispatch step. This spec adds **one
 
 - A new outbound channel ("agent dispatch") that fans out from the same domain events as notifications.
 - Vendor adapters that translate a Latitude dispatch into a platform-specific "start an agent" call.
-- Per-project configuration (target, repo, triggers, filters, guardrails) and an encrypted credential store.
+- Per-project configuration (target, repo, triggers, guardrails) and an encrypted credential store.
 - A dispatch ledger (idempotency + audit) and a dispatch-history UI.
 - Prompt assembly that reuses the incident notification snapshot.
 
@@ -91,17 +91,11 @@ A first-class, documented REST API for exactly this use case (Cursor's own docs 
 
 ### Linear — broker dispatch target ✅ MVP
 
-Rather than integrate every coding-agent platform directly, Latitude can **create a Linear issue** carrying the signal context and let the customer's existing Linear automation route it to a coding agent. Cursor, Claude Code, **and Codex** all support delegating a Linear issue to their agent (assign/mention, or **triage rules** that auto-delegate matching issues with no human touch). One adapter, many downstream agents.
+Rather than integrate every coding-agent platform directly, Latitude can **create a Linear issue** carrying the signal context and let the customer's existing Linear automation route it to a coding agent. Several coding-agent platforms (Cursor and others) support delegating a Linear issue to their agent (assign/mention, or **triage rules** that auto-delegate matching issues with no human touch). One adapter, many downstream agents.
 
-- **Mechanism:** Latitude's Linear integration creates an issue (title + body from the dispatch context, optional team/label/assignee) via the Linear API. The customer configures a Linear **triage rule** (e.g. "Delegate → Codex/Cursor") so matching issues auto-start an agent.
-- **Why it's attractive:** it is the only practical path to **Codex Cloud** (which has no stable public dispatch API — see below), it doubles as a human-visible audit trail in the customer's tracker, and it generalizes beyond any single agent vendor.
+- **Mechanism:** Latitude's Linear integration creates an issue (title + body from the dispatch context, optional team/label/assignee) via the Linear API. The customer configures a Linear **triage rule** ("Delegate → <their agent>") so matching issues auto-start an agent.
+- **Why it's attractive:** it is a vendor-neutral broker — one adapter reaches any agent that integrates with Linear, including platforms with no direct dispatch API — and it doubles as a human-visible audit trail in the customer's tracker.
 - **Caveat:** the agent hand-off depends on the customer's Linear rules, so the wake is "issue created" on our side; what happens next lives in their workspace.
-
-### Codex — no direct cloud-dispatch API, reached via Linear/webhook
-
-Codex Cloud has **no documented public REST API** to start a task. The endpoint the `codex cloud` CLI uses (`POST https://chatgpt.com/backend-api/.../tasks`) is an internal, ChatGPT-account-authenticated surface reverse-engineered from the open-source `codex-rs` client — not a stable contract, and we will **not** build against it. Its automation hooks are the **Slack/Linear** integrations (human `@Codex` mention, or **Linear triage rules** that auto-delegate). `codex exec` / Codex SDK / `openai/codex-action` run Codex in *your* infra/CI (a self-hosted runner), not Codex Cloud.
-
-**So Codex is supported, just indirectly:** the **Linear broker** (above, MVP) auto-delegates issues to Codex via triage rules, and the **generic webhook** adapter can drive a self-hosted `codex exec` runner. There is no dedicated Codex adapter. Decision [D3](#decisions).
 
 ### Summary matrix
 
@@ -111,7 +105,8 @@ Codex Cloud has **no documented public REST API** to start a task. The endpoint 
 | **Claude Code** | ✅ Yes | Routines `/fire` | **Phase 3** |
 | **Linear (broker)** | ✅ Yes | create issue → customer triage rule delegates to an agent | **Phase 4** |
 | **Generic webhook** | ✅ Yes (customer owns the receiver) | signed HTTP POST | **Phase 1 (foundation)** |
-| **Codex Cloud** | ❌ No stable API | reached via Linear broker or webhook→`codex exec` | none (indirect) |
+
+Platforms without a stable public dispatch API are reached **indirectly** — via the Linear broker (triage-rule delegation) or a self-hosted runner behind the generic webhook adapter.
 
 ---
 
@@ -123,7 +118,7 @@ Agent Dispatch is a **new outbound channel** built exactly like the Slack channe
 SignalCreated / IncidentCreated (outbox → domain-events worker)        [ships]
    ├──→ notifications:request-*-notifications      (email / in-app / Slack)  [ships]
    └──→ agent-dispatch:request                     (NEW, parallel fan-out)
-            │  resolve project dispatch config; apply trigger + filter + mute gates;
+            │  resolve project dispatch config; apply trigger + mute gates;
             │  rate-limit / cooldown check; build the prompt context snapshot
             ▼
         agent-dispatch:send  (one job per matched config)
@@ -135,7 +130,7 @@ SignalCreated / IncidentCreated (outbox → domain-events worker)        [ships]
         external platform spins up the agent → (its own infra) → PR
 ```
 
-Key boundary: the `agent-dispatch:request` producer is where **all policy** lives (which trigger, which filters, mute, guardrails, prompt assembly). The `agent-dispatch:send` consumer is a thin claim → render → POST → record. This mirrors the notifications producer/consumer split.
+Key boundary: the `agent-dispatch:request` producer is where **all policy** lives (which trigger, mute, guardrails, prompt assembly). The `agent-dispatch:send` consumer is a thin claim → render → POST → record. This mirrors the notifications producer/consumer split.
 
 **Package layout** (mirrors `@domain/integrations` + Slack):
 
@@ -160,11 +155,12 @@ The `agent-dispatch:request` producer applies, in order:
 
 1. **Config lookup** — is there an enabled dispatch config for `(organizationId, projectId)`? (else skip)
 2. **Trigger gate** — does the config subscribe to this trigger kind? (else skip)
-3. **Source filter** — optional narrowing: signal `source` (`flagger` | `annotation` | `custom`), specific `flaggerSlug`s (e.g. only `frustration`), `minSeverity`, signal priority. (else skip)
-4. **Mute gate** — a muted signal (`signals.muted_at`) or muted monitor suppresses dispatch, mirroring notification mute. (else skip)
-5. **Guardrail gate** — per-config `maxDispatchesPerDay` and `cooldownMinutes` (see [Idempotency, guardrails, failure policy](#idempotency-guardrails-and-failure-policy)). (else skip, logged)
+3. **Mute gate** — a muted signal (`signals.muted_at`) or muted monitor suppresses dispatch, mirroring notification mute. (else skip)
+4. **Guardrail gate** — per-config `maxDispatchesPerDay` and `cooldownMinutes` (see [Idempotency, guardrails, failure policy](#idempotency-guardrails-and-failure-policy)). (else skip, logged)
 
 Only after all gates pass does it snapshot the prompt context and enqueue `agent-dispatch:send`.
+
+**No per-dispatch source filters in the MVP.** Dispatch is all-or-nothing per trigger; the way to stop dispatch for one noisy signal is to **mute that signal** (`signals.muted_at`) — the same control that already silences its notifications. This keeps one lever for "I don't care about this signal" instead of a parallel filter surface. (Granular filters — by signal `source`, `flaggerSlug`, severity, priority — are future work, not MVP.)
 
 There is **no human approval step.** The whole point is an unattended `signal → fix-PR` loop; the human review gate is the **draft PR itself**, reviewed in GitHub like any other PR — not an approval before the agent starts. See [D5](#decisions).
 
@@ -301,9 +297,9 @@ Content-Type: application/json
 { "query": "mutation { issueCreate(input: { teamId, title, description, labelIds?, assigneeId? }) { issue { id url identifier } } }" }
 ```
 
-- Creates a Linear issue from the dispatch context (`title` = signal name + trigger; `description` = the rendered prompt + deep link + sample trace ids). The customer's Linear **triage rule** (Delegate → Cursor/Codex/…) auto-starts the downstream agent — Latitude does not call the agent platform itself.
+- Creates a Linear issue from the dispatch context (`title` = signal name + trigger; `description` = the rendered prompt + deep link + sample trace ids). The customer's Linear **triage rule** (Delegate → their agent) auto-starts the downstream agent — Latitude does not call the agent platform itself.
 - Idempotency: ledger claim before the mutation; optionally set a deterministic external attribute / title marker so a manual re-run is recognizable.
-- This is the **only** route to Codex Cloud and a vendor-neutral broker for the rest. Store the issue `id` + `url`.
+- A vendor-neutral broker reaching any Linear-integrated agent (including platforms with no direct dispatch API). Store the issue `id` + `url`.
 
 ### Webhook adapter (foundation + universal fallback)
 
@@ -317,7 +313,7 @@ X-Latitude-Delivery: <idempotencyKey>
 ```
 
 - HMAC-signed (per-config secret), idempotency key in header, retry with backoff.
-- This is what a **self-hosted Codex runner** consumes (their handler runs `codex exec`), and the escape hatch for any platform without a first-class adapter.
+- This is what a **self-hosted runner** consumes (their handler runs a CLI agent in their own infra), and the escape hatch for any platform without a first-class adapter.
 
 ---
 
@@ -335,7 +331,6 @@ latitude.agent_dispatch_configs             (NEW — per project per target)
   id, organization_id, project_id, integration_id,
   enabled boolean,
   triggers jsonb,                -- ["incident.opened", ...]
-  filters jsonb,                 -- { signalSources?, flaggerSlugs?, minSeverity?, priorities? }
   target jsonb,                  -- vendor-specific resolved target (repoUrl, startingRef,
                                  --   environmentName?, routineTriggerId?, linearTeamId?, webhookUrl?, autoCreatePR)
   prompt_template text,          -- nullable → default template
@@ -399,7 +394,7 @@ Claim-then-act ordering (stamp `claimed_at` before POST) means a crash mid-POST 
 **Settings → Integrations** (next to Slack):
 
 1. **Connect a target**: pick Cursor / Claude Code / Linear / Webhook; store the vendor credential (encrypted). Cursor: API key + GitHub-app-authorized repo. Claude: routine trigger id + token. Linear: API key/OAuth + team. Webhook: URL + generated secret.
-2. **Per-project dispatch config**: enable, choose triggers, optional filters (signal source, flagger slugs, min severity), repo/env (or Linear team) mapping, prompt template override, guardrails.
+2. **Per-project dispatch config**: enable, choose triggers, repo/env (or Linear team) mapping, prompt template override, guardrails. (To silence one noisy signal, mute the signal — there are no per-dispatch source filters in the MVP.)
 3. **MCP checklist (informational, non-enforcing)**: "Latitude MCP connected on this Cursor environment / Claude routine?" — a reminder, since MCP provisioning is the customer's responsibility ([D1](#decisions)). The dispatcher does not verify it.
 4. **Dispatch history (MVP)**: the `agent_dispatches` ledger rendered as an audit log — trigger, signal/incident, time, status, and a deep link ("View in Cursor" / "View in Claude" / "View Linear issue"). This ships in the MVP, not later.
 
@@ -420,7 +415,7 @@ A feature flag (`AGENT_DISPATCH_FLAG = "agent-dispatch"`, off by default, per-or
 
 ## Self-hosting
 
-- Cursor and Claude Code cloud agents are SaaS; a self-hoster who won't use them uses the **webhook adapter** to a runner in their own infra (`claude -p --bare`, `codex exec`, or a custom harness), or the **Linear adapter** if their tracker brokers an agent.
+- Cursor and Claude Code cloud agents are SaaS; a self-hoster who won't use them uses the **webhook adapter** to a runner in their own infra (`claude -p --bare` or a custom harness), or the **Linear adapter** if their tracker brokers an agent.
 - Keep the adapter set permissively licensed and the integration **bring-your-own**: no bundled dependency on any single vendor; the webhook path is always available. Consistent with the OSS/self-host policy in `AGENTS.md`.
 - All new infra is namespaced (Postgres tables under `latitude.`, queue topics under the existing registry, Redis keys org-prefixed).
 
@@ -430,9 +425,9 @@ A feature flag (`AGENT_DISPATCH_FLAG = "agent-dispatch"`, off by default, per-or
 
 - **D1 — The dispatcher does not provision MCP auth for the receiving agent.** The customer's cloud agent is assumed to already have the Latitude MCP connected (OAuth, once, out of band). Latitude never mints, forwards, or embeds MCP credentials at dispatch time. Rationale: MCP is OAuth-first and consent-minted (`dev-docs/mcp.md` — OAuth keys are creatable only via the consent UX, never via API), so unattended minting doesn't exist; pushing MCP provisioning to platform setup keeps the dispatcher to a single outbound call and shrinks the credential blast radius. The rich prompt + deep link + sample trace ids make the agent productive even when MCP is absent.
 - **D2 — Adapters: Cursor (primary), Claude routines, Linear broker, webhook (foundation).** Driven by which platforms expose a stable hosted-dispatch API ([ground truth](#what-is-actually-dispatchable-today-ground-truth)). All four ship in the MVP.
-- **D3 — No dedicated Codex adapter.** Codex Cloud has no stable public dispatch API (the `chatgpt.com/backend-api` surface is unofficial and rejected). Codex is reached via the **Linear broker** (triage-rule delegation) or the **webhook** adapter (self-hosted `codex exec`). The Managed Agents Claude path is likewise out of scope; routines are the only Claude path.
+- **D3 — Platforms without a stable public dispatch API get no dedicated adapter.** They are reached indirectly via the **Linear broker** (triage-rule delegation) or the **webhook** adapter (self-hosted runner). The Claude Managed Agents path is likewise out of scope; routines are the only Claude path.
 - **D4 — Reuse the notification fan-out and the Slack integration pattern wholesale.** Same domain events, same producer/consumer split, same encrypted-credential + idempotency-ledger shapes. Agent dispatch is "a channel that wakes an agent instead of notifying a human".
-- **D5 — Fully unattended `signal → draft PR`; no human approval before the agent runs, and `mode: "agent"` (never `"plan"`).** The goal is a hands-off loop, so a pre-run approval gate is explicitly not built. Plan mode is wrong here because it stops to ask a human before implementing — the opposite of the intent. Safety comes from the **draft PR** (reviewed/merged by a human in GitHub, never auto-merged), per-config trigger/source **filters**, **mute**, and **guardrails** (`maxDispatchesPerDay`, `cooldownMinutes`). `incident.opened` (signal escalation) is the default trigger as the highest-signal moment. The residual risk is an unwanted draft PR, which is cheap to discard.
+- **D5 — Fully unattended `signal → draft PR`; no human approval before the agent runs, and `mode: "agent"` (never `"plan"`).** The goal is a hands-off loop, so a pre-run approval gate is explicitly not built. Plan mode is wrong here because it stops to ask a human before implementing — the opposite of the intent. Safety comes from the **draft PR** (reviewed/merged by a human in GitHub, never auto-merged), **signal mute** (the per-signal off switch — no separate dispatch filters in the MVP), and **guardrails** (`maxDispatchesPerDay`, `cooldownMinutes`). `incident.opened` (signal escalation) is the default trigger as the highest-signal moment. The residual risk is an unwanted draft PR, which is cheap to discard.
 - **D6 — Idempotency is mandatory and keyed `<vendor>:<trigger>:<sourceId>`.** One escalation → at most one agent. Cursor `agentId` reinforces it natively.
 - **D7 — No completion loop.** Latitude does not poll or verify the agent's run or the resulting PR. The dispatch ends at "agent started / issue created"; the real closure of the loop is the customer **merging the PR** in GitHub, which Latitude does not track. Single repo per config for MVP (multi-repo selection is future work).
 
@@ -447,12 +442,12 @@ A feature flag (`AGENT_DISPATCH_FLAG = "agent-dispatch"`, off by default, per-or
 - [ ] **P1-1**: `@domain/agent-dispatch` package — entities, `AgentDispatchContext`, ports (`AgentDispatchAdapter`, repositories), errors (`Data.TaggedError` per `dev-docs/effect-and-errors`).
 - [ ] **P1-2**: PG migration — `agent_dispatch_configs`, `agent_dispatch_credentials`, `agent_dispatches`; extend `integrations.kind` enum; RLS policies (api-keys/slack template); no FKs.
 - [ ] **P1-3**: Domain-events fan-out — publish `agent-dispatch:request` from `SignalCreated` and `IncidentCreated`, parallel to notifications, dedupe-keyed; behind `AGENT_DISPATCH_FLAG`.
-- [ ] **P1-4**: `requestAgentDispatchUseCase` (producer) — config lookup, trigger/source/mute/guardrail gates, prompt-context snapshot (reuse the incident-notification snapshot source), enqueue `agent-dispatch:send`.
+- [ ] **P1-4**: `requestAgentDispatchUseCase` (producer) — config lookup, trigger/mute/guardrail gates, prompt-context snapshot (reuse the incident-notification snapshot source), enqueue `agent-dispatch:send`.
 - [ ] **P1-5**: `sendAgentDispatchUseCase` (consumer) — ledger claim, adapter dispatch, record external ids/url, failure-category mapping.
 - [ ] **P1-6**: Webhook adapter — HMAC signing, idempotency header, retry/backoff. Encrypted `webhook_secret`.
 - [ ] **P1-7**: `apps/workers` wiring — new `agent-dispatch` worker (request + send), topic registry entries, layer composition.
 - [ ] **P1-8**: **Dispatch history UI (MVP)** — Settings → Integrations audit log over the `agent_dispatches` ledger: trigger, signal/incident, time, status, and the adapter deep link. Ships with the foundation; adapters add their own deep-link labels.
-- [ ] **P1-9**: Tests — producer gate matrix (trigger/filter/mute/guardrail), ledger idempotency under redelivery, webhook signing + retry (PGlite testkit; no `vi.mock` for repos per `dev-docs`/testing skill).
+- [ ] **P1-9**: Tests — producer gate matrix (trigger/mute/guardrail), ledger idempotency under redelivery, webhook signing + retry (PGlite testkit; no `vi.mock` for repos per `dev-docs`/testing skill).
 
 **Exit gate**: a signal escalation in a flagged org fires a single signed webhook with the rendered prompt + context; redelivery does not double-fire; mute and guardrails suppress correctly; the dispatch shows up in the history UI.
 
@@ -476,7 +471,7 @@ A feature flag (`AGENT_DISPATCH_FLAG = "agent-dispatch"`, off by default, per-or
 ### Phase 4 — Linear adapter (broker)
 
 - [ ] **P4-1**: `LinearAdapter` — `issueCreate` GraphQL mutation from the dispatch context (title + description + optional team/label/assignee); store issue `id` + `url`. Ledger-claim dedup before the mutation.
-- [ ] **P4-2**: Credential + config — encrypted `linear_api_key`/OAuth + team selection; connect flow; copy explaining the customer must set a Linear triage rule (Delegate → Cursor/Codex/…) for the downstream agent to start.
+- [ ] **P4-2**: Credential + config — encrypted `linear_api_key`/OAuth + team selection; connect flow; copy explaining the customer must set a Linear triage rule (Delegate → their agent) for the downstream agent to start.
 - [ ] **P4-3**: Tests — mutation shape, dedup, auth/config error categories.
 
 **Exit gate**: an escalation creates exactly one Linear issue carrying the context + deep link; the ledger holds the issue url. (Downstream agent start is the customer's triage rule — out of Latitude's scope, per [D7](#decisions).)
