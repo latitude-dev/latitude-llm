@@ -22,6 +22,7 @@ describe("defineApiEndpoint", () => {
         path: "/foo",
         name: "fooThing",
         description: "Get a foo",
+        annotations: { readOnlyHint: true, destructiveHint: false },
         responses: {
           200: {
             content: { "application/json": { schema: z.object({ ok: z.boolean() }) } },
@@ -42,6 +43,7 @@ describe("defineApiEndpoint", () => {
         path: "/x",
         name: "x",
         description: "x",
+        annotations: { readOnlyHint: true, destructiveHint: false },
         responses: { 200: { description: "OK" } },
       }),
       handler: async (c) => c.body(null, 200),
@@ -56,6 +58,7 @@ describe("defineApiEndpoint", () => {
         path: "/x",
         name: "x",
         description: "x",
+        annotations: { readOnlyHint: true, destructiveHint: false },
         responses: { 200: { description: "OK" } },
       }),
       handler: async (c) => c.body(null, 200),
@@ -71,6 +74,7 @@ describe("defineApiEndpoint", () => {
         path: "/items",
         name: "createItem",
         description: "Create",
+        annotations: { readOnlyHint: false, destructiveHint: false },
         request: {
           body: {
             content: { "application/json": { schema: z.object({ value: z.string() }) } },
@@ -92,8 +96,10 @@ describe("defineApiEndpoint", () => {
 
     const spec = app.getOpenAPI31Document({ openapi: "3.1.0", info: { title: "t", version: "0" } })
     expect(spec.paths?.["/items"]?.post?.operationId).toBe("createItem")
-    // `name` is internal-only and must NOT leak into the OpenAPI spec.
-    expect((spec.paths?.["/items"]?.post as Record<string, unknown> | undefined)?.name).toBeUndefined()
+    // `name` and `annotations` are internal-only and must NOT leak into the OpenAPI spec.
+    const operation = spec.paths?.["/items"]?.post as Record<string, unknown> | undefined
+    expect(operation?.name).toBeUndefined()
+    expect(operation?.annotations).toBeUndefined()
   })
 
   it("mountHttp wires a working handler that responds to fetch", async () => {
@@ -103,6 +109,7 @@ describe("defineApiEndpoint", () => {
         path: "/echo/{id}",
         name: "echo",
         description: "Echo id",
+        annotations: { readOnlyHint: true, destructiveHint: false },
         request: { params: z.object({ id: z.string() }) },
         responses: {
           200: {

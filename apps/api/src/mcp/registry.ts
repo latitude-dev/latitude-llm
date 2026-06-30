@@ -1,4 +1,4 @@
-import type { AnyApiEndpoint } from "./define-endpoint.ts"
+import type { AnyApiEndpoint, McpToolAnnotations } from "./define-endpoint.ts"
 import { type ExtractedOutput, extractOutputSchema } from "./extract-output.ts"
 import { type FlatInput, flattenRouteInputSchema } from "./flatten-input.ts"
 
@@ -49,6 +49,8 @@ interface ToolDescriptor {
   readonly title: string
   /** Tool description, taken from the route's `description`. */
   readonly description: string
+  /** MCP tool annotations (read-only / destructive hints) declared at the endpoint. */
+  readonly annotations: McpToolAnnotations
   /** Flattened Zod input schema + per-field source map for HTTP dispatch. */
   readonly input: FlatInput
   /**
@@ -76,6 +78,7 @@ export const collectToolDescriptors = (): ToolDescriptor[] =>
       name: route.name,
       title: route.summary ?? route.name,
       description: route.description ?? "",
+      annotations: route.annotations,
       input: flattenRouteInputSchema(route),
       output: extractOutputSchema(route),
       routerPrefix: prefix,

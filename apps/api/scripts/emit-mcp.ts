@@ -41,6 +41,7 @@ const tools = collectToolDescriptors().map((tool) => ({
   // (rather than emitting `null`) for 204 / no-JSON-body routes so clients can
   // rely on `"outputSchema" in tool` to mean "structured output is available".
   ...(tool.output ? { outputSchema: z.toJSONSchema(tool.output.schema, { target: "draft-2020-12" }) } : {}),
+  annotations: tool.annotations,
 }))
 
 const manifest = { ...MCP_INFO, tools }

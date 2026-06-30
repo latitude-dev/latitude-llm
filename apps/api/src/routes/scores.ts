@@ -237,6 +237,7 @@ const createScore = scoreEndpoint({
     method: "post",
     path: "/",
     name: "createScore",
+    annotations: { readOnlyHint: false, destructiveHint: false },
     tags: ["Scores"],
     ...scoresFernGroup("create"),
     summary: "Create project score",

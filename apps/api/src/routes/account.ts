@@ -64,6 +64,7 @@ const getAccount = accountEndpoint({
     method: "get",
     path: "/",
     name: "getAccount",
+    annotations: { readOnlyHint: true, destructiveHint: false },
     tags: ["Account"],
     ...accountFernGroup,
     summary: "Get account",

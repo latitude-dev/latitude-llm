@@ -175,6 +175,10 @@
           "updatedAt"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     },
     {
@@ -357,6 +361,10 @@
           "hasMore"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -517,6 +525,10 @@
           "updatedAt"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -770,6 +782,10 @@
           "updatedAt"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
       }
     },
     {
@@ -789,6 +805,10 @@
           "projectSlug"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
       }
     },
     {
@@ -1231,6 +1251,10 @@
           "body"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     },
     {
@@ -1712,6 +1736,10 @@
           "metadata"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     },
     {
@@ -2074,6 +2102,10 @@
           "hasMore"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -2336,6 +2368,10 @@
           "spans"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -2633,6 +2669,10 @@
           "allMessages"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -2976,6 +3016,10 @@
           "items"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -3474,6 +3518,10 @@
           "linksJson"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -3813,6 +3861,10 @@
           "hasMore"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -4117,6 +4169,10 @@
           "metadata"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -4268,6 +4324,10 @@
           "status"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     },
     {
@@ -4535,6 +4595,10 @@
           "tools"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -4632,6 +4696,10 @@
           "items"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -4756,6 +4824,10 @@
           "sampleSize"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -4853,6 +4925,10 @@
           "items"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -4939,6 +5015,10 @@
           "items"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -5027,6 +5107,10 @@
           "items"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -5194,6 +5278,10 @@
           "hasMore"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -5497,6 +5585,10 @@
           "errorsUsage"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -5704,6 +5796,10 @@
           "costRollup"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -5849,6 +5945,10 @@
           "toIso"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -5953,6 +6053,10 @@
           "toIso"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -6037,6 +6141,10 @@
           "items"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -6150,6 +6258,10 @@
           "items"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -6236,6 +6348,10 @@
           "items"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -6358,6 +6474,10 @@
           "activeDays"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -6546,6 +6666,10 @@
           "hasMore"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -6709,6 +6833,10 @@
           "updatedAt"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -6954,6 +7082,10 @@
           "updatedAt"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     },
     {
@@ -7199,6 +7331,10 @@
           "updatedAt"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
       }
     },
     {
@@ -7223,6 +7359,10 @@
           "searchSlug"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
       }
     },
     {
@@ -7522,6 +7662,10 @@
           "hasMore"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -7777,6 +7921,10 @@
           "hasMore"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -8273,6 +8421,10 @@
           "evaluationId"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     },
     {
@@ -8405,6 +8557,10 @@
           "changed"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
       }
     },
     {
@@ -8429,6 +8585,10 @@
           "signalSlug"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
       }
     },
     {
@@ -8558,6 +8718,10 @@
           "occurrences"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -8957,6 +9121,10 @@
           "monitoringState"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -9027,6 +9195,10 @@
           "buckets"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -9302,6 +9474,10 @@
           "hasMore"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -9383,6 +9559,10 @@
           "items"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     },
     {
@@ -9464,6 +9644,10 @@
           "items"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     },
     {
@@ -9518,6 +9702,10 @@
           "evaluationId"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     },
     {
@@ -9542,6 +9730,10 @@
           "signalSlug"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     },
     {
@@ -9600,6 +9792,10 @@
           "status"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     },
     {
@@ -10465,6 +10661,10 @@
           "items"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -11286,6 +11486,10 @@
           "condition"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     },
     {
@@ -11515,6 +11719,10 @@
           "hasMore"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -11687,6 +11895,10 @@
           "updatedAt"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -11864,6 +12076,10 @@
           "updatedAt"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     },
     {
@@ -12052,6 +12268,10 @@
           "updatedAt"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
       }
     },
     {
@@ -12076,6 +12296,10 @@
           "datasetSlug"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
       }
     },
     {
@@ -12324,6 +12548,10 @@
           "hasMore"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -12544,6 +12772,10 @@
           "rowIds"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     },
     {
@@ -12741,6 +12973,10 @@
           "version"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
       }
     },
     {
@@ -12859,6 +13095,10 @@
           "version"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
       }
     },
     {
@@ -13022,6 +13262,10 @@
           "rowIds"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     },
     {
@@ -13170,6 +13414,10 @@
           "rowCount"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     },
     {
@@ -13283,6 +13531,10 @@
           "columns"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -13381,6 +13633,10 @@
           "source"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     },
     {
@@ -13485,6 +13741,10 @@
           "source"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
       }
     },
     {
@@ -13515,6 +13775,10 @@
           "identifier"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
       }
     },
     {
@@ -13630,6 +13894,10 @@
           "columns"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     },
     {
@@ -13728,6 +13996,10 @@
           "source"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     },
     {
@@ -13811,6 +14083,10 @@
           "updatedAt"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     },
     {
@@ -13897,6 +14173,10 @@
           "apiKeys"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -13980,6 +14260,10 @@
           "updatedAt"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -14069,6 +14353,10 @@
           "updatedAt"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
       }
     },
     {
@@ -14089,6 +14377,10 @@
           "apiKeyId"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
       }
     },
     {
@@ -14199,6 +14491,10 @@
           "oauthKeys"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -14306,6 +14602,10 @@
           "disabled"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -14326,6 +14626,10 @@
           "oauthKeyId"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
       }
     },
     {
@@ -14439,6 +14743,10 @@
           "role"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -14616,6 +14924,10 @@
           "members"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -14723,6 +15035,10 @@
           "inviterId"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     },
     {
@@ -14817,6 +15133,10 @@
           "joinedAt"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -14920,6 +15240,10 @@
           "joinedAt"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
       }
     },
     {
@@ -14940,6 +15264,10 @@
           "memberId"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
       }
     },
     {
@@ -16389,6 +16717,10 @@
           "hasMore"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -20044,6 +20376,10 @@
           "updatedAt"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     },
     {
@@ -21536,6 +21872,10 @@
           "items"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -22944,6 +23284,10 @@
           "updatedAt"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -25566,6 +25910,10 @@
           "updatedAt"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
       }
     },
     {
@@ -25590,6 +25938,10 @@
           "monitorSlug"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
       }
     },
     {
@@ -26456,6 +26808,10 @@
           "hasMore"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
       }
     },
     {
@@ -27864,6 +28220,10 @@
           "updatedAt"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     },
     {
@@ -29272,6 +29632,10 @@
           "updatedAt"
         ],
         "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
       }
     }
   ]
