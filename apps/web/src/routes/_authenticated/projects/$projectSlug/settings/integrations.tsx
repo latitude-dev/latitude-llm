@@ -1,17 +1,25 @@
 import { SLACK_ROUTABLE_NOTIFICATION_GROUPS } from "@domain/shared"
 import { Alert, Button, Icon, Modal, SlackIcon, Text, useMountEffect, useToast } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
+import { eq } from "@tanstack/react-db"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
-import { Trash2 } from "lucide-react"
+import { ExternalLink, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { z } from "zod"
+import {
+  type AgentDispatchRecord,
+  isAgentDispatchEnabled,
+  listAgentDispatches,
+} from "../../../../../domains/agent-dispatch/agent-dispatch.functions.ts"
 import {
   disconnectSlackIntegration,
   getActiveSlackIntegration,
   type SlackIntegrationRecord,
 } from "../../../../../domains/integrations/integrations.functions.ts"
+import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
+import { useRouteProject } from "../-route-data.ts"
 import { IntegrationCard } from "./-components/integration-card.tsx"
 import { SettingsPage } from "./-components/settings-page.tsx"
 import { SLACK_INTEGRATION_QUERY_KEY, SlackRouteRow } from "./-components/slack-route-row.tsx"
@@ -30,6 +38,13 @@ function IntegrationsSettingsPage() {
   const { toast } = useToast()
   const router = useRouter()
   const search = Route.useSearch()
+  const { projectSlug } = Route.useParams()
+  const routeProject = useRouteProject()
+  const { data: project } = useProjectsCollection(
+    (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
+    [projectSlug],
+  )
+  const currentProject = project ?? routeProject
 
   useMountEffect(() => {
     if (search.installed === "ok") {
@@ -53,6 +68,7 @@ function IntegrationsSettingsPage() {
   return (
     <SettingsPage title="Integrations" description="Connect Latitude to the tools your team already uses.">
       <SlackIntegrationSection />
+      {currentProject ? <AgentDispatchHistorySection projectId={currentProject.id} /> : null}
     </SettingsPage>
   )
 }
@@ -153,6 +169,67 @@ function ConnectedSlackCard({
           ))}
         </div>
       </div>
+    </div>
+  )
+}
+
+function AgentDispatchHistorySection({ projectId }: { projectId: string }) {
+  const { data: enabled } = useQuery({
+    queryKey: ["agent-dispatch-enabled"],
+    queryFn: () => isAgentDispatchEnabled(),
+  })
+  const { data: dispatches = [], isLoading } = useQuery({
+    queryKey: ["agent-dispatches", projectId],
+    queryFn: () => listAgentDispatches({ data: { projectId } }),
+    enabled: enabled?.enabled === true,
+  })
+
+  if (!enabled?.enabled) return null
+  if (isLoading) return null
+
+  return (
+    <div className="rounded-lg border border-border">
+      <div className="border-b border-border p-4">
+        <Text.H5 weight="semibold">Agent dispatch history</Text.H5>
+        <Text.H6 color="foregroundMuted">
+          Audit log of coding-agent dispatches triggered by signals and incidents.
+        </Text.H6>
+      </div>
+      {dispatches.length === 0 ? (
+        <div className="p-4">
+          <Text.H6 color="foregroundMuted">No dispatches yet.</Text.H6>
+        </div>
+      ) : (
+        <div className="divide-y divide-border">
+          {dispatches.map((dispatch) => (
+            <AgentDispatchRow key={dispatch.id} dispatch={dispatch} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AgentDispatchRow({ dispatch }: { dispatch: AgentDispatchRecord }) {
+  return (
+    <div className="flex flex-row flex-wrap items-center justify-between gap-2 p-4">
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <Text.H6 weight="semibold">
+          {dispatch.trigger} · {dispatch.sourceType}:{dispatch.sourceId}
+        </Text.H6>
+        <Text.H6 color="foregroundMuted">
+          {dispatch.status} · {relativeTime(new Date(dispatch.claimedAt))}
+          {dispatch.errorCategory ? ` · ${dispatch.errorCategory}` : ""}
+        </Text.H6>
+      </div>
+      {dispatch.externalUrl ? (
+        <Button asChild variant="outline" size="sm">
+          <a href={dispatch.externalUrl} target="_blank" rel="noreferrer">
+            <ExternalLink className="h-4 w-4" />
+            View run
+          </a>
+        </Button>
+      ) : null}
     </div>
   )
 }

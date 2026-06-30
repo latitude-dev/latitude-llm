@@ -211,19 +211,37 @@ export const createDomainEventsWorker = ({
       ).pipe(Effect.asVoid),
 
     SignalCreated: (event) =>
-      pub.publish(
-        "notifications",
-        "request-signal-discovered-notifications",
-        {
-          organizationId: event.payload.organizationId,
-          projectId: event.payload.projectId,
-          signalId: event.payload.signalId,
-          discoveredAt: event.payload.createdAt,
-        },
-        {
-          dedupeKey: `notifications:request-signal-discovered:${event.payload.signalId}`,
-        },
-      ),
+      Effect.all(
+        [
+          pub.publish(
+            "notifications",
+            "request-signal-discovered-notifications",
+            {
+              organizationId: event.payload.organizationId,
+              projectId: event.payload.projectId,
+              signalId: event.payload.signalId,
+              discoveredAt: event.payload.createdAt,
+            },
+            {
+              dedupeKey: `notifications:request-signal-discovered:${event.payload.signalId}`,
+            },
+          ),
+          pub.publish(
+            "agent-dispatch",
+            "request",
+            {
+              organizationId: event.payload.organizationId,
+              projectId: event.payload.projectId,
+              signalId: event.payload.signalId,
+              source: "signal",
+            },
+            {
+              dedupeKey: `agent-dispatch:request-signal:${event.payload.signalId}`,
+            },
+          ),
+        ],
+        { concurrency: "unbounded" },
+      ).pipe(Effect.asVoid),
 
     SignalEscalated: (event) =>
       pub.publish("alert-incidents", "signal-escalated", event.payload, {
@@ -251,18 +269,35 @@ export const createDomainEventsWorker = ({
       ),
 
     IncidentCreated: (event) =>
-      pub.publish(
-        "notifications",
-        "request-incident-notifications",
-        {
-          organizationId: event.payload.organizationId,
-          alertIncidentId: event.payload.alertIncidentId,
-          transition: "created",
-        },
-        {
-          dedupeKey: `notifications:request-incident-created:${event.payload.alertIncidentId}`,
-        },
-      ),
+      Effect.all(
+        [
+          pub.publish(
+            "notifications",
+            "request-incident-notifications",
+            {
+              organizationId: event.payload.organizationId,
+              alertIncidentId: event.payload.alertIncidentId,
+              transition: "created",
+            },
+            {
+              dedupeKey: `notifications:request-incident-created:${event.payload.alertIncidentId}`,
+            },
+          ),
+          pub.publish(
+            "agent-dispatch",
+            "request",
+            {
+              organizationId: event.payload.organizationId,
+              alertIncidentId: event.payload.alertIncidentId,
+              source: "incident",
+            },
+            {
+              dedupeKey: `agent-dispatch:request-incident:${event.payload.alertIncidentId}`,
+            },
+          ),
+        ],
+        { concurrency: "unbounded" },
+      ).pipe(Effect.asVoid),
 
     SignalAssigneeChanged: (event) =>
       // Cleared assignments and self-assignments never notify; the producer

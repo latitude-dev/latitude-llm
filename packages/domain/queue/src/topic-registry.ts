@@ -235,6 +235,30 @@ const _registry = {
     }
   }>(),
 
+  "agent-dispatch": payloads<{
+    request: {
+      readonly organizationId: string
+      readonly projectId?: string
+      readonly signalId?: string
+      readonly alertIncidentId?: string
+      readonly source: "signal" | "incident"
+    }
+    send: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly configId: string
+      readonly integrationId: string
+      readonly kind: string
+      readonly idempotencyKey: string
+      readonly trigger: string
+      readonly sourceType: "signal" | "monitor"
+      readonly sourceId: string
+      readonly prompt: string
+      readonly context: Record<string, unknown>
+      readonly target: Record<string, unknown>
+    }
+  }>(),
+
   "alert-incidents": payloads<{
     "signal-escalated": {
       readonly organizationId: string

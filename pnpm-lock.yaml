@@ -377,7 +377,7 @@ importers:
     devDependencies:
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(typescript@6.0.3)
 
   apps/web:
     dependencies:
@@ -387,6 +387,9 @@ importers:
       '@domain/admin':
         specifier: workspace:*
         version: link:../../packages/domain/admin
+      '@domain/agent-dispatch':
+        specifier: workspace:*
+        version: link:../../packages/domain/agent-dispatch
       '@domain/annotations':
         specifier: workspace:*
         version: link:../../packages/domain/annotations
@@ -649,6 +652,9 @@ importers:
       '@bull-board/hono':
         specifier: 'catalog:'
         version: 6.12.1(hono@4.12.16)
+      '@domain/agent-dispatch':
+        specifier: workspace:*
+        version: link:../../packages/domain/agent-dispatch
       '@domain/ai':
         specifier: workspace:*
         version: link:../../packages/domain/ai
@@ -739,6 +745,9 @@ importers:
       '@hono/node-server':
         specifier: 'catalog:'
         version: 1.19.13(hono@4.12.16)
+      '@platform/agent-dispatch':
+        specifier: workspace:*
+        version: link:../../packages/platform/agent-dispatch
       '@platform/ai':
         specifier: workspace:*
         version: link:../../packages/platform/ai
@@ -976,6 +985,49 @@ importers:
       zod:
         specifier: 'catalog:'
         version: 4.3.6
+
+  packages/domain/agent-dispatch:
+    dependencies:
+      '@domain/feature-flags':
+        specifier: workspace:*
+        version: link:../feature-flags
+      '@domain/incidents':
+        specifier: workspace:*
+        version: link:../incidents
+      '@domain/monitors':
+        specifier: workspace:*
+        version: link:../monitors
+      '@domain/notifications':
+        specifier: workspace:*
+        version: link:../notifications
+      '@domain/organizations':
+        specifier: workspace:*
+        version: link:../organizations
+      '@domain/projects':
+        specifier: workspace:*
+        version: link:../projects
+      '@domain/scores':
+        specifier: workspace:*
+        version: link:../scores
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@domain/signals':
+        specifier: workspace:*
+        version: link:../signals
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.57
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
+    devDependencies:
+      '@repo/vitest-config':
+        specifier: workspace:*
+        version: link:../../vitest-config
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@26.0.0)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@26.0.0)(esbuild@0.28.1)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))
 
   packages/domain/ai:
     dependencies:
@@ -1883,6 +1935,25 @@ importers:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
 
+  packages/platform/agent-dispatch:
+    dependencies:
+      '@domain/agent-dispatch':
+        specifier: workspace:*
+        version: link:../../domain/agent-dispatch
+      '@repo/utils':
+        specifier: workspace:*
+        version: link:../../utils
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.57
+    devDependencies:
+      '@repo/vitest-config':
+        specifier: workspace:*
+        version: link:../../vitest-config
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@26.0.0)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@26.0.0)(esbuild@0.28.1)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))
+
   packages/platform/ai:
     dependencies:
       '@domain/ai':
@@ -2182,6 +2253,9 @@ importers:
       '@domain/admin':
         specifier: workspace:*
         version: link:../../domain/admin
+      '@domain/agent-dispatch':
+        specifier: workspace:*
+        version: link:../../domain/agent-dispatch
       '@domain/ai':
         specifier: workspace:*
         version: link:../../domain/ai
@@ -15007,7 +15081,7 @@ snapshots:
       jose: 6.2.2
       kysely: 0.28.17
       nanostores: 1.3.0
-      zod: 4.3.6
+      zod: 4.4.3
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
 
@@ -15021,7 +15095,7 @@ snapshots:
       jose: 6.2.2
       kysely: 0.28.17
       nanostores: 1.3.0
-      zod: 4.3.6
+      zod: 4.4.3
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
 
@@ -15096,7 +15170,7 @@ snapshots:
       better-call: 1.3.5(zod@4.3.6)
       defu: 6.1.7
       stripe: 22.2.0(@types/node@26.0.0)
-      zod: 4.3.6
+      zod: 4.4.3
 
   '@better-auth/telemetry@1.6.11(@better-auth/core@1.6.11(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.3.6))(jose@6.2.2)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)':
     dependencies:
@@ -15567,10 +15641,6 @@ snapshots:
     optionalDependencies:
       '@noble/hashes': 2.2.0
 
-  '@finom/zod-to-json-schema@3.24.11(zod@4.3.6)':
-    dependencies:
-      zod: 4.3.6
-
   '@finom/zod-to-json-schema@3.24.11(zod@4.4.3)':
     dependencies:
       zod: 4.4.3
@@ -15971,7 +16041,7 @@ snapshots:
       langsmith: 0.6.3(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.217.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.1(@opentelemetry/api@1.9.1))(openai@6.44.0(ws@8.21.0)(zod@4.3.6))(ws@8.21.0)
       mustache: 4.2.0
       p-queue: 6.6.2
-      zod: 4.3.6
+      zod: 4.4.3
     transitivePeerDependencies:
       - '@opentelemetry/api'
       - '@opentelemetry/exporter-trace-otlp-proto'
@@ -15983,8 +16053,8 @@ snapshots:
     dependencies:
       '@langchain/core': 1.1.49(@opentelemetry/api@1.9.1)(@opentelemetry/exporter-trace-otlp-proto@0.217.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.1(@opentelemetry/api@1.9.1))(openai@6.44.0(ws@8.21.0)(zod@4.3.6))(ws@8.21.0)
       js-tiktoken: 1.0.21
-      openai: 6.44.0(ws@8.21.0)(zod@4.3.6)
-      zod: 4.3.6
+      openai: 6.44.0(ws@8.21.0)(zod@4.4.3)
+      zod: 4.4.3
     transitivePeerDependencies:
       - ws
 
@@ -16012,11 +16082,11 @@ snapshots:
 
   '@llamaindex/core@0.6.22':
     dependencies:
-      '@finom/zod-to-json-schema': 3.24.11(zod@4.3.6)
+      '@finom/zod-to-json-schema': 3.24.11(zod@4.4.3)
       '@llamaindex/env': 0.1.30
       '@types/node': 24.12.2
       magic-bytes.js: 1.13.0
-      zod: 4.3.6
+      zod: 4.4.3
     transitivePeerDependencies:
       - '@huggingface/transformers'
       - gpt-tokenizer
@@ -17162,7 +17232,7 @@ snapshots:
       '@types/shimmer': 1.2.0
       import-in-the-middle: 1.7.1
       require-in-the-middle: 7.5.2
-      semver: 7.8.4
+      semver: 7.8.5
       shimmer: 1.2.1
     transitivePeerDependencies:
       - supports-color
@@ -23156,7 +23226,7 @@ snapshots:
       tinyglobby: 0.2.16
       unbash: 3.0.0
       yaml: 2.8.3
-      zod: 4.3.6
+      zod: 4.4.3
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
@@ -24167,6 +24237,11 @@ snapshots:
     optionalDependencies:
       ws: 8.21.0
       zod: 4.3.6
+
+  openai@6.44.0(ws@8.21.0)(zod@4.4.3):
+    optionalDependencies:
+      ws: 8.21.0
+      zod: 4.4.3
 
   openapi3-ts@4.5.0:
     dependencies:
