@@ -122,7 +122,7 @@ const toDomainObservation = (row: TaxonomyObservationRow): TaxonomyMomentObserva
   taxonomyMomentObservationSchema.parse({
     organizationId: OrganizationId(row.organization_id),
     projectId: ProjectId(row.project_id),
-    observationId: row.observation_id,
+    observationId: row.observation_id.slice(0, 24),
     sessionId: SessionId(row.session_id),
     analysisHash: row.analysis_hash,
     momentId: row.moment_id,
