@@ -1,5 +1,5 @@
 import type { AI } from "@domain/ai"
-import type { ScriptCompileError, ScriptRuntime } from "@domain/sandbox"
+import type { ScriptCompileError, ScriptRuntime, ScriptSessionContext } from "@domain/sandbox"
 import {
   cuidSchema,
   evaluationSettingsSchema,
@@ -30,6 +30,17 @@ const previewEvaluationInputSchema = z.object({
 
 export type PreviewEvaluationInput = z.input<typeof previewEvaluationInputSchema>
 
+/** A session's identity + key metrics, so a preview row is recognizable and explains metric matches. */
+export interface PreviewSessionSummary {
+  /** First user message in the session, truncated — the human "what was this about". */
+  readonly firstUserMessage: string | null
+  readonly durationNs: number
+  readonly costMicrocents: number
+  readonly tokensTotal: number
+  readonly traceCount: number
+  readonly errorCount: number
+}
+
 export interface PreviewEvaluationRow {
   readonly sessionId: string
   readonly traceId: string
@@ -40,6 +51,8 @@ export interface PreviewEvaluationRow {
   readonly feedback: string
   /** Set when this sample's run errored; the rest of the preview still returns. */
   readonly error: string | null
+  /** Session content + metrics; `null` only when the session itself couldn't be loaded. */
+  readonly summary: PreviewSessionSummary | null
 }
 
 export interface PreviewEvaluationResult {
@@ -52,6 +65,20 @@ const describeError = (error: unknown): string =>
   typeof error === "object" && error !== null && "message" in error
     ? String((error as { message: unknown }).message)
     : String(error)
+
+const SUMMARY_MESSAGE_MAX = 280
+
+const buildSummary = (session: ScriptSessionContext): PreviewSessionSummary => {
+  const firstUser = session.conversation.find((message) => message.role === "user")?.content ?? null
+  return {
+    firstUserMessage: firstUser ? firstUser.slice(0, SUMMARY_MESSAGE_MAX) : null,
+    durationNs: session.duration,
+    costMicrocents: session.cost.total,
+    tokensTotal: session.tokens.total,
+    traceCount: session.traceCount,
+    errorCount: session.errorCount,
+  }
+}
 
 /**
  * Compiles an evaluation (declarative `settings` or a raw `script`) and runs it against the latest
@@ -110,6 +137,7 @@ export const previewEvaluationUseCase = (input: PreviewEvaluationInput) =>
             value: execution.result.value,
             feedback: execution.result.feedback,
             error: null,
+            summary: buildSummary(scriptSession),
           } satisfies PreviewEvaluationRow
         }).pipe(
           Effect.match({
@@ -121,6 +149,7 @@ export const previewEvaluationUseCase = (input: PreviewEvaluationInput) =>
               value: null,
               feedback: "",
               error: describeError(error),
+              summary: null,
             }),
           }),
         )

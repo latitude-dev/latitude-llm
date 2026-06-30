@@ -227,6 +227,7 @@ export {
   type PreviewEvaluationInput,
   type PreviewEvaluationResult,
   type PreviewEvaluationRow,
+  type PreviewSessionSummary,
   previewEvaluationUseCase,
 } from "./use-cases/preview-evaluation.ts"
 export {

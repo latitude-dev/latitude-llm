@@ -133,6 +133,9 @@ describe("previewEvaluationUseCase", () => {
     expect(result.items).toHaveLength(2)
     expect(result.items[0]).toMatchObject({ sessionId: "s1", passed: true, value: 1, error: null })
     expect(result.items[1]).toMatchObject({ sessionId: "s2", passed: true, error: null })
+    // Each row carries the session summary (metrics) so the preview is recognizable.
+    expect(result.items[0]?.summary).not.toBeNull()
+    expect(typeof result.items[0]?.summary?.tokensTotal).toBe("number")
   })
 
   it("skips sessions with no traces", async () => {

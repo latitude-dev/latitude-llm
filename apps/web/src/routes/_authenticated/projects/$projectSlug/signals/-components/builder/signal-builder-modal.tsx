@@ -315,7 +315,7 @@ export function SignalBuilderModal({
             result={previewResult}
             isRunning={previewRunning}
             onRun={runPreview}
-            projectSlug={projectSlug}
+            projectId={projectId}
           />
         ) : null}
 
