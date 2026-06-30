@@ -1,6 +1,6 @@
 import { Icon, Text } from "@repo/ui"
-import { ChevronDownIcon, type LucideIcon } from "lucide-react"
-import type { ReactNode } from "react"
+import { ChevronDownIcon, type LucideProps } from "lucide-react"
+import type { ComponentType, ReactNode } from "react"
 
 /**
  * Generic collapsible "actions" panel for the backoffice dashboards.
@@ -65,8 +65,8 @@ export function ActionsSection({ title, description, children }: ActionsSectionP
  * list of small cards stacked inside a container.
  */
 export interface ActionRowProps {
-  /** Lucide icon rendered in a subtle round on the left edge. */
-  readonly icon: LucideIcon
+  /** Icon rendered in a subtle round on the left edge. */
+  readonly icon: ComponentType<LucideProps>
   readonly title: ReactNode
   /** Single sentence explaining what the action does. Renders muted under the title. */
   readonly description: ReactNode
