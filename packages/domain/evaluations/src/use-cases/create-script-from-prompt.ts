@@ -153,7 +153,7 @@ export const createScriptFromPromptUseCase = (input: CreateScriptFromPromptInput
 
     const telemetry: GenerateTelemetryCapture = {
       spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.evaluationScriptGeneration,
-      project: LATITUDE_TELEMETRY_PROJECT_SLUGS.evaluations,
+      project: LATITUDE_TELEMETRY_PROJECT_SLUGS.evaluationScriptGeneration,
       tags: [...AI_GENERATE_TELEMETRY_TAGS.evaluationScriptGeneration],
       metadata: buildProjectScopedAiMetadata({ organizationId: input.organizationId, projectId: input.projectId }, {}),
     }

@@ -14,7 +14,7 @@ Each feature is dogfooded into its own Latitude project (one project per AI feat
 | Annotation Enrichment | `latitude-annotation-enrichment` |
 | Flagger Instruction Extraction / Classification / Drafting | `latitude-flaggers` |
 | Evaluation Judge (live / alignment / optimization) | `latitude-evaluations` |
-| Evaluation Script Generation | `latitude-evaluations` |
+| Evaluation Script Generation | `latitude-evaluation-script-generation` |
 | Optimization Proposal (GEPA) | `latitude-optimizations` |
 | Taxonomy Naming (propose themes / name cluster) | `latitude-taxonomy` |
 
