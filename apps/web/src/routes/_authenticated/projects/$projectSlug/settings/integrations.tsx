@@ -4,7 +4,7 @@ import { relativeTime } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
-import { Trash2 } from "lucide-react"
+import { ExternalLink, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { z } from "zod"
 import {
@@ -63,8 +63,10 @@ function IntegrationsSettingsPage() {
 
   return (
     <SettingsPage title="Integrations" description="Connect Latitude to the tools your team already uses.">
-      <SlackIntegrationSection />
-      {currentProject ? <AgentDispatchSection projectId={currentProject.id} /> : null}
+      <div className="flex flex-col gap-3">
+        <SlackIntegrationSection />
+        {currentProject ? <AgentDispatchSection projectId={currentProject.id} /> : null}
+      </div>
     </SettingsPage>
   )
 }
@@ -102,8 +104,12 @@ function DisconnectedSlackCard() {
         // client-side routing. Plain `<a>` (inside a `Button asChild`)
         // gives cmd/middle-click + copy-link affordances while keeping
         // the full-page nav.
-        <Button asChild>
-          <a href="/integrations/slack/install">Connect Slack</a>
+        <Button asChild variant="outline">
+          <a href="/integrations/slack/install">
+            <Icon icon={Plus} size="sm" />
+            Connect
+            <Icon icon={ExternalLink} size="sm" />
+          </a>
         </Button>
       }
     />

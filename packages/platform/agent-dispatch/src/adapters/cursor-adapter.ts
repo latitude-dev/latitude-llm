@@ -11,24 +11,24 @@ export const createCursorAdapter = (): AgentDispatchAdapter => ({
         return yield* Effect.fail(new DispatchAdapterError({ reason: "config", cause: "missing cursor api key" }))
       }
 
-      const target = config as { repoUrl: string; startingRef: string; environmentName?: string }
+      const target = config as { repoUrl: string; startingRef?: string; autoCreatePR?: boolean }
       const body = {
-        agentId: idempotencyKey,
         prompt: { text: prompt },
-        repos: [{ url: target.repoUrl, startingRef: target.startingRef }],
-        autoCreatePR: true,
-        mode: "agent",
-        ...(target.environmentName
-          ? { env: { type: "cloud", name: target.environmentName } }
-          : { env: { type: "cloud" } }),
+        source: {
+          repository: target.repoUrl,
+          ...(target.startingRef ? { ref: target.startingRef } : {}),
+        },
+        target: {
+          autoCreatePr: target.autoCreatePR ?? true,
+        },
       }
 
       const response = yield* Effect.tryPromise({
         try: () =>
-          fetch("https://api.cursor.com/v1/agents", {
+          fetch("https://api.cursor.com/v0/agents", {
             method: "POST",
             headers: {
-              Authorization: `Basic ${Buffer.from(`${apiKey}:`).toString("base64")}`,
+              Authorization: `Basic ${btoa(`${apiKey}:`)}`,
               "Content-Type": "application/json",
             },
             body: JSON.stringify(body),
@@ -38,13 +38,25 @@ export const createCursorAdapter = (): AgentDispatchAdapter => ({
 
       if (response.status === 409) {
         const json = yield* Effect.tryPromise(() => response.json()).pipe(Effect.orElseSucceed(() => ({})))
-        const agent = (json as { agent?: { id?: string; url?: string }; run?: { id?: string } }).agent
-        const run = (json as { run?: { id?: string } }).run
+        const responseBody = json as {
+          id?: string
+          agent?: { id?: string; url?: string }
+          run?: { id?: string }
+          target?: { url?: string }
+        }
         return {
           status: "accepted" as const,
-          ...(agent?.id !== undefined ? { externalAgentId: agent.id } : {}),
-          ...(run?.id !== undefined ? { externalRunId: run.id } : {}),
-          ...(agent?.url !== undefined ? { deepLinkUrl: agent.url } : {}),
+          ...(responseBody.id !== undefined
+            ? { externalAgentId: responseBody.id }
+            : responseBody.agent?.id !== undefined
+              ? { externalAgentId: responseBody.agent.id }
+              : {}),
+          ...(responseBody.run?.id !== undefined ? { externalRunId: responseBody.run.id } : {}),
+          ...(responseBody.target?.url !== undefined
+            ? { deepLinkUrl: responseBody.target.url }
+            : responseBody.agent?.url !== undefined
+              ? { deepLinkUrl: responseBody.agent.url }
+              : {}),
         }
       }
 
@@ -63,15 +75,29 @@ export const createCursorAdapter = (): AgentDispatchAdapter => ({
       }
 
       const json = yield* Effect.tryPromise({
-        try: () => response.json() as Promise<{ agent?: { id?: string; url?: string }; run?: { id?: string } }>,
+        try: () =>
+          response.json() as Promise<{
+            id?: string
+            agent?: { id?: string; url?: string }
+            run?: { id?: string }
+            target?: { url?: string }
+          }>,
         catch: (cause) => new DispatchAdapterError({ reason: "transport", cause }),
       })
 
       return {
         status: "accepted" as const,
-        ...(json.agent?.id !== undefined ? { externalAgentId: json.agent.id } : {}),
+        ...(json.id !== undefined
+          ? { externalAgentId: json.id }
+          : json.agent?.id !== undefined
+            ? { externalAgentId: json.agent.id }
+            : {}),
         ...(json.run?.id !== undefined ? { externalRunId: json.run.id } : {}),
-        ...(json.agent?.url !== undefined ? { deepLinkUrl: json.agent.url } : {}),
+        ...(json.target?.url !== undefined
+          ? { deepLinkUrl: json.target.url }
+          : json.agent?.url !== undefined
+            ? { deepLinkUrl: json.agent.url }
+            : {}),
       }
     }),
 })

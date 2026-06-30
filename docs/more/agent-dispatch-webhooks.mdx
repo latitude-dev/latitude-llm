@@ -1,0 +1,69 @@
+---
+title: Agent dispatch webhooks
+description: Receive Latitude agent dispatches in your own system.
+---
+
+Agent dispatch webhooks let Latitude send signal follow-up work to any HTTPS endpoint you control.
+
+## Endpoint requirements
+
+Your endpoint must:
+
+- Accept `POST` requests over public HTTPS.
+- Return a `2xx` response when the dispatch is accepted.
+- Return `401` or `403` for authentication failures.
+- Return `429` with an optional `Retry-After` header when you want Latitude to retry later.
+
+Latitude rejects webhook URLs that are not HTTPS or resolve to private/internal IP addresses.
+
+## Request body
+
+Latitude sends JSON with the trigger, the dispatch context, and the prompt text assembled for the agent.
+
+```json
+{
+  "trigger": "signal.discovered",
+  "context": {
+    "trigger": "signal.discovered",
+    "organizationName": "Acme Inc.",
+    "projectName": "Checkout API",
+    "projectSlug": "checkout-api",
+    "deepLinkUrl": "https://app.latitude.so/projects/checkout-api/signals/sig_123",
+    "signal": {
+      "id": "sig_123",
+      "name": "Payment timeout spike"
+    }
+  },
+  "prompt": "Investigate the Latitude signal and propose the next follow-up action..."
+}
+```
+
+The exact `context` shape depends on the trigger source, but `trigger`, project identity, a Latitude deep link, and the rendered prompt are always included.
+
+## Headers
+
+Latitude includes two headers on every delivery:
+
+| Header | Description |
+| --- | --- |
+| `X-Latitude-Delivery` | Stable idempotency key for this dispatch. Use it to deduplicate retries. |
+| `X-Latitude-Signature` | HMAC-SHA256 signature of the raw JSON request body, prefixed with `sha256=`. |
+
+## Verify the signature
+
+When you connect the webhook integration, Latitude shows a webhook secret once. Store it securely and use it to verify `X-Latitude-Signature`.
+
+```ts
+import { createHmac, timingSafeEqual } from "node:crypto"
+
+function verifyLatitudeSignature(rawBody: string, signatureHeader: string, secret: string) {
+  const expected = `sha256=${createHmac("sha256", secret).update(rawBody).digest("hex")}`
+  return timingSafeEqual(Buffer.from(signatureHeader), Buffer.from(expected))
+}
+```
+
+Verify the signature against the raw request body before parsing JSON.
+
+## Retry behavior
+
+Latitude retries transport failures, `429`, and `5xx` responses. A `4xx` response other than `429` is treated as a configuration or authentication failure and is not retried indefinitely.

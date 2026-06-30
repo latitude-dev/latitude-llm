@@ -14,8 +14,7 @@ export type AgentDispatchGuardrails = z.infer<typeof agentDispatchGuardrailsSche
 
 export const cursorDispatchTargetSchema = z.object({
   repoUrl: z.string().url(),
-  startingRef: z.string().min(1),
-  environmentName: z.string().optional(),
+  startingRef: z.string().optional(),
   autoCreatePR: z.boolean().optional(),
 })
 

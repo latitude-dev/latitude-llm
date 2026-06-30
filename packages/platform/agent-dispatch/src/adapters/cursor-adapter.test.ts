@@ -12,8 +12,8 @@ describe("createCursorAdapter", () => {
           auth: new Headers(init?.headers).get("Authorization") ?? "",
         })
         return new Response(
-          JSON.stringify({ agent: { id: "ag1", url: "https://cursor.com/agents/ag1" }, run: { id: "run1" } }),
-          { status: 409 },
+          JSON.stringify({ id: "bc_abc123", target: { url: "https://cursor.com/agents?id=bc_abc123" } }),
+          { status: 200 },
         )
       }),
     )
@@ -37,12 +37,12 @@ describe("createCursorAdapter", () => {
     )
 
     expect(result.status).toBe("accepted")
-    expect(result.externalAgentId).toBe("ag1")
-    expect(result.deepLinkUrl).toBe("https://cursor.com/agents/ag1")
+    expect(result.externalAgentId).toBe("bc_abc123")
+    expect(result.deepLinkUrl).toBe("https://cursor.com/agents?id=bc_abc123")
     expect(JSON.parse(calls[0]!.body)).toMatchObject({
-      agentId: "cursor:incident.opened:src1",
-      mode: "agent",
-      autoCreatePR: true,
+      prompt: { text: "fix it" },
+      source: { repository: "https://github.com/acme/app", ref: "main" },
+      target: { autoCreatePr: true },
     })
     expect(calls[0]!.auth.startsWith("Basic ")).toBe(true)
 

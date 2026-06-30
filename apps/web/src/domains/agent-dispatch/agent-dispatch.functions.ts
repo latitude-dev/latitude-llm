@@ -5,6 +5,7 @@ import {
   AGENT_DISPATCH_TRIGGERS,
   type AgentDispatchConfig,
   AgentDispatchConfigRepository,
+  AgentDispatchCredentialRepository,
   AgentDispatchIntegrationRepository,
   type AgentDispatchKind,
   AgentDispatchRepository,
@@ -60,7 +61,44 @@ export interface AgentDispatchConfigRecord {
   readonly target: AgentDispatchConfig["target"]
   readonly promptTemplate: string | null
   readonly guardrails: AgentDispatchConfig["guardrails"]
+  readonly updatedAt: string
 }
+
+interface CursorRepositoryRecord {
+  readonly owner: string
+  readonly name: string
+  readonly repository: string
+}
+
+interface LinearMemberRecord {
+  readonly id: string
+  readonly name: string
+  readonly email: string | null
+}
+
+const cursorRepositoriesResponseSchema = z.object({
+  repositories: z.array(
+    z.object({
+      owner: z.string(),
+      name: z.string(),
+      repository: z.string().url(),
+    }),
+  ),
+})
+
+const linearMembersResponseSchema = z.object({
+  data: z.object({
+    users: z.object({
+      nodes: z.array(
+        z.object({
+          id: z.string(),
+          name: z.string(),
+          email: z.string().nullable().optional(),
+        }),
+      ),
+    }),
+  }),
+})
 
 const agentDispatchLayer = Layer.mergeAll(
   AgentDispatchIntegrationRepositoryLive,
@@ -98,6 +136,50 @@ const toDispatchRecord = (row: {
   kind: parseKindFromIdempotencyKey(row.idempotencyKey),
 })
 
+async function fetchLinearMembers(linearApiKey: string): Promise<LinearMemberRecord[]> {
+  const response = await fetch("https://api.linear.app/graphql", {
+    method: "POST",
+    headers: {
+      Authorization: linearApiKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      query: `query LatitudeAgentDispatchMembers { users(first: 100, includeDisabled: false) { nodes { id name email } } }`,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(
+      response.status === 401 || response.status === 403
+        ? "Linear rejected this API key."
+        : "Could not load Linear users.",
+    )
+  }
+
+  const parsed = linearMembersResponseSchema.safeParse(await response.json())
+  if (!parsed.success) return []
+  return parsed.data.data.users.nodes.map((user) => ({ id: user.id, name: user.name, email: user.email ?? null }))
+}
+
+async function fetchCursorRepositories(cursorApiKey: string): Promise<CursorRepositoryRecord[]> {
+  const response = await fetch("https://api.cursor.com/v0/repositories", {
+    headers: {
+      Authorization: `Basic ${btoa(`${cursorApiKey}:`)}`,
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error(
+      response.status === 401 || response.status === 403
+        ? "Cursor rejected this API key."
+        : "Could not load Cursor repositories.",
+    )
+  }
+
+  const parsed = cursorRepositoriesResponseSchema.safeParse(await response.json())
+  return parsed.success ? parsed.data.repositories : []
+}
+
 const toConfigRecord = (config: AgentDispatchConfig): AgentDispatchConfigRecord => ({
   id: config.id,
   integrationId: config.integrationId,
@@ -107,6 +189,7 @@ const toConfigRecord = (config: AgentDispatchConfig): AgentDispatchConfigRecord 
   target: config.target,
   promptTemplate: config.promptTemplate,
   guardrails: config.guardrails,
+  updatedAt: config.updatedAt.toISOString(),
 })
 
 export const isAgentDispatchEnabled = createServerFn({ method: "GET" }).handler(async () => {
@@ -158,6 +241,58 @@ export const listAgentDispatches = createServerFn({ method: "GET" })
     return rows.map((row) => toDispatchRecord(row))
   })
 
+export const listCursorRepositories = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ integrationId: z.string() }))
+  .handler(async ({ data }) => {
+    const { organizationId } = await requireSession()
+    const credentials = await Effect.runPromise(
+      Effect.gen(function* () {
+        const credentialRepo = yield* AgentDispatchCredentialRepository
+        return yield* credentialRepo.getDecrypted(data.integrationId)
+      }).pipe(withPostgres(AgentDispatchCredentialRepositoryLive, getPostgresClient(), organizationId)),
+    )
+
+    if (!credentials.cursorApiKey) return []
+
+    return fetchCursorRepositories(credentials.cursorApiKey)
+  })
+
+export const listLinearMembers = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ integrationId: z.string() }))
+  .handler(async ({ data }) => {
+    const { organizationId } = await requireSession()
+    const credentials = await Effect.runPromise(
+      Effect.gen(function* () {
+        const credentialRepo = yield* AgentDispatchCredentialRepository
+        return yield* credentialRepo.getDecrypted(data.integrationId)
+      }).pipe(withPostgres(AgentDispatchCredentialRepositoryLive, getPostgresClient(), organizationId)),
+    )
+
+    if (!credentials.linearApiKey) return []
+    return fetchLinearMembers(credentials.linearApiKey)
+  })
+
+export const listCursorRepositoriesForApiKey = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ cursorApiKey: z.string().min(1) }))
+  .handler(async ({ data }) => {
+    await requireSession()
+    return fetchCursorRepositories(data.cursorApiKey)
+  })
+
+export const getWebhookSecret = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ integrationId: z.string() }))
+  .handler(async ({ data }) => {
+    const { organizationId } = await requireSession()
+    const credentials = await Effect.runPromise(
+      Effect.gen(function* () {
+        const credentialRepo = yield* AgentDispatchCredentialRepository
+        return yield* credentialRepo.getDecrypted(data.integrationId)
+      }).pipe(withPostgres(AgentDispatchCredentialRepositoryLive, getPostgresClient(), organizationId)),
+    )
+
+    return { webhookSecret: credentials.webhookSecret ?? null }
+  })
+
 export const getAgentDispatchConfig = createServerFn({ method: "GET" })
   .inputValidator(z.object({ projectId: z.string(), kind: agentDispatchKindSchema }))
   .handler(async ({ data }) => {
@@ -184,6 +319,9 @@ export const connectCursorIntegration = createServerFn({ method: "POST" })
     z.object({
       kind: z.literal("cursor"),
       cursorApiKey: z.string().min(1),
+      projectId: z.string(),
+      repoUrl: z.string().url(),
+      startingRef: z.string().optional(),
     }),
   )
   .handler(async ({ data }) => {
@@ -194,10 +332,22 @@ export const connectCursorIntegration = createServerFn({ method: "POST" })
       Effect.gen(function* () {
         const integration = yield* connectAgentDispatchIntegrationUseCase({
           kind: "cursor",
-          vendorAccountId: `cursor:${organizationId}`,
+          vendorAccountId: `cursor:${data.repoUrl}`,
           installedByUserId: userId,
           organizationId: OrganizationId(organizationId),
           cursorApiKey: data.cursorApiKey,
+        })
+        yield* upsertAgentDispatchConfigUseCase({
+          organizationId: OrganizationId(organizationId),
+          projectId: ProjectId(data.projectId),
+          integrationId: integration.id,
+          kind: "cursor",
+          enabled: true,
+          triggers: ["signal.discovered"],
+          target: {
+            repoUrl: data.repoUrl,
+            ...(data.startingRef ? { startingRef: data.startingRef } : {}),
+          },
         })
         return { integrationId: integration.id }
       }).pipe(withPostgres(agentDispatchLayer, client, organizationId)),
@@ -235,6 +385,7 @@ export const connectLinearIntegration = createServerFn({ method: "POST" })
     z.object({
       kind: z.literal("linear"),
       linearApiKey: z.string().min(1),
+      teamId: z.string().min(1),
     }),
   )
   .handler(async ({ data }) => {
@@ -245,7 +396,7 @@ export const connectLinearIntegration = createServerFn({ method: "POST" })
       Effect.gen(function* () {
         const integration = yield* connectAgentDispatchIntegrationUseCase({
           kind: "linear",
-          vendorAccountId: `linear:${organizationId}`,
+          vendorAccountId: `linear:${data.teamId}`,
           installedByUserId: userId,
           organizationId: OrganizationId(organizationId),
           linearApiKey: data.linearApiKey,
@@ -260,6 +411,7 @@ export const connectWebhookIntegration = createServerFn({ method: "POST" })
     z.object({
       kind: z.literal("webhook"),
       webhookUrl: z.string().url(),
+      projectId: z.string(),
     }),
   )
   .handler(async ({ data }) => {
@@ -275,6 +427,15 @@ export const connectWebhookIntegration = createServerFn({ method: "POST" })
           installedByUserId: userId,
           organizationId: OrganizationId(organizationId),
           webhookSecret,
+        })
+        yield* upsertAgentDispatchConfigUseCase({
+          organizationId: OrganizationId(organizationId),
+          projectId: ProjectId(data.projectId),
+          integrationId: integration.id,
+          kind: "webhook",
+          enabled: true,
+          triggers: ["signal.discovered"],
+          target: { webhookUrl: data.webhookUrl },
         })
         return { integrationId: integration.id, webhookSecret }
       }).pipe(withPostgres(agentDispatchLayer, client, organizationId)),

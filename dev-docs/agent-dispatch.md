@@ -30,7 +30,7 @@ Packages:
 | Kind | Mechanism | Idempotency |
 | --- | --- | --- |
 | `webhook` | HMAC-signed JSON POST | Ledger claim |
-| `cursor` | `POST /v1/agents` (`mode: "agent"`, `autoCreatePR: true`) | Ledger + Cursor `agentId` (409 = success) |
+| `cursor` | `POST /v0/agents` with `source.repository`, optional `source.ref`, and `target.autoCreatePr: true` | Ledger claim + Cursor agent id |
 | `claude_code` | Routines `/fire` with beta header | Ledger claim |
 | `linear` | GraphQL `issueCreate` (customer triage rule delegates to agent) | Ledger claim |
 
@@ -44,9 +44,9 @@ Settings → Integrations (feature flag `agent-dispatch`):
 2. Per-project dispatch config: enable, triggers, target mapping, guardrails
 3. Dispatch history audit log
 
-Triggers: `incident.opened` (default), `signal.discovered`, `monitor.incident`. Muted signals/monitors suppress dispatch (same as notifications).
+The settings UI currently exposes `signal.discovered` (new signal) and `incident.opened` (escalating signal) for hosted agent/webhook targets. Linear only exposes `signal.discovered` so it creates follow-up issues for new signals rather than every escalation. `monitor.incident` remains in the domain trigger enum for future expansion but is not exposed in the current UI. Muted signals/monitors suppress dispatch (same as notifications).
 
-Guardrails: `maxDispatchesPerDay`, `cooldownMinutes` per config.
+Guardrails: `maxDispatchesPerDay`, `cooldownMinutes` per config. The current UI uses defaults and does not expose these controls.
 
 ## Data model
 
