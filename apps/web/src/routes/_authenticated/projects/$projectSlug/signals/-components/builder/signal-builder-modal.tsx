@@ -11,7 +11,7 @@ import {
   useUpdateSignalEvaluation,
 } from "../../../../../../../domains/signals/signals.collection.ts"
 import { toUserMessage } from "../../../../../../../lib/errors.ts"
-import { hasInvalidRegex } from "./condition-meta.tsx"
+import { isConditionValid } from "./condition-meta.tsx"
 import { ConditionEditor, type ConditionEditState, RuleConditionList, type RuleDraft } from "./rule-detector-editor.tsx"
 import { SignalPreviewStep } from "./signal-preview-step.tsx"
 import { SignalScopeEditor } from "./signal-scope-editor.tsx"
@@ -213,7 +213,7 @@ export function SignalBuilderModal({
       <Button variant="outline" onClick={() => openConditionEditor(null)}>
         Cancel
       </Button>
-      <Button onClick={confirmCondition} disabled={draftCondition === null || hasInvalidRegex(draftCondition)}>
+      <Button onClick={confirmCondition} disabled={draftCondition === null || !isConditionValid(draftCondition)}>
         {conditionEdit?.index === "new" ? "Add condition" : "Save condition"}
       </Button>
     </>
@@ -259,8 +259,10 @@ export function SignalBuilderModal({
       }
       footer={footer}
     >
-      {/* Fixed-height body so the modal does not resize between steps; content scrolls internally. */}
-      <div className="flex h-[28rem] flex-col gap-4 overflow-y-auto pb-6">
+      {/* Fixed-height body so the modal does not resize between steps; content scrolls internally.
+          `overflow-y-auto` also clips horizontally, so `-mx-2 px-2` (absorbed by the modal's px-6)
+          gives focus rings and popover offsets a few px of clip headroom without insetting content. */}
+      <div className="-mx-2 flex h-[28rem] flex-col gap-4 overflow-y-auto px-2 pb-6">
         {step === "scope" ? <SignalScopeEditor projectId={projectId} value={filters} onChange={setFilters} /> : null}
 
         {step === "detector" && !inConditionSubStep ? (
@@ -302,6 +304,7 @@ export function SignalBuilderModal({
             draftCondition={draftCondition}
             onDraftConditionChange={setDraftCondition}
             onClearType={() => setDraftCondition(null)}
+            projectId={projectId}
             title={conditionEdit?.index === "new" ? "Add condition" : "Edit condition"}
             onBack={() => openConditionEditor(null)}
           />

@@ -1,6 +1,21 @@
 import type { EvaluationRuleCondition, MetricField } from "@domain/shared"
-import { Input, Select, SwitchInput } from "@repo/ui"
-import type { ReactNode } from "react"
+import {
+  Button,
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxTrigger,
+  FormField,
+  Input,
+  Select,
+  SwitchInput,
+  Text,
+} from "@repo/ui"
+import { type ReactNode, useRef, useState } from "react"
+import { useTraceDistinctValues } from "../../../../../../../domains/traces/traces.collection.ts"
 
 type ConditionType = EvaluationRuleCondition["type"]
 type ConditionOf<T extends ConditionType> = Extract<EvaluationRuleCondition, { type: T }>
@@ -71,6 +86,105 @@ const metricFieldLabel = (field: MetricField) => metricMeta(field).label
 interface EditorProps<T extends ConditionType> {
   readonly condition: ConditionOf<T>
   readonly onChange: (next: ConditionOf<T>) => void
+  readonly projectId: string
+}
+
+const FINISH_REASON_SUGGESTIONS = ["stop", "length", "tool_calls", "content_filter", "error"] as const
+
+/**
+ * Single-value combobox over the design-system `Combobox`: suggests known values and accepts
+ * free text via a "Use …" item, so a value that isn't in the suggestions can still be entered.
+ */
+function SuggestiveCombobox({
+  label,
+  placeholder,
+  value,
+  onChange,
+  suggestions,
+}: {
+  readonly label: string
+  readonly placeholder?: string
+  readonly value: string
+  readonly onChange: (next: string) => void
+  readonly suggestions: readonly string[]
+}) {
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  // Portal the popup into an element inside the modal so the dialog's pointer/focus layer
+  // doesn't treat clicks on the popup as "outside" (which would dismiss it without selecting).
+  const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null)
+  const [search, setSearch] = useState("")
+  const trimmed = search.trim()
+  const hasExact = suggestions.some((s) => s.toLowerCase() === trimmed.toLowerCase())
+  const items = trimmed.length > 0 && !hasExact ? [trimmed, ...suggestions] : [...suggestions]
+
+  return (
+    <FormField label={label}>
+      <div className="relative">
+        <div ref={setContainerEl} aria-hidden className="absolute left-0 top-0" />
+        <Combobox<string>
+          value={value.length > 0 ? value : null}
+          onValueChange={(picked) => {
+            onChange(picked ?? "")
+            setSearch("")
+          }}
+          items={items}
+          itemToStringValue={(item) => item}
+          isItemEqualToValue={(a, b) => a === b}
+        >
+          <Button asChild variant="outline" className="w-full justify-between">
+            <ComboboxTrigger ref={triggerRef}>
+              {value.length > 0 ? (
+                <Text.H5>{value}</Text.H5>
+              ) : (
+                <Text.H5 color="foregroundMuted">{placeholder ?? "Select…"}</Text.H5>
+              )}
+            </ComboboxTrigger>
+          </Button>
+          <ComboboxContent anchor={triggerRef} container={containerEl}>
+            <ComboboxInput
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              {...(placeholder ? { placeholder } : {})}
+            />
+            <ComboboxList>
+              {(item: string) => (
+                <ComboboxItem value={item}>
+                  <Text.H5>{!hasExact && item === trimmed ? `Use “${item}”` : item}</Text.H5>
+                </ComboboxItem>
+              )}
+            </ComboboxList>
+            <ComboboxEmpty>Type to add a value.</ComboboxEmpty>
+          </ComboboxContent>
+        </Combobox>
+      </div>
+    </FormField>
+  )
+}
+
+/** Tool-name field that suggests the project's known tool names (free text allowed). */
+function ToolNameField({
+  projectId,
+  label,
+  placeholder,
+  value,
+  onChange,
+}: {
+  readonly projectId: string
+  readonly label: string
+  readonly placeholder?: string
+  readonly value: string
+  readonly onChange: (next: string) => void
+}) {
+  const { data: tools = [] } = useTraceDistinctValues({ projectId, column: "tools" })
+  return (
+    <SuggestiveCombobox
+      label={label}
+      value={value}
+      onChange={onChange}
+      suggestions={tools}
+      {...(placeholder ? { placeholder } : {})}
+    />
+  )
 }
 
 export interface ConditionTypeMeta<T extends ConditionType = ConditionType> {
@@ -156,6 +270,7 @@ const text_match: ConditionTypeMeta<"text_match"> = {
       </div>
       <Input
         label="Value"
+        placeholder="e.g. I don't know"
         value={condition.value}
         onChange={(event) => onChange({ ...condition, value: event.target.value })}
         {...(regexError(condition.operator, condition.value)
@@ -294,11 +409,13 @@ const tool_used: ConditionTypeMeta<"tool_used"> = {
   description: "A specific tool was called during the conversation.",
   create: () => ({ type: "tool_used", toolName: "" }),
   summarize: (c) => `Tool "${c.toolName}" was used`,
-  Editor: ({ condition, onChange }) => (
-    <Input
+  Editor: ({ condition, onChange, projectId }) => (
+    <ToolNameField
+      projectId={projectId}
       label="Tool name"
+      placeholder="Search tools…"
       value={condition.toolName}
-      onChange={(event) => onChange({ ...condition, toolName: event.target.value })}
+      onChange={(toolName) => onChange({ ...condition, toolName })}
     />
   ),
 }
@@ -308,15 +425,13 @@ const tool_failed: ConditionTypeMeta<"tool_failed"> = {
   description: "A tool call ended with an error span status (leave name empty for any tool).",
   create: () => ({ type: "tool_failed" }),
   summarize: (c) => (c.toolName ? `Tool "${c.toolName}" failed` : "A tool failed"),
-  Editor: ({ condition, onChange }) => (
-    <Input
+  Editor: ({ condition, onChange, projectId }) => (
+    <ToolNameField
+      projectId={projectId}
       label="Tool name (optional)"
       placeholder="Any tool"
       value={condition.toolName ?? ""}
-      onChange={(event) => {
-        const toolName = event.target.value
-        onChange(toolName ? { ...condition, toolName } : { type: "tool_failed" })
-      }}
+      onChange={(toolName) => onChange(toolName ? { ...condition, toolName } : { type: "tool_failed" })}
     />
   ),
 }
@@ -356,11 +471,12 @@ const finish_reason: ConditionTypeMeta<"finish_reason"> = {
   create: () => ({ type: "finish_reason", value: "" }),
   summarize: (c) => `Finish reason is "${c.value}"`,
   Editor: ({ condition, onChange }) => (
-    <Input
+    <SuggestiveCombobox
       label="Finish reason"
       placeholder="e.g. stop, length, tool_calls"
       value={condition.value}
-      onChange={(event) => onChange({ ...condition, value: event.target.value })}
+      onChange={(value) => onChange({ ...condition, value })}
+      suggestions={FINISH_REASON_SUGGESTIONS}
     />
   ),
 }
@@ -394,5 +510,26 @@ export const CONDITION_TYPE_ORDER: readonly ConditionType[] = [
 export const summarizeCondition = (condition: EvaluationRuleCondition): string =>
   (CONDITION_META[condition.type] as ConditionTypeMeta).summarize(condition)
 
-export const hasInvalidRegex = (condition: EvaluationRuleCondition): boolean =>
-  condition.type === "text_match" && regexError(condition.operator, condition.value) !== undefined
+/**
+ * Whether a condition is complete enough to add — gates the "Add condition" button so users
+ * can't create an empty/invalid condition that would only fail at save time.
+ */
+export const isConditionValid = (c: EvaluationRuleCondition): boolean => {
+  switch (c.type) {
+    case "text_match":
+      return c.value.trim().length > 0 && regexError(c.operator, c.value) === undefined
+    case "output_length":
+    case "tool_call_count":
+    case "metric":
+      return Number.isFinite(c.value) && c.value >= 0
+    case "tool_used":
+      return c.toolName.trim().length > 0
+    case "finish_reason":
+      return c.value.trim().length > 0
+    case "empty_output":
+    case "json_output":
+    case "tool_failed":
+    case "error":
+      return true
+  }
+}

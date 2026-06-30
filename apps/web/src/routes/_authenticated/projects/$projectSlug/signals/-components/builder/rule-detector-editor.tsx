@@ -147,12 +147,14 @@ export function ConditionEditor({
   draftCondition,
   onDraftConditionChange,
   onClearType,
+  projectId,
   title,
   onBack,
 }: {
   readonly draftCondition: EvaluationRuleCondition | null
   readonly onDraftConditionChange: (next: EvaluationRuleCondition) => void
   readonly onClearType: () => void
+  readonly projectId: string
   readonly title: string
   readonly onBack: () => void
 }) {
@@ -205,7 +207,7 @@ export function ConditionEditor({
         </Button>
       </div>
       <Text.H6 color="foregroundMuted">{meta.description}</Text.H6>
-      <Editor condition={draftCondition} onChange={onDraftConditionChange} />
+      <Editor condition={draftCondition} onChange={onDraftConditionChange} projectId={projectId} />
     </div>
   )
 }
