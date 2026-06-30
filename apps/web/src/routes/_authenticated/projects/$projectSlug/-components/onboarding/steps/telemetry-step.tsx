@@ -1,6 +1,6 @@
 import { Button, Text } from "@repo/ui"
 import { lazy, Suspense } from "react"
-import { TraceTail } from "../mocks/trace-tail.tsx"
+import { TraceTail, TelemetryHelpAlert } from "../mocks/trace-tail.tsx"
 import { TelemetryInstructions } from "./telemetry-instructions.tsx"
 
 const OnboardingWaitingLottie = lazy(() => import("../../onboarding-waiting-lottie.tsx"))
@@ -54,5 +54,16 @@ export function Left({
 }
 
 export function Right({ traceReceived }: { readonly traceReceived: boolean }) {
-  return <TraceTail traceReceived={traceReceived} />
+  return (
+    <div className="flex min-h-0 w-full flex-1 flex-col self-stretch">
+      <div className="mx-auto flex w-full max-w-[448px] flex-1 flex-col justify-center">
+        <TraceTail traceReceived={traceReceived} />
+      </div>
+      {!traceReceived ? (
+        <div className="mx-auto w-full max-w-[448px] shrink-0 -mb-10 lg:-mb-16">
+          <TelemetryHelpAlert />
+        </div>
+      ) : null}
+    </div>
+  )
 }

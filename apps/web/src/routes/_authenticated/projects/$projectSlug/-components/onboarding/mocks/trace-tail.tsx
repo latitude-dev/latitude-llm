@@ -1,5 +1,5 @@
-import { Skeleton, Text } from "@repo/ui"
-import { Check } from "lucide-react"
+import { Alert, Icon, Skeleton, Text } from "@repo/ui"
+import { Check, Headset } from "lucide-react"
 
 const TOTAL_ROWS = 4
 
@@ -7,7 +7,7 @@ export function TraceTail({ traceReceived }: { readonly traceReceived: boolean }
   const skeletonCount = traceReceived ? TOTAL_ROWS - 1 : TOTAL_ROWS
 
   return (
-    <div className="flex h-fit w-full max-w-[440px] flex-col gap-4 self-center">
+    <div className="flex w-full flex-col gap-4">
       <div className="flex flex-col gap-1">
         <Text.H5M>{traceReceived ? "Your first trace just arrived" : "Waiting for your first trace…"}</Text.H5M>
         <Text.H6 color="foregroundMuted">
@@ -24,6 +24,30 @@ export function TraceTail({ traceReceived }: { readonly traceReceived: boolean }
         ))}
       </div>
     </div>
+  )
+}
+
+export function TelemetryHelpAlert() {
+  return (
+    <Alert
+      showIcon={false}
+      spacing="xsmall"
+      className="rounded-lg shadow-none"
+      title={
+        <span className="flex items-center gap-2">
+          <Icon icon={Headset} size="sm" color="accentForeground" weight="L" />
+          Need help with setting up?
+        </span>
+      }
+      description={
+        <>
+          <button type="button" className="font-semibold underline underline-offset-2 hover:opacity-80">
+            Click here
+          </button>{" "}
+          and we'll come back to you to help you install Latitude in your project
+        </>
+      }
+    />
   )
 }
 
