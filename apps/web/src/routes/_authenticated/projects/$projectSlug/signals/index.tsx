@@ -53,6 +53,7 @@ import {
   DownloadIcon,
   PauseIcon,
   PlayIcon,
+  PlusIcon,
   SearchIcon,
 } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
@@ -74,6 +75,7 @@ import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { AssigneeFilter, UNASSIGNED_FILTER_TOKEN } from "./-components/assignee-filter.tsx"
+import { SignalBuilderModal } from "./-components/builder/signal-builder-modal.tsx"
 import { SignalsAnalyticsPanel } from "./-components/signals-analytics-panel.tsx"
 import { SignalsEmptyState } from "./-components/signals-empty-state.tsx"
 import {
@@ -177,6 +179,7 @@ function SignalsPage() {
   const [exporting, setExporting] = useState(false)
   const [bulkMuteModalOpen, setBulkMuteModalOpen] = useState(false)
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
+  const [builderOpen, setBuilderOpen] = useState(false)
 
   useDebounce(
     () => {
@@ -351,7 +354,15 @@ function SignalsPage() {
     return (
       <Layout>
         <Layout.Content>
-          <SignalsEmptyState />
+          <SignalsEmptyState onCreate={() => setBuilderOpen(true)} />
+          {builderOpen ? (
+            <SignalBuilderModal
+              projectId={project.id}
+              projectSlug={project.slug}
+              mode="create"
+              onClose={() => setBuilderOpen(false)}
+            />
+          ) : null}
         </Layout.Content>
       </Layout>
     )
@@ -420,6 +431,10 @@ function SignalsPage() {
                 active={lifecycleGroup}
                 onSelect={(value) => setLifecycleGroup(value)}
               />
+              <Button size="sm" onClick={() => setBuilderOpen(true)}>
+                <Icon icon={PlusIcon} size="sm" />
+                New signal
+              </Button>
             </Layout.ActionRowItem>
           </Layout.ActionsRow>
         </Layout.Actions>
@@ -496,6 +511,15 @@ function SignalsPage() {
             </>
           }
         />
+
+        {builderOpen ? (
+          <SignalBuilderModal
+            projectId={project.id}
+            projectSlug={project.slug}
+            mode="create"
+            onClose={() => setBuilderOpen(false)}
+          />
+        ) : null}
       </Layout.Content>
     </Layout>
   )

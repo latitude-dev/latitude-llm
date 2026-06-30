@@ -293,6 +293,7 @@ const toSignalDetailRecord = (input: {
   projectId: input.issue.projectId,
   name: input.issue.name,
   description: input.issue.description,
+  filters: input.issue.filters ?? null,
   source: input.issue.source,
   origin: input.issue.origin,
   assigneeId: input.issue.assigneeId,

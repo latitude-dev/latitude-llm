@@ -1,4 +1,4 @@
-import type { FilterSet } from "@domain/shared"
+import type { EvaluationSettings } from "@domain/shared"
 import {
   Button,
   CloseTrigger,
@@ -13,8 +13,8 @@ import {
   useToast,
 } from "@repo/ui"
 import { useForm } from "@tanstack/react-form"
-import { useParams } from "@tanstack/react-router"
-import { FilterIcon, PencilIcon, RotateCwIcon, ShieldCheckIcon, XIcon } from "lucide-react"
+import { useNavigate, useParams } from "@tanstack/react-router"
+import { PencilIcon, RotateCwIcon, ShieldCheckIcon, Trash2Icon, XIcon } from "lucide-react"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import {
   type EvaluationSummaryRecord,
@@ -24,12 +24,16 @@ import {
   unmonitorSignal,
   updateSignalEvaluationSampling,
 } from "../../../../../../domains/evaluations/evaluation-alignment.functions.ts"
-import { invalidateSignalQueries } from "../../../../../../domains/signals/signals.collection.ts"
+import {
+  invalidateSignalQueries,
+  useDeleteSignal,
+  useSignalDetail,
+} from "../../../../../../domains/signals/signals.collection.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { createFormSubmitHandler } from "../../../../../../lib/form-server-action.ts"
 import { FlaggerBadge } from "../../-components/flaggers/flagger-badge.tsx"
 import { AlignmentStatsModal } from "./alignment-stats-modal.tsx"
-import { EvaluationFilterModal } from "./evaluation-filter-modal.tsx"
+import { SignalBuilderModal } from "./builder/signal-builder-modal.tsx"
 import { formatPercent, getAlignmentVariant } from "./signal-formatters.ts"
 
 const POLL_INTERVAL_MS = 5000
@@ -211,14 +215,6 @@ function SamplingModalForm({
   )
 }
 
-function countFilterConditions(filter: FilterSet): number {
-  let total = 0
-  for (const conditions of Object.values(filter)) {
-    if (conditions.length > 0) total += 1
-  }
-  return total
-}
-
 const toTracked = (state: SignalAlignmentStateRecord): TrackedWorkflow | null => {
   if (state.kind === "generating") {
     return { kind: "initial" }
@@ -252,13 +248,17 @@ export function SignalDrawerEvaluations({
 }) {
   const { toast } = useToast()
   const { projectSlug } = useParams({ strict: false })
+  const navigate = useNavigate()
+  const deleteSignal = useDeleteSignal(projectId)
+  const { data: signalDetail } = useSignalDetail({ projectId, signalId })
   const [tracked, setTracked] = useState<TrackedWorkflow | null>(null)
   const [monitorModalOpen, setMonitorModalOpen] = useState(false)
   const [realignEvaluationId, setRealignEvaluationId] = useState<string | null>(null)
   const [deleteEvaluationId, setDeleteEvaluationId] = useState<string | null>(null)
   const [statsEvaluation, setStatsEvaluation] = useState<EvaluationSummaryRecord | null>(null)
   const [samplingEvaluation, setSamplingEvaluation] = useState<EvaluationSummaryRecord | null>(null)
-  const [filterEvaluation, setFilterEvaluation] = useState<EvaluationSummaryRecord | null>(null)
+  const [builderOpen, setBuilderOpen] = useState(false)
+  const [deleteSignalOpen, setDeleteSignalOpen] = useState(false)
   const [isStartingGenerate, setIsStartingGenerate] = useState(false)
   const [isStartingRealign, setIsStartingRealign] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -375,6 +375,19 @@ export function SignalDrawerEvaluations({
     }
   }
 
+  const handleDeleteSignal = async () => {
+    setIsDeleting(true)
+    try {
+      await deleteSignal.mutateAsync(signalId)
+      toast({ description: "Signal deleted." })
+      setDeleteSignalOpen(false)
+      void navigate({ to: "/projects/$projectSlug/signals", params: { projectSlug: projectSlug ?? "" } })
+    } catch (error) {
+      toast({ variant: "destructive", description: toUserMessage(error) })
+      setIsDeleting(false)
+    }
+  }
+
   const isBusy = tracked !== null
   const visibleEvaluations = evaluations.filter(
     (evaluation) => evaluation.archivedAt === null && evaluation.deletedAt === null,
@@ -385,12 +398,14 @@ export function SignalDrawerEvaluations({
   // User-origin evaluations come from a raw API/MCP script or declarative settings
   // and cannot be realigned (no annotations) — the signal owns its evaluation.
   const isUserOriginEvaluation = signalOrigin === "user"
+  const editableSettings: EvaluationSettings | null =
+    isUserOriginEvaluation && primaryEvaluation?.settings ? primaryEvaluation.settings : null
+  // Raw API/MCP scripts (settings === null) stay read-only; settings-defined
+  // user evaluations are editable via the builder.
   const userEvaluationNote =
-    primaryEvaluation === null || !isUserOriginEvaluation
+    primaryEvaluation === null || !isUserOriginEvaluation || editableSettings !== null
       ? null
-      : primaryEvaluation.settings
-        ? "Custom evaluation defined from settings. Editing its settings is coming soon."
-        : "Custom script defined via the API or MCP. It is not editable here."
+      : "Custom script defined via the API or MCP. It is not editable here."
   const isActionPending = isBusy || isStartingGenerate || isStartingRealign || isDeleting
   const monitorBlockedByLifecycle = !canMonitorSignal
   const isGenerating = isStartingGenerate || tracked?.kind === "initial"
@@ -558,37 +573,6 @@ export function SignalDrawerEvaluations({
                   </Tooltip>
                 }
               />
-              <SummaryField
-                label="Scope"
-                value={(() => {
-                  const conditionCount = countFilterConditions(primaryEvaluation.trigger.filter)
-                  const summary =
-                    conditionCount === 0 ? "All traces" : `${conditionCount} filter${conditionCount === 1 ? "" : "s"}`
-                  return (
-                    <Tooltip
-                      asChild
-                      trigger={
-                        <button
-                          type="button"
-                          onClick={() => setFilterEvaluation(primaryEvaluation)}
-                          disabled={isActionPending}
-                          className="inline-flex h-5 cursor-pointer items-center gap-1 bg-transparent p-0 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <Icon icon={FilterIcon} size="xs" color="foregroundMuted" />
-                          <Text.H5 color="foreground">{summary}</Text.H5>
-                          <Icon icon={PencilIcon} size="xs" color="foregroundMuted" />
-                        </button>
-                      }
-                    >
-                      <Text.H6 color="foregroundMuted">
-                        {conditionCount === 0
-                          ? "Click to limit which traces this evaluation runs on."
-                          : "Click to change which traces this evaluation runs on."}
-                      </Text.H6>
-                    </Tooltip>
-                  )
-                })()}
-              />
               {!isUserOriginEvaluation ? (
                 <div className="flex min-w-0 flex-1 items-end justify-end gap-x-1">
                   <Tooltip
@@ -616,6 +600,29 @@ export function SignalDrawerEvaluations({
                   >
                     <Icon icon={RotateCwIcon} size="sm" />
                     {isPrimaryEvaluationRealigning ? "Realigning" : "Realign"}
+                  </Button>
+                </div>
+              ) : editableSettings !== null ? (
+                <div className="flex min-w-0 flex-1 items-end justify-end gap-x-1">
+                  <Tooltip
+                    asChild
+                    trigger={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDeleteSignalOpen(true)}
+                        disabled={isActionPending}
+                        aria-label="Delete signal"
+                      >
+                        <Icon icon={Trash2Icon} size="sm" />
+                      </Button>
+                    }
+                  >
+                    <Text.H6 color="foregroundMuted">Delete signal</Text.H6>
+                  </Tooltip>
+                  <Button variant="outline" onClick={() => setBuilderOpen(true)} disabled={isActionPending}>
+                    <Icon icon={PencilIcon} size="sm" />
+                    Edit
                   </Button>
                 </div>
               ) : null}
@@ -677,11 +684,35 @@ export function SignalDrawerEvaluations({
         onClose={() => setSamplingEvaluation(null)}
       />
 
-      <EvaluationFilterModal
-        evaluation={filterEvaluation}
-        projectId={projectId}
-        signalId={signalId}
-        onClose={() => setFilterEvaluation(null)}
+      {builderOpen && editableSettings !== null ? (
+        <SignalBuilderModal
+          projectId={projectId}
+          projectSlug={projectSlug ?? ""}
+          mode="edit"
+          initial={{
+            signalId,
+            filters: signalDetail?.filters ?? null,
+            settings: editableSettings,
+          }}
+          onClose={() => setBuilderOpen(false)}
+        />
+      ) : null}
+
+      <Modal
+        open={deleteSignalOpen}
+        onOpenChange={(open) => (!open ? setDeleteSignalOpen(false) : undefined)}
+        dismissible
+        title="Delete signal"
+        description="Are you sure you want to delete this signal? This also archives its evaluation. This cannot be undone."
+        footer={
+          <>
+            <CloseTrigger />
+            <Button variant="destructive" onClick={() => void handleDeleteSignal()} disabled={isDeleting}>
+              <Icon icon={Trash2Icon} size="sm" />
+              Delete
+            </Button>
+          </>
+        }
       />
     </>
   )

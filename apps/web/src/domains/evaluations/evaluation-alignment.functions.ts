@@ -7,18 +7,9 @@ import {
   type SignalAlignmentState,
   unmonitorSignalUseCase,
   updateEvaluationSampling,
-  updateEvaluationTriggerFilter,
 } from "@domain/evaluations"
 import { WorkflowQuerier, WorkflowStarter } from "@domain/queue"
-import {
-  BadRequestError,
-  EvaluationId,
-  filterSetSchema,
-  OrganizationId,
-  ProjectId,
-  SignalId,
-  UserId,
-} from "@domain/shared"
+import { BadRequestError, EvaluationId, OrganizationId, ProjectId, SignalId, UserId } from "@domain/shared"
 import { SignalRepository } from "@domain/signals"
 import {
   EvaluationRepositoryLive,
@@ -43,13 +34,6 @@ const updateEvaluationSamplingInputSchema = z.object({
   signalId: z.string(),
   evaluationId: z.string(),
   sampling: z.number().int().min(0).max(100),
-})
-
-const updateEvaluationTriggerFilterInputSchema = z.object({
-  projectId: z.string(),
-  signalId: z.string(),
-  evaluationId: z.string(),
-  filter: filterSetSchema,
 })
 
 export type SignalAlignmentStateRecord = SignalAlignmentState
@@ -203,33 +187,6 @@ export const updateSignalEvaluationSampling = createServerFn({ method: "POST" })
         }
 
         const updatedEvaluation = updateEvaluationSampling({ evaluation, sampling: data.sampling })
-        yield* repository.save(updatedEvaluation)
-
-        return toEvaluationSummaryRecord(updatedEvaluation)
-      }).pipe(withPostgres(EvaluationRepositoryLive, client, OrganizationId(organizationId)), withTracing),
-    )
-  })
-
-export const updateSignalEvaluationTriggerFilter = createServerFn({ method: "POST" })
-  .inputValidator(updateEvaluationTriggerFilterInputSchema)
-  .handler(async ({ data }): Promise<EvaluationSummaryRecord> => {
-    const { organizationId } = await requireSession()
-    const client = getPostgresClient()
-    const projectId = ProjectId(data.projectId)
-    const signalId = SignalId(data.signalId)
-
-    return Effect.runPromise(
-      Effect.gen(function* () {
-        const repository = yield* EvaluationRepository
-        const evaluation = yield* repository.findById(EvaluationId(data.evaluationId))
-
-        if (evaluation.projectId !== projectId || evaluation.signalId !== signalId) {
-          return yield* new BadRequestError({
-            message: `Evaluation ${evaluation.id} does not match the requested issue or project`,
-          })
-        }
-
-        const updatedEvaluation = updateEvaluationTriggerFilter({ evaluation, filter: data.filter })
         yield* repository.save(updatedEvaluation)
 
         return toEvaluationSummaryRecord(updatedEvaluation)
