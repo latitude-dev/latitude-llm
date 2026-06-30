@@ -313,7 +313,7 @@ importers:
         version: link:../../packages/platform/testkit
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(typescript@6.0.3)
 
   apps/ingest:
     dependencies:
@@ -377,7 +377,7 @@ importers:
     devDependencies:
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
 
   apps/web:
     dependencies:
@@ -994,12 +994,6 @@ importers:
       '@domain/incidents':
         specifier: workspace:*
         version: link:../incidents
-      '@domain/monitors':
-        specifier: workspace:*
-        version: link:../monitors
-      '@domain/notifications':
-        specifier: workspace:*
-        version: link:../notifications
       '@domain/organizations':
         specifier: workspace:*
         version: link:../organizations
@@ -1022,9 +1016,6 @@ importers:
         specifier: 'catalog:'
         version: 4.3.6
     devDependencies:
-      '@repo/vitest-config':
-        specifier: workspace:*
-        version: link:../../vitest-config
       vitest:
         specifier: 'catalog:'
         version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@26.0.0)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@26.0.0)(esbuild@0.28.1)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))
@@ -1940,16 +1931,10 @@ importers:
       '@domain/agent-dispatch':
         specifier: workspace:*
         version: link:../../domain/agent-dispatch
-      '@repo/utils':
-        specifier: workspace:*
-        version: link:../../utils
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
     devDependencies:
-      '@repo/vitest-config':
-        specifier: workspace:*
-        version: link:../../vitest-config
       vitest:
         specifier: 'catalog:'
         version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@26.0.0)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@26.0.0)(esbuild@0.28.1)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))
