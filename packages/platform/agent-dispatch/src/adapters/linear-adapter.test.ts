@@ -44,8 +44,13 @@ describe("createLinearAdapter", () => {
 
     expect(result.status).toBe("accepted")
     expect(result.deepLinkUrl).toBe("https://linear.app/acme/issue/AC-1")
-    expect(JSON.parse(calls[0]!.body).query).toContain("issueCreate")
-    expect(JSON.parse(calls[0]!.body).query).toContain("Timeout errors")
+    const payload = JSON.parse(calls[0]!.body) as {
+      query: string
+      variables: { input: { title: string; description: string; teamId: string } }
+    }
+    expect(payload.query).toContain("issueCreate")
+    expect(payload.variables.input.title).toContain("Timeout errors")
+    expect(payload.variables.input.teamId).toBe("team1")
 
     vi.unstubAllGlobals()
   })

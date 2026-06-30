@@ -38,7 +38,25 @@ export const renderDispatchPrompt = (input: {
   readonly template?: string | null
 }): string => {
   const template = input.template ?? DEFAULT_PROMPT_TEMPLATE
-  return template.replace(/\{\{([^}]+)\}\}/g, (_match, key: string) => renderPlaceholder(input.context, key.trim()))
+  let result = ""
+  let index = 0
+  while (index < template.length) {
+    const start = template.indexOf("{{", index)
+    if (start === -1) {
+      result += template.slice(index)
+      break
+    }
+    result += template.slice(index, start)
+    const end = template.indexOf("}}", start + 2)
+    if (end === -1) {
+      result += template.slice(start)
+      break
+    }
+    const key = template.slice(start + 2, end).trim()
+    result += renderPlaceholder(input.context, key)
+    index = end + 2
+  }
+  return result
 }
 
 export const defaultDispatchPromptTemplate = DEFAULT_PROMPT_TEMPLATE
