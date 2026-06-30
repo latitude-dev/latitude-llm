@@ -459,7 +459,6 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
         <TracesEmptyOnboarding
           projectId={currentProject.id}
           projectSlug={currentProject.slug}
-          onboardingType={currentProject.settings.onboardingType}
           orgHasConnectedProjects={orgHasConnectedProjects}
         />
       </Layout>

@@ -21,11 +21,9 @@ import { OnboardingGallery } from "./onboarding/onboarding-gallery.tsx"
 import * as FlaggersStep from "./onboarding/steps/flaggers-step.tsx"
 import * as RoleStep from "./onboarding/steps/role-step.tsx"
 import * as SlackStep from "./onboarding/steps/slack-step.tsx"
-import type { StackChoice } from "./onboarding/steps/stack-step.tsx"
-import * as StackStep from "./onboarding/steps/stack-step.tsx"
 import * as TelemetryStep from "./onboarding/steps/telemetry-step.tsx"
 
-export const ONBOARDING_STEPS = ["role", "stack", "flaggers", "slack", "telemetry"] as const
+export const ONBOARDING_STEPS = ["role", "flaggers", "slack", "telemetry"] as const
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number]
 
 type OnboardingFormValues = { jobTitle: string; phoneNumber: string }
@@ -45,7 +43,6 @@ export function OnboardingFlow({
   projectSlug,
   projectName: initialProjectName,
   persistedProjectName,
-  onboardingType,
   slackEnvConfigured,
   initialStep,
   flashInstalled,
@@ -56,7 +53,6 @@ export function OnboardingFlow({
   readonly projectSlug: string
   readonly projectName: string
   readonly persistedProjectName: string
-  readonly onboardingType: "code-agents" | "prod-traces" | undefined
   readonly slackEnvConfigured: boolean
   readonly initialStep?: OnboardingStep
   readonly flashInstalled?: "ok"
@@ -68,14 +64,7 @@ export function OnboardingFlow({
 
   const slackStepEnabled = slackEnvConfigured
 
-  // Force back to `role` if a URL deep-links past `stack` without `onboardingType` set.
-  const onboardingTypeSet = onboardingType != null
-  const resolvedInitialStep: OnboardingStep = (() => {
-    if (initialStep == null) return "role"
-    if (initialStep === "role" || initialStep === "stack") return initialStep
-    if (!onboardingTypeSet) return "role"
-    return initialStep
-  })()
+  const resolvedInitialStep: OnboardingStep = initialStep ?? "role"
 
   const [step, setStep] = useState<OnboardingStep>(resolvedInitialStep)
 
@@ -115,7 +104,6 @@ export function OnboardingFlow({
     })
   })
 
-  const [stackChoice, setStackChoice] = useState<StackChoice | null>(null)
   const [projectName, setProjectName] = useState(initialProjectName)
   const [selectedFlaggerSlugs, setSelectedFlaggerSlugs] = useState<ReadonlySet<string> | null>(null)
   const [isSavingFlaggers, setIsSavingFlaggers] = useState(false)
@@ -129,8 +117,9 @@ export function OnboardingFlow({
     } satisfies OnboardingFormValues,
     onSubmit: createFormSubmitHandler(
       async ({ jobTitle, phoneNumber }) => {
-        const stack = stackChoice as StackChoice
-        await submitOnboarding({ data: { jobTitle, phoneNumber, stackChoice: stack, projectId } })
+        await submitOnboarding({
+          data: { jobTitle, phoneNumber, stackChoice: "production-agent", projectId },
+        })
       },
       {
         onSuccess: () => goToStep("flaggers"),
@@ -145,11 +134,6 @@ export function OnboardingFlow({
     await form.validateField("jobTitle", "change")
     const meta = form.getFieldMeta("jobTitle")
     if (meta && meta.errors.length > 0) return
-    goToStep("stack")
-  }
-
-  const handleStackContinue = () => {
-    if (stackChoice === null) return
     void form.handleSubmit()
   }
 
@@ -273,12 +257,9 @@ export function OnboardingFlow({
 
   const telemetryBackStep: OnboardingStep = slackStepEnabled ? "slack" : "flaggers"
 
-  // Right-pane slides. `role` and `stack` share one "intro" slide so the gallery stays put
-  // across the first two steps; the pane first slides when entering `flaggers`.
   type RightSlide = "intro" | "flaggers" | "slack" | "telemetry"
   const STEP_TO_RIGHT_SLIDE: Record<OnboardingStep, RightSlide> = {
     role: "intro",
-    stack: "intro",
     flaggers: "flaggers",
     slack: "slack",
     telemetry: "telemetry",
@@ -292,14 +273,10 @@ export function OnboardingFlow({
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-row overflow-hidden bg-background">
       <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-y-auto overscroll-y-contain px-6 pt-12 pb-16 sm:px-12 sm:pt-16 sm:pb-20 lg:w-1/2 lg:border-r lg:border-border lg:px-24 lg:pt-24 lg:pb-32 [scrollbar-gutter:stable]">
         {step === "role" ? (
-          <RoleStep.Left form={form} onNext={() => void handleAdvanceFromRole()} />
-        ) : step === "stack" ? (
-          <StackStep.Left
-            stackChoice={stackChoice}
-            setStackChoice={setStackChoice}
+          <RoleStep.Left
+            form={form}
             isSubmitting={form.state.isSubmitting}
-            onBack={() => goToStep("role")}
-            onContinue={handleStackContinue}
+            onNext={() => void handleAdvanceFromRole()}
           />
         ) : step === "flaggers" ? (
           <FlaggersStep.Left
@@ -312,7 +289,7 @@ export function OnboardingFlow({
             projectName={projectName}
             onProjectNameChange={setProjectName}
             isSavingFlaggers={isSavingFlaggers}
-            onBack={() => goToStep("stack")}
+            onBack={() => goToStep("role")}
             onContinue={() => void handleConfigureFlaggers()}
           />
         ) : step === "slack" ? (
@@ -323,7 +300,6 @@ export function OnboardingFlow({
           />
         ) : (
           <TelemetryStep.Left
-            stackChoice={stackChoice}
             traceReceived={traceReceived}
             projectSlug={projectSlug}
             sampleProjectSlug={sampleProject?.slug}

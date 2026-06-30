@@ -217,8 +217,8 @@ export function MockSignalsFeed({
   const openCount = mockRows.filter((f) => enabledFlaggerSlugs.has(f.slug)).length
 
   return (
-    <div className="flex h-fit w-full max-w-[591px] flex-col gap-4 self-center">
-      <div className="flex flex-col gap-1">
+    <div className="flex w-full max-w-[591px] min-h-0 max-h-160 flex-col gap-4 self-center overflow-hidden">
+      <div className="flex shrink-0 flex-col gap-1">
         <Text.H5M>Signals you'd see in your project</Text.H5M>
         <Text.H6 color="foregroundMuted">
           {openCount > 0
@@ -227,30 +227,37 @@ export function MockSignalsFeed({
         </Text.H6>
       </div>
 
-      <div className="flex w-full flex-col">
-        {mockRows.map((flagger, index) => {
-          const issue = MOCK_ISSUES_BY_FLAGGER[flagger.slug]
-          if (!issue) return null
-          // Static per-position delay: a preset (bulk toggle) cascades top-to-bottom, while a
-          // single toggle keeps a barely-perceptible delay — no need to track prior open state.
-          return (
-            <CollapsibleRow
-              key={flagger.slug}
-              open={enabledFlaggerSlugs.has(flagger.slug)}
-              delayMs={Math.min(index * STAGGER_STEP_MS, STAGGER_MAX_MS)}
-            >
-              <SignalCard issue={issue} />
-            </CollapsibleRow>
-          )
-        })}
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        <div className="flex w-full flex-col">
+          {mockRows.map((flagger, index) => {
+            const issue = MOCK_ISSUES_BY_FLAGGER[flagger.slug]
+            if (!issue) return null
+            // Static per-position delay: a preset (bulk toggle) cascades top-to-bottom, while a
+            // single toggle keeps a barely-perceptible delay — no need to track prior open state.
+            return (
+              <CollapsibleRow
+                key={flagger.slug}
+                open={enabledFlaggerSlugs.has(flagger.slug)}
+                delayMs={Math.min(index * STAGGER_STEP_MS, STAGGER_MAX_MS)}
+              >
+                <SignalCard issue={issue} />
+              </CollapsibleRow>
+            )
+          })}
 
-        <CollapsibleRow open={openCount === 0} delayMs={0}>
-          <div className="rounded-lg border border-dashed border-border bg-card/50 p-4">
-            <Text.H6 color="foregroundMuted" align="center">
-              Pick a flagger to see what kinds of issues it would surface.
-            </Text.H6>
-          </div>
-        </CollapsibleRow>
+          <CollapsibleRow open={openCount === 0} delayMs={0}>
+            <div className="rounded-lg border border-dashed border-border bg-card/50 p-4">
+              <Text.H6 color="foregroundMuted" align="center">
+                Pick a flagger to see what kinds of issues it would surface.
+              </Text.H6>
+            </div>
+          </CollapsibleRow>
+        </div>
+
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-secondary from-25% to-transparent"
+        />
       </div>
     </div>
   )

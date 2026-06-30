@@ -2,7 +2,15 @@ import { Button, Input, Text } from "@repo/ui"
 import { fieldErrorsAsStrings } from "../../../../../../../lib/form-server-action.ts"
 import type { OnboardingForm } from "../../onboarding-flow.tsx"
 
-export function Left({ form, onNext }: { readonly form: OnboardingForm; readonly onNext: () => void }) {
+export function Left({
+  form,
+  isSubmitting,
+  onNext,
+}: {
+  readonly form: OnboardingForm
+  readonly isSubmitting: boolean
+  readonly onNext: () => void
+}) {
   return (
     <div className="mx-auto flex min-h-full w-full max-w-[560px] flex-col">
       <div className="flex w-full flex-col gap-8">
@@ -50,7 +58,9 @@ export function Left({ form, onNext }: { readonly form: OnboardingForm; readonly
           )}
         </form.Field>
         <div>
-          <Button onClick={onNext}>Next</Button>
+          <Button disabled={isSubmitting} onClick={onNext}>
+            {isSubmitting ? "Saving…" : "Next"}
+          </Button>
         </div>
       </div>
     </div>
