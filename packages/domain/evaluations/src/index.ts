@@ -218,6 +218,13 @@ export {
 } from "./use-cases/monitor-signal.ts"
 export { evaluateOptimizationCandidate } from "./use-cases/optimization/evaluate-optimization-candidate.ts"
 export {
+  type PreviewEvaluationError,
+  type PreviewEvaluationInput,
+  type PreviewEvaluationResult,
+  type PreviewEvaluationRow,
+  previewEvaluationUseCase,
+} from "./use-cases/preview-evaluation.ts"
+export {
   type UnmonitorSignalError,
   type UnmonitorSignalInput,
   unmonitorSignalUseCase,
