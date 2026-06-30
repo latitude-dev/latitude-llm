@@ -1,6 +1,6 @@
 import type { EvaluationRuleCondition } from "@domain/shared"
-import { Button, Icon, Select, Tabs, Text } from "@repo/ui"
-import { ArrowDownIcon, ArrowUpIcon, PencilIcon, PlusIcon, XIcon } from "lucide-react"
+import { Button, Icon, Tabs, Text } from "@repo/ui"
+import { ArrowDownIcon, ArrowUpIcon, ChevronLeftIcon, PencilIcon, PlusIcon, XIcon } from "lucide-react"
 import { CONDITION_META, CONDITION_TYPE_ORDER, type ConditionTypeMeta, summarizeCondition } from "./condition-meta.tsx"
 
 const MAX_CONDITIONS = 10
@@ -28,7 +28,7 @@ function ConditionRow({
   readonly onMove: (direction: -1 | 1) => void
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-2">
+    <div className="flex items-center gap-2 px-3 py-2">
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <Text.H6 color="foregroundMuted">{CONDITION_META[condition.type].label}</Text.H6>
         <Text.H5 ellipsis noWrap>
@@ -103,55 +103,108 @@ export function RuleConditionList({
             active={match}
             onSelect={(value) => onChange({ ...draft, match: value })}
           />
-          <Text.H6 color="foregroundMuted">of the conditions match</Text.H6>
+          <Text.H6 color="foregroundMuted">of the conditions</Text.H6>
         </div>
       ) : null}
-      {conditions.map((condition, index) => (
-        <ConditionRow
-          key={index}
-          condition={condition}
-          index={index}
-          total={conditions.length}
-          onEdit={() => onEditCondition({ index })}
-          onRemove={() => removeAt(index)}
-          onMove={(direction) => moveAt(index, direction)}
-        />
-      ))}
-      {conditions.length < MAX_CONDITIONS ? (
-        <Button variant="outline" onClick={() => onEditCondition({ index: "new" })}>
-          <Icon icon={PlusIcon} size="sm" />
-          Add condition
-        </Button>
-      ) : (
-        <Text.H6 color="foregroundMuted">Maximum of {MAX_CONDITIONS} conditions reached.</Text.H6>
-      )}
+
+      <div className="flex flex-col divide-y divide-border rounded-lg border border-border">
+        {conditions.map((condition, index) => (
+          <ConditionRow
+            key={index}
+            condition={condition}
+            index={index}
+            total={conditions.length}
+            onEdit={() => onEditCondition({ index })}
+            onRemove={() => removeAt(index)}
+            onMove={(direction) => moveAt(index, direction)}
+          />
+        ))}
+        {conditions.length < MAX_CONDITIONS ? (
+          <button
+            type="button"
+            onClick={() => onEditCondition({ index: "new" })}
+            className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-left hover:bg-muted"
+          >
+            <Icon icon={PlusIcon} size="sm" color="foregroundMuted" />
+            <Text.H5 color="foregroundMuted">Add condition</Text.H5>
+          </button>
+        ) : (
+          <div className="px-3 py-2.5">
+            <Text.H6 color="foregroundMuted">Maximum of {MAX_CONDITIONS} conditions reached.</Text.H6>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
-/** The add/edit condition sub-step content (type picker + the type's settings). */
+/**
+ * The add/edit condition sub-step, single-purpose at each phase: when no type is
+ * chosen it shows only the type list; once a type is chosen it shows only that
+ * type's settings, with the type as the header and a "Change type" affordance.
+ */
 export function ConditionEditor({
   draftCondition,
   onDraftConditionChange,
+  onClearType,
+  title,
+  onBack,
 }: {
-  readonly draftCondition: EvaluationRuleCondition
+  readonly draftCondition: EvaluationRuleCondition | null
   readonly onDraftConditionChange: (next: EvaluationRuleCondition) => void
+  readonly onClearType: () => void
+  readonly title: string
+  readonly onBack: () => void
 }) {
-  const meta = CONDITION_META[draftCondition.type] as ConditionTypeMeta
-  const Editor = meta.Editor as ConditionTypeMeta["Editor"]
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
-        <Select
-          name="condition-type"
-          label="Condition type"
-          options={CONDITION_TYPE_ORDER.map((type) => ({ label: CONDITION_META[type].label, value: type }))}
-          value={draftCondition.type}
-          onChange={(type) => onDraftConditionChange(CONDITION_META[type].create())}
-        />
-        <Text.H6 color="foregroundMuted">{meta.description}</Text.H6>
+  // Phase A — pick a type (nothing else on screen).
+  if (draftCondition === null) {
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back to conditions">
+            <Icon icon={ChevronLeftIcon} size="sm" />
+          </Button>
+          <Text.H5M>{title}</Text.H5M>
+        </div>
+        <div className="flex flex-col divide-y divide-border rounded-lg border border-border">
+          {CONDITION_TYPE_ORDER.map((type) => {
+            const meta = CONDITION_META[type]
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={() => onDraftConditionChange(meta.create())}
+                className="flex cursor-pointer flex-col gap-0.5 px-3 py-2 text-left hover:bg-muted"
+              >
+                <Text.H5>{meta.label}</Text.H5>
+                <Text.H6 color="foregroundMuted">{meta.description}</Text.H6>
+              </button>
+            )
+          })}
+        </div>
       </div>
+    )
+  }
+
+  // Phase B — configure the chosen type (only its settings).
+  const meta = CONDITION_META[draftCondition.type]
+  const Editor = meta.Editor as ConditionTypeMeta["Editor"]
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1">
+          <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back to conditions">
+            <Icon icon={ChevronLeftIcon} size="sm" />
+          </Button>
+          <Text.H5M ellipsis noWrap>
+            {meta.label}
+          </Text.H5M>
+        </div>
+        <Button variant="link" size="sm" onClick={onClearType}>
+          Change type
+        </Button>
+      </div>
+      <Text.H6 color="foregroundMuted">{meta.description}</Text.H6>
       <Editor condition={draftCondition} onChange={onDraftConditionChange} />
     </div>
   )

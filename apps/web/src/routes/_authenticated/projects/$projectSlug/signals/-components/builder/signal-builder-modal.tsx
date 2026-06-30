@@ -132,16 +132,9 @@ export function SignalBuilderModal({
       setDraftCondition(null)
       return
     }
+    // No type is auto-selected for a new condition; the user picks from the type list.
     const existing = state.index !== "new" ? ruleDraft.conditions[state.index] : undefined
-    setDraftCondition(
-      existing ?? {
-        type: "text_match",
-        scope: "last_assistant",
-        operator: "contains",
-        value: "",
-        caseSensitive: false,
-      },
-    )
+    setDraftCondition(existing ?? null)
     setConditionEdit(state)
   }
 
@@ -218,10 +211,10 @@ export function SignalBuilderModal({
   const footer = inConditionSubStep ? (
     <>
       <Button variant="outline" onClick={() => openConditionEditor(null)}>
-        Back
+        Cancel
       </Button>
-      <Button onClick={confirmCondition} disabled={draftCondition !== null && hasInvalidRegex(draftCondition)}>
-        Confirm
+      <Button onClick={confirmCondition} disabled={draftCondition === null || hasInvalidRegex(draftCondition)}>
+        {conditionEdit?.index === "new" ? "Add condition" : "Save condition"}
       </Button>
     </>
   ) : (
@@ -267,7 +260,7 @@ export function SignalBuilderModal({
       footer={footer}
     >
       {/* Fixed-height body so the modal does not resize between steps; content scrolls internally. */}
-      <div className="flex h-[28rem] flex-col gap-4 overflow-y-auto">
+      <div className="flex h-[28rem] flex-col gap-4 overflow-y-auto pb-6">
         {step === "scope" ? <SignalScopeEditor projectId={projectId} value={filters} onChange={setFilters} /> : null}
 
         {step === "detector" && !inConditionSubStep ? (
@@ -304,8 +297,14 @@ export function SignalBuilderModal({
           </div>
         ) : null}
 
-        {step === "detector" && inConditionSubStep && draftCondition !== null ? (
-          <ConditionEditor draftCondition={draftCondition} onDraftConditionChange={setDraftCondition} />
+        {step === "detector" && inConditionSubStep ? (
+          <ConditionEditor
+            draftCondition={draftCondition}
+            onDraftConditionChange={setDraftCondition}
+            onClearType={() => setDraftCondition(null)}
+            title={conditionEdit?.index === "new" ? "Add condition" : "Edit condition"}
+            onBack={() => openConditionEditor(null)}
+          />
         ) : null}
 
         {step === "test" ? (
