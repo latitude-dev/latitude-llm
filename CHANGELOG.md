@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## v0.3.25 - 2026-06-30
+
+### Telemetry SDKs and docs
+
+- Added a Python Latitude tracer helper with compatibility fixes and updated SDK documentation (ref: 9c8d37e61, 153327065).
+
+### Traces and sessions
+
+- Added in-conversation search and keyboard navigation to session and trace conversation details (ref: #3709).
+- Renamed the annotation empty-state copy from issues to signals (ref: 43fd86952).
+
+### Operations
+
+- Retried transient ClickHouse `ECONNRESET` read failures and tuned keep-alive handling to reduce query flakiness (ref: #3745).
+- Updated the bundled `models.dev` provider catalog and ignored local `.conductor` agent state (ref: #3752, 15d3a9372).
+
 ## v0.3.24 - 2026-06-29
 
 ### Signals and evaluations
