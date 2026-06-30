@@ -553,25 +553,33 @@ export function SignalDrawerEvaluations({
               <SummaryField
                 label="Sampling"
                 value={
-                  <Tooltip
-                    asChild
-                    trigger={
-                      <button
-                        type="button"
-                        onClick={() => setSamplingEvaluation(primaryEvaluation)}
-                        disabled={isActionPending}
-                        className="inline-flex h-5 cursor-pointer items-center gap-1 bg-transparent p-0 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <Text.H5 color="foreground">{formatPercent(primaryEvaluation.trigger.sampling / 100)}</Text.H5>
-                        <Icon icon={PencilIcon} size="xs" color="foregroundMuted" />
-                      </button>
-                    }
-                  >
-                    <Text.H6 color="foregroundMuted">
-                      Click to change. We evaluate this signal on{" "}
-                      {formatPercent(primaryEvaluation.trigger.sampling / 100)} of the incoming traces.
-                    </Text.H6>
-                  </Tooltip>
+                  // User signals edit sampling in the builder, so the detail page shows it read-only;
+                  // system signals (no builder) keep the inline click-to-change control.
+                  isUserOriginEvaluation ? (
+                    <Text.H5 color="foreground">{formatPercent(primaryEvaluation.trigger.sampling / 100)}</Text.H5>
+                  ) : (
+                    <Tooltip
+                      asChild
+                      trigger={
+                        <button
+                          type="button"
+                          onClick={() => setSamplingEvaluation(primaryEvaluation)}
+                          disabled={isActionPending}
+                          className="inline-flex h-5 cursor-pointer items-center gap-1 bg-transparent p-0 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Text.H5 color="foreground">
+                            {formatPercent(primaryEvaluation.trigger.sampling / 100)}
+                          </Text.H5>
+                          <Icon icon={PencilIcon} size="xs" color="foregroundMuted" />
+                        </button>
+                      }
+                    >
+                      <Text.H6 color="foregroundMuted">
+                        Click to change. We evaluate this signal on{" "}
+                        {formatPercent(primaryEvaluation.trigger.sampling / 100)} of the incoming traces.
+                      </Text.H6>
+                    </Tooltip>
+                  )
                 }
               />
               {!isUserOriginEvaluation ? (
