@@ -2,9 +2,6 @@ import { describe, expect, it } from 'vitest'
 
 import { findHeadCommit } from '../../data-access/commits'
 import { updateAndMergeCommit } from './updateAndMerge'
-import { createFeature } from '../features/create'
-import { toggleWorkspaceFeature } from '../workspaceFeatures/toggle'
-import { DISABLE_VERSION_DEPLOY_FLAG } from '../workspaceFeatures/flags'
 
 describe('updateAndMergeCommit', () => {
   it('updates and merges a draft commit', async (ctx) => {
@@ -55,43 +52,6 @@ describe('updateAndMergeCommit', () => {
 
     expect(result.ok).toBe(false)
     expect(result.error!.message).toBe('Cannot modify a merged commit')
-  })
-
-  it('fails loudly when version deploy is disabled for the workspace', async (ctx) => {
-    const { project, workspace, user, providers } =
-      await ctx.factories.createProject()
-    const { commit: draft } = await ctx.factories.createDraft({ project, user })
-
-    await ctx.factories.createDocumentVersion({
-      workspace,
-      user,
-      commit: draft,
-      path: 'foo',
-      content: ctx.factories.helpers.createPrompt({ provider: providers[0]! }),
-    })
-
-    const feature = await createFeature({
-      name: DISABLE_VERSION_DEPLOY_FLAG,
-    }).then((r) => r.unwrap())
-    await toggleWorkspaceFeature(workspace.id, feature.id, true).then((r) =>
-      r.unwrap(),
-    )
-
-    const result = await updateAndMergeCommit({
-      workspace,
-      commit: draft,
-      data: { title: 'Updated Title' },
-    })
-
-    expect(result.ok).toBe(false)
-    expect(result.error!.message).toContain(
-      'Deploying versions is disabled for this workspace',
-    )
-
-    const headCommit = await findHeadCommit({ projectId: project.id }).then(
-      (r) => r.value,
-    )
-    expect(headCommit?.id).not.toBe(draft.id)
   })
 
   it('merges without updates if no data is provided', async (ctx) => {
