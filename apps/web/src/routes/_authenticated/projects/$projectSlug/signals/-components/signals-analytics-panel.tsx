@@ -7,7 +7,7 @@ import { IncidentMarkerPopover } from "../../../../../../domains/alerts/incident
 import { buildIncidentMarkers } from "../../../../../../domains/alerts/incident-markers.ts"
 import { useIncidentBucketHoverPopover } from "../../../../../../domains/alerts/use-incident-bucket-hover-popover.ts"
 import { useShowIncidentsOverlay } from "../../../../../../domains/alerts/use-show-incidents-overlay.ts"
-import type { SignalsListResultRecord } from "../../../../../../domains/signals/signals.functions.ts"
+import type { SignalsTableAnalyticsRecord } from "../../../../../../domains/signals/signals.functions.ts"
 import { formatHistogramBucketLabel, formatHistogramBucketTooltipLabel } from "./signal-formatters.ts"
 
 const COUNT_CARDS = [
@@ -53,7 +53,7 @@ export function SignalsAnalyticsPanel({
 }: {
   readonly projectId: string
   readonly projectSlug: string
-  readonly analytics: SignalsListResultRecord["analytics"]
+  readonly analytics: SignalsTableAnalyticsRecord["analytics"]
   readonly isLoading: boolean
   readonly onRangeSelect?: ((range: { from: string; to: string } | null) => void) | undefined
 }) {

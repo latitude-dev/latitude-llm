@@ -198,11 +198,24 @@ export {
   type SignalDetails,
 } from "./use-cases/get-signal-details.ts"
 export {
+  type GetSignalRowMetricsError,
+  type GetSignalRowMetricsInput,
+  type GetSignalRowMetricsResult,
+  getSignalRowMetricsUseCase,
+  type SignalRowMetrics,
+} from "./use-cases/get-signal-row-metrics.ts"
+export {
   type GetSignalTrendError,
   type GetSignalTrendInput,
   type GetSignalTrendResult,
   getSignalTrendUseCase,
 } from "./use-cases/get-signal-trend.ts"
+export {
+  type GetSignalsTableAnalyticsError,
+  type GetSignalsTableAnalyticsInput,
+  type GetSignalsTableAnalyticsResult,
+  getSignalsTableAnalyticsUseCase,
+} from "./use-cases/get-signals-table-analytics.ts"
 export {
   type ListSignalTracesError,
   type ListSignalTracesInput,
@@ -259,6 +272,7 @@ export {
   type SearchOrgSignalsInput,
   searchOrgSignalsUseCase,
 } from "./use-cases/search-org-signals.ts"
+export { mergeListItemWithRowMetrics } from "./use-cases/signals-list-internals.ts"
 export {
   type SweepEscalatingSignalsPublish,
   type SweepEscalatingSignalsResult,

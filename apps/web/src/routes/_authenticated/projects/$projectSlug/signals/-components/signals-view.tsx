@@ -22,7 +22,7 @@ import type { MemberRecord } from "../../../../../../domains/members/members.fun
 import type {
   SignalRecord,
   SignalRowMetricsRecord,
-  SignalsListResultRecord,
+  SignalsTableAnalyticsRecord,
 } from "../../../../../../domains/signals/signals.functions.ts"
 import {
   ListingLayout as Layout,
@@ -161,7 +161,7 @@ export function SignalsView({
   readonly infiniteScroll: InfiniteTableInfiniteScroll
   readonly sorting: SignalsTableSorting
   readonly occurrencesSum: number
-  readonly priorityCounts: SignalsListResultRecord["priorityCounts"]
+  readonly priorityCounts: SignalsTableAnalyticsRecord["priorityCounts"]
   readonly visibleColumnIds: readonly SignalsColumnId[]
   readonly selection: InfiniteTableSelection
   readonly onSortChange: (sorting: SignalsTableSorting) => void

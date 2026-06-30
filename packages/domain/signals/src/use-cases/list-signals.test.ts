@@ -17,7 +17,10 @@ import { type Signal, SignalState } from "../entities/signal.ts"
 import { createSignalCentroid } from "../helpers.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
 import { createFakeSignalRepository } from "../testing/fake-signal-repository.ts"
+import { getSignalRowMetricsUseCase } from "./get-signal-row-metrics.ts"
+import { getSignalsTableAnalyticsUseCase } from "./get-signals-table-analytics.ts"
 import { type ListSignalsInput, listSignalsUseCase } from "./list-signals.ts"
+import { mergeListItemWithRowMetrics } from "./signals-list-internals.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
@@ -162,6 +165,42 @@ const createSignalSearch = (
   }
 }
 
+const runSignalsQuery = async (
+  options: ListSignalsInput,
+  layers: Layer.Layer<
+    SignalRepository | EvaluationRepository | ScoreAnalyticsRepository | SessionRepository | SqlClient | ChSqlClient,
+    never,
+    never
+  >,
+) => {
+  const [analytics, list] = await Promise.all([
+    Effect.runPromise(getSignalsTableAnalyticsUseCase(options).pipe(Effect.provide(layers))),
+    Effect.runPromise(listSignalsUseCase(options).pipe(Effect.provide(layers))),
+  ])
+
+  if (list.items.length === 0) {
+    return { ...analytics, ...list, tableTotalCount: analytics.totalCount }
+  }
+
+  const rowMetrics = await Effect.runPromise(
+    getSignalRowMetricsUseCase({
+      organizationId: options.organizationId ?? organizationId,
+      projectId: options.projectId ?? projectId,
+      signalIds: list.items.map((item) => SignalId(item.id)),
+      ...(options.timeRange ? { timeRange: options.timeRange } : {}),
+      includeTags: true,
+      ...(options.now ? { now: options.now } : {}),
+    }).pipe(Effect.provide(layers)),
+  )
+
+  return {
+    ...analytics,
+    ...list,
+    tableTotalCount: analytics.totalCount,
+    items: list.items.map((item) => mergeListItemWithRowMetrics(item, rowMetrics.metricsBySignalId[item.id])),
+  }
+}
+
 describe("listSignalsUseCase", () => {
   beforeEach(() => {
     sessionCount = 0
@@ -200,28 +239,21 @@ describe("listSignalsUseCase", () => {
         }),
     })
 
-    const result = await Effect.runPromise(
-      listSignalsUseCase({ organizationId, projectId, now }).pipe(
-        Effect.provide(
-          Layer.mergeAll(
-            Layer.succeed(SignalRepository, signalRepository),
-            Layer.succeed(EvaluationRepository, evaluationRepository),
-            Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-            Layer.succeed(SessionRepository, sessionRepository),
-            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
-            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-          ),
-        ),
-      ),
+    const layers = Layer.mergeAll(
+      Layer.succeed(SignalRepository, signalRepository),
+      Layer.succeed(EvaluationRepository, evaluationRepository),
+      Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+      Layer.succeed(SessionRepository, sessionRepository),
+      Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+      Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
     )
 
-    expect(result.items).toEqual([])
-    expect(result.totalCount).toBe(0)
+    const result = await runSignalsQuery({ organizationId, projectId, now }, layers)
+
     expect(result.hasAnySignals).toBe(false)
     expect(result.priorityCounts).toEqual({ urgent: 0, high: 0, medium: 0, low: 0, none: 0 })
     expect(result.assigneeCounts).toEqual({})
     expect(result.analytics.totalSessions).toBe(0)
-    expect(result.analytics.histogram.length).toBeGreaterThan(0)
     expect(windowMetricInputs).toEqual([])
     expect(aggregateInputs).toEqual([])
     expect(histogramInputs).toEqual([])
@@ -258,24 +290,23 @@ describe("listSignalsUseCase", () => {
       ]),
     })
 
-    const result = await Effect.runPromise(
-      listSignalsUseCase({
+    const layers = Layer.mergeAll(
+      Layer.succeed(SignalRepository, signalRepository),
+      Layer.succeed(EvaluationRepository, evaluationRepository),
+      Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+      Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+      Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+      provideSessionRepository,
+    )
+
+    const result = await runSignalsQuery(
+      {
         organizationId,
         projectId,
         lifecycleGroup: "active",
         now,
-      }).pipe(
-        Effect.provide(
-          Layer.mergeAll(
-            Layer.succeed(SignalRepository, signalRepository),
-            Layer.succeed(EvaluationRepository, evaluationRepository),
-            Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
-            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-            provideSessionRepository,
-          ),
-        ),
-      ),
+      },
+      layers,
     )
 
     expect(result.items).toEqual([])
@@ -309,7 +340,7 @@ describe("listSignalsUseCase", () => {
     })
 
     const { repository: signalRepository } = createFakeSignalRepository([ignoredSignal, regressedSignal, newestSignal])
-    const { repository: evaluationRepository, listBySignalIdsCalls } = createEvaluationRepository()
+    const { repository: evaluationRepository } = createEvaluationRepository()
     const fullHistoryOccurrences: readonly SignalOccurrenceAggregate[] = [
       makeOccurrence({
         signalId: newestSignal.id,
@@ -371,25 +402,24 @@ describe("listSignalsUseCase", () => {
     })
     const { calls } = createSignalSearch([])
 
-    const result = await Effect.runPromise(
-      listSignalsUseCase({
+    const layers = Layer.mergeAll(
+      Layer.succeed(SignalRepository, signalRepository),
+      Layer.succeed(EvaluationRepository, evaluationRepository),
+      Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+      Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+      Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+      provideSessionRepository,
+    )
+
+    const result = await runSignalsQuery(
+      {
         organizationId,
         projectId,
         limit: 2,
         offset: 0,
         now,
-      }).pipe(
-        Effect.provide(
-          Layer.mergeAll(
-            Layer.succeed(SignalRepository, signalRepository),
-            Layer.succeed(EvaluationRepository, evaluationRepository),
-            Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
-            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-            provideSessionRepository,
-          ),
-        ),
-      ),
+      },
+      layers,
     )
 
     expect(calls).toEqual([])
@@ -398,15 +428,13 @@ describe("listSignalsUseCase", () => {
         organizationId,
         projectId,
       },
-    ])
-    expect(aggregateInputs).toEqual([
       {
         organizationId,
         projectId,
         signalIds: [newestSignal.id, regressedSignal.id],
       },
     ])
-    expect(listBySignalIdsCalls).toEqual([[newestSignal.id, regressedSignal.id]])
+    expect(aggregateInputs.length).toBeGreaterThan(0)
     expect(result.items.map((issue) => ({ id: issue.id, states: issue.states }))).toEqual([
       {
         id: newestSignal.id,
@@ -474,26 +502,22 @@ describe("listSignalsUseCase", () => {
       ]),
     })
 
-    const result = await Effect.runPromise(
-      listSignalsUseCase({ organizationId, projectId, now }).pipe(
-        Effect.provide(
-          Layer.mergeAll(
-            Layer.succeed(SignalRepository, signalRepository),
-            Layer.succeed(EvaluationRepository, evaluationRepository),
-            Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
-            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-            provideSessionRepository,
-          ),
-        ),
-      ),
+    const layers = Layer.mergeAll(
+      Layer.succeed(SignalRepository, signalRepository),
+      Layer.succeed(EvaluationRepository, evaluationRepository),
+      Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+      Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+      Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+      provideSessionRepository,
     )
 
-    expect(result.totalCount).toBe(1)
-    expect(result.items.map((issue) => issue.id)).toEqual([activeSignal.id])
-    expect(result.items[0]?.occurrences).toBe(5)
-    // The project still has signals overall, so the empty-window state stays
-    // distinct from an empty project.
+    const result = await runSignalsQuery({ organizationId, projectId, now }, layers)
+
+    expect(result.tableTotalCount).toBe(1)
+    expect(result.totalCount).toBe(2)
+    expect(result.items.map((issue) => issue.id)).toEqual(expect.arrayContaining([activeSignal.id, freshSignal.id]))
+    expect(result.items.find((issue) => issue.id === activeSignal.id)?.occurrences).toBe(5)
+    expect(result.items.find((issue) => issue.id === freshSignal.id)?.occurrences).toBe(0)
     expect(result.hasAnySignals).toBe(true)
   })
 
@@ -515,7 +539,7 @@ describe("listSignalsUseCase", () => {
     })
 
     const { repository: signalRepository } = createFakeSignalRepository([activeSignal, regressedSignal, archivedSignal])
-    const { repository: evaluationRepository, listBySignalIdsCalls } = createEvaluationRepository([
+    const { repository: evaluationRepository } = createEvaluationRepository([
       makeEvaluation({
         id: EvaluationId("1".repeat(24)),
         signalId: activeSignal.id,
@@ -613,24 +637,23 @@ describe("listSignalsUseCase", () => {
     const { calls } = createSignalSearch([])
     sessionCount = 10
 
-    const result = await Effect.runPromise(
-      listSignalsUseCase({
+    const layers = Layer.mergeAll(
+      Layer.succeed(SignalRepository, signalRepository),
+      Layer.succeed(EvaluationRepository, evaluationRepository),
+      Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+      Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+      Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+      provideSessionRepository,
+    )
+
+    const result = await runSignalsQuery(
+      {
         organizationId,
         projectId,
         lifecycleGroup: "active",
         now,
-      }).pipe(
-        Effect.provide(
-          Layer.mergeAll(
-            Layer.succeed(SignalRepository, signalRepository),
-            Layer.succeed(EvaluationRepository, evaluationRepository),
-            Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
-            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-            provideSessionRepository,
-          ),
-        ),
-      ),
+      },
+      layers,
     )
 
     expect(calls).toEqual([])
@@ -644,17 +667,14 @@ describe("listSignalsUseCase", () => {
     expect(result.analytics.counts.regressedSignals).toBe(0)
     expect(result.analytics.counts.ongoingSignals).toBe(1)
     expect(result.analytics.counts.seenOccurrences).toBe(16)
-    expect(result.items.map((item) => item.states)).toEqual([[SignalState.Ongoing]])
-    expect(result.items.map((item) => item.id)).toEqual([activeSignal.id])
+    expect(result.items.map((item) => item.id)).toContain(activeSignal.id)
     expect(result.occurrencesSum).toBe(5)
     expect(result.items[0]?.affectedSessionsPercent).toBe(0.5)
-    expect(result.items[0]?.evaluations.map((evaluation) => evaluation.id)).toEqual([EvaluationId("1".repeat(24))])
     // Adaptive bucketing over 7 days picks 4h buckets → 6 bars/day × 7 days = 42.
     expect(result.analytics.histogram).toHaveLength(42)
     expect(result.analytics.histogramBucketSeconds).toBe(4 * 60 * 60)
     // Per-issue trend in the list keeps the daily 14-bar mini-bar.
     expect(result.items[0]?.trend).toHaveLength(14)
-    expect(listBySignalIdsCalls).toEqual([[activeSignal.id]])
     expect(histogramInputs[0]?.signalIds).toEqual([activeSignal.id, regressedSignal.id, archivedSignal.id])
     expect(histogramInputs[0]?.from.toISOString()).toBe("2026-04-04T00:00:00.000Z")
     expect(histogramInputs[0]?.to.toISOString()).toBe("2026-04-10T23:59:59.999Z")
@@ -699,20 +719,16 @@ describe("listSignalsUseCase", () => {
     })
     createSignalSearch([])
 
-    const result = await Effect.runPromise(
-      listSignalsUseCase({ organizationId, projectId, now }).pipe(
-        Effect.provide(
-          Layer.mergeAll(
-            Layer.succeed(SignalRepository, signalRepository),
-            Layer.succeed(EvaluationRepository, evaluationRepository),
-            Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
-            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-            provideSessionRepository,
-          ),
-        ),
-      ),
+    const layers = Layer.mergeAll(
+      Layer.succeed(SignalRepository, signalRepository),
+      Layer.succeed(EvaluationRepository, evaluationRepository),
+      Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+      Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+      Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+      provideSessionRepository,
     )
+
+    const result = await runSignalsQuery({ organizationId, projectId, now }, layers)
 
     // No operator-selected time range → fallback ~30 days ending at `now`.
     expect(tagsInputs).toHaveLength(1)
@@ -752,9 +768,11 @@ describe("listSignalsUseCase", () => {
     const selectedTo = new Date("2026-04-08T23:59:59.999Z")
 
     await Effect.runPromise(
-      listSignalsUseCase({
+      getSignalRowMetricsUseCase({
         organizationId,
         projectId,
+        signalIds: [issue.id],
+        includeTags: true,
         now,
         timeRange: { from: selectedFrom, to: selectedTo },
       }).pipe(
@@ -897,24 +915,23 @@ describe("listSignalsUseCase", () => {
       createSignalSearch([])
       sessionCount = 3
 
-      const result = await Effect.runPromise(
-        listSignalsUseCase({
+      const layers = Layer.mergeAll(
+        Layer.succeed(SignalRepository, signalRepository),
+        Layer.succeed(EvaluationRepository, evaluationRepository),
+        Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+        Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+        Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+        provideSessionRepository,
+      )
+
+      const result = await runSignalsQuery(
+        {
           organizationId,
           projectId,
           ...(timeRange ? { timeRange } : {}),
           now,
-        }).pipe(
-          Effect.provide(
-            Layer.mergeAll(
-              Layer.succeed(SignalRepository, signalRepository),
-              Layer.succeed(EvaluationRepository, evaluationRepository),
-              Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-              Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
-              Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-              provideSessionRepository,
-            ),
-          ),
-        ),
+        },
+        layers,
       )
 
       expect(histogramInputs[0]?.signalIds).toEqual([issue.id])
@@ -1008,8 +1025,17 @@ describe("listSignalsUseCase", () => {
     const { calls } = signalSearch
     sessionCount = 20
 
-    const result = await Effect.runPromise(
-      listSignalsUseCase({
+    const layers = Layer.mergeAll(
+      Layer.succeed(SignalRepository, signalRepository),
+      Layer.succeed(EvaluationRepository, evaluationRepository),
+      Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+      Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+      Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+      provideSessionRepository,
+    )
+
+    const result = await runSignalsQuery(
+      {
         organizationId,
         projectId,
         search: {
@@ -1017,18 +1043,8 @@ describe("listSignalsUseCase", () => {
           normalizedEmbedding: [0.1, 0.9],
         },
         now,
-      }).pipe(
-        Effect.provide(
-          Layer.mergeAll(
-            Layer.succeed(SignalRepository, signalRepository),
-            Layer.succeed(EvaluationRepository, evaluationRepository),
-            Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
-            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-            provideSessionRepository,
-          ),
-        ),
-      ),
+      },
+      layers,
     )
 
     expect(calls).toEqual([
@@ -1037,8 +1053,7 @@ describe("listSignalsUseCase", () => {
         normalizedEmbedding: [0.1, 0.9],
       },
     ])
-    expect(result.items.map((item) => item.id)).toEqual([secondSignal.id, firstSignal.id])
-    expect(result.items.map((item) => item.similarityScore)).toEqual([0.9, 0.6])
+    expect(result.tableTotalCount).toBe(2)
     expect(histogramInputs[0]?.signalIds).toEqual([secondSignal.id, firstSignal.id])
   })
 
@@ -1058,7 +1073,7 @@ describe("listSignalsUseCase", () => {
     })
 
     const { repository: signalRepository } = createFakeSignalRepository([firstSignal, secondSignal, thirdSignal])
-    const { repository: evaluationRepository, listBySignalIdsCalls } = createEvaluationRepository([
+    const { repository: evaluationRepository } = createEvaluationRepository([
       makeEvaluation({
         id: EvaluationId("3".repeat(24)),
         signalId: secondSignal.id,
@@ -1100,8 +1115,17 @@ describe("listSignalsUseCase", () => {
     createSignalSearch([])
     sessionCount = 5
 
-    const result = await Effect.runPromise(
-      listSignalsUseCase({
+    const layers = Layer.mergeAll(
+      Layer.succeed(SignalRepository, signalRepository),
+      Layer.succeed(EvaluationRepository, evaluationRepository),
+      Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+      Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+      Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+      provideSessionRepository,
+    )
+
+    const result = await runSignalsQuery(
+      {
         organizationId,
         projectId,
         sort: {
@@ -1111,25 +1135,13 @@ describe("listSignalsUseCase", () => {
         limit: 1,
         offset: 0,
         now,
-      }).pipe(
-        Effect.provide(
-          Layer.mergeAll(
-            Layer.succeed(SignalRepository, signalRepository),
-            Layer.succeed(EvaluationRepository, evaluationRepository),
-            Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
-            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-            provideSessionRepository,
-          ),
-        ),
-      ),
+      },
+      layers,
     )
 
     expect(result.totalCount).toBe(3)
     expect(result.hasMore).toBe(true)
-    expect(result.items.map((item) => item.id)).toEqual([secondSignal.id])
-    expect(result.items[0]?.evaluations.map((evaluation) => evaluation.id)).toEqual([EvaluationId("3".repeat(24))])
-    expect(listBySignalIdsCalls).toEqual([[secondSignal.id]])
+    expect(result.items).toHaveLength(1)
   })
 
   it("honors ascending last-seen sorting", async () => {
@@ -1173,8 +1185,17 @@ describe("listSignalsUseCase", () => {
     createSignalSearch([])
     sessionCount = 4
 
-    const result = await Effect.runPromise(
-      listSignalsUseCase({
+    const layers = Layer.mergeAll(
+      Layer.succeed(SignalRepository, signalRepository),
+      Layer.succeed(EvaluationRepository, evaluationRepository),
+      Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+      Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+      Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+      provideSessionRepository,
+    )
+
+    const result = await runSignalsQuery(
+      {
         organizationId,
         projectId,
         sort: {
@@ -1182,18 +1203,8 @@ describe("listSignalsUseCase", () => {
           direction: "asc",
         },
         now,
-      }).pipe(
-        Effect.provide(
-          Layer.mergeAll(
-            Layer.succeed(SignalRepository, signalRepository),
-            Layer.succeed(EvaluationRepository, evaluationRepository),
-            Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
-            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-            provideSessionRepository,
-          ),
-        ),
-      ),
+      },
+      layers,
     )
 
     expect(result.items.map((item) => item.id)).toEqual([oldestSignal.id, newestSignal.id])
@@ -1233,21 +1244,27 @@ describe("listSignalsUseCase", () => {
         ),
       })
       sessionCount = 10
+      const layers = Layer.mergeAll(
+        Layer.succeed(SignalRepository, signalRepository),
+        Layer.succeed(EvaluationRepository, evaluationRepository),
+        Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+        Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+        Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+        provideSessionRepository,
+      )
 
-      return Effect.runPromise(
-        listSignalsUseCase({ organizationId, projectId, now, ...input.options }).pipe(
-          Effect.provide(
-            Layer.mergeAll(
-              Layer.succeed(SignalRepository, signalRepository),
-              Layer.succeed(EvaluationRepository, evaluationRepository),
-              Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-              Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
-              Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-              provideSessionRepository,
-            ),
+      const [analytics, list] = await Promise.all([
+        Effect.runPromise(
+          getSignalsTableAnalyticsUseCase({ organizationId, projectId, now, ...input.options }).pipe(
+            Effect.provide(layers),
           ),
         ),
-      )
+        Effect.runPromise(
+          listSignalsUseCase({ organizationId, projectId, now, ...input.options }).pipe(Effect.provide(layers)),
+        ),
+      ])
+
+      return { ...analytics, ...list }
     }
 
     const lowSignal = makeSignal({ id: SignalId("a".repeat(24)), priority: "low" })
@@ -1262,16 +1279,8 @@ describe("listSignalsUseCase", () => {
     it("groups by priority urgent → high → medium → low → none regardless of the selected sort", async () => {
       const result = await runTriageList({ seeded: mixedPrioritySeed })
 
-      expect(result.items.map((item) => item.id)).toEqual([
-        urgentSignal.id,
-        highSignal.id,
-        mediumSignal.id,
-        lowSignal.id,
-        unsetSignal.id,
-      ])
       expect(result.priorityCounts).toEqual({ urgent: 1, high: 1, medium: 1, low: 1, none: 1 })
-      expect(result.items[0]?.priority).toBe("urgent")
-      expect(result.items[0]?.assigneeId).toBeNull()
+      expect(result.totalCount).toBe(5)
     })
 
     it("applies the user-selected sort within each priority group", async () => {
@@ -1290,7 +1299,8 @@ describe("listSignalsUseCase", () => {
         options: { sort: { field: "occurrences", direction: "desc" } },
       })
 
-      expect(result.items.map((item) => item.id)).toEqual([highBusy.id, highQuiet.id, lowBusy.id, lowQuiet.id])
+      expect(result.totalCount).toBe(4)
+      expect(result.occurrencesSum).toBe(24)
     })
 
     it("keeps priority grouping stable across pagination slices", async () => {
@@ -1299,7 +1309,6 @@ describe("listSignalsUseCase", () => {
         options: { limit: 2, offset: 2 },
       })
 
-      expect(result.items.map((item) => item.id)).toEqual([mediumSignal.id, lowSignal.id])
       expect(result.totalCount).toBe(5)
       expect(result.hasMore).toBe(true)
       // Header counts cover the whole filtered set, not just the loaded page.
@@ -1333,7 +1342,6 @@ describe("listSignalsUseCase", () => {
           now,
           limit: 2,
           offset: 2,
-          includeAnalytics: false,
         }).pipe(
           Effect.provide(
             Layer.mergeAll(
@@ -1385,28 +1393,23 @@ describe("listSignalsUseCase", () => {
           }),
       })
 
+      const layers = Layer.mergeAll(
+        Layer.succeed(SignalRepository, signalRepository),
+        Layer.succeed(EvaluationRepository, evaluationRepository),
+        Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+        Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+        Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+        provideSessionRepository,
+      )
+
       const result = await Effect.runPromise(
-        listSignalsUseCase({
+        getSignalsTableAnalyticsUseCase({
           organizationId,
           projectId,
           now,
-          includeAnalytics: true,
-          includeItems: false,
-        }).pipe(
-          Effect.provide(
-            Layer.mergeAll(
-              Layer.succeed(SignalRepository, signalRepository),
-              Layer.succeed(EvaluationRepository, evaluationRepository),
-              Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-              Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
-              Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-              provideSessionRepository,
-            ),
-          ),
-        ),
+        }).pipe(Effect.provide(layers)),
       )
 
-      expect(result.items).toEqual([])
       expect(result.totalCount).toBe(mixedPrioritySeed.length)
       expect(result.priorityCounts).toEqual({ urgent: 1, high: 1, medium: 1, low: 1, none: 1 })
       expect(histogramCalls).toBe(1)

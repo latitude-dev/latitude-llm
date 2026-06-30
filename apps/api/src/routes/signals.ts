@@ -7,12 +7,13 @@ import {
   applySignalLifecycleCommandUseCase,
   createSignalUseCase,
   deleteSignalUseCase,
-  embedSignalSearchQueryUseCase,
   getSignalAnalyticsUseCase,
   getSignalDetailsUseCase,
+  getSignalRowMetricsUseCase,
   getSignalTrendUseCase,
   listSignalsUseCase,
   listSignalTracesUseCase,
+  mergeListItemWithRowMetrics,
   SIGNAL_PRIORITIES,
   type SignalLifecycleCommand,
   SignalRepository,
@@ -345,15 +346,7 @@ const listSignals = signalEndpoint({
               }
             : undefined
 
-        const search = query.query
-          ? yield* embedSignalSearchQueryUseCase({
-              organizationId: orgId,
-              projectId: project.id,
-              query: query.query,
-            })
-          : undefined
-
-        const result = yield* listSignalsUseCase({
+        const list = yield* listSignalsUseCase({
           organizationId: orgId,
           projectId: project.id,
           limit: query.limit,
@@ -361,9 +354,28 @@ const listSignals = signalEndpoint({
           sort: { field: query.sortBy, direction: query.sortDirection },
           ...(query.lifecycleGroup ? { lifecycleGroup: query.lifecycleGroup } : {}),
           ...(timeRange ? { timeRange } : {}),
-          ...(search ? { search } : {}),
+          ...(query.query ? { textSearchQuery: query.query } : {}),
         })
-        return { result, offset }
+
+        if (list.items.length === 0) {
+          return { result: list, offset }
+        }
+
+        const rowMetrics = yield* getSignalRowMetricsUseCase({
+          organizationId: orgId,
+          projectId: project.id,
+          signalIds: list.items.map((item) => SignalId(item.id)),
+          ...(timeRange ? { timeRange } : {}),
+          includeTags: true,
+        })
+
+        return {
+          result: {
+            ...list,
+            items: list.items.map((item) => mergeListItemWithRowMetrics(item, rowMetrics.metricsBySignalId[item.id])),
+          },
+          offset,
+        }
       }).pipe(
         withPostgres(
           Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive),

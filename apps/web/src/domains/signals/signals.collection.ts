@@ -14,7 +14,8 @@ import type {
   SignalRowMetricsRecord,
   SignalSessionPageRecord,
   SignalSummaryRecord,
-  SignalsListResultRecord,
+  SignalsListPageRecord,
+  SignalsTableAnalyticsRecord,
   UpdateSignalTriageRecord,
 } from "./signals.functions.ts"
 import {
@@ -37,7 +38,7 @@ const queryClient = getQueryClient()
 const DEFAULT_ISSUES_BATCH_SIZE = 50
 const SIGNAL_TRACE_BATCH_SIZE = 25
 const ISSUES_QUERY_STALE_TIME_MS = 30_000
-const EMPTY_ISSUES_ANALYTICS: SignalsListResultRecord["analytics"] = {
+const EMPTY_ISSUES_ANALYTICS: SignalsTableAnalyticsRecord["analytics"] = {
   counts: {
     newSignals: 0,
     escalatingSignals: 0,
@@ -50,7 +51,7 @@ const EMPTY_ISSUES_ANALYTICS: SignalsListResultRecord["analytics"] = {
   histogramBucketSeconds: 24 * 60 * 60,
   totalSessions: 0,
 }
-const EMPTY_PRIORITY_COUNTS: SignalsListResultRecord["priorityCounts"] = {
+const EMPTY_PRIORITY_COUNTS: SignalsTableAnalyticsRecord["priorityCounts"] = {
   urgent: 0,
   high: 0,
   medium: 0,
@@ -180,7 +181,7 @@ export function useSignals(input: {
     ],
   )
 
-  const fetchPage = async (offset: number): Promise<SignalsListResultRecord> => {
+  const fetchPage = async (offset: number): Promise<SignalsListPageRecord> => {
     const offsetKey = getSignalsOffsetQueryKey(keyInput, offset)
     // Use the per-page query cache, but still refetch when invalidated instead of
     // short-circuiting to stale data via getQueryData().
@@ -199,7 +200,7 @@ export function useSignals(input: {
   const enabled = (input.enabled ?? true) && input.projectId.length > 0
   const analyticsQuery = useQuery({
     queryKey: getSignalsAnalyticsQueryKey(keyInput),
-    queryFn: (): Promise<SignalsListResultRecord> =>
+    queryFn: (): Promise<SignalsTableAnalyticsRecord> =>
       getSignalsAnalytics({
         data: buildListSignalsRequest(keyInput, 0),
       }),

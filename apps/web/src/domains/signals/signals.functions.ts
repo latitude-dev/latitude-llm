@@ -6,15 +6,7 @@ import {
   type SignalDimension,
   type SignalEscalationThresholdBucket,
 } from "@domain/scores"
-import {
-  type FilterCondition,
-  type FilterSet,
-  OrganizationId,
-  ProjectId,
-  resolveSettings,
-  SettingsReader,
-  SignalId,
-} from "@domain/shared"
+import { OrganizationId, ProjectId, resolveSettings, SettingsReader, SignalId } from "@domain/shared"
 import {
   type ApplySignalLifecycleCommandResult,
   applySignalLifecycleCommandUseCase,
@@ -24,8 +16,11 @@ import {
   deriveSignalLifecycleStates,
   embedSignalSearchQueryUseCase,
   fillBuckets,
+  type GetSignalsTableAnalyticsResult,
   getEscalationOccurrenceThreshold,
   getRelatedSignalsUseCase,
+  getSignalRowMetricsUseCase,
+  getSignalsTableAnalyticsUseCase,
   type ListSignalsResult,
   listSignalsUseCase,
   type OrgSignalSearchItem,
@@ -127,28 +122,31 @@ const toSignalRecord = (issue: SignalListItem) => ({
 
 export type SignalRecord = ReturnType<typeof toSignalRecord>
 
-const toSignalsListResultRecord = (result: ListSignalsResult, viewerUserId: string) => ({
-  analytics: {
-    counts: result.analytics.counts,
-    histogram: result.analytics.histogram.map(toSignalsBucketRecord),
-    histogramBucketSeconds: result.analytics.histogramBucketSeconds,
-    totalSessions: result.analytics.totalSessions,
-  },
+const toSignalsListPageRecord = (result: ListSignalsResult) => ({
   items: result.items.map(toSignalRecord),
   totalCount: result.totalCount,
   hasMore: result.hasMore,
   hasAnySignals: result.hasAnySignals,
   limit: result.limit,
   offset: result.offset,
+})
+
+export type SignalsListPageRecord = ReturnType<typeof toSignalsListPageRecord>
+
+const toSignalsTableAnalyticsRecord = (result: GetSignalsTableAnalyticsResult, viewerUserId: string) => ({
+  analytics: {
+    counts: result.analytics.counts,
+    histogram: result.analytics.histogram.map(toSignalsBucketRecord),
+    histogramBucketSeconds: result.analytics.histogramBucketSeconds,
+    totalSessions: result.analytics.totalSessions,
+  },
+  totalCount: result.totalCount,
   occurrencesSum: result.occurrencesSum,
   priorityCounts: result.priorityCounts,
-  // Resolved server-side from the per-assignee counts so the client never
-  // receives the full assignee map; reflects every filter except the assignee
-  // filter itself (see ListSignalsResult.assigneeCounts).
   mySignalsCount: result.assigneeCounts[viewerUserId] ?? 0,
 })
 
-export type SignalsListResultRecord = ReturnType<typeof toSignalsListResultRecord>
+export type SignalsTableAnalyticsRecord = ReturnType<typeof toSignalsTableAnalyticsRecord>
 
 const signalRowMetricsInputSchema = z.object({
   projectId: z.string(),
@@ -329,100 +327,148 @@ type SignalLifecycleCommandRecord = ReturnType<typeof toSignalLifecycleCommandRe
 
 type ListSignalsRequest = z.infer<typeof listSignalsInputSchema>
 
-const runSignalsList = async (
-  data: ListSignalsRequest,
-  options: { readonly includeAnalytics: boolean; readonly includeItems?: boolean },
-): Promise<SignalsListResultRecord> => {
-  const { organizationId, userId } = await requireSession()
-  const orgId = OrganizationId(organizationId)
-  const pgClient = getPostgresClient()
-  const chClient = getClickhouseClient()
-  const redisClient = getRedisClient()
-  const trimmedSearchQuery = data.searchQuery?.trim() || undefined
-
-  const result = await Effect.runPromise(
-    Effect.gen(function* () {
-      const directMatch = trimmedSearchQuery
-        ? yield* Effect.gen(function* () {
-            const signalRepo = yield* SignalRepository
-            const [byId, bySlug] = yield* Effect.all(
-              [
-                signalRepo
-                  .findById(SignalId(trimmedSearchQuery))
-                  .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
-                signalRepo
-                  .findBySlug({ projectId: ProjectId(data.projectId), slug: trimmedSearchQuery })
-                  .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
-              ],
-              { concurrency: 2 },
-            )
-            const idMatch = byId && byId.projectId === data.projectId ? byId : null
-            return idMatch ?? bySlug
-          })
-        : null
-
-      const search =
-        options.includeAnalytics && trimmedSearchQuery && !directMatch
-          ? yield* embedSignalSearchQueryUseCase({
-              organizationId,
-              projectId: data.projectId,
-              query: trimmedSearchQuery,
-            })
-          : undefined
-
-      const timeRange =
-        data.timeRange?.fromIso || data.timeRange?.toIso
-          ? {
-              ...(data.timeRange?.fromIso ? { from: new Date(data.timeRange.fromIso) } : {}),
-              ...(data.timeRange?.toIso ? { to: new Date(data.timeRange.toIso) } : {}),
-            }
-          : undefined
-
-      return yield* listSignalsUseCase({
-        organizationId,
-        projectId: data.projectId,
-        ...(data.limit !== undefined ? { limit: data.limit } : {}),
-        ...(data.offset !== undefined ? { offset: data.offset } : {}),
-        includeAnalytics: options.includeAnalytics,
-        ...(options.includeItems !== undefined ? { includeItems: options.includeItems } : {}),
-        ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
-        ...(data.assigneeIds?.length ? { assigneeIds: data.assigneeIds } : {}),
-        ...(data.sort ? { sort: data.sort } : {}),
-        ...(timeRange ? { timeRange } : {}),
-        ...(directMatch
-          ? { signalIds: [directMatch.id] }
-          : search
-            ? {
-                search: {
-                  query: search.query,
-                  normalizedEmbedding: search.normalizedEmbedding,
-                },
-              }
-            : trimmedSearchQuery
-              ? { textSearchQuery: trimmedSearchQuery }
-              : {}),
+const resolveListSignalsDirectMatch = (data: ListSignalsRequest, trimmedSearchQuery: string | undefined) =>
+  trimmedSearchQuery
+    ? Effect.gen(function* () {
+        const signalRepo = yield* SignalRepository
+        const [byId, bySlug] = yield* Effect.all(
+          [
+            signalRepo
+              .findById(SignalId(trimmedSearchQuery))
+              .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
+            signalRepo
+              .findBySlug({ projectId: ProjectId(data.projectId), slug: trimmedSearchQuery })
+              .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
+          ],
+          { concurrency: 2 },
+        )
+        const idMatch = byId && byId.projectId === data.projectId ? byId : null
+        return idMatch ?? bySlug
       })
-    }).pipe(
-      withPostgres(Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive), pgClient, orgId),
-      withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive), chClient, orgId),
-      withAi(AIEmbedLive, redisClient),
-      withTracing,
-    ),
-  )
+    : Effect.succeed(null)
 
-  return toSignalsListResultRecord(result, userId)
-}
+const resolveListSignalsTimeRange = (data: ListSignalsRequest) =>
+  data.timeRange?.fromIso || data.timeRange?.toIso
+    ? {
+        ...(data.timeRange?.fromIso ? { from: new Date(data.timeRange.fromIso) } : {}),
+        ...(data.timeRange?.toIso ? { to: new Date(data.timeRange.toIso) } : {}),
+      }
+    : undefined
+
+const resolveListSignalsSearchForList = (data: ListSignalsRequest) =>
+  Effect.gen(function* () {
+    const trimmedSearchQuery = data.searchQuery?.trim() || undefined
+    const directMatch = yield* resolveListSignalsDirectMatch(data, trimmedSearchQuery)
+
+    return {
+      directMatch,
+      search: undefined,
+      timeRange: resolveListSignalsTimeRange(data),
+      trimmedSearchQuery,
+    }
+  })
+
+const resolveListSignalsSearchForAnalytics = (data: ListSignalsRequest, organizationId: string) =>
+  Effect.gen(function* () {
+    const trimmedSearchQuery = data.searchQuery?.trim() || undefined
+    const directMatch = yield* resolveListSignalsDirectMatch(data, trimmedSearchQuery)
+    const search =
+      trimmedSearchQuery && !directMatch
+        ? yield* embedSignalSearchQueryUseCase({
+            organizationId,
+            projectId: data.projectId,
+            query: trimmedSearchQuery,
+          })
+        : undefined
+
+    return {
+      directMatch,
+      search,
+      timeRange: resolveListSignalsTimeRange(data),
+      trimmedSearchQuery,
+    }
+  })
+
+const listSignalsFilters = (
+  data: ListSignalsRequest,
+  resolved: {
+    readonly directMatch: Signal | null
+    readonly search: { readonly query: string; readonly normalizedEmbedding: readonly number[] } | undefined
+    readonly timeRange: { readonly from?: Date; readonly to?: Date } | undefined
+    readonly trimmedSearchQuery: string | undefined
+  },
+) => ({
+  ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
+  ...(data.assigneeIds?.length ? { assigneeIds: data.assigneeIds } : {}),
+  ...(data.sort ? { sort: data.sort } : {}),
+  ...(resolved.timeRange ? { timeRange: resolved.timeRange } : {}),
+  ...(resolved.directMatch
+    ? { signalIds: [resolved.directMatch.id] }
+    : resolved.search
+      ? {
+          search: {
+            query: resolved.search.query,
+            normalizedEmbedding: [...resolved.search.normalizedEmbedding],
+          },
+        }
+      : resolved.trimmedSearchQuery
+        ? { textSearchQuery: resolved.trimmedSearchQuery }
+        : {}),
+})
 
 export const listSignals = createServerFn({ method: "GET" })
   .inputValidator(listSignalsInputSchema)
-  .handler(async ({ data }): Promise<SignalsListResultRecord> => runSignalsList(data, { includeAnalytics: false }))
+  .handler(async ({ data }): Promise<SignalsListPageRecord> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const pgClient = getPostgresClient()
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const resolved = yield* resolveListSignalsSearchForList(data)
+        return yield* listSignalsUseCase({
+          organizationId,
+          projectId: data.projectId,
+          ...(data.limit !== undefined ? { limit: data.limit } : {}),
+          ...(data.offset !== undefined ? { offset: data.offset } : {}),
+          ...listSignalsFilters(data, resolved),
+        })
+      }).pipe(
+        withPostgres(Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive), pgClient, orgId),
+        withTracing,
+      ),
+    )
+
+    return toSignalsListPageRecord(result)
+  })
 
 export const getSignalsAnalytics = createServerFn({ method: "GET" })
   .inputValidator(listSignalsInputSchema)
-  .handler(
-    async ({ data }): Promise<SignalsListResultRecord> =>
-      runSignalsList(data, { includeAnalytics: true, includeItems: false }),
-  )
+  .handler(async ({ data }): Promise<SignalsTableAnalyticsRecord> => {
+    const { organizationId, userId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const pgClient = getPostgresClient()
+    const chClient = getClickhouseClient()
+    const redisClient = getRedisClient()
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const resolved = yield* resolveListSignalsSearchForAnalytics(data, organizationId)
+        return yield* getSignalsTableAnalyticsUseCase({
+          organizationId,
+          projectId: data.projectId,
+          ...listSignalsFilters(data, resolved),
+        })
+      }).pipe(
+        withPostgres(Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive), pgClient, orgId),
+        withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive), chClient, orgId),
+        withAi(AIEmbedLive, redisClient),
+        withTracing,
+      ),
+    )
+
+    return toSignalsTableAnalyticsRecord(result, userId)
+  })
 
 export const getSignalRowMetrics = createServerFn({ method: "GET" })
   .inputValidator(signalRowMetricsInputSchema)
@@ -438,81 +484,30 @@ export const getSignalRowMetrics = createServerFn({ method: "GET" })
           }
         : undefined
 
-    const trendTo = new Date(timeRange?.to ?? timeRange?.from ?? new Date())
-    trendTo.setUTCHours(23, 59, 59, 999)
-    const trendFrom = new Date(trendTo)
-    trendFrom.setUTCDate(trendFrom.getUTCDate() - 13)
-    trendFrom.setUTCHours(0, 0, 0, 0)
-    const trendScaffold: string[] = []
-    const trendCursor = new Date(trendFrom)
-    while (trendCursor.getTime() <= trendTo.getTime()) {
-      trendScaffold.push(trendCursor.toISOString().slice(0, 10))
-      trendCursor.setUTCDate(trendCursor.getUTCDate() + 1)
-    }
-
-    return Effect.runPromise(
-      Effect.gen(function* () {
-        const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
-        const sessionRepository = yield* SessionRepository
-        const startTimeConditions: FilterCondition[] = []
-        if (timeRange?.from) startTimeConditions.push({ op: "gte", value: timeRange.from.toISOString() })
-        if (timeRange?.to) startTimeConditions.push({ op: "lte", value: timeRange.to.toISOString() })
-        const sessionCountFilters: FilterSet | undefined =
-          startTimeConditions.length > 0 ? { startTime: startTimeConditions } : undefined
-        const signalIds = data.signalIds.map(SignalId)
-        const [metrics, sessionCount, trendSeries] = yield* Effect.all([
-          scoreAnalyticsRepository.listSignalWindowMetrics({
-            organizationId: orgId,
-            projectId: ProjectId(data.projectId),
-            signalIds,
-            ...(timeRange ? { timeRange } : {}),
-          }),
-          sessionRepository.countByProjectId({
-            organizationId: orgId,
-            projectId: ProjectId(data.projectId),
-            ...(sessionCountFilters ? { filters: sessionCountFilters } : {}),
-          }),
-          scoreAnalyticsRepository.trendBySignals({
-            organizationId: orgId,
-            projectId: ProjectId(data.projectId),
-            signalIds,
-            timeRange: { from: trendFrom, to: trendTo },
-          }),
-        ])
-
-        const metricsBySignalId = new Map(metrics.map((metric) => [metric.signalId as string, metric] as const))
-        const trendBySignalId = new Map(
-          trendSeries.map((series) => [
-            series.signalId as string,
-            fillBuckets({ scaffold: trendScaffold, buckets: series.buckets }).map(toSignalsBucketRecord),
-          ]),
-        )
-
-        return {
-          metricsBySignalId: Object.fromEntries(
-            data.signalIds.map((signalId) => {
-              const metric = metricsBySignalId.get(signalId)
-              return [
-                signalId,
-                {
-                  occurrences: metric?.occurrences ?? 0,
-                  affectedSessionsPercent:
-                    !metric || sessionCount.totalCount === 0
-                      ? 0
-                      : Math.min(metric.affectedSessions / sessionCount.totalCount, 1),
-                  trend:
-                    trendBySignalId.get(signalId) ??
-                    fillBuckets({ scaffold: trendScaffold, buckets: [] }).map(toSignalsBucketRecord),
-                },
-              ]
-            }),
-          ),
-        } satisfies SignalRowMetricsRecord
+    const result = await Effect.runPromise(
+      getSignalRowMetricsUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        signalIds: data.signalIds.map(SignalId),
+        ...(timeRange ? { timeRange } : {}),
       }).pipe(
         withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, SessionRepositoryLive), chClient, orgId),
         withTracing,
       ),
     )
+
+    return {
+      metricsBySignalId: Object.fromEntries(
+        Object.entries(result.metricsBySignalId).map(([signalId, metrics]) => [
+          signalId,
+          {
+            occurrences: metrics.occurrences,
+            affectedSessionsPercent: metrics.affectedSessionsPercent,
+            trend: metrics.trend.map(toSignalsBucketRecord),
+          },
+        ]),
+      ),
+    }
   })
 
 export interface OrgSignalSearchRecord {
@@ -1171,14 +1166,6 @@ export const applyBulkSignalLifecycleAction = createServerFn({ method: "POST" })
 
       await Effect.runPromise(
         Effect.gen(function* () {
-          const search = trimmedSearchQuery
-            ? yield* embedSignalSearchQueryUseCase({
-                organizationId,
-                projectId: data.projectId,
-                query: trimmedSearchQuery,
-              })
-            : undefined
-
           const timeRange =
             data.timeRange?.fromIso || data.timeRange?.toIso
               ? {
@@ -1194,19 +1181,11 @@ export const applyBulkSignalLifecycleAction = createServerFn({ method: "POST" })
               projectId: data.projectId,
               limit: BULK_ACTION_BATCH_SIZE,
               offset,
-              includeAnalytics: false,
               ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
               ...(data.assigneeIds?.length ? { assigneeIds: data.assigneeIds } : {}),
               ...(data.sort ? { sort: data.sort } : {}),
               ...(timeRange ? { timeRange } : {}),
-              ...(search
-                ? {
-                    search: {
-                      query: search.query,
-                      normalizedEmbedding: search.normalizedEmbedding,
-                    },
-                  }
-                : {}),
+              ...(trimmedSearchQuery ? { textSearchQuery: trimmedSearchQuery } : {}),
             })
 
             if (page.items.length === 0) break
