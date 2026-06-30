@@ -130,7 +130,7 @@ export function SignalScopeEditor({
               : "This signal evaluates every trace in your project."}
           </Text.H5>
           <Text.H6 color="foregroundMuted">
-            Add a filter to limit the detector to a subset — for example, only the `checkout` service.
+            Add a filter to limit the evaluation to a subset — for example, only the `checkout` service.
           </Text.H6>
         </div>
 

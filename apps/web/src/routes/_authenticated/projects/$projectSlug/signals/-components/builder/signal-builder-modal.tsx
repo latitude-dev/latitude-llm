@@ -25,7 +25,7 @@ const EDIT_STEPS: readonly StepId[] = ["scope", "detector", "test"]
 
 const STEP_TITLE: Record<StepId, string> = {
   scope: "Scope",
-  detector: "Detector",
+  detector: "Evaluation",
   test: "Test",
   details: "Details",
 }
@@ -111,7 +111,7 @@ export function SignalBuilderModal({
   const runPreview = (): void => {
     const payload = detectorPayload(tab, ruleDraft, criteria)
     if (payload === null) {
-      setPreviewResult({ status: "error", error: "Add a valid detector before running a preview." })
+      setPreviewResult({ status: "error", error: "Add a valid evaluation before running a preview." })
       return
     }
     setPreviewRunning(true)
@@ -158,7 +158,7 @@ export function SignalBuilderModal({
       return
     }
     if (evaluation === null) {
-      toast({ variant: "destructive", description: "Add a valid detector before creating the signal." })
+      toast({ variant: "destructive", description: "Add a valid evaluation before creating the signal." })
       return
     }
     setIsSaving(true)
@@ -185,7 +185,7 @@ export function SignalBuilderModal({
   const handleSaveEdit = async () => {
     if (!initial) return
     if (evaluation === null) {
-      toast({ variant: "destructive", description: "Add a valid detector before saving." })
+      toast({ variant: "destructive", description: "Add a valid evaluation before saving." })
       return
     }
     const detectorChanged = JSON.stringify(evaluation.settings) !== JSON.stringify(initial.settings)
@@ -255,7 +255,7 @@ export function SignalBuilderModal({
       onOpenChange={(next) => {
         if (!next) onClose()
       }}
-      title={mode === "create" ? "New signal" : "Edit signal detector"}
+      title={mode === "create" ? "New signal" : "Edit signal evaluation"}
       description={
         <StepIndicator
           steps={steps.map((id) => ({ id, label: STEP_TITLE[id] }))}

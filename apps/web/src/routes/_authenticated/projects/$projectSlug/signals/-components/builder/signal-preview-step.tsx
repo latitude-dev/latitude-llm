@@ -155,7 +155,7 @@ export function SignalPreviewStep({
             {matchCount} of {items.length} matched
           </Text.H5M>
         ) : (
-          <Text.H6 color="foregroundMuted">Latest matching sessions, evaluated with the current detector.</Text.H6>
+          <Text.H6 color="foregroundMuted">Latest matching sessions, scored with the current evaluation.</Text.H6>
         )}
         <Button variant="outline" size="sm" onClick={onRun} disabled={isRunning} isLoading={isRunning}>
           <Icon icon={RotateCwIcon} size="sm" />
@@ -170,7 +170,7 @@ export function SignalPreviewStep({
           <Skeleton className="h-16 w-full rounded-lg" />
         </div>
       ) : result === null || result.status === "pending" ? (
-        <Text.H6 color="foregroundMuted">Run a preview to see how the detector scores recent sessions.</Text.H6>
+        <Text.H6 color="foregroundMuted">Run a preview to see how the evaluation scores recent sessions.</Text.H6>
       ) : result.status === "error" ? (
         <Text.H6 color="destructive">{result.error}</Text.H6>
       ) : sorted.length === 0 ? (
