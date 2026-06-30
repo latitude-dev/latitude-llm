@@ -15,6 +15,7 @@ import { hasInvalidRegex } from "./condition-meta.tsx"
 import { ConditionEditor, type ConditionEditState, RuleConditionList, type RuleDraft } from "./rule-detector-editor.tsx"
 import { SignalPreviewStep } from "./signal-preview-step.tsx"
 import { SignalScopeEditor } from "./signal-scope-editor.tsx"
+import { StepIndicator } from "./step-indicator.tsx"
 
 type DetectorTab = "rules" | "llm" | "advanced"
 type StepId = "scope" | "detector" | "test" | "details"
@@ -251,14 +252,22 @@ export function SignalBuilderModal({
       open
       dismissible
       size="large"
+      scrollable={false}
       onOpenChange={(next) => {
         if (!next) onClose()
       }}
       title={mode === "create" ? "New signal" : "Edit signal detector"}
-      description={`Step ${stepIndex + 1} of ${steps.length} — ${STEP_TITLE[step]}`}
+      description={
+        <StepIndicator
+          steps={steps.map((id) => ({ id, label: STEP_TITLE[id] }))}
+          activeIndex={stepIndex}
+          onStepClick={goToStep}
+        />
+      }
       footer={footer}
     >
-      <div className="flex flex-col gap-4">
+      {/* Fixed-height body so the modal does not resize between steps; content scrolls internally. */}
+      <div className="flex h-[28rem] flex-col gap-4 overflow-y-auto">
         {step === "scope" ? <SignalScopeEditor projectId={projectId} value={filters} onChange={setFilters} /> : null}
 
         {step === "detector" && !inConditionSubStep ? (
