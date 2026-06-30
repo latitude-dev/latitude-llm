@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## v0.3.26 - 2026-06-30
+
+### API and MCP
+
+- Added MCP tool annotations (`readOnlyHint`/`destructiveHint`, with optional `idempotentHint`/`openWorldHint`) to all 91 MCP-eligible API endpoints, so MCP clients can tell read-only, additive, and destructive tools apart. Annotations surface only in `mcp.json` and the live MCP transport; `openapi.json` and the generated SDK are unchanged (ref: #3766).
+
+### Evaluations
+
+- Added a use case to generate sandbox evaluation scripts from a freeform prompt: each candidate is smoke-tested against a representative session and regenerated on sandbox failure (up to 3 attempts), with generation telemetry routed to a dedicated dogfood project (ref: #3763).
+
 ## v0.3.25 - 2026-06-30
 
 ### Telemetry SDKs and docs
