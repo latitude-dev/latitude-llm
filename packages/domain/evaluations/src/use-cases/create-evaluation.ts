@@ -20,6 +20,8 @@ export interface CreateEvaluationInput {
   /** Exactly one of `settings` or `script`. `settings` compiles to the script; `script` is raw (advanced). */
   readonly settings?: EvaluationSettings
   readonly script?: string
+  /** Percentage (0–100) of matching traces the evaluation runs against; defaults to the standard rate. */
+  readonly sampling?: number
   readonly now?: Date
 }
 
@@ -59,7 +61,7 @@ export const createEvaluationUseCase = (input: CreateEvaluationInput) =>
       settings,
       script,
       scriptHash,
-      trigger: defaultEvaluationTrigger(),
+      trigger: { ...defaultEvaluationTrigger(), ...(input.sampling !== undefined ? { sampling: input.sampling } : {}) },
       alignment: null,
       alignedAt: null,
       archivedAt: null,

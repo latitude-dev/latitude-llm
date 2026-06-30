@@ -1,5 +1,5 @@
 import type { FilterCondition, FilterSet } from "@domain/shared"
-import { Button, DropdownMenu, Icon, Text } from "@repo/ui"
+import { Button, Icon, Slider, Text } from "@repo/ui"
 import { PlusIcon, XIcon } from "lucide-react"
 import { type RefObject, useMemo, useState } from "react"
 import { MetadataFilter } from "../../../../../../../components/filters-builder/metadata-filter/metadata-filter.tsx"
@@ -61,19 +61,22 @@ export function applyMetadataEntries(filter: FilterSet, entries: readonly { key:
 }
 
 /**
- * Inline scope editor. The signal's `filters` pre-gate is optional — an empty scope
- * evaluates every trace. Filter dimensions stay hidden behind "Add filter" and are
- * revealed progressively, so the default (all traces) reads as one clear line rather
- * than a wall of empty pickers.
+ * Inline scope editor: which traces the detector runs on (`filters`, optional) and how many of
+ * them (`sampling`). Filter dimensions are added from labeled chips and revealed progressively, so
+ * the default (all traces) reads as one clear line rather than a wall of empty pickers.
  */
 export function SignalScopeEditor({
   projectId,
   value,
   onChange,
+  sampling,
+  onSamplingChange,
 }: {
   readonly projectId: string
   readonly value: FilterSet
   readonly onChange: (next: FilterSet) => void
+  readonly sampling: number
+  readonly onSamplingChange: (next: number) => void
 }) {
   const [popoverContainerEl, setPopoverContainerEl] = useState<HTMLDivElement | null>(null)
   const popoverContainerRef = useMemo<RefObject<HTMLElement | null>>(
@@ -170,18 +173,37 @@ export function SignalScopeEditor({
         ) : null}
 
         {addableOptions.length > 0 ? (
-          <div>
-            <DropdownMenu
-              trigger={() => (
-                <Button variant="outline" size="sm">
+          <div className="flex flex-col gap-1.5">
+            <Text.H6 color="foregroundMuted">Add a filter</Text.H6>
+            <div className="flex flex-wrap gap-2">
+              {addableOptions.map((option) => (
+                <Button key={option.label} variant="outline" size="sm" onClick={option.onClick}>
                   <Icon icon={PlusIcon} size="sm" />
-                  Add filter
+                  {option.label}
                 </Button>
-              )}
-              options={addableOptions}
-            />
+              ))}
+            </div>
           </div>
         ) : null}
+
+        <div className="flex flex-col gap-2 border-t border-border pt-4">
+          <div className="flex items-baseline justify-between">
+            <Text.H6 color="foregroundMuted">Sampling</Text.H6>
+            <Text.H5M>{sampling}%</Text.H5M>
+          </div>
+          <Slider
+            min={0}
+            max={100}
+            step={1}
+            value={[sampling]}
+            onValueChange={(values) => onSamplingChange(values[0] ?? 0)}
+          />
+          <Text.H6 color="foregroundMuted">
+            {sampling === 0
+              ? "0% pauses this signal — no matching traces are evaluated."
+              : `Evaluates ${sampling}% of matching traces.`}
+          </Text.H6>
+        </div>
       </div>
     </div>
   )

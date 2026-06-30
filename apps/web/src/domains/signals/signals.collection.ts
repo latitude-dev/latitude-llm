@@ -479,6 +479,7 @@ export function useCreateSignal(projectId: string) {
       readonly name: string
       readonly description: string
       readonly filters?: SignalFilters | null
+      readonly sampling?: number
       readonly evaluation: EvaluationDraft
     }): Promise<CreateSignalRecord> =>
       createSignal({
@@ -487,6 +488,7 @@ export function useCreateSignal(projectId: string) {
           name: input.name,
           description: input.description,
           ...(input.filters != null ? { filters: input.filters } : {}),
+          ...(input.sampling !== undefined ? { sampling: input.sampling } : {}),
           evaluation: input.evaluation,
         },
       }),
@@ -516,8 +518,18 @@ export function useUpdateSignal(projectId: string, signalId: string) {
 
 export function useUpdateSignalEvaluation(projectId: string, signalId: string) {
   return useMutation({
-    mutationFn: (input: { readonly settings: Extract<EvaluationDraft, { settings: unknown }>["settings"] }) =>
-      updateSignalEvaluation({ data: { projectId, signalId, settings: input.settings } }),
+    mutationFn: (input: {
+      readonly settings: Extract<EvaluationDraft, { settings: unknown }>["settings"]
+      readonly sampling?: number
+    }) =>
+      updateSignalEvaluation({
+        data: {
+          projectId,
+          signalId,
+          settings: input.settings,
+          ...(input.sampling !== undefined ? { sampling: input.sampling } : {}),
+        },
+      }),
     onSuccess: () => invalidateSignalQueries(projectId, signalId),
   })
 }

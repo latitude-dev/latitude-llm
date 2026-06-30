@@ -1329,6 +1329,7 @@ const createSignalInputSchema = z.object({
   description: z.string().min(1),
   priority: signalPrioritySchema.nullish(),
   filters: filterSetSchema.nullish(),
+  sampling: z.number().int().min(0).max(100).optional(),
   evaluation: evaluationDraftSchema,
 })
 
@@ -1353,6 +1354,7 @@ export const createSignal = createServerFn({ method: "POST" })
         description: data.description,
         ...(data.priority != null ? { priority: data.priority } : {}),
         ...(data.filters != null ? { filters: data.filters } : {}),
+        ...(data.sampling !== undefined ? { sampling: data.sampling } : {}),
         evaluation: data.evaluation,
       }).pipe(
         withPostgres(
@@ -1403,6 +1405,7 @@ const updateSignalEvaluationInputSchema = z.object({
   projectId: z.string(),
   signalId: z.string(),
   settings: evaluationSettingsSchema,
+  sampling: z.number().int().min(0).max(100).optional(),
 })
 
 /** Recompiles a user signal's settings-defined evaluation in place. */
@@ -1420,6 +1423,7 @@ export const updateSignalEvaluation = createServerFn({ method: "POST" })
           projectId: data.projectId,
           signalId: data.signalId,
           settings: data.settings,
+          ...(data.sampling !== undefined ? { sampling: data.sampling } : {}),
         }).pipe(
           withPostgres(
             Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive),

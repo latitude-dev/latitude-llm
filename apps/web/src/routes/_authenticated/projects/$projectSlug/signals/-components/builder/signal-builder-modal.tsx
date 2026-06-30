@@ -1,4 +1,4 @@
-import type { SignalPreviewResult } from "@domain/evaluations"
+import { DEFAULT_EVALUATION_SAMPLING, type SignalPreviewResult } from "@domain/evaluations"
 import type { EvaluationRuleCondition, EvaluationSettings, FilterSet } from "@domain/shared"
 import { Button, Input, Modal, Tabs, Text, Textarea, useToast } from "@repo/ui"
 import { useNavigate } from "@tanstack/react-router"
@@ -38,6 +38,7 @@ export interface SignalBuilderInitial {
   readonly signalId: string
   readonly filters: FilterSet | null
   readonly settings: EvaluationSettings
+  readonly sampling: number
 }
 
 function detectorPayload(
@@ -92,6 +93,7 @@ export function SignalBuilderModal({
       : emptyRuleDraft,
   )
   const [criteria, setCriteria] = useState(() => (initial?.settings?.kind === "judge" ? initial.settings.criteria : ""))
+  const [sampling, setSampling] = useState<number>(initial?.sampling ?? DEFAULT_EVALUATION_SAMPLING)
   const [conditionEdit, setConditionEdit] = useState<ConditionEditState>(null)
   const [draftCondition, setDraftCondition] = useState<EvaluationRuleCondition | null>(null)
 
@@ -165,6 +167,7 @@ export function SignalBuilderModal({
         name: trimmedName,
         description: description.trim(),
         filters: filterSetOrNull(filters),
+        sampling,
         evaluation,
       })
       toast({ description: "Signal created." })
@@ -186,10 +189,13 @@ export function SignalBuilderModal({
       return
     }
     const detectorChanged = JSON.stringify(evaluation.settings) !== JSON.stringify(initial.settings)
+    const samplingChanged = sampling !== initial.sampling
     setIsSaving(true)
     try {
       await updateSignal.mutateAsync({ filters: filterSetOrNull(filters) })
-      if (detectorChanged) await updateSignalEvaluation.mutateAsync({ settings: evaluation.settings })
+      if (detectorChanged || samplingChanged) {
+        await updateSignalEvaluation.mutateAsync({ settings: evaluation.settings, sampling })
+      }
       await invalidateSignalQueries(projectId, initial.signalId)
       toast({ description: "Signal updated." })
       onClose()
@@ -263,7 +269,15 @@ export function SignalBuilderModal({
           `overflow-y-auto` also clips horizontally, so `-mx-2 px-2` (absorbed by the modal's px-6)
           gives focus rings and popover offsets a few px of clip headroom without insetting content. */}
       <div className="-mx-2 flex h-[28rem] flex-col gap-4 overflow-y-auto px-2 pb-6">
-        {step === "scope" ? <SignalScopeEditor projectId={projectId} value={filters} onChange={setFilters} /> : null}
+        {step === "scope" ? (
+          <SignalScopeEditor
+            projectId={projectId}
+            value={filters}
+            onChange={setFilters}
+            sampling={sampling}
+            onSamplingChange={setSampling}
+          />
+        ) : null}
 
         {step === "detector" && !inConditionSubStep ? (
           <div className="flex flex-col gap-4">

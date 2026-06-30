@@ -1,3 +1,4 @@
+import { DEFAULT_EVALUATION_SAMPLING } from "@domain/evaluations"
 import type { EvaluationSettings } from "@domain/shared"
 import {
   Button,
@@ -693,6 +694,7 @@ export function SignalDrawerEvaluations({
             signalId,
             filters: signalDetail?.filters ?? null,
             settings: editableSettings,
+            sampling: primaryEvaluation?.trigger.sampling ?? DEFAULT_EVALUATION_SAMPLING,
           }}
           onClose={() => setBuilderOpen(false)}
         />

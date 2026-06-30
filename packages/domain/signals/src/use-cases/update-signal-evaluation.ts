@@ -24,6 +24,7 @@ const updateSignalEvaluationInputSchema = z.object({
   projectId: cuidSchema.transform(ProjectId),
   signalId: signalIdSchema,
   settings: evaluationSettingsSchema,
+  sampling: z.number().int().min(0).max(100).optional(),
   now: z.date().optional(),
 })
 
@@ -92,7 +93,9 @@ export const updateSignalEvaluationUseCase = (input: UpdateSignalEvaluationInput
           })
         }
 
-        if (evaluation.script === script) {
+        const scriptChanged = evaluation.script !== script
+        const samplingChanged = parsed.sampling !== undefined && evaluation.trigger.sampling !== parsed.sampling
+        if (!scriptChanged && !samplingChanged) {
           return {
             signalId: signal.id,
             evaluationId: evaluation.id,
@@ -105,8 +108,10 @@ export const updateSignalEvaluationUseCase = (input: UpdateSignalEvaluationInput
           settings: parsed.settings,
           script,
           scriptHash,
-          alignment: null,
-          alignedAt: null,
+          // Only a definition change invalidates alignment; a sampling-only change keeps it.
+          ...(scriptChanged ? { alignment: null, alignedAt: null } : {}),
+          trigger:
+            parsed.sampling !== undefined ? { ...evaluation.trigger, sampling: parsed.sampling } : evaluation.trigger,
           updatedAt: now,
         })
 
