@@ -150,6 +150,17 @@ export const optimizeEvaluationDraft = (input: {
         validationRatio: ALIGNMENT_VALIDATION_SPLIT,
       })
 
+      if (dataset.valset.length === 0) {
+        return yield* Effect.fail(
+          new EvaluationOptimizationActivityError({
+            activity: "optimizeEvaluationDraft",
+            cause: new Error(
+              `GEPA optimization requires separate training and validation examples, got ${allExamples.length} curated example${allExamples.length === 1 ? "" : "s"}`,
+            ),
+          }),
+        )
+      }
+
       // Stagnation budget sized so the proposer sees at least every curated
       // dataset row before we declare the search exhausted, regardless of how
       // the minibatch size is configured. Floored at 10 to keep the engine
