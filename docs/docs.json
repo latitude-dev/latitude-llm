@@ -9,6 +9,22 @@
     {
       "source": "/more/sandbox",
       "destination": "/observability/features/sandbox"
+    },
+    {
+      "source": "/more/agent-dispatch-cursor",
+      "destination": "/agent-dispatch/cursor"
+    },
+    {
+      "source": "/more/agent-dispatch-claude-code",
+      "destination": "/agent-dispatch/claude-code"
+    },
+    {
+      "source": "/more/agent-dispatch-linear",
+      "destination": "/agent-dispatch/linear"
+    },
+    {
+      "source": "/more/agent-dispatch-webhooks",
+      "destination": "/agent-dispatch/webhooks"
     }
   ],
   "theme": "mint",
@@ -228,10 +244,10 @@
           {
             "group": "Agent dispatch",
             "pages": [
-              "more/agent-dispatch-cursor",
-              "more/agent-dispatch-claude-code",
-              "more/agent-dispatch-linear",
-              "more/agent-dispatch-webhooks"
+              "agent-dispatch/cursor",
+              "agent-dispatch/claude-code",
+              "agent-dispatch/linear",
+              "agent-dispatch/webhooks"
             ]
           },
           {

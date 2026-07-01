@@ -92,10 +92,10 @@ const INTEGRATION_SUBTITLES: Record<AgentDispatchKindKey, string> = {
 }
 
 const INTEGRATION_DOC_URLS: Record<AgentDispatchKindKey, string> = {
-  cursor: "https://docs.latitude.so/more/agent-dispatch-cursor",
-  claude_code: "https://docs.latitude.so/more/agent-dispatch-claude-code",
-  linear: "https://docs.latitude.so/more/agent-dispatch-linear",
-  webhook: "https://docs.latitude.so/more/agent-dispatch-webhooks",
+  cursor: "https://docs.latitude.so/agent-dispatch/cursor",
+  claude_code: "https://docs.latitude.so/agent-dispatch/claude-code",
+  linear: "https://docs.latitude.so/agent-dispatch/linear",
+  webhook: "https://docs.latitude.so/agent-dispatch/webhooks",
 }
 
 const ACTIVE_DISPATCH_TRIGGERS = ["signal.discovered", "incident.opened"] as const
