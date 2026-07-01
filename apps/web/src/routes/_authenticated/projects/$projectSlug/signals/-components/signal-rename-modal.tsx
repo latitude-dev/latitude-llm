@@ -64,7 +64,10 @@ export function SignalRenameModal({
           void form.handleSubmit()
         }}
       >
-        <form.Field name="name">
+        <form.Field
+          name="name"
+          validators={{ onSubmit: ({ value }) => (value.trim().length === 0 ? "Name is required" : undefined) }}
+        >
           {(field) => (
             <Input
               required
@@ -76,7 +79,10 @@ export function SignalRenameModal({
             />
           )}
         </form.Field>
-        <form.Field name="description">
+        <form.Field
+          name="description"
+          validators={{ onSubmit: ({ value }) => (value.trim().length === 0 ? "Description is required" : undefined) }}
+        >
           {(field) => (
             <Textarea
               label="Description"
