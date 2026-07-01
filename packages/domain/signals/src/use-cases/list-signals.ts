@@ -82,7 +82,7 @@ const listSignalsInputSchema = z.object({
       field: "lastSeen",
       direction: "desc",
     }),
-  limit: z.number().int().min(1).max(100).default(50),
+  limit: z.number().int().min(1).max(200).default(50),
   offset: z.number().int().min(0).default(0),
   includeAnalytics: z.boolean().default(true),
   includeItems: z.boolean().default(true),
