@@ -59,7 +59,7 @@ const buildInner = (input: MetricSqlInput): InnerQuery => {
   }
 }
 
-export const spansDescriptor: StreamDescriptor = {
+export const spansDescriptor: StreamDescriptor<"spans"> = {
   buildInner: (input) => Effect.succeed(buildInner(input)),
   aggregate: (metric) => traceFamilyAggregate(metric, COLUMNS),
   breakdowns: BREAKDOWN,

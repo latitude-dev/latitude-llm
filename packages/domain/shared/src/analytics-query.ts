@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { monitorMetricSchema } from "./alert-incident-condition.ts"
+import { type MonitorMetric, monitorMetricSchema } from "./alert-incident-condition.ts"
 import { filterSetSchema } from "./filter.ts"
 
 /**
@@ -30,6 +30,11 @@ export type SessionBreakdownField = (typeof SESSION_BREAKDOWN_FIELDS)[number]
 export const SPAN_BREAKDOWN_FIELDS = ["model", "provider", "service", "tool", "tag", "operation", "status"] as const
 export type SpanBreakdownField = (typeof SPAN_BREAKDOWN_FIELDS)[number]
 
+// Scores are the signal grain: `signalId` / `source` are direct columns; the trace
+// dims (`model`…`tag`) resolve through each score's trace via the traces rollup.
+export const SCORE_BREAKDOWN_FIELDS = ["signalId", "source", "model", "provider", "service", "tool", "tag"] as const
+export type ScoreBreakdownField = (typeof SCORE_BREAKDOWN_FIELDS)[number]
+
 export const ANALYTICS_TIME_BUCKET_UNITS = ["hour", "day", "week"] as const
 export const analyticsTimeBucketSchema = z.object({
   unit: z.enum(ANALYTICS_TIME_BUCKET_UNITS).describe("Bucket granularity."),
@@ -46,6 +51,25 @@ export const analyticsOrderBySchema = z.object({
   direction: z.enum(["asc", "desc"]).default("desc"),
 })
 
+/**
+ * Metric vocabulary for the `scores` stream (signals): occurrence `count`, the
+ * `passRate`/`errorRate` over the pass/error flags, and stats over the 0–1 score
+ * `value`. Distinct from the trace-family `MonitorMetric` (no duration/cost/tokens).
+ */
+export const scoreMetricSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("count") }),
+  z.object({ kind: z.literal("passRate") }),
+  z.object({ kind: z.literal("errorRate") }),
+  z.object({ kind: z.literal("avg"), field: z.literal("value") }),
+  z.object({ kind: z.literal("min"), field: z.literal("value") }),
+  z.object({ kind: z.literal("max"), field: z.literal("value") }),
+  z.object({ kind: z.literal("median"), field: z.literal("value") }),
+])
+export type ScoreMetric = z.infer<typeof scoreMetricSchema>
+
+/** The metric union across every analytics stream. */
+export type AnalyticsMetric = MonitorMetric | ScoreMetric
+
 const rangeSchema = z
   .object({
     fromIso: z.iso.datetime().describe("Inclusive lower bound (ISO-8601)."),
@@ -53,13 +77,11 @@ const rangeSchema = z
   })
   .describe("The time window.")
 
-const sharedFields = {
+// Fields common to every stream (metric is per-stream, added on each variant).
+const commonFields = {
   filters: filterSetSchema
     .optional()
     .describe("Structured filter set applied to the stream (same DSL as `listTraces`)."),
-  metric: monitorMetricSchema.describe(
-    "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`.",
-  ),
   timeBucket: analyticsTimeBucketSchema
     .optional()
     .describe("Bucket the metric over time. Omit for a single aggregate."),
@@ -76,6 +98,10 @@ const sharedFields = {
     .describe(`Maximum rows returned. Defaults to ${ANALYTICS_DEFAULT_LIMIT}; max ${ANALYTICS_MAX_LIMIT}.`),
 } as const
 
+const traceFamilyMetric = monitorMetricSchema.describe(
+  "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`.",
+)
+
 const semanticQuery = z
   .string()
   .min(1)
@@ -84,10 +110,12 @@ const semanticQuery = z
 
 /**
  * One composable analytics query, discriminated by `stream` so each stream
- * declares exactly what it supports: `traces` accepts a semantic `query` and a
- * `breakdown` dimension; `sessions` accepts a semantic `query`; `spans` accepts
- * neither (structural filters only). The shape is self-describing to MCP/SDK
- * consumers. Range ordering (`fromIso` < `toIso`) is enforced at the boundary.
+ * declares exactly what it supports: `traces` accepts a semantic `query` + a
+ * `breakdown`; `sessions` accepts a `query` + breakdowns (minus `name`); `spans`
+ * accepts breakdowns incl. the span-only `operation`; `scores` (the signal grain)
+ * accepts signal-shaped metrics + breakdowns. The shape is self-describing to
+ * MCP/SDK consumers. Range ordering (`fromIso` < `toIso`) is enforced at the
+ * boundary.
  */
 export const analyticsQuerySchema = z.discriminatedUnion("stream", [
   z
@@ -95,7 +123,8 @@ export const analyticsQuerySchema = z.discriminatedUnion("stream", [
       stream: z.literal("traces"),
       query: semanticQuery.optional(),
       breakdown: z.enum(TRACE_BREAKDOWN_FIELDS).optional().describe("Dimension to group by, one row per value."),
-      ...sharedFields,
+      metric: traceFamilyMetric,
+      ...commonFields,
     })
     .strict(),
   z
@@ -103,19 +132,43 @@ export const analyticsQuerySchema = z.discriminatedUnion("stream", [
       stream: z.literal("sessions"),
       query: semanticQuery.optional(),
       breakdown: z.enum(SESSION_BREAKDOWN_FIELDS).optional().describe("Dimension to group by, one row per value."),
-      ...sharedFields,
+      metric: traceFamilyMetric,
+      ...commonFields,
     })
     .strict(),
   z
     .object({
       stream: z.literal("spans"),
       breakdown: z.enum(SPAN_BREAKDOWN_FIELDS).optional().describe("Dimension to group by, one row per value."),
-      ...sharedFields,
+      metric: traceFamilyMetric,
+      ...commonFields,
+    })
+    .strict(),
+  z
+    .object({
+      stream: z
+        .literal("scores")
+        .describe(
+          'Scored occurrences. A **signal** is scores carrying a `signalId` — analyze one signal with `stream: "scores"` filtered by `score.signalId` (or broken down by `signalId`).',
+        ),
+      breakdown: z
+        .enum(SCORE_BREAKDOWN_FIELDS)
+        .optional()
+        .describe(
+          "Dimension to group by: `signalId`/`source` (direct) or a trace dim (`model`…`tag`) via the score's trace.",
+        ),
+      metric: scoreMetricSchema.describe(
+        "The metric: `count`, `passRate`, `errorRate` (over the pass/error flags), or `{avg|min|max|median}` of the 0–1 score `value`.",
+      ),
+      ...commonFields,
     })
     .strict(),
 ])
 
 export type AnalyticsQuery = z.infer<typeof analyticsQuerySchema>
+
+/** Every stream the analytics query supports (superset of the monitor streams). */
+export type AnalyticsStream = AnalyticsQuery["stream"]
 
 /** `true` when `fromIso` is strictly before `toIso`. Enforced at the request boundary. */
 export const isValidAnalyticsRange = (range: { fromIso: string; toIso: string }): boolean =>

@@ -25,12 +25,12 @@ class AnalyticsQueryTraces(UniversalBaseModel):
     Dimension to group by, one row per value.
     """
 
-    filters: typing.Optional[FilterSet] = None
     metric: AnalyticsQueryTracesMetric = pydantic.Field()
     """
     The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`.
     """
 
+    filters: typing.Optional[FilterSet] = None
     time_bucket: typing_extensions.Annotated[
         typing.Optional[AnalyticsQueryTracesTimeBucket], FieldMetadata(alias="timeBucket")
     ] = pydantic.Field(default=None)

@@ -95,7 +95,7 @@ const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, Repository
     }
   })
 
-export const sessionsDescriptor: StreamDescriptor = {
+export const sessionsDescriptor: StreamDescriptor<"sessions"> = {
   buildInner,
   aggregate: (metric) => traceFamilyAggregate(metric, COLUMNS),
   breakdowns: BREAKDOWN,

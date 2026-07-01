@@ -1,14 +1,15 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import {
+  type AnalyticsMetric,
   type AnalyticsSeriesPoint,
   type AnalyticsTimeBucket,
   ChSqlClient,
   type ChSqlClientShape,
-  type MonitorMetric,
   metricValueFromStored,
   toRepositoryError,
 } from "@domain/shared"
 import { AnalyticsQueryReader, type AnalyticsQueryReaderShape } from "@domain/spans"
+import { normalizeCHString } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import { type BreakdownExpr, streamFor } from "../metric-sql/index.ts"
 
@@ -16,10 +17,10 @@ import { type BreakdownExpr, streamFor } from "../metric-sql/index.ts"
  * Convert a raw ClickHouse aggregate to the value we return. Only the physical
  * quantities are scaled to display units — `duration` → seconds, `cost` →
  * dollars (via the platform's canonical converter). Rates (`errorRate`,
- * `cacheHitRate`) stay as 0–1 ratios and counts/tokens stay raw: this is a data
- * API, so a fraction is more composable than a percent for downstream math.
+ * `cacheHitRate`, `passRate`), the 0–1 score `value`, and counts/tokens stay raw:
+ * this is a data API, so a fraction is more composable than a percent downstream.
  */
-const toDisplayValue = (raw: number, metric: MonitorMetric): number =>
+const toDisplayValue = (raw: number, metric: AnalyticsMetric): number =>
   "field" in metric && (metric.field === "duration" || metric.field === "cost")
     ? metricValueFromStored(raw, metric)
     : raw
@@ -108,9 +109,11 @@ const make = (): AnalyticsQueryReaderShape => ({
         })
         .pipe(Effect.mapError((error) => toRepositoryError(error, "AnalyticsQueryReader.query")))
 
+      // `key` can come from a FixedString column (signalId/source/userId), which
+      // ClickHouse zero-pads — normalize so consumers get the logical value.
       return rows.map(
         (row): AnalyticsSeriesPoint => ({
-          ...(row.key !== undefined ? { key: row.key } : {}),
+          ...(row.key !== undefined ? { key: normalizeCHString(row.key) } : {}),
           ...(row.bucket_start !== undefined ? { bucketStart: row.bucket_start } : {}),
           value: toDisplayValue(Number(row.value ?? 0), input.metric),
         }),

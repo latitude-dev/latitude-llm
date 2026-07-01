@@ -78,7 +78,7 @@ const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, Repository
     }
   })
 
-export const tracesDescriptor: StreamDescriptor = {
+export const tracesDescriptor: StreamDescriptor<"traces"> = {
   buildInner,
   aggregate: (metric) => traceFamilyAggregate(metric, COLUMNS),
   breakdowns: BREAKDOWN,

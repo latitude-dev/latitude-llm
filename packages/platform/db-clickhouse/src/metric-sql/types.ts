@@ -1,29 +1,35 @@
 import type {
+  AnalyticsStream,
   ChSqlClient,
   FilterSet,
   MonitorMetric,
-  MonitorStream,
   OrganizationId,
   ProjectId,
   RepositoryError,
+  ScoreMetric,
 } from "@domain/shared"
 import type { Effect } from "effect"
 
+/** The metric vocabulary a given stream accepts — scores have their own, the rest are trace-family. */
+export type MetricForStream<S extends AnalyticsStream> = S extends "scores" ? ScoreMetric : MonitorMetric
+
 /**
  * The minimal window input the SQL builders need: a resolved stream + predicate
- * (+ optional semantic query) and the metric to compute. Structurally a subset
- * of `MetricSeriesWindowInput` (monitors) and the analytics-query input, so both
- * readers pass straight through without a shared port dependency.
+ * (+ optional semantic query) and the metric to compute. Generic over the stream
+ * so `metric` is exactly the vocabulary that stream accepts — invalid stream+metric
+ * pairings don't compile. Structurally a subset of `MetricSeriesWindowInput`
+ * (monitors) and the analytics-query input; the monitor firing path only ever
+ * uses the trace-family streams + `MonitorMetric`.
  */
-export interface MetricSqlInput {
+export interface MetricSqlInput<S extends AnalyticsStream = AnalyticsStream> {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly target: {
-    readonly stream: MonitorStream
+    readonly stream: S
     readonly filterSet: FilterSet
-    /** Semantic search query — `traces` stream only; `null` otherwise. */
+    /** Semantic search query — `traces`/`sessions` only; `null` otherwise. */
     readonly query: string | null
-    readonly metric: MonitorMetric
+    readonly metric: MetricForStream<S>
   }
   /** Inclusive lower bound on the row's time axis. */
   readonly from: Date
@@ -55,10 +61,10 @@ export interface BreakdownExpr {
  * shape (the trace family) share an aggregate builder; streams with a different
  * shape (scores, moments, …) bring their own.
  */
-export interface StreamDescriptor {
-  buildInner(input: MetricSqlInput): Effect.Effect<InnerQuery, RepositoryError, ChSqlClient>
-  /** SQL aggregate for the metric, over the inner subquery's columns. */
-  aggregate(metric: MonitorMetric): string
+export interface StreamDescriptor<S extends AnalyticsStream = AnalyticsStream> {
+  buildInner(input: MetricSqlInput<S>): Effect.Effect<InnerQuery, RepositoryError, ChSqlClient>
+  /** SQL aggregate over the inner subquery's columns, for the metric this stream accepts. */
+  aggregate(metric: MetricForStream<S>): string
   /** Breakdown dimensions this stream exposes (logical field → SQL expression). */
   readonly breakdowns: Record<string, BreakdownExpr>
   /** The inner column to bucket on for time series. */

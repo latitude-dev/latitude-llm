@@ -1,4 +1,4 @@
-import type { MonitorMetric } from "@domain/shared"
+import type { MonitorMetric, ScoreMetric } from "@domain/shared"
 
 /** ClickHouse `DateTime64` params take a space-separated, zone-naive string (UTC). */
 const toClickHouseDateTime64 = (value: Date): string => value.toISOString().replace("T", " ").replace("Z", "")
@@ -10,6 +10,30 @@ export const windowParams = (input: { organizationId: string; projectId: string;
   windowFrom: toClickHouseDateTime64(input.from),
   windowTo: toClickHouseDateTime64(input.to),
 })
+
+/**
+ * Metric → SQL aggregate for the `scores` stream (the signal grain). `count`
+ * is occurrences; `passRate`/`errorRate` are over the pass/error flags; the
+ * value stats read the 0–1 score `value`. Ratios/averages guard the empty group.
+ */
+export const scoreAggregate = (metric: ScoreMetric): string => {
+  switch (metric.kind) {
+    case "count":
+      return "count()"
+    case "passRate":
+      return "if(count() = 0, 0, countIf(passed) / count())"
+    case "errorRate":
+      return "if(count() = 0, 0, countIf(errored) / count())"
+    case "avg":
+      return "if(count() = 0, 0, avg(value))"
+    case "min":
+      return "if(count() = 0, 0, min(value))"
+    case "max":
+      return "if(count() = 0, 0, max(value))"
+    case "median":
+      return "if(count() = 0, 0, quantileTDigest(0.5)(value))"
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Trace family (traces / sessions / spans): one metric vocabulary

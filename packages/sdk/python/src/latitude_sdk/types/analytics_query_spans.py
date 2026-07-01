@@ -20,12 +20,12 @@ class AnalyticsQuerySpans(UniversalBaseModel):
     Dimension to group by, one row per value.
     """
 
-    filters: typing.Optional[FilterSet] = None
     metric: AnalyticsQuerySpansMetric = pydantic.Field()
     """
     The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`.
     """
 
+    filters: typing.Optional[FilterSet] = None
     time_bucket: typing_extensions.Annotated[
         typing.Optional[AnalyticsQuerySpansTimeBucket], FieldMetadata(alias="timeBucket")
     ] = pydantic.Field(default=None)

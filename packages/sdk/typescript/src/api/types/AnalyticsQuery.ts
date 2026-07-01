@@ -5,7 +5,8 @@ import type * as LatitudeApi from "../index.js";
 export type AnalyticsQuery =
     | LatitudeApi.AnalyticsQuery.Traces
     | LatitudeApi.AnalyticsQuery.Sessions
-    | LatitudeApi.AnalyticsQuery.Spans;
+    | LatitudeApi.AnalyticsQuery.Spans
+    | LatitudeApi.AnalyticsQuery.Scores;
 
 export namespace AnalyticsQuery {
     export interface Traces {
@@ -14,9 +15,9 @@ export namespace AnalyticsQuery {
         query?: string | undefined;
         /** Dimension to group by, one row per value. */
         breakdown?: AnalyticsQueryTraces.Breakdown | undefined;
-        filters?: LatitudeApi.FilterSet | undefined;
         /** The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`. */
         metric: LatitudeApi.AnalyticsQueryTracesMetric;
+        filters?: LatitudeApi.FilterSet | undefined;
         /** Bucket the metric over time. Omit for a single aggregate. */
         timeBucket?: AnalyticsQueryTraces.TimeBucket | undefined;
         /** The time window. */
@@ -99,9 +100,9 @@ export namespace AnalyticsQuery {
         query?: string | undefined;
         /** Dimension to group by, one row per value. */
         breakdown?: AnalyticsQuerySessions.Breakdown | undefined;
-        filters?: LatitudeApi.FilterSet | undefined;
         /** The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`. */
         metric: LatitudeApi.AnalyticsQuerySessionsMetric;
+        filters?: LatitudeApi.FilterSet | undefined;
         /** Bucket the metric over time. Omit for a single aggregate. */
         timeBucket?: AnalyticsQuerySessions.TimeBucket | undefined;
         /** The time window. */
@@ -181,9 +182,9 @@ export namespace AnalyticsQuery {
         stream: "spans";
         /** Dimension to group by, one row per value. */
         breakdown?: AnalyticsQuerySpans.Breakdown | undefined;
-        filters?: LatitudeApi.FilterSet | undefined;
         /** The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`. */
         metric: LatitudeApi.AnalyticsQuerySpansMetric;
+        filters?: LatitudeApi.FilterSet | undefined;
         /** Bucket the metric over time. Omit for a single aggregate. */
         timeBucket?: AnalyticsQuerySpans.TimeBucket | undefined;
         /** The time window. */
@@ -204,6 +205,88 @@ export namespace AnalyticsQuery {
             Tag: "tag",
             Operation: "operation",
             Status: "status",
+        } as const;
+        export type Breakdown = (typeof Breakdown)[keyof typeof Breakdown];
+
+        /**
+         * Bucket the metric over time. Omit for a single aggregate.
+         */
+        export interface TimeBucket {
+            /** Bucket granularity. */
+            unit: TimeBucket.Unit;
+            /** Number of units per bucket (e.g. `2` weeks). */
+            size?: number | undefined;
+        }
+
+        export namespace TimeBucket {
+            /** Bucket granularity. */
+            export const Unit = {
+                Hour: "hour",
+                Day: "day",
+                Week: "week",
+            } as const;
+            export type Unit = (typeof Unit)[keyof typeof Unit];
+        }
+
+        /**
+         * The time window.
+         */
+        export interface Range {
+            /** Inclusive lower bound (ISO-8601). */
+            fromIso: string;
+            /** Exclusive upper bound (ISO-8601). Must be after `fromIso`. */
+            toIso: string;
+        }
+
+        /**
+         * Sort for breakdown results. Defaults to value-desc.
+         */
+        export interface OrderBy {
+            by?: OrderBy.By | undefined;
+            direction?: OrderBy.Direction | undefined;
+        }
+
+        export namespace OrderBy {
+            export const By = {
+                Value: "value",
+                Key: "key",
+            } as const;
+            export type By = (typeof By)[keyof typeof By];
+            export const Direction = {
+                Asc: "asc",
+                Desc: "desc",
+            } as const;
+            export type Direction = (typeof Direction)[keyof typeof Direction];
+        }
+    }
+
+    export interface Scores {
+        stream: "scores";
+        /** Dimension to group by: `signalId`/`source` (direct) or a trace dim (`model`…`tag`). */
+        breakdown?: AnalyticsQueryScores.Breakdown | undefined;
+        /** The metric: `count`, `passRate`, `errorRate`, or `{avg|min|max|median}` of the 0–1 score `value`. */
+        metric: LatitudeApi.AnalyticsQueryScoresMetric;
+        filters?: LatitudeApi.FilterSet | undefined;
+        /** Bucket the metric over time. Omit for a single aggregate. */
+        timeBucket?: AnalyticsQueryScores.TimeBucket | undefined;
+        /** The time window. */
+        range: AnalyticsQueryScores.Range;
+        /** Sort for breakdown results. Defaults to value-desc. */
+        orderBy?: AnalyticsQueryScores.OrderBy | undefined;
+        /** Maximum rows returned. Defaults to 50; max 500. */
+        limit?: number | undefined;
+    }
+
+    export namespace AnalyticsQueryScores {
+        /** Dimension to group by: `signalId`/`source` (direct) or a trace dim (`model`…`tag`). */
+        export const Breakdown = {
+            SignalId: "signalId",
+            Source: "source",
+            Model: "model",
+            Provider: "provider",
+            Service: "service",
+            Tool: "tool",
+            Tag: "tag",
         } as const;
         export type Breakdown = (typeof Breakdown)[keyof typeof Breakdown];
 
