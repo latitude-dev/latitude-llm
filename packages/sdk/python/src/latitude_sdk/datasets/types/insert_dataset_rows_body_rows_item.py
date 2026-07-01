@@ -30,12 +30,14 @@ class InsertDatasetRowsBodyRowsItem(UniversalBaseModel):
     """
 
     expected_output: typing_extensions.Annotated[
-        typing.Optional[InsertDatasetRowsBodyRowsItemExpectedOutput], FieldMetadata(alias="expectedOutput")
-    ] = pydantic.Field(default=None)
-    """
-    Correct answer for this row. Filled in by curators; usually distinct from `output`.
-    """
-
+        typing.Optional[InsertDatasetRowsBodyRowsItemExpectedOutput],
+        FieldMetadata(alias="expectedOutput"),
+        pydantic.Field(
+            alias="expectedOutput",
+            default=None,
+            description="Correct answer for this row. Filled in by curators; usually distinct from `output`.",
+        ),
+    ]
     metadata: typing.Optional[InsertDatasetRowsBodyRowsItemMetadata] = pydantic.Field(default=None)
     """
     Row metadata cell.

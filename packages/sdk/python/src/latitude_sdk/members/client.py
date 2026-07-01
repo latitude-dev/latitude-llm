@@ -46,10 +46,10 @@ class MembersClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.members.list()
         """
@@ -84,10 +84,10 @@ class MembersClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.members.invite(
             email="email",
@@ -115,10 +115,10 @@ class MembersClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.members.get(
             member_id="memberId",
@@ -145,10 +145,10 @@ class MembersClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.members.remove(
             member_id="memberId",
@@ -181,10 +181,10 @@ class MembersClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.members.update(
             member_id="memberId",
@@ -228,10 +228,10 @@ class AsyncMembersClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -274,10 +274,10 @@ class AsyncMembersClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -313,10 +313,10 @@ class AsyncMembersClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -351,10 +351,10 @@ class AsyncMembersClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -395,10 +395,10 @@ class AsyncMembersClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 

@@ -9,9 +9,13 @@ from ..core.serialization import FieldMetadata
 
 
 class SignalsLifecycleBody(UniversalBaseModel):
-    signal_ids: typing_extensions.Annotated[typing.List[str], FieldMetadata(alias="signalIds")] = pydantic.Field()
-    """
-    Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
-    """
+    signal_ids: typing_extensions.Annotated[
+        typing.List[str],
+        FieldMetadata(alias="signalIds"),
+        pydantic.Field(
+            alias="signalIds",
+            description="Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.",
+        ),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

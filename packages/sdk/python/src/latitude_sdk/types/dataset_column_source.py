@@ -5,6 +5,7 @@ from __future__ import annotations
 import typing
 
 import pydantic
+import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from .dataset_column_source_builtin_field import DatasetColumnSourceBuiltinField
 
@@ -30,4 +31,6 @@ class DatasetColumnSource_Custom(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-DatasetColumnSource = typing.Union[DatasetColumnSource_Builtin, DatasetColumnSource_Custom]
+DatasetColumnSource = typing_extensions.Annotated[
+    typing.Union[DatasetColumnSource_Builtin, DatasetColumnSource_Custom], pydantic.Field(discriminator="kind")
+]

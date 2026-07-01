@@ -13,5 +13,13 @@ export interface AnnotationAnchor {
     /** Exclusive end offset for substring annotations. Must be paired with `startOffset` and `partIndex`, and `>= startOffset`. */
     endOffset?: number | undefined;
     /** UI-side text transform applied before the offsets were captured (e.g. `"pretty-json"`). Resolvers must apply the same transform before slicing. */
-    textFormat?: "pretty-json" | undefined;
+    textFormat?: AnnotationAnchor.TextFormat | undefined;
+}
+
+export namespace AnnotationAnchor {
+    /** UI-side text transform applied before the offsets were captured (e.g. `"pretty-json"`). Resolvers must apply the same transform before slicing. */
+    export const TextFormat = {
+        PrettyJson: "pretty-json",
+    } as const;
+    export type TextFormat = (typeof TextFormat)[keyof typeof TextFormat];
 }

@@ -19,24 +19,27 @@ class ToolDefinitionDetail(UniversalBaseModel):
     Parsed name and description. `null` when the stored definition could not be parsed.
     """
 
-    definition_json: typing_extensions.Annotated[str, FieldMetadata(alias="definitionJson")] = pydantic.Field()
-    """
-    Raw tool definition JSON, verbatim, including its `parameters`.
-    """
-
-    offered_count: typing_extensions.Annotated[int, FieldMetadata(alias="offeredCount")] = pydantic.Field()
-    """
-    LLM turns that offered this tool in the range.
-    """
-
-    offered_traces: typing_extensions.Annotated[int, FieldMetadata(alias="offeredTraces")] = pydantic.Field()
-    """
-    Distinct traces that offered this tool.
-    """
-
-    last_offered: typing_extensions.Annotated[str, FieldMetadata(alias="lastOffered")] = pydantic.Field()
-    """
-    ISO-8601 timestamp the tool was last offered.
-    """
+    definition_json: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="definitionJson"),
+        pydantic.Field(
+            alias="definitionJson", description="Raw tool definition JSON, verbatim, including its `parameters`."
+        ),
+    ]
+    offered_count: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="offeredCount"),
+        pydantic.Field(alias="offeredCount", description="LLM turns that offered this tool in the range."),
+    ]
+    offered_traces: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="offeredTraces"),
+        pydantic.Field(alias="offeredTraces", description="Distinct traces that offered this tool."),
+    ]
+    last_offered: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="lastOffered"),
+        pydantic.Field(alias="lastOffered", description="ISO-8601 timestamp the tool was last offered."),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

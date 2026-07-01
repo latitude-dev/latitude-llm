@@ -10,6 +10,8 @@ from .o_auth_key import OAuthKey
 
 
 class OAuthKeyList(UniversalBaseModel):
-    oauth_keys: typing_extensions.Annotated[typing.List[OAuthKey], FieldMetadata(alias="oauthKeys")]
+    oauth_keys: typing_extensions.Annotated[
+        typing.List[OAuthKey], FieldMetadata(alias="oauthKeys"), pydantic.Field(alias="oauthKeys")
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

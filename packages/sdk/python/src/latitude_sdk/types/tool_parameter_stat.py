@@ -20,11 +20,10 @@ class ToolParameterStat(UniversalBaseModel):
     Sampled calls whose input contains this key.
     """
 
-    top_values: typing_extensions.Annotated[typing.List[ToolParameterValueStat], FieldMetadata(alias="topValues")] = (
-        pydantic.Field()
-    )
-    """
-    Most common values for this key.
-    """
+    top_values: typing_extensions.Annotated[
+        typing.List[ToolParameterValueStat],
+        FieldMetadata(alias="topValues"),
+        pydantic.Field(alias="topValues", description="Most common values for this key."),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

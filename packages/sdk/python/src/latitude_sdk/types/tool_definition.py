@@ -17,6 +17,9 @@ class ToolDefinition(UniversalBaseModel):
     Tool description as exposed to the LLM.
     """
 
-    parameters: typing.Optional[typing.Optional[typing.Any]] = None
+    parameters: typing.Optional[typing.Any] = pydantic.Field(default=None)
+    """
+    JSON Schema for the tool's parameters, as provided by the caller.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

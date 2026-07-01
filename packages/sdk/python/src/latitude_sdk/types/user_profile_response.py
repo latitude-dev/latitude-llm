@@ -9,71 +9,79 @@ from ..core.serialization import FieldMetadata
 
 
 class UserProfileResponse(UniversalBaseModel):
-    user_id: typing_extensions.Annotated[str, FieldMetadata(alias="userId")] = pydantic.Field()
-    """
-    The end-user's identifier, as reported on their traces' `user_id`.
-    """
-
-    user_email: typing_extensions.Annotated[str, FieldMetadata(alias="userEmail")] = pydantic.Field()
-    """
-    Latest non-empty email seen on the user's traces. Empty when never reported.
-    """
-
-    first_seen_at: typing_extensions.Annotated[str, FieldMetadata(alias="firstSeenAt")] = pydantic.Field()
-    """
-    ISO-8601 timestamp of the user's first trace ever.
-    """
-
-    last_seen_at: typing_extensions.Annotated[str, FieldMetadata(alias="lastSeenAt")] = pydantic.Field()
-    """
-    ISO-8601 timestamp of the user's most recent trace ever.
-    """
-
-    trace_count: typing_extensions.Annotated[int, FieldMetadata(alias="traceCount")] = pydantic.Field()
-    """
-    Lifetime traces attributed to the user.
-    """
-
-    session_count: typing_extensions.Annotated[int, FieldMetadata(alias="sessionCount")] = pydantic.Field()
-    """
-    Distinct sessions in which the user produced at least one trace.
-    """
-
-    error_session_count: typing_extensions.Annotated[int, FieldMetadata(alias="errorSessionCount")] = pydantic.Field()
-    """
-    Of `sessionCount`, sessions with at least one errored trace.
-    """
-
-    tokens_total: typing_extensions.Annotated[int, FieldMetadata(alias="tokensTotal")] = pydantic.Field()
-    """
-    Total tokens across the user's traces.
-    """
-
-    tokens_input: typing_extensions.Annotated[int, FieldMetadata(alias="tokensInput")] = pydantic.Field()
-    """
-    Input (prompt) tokens across the user's traces.
-    """
-
-    tokens_output: typing_extensions.Annotated[int, FieldMetadata(alias="tokensOutput")] = pydantic.Field()
-    """
-    Output (completion) tokens across the user's traces.
-    """
-
-    cost_total_microcents: typing_extensions.Annotated[float, FieldMetadata(alias="costTotalMicrocents")] = (
-        pydantic.Field()
-    )
-    """
-    Total cost across the user's traces, in microcents.
-    """
-
-    avg_duration_ns: typing_extensions.Annotated[float, FieldMetadata(alias="avgDurationNs")] = pydantic.Field()
-    """
-    Mean per-trace duration, in nanoseconds.
-    """
-
-    active_days: typing_extensions.Annotated[int, FieldMetadata(alias="activeDays")] = pydantic.Field()
-    """
-    Distinct UTC days with at least one trace.
-    """
+    user_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="userId"),
+        pydantic.Field(
+            alias="userId", description="The end-user's identifier, as reported on their traces' `user_id`."
+        ),
+    ]
+    user_email: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="userEmail"),
+        pydantic.Field(
+            alias="userEmail",
+            description="Latest non-empty email seen on the user's traces. Empty when never reported.",
+        ),
+    ]
+    first_seen_at: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="firstSeenAt"),
+        pydantic.Field(alias="firstSeenAt", description="ISO-8601 timestamp of the user's first trace ever."),
+    ]
+    last_seen_at: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="lastSeenAt"),
+        pydantic.Field(alias="lastSeenAt", description="ISO-8601 timestamp of the user's most recent trace ever."),
+    ]
+    trace_count: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="traceCount"),
+        pydantic.Field(alias="traceCount", description="Lifetime traces attributed to the user."),
+    ]
+    session_count: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="sessionCount"),
+        pydantic.Field(
+            alias="sessionCount", description="Distinct sessions in which the user produced at least one trace."
+        ),
+    ]
+    error_session_count: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="errorSessionCount"),
+        pydantic.Field(
+            alias="errorSessionCount", description="Of `sessionCount`, sessions with at least one errored trace."
+        ),
+    ]
+    tokens_total: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="tokensTotal"),
+        pydantic.Field(alias="tokensTotal", description="Total tokens across the user's traces."),
+    ]
+    tokens_input: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="tokensInput"),
+        pydantic.Field(alias="tokensInput", description="Input (prompt) tokens across the user's traces."),
+    ]
+    tokens_output: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="tokensOutput"),
+        pydantic.Field(alias="tokensOutput", description="Output (completion) tokens across the user's traces."),
+    ]
+    cost_total_microcents: typing_extensions.Annotated[
+        float,
+        FieldMetadata(alias="costTotalMicrocents"),
+        pydantic.Field(alias="costTotalMicrocents", description="Total cost across the user's traces, in microcents."),
+    ]
+    avg_duration_ns: typing_extensions.Annotated[
+        float,
+        FieldMetadata(alias="avgDurationNs"),
+        pydantic.Field(alias="avgDurationNs", description="Mean per-trace duration, in nanoseconds."),
+    ]
+    active_days: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="activeDays"),
+        pydantic.Field(alias="activeDays", description="Distinct UTC days with at least one trace."),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -3,7 +3,8 @@
 import * as core from "../core/index.js";
 import * as errors from "../errors/index.js";
 
-const TOKEN_PARAM = "token" as const;
+const TOKEN_PARAM = "apiKey" as const;
+const ENV_TOKEN = "LATITUDE_API_KEY" as const;
 
 export class BearerAuthProvider implements core.AuthProvider {
     private readonly options: BearerAuthProvider.Options;
@@ -13,7 +14,7 @@ export class BearerAuthProvider implements core.AuthProvider {
     }
 
     public static canCreate(options: Partial<BearerAuthProvider.Options>): boolean {
-        return options?.[TOKEN_PARAM] != null;
+        return options?.[TOKEN_PARAM] != null || process.env?.[ENV_TOKEN] != null;
     }
 
     public async getAuthRequest({
@@ -21,25 +22,25 @@ export class BearerAuthProvider implements core.AuthProvider {
     }: {
         endpointMetadata?: core.EndpointMetadata;
     } = {}): Promise<core.AuthRequest> {
-        const token = await core.Supplier.get(this.options[TOKEN_PARAM]);
-        if (token == null) {
-            throw new errors.LatitudeApiError({
+        const apiKey = (await core.Supplier.get(this.options[TOKEN_PARAM])) ?? process.env?.[ENV_TOKEN];
+        if (apiKey == null) {
+            throw new errors.LatitudeError({
                 message: BearerAuthProvider.AUTH_CONFIG_ERROR_MESSAGE,
             });
         }
 
         return {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${apiKey}` },
         };
     }
 }
 
 export namespace BearerAuthProvider {
-    export const AUTH_SCHEME = "BearerAuthScheme" as const;
+    export const AUTH_SCHEME = "ApiKeyAuth" as const;
     export const AUTH_CONFIG_ERROR_MESSAGE: string =
-        `Please provide '${TOKEN_PARAM}' when initializing the client` as const;
+        `Please provide '${TOKEN_PARAM}' when initializing the client, or set the '${ENV_TOKEN}' environment variable` as const;
     export type Options = AuthOptions;
-    export type AuthOptions = { [TOKEN_PARAM]: core.Supplier<core.BearerToken> };
+    export type AuthOptions = { [TOKEN_PARAM]?: core.Supplier<core.BearerToken> | undefined };
 
     export function createInstance(options: Options): core.AuthProvider {
         return new BearerAuthProvider(options);

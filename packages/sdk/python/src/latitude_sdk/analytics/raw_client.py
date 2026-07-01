@@ -6,7 +6,8 @@ from json.decoder import JSONDecodeError
 from ..core.api_error import ApiError
 from ..core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from ..core.http_response import AsyncHttpResponse, HttpResponse
-from ..core.jsonable_encoder import jsonable_encoder
+from ..core.jsonable_encoder import encode_path_param
+from ..core.parse_error import ParsingError
 from ..core.pydantic_utilities import parse_obj_as
 from ..core.request_options import RequestOptions
 from ..core.serialization import convert_and_respect_annotation_metadata
@@ -16,6 +17,7 @@ from ..errors.unauthorized_error import UnauthorizedError
 from ..types.analytics_query import AnalyticsQuery
 from ..types.analytics_series import AnalyticsSeries
 from ..types.error import Error
+from pydantic import ValidationError
 
 # this is used as the default value for optional parameters
 OMIT = typing.cast(typing.Any, ...)
@@ -47,7 +49,7 @@ class RawAnalyticsClient:
             The analytics series
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/analytics/query",
+            f"v1/projects/{encode_path_param(project_slug)}/analytics/query",
             method="POST",
             json=convert_and_respect_annotation_metadata(object_=request, annotation=AnalyticsQuery, direction="write"),
             headers={
@@ -102,6 +104,10 @@ class RawAnalyticsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
 
@@ -131,7 +137,7 @@ class AsyncRawAnalyticsClient:
             The analytics series
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/analytics/query",
+            f"v1/projects/{encode_path_param(project_slug)}/analytics/query",
             method="POST",
             json=convert_and_respect_annotation_metadata(object_=request, annotation=AnalyticsQuery, direction="write"),
             headers={
@@ -186,4 +192,8 @@ class AsyncRawAnalyticsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)

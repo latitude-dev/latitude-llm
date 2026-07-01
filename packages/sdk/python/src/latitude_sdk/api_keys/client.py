@@ -43,10 +43,10 @@ class ApiKeysClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.api_keys.list()
         """
@@ -72,10 +72,10 @@ class ApiKeysClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.api_keys.create(
             name="name",
@@ -103,10 +103,10 @@ class ApiKeysClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.api_keys.get(
             api_key_id="apiKeyId",
@@ -133,10 +133,10 @@ class ApiKeysClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.api_keys.revoke(
             api_key_id="apiKeyId",
@@ -167,10 +167,10 @@ class ApiKeysClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.api_keys.update(
             api_key_id="apiKeyId",
@@ -214,10 +214,10 @@ class AsyncApiKeysClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -251,10 +251,10 @@ class AsyncApiKeysClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -290,10 +290,10 @@ class AsyncApiKeysClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -328,10 +328,10 @@ class AsyncApiKeysClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -372,10 +372,10 @@ class AsyncApiKeysClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 

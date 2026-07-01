@@ -1,7 +1,13 @@
+export type { AnalyticsSignalsRequest } from "./AnalyticsSignalsRequest.js";
 export { CreateSignalBody } from "./CreateSignalBody.js";
+export type { DeleteSignalsRequest } from "./DeleteSignalsRequest.js";
 export { ExportSignalsBody } from "./ExportSignalsBody.js";
-export type { SignalsAnalyticsRequest } from "./SignalsAnalyticsRequest.js";
-export type { SignalsListRequest } from "./SignalsListRequest.js";
-export type { SignalsListTracesRequest } from "./SignalsListTracesRequest.js";
-export type { SignalsTrendRequest } from "./SignalsTrendRequest.js";
+export type { GetSignalsRequest } from "./GetSignalsRequest.js";
+export type { ListSignalsRequest } from "./ListSignalsRequest.js";
+export type { ListTracesSignalsRequest } from "./ListTracesSignalsRequest.js";
+export type { MonitorSignalsRequest } from "./MonitorSignalsRequest.js";
+export type { MuteSignalsRequest } from "./MuteSignalsRequest.js";
+export type { TrendSignalsRequest } from "./TrendSignalsRequest.js";
+export type { UnmonitorSignalsRequest } from "./UnmonitorSignalsRequest.js";
+export type { UnmuteSignalsRequest } from "./UnmuteSignalsRequest.js";
 export type { UpdateSignalBody } from "./UpdateSignalBody.js";

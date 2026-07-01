@@ -15,13 +15,25 @@ from .evaluation_score_metadata import EvaluationScoreMetadata
 class ScoreResponse_Custom(UniversalBaseModel):
     source: typing.Literal["custom"] = "custom"
     id: str
-    organization_id: typing_extensions.Annotated[str, FieldMetadata(alias="organizationId")]
-    project_id: typing_extensions.Annotated[str, FieldMetadata(alias="projectId")]
-    session_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="sessionId")] = None
-    trace_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="traceId")] = None
-    span_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="spanId")] = None
-    simulation_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="simulationId")] = None
-    signal_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="signalId")] = None
+    organization_id: typing_extensions.Annotated[
+        str, FieldMetadata(alias="organizationId"), pydantic.Field(alias="organizationId")
+    ]
+    project_id: typing_extensions.Annotated[str, FieldMetadata(alias="projectId"), pydantic.Field(alias="projectId")]
+    session_id: typing_extensions.Annotated[
+        typing.Optional[str], FieldMetadata(alias="sessionId"), pydantic.Field(alias="sessionId", default=None)
+    ]
+    trace_id: typing_extensions.Annotated[
+        typing.Optional[str], FieldMetadata(alias="traceId"), pydantic.Field(alias="traceId", default=None)
+    ]
+    span_id: typing_extensions.Annotated[
+        typing.Optional[str], FieldMetadata(alias="spanId"), pydantic.Field(alias="spanId", default=None)
+    ]
+    simulation_id: typing_extensions.Annotated[
+        typing.Optional[str], FieldMetadata(alias="simulationId"), pydantic.Field(alias="simulationId", default=None)
+    ]
+    signal_id: typing_extensions.Annotated[
+        typing.Optional[str], FieldMetadata(alias="signalId"), pydantic.Field(alias="signalId", default=None)
+    ]
     value: float
     passed: bool
     feedback: str
@@ -30,12 +42,20 @@ class ScoreResponse_Custom(UniversalBaseModel):
     duration: int
     tokens: int
     cost: int
-    drafted_at: typing_extensions.Annotated[typing.Optional[dt.datetime], FieldMetadata(alias="draftedAt")] = None
-    annotator_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="annotatorId")] = None
-    created_at: typing_extensions.Annotated[dt.datetime, FieldMetadata(alias="createdAt")]
-    updated_at: typing_extensions.Annotated[dt.datetime, FieldMetadata(alias="updatedAt")]
-    source_id: typing_extensions.Annotated[str, FieldMetadata(alias="sourceId")]
-    metadata: typing.Dict[str, typing.Optional[typing.Any]]
+    drafted_at: typing_extensions.Annotated[
+        typing.Optional[dt.datetime], FieldMetadata(alias="draftedAt"), pydantic.Field(alias="draftedAt", default=None)
+    ]
+    annotator_id: typing_extensions.Annotated[
+        typing.Optional[str], FieldMetadata(alias="annotatorId"), pydantic.Field(alias="annotatorId", default=None)
+    ]
+    created_at: typing_extensions.Annotated[
+        dt.datetime, FieldMetadata(alias="createdAt"), pydantic.Field(alias="createdAt")
+    ]
+    updated_at: typing_extensions.Annotated[
+        dt.datetime, FieldMetadata(alias="updatedAt"), pydantic.Field(alias="updatedAt")
+    ]
+    source_id: typing_extensions.Annotated[str, FieldMetadata(alias="sourceId"), pydantic.Field(alias="sourceId")]
+    metadata: typing.Dict[str, typing.Any]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
@@ -43,13 +63,25 @@ class ScoreResponse_Custom(UniversalBaseModel):
 class ScoreResponse_Evaluation(UniversalBaseModel):
     source: typing.Literal["evaluation"] = "evaluation"
     id: str
-    organization_id: typing_extensions.Annotated[str, FieldMetadata(alias="organizationId")]
-    project_id: typing_extensions.Annotated[str, FieldMetadata(alias="projectId")]
-    session_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="sessionId")] = None
-    trace_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="traceId")] = None
-    span_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="spanId")] = None
-    simulation_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="simulationId")] = None
-    signal_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="signalId")] = None
+    organization_id: typing_extensions.Annotated[
+        str, FieldMetadata(alias="organizationId"), pydantic.Field(alias="organizationId")
+    ]
+    project_id: typing_extensions.Annotated[str, FieldMetadata(alias="projectId"), pydantic.Field(alias="projectId")]
+    session_id: typing_extensions.Annotated[
+        typing.Optional[str], FieldMetadata(alias="sessionId"), pydantic.Field(alias="sessionId", default=None)
+    ]
+    trace_id: typing_extensions.Annotated[
+        typing.Optional[str], FieldMetadata(alias="traceId"), pydantic.Field(alias="traceId", default=None)
+    ]
+    span_id: typing_extensions.Annotated[
+        typing.Optional[str], FieldMetadata(alias="spanId"), pydantic.Field(alias="spanId", default=None)
+    ]
+    simulation_id: typing_extensions.Annotated[
+        typing.Optional[str], FieldMetadata(alias="simulationId"), pydantic.Field(alias="simulationId", default=None)
+    ]
+    signal_id: typing_extensions.Annotated[
+        typing.Optional[str], FieldMetadata(alias="signalId"), pydantic.Field(alias="signalId", default=None)
+    ]
     value: float
     passed: bool
     feedback: str
@@ -58,14 +90,24 @@ class ScoreResponse_Evaluation(UniversalBaseModel):
     duration: int
     tokens: int
     cost: int
-    drafted_at: typing_extensions.Annotated[typing.Optional[dt.datetime], FieldMetadata(alias="draftedAt")] = None
-    annotator_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="annotatorId")] = None
-    created_at: typing_extensions.Annotated[dt.datetime, FieldMetadata(alias="createdAt")]
-    updated_at: typing_extensions.Annotated[dt.datetime, FieldMetadata(alias="updatedAt")]
-    source_id: typing_extensions.Annotated[str, FieldMetadata(alias="sourceId")]
+    drafted_at: typing_extensions.Annotated[
+        typing.Optional[dt.datetime], FieldMetadata(alias="draftedAt"), pydantic.Field(alias="draftedAt", default=None)
+    ]
+    annotator_id: typing_extensions.Annotated[
+        typing.Optional[str], FieldMetadata(alias="annotatorId"), pydantic.Field(alias="annotatorId", default=None)
+    ]
+    created_at: typing_extensions.Annotated[
+        dt.datetime, FieldMetadata(alias="createdAt"), pydantic.Field(alias="createdAt")
+    ]
+    updated_at: typing_extensions.Annotated[
+        dt.datetime, FieldMetadata(alias="updatedAt"), pydantic.Field(alias="updatedAt")
+    ]
+    source_id: typing_extensions.Annotated[str, FieldMetadata(alias="sourceId"), pydantic.Field(alias="sourceId")]
     metadata: EvaluationScoreMetadata
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-ScoreResponse = typing.Union[ScoreResponse_Custom, ScoreResponse_Evaluation]
+ScoreResponse = typing_extensions.Annotated[
+    typing.Union[ScoreResponse_Custom, ScoreResponse_Evaluation], pydantic.Field(discriminator="source")
+]

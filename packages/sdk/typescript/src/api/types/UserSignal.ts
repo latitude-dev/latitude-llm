@@ -10,7 +10,7 @@ export interface UserSignal {
     /** Lifecycle states currently applying to the signal. */
     states: string[];
     /** Signal priority. `null` when unset. */
-    priority?: string | undefined;
+    priority: string | null;
     /** Occurrences on the user's traces. */
     occurrences: number;
     /** Distinct traces of the user that contributed an occurrence. */

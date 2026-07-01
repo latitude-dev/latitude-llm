@@ -19,11 +19,11 @@ class ToolErrorBreakdownRow(UniversalBaseModel):
     A verbatim error output from the cluster (truncated).
     """
 
-    error_type: typing_extensions.Annotated[str, FieldMetadata(alias="errorType")] = pydantic.Field()
-    """
-    An error type seen in the cluster.
-    """
-
+    error_type: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="errorType"),
+        pydantic.Field(alias="errorType", description="An error type seen in the cluster."),
+    ]
     calls: int = pydantic.Field()
     """
     Number of failed calls in the cluster.

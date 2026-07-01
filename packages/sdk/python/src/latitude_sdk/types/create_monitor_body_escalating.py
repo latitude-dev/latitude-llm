@@ -4,10 +4,10 @@ import typing
 
 import pydantic
 from ..core.pydantic_utilities import UniversalBaseModel
-from .alert_escalating_condition import AlertEscalatingCondition
+from .create_monitor_body_escalating_condition import CreateMonitorBodyEscalatingCondition
+from .create_monitor_body_escalating_metric import CreateMonitorBodyEscalatingMetric
 from .create_monitor_body_escalating_severity import CreateMonitorBodyEscalatingSeverity
-from .monitor_metric import MonitorMetric
-from .monitor_target import MonitorTarget
+from .create_monitor_body_escalating_target import CreateMonitorBodyEscalatingTarget
 
 
 class CreateMonitorBodyEscalating(UniversalBaseModel):
@@ -21,13 +21,24 @@ class CreateMonitorBodyEscalating(UniversalBaseModel):
     Optional free-form description.
     """
 
-    target: MonitorTarget
+    target: CreateMonitorBodyEscalatingTarget = pydantic.Field()
+    """
+    Entity or filter set watched by the monitor.
+    """
+
     severity: CreateMonitorBodyEscalatingSeverity = pydantic.Field()
     """
     Severity assigned to incidents opened by this monitor.
     """
 
-    metric: typing.Optional[MonitorMetric] = None
-    condition: AlertEscalatingCondition
+    metric: typing.Optional[CreateMonitorBodyEscalatingMetric] = pydantic.Field(default=None)
+    """
+    Metric evaluated by the monitor rule.
+    """
+
+    condition: CreateMonitorBodyEscalatingCondition = pydantic.Field()
+    """
+    Escalating condition that opens sustained incidents.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

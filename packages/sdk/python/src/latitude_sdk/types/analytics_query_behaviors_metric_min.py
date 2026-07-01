@@ -4,9 +4,10 @@ import typing
 
 import pydantic
 from ..core.pydantic_utilities import UniversalBaseModel
+from .analytics_query_behaviors_metric_min_field import AnalyticsQueryBehaviorsMetricMinField
 
 
 class AnalyticsQueryBehaviorsMetricMin(UniversalBaseModel):
-    field: typing.Literal["confidence"] = "confidence"
+    field: AnalyticsQueryBehaviorsMetricMinField
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

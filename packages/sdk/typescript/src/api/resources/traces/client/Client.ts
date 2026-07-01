@@ -7,7 +7,7 @@ import * as core from "../../../../core/index.js";
 import * as environments from "../../../../environments.js";
 import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCodeError.js";
 import * as errors from "../../../../errors/index.js";
-import * as LatitudeApi from "../../../index.js";
+import * as Latitude from "../../../index.js";
 
 export declare namespace TracesClient {
     export type Options = BaseClientOptions;
@@ -18,7 +18,7 @@ export declare namespace TracesClient {
 export class TracesClient {
     protected readonly _options: NormalizedClientOptionsWithAuth<TracesClient.Options>;
 
-    constructor(options: TracesClient.Options) {
+    constructor(options: TracesClient.Options = {}) {
         this._options = normalizeClientOptionsWithAuth(options);
     }
 
@@ -26,29 +26,29 @@ export class TracesClient {
      * Returns a cursor-paginated page of traces in the project. Combine `filters` with `query` (free-text semantic search) to narrow the result set. Trace list rows exclude per-message LLM content — use `getTrace` for the full conversation view.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
-     * @param {LatitudeApi.ListTracesBody} request
+     * @param {Latitude.ListTracesBody} request
      * @param {TracesClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.traces.list("projectSlug")
      */
     public list(
         projectSlug: string,
-        request: LatitudeApi.ListTracesBody = {},
+        request: Latitude.ListTracesBody = {},
         requestOptions?: TracesClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.PaginatedTraces> {
+    ): core.HttpResponsePromise<Latitude.PaginatedTraces> {
         return core.HttpResponsePromise.fromPromise(this.__list(projectSlug, request, requestOptions));
     }
 
     private async __list(
         projectSlug: string,
-        request: LatitudeApi.ListTracesBody = {},
+        request: Latitude.ListTracesBody = {},
         requestOptions?: TracesClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.PaginatedTraces>> {
+    ): Promise<core.WithRawResponse<Latitude.PaginatedTraces>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -59,13 +59,13 @@ export class TracesClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/traces/list`,
             ),
             method: "POST",
             headers: _headers,
             contentType: "application/json",
-            queryParameters: requestOptions?.queryParams,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
             body: request,
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
@@ -75,28 +75,22 @@ export class TracesClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.PaginatedTraces, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.PaginatedTraces, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -116,32 +110,29 @@ export class TracesClient {
      * Returns trace analytics for the project: a total (or median) per metric over the requested range, plus a per-bucket series for each metric. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
-     * @param {LatitudeApi.TracesAnalyticsRequest} request
+     * @param {Latitude.AnalyticsTracesRequest} request
      * @param {TracesClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
-     *     await client.traces.analytics("projectSlug", {
-     *         fromIso: "2024-01-15T09:30:00Z",
-     *         toIso: "2024-01-15T09:30:00Z"
-     *     })
+     *     await client.traces.analytics("projectSlug")
      */
     public analytics(
         projectSlug: string,
-        request: LatitudeApi.TracesAnalyticsRequest = {},
+        request: Latitude.AnalyticsTracesRequest = {},
         requestOptions?: TracesClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.TraceAnalyticsResponse> {
+    ): core.HttpResponsePromise<Latitude.TraceAnalyticsResponse> {
         return core.HttpResponsePromise.fromPromise(this.__analytics(projectSlug, request, requestOptions));
     }
 
     private async __analytics(
         projectSlug: string,
-        request: LatitudeApi.TracesAnalyticsRequest = {},
+        request: Latitude.AnalyticsTracesRequest = {},
         requestOptions?: TracesClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.TraceAnalyticsResponse>> {
+    ): Promise<core.WithRawResponse<Latitude.TraceAnalyticsResponse>> {
         const { fromIso, toIso } = request;
         const _queryParams: Record<string, unknown> = {
             fromIso: fromIso != null ? fromIso : undefined,
@@ -157,12 +148,11 @@ export class TracesClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/traces/analytics`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: { ..._queryParams, ...requestOptions?.queryParams },
             queryString: core.url
                 .queryBuilder()
                 .addMany(_queryParams)
@@ -175,28 +165,22 @@ export class TracesClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.TraceAnalyticsResponse, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.TraceAnalyticsResponse, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -217,11 +201,12 @@ export class TracesClient {
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} traceId - 32-character trace identifier.
+     * @param {Latitude.GetTracesRequest} request
      * @param {TracesClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.traces.get("projectSlug", "traceId")
@@ -229,16 +214,18 @@ export class TracesClient {
     public get(
         projectSlug: string,
         traceId: string,
+        request: Latitude.GetTracesRequest = {},
         requestOptions?: TracesClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.TraceDetail> {
-        return core.HttpResponsePromise.fromPromise(this.__get(projectSlug, traceId, requestOptions));
+    ): core.HttpResponsePromise<Latitude.TraceDetail> {
+        return core.HttpResponsePromise.fromPromise(this.__get(projectSlug, traceId, request, requestOptions));
     }
 
     private async __get(
         projectSlug: string,
         traceId: string,
+        _request: Latitude.GetTracesRequest = {},
         requestOptions?: TracesClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.TraceDetail>> {
+    ): Promise<core.WithRawResponse<Latitude.TraceDetail>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -249,12 +236,12 @@ export class TracesClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/traces/${core.url.encodePathParam(traceId)}`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: requestOptions?.queryParams,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -262,28 +249,22 @@ export class TracesClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.TraceDetail, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.TraceDetail, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -304,11 +285,12 @@ export class TracesClient {
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} traceId - 32-character trace identifier.
+     * @param {Latitude.ListSpansTracesRequest} request
      * @param {TracesClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.traces.listSpans("projectSlug", "traceId")
@@ -316,16 +298,18 @@ export class TracesClient {
     public listSpans(
         projectSlug: string,
         traceId: string,
+        request: Latitude.ListSpansTracesRequest = {},
         requestOptions?: TracesClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.TraceSpans> {
-        return core.HttpResponsePromise.fromPromise(this.__listSpans(projectSlug, traceId, requestOptions));
+    ): core.HttpResponsePromise<Latitude.TraceSpans> {
+        return core.HttpResponsePromise.fromPromise(this.__listSpans(projectSlug, traceId, request, requestOptions));
     }
 
     private async __listSpans(
         projectSlug: string,
         traceId: string,
+        _request: Latitude.ListSpansTracesRequest = {},
         requestOptions?: TracesClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.TraceSpans>> {
+    ): Promise<core.WithRawResponse<Latitude.TraceSpans>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -336,12 +320,12 @@ export class TracesClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/traces/${core.url.encodePathParam(traceId)}/spans`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: requestOptions?.queryParams,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -349,28 +333,22 @@ export class TracesClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.TraceSpans, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.TraceSpans, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -392,11 +370,12 @@ export class TracesClient {
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} traceId - 32-character trace identifier.
      * @param {string} spanId - 16-character span identifier.
+     * @param {Latitude.GetSpanTracesRequest} request
      * @param {TracesClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.traces.getSpan("projectSlug", "traceId", "spanId")
@@ -405,17 +384,21 @@ export class TracesClient {
         projectSlug: string,
         traceId: string,
         spanId: string,
+        request: Latitude.GetSpanTracesRequest = {},
         requestOptions?: TracesClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.SpanDetail> {
-        return core.HttpResponsePromise.fromPromise(this.__getSpan(projectSlug, traceId, spanId, requestOptions));
+    ): core.HttpResponsePromise<Latitude.SpanDetail> {
+        return core.HttpResponsePromise.fromPromise(
+            this.__getSpan(projectSlug, traceId, spanId, request, requestOptions),
+        );
     }
 
     private async __getSpan(
         projectSlug: string,
         traceId: string,
         spanId: string,
+        _request: Latitude.GetSpanTracesRequest = {},
         requestOptions?: TracesClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.SpanDetail>> {
+    ): Promise<core.WithRawResponse<Latitude.SpanDetail>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -426,12 +409,12 @@ export class TracesClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/traces/${core.url.encodePathParam(traceId)}/spans/${core.url.encodePathParam(spanId)}`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: requestOptions?.queryParams,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -439,28 +422,22 @@ export class TracesClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.SpanDetail, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.SpanDetail, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -481,25 +458,22 @@ export class TracesClient {
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} traceId - 32-character trace identifier.
-     * @param {LatitudeApi.TracesListAnnotationsRequest} request
+     * @param {Latitude.ListAnnotationsTracesRequest} request
      * @param {TracesClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
-     *     await client.traces.listAnnotations("projectSlug", "traceId", {
-     *         cursor: "cursor",
-     *         limit: 1
-     *     })
+     *     await client.traces.listAnnotations("projectSlug", "traceId")
      */
     public listAnnotations(
         projectSlug: string,
         traceId: string,
-        request: LatitudeApi.TracesListAnnotationsRequest = {},
+        request: Latitude.ListAnnotationsTracesRequest = {},
         requestOptions?: TracesClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.PaginatedTraceAnnotations> {
+    ): core.HttpResponsePromise<Latitude.PaginatedTraceAnnotations> {
         return core.HttpResponsePromise.fromPromise(
             this.__listAnnotations(projectSlug, traceId, request, requestOptions),
         );
@@ -508,9 +482,9 @@ export class TracesClient {
     private async __listAnnotations(
         projectSlug: string,
         traceId: string,
-        request: LatitudeApi.TracesListAnnotationsRequest = {},
+        request: Latitude.ListAnnotationsTracesRequest = {},
         requestOptions?: TracesClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.PaginatedTraceAnnotations>> {
+    ): Promise<core.WithRawResponse<Latitude.PaginatedTraceAnnotations>> {
         const { cursor, limit } = request;
         const _queryParams: Record<string, unknown> = {
             cursor,
@@ -526,12 +500,11 @@ export class TracesClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/traces/${core.url.encodePathParam(traceId)}/annotations`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: { ..._queryParams, ...requestOptions?.queryParams },
             queryString: core.url
                 .queryBuilder()
                 .addMany(_queryParams)
@@ -544,31 +517,22 @@ export class TracesClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return {
-                data: _response.body as LatitudeApi.PaginatedTraceAnnotations,
-                rawResponse: _response.rawResponse,
-            };
+            return { data: _response.body as Latitude.PaginatedTraceAnnotations, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -590,11 +554,12 @@ export class TracesClient {
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} traceId - 32-character trace identifier.
      * @param {string} annotationId - Stable annotation identifier.
+     * @param {Latitude.GetAnnotationTracesRequest} request
      * @param {TracesClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.traces.getAnnotation("projectSlug", "traceId", "annotationId")
@@ -603,10 +568,11 @@ export class TracesClient {
         projectSlug: string,
         traceId: string,
         annotationId: string,
+        request: Latitude.GetAnnotationTracesRequest = {},
         requestOptions?: TracesClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.Annotation> {
+    ): core.HttpResponsePromise<Latitude.Annotation> {
         return core.HttpResponsePromise.fromPromise(
-            this.__getAnnotation(projectSlug, traceId, annotationId, requestOptions),
+            this.__getAnnotation(projectSlug, traceId, annotationId, request, requestOptions),
         );
     }
 
@@ -614,8 +580,9 @@ export class TracesClient {
         projectSlug: string,
         traceId: string,
         annotationId: string,
+        _request: Latitude.GetAnnotationTracesRequest = {},
         requestOptions?: TracesClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.Annotation>> {
+    ): Promise<core.WithRawResponse<Latitude.Annotation>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -626,12 +593,12 @@ export class TracesClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/traces/${core.url.encodePathParam(traceId)}/annotations/${core.url.encodePathParam(annotationId)}`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: requestOptions?.queryParams,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -639,28 +606,22 @@ export class TracesClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.Annotation, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.Annotation, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -680,12 +641,12 @@ export class TracesClient {
      * Enqueues a CSV export of the traces matched by `traces`. The export runs asynchronously; a download link is emailed to `recipient` when the file is ready. The response returns immediately with `status = "queued"`. The recipient must already be a member of the requesting organization.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
-     * @param {LatitudeApi.ExportTracesBody} request
+     * @param {Latitude.ExportTracesBody} request
      * @param {TracesClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.traces.export("projectSlug", {
@@ -698,17 +659,17 @@ export class TracesClient {
      */
     public export(
         projectSlug: string,
-        request: LatitudeApi.ExportTracesBody,
+        request: Latitude.ExportTracesBody,
         requestOptions?: TracesClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.ExportTracesResponse> {
+    ): core.HttpResponsePromise<Latitude.ExportTracesResponse> {
         return core.HttpResponsePromise.fromPromise(this.__export(projectSlug, request, requestOptions));
     }
 
     private async __export(
         projectSlug: string,
-        request: LatitudeApi.ExportTracesBody,
+        request: Latitude.ExportTracesBody,
         requestOptions?: TracesClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.ExportTracesResponse>> {
+    ): Promise<core.WithRawResponse<Latitude.ExportTracesResponse>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -719,13 +680,13 @@ export class TracesClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/traces/export`,
             ),
             method: "POST",
             headers: _headers,
             contentType: "application/json",
-            queryParameters: requestOptions?.queryParams,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
             body: request,
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
@@ -735,28 +696,22 @@ export class TracesClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.ExportTracesResponse, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.ExportTracesResponse, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,

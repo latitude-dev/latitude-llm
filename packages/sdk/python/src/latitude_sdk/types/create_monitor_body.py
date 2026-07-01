@@ -5,23 +5,28 @@ from __future__ import annotations
 import typing
 
 import pydantic
+import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
-from .alert_escalating_condition import AlertEscalatingCondition
-from .alert_threshold_condition import AlertThresholdCondition
+from .create_monitor_body_escalating_condition import CreateMonitorBodyEscalatingCondition
+from .create_monitor_body_escalating_metric import CreateMonitorBodyEscalatingMetric
 from .create_monitor_body_escalating_severity import CreateMonitorBodyEscalatingSeverity
+from .create_monitor_body_escalating_target import CreateMonitorBodyEscalatingTarget
+from .create_monitor_body_match_metric import CreateMonitorBodyMatchMetric
 from .create_monitor_body_match_severity import CreateMonitorBodyMatchSeverity
+from .create_monitor_body_match_target import CreateMonitorBodyMatchTarget
+from .create_monitor_body_threshold_condition import CreateMonitorBodyThresholdCondition
+from .create_monitor_body_threshold_metric import CreateMonitorBodyThresholdMetric
 from .create_monitor_body_threshold_severity import CreateMonitorBodyThresholdSeverity
-from .monitor_metric import MonitorMetric
-from .monitor_target import MonitorTarget
+from .create_monitor_body_threshold_target import CreateMonitorBodyThresholdTarget
 
 
 class CreateMonitorBody_Match(UniversalBaseModel):
     trigger: typing.Literal["match"] = "match"
     name: str
     description: typing.Optional[str] = None
-    target: MonitorTarget
+    target: CreateMonitorBodyMatchTarget
     severity: CreateMonitorBodyMatchSeverity
-    metric: typing.Optional[MonitorMetric] = None
+    metric: typing.Optional[CreateMonitorBodyMatchMetric] = None
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
@@ -30,10 +35,10 @@ class CreateMonitorBody_Threshold(UniversalBaseModel):
     trigger: typing.Literal["threshold"] = "threshold"
     name: str
     description: typing.Optional[str] = None
-    target: MonitorTarget
+    target: CreateMonitorBodyThresholdTarget
     severity: CreateMonitorBodyThresholdSeverity
-    metric: typing.Optional[MonitorMetric] = None
-    condition: AlertThresholdCondition
+    metric: typing.Optional[CreateMonitorBodyThresholdMetric] = None
+    condition: CreateMonitorBodyThresholdCondition
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
@@ -42,12 +47,15 @@ class CreateMonitorBody_Escalating(UniversalBaseModel):
     trigger: typing.Literal["escalating"] = "escalating"
     name: str
     description: typing.Optional[str] = None
-    target: MonitorTarget
+    target: CreateMonitorBodyEscalatingTarget
     severity: CreateMonitorBodyEscalatingSeverity
-    metric: typing.Optional[MonitorMetric] = None
-    condition: AlertEscalatingCondition
+    metric: typing.Optional[CreateMonitorBodyEscalatingMetric] = None
+    condition: CreateMonitorBodyEscalatingCondition
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-CreateMonitorBody = typing.Union[CreateMonitorBody_Match, CreateMonitorBody_Threshold, CreateMonitorBody_Escalating]
+CreateMonitorBody = typing_extensions.Annotated[
+    typing.Union[CreateMonitorBody_Match, CreateMonitorBody_Threshold, CreateMonitorBody_Escalating],
+    pydantic.Field(discriminator="trigger"),
+]

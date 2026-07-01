@@ -50,10 +50,10 @@ class ScoresClient:
 
         Examples
         --------
-        from latitude import CreateCustomScoreBody, LatitudeApiClient, TraceRef_Id
+        from latitude_sdk import CreateCustomScoreBody, LatitudeClient, TraceRef_Id
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.scores.create(
             project_slug="projectSlug",
@@ -112,10 +112,10 @@ class AsyncScoresClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient, CreateCustomScoreBody, TraceRef_Id
+        from latitude_sdk import AsyncLatitudeClient, CreateCustomScoreBody, TraceRef_Id
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 

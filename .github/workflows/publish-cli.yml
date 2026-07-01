@@ -1,0 +1,187 @@
+name: Publish CLI
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref to publish from
+        required: false
+        type: string
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to publish from
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-cli-${{ inputs.ref || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Determine version
+    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'latitude-dev/latitude-llm' }}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      should_publish: ${{ steps.check.outputs.should_publish }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.0
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Extract version from changelog
+        id: version
+        run: |
+          VERSION=$(grep -m1 -E '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' packages/cli/CHANGELOG.md \
+            | sed -E 's/^## \[([0-9]+\.[0-9]+\.[0-9]+)\].*/\1/')
+          if [ -z "$VERSION" ]; then
+            echo "No versioned entry (## [X.Y.Z]) found in packages/cli/CHANGELOG.md" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "CLI version: $VERSION"
+
+      - name: Check whether this version is already released
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="cli-${{ steps.version.outputs.version }}"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+            echo "Release $TAG already exists — nothing to publish."
+          else
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+            echo "Release $TAG not found — will build and publish."
+          fi
+
+  build:
+    name: Build ${{ matrix.asset }}
+    needs: prepare
+    if: ${{ needs.prepare.outputs.should_publish == 'true' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { asset: latitude-linux-amd64, target: x86_64-unknown-linux-gnu, os: ubuntu-latest, cross: true }
+          - { asset: latitude-linux-arm64, target: aarch64-unknown-linux-gnu, os: ubuntu-latest, cross: true }
+          - { asset: latitude-macos-amd64, target: x86_64-apple-darwin, os: macos-latest, cross: false }
+          - { asset: latitude-macos-arm64, target: aarch64-apple-darwin, os: macos-latest, cross: false }
+          - { asset: latitude-windows-amd64, target: x86_64-pc-windows-msvc, os: windows-latest, cross: false }
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.0
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cargo-edit
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-edit
+
+      - name: Install cross
+        if: matrix.cross
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
+
+      - name: Set crate version
+        shell: bash
+        run: cargo set-version --manifest-path packages/cli/Cargo.toml "${{ needs.prepare.outputs.version }}"
+
+      - name: Build
+        shell: bash
+        working-directory: packages/cli
+        run: |
+          # Linux uses rustls so the binary carries no runtime OpenSSL dependency; macOS/Windows keep native-tls.
+          FEATURES=""
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            FEATURES="--no-default-features --features rustls"
+          fi
+          if [ "${{ matrix.cross }}" = "true" ]; then
+            cross build --release --bin latitude --target ${{ matrix.target }} $FEATURES
+          else
+            cargo build --release --bin latitude --target ${{ matrix.target }} $FEATURES
+          fi
+
+      - name: Package
+        shell: bash
+        working-directory: packages/cli
+        run: |
+          STAGE="${{ matrix.asset }}"
+          mkdir -p "$STAGE"
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cp "target/${{ matrix.target }}/release/latitude.exe" "$STAGE/"
+          else
+            cp "target/${{ matrix.target }}/release/latitude" "$STAGE/"
+          fi
+          cp README.md LICENSE "$STAGE/" 2>/dev/null || true
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            7z a "${STAGE}.zip" "$STAGE" >/dev/null
+            echo "ASSET=packages/cli/${STAGE}.zip" >> "$GITHUB_ENV"
+          else
+            tar -czf "${STAGE}.tar.gz" "$STAGE"
+            echo "ASSET=packages/cli/${STAGE}.tar.gz" >> "$GITHUB_ENV"
+          fi
+
+      - name: Upload target artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: ${{ env.ASSET }}
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub release
+    needs: [prepare, build]
+    if: ${{ needs.prepare.outputs.should_publish == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.0
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Extract changelog
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          awk -v ver="$VERSION" '
+            /^## \[/ { if (found) exit; if (index($0, "[" ver "]")) { found=1; next } }
+            found { print }
+          ' packages/cli/CHANGELOG.md > release_notes.md
+          if [ ! -s release_notes.md ]; then
+            echo "Missing changelog entry for version ${VERSION} in packages/cli/CHANGELOG.md" >&2
+            exit 1
+          fi
+          echo "Release notes:"; cat release_notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: cli-${{ needs.prepare.outputs.version }}
+          name: Latitude CLI v${{ needs.prepare.outputs.version }}
+          body_path: release_notes.md
+          files: dist/*
+          target_commitish: ${{ inputs.ref || github.sha }}
+          draft: false
+          prerelease: ${{ contains(needs.prepare.outputs.version, 'alpha') || contains(needs.prepare.outputs.version, 'beta') || contains(needs.prepare.outputs.version, 'rc') }}

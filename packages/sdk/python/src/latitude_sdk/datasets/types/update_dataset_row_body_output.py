@@ -2,6 +2,4 @@
 
 import typing
 
-UpdateDatasetRowBodyOutput = typing.Union[
-    str, float, bool, typing.List[typing.Optional[typing.Any]], typing.Dict[str, typing.Optional[typing.Any]]
-]
+UpdateDatasetRowBodyOutput = typing.Union[str, float, bool, typing.List[typing.Any], typing.Dict[str, typing.Any]]

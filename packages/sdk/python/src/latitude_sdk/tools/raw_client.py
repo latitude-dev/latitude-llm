@@ -8,7 +8,8 @@ from ..core.api_error import ApiError
 from ..core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from ..core.datetime_utils import serialize_datetime
 from ..core.http_response import AsyncHttpResponse, HttpResponse
-from ..core.jsonable_encoder import jsonable_encoder
+from ..core.jsonable_encoder import encode_path_param
+from ..core.parse_error import ParsingError
 from ..core.pydantic_utilities import parse_obj_as
 from ..core.request_options import RequestOptions
 from ..errors.bad_request_error import BadRequestError
@@ -23,13 +24,14 @@ from ..types.tool_error_breakdown_response import ToolErrorBreakdownResponse
 from ..types.tool_histogram_response import ToolHistogramResponse
 from ..types.tool_parameter_stats_response import ToolParameterStatsResponse
 from ..types.tools_analytics_response import ToolsAnalyticsResponse
-from .types.tools_co_occurrence_request_errors_only import ToolsCoOccurrenceRequestErrorsOnly
-from .types.tools_context_request_dimension import ToolsContextRequestDimension
-from .types.tools_context_request_errors_only import ToolsContextRequestErrorsOnly
-from .types.tools_get_request_errors_only import ToolsGetRequestErrorsOnly
-from .types.tools_histogram_request_errors_only import ToolsHistogramRequestErrorsOnly
-from .types.tools_list_calls_request_errors_only import ToolsListCallsRequestErrorsOnly
-from .types.tools_parameters_request_errors_only import ToolsParametersRequestErrorsOnly
+from .types.co_occurrence_tools_request_errors_only import CoOccurrenceToolsRequestErrorsOnly
+from .types.context_tools_request_dimension import ContextToolsRequestDimension
+from .types.context_tools_request_errors_only import ContextToolsRequestErrorsOnly
+from .types.get_tools_request_errors_only import GetToolsRequestErrorsOnly
+from .types.histogram_tools_request_errors_only import HistogramToolsRequestErrorsOnly
+from .types.list_calls_tools_request_errors_only import ListCallsToolsRequestErrorsOnly
+from .types.parameters_tools_request_errors_only import ParametersToolsRequestErrorsOnly
+from pydantic import ValidationError
 
 
 class RawToolsClient:
@@ -71,7 +73,7 @@ class RawToolsClient:
             Tools analytics
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/tools",
+            f"v1/projects/{encode_path_param(project_slug)}/tools",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -126,6 +128,10 @@ class RawToolsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def histogram(
@@ -136,7 +142,7 @@ class RawToolsClient:
         to_iso: typing.Optional[dt.datetime] = None,
         tool_name: typing.Optional[str] = None,
         bucket_seconds: typing.Optional[int] = None,
-        errors_only: typing.Optional[ToolsHistogramRequestErrorsOnly] = None,
+        errors_only: typing.Optional[HistogramToolsRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[ToolHistogramResponse]:
         """
@@ -159,7 +165,7 @@ class RawToolsClient:
         bucket_seconds : typing.Optional[int]
             Bucket width in seconds. Derived from the range (~30 buckets) when omitted.
 
-        errors_only : typing.Optional[ToolsHistogramRequestErrorsOnly]
+        errors_only : typing.Optional[HistogramToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         request_options : typing.Optional[RequestOptions]
@@ -171,7 +177,7 @@ class RawToolsClient:
             Call histogram
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/tools/histogram",
+            f"v1/projects/{encode_path_param(project_slug)}/tools/histogram",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -228,6 +234,10 @@ class RawToolsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def parameters(
@@ -239,7 +249,7 @@ class RawToolsClient:
         to_iso: typing.Optional[dt.datetime] = None,
         top_keys: typing.Optional[int] = None,
         top_values_per_key: typing.Optional[int] = None,
-        errors_only: typing.Optional[ToolsParametersRequestErrorsOnly] = None,
+        errors_only: typing.Optional[ParametersToolsRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[ToolParameterStatsResponse]:
         """
@@ -265,7 +275,7 @@ class RawToolsClient:
         top_values_per_key : typing.Optional[int]
             Maximum number of values to return per key.
 
-        errors_only : typing.Optional[ToolsParametersRequestErrorsOnly]
+        errors_only : typing.Optional[ParametersToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         request_options : typing.Optional[RequestOptions]
@@ -277,7 +287,7 @@ class RawToolsClient:
             Parameter stats
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/tools/{jsonable_encoder(tool_name)}/parameters",
+            f"v1/projects/{encode_path_param(project_slug)}/tools/{encode_path_param(tool_name)}/parameters",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -334,6 +344,10 @@ class RawToolsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def context(
@@ -341,10 +355,10 @@ class RawToolsClient:
         project_slug: str,
         tool_name: str,
         *,
-        dimension: ToolsContextRequestDimension,
+        dimension: ContextToolsRequestDimension,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
-        errors_only: typing.Optional[ToolsContextRequestErrorsOnly] = None,
+        errors_only: typing.Optional[ContextToolsRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[ToolContextBreakdownResponse]:
         """
@@ -358,7 +372,7 @@ class RawToolsClient:
         tool_name : str
             Tool name. URL-encode names containing special characters.
 
-        dimension : ToolsContextRequestDimension
+        dimension : ContextToolsRequestDimension
             Dimension to break the usage down by.
 
         from_iso : typing.Optional[dt.datetime]
@@ -367,7 +381,7 @@ class RawToolsClient:
         to_iso : typing.Optional[dt.datetime]
             Upper bound (inclusive) of the time range. Defaults to now.
 
-        errors_only : typing.Optional[ToolsContextRequestErrorsOnly]
+        errors_only : typing.Optional[ContextToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         request_options : typing.Optional[RequestOptions]
@@ -379,7 +393,7 @@ class RawToolsClient:
             Context breakdown
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/tools/{jsonable_encoder(tool_name)}/context",
+            f"v1/projects/{encode_path_param(project_slug)}/tools/{encode_path_param(tool_name)}/context",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -435,6 +449,10 @@ class RawToolsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def co_occurrence(
@@ -445,7 +463,7 @@ class RawToolsClient:
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
         limit: typing.Optional[int] = None,
-        errors_only: typing.Optional[ToolsCoOccurrenceRequestErrorsOnly] = None,
+        errors_only: typing.Optional[CoOccurrenceToolsRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[ToolCoOccurrenceResponse]:
         """
@@ -468,7 +486,7 @@ class RawToolsClient:
         limit : typing.Optional[int]
             Maximum number of tools to return.
 
-        errors_only : typing.Optional[ToolsCoOccurrenceRequestErrorsOnly]
+        errors_only : typing.Optional[CoOccurrenceToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         request_options : typing.Optional[RequestOptions]
@@ -480,7 +498,7 @@ class RawToolsClient:
             Co-occurring tools
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/tools/{jsonable_encoder(tool_name)}/co-occurrence",
+            f"v1/projects/{encode_path_param(project_slug)}/tools/{encode_path_param(tool_name)}/co-occurrence",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -536,6 +554,10 @@ class RawToolsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def errors(
@@ -577,7 +599,7 @@ class RawToolsClient:
             Error breakdown
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/tools/{jsonable_encoder(tool_name)}/errors",
+            f"v1/projects/{encode_path_param(project_slug)}/tools/{encode_path_param(tool_name)}/errors",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -632,6 +654,10 @@ class RawToolsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def list_calls(
@@ -642,7 +668,7 @@ class RawToolsClient:
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
         limit: typing.Optional[int] = None,
-        errors_only: typing.Optional[ToolsListCallsRequestErrorsOnly] = None,
+        errors_only: typing.Optional[ListCallsToolsRequestErrorsOnly] = None,
         cursor: typing.Optional[str] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[PaginatedToolCalls]:
@@ -666,7 +692,7 @@ class RawToolsClient:
         limit : typing.Optional[int]
             Page size. Defaults to 50; max 50.
 
-        errors_only : typing.Optional[ToolsListCallsRequestErrorsOnly]
+        errors_only : typing.Optional[ListCallsToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         cursor : typing.Optional[str]
@@ -681,7 +707,7 @@ class RawToolsClient:
             Page of tool calls
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/tools/{jsonable_encoder(tool_name)}/calls",
+            f"v1/projects/{encode_path_param(project_slug)}/tools/{encode_path_param(tool_name)}/calls",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -738,6 +764,10 @@ class RawToolsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def get(
@@ -747,7 +777,7 @@ class RawToolsClient:
         *,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
-        errors_only: typing.Optional[ToolsGetRequestErrorsOnly] = None,
+        errors_only: typing.Optional[GetToolsRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[ToolDetailResponse]:
         """
@@ -767,7 +797,7 @@ class RawToolsClient:
         to_iso : typing.Optional[dt.datetime]
             Upper bound (inclusive) of the time range. Defaults to now.
 
-        errors_only : typing.Optional[ToolsGetRequestErrorsOnly]
+        errors_only : typing.Optional[GetToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         request_options : typing.Optional[RequestOptions]
@@ -779,7 +809,7 @@ class RawToolsClient:
             Tool detail
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/tools/{jsonable_encoder(tool_name)}",
+            f"v1/projects/{encode_path_param(project_slug)}/tools/{encode_path_param(tool_name)}",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -834,6 +864,10 @@ class RawToolsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
 
@@ -876,7 +910,7 @@ class AsyncRawToolsClient:
             Tools analytics
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/tools",
+            f"v1/projects/{encode_path_param(project_slug)}/tools",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -931,6 +965,10 @@ class AsyncRawToolsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def histogram(
@@ -941,7 +979,7 @@ class AsyncRawToolsClient:
         to_iso: typing.Optional[dt.datetime] = None,
         tool_name: typing.Optional[str] = None,
         bucket_seconds: typing.Optional[int] = None,
-        errors_only: typing.Optional[ToolsHistogramRequestErrorsOnly] = None,
+        errors_only: typing.Optional[HistogramToolsRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[ToolHistogramResponse]:
         """
@@ -964,7 +1002,7 @@ class AsyncRawToolsClient:
         bucket_seconds : typing.Optional[int]
             Bucket width in seconds. Derived from the range (~30 buckets) when omitted.
 
-        errors_only : typing.Optional[ToolsHistogramRequestErrorsOnly]
+        errors_only : typing.Optional[HistogramToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         request_options : typing.Optional[RequestOptions]
@@ -976,7 +1014,7 @@ class AsyncRawToolsClient:
             Call histogram
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/tools/histogram",
+            f"v1/projects/{encode_path_param(project_slug)}/tools/histogram",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -1033,6 +1071,10 @@ class AsyncRawToolsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def parameters(
@@ -1044,7 +1086,7 @@ class AsyncRawToolsClient:
         to_iso: typing.Optional[dt.datetime] = None,
         top_keys: typing.Optional[int] = None,
         top_values_per_key: typing.Optional[int] = None,
-        errors_only: typing.Optional[ToolsParametersRequestErrorsOnly] = None,
+        errors_only: typing.Optional[ParametersToolsRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[ToolParameterStatsResponse]:
         """
@@ -1070,7 +1112,7 @@ class AsyncRawToolsClient:
         top_values_per_key : typing.Optional[int]
             Maximum number of values to return per key.
 
-        errors_only : typing.Optional[ToolsParametersRequestErrorsOnly]
+        errors_only : typing.Optional[ParametersToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         request_options : typing.Optional[RequestOptions]
@@ -1082,7 +1124,7 @@ class AsyncRawToolsClient:
             Parameter stats
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/tools/{jsonable_encoder(tool_name)}/parameters",
+            f"v1/projects/{encode_path_param(project_slug)}/tools/{encode_path_param(tool_name)}/parameters",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -1139,6 +1181,10 @@ class AsyncRawToolsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def context(
@@ -1146,10 +1192,10 @@ class AsyncRawToolsClient:
         project_slug: str,
         tool_name: str,
         *,
-        dimension: ToolsContextRequestDimension,
+        dimension: ContextToolsRequestDimension,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
-        errors_only: typing.Optional[ToolsContextRequestErrorsOnly] = None,
+        errors_only: typing.Optional[ContextToolsRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[ToolContextBreakdownResponse]:
         """
@@ -1163,7 +1209,7 @@ class AsyncRawToolsClient:
         tool_name : str
             Tool name. URL-encode names containing special characters.
 
-        dimension : ToolsContextRequestDimension
+        dimension : ContextToolsRequestDimension
             Dimension to break the usage down by.
 
         from_iso : typing.Optional[dt.datetime]
@@ -1172,7 +1218,7 @@ class AsyncRawToolsClient:
         to_iso : typing.Optional[dt.datetime]
             Upper bound (inclusive) of the time range. Defaults to now.
 
-        errors_only : typing.Optional[ToolsContextRequestErrorsOnly]
+        errors_only : typing.Optional[ContextToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         request_options : typing.Optional[RequestOptions]
@@ -1184,7 +1230,7 @@ class AsyncRawToolsClient:
             Context breakdown
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/tools/{jsonable_encoder(tool_name)}/context",
+            f"v1/projects/{encode_path_param(project_slug)}/tools/{encode_path_param(tool_name)}/context",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -1240,6 +1286,10 @@ class AsyncRawToolsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def co_occurrence(
@@ -1250,7 +1300,7 @@ class AsyncRawToolsClient:
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
         limit: typing.Optional[int] = None,
-        errors_only: typing.Optional[ToolsCoOccurrenceRequestErrorsOnly] = None,
+        errors_only: typing.Optional[CoOccurrenceToolsRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[ToolCoOccurrenceResponse]:
         """
@@ -1273,7 +1323,7 @@ class AsyncRawToolsClient:
         limit : typing.Optional[int]
             Maximum number of tools to return.
 
-        errors_only : typing.Optional[ToolsCoOccurrenceRequestErrorsOnly]
+        errors_only : typing.Optional[CoOccurrenceToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         request_options : typing.Optional[RequestOptions]
@@ -1285,7 +1335,7 @@ class AsyncRawToolsClient:
             Co-occurring tools
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/tools/{jsonable_encoder(tool_name)}/co-occurrence",
+            f"v1/projects/{encode_path_param(project_slug)}/tools/{encode_path_param(tool_name)}/co-occurrence",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -1341,6 +1391,10 @@ class AsyncRawToolsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def errors(
@@ -1382,7 +1436,7 @@ class AsyncRawToolsClient:
             Error breakdown
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/tools/{jsonable_encoder(tool_name)}/errors",
+            f"v1/projects/{encode_path_param(project_slug)}/tools/{encode_path_param(tool_name)}/errors",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -1437,6 +1491,10 @@ class AsyncRawToolsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def list_calls(
@@ -1447,7 +1505,7 @@ class AsyncRawToolsClient:
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
         limit: typing.Optional[int] = None,
-        errors_only: typing.Optional[ToolsListCallsRequestErrorsOnly] = None,
+        errors_only: typing.Optional[ListCallsToolsRequestErrorsOnly] = None,
         cursor: typing.Optional[str] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[PaginatedToolCalls]:
@@ -1471,7 +1529,7 @@ class AsyncRawToolsClient:
         limit : typing.Optional[int]
             Page size. Defaults to 50; max 50.
 
-        errors_only : typing.Optional[ToolsListCallsRequestErrorsOnly]
+        errors_only : typing.Optional[ListCallsToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         cursor : typing.Optional[str]
@@ -1486,7 +1544,7 @@ class AsyncRawToolsClient:
             Page of tool calls
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/tools/{jsonable_encoder(tool_name)}/calls",
+            f"v1/projects/{encode_path_param(project_slug)}/tools/{encode_path_param(tool_name)}/calls",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -1543,6 +1601,10 @@ class AsyncRawToolsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def get(
@@ -1552,7 +1614,7 @@ class AsyncRawToolsClient:
         *,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
-        errors_only: typing.Optional[ToolsGetRequestErrorsOnly] = None,
+        errors_only: typing.Optional[GetToolsRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[ToolDetailResponse]:
         """
@@ -1572,7 +1634,7 @@ class AsyncRawToolsClient:
         to_iso : typing.Optional[dt.datetime]
             Upper bound (inclusive) of the time range. Defaults to now.
 
-        errors_only : typing.Optional[ToolsGetRequestErrorsOnly]
+        errors_only : typing.Optional[GetToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         request_options : typing.Optional[RequestOptions]
@@ -1584,7 +1646,7 @@ class AsyncRawToolsClient:
             Tool detail
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/tools/{jsonable_encoder(tool_name)}",
+            f"v1/projects/{encode_path_param(project_slug)}/tools/{encode_path_param(tool_name)}",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -1639,4 +1701,8 @@ class AsyncRawToolsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)

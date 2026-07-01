@@ -7,7 +7,7 @@ import * as core from "../../../../core/index.js";
 import * as environments from "../../../../environments.js";
 import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCodeError.js";
 import * as errors from "../../../../errors/index.js";
-import * as LatitudeApi from "../../../index.js";
+import * as Latitude from "../../../index.js";
 
 export declare namespace SavedSearchesClient {
     export type Options = BaseClientOptions;
@@ -18,7 +18,7 @@ export declare namespace SavedSearchesClient {
 export class SavedSearchesClient {
     protected readonly _options: NormalizedClientOptionsWithAuth<SavedSearchesClient.Options>;
 
-    constructor(options: SavedSearchesClient.Options) {
+    constructor(options: SavedSearchesClient.Options = {}) {
         this._options = normalizeClientOptionsWithAuth(options);
     }
 
@@ -26,26 +26,29 @@ export class SavedSearchesClient {
      * Returns every saved search in the project. The response uses the standard paginated shape; the saved-search list currently fits in a single page (`nextCursor` is always `null`).
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {Latitude.ListSavedSearchesRequest} request
      * @param {SavedSearchesClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.savedSearches.list("projectSlug")
      */
     public list(
         projectSlug: string,
+        request: Latitude.ListSavedSearchesRequest = {},
         requestOptions?: SavedSearchesClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.PaginatedSavedSearches> {
-        return core.HttpResponsePromise.fromPromise(this.__list(projectSlug, requestOptions));
+    ): core.HttpResponsePromise<Latitude.PaginatedSavedSearches> {
+        return core.HttpResponsePromise.fromPromise(this.__list(projectSlug, request, requestOptions));
     }
 
     private async __list(
         projectSlug: string,
+        _request: Latitude.ListSavedSearchesRequest = {},
         requestOptions?: SavedSearchesClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.PaginatedSavedSearches>> {
+    ): Promise<core.WithRawResponse<Latitude.PaginatedSavedSearches>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -56,12 +59,12 @@ export class SavedSearchesClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/searches`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: requestOptions?.queryParams,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -69,28 +72,22 @@ export class SavedSearchesClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.PaginatedSavedSearches, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.PaginatedSavedSearches, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -110,12 +107,12 @@ export class SavedSearchesClient {
      * Creates a saved search within the project. At least one of `query` or `filters` must be set. The slug is derived from `name`. OAuth-authenticated only.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
-     * @param {LatitudeApi.CreateSavedSearchBody} request
+     * @param {Latitude.CreateSavedSearchBody} request
      * @param {SavedSearchesClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.savedSearches.create("projectSlug", {
@@ -124,17 +121,17 @@ export class SavedSearchesClient {
      */
     public create(
         projectSlug: string,
-        request: LatitudeApi.CreateSavedSearchBody,
+        request: Latitude.CreateSavedSearchBody,
         requestOptions?: SavedSearchesClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.SavedSearch> {
+    ): core.HttpResponsePromise<Latitude.SavedSearch> {
         return core.HttpResponsePromise.fromPromise(this.__create(projectSlug, request, requestOptions));
     }
 
     private async __create(
         projectSlug: string,
-        request: LatitudeApi.CreateSavedSearchBody,
+        request: Latitude.CreateSavedSearchBody,
         requestOptions?: SavedSearchesClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.SavedSearch>> {
+    ): Promise<core.WithRawResponse<Latitude.SavedSearch>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -145,13 +142,13 @@ export class SavedSearchesClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/searches`,
             ),
             method: "POST",
             headers: _headers,
             contentType: "application/json",
-            queryParameters: requestOptions?.queryParams,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
             body: request,
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
@@ -161,28 +158,22 @@ export class SavedSearchesClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.SavedSearch, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.SavedSearch, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -203,11 +194,12 @@ export class SavedSearchesClient {
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} searchSlug - Saved-search slug (human-readable identifier within the project).
+     * @param {Latitude.GetSavedSearchesRequest} request
      * @param {SavedSearchesClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.savedSearches.get("projectSlug", "searchSlug")
@@ -215,16 +207,18 @@ export class SavedSearchesClient {
     public get(
         projectSlug: string,
         searchSlug: string,
+        request: Latitude.GetSavedSearchesRequest = {},
         requestOptions?: SavedSearchesClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.SavedSearch> {
-        return core.HttpResponsePromise.fromPromise(this.__get(projectSlug, searchSlug, requestOptions));
+    ): core.HttpResponsePromise<Latitude.SavedSearch> {
+        return core.HttpResponsePromise.fromPromise(this.__get(projectSlug, searchSlug, request, requestOptions));
     }
 
     private async __get(
         projectSlug: string,
         searchSlug: string,
+        _request: Latitude.GetSavedSearchesRequest = {},
         requestOptions?: SavedSearchesClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.SavedSearch>> {
+    ): Promise<core.WithRawResponse<Latitude.SavedSearch>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -235,12 +229,12 @@ export class SavedSearchesClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/searches/${core.url.encodePathParam(searchSlug)}`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: requestOptions?.queryParams,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -248,28 +242,22 @@ export class SavedSearchesClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.SavedSearch, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.SavedSearch, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -290,10 +278,11 @@ export class SavedSearchesClient {
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} searchSlug - Saved-search slug (human-readable identifier within the project).
+     * @param {Latitude.DeleteSavedSearchesRequest} request
      * @param {SavedSearchesClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.savedSearches.delete("projectSlug", "searchSlug")
@@ -301,14 +290,16 @@ export class SavedSearchesClient {
     public delete(
         projectSlug: string,
         searchSlug: string,
+        request: Latitude.DeleteSavedSearchesRequest = {},
         requestOptions?: SavedSearchesClient.RequestOptions,
     ): core.HttpResponsePromise<void> {
-        return core.HttpResponsePromise.fromPromise(this.__delete(projectSlug, searchSlug, requestOptions));
+        return core.HttpResponsePromise.fromPromise(this.__delete(projectSlug, searchSlug, request, requestOptions));
     }
 
     private async __delete(
         projectSlug: string,
         searchSlug: string,
+        _request: Latitude.DeleteSavedSearchesRequest = {},
         requestOptions?: SavedSearchesClient.RequestOptions,
     ): Promise<core.WithRawResponse<void>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
@@ -321,12 +312,12 @@ export class SavedSearchesClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/searches/${core.url.encodePathParam(searchSlug)}`,
             ),
             method: "DELETE",
             headers: _headers,
-            queryParameters: requestOptions?.queryParams,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -340,17 +331,14 @@ export class SavedSearchesClient {
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -371,12 +359,12 @@ export class SavedSearchesClient {
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} searchSlug - Saved-search slug (human-readable identifier within the project).
-     * @param {LatitudeApi.UpdateSavedSearchBody} request
+     * @param {Latitude.UpdateSavedSearchBody} request
      * @param {SavedSearchesClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.savedSearches.update("projectSlug", "searchSlug")
@@ -384,18 +372,18 @@ export class SavedSearchesClient {
     public update(
         projectSlug: string,
         searchSlug: string,
-        request: LatitudeApi.UpdateSavedSearchBody = {},
+        request: Latitude.UpdateSavedSearchBody = {},
         requestOptions?: SavedSearchesClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.SavedSearch> {
+    ): core.HttpResponsePromise<Latitude.SavedSearch> {
         return core.HttpResponsePromise.fromPromise(this.__update(projectSlug, searchSlug, request, requestOptions));
     }
 
     private async __update(
         projectSlug: string,
         searchSlug: string,
-        request: LatitudeApi.UpdateSavedSearchBody = {},
+        request: Latitude.UpdateSavedSearchBody = {},
         requestOptions?: SavedSearchesClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.SavedSearch>> {
+    ): Promise<core.WithRawResponse<Latitude.SavedSearch>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -406,13 +394,13 @@ export class SavedSearchesClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/searches/${core.url.encodePathParam(searchSlug)}`,
             ),
             method: "PATCH",
             headers: _headers,
             contentType: "application/json",
-            queryParameters: requestOptions?.queryParams,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
             body: request,
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
@@ -422,28 +410,22 @@ export class SavedSearchesClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.SavedSearch, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.SavedSearch, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -464,27 +446,22 @@ export class SavedSearchesClient {
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} searchSlug - Saved-search slug (human-readable identifier within the project).
-     * @param {LatitudeApi.SavedSearchesListTracesRequest} request
+     * @param {Latitude.ListTracesSavedSearchesRequest} request
      * @param {SavedSearchesClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
-     *     await client.savedSearches.listTraces("projectSlug", "searchSlug", {
-     *         cursor: "cursor",
-     *         limit: 1,
-     *         sortBy: "relevance",
-     *         sortDirection: "asc"
-     *     })
+     *     await client.savedSearches.listTraces("projectSlug", "searchSlug")
      */
     public listTraces(
         projectSlug: string,
         searchSlug: string,
-        request: LatitudeApi.SavedSearchesListTracesRequest = {},
+        request: Latitude.ListTracesSavedSearchesRequest = {},
         requestOptions?: SavedSearchesClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.PaginatedTraces> {
+    ): core.HttpResponsePromise<Latitude.PaginatedTraces> {
         return core.HttpResponsePromise.fromPromise(
             this.__listTraces(projectSlug, searchSlug, request, requestOptions),
         );
@@ -493,9 +470,9 @@ export class SavedSearchesClient {
     private async __listTraces(
         projectSlug: string,
         searchSlug: string,
-        request: LatitudeApi.SavedSearchesListTracesRequest = {},
+        request: Latitude.ListTracesSavedSearchesRequest = {},
         requestOptions?: SavedSearchesClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.PaginatedTraces>> {
+    ): Promise<core.WithRawResponse<Latitude.PaginatedTraces>> {
         const { cursor, limit, sortBy, sortDirection } = request;
         const _queryParams: Record<string, unknown> = {
             cursor,
@@ -513,12 +490,11 @@ export class SavedSearchesClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/searches/${core.url.encodePathParam(searchSlug)}/traces`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: { ..._queryParams, ...requestOptions?.queryParams },
             queryString: core.url
                 .queryBuilder()
                 .addMany(_queryParams)
@@ -531,28 +507,22 @@ export class SavedSearchesClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.PaginatedTraces, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.PaginatedTraces, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,

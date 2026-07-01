@@ -4,10 +4,10 @@ import typing
 
 import pydantic
 from ..core.pydantic_utilities import UniversalBaseModel
-from .alert_threshold_condition import AlertThresholdCondition
+from .create_monitor_body_threshold_condition import CreateMonitorBodyThresholdCondition
+from .create_monitor_body_threshold_metric import CreateMonitorBodyThresholdMetric
 from .create_monitor_body_threshold_severity import CreateMonitorBodyThresholdSeverity
-from .monitor_metric import MonitorMetric
-from .monitor_target import MonitorTarget
+from .create_monitor_body_threshold_target import CreateMonitorBodyThresholdTarget
 
 
 class CreateMonitorBodyThreshold(UniversalBaseModel):
@@ -21,13 +21,24 @@ class CreateMonitorBodyThreshold(UniversalBaseModel):
     Optional free-form description.
     """
 
-    target: MonitorTarget
+    target: CreateMonitorBodyThresholdTarget = pydantic.Field()
+    """
+    Entity or filter set watched by the monitor.
+    """
+
     severity: CreateMonitorBodyThresholdSeverity = pydantic.Field()
     """
     Severity assigned to incidents opened by this monitor.
     """
 
-    metric: typing.Optional[MonitorMetric] = None
-    condition: AlertThresholdCondition
+    metric: typing.Optional[CreateMonitorBodyThresholdMetric] = pydantic.Field(default=None)
+    """
+    Metric evaluated by the monitor rule.
+    """
+
+    condition: CreateMonitorBodyThresholdCondition = pydantic.Field()
+    """
+    Threshold condition that opens point incidents.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

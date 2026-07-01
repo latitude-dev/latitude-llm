@@ -2,7 +2,7 @@
 
 export interface ExportDatasetRowsReadyResponse {
     /** Always `"ready"`. The CSV is available at `downloadUrl`. */
-    status: "ready";
+    status: ExportDatasetRowsReadyResponse.Status;
     /** Short-lived signed URL pointing to the CSV in object storage. Follow it with a plain HTTP GET. */
     downloadUrl: string;
     /** Suggested filename for the downloaded CSV. */
@@ -11,4 +11,12 @@ export interface ExportDatasetRowsReadyResponse {
     expiresAt: string;
     /** Number of rows included in the export. */
     rowCount: number;
+}
+
+export namespace ExportDatasetRowsReadyResponse {
+    /** Always `"ready"`. The CSV is available at `downloadUrl`. */
+    export const Status = {
+        Ready: "ready",
+    } as const;
+    export type Status = (typeof Status)[keyof typeof Status];
 }

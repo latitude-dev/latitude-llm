@@ -9,7 +9,7 @@ export interface AccountUser {
     /** Verified email address of the authenticated user. */
     email: string;
     /** Display name, when set. `null` until the user completes onboarding. */
-    name?: string | undefined;
+    name: string | null;
     /** Profile image URL, when set. */
-    image?: string | undefined;
+    image: string | null;
 }

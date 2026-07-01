@@ -13,11 +13,14 @@ class EvaluationAlignmentMetrics(UniversalBaseModel):
     Alignment metrics computed from the evaluation's confusion matrix, or `null` for an unaligned (e.g. raw / deterministic) evaluation.
     """
 
-    alignment_metric: typing_extensions.Annotated[float, FieldMetadata(alias="alignmentMetric")] = pydantic.Field()
-    """
-    Headline score that judges how well the evaluation tracks human annotations.
-    """
-
+    alignment_metric: typing_extensions.Annotated[
+        float,
+        FieldMetadata(alias="alignmentMetric"),
+        pydantic.Field(
+            alias="alignmentMetric",
+            description="Headline score that judges how well the evaluation tracks human annotations.",
+        ),
+    ]
     accuracy: float = pydantic.Field()
     """
     Accuracy: `(TP + TN) / total`.
@@ -43,21 +46,22 @@ class EvaluationAlignmentMetrics(UniversalBaseModel):
     Mean of precision and negative predictive value.
     """
 
-    f_1: typing_extensions.Annotated[float, FieldMetadata(alias="f1")] = pydantic.Field()
+    f1: float = pydantic.Field()
     """
     F1 score: harmonic mean of precision and recall.
     """
 
-    balanced_accuracy: typing_extensions.Annotated[float, FieldMetadata(alias="balancedAccuracy")] = pydantic.Field()
-    """
-    Balanced accuracy: mean of recall and specificity.
-    """
-
+    balanced_accuracy: typing_extensions.Annotated[
+        float,
+        FieldMetadata(alias="balancedAccuracy"),
+        pydantic.Field(alias="balancedAccuracy", description="Balanced accuracy: mean of recall and specificity."),
+    ]
     matthews_correlation_coefficient: typing_extensions.Annotated[
-        float, FieldMetadata(alias="matthewsCorrelationCoefficient")
-    ] = pydantic.Field()
-    """
-    Matthews correlation coefficient, in `[-1, 1]`.
-    """
+        float,
+        FieldMetadata(alias="matthewsCorrelationCoefficient"),
+        pydantic.Field(
+            alias="matthewsCorrelationCoefficient", description="Matthews correlation coefficient, in `[-1, 1]`."
+        ),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

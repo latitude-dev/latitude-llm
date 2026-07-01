@@ -5,12 +5,13 @@ from __future__ import annotations
 import typing
 
 import pydantic
+import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from .analytics_query_sessions_metric_avg_field import AnalyticsQuerySessionsMetricAvgField
 from .analytics_query_sessions_metric_max_field import AnalyticsQuerySessionsMetricMaxField
 from .analytics_query_sessions_metric_median_field import AnalyticsQuerySessionsMetricMedianField
 from .analytics_query_sessions_metric_min_field import AnalyticsQuerySessionsMetricMinField
-from .analytics_query_sessions_metric_p_95_field import AnalyticsQuerySessionsMetricP95Field
+from .analytics_query_sessions_metric_p95field import AnalyticsQuerySessionsMetricP95Field
 from .analytics_query_sessions_metric_sum_field import AnalyticsQuerySessionsMetricSumField
 
 
@@ -110,14 +111,17 @@ class AnalyticsQuerySessionsMetric_P95(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-AnalyticsQuerySessionsMetric = typing.Union[
-    AnalyticsQuerySessionsMetric_Count,
-    AnalyticsQuerySessionsMetric_ErrorRate,
-    AnalyticsQuerySessionsMetric_CacheHitRate,
-    AnalyticsQuerySessionsMetric_Sum,
-    AnalyticsQuerySessionsMetric_Min,
-    AnalyticsQuerySessionsMetric_Max,
-    AnalyticsQuerySessionsMetric_Avg,
-    AnalyticsQuerySessionsMetric_Median,
-    AnalyticsQuerySessionsMetric_P95,
+AnalyticsQuerySessionsMetric = typing_extensions.Annotated[
+    typing.Union[
+        AnalyticsQuerySessionsMetric_Count,
+        AnalyticsQuerySessionsMetric_ErrorRate,
+        AnalyticsQuerySessionsMetric_CacheHitRate,
+        AnalyticsQuerySessionsMetric_Sum,
+        AnalyticsQuerySessionsMetric_Min,
+        AnalyticsQuerySessionsMetric_Max,
+        AnalyticsQuerySessionsMetric_Avg,
+        AnalyticsQuerySessionsMetric_Median,
+        AnalyticsQuerySessionsMetric_P95,
+    ],
+    pydantic.Field(discriminator="kind"),
 ]

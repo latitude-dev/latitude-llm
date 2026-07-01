@@ -7,7 +7,7 @@ import * as core from "../../../../core/index.js";
 import * as environments from "../../../../environments.js";
 import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCodeError.js";
 import * as errors from "../../../../errors/index.js";
-import * as LatitudeApi from "../../../index.js";
+import * as Latitude from "../../../index.js";
 
 export declare namespace AnnotationsClient {
     export type Options = BaseClientOptions;
@@ -18,7 +18,7 @@ export declare namespace AnnotationsClient {
 export class AnnotationsClient {
     protected readonly _options: NormalizedClientOptionsWithAuth<AnnotationsClient.Options>;
 
-    constructor(options: AnnotationsClient.Options) {
+    constructor(options: AnnotationsClient.Options = {}) {
         this._options = normalizeClientOptionsWithAuth(options);
     }
 
@@ -26,12 +26,12 @@ export class AnnotationsClient {
      * Creates a published annotation score against a target trace. The trace is resolved by explicit id (`trace.by = "id"`) or by a filter set (`trace.by = "filters"`, exactly one match required). When called with an OAuth token, the annotation is attributed to the authenticated user.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
-     * @param {LatitudeApi.CreateAnnotationBody} request
+     * @param {Latitude.CreateAnnotationBody} request
      * @param {AnnotationsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.annotations.create("projectSlug", {
@@ -46,17 +46,17 @@ export class AnnotationsClient {
      */
     public create(
         projectSlug: string,
-        request: LatitudeApi.CreateAnnotationBody,
+        request: Latitude.CreateAnnotationBody,
         requestOptions?: AnnotationsClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.Annotation> {
+    ): core.HttpResponsePromise<Latitude.Annotation> {
         return core.HttpResponsePromise.fromPromise(this.__create(projectSlug, request, requestOptions));
     }
 
     private async __create(
         projectSlug: string,
-        request: LatitudeApi.CreateAnnotationBody,
+        request: Latitude.CreateAnnotationBody,
         requestOptions?: AnnotationsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.Annotation>> {
+    ): Promise<core.WithRawResponse<Latitude.Annotation>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -67,13 +67,13 @@ export class AnnotationsClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/annotations`,
             ),
             method: "POST",
             headers: _headers,
             contentType: "application/json",
-            queryParameters: requestOptions?.queryParams,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
             body: request,
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
@@ -83,28 +83,22 @@ export class AnnotationsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.Annotation, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.Annotation, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,

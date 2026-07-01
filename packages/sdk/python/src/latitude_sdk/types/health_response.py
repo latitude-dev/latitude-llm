@@ -4,10 +4,12 @@ import typing
 
 import pydantic
 from ..core.pydantic_utilities import UniversalBaseModel
+from .health_response_service import HealthResponseService
+from .health_response_status import HealthResponseStatus
 
 
 class HealthResponse(UniversalBaseModel):
-    service: typing.Literal["api"] = "api"
-    status: typing.Literal["ok"] = "ok"
+    service: HealthResponseService
+    status: HealthResponseStatus
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

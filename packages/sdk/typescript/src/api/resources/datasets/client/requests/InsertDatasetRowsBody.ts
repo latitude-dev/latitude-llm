@@ -19,15 +19,15 @@ export namespace InsertDatasetRowsBody {
             /** Optional client-supplied row id. Generated when omitted. */
             id?: string | undefined;
             /** Row input cell. */
-            input?: Item.Input | undefined;
+            input: Item.Input | null;
             /** Row output cell. */
-            output?: Item.Output | undefined;
+            output?: (Item.Output | null) | undefined;
             /** Correct answer for this row. Filled in by curators; usually distinct from `output`. */
-            expectedOutput?: Item.ExpectedOutput | undefined;
+            expectedOutput?: (Item.ExpectedOutput | null) | undefined;
             /** Row metadata cell. */
-            metadata?: Item.Metadata | undefined;
+            metadata?: (Item.Metadata | null) | undefined;
             /** Custom column values keyed by column identifier. Removed or unknown columns are rejected. */
-            custom?: Record<string, Item.Custom.Value> | undefined;
+            custom?: Record<string, Item.Custom.Value | null> | undefined;
         }
 
         export namespace Item {

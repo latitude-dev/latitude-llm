@@ -10,75 +10,68 @@ from .recent_tool_call_status_code import RecentToolCallStatusCode
 
 
 class RecentToolCall(UniversalBaseModel):
-    span_id: typing_extensions.Annotated[str, FieldMetadata(alias="spanId")] = pydantic.Field()
-    """
-    16-character span identifier of the tool call.
-    """
-
-    trace_id: typing_extensions.Annotated[str, FieldMetadata(alias="traceId")] = pydantic.Field()
-    """
-    Trace this call belongs to.
-    """
-
-    session_id: typing_extensions.Annotated[str, FieldMetadata(alias="sessionId")] = pydantic.Field()
-    """
-    Session this call belongs to.
-    """
-
-    start_time: typing_extensions.Annotated[str, FieldMetadata(alias="startTime")] = pydantic.Field()
-    """
-    ISO-8601 timestamp the call started.
-    """
-
-    duration_ns: typing_extensions.Annotated[float, FieldMetadata(alias="durationNs")] = pydantic.Field()
-    """
-    Call duration, in nanoseconds.
-    """
-
-    status_code: typing_extensions.Annotated[RecentToolCallStatusCode, FieldMetadata(alias="statusCode")] = (
-        pydantic.Field()
-    )
-    """
-    Span status of the call.
-    """
-
-    status_message: typing_extensions.Annotated[str, FieldMetadata(alias="statusMessage")] = pydantic.Field()
-    """
-    Status message, when present.
-    """
-
-    error_type: typing_extensions.Annotated[str, FieldMetadata(alias="errorType")] = pydantic.Field()
-    """
-    Error type, when the call failed.
-    """
-
-    tool_call_id: typing_extensions.Annotated[str, FieldMetadata(alias="toolCallId")] = pydantic.Field()
-    """
-    Provider tool-call id linking the call to its request.
-    """
-
-    tool_input: typing_extensions.Annotated[str, FieldMetadata(alias="toolInput")] = pydantic.Field()
-    """
-    Truncated preview of the call arguments.
-    """
-
-    tool_output: typing_extensions.Annotated[str, FieldMetadata(alias="toolOutput")] = pydantic.Field()
-    """
-    Truncated preview of the call result.
-    """
-
-    tool_input_truncated: typing_extensions.Annotated[bool, FieldMetadata(alias="toolInputTruncated")] = (
-        pydantic.Field()
-    )
-    """
-    `true` when `toolInput` was truncated.
-    """
-
-    tool_output_truncated: typing_extensions.Annotated[bool, FieldMetadata(alias="toolOutputTruncated")] = (
-        pydantic.Field()
-    )
-    """
-    `true` when `toolOutput` was truncated.
-    """
+    span_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="spanId"),
+        pydantic.Field(alias="spanId", description="16-character span identifier of the tool call."),
+    ]
+    trace_id: typing_extensions.Annotated[
+        str, FieldMetadata(alias="traceId"), pydantic.Field(alias="traceId", description="Trace this call belongs to.")
+    ]
+    session_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="sessionId"),
+        pydantic.Field(alias="sessionId", description="Session this call belongs to."),
+    ]
+    start_time: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="startTime"),
+        pydantic.Field(alias="startTime", description="ISO-8601 timestamp the call started."),
+    ]
+    duration_ns: typing_extensions.Annotated[
+        float,
+        FieldMetadata(alias="durationNs"),
+        pydantic.Field(alias="durationNs", description="Call duration, in nanoseconds."),
+    ]
+    status_code: typing_extensions.Annotated[
+        RecentToolCallStatusCode,
+        FieldMetadata(alias="statusCode"),
+        pydantic.Field(alias="statusCode", description="Span status of the call."),
+    ]
+    status_message: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="statusMessage"),
+        pydantic.Field(alias="statusMessage", description="Status message, when present."),
+    ]
+    error_type: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="errorType"),
+        pydantic.Field(alias="errorType", description="Error type, when the call failed."),
+    ]
+    tool_call_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="toolCallId"),
+        pydantic.Field(alias="toolCallId", description="Provider tool-call id linking the call to its request."),
+    ]
+    tool_input: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="toolInput"),
+        pydantic.Field(alias="toolInput", description="Truncated preview of the call arguments."),
+    ]
+    tool_output: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="toolOutput"),
+        pydantic.Field(alias="toolOutput", description="Truncated preview of the call result."),
+    ]
+    tool_input_truncated: typing_extensions.Annotated[
+        bool,
+        FieldMetadata(alias="toolInputTruncated"),
+        pydantic.Field(alias="toolInputTruncated", description="`true` when `toolInput` was truncated."),
+    ]
+    tool_output_truncated: typing_extensions.Annotated[
+        bool,
+        FieldMetadata(alias="toolOutputTruncated"),
+        pydantic.Field(alias="toolOutputTruncated", description="`true` when `toolOutput` was truncated."),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

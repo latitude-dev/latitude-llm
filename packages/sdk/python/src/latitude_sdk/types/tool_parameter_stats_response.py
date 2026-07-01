@@ -15,9 +15,10 @@ class ToolParameterStatsResponse(UniversalBaseModel):
     Top input keys and their most common values.
     """
 
-    sample_size: typing_extensions.Annotated[int, FieldMetadata(alias="sampleSize")] = pydantic.Field()
-    """
-    Number of recent calls the stats were computed over.
-    """
+    sample_size: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="sampleSize"),
+        pydantic.Field(alias="sampleSize", description="Number of recent calls the stats were computed over."),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

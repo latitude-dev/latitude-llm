@@ -9,23 +9,22 @@ from ..core.serialization import FieldMetadata
 
 
 class DeleteDatasetRowsResponse(UniversalBaseModel):
-    version_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="versionId")] = pydantic.Field(
-        default=None
-    )
-    """
-    New dataset version id, or `null` when nothing was deleted.
-    """
-
+    version_id: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="versionId"),
+        pydantic.Field(
+            alias="versionId", default=None, description="New dataset version id, or `null` when nothing was deleted."
+        ),
+    ]
     version: int = pydantic.Field()
     """
     New dataset version number.
     """
 
-    deleted_count: typing_extensions.Annotated[typing.Optional[int], FieldMetadata(alias="deletedCount")] = (
-        pydantic.Field(default=None)
-    )
-    """
-    Number of rows removed.
-    """
+    deleted_count: typing_extensions.Annotated[
+        typing.Optional[int],
+        FieldMetadata(alias="deletedCount"),
+        pydantic.Field(alias="deletedCount", default=None, description="Number of rows removed."),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

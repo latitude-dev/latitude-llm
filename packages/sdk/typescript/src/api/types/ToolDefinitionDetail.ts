@@ -5,7 +5,7 @@
  */
 export interface ToolDefinitionDetail {
     /** Parsed name and description. `null` when the stored definition could not be parsed. */
-    definition?: ToolDefinitionDetail.Definition | undefined;
+    definition: ToolDefinitionDetail.Definition | null;
     /** Raw tool definition JSON, verbatim, including its `parameters`. */
     definitionJson: string;
     /** LLM turns that offered this tool in the range. */

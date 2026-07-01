@@ -4,10 +4,11 @@ import typing
 
 import pydantic
 from ..core.pydantic_utilities import UniversalBaseModel
+from .export_signals_response_status import ExportSignalsResponseStatus
 
 
 class ExportSignalsResponse(UniversalBaseModel):
-    status: typing.Literal["queued"] = pydantic.Field(default="queued")
+    status: ExportSignalsResponseStatus = pydantic.Field()
     """
     Always `"queued"`. The CSV is emailed to `recipient` when ready.
     """

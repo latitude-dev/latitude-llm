@@ -7,8 +7,8 @@ import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
 from .alert_condition import AlertCondition
-from .monitor_filter_set import MonitorFilterSet
-from .monitor_metric import MonitorMetric
+from .filter_condition import FilterCondition
+from .monitor_config_metric import MonitorConfigMetric
 
 
 class MonitorConfig(UniversalBaseModel):
@@ -16,13 +16,21 @@ class MonitorConfig(UniversalBaseModel):
     Rule configuration used when the monitor is evaluated.
     """
 
-    filter_set: typing_extensions.Annotated[typing.Optional[MonitorFilterSet], FieldMetadata(alias="filterSet")] = None
+    filter_set: typing_extensions.Annotated[
+        typing.Optional[typing.Dict[str, typing.List[FilterCondition]]],
+        FieldMetadata(alias="filterSet"),
+        pydantic.Field(alias="filterSet", default=None, description="Filters applied by the monitor rule."),
+    ]
     query: typing.Optional[str] = pydantic.Field(default=None)
     """
     Semantic query applied by inline monitor targets.
     """
 
-    metric: typing.Optional[MonitorMetric] = None
+    metric: typing.Optional[MonitorConfigMetric] = pydantic.Field(default=None)
+    """
+    Metric evaluated by threshold and escalating monitor rules.
+    """
+
     condition: typing.Optional[AlertCondition] = None
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

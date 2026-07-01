@@ -15,13 +15,15 @@ class ProjectSettings(UniversalBaseModel):
     Per-project settings overrides. `null` means inherit from the organization.
     """
 
-    keep_monitoring: typing_extensions.Annotated[typing.Optional[bool], FieldMetadata(alias="keepMonitoring")] = (
-        pydantic.Field(default=None)
-    )
-    """
-    When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.
-    """
-
+    keep_monitoring: typing_extensions.Annotated[
+        typing.Optional[bool],
+        FieldMetadata(alias="keepMonitoring"),
+        pydantic.Field(
+            alias="keepMonitoring",
+            default=None,
+            description="When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
+        ),
+    ]
     notifications: typing.Optional[NotificationsSetting] = None
     escalation: typing.Optional[EscalationSetting] = None
 

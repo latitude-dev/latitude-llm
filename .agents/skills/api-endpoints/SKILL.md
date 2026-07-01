@@ -1,6 +1,6 @@
 ---
 name: api-endpoints
-description: Adding or changing routes in `apps/api`. One source of truth (`defineApiEndpoint` + a Zod schema) becomes an HTTP endpoint, an OpenAPI operation, an MCP tool, and a TS SDK method — descriptions and contracts must be written with all four readers in mind.
+description: Adding or changing routes in `apps/api`. One source of truth (`defineApiEndpoint` + a Zod schema) becomes an HTTP endpoint, an OpenAPI operation, an MCP tool, TS + Python SDK methods, and a `latitude` CLI command — descriptions and contracts must be written with all of these readers in mind.
 ---
 
 # Adding API endpoints
@@ -23,18 +23,19 @@ If the entity doesn't have a `.functions.ts` because the UI doesn't expose this 
 
 ## What you're really doing
 
-Every endpoint in `apps/api` is **one declaration that fans out four ways**:
+Every endpoint in `apps/api` is **one declaration that fans out into every generated surface**:
 
 | Surface | Generated from | Consumed by |
 | --- | --- | --- |
 | HTTP route (Hono) | `route.method` + `route.path` + handler | curl, internal services |
-| OpenAPI operation | `route.name` (→ `operationId`), `route.description`, request/response schemas | `apps/api/openapi.json` → Fern → TS SDK (`@latitude/sdk-typescript`) |
+| OpenAPI operation | `route.name` (→ `operationId`), `route.description`, request/response schemas | `apps/api/openapi.json` — the source Fern reads for everything below |
 | MCP tool | `route.name`, `route.description`, flattened input + 2xx-JSON output schema | `apps/api/mcp.json`, runtime `/v1/mcp` transport |
-| SDK method | Fern reads the OpenAPI doc | end-user TypeScript code |
+| TS + Python SDK methods | Fern reads `openapi.json` | end-user TypeScript (`@latitude-data/sdk`) and Python (`latitude-sdk`) code |
+| `latitude` CLI command | Fern reads `openapi.json` | shell users + AI agents (`latitude <resource> <verb>`, `--help`, `--schema`) |
 
-You don't write three configs. You write one. The infra in `apps/api/src/mcp/*` derives the other surfaces.
+You don't write these configs separately. You write one. The infra in `apps/api/src/mcp/*` derives the MCP tool, and Fern derives the SDKs + CLI from `openapi.json`.
 
-This means: **the descriptions you put on routes and on schema fields are read by SDK users AND by AI agents calling the MCP**. Treat every `description` as user-facing copy. Vague or absent descriptions are bugs.
+This means: **the descriptions you put on routes and on schema fields are read by SDK users, by AI agents calling the MCP, AND by CLI users (as `--help`/`--schema` text)**. Treat every `description` as user-facing copy. Vague or absent descriptions are bugs.
 
 ## Recipe: add a new route file
 
@@ -142,7 +143,7 @@ pnpm mcp:emit       # rewrites apps/api/mcp.json
 
 Both files are checked in. CI guards against drift, so commit them alongside the route file.
 
-The TS SDK regenerates from `openapi.json` via Fern (`pnpm generate:sdk`). Run it locally if your PR is supposed to expose the new method through the SDK — otherwise the next SDK release picks it up.
+The TS + Python SDKs and the `latitude` CLI all regenerate from `openapi.json` via Fern — `pnpm generate:sdk` (both SDKs), `pnpm generate:cli` (CLI), or `pnpm generate:all` (all three; needs Docker + a Rust toolchain for the CLI). CI (`api-manifests.yml`) regenerates all of them and fails on drift, so run `pnpm generate:all` and commit the results when your PR changes the surface — otherwise the drift check goes red.
 
 ### 4. Tests
 
@@ -151,10 +152,11 @@ The TS SDK regenerates from `openapi.json` via Fern (`pnpm generate:sdk`). Run i
 
 ## Schema descriptions — the rule that matters most
 
-**Every field in every request/response schema needs a description unless the field name is self-explanatory.** Descriptions reach two distinct audiences:
+**Every field in every request/response schema needs a description unless the field name is self-explanatory.** Descriptions reach three distinct audiences:
 
-- **SDK users** read them as TypeScript JSDoc on the generated SDK methods (Fern emits them as `@param` / property comments).
+- **SDK users** read them as TypeScript JSDoc / Python docstrings on the generated SDK methods (Fern emits them as `@param` / property comments).
 - **AI agents** read them via the MCP tool's `inputSchema` / `outputSchema` to decide what to put in a tool call.
+- **CLI users** read them as `--help` text and machine-readable `--schema` output on the generated `latitude` commands.
 
 Write each description as one short sentence in present tense, like a microcopy label. Examples:
 

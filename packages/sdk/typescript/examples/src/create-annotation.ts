@@ -14,12 +14,12 @@
  *
  * Both invocations load `.env` via Node's built-in `--env-file` flag.
  */
-import { LatitudeApiClient } from "@latitude-data/sdk"
+import { LatitudeClient } from "@latitude-data/sdk"
 import { optionalEnv, requireEnv } from "./env.ts"
 
-const client = new LatitudeApiClient({
+const client = new LatitudeClient({
   baseUrl: optionalEnv("LATITUDE_API_BASE_URL"),
-  token: requireEnv("LATITUDE_API_KEY"),
+  apiKey: requireEnv("LATITUDE_API_KEY"),
 })
 
 const annotation = await client.annotations.create(requireEnv("LATITUDE_PROJECT_SLUG"), {

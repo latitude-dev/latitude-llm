@@ -10,13 +10,15 @@ from .trace_ref import TraceRef
 
 
 class CreateCustomScoreBody(UniversalBaseModel):
-    simulation_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="simulationId")] = (
-        pydantic.Field(default=None)
-    )
-    """
-    Simulation this score is tied to, if any. `null` (default) when not part of a simulation.
-    """
-
+    simulation_id: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="simulationId"),
+        pydantic.Field(
+            alias="simulationId",
+            default=None,
+            description="Simulation this score is tied to, if any. `null` (default) when not part of a simulation.",
+        ),
+    ]
     value: float = pydantic.Field()
     """
     Normalized score value in [0, 1]. Higher = better.
@@ -53,21 +55,27 @@ class CreateCustomScoreBody(UniversalBaseModel):
     """
 
     trace: TraceRef
-    source_id: typing_extensions.Annotated[str, FieldMetadata(alias="sourceId")] = pydantic.Field()
-    """
-    User-supplied tag identifying the score's origin (e.g. `"prod-pipeline"`, `"qa-script-v2"`).
-    """
-
-    metadata: typing.Optional[typing.Dict[str, typing.Optional[typing.Any]]] = pydantic.Field(default=None)
+    source_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="sourceId"),
+        pydantic.Field(
+            alias="sourceId",
+            description='User-supplied tag identifying the score\'s origin (e.g. `"prod-pipeline"`, `"qa-script-v2"`).',
+        ),
+    ]
+    metadata: typing.Optional[typing.Dict[str, typing.Any]] = pydantic.Field(default=None)
     """
     Arbitrary user-supplied metadata persisted alongside the score.
     """
 
-    evaluation: typing_extensions.Annotated[typing.Optional[bool], FieldMetadata(alias="_evaluation")] = pydantic.Field(
-        default=None
-    )
-    """
-    Discriminator: omit (or `false`) for custom scores. Required `true` for evaluation scores.
-    """
+    evaluation: typing_extensions.Annotated[
+        typing.Optional[bool],
+        FieldMetadata(alias="_evaluation"),
+        pydantic.Field(
+            alias="_evaluation",
+            default=None,
+            description="Discriminator: omit (or `false`) for custom scores. Required `true` for evaluation scores.",
+        ),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

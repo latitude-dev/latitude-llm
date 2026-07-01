@@ -15,11 +15,11 @@ class Project(UniversalBaseModel):
     Stable project identifier (CUID2).
     """
 
-    organization_id: typing_extensions.Annotated[str, FieldMetadata(alias="organizationId")] = pydantic.Field()
-    """
-    Organization that owns this project.
-    """
-
+    organization_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="organizationId"),
+        pydantic.Field(alias="organizationId", description="Organization that owns this project."),
+    ]
     name: str = pydantic.Field()
     """
     Human-readable name.
@@ -31,33 +31,38 @@ class Project(UniversalBaseModel):
     """
 
     settings: typing.Optional[ProjectSettings] = None
-    first_trace_at: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="firstTraceAt")] = (
-        pydantic.Field(default=None)
-    )
-    """
-    ISO-8601 timestamp of the first ingested trace. `null` until the first trace lands.
-    """
-
-    deleted_at: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="deletedAt")] = pydantic.Field(
-        default=None
-    )
-    """
-    ISO-8601 timestamp at which the project was deleted. `null` while the project is active.
-    """
-
-    last_edited_at: typing_extensions.Annotated[str, FieldMetadata(alias="lastEditedAt")] = pydantic.Field()
-    """
-    ISO-8601 timestamp of the most recent name/settings edit.
-    """
-
-    created_at: typing_extensions.Annotated[str, FieldMetadata(alias="createdAt")] = pydantic.Field()
-    """
-    ISO-8601 timestamp of creation.
-    """
-
-    updated_at: typing_extensions.Annotated[str, FieldMetadata(alias="updatedAt")] = pydantic.Field()
-    """
-    ISO-8601 timestamp of the last metadata change.
-    """
+    first_trace_at: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="firstTraceAt"),
+        pydantic.Field(
+            alias="firstTraceAt",
+            default=None,
+            description="ISO-8601 timestamp of the first ingested trace. `null` until the first trace lands.",
+        ),
+    ]
+    deleted_at: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="deletedAt"),
+        pydantic.Field(
+            alias="deletedAt",
+            default=None,
+            description="ISO-8601 timestamp at which the project was deleted. `null` while the project is active.",
+        ),
+    ]
+    last_edited_at: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="lastEditedAt"),
+        pydantic.Field(alias="lastEditedAt", description="ISO-8601 timestamp of the most recent name/settings edit."),
+    ]
+    created_at: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="createdAt"),
+        pydantic.Field(alias="createdAt", description="ISO-8601 timestamp of creation."),
+    ]
+    updated_at: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="updatedAt"),
+        pydantic.Field(alias="updatedAt", description="ISO-8601 timestamp of the last metadata change."),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

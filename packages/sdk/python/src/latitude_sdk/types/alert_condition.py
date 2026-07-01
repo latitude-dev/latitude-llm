@@ -5,8 +5,10 @@ from __future__ import annotations
 import typing
 
 import pydantic
+import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from .alert_escalating_condition_direction import AlertEscalatingConditionDirection
+from .alert_escalating_condition_threshold import AlertEscalatingConditionThreshold
 from .alert_escalating_condition_window import AlertEscalatingConditionWindow
 from .alert_metric_threshold import AlertMetricThreshold
 from .alert_threshold_condition_direction import AlertThresholdConditionDirection
@@ -33,7 +35,7 @@ class AlertCondition_Escalating(UniversalBaseModel):
 
     trigger: typing.Literal["escalating"] = "escalating"
     metric: MonitorMetric
-    threshold: typing.Optional[AlertMetricThreshold] = None
+    threshold: typing.Optional[AlertEscalatingConditionThreshold] = None
     direction: typing.Optional[AlertEscalatingConditionDirection] = None
     sensitivity: typing.Optional[int] = None
     window: AlertEscalatingConditionWindow
@@ -41,4 +43,6 @@ class AlertCondition_Escalating(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-AlertCondition = typing.Union[AlertCondition_Threshold, AlertCondition_Escalating]
+AlertCondition = typing_extensions.Annotated[
+    typing.Union[AlertCondition_Threshold, AlertCondition_Escalating], pydantic.Field(discriminator="trigger")
+]

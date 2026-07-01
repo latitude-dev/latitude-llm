@@ -5,3 +5,6 @@ import typing
 from .filter_condition import FilterCondition
 
 MonitorFilterSet = typing.Dict[str, typing.List[FilterCondition]]
+"""
+Additional filters applied when evaluating the monitor.
+"""

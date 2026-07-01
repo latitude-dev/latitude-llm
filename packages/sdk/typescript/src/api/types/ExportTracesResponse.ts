@@ -2,5 +2,13 @@
 
 export interface ExportTracesResponse {
     /** Always `"queued"`. The CSV is built asynchronously and emailed to `recipient` when ready. */
-    status: "queued";
+    status: ExportTracesResponse.Status;
+}
+
+export namespace ExportTracesResponse {
+    /** Always `"queued"`. The CSV is built asynchronously and emailed to `recipient` when ready. */
+    export const Status = {
+        Queued: "queued",
+    } as const;
+    export type Status = (typeof Status)[keyof typeof Status];
 }

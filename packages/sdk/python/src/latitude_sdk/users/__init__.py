@@ -7,20 +7,20 @@ from importlib import import_module
 
 if typing.TYPE_CHECKING:
     from .types import (
-        UsersActivityRequestErrorsOnly,
-        UsersGetRequestErrorsOnly,
-        UsersListRequestSortBy,
-        UsersListRequestSortDirection,
-        UsersUsageRequestDimension,
-        UsersUsageRequestErrorsOnly,
+        ActivityUsersRequestErrorsOnly,
+        GetUsersRequestErrorsOnly,
+        ListUsersRequestSortBy,
+        ListUsersRequestSortDirection,
+        UsageUsersRequestDimension,
+        UsageUsersRequestErrorsOnly,
     )
 _dynamic_imports: typing.Dict[str, str] = {
-    "UsersActivityRequestErrorsOnly": ".types",
-    "UsersGetRequestErrorsOnly": ".types",
-    "UsersListRequestSortBy": ".types",
-    "UsersListRequestSortDirection": ".types",
-    "UsersUsageRequestDimension": ".types",
-    "UsersUsageRequestErrorsOnly": ".types",
+    "ActivityUsersRequestErrorsOnly": ".types",
+    "GetUsersRequestErrorsOnly": ".types",
+    "ListUsersRequestSortBy": ".types",
+    "ListUsersRequestSortDirection": ".types",
+    "UsageUsersRequestDimension": ".types",
+    "UsageUsersRequestErrorsOnly": ".types",
 }
 
 
@@ -46,10 +46,10 @@ def __dir__():
 
 
 __all__ = [
-    "UsersActivityRequestErrorsOnly",
-    "UsersGetRequestErrorsOnly",
-    "UsersListRequestSortBy",
-    "UsersListRequestSortDirection",
-    "UsersUsageRequestDimension",
-    "UsersUsageRequestErrorsOnly",
+    "ActivityUsersRequestErrorsOnly",
+    "GetUsersRequestErrorsOnly",
+    "ListUsersRequestSortBy",
+    "ListUsersRequestSortDirection",
+    "UsageUsersRequestDimension",
+    "UsageUsersRequestErrorsOnly",
 ]

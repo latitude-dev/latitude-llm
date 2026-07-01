@@ -5,3 +5,6 @@ import typing
 from .filter_condition import FilterCondition
 
 FilterSet = typing.Dict[str, typing.List[FilterCondition]]
+"""
+Filter set keyed by field name. Each entry holds an array of conditions ANDed together for that field; field-level groups are also ANDed across the set.
+"""

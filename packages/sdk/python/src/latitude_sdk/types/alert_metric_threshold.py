@@ -5,6 +5,7 @@ from __future__ import annotations
 import typing
 
 import pydantic
+import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from .alert_baseline import AlertBaseline
 
@@ -43,6 +44,7 @@ class AlertMetricThreshold_Expected(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-AlertMetricThreshold = typing.Union[
-    AlertMetricThreshold_Absolute, AlertMetricThreshold_Multiplier, AlertMetricThreshold_Expected
+AlertMetricThreshold = typing_extensions.Annotated[
+    typing.Union[AlertMetricThreshold_Absolute, AlertMetricThreshold_Multiplier, AlertMetricThreshold_Expected],
+    pydantic.Field(discriminator="mode"),
 ]

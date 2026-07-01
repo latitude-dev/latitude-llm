@@ -90,3 +90,11 @@ jobs:
     with:
       ref: ${{ github.sha }}
     secrets: inherit
+
+  publish-cli:
+    permissions:
+      contents: write
+    uses: ./.github/workflows/publish-cli.yml
+    with:
+      ref: ${{ github.sha }}
+    secrets: inherit

@@ -2,6 +2,6 @@
 
 import typing
 
-from .filter_condition_value_item import FilterConditionValueItem
+from .filter_condition_value_three_item import FilterConditionValueThreeItem
 
-FilterConditionValue = typing.Union[str, float, bool, typing.List[FilterConditionValueItem]]
+FilterConditionValue = typing.Union[str, float, bool, typing.List[FilterConditionValueThreeItem]]

@@ -5,6 +5,7 @@ from __future__ import annotations
 import typing
 
 import pydantic
+import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 
 
@@ -41,4 +42,6 @@ class AlertDuration_Days(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-AlertDuration = typing.Union[AlertDuration_Minutes, AlertDuration_Hours, AlertDuration_Days]
+AlertDuration = typing_extensions.Annotated[
+    typing.Union[AlertDuration_Minutes, AlertDuration_Hours, AlertDuration_Days], pydantic.Field(discriminator="unit")
+]

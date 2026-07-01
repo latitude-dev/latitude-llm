@@ -20,14 +20,14 @@ import type { BaseClientOptions, BaseRequestOptions } from "./BaseClient.js";
 import { type NormalizedClientOptionsWithAuth, normalizeClientOptionsWithAuth } from "./BaseClient.js";
 import * as core from "./core/index.js";
 
-export declare namespace LatitudeApiClient {
+export declare namespace LatitudeClient {
     export type Options = BaseClientOptions;
 
     export interface RequestOptions extends BaseRequestOptions {}
 }
 
-export class LatitudeApiClient {
-    protected readonly _options: NormalizedClientOptionsWithAuth<LatitudeApiClient.Options>;
+export class LatitudeClient {
+    protected readonly _options: NormalizedClientOptionsWithAuth<LatitudeClient.Options>;
     protected _projects: ProjectsClient | undefined;
     protected _scores: ScoresClient | undefined;
     protected _annotations: AnnotationsClient | undefined;
@@ -45,7 +45,7 @@ export class LatitudeApiClient {
     protected _monitors: MonitorsClient | undefined;
     protected _analytics: AnalyticsClient | undefined;
 
-    constructor(options: LatitudeApiClient.Options) {
+    constructor(options: LatitudeClient.Options = {}) {
         this._options = normalizeClientOptionsWithAuth(options);
     }
 

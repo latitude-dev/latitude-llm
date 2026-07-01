@@ -16,16 +16,16 @@ class UserListResponse(UniversalBaseModel):
     Page of users, in the requested sort order.
     """
 
-    total_count: typing_extensions.Annotated[int, FieldMetadata(alias="totalCount")] = pydantic.Field()
-    """
-    Total users matching the filters across every page.
-    """
-
-    has_more: typing_extensions.Annotated[bool, FieldMetadata(alias="hasMore")] = pydantic.Field()
-    """
-    `true` when there is at least one more page after this one.
-    """
-
+    total_count: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="totalCount"),
+        pydantic.Field(alias="totalCount", description="Total users matching the filters across every page."),
+    ]
+    has_more: typing_extensions.Annotated[
+        bool,
+        FieldMetadata(alias="hasMore"),
+        pydantic.Field(alias="hasMore", description="`true` when there is at least one more page after this one."),
+    ]
     limit: int = pydantic.Field()
     """
     Page size used for this response.
@@ -36,6 +36,8 @@ class UserListResponse(UniversalBaseModel):
     Zero-based offset of the first item in this page.
     """
 
-    cost_rollup: typing_extensions.Annotated[UserCostRollup, FieldMetadata(alias="costRollup")]
+    cost_rollup: typing_extensions.Annotated[
+        UserCostRollup, FieldMetadata(alias="costRollup"), pydantic.Field(alias="costRollup")
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

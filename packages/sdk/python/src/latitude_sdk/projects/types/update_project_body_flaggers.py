@@ -20,13 +20,25 @@ class UpdateProjectBodyFlaggers(UniversalBaseModel):
     jailbreaking: typing.Optional[bool] = None
     forgetting: typing.Optional[bool] = None
     trashing: typing.Optional[bool] = None
-    tool_call_errors: typing_extensions.Annotated[typing.Optional[bool], FieldMetadata(alias="tool-call-errors")] = None
+    tool_call_errors: typing_extensions.Annotated[
+        typing.Optional[bool],
+        FieldMetadata(alias="tool-call-errors"),
+        pydantic.Field(alias="tool-call-errors", default=None),
+    ]
     output_schema_validation: typing_extensions.Annotated[
-        typing.Optional[bool], FieldMetadata(alias="output-schema-validation")
-    ] = None
-    empty_response: typing_extensions.Annotated[typing.Optional[bool], FieldMetadata(alias="empty-response")] = None
+        typing.Optional[bool],
+        FieldMetadata(alias="output-schema-validation"),
+        pydantic.Field(alias="output-schema-validation", default=None),
+    ]
+    empty_response: typing_extensions.Annotated[
+        typing.Optional[bool],
+        FieldMetadata(alias="empty-response"),
+        pydantic.Field(alias="empty-response", default=None),
+    ]
     low_cache_hit_rate: typing_extensions.Annotated[
-        typing.Optional[bool], FieldMetadata(alias="low-cache-hit-rate")
-    ] = None
+        typing.Optional[bool],
+        FieldMetadata(alias="low-cache-hit-rate"),
+        pydantic.Field(alias="low-cache-hit-rate", default=None),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

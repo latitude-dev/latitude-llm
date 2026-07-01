@@ -7,7 +7,7 @@ import * as core from "../../../../core/index.js";
 import * as environments from "../../../../environments.js";
 import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCodeError.js";
 import * as errors from "../../../../errors/index.js";
-import * as LatitudeApi from "../../../index.js";
+import * as Latitude from "../../../index.js";
 
 export declare namespace ToolsClient {
     export type Options = BaseClientOptions;
@@ -18,7 +18,7 @@ export declare namespace ToolsClient {
 export class ToolsClient {
     protected readonly _options: NormalizedClientOptionsWithAuth<ToolsClient.Options>;
 
-    constructor(options: ToolsClient.Options) {
+    constructor(options: ToolsClient.Options = {}) {
         this._options = normalizeClientOptionsWithAuth(options);
     }
 
@@ -26,33 +26,29 @@ export class ToolsClient {
      * Returns every tool in the project over the range — the union of defined and called tools — with per-tool usage metrics, offered counts, a call trend, and project-wide totals. The range defaults to the trailing 7 days.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
-     * @param {LatitudeApi.ToolsListRequest} request
+     * @param {Latitude.ListToolsRequest} request
      * @param {ToolsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
-     *     await client.tools.list("projectSlug", {
-     *         fromIso: "2024-01-15T09:30:00Z",
-     *         toIso: "2024-01-15T09:30:00Z",
-     *         trendBucketSeconds: 1
-     *     })
+     *     await client.tools.list("projectSlug")
      */
     public list(
         projectSlug: string,
-        request: LatitudeApi.ToolsListRequest = {},
+        request: Latitude.ListToolsRequest = {},
         requestOptions?: ToolsClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.ToolsAnalyticsResponse> {
+    ): core.HttpResponsePromise<Latitude.ToolsAnalyticsResponse> {
         return core.HttpResponsePromise.fromPromise(this.__list(projectSlug, request, requestOptions));
     }
 
     private async __list(
         projectSlug: string,
-        request: LatitudeApi.ToolsListRequest = {},
+        request: Latitude.ListToolsRequest = {},
         requestOptions?: ToolsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.ToolsAnalyticsResponse>> {
+    ): Promise<core.WithRawResponse<Latitude.ToolsAnalyticsResponse>> {
         const { fromIso, toIso, trendBucketSeconds } = request;
         const _queryParams: Record<string, unknown> = {
             fromIso: fromIso != null ? fromIso : undefined,
@@ -69,12 +65,11 @@ export class ToolsClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/tools`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: { ..._queryParams, ...requestOptions?.queryParams },
             queryString: core.url
                 .queryBuilder()
                 .addMany(_queryParams)
@@ -87,28 +82,22 @@ export class ToolsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.ToolsAnalyticsResponse, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.ToolsAnalyticsResponse, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -128,35 +117,29 @@ export class ToolsClient {
      * Returns per-bucket call counts over the range. Omit `toolName` to aggregate across every tool in the project; pass it to scope the histogram to a single tool.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
-     * @param {LatitudeApi.ToolsHistogramRequest} request
+     * @param {Latitude.HistogramToolsRequest} request
      * @param {ToolsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
-     *     await client.tools.histogram("projectSlug", {
-     *         fromIso: "2024-01-15T09:30:00Z",
-     *         toIso: "2024-01-15T09:30:00Z",
-     *         toolName: "toolName",
-     *         bucketSeconds: 1,
-     *         errorsOnly: "true"
-     *     })
+     *     await client.tools.histogram("projectSlug")
      */
     public histogram(
         projectSlug: string,
-        request: LatitudeApi.ToolsHistogramRequest = {},
+        request: Latitude.HistogramToolsRequest = {},
         requestOptions?: ToolsClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.ToolHistogramResponse> {
+    ): core.HttpResponsePromise<Latitude.ToolHistogramResponse> {
         return core.HttpResponsePromise.fromPromise(this.__histogram(projectSlug, request, requestOptions));
     }
 
     private async __histogram(
         projectSlug: string,
-        request: LatitudeApi.ToolsHistogramRequest = {},
+        request: Latitude.HistogramToolsRequest = {},
         requestOptions?: ToolsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.ToolHistogramResponse>> {
+    ): Promise<core.WithRawResponse<Latitude.ToolHistogramResponse>> {
         const { fromIso, toIso, toolName, bucketSeconds, errorsOnly } = request;
         const _queryParams: Record<string, unknown> = {
             fromIso: fromIso != null ? fromIso : undefined,
@@ -175,12 +158,11 @@ export class ToolsClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/tools/histogram`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: { ..._queryParams, ...requestOptions?.queryParams },
             queryString: core.url
                 .queryBuilder()
                 .addMany(_queryParams)
@@ -193,28 +175,22 @@ export class ToolsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.ToolHistogramResponse, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.ToolHistogramResponse, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -235,37 +211,31 @@ export class ToolsClient {
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} toolName - Tool name. URL-encode names containing special characters.
-     * @param {LatitudeApi.ToolsParametersRequest} request
+     * @param {Latitude.ParametersToolsRequest} request
      * @param {ToolsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
-     *     await client.tools.parameters("projectSlug", "toolName", {
-     *         fromIso: "2024-01-15T09:30:00Z",
-     *         toIso: "2024-01-15T09:30:00Z",
-     *         topKeys: 1,
-     *         topValuesPerKey: 1,
-     *         errorsOnly: "true"
-     *     })
+     *     await client.tools.parameters("projectSlug", "toolName")
      */
     public parameters(
         projectSlug: string,
         toolName: string,
-        request: LatitudeApi.ToolsParametersRequest = {},
+        request: Latitude.ParametersToolsRequest = {},
         requestOptions?: ToolsClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.ToolParameterStatsResponse> {
+    ): core.HttpResponsePromise<Latitude.ToolParameterStatsResponse> {
         return core.HttpResponsePromise.fromPromise(this.__parameters(projectSlug, toolName, request, requestOptions));
     }
 
     private async __parameters(
         projectSlug: string,
         toolName: string,
-        request: LatitudeApi.ToolsParametersRequest = {},
+        request: Latitude.ParametersToolsRequest = {},
         requestOptions?: ToolsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.ToolParameterStatsResponse>> {
+    ): Promise<core.WithRawResponse<Latitude.ToolParameterStatsResponse>> {
         const { fromIso, toIso, topKeys, topValuesPerKey, errorsOnly } = request;
         const _queryParams: Record<string, unknown> = {
             fromIso: fromIso != null ? fromIso : undefined,
@@ -284,12 +254,11 @@ export class ToolsClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/tools/${core.url.encodePathParam(toolName)}/parameters`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: { ..._queryParams, ...requestOptions?.queryParams },
             queryString: core.url
                 .queryBuilder()
                 .addMany(_queryParams)
@@ -302,31 +271,22 @@ export class ToolsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return {
-                data: _response.body as LatitudeApi.ToolParameterStatsResponse,
-                rawResponse: _response.rawResponse,
-            };
+            return { data: _response.body as Latitude.ToolParameterStatsResponse, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -347,36 +307,33 @@ export class ToolsClient {
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} toolName - Tool name. URL-encode names containing special characters.
-     * @param {LatitudeApi.ToolsContextRequest} request
+     * @param {Latitude.ContextToolsRequest} request
      * @param {ToolsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.tools.context("projectSlug", "toolName", {
-     *         fromIso: "2024-01-15T09:30:00Z",
-     *         toIso: "2024-01-15T09:30:00Z",
-     *         dimension: "model",
-     *         errorsOnly: "true"
+     *         dimension: "model"
      *     })
      */
     public context(
         projectSlug: string,
         toolName: string,
-        request: LatitudeApi.ToolsContextRequest,
+        request: Latitude.ContextToolsRequest,
         requestOptions?: ToolsClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.ToolContextBreakdownResponse> {
+    ): core.HttpResponsePromise<Latitude.ToolContextBreakdownResponse> {
         return core.HttpResponsePromise.fromPromise(this.__context(projectSlug, toolName, request, requestOptions));
     }
 
     private async __context(
         projectSlug: string,
         toolName: string,
-        request: LatitudeApi.ToolsContextRequest,
+        request: Latitude.ContextToolsRequest,
         requestOptions?: ToolsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.ToolContextBreakdownResponse>> {
+    ): Promise<core.WithRawResponse<Latitude.ToolContextBreakdownResponse>> {
         const { fromIso, toIso, dimension, errorsOnly } = request;
         const _queryParams: Record<string, unknown> = {
             fromIso: fromIso != null ? fromIso : undefined,
@@ -394,12 +351,11 @@ export class ToolsClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/tools/${core.url.encodePathParam(toolName)}/context`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: { ..._queryParams, ...requestOptions?.queryParams },
             queryString: core.url
                 .queryBuilder()
                 .addMany(_queryParams)
@@ -413,7 +369,7 @@ export class ToolsClient {
         });
         if (_response.ok) {
             return {
-                data: _response.body as LatitudeApi.ToolContextBreakdownResponse,
+                data: _response.body as Latitude.ToolContextBreakdownResponse,
                 rawResponse: _response.rawResponse,
             };
         }
@@ -421,22 +377,16 @@ export class ToolsClient {
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -457,27 +407,22 @@ export class ToolsClient {
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} toolName - Tool name. URL-encode names containing special characters.
-     * @param {LatitudeApi.ToolsCoOccurrenceRequest} request
+     * @param {Latitude.CoOccurrenceToolsRequest} request
      * @param {ToolsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
-     *     await client.tools.coOccurrence("projectSlug", "toolName", {
-     *         fromIso: "2024-01-15T09:30:00Z",
-     *         toIso: "2024-01-15T09:30:00Z",
-     *         limit: 1,
-     *         errorsOnly: "true"
-     *     })
+     *     await client.tools.coOccurrence("projectSlug", "toolName")
      */
     public coOccurrence(
         projectSlug: string,
         toolName: string,
-        request: LatitudeApi.ToolsCoOccurrenceRequest = {},
+        request: Latitude.CoOccurrenceToolsRequest = {},
         requestOptions?: ToolsClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.ToolCoOccurrenceResponse> {
+    ): core.HttpResponsePromise<Latitude.ToolCoOccurrenceResponse> {
         return core.HttpResponsePromise.fromPromise(
             this.__coOccurrence(projectSlug, toolName, request, requestOptions),
         );
@@ -486,9 +431,9 @@ export class ToolsClient {
     private async __coOccurrence(
         projectSlug: string,
         toolName: string,
-        request: LatitudeApi.ToolsCoOccurrenceRequest = {},
+        request: Latitude.CoOccurrenceToolsRequest = {},
         requestOptions?: ToolsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.ToolCoOccurrenceResponse>> {
+    ): Promise<core.WithRawResponse<Latitude.ToolCoOccurrenceResponse>> {
         const { fromIso, toIso, limit, errorsOnly } = request;
         const _queryParams: Record<string, unknown> = {
             fromIso: fromIso != null ? fromIso : undefined,
@@ -506,12 +451,11 @@ export class ToolsClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/tools/${core.url.encodePathParam(toolName)}/co-occurrence`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: { ..._queryParams, ...requestOptions?.queryParams },
             queryString: core.url
                 .queryBuilder()
                 .addMany(_queryParams)
@@ -524,28 +468,22 @@ export class ToolsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.ToolCoOccurrenceResponse, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.ToolCoOccurrenceResponse, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -566,35 +504,31 @@ export class ToolsClient {
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} toolName - Tool name. URL-encode names containing special characters.
-     * @param {LatitudeApi.ToolsErrorsRequest} request
+     * @param {Latitude.ErrorsToolsRequest} request
      * @param {ToolsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
-     *     await client.tools.errors("projectSlug", "toolName", {
-     *         fromIso: "2024-01-15T09:30:00Z",
-     *         toIso: "2024-01-15T09:30:00Z",
-     *         limit: 1
-     *     })
+     *     await client.tools.errors("projectSlug", "toolName")
      */
     public errors(
         projectSlug: string,
         toolName: string,
-        request: LatitudeApi.ToolsErrorsRequest = {},
+        request: Latitude.ErrorsToolsRequest = {},
         requestOptions?: ToolsClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.ToolErrorBreakdownResponse> {
+    ): core.HttpResponsePromise<Latitude.ToolErrorBreakdownResponse> {
         return core.HttpResponsePromise.fromPromise(this.__errors(projectSlug, toolName, request, requestOptions));
     }
 
     private async __errors(
         projectSlug: string,
         toolName: string,
-        request: LatitudeApi.ToolsErrorsRequest = {},
+        request: Latitude.ErrorsToolsRequest = {},
         requestOptions?: ToolsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.ToolErrorBreakdownResponse>> {
+    ): Promise<core.WithRawResponse<Latitude.ToolErrorBreakdownResponse>> {
         const { fromIso, toIso, limit } = request;
         const _queryParams: Record<string, unknown> = {
             fromIso: fromIso != null ? fromIso : undefined,
@@ -611,12 +545,11 @@ export class ToolsClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/tools/${core.url.encodePathParam(toolName)}/errors`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: { ..._queryParams, ...requestOptions?.queryParams },
             queryString: core.url
                 .queryBuilder()
                 .addMany(_queryParams)
@@ -629,31 +562,22 @@ export class ToolsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return {
-                data: _response.body as LatitudeApi.ToolErrorBreakdownResponse,
-                rawResponse: _response.rawResponse,
-            };
+            return { data: _response.body as Latitude.ToolErrorBreakdownResponse, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -674,37 +598,31 @@ export class ToolsClient {
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} toolName - Tool name. URL-encode names containing special characters.
-     * @param {LatitudeApi.ToolsListCallsRequest} request
+     * @param {Latitude.ListCallsToolsRequest} request
      * @param {ToolsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
-     *     await client.tools.listCalls("projectSlug", "toolName", {
-     *         fromIso: "2024-01-15T09:30:00Z",
-     *         toIso: "2024-01-15T09:30:00Z",
-     *         limit: 1,
-     *         errorsOnly: "true",
-     *         cursor: "cursor"
-     *     })
+     *     await client.tools.listCalls("projectSlug", "toolName")
      */
     public listCalls(
         projectSlug: string,
         toolName: string,
-        request: LatitudeApi.ToolsListCallsRequest = {},
+        request: Latitude.ListCallsToolsRequest = {},
         requestOptions?: ToolsClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.PaginatedToolCalls> {
+    ): core.HttpResponsePromise<Latitude.PaginatedToolCalls> {
         return core.HttpResponsePromise.fromPromise(this.__listCalls(projectSlug, toolName, request, requestOptions));
     }
 
     private async __listCalls(
         projectSlug: string,
         toolName: string,
-        request: LatitudeApi.ToolsListCallsRequest = {},
+        request: Latitude.ListCallsToolsRequest = {},
         requestOptions?: ToolsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.PaginatedToolCalls>> {
+    ): Promise<core.WithRawResponse<Latitude.PaginatedToolCalls>> {
         const { fromIso, toIso, limit, errorsOnly, cursor } = request;
         const _queryParams: Record<string, unknown> = {
             fromIso: fromIso != null ? fromIso : undefined,
@@ -723,12 +641,11 @@ export class ToolsClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/tools/${core.url.encodePathParam(toolName)}/calls`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: { ..._queryParams, ...requestOptions?.queryParams },
             queryString: core.url
                 .queryBuilder()
                 .addMany(_queryParams)
@@ -741,28 +658,22 @@ export class ToolsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.PaginatedToolCalls, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.PaginatedToolCalls, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -783,35 +694,31 @@ export class ToolsClient {
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} toolName - Tool name. URL-encode names containing special characters.
-     * @param {LatitudeApi.ToolsGetRequest} request
+     * @param {Latitude.GetToolsRequest} request
      * @param {ToolsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
-     *     await client.tools.get("projectSlug", "toolName", {
-     *         fromIso: "2024-01-15T09:30:00Z",
-     *         toIso: "2024-01-15T09:30:00Z",
-     *         errorsOnly: "true"
-     *     })
+     *     await client.tools.get("projectSlug", "toolName")
      */
     public get(
         projectSlug: string,
         toolName: string,
-        request: LatitudeApi.ToolsGetRequest = {},
+        request: Latitude.GetToolsRequest = {},
         requestOptions?: ToolsClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.ToolDetailResponse> {
+    ): core.HttpResponsePromise<Latitude.ToolDetailResponse> {
         return core.HttpResponsePromise.fromPromise(this.__get(projectSlug, toolName, request, requestOptions));
     }
 
     private async __get(
         projectSlug: string,
         toolName: string,
-        request: LatitudeApi.ToolsGetRequest = {},
+        request: Latitude.GetToolsRequest = {},
         requestOptions?: ToolsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.ToolDetailResponse>> {
+    ): Promise<core.WithRawResponse<Latitude.ToolDetailResponse>> {
         const { fromIso, toIso, errorsOnly } = request;
         const _queryParams: Record<string, unknown> = {
             fromIso: fromIso != null ? fromIso : undefined,
@@ -828,12 +735,11 @@ export class ToolsClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/tools/${core.url.encodePathParam(toolName)}`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: { ..._queryParams, ...requestOptions?.queryParams },
             queryString: core.url
                 .queryBuilder()
                 .addMany(_queryParams)
@@ -846,28 +752,22 @@ export class ToolsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.ToolDetailResponse, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.ToolDetailResponse, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,

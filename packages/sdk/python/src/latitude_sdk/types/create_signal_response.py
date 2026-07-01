@@ -19,9 +19,10 @@ class CreateSignalResponse(UniversalBaseModel):
     URL-safe identifier; use it on the other signal endpoints.
     """
 
-    evaluation_id: typing_extensions.Annotated[str, FieldMetadata(alias="evaluationId")] = pydantic.Field()
-    """
-    Id of the signal's detector evaluation.
-    """
+    evaluation_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="evaluationId"),
+        pydantic.Field(alias="evaluationId", description="Id of the signal's detector evaluation."),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

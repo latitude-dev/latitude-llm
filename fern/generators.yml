@@ -11,30 +11,38 @@ groups:
   local-typescript:
     generators:
       - name: fernapi/fern-typescript-node-sdk
-        version: 3.64.1
+        version: 3.73.4
         output:
-          # Fern writes generated TypeScript source files here (Client.ts,
-          # index.ts, api/, core/, errors/, environments.ts). The surrounding
-          # package shell (`package.json`, `tsconfig.json`, `tsdown.config.ts`,
-          # `src/index.ts` re-export) is hand-written one level up at
-          # `packages/sdk/typescript/`. Fern owns everything inside `src/`;
-          # running `pnpm generate:sdk` overwrites the contents.
           location: local-file-system
           path: ../packages/sdk/typescript/src
+        config:
+          naming:
+            namespace: Latitude
+          inlinePathParameters: false
 
   local-python:
     generators:
-      # Pinned to the newest generator that the CLI pinned in fern.config.json
-      # (0.83.0) accepts — 4.33.0+ requires a newer CLI.
       - name: fernapi/fern-python-sdk
-        version: 4.32.2
+        version: 5.15.0
         output:
-          # Same arrangement as TypeScript: Fern owns everything inside
-          # `src/`; the package shell (`pyproject.toml`, README, CHANGELOG,
-          # tests/) is hand-written one level up at `packages/sdk/python/`.
           location: local-file-system
           path: ../packages/sdk/python/src/latitude_sdk
         config:
-          client_class_name: LatitudeApiClient
+          package_name: latitude_sdk
+          client_class_name: LatitudeClient
+          environment_class_name: LatitudeEnvironment
+          inline_path_params: false
           pydantic_config:
             version: v2
+
+  local-cli:
+    generators:
+      - name: fernapi/fern-cli-generator
+        version: 0.21.0
+        ir-version: v67
+        output:
+          location: local-file-system
+          path: ../packages/cli
+        config:
+          binaryName: latitude
+          customCommands: false

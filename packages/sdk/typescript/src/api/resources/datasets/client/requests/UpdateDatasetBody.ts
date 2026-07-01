@@ -8,5 +8,5 @@ export interface UpdateDatasetBody {
     /** New human-readable name. Renaming regenerates the slug. */
     name?: string;
     /** New description. Pass `null` to clear; omit to keep the current value. */
-    description?: string;
+    description?: string | null;
 }

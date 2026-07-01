@@ -6,7 +6,8 @@ from json.decoder import JSONDecodeError
 from ..core.api_error import ApiError
 from ..core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from ..core.http_response import AsyncHttpResponse, HttpResponse
-from ..core.jsonable_encoder import jsonable_encoder
+from ..core.jsonable_encoder import encode_path_param
+from ..core.parse_error import ParsingError
 from ..core.pydantic_utilities import parse_obj_as
 from ..core.request_options import RequestOptions
 from ..core.serialization import convert_and_respect_annotation_metadata
@@ -17,6 +18,7 @@ from ..types.annotation import Annotation
 from ..types.annotation_anchor import AnnotationAnchor
 from ..types.error import Error
 from ..types.trace_ref import TraceRef
+from pydantic import ValidationError
 
 # this is used as the default value for optional parameters
 OMIT = typing.cast(typing.Any, ...)
@@ -75,7 +77,7 @@ class RawAnnotationsClient:
             Annotation created
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/annotations",
+            f"v1/projects/{encode_path_param(project_slug)}/annotations",
             method="POST",
             json={
                 "simulationId": simulation_id,
@@ -140,6 +142,10 @@ class RawAnnotationsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
 
@@ -196,7 +202,7 @@ class AsyncRawAnnotationsClient:
             Annotation created
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/annotations",
+            f"v1/projects/{encode_path_param(project_slug)}/annotations",
             method="POST",
             json={
                 "simulationId": simulation_id,
@@ -261,4 +267,8 @@ class AsyncRawAnnotationsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)

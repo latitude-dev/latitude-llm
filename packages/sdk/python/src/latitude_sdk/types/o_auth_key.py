@@ -14,54 +14,52 @@ class OAuthKey(UniversalBaseModel):
     Stable OAuth key identifier.
     """
 
-    client_id: typing_extensions.Annotated[str, FieldMetadata(alias="clientId")] = pydantic.Field()
-    """
-    Identifier of the OAuth client the key was issued to.
-    """
-
-    client_name: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="clientName")] = pydantic.Field(
-        default=None
-    )
-    """
-    Display name of the OAuth client.
-    """
-
-    client_icon: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="clientIcon")] = pydantic.Field(
-        default=None
-    )
-    """
-    Icon URL of the OAuth client.
-    """
-
-    user_id: typing_extensions.Annotated[str, FieldMetadata(alias="userId")] = pydantic.Field()
-    """
-    Identifier of the user the key belongs to.
-    """
-
-    user_name: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="userName")] = pydantic.Field(
-        default=None
-    )
-    """
-    Display name of the user. `null` until the user completes onboarding.
-    """
-
-    user_email: typing_extensions.Annotated[str, FieldMetadata(alias="userEmail")] = pydantic.Field()
-    """
-    Email of the user.
-    """
-
-    last_activity_at: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="lastActivityAt")] = (
-        pydantic.Field(default=None)
-    )
-    """
-    ISO-8601 timestamp of the last refresh on the key. `null` if the key has never been used.
-    """
-
-    connected_at: typing_extensions.Annotated[str, FieldMetadata(alias="connectedAt")] = pydantic.Field()
-    """
-    ISO-8601 timestamp at which the key was connected.
-    """
-
+    client_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="clientId"),
+        pydantic.Field(alias="clientId", description="Identifier of the OAuth client the key was issued to."),
+    ]
+    client_name: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="clientName"),
+        pydantic.Field(alias="clientName", default=None, description="Display name of the OAuth client."),
+    ]
+    client_icon: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="clientIcon"),
+        pydantic.Field(alias="clientIcon", default=None, description="Icon URL of the OAuth client."),
+    ]
+    user_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="userId"),
+        pydantic.Field(alias="userId", description="Identifier of the user the key belongs to."),
+    ]
+    user_name: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="userName"),
+        pydantic.Field(
+            alias="userName",
+            default=None,
+            description="Display name of the user. `null` until the user completes onboarding.",
+        ),
+    ]
+    user_email: typing_extensions.Annotated[
+        str, FieldMetadata(alias="userEmail"), pydantic.Field(alias="userEmail", description="Email of the user.")
+    ]
+    last_activity_at: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="lastActivityAt"),
+        pydantic.Field(
+            alias="lastActivityAt",
+            default=None,
+            description="ISO-8601 timestamp of the last refresh on the key. `null` if the key has never been used.",
+        ),
+    ]
+    connected_at: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="connectedAt"),
+        pydantic.Field(alias="connectedAt", description="ISO-8601 timestamp at which the key was connected."),
+    ]
     disabled: bool = pydantic.Field()
     """
     Whether the key has been disabled.

@@ -5,6 +5,7 @@ from __future__ import annotations
 import typing
 
 import pydantic
+import typing_extensions
 from ...core.pydantic_utilities import UniversalBaseModel
 from .create_signal_body_evaluation_settings_settings_rule_conditions_item import (
     CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem,
@@ -37,6 +38,7 @@ class CreateSignalBodyEvaluationSettingsSettings_Rule(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-CreateSignalBodyEvaluationSettingsSettings = typing.Union[
-    CreateSignalBodyEvaluationSettingsSettings_Judge, CreateSignalBodyEvaluationSettingsSettings_Rule
+CreateSignalBodyEvaluationSettingsSettings = typing_extensions.Annotated[
+    typing.Union[CreateSignalBodyEvaluationSettingsSettings_Judge, CreateSignalBodyEvaluationSettingsSettings_Rule],
+    pydantic.Field(discriminator="kind"),
 ]

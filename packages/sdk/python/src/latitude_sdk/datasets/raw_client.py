@@ -6,7 +6,8 @@ from json.decoder import JSONDecodeError
 from ..core.api_error import ApiError
 from ..core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from ..core.http_response import AsyncHttpResponse, HttpResponse
-from ..core.jsonable_encoder import jsonable_encoder
+from ..core.jsonable_encoder import encode_path_param
+from ..core.parse_error import ParsingError
 from ..core.pydantic_utilities import parse_obj_as
 from ..core.request_options import RequestOptions
 from ..core.serialization import convert_and_respect_annotation_metadata
@@ -25,20 +26,21 @@ from ..types.import_rows_from_traces_response import ImportRowsFromTracesRespons
 from ..types.insert_dataset_rows_response import InsertDatasetRowsResponse
 from ..types.paginated_dataset_rows import PaginatedDatasetRows
 from ..types.paginated_datasets import PaginatedDatasets
-from ..types.traces_ref import TracesRef
 from ..types.update_dataset_row_response import UpdateDatasetRowResponse
-from .types.datasets_list_columns_request_include_removed import DatasetsListColumnsRequestIncludeRemoved
-from .types.datasets_list_request_sort_by import DatasetsListRequestSortBy
-from .types.datasets_list_request_sort_direction import DatasetsListRequestSortDirection
-from .types.datasets_list_rows_request_sort_direction import DatasetsListRowsRequestSortDirection
 from .types.delete_dataset_rows_body_selection import DeleteDatasetRowsBodySelection
 from .types.export_dataset_rows_body_selection import ExportDatasetRowsBodySelection
+from .types.import_rows_from_traces_body_traces import ImportRowsFromTracesBodyTraces
 from .types.insert_dataset_rows_body_rows_item import InsertDatasetRowsBodyRowsItem
+from .types.list_columns_datasets_request_include_removed import ListColumnsDatasetsRequestIncludeRemoved
+from .types.list_datasets_request_sort_by import ListDatasetsRequestSortBy
+from .types.list_datasets_request_sort_direction import ListDatasetsRequestSortDirection
+from .types.list_rows_datasets_request_sort_direction import ListRowsDatasetsRequestSortDirection
 from .types.update_dataset_row_body_custom_value import UpdateDatasetRowBodyCustomValue
 from .types.update_dataset_row_body_expected_output import UpdateDatasetRowBodyExpectedOutput
 from .types.update_dataset_row_body_input import UpdateDatasetRowBodyInput
 from .types.update_dataset_row_body_metadata import UpdateDatasetRowBodyMetadata
 from .types.update_dataset_row_body_output import UpdateDatasetRowBodyOutput
+from pydantic import ValidationError
 
 # this is used as the default value for optional parameters
 OMIT = typing.cast(typing.Any, ...)
@@ -54,8 +56,8 @@ class RawDatasetsClient:
         *,
         cursor: typing.Optional[str] = None,
         limit: typing.Optional[int] = None,
-        sort_by: typing.Optional[DatasetsListRequestSortBy] = None,
-        sort_direction: typing.Optional[DatasetsListRequestSortDirection] = None,
+        sort_by: typing.Optional[ListDatasetsRequestSortBy] = None,
+        sort_direction: typing.Optional[ListDatasetsRequestSortDirection] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[PaginatedDatasets]:
         """
@@ -72,10 +74,10 @@ class RawDatasetsClient:
         limit : typing.Optional[int]
             Page size. Defaults to 50; max 200.
 
-        sort_by : typing.Optional[DatasetsListRequestSortBy]
+        sort_by : typing.Optional[ListDatasetsRequestSortBy]
             Field to sort by. Defaults to `updatedAt`.
 
-        sort_direction : typing.Optional[DatasetsListRequestSortDirection]
+        sort_direction : typing.Optional[ListDatasetsRequestSortDirection]
             Sort direction. Defaults to `desc`.
 
         request_options : typing.Optional[RequestOptions]
@@ -87,7 +89,7 @@ class RawDatasetsClient:
             Page of datasets
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets",
             method="GET",
             params={
                 "cursor": cursor,
@@ -143,6 +145,10 @@ class RawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def create(
@@ -176,7 +182,7 @@ class RawDatasetsClient:
             Created dataset
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets",
             method="POST",
             json={
                 "name": name,
@@ -234,6 +240,10 @@ class RawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def get(
@@ -259,7 +269,7 @@ class RawDatasetsClient:
             Dataset
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}",
             method="GET",
             request_options=request_options,
         )
@@ -309,6 +319,10 @@ class RawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def delete(
@@ -333,7 +347,7 @@ class RawDatasetsClient:
         HttpResponse[None]
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}",
             method="DELETE",
             request_options=request_options,
         )
@@ -365,6 +379,10 @@ class RawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def update(
@@ -402,7 +420,7 @@ class RawDatasetsClient:
             Updated dataset
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}",
             method="PATCH",
             json={
                 "name": name,
@@ -460,6 +478,10 @@ class RawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def list_rows(
@@ -470,7 +492,7 @@ class RawDatasetsClient:
         cursor: typing.Optional[str] = None,
         limit: typing.Optional[int] = None,
         search: typing.Optional[str] = None,
-        sort_direction: typing.Optional[DatasetsListRowsRequestSortDirection] = None,
+        sort_direction: typing.Optional[ListRowsDatasetsRequestSortDirection] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[PaginatedDatasetRows]:
         """
@@ -493,7 +515,7 @@ class RawDatasetsClient:
         search : typing.Optional[str]
             Free-text search against row cells.
 
-        sort_direction : typing.Optional[DatasetsListRowsRequestSortDirection]
+        sort_direction : typing.Optional[ListRowsDatasetsRequestSortDirection]
             Sort direction on `createdAt`. Defaults to `desc` (newest first).
 
         request_options : typing.Optional[RequestOptions]
@@ -505,7 +527,7 @@ class RawDatasetsClient:
             Page of rows
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/rows",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/rows",
             method="GET",
             params={
                 "cursor": cursor,
@@ -561,6 +583,10 @@ class RawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def insert_rows(
@@ -594,7 +620,7 @@ class RawDatasetsClient:
             Rows inserted
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/rows",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/rows",
             method="POST",
             json={
                 "rows": convert_and_respect_annotation_metadata(
@@ -653,6 +679,10 @@ class RawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def delete_rows(
@@ -686,7 +716,7 @@ class RawDatasetsClient:
             Rows deleted
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/rows",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/rows",
             method="DELETE",
             json={
                 "selection": convert_and_respect_annotation_metadata(
@@ -745,6 +775,10 @@ class RawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def update_row(
@@ -798,20 +832,22 @@ class RawDatasetsClient:
             Row updated
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/rows/{jsonable_encoder(row_id)}",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/rows/{encode_path_param(row_id)}",
             method="PATCH",
             json={
                 "input": convert_and_respect_annotation_metadata(
-                    object_=input, annotation=UpdateDatasetRowBodyInput, direction="write"
+                    object_=input, annotation=typing.Optional[UpdateDatasetRowBodyInput], direction="write"
                 ),
                 "output": convert_and_respect_annotation_metadata(
-                    object_=output, annotation=UpdateDatasetRowBodyOutput, direction="write"
+                    object_=output, annotation=typing.Optional[UpdateDatasetRowBodyOutput], direction="write"
                 ),
                 "expectedOutput": convert_and_respect_annotation_metadata(
-                    object_=expected_output, annotation=UpdateDatasetRowBodyExpectedOutput, direction="write"
+                    object_=expected_output,
+                    annotation=typing.Optional[UpdateDatasetRowBodyExpectedOutput],
+                    direction="write",
                 ),
                 "metadata": convert_and_respect_annotation_metadata(
-                    object_=metadata, annotation=UpdateDatasetRowBodyMetadata, direction="write"
+                    object_=metadata, annotation=typing.Optional[UpdateDatasetRowBodyMetadata], direction="write"
                 ),
                 "custom": convert_and_respect_annotation_metadata(
                     object_=custom,
@@ -871,6 +907,10 @@ class RawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def import_rows_from_traces(
@@ -878,7 +918,7 @@ class RawDatasetsClient:
         project_slug: str,
         dataset_slug: str,
         *,
-        traces: TracesRef,
+        traces: ImportRowsFromTracesBodyTraces,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[ImportRowsFromTracesResponse]:
         """
@@ -892,7 +932,8 @@ class RawDatasetsClient:
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
 
-        traces : TracesRef
+        traces : ImportRowsFromTracesBodyTraces
+            Which traces to import as rows — either explicit ids or a filter set.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -903,11 +944,11 @@ class RawDatasetsClient:
             Rows imported
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/rows/import/traces",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/rows/import/traces",
             method="POST",
             json={
                 "traces": convert_and_respect_annotation_metadata(
-                    object_=traces, annotation=TracesRef, direction="write"
+                    object_=traces, annotation=ImportRowsFromTracesBodyTraces, direction="write"
                 ),
             },
             headers={
@@ -962,6 +1003,10 @@ class RawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def export_rows(
@@ -1003,7 +1048,7 @@ class RawDatasetsClient:
             CSV ready at the signed URL
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/rows/export",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/rows/export",
             method="POST",
             json={
                 "selection": convert_and_respect_annotation_metadata(
@@ -1074,6 +1119,10 @@ class RawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def list_columns(
@@ -1081,7 +1130,7 @@ class RawDatasetsClient:
         project_slug: str,
         dataset_slug: str,
         *,
-        include_removed: typing.Optional[DatasetsListColumnsRequestIncludeRemoved] = None,
+        include_removed: typing.Optional[ListColumnsDatasetsRequestIncludeRemoved] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[DatasetColumnsList]:
         """
@@ -1095,7 +1144,7 @@ class RawDatasetsClient:
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
 
-        include_removed : typing.Optional[DatasetsListColumnsRequestIncludeRemoved]
+        include_removed : typing.Optional[ListColumnsDatasetsRequestIncludeRemoved]
             When `true`, also returns soft-removed columns (each carrying `removed: true`). Defaults to `false`.
 
         request_options : typing.Optional[RequestOptions]
@@ -1107,7 +1156,7 @@ class RawDatasetsClient:
             Column schema
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/columns",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/columns",
             method="GET",
             params={
                 "includeRemoved": include_removed,
@@ -1160,6 +1209,10 @@ class RawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def add_column(
@@ -1193,7 +1246,7 @@ class RawDatasetsClient:
             Created column
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/columns",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/columns",
             method="POST",
             json={
                 "name": name,
@@ -1250,6 +1303,10 @@ class RawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def delete_column(
@@ -1282,7 +1339,7 @@ class RawDatasetsClient:
         HttpResponse[None]
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/columns/{jsonable_encoder(identifier)}",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/columns/{encode_path_param(identifier)}",
             method="DELETE",
             request_options=request_options,
         )
@@ -1314,6 +1371,10 @@ class RawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def update_column(
@@ -1351,7 +1412,7 @@ class RawDatasetsClient:
             Updated column
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/columns/{jsonable_encoder(identifier)}",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/columns/{encode_path_param(identifier)}",
             method="PATCH",
             json={
                 "name": name,
@@ -1408,6 +1469,10 @@ class RawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def reorder_columns(
@@ -1441,7 +1506,7 @@ class RawDatasetsClient:
             Reordered column schema
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/columns/reorder",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/columns/reorder",
             method="POST",
             json={
                 "order": order,
@@ -1498,6 +1563,10 @@ class RawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def restore_column(
@@ -1531,7 +1600,7 @@ class RawDatasetsClient:
             Restored column
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/columns/{jsonable_encoder(identifier)}/restore",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/columns/{encode_path_param(identifier)}/restore",
             method="POST",
             request_options=request_options,
         )
@@ -1581,6 +1650,10 @@ class RawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
 
@@ -1594,8 +1667,8 @@ class AsyncRawDatasetsClient:
         *,
         cursor: typing.Optional[str] = None,
         limit: typing.Optional[int] = None,
-        sort_by: typing.Optional[DatasetsListRequestSortBy] = None,
-        sort_direction: typing.Optional[DatasetsListRequestSortDirection] = None,
+        sort_by: typing.Optional[ListDatasetsRequestSortBy] = None,
+        sort_direction: typing.Optional[ListDatasetsRequestSortDirection] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[PaginatedDatasets]:
         """
@@ -1612,10 +1685,10 @@ class AsyncRawDatasetsClient:
         limit : typing.Optional[int]
             Page size. Defaults to 50; max 200.
 
-        sort_by : typing.Optional[DatasetsListRequestSortBy]
+        sort_by : typing.Optional[ListDatasetsRequestSortBy]
             Field to sort by. Defaults to `updatedAt`.
 
-        sort_direction : typing.Optional[DatasetsListRequestSortDirection]
+        sort_direction : typing.Optional[ListDatasetsRequestSortDirection]
             Sort direction. Defaults to `desc`.
 
         request_options : typing.Optional[RequestOptions]
@@ -1627,7 +1700,7 @@ class AsyncRawDatasetsClient:
             Page of datasets
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets",
             method="GET",
             params={
                 "cursor": cursor,
@@ -1683,6 +1756,10 @@ class AsyncRawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def create(
@@ -1716,7 +1793,7 @@ class AsyncRawDatasetsClient:
             Created dataset
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets",
             method="POST",
             json={
                 "name": name,
@@ -1774,6 +1851,10 @@ class AsyncRawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def get(
@@ -1799,7 +1880,7 @@ class AsyncRawDatasetsClient:
             Dataset
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}",
             method="GET",
             request_options=request_options,
         )
@@ -1849,6 +1930,10 @@ class AsyncRawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def delete(
@@ -1873,7 +1958,7 @@ class AsyncRawDatasetsClient:
         AsyncHttpResponse[None]
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}",
             method="DELETE",
             request_options=request_options,
         )
@@ -1905,6 +1990,10 @@ class AsyncRawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def update(
@@ -1942,7 +2031,7 @@ class AsyncRawDatasetsClient:
             Updated dataset
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}",
             method="PATCH",
             json={
                 "name": name,
@@ -2000,6 +2089,10 @@ class AsyncRawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def list_rows(
@@ -2010,7 +2103,7 @@ class AsyncRawDatasetsClient:
         cursor: typing.Optional[str] = None,
         limit: typing.Optional[int] = None,
         search: typing.Optional[str] = None,
-        sort_direction: typing.Optional[DatasetsListRowsRequestSortDirection] = None,
+        sort_direction: typing.Optional[ListRowsDatasetsRequestSortDirection] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[PaginatedDatasetRows]:
         """
@@ -2033,7 +2126,7 @@ class AsyncRawDatasetsClient:
         search : typing.Optional[str]
             Free-text search against row cells.
 
-        sort_direction : typing.Optional[DatasetsListRowsRequestSortDirection]
+        sort_direction : typing.Optional[ListRowsDatasetsRequestSortDirection]
             Sort direction on `createdAt`. Defaults to `desc` (newest first).
 
         request_options : typing.Optional[RequestOptions]
@@ -2045,7 +2138,7 @@ class AsyncRawDatasetsClient:
             Page of rows
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/rows",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/rows",
             method="GET",
             params={
                 "cursor": cursor,
@@ -2101,6 +2194,10 @@ class AsyncRawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def insert_rows(
@@ -2134,7 +2231,7 @@ class AsyncRawDatasetsClient:
             Rows inserted
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/rows",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/rows",
             method="POST",
             json={
                 "rows": convert_and_respect_annotation_metadata(
@@ -2193,6 +2290,10 @@ class AsyncRawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def delete_rows(
@@ -2226,7 +2327,7 @@ class AsyncRawDatasetsClient:
             Rows deleted
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/rows",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/rows",
             method="DELETE",
             json={
                 "selection": convert_and_respect_annotation_metadata(
@@ -2285,6 +2386,10 @@ class AsyncRawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def update_row(
@@ -2338,20 +2443,22 @@ class AsyncRawDatasetsClient:
             Row updated
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/rows/{jsonable_encoder(row_id)}",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/rows/{encode_path_param(row_id)}",
             method="PATCH",
             json={
                 "input": convert_and_respect_annotation_metadata(
-                    object_=input, annotation=UpdateDatasetRowBodyInput, direction="write"
+                    object_=input, annotation=typing.Optional[UpdateDatasetRowBodyInput], direction="write"
                 ),
                 "output": convert_and_respect_annotation_metadata(
-                    object_=output, annotation=UpdateDatasetRowBodyOutput, direction="write"
+                    object_=output, annotation=typing.Optional[UpdateDatasetRowBodyOutput], direction="write"
                 ),
                 "expectedOutput": convert_and_respect_annotation_metadata(
-                    object_=expected_output, annotation=UpdateDatasetRowBodyExpectedOutput, direction="write"
+                    object_=expected_output,
+                    annotation=typing.Optional[UpdateDatasetRowBodyExpectedOutput],
+                    direction="write",
                 ),
                 "metadata": convert_and_respect_annotation_metadata(
-                    object_=metadata, annotation=UpdateDatasetRowBodyMetadata, direction="write"
+                    object_=metadata, annotation=typing.Optional[UpdateDatasetRowBodyMetadata], direction="write"
                 ),
                 "custom": convert_and_respect_annotation_metadata(
                     object_=custom,
@@ -2411,6 +2518,10 @@ class AsyncRawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def import_rows_from_traces(
@@ -2418,7 +2529,7 @@ class AsyncRawDatasetsClient:
         project_slug: str,
         dataset_slug: str,
         *,
-        traces: TracesRef,
+        traces: ImportRowsFromTracesBodyTraces,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[ImportRowsFromTracesResponse]:
         """
@@ -2432,7 +2543,8 @@ class AsyncRawDatasetsClient:
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
 
-        traces : TracesRef
+        traces : ImportRowsFromTracesBodyTraces
+            Which traces to import as rows — either explicit ids or a filter set.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -2443,11 +2555,11 @@ class AsyncRawDatasetsClient:
             Rows imported
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/rows/import/traces",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/rows/import/traces",
             method="POST",
             json={
                 "traces": convert_and_respect_annotation_metadata(
-                    object_=traces, annotation=TracesRef, direction="write"
+                    object_=traces, annotation=ImportRowsFromTracesBodyTraces, direction="write"
                 ),
             },
             headers={
@@ -2502,6 +2614,10 @@ class AsyncRawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def export_rows(
@@ -2543,7 +2659,7 @@ class AsyncRawDatasetsClient:
             CSV ready at the signed URL
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/rows/export",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/rows/export",
             method="POST",
             json={
                 "selection": convert_and_respect_annotation_metadata(
@@ -2614,6 +2730,10 @@ class AsyncRawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def list_columns(
@@ -2621,7 +2741,7 @@ class AsyncRawDatasetsClient:
         project_slug: str,
         dataset_slug: str,
         *,
-        include_removed: typing.Optional[DatasetsListColumnsRequestIncludeRemoved] = None,
+        include_removed: typing.Optional[ListColumnsDatasetsRequestIncludeRemoved] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[DatasetColumnsList]:
         """
@@ -2635,7 +2755,7 @@ class AsyncRawDatasetsClient:
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
 
-        include_removed : typing.Optional[DatasetsListColumnsRequestIncludeRemoved]
+        include_removed : typing.Optional[ListColumnsDatasetsRequestIncludeRemoved]
             When `true`, also returns soft-removed columns (each carrying `removed: true`). Defaults to `false`.
 
         request_options : typing.Optional[RequestOptions]
@@ -2647,7 +2767,7 @@ class AsyncRawDatasetsClient:
             Column schema
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/columns",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/columns",
             method="GET",
             params={
                 "includeRemoved": include_removed,
@@ -2700,6 +2820,10 @@ class AsyncRawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def add_column(
@@ -2733,7 +2857,7 @@ class AsyncRawDatasetsClient:
             Created column
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/columns",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/columns",
             method="POST",
             json={
                 "name": name,
@@ -2790,6 +2914,10 @@ class AsyncRawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def delete_column(
@@ -2822,7 +2950,7 @@ class AsyncRawDatasetsClient:
         AsyncHttpResponse[None]
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/columns/{jsonable_encoder(identifier)}",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/columns/{encode_path_param(identifier)}",
             method="DELETE",
             request_options=request_options,
         )
@@ -2854,6 +2982,10 @@ class AsyncRawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def update_column(
@@ -2891,7 +3023,7 @@ class AsyncRawDatasetsClient:
             Updated column
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/columns/{jsonable_encoder(identifier)}",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/columns/{encode_path_param(identifier)}",
             method="PATCH",
             json={
                 "name": name,
@@ -2948,6 +3080,10 @@ class AsyncRawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def reorder_columns(
@@ -2981,7 +3117,7 @@ class AsyncRawDatasetsClient:
             Reordered column schema
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/columns/reorder",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/columns/reorder",
             method="POST",
             json={
                 "order": order,
@@ -3038,6 +3174,10 @@ class AsyncRawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def restore_column(
@@ -3071,7 +3211,7 @@ class AsyncRawDatasetsClient:
             Restored column
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/datasets/{jsonable_encoder(dataset_slug)}/columns/{jsonable_encoder(identifier)}/restore",
+            f"v1/projects/{encode_path_param(project_slug)}/datasets/{encode_path_param(dataset_slug)}/columns/{encode_path_param(identifier)}/restore",
             method="POST",
             request_options=request_options,
         )
@@ -3121,4 +3261,8 @@ class AsyncRawDatasetsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)

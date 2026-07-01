@@ -15,19 +15,20 @@ class UserActivityResponse(UniversalBaseModel):
     Per-bucket session activity across the range, oldest first.
     """
 
-    bucket_seconds: typing_extensions.Annotated[int, FieldMetadata(alias="bucketSeconds")] = pydantic.Field()
-    """
-    Bucket width the buckets were computed with, in seconds.
-    """
-
-    from_iso: typing_extensions.Annotated[str, FieldMetadata(alias="fromIso")] = pydantic.Field()
-    """
-    ISO-8601 lower bound of the resolved range.
-    """
-
-    to_iso: typing_extensions.Annotated[str, FieldMetadata(alias="toIso")] = pydantic.Field()
-    """
-    ISO-8601 upper bound of the resolved range.
-    """
+    bucket_seconds: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="bucketSeconds"),
+        pydantic.Field(alias="bucketSeconds", description="Bucket width the buckets were computed with, in seconds."),
+    ]
+    from_iso: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="fromIso"),
+        pydantic.Field(alias="fromIso", description="ISO-8601 lower bound of the resolved range."),
+    ]
+    to_iso: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="toIso"),
+        pydantic.Field(alias="toIso", description="ISO-8601 upper bound of the resolved range."),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -7,7 +7,7 @@ import * as core from "../../../../core/index.js";
 import * as environments from "../../../../environments.js";
 import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCodeError.js";
 import * as errors from "../../../../errors/index.js";
-import * as LatitudeApi from "../../../index.js";
+import * as Latitude from "../../../index.js";
 
 export declare namespace MembersClient {
     export type Options = BaseClientOptions;
@@ -18,7 +18,7 @@ export declare namespace MembersClient {
 export class MembersClient {
     protected readonly _options: NormalizedClientOptionsWithAuth<MembersClient.Options>;
 
-    constructor(options: MembersClient.Options) {
+    constructor(options: MembersClient.Options = {}) {
         this._options = normalizeClientOptionsWithAuth(options);
     }
 
@@ -27,20 +27,20 @@ export class MembersClient {
      *
      * @param {MembersClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.members.list()
      */
-    public list(requestOptions?: MembersClient.RequestOptions): core.HttpResponsePromise<LatitudeApi.MemberList> {
+    public list(requestOptions?: MembersClient.RequestOptions): core.HttpResponsePromise<Latitude.MemberList> {
         return core.HttpResponsePromise.fromPromise(this.__list(requestOptions));
     }
 
     private async __list(
         requestOptions?: MembersClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.MemberList>> {
+    ): Promise<core.WithRawResponse<Latitude.MemberList>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -51,12 +51,12 @@ export class MembersClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 "v1/members",
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: requestOptions?.queryParams,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -64,28 +64,22 @@ export class MembersClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.MemberList, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.MemberList, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -99,12 +93,12 @@ export class MembersClient {
     /**
      * Signals an invitation to join the caller's organization. The invitee receives an accept link by email and becomes a member once they accept. The response is the pending invitation record. Requires OAuth authentication (API-key callers can't act on behalf of a specific user).
      *
-     * @param {LatitudeApi.InviteMemberBody} request
+     * @param {Latitude.InviteMemberBody} request
      * @param {MembersClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.members.invite({
@@ -112,16 +106,16 @@ export class MembersClient {
      *     })
      */
     public invite(
-        request: LatitudeApi.InviteMemberBody,
+        request: Latitude.InviteMemberBody,
         requestOptions?: MembersClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.InvitedMember> {
+    ): core.HttpResponsePromise<Latitude.InvitedMember> {
         return core.HttpResponsePromise.fromPromise(this.__invite(request, requestOptions));
     }
 
     private async __invite(
-        request: LatitudeApi.InviteMemberBody,
+        request: Latitude.InviteMemberBody,
         requestOptions?: MembersClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.InvitedMember>> {
+    ): Promise<core.WithRawResponse<Latitude.InvitedMember>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -132,13 +126,13 @@ export class MembersClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 "v1/members",
             ),
             method: "POST",
             headers: _headers,
             contentType: "application/json",
-            queryParameters: requestOptions?.queryParams,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
             body: request,
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
@@ -148,28 +142,22 @@ export class MembersClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.InvitedMember, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.InvitedMember, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -184,26 +172,29 @@ export class MembersClient {
      * Returns a single member of the caller's organization, including their role and user details.
      *
      * @param {string} memberId - Membership identifier.
+     * @param {Latitude.GetMembersRequest} request
      * @param {MembersClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.members.get("memberId")
      */
     public get(
         memberId: string,
+        request: Latitude.GetMembersRequest = {},
         requestOptions?: MembersClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.ActiveMember> {
-        return core.HttpResponsePromise.fromPromise(this.__get(memberId, requestOptions));
+    ): core.HttpResponsePromise<Latitude.ActiveMember> {
+        return core.HttpResponsePromise.fromPromise(this.__get(memberId, request, requestOptions));
     }
 
     private async __get(
         memberId: string,
+        _request: Latitude.GetMembersRequest = {},
         requestOptions?: MembersClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.ActiveMember>> {
+    ): Promise<core.WithRawResponse<Latitude.ActiveMember>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -214,12 +205,12 @@ export class MembersClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/members/${core.url.encodePathParam(memberId)}`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: requestOptions?.queryParams,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -227,28 +218,22 @@ export class MembersClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.ActiveMember, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.ActiveMember, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -263,20 +248,26 @@ export class MembersClient {
      * Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication.
      *
      * @param {string} memberId - Membership identifier.
+     * @param {Latitude.RemoveMembersRequest} request
      * @param {MembersClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.members.remove("memberId")
      */
-    public remove(memberId: string, requestOptions?: MembersClient.RequestOptions): core.HttpResponsePromise<void> {
-        return core.HttpResponsePromise.fromPromise(this.__remove(memberId, requestOptions));
+    public remove(
+        memberId: string,
+        request: Latitude.RemoveMembersRequest = {},
+        requestOptions?: MembersClient.RequestOptions,
+    ): core.HttpResponsePromise<void> {
+        return core.HttpResponsePromise.fromPromise(this.__remove(memberId, request, requestOptions));
     }
 
     private async __remove(
         memberId: string,
+        _request: Latitude.RemoveMembersRequest = {},
         requestOptions?: MembersClient.RequestOptions,
     ): Promise<core.WithRawResponse<void>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
@@ -289,12 +280,12 @@ export class MembersClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/members/${core.url.encodePathParam(memberId)}`,
             ),
             method: "DELETE",
             headers: _headers,
-            queryParameters: requestOptions?.queryParams,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -308,17 +299,14 @@ export class MembersClient {
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -333,12 +321,12 @@ export class MembersClient {
      * Updates a member of the caller's organization. Today only the role is mutable. The caller must be an admin or owner; owners cannot be demoted via this endpoint. Requires OAuth authentication.
      *
      * @param {string} memberId - Membership identifier.
-     * @param {LatitudeApi.UpdateMemberRoleBody} request
+     * @param {Latitude.UpdateMemberRoleBody} request
      * @param {MembersClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.members.update("memberId", {
@@ -347,17 +335,17 @@ export class MembersClient {
      */
     public update(
         memberId: string,
-        request: LatitudeApi.UpdateMemberRoleBody,
+        request: Latitude.UpdateMemberRoleBody,
         requestOptions?: MembersClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.ActiveMember> {
+    ): core.HttpResponsePromise<Latitude.ActiveMember> {
         return core.HttpResponsePromise.fromPromise(this.__update(memberId, request, requestOptions));
     }
 
     private async __update(
         memberId: string,
-        request: LatitudeApi.UpdateMemberRoleBody,
+        request: Latitude.UpdateMemberRoleBody,
         requestOptions?: MembersClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.ActiveMember>> {
+    ): Promise<core.WithRawResponse<Latitude.ActiveMember>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -368,13 +356,13 @@ export class MembersClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/members/${core.url.encodePathParam(memberId)}`,
             ),
             method: "PATCH",
             headers: _headers,
             contentType: "application/json",
-            queryParameters: requestOptions?.queryParams,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
             body: request,
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
@@ -384,28 +372,22 @@ export class MembersClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.ActiveMember, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.ActiveMember, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,

@@ -20,9 +20,9 @@ from .raw_client import AsyncRawSignalsClient, RawSignalsClient
 from .types.create_signal_body_evaluation import CreateSignalBodyEvaluation
 from .types.create_signal_body_priority import CreateSignalBodyPriority
 from .types.export_signals_body_lifecycle_group import ExportSignalsBodyLifecycleGroup
-from .types.signals_list_request_lifecycle_group import SignalsListRequestLifecycleGroup
-from .types.signals_list_request_sort_by import SignalsListRequestSortBy
-from .types.signals_list_request_sort_direction import SignalsListRequestSortDirection
+from .types.list_signals_request_lifecycle_group import ListSignalsRequestLifecycleGroup
+from .types.list_signals_request_sort_by import ListSignalsRequestSortBy
+from .types.list_signals_request_sort_direction import ListSignalsRequestSortDirection
 
 # this is used as the default value for optional parameters
 OMIT = typing.cast(typing.Any, ...)
@@ -50,9 +50,9 @@ class SignalsClient:
         cursor: typing.Optional[str] = None,
         limit: typing.Optional[int] = None,
         query: typing.Optional[str] = None,
-        lifecycle_group: typing.Optional[SignalsListRequestLifecycleGroup] = None,
-        sort_by: typing.Optional[SignalsListRequestSortBy] = None,
-        sort_direction: typing.Optional[SignalsListRequestSortDirection] = None,
+        lifecycle_group: typing.Optional[ListSignalsRequestLifecycleGroup] = None,
+        sort_by: typing.Optional[ListSignalsRequestSortBy] = None,
+        sort_direction: typing.Optional[ListSignalsRequestSortDirection] = None,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
         request_options: typing.Optional[RequestOptions] = None,
@@ -74,13 +74,13 @@ class SignalsClient:
         query : typing.Optional[str]
             Free-text semantic search across the signals' names and descriptions.
 
-        lifecycle_group : typing.Optional[SignalsListRequestLifecycleGroup]
+        lifecycle_group : typing.Optional[ListSignalsRequestLifecycleGroup]
             `"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both.
 
-        sort_by : typing.Optional[SignalsListRequestSortBy]
+        sort_by : typing.Optional[ListSignalsRequestSortBy]
             Sort field. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority.
 
-        sort_direction : typing.Optional[SignalsListRequestSortDirection]
+        sort_direction : typing.Optional[ListSignalsRequestSortDirection]
             Sort direction. Defaults to `desc`.
 
         from_iso : typing.Optional[dt.datetime]
@@ -99,27 +99,13 @@ class SignalsClient:
 
         Examples
         --------
-        import datetime
+        from latitude_sdk import LatitudeClient
 
-        from latitude import LatitudeApiClient
-
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.signals.list(
             project_slug="projectSlug",
-            cursor="cursor",
-            limit=1,
-            query="query",
-            lifecycle_group="active",
-            sort_by="lastSeen",
-            sort_direction="asc",
-            from_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            to_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
         )
         """
         _response = self._raw_client.list(
@@ -180,14 +166,14 @@ class SignalsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
-        from latitude.signals import (
+        from latitude_sdk import LatitudeClient
+        from latitude_sdk.signals import (
             CreateSignalBodyEvaluationSettings,
             CreateSignalBodyEvaluationSettingsSettings_Judge,
         )
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.signals.create(
             project_slug="projectSlug",
@@ -235,10 +221,10 @@ class SignalsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.signals.get(
             project_slug="projectSlug",
@@ -271,10 +257,10 @@ class SignalsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.signals.delete(
             project_slug="projectSlug",
@@ -324,10 +310,10 @@ class SignalsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.signals.update(
             project_slug="projectSlug",
@@ -376,21 +362,13 @@ class SignalsClient:
 
         Examples
         --------
-        import datetime
+        from latitude_sdk import LatitudeClient
 
-        from latitude import LatitudeApiClient
-
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.signals.analytics(
             project_slug="projectSlug",
-            from_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            to_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
         )
         """
         _response = self._raw_client.analytics(
@@ -434,22 +412,14 @@ class SignalsClient:
 
         Examples
         --------
-        import datetime
+        from latitude_sdk import LatitudeClient
 
-        from latitude import LatitudeApiClient
-
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.signals.trend(
             project_slug="projectSlug",
             signal_slug="signalSlug",
-            from_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            to_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
         )
         """
         _response = self._raw_client.trend(
@@ -493,16 +463,14 @@ class SignalsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.signals.list_traces(
             project_slug="projectSlug",
             signal_slug="signalSlug",
-            cursor="cursor",
-            limit=1,
         )
         """
         _response = self._raw_client.list_traces(
@@ -538,10 +506,10 @@ class SignalsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.signals.mute(
             project_slug="projectSlug",
@@ -579,10 +547,10 @@ class SignalsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.signals.unmute(
             project_slug="projectSlug",
@@ -616,10 +584,10 @@ class SignalsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.signals.monitor(
             project_slug="projectSlug",
@@ -652,10 +620,10 @@ class SignalsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.signals.unmonitor(
             project_slug="projectSlug",
@@ -701,10 +669,10 @@ class SignalsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.signals.export(
             project_slug="projectSlug",
@@ -743,9 +711,9 @@ class AsyncSignalsClient:
         cursor: typing.Optional[str] = None,
         limit: typing.Optional[int] = None,
         query: typing.Optional[str] = None,
-        lifecycle_group: typing.Optional[SignalsListRequestLifecycleGroup] = None,
-        sort_by: typing.Optional[SignalsListRequestSortBy] = None,
-        sort_direction: typing.Optional[SignalsListRequestSortDirection] = None,
+        lifecycle_group: typing.Optional[ListSignalsRequestLifecycleGroup] = None,
+        sort_by: typing.Optional[ListSignalsRequestSortBy] = None,
+        sort_direction: typing.Optional[ListSignalsRequestSortDirection] = None,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
         request_options: typing.Optional[RequestOptions] = None,
@@ -767,13 +735,13 @@ class AsyncSignalsClient:
         query : typing.Optional[str]
             Free-text semantic search across the signals' names and descriptions.
 
-        lifecycle_group : typing.Optional[SignalsListRequestLifecycleGroup]
+        lifecycle_group : typing.Optional[ListSignalsRequestLifecycleGroup]
             `"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both.
 
-        sort_by : typing.Optional[SignalsListRequestSortBy]
+        sort_by : typing.Optional[ListSignalsRequestSortBy]
             Sort field. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority.
 
-        sort_direction : typing.Optional[SignalsListRequestSortDirection]
+        sort_direction : typing.Optional[ListSignalsRequestSortDirection]
             Sort direction. Defaults to `desc`.
 
         from_iso : typing.Optional[dt.datetime]
@@ -793,30 +761,17 @@ class AsyncSignalsClient:
         Examples
         --------
         import asyncio
-        import datetime
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
         async def main() -> None:
             await client.signals.list(
                 project_slug="projectSlug",
-                cursor="cursor",
-                limit=1,
-                query="query",
-                lifecycle_group="active",
-                sort_by="lastSeen",
-                sort_direction="asc",
-                from_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                to_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
             )
 
 
@@ -882,14 +837,14 @@ class AsyncSignalsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
-        from latitude.signals import (
+        from latitude_sdk import AsyncLatitudeClient
+        from latitude_sdk.signals import (
             CreateSignalBodyEvaluationSettings,
             CreateSignalBodyEvaluationSettingsSettings_Judge,
         )
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -945,10 +900,10 @@ class AsyncSignalsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -989,10 +944,10 @@ class AsyncSignalsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1050,10 +1005,10 @@ class AsyncSignalsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1109,24 +1064,17 @@ class AsyncSignalsClient:
         Examples
         --------
         import asyncio
-        import datetime
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
         async def main() -> None:
             await client.signals.analytics(
                 project_slug="projectSlug",
-                from_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                to_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
             )
 
 
@@ -1174,12 +1122,11 @@ class AsyncSignalsClient:
         Examples
         --------
         import asyncio
-        import datetime
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1187,12 +1134,6 @@ class AsyncSignalsClient:
             await client.signals.trend(
                 project_slug="projectSlug",
                 signal_slug="signalSlug",
-                from_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                to_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
             )
 
 
@@ -1241,10 +1182,10 @@ class AsyncSignalsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1252,8 +1193,6 @@ class AsyncSignalsClient:
             await client.signals.list_traces(
                 project_slug="projectSlug",
                 signal_slug="signalSlug",
-                cursor="cursor",
-                limit=1,
             )
 
 
@@ -1294,10 +1233,10 @@ class AsyncSignalsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1343,10 +1282,10 @@ class AsyncSignalsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1388,10 +1327,10 @@ class AsyncSignalsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1432,10 +1371,10 @@ class AsyncSignalsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1489,10 +1428,10 @@ class AsyncSignalsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 

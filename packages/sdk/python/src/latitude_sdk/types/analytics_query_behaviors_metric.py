@@ -5,7 +5,12 @@ from __future__ import annotations
 import typing
 
 import pydantic
+import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
+from .analytics_query_behaviors_metric_avg_field import AnalyticsQueryBehaviorsMetricAvgField
+from .analytics_query_behaviors_metric_max_field import AnalyticsQueryBehaviorsMetricMaxField
+from .analytics_query_behaviors_metric_median_field import AnalyticsQueryBehaviorsMetricMedianField
+from .analytics_query_behaviors_metric_min_field import AnalyticsQueryBehaviorsMetricMinField
 
 
 class AnalyticsQueryBehaviorsMetric_Count(UniversalBaseModel):
@@ -24,7 +29,7 @@ class AnalyticsQueryBehaviorsMetric_Avg(UniversalBaseModel):
     """
 
     kind: typing.Literal["avg"] = "avg"
-    field: typing.Literal["confidence"] = "confidence"
+    field: AnalyticsQueryBehaviorsMetricAvgField
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
@@ -35,7 +40,7 @@ class AnalyticsQueryBehaviorsMetric_Min(UniversalBaseModel):
     """
 
     kind: typing.Literal["min"] = "min"
-    field: typing.Literal["confidence"] = "confidence"
+    field: AnalyticsQueryBehaviorsMetricMinField
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
@@ -46,7 +51,7 @@ class AnalyticsQueryBehaviorsMetric_Max(UniversalBaseModel):
     """
 
     kind: typing.Literal["max"] = "max"
-    field: typing.Literal["confidence"] = "confidence"
+    field: AnalyticsQueryBehaviorsMetricMaxField
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
@@ -57,15 +62,18 @@ class AnalyticsQueryBehaviorsMetric_Median(UniversalBaseModel):
     """
 
     kind: typing.Literal["median"] = "median"
-    field: typing.Literal["confidence"] = "confidence"
+    field: AnalyticsQueryBehaviorsMetricMedianField
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-AnalyticsQueryBehaviorsMetric = typing.Union[
-    AnalyticsQueryBehaviorsMetric_Count,
-    AnalyticsQueryBehaviorsMetric_Avg,
-    AnalyticsQueryBehaviorsMetric_Min,
-    AnalyticsQueryBehaviorsMetric_Max,
-    AnalyticsQueryBehaviorsMetric_Median,
+AnalyticsQueryBehaviorsMetric = typing_extensions.Annotated[
+    typing.Union[
+        AnalyticsQueryBehaviorsMetric_Count,
+        AnalyticsQueryBehaviorsMetric_Avg,
+        AnalyticsQueryBehaviorsMetric_Min,
+        AnalyticsQueryBehaviorsMetric_Max,
+        AnalyticsQueryBehaviorsMetric_Median,
+    ],
+    pydantic.Field(discriminator="kind"),
 ]

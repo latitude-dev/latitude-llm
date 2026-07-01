@@ -4,13 +4,13 @@ import typing
 
 from ..core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from ..core.request_options import RequestOptions
-from ..types.filter_set import FilterSet
+from ..types.filter_condition import FilterCondition
 from ..types.paginated_saved_searches import PaginatedSavedSearches
 from ..types.paginated_traces import PaginatedTraces
 from ..types.saved_search import SavedSearch
 from .raw_client import AsyncRawSavedSearchesClient, RawSavedSearchesClient
-from .types.saved_searches_list_traces_request_sort_by import SavedSearchesListTracesRequestSortBy
-from .types.saved_searches_list_traces_request_sort_direction import SavedSearchesListTracesRequestSortDirection
+from .types.list_traces_saved_searches_request_sort_by import ListTracesSavedSearchesRequestSortBy
+from .types.list_traces_saved_searches_request_sort_direction import ListTracesSavedSearchesRequestSortDirection
 
 # this is used as the default value for optional parameters
 OMIT = typing.cast(typing.Any, ...)
@@ -52,10 +52,10 @@ class SavedSearchesClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.saved_searches.list(
             project_slug="projectSlug",
@@ -70,7 +70,7 @@ class SavedSearchesClient:
         *,
         name: str,
         query: typing.Optional[str] = OMIT,
-        filters: typing.Optional[FilterSet] = OMIT,
+        filters: typing.Optional[typing.Dict[str, typing.Sequence[FilterCondition]]] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> SavedSearch:
         """
@@ -87,7 +87,8 @@ class SavedSearchesClient:
         query : typing.Optional[str]
             Free-text semantic query. `null` (default) when the search is filter-only. At least one of `query` or `filters` must be set.
 
-        filters : typing.Optional[FilterSet]
+        filters : typing.Optional[typing.Dict[str, typing.Sequence[FilterCondition]]]
+            Structured filter set. Defaults to `{}` (no filters). At least one of `query` or `filters` must be set.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -99,10 +100,10 @@ class SavedSearchesClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.saved_searches.create(
             project_slug="projectSlug",
@@ -138,10 +139,10 @@ class SavedSearchesClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.saved_searches.get(
             project_slug="projectSlug",
@@ -174,10 +175,10 @@ class SavedSearchesClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.saved_searches.delete(
             project_slug="projectSlug",
@@ -194,7 +195,7 @@ class SavedSearchesClient:
         *,
         name: typing.Optional[str] = OMIT,
         query: typing.Optional[str] = OMIT,
-        filters: typing.Optional[FilterSet] = OMIT,
+        filters: typing.Optional[typing.Dict[str, typing.Sequence[FilterCondition]]] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> SavedSearch:
         """
@@ -214,7 +215,8 @@ class SavedSearchesClient:
         query : typing.Optional[str]
             Replace the free-text query. Pass `null` to clear it.
 
-        filters : typing.Optional[FilterSet]
+        filters : typing.Optional[typing.Dict[str, typing.Sequence[FilterCondition]]]
+            Replace the structured filter set.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -226,10 +228,10 @@ class SavedSearchesClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.saved_searches.update(
             project_slug="projectSlug",
@@ -248,8 +250,8 @@ class SavedSearchesClient:
         *,
         cursor: typing.Optional[str] = None,
         limit: typing.Optional[int] = None,
-        sort_by: typing.Optional[SavedSearchesListTracesRequestSortBy] = None,
-        sort_direction: typing.Optional[SavedSearchesListTracesRequestSortDirection] = None,
+        sort_by: typing.Optional[ListTracesSavedSearchesRequestSortBy] = None,
+        sort_direction: typing.Optional[ListTracesSavedSearchesRequestSortDirection] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> PaginatedTraces:
         """
@@ -269,10 +271,10 @@ class SavedSearchesClient:
         limit : typing.Optional[int]
             Page size. Defaults to 50; max 200.
 
-        sort_by : typing.Optional[SavedSearchesListTracesRequestSortBy]
+        sort_by : typing.Optional[ListTracesSavedSearchesRequestSortBy]
             Field to sort by. Defaults to `startTime`. Pass `relevance` to rank by semantic match against the saved search's query (best match first, then most recent).
 
-        sort_direction : typing.Optional[SavedSearchesListTracesRequestSortDirection]
+        sort_direction : typing.Optional[ListTracesSavedSearchesRequestSortDirection]
             Sort direction. Defaults to `desc` (most recent first).
 
         request_options : typing.Optional[RequestOptions]
@@ -285,18 +287,14 @@ class SavedSearchesClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.saved_searches.list_traces(
             project_slug="projectSlug",
             search_slug="searchSlug",
-            cursor="cursor",
-            limit=1,
-            sort_by="relevance",
-            sort_direction="asc",
         )
         """
         _response = self._raw_client.list_traces(
@@ -349,10 +347,10 @@ class AsyncSavedSearchesClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -373,7 +371,7 @@ class AsyncSavedSearchesClient:
         *,
         name: str,
         query: typing.Optional[str] = OMIT,
-        filters: typing.Optional[FilterSet] = OMIT,
+        filters: typing.Optional[typing.Dict[str, typing.Sequence[FilterCondition]]] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> SavedSearch:
         """
@@ -390,7 +388,8 @@ class AsyncSavedSearchesClient:
         query : typing.Optional[str]
             Free-text semantic query. `null` (default) when the search is filter-only. At least one of `query` or `filters` must be set.
 
-        filters : typing.Optional[FilterSet]
+        filters : typing.Optional[typing.Dict[str, typing.Sequence[FilterCondition]]]
+            Structured filter set. Defaults to `{}` (no filters). At least one of `query` or `filters` must be set.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -404,10 +403,10 @@ class AsyncSavedSearchesClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -451,10 +450,10 @@ class AsyncSavedSearchesClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -495,10 +494,10 @@ class AsyncSavedSearchesClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -521,7 +520,7 @@ class AsyncSavedSearchesClient:
         *,
         name: typing.Optional[str] = OMIT,
         query: typing.Optional[str] = OMIT,
-        filters: typing.Optional[FilterSet] = OMIT,
+        filters: typing.Optional[typing.Dict[str, typing.Sequence[FilterCondition]]] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> SavedSearch:
         """
@@ -541,7 +540,8 @@ class AsyncSavedSearchesClient:
         query : typing.Optional[str]
             Replace the free-text query. Pass `null` to clear it.
 
-        filters : typing.Optional[FilterSet]
+        filters : typing.Optional[typing.Dict[str, typing.Sequence[FilterCondition]]]
+            Replace the structured filter set.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -555,10 +555,10 @@ class AsyncSavedSearchesClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -583,8 +583,8 @@ class AsyncSavedSearchesClient:
         *,
         cursor: typing.Optional[str] = None,
         limit: typing.Optional[int] = None,
-        sort_by: typing.Optional[SavedSearchesListTracesRequestSortBy] = None,
-        sort_direction: typing.Optional[SavedSearchesListTracesRequestSortDirection] = None,
+        sort_by: typing.Optional[ListTracesSavedSearchesRequestSortBy] = None,
+        sort_direction: typing.Optional[ListTracesSavedSearchesRequestSortDirection] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> PaginatedTraces:
         """
@@ -604,10 +604,10 @@ class AsyncSavedSearchesClient:
         limit : typing.Optional[int]
             Page size. Defaults to 50; max 200.
 
-        sort_by : typing.Optional[SavedSearchesListTracesRequestSortBy]
+        sort_by : typing.Optional[ListTracesSavedSearchesRequestSortBy]
             Field to sort by. Defaults to `startTime`. Pass `relevance` to rank by semantic match against the saved search's query (best match first, then most recent).
 
-        sort_direction : typing.Optional[SavedSearchesListTracesRequestSortDirection]
+        sort_direction : typing.Optional[ListTracesSavedSearchesRequestSortDirection]
             Sort direction. Defaults to `desc` (most recent first).
 
         request_options : typing.Optional[RequestOptions]
@@ -622,10 +622,10 @@ class AsyncSavedSearchesClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -633,10 +633,6 @@ class AsyncSavedSearchesClient:
             await client.saved_searches.list_traces(
                 project_slug="projectSlug",
                 search_slug="searchSlug",
-                cursor="cursor",
-                limit=1,
-                sort_by="relevance",
-                sort_direction="asc",
             )
 
 

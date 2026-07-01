@@ -9,7 +9,7 @@ T = TypeVar("T")
 
 
 class BaseHttpResponse:
-    """Minimalist HTTP response wrapper that exposes response headers."""
+    """Minimalist HTTP response wrapper that exposes response headers and status code."""
 
     _response: httpx.Response
 
@@ -19,6 +19,10 @@ class BaseHttpResponse:
     @property
     def headers(self) -> Dict[str, str]:
         return dict(self._response.headers)
+
+    @property
+    def status_code(self) -> int:
+        return self._response.status_code
 
 
 class HttpResponse(Generic[T], BaseHttpResponse):

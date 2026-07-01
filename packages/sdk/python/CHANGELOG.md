@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.0.0] - 2026-06-30
+
+Major regeneration on the latest Fern toolchain — Fern CLI `0.83.0` → `5.58.0` and the `fern-python-sdk` generator `4.32.2` → `5.15.0` (a major generator upgrade). The HTTP API surface (endpoints, request/response schemas) is unchanged; `openapi.json` changes are limited to `info` metadata and the auth security scheme (now modeled as an API key).
+
+### Renamed (breaking)
+
+- The client classes drop the `Api` infix (via the generator's `client_class_name` config): `LatitudeApiClient` → `LatitudeClient`, `AsyncLatitudeApiClient` → `AsyncLatitudeClient`, and the environment enum `LatitudeApiClientEnvironment` → `LatitudeEnvironment` (via `environment_class_name`). Update your imports and constructors (`from latitude_sdk import LatitudeClient`).
+- The client auth argument is renamed `token` → `api_key` (the credential is an organization-scoped API key, sent as `Authorization: Bearer <key>`). Update `LatitudeClient(token=...)` to `LatitudeClient(api_key=...)`.
+
+### Fixed
+
+- Generated code examples and docstrings now import from `latitude_sdk` (the actual installed module) instead of the bare `latitude` package name (via the generator's `package_name` config).
+
+### Removed (breaking)
+
+- Standalone request/query-parameter enum types are no longer exported — they are inlined into the corresponding method signatures. Affected names include `DatasetsListRequestSortBy`, `DatasetsListRequestSortDirection`, `DatasetsListColumnsRequestIncludeRemoved`, `DatasetsListRowsRequestSortDirection`, `IncidentsListRequestSeveritiesItem`, `IncidentsListRequestSourceType`, `ListMonitorsForTargetBodyTargetType`, `UpdateMonitorBodySeverity`, `UpdateMonitorBodyTrigger`, `SavedSearchesListTracesRequestSortBy`/`SortDirection`, `SignalsListRequestLifecycleGroup`/`SortBy`/`SortDirection`, the `Tools*Request*` and `Users*Request*` parameter enums, and `FilterConditionValueItem`. If you imported any of these by name, pass the literal value inline.
+
+### Added
+
+- The `api_key` argument now falls back to the `LATITUDE_API_KEY` environment variable when omitted (via the OpenAPI spec's `x-fern-bearer` extension), so `LatitudeClient()` works when that env var is set. An explicitly passed `api_key` takes precedence.
+- The v5 generator emits many more fine-grained union-member and enum types (e.g. `ActiveMemberStatus`, `AlertEscalatingConditionThreshold_Absolute`/`_Expected`/`_Multiplier`, `AlertThresholdConditionTrigger`, `AnnotationSource`) and ~226 additional type modules. No new endpoints or methods.
+
 ## [6.10.0] - 2026-07-01
 
 ### Added
