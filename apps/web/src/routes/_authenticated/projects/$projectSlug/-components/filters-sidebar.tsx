@@ -20,6 +20,7 @@ import { PercentileFilter } from "../../../../../components/filters-builder/perc
 import { StatusFilter, type StatusFilterValue } from "../../../../../components/filters-builder/status-filter.tsx"
 import type { DistinctColumn } from "../../../../../components/filters-builder/types.ts"
 import { useMembersCollection } from "../../../../../domains/members/members.collection.ts"
+import { isHasLlmActivityFilterOn } from "../../../../../domains/sessions/sessions.collection.ts"
 import { useTopicFilterOptions } from "../../../../../domains/taxonomy/taxonomy.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { authClient } from "../../../../../lib/auth-client.ts"
@@ -96,8 +97,7 @@ function getStatusValues(filters: FilterSet, field: string): readonly StatusFilt
 }
 
 function getHasLlmActivityOn(filters: FilterSet): boolean {
-  const cond = filters.hasLlmActivity?.find((c) => c.op === "eq")
-  return cond?.value === true || cond?.value === "true"
+  return isHasLlmActivityFilterOn(filters)
 }
 
 function setFieldConditions(filters: FilterSet, field: string, conditions: FilterCondition[]): FilterSet {
@@ -471,7 +471,7 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
 
   const setHasLlmActivity = useCallback(
     (on: boolean) => {
-      setField("hasLlmActivity", on ? [{ op: "eq", value: true }] : [])
+      setField("hasLlmActivity", on ? [] : [{ op: "eq", value: false }])
     },
     [setField],
   )
@@ -660,7 +660,10 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
         </CollapsibleSection>
 
         {mode === "sessions" && (
-          <CollapsibleSection label="Has LLM activity" defaultOpen={getHasLlmActivityOn(filters)}>
+          <CollapsibleSection
+            label="Has LLM activity"
+            defaultOpen={filters.hasLlmActivity !== undefined && !getHasLlmActivityOn(filters)}
+          >
             <div className="flex items-center justify-between gap-2">
               <Text.H7 color="foregroundMuted">
                 {getHasLlmActivityOn(filters) ? "Hiding sessions without any LLM call." : "Including orphan fragments."}

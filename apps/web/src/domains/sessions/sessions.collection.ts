@@ -37,27 +37,38 @@ export function deriveSessionStatus(endTime: string | Date, now: number = Date.n
 }
 
 /**
- * Normalizes the optional `hasLlmActivity` session filter before it reaches
- * the repo. Hides "orphan fragment" rows (sessions with 0 tokens and no model)
- * only when the user explicitly turns the sidebar toggle on.
+ * Default-on session filter: hide "orphan fragment" rows that carry no LLM
+ * activity (sessions whose every span produced 0 tokens and no model name).
  *
  * URL representation of the sidebar toggle:
- *   - key absent → off; no `hasLlmActivity` clause is applied.
- *   - `{op:"eq",value:true}` → on; filter is kept.
- *   - `{op:"eq",value:false}` → legacy off sentinel from the old default-on
- *     toggle; stripped so the repo sees no clause (same as absent).
+ *   - key absent → default ON; this helper injects the filter.
+ *   - `{op:"eq",value:true}` → explicit ON; equivalent to absent.
+ *   - `{op:"eq",value:false}` → user opted out; stripped before querying so
+ *     the repo applies no `hasLlmActivity` clause.
  */
 export function withSessionDefaults(filters: FilterSet | undefined): FilterSet {
-  if (filters?.hasLlmActivity === undefined) {
-    return filters ?? {}
+  if (filters?.hasLlmActivity !== undefined) {
+    const explicit = filters.hasLlmActivity
+    const optedOut = explicit.some((c) => c.op === "eq" && (c.value === false || c.value === "false"))
+    if (optedOut) {
+      const { hasLlmActivity: _drop, ...rest } = filters as Record<string, readonly FilterCondition[]>
+      return rest as FilterSet
+    }
+    return filters
   }
-  const explicit = filters.hasLlmActivity
-  const legacyOff = explicit.some((c) => c.op === "eq" && (c.value === false || c.value === "false"))
-  if (legacyOff) {
-    const { hasLlmActivity: _drop, ...rest } = filters as Record<string, readonly FilterCondition[]>
-    return rest as FilterSet
-  }
-  return filters
+  return { ...(filters ?? {}), hasLlmActivity: [{ op: "eq", value: true }] }
+}
+
+export function isHasLlmActivityFilterOn(filters: FilterSet | undefined): boolean {
+  const cond = filters?.hasLlmActivity?.find((c) => c.op === "eq")
+  if (cond === undefined) return true
+  return cond.value !== false && cond.value !== "false"
+}
+
+function withoutHasLlmActivityFilter(filters: FilterSet): FilterSet {
+  if (!("hasLlmActivity" in filters)) return filters
+  const { hasLlmActivity: _drop, ...rest } = filters as Record<string, readonly FilterCondition[]>
+  return rest as FilterSet
 }
 
 export function useSessionsInfiniteScroll({
@@ -172,6 +183,47 @@ export function useSessionsCount({
   return {
     totalCount: data?.totalCount ?? 0,
     matchingTraceCount: data?.matchingTraceCount,
+    isLoading,
+  }
+}
+
+export function useSessionsCountWithoutLlmActivityFilter({
+  projectId,
+  filters,
+  searchQuery,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly filters?: FilterSet
+  readonly searchQuery?: string
+  readonly enabled?: boolean
+}) {
+  const scope = use(TraceScopeContext)
+  const filtersWithoutLlmActivity = useMemo(() => withoutHasLlmActivityFilter(withSessionDefaults(filters)), [filters])
+
+  const { data, isLoading } = useQuery({
+    queryKey: [
+      ...traceScopeKey(scope),
+      "sessionsCountWithoutLlmActivity",
+      projectId,
+      filtersWithoutLlmActivity,
+      searchQuery,
+    ],
+    queryFn: () =>
+      countSessionsByProject({
+        data: {
+          ...traceScopeData(scope),
+          projectId,
+          filters: filtersWithoutLlmActivity,
+          ...(searchQuery ? { searchQuery } : {}),
+        },
+      }),
+    staleTime: 30_000,
+    enabled: enabled && projectId.length > 0,
+  })
+
+  return {
+    totalCount: data?.totalCount ?? 0,
     isLoading,
   }
 }

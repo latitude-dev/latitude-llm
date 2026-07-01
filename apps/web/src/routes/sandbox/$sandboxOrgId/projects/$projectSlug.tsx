@@ -343,6 +343,7 @@ function SandboxTracesContent({ sandboxOrgId, projectSlug }: { sandboxOrgId: str
           onCloseSession={closeSessionPanel}
           visibleColumnIds={sessionColumnSettings.visibleColumnIds}
           isSearching={false}
+          hasUserAppliedFilters={hasActiveFilters}
           selectable={false}
         />
       )}
