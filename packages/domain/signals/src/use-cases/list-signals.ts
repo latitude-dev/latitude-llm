@@ -9,6 +9,7 @@ import {
   type SignalWindowMetric,
 } from "@domain/scores"
 import {
+  BadRequestError,
   type ChSqlClient,
   cuidSchema,
   type FilterCondition,
@@ -90,7 +91,21 @@ const listSignalsInputSchema = z.object({
 })
 
 export type ListSignalsInput = z.input<typeof listSignalsInputSchema>
-export type ListSignalsError = RepositoryError
+export type ListSignalsError = RepositoryError | BadRequestError
+
+const formatValidationError = (error: z.ZodError): string => error.issues.map((issue) => issue.message).join(", ")
+
+// The route's `PaginatedQueryParamsSchema` allows `limit` up to 200, wider than
+// this use-case's own cap, so an in-range client request can still fail here —
+// that must surface as a `BadRequestError`, not an unhandled `ZodError`.
+const parseOrBadRequest = <T>(schema: z.ZodType<T>, input: unknown) =>
+  Effect.try({
+    try: () => schema.parse(input),
+    catch: (error) =>
+      new BadRequestError({
+        message: error instanceof z.ZodError ? formatValidationError(error) : "Invalid list signals input",
+      }),
+  })
 
 export interface SignalListAnalyticsCounts {
   readonly newSignals: number
@@ -502,7 +517,7 @@ export const listSignalsUseCase = (
   ChSqlClient | EvaluationRepository | SignalRepository | ScoreAnalyticsRepository | SessionRepository | SqlClient
 > =>
   Effect.gen(function* () {
-    const parsed = listSignalsInputSchema.parse(input)
+    const parsed = yield* parseOrBadRequest(listSignalsInputSchema, input)
     yield* Effect.annotateCurrentSpan("projectId", String(parsed.projectId))
     const signalRepository = yield* SignalRepository
     const now = parsed.now ?? new Date()

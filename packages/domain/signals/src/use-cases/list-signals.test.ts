@@ -7,7 +7,15 @@ import {
 } from "@domain/evaluations"
 import { ScoreAnalyticsRepository, type SignalOccurrenceAggregate, type SignalWindowMetric } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
-import { ChSqlClient, EvaluationId, OrganizationId, ProjectId, SignalId, SqlClient } from "@domain/shared"
+import {
+  BadRequestError,
+  ChSqlClient,
+  EvaluationId,
+  OrganizationId,
+  ProjectId,
+  SignalId,
+  SqlClient,
+} from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { SessionRepository } from "@domain/spans"
 import { createFakeSessionRepository } from "@domain/spans/testing"
@@ -166,6 +174,34 @@ const createSignalSearch = (
 describe("listSignalsUseCase", () => {
   beforeEach(() => {
     sessionCount = 0
+  })
+
+  it("rejects a limit above its cap with BadRequestError instead of an unhandled ZodError", async () => {
+    // The route's `PaginatedQueryParamsSchema` allows `limit` up to 200, wider
+    // than this use-case's own cap of 100 — a request that is valid at the
+    // HTTP layer must still fail cleanly here, not crash with a raw ZodError.
+    const { repository: signalRepository } = createFakeSignalRepository([])
+    const { repository: evaluationRepository } = createEvaluationRepository()
+    const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository()
+    const { repository: sessionRepository } = createFakeSessionRepository()
+
+    const error = await Effect.runPromise(
+      listSignalsUseCase({ organizationId, projectId, limit: 150 }).pipe(
+        Effect.flip,
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(SignalRepository, signalRepository),
+            Layer.succeed(EvaluationRepository, evaluationRepository),
+            Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+            Layer.succeed(SessionRepository, sessionRepository),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+          ),
+        ),
+      ),
+    )
+
+    expect(error).toBeInstanceOf(BadRequestError)
   })
 
   it("returns the empty issue shape without querying ClickHouse when the project has no issues", async () => {
