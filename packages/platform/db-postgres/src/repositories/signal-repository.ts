@@ -26,7 +26,7 @@ import {
 import { and, asc, count, desc, eq, getTableColumns, ilike, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
-import { incidents } from "../schema/alert-incidents.ts"
+import { alertIncidents } from "../schema/alert-incidents.ts"
 import { projects } from "../schema/projects.ts"
 import { scores } from "../schema/scores.ts"
 import { signals } from "../schema/signals.ts"
@@ -45,10 +45,10 @@ const outerSignalId = sql.raw(`"latitude"."signals"."id"`)
 
 const isEscalatingExpr = sql<boolean>`exists (
   select 1
-  from ${incidents}
-  where ${incidents.sourceType} = 'signal'
-    and ${incidents.sourceId} = ${outerSignalId}
-    and ${incidents.endedAt} is null
+  from ${alertIncidents}
+  where ${alertIncidents.sourceType} = 'signal'
+    and ${alertIncidents.sourceId} = ${outerSignalId}
+    and ${alertIncidents.endedAt} is null
 )`
 
 const signalColumnsWithLifecycle = {

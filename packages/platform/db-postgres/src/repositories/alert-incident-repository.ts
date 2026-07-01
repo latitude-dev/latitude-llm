@@ -26,17 +26,17 @@ import {
 } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
-import { incidents } from "../schema/alert-incidents.ts"
+import { alertIncidents } from "../schema/alert-incidents.ts"
 
 /** Keyset predicate for `ended_at DESC NULLS FIRST, id DESC`: a null `endedAt` cursor is still inside the ongoing block (remaining ongoing rows + all closed rows); a non-null cursor compares closed rows on `(ended_at, id)`. */
 const afterCursor = (cursor: IncidentCursor | undefined): SQL | undefined => {
   if (!cursor) return undefined
   if (cursor.endedAt === null) {
-    return or(and(isNull(incidents.endedAt), lt(incidents.id, cursor.id)), isNotNull(incidents.endedAt))
+    return or(and(isNull(alertIncidents.endedAt), lt(alertIncidents.id, cursor.id)), isNotNull(alertIncidents.endedAt))
   }
   return or(
-    lt(incidents.endedAt, cursor.endedAt),
-    and(eq(incidents.endedAt, cursor.endedAt), lt(incidents.id, cursor.id)),
+    lt(alertIncidents.endedAt, cursor.endedAt),
+    and(eq(alertIncidents.endedAt, cursor.endedAt), lt(alertIncidents.id, cursor.id)),
   )
 }
 
@@ -48,7 +48,7 @@ const toKeysetPage = (rows: readonly Incident[], limit: number): IncidentListPag
   return { items, hasMore, nextCursor: hasMore && last ? { endedAt: last.endedAt, id: last.id } : null }
 }
 
-const toInsertRow = (incident: Incident): typeof incidents.$inferInsert => ({
+const toInsertRow = (incident: Incident): typeof alertIncidents.$inferInsert => ({
   id: incident.id,
   organizationId: incident.organizationId,
   projectId: incident.projectId,
@@ -63,7 +63,7 @@ const toInsertRow = (incident: Incident): typeof incidents.$inferInsert => ({
   condition: incident.condition,
 })
 
-const toDomain = (row: typeof incidents.$inferSelect): Incident => incidentSchema.parse(row)
+const toDomain = (row: typeof alertIncidents.$inferSelect): Incident => incidentSchema.parse(row)
 
 const makeIncidentRepository = (): IncidentRepositoryShape =>
   IncidentRepository.of({
@@ -71,7 +71,7 @@ const makeIncidentRepository = (): IncidentRepositoryShape =>
       Effect.gen(function* () {
         const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
         const row = toInsertRow(incident)
-        yield* sqlClient.query((db) => db.insert(incidents).values(row))
+        yield* sqlClient.query((db) => db.insert(alertIncidents).values(row))
       }),
     findById: (id) =>
       Effect.gen(function* () {
@@ -79,8 +79,8 @@ const makeIncidentRepository = (): IncidentRepositoryShape =>
         const rows = yield* sqlClient.query((db) =>
           db
             .select()
-            .from(incidents)
-            .where(and(eq(incidents.id, id), eq(incidents.organizationId, sqlClient.organizationId)))
+            .from(alertIncidents)
+            .where(and(eq(alertIncidents.id, id), eq(alertIncidents.organizationId, sqlClient.organizationId)))
             .limit(1),
         )
         const row = rows[0]
@@ -93,13 +93,13 @@ const makeIncidentRepository = (): IncidentRepositoryShape =>
         const rows = yield* sqlClient.query((db) =>
           db
             .select()
-            .from(incidents)
+            .from(alertIncidents)
             .where(
               and(
-                eq(incidents.organizationId, sqlClient.organizationId),
-                eq(incidents.sourceType, sourceType),
-                eq(incidents.sourceId, sourceId),
-                isNull(incidents.endedAt),
+                eq(alertIncidents.organizationId, sqlClient.organizationId),
+                eq(alertIncidents.sourceType, sourceType),
+                eq(alertIncidents.sourceId, sourceId),
+                isNull(alertIncidents.endedAt),
               ),
             )
             .limit(1),
@@ -112,17 +112,17 @@ const makeIncidentRepository = (): IncidentRepositoryShape =>
         const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
         const rows = yield* sqlClient.query((db) =>
           db
-            .update(incidents)
+            .update(alertIncidents)
             .set({ endedAt })
             .where(
               and(
-                eq(incidents.organizationId, sqlClient.organizationId),
-                eq(incidents.sourceType, sourceType),
-                eq(incidents.sourceId, sourceId),
-                isNull(incidents.endedAt),
+                eq(alertIncidents.organizationId, sqlClient.organizationId),
+                eq(alertIncidents.sourceType, sourceType),
+                eq(alertIncidents.sourceId, sourceId),
+                isNull(alertIncidents.endedAt),
               ),
             )
-            .returning({ id: incidents.id }),
+            .returning({ id: alertIncidents.id }),
         )
         const closedId = rows[0]?.id
         return closedId ? (closedId as AlertIncidentId) : null
@@ -132,9 +132,9 @@ const makeIncidentRepository = (): IncidentRepositoryShape =>
         const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
         yield* sqlClient.query((db) =>
           db
-            .update(incidents)
+            .update(alertIncidents)
             .set({ exitEligibleSince })
-            .where(and(eq(incidents.id, id), eq(incidents.organizationId, sqlClient.organizationId))),
+            .where(and(eq(alertIncidents.id, id), eq(alertIncidents.organizationId, sqlClient.organizationId))),
         )
       }),
     setEndedAt: ({ id, endedAt }) =>
@@ -142,9 +142,9 @@ const makeIncidentRepository = (): IncidentRepositoryShape =>
         const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
         yield* sqlClient.query((db) =>
           db
-            .update(incidents)
+            .update(alertIncidents)
             .set({ endedAt })
-            .where(and(eq(incidents.id, id), eq(incidents.organizationId, sqlClient.organizationId))),
+            .where(and(eq(alertIncidents.id, id), eq(alertIncidents.organizationId, sqlClient.organizationId))),
         )
       }),
     closeById: ({ id, endedAt }) =>
@@ -152,13 +152,13 @@ const makeIncidentRepository = (): IncidentRepositoryShape =>
         const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
         const rows = yield* sqlClient.query((db) =>
           db
-            .update(incidents)
+            .update(alertIncidents)
             .set({ endedAt })
             .where(
               and(
-                eq(incidents.id, id),
-                eq(incidents.organizationId, sqlClient.organizationId),
-                isNull(incidents.endedAt),
+                eq(alertIncidents.id, id),
+                eq(alertIncidents.organizationId, sqlClient.organizationId),
+                isNull(alertIncidents.endedAt),
               ),
             )
             .returning(),
@@ -172,19 +172,19 @@ const makeIncidentRepository = (): IncidentRepositoryShape =>
         const rows = yield* sqlClient.query((db) =>
           db
             .select()
-            .from(incidents)
+            .from(alertIncidents)
             .where(
               and(
-                eq(incidents.organizationId, organizationId),
-                eq(incidents.projectId, projectId),
-                to ? lte(incidents.startedAt, to) : undefined,
-                from ? or(isNull(incidents.endedAt), gte(incidents.endedAt, from)) : undefined,
-                sourceTypes && sourceTypes.length > 0 ? inArray(incidents.sourceType, sourceTypes) : undefined,
-                sourceId ? eq(incidents.sourceId, sourceId) : undefined,
-                severities && severities.length > 0 ? inArray(incidents.severity, severities) : undefined,
+                eq(alertIncidents.organizationId, organizationId),
+                eq(alertIncidents.projectId, projectId),
+                to ? lte(alertIncidents.startedAt, to) : undefined,
+                from ? or(isNull(alertIncidents.endedAt), gte(alertIncidents.endedAt, from)) : undefined,
+                sourceTypes && sourceTypes.length > 0 ? inArray(alertIncidents.sourceType, sourceTypes) : undefined,
+                sourceId ? eq(alertIncidents.sourceId, sourceId) : undefined,
+                severities && severities.length > 0 ? inArray(alertIncidents.severity, severities) : undefined,
               ),
             )
-            .orderBy(asc(incidents.startedAt)),
+            .orderBy(asc(alertIncidents.startedAt)),
         )
         return rows.map(toDomain)
       }),
@@ -194,9 +194,9 @@ const makeIncidentRepository = (): IncidentRepositoryShape =>
         const rows = yield* sqlClient.query((db) =>
           db
             .select()
-            .from(incidents)
-            .where(and(eq(incidents.sourceType, sourceType), isNull(incidents.endedAt)))
-            .orderBy(asc(incidents.startedAt)),
+            .from(alertIncidents)
+            .where(and(eq(alertIncidents.sourceType, sourceType), isNull(alertIncidents.endedAt)))
+            .orderBy(asc(alertIncidents.startedAt)),
         )
         return rows.map(toDomain)
       }),
@@ -204,18 +204,18 @@ const makeIncidentRepository = (): IncidentRepositoryShape =>
       Effect.gen(function* () {
         const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
         const where = and(
-          eq(incidents.organizationId, sqlClient.organizationId),
-          eq(incidents.sourceType, "monitor"),
-          eq(incidents.sourceId, monitorId),
+          eq(alertIncidents.organizationId, sqlClient.organizationId),
+          eq(alertIncidents.sourceType, "monitor"),
+          eq(alertIncidents.sourceId, monitorId),
           afterCursor(cursor),
         )
         const rows = yield* sqlClient.query((db) =>
           db
-            .select(getTableColumns(incidents))
-            .from(incidents)
+            .select(getTableColumns(alertIncidents))
+            .from(alertIncidents)
             .where(where)
             // ended_at DESC defaults to NULLS FIRST in Postgres, so ongoing incidents lead.
-            .orderBy(desc(incidents.endedAt), desc(incidents.id))
+            .orderBy(desc(alertIncidents.endedAt), desc(alertIncidents.id))
             .limit(limit + 1),
         )
         return toKeysetPage(rows.map(toDomain), limit)
@@ -224,20 +224,20 @@ const makeIncidentRepository = (): IncidentRepositoryShape =>
       Effect.gen(function* () {
         const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
         const where = and(
-          eq(incidents.organizationId, sqlClient.organizationId),
-          eq(incidents.sourceType, "monitor"),
-          eq(incidents.sourceId, monitorId),
+          eq(alertIncidents.organizationId, sqlClient.organizationId),
+          eq(alertIncidents.sourceType, "monitor"),
+          eq(alertIncidents.sourceId, monitorId),
         )
         const [aggRows, lastRows] = yield* sqlClient.query((db) => {
           const aggPromise = db
-            .select({ total: count(), firstStartedAt: min(incidents.startedAt) })
-            .from(incidents)
+            .select({ total: count(), firstStartedAt: min(alertIncidents.startedAt) })
+            .from(alertIncidents)
             .where(where)
           const lastPromise = db
-            .select({ id: incidents.id, startedAt: incidents.startedAt, endedAt: incidents.endedAt })
-            .from(incidents)
+            .select({ id: alertIncidents.id, startedAt: alertIncidents.startedAt, endedAt: alertIncidents.endedAt })
+            .from(alertIncidents)
             .where(where)
-            .orderBy(desc(incidents.endedAt), desc(incidents.id))
+            .orderBy(desc(alertIncidents.endedAt), desc(alertIncidents.id))
             .limit(1)
           return Promise.all([aggPromise, lastPromise])
         })
