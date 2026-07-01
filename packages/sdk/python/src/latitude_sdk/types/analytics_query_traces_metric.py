@@ -5,12 +5,13 @@ from __future__ import annotations
 import typing
 
 import pydantic
+import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from .analytics_query_traces_metric_avg_field import AnalyticsQueryTracesMetricAvgField
 from .analytics_query_traces_metric_max_field import AnalyticsQueryTracesMetricMaxField
 from .analytics_query_traces_metric_median_field import AnalyticsQueryTracesMetricMedianField
 from .analytics_query_traces_metric_min_field import AnalyticsQueryTracesMetricMinField
-from .analytics_query_traces_metric_p_95_field import AnalyticsQueryTracesMetricP95Field
+from .analytics_query_traces_metric_p95field import AnalyticsQueryTracesMetricP95Field
 from .analytics_query_traces_metric_sum_field import AnalyticsQueryTracesMetricSumField
 
 
@@ -110,14 +111,17 @@ class AnalyticsQueryTracesMetric_P95(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-AnalyticsQueryTracesMetric = typing.Union[
-    AnalyticsQueryTracesMetric_Count,
-    AnalyticsQueryTracesMetric_ErrorRate,
-    AnalyticsQueryTracesMetric_CacheHitRate,
-    AnalyticsQueryTracesMetric_Sum,
-    AnalyticsQueryTracesMetric_Min,
-    AnalyticsQueryTracesMetric_Max,
-    AnalyticsQueryTracesMetric_Avg,
-    AnalyticsQueryTracesMetric_Median,
-    AnalyticsQueryTracesMetric_P95,
+AnalyticsQueryTracesMetric = typing_extensions.Annotated[
+    typing.Union[
+        AnalyticsQueryTracesMetric_Count,
+        AnalyticsQueryTracesMetric_ErrorRate,
+        AnalyticsQueryTracesMetric_CacheHitRate,
+        AnalyticsQueryTracesMetric_Sum,
+        AnalyticsQueryTracesMetric_Min,
+        AnalyticsQueryTracesMetric_Max,
+        AnalyticsQueryTracesMetric_Avg,
+        AnalyticsQueryTracesMetric_Median,
+        AnalyticsQueryTracesMetric_P95,
+    ],
+    pydantic.Field(discriminator="kind"),
 ]

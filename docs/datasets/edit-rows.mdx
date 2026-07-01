@@ -64,9 +64,9 @@ The response carries the new dataset version:
 <Tabs>
   <Tab title="TypeScript">
     ```typescript
-    import { LatitudeApiClient } from "@latitude-data/sdk";
+    import { LatitudeClient } from "@latitude-data/sdk";
 
-    const client = new LatitudeApiClient({ token: process.env.LATITUDE_API_KEY! });
+    const client = new LatitudeClient({ apiKey: process.env.LATITUDE_API_KEY! });
 
     const { version } = await client.datasets.updateRow(
       "my-project",
@@ -83,9 +83,9 @@ The response carries the new dataset version:
     ```python
     import os
 
-    from latitude_sdk import LatitudeApiClient
+    from latitude_sdk import LatitudeClient
 
-    client = LatitudeApiClient(token=os.environ["LATITUDE_API_KEY"])
+    client = LatitudeClient(api_key=os.environ["LATITUDE_API_KEY"])
 
     result = client.datasets.update_row(
         "my-project",

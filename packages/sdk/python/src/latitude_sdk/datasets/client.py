@@ -13,16 +13,16 @@ from ..types.import_rows_from_traces_response import ImportRowsFromTracesRespons
 from ..types.insert_dataset_rows_response import InsertDatasetRowsResponse
 from ..types.paginated_dataset_rows import PaginatedDatasetRows
 from ..types.paginated_datasets import PaginatedDatasets
-from ..types.traces_ref import TracesRef
 from ..types.update_dataset_row_response import UpdateDatasetRowResponse
 from .raw_client import AsyncRawDatasetsClient, RawDatasetsClient
-from .types.datasets_list_columns_request_include_removed import DatasetsListColumnsRequestIncludeRemoved
-from .types.datasets_list_request_sort_by import DatasetsListRequestSortBy
-from .types.datasets_list_request_sort_direction import DatasetsListRequestSortDirection
-from .types.datasets_list_rows_request_sort_direction import DatasetsListRowsRequestSortDirection
 from .types.delete_dataset_rows_body_selection import DeleteDatasetRowsBodySelection
 from .types.export_dataset_rows_body_selection import ExportDatasetRowsBodySelection
+from .types.import_rows_from_traces_body_traces import ImportRowsFromTracesBodyTraces
 from .types.insert_dataset_rows_body_rows_item import InsertDatasetRowsBodyRowsItem
+from .types.list_columns_datasets_request_include_removed import ListColumnsDatasetsRequestIncludeRemoved
+from .types.list_datasets_request_sort_by import ListDatasetsRequestSortBy
+from .types.list_datasets_request_sort_direction import ListDatasetsRequestSortDirection
+from .types.list_rows_datasets_request_sort_direction import ListRowsDatasetsRequestSortDirection
 from .types.update_dataset_row_body_custom_value import UpdateDatasetRowBodyCustomValue
 from .types.update_dataset_row_body_expected_output import UpdateDatasetRowBodyExpectedOutput
 from .types.update_dataset_row_body_input import UpdateDatasetRowBodyInput
@@ -54,8 +54,8 @@ class DatasetsClient:
         *,
         cursor: typing.Optional[str] = None,
         limit: typing.Optional[int] = None,
-        sort_by: typing.Optional[DatasetsListRequestSortBy] = None,
-        sort_direction: typing.Optional[DatasetsListRequestSortDirection] = None,
+        sort_by: typing.Optional[ListDatasetsRequestSortBy] = None,
+        sort_direction: typing.Optional[ListDatasetsRequestSortDirection] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> PaginatedDatasets:
         """
@@ -72,10 +72,10 @@ class DatasetsClient:
         limit : typing.Optional[int]
             Page size. Defaults to 50; max 200.
 
-        sort_by : typing.Optional[DatasetsListRequestSortBy]
+        sort_by : typing.Optional[ListDatasetsRequestSortBy]
             Field to sort by. Defaults to `updatedAt`.
 
-        sort_direction : typing.Optional[DatasetsListRequestSortDirection]
+        sort_direction : typing.Optional[ListDatasetsRequestSortDirection]
             Sort direction. Defaults to `desc`.
 
         request_options : typing.Optional[RequestOptions]
@@ -88,17 +88,13 @@ class DatasetsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.datasets.list(
             project_slug="projectSlug",
-            cursor="cursor",
-            limit=1,
-            sort_by="name",
-            sort_direction="asc",
         )
         """
         _response = self._raw_client.list(
@@ -143,10 +139,10 @@ class DatasetsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.datasets.create(
             project_slug="projectSlug",
@@ -182,10 +178,10 @@ class DatasetsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.datasets.get(
             project_slug="projectSlug",
@@ -218,10 +214,10 @@ class DatasetsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.datasets.delete(
             project_slug="projectSlug",
@@ -267,10 +263,10 @@ class DatasetsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.datasets.update(
             project_slug="projectSlug",
@@ -290,7 +286,7 @@ class DatasetsClient:
         cursor: typing.Optional[str] = None,
         limit: typing.Optional[int] = None,
         search: typing.Optional[str] = None,
-        sort_direction: typing.Optional[DatasetsListRowsRequestSortDirection] = None,
+        sort_direction: typing.Optional[ListRowsDatasetsRequestSortDirection] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> PaginatedDatasetRows:
         """
@@ -313,7 +309,7 @@ class DatasetsClient:
         search : typing.Optional[str]
             Free-text search against row cells.
 
-        sort_direction : typing.Optional[DatasetsListRowsRequestSortDirection]
+        sort_direction : typing.Optional[ListRowsDatasetsRequestSortDirection]
             Sort direction on `createdAt`. Defaults to `desc` (newest first).
 
         request_options : typing.Optional[RequestOptions]
@@ -326,18 +322,14 @@ class DatasetsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.datasets.list_rows(
             project_slug="projectSlug",
             dataset_slug="datasetSlug",
-            cursor="cursor",
-            limit=1,
-            search="search",
-            sort_direction="asc",
         )
         """
         _response = self._raw_client.list_rows(
@@ -383,11 +375,11 @@ class DatasetsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
-        from latitude.datasets import InsertDatasetRowsBodyRowsItem
+        from latitude_sdk import LatitudeClient
+        from latitude_sdk.datasets import InsertDatasetRowsBodyRowsItem
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.datasets.insert_rows(
             project_slug="projectSlug",
@@ -430,11 +422,11 @@ class DatasetsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
-        from latitude.datasets import DeleteDatasetRowsBodySelection_Selected
+        from latitude_sdk import LatitudeClient
+        from latitude_sdk.datasets import DeleteDatasetRowsBodySelection_Selected
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.datasets.delete_rows(
             project_slug="projectSlug",
@@ -501,10 +493,10 @@ class DatasetsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.datasets.update_row(
             project_slug="projectSlug",
@@ -530,7 +522,7 @@ class DatasetsClient:
         project_slug: str,
         dataset_slug: str,
         *,
-        traces: TracesRef,
+        traces: ImportRowsFromTracesBodyTraces,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> ImportRowsFromTracesResponse:
         """
@@ -544,7 +536,8 @@ class DatasetsClient:
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
 
-        traces : TracesRef
+        traces : ImportRowsFromTracesBodyTraces
+            Which traces to import as rows — either explicit ids or a filter set.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -556,15 +549,16 @@ class DatasetsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient, TracesRef_Ids
+        from latitude_sdk import LatitudeClient
+        from latitude_sdk.datasets import ImportRowsFromTracesBodyTraces_Ids
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.datasets.import_rows_from_traces(
             project_slug="projectSlug",
             dataset_slug="datasetSlug",
-            traces=TracesRef_Ids(
+            traces=ImportRowsFromTracesBodyTraces_Ids(
                 ids=["ids"],
             ),
         )
@@ -614,10 +608,10 @@ class DatasetsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.datasets.export_rows(
             project_slug="projectSlug",
@@ -634,7 +628,7 @@ class DatasetsClient:
         project_slug: str,
         dataset_slug: str,
         *,
-        include_removed: typing.Optional[DatasetsListColumnsRequestIncludeRemoved] = None,
+        include_removed: typing.Optional[ListColumnsDatasetsRequestIncludeRemoved] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> DatasetColumnsList:
         """
@@ -648,7 +642,7 @@ class DatasetsClient:
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
 
-        include_removed : typing.Optional[DatasetsListColumnsRequestIncludeRemoved]
+        include_removed : typing.Optional[ListColumnsDatasetsRequestIncludeRemoved]
             When `true`, also returns soft-removed columns (each carrying `removed: true`). Defaults to `false`.
 
         request_options : typing.Optional[RequestOptions]
@@ -661,15 +655,14 @@ class DatasetsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.datasets.list_columns(
             project_slug="projectSlug",
             dataset_slug="datasetSlug",
-            include_removed="true",
         )
         """
         _response = self._raw_client.list_columns(
@@ -709,10 +702,10 @@ class DatasetsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.datasets.add_column(
             project_slug="projectSlug",
@@ -754,10 +747,10 @@ class DatasetsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.datasets.delete_column(
             project_slug="projectSlug",
@@ -806,10 +799,10 @@ class DatasetsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.datasets.update_column(
             project_slug="projectSlug",
@@ -855,10 +848,10 @@ class DatasetsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.datasets.reorder_columns(
             project_slug="projectSlug",
@@ -903,10 +896,10 @@ class DatasetsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.datasets.restore_column(
             project_slug="projectSlug",
@@ -941,8 +934,8 @@ class AsyncDatasetsClient:
         *,
         cursor: typing.Optional[str] = None,
         limit: typing.Optional[int] = None,
-        sort_by: typing.Optional[DatasetsListRequestSortBy] = None,
-        sort_direction: typing.Optional[DatasetsListRequestSortDirection] = None,
+        sort_by: typing.Optional[ListDatasetsRequestSortBy] = None,
+        sort_direction: typing.Optional[ListDatasetsRequestSortDirection] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> PaginatedDatasets:
         """
@@ -959,10 +952,10 @@ class AsyncDatasetsClient:
         limit : typing.Optional[int]
             Page size. Defaults to 50; max 200.
 
-        sort_by : typing.Optional[DatasetsListRequestSortBy]
+        sort_by : typing.Optional[ListDatasetsRequestSortBy]
             Field to sort by. Defaults to `updatedAt`.
 
-        sort_direction : typing.Optional[DatasetsListRequestSortDirection]
+        sort_direction : typing.Optional[ListDatasetsRequestSortDirection]
             Sort direction. Defaults to `desc`.
 
         request_options : typing.Optional[RequestOptions]
@@ -977,20 +970,16 @@ class AsyncDatasetsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
         async def main() -> None:
             await client.datasets.list(
                 project_slug="projectSlug",
-                cursor="cursor",
-                limit=1,
-                sort_by="name",
-                sort_direction="asc",
             )
 
 
@@ -1040,10 +1029,10 @@ class AsyncDatasetsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1087,10 +1076,10 @@ class AsyncDatasetsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1131,10 +1120,10 @@ class AsyncDatasetsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1188,10 +1177,10 @@ class AsyncDatasetsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1217,7 +1206,7 @@ class AsyncDatasetsClient:
         cursor: typing.Optional[str] = None,
         limit: typing.Optional[int] = None,
         search: typing.Optional[str] = None,
-        sort_direction: typing.Optional[DatasetsListRowsRequestSortDirection] = None,
+        sort_direction: typing.Optional[ListRowsDatasetsRequestSortDirection] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> PaginatedDatasetRows:
         """
@@ -1240,7 +1229,7 @@ class AsyncDatasetsClient:
         search : typing.Optional[str]
             Free-text search against row cells.
 
-        sort_direction : typing.Optional[DatasetsListRowsRequestSortDirection]
+        sort_direction : typing.Optional[ListRowsDatasetsRequestSortDirection]
             Sort direction on `createdAt`. Defaults to `desc` (newest first).
 
         request_options : typing.Optional[RequestOptions]
@@ -1255,10 +1244,10 @@ class AsyncDatasetsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1266,10 +1255,6 @@ class AsyncDatasetsClient:
             await client.datasets.list_rows(
                 project_slug="projectSlug",
                 dataset_slug="datasetSlug",
-                cursor="cursor",
-                limit=1,
-                search="search",
-                sort_direction="asc",
             )
 
 
@@ -1320,11 +1305,11 @@ class AsyncDatasetsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
-        from latitude.datasets import InsertDatasetRowsBodyRowsItem
+        from latitude_sdk import AsyncLatitudeClient
+        from latitude_sdk.datasets import InsertDatasetRowsBodyRowsItem
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1377,11 +1362,11 @@ class AsyncDatasetsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
-        from latitude.datasets import DeleteDatasetRowsBodySelection_Selected
+        from latitude_sdk import AsyncLatitudeClient
+        from latitude_sdk.datasets import DeleteDatasetRowsBodySelection_Selected
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1456,10 +1441,10 @@ class AsyncDatasetsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1491,7 +1476,7 @@ class AsyncDatasetsClient:
         project_slug: str,
         dataset_slug: str,
         *,
-        traces: TracesRef,
+        traces: ImportRowsFromTracesBodyTraces,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> ImportRowsFromTracesResponse:
         """
@@ -1505,7 +1490,8 @@ class AsyncDatasetsClient:
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
 
-        traces : TracesRef
+        traces : ImportRowsFromTracesBodyTraces
+            Which traces to import as rows — either explicit ids or a filter set.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -1519,10 +1505,11 @@ class AsyncDatasetsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient, TracesRef_Ids
+        from latitude_sdk import AsyncLatitudeClient
+        from latitude_sdk.datasets import ImportRowsFromTracesBodyTraces_Ids
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1530,7 +1517,7 @@ class AsyncDatasetsClient:
             await client.datasets.import_rows_from_traces(
                 project_slug="projectSlug",
                 dataset_slug="datasetSlug",
-                traces=TracesRef_Ids(
+                traces=ImportRowsFromTracesBodyTraces_Ids(
                     ids=["ids"],
                 ),
             )
@@ -1585,10 +1572,10 @@ class AsyncDatasetsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1611,7 +1598,7 @@ class AsyncDatasetsClient:
         project_slug: str,
         dataset_slug: str,
         *,
-        include_removed: typing.Optional[DatasetsListColumnsRequestIncludeRemoved] = None,
+        include_removed: typing.Optional[ListColumnsDatasetsRequestIncludeRemoved] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> DatasetColumnsList:
         """
@@ -1625,7 +1612,7 @@ class AsyncDatasetsClient:
         dataset_slug : str
             Dataset slug (human-readable identifier within the project).
 
-        include_removed : typing.Optional[DatasetsListColumnsRequestIncludeRemoved]
+        include_removed : typing.Optional[ListColumnsDatasetsRequestIncludeRemoved]
             When `true`, also returns soft-removed columns (each carrying `removed: true`). Defaults to `false`.
 
         request_options : typing.Optional[RequestOptions]
@@ -1640,10 +1627,10 @@ class AsyncDatasetsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1651,7 +1638,6 @@ class AsyncDatasetsClient:
             await client.datasets.list_columns(
                 project_slug="projectSlug",
                 dataset_slug="datasetSlug",
-                include_removed="true",
             )
 
 
@@ -1696,10 +1682,10 @@ class AsyncDatasetsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1751,10 +1737,10 @@ class AsyncDatasetsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1811,10 +1797,10 @@ class AsyncDatasetsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1868,10 +1854,10 @@ class AsyncDatasetsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1924,10 +1910,10 @@ class AsyncDatasetsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 

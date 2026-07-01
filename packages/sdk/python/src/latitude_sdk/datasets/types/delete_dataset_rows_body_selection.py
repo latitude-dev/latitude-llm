@@ -16,7 +16,9 @@ class DeleteDatasetRowsBodySelection_Selected(UniversalBaseModel):
     """
 
     mode: typing.Literal["selected"] = "selected"
-    row_ids: typing_extensions.Annotated[typing.List[str], FieldMetadata(alias="rowIds")]
+    row_ids: typing_extensions.Annotated[
+        typing.List[str], FieldMetadata(alias="rowIds"), pydantic.Field(alias="rowIds")
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
@@ -37,13 +39,18 @@ class DeleteDatasetRowsBodySelection_AllExcept(UniversalBaseModel):
     """
 
     mode: typing.Literal["allExcept"] = "allExcept"
-    row_ids: typing_extensions.Annotated[typing.List[str], FieldMetadata(alias="rowIds")]
+    row_ids: typing_extensions.Annotated[
+        typing.List[str], FieldMetadata(alias="rowIds"), pydantic.Field(alias="rowIds")
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-DeleteDatasetRowsBodySelection = typing.Union[
-    DeleteDatasetRowsBodySelection_Selected,
-    DeleteDatasetRowsBodySelection_All,
-    DeleteDatasetRowsBodySelection_AllExcept,
+DeleteDatasetRowsBodySelection = typing_extensions.Annotated[
+    typing.Union[
+        DeleteDatasetRowsBodySelection_Selected,
+        DeleteDatasetRowsBodySelection_All,
+        DeleteDatasetRowsBodySelection_AllExcept,
+    ],
+    pydantic.Field(discriminator="mode"),
 ]

@@ -4,9 +4,10 @@ import typing
 
 import pydantic
 from ..core.pydantic_utilities import UniversalBaseModel
+from .analytics_query_behaviors_metric_avg_field import AnalyticsQueryBehaviorsMetricAvgField
 
 
 class AnalyticsQueryBehaviorsMetricAvg(UniversalBaseModel):
-    field: typing.Literal["confidence"] = "confidence"
+    field: AnalyticsQueryBehaviorsMetricAvgField
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

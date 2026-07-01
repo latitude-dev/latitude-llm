@@ -91,9 +91,9 @@ if typing.TYPE_CHECKING:
     )
     from .create_signal_body_priority import CreateSignalBodyPriority
     from .export_signals_body_lifecycle_group import ExportSignalsBodyLifecycleGroup
-    from .signals_list_request_lifecycle_group import SignalsListRequestLifecycleGroup
-    from .signals_list_request_sort_by import SignalsListRequestSortBy
-    from .signals_list_request_sort_direction import SignalsListRequestSortDirection
+    from .list_signals_request_lifecycle_group import ListSignalsRequestLifecycleGroup
+    from .list_signals_request_sort_by import ListSignalsRequestSortBy
+    from .list_signals_request_sort_direction import ListSignalsRequestSortDirection
 _dynamic_imports: typing.Dict[str, str] = {
     "CreateSignalBodyEvaluation": ".create_signal_body_evaluation",
     "CreateSignalBodyEvaluationScript": ".create_signal_body_evaluation_script",
@@ -136,9 +136,9 @@ _dynamic_imports: typing.Dict[str, str] = {
     "CreateSignalBodyEvaluationSettingsSettings_Rule": ".create_signal_body_evaluation_settings_settings",
     "CreateSignalBodyPriority": ".create_signal_body_priority",
     "ExportSignalsBodyLifecycleGroup": ".export_signals_body_lifecycle_group",
-    "SignalsListRequestLifecycleGroup": ".signals_list_request_lifecycle_group",
-    "SignalsListRequestSortBy": ".signals_list_request_sort_by",
-    "SignalsListRequestSortDirection": ".signals_list_request_sort_direction",
+    "ListSignalsRequestLifecycleGroup": ".list_signals_request_lifecycle_group",
+    "ListSignalsRequestSortBy": ".list_signals_request_sort_by",
+    "ListSignalsRequestSortDirection": ".list_signals_request_sort_direction",
 }
 
 
@@ -205,7 +205,7 @@ __all__ = [
     "CreateSignalBodyEvaluationSettingsSettings_Rule",
     "CreateSignalBodyPriority",
     "ExportSignalsBodyLifecycleGroup",
-    "SignalsListRequestLifecycleGroup",
-    "SignalsListRequestSortBy",
-    "SignalsListRequestSortDirection",
+    "ListSignalsRequestLifecycleGroup",
+    "ListSignalsRequestSortBy",
+    "ListSignalsRequestSortDirection",
 ]

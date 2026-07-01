@@ -8,7 +8,8 @@ from ..core.api_error import ApiError
 from ..core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from ..core.datetime_utils import serialize_datetime
 from ..core.http_response import AsyncHttpResponse, HttpResponse
-from ..core.jsonable_encoder import jsonable_encoder
+from ..core.jsonable_encoder import encode_path_param
+from ..core.parse_error import ParsingError
 from ..core.pydantic_utilities import parse_obj_as
 from ..core.request_options import RequestOptions
 from ..errors.bad_request_error import BadRequestError
@@ -17,8 +18,9 @@ from ..errors.unauthorized_error import UnauthorizedError
 from ..types.error import Error
 from ..types.incident import Incident
 from ..types.list_incidents_response import ListIncidentsResponse
-from .types.incidents_list_request_severities_item import IncidentsListRequestSeveritiesItem
-from .types.incidents_list_request_source_type import IncidentsListRequestSourceType
+from .types.list_incidents_request_severities_item import ListIncidentsRequestSeveritiesItem
+from .types.list_incidents_request_source_type import ListIncidentsRequestSourceType
+from pydantic import ValidationError
 
 
 class RawIncidentsClient:
@@ -31,10 +33,10 @@ class RawIncidentsClient:
         *,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
-        source_type: typing.Optional[IncidentsListRequestSourceType] = None,
+        source_type: typing.Optional[ListIncidentsRequestSourceType] = None,
         source_id: typing.Optional[str] = None,
         severities: typing.Optional[
-            typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]
+            typing.Union[ListIncidentsRequestSeveritiesItem, typing.Sequence[ListIncidentsRequestSeveritiesItem]]
         ] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[ListIncidentsResponse]:
@@ -52,13 +54,13 @@ class RawIncidentsClient:
         to_iso : typing.Optional[dt.datetime]
             Upper bound (inclusive) of the time window. Defaults to now.
 
-        source_type : typing.Optional[IncidentsListRequestSourceType]
+        source_type : typing.Optional[ListIncidentsRequestSourceType]
             Restrict to incidents triggered by this source type: `monitor` or `signal`.
 
         source_id : typing.Optional[str]
             Restrict to incidents tied to one source entity id.
 
-        severities : typing.Optional[typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]]
+        severities : typing.Optional[typing.Union[ListIncidentsRequestSeveritiesItem, typing.Sequence[ListIncidentsRequestSeveritiesItem]]]
             Restrict to incidents whose severity matches any value in this list.
 
         request_options : typing.Optional[RequestOptions]
@@ -70,7 +72,7 @@ class RawIncidentsClient:
             Matching incidents
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/incidents",
+            f"v1/projects/{encode_path_param(project_slug)}/incidents",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -127,6 +129,10 @@ class RawIncidentsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def resolve(
@@ -152,7 +158,7 @@ class RawIncidentsClient:
             Resolved incident
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/incidents/{jsonable_encoder(incident_id)}",
+            f"v1/projects/{encode_path_param(project_slug)}/incidents/{encode_path_param(incident_id)}",
             method="POST",
             request_options=request_options,
         )
@@ -202,6 +208,10 @@ class RawIncidentsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
 
@@ -215,10 +225,10 @@ class AsyncRawIncidentsClient:
         *,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
-        source_type: typing.Optional[IncidentsListRequestSourceType] = None,
+        source_type: typing.Optional[ListIncidentsRequestSourceType] = None,
         source_id: typing.Optional[str] = None,
         severities: typing.Optional[
-            typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]
+            typing.Union[ListIncidentsRequestSeveritiesItem, typing.Sequence[ListIncidentsRequestSeveritiesItem]]
         ] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[ListIncidentsResponse]:
@@ -236,13 +246,13 @@ class AsyncRawIncidentsClient:
         to_iso : typing.Optional[dt.datetime]
             Upper bound (inclusive) of the time window. Defaults to now.
 
-        source_type : typing.Optional[IncidentsListRequestSourceType]
+        source_type : typing.Optional[ListIncidentsRequestSourceType]
             Restrict to incidents triggered by this source type: `monitor` or `signal`.
 
         source_id : typing.Optional[str]
             Restrict to incidents tied to one source entity id.
 
-        severities : typing.Optional[typing.Union[IncidentsListRequestSeveritiesItem, typing.Sequence[IncidentsListRequestSeveritiesItem]]]
+        severities : typing.Optional[typing.Union[ListIncidentsRequestSeveritiesItem, typing.Sequence[ListIncidentsRequestSeveritiesItem]]]
             Restrict to incidents whose severity matches any value in this list.
 
         request_options : typing.Optional[RequestOptions]
@@ -254,7 +264,7 @@ class AsyncRawIncidentsClient:
             Matching incidents
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/incidents",
+            f"v1/projects/{encode_path_param(project_slug)}/incidents",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -311,6 +321,10 @@ class AsyncRawIncidentsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def resolve(
@@ -336,7 +350,7 @@ class AsyncRawIncidentsClient:
             Resolved incident
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/incidents/{jsonable_encoder(incident_id)}",
+            f"v1/projects/{encode_path_param(project_slug)}/incidents/{encode_path_param(incident_id)}",
             method="POST",
             request_options=request_options,
         )
@@ -386,4 +400,8 @@ class AsyncRawIncidentsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)

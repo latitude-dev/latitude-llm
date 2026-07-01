@@ -4,9 +4,9 @@ import typing
 
 import pydantic
 from ..core.pydantic_utilities import UniversalBaseModel
+from .create_monitor_body_match_metric import CreateMonitorBodyMatchMetric
 from .create_monitor_body_match_severity import CreateMonitorBodyMatchSeverity
-from .monitor_metric import MonitorMetric
-from .monitor_target import MonitorTarget
+from .create_monitor_body_match_target import CreateMonitorBodyMatchTarget
 
 
 class CreateMonitorBodyMatch(UniversalBaseModel):
@@ -20,12 +20,19 @@ class CreateMonitorBodyMatch(UniversalBaseModel):
     Optional free-form description.
     """
 
-    target: MonitorTarget
+    target: CreateMonitorBodyMatchTarget = pydantic.Field()
+    """
+    Entity or filter set watched by the monitor.
+    """
+
     severity: CreateMonitorBodyMatchSeverity = pydantic.Field()
     """
     Severity assigned to incidents opened by this monitor.
     """
 
-    metric: typing.Optional[MonitorMetric] = None
+    metric: typing.Optional[CreateMonitorBodyMatchMetric] = pydantic.Field(default=None)
+    """
+    Metric stored for later rule edits. Match monitors evaluate counts.
+    """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

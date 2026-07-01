@@ -2,4 +2,6 @@
 
 import typing
 
-AnnotationSourceId = typing.Union[typing.Literal["UI"], typing.Literal["API"], typing.Literal["SYSTEM"], str]
+from .annotation_source_id_zero import AnnotationSourceIdZero
+
+AnnotationSourceId = typing.Union[AnnotationSourceIdZero, str]

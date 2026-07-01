@@ -4,9 +4,10 @@ import typing
 
 import pydantic
 from ..core.pydantic_utilities import UniversalBaseModel
+from .analytics_query_scores_metric_median_field import AnalyticsQueryScoresMetricMedianField
 
 
 class AnalyticsQueryScoresMetricMedian(UniversalBaseModel):
-    field: typing.Literal["value"] = "value"
+    field: AnalyticsQueryScoresMetricMedianField
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

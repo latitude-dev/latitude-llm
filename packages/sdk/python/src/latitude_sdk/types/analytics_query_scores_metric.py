@@ -5,7 +5,12 @@ from __future__ import annotations
 import typing
 
 import pydantic
+import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
+from .analytics_query_scores_metric_avg_field import AnalyticsQueryScoresMetricAvgField
+from .analytics_query_scores_metric_max_field import AnalyticsQueryScoresMetricMaxField
+from .analytics_query_scores_metric_median_field import AnalyticsQueryScoresMetricMedianField
+from .analytics_query_scores_metric_min_field import AnalyticsQueryScoresMetricMinField
 
 
 class AnalyticsQueryScoresMetric_Count(UniversalBaseModel):
@@ -44,7 +49,7 @@ class AnalyticsQueryScoresMetric_Avg(UniversalBaseModel):
     """
 
     kind: typing.Literal["avg"] = "avg"
-    field: typing.Literal["value"] = "value"
+    field: AnalyticsQueryScoresMetricAvgField
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
@@ -55,7 +60,7 @@ class AnalyticsQueryScoresMetric_Min(UniversalBaseModel):
     """
 
     kind: typing.Literal["min"] = "min"
-    field: typing.Literal["value"] = "value"
+    field: AnalyticsQueryScoresMetricMinField
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
@@ -66,7 +71,7 @@ class AnalyticsQueryScoresMetric_Max(UniversalBaseModel):
     """
 
     kind: typing.Literal["max"] = "max"
-    field: typing.Literal["value"] = "value"
+    field: AnalyticsQueryScoresMetricMaxField
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
@@ -77,17 +82,20 @@ class AnalyticsQueryScoresMetric_Median(UniversalBaseModel):
     """
 
     kind: typing.Literal["median"] = "median"
-    field: typing.Literal["value"] = "value"
+    field: AnalyticsQueryScoresMetricMedianField
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-AnalyticsQueryScoresMetric = typing.Union[
-    AnalyticsQueryScoresMetric_Count,
-    AnalyticsQueryScoresMetric_PassRate,
-    AnalyticsQueryScoresMetric_ErrorRate,
-    AnalyticsQueryScoresMetric_Avg,
-    AnalyticsQueryScoresMetric_Min,
-    AnalyticsQueryScoresMetric_Max,
-    AnalyticsQueryScoresMetric_Median,
+AnalyticsQueryScoresMetric = typing_extensions.Annotated[
+    typing.Union[
+        AnalyticsQueryScoresMetric_Count,
+        AnalyticsQueryScoresMetric_PassRate,
+        AnalyticsQueryScoresMetric_ErrorRate,
+        AnalyticsQueryScoresMetric_Avg,
+        AnalyticsQueryScoresMetric_Min,
+        AnalyticsQueryScoresMetric_Max,
+        AnalyticsQueryScoresMetric_Median,
+    ],
+    pydantic.Field(discriminator="kind"),
 ]

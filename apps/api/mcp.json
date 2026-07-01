@@ -1,6 +1,6 @@
 {
-  "name": "Latitude MCP",
-  "title": "Latitude MCP",
+  "name": "Latitude",
+  "title": "Latitude",
   "description": "Open-source AI agent monitoring platform. Full observability into what's failing in production. Discover underlying issues, get alerts when something breaks and verify your fix worked.",
   "version": "v1",
   "websiteUrl": "https://latitude.so",

@@ -14,13 +14,13 @@ from ..types.tool_histogram_response import ToolHistogramResponse
 from ..types.tool_parameter_stats_response import ToolParameterStatsResponse
 from ..types.tools_analytics_response import ToolsAnalyticsResponse
 from .raw_client import AsyncRawToolsClient, RawToolsClient
-from .types.tools_co_occurrence_request_errors_only import ToolsCoOccurrenceRequestErrorsOnly
-from .types.tools_context_request_dimension import ToolsContextRequestDimension
-from .types.tools_context_request_errors_only import ToolsContextRequestErrorsOnly
-from .types.tools_get_request_errors_only import ToolsGetRequestErrorsOnly
-from .types.tools_histogram_request_errors_only import ToolsHistogramRequestErrorsOnly
-from .types.tools_list_calls_request_errors_only import ToolsListCallsRequestErrorsOnly
-from .types.tools_parameters_request_errors_only import ToolsParametersRequestErrorsOnly
+from .types.co_occurrence_tools_request_errors_only import CoOccurrenceToolsRequestErrorsOnly
+from .types.context_tools_request_dimension import ContextToolsRequestDimension
+from .types.context_tools_request_errors_only import ContextToolsRequestErrorsOnly
+from .types.get_tools_request_errors_only import GetToolsRequestErrorsOnly
+from .types.histogram_tools_request_errors_only import HistogramToolsRequestErrorsOnly
+from .types.list_calls_tools_request_errors_only import ListCallsToolsRequestErrorsOnly
+from .types.parameters_tools_request_errors_only import ParametersToolsRequestErrorsOnly
 
 
 class ToolsClient:
@@ -74,22 +74,13 @@ class ToolsClient:
 
         Examples
         --------
-        import datetime
+        from latitude_sdk import LatitudeClient
 
-        from latitude import LatitudeApiClient
-
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.tools.list(
             project_slug="projectSlug",
-            from_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            to_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            trend_bucket_seconds=1,
         )
         """
         _response = self._raw_client.list(
@@ -109,7 +100,7 @@ class ToolsClient:
         to_iso: typing.Optional[dt.datetime] = None,
         tool_name: typing.Optional[str] = None,
         bucket_seconds: typing.Optional[int] = None,
-        errors_only: typing.Optional[ToolsHistogramRequestErrorsOnly] = None,
+        errors_only: typing.Optional[HistogramToolsRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> ToolHistogramResponse:
         """
@@ -132,7 +123,7 @@ class ToolsClient:
         bucket_seconds : typing.Optional[int]
             Bucket width in seconds. Derived from the range (~30 buckets) when omitted.
 
-        errors_only : typing.Optional[ToolsHistogramRequestErrorsOnly]
+        errors_only : typing.Optional[HistogramToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         request_options : typing.Optional[RequestOptions]
@@ -145,24 +136,13 @@ class ToolsClient:
 
         Examples
         --------
-        import datetime
+        from latitude_sdk import LatitudeClient
 
-        from latitude import LatitudeApiClient
-
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.tools.histogram(
             project_slug="projectSlug",
-            from_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            to_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            tool_name="toolName",
-            bucket_seconds=1,
-            errors_only="true",
         )
         """
         _response = self._raw_client.histogram(
@@ -185,7 +165,7 @@ class ToolsClient:
         to_iso: typing.Optional[dt.datetime] = None,
         top_keys: typing.Optional[int] = None,
         top_values_per_key: typing.Optional[int] = None,
-        errors_only: typing.Optional[ToolsParametersRequestErrorsOnly] = None,
+        errors_only: typing.Optional[ParametersToolsRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> ToolParameterStatsResponse:
         """
@@ -211,7 +191,7 @@ class ToolsClient:
         top_values_per_key : typing.Optional[int]
             Maximum number of values to return per key.
 
-        errors_only : typing.Optional[ToolsParametersRequestErrorsOnly]
+        errors_only : typing.Optional[ParametersToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         request_options : typing.Optional[RequestOptions]
@@ -224,25 +204,14 @@ class ToolsClient:
 
         Examples
         --------
-        import datetime
+        from latitude_sdk import LatitudeClient
 
-        from latitude import LatitudeApiClient
-
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.tools.parameters(
             project_slug="projectSlug",
             tool_name="toolName",
-            from_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            to_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            top_keys=1,
-            top_values_per_key=1,
-            errors_only="true",
         )
         """
         _response = self._raw_client.parameters(
@@ -262,10 +231,10 @@ class ToolsClient:
         project_slug: str,
         tool_name: str,
         *,
-        dimension: ToolsContextRequestDimension,
+        dimension: ContextToolsRequestDimension,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
-        errors_only: typing.Optional[ToolsContextRequestErrorsOnly] = None,
+        errors_only: typing.Optional[ContextToolsRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> ToolContextBreakdownResponse:
         """
@@ -279,7 +248,7 @@ class ToolsClient:
         tool_name : str
             Tool name. URL-encode names containing special characters.
 
-        dimension : ToolsContextRequestDimension
+        dimension : ContextToolsRequestDimension
             Dimension to break the usage down by.
 
         from_iso : typing.Optional[dt.datetime]
@@ -288,7 +257,7 @@ class ToolsClient:
         to_iso : typing.Optional[dt.datetime]
             Upper bound (inclusive) of the time range. Defaults to now.
 
-        errors_only : typing.Optional[ToolsContextRequestErrorsOnly]
+        errors_only : typing.Optional[ContextToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         request_options : typing.Optional[RequestOptions]
@@ -301,24 +270,15 @@ class ToolsClient:
 
         Examples
         --------
-        import datetime
+        from latitude_sdk import LatitudeClient
 
-        from latitude import LatitudeApiClient
-
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.tools.context(
             project_slug="projectSlug",
             tool_name="toolName",
-            from_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            to_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
             dimension="model",
-            errors_only="true",
         )
         """
         _response = self._raw_client.context(
@@ -340,7 +300,7 @@ class ToolsClient:
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
         limit: typing.Optional[int] = None,
-        errors_only: typing.Optional[ToolsCoOccurrenceRequestErrorsOnly] = None,
+        errors_only: typing.Optional[CoOccurrenceToolsRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> ToolCoOccurrenceResponse:
         """
@@ -363,7 +323,7 @@ class ToolsClient:
         limit : typing.Optional[int]
             Maximum number of tools to return.
 
-        errors_only : typing.Optional[ToolsCoOccurrenceRequestErrorsOnly]
+        errors_only : typing.Optional[CoOccurrenceToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         request_options : typing.Optional[RequestOptions]
@@ -376,24 +336,14 @@ class ToolsClient:
 
         Examples
         --------
-        import datetime
+        from latitude_sdk import LatitudeClient
 
-        from latitude import LatitudeApiClient
-
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.tools.co_occurrence(
             project_slug="projectSlug",
             tool_name="toolName",
-            from_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            to_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            limit=1,
-            errors_only="true",
         )
         """
         _response = self._raw_client.co_occurrence(
@@ -447,23 +397,14 @@ class ToolsClient:
 
         Examples
         --------
-        import datetime
+        from latitude_sdk import LatitudeClient
 
-        from latitude import LatitudeApiClient
-
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.tools.errors(
             project_slug="projectSlug",
             tool_name="toolName",
-            from_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            to_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            limit=1,
         )
         """
         _response = self._raw_client.errors(
@@ -479,7 +420,7 @@ class ToolsClient:
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
         limit: typing.Optional[int] = None,
-        errors_only: typing.Optional[ToolsListCallsRequestErrorsOnly] = None,
+        errors_only: typing.Optional[ListCallsToolsRequestErrorsOnly] = None,
         cursor: typing.Optional[str] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> PaginatedToolCalls:
@@ -503,7 +444,7 @@ class ToolsClient:
         limit : typing.Optional[int]
             Page size. Defaults to 50; max 50.
 
-        errors_only : typing.Optional[ToolsListCallsRequestErrorsOnly]
+        errors_only : typing.Optional[ListCallsToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         cursor : typing.Optional[str]
@@ -519,25 +460,14 @@ class ToolsClient:
 
         Examples
         --------
-        import datetime
+        from latitude_sdk import LatitudeClient
 
-        from latitude import LatitudeApiClient
-
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.tools.list_calls(
             project_slug="projectSlug",
             tool_name="toolName",
-            from_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            to_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            limit=1,
-            errors_only="true",
-            cursor="cursor",
         )
         """
         _response = self._raw_client.list_calls(
@@ -559,7 +489,7 @@ class ToolsClient:
         *,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
-        errors_only: typing.Optional[ToolsGetRequestErrorsOnly] = None,
+        errors_only: typing.Optional[GetToolsRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> ToolDetailResponse:
         """
@@ -579,7 +509,7 @@ class ToolsClient:
         to_iso : typing.Optional[dt.datetime]
             Upper bound (inclusive) of the time range. Defaults to now.
 
-        errors_only : typing.Optional[ToolsGetRequestErrorsOnly]
+        errors_only : typing.Optional[GetToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         request_options : typing.Optional[RequestOptions]
@@ -592,23 +522,14 @@ class ToolsClient:
 
         Examples
         --------
-        import datetime
+        from latitude_sdk import LatitudeClient
 
-        from latitude import LatitudeApiClient
-
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.tools.get(
             project_slug="projectSlug",
             tool_name="toolName",
-            from_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            to_iso=datetime.datetime.fromisoformat(
-                "2024-01-15 09:30:00+00:00",
-            ),
-            errors_only="true",
         )
         """
         _response = self._raw_client.get(
@@ -674,25 +595,17 @@ class AsyncToolsClient:
         Examples
         --------
         import asyncio
-        import datetime
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
         async def main() -> None:
             await client.tools.list(
                 project_slug="projectSlug",
-                from_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                to_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                trend_bucket_seconds=1,
             )
 
 
@@ -715,7 +628,7 @@ class AsyncToolsClient:
         to_iso: typing.Optional[dt.datetime] = None,
         tool_name: typing.Optional[str] = None,
         bucket_seconds: typing.Optional[int] = None,
-        errors_only: typing.Optional[ToolsHistogramRequestErrorsOnly] = None,
+        errors_only: typing.Optional[HistogramToolsRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> ToolHistogramResponse:
         """
@@ -738,7 +651,7 @@ class AsyncToolsClient:
         bucket_seconds : typing.Optional[int]
             Bucket width in seconds. Derived from the range (~30 buckets) when omitted.
 
-        errors_only : typing.Optional[ToolsHistogramRequestErrorsOnly]
+        errors_only : typing.Optional[HistogramToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         request_options : typing.Optional[RequestOptions]
@@ -752,27 +665,17 @@ class AsyncToolsClient:
         Examples
         --------
         import asyncio
-        import datetime
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
         async def main() -> None:
             await client.tools.histogram(
                 project_slug="projectSlug",
-                from_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                to_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                tool_name="toolName",
-                bucket_seconds=1,
-                errors_only="true",
             )
 
 
@@ -798,7 +701,7 @@ class AsyncToolsClient:
         to_iso: typing.Optional[dt.datetime] = None,
         top_keys: typing.Optional[int] = None,
         top_values_per_key: typing.Optional[int] = None,
-        errors_only: typing.Optional[ToolsParametersRequestErrorsOnly] = None,
+        errors_only: typing.Optional[ParametersToolsRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> ToolParameterStatsResponse:
         """
@@ -824,7 +727,7 @@ class AsyncToolsClient:
         top_values_per_key : typing.Optional[int]
             Maximum number of values to return per key.
 
-        errors_only : typing.Optional[ToolsParametersRequestErrorsOnly]
+        errors_only : typing.Optional[ParametersToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         request_options : typing.Optional[RequestOptions]
@@ -838,12 +741,11 @@ class AsyncToolsClient:
         Examples
         --------
         import asyncio
-        import datetime
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -851,15 +753,6 @@ class AsyncToolsClient:
             await client.tools.parameters(
                 project_slug="projectSlug",
                 tool_name="toolName",
-                from_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                to_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                top_keys=1,
-                top_values_per_key=1,
-                errors_only="true",
             )
 
 
@@ -882,10 +775,10 @@ class AsyncToolsClient:
         project_slug: str,
         tool_name: str,
         *,
-        dimension: ToolsContextRequestDimension,
+        dimension: ContextToolsRequestDimension,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
-        errors_only: typing.Optional[ToolsContextRequestErrorsOnly] = None,
+        errors_only: typing.Optional[ContextToolsRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> ToolContextBreakdownResponse:
         """
@@ -899,7 +792,7 @@ class AsyncToolsClient:
         tool_name : str
             Tool name. URL-encode names containing special characters.
 
-        dimension : ToolsContextRequestDimension
+        dimension : ContextToolsRequestDimension
             Dimension to break the usage down by.
 
         from_iso : typing.Optional[dt.datetime]
@@ -908,7 +801,7 @@ class AsyncToolsClient:
         to_iso : typing.Optional[dt.datetime]
             Upper bound (inclusive) of the time range. Defaults to now.
 
-        errors_only : typing.Optional[ToolsContextRequestErrorsOnly]
+        errors_only : typing.Optional[ContextToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         request_options : typing.Optional[RequestOptions]
@@ -922,12 +815,11 @@ class AsyncToolsClient:
         Examples
         --------
         import asyncio
-        import datetime
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -935,14 +827,7 @@ class AsyncToolsClient:
             await client.tools.context(
                 project_slug="projectSlug",
                 tool_name="toolName",
-                from_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                to_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
                 dimension="model",
-                errors_only="true",
             )
 
 
@@ -967,7 +852,7 @@ class AsyncToolsClient:
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
         limit: typing.Optional[int] = None,
-        errors_only: typing.Optional[ToolsCoOccurrenceRequestErrorsOnly] = None,
+        errors_only: typing.Optional[CoOccurrenceToolsRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> ToolCoOccurrenceResponse:
         """
@@ -990,7 +875,7 @@ class AsyncToolsClient:
         limit : typing.Optional[int]
             Maximum number of tools to return.
 
-        errors_only : typing.Optional[ToolsCoOccurrenceRequestErrorsOnly]
+        errors_only : typing.Optional[CoOccurrenceToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         request_options : typing.Optional[RequestOptions]
@@ -1004,12 +889,11 @@ class AsyncToolsClient:
         Examples
         --------
         import asyncio
-        import datetime
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1017,14 +901,6 @@ class AsyncToolsClient:
             await client.tools.co_occurrence(
                 project_slug="projectSlug",
                 tool_name="toolName",
-                from_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                to_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                limit=1,
-                errors_only="true",
             )
 
 
@@ -1082,12 +958,11 @@ class AsyncToolsClient:
         Examples
         --------
         import asyncio
-        import datetime
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1095,13 +970,6 @@ class AsyncToolsClient:
             await client.tools.errors(
                 project_slug="projectSlug",
                 tool_name="toolName",
-                from_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                to_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                limit=1,
             )
 
 
@@ -1120,7 +988,7 @@ class AsyncToolsClient:
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
         limit: typing.Optional[int] = None,
-        errors_only: typing.Optional[ToolsListCallsRequestErrorsOnly] = None,
+        errors_only: typing.Optional[ListCallsToolsRequestErrorsOnly] = None,
         cursor: typing.Optional[str] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> PaginatedToolCalls:
@@ -1144,7 +1012,7 @@ class AsyncToolsClient:
         limit : typing.Optional[int]
             Page size. Defaults to 50; max 50.
 
-        errors_only : typing.Optional[ToolsListCallsRequestErrorsOnly]
+        errors_only : typing.Optional[ListCallsToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         cursor : typing.Optional[str]
@@ -1161,12 +1029,11 @@ class AsyncToolsClient:
         Examples
         --------
         import asyncio
-        import datetime
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1174,15 +1041,6 @@ class AsyncToolsClient:
             await client.tools.list_calls(
                 project_slug="projectSlug",
                 tool_name="toolName",
-                from_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                to_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                limit=1,
-                errors_only="true",
-                cursor="cursor",
             )
 
 
@@ -1207,7 +1065,7 @@ class AsyncToolsClient:
         *,
         from_iso: typing.Optional[dt.datetime] = None,
         to_iso: typing.Optional[dt.datetime] = None,
-        errors_only: typing.Optional[ToolsGetRequestErrorsOnly] = None,
+        errors_only: typing.Optional[GetToolsRequestErrorsOnly] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> ToolDetailResponse:
         """
@@ -1227,7 +1085,7 @@ class AsyncToolsClient:
         to_iso : typing.Optional[dt.datetime]
             Upper bound (inclusive) of the time range. Defaults to now.
 
-        errors_only : typing.Optional[ToolsGetRequestErrorsOnly]
+        errors_only : typing.Optional[GetToolsRequestErrorsOnly]
             When `true`, scope every aggregate to failed calls only.
 
         request_options : typing.Optional[RequestOptions]
@@ -1241,12 +1099,11 @@ class AsyncToolsClient:
         Examples
         --------
         import asyncio
-        import datetime
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -1254,13 +1111,6 @@ class AsyncToolsClient:
             await client.tools.get(
                 project_slug="projectSlug",
                 tool_name="toolName",
-                from_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                to_iso=datetime.datetime.fromisoformat(
-                    "2024-01-15 09:30:00+00:00",
-                ),
-                errors_only="true",
             )
 
 

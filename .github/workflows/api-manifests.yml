@@ -71,3 +71,9 @@ jobs:
 
       - name: Fail if packages/sdk/python/src drifted
         run: git diff --exit-code packages/sdk/python/src
+
+      - name: Regenerate Fern-emitted CLI
+        run: ./fern/invoke.sh generate --group local-cli --local --force
+
+      - name: Fail if packages/cli drifted
+        run: git diff --exit-code packages/cli

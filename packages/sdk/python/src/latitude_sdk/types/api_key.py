@@ -14,11 +14,11 @@ class ApiKey(UniversalBaseModel):
     Stable API-key identifier.
     """
 
-    organization_id: typing_extensions.Annotated[str, FieldMetadata(alias="organizationId")] = pydantic.Field()
-    """
-    Organization that owns this API key.
-    """
-
+    organization_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="organizationId"),
+        pydantic.Field(alias="organizationId", description="Organization that owns this API key."),
+    ]
     name: str = pydantic.Field()
     """
     Human-readable name.
@@ -29,28 +29,36 @@ class ApiKey(UniversalBaseModel):
     The full API key token. Returned by create / get / update — store it securely; treat it as a password.
     """
 
-    last_used_at: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="lastUsedAt")] = pydantic.Field(
-        default=None
-    )
-    """
-    ISO-8601 timestamp of the most recent successful authentication. `null` until first use.
-    """
-
-    deleted_at: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="deletedAt")] = pydantic.Field(
-        default=None
-    )
-    """
-    ISO-8601 timestamp at which the key was revoked. `null` while the key is active.
-    """
-
-    created_at: typing_extensions.Annotated[str, FieldMetadata(alias="createdAt")] = pydantic.Field()
-    """
-    ISO-8601 timestamp of creation.
-    """
-
-    updated_at: typing_extensions.Annotated[str, FieldMetadata(alias="updatedAt")] = pydantic.Field()
-    """
-    ISO-8601 timestamp of the last metadata update (rename, revoke, last-used touch).
-    """
+    last_used_at: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="lastUsedAt"),
+        pydantic.Field(
+            alias="lastUsedAt",
+            default=None,
+            description="ISO-8601 timestamp of the most recent successful authentication. `null` until first use.",
+        ),
+    ]
+    deleted_at: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="deletedAt"),
+        pydantic.Field(
+            alias="deletedAt",
+            default=None,
+            description="ISO-8601 timestamp at which the key was revoked. `null` while the key is active.",
+        ),
+    ]
+    created_at: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="createdAt"),
+        pydantic.Field(alias="createdAt", description="ISO-8601 timestamp of creation."),
+    ]
+    updated_at: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="updatedAt"),
+        pydantic.Field(
+            alias="updatedAt",
+            description="ISO-8601 timestamp of the last metadata update (rename, revoke, last-used touch).",
+        ),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

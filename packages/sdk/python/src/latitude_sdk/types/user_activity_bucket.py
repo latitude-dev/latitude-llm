@@ -19,9 +19,10 @@ class UserActivityBucket(UniversalBaseModel):
     Distinct user-attributed sessions starting in the bucket.
     """
 
-    error_count: typing_extensions.Annotated[int, FieldMetadata(alias="errorCount")] = pydantic.Field()
-    """
-    Of `count`, sessions with at least one errored trace.
-    """
+    error_count: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="errorCount"),
+        pydantic.Field(alias="errorCount", description="Of `count`, sessions with at least one errored trace."),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

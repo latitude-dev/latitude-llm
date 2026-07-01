@@ -7,7 +7,7 @@ import * as core from "../../../../core/index.js";
 import * as environments from "../../../../environments.js";
 import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCodeError.js";
 import * as errors from "../../../../errors/index.js";
-import * as LatitudeApi from "../../../index.js";
+import * as Latitude from "../../../index.js";
 
 export declare namespace IncidentsClient {
     export type Options = BaseClientOptions;
@@ -18,7 +18,7 @@ export declare namespace IncidentsClient {
 export class IncidentsClient {
     protected readonly _options: NormalizedClientOptionsWithAuth<IncidentsClient.Options>;
 
-    constructor(options: IncidentsClient.Options) {
+    constructor(options: IncidentsClient.Options = {}) {
         this._options = normalizeClientOptionsWithAuth(options);
     }
 
@@ -26,34 +26,29 @@ export class IncidentsClient {
      * Returns incidents in the project, ordered from oldest to newest. The time window defaults to the trailing 7 days.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
-     * @param {LatitudeApi.IncidentsListRequest} request
+     * @param {Latitude.ListIncidentsRequest} request
      * @param {IncidentsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
-     *     await client.incidents.list("projectSlug", {
-     *         fromIso: "2024-01-15T09:30:00Z",
-     *         toIso: "2024-01-15T09:30:00Z",
-     *         source_type: "monitor",
-     *         source_id: "source_id"
-     *     })
+     *     await client.incidents.list("projectSlug")
      */
     public list(
         projectSlug: string,
-        request: LatitudeApi.IncidentsListRequest = {},
+        request: Latitude.ListIncidentsRequest = {},
         requestOptions?: IncidentsClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.ListIncidentsResponse> {
+    ): core.HttpResponsePromise<Latitude.ListIncidentsResponse> {
         return core.HttpResponsePromise.fromPromise(this.__list(projectSlug, request, requestOptions));
     }
 
     private async __list(
         projectSlug: string,
-        request: LatitudeApi.IncidentsListRequest = {},
+        request: Latitude.ListIncidentsRequest = {},
         requestOptions?: IncidentsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.ListIncidentsResponse>> {
+    ): Promise<core.WithRawResponse<Latitude.ListIncidentsResponse>> {
         const { fromIso, toIso, source_type: sourceType, source_id: sourceId, severities } = request;
         const _queryParams: Record<string, unknown> = {
             fromIso: fromIso != null ? fromIso : undefined,
@@ -76,12 +71,11 @@ export class IncidentsClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/incidents`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: { ..._queryParams, ...requestOptions?.queryParams },
             queryString: core.url
                 .queryBuilder()
                 .addMany(_queryParams)
@@ -94,28 +88,22 @@ export class IncidentsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.ListIncidentsResponse, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.ListIncidentsResponse, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -136,11 +124,12 @@ export class IncidentsClient {
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} incidentId - Incident identifier.
+     * @param {Latitude.ResolveIncidentsRequest} request
      * @param {IncidentsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.incidents.resolve("projectSlug", "incidentId")
@@ -148,16 +137,18 @@ export class IncidentsClient {
     public resolve(
         projectSlug: string,
         incidentId: string,
+        request: Latitude.ResolveIncidentsRequest = {},
         requestOptions?: IncidentsClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.Incident> {
-        return core.HttpResponsePromise.fromPromise(this.__resolve(projectSlug, incidentId, requestOptions));
+    ): core.HttpResponsePromise<Latitude.Incident> {
+        return core.HttpResponsePromise.fromPromise(this.__resolve(projectSlug, incidentId, request, requestOptions));
     }
 
     private async __resolve(
         projectSlug: string,
         incidentId: string,
+        _request: Latitude.ResolveIncidentsRequest = {},
         requestOptions?: IncidentsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.Incident>> {
+    ): Promise<core.WithRawResponse<Latitude.Incident>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -168,12 +159,12 @@ export class IncidentsClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/incidents/${core.url.encodePathParam(incidentId)}`,
             ),
             method: "POST",
             headers: _headers,
-            queryParameters: requestOptions?.queryParams,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -181,28 +172,22 @@ export class IncidentsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.Incident, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.Incident, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,

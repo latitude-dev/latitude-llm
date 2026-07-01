@@ -17,7 +17,7 @@ import {
   getWorkflowQuerier,
   getWorkflowStarter,
 } from "./clients.ts"
-import { API_INFO } from "./constants.ts"
+import { API_INFO, API_SECURITY_SCHEME } from "./constants.ts"
 import { registerCorsMiddleware } from "./middleware/cors.ts"
 import { honoErrorHandler } from "./middleware/error-handler.ts"
 import { suppressHttpErrorTelemetry } from "./middleware/suppress-http-error-telemetry.ts"
@@ -68,11 +68,7 @@ const startServer = async () => {
   })
 
   // Register security scheme via the OpenAPI registry
-  app.openAPIRegistry.registerComponent("securitySchemes", "ApiKeyAuth", {
-    type: "http",
-    scheme: "bearer",
-    description: "Organization-scoped API key",
-  })
+  app.openAPIRegistry.registerComponent("securitySchemes", "ApiKeyAuth", API_SECURITY_SCHEME)
 
   // OpenAPI spec
   app.doc("/openapi.json", {

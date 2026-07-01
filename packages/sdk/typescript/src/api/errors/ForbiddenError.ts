@@ -2,10 +2,10 @@
 
 import type * as core from "../../core/index.js";
 import * as errors from "../../errors/index.js";
-import type * as LatitudeApi from "../index.js";
+import type * as Latitude from "../index.js";
 
-export class ForbiddenError extends errors.LatitudeApiError {
-    constructor(body: LatitudeApi.Error_, rawResponse?: core.RawResponse) {
+export class ForbiddenError extends errors.LatitudeError {
+    constructor(body: Latitude.Error_, rawResponse?: core.RawResponse) {
         super({
             message: "ForbiddenError",
             statusCode: 403,
@@ -17,6 +17,6 @@ export class ForbiddenError extends errors.LatitudeApiError {
             Error.captureStackTrace(this, this.constructor);
         }
 
-        this.name = this.constructor.name;
+        this.name = "ForbiddenError";
     }
 }

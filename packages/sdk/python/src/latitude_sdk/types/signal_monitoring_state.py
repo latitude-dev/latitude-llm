@@ -46,14 +46,19 @@ class SignalMonitoringState_Realigning(UniversalBaseModel):
     """
 
     kind: typing.Literal["realigning"] = "realigning"
-    evaluation_id: typing_extensions.Annotated[str, FieldMetadata(alias="evaluationId")]
+    evaluation_id: typing_extensions.Annotated[
+        str, FieldMetadata(alias="evaluationId"), pydantic.Field(alias="evaluationId")
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-SignalMonitoringState = typing.Union[
-    SignalMonitoringState_Automatic,
-    SignalMonitoringState_Idle,
-    SignalMonitoringState_Generating,
-    SignalMonitoringState_Realigning,
+SignalMonitoringState = typing_extensions.Annotated[
+    typing.Union[
+        SignalMonitoringState_Automatic,
+        SignalMonitoringState_Idle,
+        SignalMonitoringState_Generating,
+        SignalMonitoringState_Realigning,
+    ],
+    pydantic.Field(discriminator="kind"),
 ]

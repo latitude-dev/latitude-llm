@@ -9,14 +9,15 @@ from ..core.serialization import FieldMetadata
 
 
 class ToolCoOccurrenceRow(UniversalBaseModel):
-    other_tool: typing_extensions.Annotated[str, FieldMetadata(alias="otherTool")] = pydantic.Field()
-    """
-    Another tool called in the same traces.
-    """
-
-    shared_traces: typing_extensions.Annotated[int, FieldMetadata(alias="sharedTraces")] = pydantic.Field()
-    """
-    Traces where both tools were called.
-    """
+    other_tool: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="otherTool"),
+        pydantic.Field(alias="otherTool", description="Another tool called in the same traces."),
+    ]
+    shared_traces: typing_extensions.Annotated[
+        int,
+        FieldMetadata(alias="sharedTraces"),
+        pydantic.Field(alias="sharedTraces", description="Traces where both tools were called."),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

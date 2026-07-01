@@ -13,9 +13,10 @@ class SignalMonitoringStateRealigning(UniversalBaseModel):
     An active evaluation is being realigned.
     """
 
-    evaluation_id: typing_extensions.Annotated[str, FieldMetadata(alias="evaluationId")] = pydantic.Field()
-    """
-    Id of the evaluation currently being realigned.
-    """
+    evaluation_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="evaluationId"),
+        pydantic.Field(alias="evaluationId", description="Id of the evaluation currently being realigned."),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

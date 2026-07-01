@@ -5,6 +5,7 @@ from __future__ import annotations
 import typing
 
 import pydantic
+import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from .analytics_query_moments_metric_avg_field import AnalyticsQueryMomentsMetricAvgField
 from .analytics_query_moments_metric_max_field import AnalyticsQueryMomentsMetricMaxField
@@ -66,10 +67,13 @@ class AnalyticsQueryMomentsMetric_Median(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-AnalyticsQueryMomentsMetric = typing.Union[
-    AnalyticsQueryMomentsMetric_Count,
-    AnalyticsQueryMomentsMetric_Avg,
-    AnalyticsQueryMomentsMetric_Min,
-    AnalyticsQueryMomentsMetric_Max,
-    AnalyticsQueryMomentsMetric_Median,
+AnalyticsQueryMomentsMetric = typing_extensions.Annotated[
+    typing.Union[
+        AnalyticsQueryMomentsMetric_Count,
+        AnalyticsQueryMomentsMetric_Avg,
+        AnalyticsQueryMomentsMetric_Min,
+        AnalyticsQueryMomentsMetric_Max,
+        AnalyticsQueryMomentsMetric_Median,
+    ],
+    pydantic.Field(discriminator="kind"),
 ]

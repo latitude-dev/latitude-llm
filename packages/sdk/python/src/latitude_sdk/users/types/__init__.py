@@ -6,19 +6,19 @@ import typing
 from importlib import import_module
 
 if typing.TYPE_CHECKING:
-    from .users_activity_request_errors_only import UsersActivityRequestErrorsOnly
-    from .users_get_request_errors_only import UsersGetRequestErrorsOnly
-    from .users_list_request_sort_by import UsersListRequestSortBy
-    from .users_list_request_sort_direction import UsersListRequestSortDirection
-    from .users_usage_request_dimension import UsersUsageRequestDimension
-    from .users_usage_request_errors_only import UsersUsageRequestErrorsOnly
+    from .activity_users_request_errors_only import ActivityUsersRequestErrorsOnly
+    from .get_users_request_errors_only import GetUsersRequestErrorsOnly
+    from .list_users_request_sort_by import ListUsersRequestSortBy
+    from .list_users_request_sort_direction import ListUsersRequestSortDirection
+    from .usage_users_request_dimension import UsageUsersRequestDimension
+    from .usage_users_request_errors_only import UsageUsersRequestErrorsOnly
 _dynamic_imports: typing.Dict[str, str] = {
-    "UsersActivityRequestErrorsOnly": ".users_activity_request_errors_only",
-    "UsersGetRequestErrorsOnly": ".users_get_request_errors_only",
-    "UsersListRequestSortBy": ".users_list_request_sort_by",
-    "UsersListRequestSortDirection": ".users_list_request_sort_direction",
-    "UsersUsageRequestDimension": ".users_usage_request_dimension",
-    "UsersUsageRequestErrorsOnly": ".users_usage_request_errors_only",
+    "ActivityUsersRequestErrorsOnly": ".activity_users_request_errors_only",
+    "GetUsersRequestErrorsOnly": ".get_users_request_errors_only",
+    "ListUsersRequestSortBy": ".list_users_request_sort_by",
+    "ListUsersRequestSortDirection": ".list_users_request_sort_direction",
+    "UsageUsersRequestDimension": ".usage_users_request_dimension",
+    "UsageUsersRequestErrorsOnly": ".usage_users_request_errors_only",
 }
 
 
@@ -44,10 +44,10 @@ def __dir__():
 
 
 __all__ = [
-    "UsersActivityRequestErrorsOnly",
-    "UsersGetRequestErrorsOnly",
-    "UsersListRequestSortBy",
-    "UsersListRequestSortDirection",
-    "UsersUsageRequestDimension",
-    "UsersUsageRequestErrorsOnly",
+    "ActivityUsersRequestErrorsOnly",
+    "GetUsersRequestErrorsOnly",
+    "ListUsersRequestSortBy",
+    "ListUsersRequestSortDirection",
+    "UsageUsersRequestDimension",
+    "UsageUsersRequestErrorsOnly",
 ]

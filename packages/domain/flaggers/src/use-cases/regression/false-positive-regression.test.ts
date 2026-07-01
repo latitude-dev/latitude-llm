@@ -9,7 +9,7 @@ import {
   TraceId,
 } from "@domain/shared"
 import type { TraceDetail } from "@domain/spans"
-import { LatitudeApiClient } from "@latitude-data/sdk"
+import { LatitudeClient } from "@latitude-data/sdk"
 import { AIGenerateLive, createAiLayer } from "@platform/ai"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -52,8 +52,8 @@ function readRequiredEnv(name: string): string {
 }
 
 async function fetchFalsePositiveRegressionRows(): Promise<FalsePositiveRegressionRow[]> {
-  const client = new LatitudeApiClient({
-    token: readRequiredEnv("LAT_LATITUDE_TELEMETRY_API_KEY"),
+  const client = new LatitudeClient({
+    apiKey: readRequiredEnv("LAT_LATITUDE_TELEMETRY_API_KEY"),
     baseUrl: process.env.LAT_LATITUDE_API_URL?.trim() || "https://api.latitude.so",
     maxRetries: 0,
   })

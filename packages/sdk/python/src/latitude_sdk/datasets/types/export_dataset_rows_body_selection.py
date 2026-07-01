@@ -16,7 +16,9 @@ class ExportDatasetRowsBodySelection_Selected(UniversalBaseModel):
     """
 
     mode: typing.Literal["selected"] = "selected"
-    row_ids: typing_extensions.Annotated[typing.List[str], FieldMetadata(alias="rowIds")]
+    row_ids: typing_extensions.Annotated[
+        typing.List[str], FieldMetadata(alias="rowIds"), pydantic.Field(alias="rowIds")
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
@@ -37,13 +39,18 @@ class ExportDatasetRowsBodySelection_AllExcept(UniversalBaseModel):
     """
 
     mode: typing.Literal["allExcept"] = "allExcept"
-    row_ids: typing_extensions.Annotated[typing.List[str], FieldMetadata(alias="rowIds")]
+    row_ids: typing_extensions.Annotated[
+        typing.List[str], FieldMetadata(alias="rowIds"), pydantic.Field(alias="rowIds")
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-ExportDatasetRowsBodySelection = typing.Union[
-    ExportDatasetRowsBodySelection_Selected,
-    ExportDatasetRowsBodySelection_All,
-    ExportDatasetRowsBodySelection_AllExcept,
+ExportDatasetRowsBodySelection = typing_extensions.Annotated[
+    typing.Union[
+        ExportDatasetRowsBodySelection_Selected,
+        ExportDatasetRowsBodySelection_All,
+        ExportDatasetRowsBodySelection_AllExcept,
+    ],
+    pydantic.Field(discriminator="mode"),
 ]

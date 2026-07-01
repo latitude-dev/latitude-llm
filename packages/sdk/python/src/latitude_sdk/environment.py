@@ -3,5 +3,5 @@
 import enum
 
 
-class LatitudeApiClientEnvironment(enum.Enum):
+class LatitudeEnvironment(enum.Enum):
     PRODUCTION = "https://api.latitude.so"

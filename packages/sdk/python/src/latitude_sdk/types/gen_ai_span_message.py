@@ -2,4 +2,7 @@
 
 import typing
 
-GenAiSpanMessage = typing.Dict[str, typing.Optional[typing.Any]]
+GenAiSpanMessage = typing.Dict[str, typing.Any]
+"""
+Message in OpenTelemetry GenAI format (`role` + content parts + optional tool calls).
+"""

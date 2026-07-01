@@ -7,7 +7,7 @@ import * as core from "../../../../core/index.js";
 import * as environments from "../../../../environments.js";
 import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCodeError.js";
 import * as errors from "../../../../errors/index.js";
-import * as LatitudeApi from "../../../index.js";
+import * as Latitude from "../../../index.js";
 
 export declare namespace ScoresClient {
     export type Options = BaseClientOptions;
@@ -18,7 +18,7 @@ export declare namespace ScoresClient {
 export class ScoresClient {
     protected readonly _options: NormalizedClientOptionsWithAuth<ScoresClient.Options>;
 
-    constructor(options: ScoresClient.Options) {
+    constructor(options: ScoresClient.Options = {}) {
         this._options = normalizeClientOptionsWithAuth(options);
     }
 
@@ -26,38 +26,41 @@ export class ScoresClient {
      * Creates a score against a target trace. The trace is resolved by explicit id (`trace.by = "id"`) or by a filter set (`trace.by = "filters"`, exactly one match required). Annotations use the separate `/annotations` endpoint.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
-     * @param {LatitudeApi.CreateScoreBody} request
+     * @param {Latitude.CreateScoresRequest} request
      * @param {ScoresClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
      *
      * @example
      *     await client.scores.create("projectSlug", {
-     *         value: 1.1,
-     *         passed: true,
-     *         feedback: "feedback",
-     *         trace: {
-     *             by: "id",
-     *             id: "id"
-     *         },
-     *         sourceId: "sourceId"
+     *         body: {
+     *             value: 1.1,
+     *             passed: true,
+     *             feedback: "feedback",
+     *             trace: {
+     *                 by: "id",
+     *                 id: "id"
+     *             },
+     *             sourceId: "sourceId"
+     *         }
      *     })
      */
     public create(
         projectSlug: string,
-        request: LatitudeApi.CreateScoreBody,
+        request: Latitude.CreateScoresRequest,
         requestOptions?: ScoresClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.ScoreResponse> {
+    ): core.HttpResponsePromise<Latitude.ScoreResponse> {
         return core.HttpResponsePromise.fromPromise(this.__create(projectSlug, request, requestOptions));
     }
 
     private async __create(
         projectSlug: string,
-        request: LatitudeApi.CreateScoreBody,
+        request: Latitude.CreateScoresRequest,
         requestOptions?: ScoresClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.ScoreResponse>> {
+    ): Promise<core.WithRawResponse<Latitude.ScoreResponse>> {
+        const { body: _body } = request;
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -68,15 +71,15 @@ export class ScoresClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
+                    environments.LatitudeEnvironment.Production,
                 `v1/projects/${core.url.encodePathParam(projectSlug)}/scores`,
             ),
             method: "POST",
             headers: _headers,
             contentType: "application/json",
-            queryParameters: requestOptions?.queryParams,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             requestType: "json",
-            body: request,
+            body: _body,
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -84,28 +87,22 @@ export class ScoresClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.ScoreResponse, rawResponse: _response.rawResponse };
+            return { data: _response.body as Latitude.ScoreResponse, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
                 default:
-                    throw new errors.LatitudeApiError({
+                    throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,

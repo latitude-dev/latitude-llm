@@ -1,7 +1,7 @@
-export type { UsersActivityRequest } from "./UsersActivityRequest.js";
-export type { UsersBehavioursRequest } from "./UsersBehavioursRequest.js";
-export type { UsersGetRequest } from "./UsersGetRequest.js";
-export type { UsersListRequest } from "./UsersListRequest.js";
-export type { UsersOverviewRequest } from "./UsersOverviewRequest.js";
-export type { UsersSignalsRequest } from "./UsersSignalsRequest.js";
-export type { UsersUsageRequest } from "./UsersUsageRequest.js";
+export type { ActivityUsersRequest } from "./ActivityUsersRequest.js";
+export type { BehavioursUsersRequest } from "./BehavioursUsersRequest.js";
+export type { GetUsersRequest } from "./GetUsersRequest.js";
+export type { ListUsersRequest } from "./ListUsersRequest.js";
+export type { OverviewUsersRequest } from "./OverviewUsersRequest.js";
+export type { SignalsUsersRequest } from "./SignalsUsersRequest.js";
+export type { UsageUsersRequest } from "./UsageUsersRequest.js";

@@ -13,12 +13,12 @@
  * From the repo root (workspace filter, how you'd run it under Turbo):
  *   pnpm --filter @examples/sdk-typescript apiKeys:list
  */
-import { LatitudeApiClient } from "@latitude-data/sdk"
+import { LatitudeClient } from "@latitude-data/sdk"
 import { optionalEnv, requireEnv } from "./env.ts"
 
-const client = new LatitudeApiClient({
+const client = new LatitudeClient({
   baseUrl: optionalEnv("LATITUDE_API_BASE_URL"),
-  token: requireEnv("LATITUDE_API_KEY"),
+  apiKey: requireEnv("LATITUDE_API_KEY"),
 })
 
 const { apiKeys } = await client.apiKeys.list()

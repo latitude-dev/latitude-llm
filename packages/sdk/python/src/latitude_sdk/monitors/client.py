@@ -4,18 +4,18 @@ import typing
 
 from ..core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from ..core.request_options import RequestOptions
-from ..types.alert_condition import AlertCondition
 from ..types.create_monitor_body import CreateMonitorBody
+from ..types.filter_condition import FilterCondition
 from ..types.monitor import Monitor
-from ..types.monitor_filter_set import MonitorFilterSet
 from ..types.monitor_list import MonitorList
-from ..types.monitor_metric import MonitorMetric
-from ..types.monitor_target import MonitorTarget
 from ..types.paginated_monitor_incidents import PaginatedMonitorIncidents
 from ..types.paginated_monitors import PaginatedMonitors
 from .raw_client import AsyncRawMonitorsClient, RawMonitorsClient
 from .types.list_monitors_for_target_body_target_type import ListMonitorsForTargetBodyTargetType
+from .types.update_monitor_body_condition import UpdateMonitorBodyCondition
+from .types.update_monitor_body_metric import UpdateMonitorBodyMetric
 from .types.update_monitor_body_severity import UpdateMonitorBodySeverity
+from .types.update_monitor_body_target import UpdateMonitorBodyTarget
 from .types.update_monitor_body_trigger import UpdateMonitorBodyTrigger
 
 # this is used as the default value for optional parameters
@@ -73,16 +73,13 @@ class MonitorsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.monitors.list(
             project_slug="projectSlug",
-            cursor="cursor",
-            limit=1,
-            search="search",
         )
         """
         _response = self._raw_client.list(
@@ -113,16 +110,20 @@ class MonitorsClient:
 
         Examples
         --------
-        from latitude import CreateMonitorBody_Match, LatitudeApiClient, MonitorTarget
+        from latitude_sdk import (
+            CreateMonitorBody_Match,
+            CreateMonitorBodyMatchTarget,
+            LatitudeClient,
+        )
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.monitors.create(
             project_slug="projectSlug",
             request=CreateMonitorBody_Match(
                 name="name",
-                target=MonitorTarget(
+                target=CreateMonitorBodyMatchTarget(
                     type="savedSearch",
                 ),
                 severity="low",
@@ -136,7 +137,7 @@ class MonitorsClient:
         self,
         project_slug: str,
         *,
-        filter_set_contains: MonitorFilterSet,
+        filter_set_contains: typing.Dict[str, typing.Sequence[FilterCondition]],
         target_type: typing.Optional[ListMonitorsForTargetBodyTargetType] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> MonitorList:
@@ -148,7 +149,8 @@ class MonitorsClient:
         project_slug : str
             Project slug (human-readable identifier)
 
-        filter_set_contains : MonitorFilterSet
+        filter_set_contains : typing.Dict[str, typing.Sequence[FilterCondition]]
+            Filter subset to match against monitor targets. For one user use `userId`; for one tool use `operation = execute_tool` and `toolName`.
 
         target_type : typing.Optional[ListMonitorsForTargetBodyTargetType]
             Optional target type to match.
@@ -163,10 +165,10 @@ class MonitorsClient:
 
         Examples
         --------
-        from latitude import FilterCondition, LatitudeApiClient
+        from latitude_sdk import FilterCondition, LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.monitors.list_for_target(
             project_slug="projectSlug",
@@ -212,10 +214,10 @@ class MonitorsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.monitors.get(
             project_slug="projectSlug",
@@ -248,10 +250,10 @@ class MonitorsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.monitors.delete(
             project_slug="projectSlug",
@@ -268,10 +270,10 @@ class MonitorsClient:
         *,
         name: typing.Optional[str] = OMIT,
         description: typing.Optional[str] = OMIT,
-        target: typing.Optional[MonitorTarget] = OMIT,
+        target: typing.Optional[UpdateMonitorBodyTarget] = OMIT,
         trigger: typing.Optional[UpdateMonitorBodyTrigger] = OMIT,
-        metric: typing.Optional[MonitorMetric] = OMIT,
-        condition: typing.Optional[AlertCondition] = OMIT,
+        metric: typing.Optional[UpdateMonitorBodyMetric] = OMIT,
+        condition: typing.Optional[UpdateMonitorBodyCondition] = OMIT,
         severity: typing.Optional[UpdateMonitorBodySeverity] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> Monitor:
@@ -292,14 +294,17 @@ class MonitorsClient:
         description : typing.Optional[str]
             New description.
 
-        target : typing.Optional[MonitorTarget]
+        target : typing.Optional[UpdateMonitorBodyTarget]
+            Replacement target watched by the monitor.
 
         trigger : typing.Optional[UpdateMonitorBodyTrigger]
             Replacement incident trigger for the monitor rule.
 
-        metric : typing.Optional[MonitorMetric]
+        metric : typing.Optional[UpdateMonitorBodyMetric]
+            Replacement metric evaluated by the monitor.
 
-        condition : typing.Optional[AlertCondition]
+        condition : typing.Optional[UpdateMonitorBodyCondition]
+            Replacement condition for threshold or escalating monitors.
 
         severity : typing.Optional[UpdateMonitorBodySeverity]
             Replacement incident severity.
@@ -314,10 +319,10 @@ class MonitorsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.monitors.update(
             project_slug="projectSlug",
@@ -374,16 +379,14 @@ class MonitorsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.monitors.list_incidents(
             project_slug="projectSlug",
             monitor_slug="monitorSlug",
-            cursor="cursor",
-            limit=1,
         )
         """
         _response = self._raw_client.list_incidents(
@@ -415,10 +418,10 @@ class MonitorsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.monitors.mute(
             project_slug="projectSlug",
@@ -452,10 +455,10 @@ class MonitorsClient:
 
         Examples
         --------
-        from latitude import LatitudeApiClient
+        from latitude_sdk import LatitudeClient
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.monitors.unmute(
             project_slug="projectSlug",
@@ -519,19 +522,16 @@ class AsyncMonitorsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
         async def main() -> None:
             await client.monitors.list(
                 project_slug="projectSlug",
-                cursor="cursor",
-                limit=1,
-                search="search",
             )
 
 
@@ -567,14 +567,14 @@ class AsyncMonitorsClient:
         --------
         import asyncio
 
-        from latitude import (
-            AsyncLatitudeApiClient,
+        from latitude_sdk import (
+            AsyncLatitudeClient,
             CreateMonitorBody_Match,
-            MonitorTarget,
+            CreateMonitorBodyMatchTarget,
         )
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -583,7 +583,7 @@ class AsyncMonitorsClient:
                 project_slug="projectSlug",
                 request=CreateMonitorBody_Match(
                     name="name",
-                    target=MonitorTarget(
+                    target=CreateMonitorBodyMatchTarget(
                         type="savedSearch",
                     ),
                     severity="low",
@@ -600,7 +600,7 @@ class AsyncMonitorsClient:
         self,
         project_slug: str,
         *,
-        filter_set_contains: MonitorFilterSet,
+        filter_set_contains: typing.Dict[str, typing.Sequence[FilterCondition]],
         target_type: typing.Optional[ListMonitorsForTargetBodyTargetType] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> MonitorList:
@@ -612,7 +612,8 @@ class AsyncMonitorsClient:
         project_slug : str
             Project slug (human-readable identifier)
 
-        filter_set_contains : MonitorFilterSet
+        filter_set_contains : typing.Dict[str, typing.Sequence[FilterCondition]]
+            Filter subset to match against monitor targets. For one user use `userId`; for one tool use `operation = execute_tool` and `toolName`.
 
         target_type : typing.Optional[ListMonitorsForTargetBodyTargetType]
             Optional target type to match.
@@ -629,10 +630,10 @@ class AsyncMonitorsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient, FilterCondition
+        from latitude_sdk import AsyncLatitudeClient, FilterCondition
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -686,10 +687,10 @@ class AsyncMonitorsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -730,10 +731,10 @@ class AsyncMonitorsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -756,10 +757,10 @@ class AsyncMonitorsClient:
         *,
         name: typing.Optional[str] = OMIT,
         description: typing.Optional[str] = OMIT,
-        target: typing.Optional[MonitorTarget] = OMIT,
+        target: typing.Optional[UpdateMonitorBodyTarget] = OMIT,
         trigger: typing.Optional[UpdateMonitorBodyTrigger] = OMIT,
-        metric: typing.Optional[MonitorMetric] = OMIT,
-        condition: typing.Optional[AlertCondition] = OMIT,
+        metric: typing.Optional[UpdateMonitorBodyMetric] = OMIT,
+        condition: typing.Optional[UpdateMonitorBodyCondition] = OMIT,
         severity: typing.Optional[UpdateMonitorBodySeverity] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> Monitor:
@@ -780,14 +781,17 @@ class AsyncMonitorsClient:
         description : typing.Optional[str]
             New description.
 
-        target : typing.Optional[MonitorTarget]
+        target : typing.Optional[UpdateMonitorBodyTarget]
+            Replacement target watched by the monitor.
 
         trigger : typing.Optional[UpdateMonitorBodyTrigger]
             Replacement incident trigger for the monitor rule.
 
-        metric : typing.Optional[MonitorMetric]
+        metric : typing.Optional[UpdateMonitorBodyMetric]
+            Replacement metric evaluated by the monitor.
 
-        condition : typing.Optional[AlertCondition]
+        condition : typing.Optional[UpdateMonitorBodyCondition]
+            Replacement condition for threshold or escalating monitors.
 
         severity : typing.Optional[UpdateMonitorBodySeverity]
             Replacement incident severity.
@@ -804,10 +808,10 @@ class AsyncMonitorsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -872,10 +876,10 @@ class AsyncMonitorsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -883,8 +887,6 @@ class AsyncMonitorsClient:
             await client.monitors.list_incidents(
                 project_slug="projectSlug",
                 monitor_slug="monitorSlug",
-                cursor="cursor",
-                limit=1,
             )
 
 
@@ -921,10 +923,10 @@ class AsyncMonitorsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 
@@ -966,10 +968,10 @@ class AsyncMonitorsClient:
         --------
         import asyncio
 
-        from latitude import AsyncLatitudeApiClient
+        from latitude_sdk import AsyncLatitudeClient
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 

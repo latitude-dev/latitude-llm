@@ -20,7 +20,9 @@ class TraceAnalyticsResponse(UniversalBaseModel):
     duration: TraceAnalyticsDuration
     tokens: TraceAnalyticsTokens
     time_to_first_token: typing_extensions.Annotated[
-        TraceAnalyticsTimeToFirstToken, FieldMetadata(alias="timeToFirstToken")
+        TraceAnalyticsTimeToFirstToken,
+        FieldMetadata(alias="timeToFirstToken"),
+        pydantic.Field(alias="timeToFirstToken"),
     ]
     spans: TraceAnalyticsSpans
 

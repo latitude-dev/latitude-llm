@@ -7,14 +7,25 @@ import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
 from .tool_definition_detail import ToolDefinitionDetail
-from .tool_usage_metrics import ToolUsageMetrics
+from .tool_detail_response_errors_usage import ToolDetailResponseErrorsUsage
+from .tool_detail_response_usage import ToolDetailResponseUsage
 
 
 class ToolDetailResponse(UniversalBaseModel):
     definition: typing.Optional[ToolDefinitionDetail] = None
-    usage: typing.Optional[ToolUsageMetrics] = None
-    errors_usage: typing_extensions.Annotated[typing.Optional[ToolUsageMetrics], FieldMetadata(alias="errorsUsage")] = (
-        None
-    )
+    usage: typing.Optional[ToolDetailResponseUsage] = pydantic.Field(default=None)
+    """
+    Global (all-calls) usage metrics. `null` when the tool has no calls in the range.
+    """
+
+    errors_usage: typing_extensions.Annotated[
+        typing.Optional[ToolDetailResponseErrorsUsage],
+        FieldMetadata(alias="errorsUsage"),
+        pydantic.Field(
+            alias="errorsUsage",
+            default=None,
+            description="Failed-calls-only usage metrics. Non-null only when `errorsOnly=true` is requested.",
+        ),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

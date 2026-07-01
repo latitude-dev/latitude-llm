@@ -8,7 +8,8 @@ from ..core.api_error import ApiError
 from ..core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from ..core.datetime_utils import serialize_datetime
 from ..core.http_response import AsyncHttpResponse, HttpResponse
-from ..core.jsonable_encoder import jsonable_encoder
+from ..core.jsonable_encoder import encode_path_param
+from ..core.parse_error import ParsingError
 from ..core.pydantic_utilities import parse_obj_as
 from ..core.request_options import RequestOptions
 from ..core.serialization import convert_and_respect_annotation_metadata
@@ -28,6 +29,7 @@ from ..types.trace_spans import TraceSpans
 from ..types.traces_ref import TracesRef
 from .types.list_traces_body_sort_by import ListTracesBodySortBy
 from .types.list_traces_body_sort_direction import ListTracesBodySortDirection
+from pydantic import ValidationError
 
 # this is used as the default value for optional parameters
 OMIT = typing.cast(typing.Any, ...)
@@ -83,7 +85,7 @@ class RawTracesClient:
             Page of traces
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/traces/list",
+            f"v1/projects/{encode_path_param(project_slug)}/traces/list",
             method="POST",
             json={
                 "cursor": cursor,
@@ -147,6 +149,10 @@ class RawTracesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def analytics(
@@ -180,7 +186,7 @@ class RawTracesClient:
             Trace analytics
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/traces/analytics",
+            f"v1/projects/{encode_path_param(project_slug)}/traces/analytics",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -234,6 +240,10 @@ class RawTracesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def get(
@@ -259,7 +269,7 @@ class RawTracesClient:
             Trace detail
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/traces/{jsonable_encoder(trace_id)}",
+            f"v1/projects/{encode_path_param(project_slug)}/traces/{encode_path_param(trace_id)}",
             method="GET",
             request_options=request_options,
         )
@@ -309,6 +319,10 @@ class RawTracesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def list_spans(
@@ -334,7 +348,7 @@ class RawTracesClient:
             Spans of the trace
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/traces/{jsonable_encoder(trace_id)}/spans",
+            f"v1/projects/{encode_path_param(project_slug)}/traces/{encode_path_param(trace_id)}/spans",
             method="GET",
             request_options=request_options,
         )
@@ -384,6 +398,10 @@ class RawTracesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def get_span(
@@ -412,7 +430,7 @@ class RawTracesClient:
             Span detail
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/traces/{jsonable_encoder(trace_id)}/spans/{jsonable_encoder(span_id)}",
+            f"v1/projects/{encode_path_param(project_slug)}/traces/{encode_path_param(trace_id)}/spans/{encode_path_param(span_id)}",
             method="GET",
             request_options=request_options,
         )
@@ -462,6 +480,10 @@ class RawTracesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def list_annotations(
@@ -499,7 +521,7 @@ class RawTracesClient:
             Annotations of the trace
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/traces/{jsonable_encoder(trace_id)}/annotations",
+            f"v1/projects/{encode_path_param(project_slug)}/traces/{encode_path_param(trace_id)}/annotations",
             method="GET",
             params={
                 "cursor": cursor,
@@ -553,6 +575,10 @@ class RawTracesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def get_annotation(
@@ -586,7 +612,7 @@ class RawTracesClient:
             Annotation
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/traces/{jsonable_encoder(trace_id)}/annotations/{jsonable_encoder(annotation_id)}",
+            f"v1/projects/{encode_path_param(project_slug)}/traces/{encode_path_param(trace_id)}/annotations/{encode_path_param(annotation_id)}",
             method="GET",
             request_options=request_options,
         )
@@ -636,6 +662,10 @@ class RawTracesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def export(
@@ -668,7 +698,7 @@ class RawTracesClient:
             Export enqueued
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/traces/export",
+            f"v1/projects/{encode_path_param(project_slug)}/traces/export",
             method="POST",
             json={
                 "traces": convert_and_respect_annotation_metadata(
@@ -728,6 +758,10 @@ class RawTracesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
 
@@ -781,7 +815,7 @@ class AsyncRawTracesClient:
             Page of traces
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/traces/list",
+            f"v1/projects/{encode_path_param(project_slug)}/traces/list",
             method="POST",
             json={
                 "cursor": cursor,
@@ -845,6 +879,10 @@ class AsyncRawTracesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def analytics(
@@ -878,7 +916,7 @@ class AsyncRawTracesClient:
             Trace analytics
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/traces/analytics",
+            f"v1/projects/{encode_path_param(project_slug)}/traces/analytics",
             method="GET",
             params={
                 "fromIso": serialize_datetime(from_iso) if from_iso is not None else None,
@@ -932,6 +970,10 @@ class AsyncRawTracesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def get(
@@ -957,7 +999,7 @@ class AsyncRawTracesClient:
             Trace detail
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/traces/{jsonable_encoder(trace_id)}",
+            f"v1/projects/{encode_path_param(project_slug)}/traces/{encode_path_param(trace_id)}",
             method="GET",
             request_options=request_options,
         )
@@ -1007,6 +1049,10 @@ class AsyncRawTracesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def list_spans(
@@ -1032,7 +1078,7 @@ class AsyncRawTracesClient:
             Spans of the trace
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/traces/{jsonable_encoder(trace_id)}/spans",
+            f"v1/projects/{encode_path_param(project_slug)}/traces/{encode_path_param(trace_id)}/spans",
             method="GET",
             request_options=request_options,
         )
@@ -1082,6 +1128,10 @@ class AsyncRawTracesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def get_span(
@@ -1110,7 +1160,7 @@ class AsyncRawTracesClient:
             Span detail
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/traces/{jsonable_encoder(trace_id)}/spans/{jsonable_encoder(span_id)}",
+            f"v1/projects/{encode_path_param(project_slug)}/traces/{encode_path_param(trace_id)}/spans/{encode_path_param(span_id)}",
             method="GET",
             request_options=request_options,
         )
@@ -1160,6 +1210,10 @@ class AsyncRawTracesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def list_annotations(
@@ -1197,7 +1251,7 @@ class AsyncRawTracesClient:
             Annotations of the trace
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/traces/{jsonable_encoder(trace_id)}/annotations",
+            f"v1/projects/{encode_path_param(project_slug)}/traces/{encode_path_param(trace_id)}/annotations",
             method="GET",
             params={
                 "cursor": cursor,
@@ -1251,6 +1305,10 @@ class AsyncRawTracesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def get_annotation(
@@ -1284,7 +1342,7 @@ class AsyncRawTracesClient:
             Annotation
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/traces/{jsonable_encoder(trace_id)}/annotations/{jsonable_encoder(annotation_id)}",
+            f"v1/projects/{encode_path_param(project_slug)}/traces/{encode_path_param(trace_id)}/annotations/{encode_path_param(annotation_id)}",
             method="GET",
             request_options=request_options,
         )
@@ -1334,6 +1392,10 @@ class AsyncRawTracesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def export(
@@ -1366,7 +1428,7 @@ class AsyncRawTracesClient:
             Export enqueued
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}/traces/export",
+            f"v1/projects/{encode_path_param(project_slug)}/traces/export",
             method="POST",
             json={
                 "traces": convert_and_respect_annotation_metadata(
@@ -1426,4 +1488,8 @@ class AsyncRawTracesClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)

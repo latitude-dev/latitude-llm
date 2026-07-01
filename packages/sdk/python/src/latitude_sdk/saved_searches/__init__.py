@@ -6,10 +6,10 @@ import typing
 from importlib import import_module
 
 if typing.TYPE_CHECKING:
-    from .types import SavedSearchesListTracesRequestSortBy, SavedSearchesListTracesRequestSortDirection
+    from .types import ListTracesSavedSearchesRequestSortBy, ListTracesSavedSearchesRequestSortDirection
 _dynamic_imports: typing.Dict[str, str] = {
-    "SavedSearchesListTracesRequestSortBy": ".types",
-    "SavedSearchesListTracesRequestSortDirection": ".types",
+    "ListTracesSavedSearchesRequestSortBy": ".types",
+    "ListTracesSavedSearchesRequestSortDirection": ".types",
 }
 
 
@@ -34,4 +34,4 @@ def __dir__():
     return sorted(lazy_attrs)
 
 
-__all__ = ["SavedSearchesListTracesRequestSortBy", "SavedSearchesListTracesRequestSortDirection"]
+__all__ = ["ListTracesSavedSearchesRequestSortBy", "ListTracesSavedSearchesRequestSortDirection"]

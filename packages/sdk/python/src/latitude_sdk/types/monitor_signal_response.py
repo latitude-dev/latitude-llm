@@ -9,16 +9,17 @@ from ..core.serialization import FieldMetadata
 
 
 class MonitorSignalResponse(UniversalBaseModel):
-    job_id: typing_extensions.Annotated[str, FieldMetadata(alias="jobId")] = pydantic.Field()
-    """
-    Identifier of the monitor job.
-    """
-
-    evaluation_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="evaluationId")] = (
-        pydantic.Field(default=None)
-    )
-    """
-    The id of the evaluation being realigned, or `null` when a brand-new evaluation is being generated.
-    """
+    job_id: typing_extensions.Annotated[
+        str, FieldMetadata(alias="jobId"), pydantic.Field(alias="jobId", description="Identifier of the monitor job.")
+    ]
+    evaluation_id: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="evaluationId"),
+        pydantic.Field(
+            alias="evaluationId",
+            default=None,
+            description="The id of the evaluation being realigned, or `null` when a brand-new evaluation is being generated.",
+        ),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

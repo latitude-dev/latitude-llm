@@ -1,5 +1,5 @@
 import { AIGenerate } from "@domain/ai"
-import { LatitudeApiClient } from "@latitude-data/sdk"
+import { LatitudeClient } from "@latitude-data/sdk"
 import { AIGenerateLive } from "@platform/ai"
 import { Cause, Effect } from "effect"
 import { describe, expect, it } from "vitest"
@@ -76,8 +76,8 @@ function readRequiredEnv(name: string): string {
 }
 
 async function fetchMalformedJsonOutputRegressionRows(): Promise<MalformedJsonOutputRegressionRow[]> {
-  const client = new LatitudeApiClient({
-    token: readRequiredEnv("LAT_LATITUDE_TELEMETRY_API_KEY"),
+  const client = new LatitudeClient({
+    apiKey: readRequiredEnv("LAT_LATITUDE_TELEMETRY_API_KEY"),
     baseUrl: process.env.LAT_LATITUDE_API_URL?.trim() || "https://api.latitude.so",
     maxRetries: 0,
   })

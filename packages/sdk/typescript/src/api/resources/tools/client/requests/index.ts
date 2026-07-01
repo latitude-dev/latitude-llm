@@ -1,8 +1,8 @@
-export type { ToolsContextRequest } from "./ToolsContextRequest.js";
-export type { ToolsCoOccurrenceRequest } from "./ToolsCoOccurrenceRequest.js";
-export type { ToolsErrorsRequest } from "./ToolsErrorsRequest.js";
-export type { ToolsGetRequest } from "./ToolsGetRequest.js";
-export type { ToolsHistogramRequest } from "./ToolsHistogramRequest.js";
-export type { ToolsListCallsRequest } from "./ToolsListCallsRequest.js";
-export type { ToolsListRequest } from "./ToolsListRequest.js";
-export type { ToolsParametersRequest } from "./ToolsParametersRequest.js";
+export type { ContextToolsRequest } from "./ContextToolsRequest.js";
+export type { CoOccurrenceToolsRequest } from "./CoOccurrenceToolsRequest.js";
+export type { ErrorsToolsRequest } from "./ErrorsToolsRequest.js";
+export type { GetToolsRequest } from "./GetToolsRequest.js";
+export type { HistogramToolsRequest } from "./HistogramToolsRequest.js";
+export type { ListCallsToolsRequest } from "./ListCallsToolsRequest.js";
+export type { ListToolsRequest } from "./ListToolsRequest.js";
+export type { ParametersToolsRequest } from "./ParametersToolsRequest.js";

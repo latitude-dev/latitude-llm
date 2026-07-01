@@ -11,7 +11,7 @@ from .analytics_query_moments_metric import AnalyticsQueryMomentsMetric
 from .analytics_query_moments_order_by import AnalyticsQueryMomentsOrderBy
 from .analytics_query_moments_range import AnalyticsQueryMomentsRange
 from .analytics_query_moments_time_bucket import AnalyticsQueryMomentsTimeBucket
-from .filter_set import FilterSet
+from .filter_condition import FilterCondition
 
 
 class AnalyticsQueryMoments(UniversalBaseModel):
@@ -25,26 +25,30 @@ class AnalyticsQueryMoments(UniversalBaseModel):
     The metric: `count`, or `{avg|min|max|median}` of the 0–1 label `confidence` or moment `coherence`.
     """
 
-    filters: typing.Optional[FilterSet] = None
-    time_bucket: typing_extensions.Annotated[
-        typing.Optional[AnalyticsQueryMomentsTimeBucket], FieldMetadata(alias="timeBucket")
-    ] = pydantic.Field(default=None)
+    filters: typing.Optional[typing.Dict[str, typing.List[FilterCondition]]] = pydantic.Field(default=None)
     """
-    Bucket the metric over time. Omit for a single aggregate.
+    Structured filter set applied to the stream (same DSL as `listTraces`).
     """
 
+    time_bucket: typing_extensions.Annotated[
+        typing.Optional[AnalyticsQueryMomentsTimeBucket],
+        FieldMetadata(alias="timeBucket"),
+        pydantic.Field(
+            alias="timeBucket", default=None, description="Bucket the metric over time. Omit for a single aggregate."
+        ),
+    ]
     range: AnalyticsQueryMomentsRange = pydantic.Field()
     """
     The time window.
     """
 
     order_by: typing_extensions.Annotated[
-        typing.Optional[AnalyticsQueryMomentsOrderBy], FieldMetadata(alias="orderBy")
-    ] = pydantic.Field(default=None)
-    """
-    Sort for breakdown results. Defaults to value-desc.
-    """
-
+        typing.Optional[AnalyticsQueryMomentsOrderBy],
+        FieldMetadata(alias="orderBy"),
+        pydantic.Field(
+            alias="orderBy", default=None, description="Sort for breakdown results. Defaults to value-desc."
+        ),
+    ]
     limit: typing.Optional[int] = pydantic.Field(default=None)
     """
     Maximum rows returned. Defaults to 50; max 500.

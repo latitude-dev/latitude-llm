@@ -5,6 +5,7 @@ from __future__ import annotations
 import typing
 
 import pydantic
+import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from .monitor_metric_avg_field import MonitorMetricAvgField
 from .monitor_metric_max_field import MonitorMetricMaxField
@@ -98,13 +99,16 @@ class MonitorMetric_Median(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-MonitorMetric = typing.Union[
-    MonitorMetric_Count,
-    MonitorMetric_ErrorRate,
-    MonitorMetric_CacheHitRate,
-    MonitorMetric_Avg,
-    MonitorMetric_Sum,
-    MonitorMetric_Min,
-    MonitorMetric_Max,
-    MonitorMetric_Median,
+MonitorMetric = typing_extensions.Annotated[
+    typing.Union[
+        MonitorMetric_Count,
+        MonitorMetric_ErrorRate,
+        MonitorMetric_CacheHitRate,
+        MonitorMetric_Avg,
+        MonitorMetric_Sum,
+        MonitorMetric_Min,
+        MonitorMetric_Max,
+        MonitorMetric_Median,
+    ],
+    pydantic.Field(discriminator="kind"),
 ]

@@ -6,7 +6,8 @@ from json.decoder import JSONDecodeError
 from ..core.api_error import ApiError
 from ..core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from ..core.http_response import AsyncHttpResponse, HttpResponse
-from ..core.jsonable_encoder import jsonable_encoder
+from ..core.jsonable_encoder import encode_path_param
+from ..core.parse_error import ParsingError
 from ..core.pydantic_utilities import parse_obj_as
 from ..core.request_options import RequestOptions
 from ..core.serialization import convert_and_respect_annotation_metadata
@@ -16,8 +17,9 @@ from ..errors.unauthorized_error import UnauthorizedError
 from ..types.error import Error
 from ..types.paginated_projects import PaginatedProjects
 from ..types.project import Project
-from ..types.project_settings import ProjectSettings
 from .types.update_project_body_flaggers import UpdateProjectBodyFlaggers
+from .types.update_project_body_settings import UpdateProjectBodySettings
+from pydantic import ValidationError
 
 # this is used as the default value for optional parameters
 OMIT = typing.cast(typing.Any, ...)
@@ -92,6 +94,10 @@ class RawProjectsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def create(self, *, name: str, request_options: typing.Optional[RequestOptions] = None) -> HttpResponse[Project]:
@@ -169,6 +175,10 @@ class RawProjectsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def get(
@@ -191,7 +201,7 @@ class RawProjectsClient:
             Project
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}",
             method="GET",
             request_options=request_options,
         )
@@ -241,6 +251,10 @@ class RawProjectsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def delete(
@@ -262,7 +276,7 @@ class RawProjectsClient:
         HttpResponse[None]
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}",
             method="DELETE",
             request_options=request_options,
         )
@@ -294,6 +308,10 @@ class RawProjectsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def update(
@@ -301,7 +319,7 @@ class RawProjectsClient:
         project_slug: str,
         *,
         name: typing.Optional[str] = OMIT,
-        settings: typing.Optional[ProjectSettings] = OMIT,
+        settings: typing.Optional[UpdateProjectBodySettings] = OMIT,
         flaggers: typing.Optional[UpdateProjectBodyFlaggers] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[Project]:
@@ -316,7 +334,8 @@ class RawProjectsClient:
         name : typing.Optional[str]
             New human-readable name. Renaming never changes the slug.
 
-        settings : typing.Optional[ProjectSettings]
+        settings : typing.Optional[UpdateProjectBodySettings]
+            Replace the project's settings overrides. Omit to leave settings untouched. To clear overrides entirely, edit via the web UI.
 
         flaggers : typing.Optional[UpdateProjectBodyFlaggers]
             Enable or disable specific flaggers for the project. Keys are flagger slugs; values are the new `enabled` state. Omitted slugs are left untouched.
@@ -330,12 +349,12 @@ class RawProjectsClient:
             Updated project
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}",
             method="PATCH",
             json={
                 "name": name,
                 "settings": convert_and_respect_annotation_metadata(
-                    object_=settings, annotation=ProjectSettings, direction="write"
+                    object_=settings, annotation=typing.Optional[UpdateProjectBodySettings], direction="write"
                 ),
                 "flaggers": convert_and_respect_annotation_metadata(
                     object_=flaggers, annotation=UpdateProjectBodyFlaggers, direction="write"
@@ -393,6 +412,10 @@ class RawProjectsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
 
@@ -467,6 +490,10 @@ class AsyncRawProjectsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def create(
@@ -546,6 +573,10 @@ class AsyncRawProjectsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def get(
@@ -568,7 +599,7 @@ class AsyncRawProjectsClient:
             Project
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}",
             method="GET",
             request_options=request_options,
         )
@@ -618,6 +649,10 @@ class AsyncRawProjectsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def delete(
@@ -639,7 +674,7 @@ class AsyncRawProjectsClient:
         AsyncHttpResponse[None]
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}",
             method="DELETE",
             request_options=request_options,
         )
@@ -671,6 +706,10 @@ class AsyncRawProjectsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def update(
@@ -678,7 +717,7 @@ class AsyncRawProjectsClient:
         project_slug: str,
         *,
         name: typing.Optional[str] = OMIT,
-        settings: typing.Optional[ProjectSettings] = OMIT,
+        settings: typing.Optional[UpdateProjectBodySettings] = OMIT,
         flaggers: typing.Optional[UpdateProjectBodyFlaggers] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[Project]:
@@ -693,7 +732,8 @@ class AsyncRawProjectsClient:
         name : typing.Optional[str]
             New human-readable name. Renaming never changes the slug.
 
-        settings : typing.Optional[ProjectSettings]
+        settings : typing.Optional[UpdateProjectBodySettings]
+            Replace the project's settings overrides. Omit to leave settings untouched. To clear overrides entirely, edit via the web UI.
 
         flaggers : typing.Optional[UpdateProjectBodyFlaggers]
             Enable or disable specific flaggers for the project. Keys are flagger slugs; values are the new `enabled` state. Omitted slugs are left untouched.
@@ -707,12 +747,12 @@ class AsyncRawProjectsClient:
             Updated project
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/projects/{jsonable_encoder(project_slug)}",
+            f"v1/projects/{encode_path_param(project_slug)}",
             method="PATCH",
             json={
                 "name": name,
                 "settings": convert_and_respect_annotation_metadata(
-                    object_=settings, annotation=ProjectSettings, direction="write"
+                    object_=settings, annotation=typing.Optional[UpdateProjectBodySettings], direction="write"
                 ),
                 "flaggers": convert_and_respect_annotation_metadata(
                     object_=flaggers, annotation=UpdateProjectBodyFlaggers, direction="write"
@@ -770,4 +810,8 @@ class AsyncRawProjectsClient:
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)

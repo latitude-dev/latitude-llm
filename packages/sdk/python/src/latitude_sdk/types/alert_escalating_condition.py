@@ -5,14 +5,24 @@ import typing
 import pydantic
 from ..core.pydantic_utilities import UniversalBaseModel
 from .alert_escalating_condition_direction import AlertEscalatingConditionDirection
+from .alert_escalating_condition_threshold import AlertEscalatingConditionThreshold
+from .alert_escalating_condition_trigger import AlertEscalatingConditionTrigger
 from .alert_escalating_condition_window import AlertEscalatingConditionWindow
-from .alert_metric_threshold import AlertMetricThreshold
 from .monitor_metric import MonitorMetric
 
 
 class AlertEscalatingCondition(UniversalBaseModel):
+    trigger: AlertEscalatingConditionTrigger = pydantic.Field()
+    """
+    Opens when the monitor target is escalating or sustained.
+    """
+
     metric: MonitorMetric
-    threshold: typing.Optional[AlertMetricThreshold] = None
+    threshold: typing.Optional[AlertEscalatingConditionThreshold] = pydantic.Field(default=None)
+    """
+    How the metric is compared when threshold-based.
+    """
+
     direction: typing.Optional[AlertEscalatingConditionDirection] = pydantic.Field(default=None)
     """
     Direction that opens the incident. Defaults to `above` when omitted.

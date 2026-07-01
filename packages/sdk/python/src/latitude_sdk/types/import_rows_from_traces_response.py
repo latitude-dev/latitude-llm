@@ -9,19 +9,18 @@ from ..core.serialization import FieldMetadata
 
 
 class ImportRowsFromTracesResponse(UniversalBaseModel):
-    version_id: typing_extensions.Annotated[str, FieldMetadata(alias="versionId")] = pydantic.Field()
-    """
-    New dataset version id.
-    """
-
+    version_id: typing_extensions.Annotated[
+        str, FieldMetadata(alias="versionId"), pydantic.Field(alias="versionId", description="New dataset version id.")
+    ]
     version: int = pydantic.Field()
     """
     New dataset version number.
     """
 
-    row_ids: typing_extensions.Annotated[typing.List[str], FieldMetadata(alias="rowIds")] = pydantic.Field()
-    """
-    Ids of the inserted rows.
-    """
+    row_ids: typing_extensions.Annotated[
+        typing.List[str],
+        FieldMetadata(alias="rowIds"),
+        pydantic.Field(alias="rowIds", description="Ids of the inserted rows."),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

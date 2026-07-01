@@ -18,6 +18,8 @@ class CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemTextMatch(Univ
     scope: typing.Optional[CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemTextMatchScope] = None
     operator: CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemTextMatchOperator
     value: str
-    case_sensitive: typing_extensions.Annotated[typing.Optional[bool], FieldMetadata(alias="caseSensitive")] = None
+    case_sensitive: typing_extensions.Annotated[
+        typing.Optional[bool], FieldMetadata(alias="caseSensitive"), pydantic.Field(alias="caseSensitive", default=None)
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -2,11 +2,19 @@
 
 export interface ExportDatasetRowsTooLargeResponse {
     /** Always `"too_large"`. The export exceeds the synchronous threshold. */
-    status: "too_large";
+    status: ExportDatasetRowsTooLargeResponse.Status;
     /** Number of rows the export would have produced. */
     rowCount: number;
     /** Maximum row count this endpoint will generate synchronously. */
     threshold: number;
     /** Instructions for the caller — typically an LLM — on how to recover: ask the end user for an email address and retry the same call with `recipient` set to it. */
     recommendedAction: string;
+}
+
+export namespace ExportDatasetRowsTooLargeResponse {
+    /** Always `"too_large"`. The export exceeds the synchronous threshold. */
+    export const Status = {
+        TooLarge: "too_large",
+    } as const;
+    export type Status = (typeof Status)[keyof typeof Status];
 }

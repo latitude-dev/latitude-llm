@@ -5,6 +5,7 @@ from __future__ import annotations
 import typing
 
 import pydantic
+import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from .filter_set import FilterSet
 
@@ -31,4 +32,4 @@ class TraceRef_Filters(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-TraceRef = typing.Union[TraceRef_Id, TraceRef_Filters]
+TraceRef = typing_extensions.Annotated[typing.Union[TraceRef_Id, TraceRef_Filters], pydantic.Field(discriminator="by")]

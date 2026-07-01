@@ -7,8 +7,8 @@ import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
 from .monitor_filter_set import MonitorFilterSet
-from .monitor_metric import MonitorMetric
 from .monitor_target_kind import MonitorTargetKind
+from .monitor_target_metric import MonitorTargetMetric
 from .monitor_target_stream import MonitorTargetStream
 from .monitor_target_type import MonitorTargetType
 
@@ -28,7 +28,11 @@ class MonitorTarget(UniversalBaseModel):
     Target entity id, or `null` for project-wide targets.
     """
 
-    filter_set: typing_extensions.Annotated[typing.Optional[MonitorFilterSet], FieldMetadata(alias="filterSet")] = None
+    filter_set: typing_extensions.Annotated[
+        typing.Optional[MonitorFilterSet],
+        FieldMetadata(alias="filterSet"),
+        pydantic.Field(alias="filterSet", default=None),
+    ]
     query: typing.Optional[str] = pydantic.Field(default=None)
     """
     Semantic query applied when evaluating inline trace targets.
@@ -44,13 +48,18 @@ class MonitorTarget(UniversalBaseModel):
     Telemetry stream evaluated by the monitor.
     """
 
-    saved_search_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="savedSearchId")] = (
-        pydantic.Field(default=None)
-    )
+    saved_search_id: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="savedSearchId"),
+        pydantic.Field(
+            alias="savedSearchId",
+            default=None,
+            description="Saved-search id for saved-search monitors, or `null` for inline targets.",
+        ),
+    ]
+    metric: typing.Optional[MonitorTargetMetric] = pydantic.Field(default=None)
     """
-    Saved-search id for saved-search monitors, or `null` for inline targets.
+    Default metric evaluated for this target.
     """
-
-    metric: typing.Optional[MonitorMetric] = None
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

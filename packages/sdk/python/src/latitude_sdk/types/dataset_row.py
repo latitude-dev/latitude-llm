@@ -14,16 +14,14 @@ from .dataset_row_output import DatasetRowOutput
 
 
 class DatasetRow(UniversalBaseModel):
-    row_id: typing_extensions.Annotated[str, FieldMetadata(alias="rowId")] = pydantic.Field()
-    """
-    Stable row identifier.
-    """
-
-    dataset_id: typing_extensions.Annotated[str, FieldMetadata(alias="datasetId")] = pydantic.Field()
-    """
-    Dataset this row belongs to.
-    """
-
+    row_id: typing_extensions.Annotated[
+        str, FieldMetadata(alias="rowId"), pydantic.Field(alias="rowId", description="Stable row identifier.")
+    ]
+    dataset_id: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="datasetId"),
+        pydantic.Field(alias="datasetId", description="Dataset this row belongs to."),
+    ]
     input: typing.Optional[DatasetRowInput] = pydantic.Field(default=None)
     """
     Input cell. Omitted when the `input` column is removed.
@@ -35,12 +33,14 @@ class DatasetRow(UniversalBaseModel):
     """
 
     expected_output: typing_extensions.Annotated[
-        typing.Optional[DatasetRowExpectedOutput], FieldMetadata(alias="expectedOutput")
-    ] = pydantic.Field(default=None)
-    """
-    The correct answer for this row. Curators fill this in by hand; it is not derived from `output`. Omitted when the `expectedOutput` column is removed.
-    """
-
+        typing.Optional[DatasetRowExpectedOutput],
+        FieldMetadata(alias="expectedOutput"),
+        pydantic.Field(
+            alias="expectedOutput",
+            default=None,
+            description="The correct answer for this row. Curators fill this in by hand; it is not derived from `output`. Omitted when the `expectedOutput` column is removed.",
+        ),
+    ]
     metadata: typing.Optional[DatasetRowMetadata] = pydantic.Field(default=None)
     """
     Metadata cell. Omitted when the `metadata` column is removed.
@@ -51,11 +51,11 @@ class DatasetRow(UniversalBaseModel):
     Custom column values keyed by column identifier. Removed columns are excluded; `{}` when none.
     """
 
-    created_at: typing_extensions.Annotated[str, FieldMetadata(alias="createdAt")] = pydantic.Field()
-    """
-    ISO-8601 timestamp at which the row was inserted.
-    """
-
+    created_at: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="createdAt"),
+        pydantic.Field(alias="createdAt", description="ISO-8601 timestamp at which the row was inserted."),
+    ]
     version: int = pydantic.Field()
     """
     Dataset version this row belongs to.

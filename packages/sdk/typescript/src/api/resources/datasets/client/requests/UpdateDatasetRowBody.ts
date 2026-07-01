@@ -6,15 +6,15 @@
  */
 export interface UpdateDatasetRowBody {
     /** New input cell. Omit to leave it unchanged. */
-    input?: UpdateDatasetRowBody.Input;
+    input?: UpdateDatasetRowBody.Input | null;
     /** New output cell. Omit to leave it unchanged. */
-    output?: UpdateDatasetRowBody.Output;
+    output?: UpdateDatasetRowBody.Output | null;
     /** New correct answer for this row. Filled in by curators; usually distinct from `output`. Omit to leave it unchanged. */
-    expectedOutput?: UpdateDatasetRowBody.ExpectedOutput;
+    expectedOutput?: UpdateDatasetRowBody.ExpectedOutput | null;
     /** New metadata cell. Omit to leave it unchanged. */
-    metadata?: UpdateDatasetRowBody.Metadata;
+    metadata?: UpdateDatasetRowBody.Metadata | null;
     /** Custom column values to set, keyed by column identifier. Merged onto the row's existing custom values — columns you omit are left unchanged. Unknown or removed columns are rejected. */
-    custom?: Record<string, UpdateDatasetRowBody.Custom.Value>;
+    custom?: Record<string, UpdateDatasetRowBody.Custom.Value | null>;
 }
 
 export namespace UpdateDatasetRowBody {

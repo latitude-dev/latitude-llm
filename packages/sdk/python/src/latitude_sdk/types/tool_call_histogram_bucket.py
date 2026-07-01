@@ -9,11 +9,11 @@ from ..core.serialization import FieldMetadata
 
 
 class ToolCallHistogramBucket(UniversalBaseModel):
-    bucket_start: typing_extensions.Annotated[str, FieldMetadata(alias="bucketStart")] = pydantic.Field()
-    """
-    ISO-8601 UTC timestamp of the bucket's start.
-    """
-
+    bucket_start: typing_extensions.Annotated[
+        str,
+        FieldMetadata(alias="bucketStart"),
+        pydantic.Field(alias="bucketStart", description="ISO-8601 UTC timestamp of the bucket's start."),
+    ]
     calls: int = pydantic.Field()
     """
     Number of calls in this bucket.
@@ -24,9 +24,10 @@ class ToolCallHistogramBucket(UniversalBaseModel):
     Number of errored calls in this bucket.
     """
 
-    p_50_duration_ns: typing_extensions.Annotated[float, FieldMetadata(alias="p50DurationNs")] = pydantic.Field()
-    """
-    Median call duration in this bucket, in nanoseconds.
-    """
+    p50duration_ns: typing_extensions.Annotated[
+        float,
+        FieldMetadata(alias="p50DurationNs"),
+        pydantic.Field(alias="p50DurationNs", description="Median call duration in this bucket, in nanoseconds."),
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

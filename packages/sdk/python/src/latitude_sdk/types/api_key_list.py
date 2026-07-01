@@ -10,6 +10,8 @@ from .api_key_list_item import ApiKeyListItem
 
 
 class ApiKeyList(UniversalBaseModel):
-    api_keys: typing_extensions.Annotated[typing.List[ApiKeyListItem], FieldMetadata(alias="apiKeys")]
+    api_keys: typing_extensions.Annotated[
+        typing.List[ApiKeyListItem], FieldMetadata(alias="apiKeys"), pydantic.Field(alias="apiKeys")
+    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -2,9 +2,17 @@
 
 export interface ExportDatasetRowsQueuedResponse {
     /** Always `"queued"`. The CSV is emailed to `recipient` when ready. */
-    status: "queued";
+    status: ExportDatasetRowsQueuedResponse.Status;
     /** Email address the export download link will be sent to. */
     recipient: string;
     /** Number of rows the export will produce. */
     rowCount: number;
+}
+
+export namespace ExportDatasetRowsQueuedResponse {
+    /** Always `"queued"`. The CSV is emailed to `recipient` when ready. */
+    export const Status = {
+        Queued: "queued",
+    } as const;
+    export type Status = (typeof Status)[keyof typeof Status];
 }

@@ -1,0 +1,90 @@
+[package]
+name = "fern-cli-sdk"
+version = "0.0.0"
+edition = "2021"
+description = "CLI generator — dynamic command surface from OpenAPI and GraphQL schemas"
+license = "Apache-2.0"
+repository = "https://github.com/fern-api/cli-sdk"
+homepage = "https://github.com/fern-api/cli-sdk"
+authors = ["Fern <hey@buildwithfern.com>"]
+keywords = ["cli", "openapi", "graphql", "fern", "codegen"]
+categories = ["command-line-utilities", "web-programming"]
+
+[lib]
+name = "fern_cli_sdk"
+path = "src/lib.rs"
+
+[[bin]]
+name = "latitude"
+path = "cli/latitude/main.rs"
+
+[features]
+# TLS backend selection.
+#
+#   default = ["native-tls"]
+#       Uses the OS's native TLS stack (Secure Transport on macOS, SChannel on
+#       Windows, OpenSSL on Linux). Honors the OS keychain / cert store —
+#       what users typically expect for an interactive CLI.
+#
+#   ["rustls"]   (cargo build --no-default-features --features rustls)
+#       Uses the pure-Rust rustls crate with Mozilla's bundled webpki roots.
+#       Produces self-contained static binaries that don't depend on system
+#       OpenSSL — preferred for distribution to varied Linux servers, scratch
+#       Docker images, and cross-compiled musl/ARM builds. Does NOT read the
+#       OS keychain; users must use `<NAME>_CA_BUNDLE` for custom roots.
+default = ["native-tls"]
+native-tls = ["reqwest/native-tls", "tokio-tungstenite/native-tls"]
+rustls = ["reqwest/rustls-tls-native-roots", "tokio-tungstenite/rustls-tls-native-roots"]
+
+[dependencies]
+anyhow = "1"
+base64 = "0.22"
+bytes = "1"
+clap = { version = "4", features = ["derive", "string", "env"] }
+clap_complete = "4"
+clap_mangen = "0.2"
+hmac = "0.12"
+dotenvy = "0.15"
+futures-util = "0.3"
+httpdate = "1"
+libc = "0.2"
+percent-encoding = "2.3.2"
+reqwest = { version = "0.12", features = ["json", "multipart", "stream"], default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_json_path = "0.7"
+serde_yaml = "0.9.34"
+secrecy = "0.10"
+serde_qs = "1.1.1"
+sha2 = "0.10"
+thiserror = "2"
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service", "vendored"] }
+webbrowser = "1"
+rand = "0.8"
+tokio = { version = "1", features = ["full"] }
+tokio-tungstenite = { version = "0.24", default-features = false, features = ["connect", "handshake"] }
+tokio-util = { version = "0.7", features = ["io"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tracing-appender = "0.2"
+unicode-normalization = "0.1.25"
+form_urlencoded = "1"
+jmespath = "0.3"
+
+[package.metadata.dist]
+dist = true
+
+# The profile that 'cargo dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
+
+[build-dependencies]
+serde = "1"
+serde_yaml = "0.9.34"
+
+[dev-dependencies]
+serial_test = "3.4.0"
+tempfile = "3"
+wiremock = "0.6"
+tokio = { version = "1", features = ["full"] }

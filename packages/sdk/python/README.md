@@ -17,9 +17,9 @@ pip install latitude-sdk
 ```python
 import os
 
-from latitude_sdk import AnnotationAnchor, LatitudeApiClient, TraceRef_Id
+from latitude_sdk import AnnotationAnchor, LatitudeClient, TraceRef_Id
 
-client = LatitudeApiClient(token=os.environ["LATITUDE_API_KEY"])
+client = LatitudeClient(api_key=os.environ["LATITUDE_API_KEY"])
 
 # Create an annotation against a known trace.
 annotation = client.annotations.create(
@@ -36,37 +36,39 @@ The client is constructed once and reused — each resource (`client.projects`, 
 
 ### Async
 
-Every resource has an async twin on `AsyncLatitudeApiClient`:
+Every resource has an async twin on `AsyncLatitudeClient`:
 
 ```python
-from latitude_sdk import AsyncLatitudeApiClient
+from latitude_sdk import AsyncLatitudeClient
 
-client = AsyncLatitudeApiClient(token=os.environ["LATITUDE_API_KEY"])
+client = AsyncLatitudeClient(api_key=os.environ["LATITUDE_API_KEY"])
 projects = await client.projects.list()
 ```
 
 ## Authentication
 
-The SDK uses bearer-token auth. Pass the token at construction — either a string or a zero-argument callable when the token is fetched dynamically:
+The SDK authenticates with an organization-scoped API key, sent as `Authorization: Bearer <key>`. Pass it as `api_key` at construction — either a string or a zero-argument callable when the key is fetched dynamically:
 
 ```python
-client = LatitudeApiClient(token=lambda: fetch_token_from_vault())
+client = LatitudeClient(api_key=lambda: fetch_key_from_vault())
 ```
+
+If you omit `api_key`, the SDK falls back to the `LATITUDE_API_KEY` environment variable, so `LatitudeClient()` works when it is set. An explicit `api_key` takes precedence.
 
 ## Configuration
 
 ```python
-from latitude_sdk import LatitudeApiClient
-from latitude_sdk.environment import LatitudeApiClientEnvironment
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeEnvironment
 
-client = LatitudeApiClient(
-    token=os.environ["LATITUDE_API_KEY"],
+client = LatitudeClient(
+    api_key=os.environ["LATITUDE_API_KEY"],
 
     # Override the base URL (defaults to https://api.latitude.so).
     base_url="https://api.staging.latitude.so",
 
     # Or pick a named environment.
-    environment=LatitudeApiClientEnvironment.PRODUCTION,
+    environment=LatitudeEnvironment.PRODUCTION,
 
     # Default request timeout in seconds (60 by default).
     timeout=30,

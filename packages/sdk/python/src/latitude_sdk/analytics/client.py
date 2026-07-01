@@ -52,15 +52,15 @@ class AnalyticsClient:
         --------
         import datetime
 
-        from latitude import (
+        from latitude_sdk import (
             AnalyticsQuery_Traces,
             AnalyticsQueryTracesMetric_Count,
             AnalyticsQueryTracesRange,
-            LatitudeApiClient,
+            LatitudeClient,
         )
 
-        client = LatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
         )
         client.analytics.query(
             project_slug="projectSlug",
@@ -122,15 +122,15 @@ class AsyncAnalyticsClient:
         import asyncio
         import datetime
 
-        from latitude import (
+        from latitude_sdk import (
             AnalyticsQuery_Traces,
             AnalyticsQueryTracesMetric_Count,
             AnalyticsQueryTracesRange,
-            AsyncLatitudeApiClient,
+            AsyncLatitudeClient,
         )
 
-        client = AsyncLatitudeApiClient(
-            token="YOUR_TOKEN",
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
         )
 
 

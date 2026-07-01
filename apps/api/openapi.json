@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Latitude API",
-    "version": "1.0.0",
-    "description": "The Latitude public API. Authenticate using an API key via the `Authorization: Bearer` header."
+    "title": "Latitude",
+    "version": "v1",
+    "description": "Open-source AI agent monitoring platform. Full observability into what's failing in production. Discover underlying issues, get alerts when something breaks and verify your fix worked."
   },
   "servers": [
     {
@@ -16,7 +16,12 @@
       "ApiKeyAuth": {
         "type": "http",
         "scheme": "bearer",
-        "description": "Organization-scoped API key"
+        "bearerFormat": "API key",
+        "description": "Organization-scoped API key, sent as `Authorization: Bearer <key>`.",
+        "x-fern-bearer": {
+          "name": "apiKey",
+          "env": "LATITUDE_API_KEY"
+        }
       }
     },
     "schemas": {

@@ -10,9 +10,9 @@ export interface ApiKeyListItem {
     /** Masked token preview safe to display in lists. Use `GET /api-keys/{apiKeyId}` to retrieve the full token. */
     token: string;
     /** ISO-8601 timestamp of the most recent successful authentication. `null` until first use. */
-    lastUsedAt?: string | undefined;
+    lastUsedAt: string | null;
     /** ISO-8601 timestamp at which the key was revoked. `null` while the key is active. */
-    deletedAt?: string | undefined;
+    deletedAt: string | null;
     /** ISO-8601 timestamp of creation. */
     createdAt: string;
     /** ISO-8601 timestamp of the last metadata update. */
