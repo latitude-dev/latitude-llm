@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.8.0] - 2026-07-01
+
+### Added
+
+- `query` on `client.analytics` gains the `scores` stream — the signal grain. A signal is scored occurrences carrying a `signalId`; analyze one via `stream="scores"` filtered by `score.signalId` (or broken down by `signalId`). Metrics: `count`, `passRate`, `errorRate`, or `{avg|min|max|median}` of the 0–1 score `value`. Breakdown by `signalId`/`source` or a trace dimension (`model`/`provider`/`service`/`tool`/`tag`) resolved through the score's trace. Score values/rates are returned raw (0–1).
+
 ## [6.7.0] - 2026-07-01
 
 ### Added
