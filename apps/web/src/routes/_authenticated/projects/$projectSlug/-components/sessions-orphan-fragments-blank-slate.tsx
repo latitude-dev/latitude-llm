@@ -1,3 +1,4 @@
+import { show as showIntercom } from "@intercom/messenger-js-sdk"
 import { Button, Icon, Text } from "@repo/ui"
 import { ExternalLinkIcon, MessagesSquareIcon } from "lucide-react"
 
@@ -26,13 +27,9 @@ export function SessionsOrphanFragmentsBlankSlate({ onShowAllSessions }: { reado
               Read the docs
             </Button>
           </a>
-          <a
-            href="mailto:hello@latitude.so?subject=Sessions%20lack%20LLM%20activity"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Button variant="outline">Contact support</Button>
-          </a>
+          <Button variant="outline" onClick={() => showIntercom()}>
+            Contact support
+          </Button>
         </div>
       </div>
     </div>
