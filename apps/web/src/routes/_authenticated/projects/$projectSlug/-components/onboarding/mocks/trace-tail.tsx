@@ -1,7 +1,8 @@
-import { showNewMessage } from "@intercom/messenger-js-sdk"
+// import { showNewMessage } from "@intercom/messenger-js-sdk"
 import { Alert, Icon, Skeleton, Text, useToast } from "@repo/ui"
 import { Check, Headset } from "lucide-react"
-import { useSupportEnabled } from "../../../../../-route-data.ts"
+import { useSupportEnabled } from "../../../../../-route-data.ts" 
+import { showNewMessage } from "@intercom/messenger-js-sdk"
 
 const TOTAL_ROWS = 4
 
