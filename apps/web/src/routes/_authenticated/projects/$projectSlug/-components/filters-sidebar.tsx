@@ -660,10 +660,7 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
         </CollapsibleSection>
 
         {mode === "sessions" && (
-          <CollapsibleSection
-            label="Has LLM activity"
-            defaultOpen={getHasLlmActivityOn(filters)}
-          >
+          <CollapsibleSection label="Has LLM activity" defaultOpen={getHasLlmActivityOn(filters)}>
             <div className="flex items-center justify-between gap-2">
               <Text.H7 color="foregroundMuted">
                 {getHasLlmActivityOn(filters) ? "Hiding sessions without any LLM call." : "Including orphan fragments."}
