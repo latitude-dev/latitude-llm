@@ -152,9 +152,27 @@ describe("run: host-controlled globals", () => {
     expect(result.value).toBe(1)
   })
 
-  it("exposes session and not the legacy conversation/issue/signal globals", async () => {
+  it("exposes conversation as a top-level alias for session.conversation", async () => {
+    const script = await compile(`
+      const text = \`\${conversation}\`
+      const isSameRef = conversation === session.conversation
+      return Score(text === "[user] hi\\n[assistant] yo" && isSameRef ? 1 : 0)
+    `)
+    const result = await run({
+      script,
+      context: {
+        session: minimalScriptSession([
+          { role: "user", content: "hi" },
+          { role: "assistant", content: "yo" },
+        ]),
+      },
+    })
+    expect(result.value).toBe(1)
+  })
+
+  it("exposes session and not the legacy issue/signal globals", async () => {
     const script = await compile(
-      "return Score(typeof session === 'object' && typeof conversation === 'undefined' && typeof issue === 'undefined' && typeof signal === 'undefined' ? 1 : 0)",
+      "return Score(typeof session === 'object' && typeof issue === 'undefined' && typeof signal === 'undefined' ? 1 : 0)",
     )
     const result = await run({ script, context: { session: minimalScriptSession() } })
     expect(result.value).toBe(1)
