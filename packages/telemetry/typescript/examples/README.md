@@ -91,6 +91,8 @@ These examples use `LatitudeTelemetry` — the simplest way to get started.
 | AWS Bedrock | `test_bedrock.ts` | `@aws-sdk/client-bedrock-runtime` | `"bedrock"` |
 | Google Vertex AI | `test_vertex.ts` | `@google-cloud/vertexai` | `"vertexai"` |
 | Vercel AI SDK | `test_vercel_ai.ts` | `ai`, `@ai-sdk/openai` | `latitude.getTracer("vercelai")` |
+| Cloudflare Think | `cloudflare-think-app/` | `@cloudflare/think`, `agents` | `latitude.getTracer("cloudflare-think")` in `beforeTurn()` |
+| Cloudflare Code Mode | `cloudflare-codemode-app/` | `@cloudflare/codemode`, `@cloudflare/ai-chat` | `latitude.getTracer("cloudflare-codemode")` in `onChatMessage()` |
 | LangChain | `test_langchain.ts` | `langchain`, `@langchain/openai` | `"langchain"` |
 | LlamaIndex | `test_llamaindex.ts` | `llamaindex` | `"llamaindex"` |
 

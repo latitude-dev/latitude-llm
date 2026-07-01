@@ -133,6 +133,7 @@
               "telemetry/frameworks/vercel-ai-sdk",
               "telemetry/frameworks/vercel-ai-sdk-v7",
               "telemetry/frameworks/cloudflare-think",
+              "telemetry/frameworks/cloudflare-codemode",
               "telemetry/frameworks/openai-agents",
               "telemetry/frameworks/google-adk",
               "telemetry/frameworks/langchain",

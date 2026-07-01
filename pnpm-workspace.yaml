@@ -10,6 +10,8 @@ packages:
   - "!packages/telemetry/typescript/examples/eve-app/**"
   - "!packages/telemetry/typescript/examples/cloudflare-think-app"
   - "!packages/telemetry/typescript/examples/cloudflare-think-app/**"
+  - "!packages/telemetry/typescript/examples/cloudflare-codemode-app"
+  - "!packages/telemetry/typescript/examples/cloudflare-codemode-app/**"
   - infra
   - tools/*
 

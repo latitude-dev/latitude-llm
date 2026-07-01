@@ -1,0 +1,246 @@
+---
+title: Cloudflare Code Mode
+description: Connect Cloudflare Code Mode agents to Latitude for observability.
+---
+
+## Overview
+
+Cloudflare Code Mode exposes your tools through a single `codemode` tool. The
+model writes JavaScript that orchestrates tool calls inside a sandboxed Dynamic
+Worker instead of requesting each tool separately.
+
+Latitude records Code Mode agents through the Vercel AI SDK's
+`experimental_telemetry` hook on `streamText()` or `generateText()`. Pass a
+Latitude tracer on every model turn.
+
+<Note>
+  Code Mode is experimental on Cloudflare's side and may introduce breaking
+  changes. Dynamic Worker loading in production may require Cloudflare's closed
+  beta — local Wrangler development supports it today.
+</Note>
+
+---
+
+## Requirements
+
+- A Latitude API key
+- A Latitude project slug
+- A Cloudflare Workers project using `@cloudflare/codemode`
+- The `nodejs_compat` compatibility flag enabled in your Worker
+- A Worker Loader binding for `DynamicWorkerExecutor`
+- `LATITUDE_API_KEY` and `LATITUDE_PROJECT_SLUG` configured as Worker secrets or variables
+
+---
+
+## Basic Telemetry
+
+This records model turns and the outer `codemode` tool call (including the
+generated code in tool input).
+
+<Steps>
+  <Step title="Install">
+    <CodeGroup>
+      ```bash npm
+      npm install @latitude-data/telemetry @cloudflare/codemode @cloudflare/ai-chat agents ai zod
+      ```
+
+      ```bash pnpm
+      pnpm add @latitude-data/telemetry @cloudflare/codemode @cloudflare/ai-chat agents ai zod
+      ```
+
+      ```bash yarn
+      yarn add @latitude-data/telemetry @cloudflare/codemode @cloudflare/ai-chat agents ai zod
+      ```
+
+      ```bash bun
+      bun add @latitude-data/telemetry @cloudflare/codemode @cloudflare/ai-chat agents ai zod
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Add a Worker Loader binding">
+    Code Mode executes generated code through `DynamicWorkerExecutor`, which
+    needs a Worker Loader binding:
+
+    ```jsonc
+    {
+      "compatibility_flags": ["nodejs_compat"],
+      "worker_loaders": [{ "binding": "LOADER" }]
+    }
+    ```
+  </Step>
+
+  <Step title="Wire telemetry into onChatMessage">
+    ```ts
+    import { AIChatAgent } from "@cloudflare/ai-chat"
+    import { DynamicWorkerExecutor } from "@cloudflare/codemode"
+    import { createCodeTool } from "@cloudflare/codemode/ai"
+    import { Latitude } from "@latitude-data/telemetry"
+    import { convertToModelMessages, stepCountIs, streamText, tool } from "ai"
+    import { z } from "zod"
+
+    type Env = {
+      LOADER: WorkerLoader
+      LATITUDE_API_KEY: string
+      LATITUDE_PROJECT_SLUG: string
+    }
+
+    let latitude: Latitude | undefined
+
+    function getLatitude(env: Env) {
+      latitude ??= new Latitude({
+        apiKey: env.LATITUDE_API_KEY,
+        project: env.LATITUDE_PROJECT_SLUG,
+        serviceName: "cloudflare-codemode-agent",
+      })
+
+      return latitude
+    }
+
+    const getWeather = tool({
+      description: "Get the current weather for a city.",
+      inputSchema: z.object({ city: z.string() }),
+      execute: async ({ city }) => ({ city, conditions: "sunny" }),
+    })
+
+    export class MyAgent extends AIChatAgent<Env> {
+      codemodeTool() {
+        return createCodeTool({
+          tools: { getWeather },
+          executor: new DynamicWorkerExecutor({ loader: this.env.LOADER }),
+        })
+      }
+
+      async onChatMessage(onFinish, options) {
+        const result = streamText({
+          model,
+          messages: await convertToModelMessages(this.messages),
+          tools: { codemode: this.codemodeTool() },
+          stopWhen: stepCountIs(5),
+          experimental_telemetry: {
+            isEnabled: true,
+            tracer: getLatitude(this.env).getTracer("cloudflare-codemode"),
+            functionId: "codemode-turn",
+          },
+          onFinish,
+        })
+
+        return result.toUIMessageStreamResponse()
+      }
+
+      protected async onChatResponse() {
+        await getLatitude(this.env).flush()
+      }
+    }
+    ```
+
+    Keep one `Latitude` instance per Worker isolate. Do not create `new
+    Latitude()` on every turn.
+  </Step>
+</Steps>
+
+---
+
+## Add App Context
+
+If your app uses the default WebSocket chat entrypoint, pass context through
+`useAgentChat({ body })` from `agents/chat/react`:
+
+```tsx
+import { useAgentChat } from "agents/chat/react"
+
+const { messages, sendMessage } = useAgentChat({
+  agent,
+  body: {
+    userId: currentUser.id,
+    sessionId: session.id,
+    tags: ["cloudflare-codemode"],
+    metadata: { plan: currentUser.plan },
+  },
+})
+```
+
+Read that context in `onChatMessage()` and pass it to `getTracer()`:
+
+```ts
+import type { ContextOptions } from "@latitude-data/telemetry"
+
+async onChatMessage(onFinish, options) {
+  const context = (options?.body ?? {}) as ContextOptions
+
+  const result = streamText({
+    // ...
+    experimental_telemetry: {
+      isEnabled: true,
+      tracer: getLatitude(this.env).getTracer("cloudflare-codemode", context),
+      functionId: "codemode-turn",
+    },
+    onFinish,
+  })
+
+  return result.toUIMessageStreamResponse()
+}
+```
+
+---
+
+## Inner Tool Calls
+
+Code Mode runs generated code in a sandbox. When that code calls
+`codemode.getWeather()`, the host Worker executes your tool's `execute`
+function over RPC — but that path does **not** go through the AI SDK tool loop,
+so `experimental_telemetry` does not emit a separate `ai.toolCall` span for each
+inner tool.
+
+Latitude still captures:
+
+- Model turns (prompts, completions, tokens, latency)
+- The outer `codemode` tool call and its generated code input
+- Tool output returned from the `codemode` execution
+
+To observe individual inner tools, instrument their `execute` functions manually
+with `capture()` or `tracer.startActiveSpan()`:
+
+```ts
+import { capture } from "@latitude-data/telemetry"
+
+const getWeather = tool({
+  description: "Get the current weather for a city.",
+  inputSchema: z.object({ city: z.string() }),
+  execute: async ({ city }) =>
+    capture(
+      "codemode.getWeather",
+      async () => ({ city, conditions: "sunny" }),
+      { tags: ["cloudflare-codemode", "inner-tool"] },
+    ),
+})
+```
+
+---
+
+## Cloudflare Think
+
+If your agent already uses `@cloudflare/think`, keep using Think's `beforeTurn()`
+hook for telemetry and swap direct tools for a `codemode` tool from
+`createCodeTool()`. The telemetry wiring is the same — only the tool surface
+changes.
+
+---
+
+## Runnable Example
+
+The Latitude repository includes a runnable Code Mode example at
+[`examples/cloudflare-codemode-app`](https://github.com/latitude-dev/latitude-llm/tree/development/packages/telemetry/typescript/examples/cloudflare-codemode-app).
+It includes a `getWeather` tool, a small QA page, and a local verifier that
+checks model spans, the `codemode` tool span, `userId`, and `sessionId` against
+local Latitude.
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your project in the Latitude dashboard
+2. Send a message to your Code Mode agent
+3. The turn appears with model calls, the `codemode` tool call, messages, latency, token usage, and errors
