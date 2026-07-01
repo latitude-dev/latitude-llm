@@ -11,6 +11,13 @@ export const MULTI_SELECT_ARRAY_OP_LABELS: Readonly<Record<MultiSelectArrayOp, s
   all: "Contains all of",
 }
 
+/** Compact labels for segmented operator controls in the filter sidebar. */
+export const MULTI_SELECT_ARRAY_OP_TAB_LABELS: Readonly<Record<MultiSelectArrayOp, string>> = {
+  in: "Any of",
+  notIn: "None of",
+  all: "All of",
+}
+
 function valuesFromArrayCondition(cond: FilterCondition | undefined): readonly string[] {
   if (!cond || !Array.isArray(cond.value)) return []
   return cond.value.map(String)

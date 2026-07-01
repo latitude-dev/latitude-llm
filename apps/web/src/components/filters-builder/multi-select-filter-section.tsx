@@ -4,11 +4,16 @@ import {
   getMultiSelectArrayFilter,
   MULTI_SELECT_ARRAY_OP_LABELS,
   MULTI_SELECT_ARRAY_OPS,
+  MULTI_SELECT_ARRAY_OP_TAB_LABELS,
   type MultiSelectArrayOp,
 } from "@domain/shared"
-import { Select } from "@repo/ui"
+import { Tabs } from "@repo/ui"
 import type { RefObject } from "react"
-import { type FilterMode, MultiSelectFilter } from "./multi-select-filter.tsx"
+import {
+  type FilterMode,
+  MultiSelectFilter,
+  type StaticFilterItem,
+} from "./multi-select-filter.tsx"
 import type { DistinctColumn } from "./types.ts"
 
 interface MultiSelectFilterSectionProps {
@@ -18,12 +23,15 @@ interface MultiSelectFilterSectionProps {
   readonly filters: FilterSet
   readonly onFiltersChange: (filters: FilterSet) => void
   readonly disabled?: boolean
+  readonly placeholder?: string
   readonly portalContainer?: RefObject<HTMLElement | null>
+  readonly staticItems?: readonly StaticFilterItem[]
 }
 
-const OPERATOR_OPTIONS = MULTI_SELECT_ARRAY_OPS.map((op) => ({
-  value: op,
-  label: MULTI_SELECT_ARRAY_OP_LABELS[op],
+const OPERATOR_TABS = MULTI_SELECT_ARRAY_OPS.map((op) => ({
+  id: op,
+  label: MULTI_SELECT_ARRAY_OP_TAB_LABELS[op],
+  tooltip: MULTI_SELECT_ARRAY_OP_LABELS[op],
 }))
 
 function setMultiSelectField(
@@ -47,20 +55,20 @@ export function MultiSelectFilterSection({
   filters,
   onFiltersChange,
   disabled,
+  placeholder,
   portalContainer,
+  staticItems,
 }: MultiSelectFilterSectionProps) {
   const { op, values } = getMultiSelectArrayFilter(filters, field)
 
   return (
     <div className="flex flex-col gap-2">
-      <Select<MultiSelectArrayOp>
-        name={`${field}-operator`}
-        size="small"
-        width="full"
-        options={OPERATOR_OPTIONS}
-        value={op}
-        {...(disabled !== undefined ? { disabled } : {})}
-        onChange={(nextOp) => {
+      <Tabs<MultiSelectArrayOp>
+        variant="secondary"
+        size="sm"
+        options={OPERATOR_TABS}
+        active={op}
+        onSelect={(nextOp) => {
           onFiltersChange(setMultiSelectField(filters, field, nextOp, values))
         }}
       />
@@ -69,8 +77,10 @@ export function MultiSelectFilterSection({
         projectId={projectId}
         column={field}
         selected={values}
+        {...(placeholder !== undefined ? { placeholder } : {})}
         {...(disabled !== undefined ? { disabled } : {})}
         {...(portalContainer !== undefined ? { portalContainer } : {})}
+        {...(staticItems !== undefined ? { staticItems } : {})}
         onChange={(nextValues) => {
           onFiltersChange(setMultiSelectField(filters, field, op, nextValues))
         }}
