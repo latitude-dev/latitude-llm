@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.10.0] - 2026-07-01
+
+### Added
+
+- `query` on `client.analytics` gains the `moments` stream — semantic-moment labels (kind/actor-tagged moments detected within a session). Metrics: `count`, or `{avg|min|max|median}` of the 0–1 label `confidence` or moment `coherence`. Breakdown by `kind`, `actor`, or `session`. Values are returned raw (0–1).
+
 ## [6.9.0] - 2026-07-01
 
 ### Added

@@ -134,6 +134,41 @@ describe("analyticsQuerySchema", () => {
     ).toBe(false)
   })
 
+  it("accepts moments metrics + kind/actor/session breakdowns", () => {
+    expect(
+      analyticsQuerySchema.safeParse({ stream: "moments", metric: { kind: "count" }, breakdown: "kind", range })
+        .success,
+    ).toBe(true)
+    expect(
+      analyticsQuerySchema.safeParse({ stream: "moments", metric: { kind: "avg", field: "confidence" }, range })
+        .success,
+    ).toBe(true)
+    expect(
+      analyticsQuerySchema.safeParse({
+        stream: "moments",
+        metric: { kind: "median", field: "coherence" },
+        breakdown: "actor",
+        range,
+      }).success,
+    ).toBe(true)
+  })
+
+  it("rejects trace-family / scores shapes on the moments stream", () => {
+    expect(analyticsQuerySchema.safeParse({ stream: "moments", metric: { kind: "errorRate" }, range }).success).toBe(
+      false,
+    )
+    expect(
+      analyticsQuerySchema.safeParse({ stream: "moments", metric: { kind: "avg", field: "value" }, range }).success,
+    ).toBe(false)
+    expect(
+      analyticsQuerySchema.safeParse({ stream: "moments", metric: { kind: "count" }, query: "x", range }).success,
+    ).toBe(false)
+    expect(
+      analyticsQuerySchema.safeParse({ stream: "moments", metric: { kind: "count" }, breakdown: "model", range })
+        .success,
+    ).toBe(false)
+  })
+
   it("caps the limit", () => {
     const result = analyticsQuerySchema.safeParse({
       stream: "traces",

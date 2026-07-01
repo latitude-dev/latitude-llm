@@ -9426,6 +9426,230 @@
               "range"
             ],
             "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "stream": {
+                "type": "string",
+                "enum": [
+                  "moments"
+                ],
+                "description": "Semantic-moment labels — kind/actor-tagged moments detected within a session."
+              },
+              "breakdown": {
+                "type": "string",
+                "enum": [
+                  "kind",
+                  "actor",
+                  "session"
+                ],
+                "description": "Dimension to group by: `kind`, `actor`, or `session`."
+              },
+              "metric": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "count"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "avg"
+                        ]
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "confidence",
+                          "coherence"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "min"
+                        ]
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "confidence",
+                          "coherence"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "max"
+                        ]
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "confidence",
+                          "coherence"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "median"
+                        ]
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "confidence",
+                          "coherence"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ]
+                  }
+                ],
+                "description": "The metric: `count`, or `{avg|min|max|median}` of the 0–1 label `confidence` or moment `coherence`."
+              },
+              "filters": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/FilterSet"
+                  },
+                  {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
+                  }
+                ]
+              },
+              "timeBucket": {
+                "type": "object",
+                "properties": {
+                  "unit": {
+                    "type": "string",
+                    "enum": [
+                      "hour",
+                      "day",
+                      "week"
+                    ],
+                    "description": "Bucket granularity."
+                  },
+                  "size": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 365,
+                    "default": 1,
+                    "description": "Number of units per bucket (e.g. `2` weeks)."
+                  }
+                },
+                "required": [
+                  "unit"
+                ],
+                "description": "Bucket the metric over time. Omit for a single aggregate."
+              },
+              "range": {
+                "type": "object",
+                "properties": {
+                  "fromIso": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2026-06-23T00:00:00Z",
+                    "description": "Inclusive lower bound (ISO-8601)."
+                  },
+                  "toIso": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2026-06-30T00:00:00Z",
+                    "description": "Exclusive upper bound (ISO-8601). Must be after `fromIso`."
+                  }
+                },
+                "required": [
+                  "fromIso",
+                  "toIso"
+                ],
+                "description": "The time window."
+              },
+              "orderBy": {
+                "type": "object",
+                "properties": {
+                  "by": {
+                    "type": "string",
+                    "enum": [
+                      "value",
+                      "key"
+                    ],
+                    "default": "value"
+                  },
+                  "direction": {
+                    "type": "string",
+                    "enum": [
+                      "asc",
+                      "desc"
+                    ],
+                    "default": "desc"
+                  }
+                },
+                "default": {
+                  "by": "value",
+                  "direction": "desc"
+                },
+                "description": "Sort for breakdown results. Defaults to value-desc."
+              },
+              "limit": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 500,
+                "default": 50,
+                "description": "Maximum rows returned. Defaults to 50; max 500."
+              }
+            },
+            "required": [
+              "stream",
+              "metric",
+              "range"
+            ],
+            "additionalProperties": false
           }
         ]
       }

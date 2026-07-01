@@ -39,6 +39,10 @@ export type ScoreBreakdownField = (typeof SCORE_BREAKDOWN_FIELDS)[number]
 export const BEHAVIOR_BREAKDOWN_FIELDS = ["cluster", "session", "method"] as const
 export type BehaviorBreakdownField = (typeof BEHAVIOR_BREAKDOWN_FIELDS)[number]
 
+// Moments are semantic-moment labels (one row per label within a session moment).
+export const MOMENT_BREAKDOWN_FIELDS = ["kind", "actor", "session"] as const
+export type MomentBreakdownField = (typeof MOMENT_BREAKDOWN_FIELDS)[number]
+
 export const ANALYTICS_TIME_BUCKET_UNITS = ["hour", "day", "week"] as const
 export const analyticsTimeBucketSchema = z.object({
   unit: z.enum(ANALYTICS_TIME_BUCKET_UNITS).describe("Bucket granularity."),
@@ -84,8 +88,22 @@ export const behaviorMetricSchema = z.discriminatedUnion("kind", [
 ])
 export type BehaviorMetric = z.infer<typeof behaviorMetricSchema>
 
+/**
+ * Metric vocabulary for the `moments` stream (semantic-moment labels): occurrence
+ * `count` and stats over the 0–1 label `confidence` or the joined moment's 0–1
+ * `coherence`. Values stay raw (0–1), like scores/behaviors.
+ */
+export const momentMetricSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("count") }),
+  z.object({ kind: z.literal("avg"), field: z.enum(["confidence", "coherence"]) }),
+  z.object({ kind: z.literal("min"), field: z.enum(["confidence", "coherence"]) }),
+  z.object({ kind: z.literal("max"), field: z.enum(["confidence", "coherence"]) }),
+  z.object({ kind: z.literal("median"), field: z.enum(["confidence", "coherence"]) }),
+])
+export type MomentMetric = z.infer<typeof momentMetricSchema>
+
 /** The metric union across every analytics stream. */
-export type AnalyticsMetric = MonitorMetric | ScoreMetric | BehaviorMetric
+export type AnalyticsMetric = MonitorMetric | ScoreMetric | BehaviorMetric | MomentMetric
 
 const rangeSchema = z
   .object({
@@ -191,6 +209,21 @@ export const analyticsQuerySchema = z.discriminatedUnion("stream", [
         .describe("Dimension to group by: `cluster` (the behavior cluster), `session`, or `method`."),
       metric: behaviorMetricSchema.describe(
         "The metric: `count`, or `{avg|min|max|median}` of the 0–1 assignment `confidence`.",
+      ),
+      ...commonFields,
+    })
+    .strict(),
+  z
+    .object({
+      stream: z
+        .literal("moments")
+        .describe("Semantic-moment labels — kind/actor-tagged moments detected within a session."),
+      breakdown: z
+        .enum(MOMENT_BREAKDOWN_FIELDS)
+        .optional()
+        .describe("Dimension to group by: `kind` (frequency/escalation/…), `actor`, or `session`."),
+      metric: momentMetricSchema.describe(
+        "The metric: `count`, or `{avg|min|max|median}` of the 0–1 label `confidence` or moment `coherence`.",
       ),
       ...commonFields,
     })

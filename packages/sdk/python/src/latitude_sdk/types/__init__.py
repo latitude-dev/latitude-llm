@@ -36,6 +36,7 @@ if typing.TYPE_CHECKING:
     from .analytics_query import (
         AnalyticsQuery,
         AnalyticsQuery_Behaviors,
+        AnalyticsQuery_Moments,
         AnalyticsQuery_Scores,
         AnalyticsQuery_Sessions,
         AnalyticsQuery_Spans,
@@ -62,6 +63,31 @@ if typing.TYPE_CHECKING:
     from .analytics_query_behaviors_range import AnalyticsQueryBehaviorsRange
     from .analytics_query_behaviors_time_bucket import AnalyticsQueryBehaviorsTimeBucket
     from .analytics_query_behaviors_time_bucket_unit import AnalyticsQueryBehaviorsTimeBucketUnit
+    from .analytics_query_moments import AnalyticsQueryMoments
+    from .analytics_query_moments_breakdown import AnalyticsQueryMomentsBreakdown
+    from .analytics_query_moments_metric import (
+        AnalyticsQueryMomentsMetric,
+        AnalyticsQueryMomentsMetric_Avg,
+        AnalyticsQueryMomentsMetric_Count,
+        AnalyticsQueryMomentsMetric_Max,
+        AnalyticsQueryMomentsMetric_Median,
+        AnalyticsQueryMomentsMetric_Min,
+    )
+    from .analytics_query_moments_metric_avg import AnalyticsQueryMomentsMetricAvg
+    from .analytics_query_moments_metric_avg_field import AnalyticsQueryMomentsMetricAvgField
+    from .analytics_query_moments_metric_count import AnalyticsQueryMomentsMetricCount
+    from .analytics_query_moments_metric_max import AnalyticsQueryMomentsMetricMax
+    from .analytics_query_moments_metric_max_field import AnalyticsQueryMomentsMetricMaxField
+    from .analytics_query_moments_metric_median import AnalyticsQueryMomentsMetricMedian
+    from .analytics_query_moments_metric_median_field import AnalyticsQueryMomentsMetricMedianField
+    from .analytics_query_moments_metric_min import AnalyticsQueryMomentsMetricMin
+    from .analytics_query_moments_metric_min_field import AnalyticsQueryMomentsMetricMinField
+    from .analytics_query_moments_order_by import AnalyticsQueryMomentsOrderBy
+    from .analytics_query_moments_order_by_by import AnalyticsQueryMomentsOrderByBy
+    from .analytics_query_moments_order_by_direction import AnalyticsQueryMomentsOrderByDirection
+    from .analytics_query_moments_range import AnalyticsQueryMomentsRange
+    from .analytics_query_moments_time_bucket import AnalyticsQueryMomentsTimeBucket
+    from .analytics_query_moments_time_bucket_unit import AnalyticsQueryMomentsTimeBucketUnit
     from .analytics_query_scores import AnalyticsQueryScores
     from .analytics_query_scores_breakdown import AnalyticsQueryScoresBreakdown
     from .analytics_query_scores_metric import (
@@ -455,6 +481,29 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AnalyticsQueryBehaviorsRange": ".analytics_query_behaviors_range",
     "AnalyticsQueryBehaviorsTimeBucket": ".analytics_query_behaviors_time_bucket",
     "AnalyticsQueryBehaviorsTimeBucketUnit": ".analytics_query_behaviors_time_bucket_unit",
+    "AnalyticsQueryMoments": ".analytics_query_moments",
+    "AnalyticsQueryMomentsBreakdown": ".analytics_query_moments_breakdown",
+    "AnalyticsQueryMomentsMetric": ".analytics_query_moments_metric",
+    "AnalyticsQueryMomentsMetricAvg": ".analytics_query_moments_metric_avg",
+    "AnalyticsQueryMomentsMetricAvgField": ".analytics_query_moments_metric_avg_field",
+    "AnalyticsQueryMomentsMetricCount": ".analytics_query_moments_metric_count",
+    "AnalyticsQueryMomentsMetricMax": ".analytics_query_moments_metric_max",
+    "AnalyticsQueryMomentsMetricMaxField": ".analytics_query_moments_metric_max_field",
+    "AnalyticsQueryMomentsMetricMedian": ".analytics_query_moments_metric_median",
+    "AnalyticsQueryMomentsMetricMedianField": ".analytics_query_moments_metric_median_field",
+    "AnalyticsQueryMomentsMetricMin": ".analytics_query_moments_metric_min",
+    "AnalyticsQueryMomentsMetricMinField": ".analytics_query_moments_metric_min_field",
+    "AnalyticsQueryMomentsMetric_Avg": ".analytics_query_moments_metric",
+    "AnalyticsQueryMomentsMetric_Count": ".analytics_query_moments_metric",
+    "AnalyticsQueryMomentsMetric_Max": ".analytics_query_moments_metric",
+    "AnalyticsQueryMomentsMetric_Median": ".analytics_query_moments_metric",
+    "AnalyticsQueryMomentsMetric_Min": ".analytics_query_moments_metric",
+    "AnalyticsQueryMomentsOrderBy": ".analytics_query_moments_order_by",
+    "AnalyticsQueryMomentsOrderByBy": ".analytics_query_moments_order_by_by",
+    "AnalyticsQueryMomentsOrderByDirection": ".analytics_query_moments_order_by_direction",
+    "AnalyticsQueryMomentsRange": ".analytics_query_moments_range",
+    "AnalyticsQueryMomentsTimeBucket": ".analytics_query_moments_time_bucket",
+    "AnalyticsQueryMomentsTimeBucketUnit": ".analytics_query_moments_time_bucket_unit",
     "AnalyticsQueryScores": ".analytics_query_scores",
     "AnalyticsQueryScoresBreakdown": ".analytics_query_scores_breakdown",
     "AnalyticsQueryScoresMetric": ".analytics_query_scores_metric",
@@ -569,6 +618,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AnalyticsQueryTracesTimeBucket": ".analytics_query_traces_time_bucket",
     "AnalyticsQueryTracesTimeBucketUnit": ".analytics_query_traces_time_bucket_unit",
     "AnalyticsQuery_Behaviors": ".analytics_query",
+    "AnalyticsQuery_Moments": ".analytics_query",
     "AnalyticsQuery_Scores": ".analytics_query",
     "AnalyticsQuery_Sessions": ".analytics_query",
     "AnalyticsQuery_Spans": ".analytics_query",
@@ -873,6 +923,29 @@ __all__ = [
     "AnalyticsQueryBehaviorsRange",
     "AnalyticsQueryBehaviorsTimeBucket",
     "AnalyticsQueryBehaviorsTimeBucketUnit",
+    "AnalyticsQueryMoments",
+    "AnalyticsQueryMomentsBreakdown",
+    "AnalyticsQueryMomentsMetric",
+    "AnalyticsQueryMomentsMetricAvg",
+    "AnalyticsQueryMomentsMetricAvgField",
+    "AnalyticsQueryMomentsMetricCount",
+    "AnalyticsQueryMomentsMetricMax",
+    "AnalyticsQueryMomentsMetricMaxField",
+    "AnalyticsQueryMomentsMetricMedian",
+    "AnalyticsQueryMomentsMetricMedianField",
+    "AnalyticsQueryMomentsMetricMin",
+    "AnalyticsQueryMomentsMetricMinField",
+    "AnalyticsQueryMomentsMetric_Avg",
+    "AnalyticsQueryMomentsMetric_Count",
+    "AnalyticsQueryMomentsMetric_Max",
+    "AnalyticsQueryMomentsMetric_Median",
+    "AnalyticsQueryMomentsMetric_Min",
+    "AnalyticsQueryMomentsOrderBy",
+    "AnalyticsQueryMomentsOrderByBy",
+    "AnalyticsQueryMomentsOrderByDirection",
+    "AnalyticsQueryMomentsRange",
+    "AnalyticsQueryMomentsTimeBucket",
+    "AnalyticsQueryMomentsTimeBucketUnit",
     "AnalyticsQueryScores",
     "AnalyticsQueryScoresBreakdown",
     "AnalyticsQueryScoresMetric",
@@ -987,6 +1060,7 @@ __all__ = [
     "AnalyticsQueryTracesTimeBucket",
     "AnalyticsQueryTracesTimeBucketUnit",
     "AnalyticsQuery_Behaviors",
+    "AnalyticsQuery_Moments",
     "AnalyticsQuery_Scores",
     "AnalyticsQuery_Sessions",
     "AnalyticsQuery_Spans",
