@@ -1,7 +1,7 @@
 import type { FilterSet } from "@domain/shared"
 import { Button, CloseTrigger, FormWrapper, Icon, Input, Modal, Switch, Text, Tooltip, useToast } from "@repo/ui"
 import { useForm } from "@tanstack/react-form"
-import { BellRingIcon } from "lucide-react"
+import { BellRingIcon, ChevronRightIcon, ShieldAlertIcon } from "lucide-react"
 import { useState } from "react"
 import {
   useCreateSavedSearch,
@@ -32,6 +32,8 @@ interface CreateProps extends BaseProps {
   readonly query: string | null
   readonly filterSet: FilterSet
   readonly onCreated: (record: SavedSearchRecord) => void
+  /** Navigates to the Signals builder with these filters seeded (the parent owns the navigation). */
+  readonly onCreateSignal: () => void
 }
 
 interface RenameProps extends BaseProps {
@@ -62,7 +64,16 @@ function monitorAlertErrorsFrom(error: unknown): AlertFieldErrors {
   return alertFieldErrorsFrom(scoped, null)
 }
 
-function CreateModal({ open, onClose, projectId, projectSlug, query, filterSet, onCreated }: CreateProps) {
+function CreateModal({
+  open,
+  onClose,
+  projectId,
+  projectSlug,
+  query,
+  filterSet,
+  onCreated,
+  onCreateSignal,
+}: CreateProps) {
   const { toast } = useToast()
   const createMutation = useCreateSavedSearch(projectId)
   const [withMonitor, setWithMonitor] = useState(false)
@@ -72,6 +83,8 @@ function CreateModal({ open, onClose, projectId, projectSlug, query, filterSet, 
   // Searches with a semantic part have no exact match rule for a monitor to count against.
   const semanticQuery = searchHasSemanticPart(query)
   const createMonitor = withMonitor && !semanticQuery
+  // A signal seeds its scope from the filter set; a query-only search has nothing to seed.
+  const canCreateSignal = Object.keys(filterSet).length > 0
 
   const form = useForm({
     defaultValues: { name: "" },
@@ -225,6 +238,24 @@ function CreateModal({ open, onClose, projectId, projectSlug, query, filterSet, 
                 ) : null}
               </div>
             )}
+            {canCreateSignal ? (
+              <button
+                type="button"
+                onClick={onCreateSignal}
+                className="flex items-center justify-between gap-3 rounded-lg border border-border p-3 text-left transition-colors hover:bg-muted/50"
+              >
+                <div className="flex items-start gap-2">
+                  <Icon icon={ShieldAlertIcon} size="sm" color="foregroundMuted" className="mt-0.5 shrink-0" />
+                  <div className="flex flex-col gap-0.5">
+                    <Text.H5M>Create a signal from this search</Text.H5M>
+                    <Text.H6 color="foregroundMuted">
+                      Continuously detect and track traces matching these filters
+                    </Text.H6>
+                  </div>
+                </div>
+                <Icon icon={ChevronRightIcon} size="sm" color="foregroundMuted" className="shrink-0" />
+              </button>
+            ) : null}
           </div>
         </FormWrapper>
       </form>

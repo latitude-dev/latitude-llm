@@ -28,6 +28,7 @@ const createSignalInputSchema = z.object({
   filters: filterSetSchema.nullish(),
   // A user signal MUST have an evaluation: exactly one of a declarative `settings` form or a raw `script`.
   evaluation: z.union([z.object({ settings: evaluationSettingsSchema }), z.object({ script: z.string().min(1) })]),
+  sampling: z.number().int().min(0).max(100).optional(),
   now: z.date().optional(),
 })
 
@@ -89,6 +90,7 @@ export const createSignalUseCase = (input: CreateSignalInput) =>
           ...("settings" in parsed.evaluation
             ? { settings: parsed.evaluation.settings }
             : { script: parsed.evaluation.script }),
+          ...(parsed.sampling !== undefined ? { sampling: parsed.sampling } : {}),
           now,
         })
 

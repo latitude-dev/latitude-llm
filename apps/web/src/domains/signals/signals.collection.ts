@@ -1,3 +1,4 @@
+import type { SignalPreviewResult } from "@domain/evaluations"
 import type { SignalDimension } from "@domain/scores"
 import type { InfiniteTableInfiniteScroll } from "@repo/ui"
 import { keepPreviousData, useInfiniteQuery, useMutation, useQueries, useQuery } from "@tanstack/react-query"
@@ -18,20 +19,30 @@ import type {
   UpdateSignalTriageRecord,
 } from "./signals.functions.ts"
 import {
+  type CreateSignalRecord,
   countSignalSessions,
+  createSignal,
+  deleteSignal,
   getRelatedSignals,
   getSignal,
   getSignalDetail,
   getSignalDimensions,
   getSignalImpact,
   getSignalOccurrences,
+  getSignalPreviewResult,
   getSignalRowMetrics,
   getSignalsAnalytics,
   listSignalSessions,
   listSignals,
+  previewEvaluation,
   searchOrgSignals,
+  updateSignal,
+  updateSignalEvaluation,
   updateSignalTriage,
 } from "./signals.functions.ts"
+
+type EvaluationDraft = Parameters<typeof createSignal>[0]["data"]["evaluation"]
+type SignalFilters = NonNullable<Parameters<typeof createSignal>[0]["data"]["filters"]>
 
 const queryClient = getQueryClient()
 const DEFAULT_ISSUES_BATCH_SIZE = 50
@@ -460,6 +471,106 @@ export function useUpdateSignalTriage(projectId: string, signalId: string) {
       }),
     onSuccess: () => invalidateSignalQueries(projectId, signalId),
   })
+}
+
+export function useCreateSignal(projectId: string) {
+  return useMutation({
+    mutationFn: (input: {
+      readonly name: string
+      readonly description: string
+      readonly filters?: SignalFilters | null
+      readonly sampling?: number
+      readonly evaluation: EvaluationDraft
+    }): Promise<CreateSignalRecord> =>
+      createSignal({
+        data: {
+          projectId,
+          name: input.name,
+          description: input.description,
+          ...(input.filters != null ? { filters: input.filters } : {}),
+          ...(input.sampling !== undefined ? { sampling: input.sampling } : {}),
+          evaluation: input.evaluation,
+        },
+      }),
+    onSuccess: () => invalidateSignalQueries(projectId),
+  })
+}
+
+export function useUpdateSignal(projectId: string, signalId: string) {
+  return useMutation({
+    mutationFn: (input: {
+      readonly name?: string
+      readonly description?: string
+      readonly filters?: SignalFilters | null
+    }) =>
+      updateSignal({
+        data: {
+          projectId,
+          signalId,
+          ...(input.name !== undefined ? { name: input.name } : {}),
+          ...(input.description !== undefined ? { description: input.description } : {}),
+          ...(input.filters !== undefined ? { filters: input.filters } : {}),
+        },
+      }),
+    onSuccess: () => invalidateSignalQueries(projectId, signalId),
+  })
+}
+
+export function useUpdateSignalEvaluation(projectId: string, signalId: string) {
+  return useMutation({
+    mutationFn: (input: {
+      readonly settings: Extract<EvaluationDraft, { settings: unknown }>["settings"]
+      readonly sampling?: number
+    }) =>
+      updateSignalEvaluation({
+        data: {
+          projectId,
+          signalId,
+          settings: input.settings,
+          ...(input.sampling !== undefined ? { sampling: input.sampling } : {}),
+        },
+      }),
+    onSuccess: () => invalidateSignalQueries(projectId, signalId),
+  })
+}
+
+export function useDeleteSignal(projectId: string) {
+  return useMutation({
+    mutationFn: (signalId: string) => deleteSignal({ data: { projectId, signalId } }),
+    onSuccess: () => invalidateSignalQueries(projectId),
+  })
+}
+
+const PREVIEW_POLL_INTERVAL_MS = 800
+const PREVIEW_POLL_TIMEOUT_MS = 30_000
+
+/**
+ * Enqueues a builder preview run and polls until the worker writes a result (or the timeout
+ * elapses). Used by the builder's on-demand "Run preview" action — not a reactive query.
+ */
+export async function runSignalPreview(input: {
+  readonly projectId: string
+  readonly evaluation: EvaluationDraft
+  readonly filters?: SignalFilters | null
+  /** Stops polling early when the caller (e.g. a closing modal) is no longer interested. */
+  readonly signal?: AbortSignal
+}): Promise<SignalPreviewResult> {
+  const { previewId } = await previewEvaluation({
+    data: {
+      projectId: input.projectId,
+      evaluation: input.evaluation,
+      ...(input.filters != null ? { filters: input.filters } : {}),
+    },
+  })
+
+  const deadline = Date.now() + PREVIEW_POLL_TIMEOUT_MS
+  while (Date.now() < deadline) {
+    if (input.signal?.aborted) return { status: "error", error: "Preview cancelled" }
+    const result = await getSignalPreviewResult({ data: { previewId } })
+    if (result.status !== "pending") return result
+    await new Promise((resolve) => setTimeout(resolve, PREVIEW_POLL_INTERVAL_MS))
+  }
+  return { status: "error", error: "Preview timed out" }
 }
 
 export function useSignalSessionsCount({

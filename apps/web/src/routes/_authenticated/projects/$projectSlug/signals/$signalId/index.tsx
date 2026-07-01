@@ -1,7 +1,7 @@
 import { Button, CopyableText, Skeleton, TagList, Text, Tooltip } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router"
-import { ArrowLeftIcon } from "lucide-react"
+import { ArrowLeftIcon, PencilIcon } from "lucide-react"
 import { useState } from "react"
 import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
 import { useSignalDetail } from "../../../../../../domains/signals/signals.collection.ts"
@@ -11,6 +11,7 @@ import { useRouteProject } from "../../-route-data.ts"
 import { SignalDetailBody } from "../-components/signal-detail-drawer.tsx"
 import { SignalLifecycleActions } from "../-components/signal-lifecycle-actions.tsx"
 import { SignalLifecycleStatuses } from "../-components/signal-lifecycle-statuses.tsx"
+import { SignalRenameModal } from "../-components/signal-rename-modal.tsx"
 import { SignalExamples } from "./-components/signal-examples.tsx"
 import { SignalNeighborNav } from "./-components/signal-neighbor-nav.tsx"
 import { SignalPatterns } from "./-components/signal-patterns.tsx"
@@ -27,7 +28,7 @@ function SignalDetailBreadcrumb() {
     (projects) => projects.where(({ project: p }) => eq(p.slug, projectSlug ?? "")).findOne(),
     [projectSlug],
   )
-  const { data: issue } = useSignalDetail({ projectId: project?.id ?? "", signalId, enabled: Boolean(project?.id) })
+  const { data: signal } = useSignalDetail({ projectId: project?.id ?? "", signalId, enabled: Boolean(project?.id) })
 
   return (
     <>
@@ -35,7 +36,7 @@ function SignalDetailBreadcrumb() {
         Signals
       </BreadcrumbLink>
       <BreadcrumbSeparator />
-      <BreadcrumbText variant="current">{issue?.name ?? "Signal"}</BreadcrumbText>
+      <BreadcrumbText variant="current">{signal?.name ?? "Signal"}</BreadcrumbText>
     </>
   )
 }
@@ -50,13 +51,14 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/sign
 function SignalDetailPage() {
   const { projectSlug, signalId } = Route.useParams()
   const project = useRouteProject()
-  const { data: issue, isLoading } = useSignalDetail({ projectId: project.id, signalId })
+  const { data: signal, isLoading } = useSignalDetail({ projectId: project.id, signalId })
   // Palette: "Assign to…" / "Set priority…" live while this page is mounted.
   useSignalTriageCommands({ projectId: project.id, signalId })
   // A trace sheet (from Examples or the Traces table) being open suppresses the
-  // J/K prev/next-issue hotkeys so paging a trace never swaps the issue under it.
+  // J/K prev/next-signal hotkeys so paging a trace never swaps the signal under it.
   const [overlayActive, setOverlayActive] = useState(false)
-  const lifecycleGroup = issue?.mutedAt ? "archived" : "active"
+  const [renameOpen, setRenameOpen] = useState(false)
+  const lifecycleGroup = signal?.mutedAt ? "archived" : "active"
 
   return (
     <Layout>
@@ -69,14 +71,14 @@ function SignalDetailPage() {
                   asChild
                   side="bottom"
                   trigger={
-                    <Button asChild variant="ghost" className="h-7 w-7 p-0" aria-label="Back to issues">
+                    <Button asChild variant="ghost" className="h-7 w-7 p-0" aria-label="Back to signals">
                       <Link to="/projects/$projectSlug/signals" params={{ projectSlug }}>
                         <ArrowLeftIcon className="h-4 w-4 text-muted-foreground" />
                       </Link>
                     </Button>
                   }
                 >
-                  Back to issues
+                  Back to signals
                 </Tooltip>
                 <div className="h-4 w-px bg-border" />
                 <SignalNeighborNav
@@ -91,10 +93,10 @@ function SignalDetailPage() {
                 <Skeleton className="h-7 w-56" />
               ) : (
                 <div className="flex min-w-0 items-center gap-2">
-                  <Text.H4M className="min-w-0 truncate">{issue?.name ?? "Signal not found"}</Text.H4M>
-                  {issue && issue.states.length > 0 ? (
+                  <Text.H4M className="min-w-0 truncate">{signal?.name ?? "Signal not found"}</Text.H4M>
+                  {signal && signal.states.length > 0 ? (
                     <div className="shrink-0">
-                      <SignalLifecycleStatuses states={issue.states} />
+                      <SignalLifecycleStatuses states={signal.states} />
                     </div>
                   ) : null}
                 </div>
@@ -102,14 +104,32 @@ function SignalDetailPage() {
             </div>
           }
           description={
-            !isLoading && issue ? (
+            !isLoading && signal ? (
               <div className="flex max-w-max">
-                <CopyableText value={issue.slug} size="sm" ellipsis tooltip="Copy issue slug" />
+                <CopyableText value={signal.slug} size="sm" ellipsis tooltip="Copy signal slug" />
               </div>
             ) : undefined
           }
           actions={
             <>
+              {signal?.origin === "user" ? (
+                <Tooltip
+                  asChild
+                  side="bottom"
+                  trigger={
+                    <Button
+                      variant="ghost"
+                      className="h-7 w-7 p-0"
+                      aria-label="Edit signal name and description"
+                      onClick={() => setRenameOpen(true)}
+                    >
+                      <PencilIcon className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  }
+                >
+                  Edit name & description
+                </Tooltip>
+              ) : null}
               <SignalTriageControls projectId={project.id} signalId={signalId} compact />
               <SignalLifecycleActions projectId={project.id} signalId={signalId} compact />
             </>
@@ -126,9 +146,9 @@ function SignalDetailPage() {
                 {isLoading ? (
                   <Skeleton className="h-5 w-full" />
                 ) : (
-                  <Text.H5 color="foregroundMuted">{issue?.description ?? "This issue could not be loaded."}</Text.H5>
+                  <Text.H5 color="foregroundMuted">{signal?.description ?? "This signal could not be loaded."}</Text.H5>
                 )}
-                {!isLoading && issue && issue.tags.length > 0 ? <TagList tags={issue.tags} wrap /> : null}
+                {!isLoading && signal && signal.tags.length > 0 ? <TagList tags={signal.tags} wrap /> : null}
               </div>
               <SignalSummary projectId={project.id} signalId={signalId} />
             </>
@@ -139,6 +159,15 @@ function SignalDetailPage() {
           }
           append={<SignalRelated projectId={project.id} projectSlug={projectSlug} signalId={signalId} />}
         />
+        {renameOpen && signal ? (
+          <SignalRenameModal
+            projectId={project.id}
+            signalId={signalId}
+            name={signal.name}
+            description={signal.description}
+            onClose={() => setRenameOpen(false)}
+          />
+        ) : null}
       </Layout.Content>
     </Layout>
   )

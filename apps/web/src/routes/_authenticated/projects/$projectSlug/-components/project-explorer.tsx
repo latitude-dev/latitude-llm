@@ -3,6 +3,7 @@ import type { FilterSet } from "@domain/shared"
 import { Button, Icon, type InfiniteTableSorting, type SortDirection, Tabs, Tooltip, toast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { useHotkeys } from "@tanstack/react-hotkeys"
+import { useNavigate } from "@tanstack/react-router"
 import {
   BellPlusIcon,
   DatabaseIcon,
@@ -10,6 +11,7 @@ import {
   FilterIcon,
   FilterXIcon,
   MessagesSquareIcon,
+  ShieldAlertIcon,
   TextIcon,
   XIcon,
 } from "lucide-react"
@@ -95,6 +97,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   const [query, setQuery] = useParamState("query", "")
   const [savedSearchSlug, setSavedSearchSlug] = useParamState("savedSearch", "")
   const [saveModalOpen, setSaveModalOpen] = useState(false)
+  const navigate = useNavigate()
   const switchTab = useCallback(
     (tab: ExplorerMode) => {
       if (tab === activeTab) return
@@ -107,6 +110,18 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   )
   const hasSearchQuery = query.length > 0
   const hasSemanticSearchQuery = searchHasSemanticPart(query)
+
+  // "Create signal from this search" navigates to the Signals page with the builder pre-opened and
+  // the current filters seeded (`rawFilters` is already the serialized form the `filters` param uses).
+  // We navigate rather than create so the user reviews/names the signal; the semantic query is not
+  // seeded yet (R3). `newSignal=1` is the receiver flag on the Signals page.
+  const createSignalFromSearch = useCallback(() => {
+    void navigate({
+      to: "/projects/$projectSlug/signals",
+      params: { projectSlug },
+      search: { newSignal: "1", ...(rawFilters ? { newSignalFilters: rawFilters } : {}) },
+    })
+  }, [navigate, projectSlug, rawFilters])
   const { data: loadedSavedSearch } = useSavedSearchBySlug(currentProject.id, savedSearchSlug || null)
   const { monitors: projectMonitors } = useMonitors({ projectId: currentProject.id, limit: 100, system: false })
 
@@ -172,9 +187,18 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
         keywords: "clear reset remove filters",
         perform: () => setRawFilters(""),
       })
+      commands.push({
+        id: "traces:create-signal",
+        title: "Create signal from this search",
+        icon: ShieldAlertIcon,
+        section: "context",
+        group: "Traces",
+        keywords: "signal create evaluation monitor track",
+        perform: createSignalFromSearch,
+      })
     }
     return commands
-  }, [isSessions, filtersOpen, rawFilters, switchTab, setFiltersOpen, setRawFilters])
+  }, [isSessions, filtersOpen, rawFilters, switchTab, setFiltersOpen, setRawFilters, createSignalFromSearch])
 
   useRegisterCommands(paletteCommands)
 
@@ -778,6 +802,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
             setSavedSearchSlug(record.slug)
             setSaveModalOpen(false)
           }}
+          onCreateSignal={createSignalFromSearch}
         />
       ) : null}
     </Layout>

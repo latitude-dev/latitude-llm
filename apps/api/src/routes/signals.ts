@@ -1,7 +1,7 @@
 import { monitorSignalUseCase, unmonitorSignalUseCase } from "@domain/evaluations"
 import { MembershipRepository } from "@domain/organizations"
 import { ProjectRepository } from "@domain/projects"
-import { QueuePublisher, WorkflowQuerier, WorkflowStarter } from "@domain/queue"
+import { WorkflowQuerier, WorkflowStarter } from "@domain/queue"
 import {
   BadRequestError,
   cuidSchema,
@@ -834,7 +834,7 @@ const createSignal = signalEndpoint({
     ...signalsFernGroup("create"),
     summary: "Create signal",
     description:
-      "Creates a user-defined signal with its membership detector — from `settings` (a `judge` LLM detector or a deterministic `rule`), or a raw `script` (advanced). The script is validated at save time (422 on a compile error). Deterministic scripts are backfilled over recent history; judges detect forward from creation.",
+      "Creates a user-defined signal with its membership detector — from `settings` (a `judge` LLM detector or a deterministic `rule`), or a raw `script` (advanced). The script is validated at save time (422 on a compile error). Detectors collect forward from creation; there is no historical backfill.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(CreateSignalBodySchema) },
     responses: openApiResponses({ status: 201, schema: CreateSignalResponseSchema, description: "Signal created" }),
@@ -864,7 +864,6 @@ const createSignal = signalEndpoint({
           organizationId,
         ),
         Effect.provide(QuickJsScriptRuntimeLive),
-        Effect.provide(Layer.succeed(QueuePublisher, c.var.queuePublisher)),
         withTracing,
       ),
     )

@@ -1,7 +1,7 @@
 import type { EvaluationAlignment, EvaluationTrigger } from "@domain/evaluations"
 import type { EvaluationSettings } from "@domain/shared"
 import { sql } from "drizzle-orm"
-import { index, jsonb, text, unique, uniqueIndex, varchar } from "drizzle-orm/pg-core"
+import { index, jsonb, text, uniqueIndex, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
 export const evaluations = latitudeSchema.table(
@@ -11,7 +11,7 @@ export const evaluations = latitudeSchema.table(
     organizationId: cuid("organization_id").notNull(), // owning organization
     projectId: cuid("project_id").notNull(), // owning project
     signalId: cuid("signal_id").notNull(), // in MVP evaluations are issue-linked; multiple evaluations may link to the same issue
-    name: varchar("name", { length: 128 }).notNull(), // unique name within the project among non-deleted rows
+    name: varchar("name", { length: 128 }).notNull(), // derived from the owning signal's name; not unique
     description: text("description").notNull(), // generated from the resulting script after alignment
     settings: jsonb("settings").$type<EvaluationSettings>(), // nullable declarative config that compiles to `script`; NULL for a raw / GEPA-generated script
     script: text("script").notNull(), // javascript-like evaluation script that runs inside a sandbox/runtime wrapper
@@ -43,9 +43,5 @@ export const evaluations = latitudeSchema.table(
     index("evaluations_active_detector_lookup_idx")
       .on(t.organizationId, t.projectId, t.signalId)
       .where(sql`${t.deletedAt} IS NULL AND ${t.archivedAt} IS NULL`),
-    // soft-delete-aware unique name per project; nulls-not-distinct ensures only one active row per name
-    unique("evaluations_unique_name_per_project_idx")
-      .on(t.organizationId, t.projectId, t.name, t.deletedAt)
-      .nullsNotDistinct(),
   ],
 )

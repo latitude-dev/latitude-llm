@@ -388,6 +388,19 @@ const _registry = {
     }
   }>(),
 
+  // On-demand builder preview: compiles a draft evaluation and runs it against the latest matching
+  // sessions WITHOUT persisting a score, writing the result to Redis for the web client to poll.
+  // `evaluation`/`filters` are JSON-shaped here and re-validated by previewEvaluationUseCase's schema.
+  "signals-preview": payloads<{
+    run: {
+      readonly previewId: string
+      readonly organizationId: string
+      readonly projectId: string
+      readonly evaluation: { readonly settings: unknown } | { readonly script: string }
+      readonly filters?: unknown
+    }
+  }>(),
+
   // Runs the deterministic portion of every registered flagger strategy against
   // a trace. Matched strategies write a SYSTEM-authored score directly; strategies
   // that return `no-match` are sampled and, if selected, routed to the LLM

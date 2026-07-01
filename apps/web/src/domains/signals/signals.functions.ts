@@ -1,4 +1,9 @@
-import { EvaluationRepository } from "@domain/evaluations"
+import {
+  buildSignalPreviewResultKey,
+  EvaluationRepository,
+  SIGNAL_PREVIEW_RESULT_TTL_SECONDS,
+  type SignalPreviewResult,
+} from "@domain/evaluations"
 import { exportSelectionSchema } from "@domain/exports"
 import {
   ScoreAnalyticsRepository,
@@ -7,8 +12,11 @@ import {
   type SignalEscalationThresholdBucket,
 } from "@domain/scores"
 import {
+  evaluationSettingsSchema,
   type FilterCondition,
   type FilterSet,
+  filterSetSchema,
+  generateId,
   OrganizationId,
   ProjectId,
   resolveSettings,
@@ -19,8 +27,10 @@ import {
   type ApplySignalLifecycleCommandResult,
   applySignalLifecycleCommandUseCase,
   buildHistogramBucketScaffold,
+  createSignalUseCase,
   DEFAULT_ESCALATION_SENSITIVITY_K,
   type DimensionPattern,
+  deleteSignalUseCase,
   deriveSignalLifecycleStates,
   embedSignalSearchQueryUseCase,
   fillBuckets,
@@ -42,7 +52,9 @@ import {
   signalsSortDirectionSchema,
   signalsSortFieldSchema,
   TAG_AGGREGATION_FALLBACK_DAYS,
+  updateSignalEvaluationUseCase,
   updateSignalTriageUseCase,
+  updateSignalUseCase,
 } from "@domain/signals"
 import { SessionRepository } from "@domain/spans"
 import { AIEmbedLive, withAi } from "@platform/ai"
@@ -61,6 +73,7 @@ import {
   SignalRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
+import { QuickJsScriptRuntimeLive } from "@platform/sandbox-quickjs"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
@@ -280,6 +293,7 @@ const toSignalDetailRecord = (input: {
   projectId: input.issue.projectId,
   name: input.issue.name,
   description: input.issue.description,
+  filters: input.issue.filters ?? null,
   source: input.issue.source,
   origin: input.issue.origin,
   assigneeId: input.issue.assigneeId,
@@ -1300,4 +1314,197 @@ export const enqueueSignalsExport = createServerFn({ method: "POST" })
     )
 
     return { type: "enqueued" }
+  })
+
+// --- Builder: create / edit / delete / preview (web leads; no REST/SDK regen) ---
+
+const evaluationDraftSchema = z.union([
+  z.object({ settings: evaluationSettingsSchema }),
+  z.object({ script: z.string().min(1) }),
+])
+
+const createSignalInputSchema = z.object({
+  projectId: z.string(),
+  name: z.string().min(1),
+  description: z.string().min(1),
+  priority: signalPrioritySchema.nullish(),
+  filters: filterSetSchema.nullish(),
+  sampling: z.number().int().min(0).max(100).optional(),
+  evaluation: evaluationDraftSchema,
+})
+
+export interface CreateSignalRecord {
+  readonly signalId: string
+  readonly slug: string
+  readonly evaluationId: string
+}
+
+/** Creates a user-origin signal with its membership detector (settings or raw script). */
+export const createSignal = createServerFn({ method: "POST" })
+  .inputValidator(createSignalInputSchema)
+  .handler(async ({ data }): Promise<CreateSignalRecord> => {
+    const { organizationId } = await requireSession()
+    const client = getPostgresClient()
+
+    return Effect.runPromise(
+      createSignalUseCase({
+        organizationId,
+        projectId: data.projectId,
+        name: data.name,
+        description: data.description,
+        ...(data.priority != null ? { priority: data.priority } : {}),
+        ...(data.filters != null ? { filters: data.filters } : {}),
+        ...(data.sampling !== undefined ? { sampling: data.sampling } : {}),
+        evaluation: data.evaluation,
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive, OutboxEventWriterLive),
+          client,
+          OrganizationId(organizationId),
+        ),
+        Effect.provide(QuickJsScriptRuntimeLive),
+        withTracing,
+      ),
+    )
+  })
+
+const updateSignalInputSchema = z.object({
+  projectId: z.string(),
+  signalId: z.string(),
+  name: z.string().min(1).optional(),
+  description: z.string().min(1).optional(),
+  filters: filterSetSchema.nullable().optional(),
+})
+
+/** Updates a signal's name/description and its canonical `filters` pre-gate. */
+export const updateSignal = createServerFn({ method: "POST" })
+  .inputValidator(updateSignalInputSchema)
+  .handler(async ({ data }): Promise<{ readonly signalId: string; readonly changed: boolean }> => {
+    const { organizationId } = await requireSession()
+    const client = getPostgresClient()
+
+    return Effect.runPromise(
+      updateSignalUseCase({
+        projectId: data.projectId,
+        signalId: data.signalId,
+        ...(data.name !== undefined ? { name: data.name } : {}),
+        ...(data.description !== undefined ? { description: data.description } : {}),
+        ...(data.filters !== undefined ? { filters: data.filters } : {}),
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive),
+          client,
+          OrganizationId(organizationId),
+        ),
+        withTracing,
+      ),
+    )
+  })
+
+const updateSignalEvaluationInputSchema = z.object({
+  projectId: z.string(),
+  signalId: z.string(),
+  settings: evaluationSettingsSchema,
+  sampling: z.number().int().min(0).max(100).optional(),
+})
+
+/** Recompiles a user signal's settings-defined evaluation in place. */
+export const updateSignalEvaluation = createServerFn({ method: "POST" })
+  .inputValidator(updateSignalEvaluationInputSchema)
+  .handler(
+    async ({
+      data,
+    }): Promise<{ readonly signalId: string; readonly evaluationId: string; readonly changed: boolean }> => {
+      const { organizationId } = await requireSession()
+      const client = getPostgresClient()
+
+      return Effect.runPromise(
+        updateSignalEvaluationUseCase({
+          projectId: data.projectId,
+          signalId: data.signalId,
+          settings: data.settings,
+          ...(data.sampling !== undefined ? { sampling: data.sampling } : {}),
+        }).pipe(
+          withPostgres(
+            Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive),
+            client,
+            OrganizationId(organizationId),
+          ),
+          Effect.provide(QuickJsScriptRuntimeLive),
+          withTracing,
+        ),
+      )
+    },
+  )
+
+const deleteSignalInputSchema = z.object({ projectId: z.string(), signalId: z.string() })
+
+/** Soft-deletes a signal and archives its evaluation. */
+export const deleteSignal = createServerFn({ method: "POST" })
+  .inputValidator(deleteSignalInputSchema)
+  .handler(async ({ data }): Promise<{ readonly signalId: string }> => {
+    const { organizationId } = await requireSession()
+    const client = getPostgresClient()
+
+    return Effect.runPromise(
+      deleteSignalUseCase({ projectId: data.projectId, signalId: data.signalId }).pipe(
+        withPostgres(
+          Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive),
+          client,
+          OrganizationId(organizationId),
+        ),
+        withTracing,
+      ),
+    )
+  })
+
+const previewEvaluationInputSchema = z.object({
+  projectId: z.string(),
+  filters: filterSetSchema.nullish(),
+  evaluation: evaluationDraftSchema,
+})
+
+/**
+ * Enqueues an on-demand preview run (latest matching sessions, no persist) and returns a
+ * `previewId` to poll via `getSignalPreviewResult`. The run executes in the `signals-preview`
+ * worker (the single path with AI + sandbox + ClickHouse); the result is written to Redis.
+ */
+export const previewEvaluation = createServerFn({ method: "POST" })
+  .inputValidator(previewEvaluationInputSchema)
+  .handler(async ({ data }): Promise<{ readonly previewId: string }> => {
+    const { organizationId } = await requireSession()
+    const previewId = generateId<"SignalPreview">()
+    const redis = getRedisClient()
+
+    await redis.set(
+      buildSignalPreviewResultKey(organizationId, previewId),
+      JSON.stringify({ status: "pending" } satisfies SignalPreviewResult),
+      "EX",
+      SIGNAL_PREVIEW_RESULT_TTL_SECONDS,
+    )
+
+    const publisher = await getQueuePublisher()
+    await Effect.runPromise(
+      publisher.publish("signals-preview", "run", {
+        previewId,
+        organizationId,
+        projectId: data.projectId,
+        evaluation: data.evaluation,
+        ...(data.filters != null ? { filters: data.filters } : {}),
+      }),
+    )
+
+    return { previewId }
+  })
+
+const getSignalPreviewResultInputSchema = z.object({ previewId: z.string() })
+
+/** Polls a preview run's result. Returns `pending` while the worker is still running (or the key expired). */
+export const getSignalPreviewResult = createServerFn({ method: "GET" })
+  .inputValidator(getSignalPreviewResultInputSchema)
+  .handler(async ({ data }): Promise<SignalPreviewResult> => {
+    const { organizationId } = await requireSession()
+    const redis = getRedisClient()
+    const raw = await redis.get(buildSignalPreviewResultKey(organizationId, data.previewId))
+    return raw === null ? { status: "pending" } : (JSON.parse(raw) as SignalPreviewResult)
   })

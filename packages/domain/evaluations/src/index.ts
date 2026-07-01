@@ -9,7 +9,11 @@ export type {
   LoadedEvaluationAlignmentState,
   PersistEvaluationAlignmentResult,
 } from "./alignment/types.ts"
-export { compileSettingsToScript, validateEvaluationScriptCompiles } from "./codegen/compile-settings-to-script.ts"
+export {
+  compileSettingsToScript,
+  validateAndHashEvaluationScript,
+  validateEvaluationScriptCompiles,
+} from "./codegen/compile-settings-to-script.ts"
 export {
   ALIGNMENT_CURATED_DATASET_MAX_ROWS,
   ALIGNMENT_CURATED_DATASET_MIN_ROWS,
@@ -144,6 +148,11 @@ export {
 } from "./runtime/evaluation-execution.ts"
 export { loadScriptSessionContext } from "./runtime/load-session-context.ts"
 export { executeEvaluationScriptSandboxed } from "./runtime/sandbox-execution.ts"
+export {
+  buildSignalPreviewResultKey,
+  SIGNAL_PREVIEW_RESULT_TTL_SECONDS,
+  type SignalPreviewResult,
+} from "./runtime/signal-preview-result.ts"
 export { collectAlignmentExamplesUseCase } from "./use-cases/alignment/collect-alignment-examples.ts"
 export { evaluateBaselineDraftUseCase } from "./use-cases/alignment/evaluate-baseline-draft.ts"
 export { evaluateDraftAgainstExamplesUseCase } from "./use-cases/alignment/evaluate-draft-against-examples.ts"
@@ -213,6 +222,14 @@ export {
   monitorSignalUseCase,
 } from "./use-cases/monitor-signal.ts"
 export { evaluateOptimizationCandidate } from "./use-cases/optimization/evaluate-optimization-candidate.ts"
+export {
+  type PreviewEvaluationError,
+  type PreviewEvaluationInput,
+  type PreviewEvaluationResult,
+  type PreviewEvaluationRow,
+  type PreviewSessionSummary,
+  previewEvaluationUseCase,
+} from "./use-cases/preview-evaluation.ts"
 export {
   type UnmonitorSignalError,
   type UnmonitorSignalInput,

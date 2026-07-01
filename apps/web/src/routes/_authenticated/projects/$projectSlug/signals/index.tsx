@@ -1,3 +1,4 @@
+import type { FilterSet } from "@domain/shared"
 import {
   Badge,
   Button,
@@ -9,6 +10,7 @@ import {
   Tabs,
   Tooltip,
   toast,
+  useMountEffect,
   useValueWithDefault,
 } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
@@ -53,6 +55,7 @@ import {
   DownloadIcon,
   PauseIcon,
   PlayIcon,
+  PlusIcon,
   SearchIcon,
 } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
@@ -72,8 +75,10 @@ import { ColumnsSelector } from "../-components/columns-selector.tsx"
 import { ExportConfirmationModal } from "../-components/export-confirmation-modal.tsx"
 import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
+import { parseFilters } from "../-components/trace-page-state.ts"
 import { useRouteProject } from "../-route-data.ts"
 import { AssigneeFilter, UNASSIGNED_FILTER_TOKEN } from "./-components/assignee-filter.tsx"
+import { SignalBuilderModal } from "./-components/builder/signal-builder-modal.tsx"
 import { SignalsAnalyticsPanel } from "./-components/signals-analytics-panel.tsx"
 import { SignalsEmptyState } from "./-components/signals-empty-state.tsx"
 import {
@@ -177,6 +182,24 @@ function SignalsPage() {
   const [exporting, setExporting] = useState(false)
   const [bulkMuteModalOpen, setBulkMuteModalOpen] = useState(false)
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
+  const [builderOpen, setBuilderOpen] = useState(false)
+  const [builderInitialFilters, setBuilderInitialFilters] = useState<FilterSet | null>(null)
+  const [newSignalParam, setNewSignalParam] = useParamState("newSignal", "")
+  const [newSignalFiltersParam, setNewSignalFiltersParam] = useParamState("newSignalFilters", "")
+
+  const openCreate = useCallback((filters: FilterSet | null) => {
+    setBuilderInitialFilters(filters)
+    setBuilderOpen(true)
+  }, [])
+
+  // "Create signal from this search" lands here with the search's filters in the URL: open the
+  // builder pre-filled, then strip the params so a refresh doesn't reopen it.
+  useMountEffect(() => {
+    if (newSignalParam !== "1") return
+    openCreate(parseFilters(newSignalFiltersParam || undefined))
+    setNewSignalParam("")
+    setNewSignalFiltersParam("")
+  })
 
   useDebounce(
     () => {
@@ -351,7 +374,16 @@ function SignalsPage() {
     return (
       <Layout>
         <Layout.Content>
-          <SignalsEmptyState />
+          <SignalsEmptyState onCreate={() => openCreate(null)} />
+          {builderOpen ? (
+            <SignalBuilderModal
+              projectId={project.id}
+              projectSlug={project.slug}
+              mode="create"
+              initialFilters={builderInitialFilters}
+              onClose={() => setBuilderOpen(false)}
+            />
+          ) : null}
         </Layout.Content>
       </Layout>
     )
@@ -420,6 +452,10 @@ function SignalsPage() {
                 active={lifecycleGroup}
                 onSelect={(value) => setLifecycleGroup(value)}
               />
+              <Button size="sm" onClick={() => openCreate(null)}>
+                <Icon icon={PlusIcon} size="sm" />
+                New signal
+              </Button>
             </Layout.ActionRowItem>
           </Layout.ActionsRow>
         </Layout.Actions>
@@ -496,6 +532,16 @@ function SignalsPage() {
             </>
           }
         />
+
+        {builderOpen ? (
+          <SignalBuilderModal
+            projectId={project.id}
+            projectSlug={project.slug}
+            mode="create"
+            initialFilters={builderInitialFilters}
+            onClose={() => setBuilderOpen(false)}
+          />
+        ) : null}
       </Layout.Content>
     </Layout>
   )

@@ -1,4 +1,3 @@
-import { hashOptimizationCandidateText } from "@domain/optimizations"
 import type { ScriptCompileError, ScriptRuntime } from "@domain/sandbox"
 import {
   BadRequestError,
@@ -8,7 +7,7 @@ import {
   type SqlClient,
 } from "@domain/shared"
 import { Effect } from "effect"
-import { compileSettingsToScript, validateEvaluationScriptCompiles } from "../codegen/compile-settings-to-script.ts"
+import { compileSettingsToScript, validateAndHashEvaluationScript } from "../codegen/compile-settings-to-script.ts"
 import { defaultEvaluationTrigger, evaluationSchema } from "../entities/evaluation.ts"
 import { EvaluationRepository } from "../ports/evaluation-repository.ts"
 
@@ -21,6 +20,8 @@ export interface CreateEvaluationInput {
   /** Exactly one of `settings` or `script`. `settings` compiles to the script; `script` is raw (advanced). */
   readonly settings?: EvaluationSettings
   readonly script?: string
+  /** Percentage (0–100) of matching traces the evaluation runs against; defaults to the standard rate. */
+  readonly sampling?: number
   readonly now?: Date
 }
 
@@ -48,12 +49,7 @@ export const createEvaluationUseCase = (input: CreateEvaluationInput) =>
     const settings = input.settings ?? null
     const script = settings ? compileSettingsToScript(settings) : (input.script as string)
 
-    yield* validateEvaluationScriptCompiles(script)
-
-    const scriptHash = yield* Effect.tryPromise({
-      try: () => hashOptimizationCandidateText(script),
-      catch: () => new BadRequestError({ message: "Failed to hash evaluation script" }),
-    })
+    const scriptHash = yield* validateAndHashEvaluationScript(script)
     const now = input.now ?? new Date()
     const evaluation = evaluationSchema.parse({
       id: generateId<"EvaluationId">(),
@@ -65,7 +61,7 @@ export const createEvaluationUseCase = (input: CreateEvaluationInput) =>
       settings,
       script,
       scriptHash,
-      trigger: defaultEvaluationTrigger(),
+      trigger: { ...defaultEvaluationTrigger(), ...(input.sampling !== undefined ? { sampling: input.sampling } : {}) },
       alignment: null,
       alignedAt: null,
       archivedAt: null,
