@@ -11,6 +11,7 @@ import { RawTelemetrySections } from "./raw-telemetry-sections.tsx"
 import { isToolExecutionSpan, ToolExecutionSection } from "./tool-execution-section.tsx"
 import { hasAnyUsage, UsageSummary } from "./usage-summary.tsx"
 import { UserContextSection } from "./user-context-section.tsx"
+import { SubagentSection } from "./subagent-section.tsx"
 
 type ExceptionInfo = {
   type?: string
@@ -136,6 +137,9 @@ export function SpanDetailContent({ span }: { readonly span: SpanDetailRecord })
 
       {/* ── User context: tags + metadata ── */}
       <UserContextSection span={span} />
+
+      {/* ── Subagent metadata ── */}
+      <SubagentSection span={span} />
 
       {/* ── LLM content ── */}
       {isLlmSpan && <LlmSections span={span} />}

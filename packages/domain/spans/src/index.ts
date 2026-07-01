@@ -70,6 +70,13 @@ export {
   isLlmCompletionOperation,
   resolveLastLlmCompletionSpanId,
 } from "./helpers/resolve-last-llm-completion-span.ts"
+export {
+  formatSpanDisplayLabel,
+  isSubagentSpan,
+  resolveAgentLabel,
+  resolveSpanLabels,
+  type SpanLabelInput,
+} from "./helpers/span-display.ts"
 export { resolveScoreTraceContext } from "./helpers/resolve-score-trace-context.ts"
 export { tokenizePhrase } from "./helpers/tokenize-phrase.ts"
 export {

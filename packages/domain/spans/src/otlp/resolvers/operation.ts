@@ -74,6 +74,16 @@ const OPENCLAW_SPAN_OPERATION: Record<string, Operation> = {
   "openclaw.tool.execution": "execute_tool",
 }
 
+const OPENCLAW_PLUGIN_SCOPE_PREFIX = "@latitude-data/openclaw-telemetry"
+
+function operationFromOpenClawPluginSpan(spanName: string): Operation | undefined {
+  if (spanName === "agent") return "invoke_agent"
+  if (spanName === "subagent") return "create_agent"
+  if (spanName === "model_call") return "chat"
+  if (spanName.startsWith("tool_call:")) return "execute_tool"
+  return undefined
+}
+
 const CLAUDE_CODE_NATIVE_SPAN_PREFIX = "claude_code."
 
 /**
@@ -102,6 +112,9 @@ const operationCandidates = [
 // LLM leaf), so classify those `chat` for the rollup; other frameworks' AGENT spans keep
 // `invoke_agent` (they have real LLM leaves).
 export function resolveOperation(spanAttrs: readonly OtlpKeyValue[], spanName: string, scopeName = ""): string {
+  if (stringAttr(spanAttrs, "interaction.kind") === "subagent") {
+    return "invoke_agent"
+  }
   if (
     scopeName.startsWith(CREWAI_OPENINFERENCE_SCOPE) &&
     stringAttr(spanAttrs, "openinference.span.kind") === "AGENT"
@@ -110,6 +123,10 @@ export function resolveOperation(spanAttrs: readonly OtlpKeyValue[], spanName: s
   }
   if (scopeName === OPENCLAW_TELEMETRY_SCOPE) {
     const mapped = OPENCLAW_SPAN_OPERATION[spanName]
+    if (mapped) return mapped
+  }
+  if (scopeName.startsWith(OPENCLAW_PLUGIN_SCOPE_PREFIX)) {
+    const mapped = operationFromOpenClawPluginSpan(spanName)
     if (mapped) return mapped
   }
   return first(operationCandidates, spanAttrs) ?? operationFromClaudeCodeNativeSpanName(spanName) ?? "unspecified"

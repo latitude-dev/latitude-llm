@@ -1,6 +1,6 @@
 import { ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
 import type { Operation, Span, SpanDetail, SpanKind, SpanMessagesData, SpanStatusCode } from "@domain/spans"
-import { SpanRepository } from "@domain/spans"
+import { resolveSpanLabels, SpanRepository } from "@domain/spans"
 import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
@@ -39,6 +39,8 @@ export interface SpanRecord {
   readonly startTime: string
   readonly endTime: string
   readonly ingestedAt: string
+  readonly displayLabel: string
+  readonly isSubagent: boolean
 }
 
 export interface SpanDetailRecord extends SpanRecord {
@@ -78,7 +80,7 @@ export interface SpanDetailRecord extends SpanRecord {
   readonly toolOutput: string
 }
 
-const serializeSpan = (span: Span): SpanRecord => ({
+const serializeSpanBase = (span: Span): Omit<SpanRecord, "displayLabel" | "isSubagent"> => ({
   organizationId: span.organizationId,
   projectId: span.projectId,
   traceId: span.traceId,
@@ -105,43 +107,61 @@ const serializeSpan = (span: Span): SpanRecord => ({
   ingestedAt: span.ingestedAt.toISOString(),
 })
 
-const serializeSpanDetail = (span: SpanDetail): SpanDetailRecord => ({
-  ...serializeSpan(span),
-  sessionId: span.sessionId,
-  userId: span.userId,
-  apiKeyId: span.apiKeyId,
-  responseModel: span.responseModel,
-  traceFlags: span.traceFlags,
-  traceState: span.traceState,
-  errorType: span.errorType,
-  tags: span.tags,
-  metadata: span.metadata,
-  eventsJson: span.eventsJson,
-  linksJson: span.linksJson,
-  tokensCacheRead: span.tokensCacheRead,
-  tokensCacheCreate: span.tokensCacheCreate,
-  tokensReasoning: span.tokensReasoning,
-  costInputMicrocents: span.costInputMicrocents,
-  costOutputMicrocents: span.costOutputMicrocents,
-  costTotalMicrocents: span.costTotalMicrocents,
-  costIsEstimated: span.costIsEstimated,
-  responseId: span.responseId,
-  finishReasons: span.finishReasons,
-  attrString: span.attrString,
-  attrInt: span.attrInt,
-  attrFloat: span.attrFloat,
-  attrBool: span.attrBool,
-  resourceString: span.resourceString,
-  scopeName: span.scopeName,
-  scopeVersion: span.scopeVersion,
-  inputMessages: span.inputMessages as readonly object[],
-  outputMessages: span.outputMessages as readonly object[],
-  systemInstructions: span.systemInstructions as readonly object[],
-  toolDefinitions: span.toolDefinitions as readonly object[],
-  toolCallId: span.toolCallId,
-  toolInput: span.toolInput,
-  toolOutput: span.toolOutput,
-})
+const serializeSpans = (spans: readonly Span[]): SpanRecord[] => {
+  const labels = resolveSpanLabels(spans)
+  return spans.map((span) => {
+    const label = labels.get(span.spanId)
+    return {
+      ...serializeSpanBase(span),
+      displayLabel: label?.displayLabel ?? span.name,
+      isSubagent: label?.isSubagent ?? false,
+    }
+  })
+}
+
+const serializeSpanDetail = (span: SpanDetail, siblings: readonly Span[] = []): SpanDetailRecord => {
+  const labels = resolveSpanLabels(siblings.length > 0 ? siblings : [span])
+  const label = labels.get(span.spanId)
+  return {
+    ...serializeSpanBase(span),
+    displayLabel: label?.displayLabel ?? span.name,
+    isSubagent: label?.isSubagent ?? false,
+    sessionId: span.sessionId,
+    userId: span.userId,
+    apiKeyId: span.apiKeyId,
+    responseModel: span.responseModel,
+    traceFlags: span.traceFlags,
+    traceState: span.traceState,
+    errorType: span.errorType,
+    tags: span.tags,
+    metadata: span.metadata,
+    eventsJson: span.eventsJson,
+    linksJson: span.linksJson,
+    tokensCacheRead: span.tokensCacheRead,
+    tokensCacheCreate: span.tokensCacheCreate,
+    tokensReasoning: span.tokensReasoning,
+    costInputMicrocents: span.costInputMicrocents,
+    costOutputMicrocents: span.costOutputMicrocents,
+    costTotalMicrocents: span.costTotalMicrocents,
+    costIsEstimated: span.costIsEstimated,
+    responseId: span.responseId,
+    finishReasons: span.finishReasons,
+    attrString: span.attrString,
+    attrInt: span.attrInt,
+    attrFloat: span.attrFloat,
+    attrBool: span.attrBool,
+    resourceString: span.resourceString,
+    scopeName: span.scopeName,
+    scopeVersion: span.scopeVersion,
+    inputMessages: span.inputMessages as readonly object[],
+    outputMessages: span.outputMessages as readonly object[],
+    systemInstructions: span.systemInstructions as readonly object[],
+    toolDefinitions: span.toolDefinitions as readonly object[],
+    toolCallId: span.toolCallId,
+    toolInput: span.toolInput,
+    toolOutput: span.toolOutput,
+  }
+}
 
 export const listSpansByTrace = createServerFn({ method: "GET" })
   .inputValidator(
@@ -167,7 +187,7 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
         })
       }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
-    return spans.map(serializeSpan)
+    return serializeSpans(spans)
   })
 
 export const listSpansBySession = createServerFn({ method: "GET" })
@@ -194,7 +214,7 @@ export const listSpansBySession = createServerFn({ method: "GET" })
         })
       }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
-    return spans.map(serializeSpan)
+    return serializeSpans(spans)
   })
 
 export interface SpanMessagesRecord {

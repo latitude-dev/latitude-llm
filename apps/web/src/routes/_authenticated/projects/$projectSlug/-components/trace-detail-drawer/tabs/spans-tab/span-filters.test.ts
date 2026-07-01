@@ -8,13 +8,13 @@ import {
 } from "./span-filters.ts"
 
 function makeSpan(partial: Partial<SpanRecord> & Pick<SpanRecord, "spanId">): SpanRecord {
+  const name = partial.name ?? partial.spanId
   return {
     organizationId: "org",
     projectId: "proj",
     traceId: "trace",
     parentSpanId: "",
     simulationId: "",
-    name: partial.spanId,
     serviceName: "svc",
     kind: "internal",
     statusCode: "ok",
@@ -33,14 +33,17 @@ function makeSpan(partial: Partial<SpanRecord> & Pick<SpanRecord, "spanId">): Sp
     endTime: "2024-01-01T00:00:01Z",
     ingestedAt: "2024-01-01T00:00:01Z",
     ...partial,
+    name,
+    displayLabel: partial.displayLabel ?? name,
+    isSubagent: partial.isSubagent ?? false,
   }
 }
 
 describe("span filters", () => {
   it("returns all spans when no filters are active", () => {
     const spans = [makeSpan({ spanId: "a" }), makeSpan({ spanId: "b" })]
-    expect(hasActiveSpanFilters({ errors: false, tools: false, model: "" })).toBe(false)
-    expect(filterSpansWithAncestors(spans, { errors: false, tools: false, model: "" })).toEqual(spans)
+    expect(hasActiveSpanFilters({ errors: false, tools: false, subagents: false, model: "" })).toBe(false)
+    expect(filterSpansWithAncestors(spans, { errors: false, tools: false, subagents: false, model: "" })).toEqual(spans)
   })
 
   it("filters by model and keeps ancestors", () => {
@@ -50,9 +53,9 @@ describe("span filters", () => {
       makeSpan({ spanId: "other", parentSpanId: "root", model: "claude-fable-5" }),
     ]
 
-    const filtered = filterSpansWithAncestors(spans, { errors: false, tools: false, model: "claude-opus-4-8" })
+    const filtered = filterSpansWithAncestors(spans, { errors: false, tools: false, subagents: false, model: "claude-opus-4-8" })
     expect(filtered.map((span) => span.spanId)).toEqual(["root", "child"])
-    expect(countMatchingSpans(spans, { errors: false, tools: false, model: "claude-opus-4-8" })).toBe(1)
+    expect(countMatchingSpans(spans, { errors: false, tools: false, subagents: false, model: "claude-opus-4-8" })).toBe(1)
   })
 
   it("filters by errors and tools together", () => {
@@ -62,7 +65,7 @@ describe("span filters", () => {
       makeSpan({ spanId: "chat-err", operation: "chat", statusCode: "error" }),
     ]
 
-    const filtered = filterSpansWithAncestors(spans, { errors: true, tools: true, model: "" })
+    const filtered = filterSpansWithAncestors(spans, { errors: true, tools: true, subagents: false, model: "" })
     expect(filtered.map((span) => span.spanId)).toEqual(["tool-err"])
   })
 
@@ -74,5 +77,23 @@ describe("span filters", () => {
     ]
 
     expect(collectSpanModels(spans)).toEqual(["claude-fable-5", "claude-opus-4-8"])
+  })
+
+  it("filters by subagents and keeps ancestors", () => {
+    const spans = [
+      makeSpan({ spanId: "root", parentSpanId: "" }),
+      makeSpan({ spanId: "tool", parentSpanId: "root", operation: "execute_tool" }),
+      makeSpan({
+        spanId: "child",
+        parentSpanId: "tool",
+        operation: "invoke_agent",
+        isSubagent: true,
+        displayLabel: "invoke_agent gpt-4o · explore",
+      }),
+      makeSpan({ spanId: "chat", parentSpanId: "root", operation: "chat" }),
+    ]
+
+    const filtered = filterSpansWithAncestors(spans, { errors: false, tools: false, subagents: true, model: "" })
+    expect(filtered.map((span) => span.spanId)).toEqual(["root", "tool", "child"])
   })
 })

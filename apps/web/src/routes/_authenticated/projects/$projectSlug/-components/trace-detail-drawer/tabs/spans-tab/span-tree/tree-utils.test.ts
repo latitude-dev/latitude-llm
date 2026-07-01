@@ -28,6 +28,8 @@ function makeSpan(spanId: string, parentSpanId: string, startTime = "2024-01-01T
     startTime,
     endTime: "2024-01-01T00:00:01Z",
     ingestedAt: "2024-01-01T00:00:00Z",
+    displayLabel: `span-${spanId}`,
+    isSubagent: false,
   }
 }
 

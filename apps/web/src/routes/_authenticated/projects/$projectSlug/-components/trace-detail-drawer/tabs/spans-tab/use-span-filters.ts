@@ -4,13 +4,15 @@ import { EMPTY_SPAN_FILTERS, type SpanFilters } from "./span-filters.ts"
 export function useSpanFilters() {
   const [errors, setErrors] = useParamState("spanErrors", false)
   const [tools, setTools] = useParamState("spanTools", false)
+  const [subagents, setSubagents] = useParamState("spanSubagents", false)
   const [model, setModel] = useParamState("spanModel", "")
 
-  const filters: SpanFilters = { errors, tools, model }
+  const filters: SpanFilters = { errors, tools, subagents, model }
 
   function setFilters(next: SpanFilters) {
     setErrors(next.errors)
     setTools(next.tools)
+    setSubagents(next.subagents)
     setModel(next.model)
   }
 
@@ -34,6 +36,7 @@ export function useSpanFilters() {
     openWithModel,
     toggleErrors: () => setErrors(!errors),
     toggleTools: () => setTools(!tools),
+    toggleSubagents: () => setSubagents(!subagents),
     selectModel: (nextModel: string) => setModel(nextModel),
   }
 }

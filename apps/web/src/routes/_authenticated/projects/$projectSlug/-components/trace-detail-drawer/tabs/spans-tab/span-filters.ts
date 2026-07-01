@@ -3,22 +3,25 @@ import type { SpanRecord } from "../../../../../../../../domains/spans/spans.fun
 export type SpanFilters = {
   readonly errors: boolean
   readonly tools: boolean
+  readonly subagents: boolean
   readonly model: string
 }
 
 export const EMPTY_SPAN_FILTERS: SpanFilters = {
   errors: false,
   tools: false,
+  subagents: false,
   model: "",
 }
 
 export function hasActiveSpanFilters(filters: SpanFilters): boolean {
-  return filters.errors || filters.tools || filters.model.length > 0
+  return filters.errors || filters.tools || filters.subagents || filters.model.length > 0
 }
 
 function spanMatchesFilters(span: SpanRecord, filters: SpanFilters): boolean {
   if (filters.errors && span.statusCode !== "error") return false
   if (filters.tools && span.operation !== "execute_tool") return false
+  if (filters.subagents && !span.isSubagent) return false
   if (filters.model.length > 0 && span.model !== filters.model) return false
   return true
 }

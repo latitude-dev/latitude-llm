@@ -103,6 +103,32 @@ describe("OpenClaw diagnostics-otel ingest", () => {
     expect(tool?.toolName).toBe("bash")
   })
 
+  it("classifies OpenClaw plugin subagent spans as create_agent", () => {
+    const trace: OtlpExportTraceServiceRequest = {
+      resourceSpans: [
+        {
+          resource: { attributes: [str("service.name", "openclaw-gateway")] },
+          scopeSpans: [
+            {
+              scope: { name: "@latitude-data/openclaw-telemetry", version: "0.1.0" },
+              spans: [
+                span("aaaaaaaaaaaaaaaa", "agent", []),
+                span("bbbbbbbbbbbbbbbb", "subagent", [
+                  str("openclaw.subagent.label", "research"),
+                  str("openclaw.subagent.agent_id", "child-1"),
+                ]),
+              ],
+            },
+          ],
+        },
+      ],
+    }
+    const pluginSpans = transformOtlpToSpans(trace, CONTEXT).spans
+    const subagent = pluginSpans.find((s) => s.name === "subagent")
+    expect(subagent?.operation).toBe("create_agent")
+    expect(subagent?.attrString["openclaw.subagent.label"]).toBe("research")
+  })
+
   it("resolves successful spans to ok status even though OTel status arrives unset", () => {
     // OpenClaw signals success out-of-band, not via OTel status — so these would
     // otherwise render with the neutral/gray status in the waterfall.

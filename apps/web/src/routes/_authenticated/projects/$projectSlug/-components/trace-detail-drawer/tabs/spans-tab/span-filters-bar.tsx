@@ -1,6 +1,6 @@
 import { cn, Icon, Select, type SelectOption, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
-import { AlertTriangleIcon, WrenchIcon, XIcon } from "lucide-react"
+import { AlertTriangleIcon, BotIcon, WrenchIcon, XIcon } from "lucide-react"
 import type { ReactNode } from "react"
 import type { SpanRecord } from "../../../../../../../../domains/spans/spans.functions.ts"
 import { collectSpanModels, countMatchingSpans, hasActiveSpanFilters, type SpanFilters } from "./span-filters.ts"
@@ -10,6 +10,7 @@ type SpanFiltersBarProps = {
   readonly filters: SpanFilters
   readonly onToggleErrors: () => void
   readonly onToggleTools: () => void
+  readonly onToggleSubagents: () => void
   readonly onSelectModel: (model: string) => void
   readonly onClearFilters: () => void
 }
@@ -51,6 +52,7 @@ export function SpanFiltersBar({
   filters,
   onToggleErrors,
   onToggleTools,
+  onToggleSubagents,
   onSelectModel,
   onClearFilters,
 }: SpanFiltersBarProps) {
@@ -86,6 +88,17 @@ export function SpanFiltersBar({
           >
             <Icon icon={WrenchIcon} size="xs" color={filters.tools ? "accentForeground" : "foregroundMuted"} />
             <span>Tools</span>
+          </FilterToggle>
+
+          <FilterToggle
+            active={filters.subagents}
+            activeClassName="border-primary/30 bg-primary/10 text-primary"
+            inactiveClassName="border-border bg-secondary text-muted-foreground hover:bg-muted"
+            onClick={onToggleSubagents}
+            ariaLabel={filters.subagents ? "Show all spans" : "Show only subagent spans"}
+          >
+            <Icon icon={BotIcon} size="xs" color={filters.subagents ? "primary" : "foregroundMuted"} />
+            <span>Subagents</span>
           </FilterToggle>
 
           {models.length > 0 ? (

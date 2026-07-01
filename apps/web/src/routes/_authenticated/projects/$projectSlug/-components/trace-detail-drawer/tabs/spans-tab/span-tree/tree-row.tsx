@@ -106,7 +106,7 @@ export const TreeRow = memo(function TreeRow({
           color={node.span.statusCode === "error" ? "destructive" : "foreground"}
           className="flex-1 min-w-0"
         >
-          {node.span.name}
+          {node.span.displayLabel}
         </Text.H6>
 
         <Text.H6 color={statusTextColor(node.span.statusCode)} className="shrink-0">

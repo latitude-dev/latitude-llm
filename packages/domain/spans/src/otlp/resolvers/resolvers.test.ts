@@ -325,6 +325,33 @@ describe("resolveAttributes", () => {
       ).toBe("chat")
     })
 
+    it("maps OpenClaw plugin span names and subagent interaction kinds", () => {
+      expect(
+        resolveAttributes({
+          spanAttrs: [],
+          statusCode: "unset",
+          spanName: "subagent",
+          scopeName: "@latitude-data/openclaw-telemetry",
+        }).operation,
+      ).toBe("create_agent")
+      expect(
+        resolveAttributes({
+          spanAttrs: [],
+          statusCode: "unset",
+          spanName: "tool_call:bash",
+          scopeName: "@latitude-data/openclaw-telemetry",
+        }).operation,
+      ).toBe("execute_tool")
+      expect(
+        resolveAttributes({
+          spanAttrs: [strAttr("interaction.kind", "subagent"), strAttr("span.type", "interaction")],
+          statusCode: "unset",
+          spanName: "interaction",
+          scopeName: "@latitude-data/claude-code-telemetry",
+        }).operation,
+      ).toBe("invoke_agent")
+    })
+
     it("maps OpenLLMetry request types", () => {
       const cases: [string, string][] = [
         ["chat", "chat"],
