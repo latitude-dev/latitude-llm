@@ -239,12 +239,13 @@ export const optimizeEvaluationDraft = (input: {
       Effect.provide(GepaOptimizerLive),
       withTracing,
       Effect.withSpan("evaluations.optimizeEvaluationDraft"),
-      Effect.mapError(
-        (cause) =>
-          new EvaluationOptimizationActivityError({
-            activity: "optimizeEvaluationDraft",
-            cause,
-          }),
+      Effect.mapError((cause) =>
+        cause instanceof EvaluationOptimizationActivityError
+          ? cause
+          : new EvaluationOptimizationActivityError({
+              activity: "optimizeEvaluationDraft",
+              cause,
+            }),
       ),
     ),
   )

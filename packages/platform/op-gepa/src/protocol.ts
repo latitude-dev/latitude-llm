@@ -96,6 +96,9 @@ const getKnownErrorMessage = (value: unknown, depth = 0): string | null => {
   return "cause" in record ? getKnownErrorMessage(record.cause, depth + 1) : null
 }
 
+const UNEXPECTED_RPC_ERROR = "Unexpected RPC error" as const
+const UNEXPECTED_REMOTE_RPC_ERROR = "Unexpected remote RPC error" as const
+
 const getRpcErrorMessage = (error: unknown): string => {
   const primaryMessage = getKnownErrorMessage(error)
   const record = asErrorRecord(error)
@@ -105,7 +108,7 @@ const getRpcErrorMessage = (error: unknown): string => {
     return `${primaryMessage}: ${causeMessage}`
   }
 
-  return primaryMessage ?? "Unexpected RPC error"
+  return primaryMessage ?? UNEXPECTED_RPC_ERROR
 }
 
 const summarizeError = (error: unknown, depth = 0): unknown => {
@@ -251,16 +254,16 @@ const getRemoteRpcErrorMessage = (error: JsonRpcError): string => {
 
   const remoteCause = extractRemoteRpcCause(error.data)
   const fromRemoteCause = getRpcErrorMessage(remoteCause)
-  if (fromRemoteCause !== "Unexpected RPC error") {
+  if (fromRemoteCause !== UNEXPECTED_RPC_ERROR) {
     return fromRemoteCause
   }
 
   const fromData = getRpcErrorMessage(error.data)
-  if (fromData !== "Unexpected RPC error") {
+  if (fromData !== UNEXPECTED_RPC_ERROR) {
     return fromData
   }
 
-  return "Unexpected remote RPC error"
+  return UNEXPECTED_REMOTE_RPC_ERROR
 }
 
 export function createJsonRpcResponseError(input: {
