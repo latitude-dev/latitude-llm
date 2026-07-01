@@ -1,4 +1,4 @@
-import type { ScoreBreakdownField, ScoreMetric } from "@domain/shared"
+import type { ScoreBreakdownField } from "@domain/shared"
 import { Effect } from "effect"
 import { buildClickHouseWhere } from "../../filter-builder.ts"
 import { SCORE_FIELD_REGISTRY } from "../../registries/score-fields.ts"
@@ -44,6 +44,17 @@ const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, never, nev
                      groupUniqArrayArray(tags)            AS tags
               FROM traces
               WHERE organization_id = {organizationId:String} AND project_id = {projectId:String}
+                -- Bound the rollup to the traces referenced by scores in this window,
+                -- so we don't aggregate the whole project's traces on every query.
+                AND trace_id IN (
+                  SELECT DISTINCT trace_id
+                  FROM scores
+                  WHERE organization_id = {organizationId:String}
+                    AND project_id = {projectId:String}
+                    AND created_at >= toDateTime64({windowFrom:String}, 3, 'UTC')
+                    AND created_at < toDateTime64({windowTo:String}, 3, 'UTC')
+                    AND trace_id != ''
+                )
               GROUP BY organization_id, project_id, trace_id
             ) tr ON sc.trace_id = tr.trace_id
             WHERE sc.organization_id = {organizationId:String}
@@ -63,9 +74,9 @@ const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, never, nev
     }
   })
 
-export const scoresDescriptor: StreamDescriptor = {
+export const scoresDescriptor: StreamDescriptor<"scores"> = {
   buildInner,
-  aggregate: (metric) => scoreAggregate(metric as ScoreMetric),
+  aggregate: (metric) => scoreAggregate(metric),
   breakdowns: BREAKDOWN,
   timeColumn: "created_at",
 }

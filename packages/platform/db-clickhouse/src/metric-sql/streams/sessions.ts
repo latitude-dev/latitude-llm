@@ -1,4 +1,4 @@
-import type { ChSqlClient, MonitorMetric, RepositoryError, SessionBreakdownField } from "@domain/shared"
+import type { ChSqlClient, RepositoryError, SessionBreakdownField } from "@domain/shared"
 import { parseSearchQuery } from "@domain/spans"
 import { Effect } from "effect"
 import { isActiveSearch, planSearch } from "../../repositories/search-plan.ts"
@@ -95,9 +95,9 @@ const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, Repository
     }
   })
 
-export const sessionsDescriptor: StreamDescriptor = {
+export const sessionsDescriptor: StreamDescriptor<"sessions"> = {
   buildInner,
-  aggregate: (metric) => traceFamilyAggregate(metric as MonitorMetric, COLUMNS),
+  aggregate: (metric) => traceFamilyAggregate(metric, COLUMNS),
   breakdowns: BREAKDOWN,
   timeColumn: "start_time",
 }
