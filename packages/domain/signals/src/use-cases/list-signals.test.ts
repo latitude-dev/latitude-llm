@@ -8,7 +8,6 @@ import {
 import { ScoreAnalyticsRepository, type SignalOccurrenceAggregate, type SignalWindowMetric } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
 import {
-  BadRequestError,
   ChSqlClient,
   EvaluationId,
   OrganizationId,
@@ -174,31 +173,6 @@ const createSignalSearch = (
 describe("listSignalsUseCase", () => {
   beforeEach(() => {
     sessionCount = 0
-  })
-
-  it("rejects a limit above its cap with BadRequestError instead of an unhandled ZodError", async () => {
-    const { repository: signalRepository } = createFakeSignalRepository([])
-    const { repository: evaluationRepository } = createEvaluationRepository()
-    const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository()
-    const { repository: sessionRepository } = createFakeSessionRepository()
-
-    const error = await Effect.runPromise(
-      listSignalsUseCase({ organizationId, projectId, limit: 201 }).pipe(
-        Effect.flip,
-        Effect.provide(
-          Layer.mergeAll(
-            Layer.succeed(SignalRepository, signalRepository),
-            Layer.succeed(EvaluationRepository, evaluationRepository),
-            Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-            Layer.succeed(SessionRepository, sessionRepository),
-            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
-            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
-          ),
-        ),
-      ),
-    )
-
-    expect(error).toBeInstanceOf(BadRequestError)
   })
 
   it("returns the empty issue shape without querying ClickHouse when the project has no issues", async () => {

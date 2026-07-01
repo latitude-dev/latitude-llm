@@ -9,7 +9,6 @@ import {
   type SignalWindowMetric,
 } from "@domain/scores"
 import {
-  BadRequestError,
   type ChSqlClient,
   cuidSchema,
   type FilterCondition,
@@ -91,18 +90,7 @@ const listSignalsInputSchema = z.object({
 })
 
 export type ListSignalsInput = z.input<typeof listSignalsInputSchema>
-export type ListSignalsError = RepositoryError | BadRequestError
-
-const formatValidationError = (error: z.ZodError): string => error.issues.map((issue) => issue.message).join(", ")
-
-const parseOrBadRequest = <T>(schema: z.ZodType<T>, input: unknown) =>
-  Effect.try({
-    try: () => schema.parse(input),
-    catch: (error) =>
-      new BadRequestError({
-        message: error instanceof z.ZodError ? formatValidationError(error) : "Invalid list signals input",
-      }),
-  })
+export type ListSignalsError = RepositoryError
 
 export interface SignalListAnalyticsCounts {
   readonly newSignals: number
@@ -514,7 +502,7 @@ export const listSignalsUseCase = (
   ChSqlClient | EvaluationRepository | SignalRepository | ScoreAnalyticsRepository | SessionRepository | SqlClient
 > =>
   Effect.gen(function* () {
-    const parsed = yield* parseOrBadRequest(listSignalsInputSchema, input)
+    const parsed = listSignalsInputSchema.parse(input)
     yield* Effect.annotateCurrentSpan("projectId", String(parsed.projectId))
     const signalRepository = yield* SignalRepository
     const now = parsed.now ?? new Date()
