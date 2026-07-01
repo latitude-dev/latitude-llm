@@ -270,7 +270,15 @@
           "getting-started/concepts",
           "getting-started/mcp",
           "more/sandbox",
-          "more/agent-dispatch-webhooks",
+          {
+            "group": "Agent dispatch",
+            "pages": [
+              "more/agent-dispatch-cursor",
+              "more/agent-dispatch-claude-code",
+              "more/agent-dispatch-linear",
+              "more/agent-dispatch-webhooks"
+            ]
+          },
           {
             "group": "Data destinations",
             "pages": [

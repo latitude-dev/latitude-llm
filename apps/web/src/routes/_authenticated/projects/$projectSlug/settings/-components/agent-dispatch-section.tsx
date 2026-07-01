@@ -20,7 +20,7 @@ import { relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { Copy, ExternalLink, type LucideProps, Plus, Webhook } from "lucide-react"
+import { BookOpen, Copy, ExternalLink, type LucideProps, Plus, Webhook } from "lucide-react"
 import { useState } from "react"
 import { z } from "zod"
 import {
@@ -91,6 +91,13 @@ const INTEGRATION_SUBTITLES: Record<AgentDispatchKindKey, string> = {
   webhook: "Send integration events to your own endpoint.",
 }
 
+const INTEGRATION_DOC_URLS: Record<AgentDispatchKindKey, string> = {
+  cursor: "https://docs.latitude.so/more/agent-dispatch-cursor",
+  claude_code: "https://docs.latitude.so/more/agent-dispatch-claude-code",
+  linear: "https://docs.latitude.so/more/agent-dispatch-linear",
+  webhook: "https://docs.latitude.so/more/agent-dispatch-webhooks",
+}
+
 const ACTIVE_DISPATCH_TRIGGERS = ["signal.discovered", "incident.opened"] as const
 
 const DISPATCH_TRIGGER_TITLES: Record<string, string> = {
@@ -147,6 +154,17 @@ const INTEGRATION_ICONS = AGENT_DISPATCH_KIND_ICONS
 
 const CLAUDE_ROUTINE_TEMPLATE =
   "Inspect the Latitude signal, identify the regression or newly discovered issue, implement the fix, run the relevant checks, and report what changed."
+
+function IntegrationDocsButton({ kind }: { readonly kind: AgentDispatchKindKey }) {
+  return (
+    <Button asChild variant="outline" size="sm">
+      <a href={INTEGRATION_DOC_URLS[kind]} target="_blank" rel="noreferrer">
+        <Icon icon={BookOpen} size="sm" />
+        Setup guide
+      </a>
+    </Button>
+  )
+}
 
 function extractClaudeRoutineTriggerId(routineUrl: string) {
   return routineUrl.trim().match(/\/routines\/(trig_[^/?#]+)/)?.[1] ?? null
@@ -318,6 +336,17 @@ export function AgentDispatchIntegrationDetails({
 
   return (
     <div className="flex flex-col gap-8">
+      <div className="flex max-w-3xl flex-col gap-3 rounded-lg border border-border bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-1">
+          <Text.H5 display="block" weight="semibold">
+            {KIND_LABELS[kind]} setup guide
+          </Text.H5>
+          <Text.H6 display="block" color="foregroundMuted">
+            Review setup, dispatch behavior, and troubleshooting for this integration.
+          </Text.H6>
+        </div>
+        <IntegrationDocsButton kind={kind} />
+      </div>
       <AgentDispatchConfigForm
         projectId={projectId}
         kind={kind}
@@ -979,6 +1008,7 @@ function ConnectAgentDispatchModal({
               </Text.H6>
             </div>
             <div className="flex flex-row flex-wrap gap-2 pt-1">
+              <IntegrationDocsButton kind={kind} />
               <Button asChild variant="outline" size="sm">
                 <a href="https://cursor.com/dashboard/api" target="_blank" rel="noreferrer">
                   <Icon icon={ExternalLink} size="sm" />
@@ -1106,6 +1136,7 @@ function ConnectAgentDispatchModal({
               </Button>
             </div>
             <div className="flex flex-row flex-wrap gap-2 pt-1">
+              <IntegrationDocsButton kind={kind} />
               <Button asChild variant="outline" size="sm">
                 <a href="https://claude.ai/code/routines" target="_blank" rel="noreferrer">
                   <Icon icon={ExternalLink} size="sm" />
@@ -1162,6 +1193,7 @@ function ConnectAgentDispatchModal({
               </Text.H6>
             </div>
             <div className="flex flex-row flex-wrap gap-2 pt-1">
+              <IntegrationDocsButton kind={kind} />
               <Button asChild variant="outline" size="sm">
                 <a href="https://linear.app/latitude/settings/account/security" target="_blank" rel="noreferrer">
                   <Icon icon={ExternalLink} size="sm" />
@@ -1245,12 +1277,7 @@ function ConnectAgentDispatchModal({
               </Text.H6>
             </div>
             <div className="flex flex-row flex-wrap gap-2 pt-1">
-              <Button asChild variant="outline" size="sm">
-                <a href="https://docs.latitude.so/more/agent-dispatch-webhooks" target="_blank" rel="noreferrer">
-                  <Icon icon={ExternalLink} size="sm" />
-                  Webhook docs
-                </a>
-              </Button>
+              <IntegrationDocsButton kind={kind} />
             </div>
           </div>
           <form.Field name="webhookUrl">
