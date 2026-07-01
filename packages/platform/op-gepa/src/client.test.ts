@@ -195,4 +195,41 @@ describe("GepaClient RPC errors", () => {
       },
     })
   })
+
+  it("extracts nested remote error messages when the Python server responds with an empty RPC message", async () => {
+    const client = asInternalClient(new GepaClient())
+
+    const rejection = new Promise<never>((_resolve, reject) => {
+      client.pendingRequests.set(2, {
+        method: "gepa_optimize",
+        responseSchema: z.object({}),
+        resolve: () => {
+          throw new Error("Expected promise rejection")
+        },
+        reject,
+      })
+    })
+
+    client.handleResponse({
+      jsonrpc: "2.0",
+      id: 2,
+      error: {
+        code: JsonRpcErrorCode.internalError,
+        message: "",
+        data: {
+          remoteError: {
+            message: "Bedrock is unable to process your request.",
+          },
+        },
+      },
+    })
+
+    await expect(rejection).rejects.toBeInstanceOf(JsonRpcResponseError)
+    await expect(rejection).rejects.toMatchObject({
+      message: "RPC error -32603: Bedrock is unable to process your request.",
+      code: JsonRpcErrorCode.internalError,
+      method: "gepa_optimize",
+      requestId: 2,
+    })
+  })
 })

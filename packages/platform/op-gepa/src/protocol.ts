@@ -244,6 +244,25 @@ export class JsonRpcResponseError extends Error {
   }
 }
 
+const getRemoteRpcErrorMessage = (error: JsonRpcError): string => {
+  if (isNonEmptyString(error.message)) {
+    return error.message.trim()
+  }
+
+  const remoteCause = extractRemoteRpcCause(error.data)
+  const fromRemoteCause = getRpcErrorMessage(remoteCause)
+  if (fromRemoteCause !== "Unexpected RPC error") {
+    return fromRemoteCause
+  }
+
+  const fromData = getRpcErrorMessage(error.data)
+  if (fromData !== "Unexpected RPC error") {
+    return fromData
+  }
+
+  return "Unexpected remote RPC error"
+}
+
 export function createJsonRpcResponseError(input: {
   readonly error: JsonRpcError
   readonly method: string
@@ -251,7 +270,7 @@ export function createJsonRpcResponseError(input: {
 }): JsonRpcResponseError {
   return new JsonRpcResponseError({
     code: input.error.code,
-    message: isNonEmptyString(input.error.message) ? input.error.message : "Unexpected remote RPC error",
+    message: getRemoteRpcErrorMessage(input.error),
     data: input.error.data ?? null,
     method: input.method,
     requestId: input.requestId,
