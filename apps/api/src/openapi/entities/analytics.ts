@@ -5,8 +5,10 @@ import {
   analyticsOrderBySchema,
   analyticsTimeBucketSchema,
   monitorMetricSchema,
+  SCORE_BREAKDOWN_FIELDS,
   SESSION_BREAKDOWN_FIELDS,
   SPAN_BREAKDOWN_FIELDS,
+  scoreMetricSchema,
   TRACE_BREAKDOWN_FIELDS,
 } from "@domain/shared"
 import { z } from "@hono/zod-openapi"
@@ -17,12 +19,10 @@ import { FilterSetSchema } from "../schemas.ts"
 // emits a clean item type for it — the domain filter schema is a refined record
 // that the SDK generator can't name). Cross-field rules (range ordering) and the
 // domain filter constraints are re-checked in the handler via the domain schema.
-const sharedFields = {
+// `metric` is per-stream (added on each variant), so it lives outside `commonFields`.
+const commonFields = {
   filters: FilterSetSchema.optional().describe(
     "Structured filter set applied to the stream (same DSL as `listTraces`).",
-  ),
-  metric: monitorMetricSchema.describe(
-    "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`.",
   ),
   timeBucket: analyticsTimeBucketSchema
     .optional()
@@ -51,6 +51,10 @@ const sharedFields = {
     .describe(`Maximum rows returned. Defaults to ${ANALYTICS_DEFAULT_LIMIT}; max ${ANALYTICS_MAX_LIMIT}.`),
 } as const
 
+const traceFamilyMetric = monitorMetricSchema.describe(
+  "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`.",
+)
+
 const semanticQuery = z
   .string()
   .min(1)
@@ -64,7 +68,8 @@ export const AnalyticsQueryBodySchema = z
         stream: z.literal("traces"),
         query: semanticQuery.optional(),
         breakdown: z.enum(TRACE_BREAKDOWN_FIELDS).optional().describe("Dimension to group by, one row per value."),
-        ...sharedFields,
+        metric: traceFamilyMetric,
+        ...commonFields,
       })
       .strict(),
     z
@@ -72,14 +77,33 @@ export const AnalyticsQueryBodySchema = z
         stream: z.literal("sessions"),
         query: semanticQuery.optional(),
         breakdown: z.enum(SESSION_BREAKDOWN_FIELDS).optional().describe("Dimension to group by, one row per value."),
-        ...sharedFields,
+        metric: traceFamilyMetric,
+        ...commonFields,
       })
       .strict(),
     z
       .object({
         stream: z.literal("spans"),
         breakdown: z.enum(SPAN_BREAKDOWN_FIELDS).optional().describe("Dimension to group by, one row per value."),
-        ...sharedFields,
+        metric: traceFamilyMetric,
+        ...commonFields,
+      })
+      .strict(),
+    z
+      .object({
+        stream: z
+          .literal("scores")
+          .describe(
+            'Scored occurrences. A signal is scores carrying a `signalId` — analyze one signal via `stream: "scores"` filtered by `score.signalId` (or broken down by `signalId`).',
+          ),
+        breakdown: z
+          .enum(SCORE_BREAKDOWN_FIELDS)
+          .optional()
+          .describe("Dimension to group by: `signalId`/`source` (direct) or a trace dim (`model`…`tag`)."),
+        metric: scoreMetricSchema.describe(
+          "The metric: `count`, `passRate`, `errorRate`, or `{avg|min|max|median}` of the 0–1 score `value`.",
+        ),
+        ...commonFields,
       })
       .strict(),
   ])

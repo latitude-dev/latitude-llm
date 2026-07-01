@@ -9,6 +9,7 @@ export * from "./AlertEscalatingCondition.js";
 export * from "./AlertMetricThreshold.js";
 export * from "./AlertThresholdCondition.js";
 export * from "./AnalyticsQuery.js";
+export * from "./AnalyticsQueryScoresMetric.js";
 export * from "./AnalyticsQuerySessionsMetric.js";
 export * from "./AnalyticsQuerySpansMetric.js";
 export * from "./AnalyticsQueryTracesMetric.js";

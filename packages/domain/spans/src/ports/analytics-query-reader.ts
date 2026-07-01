@@ -1,10 +1,10 @@
 import type {
+  AnalyticsMetric,
   AnalyticsSeriesPoint,
+  AnalyticsStream,
   AnalyticsTimeBucket,
   ChSqlClient,
   FilterSet,
-  MonitorMetric,
-  MonitorStream,
   OrganizationId,
   ProjectId,
   RepositoryError,
@@ -20,11 +20,11 @@ import { Context, type Effect } from "effect"
 export interface AnalyticsQueryInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
-  readonly stream: MonitorStream
+  readonly stream: AnalyticsStream
   readonly filterSet: FilterSet
-  /** Semantic search — `traces` stream only; `null` otherwise. */
+  /** Semantic search — `traces`/`sessions` only; `null` otherwise. */
   readonly query: string | null
-  readonly metric: MonitorMetric
+  readonly metric: AnalyticsMetric
   readonly breakdown?: string
   readonly timeBucket?: AnalyticsTimeBucket
   /** Inclusive lower bound on the row's time axis. */

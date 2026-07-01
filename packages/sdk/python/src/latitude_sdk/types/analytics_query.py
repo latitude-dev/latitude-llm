@@ -8,6 +8,11 @@ import pydantic
 import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
+from .analytics_query_scores_breakdown import AnalyticsQueryScoresBreakdown
+from .analytics_query_scores_metric import AnalyticsQueryScoresMetric
+from .analytics_query_scores_order_by import AnalyticsQueryScoresOrderBy
+from .analytics_query_scores_range import AnalyticsQueryScoresRange
+from .analytics_query_scores_time_bucket import AnalyticsQueryScoresTimeBucket
 from .analytics_query_sessions_breakdown import AnalyticsQuerySessionsBreakdown
 from .analytics_query_sessions_metric import AnalyticsQuerySessionsMetric
 from .analytics_query_sessions_order_by import AnalyticsQuerySessionsOrderBy
@@ -30,8 +35,8 @@ class AnalyticsQuery_Traces(UniversalBaseModel):
     stream: typing.Literal["traces"] = "traces"
     query: typing.Optional[str] = None
     breakdown: typing.Optional[AnalyticsQueryTracesBreakdown] = None
-    filters: typing.Optional[FilterSet] = None
     metric: AnalyticsQueryTracesMetric
+    filters: typing.Optional[FilterSet] = None
     time_bucket: typing_extensions.Annotated[
         typing.Optional[AnalyticsQueryTracesTimeBucket], FieldMetadata(alias="timeBucket")
     ] = None
@@ -48,8 +53,8 @@ class AnalyticsQuery_Sessions(UniversalBaseModel):
     stream: typing.Literal["sessions"] = "sessions"
     query: typing.Optional[str] = None
     breakdown: typing.Optional[AnalyticsQuerySessionsBreakdown] = None
-    filters: typing.Optional[FilterSet] = None
     metric: AnalyticsQuerySessionsMetric
+    filters: typing.Optional[FilterSet] = None
     time_bucket: typing_extensions.Annotated[
         typing.Optional[AnalyticsQuerySessionsTimeBucket], FieldMetadata(alias="timeBucket")
     ] = None
@@ -65,8 +70,8 @@ class AnalyticsQuery_Sessions(UniversalBaseModel):
 class AnalyticsQuery_Spans(UniversalBaseModel):
     stream: typing.Literal["spans"] = "spans"
     breakdown: typing.Optional[AnalyticsQuerySpansBreakdown] = None
-    filters: typing.Optional[FilterSet] = None
     metric: AnalyticsQuerySpansMetric
+    filters: typing.Optional[FilterSet] = None
     time_bucket: typing_extensions.Annotated[
         typing.Optional[AnalyticsQuerySpansTimeBucket], FieldMetadata(alias="timeBucket")
     ] = None
@@ -79,4 +84,23 @@ class AnalyticsQuery_Spans(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
-AnalyticsQuery = typing.Union[AnalyticsQuery_Traces, AnalyticsQuery_Sessions, AnalyticsQuery_Spans]
+class AnalyticsQuery_Scores(UniversalBaseModel):
+    stream: typing.Literal["scores"] = "scores"
+    breakdown: typing.Optional[AnalyticsQueryScoresBreakdown] = None
+    metric: AnalyticsQueryScoresMetric
+    filters: typing.Optional[FilterSet] = None
+    time_bucket: typing_extensions.Annotated[
+        typing.Optional[AnalyticsQueryScoresTimeBucket], FieldMetadata(alias="timeBucket")
+    ] = None
+    range: AnalyticsQueryScoresRange
+    order_by: typing_extensions.Annotated[
+        typing.Optional[AnalyticsQueryScoresOrderBy], FieldMetadata(alias="orderBy")
+    ] = None
+    limit: typing.Optional[int] = None
+
+    model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
+
+
+AnalyticsQuery = typing.Union[
+    AnalyticsQuery_Traces, AnalyticsQuery_Sessions, AnalyticsQuery_Spans, AnalyticsQuery_Scores
+]

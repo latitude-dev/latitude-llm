@@ -1,4 +1,4 @@
-import type { SpanBreakdownField } from "@domain/shared"
+import type { MonitorMetric, SpanBreakdownField } from "@domain/shared"
 import { Effect } from "effect"
 import { buildSpanFilterClauses } from "../../registries/span-fields.ts"
 import { type TraceFamilyColumns, traceFamilyAggregate, usageGated, windowParams } from "../helpers.ts"
@@ -61,7 +61,7 @@ const buildInner = (input: MetricSqlInput): InnerQuery => {
 
 export const spansDescriptor: StreamDescriptor = {
   buildInner: (input) => Effect.succeed(buildInner(input)),
-  aggregate: (metric) => traceFamilyAggregate(metric, COLUMNS),
+  aggregate: (metric) => traceFamilyAggregate(metric as MonitorMetric, COLUMNS),
   breakdowns: BREAKDOWN,
   timeColumn: "start_time",
 }

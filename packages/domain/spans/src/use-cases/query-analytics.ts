@@ -28,7 +28,7 @@ export const queryAnalyticsUseCase = (
     const reader = yield* AnalyticsQueryReader
     const q = input.query
     const breakdown = q.breakdown
-    const query = q.stream === "spans" ? null : (q.query ?? null)
+    const query = "query" in q ? (q.query ?? null) : null
     return yield* reader.query({
       organizationId: input.organizationId,
       projectId: input.projectId,

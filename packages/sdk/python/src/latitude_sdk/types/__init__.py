@@ -33,7 +33,38 @@ if typing.TYPE_CHECKING:
     from .alert_metric_threshold_multiplier import AlertMetricThresholdMultiplier
     from .alert_threshold_condition import AlertThresholdCondition
     from .alert_threshold_condition_direction import AlertThresholdConditionDirection
-    from .analytics_query import AnalyticsQuery, AnalyticsQuery_Sessions, AnalyticsQuery_Spans, AnalyticsQuery_Traces
+    from .analytics_query import (
+        AnalyticsQuery,
+        AnalyticsQuery_Scores,
+        AnalyticsQuery_Sessions,
+        AnalyticsQuery_Spans,
+        AnalyticsQuery_Traces,
+    )
+    from .analytics_query_scores import AnalyticsQueryScores
+    from .analytics_query_scores_breakdown import AnalyticsQueryScoresBreakdown
+    from .analytics_query_scores_metric import (
+        AnalyticsQueryScoresMetric,
+        AnalyticsQueryScoresMetric_Avg,
+        AnalyticsQueryScoresMetric_Count,
+        AnalyticsQueryScoresMetric_ErrorRate,
+        AnalyticsQueryScoresMetric_Max,
+        AnalyticsQueryScoresMetric_Median,
+        AnalyticsQueryScoresMetric_Min,
+        AnalyticsQueryScoresMetric_PassRate,
+    )
+    from .analytics_query_scores_metric_avg import AnalyticsQueryScoresMetricAvg
+    from .analytics_query_scores_metric_count import AnalyticsQueryScoresMetricCount
+    from .analytics_query_scores_metric_error_rate import AnalyticsQueryScoresMetricErrorRate
+    from .analytics_query_scores_metric_max import AnalyticsQueryScoresMetricMax
+    from .analytics_query_scores_metric_median import AnalyticsQueryScoresMetricMedian
+    from .analytics_query_scores_metric_min import AnalyticsQueryScoresMetricMin
+    from .analytics_query_scores_metric_pass_rate import AnalyticsQueryScoresMetricPassRate
+    from .analytics_query_scores_order_by import AnalyticsQueryScoresOrderBy
+    from .analytics_query_scores_order_by_by import AnalyticsQueryScoresOrderByBy
+    from .analytics_query_scores_order_by_direction import AnalyticsQueryScoresOrderByDirection
+    from .analytics_query_scores_range import AnalyticsQueryScoresRange
+    from .analytics_query_scores_time_bucket import AnalyticsQueryScoresTimeBucket
+    from .analytics_query_scores_time_bucket_unit import AnalyticsQueryScoresTimeBucketUnit
     from .analytics_query_sessions import AnalyticsQuerySessions
     from .analytics_query_sessions_breakdown import AnalyticsQuerySessionsBreakdown
     from .analytics_query_sessions_metric import (
@@ -383,6 +414,29 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AlertThresholdCondition": ".alert_threshold_condition",
     "AlertThresholdConditionDirection": ".alert_threshold_condition_direction",
     "AnalyticsQuery": ".analytics_query",
+    "AnalyticsQueryScores": ".analytics_query_scores",
+    "AnalyticsQueryScoresBreakdown": ".analytics_query_scores_breakdown",
+    "AnalyticsQueryScoresMetric": ".analytics_query_scores_metric",
+    "AnalyticsQueryScoresMetricAvg": ".analytics_query_scores_metric_avg",
+    "AnalyticsQueryScoresMetricCount": ".analytics_query_scores_metric_count",
+    "AnalyticsQueryScoresMetricErrorRate": ".analytics_query_scores_metric_error_rate",
+    "AnalyticsQueryScoresMetricMax": ".analytics_query_scores_metric_max",
+    "AnalyticsQueryScoresMetricMedian": ".analytics_query_scores_metric_median",
+    "AnalyticsQueryScoresMetricMin": ".analytics_query_scores_metric_min",
+    "AnalyticsQueryScoresMetricPassRate": ".analytics_query_scores_metric_pass_rate",
+    "AnalyticsQueryScoresMetric_Avg": ".analytics_query_scores_metric",
+    "AnalyticsQueryScoresMetric_Count": ".analytics_query_scores_metric",
+    "AnalyticsQueryScoresMetric_ErrorRate": ".analytics_query_scores_metric",
+    "AnalyticsQueryScoresMetric_Max": ".analytics_query_scores_metric",
+    "AnalyticsQueryScoresMetric_Median": ".analytics_query_scores_metric",
+    "AnalyticsQueryScoresMetric_Min": ".analytics_query_scores_metric",
+    "AnalyticsQueryScoresMetric_PassRate": ".analytics_query_scores_metric",
+    "AnalyticsQueryScoresOrderBy": ".analytics_query_scores_order_by",
+    "AnalyticsQueryScoresOrderByBy": ".analytics_query_scores_order_by_by",
+    "AnalyticsQueryScoresOrderByDirection": ".analytics_query_scores_order_by_direction",
+    "AnalyticsQueryScoresRange": ".analytics_query_scores_range",
+    "AnalyticsQueryScoresTimeBucket": ".analytics_query_scores_time_bucket",
+    "AnalyticsQueryScoresTimeBucketUnit": ".analytics_query_scores_time_bucket_unit",
     "AnalyticsQuerySessions": ".analytics_query_sessions",
     "AnalyticsQuerySessionsBreakdown": ".analytics_query_sessions_breakdown",
     "AnalyticsQuerySessionsMetric": ".analytics_query_sessions_metric",
@@ -473,6 +527,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "AnalyticsQueryTracesRange": ".analytics_query_traces_range",
     "AnalyticsQueryTracesTimeBucket": ".analytics_query_traces_time_bucket",
     "AnalyticsQueryTracesTimeBucketUnit": ".analytics_query_traces_time_bucket_unit",
+    "AnalyticsQuery_Scores": ".analytics_query",
     "AnalyticsQuery_Sessions": ".analytics_query",
     "AnalyticsQuery_Spans": ".analytics_query",
     "AnalyticsQuery_Traces": ".analytics_query",
@@ -757,6 +812,29 @@ __all__ = [
     "AlertThresholdCondition",
     "AlertThresholdConditionDirection",
     "AnalyticsQuery",
+    "AnalyticsQueryScores",
+    "AnalyticsQueryScoresBreakdown",
+    "AnalyticsQueryScoresMetric",
+    "AnalyticsQueryScoresMetricAvg",
+    "AnalyticsQueryScoresMetricCount",
+    "AnalyticsQueryScoresMetricErrorRate",
+    "AnalyticsQueryScoresMetricMax",
+    "AnalyticsQueryScoresMetricMedian",
+    "AnalyticsQueryScoresMetricMin",
+    "AnalyticsQueryScoresMetricPassRate",
+    "AnalyticsQueryScoresMetric_Avg",
+    "AnalyticsQueryScoresMetric_Count",
+    "AnalyticsQueryScoresMetric_ErrorRate",
+    "AnalyticsQueryScoresMetric_Max",
+    "AnalyticsQueryScoresMetric_Median",
+    "AnalyticsQueryScoresMetric_Min",
+    "AnalyticsQueryScoresMetric_PassRate",
+    "AnalyticsQueryScoresOrderBy",
+    "AnalyticsQueryScoresOrderByBy",
+    "AnalyticsQueryScoresOrderByDirection",
+    "AnalyticsQueryScoresRange",
+    "AnalyticsQueryScoresTimeBucket",
+    "AnalyticsQueryScoresTimeBucketUnit",
     "AnalyticsQuerySessions",
     "AnalyticsQuerySessionsBreakdown",
     "AnalyticsQuerySessionsMetric",
@@ -847,6 +925,7 @@ __all__ = [
     "AnalyticsQueryTracesRange",
     "AnalyticsQueryTracesTimeBucket",
     "AnalyticsQueryTracesTimeBucketUnit",
+    "AnalyticsQuery_Scores",
     "AnalyticsQuery_Sessions",
     "AnalyticsQuery_Spans",
     "AnalyticsQuery_Traces",

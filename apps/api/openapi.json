@@ -8125,16 +8125,6 @@
                 ],
                 "description": "Dimension to group by, one row per value."
               },
-              "filters": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/FilterSet"
-                  },
-                  {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
-                  }
-                ]
-              },
               "metric": {
                 "oneOf": [
                   {
@@ -8296,6 +8286,16 @@
                   }
                 ],
                 "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`."
+              },
+              "filters": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/FilterSet"
+                  },
+                  {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
+                  }
+                ]
               },
               "timeBucket": {
                 "type": "object",
@@ -8413,16 +8413,6 @@
                 ],
                 "description": "Dimension to group by, one row per value."
               },
-              "filters": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/FilterSet"
-                  },
-                  {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
-                  }
-                ]
-              },
               "metric": {
                 "oneOf": [
                   {
@@ -8584,6 +8574,16 @@
                   }
                 ],
                 "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`."
+              },
+              "filters": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/FilterSet"
+                  },
+                  {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
+                  }
+                ]
               },
               "timeBucket": {
                 "type": "object",
@@ -8695,16 +8695,6 @@
                 ],
                 "description": "Dimension to group by, one row per value."
               },
-              "filters": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/FilterSet"
-                  },
-                  {
-                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
-                  }
-                ]
-              },
               "metric": {
                 "oneOf": [
                   {
@@ -8866,6 +8856,268 @@
                   }
                 ],
                 "description": "The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`."
+              },
+              "filters": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/FilterSet"
+                  },
+                  {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
+                  }
+                ]
+              },
+              "timeBucket": {
+                "type": "object",
+                "properties": {
+                  "unit": {
+                    "type": "string",
+                    "enum": [
+                      "hour",
+                      "day",
+                      "week"
+                    ],
+                    "description": "Bucket granularity."
+                  },
+                  "size": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 365,
+                    "default": 1,
+                    "description": "Number of units per bucket (e.g. `2` weeks)."
+                  }
+                },
+                "required": [
+                  "unit"
+                ],
+                "description": "Bucket the metric over time. Omit for a single aggregate."
+              },
+              "range": {
+                "type": "object",
+                "properties": {
+                  "fromIso": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2026-06-23T00:00:00Z",
+                    "description": "Inclusive lower bound (ISO-8601)."
+                  },
+                  "toIso": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2026-06-30T00:00:00Z",
+                    "description": "Exclusive upper bound (ISO-8601). Must be after `fromIso`."
+                  }
+                },
+                "required": [
+                  "fromIso",
+                  "toIso"
+                ],
+                "description": "The time window."
+              },
+              "orderBy": {
+                "type": "object",
+                "properties": {
+                  "by": {
+                    "type": "string",
+                    "enum": [
+                      "value",
+                      "key"
+                    ],
+                    "default": "value"
+                  },
+                  "direction": {
+                    "type": "string",
+                    "enum": [
+                      "asc",
+                      "desc"
+                    ],
+                    "default": "desc"
+                  }
+                },
+                "default": {
+                  "by": "value",
+                  "direction": "desc"
+                },
+                "description": "Sort for breakdown results. Defaults to value-desc."
+              },
+              "limit": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 500,
+                "default": 50,
+                "description": "Maximum rows returned. Defaults to 50; max 500."
+              }
+            },
+            "required": [
+              "stream",
+              "metric",
+              "range"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "stream": {
+                "type": "string",
+                "enum": [
+                  "scores"
+                ],
+                "description": "Scored occurrences. A signal is scores carrying a `signalId` — analyze one signal via `stream: \"scores\"` filtered by `score.signalId` (or broken down by `signalId`)."
+              },
+              "breakdown": {
+                "type": "string",
+                "enum": [
+                  "signalId",
+                  "source",
+                  "model",
+                  "provider",
+                  "service",
+                  "tool",
+                  "tag"
+                ],
+                "description": "Dimension to group by: `signalId`/`source` (direct) or a trace dim (`model`…`tag`)."
+              },
+              "metric": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "count"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "passRate"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "errorRate"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "avg"
+                        ]
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "value"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "min"
+                        ]
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "value"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "max"
+                        ]
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "value"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "median"
+                        ]
+                      },
+                      "field": {
+                        "type": "string",
+                        "enum": [
+                          "value"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "field"
+                    ]
+                  }
+                ],
+                "description": "The metric: `count`, `passRate`, `errorRate`, or `{avg|min|max|median}` of the 0–1 score `value`."
+              },
+              "filters": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/FilterSet"
+                  },
+                  {
+                    "description": "Structured filter set applied to the stream (same DSL as `listTraces`)."
+                  }
+                ]
               },
               "timeBucket": {
                 "type": "object",

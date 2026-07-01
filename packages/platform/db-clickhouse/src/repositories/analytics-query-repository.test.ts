@@ -88,6 +88,33 @@ const day2To = new Date("2026-06-03T00:00:00.000Z")
 const DAY3 = new Date("2026-06-03T10:00:00.000Z")
 const day3From = day2To
 const day3To = new Date("2026-06-04T00:00:00.000Z")
+// Day 5 holds the score fixtures (the signal grain). `created_at` is a DateTime64(3).
+const day5From = new Date("2026-06-05T00:00:00.000Z")
+const day5To = new Date("2026-06-06T00:00:00.000Z")
+const toCh3 = (value: Date): string => value.toISOString().replace("T", " ").replace("Z", "")
+
+const score = (
+  n: number,
+  opts: { signalId: string; value: number; passed: boolean; errored?: boolean; traceId?: string },
+) => ({
+  id: `aqscore${n}`.padEnd(24, "0"),
+  organization_id: ORG_ID as string,
+  project_id: PROJECT_ID as string,
+  session_id: "",
+  trace_id: opts.traceId ?? "",
+  span_id: "",
+  source: "evaluation",
+  source_id: "eval_src_000000000000",
+  simulation_id: "",
+  signal_id: opts.signalId,
+  value: opts.value,
+  passed: opts.passed,
+  errored: opts.errored ?? false,
+  duration: 0,
+  tokens: 0,
+  cost: 0,
+  created_at: toCh3(new Date("2026-06-05T10:00:00.000Z")),
+})
 
 const ch = setupTestClickHouse()
 const baseInput = {
@@ -128,6 +155,16 @@ describe("AnalyticsQueryReaderLive (traces)", () => {
         span(7, DAY3, { durationMs: 1_000 }),
         span(8, DAY3, { durationMs: 2_000 }),
         span(9, DAY3, { durationMs: 3_000 }),
+      ]),
+    )
+    // Scores (signal grain): sig-a on two gpt-4o-mini traces, sig-b on a gpt-4o
+    // trace + one trace-less score. 2 passed / 1 errored → passRate .5, errorRate .25.
+    await Effect.runPromise(
+      insertJsonEachRow(ch.client, "scores", [
+        score(1, { signalId: "sig-a", value: 0.2, passed: false, traceId: traceId(1) }),
+        score(2, { signalId: "sig-a", value: 0.4, passed: true, traceId: traceId(2) }),
+        score(3, { signalId: "sig-b", value: 0.6, passed: true, traceId: traceId(4) }),
+        score(4, { signalId: "sig-b", value: 0.0, passed: false, errored: true }),
       ]),
     )
   })
@@ -237,5 +274,36 @@ describe("AnalyticsQueryReaderLive (traces)", () => {
     })
     // All seeded spans use operation "chat".
     expect(series).toEqual([{ key: "chat", value: 4 }])
+  })
+
+  const scoresInput = (extra: Partial<AnalyticsQueryInput>): AnalyticsQueryInput => ({
+    ...baseInput,
+    stream: "scores",
+    metric: { kind: "count" },
+    from: day5From,
+    to: day5To,
+    ...extra,
+  })
+
+  it("counts score occurrences (signal grain)", async () => {
+    expect(await run(scoresInput({}))).toEqual([{ value: 4 }])
+  })
+
+  it("breaks scores down by signalId", async () => {
+    const byKey = Object.fromEntries((await run(scoresInput({ breakdown: "signalId" }))).map((p) => [p.key, p.value]))
+    expect(byKey).toEqual({ "sig-a": 2, "sig-b": 2 })
+  })
+
+  it("computes avg(value) / passRate / errorRate over scores (0–1, unscaled)", async () => {
+    expect((await run(scoresInput({ metric: { kind: "avg", field: "value" } })))[0]?.value).toBeCloseTo(0.3, 5)
+    expect((await run(scoresInput({ metric: { kind: "passRate" } })))[0]?.value).toBeCloseTo(0.5, 5)
+    expect((await run(scoresInput({ metric: { kind: "errorRate" } })))[0]?.value).toBeCloseTo(0.25, 5)
+  })
+
+  it("breaks scores down by a trace dim (model) via the score's trace", async () => {
+    const byKey = Object.fromEntries((await run(scoresInput({ breakdown: "model" }))).map((p) => [p.key, p.value]))
+    // sig-a scores on two gpt-4o-mini traces, one sig-b score on a gpt-4o trace;
+    // the trace-less score drops out of the trace-dim breakdown.
+    expect(byKey).toEqual({ "gpt-4o-mini": 2, "gpt-4o": 1 })
   })
 })

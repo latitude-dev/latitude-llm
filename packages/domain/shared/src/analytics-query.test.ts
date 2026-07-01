@@ -74,6 +74,39 @@ describe("analyticsQuerySchema", () => {
     expect(result.success).toBe(false)
   })
 
+  it("accepts scores metrics + signal breakdowns (the signal grain)", () => {
+    expect(
+      analyticsQuerySchema.safeParse({ stream: "scores", metric: { kind: "count" }, breakdown: "signalId", range })
+        .success,
+    ).toBe(true)
+    expect(analyticsQuerySchema.safeParse({ stream: "scores", metric: { kind: "passRate" }, range }).success).toBe(true)
+    expect(
+      analyticsQuerySchema.safeParse({
+        stream: "scores",
+        metric: { kind: "avg", field: "value" },
+        breakdown: "model",
+        range,
+      }).success,
+    ).toBe(true)
+  })
+
+  it("rejects trace-family metrics / query / span dims on the scores stream", () => {
+    // scores has no duration/cost/tokens metrics, no cacheHitRate, no semantic query.
+    expect(
+      analyticsQuerySchema.safeParse({ stream: "scores", metric: { kind: "sum", field: "duration" }, range }).success,
+    ).toBe(false)
+    expect(analyticsQuerySchema.safeParse({ stream: "scores", metric: { kind: "cacheHitRate" }, range }).success).toBe(
+      false,
+    )
+    expect(
+      analyticsQuerySchema.safeParse({ stream: "scores", metric: { kind: "count" }, query: "x", range }).success,
+    ).toBe(false)
+    expect(
+      analyticsQuerySchema.safeParse({ stream: "scores", metric: { kind: "count" }, breakdown: "operation", range })
+        .success,
+    ).toBe(false)
+  })
+
   it("caps the limit", () => {
     const result = analyticsQuerySchema.safeParse({
       stream: "traces",

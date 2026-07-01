@@ -1,10 +1,10 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import {
+  type AnalyticsMetric,
   type AnalyticsSeriesPoint,
   type AnalyticsTimeBucket,
   ChSqlClient,
   type ChSqlClientShape,
-  type MonitorMetric,
   metricValueFromStored,
   toRepositoryError,
 } from "@domain/shared"
@@ -16,10 +16,10 @@ import { type BreakdownExpr, streamFor } from "../metric-sql/index.ts"
  * Convert a raw ClickHouse aggregate to the value we return. Only the physical
  * quantities are scaled to display units — `duration` → seconds, `cost` →
  * dollars (via the platform's canonical converter). Rates (`errorRate`,
- * `cacheHitRate`) stay as 0–1 ratios and counts/tokens stay raw: this is a data
- * API, so a fraction is more composable than a percent for downstream math.
+ * `cacheHitRate`, `passRate`), the 0–1 score `value`, and counts/tokens stay raw:
+ * this is a data API, so a fraction is more composable than a percent downstream.
  */
-const toDisplayValue = (raw: number, metric: MonitorMetric): number =>
+const toDisplayValue = (raw: number, metric: AnalyticsMetric): number =>
   "field" in metric && (metric.field === "duration" || metric.field === "cost")
     ? metricValueFromStored(raw, metric)
     : raw
