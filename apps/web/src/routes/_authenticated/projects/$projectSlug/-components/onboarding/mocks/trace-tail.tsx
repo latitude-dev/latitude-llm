@@ -29,7 +29,7 @@ export function TraceTail({ traceReceived }: { readonly traceReceived: boolean }
       </div>
 
       {!traceReceived ? (
-        <Button variant="muted" size="sm" className="w-fit" onClick={() => window.location.reload()}>
+        <Button variant="outline" size="sm" className="w-fit" onClick={() => window.location.reload()}>
           <Icon icon={RefreshCcw} size="sm" />
           Refresh
         </Button>
