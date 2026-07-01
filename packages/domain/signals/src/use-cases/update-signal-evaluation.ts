@@ -45,10 +45,10 @@ export type UpdateSignalEvaluationError =
 
 /**
  * Recompiles a user signal's active evaluation from a new `settings` form, **in place** (same
- * evaluation id). Updating in place — rather than archiving and minting a new row — is required by
- * the `(org, project, name)` unique index (two non-deleted same-named rows collide) and matches the
- * shipped realign path (`persistAlignmentResult`). Only `origin = 'user'` signals whose active
- * evaluation is settings-defined are editable here: raw-script and system signals are rejected.
+ * evaluation id). Updating in place — rather than archiving and minting a new row — matches the
+ * shipped realign path (`persistAlignmentResult`) and avoids a lineage/naming scheme for the
+ * replacement row. Only `origin = 'user'` signals whose active evaluation is settings-defined are
+ * editable here: raw-script and system signals are rejected.
  * Edits apply forward-only; existing scores keep their frozen membership. The signal's `filters`
  * (the live pre-gate) are untouched and continue to gate the same evaluation.
  */
