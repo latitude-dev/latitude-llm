@@ -20,6 +20,12 @@ const BREAKDOWN = {
  * organization + project (labels in the outer WHERE, moments inside the joined
  * subquery which also carries the time window) so neither table is scanned
  * cross-tenant and the join can't match a moment from another org/project.
+ *
+ * Both are `ReplacingMergeTree(indexed_at)`; the `FINAL`s are required, not
+ * cosmetic — without them, un-merged duplicate versions on either side inflate
+ * aggregates (and duplicates on the moment side fan out multiplicatively through
+ * the join). The labels table has no time axis (partitioned by `indexed_at`), so
+ * it can't be time-pruned — only the moment side is; the join restricts the rest.
  */
 const buildInner = (input: MetricSqlInput<"moments">): Effect.Effect<InnerQuery, never, never> =>
   Effect.sync(() => {
@@ -30,10 +36,10 @@ const buildInner = (input: MetricSqlInput<"moments">): Effect.Effect<InnerQuery,
               lbl.kind AS kind, lbl.actor AS actor, lbl.confidence AS confidence,
               lbl.session_id AS session_id, mom.start_time AS start_time,
               mom.coherence_score AS coherence_score
-            FROM session_moment_labels lbl
+            FROM session_moment_labels lbl FINAL
             INNER JOIN (
               SELECT session_id, analysis_hash, moment_id, start_time, coherence_score
-              FROM session_semantic_moments
+              FROM session_semantic_moments FINAL
               WHERE organization_id = {organizationId:String}
                 AND project_id = {projectId:String}
                 AND start_time >= toDateTime64({windowFrom:String}, 9, 'UTC')
