@@ -152,12 +152,9 @@ export const optimizeEvaluationDraft = (input: {
 
       if (dataset.valset.length === 0) {
         return yield* Effect.fail(
-          new EvaluationOptimizationActivityError({
-            activity: "optimizeEvaluationDraft",
-            cause: new Error(
-              `GEPA optimization requires separate training and validation examples, got ${allExamples.length} curated example${allExamples.length === 1 ? "" : "s"}`,
-            ),
-          }),
+          new Error(
+            `GEPA optimization requires separate training and validation examples, got ${allExamples.length} curated example${allExamples.length === 1 ? "" : "s"}`,
+          ),
         )
       }
 
