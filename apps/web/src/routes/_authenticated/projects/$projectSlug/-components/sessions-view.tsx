@@ -117,6 +117,7 @@ interface SessionsViewProps {
   readonly onSelectionChange: (state: SelectionState<string>) => void
   readonly totalTraceCount: number
   readonly onFiltersChange: (filters: FilterSet) => void
+  readonly onShowAllSessions: () => void
   readonly onFiltersClose: () => void
   readonly onOpenSession: (sessionId: string, traceId?: string) => void
   readonly onCloseSession: () => void
@@ -139,6 +140,7 @@ export function SessionsView({
   onSelectionChange,
   totalTraceCount,
   onFiltersChange,
+  onShowAllSessions,
   onFiltersClose,
   onOpenSession,
   onCloseSession,
@@ -228,29 +230,25 @@ export function SessionsView({
     filters,
   })
 
-  const shouldCheckOrphanFragmentSessions = !isLoading && sessions.length === 0 && isHasLlmActivityFilterOn(filters)
+  const shouldCheckOrphanFragmentSessions =
+    !isLoading && sessions.length === 0 && isHasLlmActivityFilterOn(filters) && !searchQuery
   const { totalCount: sessionsWithoutLlmActivityCount, isLoading: isOrphanFragmentCountLoading } =
     useSessionsCountWithoutLlmActivityFilter({
       projectId,
       filters,
-      ...(searchQuery ? { searchQuery } : {}),
       enabled: shouldCheckOrphanFragmentSessions,
     })
   const hasOrphanFragmentSessions =
     shouldCheckOrphanFragmentSessions && !isOrphanFragmentCountLoading && sessionsWithoutLlmActivityCount > 0
 
-  const showAllSessions = useCallback(() => {
-    onFiltersChange({ ...filters, hasLlmActivity: [{ op: "eq", value: false }] })
-  }, [filters, onFiltersChange])
-
   const blankSlate = useMemo(() => {
-    if (hasOrphanFragmentSessions) {
-      return <SessionsOrphanFragmentsBlankSlate onShowAllSessions={showAllSessions} />
-    }
     if (searchQuery) return "No sessions match the current search"
+    if (hasOrphanFragmentSessions) {
+      return <SessionsOrphanFragmentsBlankSlate onShowAllSessions={onShowAllSessions} />
+    }
     if (hasUserAppliedFilters) return "No sessions match the current filters"
     return "No sessions found"
-  }, [hasOrphanFragmentSessions, hasUserAppliedFilters, searchQuery, showAllSessions])
+  }, [hasOrphanFragmentSessions, hasUserAppliedFilters, onShowAllSessions, searchQuery])
 
   // Fetch annotation counts for every trace that could show in the visible
   // session rows (trace_ids on each session) so the Indicators column can

@@ -307,6 +307,10 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
     setRawFilters(serializeFilters(next) ?? "")
   }
 
+  const onShowAllSessions = useCallback(() => {
+    setRawFilters(serializeFilters({ ...filters, hasLlmActivity: [{ op: "eq", value: false as const }] }) ?? "")
+  }, [filters, setRawFilters])
+
   const onTimeRangeSelect = useCallback((range: { from: string; to: string } | null) => {
     setRawFilters((prev) => {
       const current = parseFilters(prev || undefined)
@@ -697,6 +701,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
           onSelectionChange={setSelectionState}
           totalTraceCount={totalTraceCount}
           onFiltersChange={onFiltersChange}
+          onShowAllSessions={onShowAllSessions}
           onFiltersClose={() => setFiltersOpen(false)}
           onOpenSession={onOpenSession}
           onCloseSession={closeSessionPanel}

@@ -96,10 +96,6 @@ function getStatusValues(filters: FilterSet, field: string): readonly StatusFilt
   return raw.filter((v): v is StatusFilterValue => (STATUS_VALUES as readonly string[]).includes(v))
 }
 
-function getHasLlmActivityOn(filters: FilterSet): boolean {
-  return isHasLlmActivityFilterOn(filters)
-}
-
 function setFieldConditions(filters: FilterSet, field: string, conditions: FilterCondition[]): FilterSet {
   if (conditions.length === 0) {
     const { [field]: _, ...rest } = filters
@@ -662,14 +658,16 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
         {mode === "sessions" && (
           <CollapsibleSection
             label="Has LLM activity"
-            defaultOpen={filters.hasLlmActivity !== undefined && !getHasLlmActivityOn(filters)}
+            defaultOpen={filters.hasLlmActivity !== undefined && !isHasLlmActivityFilterOn(filters)}
           >
             <div className="flex items-center justify-between gap-2">
               <Text.H7 color="foregroundMuted">
-                {getHasLlmActivityOn(filters) ? "Hiding sessions without any LLM call." : "Including orphan fragments."}
+                {isHasLlmActivityFilterOn(filters)
+                  ? "Hiding sessions without any LLM call."
+                  : "Including orphan fragments."}
               </Text.H7>
               <Switch
-                checked={getHasLlmActivityOn(filters)}
+                checked={isHasLlmActivityFilterOn(filters)}
                 onCheckedChange={(next) => setHasLlmActivity(next === true)}
               />
             </div>

@@ -131,6 +131,10 @@ function SandboxTracesContent({ sandboxOrgId, projectSlug }: { sandboxOrgId: str
     setRawFilters(serializeFilters(next) ?? "")
   }
 
+  const onShowAllSessions = useCallback(() => {
+    setRawFilters(serializeFilters({ ...filters, hasLlmActivity: [{ op: "eq", value: false as const }] }) ?? "")
+  }, [filters, setRawFilters])
+
   const closeTraceDrawer = useCallback(() => {
     setActiveTraceId("")
     setSelectedSpanId("")
@@ -338,6 +342,7 @@ function SandboxTracesContent({ sandboxOrgId, projectSlug }: { sandboxOrgId: str
           onSelectionChange={setSelectionState}
           totalTraceCount={totalCount}
           onFiltersChange={onFiltersChange}
+          onShowAllSessions={onShowAllSessions}
           onFiltersClose={() => setFiltersOpen(false)}
           onOpenSession={onOpenSession}
           onCloseSession={closeSessionPanel}
