@@ -17,15 +17,18 @@ import {
   upsertAgentDispatchConfigUseCase,
 } from "@domain/agent-dispatch"
 import { hasFeatureFlagUseCase } from "@domain/feature-flags"
-import { OrganizationId, ProjectId } from "@domain/shared"
+import { OrganizationId, ProjectId, SignalId } from "@domain/shared"
+import { SignalRepository } from "@domain/signals"
 import {
   AgentDispatchConfigRepositoryLive,
   AgentDispatchCredentialRepositoryLive,
   AgentDispatchIntegrationRepositoryLive,
   AgentDispatchRepositoryLive,
   FeatureFlagRepositoryLive,
+  SignalRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
+import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
@@ -37,11 +40,14 @@ export interface AgentDispatchRecord {
   readonly trigger: string
   readonly sourceType: string
   readonly sourceId: string
+  readonly sourceName: string | null
   readonly status: string
   readonly claimedAt: string
   readonly dispatchedAt: string | null
   readonly externalUrl: string | null
+  readonly routineUrl: string | null
   readonly errorCategory: string | null
+  readonly errorDetail: string | null
   readonly kind: AgentDispatchKind | null
 }
 
@@ -76,6 +82,12 @@ interface LinearMemberRecord {
   readonly email: string | null
 }
 
+interface LinearTeamRecord {
+  readonly id: string
+  readonly key: string
+  readonly name: string
+}
+
 const cursorRepositoriesResponseSchema = z.object({
   repositories: z.array(
     z.object({
@@ -94,6 +106,20 @@ const linearMembersResponseSchema = z.object({
           id: z.string(),
           name: z.string(),
           email: z.string().nullable().optional(),
+        }),
+      ),
+    }),
+  }),
+})
+
+const linearTeamsResponseSchema = z.object({
+  data: z.object({
+    teams: z.object({
+      nodes: z.array(
+        z.object({
+          id: z.string(),
+          key: z.string(),
+          name: z.string(),
         }),
       ),
     }),
@@ -122,17 +148,21 @@ const toDispatchRecord = (row: {
   dispatchedAt: Date | null
   externalUrl: string | null
   errorCategory: string | null
+  errorDetail: string | null
   idempotencyKey: string
 }): AgentDispatchRecord => ({
   id: row.id,
   trigger: row.trigger,
   sourceType: row.sourceType,
   sourceId: row.sourceId,
+  sourceName: null,
   status: row.status,
   claimedAt: row.claimedAt.toISOString(),
   dispatchedAt: row.dispatchedAt?.toISOString() ?? null,
   externalUrl: row.externalUrl,
+  routineUrl: null,
   errorCategory: row.errorCategory,
+  errorDetail: row.errorDetail,
   kind: parseKindFromIdempotencyKey(row.idempotencyKey),
 })
 
@@ -159,6 +189,31 @@ async function fetchLinearMembers(linearApiKey: string): Promise<LinearMemberRec
   const parsed = linearMembersResponseSchema.safeParse(await response.json())
   if (!parsed.success) return []
   return parsed.data.data.users.nodes.map((user) => ({ id: user.id, name: user.name, email: user.email ?? null }))
+}
+
+async function fetchLinearTeams(linearApiKey: string): Promise<LinearTeamRecord[]> {
+  const response = await fetch("https://api.linear.app/graphql", {
+    method: "POST",
+    headers: {
+      Authorization: linearApiKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      query: `query LatitudeAgentDispatchTeams { teams(first: 100) { nodes { id key name } } }`,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(
+      response.status === 401 || response.status === 403
+        ? "Linear rejected this API key."
+        : "Could not load Linear teams.",
+    )
+  }
+
+  const parsed = linearTeamsResponseSchema.safeParse(await response.json())
+  if (!parsed.success) return []
+  return parsed.data.data.teams.nodes
 }
 
 async function fetchCursorRepositories(cursorApiKey: string): Promise<CursorRepositoryRecord[]> {
@@ -197,6 +252,7 @@ export const isAgentDispatchEnabled = createServerFn({ method: "GET" }).handler(
   const enabled = await Effect.runPromise(
     hasFeatureFlagUseCase({ identifier: AGENT_DISPATCH_FLAG }).pipe(
       withPostgres(FeatureFlagRepositoryLive, getPostgresClient(), organizationId),
+      withTracing,
     ),
   )
   return { enabled }
@@ -222,7 +278,7 @@ export const listAgentDispatchIntegrations = createServerFn({ method: "GET" }).h
         }
       }
       return results
-    }).pipe(withPostgres(AgentDispatchIntegrationRepositoryLive, client, organizationId)),
+    }).pipe(withPostgres(AgentDispatchIntegrationRepositoryLive, client, organizationId), withTracing),
   )
 
   return integrations
@@ -232,13 +288,44 @@ export const listAgentDispatches = createServerFn({ method: "GET" })
   .inputValidator(z.object({ projectId: z.string() }))
   .handler(async ({ data }) => {
     const { organizationId } = await requireSession()
+    const projectId = ProjectId(data.projectId)
     const rows = await Effect.runPromise(
       Effect.gen(function* () {
-        const repo = yield* AgentDispatchRepository
-        return yield* repo.listByProject(ProjectId(data.projectId))
-      }).pipe(withPostgres(AgentDispatchRepositoryLive, getPostgresClient(), organizationId)),
+        const dispatchRepo = yield* AgentDispatchRepository
+        const configRepo = yield* AgentDispatchConfigRepository
+        const signalRepository = yield* SignalRepository
+        const dispatches = yield* dispatchRepo.listByProject(projectId)
+        const configs = yield* configRepo.listByProject(projectId)
+        const configById = new Map(configs.map((config) => [config.id, config]))
+        const signalIds = dispatches
+          .filter((dispatch) => dispatch.sourceType === "signal")
+          .map((dispatch) => SignalId(dispatch.sourceId))
+        const signals = signalIds.length > 0 ? yield* signalRepository.findByIds({ projectId, signalIds }) : []
+        const signalNameById = new Map<string, string>(signals.map((signal) => [signal.id, signal.name]))
+
+        return dispatches.map((dispatch) => {
+          const config = configById.get(dispatch.configId)
+          const routineUrl =
+            config?.kind === "claude_code" && "routineTriggerId" in config.target
+              ? `https://claude.ai/code/routines/${config.target.routineTriggerId}`
+              : null
+
+          return {
+            ...toDispatchRecord(dispatch),
+            sourceName: dispatch.sourceType === "signal" ? (signalNameById.get(dispatch.sourceId) ?? null) : null,
+            routineUrl,
+          }
+        })
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(AgentDispatchRepositoryLive, AgentDispatchConfigRepositoryLive, SignalRepositoryLive),
+          getPostgresClient(),
+          organizationId,
+        ),
+        withTracing,
+      ),
     )
-    return rows.map((row) => toDispatchRecord(row))
+    return rows
   })
 
 export const listCursorRepositories = createServerFn({ method: "GET" })
@@ -249,7 +336,7 @@ export const listCursorRepositories = createServerFn({ method: "GET" })
       Effect.gen(function* () {
         const credentialRepo = yield* AgentDispatchCredentialRepository
         return yield* credentialRepo.getDecrypted(data.integrationId)
-      }).pipe(withPostgres(AgentDispatchCredentialRepositoryLive, getPostgresClient(), organizationId)),
+      }).pipe(withPostgres(AgentDispatchCredentialRepositoryLive, getPostgresClient(), organizationId), withTracing),
     )
 
     if (!credentials.cursorApiKey) return []
@@ -265,11 +352,33 @@ export const listLinearMembers = createServerFn({ method: "GET" })
       Effect.gen(function* () {
         const credentialRepo = yield* AgentDispatchCredentialRepository
         return yield* credentialRepo.getDecrypted(data.integrationId)
-      }).pipe(withPostgres(AgentDispatchCredentialRepositoryLive, getPostgresClient(), organizationId)),
+      }).pipe(withPostgres(AgentDispatchCredentialRepositoryLive, getPostgresClient(), organizationId), withTracing),
     )
 
     if (!credentials.linearApiKey) return []
     return fetchLinearMembers(credentials.linearApiKey)
+  })
+
+export const listLinearTeams = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ integrationId: z.string() }))
+  .handler(async ({ data }) => {
+    const { organizationId } = await requireSession()
+    const credentials = await Effect.runPromise(
+      Effect.gen(function* () {
+        const credentialRepo = yield* AgentDispatchCredentialRepository
+        return yield* credentialRepo.getDecrypted(data.integrationId)
+      }).pipe(withPostgres(AgentDispatchCredentialRepositoryLive, getPostgresClient(), organizationId), withTracing),
+    )
+
+    if (!credentials.linearApiKey) return []
+    return fetchLinearTeams(credentials.linearApiKey)
+  })
+
+export const listLinearTeamsForApiKey = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ linearApiKey: z.string().min(1) }))
+  .handler(async ({ data }) => {
+    await requireSession()
+    return fetchLinearTeams(data.linearApiKey)
   })
 
 export const listCursorRepositoriesForApiKey = createServerFn({ method: "POST" })
@@ -287,7 +396,7 @@ export const getWebhookSecret = createServerFn({ method: "GET" })
       Effect.gen(function* () {
         const credentialRepo = yield* AgentDispatchCredentialRepository
         return yield* credentialRepo.getDecrypted(data.integrationId)
-      }).pipe(withPostgres(AgentDispatchCredentialRepositoryLive, getPostgresClient(), organizationId)),
+      }).pipe(withPostgres(AgentDispatchCredentialRepositoryLive, getPostgresClient(), organizationId), withTracing),
     )
 
     return { webhookSecret: credentials.webhookSecret ?? null }
@@ -310,7 +419,7 @@ export const getAgentDispatchConfig = createServerFn({ method: "GET" })
           integrationId: integration.id,
         })
         return config ? toConfigRecord(config) : null
-      }).pipe(withPostgres(agentDispatchLayer, client, organizationId)),
+      }).pipe(withPostgres(agentDispatchLayer, client, organizationId), withTracing),
     )
   })
 
@@ -350,7 +459,7 @@ export const connectCursorIntegration = createServerFn({ method: "POST" })
           },
         })
         return { integrationId: integration.id }
-      }).pipe(withPostgres(agentDispatchLayer, client, organizationId)),
+      }).pipe(withPostgres(agentDispatchLayer, client, organizationId), withTracing),
     )
   })
 
@@ -360,6 +469,7 @@ export const connectClaudeIntegration = createServerFn({ method: "POST" })
       kind: z.literal("claude_code"),
       claudeRoutineToken: z.string().min(1),
       routineTriggerId: z.string().min(1),
+      projectId: z.string(),
     }),
   )
   .handler(async ({ data }) => {
@@ -375,8 +485,17 @@ export const connectClaudeIntegration = createServerFn({ method: "POST" })
           organizationId: OrganizationId(organizationId),
           claudeRoutineToken: data.claudeRoutineToken,
         })
+        yield* upsertAgentDispatchConfigUseCase({
+          organizationId: OrganizationId(organizationId),
+          projectId: ProjectId(data.projectId),
+          integrationId: integration.id,
+          kind: "claude_code",
+          enabled: true,
+          triggers: ["signal.discovered"],
+          target: { routineTriggerId: data.routineTriggerId },
+        })
         return { integrationId: integration.id }
-      }).pipe(withPostgres(agentDispatchLayer, client, organizationId)),
+      }).pipe(withPostgres(agentDispatchLayer, client, organizationId), withTracing),
     )
   })
 
@@ -385,7 +504,8 @@ export const connectLinearIntegration = createServerFn({ method: "POST" })
     z.object({
       kind: z.literal("linear"),
       linearApiKey: z.string().min(1),
-      teamId: z.string().min(1),
+      teamId: z.string().uuid(),
+      projectId: z.string(),
     }),
   )
   .handler(async ({ data }) => {
@@ -401,8 +521,17 @@ export const connectLinearIntegration = createServerFn({ method: "POST" })
           organizationId: OrganizationId(organizationId),
           linearApiKey: data.linearApiKey,
         })
+        yield* upsertAgentDispatchConfigUseCase({
+          organizationId: OrganizationId(organizationId),
+          projectId: ProjectId(data.projectId),
+          integrationId: integration.id,
+          kind: "linear",
+          enabled: true,
+          triggers: ["signal.discovered"],
+          target: { teamId: data.teamId },
+        })
         return { integrationId: integration.id }
-      }).pipe(withPostgres(agentDispatchLayer, client, organizationId)),
+      }).pipe(withPostgres(agentDispatchLayer, client, organizationId), withTracing),
     )
   })
 
@@ -438,7 +567,7 @@ export const connectWebhookIntegration = createServerFn({ method: "POST" })
           target: { webhookUrl: data.webhookUrl },
         })
         return { integrationId: integration.id, webhookSecret }
-      }).pipe(withPostgres(agentDispatchLayer, client, organizationId)),
+      }).pipe(withPostgres(agentDispatchLayer, client, organizationId), withTracing),
     )
   })
 
@@ -451,6 +580,7 @@ export const disconnectAgentDispatchIntegration = createServerFn({ method: "POST
     await Effect.runPromise(
       disconnectAgentDispatchIntegrationUseCase({ integrationId: data.integrationId }).pipe(
         withPostgres(agentDispatchLayer, client, organizationId),
+        withTracing,
       ),
     )
     return { disconnected: true }
@@ -484,7 +614,7 @@ export const upsertAgentDispatchConfig = createServerFn({ method: "POST" })
         target: data.target,
         ...(data.promptTemplate !== undefined ? { promptTemplate: data.promptTemplate } : {}),
         ...(data.guardrails !== undefined ? { guardrails: data.guardrails } : {}),
-      }).pipe(withPostgres(AgentDispatchConfigRepositoryLive, client, organizationId)),
+      }).pipe(withPostgres(AgentDispatchConfigRepositoryLive, client, organizationId), withTracing),
     )
 
     return toConfigRecord(config)

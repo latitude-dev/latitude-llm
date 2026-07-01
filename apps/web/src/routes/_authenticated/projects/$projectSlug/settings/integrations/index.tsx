@@ -4,28 +4,28 @@ import { relativeTime } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
-import { ExternalLink, Plus, Trash2 } from "lucide-react"
+import { Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { z } from "zod"
 import {
   disconnectSlackIntegration,
   getActiveSlackIntegration,
   type SlackIntegrationRecord,
-} from "../../../../../domains/integrations/integrations.functions.ts"
-import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
-import { toUserMessage } from "../../../../../lib/errors.ts"
-import { useRouteProject } from "../-route-data.ts"
-import { AgentDispatchSection } from "./-components/agent-dispatch-section.tsx"
-import { IntegrationCard } from "./-components/integration-card.tsx"
-import { SettingsPage } from "./-components/settings-page.tsx"
-import { SLACK_INTEGRATION_QUERY_KEY, SlackRouteRow } from "./-components/slack-route-row.tsx"
+} from "../../../../../../domains/integrations/integrations.functions.ts"
+import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
+import { toUserMessage } from "../../../../../../lib/errors.ts"
+import { useRouteProject } from "../../-route-data.ts"
+import { AgentDispatchSection } from "../-components/agent-dispatch-section.tsx"
+import { IntegrationCard } from "../-components/integration-card.tsx"
+import { SettingsPage } from "../-components/settings-page.tsx"
+import { SLACK_INTEGRATION_QUERY_KEY, SlackRouteRow } from "../-components/slack-route-row.tsx"
 
 const searchSchema = z.object({
   installed: z.literal("ok").optional(),
   error: z.string().optional(),
 })
 
-export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/integrations")({
+export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/integrations/")({
   validateSearch: searchSchema,
   component: IntegrationsSettingsPage,
 })
@@ -65,7 +65,9 @@ function IntegrationsSettingsPage() {
     <SettingsPage title="Integrations" description="Connect Latitude to the tools your team already uses.">
       <div className="flex flex-col gap-3">
         <SlackIntegrationSection />
-        {currentProject ? <AgentDispatchSection projectId={currentProject.id} /> : null}
+        {currentProject ? (
+          <AgentDispatchSection projectId={currentProject.id} projectSlug={currentProject.slug} />
+        ) : null}
       </div>
     </SettingsPage>
   )
@@ -104,11 +106,10 @@ function DisconnectedSlackCard() {
         // client-side routing. Plain `<a>` (inside a `Button asChild`)
         // gives cmd/middle-click + copy-link affordances while keeping
         // the full-page nav.
-        <Button asChild variant="outline">
+        <Button asChild>
           <a href="/integrations/slack/install">
             <Icon icon={Plus} size="sm" />
             Connect
-            <Icon icon={ExternalLink} size="sm" />
           </a>
         </Button>
       }
@@ -156,7 +157,7 @@ function ConnectedSlackCard({
           </div>
         </div>
         <div className="shrink-0">
-          <Button variant="outline" onClick={onDisconnect}>
+          <Button variant="destructive" onClick={onDisconnect}>
             Disconnect
           </Button>
         </div>

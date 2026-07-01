@@ -1,10 +1,13 @@
 import { AGENT_DISPATCH_TRIGGERS } from "@domain/agent-dispatch"
 import {
+  Badge,
   Button,
   Checkbox,
   ClaudeCodeIcon,
   CopyableText,
   Icon,
+  InfiniteTable,
+  type InfiniteTableColumn,
   Input,
   Label,
   Modal,
@@ -16,6 +19,7 @@ import {
 import { relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { Link } from "@tanstack/react-router"
 import { Copy, ExternalLink, type LucideProps, Plus, Webhook } from "lucide-react"
 import { useState } from "react"
 import { z } from "zod"
@@ -36,6 +40,8 @@ import {
   listCursorRepositories,
   listCursorRepositoriesForApiKey,
   listLinearMembers,
+  listLinearTeams,
+  listLinearTeamsForApiKey,
   upsertAgentDispatchConfig,
 } from "../../../../../../domains/agent-dispatch/agent-dispatch.functions.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
@@ -46,20 +52,36 @@ import { IntegrationCard } from "./integration-card.tsx"
 
 export const AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY = ["agent-dispatch-integrations"] as const
 
-const KIND_LABELS = {
+export const AGENT_DISPATCH_KIND_LABELS = {
   cursor: "Cursor",
   claude_code: "Claude Code",
   linear: "Linear",
   webhook: "Webhook",
 } as const
 
-type AgentDispatchKindKey = keyof typeof KIND_LABELS
+export type AgentDispatchKindKey = keyof typeof AGENT_DISPATCH_KIND_LABELS
+
+const KIND_LABELS = AGENT_DISPATCH_KIND_LABELS
 
 const DEEP_LINK_LABELS: Record<AgentDispatchKindKey, string> = {
   cursor: "View in Cursor",
   claude_code: "View in Claude",
   linear: "View Linear issue",
   webhook: "View delivery",
+}
+
+const DISPATCH_ERROR_TITLES: Record<string, string> = {
+  auth: "Authentication error",
+  config: "Dispatch request rejected",
+  rate_limited: "Rate limited",
+  transport: "Network error",
+}
+
+const DISPATCH_ERROR_FALLBACKS: Record<string, string> = {
+  auth: "The integration credentials were rejected. Reconnect the integration and try again.",
+  config: "The provider rejected the dispatch request. New failures include the provider response here.",
+  rate_limited: "The provider rate-limited this dispatch. It should retry automatically.",
+  transport: "The provider could not be reached. It should retry automatically.",
 }
 
 const INTEGRATION_SUBTITLES: Record<AgentDispatchKindKey, string> = {
@@ -70,6 +92,11 @@ const INTEGRATION_SUBTITLES: Record<AgentDispatchKindKey, string> = {
 }
 
 const ACTIVE_DISPATCH_TRIGGERS = ["signal.discovered", "incident.opened"] as const
+
+const DISPATCH_TRIGGER_TITLES: Record<string, string> = {
+  "signal.discovered": "New signal",
+  "incident.opened": "Escalating signal",
+}
 
 const TRIGGER_LABELS: Record<(typeof ACTIVE_DISPATCH_TRIGGERS)[number], { title: string; description: string }> = {
   "signal.discovered": {
@@ -109,12 +136,14 @@ function LinearIcon(props: LucideProps) {
   )
 }
 
-const INTEGRATION_ICONS = {
+export const AGENT_DISPATCH_KIND_ICONS = {
   cursor: CursorIcon,
   claude_code: ClaudeCodeIcon,
   linear: LinearIcon,
   webhook: Webhook,
 } as const
+
+const INTEGRATION_ICONS = AGENT_DISPATCH_KIND_ICONS
 
 const CLAUDE_ROUTINE_TEMPLATE =
   "Inspect the Latitude signal, identify the regression or newly discovered issue, implement the fix, run the relevant checks, and report what changed."
@@ -123,7 +152,13 @@ function extractClaudeRoutineTriggerId(routineUrl: string) {
   return routineUrl.trim().match(/\/routines\/(trig_[^/?#]+)/)?.[1] ?? null
 }
 
-export function AgentDispatchSection({ projectId }: { readonly projectId: string }) {
+export function AgentDispatchSection({
+  projectId,
+  projectSlug,
+}: {
+  readonly projectId: string
+  readonly projectSlug: string
+}) {
   const { data: enabled } = useQuery({
     queryKey: ["agent-dispatch-enabled"],
     queryFn: () => isAgentDispatchEnabled(),
@@ -145,9 +180,9 @@ export function AgentDispatchSection({ projectId }: { readonly projectId: string
           kind={kind}
           integration={integrations.find((row: AgentDispatchIntegrationRecord) => row.kind === kind) ?? null}
           projectId={projectId}
+          projectSlug={projectSlug}
         />
       ))}
-      <AgentDispatchHistorySection projectId={projectId} />
     </>
   )
 }
@@ -156,13 +191,15 @@ function AgentDispatchKindCard({
   kind,
   integration,
   projectId,
+  projectSlug,
 }: {
   readonly kind: AgentDispatchKindKey
   readonly integration: AgentDispatchIntegrationRecord | null
   readonly projectId: string
+  readonly projectSlug: string
 }) {
   const [connectOpen, setConnectOpen] = useState(false)
-  const [webhookSecret, setWebhookSecret] = useState<string | null>(null)
+  const [, setWebhookSecret] = useState<string | null>(null)
   const queryClient = useQueryClient()
   const { toast } = useToast()
 
@@ -184,7 +221,7 @@ function AgentDispatchKindCard({
           title={KIND_LABELS[kind]}
           subtitle={INTEGRATION_SUBTITLES[kind]}
           actions={
-            <Button variant="outline" onClick={() => setConnectOpen(true)}>
+            <Button onClick={() => setConnectOpen(true)}>
               <Icon icon={Plus} size="sm" />
               Connect
             </Button>
@@ -202,21 +239,85 @@ function AgentDispatchKindCard({
   }
 
   return (
-    <div className="rounded-lg border border-border">
-      <div className="flex flex-row flex-wrap items-center justify-between gap-2 p-4">
-        <div className="flex min-w-0 flex-row items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted">
-            <Icon icon={INTEGRATION_ICONS[kind]} />
-          </div>
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <Text.H5 weight="semibold">{KIND_LABELS[kind]}</Text.H5>
-            <Text.H6 color="foregroundMuted">Connected {relativeTime(new Date(integration.installedAt))}</Text.H6>
-          </div>
+    <IntegrationCard
+      icon={INTEGRATION_ICONS[kind]}
+      title={KIND_LABELS[kind]}
+      subtitle={`Connected ${relativeTime(new Date(integration.installedAt))}`}
+      actions={
+        <div className="flex flex-row flex-nowrap items-center gap-2">
+          <Button asChild variant="outline">
+            <Link
+              to="/projects/$projectSlug/settings/integrations/$integrationKind"
+              params={{ projectSlug, integrationKind: kind }}
+            >
+              Manage
+            </Link>
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => disconnectMutation.mutate()}
+            isLoading={disconnectMutation.isPending}
+          >
+            Disconnect
+          </Button>
         </div>
-        <Button variant="outline" onClick={() => disconnectMutation.mutate()} isLoading={disconnectMutation.isPending}>
-          Disconnect
-        </Button>
-      </div>
+      }
+    />
+  )
+}
+
+export function AgentDispatchIntegrationDetails({
+  projectId,
+  projectSlug,
+  kind,
+}: {
+  readonly projectId: string
+  readonly projectSlug: string
+  readonly kind: AgentDispatchKindKey
+}) {
+  const { data: enabled } = useQuery({
+    queryKey: ["agent-dispatch-enabled"],
+    queryFn: () => isAgentDispatchEnabled(),
+  })
+  const { data: integrations = [], isLoading } = useQuery({
+    queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY,
+    queryFn: () => listAgentDispatchIntegrations(),
+    enabled: enabled?.enabled === true,
+  })
+  const [connectOpen, setConnectOpen] = useState(false)
+  const [webhookSecret, setWebhookSecret] = useState<string | null>(null)
+  const integration = integrations.find((row: AgentDispatchIntegrationRecord) => row.kind === kind) ?? null
+
+  if (!enabled?.enabled) return null
+  if (isLoading) return <Skeleton className="h-32 w-full" />
+
+  if (!integration) {
+    return (
+      <>
+        <IntegrationCard
+          icon={INTEGRATION_ICONS[kind]}
+          title={KIND_LABELS[kind]}
+          subtitle={INTEGRATION_SUBTITLES[kind]}
+          actions={
+            <Button onClick={() => setConnectOpen(true)}>
+              <Icon icon={Plus} size="sm" />
+              Connect
+            </Button>
+          }
+        />
+        <ConnectAgentDispatchModal
+          kind={kind}
+          projectId={projectId}
+          open={connectOpen}
+          onClose={() => setConnectOpen(false)}
+          onWebhookSecret={setWebhookSecret}
+        />
+      </>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-8">
       <AgentDispatchConfigForm
         projectId={projectId}
         kind={kind}
@@ -224,6 +325,7 @@ function AgentDispatchKindCard({
         vendorAccountId={integration.vendorAccountId}
         webhookSecret={kind === "webhook" ? webhookSecret : null}
       />
+      <AgentDispatchHistorySection projectId={projectId} projectSlug={projectSlug} kind={kind} />
     </div>
   )
 }
@@ -302,6 +404,11 @@ function AgentDispatchConfigFormInner({
     queryFn: () => listLinearMembers({ data: { integrationId } }),
     enabled: kind === "linear",
   })
+  const { data: linearTeams = [], isLoading: linearTeamsLoading } = useQuery({
+    queryKey: ["linear-teams", integrationId],
+    queryFn: () => listLinearTeams({ data: { integrationId } }),
+    enabled: kind === "linear",
+  })
   const { data: storedWebhookSecret } = useQuery({
     queryKey: ["webhook-secret", integrationId],
     queryFn: () => getWebhookSecret({ data: { integrationId } }),
@@ -310,6 +417,10 @@ function AgentDispatchConfigFormInner({
   const linearMemberOptions = linearMembers.map((member) => ({
     label: member.email ? `${member.name} (${member.email})` : member.name,
     value: member.id,
+  }))
+  const linearTeamOptions = linearTeams.map((team) => ({
+    label: `${team.name} (${team.key})`,
+    value: team.id,
   }))
   const effectiveWebhookSecret = webhookSecret ?? storedWebhookSecret?.webhookSecret ?? null
   const form = useForm({
@@ -408,7 +519,7 @@ function AgentDispatchConfigFormInner({
               triggers: z.array(z.enum(AGENT_DISPATCH_TRIGGERS)),
               maxDispatchesPerDay: z.coerce.number().int().positive(),
               cooldownMinutes: z.coerce.number().int().nonnegative(),
-              teamId: z.string().min(1),
+              teamId: z.string().uuid(),
               assigneeId: z.string().optional(),
             })
             .parse(values)
@@ -462,7 +573,7 @@ function AgentDispatchConfigFormInner({
 
   return (
     <form
-      className="flex w-full flex-col gap-6 border-t border-border p-6"
+      className="flex w-full flex-col gap-6"
       onSubmit={(event) => {
         event.preventDefault()
         void form.handleSubmit()
@@ -558,12 +669,29 @@ function AgentDispatchConfigFormInner({
         </div>
       ) : null}
       {kind === "linear" ? (
-        <div className="max-w-md">
+        <div className="flex max-w-md flex-col gap-3">
+          <form.Field name="teamId">
+            {(field) => (
+              <Select
+                name="teamId"
+                label="Linear team"
+                description="Latitude creates issues in this team."
+                placeholder={linearTeamsLoading ? "Loading Linear teams" : "Select a Linear team"}
+                searchable
+                loading={linearTeamsLoading}
+                disabled={linearTeamsLoading}
+                options={linearTeamOptions}
+                value={field.state.value}
+                onChange={(value) => field.handleChange(String(value))}
+                errors={fieldErrorsAsStrings(field.state.meta.errors)}
+              />
+            )}
+          </form.Field>
           <form.Field name="assigneeId">
             {(field) => (
               <Select
                 name="assigneeId"
-                label="Assignee (optional)"
+                label="Assignee"
                 description="Optional. Leave empty to create unassigned issues."
                 placeholder={linearMembersLoading ? "Loading Linear users" : "Select a Linear user"}
                 searchable
@@ -640,6 +768,10 @@ function ConnectAgentDispatchModal({
   const [cursorApiKeyForRepositories, setCursorApiKeyForRepositories] = useState("")
   const [loadedCursorApiKeyForRepositories, setLoadedCursorApiKeyForRepositories] = useState("")
   const [cursorRepositoryError, setCursorRepositoryError] = useState<string | null>(null)
+  const [linearTeams, setLinearTeams] = useState<Awaited<ReturnType<typeof listLinearTeamsForApiKey>>>([])
+  const [linearApiKeyForTeams, setLinearApiKeyForTeams] = useState("")
+  const [loadedLinearApiKeyForTeams, setLoadedLinearApiKeyForTeams] = useState("")
+  const [linearTeamError, setLinearTeamError] = useState<string | null>(null)
 
   const form = useForm({
     defaultValues:
@@ -689,12 +821,13 @@ function ConnectAgentDispatchModal({
               kind: "claude_code",
               claudeRoutineToken: parsed.claudeRoutineToken,
               routineTriggerId: extractClaudeRoutineTriggerId(parsed.routineUrl)!,
+              projectId,
             },
           })
         } else if (kind === "linear") {
-          const parsed = z.object({ linearApiKey: z.string().min(1), teamId: z.string().min(1) }).parse(values)
+          const parsed = z.object({ linearApiKey: z.string().min(1), teamId: z.string().uuid() }).parse(values)
           await connectLinearIntegration({
-            data: { kind: "linear", linearApiKey: parsed.linearApiKey, teamId: parsed.teamId },
+            data: { kind: "linear", linearApiKey: parsed.linearApiKey, teamId: parsed.teamId, projectId },
           })
         } else {
           const parsed = z.object({ webhookUrl: z.string().url() }).parse(values)
@@ -720,6 +853,10 @@ function ConnectAgentDispatchModal({
     label: `${repo.owner}/${repo.name}`,
     value: repo.repository,
   }))
+  const linearTeamOptions = linearTeams.map((team) => ({
+    label: `${team.name} (${team.key})`,
+    value: team.id,
+  }))
   const loadCursorRepositoriesMutation = useMutation({
     mutationFn: (cursorApiKey: string) => listCursorRepositoriesForApiKey({ data: { cursorApiKey } }),
     onSuccess: (repositories, cursorApiKey) => {
@@ -734,6 +871,20 @@ function ConnectAgentDispatchModal({
     },
   })
 
+  const loadLinearTeamsMutation = useMutation({
+    mutationFn: (linearApiKey: string) => listLinearTeamsForApiKey({ data: { linearApiKey } }),
+    onSuccess: (teams, linearApiKey) => {
+      setLinearTeamError(null)
+      setLinearTeams(teams)
+      setLoadedLinearApiKeyForTeams(linearApiKey)
+    },
+    onError: (error) => {
+      setLinearTeams([])
+      setLoadedLinearApiKeyForTeams("")
+      setLinearTeamError(toUserMessage(error))
+    },
+  })
+
   const trimmedCursorApiKey = cursorApiKeyForRepositories.trim()
   const hasCursorApiKey = trimmedCursorApiKey.length > 0
   const showCursorRepositoryFields =
@@ -744,6 +895,15 @@ function ConnectAgentDispatchModal({
     !cursorRepositoryError
   const showCursorRepositorySkeleton =
     kind === "cursor" && hasCursorApiKey && !showCursorRepositoryFields && !cursorRepositoryError
+  const trimmedLinearApiKey = linearApiKeyForTeams.trim()
+  const hasLinearApiKey = trimmedLinearApiKey.length > 0
+  const showLinearTeamFields =
+    kind === "linear" &&
+    hasLinearApiKey &&
+    loadedLinearApiKeyForTeams === trimmedLinearApiKey &&
+    !loadLinearTeamsMutation.isPending &&
+    !linearTeamError
+  const showLinearTeamSkeleton = kind === "linear" && hasLinearApiKey && !showLinearTeamFields && !linearTeamError
 
   useDebounce(
     () => {
@@ -758,6 +918,21 @@ function ConnectAgentDispatchModal({
     },
     500,
     [kind, cursorApiKeyForRepositories],
+  )
+
+  useDebounce(
+    () => {
+      const linearApiKey = linearApiKeyForTeams.trim()
+      if (kind !== "linear" || !linearApiKey) {
+        setLinearTeams([])
+        setLoadedLinearApiKeyForTeams("")
+        setLinearTeamError(null)
+        return
+      }
+      loadLinearTeamsMutation.mutate(linearApiKey)
+    },
+    500,
+    [kind, linearApiKeyForTeams],
   )
 
   return (
@@ -983,7 +1158,7 @@ function ConnectAgentDispatchModal({
                 2. Create a personal API key for Latitude and copy it before leaving Linear.
               </Text.H6>
               <Text.H6 display="block" color="foregroundMuted">
-                3. Paste the key and the Linear team ID where Latitude should create issues.
+                3. Paste the key, then choose the Linear team where Latitude should create issues.
               </Text.H6>
             </div>
             <div className="flex flex-row flex-wrap gap-2 pt-1">
@@ -1008,23 +1183,45 @@ function ConnectAgentDispatchModal({
                   label="Linear API key"
                   type="password"
                   value={field.state.value}
-                  onChange={(event) => field.handleChange(event.target.value)}
+                  onChange={(event) => {
+                    field.handleChange(event.target.value)
+                    setLinearTeams([])
+                    setLoadedLinearApiKeyForTeams("")
+                    setLinearTeamError(null)
+                    setLinearApiKeyForTeams(event.target.value)
+                  }}
                   errors={fieldErrorsAsStrings(field.state.meta.errors)}
                 />
               )}
             </form.Field>
-            <form.Field name="teamId">
-              {(field) => (
-                <Input
-                  label="Linear team ID"
-                  description="Latitude creates issues in this team."
-                  placeholder="LAT"
-                  value={field.state.value}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  errors={fieldErrorsAsStrings(field.state.meta.errors)}
-                />
-              )}
-            </form.Field>
+            {linearTeamError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2">
+                <Text.H6 color="destructive">{linearTeamError}</Text.H6>
+              </div>
+            ) : null}
+            {showLinearTeamSkeleton ? (
+              <div className="flex flex-col gap-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-9 w-full" />
+                <Skeleton className="h-3 w-48" />
+              </div>
+            ) : showLinearTeamFields ? (
+              <form.Field name="teamId">
+                {(field) => (
+                  <Select
+                    name="teamId"
+                    label="Linear team"
+                    description="Latitude creates issues in this team."
+                    placeholder="Select a Linear team"
+                    searchable
+                    options={linearTeamOptions}
+                    value={field.state.value}
+                    onChange={(value) => field.handleChange(String(value))}
+                    errors={fieldErrorsAsStrings(field.state.meta.errors)}
+                  />
+                )}
+              </form.Field>
+            ) : null}
           </div>
         </div>
       ) : (
@@ -1073,7 +1270,15 @@ function ConnectAgentDispatchModal({
   )
 }
 
-function AgentDispatchHistorySection({ projectId }: { readonly projectId: string }) {
+function AgentDispatchHistorySection({
+  projectId,
+  projectSlug,
+  kind,
+}: {
+  readonly projectId: string
+  readonly projectSlug: string
+  readonly kind: AgentDispatchKindKey
+}) {
   const { data: dispatches = [], isLoading } = useQuery({
     queryKey: ["agent-dispatches", projectId],
     queryFn: () => listAgentDispatches({ data: { projectId } }),
@@ -1081,9 +1286,113 @@ function AgentDispatchHistorySection({ projectId }: { readonly projectId: string
 
   if (isLoading) return null
 
+  const filteredDispatches = dispatches.filter((dispatch: AgentDispatchRecord) => dispatch.kind === kind)
+
+  const columns: InfiniteTableColumn<AgentDispatchRecord>[] = [
+    {
+      key: "trigger",
+      header: "Trigger",
+      width: 180,
+      render: (dispatch) => DISPATCH_TRIGGER_TITLES[dispatch.trigger] ?? dispatch.trigger.replaceAll(".", " "),
+    },
+    {
+      key: "source",
+      header: "Source",
+      width: 260,
+      render: (dispatch) =>
+        dispatch.sourceType === "signal" ? (
+          <Link
+            to="/projects/$projectSlug/signals/$signalId"
+            params={{ projectSlug, signalId: dispatch.sourceId }}
+            aria-label={`Open signal ${dispatch.sourceName ?? dispatch.sourceId}`}
+            className="flex min-w-0 items-center gap-1 text-xs font-semibold text-foreground hover:underline"
+          >
+            <span className="truncate">{dispatch.sourceName ?? "Deleted signal"}</span>
+            <Icon icon={ExternalLink} size="xs" />
+          </Link>
+        ) : (
+          <div className="flex min-w-0 flex-col gap-1">
+            <Badge variant="outlineMuted" size="small" className="w-fit">
+              {dispatch.sourceType}
+            </Badge>
+            <Text.H6 className="truncate font-mono" color="foregroundMuted">
+              {dispatch.sourceId}
+            </Text.H6>
+          </div>
+        ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      width: 240,
+      render: (dispatch) => {
+        const statusVariant =
+          dispatch.status === "dispatched"
+            ? "successMuted"
+            : dispatch.status === "failed"
+              ? "destructiveMuted"
+              : "muted"
+        const genericErrorDetail = dispatch.errorCategory
+          ? `Agent dispatch adapter failed (${dispatch.errorCategory})`
+          : null
+        const errorTitle = dispatch.errorCategory
+          ? (DISPATCH_ERROR_TITLES[dispatch.errorCategory] ?? dispatch.errorCategory)
+          : null
+        const errorDetail =
+          dispatch.errorDetail && dispatch.errorDetail !== genericErrorDetail
+            ? dispatch.errorDetail
+            : dispatch.errorCategory
+              ? (DISPATCH_ERROR_FALLBACKS[dispatch.errorCategory] ?? null)
+              : null
+
+        return (
+          <div className="flex min-w-0 flex-col gap-1">
+            <Badge variant={statusVariant} size="small" className="w-fit capitalize">
+              {dispatch.status}
+            </Badge>
+            {errorTitle ? <Text.H7 color="destructive">{errorTitle}</Text.H7> : null}
+            {errorDetail ? (
+              <Text.H7 color="foregroundMuted" className="line-clamp-2">
+                {errorDetail}
+              </Text.H7>
+            ) : null}
+          </div>
+        )
+      },
+    },
+    {
+      key: "claimedAt",
+      header: "Claimed",
+      width: 130,
+      render: (dispatch) => relativeTime(new Date(dispatch.claimedAt)),
+    },
+    {
+      key: "run",
+      header: "Run",
+      width: 150,
+      align: "end",
+      render: (dispatch) => {
+        const linkLabel = dispatch.kind ? (DEEP_LINK_LABELS[dispatch.kind] ?? "View run") : "View run"
+        const href = dispatch.externalUrl ?? dispatch.routineUrl
+        const label = dispatch.externalUrl ? linkLabel : dispatch.routineUrl ? "Claude routine" : null
+
+        return href && label ? (
+          <Button asChild variant="ghost" size="sm">
+            <a href={href} target="_blank" rel="noreferrer">
+              <ExternalLink className="h-4 w-4" />
+              {label}
+            </a>
+          </Button>
+        ) : (
+          <Text.H6 color="foregroundMuted">—</Text.H6>
+        )
+      },
+    },
+  ]
+
   return (
-    <div className="rounded-lg border border-border">
-      <div className="flex flex-col gap-1 border-b border-border p-4">
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
         <Text.H5 display="block" weight="semibold">
           Dispatch history
         </Text.H5>
@@ -1091,43 +1400,15 @@ function AgentDispatchHistorySection({ projectId }: { readonly projectId: string
           Audit log of dispatches triggered by signals and incidents.
         </Text.H6>
       </div>
-      {dispatches.length === 0 ? (
-        <div className="p-4">
-          <Text.H6 color="foregroundMuted">No dispatches yet.</Text.H6>
-        </div>
-      ) : (
-        <div className="divide-y divide-border">
-          {dispatches.map((dispatch: AgentDispatchRecord) => (
-            <AgentDispatchRow key={dispatch.id} dispatch={dispatch} />
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function AgentDispatchRow({ dispatch }: { readonly dispatch: AgentDispatchRecord }) {
-  const linkLabel = dispatch.kind ? (DEEP_LINK_LABELS[dispatch.kind] ?? "View run") : "View run"
-
-  return (
-    <div className="flex flex-row flex-wrap items-center justify-between gap-2 p-4">
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <Text.H6 weight="semibold">
-          {dispatch.trigger} · {dispatch.sourceType}:{dispatch.sourceId}
-        </Text.H6>
-        <Text.H6 color="foregroundMuted">
-          {dispatch.status} · {relativeTime(new Date(dispatch.claimedAt))}
-          {dispatch.errorCategory ? ` · ${dispatch.errorCategory}` : ""}
-        </Text.H6>
-      </div>
-      {dispatch.externalUrl ? (
-        <Button asChild variant="outline" size="sm">
-          <a href={dispatch.externalUrl} target="_blank" rel="noreferrer">
-            <ExternalLink className="h-4 w-4" />
-            {linkLabel}
-          </a>
-        </Button>
-      ) : null}
+      <InfiniteTable
+        data={filteredDispatches}
+        isLoading={isLoading}
+        columns={columns}
+        getRowKey={(dispatch) => dispatch.id}
+        blankSlate="No dispatches yet."
+        scrollAreaLayout="intrinsic"
+        className="max-h-[min(32rem,60vh)]"
+      />
     </div>
   )
 }

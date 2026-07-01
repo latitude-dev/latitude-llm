@@ -1,14 +1,16 @@
 import {
   AgentDispatchConfigRepository,
   type AgentDispatchKind,
+  AgentDispatchTraceReader,
   type AgentDispatchTrigger,
   requestAgentDispatchUseCase,
   sendAgentDispatchUseCase,
 } from "@domain/agent-dispatch"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { OrganizationId, ProjectId, SignalId } from "@domain/shared"
+import { TraceRepository } from "@domain/spans"
 import { AgentDispatchAdaptersLive } from "@platform/agent-dispatch"
-import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { ScoreAnalyticsRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   AgentDispatchConfigRepositoryLive,
   AgentDispatchCredentialRepositoryLive,
@@ -49,6 +51,17 @@ const sendLayer = Layer.mergeAll(
   AgentDispatchConfigRepositoryLive,
   AgentDispatchRepositoryLive,
   AgentDispatchCredentialRepositoryLive,
+)
+
+const AgentDispatchTraceReaderLive = Layer.effect(
+  AgentDispatchTraceReader,
+  Effect.gen(function* () {
+    const traces = yield* TraceRepository
+    return AgentDispatchTraceReader.of({
+      findMessagesByTraceId: (input) =>
+        traces.findByTraceId(input).pipe(Effect.map((trace) => trace.allMessages as readonly unknown[])),
+    })
+  }),
 )
 
 export const createAgentDispatchWorker = ({
@@ -111,7 +124,15 @@ export const createAgentDispatchWorker = ({
           Effect.sync(() => logger.error(`agent-dispatch.request failed orgId=${orgId}`, error)),
         ),
         withPostgres(requestLayer, pgClient, orgId),
-        withClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId),
+        withClickHouse(
+          Layer.mergeAll(
+            ScoreAnalyticsRepositoryLive,
+            TraceRepositoryLive,
+            AgentDispatchTraceReaderLive.pipe(Layer.provide(TraceRepositoryLive)),
+          ),
+          chClient,
+          orgId,
+        ),
         Effect.asVoid,
         withTracing,
       )

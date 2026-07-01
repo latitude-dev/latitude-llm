@@ -15,10 +15,10 @@ describe("buildDispatchIdempotencyKey", () => {
 })
 
 describe("renderDispatchPrompt", () => {
-  it("substitutes placeholders from context", () => {
+  it("renders the default prompt without empty optional fields", () => {
     const prompt = renderDispatchPrompt({
       context: {
-        trigger: "incident.opened",
+        trigger: "signal.discovered",
         organizationName: "Acme",
         projectName: "My App",
         projectSlug: "my-app",
@@ -27,7 +27,7 @@ describe("renderDispatchPrompt", () => {
           slug: "timeout-errors",
           name: "Timeout errors",
           source: "flagger",
-          priority: "high",
+          priority: null,
         },
         deepLinkUrl: "https://console.latitude.so/projects/my-app/signals/timeout-errors",
       },
@@ -36,5 +36,59 @@ describe("renderDispatchPrompt", () => {
     expect(prompt).toContain("Timeout errors")
     expect(prompt).toContain("sig1")
     expect(prompt).toContain("console.latitude.so")
+    expect(prompt).not.toContain("Incident:")
+    expect(prompt).not.toContain("Severity:")
+    expect(prompt).not.toContain("Tags:")
+    expect(prompt).toContain("If Latitude MCP tools are available")
+  })
+
+  it("includes sample conversation excerpts", () => {
+    const prompt = renderDispatchPrompt({
+      context: {
+        trigger: "signal.discovered",
+        organizationName: "Acme",
+        projectName: "My App",
+        projectSlug: "my-app",
+        signal: {
+          id: "sig1",
+          slug: "timeout-errors",
+          name: "Timeout errors",
+          source: "flagger",
+          priority: null,
+        },
+        deepLinkUrl: "https://console.latitude.so/projects/my-app/signals/timeout-errors",
+        sampleConversations: [
+          {
+            traceId: "trace1",
+            scoreFeedback: "Tool repeated",
+            excerpt: "[0] user:\nhello\n\n[1] assistant <-- score anchor:\ncalled tool twice",
+          },
+        ],
+      },
+    })
+    expect(prompt).toContain("Sample conversation excerpts")
+    expect(prompt).toContain("trace1")
+    expect(prompt).toContain("called tool twice")
+  })
+
+  it("still substitutes placeholders for custom templates", () => {
+    const prompt = renderDispatchPrompt({
+      template: "Investigate {{signal.name}} in {{projectName}}",
+      context: {
+        trigger: "signal.discovered",
+        organizationName: "Acme",
+        projectName: "My App",
+        projectSlug: "my-app",
+        signal: {
+          id: "sig1",
+          slug: "timeout-errors",
+          name: "Timeout errors",
+          source: "flagger",
+          priority: null,
+        },
+        deepLinkUrl: "https://console.latitude.so/projects/my-app/signals/timeout-errors",
+      },
+    })
+    expect(prompt).toBe("Investigate Timeout errors in My App")
   })
 })

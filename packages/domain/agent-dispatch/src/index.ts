@@ -48,12 +48,14 @@ export type {
   AgentDispatchIntegration,
   AgentDispatchIntegrationRepositoryShape,
   AgentDispatchRepositoryShape,
+  AgentDispatchTraceReaderShape,
 } from "./ports/repositories.ts"
 export {
   AgentDispatchConfigRepository,
   AgentDispatchCredentialRepository,
   AgentDispatchIntegrationRepository,
   AgentDispatchRepository,
+  AgentDispatchTraceReader,
 } from "./ports/repositories.ts"
 export type { ConnectAgentDispatchIntegrationInput } from "./use-cases/connect-agent-dispatch-integration.ts"
 export { connectAgentDispatchIntegrationUseCase } from "./use-cases/connect-agent-dispatch-integration.ts"

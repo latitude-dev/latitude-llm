@@ -35,6 +35,15 @@ export const agentDispatchContextSchema = z.object({
   tags: z.array(z.string()).optional(),
   deepLinkUrl: z.string(),
   sampleTraceIds: z.array(z.string()).optional(),
+  sampleConversations: z
+    .array(
+      z.object({
+        traceId: z.string(),
+        scoreFeedback: z.string().optional(),
+        excerpt: z.string(),
+      }),
+    )
+    .optional(),
 })
 
 export type AgentDispatchContext = z.infer<typeof agentDispatchContextSchema>

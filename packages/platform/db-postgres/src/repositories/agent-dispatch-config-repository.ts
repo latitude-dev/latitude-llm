@@ -165,6 +165,23 @@ export const AgentDispatchConfigRepositoryLive = Layer.succeed(AgentDispatchConf
         .pipe(Effect.mapError((e) => toRepositoryError(e, "deleteAgentDispatchConfig")))
     }),
 
+  deleteByIntegrationId: (integrationId) =>
+    Effect.gen(function* () {
+      const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+      yield* sqlClient
+        .query((db, organizationId) =>
+          db
+            .delete(agentDispatchConfigs)
+            .where(
+              and(
+                eq(agentDispatchConfigs.integrationId, integrationId),
+                eq(agentDispatchConfigs.organizationId, organizationId),
+              ),
+            ),
+        )
+        .pipe(Effect.mapError((e) => toRepositoryError(e, "deleteAgentDispatchConfigsByIntegration")))
+    }),
+
   countDispatchesInLast24h: (configId) =>
     Effect.gen(function* () {
       const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

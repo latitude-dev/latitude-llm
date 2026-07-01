@@ -1,4 +1,12 @@
-import type { OrganizationId, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
+import type {
+  ChSqlClient,
+  NotFoundError,
+  OrganizationId,
+  ProjectId,
+  RepositoryError,
+  SqlClient,
+  TraceId,
+} from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { AgentDispatch } from "../entities/agent-dispatch.ts"
 import type { AgentDispatchConfig, AgentDispatchKind } from "../entities/agent-dispatch-config.ts"
@@ -20,6 +28,7 @@ export interface AgentDispatchConfigRepositoryShape {
   readonly findById: (id: string) => Effect.Effect<AgentDispatchConfig, RepositoryError, SqlClient>
   readonly upsert: (config: AgentDispatchConfig) => Effect.Effect<AgentDispatchConfig, RepositoryError, SqlClient>
   readonly delete: (id: string) => Effect.Effect<void, RepositoryError, SqlClient>
+  readonly deleteByIntegrationId: (integrationId: string) => Effect.Effect<void, RepositoryError, SqlClient>
   readonly countDispatchesInLast24h: (configId: string) => Effect.Effect<number, RepositoryError, SqlClient>
   readonly hasRecentDispatchForSource: (input: {
     readonly configId: string
@@ -118,3 +127,16 @@ export class AgentDispatchIntegrationRepository extends Context.Service<
   AgentDispatchIntegrationRepository,
   AgentDispatchIntegrationRepositoryShape
 >()("@domain/agent-dispatch/AgentDispatchIntegrationRepository") {}
+
+export interface AgentDispatchTraceReaderShape {
+  readonly findMessagesByTraceId: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceId: TraceId
+  }) => Effect.Effect<readonly unknown[], NotFoundError | RepositoryError, ChSqlClient>
+}
+
+export class AgentDispatchTraceReader extends Context.Service<
+  AgentDispatchTraceReader,
+  AgentDispatchTraceReaderShape
+>()("@domain/agent-dispatch/AgentDispatchTraceReader") {}

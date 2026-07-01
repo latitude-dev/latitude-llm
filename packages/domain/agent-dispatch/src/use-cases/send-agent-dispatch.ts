@@ -27,6 +27,23 @@ export type SendAgentDispatchOutcome =
 
 const isAckError = (error: DispatchAdapterError): boolean => error.reason === "auth" || error.reason === "config"
 
+const stringifyCause = (cause: unknown): string | null => {
+  if (cause === undefined || cause === null) return null
+  if (typeof cause === "string") return cause
+  if (typeof cause === "number" || typeof cause === "boolean") return String(cause)
+  if (cause instanceof Error) return cause.message
+  try {
+    return JSON.stringify(cause)
+  } catch {
+    return String(cause)
+  }
+}
+
+const errorDetail = (error: DispatchAdapterError): string => {
+  const cause = stringifyCause(error.cause)
+  return cause && cause.length > 0 ? `${error.message}: ${cause}` : error.message
+}
+
 export const sendAgentDispatchUseCase = (input: SendAgentDispatchInput) =>
   Effect.gen(function* () {
     const dispatchRepo = yield* AgentDispatchRepository
@@ -76,7 +93,7 @@ export const sendAgentDispatchUseCase = (input: SendAgentDispatchInput) =>
         yield* dispatchRepo.markFailed({
           dispatchId,
           errorCategory: error.reason as DispatchErrorCategory,
-          errorDetail: error.message,
+          errorDetail: errorDetail(error),
         })
         return { status: "skipped-already-dispatched" as const }
       }
