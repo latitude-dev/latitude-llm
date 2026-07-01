@@ -108,6 +108,8 @@ export const previewEvaluationUseCase = (input: PreviewEvaluationInput) =>
     const rows = yield* Effect.forEach(
       page.items,
       (session) => {
+        // Any trace anchors the load: `loadScriptSessionContext` resolves the sessionId from it and
+        // evaluates the whole session (all traces), so the choice of `[0]` doesn't narrow coverage.
         const traceId = session.traceIds[0]
         if (traceId === undefined) {
           return Effect.succeed(null)
