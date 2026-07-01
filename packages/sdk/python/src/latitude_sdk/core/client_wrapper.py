@@ -33,10 +33,11 @@ class BaseClientWrapper:
         import platform
 
         headers: typing.Dict[str, str] = {
-            "User-Agent": "latitude_sdk/6.10.1",
+            "User-Agent": "latitude_sdk/7.0.1",
             "X-Fern-Language": "Python",
             "X-Fern-Runtime": f"python/{platform.python_version()}",
             "X-Fern-Platform": f"{platform.system().lower()}/{platform.release()}",
+            "X-Fern-Interpreter": platform.python_implementation(),
             **(self.get_custom_headers() or {}),
         }
         headers["Authorization"] = f"Bearer {self._get_api_key()}"
