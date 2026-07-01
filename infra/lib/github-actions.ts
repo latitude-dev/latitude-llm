@@ -37,6 +37,20 @@ function createDeployPolicy(environment: string): aws.iam.RolePolicyArgs["policy
         Action: ["iam:PassRole"],
         Resource: `arn:aws:iam::*:role/latitude-${environment}-*`,
       },
+      {
+        Sid: "CodeDeployOperations",
+        Effect: "Allow",
+        Action: [
+          "codedeploy:CreateDeployment",
+          "codedeploy:GetDeployment",
+          "codedeploy:GetDeploymentConfig",
+          "codedeploy:GetDeploymentGroup",
+          "codedeploy:ListDeployments",
+          "codedeploy:RegisterApplicationRevision",
+          "codedeploy:GetApplicationRevision",
+        ],
+        Resource: "*",
+      },
     ],
   }
 }

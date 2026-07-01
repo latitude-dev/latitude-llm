@@ -97,7 +97,8 @@ infra/
     ├── vpc.ts               # VPC, subnets, NAT
     ├── vpc-endpoints.ts     # S3 + Secrets Manager VPC endpoints
     ├── security-groups.ts   # Security group factories
-    ├── alb.ts               # ALB + listeners + target groups
+    ├── alb.ts               # ALB + listeners + blue/green target groups
+    ├── codedeploy.ts        # CodeDeploy app + deployment groups
     ├── ecs.ts               # ECS cluster + services + migrations task
     ├── rds.ts               # RDS (standard) / Aurora Serverless v2
     ├── redis.ts             # ElastiCache / MemoryDB
@@ -108,6 +109,21 @@ infra/
     ├── github-actions.ts    # OIDC provider + deploy role
     └── observability.ts     # CloudWatch dashboards + alarms
 ```
+
+## Deployments
+
+ALB-fronted services (`web`, `api`, `ingest`, `workers`) use **AWS CodeDeploy blue/green** deployments. Each service has paired blue and green target groups; CodeDeploy shifts production traffic to the green group only after new tasks pass health checks, then drains the blue tasks after a short wait. `workflows` has no ALB and keeps ECS rolling deployments.
+
+Pulumi provisions:
+
+- Green target groups alongside existing blue groups (`lat-{prod|stg}-{service}-grn`)
+- ECS services with `deploymentController: CODE_DEPLOY` for ALB-backed services
+- `healthCheckGracePeriodSeconds: 120` so tasks can warm up before ALB health checks count
+- A CodeDeploy application (`latitude-{env}-codedeploy`) and per-service deployment groups
+
+GitHub Actions (`scripts/deploy-ecs-service.sh`) registers a new task definition revision, then calls `aws deploy create-deployment` with an AppSpec for CodeDeploy-managed services. `workflows` still uses `ecs update-service`.
+
+**Rollout order:** apply the Pulumi changes first (`pulumi up`) so green target groups, CodeDeploy resources, and the `CODE_DEPLOY` controller exist before the updated deploy workflow runs. The first CodeDeploy deployment after migration may replace ECS service wiring; plan a maintenance window if needed.
 
 ## CI/CD
 
@@ -145,7 +161,7 @@ To deploy to production:
    - Run all checks in parallel
    - Build and push container images to GHCR
    - Execute database migrations via ECS task
-   - Deploy services to ECS Fargate with zero-downtime rolling updates
+   - Deploy ALB-fronted services via CodeDeploy blue/green; deploy `workflows` via ECS rolling update
 
 5. **Verify deployment**: Check service health via their endpoints:
    - `https://console.latitude.so/api/health`

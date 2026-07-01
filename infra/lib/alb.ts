@@ -5,9 +5,14 @@ import type { Ec2SecurityGroup, Ec2Subnet, LbListener, LbLoadBalancer, LbTargetG
 
 const STATUS_PAGE_URL = "https://status.latitude.so/"
 
+export interface TargetGroupPair {
+  blue: LbTargetGroup
+  green: LbTargetGroup
+}
+
 export interface AlbOutput {
   alb: LbLoadBalancer
-  targetGroups: Record<string, LbTargetGroup>
+  targetGroups: Record<string, TargetGroupPair>
   httpListener: LbListener
   httpsListener?: LbListener
 }
@@ -33,7 +38,7 @@ export function createAlb(
     },
   })
 
-  const targetGroups: Record<string, LbTargetGroup> = {}
+  const targetGroups: Record<string, TargetGroupPair> = {}
 
   // bull-board routes to the workers service, so we map "bullBoard" -> "workers" for
   // the service config lookup.
@@ -45,34 +50,56 @@ export function createAlb(
     const healthCheckPath = serviceConfig?.healthCheckPath ?? "/health"
 
     const shortEnv = config.name === "production" ? "prod" : "stg"
-    const tgName = `lat-${shortEnv}-${domainKey}-tg`
+    const blueName = `lat-${shortEnv}-${domainKey}-tg`
+    const greenName = `lat-${shortEnv}-${domainKey}-grn`
 
-    targetGroups[domainKey] = new aws.lb.TargetGroup(
+    const targetGroupArgs = {
+      port: 8080,
+      protocol: "HTTP" as const,
+      targetType: "ip" as const,
+      vpcId: publicSubnets[0].vpcId,
+      healthCheck: {
+        enabled: true,
+        healthyThreshold: 2,
+        interval: 30,
+        matcher: "200",
+        path: healthCheckPath,
+        port: "traffic-port",
+        protocol: "HTTP" as const,
+        timeout: 5,
+        unhealthyThreshold: 3,
+      },
+    }
+
+    const blue = new aws.lb.TargetGroup(
       `${name}-${domainKey}-tg`,
       {
-        name: tgName,
-        port: 8080,
-        protocol: "HTTP",
-        targetType: "ip",
-        vpcId: publicSubnets[0].vpcId,
-        healthCheck: {
-          enabled: true,
-          healthyThreshold: 2,
-          interval: 30,
-          matcher: "200",
-          path: healthCheckPath,
-          port: "traffic-port",
-          protocol: "HTTP",
-          timeout: 5,
-          unhealthyThreshold: 3,
-        },
+        ...targetGroupArgs,
+        name: blueName,
         tags: {
           Name: `${name}-${domainKey}-tg`,
           Environment: config.name,
+          DeploymentColor: "blue",
         },
       },
       { deleteBeforeReplace: false },
     )
+
+    const green = new aws.lb.TargetGroup(
+      `${name}-${domainKey}-tg-green`,
+      {
+        ...targetGroupArgs,
+        name: greenName,
+        tags: {
+          Name: `${name}-${domainKey}-tg-green`,
+          Environment: config.name,
+          DeploymentColor: "green",
+        },
+      },
+      { deleteBeforeReplace: false },
+    )
+
+    targetGroups[domainKey] = { blue, green }
   }
 
   const httpListener = new aws.lb.Listener(`${name}-http`, {
@@ -93,7 +120,7 @@ export function createAlb(
       : [
           {
             type: "forward",
-            targetGroupArn: targetGroups.web.arn,
+            targetGroupArn: targetGroups.web.blue.arn,
           },
         ],
   })
@@ -104,20 +131,20 @@ export function createAlb(
     const createServiceActions = (targetGroup: LbTargetGroup) =>
       enableMaintenanceRedirect ? createStatusPageRedirectActions() : createForwardActions(targetGroup)
 
-    const defaultActions = createServiceActions(targetGroups.web)
+    const defaultActions = createServiceActions(targetGroups.web.blue)
 
     const rules = [
       {
         hostname: config.domains.api,
-        actions: createServiceActions(targetGroups.api),
+        actions: createServiceActions(targetGroups.api.blue),
       },
       {
         hostname: config.domains.ingest,
-        actions: createServiceActions(targetGroups.ingest),
+        actions: createServiceActions(targetGroups.ingest.blue),
       },
       {
         hostname: config.domains.bullBoard,
-        actions: createServiceActions(targetGroups.bullBoard),
+        actions: createServiceActions(targetGroups.bullBoard.blue),
       },
     ]
 
@@ -150,10 +177,10 @@ export function createAlb(
 
     if (enableMaintenanceRedirect) {
       const associationRules = [
-        { ruleName: "web-target-group-association", targetGroup: targetGroups.web },
-        { ruleName: "api-target-group-association", targetGroup: targetGroups.api },
-        { ruleName: "ingest-target-group-association", targetGroup: targetGroups.ingest },
-        { ruleName: "bull-board-target-group-association", targetGroup: targetGroups.bullBoard },
+        { ruleName: "web-target-group-association", targetGroup: targetGroups.web.blue },
+        { ruleName: "api-target-group-association", targetGroup: targetGroups.api.blue },
+        { ruleName: "ingest-target-group-association", targetGroup: targetGroups.ingest.blue },
+        { ruleName: "bull-board-target-group-association", targetGroup: targetGroups.bullBoard.blue },
       ]
 
       for (let i = 0; i < associationRules.length; i++) {

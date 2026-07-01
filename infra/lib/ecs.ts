@@ -3,6 +3,7 @@ import type { Output } from "@pulumi/pulumi"
 import * as pulumi from "@pulumi/pulumi"
 import type { EnvironmentConfig, ServiceConfig } from "../config.ts"
 import type { SecretRef } from "./secrets.ts"
+import { isCodeDeployService } from "./codedeploy.ts"
 import type {
   CloudwatchLogGroup,
   Ec2SecurityGroup,
@@ -200,6 +201,9 @@ export function createEcs(
     )
     taskDefinitions[serviceConfig.name] = taskDef
 
+    const usesCodeDeploy = isCodeDeployService(serviceConfig.name)
+    const hasLoadBalancer = serviceConfig.port !== undefined
+
     const ecsService = new aws.ecs.Service(
       `${name}-${serviceConfig.name}`,
       {
@@ -207,12 +211,13 @@ export function createEcs(
         taskDefinition: taskDef.arn,
         desiredCount: serviceConfig.desiredCount,
         launchType: "FARGATE",
+        healthCheckGracePeriodSeconds: hasLoadBalancer ? 120 : undefined,
         networkConfiguration: {
           subnets: privateSubnets.map((s) => s.id),
           securityGroups: [securityGroup.id],
           assignPublicIp: false,
         },
-        loadBalancers: serviceConfig.port
+        loadBalancers: hasLoadBalancer
           ? Object.entries(albTargetGroupArns)
               .filter(([key]) => {
                 if (serviceConfig.name === "workers") return key === "bullBoard"
@@ -225,7 +230,7 @@ export function createEcs(
               }))
           : undefined,
         deploymentController: {
-          type: "ECS",
+          type: usesCodeDeploy ? "CODE_DEPLOY" : "ECS",
         },
         tags: {
           Name: `${name}-${serviceConfig.name}`,

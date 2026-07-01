@@ -2,6 +2,7 @@ import * as pulumi from "@pulumi/pulumi"
 import { defaults, type EnvironmentConfig, productionConfig, stagingConfig } from "./config.ts"
 import { createAlb } from "./lib/alb.ts"
 import { createBastion } from "./lib/bastion.ts"
+import { createCodeDeploy } from "./lib/codedeploy.ts"
 import { createDatadogSynthetics } from "./lib/datadog-synthetics.ts"
 import { createCertificate, createDnsRecords, createHostedZone, createTryLatitudeDnsRecords } from "./lib/dns.ts"
 import { createEcs } from "./lib/ecs.ts"
@@ -119,10 +120,10 @@ const ecs = createEcs(
   s3.bucket,
   imageTag,
   {
-    web: alb.targetGroups.web.arn,
-    api: alb.targetGroups.api.arn,
-    ingest: alb.targetGroups.ingest.arn,
-    bullBoard: alb.targetGroups.bullBoard.arn,
+    web: alb.targetGroups.web.blue.arn,
+    api: alb.targetGroups.api.blue.arn,
+    ingest: alb.targetGroups.ingest.blue.arn,
+    bullBoard: alb.targetGroups.bullBoard.blue.arn,
   },
   {
     address: temporalCloudAddress,
@@ -136,6 +137,10 @@ const datadogSynthetics = environment === "production" && enableDatadogSynthetic
       datadogSite,
       slackAlertHandle: datadogSlackAlertHandle,
     })
+  : undefined
+
+const codeDeploy = alb.httpsListener
+  ? createCodeDeploy(name, envConfig, ecs.cluster, ecs.services, alb, alb.httpsListener.arn)
   : undefined
 
 const githubActions = createGithubActionsOidc(name, environment, githubOwner, githubRepo)
@@ -161,6 +166,15 @@ export const outputs = {
 
   ecsClusterName: ecs.cluster.name,
   ecsServiceNames: Object.fromEntries(Object.entries(ecs.services).map(([k, v]) => [k, v.name])),
+
+  ...(codeDeploy
+    ? {
+        codeDeployApplicationName: codeDeploy.application.name,
+        codeDeployDeploymentGroupNames: Object.fromEntries(
+          Object.entries(codeDeploy.deploymentGroups).map(([service, group]) => [service, group.deploymentGroupName]),
+        ),
+      }
+    : {}),
 
   certificateArn: certificate.certificate.arn,
 
