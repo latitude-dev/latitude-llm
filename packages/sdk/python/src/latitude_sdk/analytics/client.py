@@ -68,10 +68,10 @@ class AnalyticsClient:
                 metric=AnalyticsQueryTracesMetric_Count(),
                 range=AnalyticsQueryTracesRange(
                     from_iso=datetime.datetime.fromisoformat(
-                        "2024-01-15 09:30:00+00:00",
+                        "2026-06-23 00:00:00+00:00",
                     ),
                     to_iso=datetime.datetime.fromisoformat(
-                        "2024-01-15 09:30:00+00:00",
+                        "2026-06-30 00:00:00+00:00",
                     ),
                 ),
             ),
@@ -141,10 +141,10 @@ class AsyncAnalyticsClient:
                     metric=AnalyticsQueryTracesMetric_Count(),
                     range=AnalyticsQueryTracesRange(
                         from_iso=datetime.datetime.fromisoformat(
-                            "2024-01-15 09:30:00+00:00",
+                            "2026-06-23 00:00:00+00:00",
                         ),
                         to_iso=datetime.datetime.fromisoformat(
-                            "2024-01-15 09:30:00+00:00",
+                            "2026-06-30 00:00:00+00:00",
                         ),
                     ),
                 ),

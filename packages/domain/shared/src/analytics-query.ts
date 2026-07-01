@@ -3,10 +3,10 @@ import { monitorMetricSchema } from "./alert-incident-condition.ts"
 import { filterSetSchema } from "./filter.ts"
 
 /**
- * Breakdown dimensions for the `traces` stream — logical names the API accepts,
- * mapped to ClickHouse expressions in the engine's trace descriptor. `sessions`
- * and `spans` expose no breakdowns yet (their variants omit the field), so the
- * discriminated union below tells a consumer exactly what each stream supports.
+ * Breakdown dimensions per stream — logical names the API accepts, mapped to
+ * ClickHouse expressions in each stream's descriptor. Every stream has its own
+ * set (see the `*_BREAKDOWN_FIELDS` below), surfaced on the discriminated union
+ * variants so a consumer sees exactly what each stream supports.
  */
 export const TRACE_BREAKDOWN_FIELDS = [
   "model",

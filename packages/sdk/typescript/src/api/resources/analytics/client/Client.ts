@@ -40,8 +40,8 @@ export class AnalyticsClient {
      *             kind: "count"
      *         },
      *         range: {
-     *             fromIso: "2024-01-15T09:30:00Z",
-     *             toIso: "2024-01-15T09:30:00Z"
+     *             fromIso: "2026-06-23T00:00:00Z",
+     *             toIso: "2026-06-30T00:00:00Z"
      *         }
      *     })
      */

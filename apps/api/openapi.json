@@ -8328,11 +8328,13 @@
                   "fromIso": {
                     "type": "string",
                     "format": "date-time",
+                    "example": "2026-06-23T00:00:00Z",
                     "description": "Inclusive lower bound (ISO-8601)."
                   },
                   "toIso": {
                     "type": "string",
                     "format": "date-time",
+                    "example": "2026-06-30T00:00:00Z",
                     "description": "Exclusive upper bound (ISO-8601). Must be after `fromIso`."
                   }
                 },
@@ -8361,6 +8363,10 @@
                     ],
                     "default": "desc"
                   }
+                },
+                "default": {
+                  "by": "value",
+                  "direction": "desc"
                 },
                 "description": "Sort for breakdown results. Defaults to value-desc."
               },
@@ -8610,11 +8616,13 @@
                   "fromIso": {
                     "type": "string",
                     "format": "date-time",
+                    "example": "2026-06-23T00:00:00Z",
                     "description": "Inclusive lower bound (ISO-8601)."
                   },
                   "toIso": {
                     "type": "string",
                     "format": "date-time",
+                    "example": "2026-06-30T00:00:00Z",
                     "description": "Exclusive upper bound (ISO-8601). Must be after `fromIso`."
                   }
                 },
@@ -8643,6 +8651,10 @@
                     ],
                     "default": "desc"
                   }
+                },
+                "default": {
+                  "by": "value",
+                  "direction": "desc"
                 },
                 "description": "Sort for breakdown results. Defaults to value-desc."
               },
@@ -8886,11 +8898,13 @@
                   "fromIso": {
                     "type": "string",
                     "format": "date-time",
+                    "example": "2026-06-23T00:00:00Z",
                     "description": "Inclusive lower bound (ISO-8601)."
                   },
                   "toIso": {
                     "type": "string",
                     "format": "date-time",
+                    "example": "2026-06-30T00:00:00Z",
                     "description": "Exclusive upper bound (ISO-8601). Must be after `fromIso`."
                   }
                 },
@@ -8919,6 +8933,10 @@
                     ],
                     "default": "desc"
                   }
+                },
+                "default": {
+                  "by": "value",
+                  "direction": "desc"
                 },
                 "description": "Sort for breakdown results. Defaults to value-desc."
               },

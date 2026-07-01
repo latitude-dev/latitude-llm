@@ -29,11 +29,19 @@ const sharedFields = {
     .describe("Bucket the metric over time. Omit for a single aggregate."),
   range: z
     .object({
-      fromIso: z.iso.datetime().describe("Inclusive lower bound (ISO-8601)."),
-      toIso: z.iso.datetime().describe("Exclusive upper bound (ISO-8601). Must be after `fromIso`."),
+      fromIso: z.iso
+        .datetime()
+        .openapi({ example: "2026-06-23T00:00:00Z" })
+        .describe("Inclusive lower bound (ISO-8601)."),
+      toIso: z.iso
+        .datetime()
+        .openapi({ example: "2026-06-30T00:00:00Z" })
+        .describe("Exclusive upper bound (ISO-8601). Must be after `fromIso`."),
     })
     .describe("The time window."),
-  orderBy: analyticsOrderBySchema.optional().describe("Sort for breakdown results. Defaults to value-desc."),
+  orderBy: analyticsOrderBySchema
+    .default({ by: "value", direction: "desc" })
+    .describe("Sort for breakdown results. Defaults to value-desc."),
   limit: z
     .number()
     .int()

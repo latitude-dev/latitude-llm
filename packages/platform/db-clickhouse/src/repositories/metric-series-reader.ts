@@ -8,8 +8,9 @@ const make = (): MetricSeriesReaderShape => ({
   valueInWindow: (input) =>
     Effect.gen(function* () {
       const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
-      const inner = yield* streamFor(input.target.stream).buildInner(input)
-      const aggregate = streamFor(input.target.stream).aggregate(input.target.metric)
+      const descriptor = streamFor(input.target.stream)
+      const inner = yield* descriptor.buildInner(input)
+      const aggregate = descriptor.aggregate(input.target.metric)
       return yield* chSqlClient
         .query(async (client) => {
           const result = await client.query({
@@ -28,7 +29,8 @@ const make = (): MetricSeriesReaderShape => ({
   firstEventAt: (input) =>
     Effect.gen(function* () {
       const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
-      const inner = yield* streamFor(input.target.stream).buildInner(input)
+      const descriptor = streamFor(input.target.stream)
+      const inner = yield* descriptor.buildInner(input)
       return yield* chSqlClient
         .query(async (client) => {
           const result = await client.query({
@@ -54,7 +56,8 @@ const make = (): MetricSeriesReaderShape => ({
   lastEventAt: (input) =>
     Effect.gen(function* () {
       const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
-      const inner = yield* streamFor(input.target.stream).buildInner(input)
+      const descriptor = streamFor(input.target.stream)
+      const inner = yield* descriptor.buildInner(input)
       return yield* chSqlClient
         .query(async (client) => {
           const result = await client.query({
@@ -80,8 +83,9 @@ const make = (): MetricSeriesReaderShape => ({
   seriesPerBucket: (input: MetricSeriesBucketInput) =>
     Effect.gen(function* () {
       const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
-      const inner = yield* streamFor(input.target.stream).buildInner(input)
-      const aggregate = streamFor(input.target.stream).aggregate(input.target.metric)
+      const descriptor = streamFor(input.target.stream)
+      const inner = yield* descriptor.buildInner(input)
+      const aggregate = descriptor.aggregate(input.target.metric)
       const bucketCount = Math.max(0, Math.floor((input.to.getTime() - input.from.getTime()) / input.bucketMs))
       // Bucket each matching trace by how far its `start_time` sits before `to`,
       // in `bucketNs` (= bucketMs) steps — index 0 is the bucket ending at `to`.

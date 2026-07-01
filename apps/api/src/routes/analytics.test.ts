@@ -60,6 +60,10 @@ describe("Analytics Routes Integration", () => {
         body: { stream: "traces", metric: { kind: "count" }, range: { fromIso: RANGE.toIso, toIso: RANGE.fromIso } },
       },
       {
+        name: "empty range (fromIso === toIso)",
+        body: { stream: "traces", metric: { kind: "count" }, range: { fromIso: RANGE.fromIso, toIso: RANGE.fromIso } },
+      },
+      {
         name: "limit over the cap",
         body: { stream: "traces", metric: { kind: "count" }, range: RANGE, limit: 100_000 },
       },

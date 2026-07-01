@@ -29948,6 +29948,10 @@
                     "description": "The time window."
                   },
                   "orderBy": {
+                    "default": {
+                      "by": "value",
+                      "direction": "desc"
+                    },
                     "description": "Sort for breakdown results. Defaults to value-desc.",
                     "type": "object",
                     "properties": {
@@ -29986,6 +29990,7 @@
                   "stream",
                   "metric",
                   "range",
+                  "orderBy",
                   "limit"
                 ],
                 "additionalProperties": false
@@ -30285,6 +30290,10 @@
                     "description": "The time window."
                   },
                   "orderBy": {
+                    "default": {
+                      "by": "value",
+                      "direction": "desc"
+                    },
                     "description": "Sort for breakdown results. Defaults to value-desc.",
                     "type": "object",
                     "properties": {
@@ -30323,6 +30332,7 @@
                   "stream",
                   "metric",
                   "range",
+                  "orderBy",
                   "limit"
                 ],
                 "additionalProperties": false
@@ -30616,6 +30626,10 @@
                     "description": "The time window."
                   },
                   "orderBy": {
+                    "default": {
+                      "by": "value",
+                      "direction": "desc"
+                    },
                     "description": "Sort for breakdown results. Defaults to value-desc.",
                     "type": "object",
                     "properties": {
@@ -30654,6 +30668,7 @@
                   "stream",
                   "metric",
                   "range",
+                  "orderBy",
                   "limit"
                 ],
                 "additionalProperties": false
