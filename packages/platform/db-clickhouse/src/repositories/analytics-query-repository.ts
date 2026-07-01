@@ -9,6 +9,7 @@ import {
   toRepositoryError,
 } from "@domain/shared"
 import { AnalyticsQueryReader, type AnalyticsQueryReaderShape } from "@domain/spans"
+import { normalizeCHString } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import { type BreakdownExpr, streamFor } from "../metric-sql/index.ts"
 
@@ -108,9 +109,11 @@ const make = (): AnalyticsQueryReaderShape => ({
         })
         .pipe(Effect.mapError((error) => toRepositoryError(error, "AnalyticsQueryReader.query")))
 
+      // `key` can come from a FixedString column (signalId/source/userId), which
+      // ClickHouse zero-pads — normalize so consumers get the logical value.
       return rows.map(
         (row): AnalyticsSeriesPoint => ({
-          ...(row.key !== undefined ? { key: row.key } : {}),
+          ...(row.key !== undefined ? { key: normalizeCHString(row.key) } : {}),
           ...(row.bucket_start !== undefined ? { bucketStart: row.bucket_start } : {}),
           value: toDisplayValue(Number(row.value ?? 0), input.metric),
         }),
