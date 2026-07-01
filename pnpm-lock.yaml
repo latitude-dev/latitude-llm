@@ -54,6 +54,9 @@ catalogs:
     '@temporalio/workflow':
       specifier: 1.17.2
       version: 1.17.2
+    '@types/mustache':
+      specifier: 4.2.6
+      version: 4.2.6
     '@types/node':
       specifier: 22.14.1
       version: 22.14.1
@@ -93,6 +96,9 @@ catalogs:
     ioredis:
       specifier: 5.10.1
       version: 5.10.1
+    mustache:
+      specifier: 4.2.0
+      version: 4.2.0
     pg:
       specifier: 8.16.0
       version: 8.16.0
@@ -1015,10 +1021,16 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
+      mustache:
+        specifier: 'catalog:'
+        version: 4.2.0
       zod:
         specifier: 'catalog:'
         version: 4.3.6
     devDependencies:
+      '@types/mustache':
+        specifier: 'catalog:'
+        version: 4.2.6
       vitest:
         specifier: 'catalog:'
         version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@26.0.0)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@26.0.0)(esbuild@0.28.1)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))
@@ -8865,6 +8877,9 @@ packages:
 
   '@types/mssql@9.1.11':
     resolution: {integrity: sha512-vcujgrDbDezCxNDO4KY6gjwduLYOKfrexpRUwhoysRvcXZ3+IgZ/PMYFDgh8c3cQIxZ6skAwYo+H6ibMrBWPjQ==}
+
+  '@types/mustache@4.2.6':
+    resolution: {integrity: sha512-t+8/QWTAhOFlrF1IVZqKnMRJi84EgkIK5Kh0p2JV4OLywUvCwJPFxbJAl7XAow7DVIHsF+xW9f1MVzg0L6Szjw==}
 
   '@types/mysql@2.15.27':
     resolution: {integrity: sha512-YfWiV16IY0OeBfBCk8+hXKmdTKrKlwKN1MNKAPBu5JYxLwBEZl7QzeEpGnlZb3VMGJrrGmB84gXiH+ofs/TezA==}
@@ -20894,6 +20909,8 @@ snapshots:
       tedious: 19.2.1
     transitivePeerDependencies:
       - supports-color
+
+  '@types/mustache@4.2.6': {}
 
   '@types/mysql@2.15.27':
     dependencies:

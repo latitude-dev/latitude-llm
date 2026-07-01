@@ -25,9 +25,11 @@
     "@domain/signals": "workspace:*",
     "@domain/shared": "workspace:*",
     "effect": "catalog:",
+    "mustache": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@types/mustache": "catalog:",
     "vitest": "catalog:"
   }
 }

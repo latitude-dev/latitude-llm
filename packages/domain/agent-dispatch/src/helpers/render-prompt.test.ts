@@ -91,4 +91,20 @@ describe("renderDispatchPrompt", () => {
     })
     expect(prompt).toBe("Investigate Timeout errors in My App")
   })
+
+  it("joins array fields and leaves missing optional fields empty", () => {
+    const prompt = renderDispatchPrompt({
+      context: {
+        trigger: "signal.discovered",
+        organizationName: "Acme",
+        projectName: "App",
+        projectSlug: "app",
+        tags: ["latency", "timeout"],
+        sampleTraceIds: ["tr_1", "tr_2"],
+        deepLinkUrl: "https://console.latitude.so/projects/app",
+      },
+      template: "Tags: {{tags}} | Traces: {{sampleTraceIds}} | Signal: {{signal.name}}",
+    })
+    expect(prompt).toBe("Tags: latency, timeout | Traces: tr_1, tr_2 | Signal: ")
+  })
 })
