@@ -222,6 +222,34 @@ function NumberField({
   )
 }
 
+/** Operator select + numeric value, shared by the output-length, tool-call-count, and metric editors. */
+function ComparisonRow({
+  operator,
+  value,
+  unit,
+  onOperatorChange,
+  onValueChange,
+}: {
+  readonly operator: ComparisonOp
+  readonly value: number
+  readonly unit?: string
+  readonly onOperatorChange: (next: ComparisonOp) => void
+  readonly onValueChange: (next: number) => void
+}) {
+  return (
+    <>
+      <Select
+        name="comparison-operator"
+        label="Operator"
+        options={[...COMPARISON_OPTIONS]}
+        value={operator}
+        onChange={onOperatorChange}
+      />
+      <NumberField label="Value" value={value} {...(unit !== undefined ? { unit } : {})} onChange={onValueChange} />
+    </>
+  )
+}
+
 function regexError(operator: ConditionOf<"text_match">["operator"], value: string): string[] | undefined {
   if (operator !== "matches_regex" && operator !== "not_matches_regex") return undefined
   if (value.length === 0) return undefined
@@ -250,24 +278,20 @@ const text_match: ConditionTypeMeta<"text_match"> = {
   },
   Editor: ({ condition, onChange }) => (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1.5">
-        <Select
-          name="text-match-scope"
-          label="Where"
-          options={[...SCOPE_OPTIONS]}
-          value={condition.scope}
-          onChange={(scope) => onChange({ ...condition, scope })}
-        />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <Select
-          name="text-match-operator"
-          label="Operator"
-          options={[...TEXT_OPERATOR_OPTIONS]}
-          value={condition.operator}
-          onChange={(operator) => onChange({ ...condition, operator })}
-        />
-      </div>
+      <Select
+        name="text-match-scope"
+        label="Where"
+        options={[...SCOPE_OPTIONS]}
+        value={condition.scope}
+        onChange={(scope) => onChange({ ...condition, scope })}
+      />
+      <Select
+        name="text-match-operator"
+        label="Operator"
+        options={[...TEXT_OPERATOR_OPTIONS]}
+        value={condition.operator}
+        onChange={(operator) => onChange({ ...condition, operator })}
+      />
       <Input
         label="Value"
         placeholder="e.g. I don't know"
@@ -301,25 +325,19 @@ const output_length: ConditionTypeMeta<"output_length"> = {
   summarize: (c) => `Output length ${COMPARISON_SYMBOL[c.operator]} ${c.value} ${c.unit}`,
   Editor: ({ condition, onChange }) => (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1.5">
-        <Select
-          name="output-length-unit"
-          label="Unit"
-          options={[...LENGTH_UNIT_OPTIONS]}
-          value={condition.unit}
-          onChange={(unit) => onChange({ ...condition, unit })}
-        />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <Select
-          name="output-length-operator"
-          label="Operator"
-          options={[...COMPARISON_OPTIONS]}
-          value={condition.operator}
-          onChange={(operator) => onChange({ ...condition, operator })}
-        />
-      </div>
-      <NumberField label="Value" value={condition.value} onChange={(value) => onChange({ ...condition, value })} />
+      <Select
+        name="output-length-unit"
+        label="Unit"
+        options={[...LENGTH_UNIT_OPTIONS]}
+        value={condition.unit}
+        onChange={(unit) => onChange({ ...condition, unit })}
+      />
+      <ComparisonRow
+        operator={condition.operator}
+        value={condition.value}
+        onOperatorChange={(operator) => onChange({ ...condition, operator })}
+        onValueChange={(value) => onChange({ ...condition, value })}
+      />
     </div>
   ),
 }
@@ -330,15 +348,13 @@ const json_output: ConditionTypeMeta<"json_output"> = {
   create: () => ({ type: "json_output", expectation: "valid" }),
   summarize: (c) => `Output is ${c.expectation} JSON`,
   Editor: ({ condition, onChange }) => (
-    <div className="flex flex-col gap-1.5">
-      <Select
-        name="json-output-expectation"
-        label="Expectation"
-        options={[...JSON_EXPECTATION_OPTIONS]}
-        value={condition.expectation}
-        onChange={(expectation) => onChange({ ...condition, expectation })}
-      />
-    </div>
+    <Select
+      name="json-output-expectation"
+      label="Expectation"
+      options={[...JSON_EXPECTATION_OPTIONS]}
+      value={condition.expectation}
+      onChange={(expectation) => onChange({ ...condition, expectation })}
+    />
   ),
 }
 
@@ -357,47 +373,35 @@ const metric: ConditionTypeMeta<"metric"> = {
     const aggregationLocked = condition.field === "traceCount"
     return (
       <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1.5">
-          <Select
-            name="metric-field"
-            label="Metric"
-            options={METRIC_FIELDS.map((m) => ({ label: m.label, value: m.field }))}
-            value={condition.field}
-            onChange={(field) =>
-              onChange({
-                ...condition,
-                field,
-                // traceCount has no per-trace projection — force session aggregation.
-                ...(field === "traceCount" ? { aggregation: "session" as const } : {}),
-                value: metricValueToStored(display, field),
-              })
-            }
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Select
-            name="metric-aggregation"
-            label="Aggregation"
-            options={[...METRIC_AGGREGATION_OPTIONS]}
-            value={condition.aggregation}
-            disabled={aggregationLocked}
-            onChange={(aggregation) => onChange({ ...condition, aggregation })}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Select
-            name="metric-operator"
-            label="Operator"
-            options={[...COMPARISON_OPTIONS]}
-            value={condition.operator}
-            onChange={(operator) => onChange({ ...condition, operator })}
-          />
-        </div>
-        <NumberField
-          label="Value"
+        <Select
+          name="metric-field"
+          label="Metric"
+          options={METRIC_FIELDS.map((m) => ({ label: m.label, value: m.field }))}
+          value={condition.field}
+          onChange={(field) =>
+            onChange({
+              ...condition,
+              field,
+              // traceCount has no per-trace projection — force session aggregation.
+              ...(field === "traceCount" ? { aggregation: "session" as const } : {}),
+              value: metricValueToStored(display, field),
+            })
+          }
+        />
+        <Select
+          name="metric-aggregation"
+          label="Aggregation"
+          options={[...METRIC_AGGREGATION_OPTIONS]}
+          value={condition.aggregation}
+          disabled={aggregationLocked}
+          onChange={(aggregation) => onChange({ ...condition, aggregation })}
+        />
+        <ComparisonRow
+          operator={condition.operator}
           value={display}
-          unit={meta.unit}
-          onChange={(next) => onChange({ ...condition, value: metricValueToStored(next, condition.field) })}
+          {...(meta.unit !== undefined ? { unit: meta.unit } : {})}
+          onOperatorChange={(operator) => onChange({ ...condition, operator })}
+          onValueChange={(next) => onChange({ ...condition, value: metricValueToStored(next, condition.field) })}
         />
       </div>
     )
@@ -443,16 +447,12 @@ const tool_call_count: ConditionTypeMeta<"tool_call_count"> = {
   summarize: (c) => `Tool calls ${COMPARISON_SYMBOL[c.operator]} ${c.value}`,
   Editor: ({ condition, onChange }) => (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1.5">
-        <Select
-          name="tool-call-count-operator"
-          label="Operator"
-          options={[...COMPARISON_OPTIONS]}
-          value={condition.operator}
-          onChange={(operator) => onChange({ ...condition, operator })}
-        />
-      </div>
-      <NumberField label="Value" value={condition.value} onChange={(value) => onChange({ ...condition, value })} />
+      <ComparisonRow
+        operator={condition.operator}
+        value={condition.value}
+        onOperatorChange={(operator) => onChange({ ...condition, operator })}
+        onValueChange={(value) => onChange({ ...condition, value })}
+      />
     </div>
   ),
 }
