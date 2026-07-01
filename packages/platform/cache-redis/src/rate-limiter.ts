@@ -49,7 +49,7 @@ export const checkRedisRateLimit = (
       }
 
       const [incrResult, ttlResult] = results
-      if (incrResult[0] || ttlResult[0]) {
+      if (!incrResult || !ttlResult || incrResult[0] || ttlResult[0]) {
         return { allowed: true, count: Number.POSITIVE_INFINITY, retryAfterSeconds: null }
       }
 
