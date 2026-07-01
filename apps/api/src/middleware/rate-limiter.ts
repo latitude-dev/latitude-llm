@@ -53,7 +53,8 @@ const createRedisRateLimiter = (config: RateLimitConfig) => {
 
       const [incrResult, ttlResult] = results
 
-      if (!incrResult || !ttlResult || incrResult[0] || ttlResult[0]) {
+      // Check for errors
+      if (incrResult[0] || ttlResult[0]) {
         await next()
         return
       }
