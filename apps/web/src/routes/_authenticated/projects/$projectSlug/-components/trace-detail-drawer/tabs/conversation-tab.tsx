@@ -47,8 +47,13 @@ import {
   formatConversationSearchForBackend,
 } from "./compute-loaded-conversation-highlights.ts"
 import { ConversationSearchBar } from "./conversation-search-bar.tsx"
-import { getNavigableSearchHighlights, toSearchHighlightRanges } from "./navigable-search-highlights.ts"
-import { scrollToHighlightMatch } from "./scroll-to-highlight-match.ts"
+import {
+  getFirstMatchHint,
+  getNavigableSearchHighlights,
+  resolveSearchScrollTarget,
+  toSearchHighlightRanges,
+} from "./navigable-search-highlights.ts"
+import { scrollToSearchMatch } from "./scroll-to-highlight-match.ts"
 import { SearchMatchNavigator } from "./search-match-navigator.tsx"
 
 const LOAD_MORE_THRESHOLD_PX = 1200
@@ -397,11 +402,10 @@ function ConversationContent({
     [annotationHighlightRanges, searchHighlightRanges],
   )
 
-  const firstMatchHint = useMemo<FirstMatchHint | null>(() => {
-    const first = navigableMatches[0]
-    if (!first) return null
-    return { messageIndex: first.messageIndex, partIndex: first.partIndex }
-  }, [navigableMatches])
+  const firstMatchHint = useMemo<FirstMatchHint | null>(
+    () => getFirstMatchHint(searchHighlightsData),
+    [searchHighlightsData],
+  )
 
   // TODO(frontend-use-effect-policy): loading search target pages is a query-side effect keyed by async highlight results.
   useEffect(() => {
@@ -422,16 +426,25 @@ function ConversationContent({
     loadMoreMessages()
   }, [focusMessageIndex, messages.length, loadMoreMessages])
 
+  const searchScrollTarget = useMemo(
+    () =>
+      activeSearchQuery.length > 0
+        ? resolveSearchScrollTarget({
+            result: searchHighlightsData,
+            navigableMatches,
+            activeNavigableIndex: activeMatchIndex,
+          })
+        : null,
+    [activeMatchIndex, activeSearchQuery, navigableMatches, searchHighlightsData],
+  )
+
   // TODO(frontend-use-effect-policy): scrolls to the active search match after highlight DOM mounts.
   useEffect(() => {
     const container = scrollRef.current
-    const match = navigableMatches[activeMatchIndex]
-    if (!container || !match || !searchNavigationActive) return
-    return scrollToHighlightMatch(container, {
-      messageIndex: match.messageIndex,
-      startOffset: match.startOffset,
-    })
-  }, [activeMatchIndex, navigableMatches, scrollRef, searchNavigationActive])
+    if (!container || !searchScrollTarget) return
+    if (searchScrollTarget.messageIndex >= messages.length) return
+    return scrollToSearchMatch(container, searchScrollTarget)
+  }, [messages.length, scrollRef, searchScrollTarget])
 
   if (textSelectionPopoverControlsRef) {
     textSelectionPopoverControlsRef.current = {

@@ -1,12 +1,55 @@
 import type { TraceHighlight, TraceSearchHighlightsResult } from "@domain/spans"
-import type { HighlightRange } from "@repo/ui"
+import type { FirstMatchHint, HighlightRange } from "@repo/ui"
+
+export type SearchScrollTarget =
+  | { readonly kind: "inline"; readonly messageIndex: number; readonly startOffset: number }
+  | { readonly kind: "message"; readonly messageIndex: number }
 
 export function getNavigableSearchHighlights(highlights: readonly TraceHighlight[]): readonly TraceHighlight[] {
-  return highlights.filter(
-    (highlight) =>
-      (highlight.type === "search-literal" || highlight.type === "search-token") &&
-      highlight.endOffset > highlight.startOffset,
+  return highlights.filter(isInlineNavigableHighlight)
+}
+
+function isInlineNavigableHighlight(highlight: TraceHighlight): boolean {
+  return (
+    (highlight.type === "search-literal" || highlight.type === "search-token") &&
+    highlight.endOffset > highlight.startOffset
   )
+}
+
+export function getSearchScrollTarget(highlight: TraceHighlight): SearchScrollTarget {
+  if (isInlineNavigableHighlight(highlight)) {
+    return {
+      kind: "inline",
+      messageIndex: highlight.messageIndex,
+      startOffset: highlight.startOffset,
+    }
+  }
+  return { kind: "message", messageIndex: highlight.messageIndex }
+}
+
+export function getFirstMatchHint(result: TraceSearchHighlightsResult | undefined): FirstMatchHint | null {
+  if (!result || result.highlights.length === 0) return null
+  const index = result.firstMatchIndex >= 0 ? result.firstMatchIndex : 0
+  const first = result.highlights[index] ?? result.highlights[0]
+  if (!first) return null
+  return { messageIndex: first.messageIndex, partIndex: first.partIndex }
+}
+
+export function resolveSearchScrollTarget(args: {
+  readonly result: TraceSearchHighlightsResult | undefined
+  readonly navigableMatches: readonly TraceHighlight[]
+  readonly activeNavigableIndex: number
+}): SearchScrollTarget | null {
+  const { result, navigableMatches, activeNavigableIndex } = args
+  if (!result || result.highlights.length === 0) return null
+
+  const activeNavigable = navigableMatches[activeNavigableIndex]
+  if (activeNavigable) return getSearchScrollTarget(activeNavigable)
+
+  const index = result.firstMatchIndex >= 0 ? result.firstMatchIndex : 0
+  const first = result.highlights[index] ?? result.highlights[0]
+  if (!first) return null
+  return getSearchScrollTarget(first)
 }
 
 export function toSearchHighlightRanges(
@@ -17,9 +60,7 @@ export function toSearchHighlightRanges(
 
   let navigableIdx = 0
   return result.highlights.map((highlight) => {
-    const isNavigable =
-      (highlight.type === "search-literal" || highlight.type === "search-token") &&
-      highlight.endOffset > highlight.startOffset
+    const isNavigable = isInlineNavigableHighlight(highlight)
 
     const range: HighlightRange = {
       messageIndex: highlight.messageIndex,

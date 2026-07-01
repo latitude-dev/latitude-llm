@@ -1,22 +1,22 @@
+import { findNearestMessageAnchor } from "../../conversation-timeline/flash-highlight.ts"
 import { centerHighlightInView, findHighlightNode } from "./find-highlight-node.ts"
+import type { SearchScrollTarget } from "./navigable-search-highlights.ts"
 
 const SCROLL_OBSERVER_TIMEOUT_MS = 2000
 
-type HighlightScrollTarget = {
-  readonly messageIndex: number
-  readonly startOffset: number
-}
-
-export function scrollToHighlightMatch(
+export function scrollToSearchMatch(
   container: HTMLElement,
-  target: HighlightScrollTarget,
+  target: SearchScrollTarget,
   behavior: ScrollBehavior = "smooth",
 ): () => void {
   let done = false
 
   function tryScroll(): boolean {
     if (done) return true
-    const node = findHighlightNode(container, target.messageIndex, target.startOffset)
+    const node =
+      target.kind === "inline"
+        ? findHighlightNode(container, target.messageIndex, target.startOffset)
+        : findNearestMessageAnchor(container, target.messageIndex)
     if (!node) return false
     centerHighlightInView(container, node, behavior)
     return true
