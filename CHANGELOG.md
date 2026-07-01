@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+## v0.3.29 - 2026-07-01
+
+### Analytics
+
+- Added the composable `queryAnalytics` API/MCP surface for traces, sessions, spans, scores, behaviors, and moments, with metric, breakdown, time-bucket, ordering, and SDK support (ref: #3768, #3778, #3780, #3781).
+
+### Signals and agent dispatch
+
+- Added the signal builder UI for creating, editing, previewing, and renaming signals from the web app, backed by worker-side preview support and rule detector editing (ref: #3773).
+- Added signal-to-agent dispatch with integrations for Claude Code, Cursor, Linear, and webhooks, plus settings UI, worker processing, documentation, and idempotent dispatch handling (ref: #3753).
+- Returned a validation error instead of crashing when signal list requests ask for more than 100 items (ref: #3786).
+
+### SDKs and CLI
+
+- Upgraded generated TypeScript and Python SDKs to Fern v7, renamed public SDK types to the Latitude namespace, added API-key auth updates, and introduced the generated `latitude` CLI with publishing workflows (ref: #3784).
+
+### Evaluations and sandbox
+
+- Exposed `conversation` as a top-level sandbox global alias for `session.conversation` (ref: #3770).
+- Surfaced real GEPA RPC errors in evaluation optimization instead of collapsing them to an unexpected remote RPC error (ref: #3790).
+
+### Docs and UI
+
+- Added voice-agent observability docs for ElevenLabs, LiveKit, and Vercel AI SDK v7 (ref: #3750).
+- Fixed GenAI conversation rendering when message parts are missing (ref: #3791).
+- Truncated legacy taxonomy observation IDs before domain conversion to avoid ClickHouse-backed observation crashes (ref: #3755).
+
 ## v0.3.28 - 2026-07-01
 
 ### Signals
