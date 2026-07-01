@@ -617,6 +617,7 @@ if typing.TYPE_CHECKING:
     from .project import Project
     from .project_settings import ProjectSettings
     from .project_user import ProjectUser
+    from .query_spans import QuerySpans
     from .recent_tool_call import RecentToolCall
     from .recent_tool_call_status_code import RecentToolCallStatusCode
     from .saved_search import SavedSearch
@@ -1274,6 +1275,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "Project": ".project",
     "ProjectSettings": ".project_settings",
     "ProjectUser": ".project_user",
+    "QuerySpans": ".query_spans",
     "RecentToolCall": ".recent_tool_call",
     "RecentToolCallStatusCode": ".recent_tool_call_status_code",
     "SavedSearch": ".saved_search",
@@ -1959,6 +1961,7 @@ __all__ = [
     "Project",
     "ProjectSettings",
     "ProjectUser",
+    "QuerySpans",
     "RecentToolCall",
     "RecentToolCallStatusCode",
     "SavedSearch",

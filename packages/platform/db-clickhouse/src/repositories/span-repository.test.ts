@@ -193,6 +193,30 @@ describe("SpanRepository", () => {
 
       expect(spans.map((span) => span.name)).toEqual(["second", "newer"])
     })
+
+    it("applies a span-field FilterSet across traces", async () => {
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({ span_id: "aaaaaaaaaaaaaaaa", name: "chat-span", operation: "chat" }),
+          makeSpanRow({
+            span_id: "bbbbbbbbbbbbbbbb",
+            name: "tool-span",
+            operation: "execute_tool",
+            tool_name: "search",
+          }),
+        ]),
+      )
+
+      const spans = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: { limit: 10, filters: { operation: [{ op: "eq", value: "execute_tool" }] } },
+        }),
+      )
+
+      expect(spans.map((span) => span.name)).toEqual(["tool-span"])
+    })
   })
 
   describe("listByIngestedAtWindow", () => {

@@ -97,6 +97,7 @@ export * from "./PaginatedTraces.js";
 export * from "./Project.js";
 export * from "./ProjectSettings.js";
 export * from "./ProjectUser.js";
+export * from "./QuerySpans.js";
 export * from "./RecentToolCall.js";
 export * from "./SavedSearch.js";
 export * from "./ScoreResponse.js";

@@ -26,6 +26,7 @@ import { SpanRepository, type SpanRepositoryShape } from "@domain/spans"
 import { normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
+import { buildSpanFilterClauses } from "../registries/span-fields.ts"
 
 // ClickHouse DateTime64(9, 'UTC') rejects trailing 'Z'; strip it.
 const toClickhouseDateTime = (date: Date | undefined): string | undefined =>
@@ -424,6 +425,10 @@ export const SpanRepositoryLive = Layer.effect(
         const startToClause = options.startTimeTo
           ? "AND start_time <= parseDateTime64BestEffort({startTimeTo:String}, 9, 'UTC')"
           : ""
+        const { whereClauses: filterClauses, params: filterParams } = options.filters
+          ? buildSpanFilterClauses(options.filters)
+          : { whereClauses: [], params: {} }
+        const filterClause = filterClauses.length > 0 ? `AND ${filterClauses.join(" AND ")}` : ""
         return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
@@ -435,6 +440,7 @@ export const SpanRepositoryLive = Layer.effect(
                         AND project_id = {projectId:String}
                         ${startFromClause}
                         ${startToClause}
+                        ${filterClause}
                       ORDER BY span_id, ingested_at DESC
                       LIMIT 1 BY span_id
                     )
@@ -446,6 +452,7 @@ export const SpanRepositoryLive = Layer.effect(
                 projectId: projectId as string,
                 ...(options.startTimeFrom ? { startTimeFrom: toClickhouseDateTime(options.startTimeFrom) } : {}),
                 ...(options.startTimeTo ? { startTimeTo: toClickhouseDateTime(options.startTimeTo) } : {}),
+                ...filterParams,
                 limit: options.limit ?? 50,
                 offset: options.offset ?? 0,
               },
