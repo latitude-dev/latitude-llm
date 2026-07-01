@@ -7,7 +7,8 @@ export type AnalyticsQuery =
     | LatitudeApi.AnalyticsQuery.Sessions
     | LatitudeApi.AnalyticsQuery.Spans
     | LatitudeApi.AnalyticsQuery.Scores
-    | LatitudeApi.AnalyticsQuery.Behaviors;
+    | LatitudeApi.AnalyticsQuery.Behaviors
+    | LatitudeApi.AnalyticsQuery.Moments;
 
 export namespace AnalyticsQuery {
     export interface Traces {
@@ -16,7 +17,7 @@ export namespace AnalyticsQuery {
         query?: string | undefined;
         /** Dimension to group by, one row per value. */
         breakdown?: AnalyticsQueryTraces.Breakdown | undefined;
-        /** The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`. */
+        /** The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`. */
         metric: LatitudeApi.AnalyticsQueryTracesMetric;
         filters?: LatitudeApi.FilterSet | undefined;
         /** Bucket the metric over time. Omit for a single aggregate. */
@@ -101,7 +102,7 @@ export namespace AnalyticsQuery {
         query?: string | undefined;
         /** Dimension to group by, one row per value. */
         breakdown?: AnalyticsQuerySessions.Breakdown | undefined;
-        /** The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`. */
+        /** The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`. */
         metric: LatitudeApi.AnalyticsQuerySessionsMetric;
         filters?: LatitudeApi.FilterSet | undefined;
         /** Bucket the metric over time. Omit for a single aggregate. */
@@ -183,7 +184,7 @@ export namespace AnalyticsQuery {
         stream: "spans";
         /** Dimension to group by, one row per value. */
         breakdown?: AnalyticsQuerySpans.Breakdown | undefined;
-        /** The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`. */
+        /** The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`. */
         metric: LatitudeApi.AnalyticsQuerySpansMetric;
         filters?: LatitudeApi.FilterSet | undefined;
         /** Bucket the metric over time. Omit for a single aggregate. */
@@ -366,6 +367,84 @@ export namespace AnalyticsQuery {
             Cluster: "cluster",
             Session: "session",
             Method: "method",
+        } as const;
+        export type Breakdown = (typeof Breakdown)[keyof typeof Breakdown];
+
+        /**
+         * Bucket the metric over time. Omit for a single aggregate.
+         */
+        export interface TimeBucket {
+            /** Bucket granularity. */
+            unit: TimeBucket.Unit;
+            /** Number of units per bucket (e.g. `2` weeks). */
+            size?: number | undefined;
+        }
+
+        export namespace TimeBucket {
+            /** Bucket granularity. */
+            export const Unit = {
+                Hour: "hour",
+                Day: "day",
+                Week: "week",
+            } as const;
+            export type Unit = (typeof Unit)[keyof typeof Unit];
+        }
+
+        /**
+         * The time window.
+         */
+        export interface Range {
+            /** Inclusive lower bound (ISO-8601). */
+            fromIso: string;
+            /** Exclusive upper bound (ISO-8601). Must be after `fromIso`. */
+            toIso: string;
+        }
+
+        /**
+         * Sort for breakdown results. Defaults to value-desc.
+         */
+        export interface OrderBy {
+            by?: OrderBy.By | undefined;
+            direction?: OrderBy.Direction | undefined;
+        }
+
+        export namespace OrderBy {
+            export const By = {
+                Value: "value",
+                Key: "key",
+            } as const;
+            export type By = (typeof By)[keyof typeof By];
+            export const Direction = {
+                Asc: "asc",
+                Desc: "desc",
+            } as const;
+            export type Direction = (typeof Direction)[keyof typeof Direction];
+        }
+    }
+
+    export interface Moments {
+        stream: "moments";
+        /** Dimension to group by: `kind`, `actor`, or `session`. */
+        breakdown?: AnalyticsQueryMoments.Breakdown | undefined;
+        /** The metric: `count`, or `{avg|min|max|median}` of the 0–1 label `confidence` or moment `coherence`. */
+        metric: LatitudeApi.AnalyticsQueryMomentsMetric;
+        filters?: LatitudeApi.FilterSet | undefined;
+        /** Bucket the metric over time. Omit for a single aggregate. */
+        timeBucket?: AnalyticsQueryMoments.TimeBucket | undefined;
+        /** The time window. */
+        range: AnalyticsQueryMoments.Range;
+        /** Sort for breakdown results. Defaults to value-desc. */
+        orderBy?: AnalyticsQueryMoments.OrderBy | undefined;
+        /** Maximum rows returned. Defaults to 50; max 500. */
+        limit?: number | undefined;
+    }
+
+    export namespace AnalyticsQueryMoments {
+        /** Dimension to group by: `kind`, `actor`, or `session`. */
+        export const Breakdown = {
+            Kind: "kind",
+            Actor: "actor",
+            Session: "session",
         } as const;
         export type Breakdown = (typeof Breakdown)[keyof typeof Breakdown];
 

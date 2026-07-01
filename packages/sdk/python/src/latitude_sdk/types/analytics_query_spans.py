@@ -22,7 +22,7 @@ class AnalyticsQuerySpans(UniversalBaseModel):
 
     metric: AnalyticsQuerySpansMetric = pydantic.Field()
     """
-    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`.
+    The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
     """
 
     filters: typing.Optional[FilterSet] = None

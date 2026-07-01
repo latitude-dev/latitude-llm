@@ -3,7 +3,7 @@
 import type * as LatitudeApi from "../index.js";
 
 /**
- * The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median}` over `duration`/`cost`/`tokens`.
+ * The metric: `count`, `errorRate`, `cacheHitRate`, or `{sum|min|max|avg|median|p95}` over `duration`/`cost`/`tokens`.
  */
 export type AnalyticsQuerySpansMetric =
     | LatitudeApi.AnalyticsQuerySpansMetric.Count
@@ -13,7 +13,8 @@ export type AnalyticsQuerySpansMetric =
     | LatitudeApi.AnalyticsQuerySpansMetric.Min
     | LatitudeApi.AnalyticsQuerySpansMetric.Max
     | LatitudeApi.AnalyticsQuerySpansMetric.Avg
-    | LatitudeApi.AnalyticsQuerySpansMetric.Median;
+    | LatitudeApi.AnalyticsQuerySpansMetric.Median
+    | LatitudeApi.AnalyticsQuerySpansMetric.P95;
 
 export namespace AnalyticsQuerySpansMetric {
     export interface Count {
@@ -90,6 +91,20 @@ export namespace AnalyticsQuerySpansMetric {
     }
 
     export namespace AnalyticsQuerySpansMetricMedian {
+        export const Field = {
+            Duration: "duration",
+            Cost: "cost",
+            Tokens: "tokens",
+        } as const;
+        export type Field = (typeof Field)[keyof typeof Field];
+    }
+
+    export interface P95 {
+        kind: "p95";
+        field: AnalyticsQuerySpansMetricP95.Field;
+    }
+
+    export namespace AnalyticsQuerySpansMetricP95 {
         export const Field = {
             Duration: "duration",
             Cost: "cost",

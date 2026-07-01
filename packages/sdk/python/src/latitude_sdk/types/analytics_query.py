@@ -13,6 +13,11 @@ from .analytics_query_behaviors_metric import AnalyticsQueryBehaviorsMetric
 from .analytics_query_behaviors_order_by import AnalyticsQueryBehaviorsOrderBy
 from .analytics_query_behaviors_range import AnalyticsQueryBehaviorsRange
 from .analytics_query_behaviors_time_bucket import AnalyticsQueryBehaviorsTimeBucket
+from .analytics_query_moments_breakdown import AnalyticsQueryMomentsBreakdown
+from .analytics_query_moments_metric import AnalyticsQueryMomentsMetric
+from .analytics_query_moments_order_by import AnalyticsQueryMomentsOrderBy
+from .analytics_query_moments_range import AnalyticsQueryMomentsRange
+from .analytics_query_moments_time_bucket import AnalyticsQueryMomentsTimeBucket
 from .analytics_query_scores_breakdown import AnalyticsQueryScoresBreakdown
 from .analytics_query_scores_metric import AnalyticsQueryScoresMetric
 from .analytics_query_scores_order_by import AnalyticsQueryScoresOrderBy
@@ -123,10 +128,28 @@ class AnalyticsQuery_Behaviors(UniversalBaseModel):
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
+class AnalyticsQuery_Moments(UniversalBaseModel):
+    stream: typing.Literal["moments"] = "moments"
+    breakdown: typing.Optional[AnalyticsQueryMomentsBreakdown] = None
+    metric: AnalyticsQueryMomentsMetric
+    filters: typing.Optional[FilterSet] = None
+    time_bucket: typing_extensions.Annotated[
+        typing.Optional[AnalyticsQueryMomentsTimeBucket], FieldMetadata(alias="timeBucket")
+    ] = None
+    range: AnalyticsQueryMomentsRange
+    order_by: typing_extensions.Annotated[
+        typing.Optional[AnalyticsQueryMomentsOrderBy], FieldMetadata(alias="orderBy")
+    ] = None
+    limit: typing.Optional[int] = None
+
+    model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
+
+
 AnalyticsQuery = typing.Union[
     AnalyticsQuery_Traces,
     AnalyticsQuery_Sessions,
     AnalyticsQuery_Spans,
     AnalyticsQuery_Scores,
     AnalyticsQuery_Behaviors,
+    AnalyticsQuery_Moments,
 ]

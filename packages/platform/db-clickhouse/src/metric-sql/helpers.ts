@@ -1,4 +1,4 @@
-import type { BehaviorMetric, MonitorMetric, ScoreMetric } from "@domain/shared"
+import type { BehaviorMetric, MomentMetric, MonitorMetric, ScoreMetric } from "@domain/shared"
 
 /** ClickHouse `DateTime64` params take a space-separated, zone-naive string (UTC). */
 const toClickHouseDateTime64 = (value: Date): string => value.toISOString().replace("T", " ").replace("Z", "")
@@ -54,6 +54,26 @@ export const behaviorAggregate = (metric: BehaviorMetric): string => {
   }
 }
 
+/**
+ * Metric → SQL aggregate for the `moments` stream (semantic-moment labels).
+ * `count` is labels; the stats read the 0–1 label `confidence` or the joined
+ * moment's 0–1 `coherence_score`. Averages guard the empty group.
+ */
+export const momentAggregate = (metric: MomentMetric): string => {
+  if (metric.kind === "count") return "count()"
+  const column = metric.field === "coherence" ? "coherence_score" : "confidence"
+  switch (metric.kind) {
+    case "avg":
+      return `if(count() = 0, 0, avg(${column}))`
+    case "min":
+      return `if(count() = 0, 0, min(${column}))`
+    case "max":
+      return `if(count() = 0, 0, max(${column}))`
+    case "median":
+      return `if(count() = 0, 0, quantileTDigest(0.5)(${column}))`
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Trace family (traces / sessions / spans): one metric vocabulary
 //
@@ -103,6 +123,8 @@ export const traceFamilyAggregate = (metric: MonitorMetric, c: TraceFamilyColumn
       return `if(count() = 0, 0, avg(${c[metric.field]}))`
     case "median":
       return `if(count() = 0, 0, quantileTDigest(0.5)(${c[metric.field]}))`
+    case "p95":
+      return `if(count() = 0, 0, quantileTDigest(0.95)(${c[metric.field]}))`
   }
 }
 
