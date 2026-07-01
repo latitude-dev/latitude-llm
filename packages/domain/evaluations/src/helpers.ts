@@ -379,6 +379,17 @@ export const buildLiveEvaluationExecutePublication = (input: {
     }
   }
 
+  if (input.evaluation.trigger.turn === "first") {
+    return {
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      evaluationId: input.evaluation.id,
+      traceId: input.traceId,
+      dedupeKey: scopeDedupeKey,
+      ...(debounceMs !== undefined ? { debounceMs } : {}),
+    }
+  }
+
   return {
     organizationId: input.organizationId,
     projectId: input.projectId,

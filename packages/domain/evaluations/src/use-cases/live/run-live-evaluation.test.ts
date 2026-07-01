@@ -654,6 +654,83 @@ describe("runLiveEvaluationUseCase", () => {
     expect(operations).toEqual([])
   })
 
+  it("skips turn = first evaluations when a canonical result already exists for the session", async () => {
+    const otherTraceId = TraceId("e".repeat(32))
+    let signalLoadCalls = 0
+    const evaluation = makeEvaluation({
+      trigger: {
+        filter: {},
+        turn: "first",
+        debounce: 0,
+        sampling: 100,
+      },
+    })
+    const traceDetail = makeTraceDetail({ traceId: INPUT.traceId, sessionId: SessionId("session-abc") })
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const signalRepository = createSignalRepository(() => {
+      signalLoadCalls += 1
+      return Effect.die("Signal should not be loaded when a canonical session result already exists")
+    })
+    const duplicateFixture = createFakeScoreRepository({
+      existsByEvaluationIdAndScope: ({ projectId, evaluationId, sessionId }) => {
+        expect(projectId).toEqual(ProjectId(INPUT.projectId))
+        expect(evaluationId).toBe(evaluation.id)
+        expect(sessionId).toBe("session-abc")
+        return Effect.succeed(true)
+      },
+      existsByEvaluationIdAndTraceId: () => Effect.die("turn = first should not check trace-scoped existence"),
+    })
+    duplicateFixture.scores.set("existing-score", {
+      id: "existing-score",
+      organizationId: OrganizationId(INPUT.organizationId),
+      projectId: ProjectId(INPUT.projectId),
+      sessionId: SessionId("session-abc"),
+      traceId: otherTraceId,
+      spanId: null,
+      sourceType: "evaluation",
+      sourceId: evaluation.id,
+      simulationId: null,
+      signalId: null,
+      value: 1,
+      passed: false,
+      feedback: "already ran",
+      metadata: { evaluationHash: "hash" },
+      error: null,
+      errored: false,
+      duration: 0,
+      tokens: 0,
+      cost: 0,
+      draftedAt: null,
+      annotatorId: null,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    })
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            scoreRepository: duplicateFixture.repository,
+            signalRepository,
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({
+      action: "skipped",
+      reason: "result-already-exists",
+      evaluationId: INPUT.evaluationId,
+      traceId: INPUT.traceId,
+    })
+    expect(signalLoadCalls).toBe(0)
+  })
+
   it("skips when another worker wins the canonical write race after execution", async () => {
     let duplicateCheckCalls = 0
     let duplicateCommitted = false

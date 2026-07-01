@@ -198,19 +198,21 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       } satisfies RunLiveEvaluationResult
     }
 
-    const resultAlreadyExists = yield* scoreRepository.existsByEvaluationIdAndTraceId({
-      projectId,
-      evaluationId: evaluation.id,
-      traceId: TraceId(input.traceId),
-    })
+    if (evaluation.trigger.turn !== "first") {
+      const resultAlreadyExists = yield* scoreRepository.existsByEvaluationIdAndTraceId({
+        projectId,
+        evaluationId: evaluation.id,
+        traceId: TraceId(input.traceId),
+      })
 
-    if (resultAlreadyExists) {
-      return {
-        action: "skipped",
-        reason: "result-already-exists",
-        evaluationId: input.evaluationId,
-        traceId: input.traceId,
-      } satisfies RunLiveEvaluationResult
+      if (resultAlreadyExists) {
+        return {
+          action: "skipped",
+          reason: "result-already-exists",
+          evaluationId: input.evaluationId,
+          traceId: input.traceId,
+        } satisfies RunLiveEvaluationResult
+      }
     }
 
     const traceRepository = yield* TraceRepository
@@ -229,6 +231,24 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         evaluationId: input.evaluationId,
         traceId: input.traceId,
       } satisfies RunLiveEvaluationResult
+    }
+
+    if (evaluation.trigger.turn === "first") {
+      const resultAlreadyExists = yield* scoreRepository.existsByEvaluationIdAndScope({
+        projectId,
+        evaluationId: evaluation.id,
+        traceId: traceDetail.traceId,
+        sessionId: traceDetail.sessionId || null,
+      })
+
+      if (resultAlreadyExists) {
+        return {
+          action: "skipped",
+          reason: "result-already-exists",
+          evaluationId: input.evaluationId,
+          traceId: input.traceId,
+        } satisfies RunLiveEvaluationResult
+      }
     }
 
     // Readiness gate — only for scripts that call semanticSimilarity(), before any billing or execution
@@ -450,11 +470,19 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         return yield* scoreWriteExit
       }
 
-      const resultNowExists = yield* scoreRepository.existsByEvaluationIdAndTraceId({
-        projectId,
-        evaluationId: evaluation.id,
-        traceId: TraceId(input.traceId),
-      })
+      const resultNowExists =
+        evaluation.trigger.turn === "first"
+          ? yield* scoreRepository.existsByEvaluationIdAndScope({
+              projectId,
+              evaluationId: evaluation.id,
+              traceId: traceDetail.traceId,
+              sessionId: traceDetail.sessionId || null,
+            })
+          : yield* scoreRepository.existsByEvaluationIdAndTraceId({
+              projectId,
+              evaluationId: evaluation.id,
+              traceId: TraceId(input.traceId),
+            })
 
       if (!resultNowExists) {
         return yield* scoreWriteExit

@@ -9,6 +9,7 @@ import {
   archiveEvaluation,
   buildLiveEvaluationExecuteScopeDedupeKey,
   buildLiveEvaluationExecuteTraceDedupeKey,
+  buildLiveEvaluationExecutePublication,
   calculateAccuracy,
   calculateAlignmentMetric,
   calculateAlignmentMetricDrop,
@@ -395,6 +396,33 @@ describe("live evaluation trigger helpers", () => {
         traceId: "trace-1",
       }),
     ).toBe("evaluations:live:execute:org-1:proj-1:eval-1:trace:trace-1")
+  })
+
+  it("uses session-scoped dedupe for turn = first publications", () => {
+    const evaluation = makeEvaluation({
+      trigger: {
+        filter: {},
+        turn: "first",
+        debounce: 0,
+        sampling: 100,
+      },
+    })
+
+    expect(
+      buildLiveEvaluationExecutePublication({
+        organizationId: "org-1",
+        projectId: "proj-1",
+        traceId: "trace-1",
+        sessionId: "session-1",
+        evaluation,
+      }),
+    ).toEqual({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      evaluationId: evaluation.id,
+      traceId: "trace-1",
+      dedupeKey: `evaluations:live:execute:org-1:proj-1:${evaluation.id}:session:session-1`,
+    })
   })
 
   it("converts debounce seconds into milliseconds", () => {
