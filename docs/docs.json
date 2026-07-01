@@ -5,6 +5,10 @@
     {
       "source": "/more/data-destinations",
       "destination": "/more/data-destinations/overview"
+    },
+    {
+      "source": "/more/sandbox",
+      "destination": "/observability/features/sandbox"
     }
   ],
   "theme": "mint",
@@ -174,7 +178,7 @@
               "observability/features/trace-ids",
               "observability/features/trace-urls",
               "observability/features/user-tracking",
-              "more/sandbox"
+              "observability/features/sandbox"
             ]
           },
           {
