@@ -20,7 +20,7 @@ const spanId = (n: number) => `aq${n}`.padEnd(16, "0")
 const span = (
   n: number,
   startTime: Date,
-  opts: { model?: string; statusCode?: number; sessionId?: string } = {},
+  opts: { model?: string; statusCode?: number; sessionId?: string; durationMs?: number } = {},
 ): SpanRow =>
   ({
     organization_id: ORG_ID,
@@ -33,7 +33,7 @@ const span = (
     api_key_id: "test-api-key",
     simulation_id: "",
     start_time: toCh(startTime),
-    end_time: toCh(new Date(startTime.getTime() + 1_000)),
+    end_time: toCh(new Date(startTime.getTime() + (opts.durationMs ?? 1_000))),
     name: "aq-span",
     service_name: "aq-service",
     kind: 0,
@@ -83,6 +83,11 @@ const day1From = new Date("2026-06-01T00:00:00.000Z")
 const day1To = new Date("2026-06-02T00:00:00.000Z")
 const day2From = day1To
 const day2To = new Date("2026-06-03T00:00:00.000Z")
+// Day 3 holds three traces of distinct duration (1s / 2s / 3s) so min/max/median/avg
+// are all distinguishable.
+const DAY3 = new Date("2026-06-03T10:00:00.000Z")
+const day3From = day2To
+const day3To = new Date("2026-06-04T00:00:00.000Z")
 
 const ch = setupTestClickHouse()
 const baseInput = {
@@ -120,6 +125,9 @@ describe("AnalyticsQueryReaderLive (traces)", () => {
         span(4, DAY1, { model: "gpt-4o" }),
         span(5, new Date("2026-06-02T10:00:00.000Z"), { model: "gpt-4o", sessionId: "aq-session-1" }),
         span(6, new Date("2026-06-02T11:00:00.000Z"), { model: "gpt-4o", sessionId: "aq-session-2" }),
+        span(7, DAY3, { durationMs: 1_000 }),
+        span(8, DAY3, { durationMs: 2_000 }),
+        span(9, DAY3, { durationMs: 3_000 }),
       ]),
     )
   })
@@ -168,6 +176,17 @@ describe("AnalyticsQueryReaderLive (traces)", () => {
     const series = await run(tracesInput({ metric: { kind: "avg", field: "duration" } }))
     expect(series).toHaveLength(1)
     expect(series[0]?.value).toBeCloseTo(1, 5)
+  })
+
+  it("computes min/max/median/avg over duration (in seconds)", async () => {
+    // Day 3 has three traces of 1s / 2s / 3s.
+    const base = { ...baseInput, stream: "traces" as const, from: day3From, to: day3To }
+    const value = async (kind: "min" | "max" | "median" | "avg") =>
+      (await run({ ...base, metric: { kind, field: "duration" } }))[0]?.value
+    expect(await value("min")).toBeCloseTo(1, 5)
+    expect(await value("max")).toBeCloseTo(3, 5)
+    expect(await value("median")).toBeCloseTo(2, 5)
+    expect(await value("avg")).toBeCloseTo(2, 5)
   })
 
   it("honors the row limit on a breakdown", async () => {

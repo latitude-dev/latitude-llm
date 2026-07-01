@@ -293,7 +293,7 @@ describe("MetricSeriesReaderLive (traces / count)", () => {
     expect(counts).toEqual([0, 1, 1])
   })
 
-  it("computes errorRate / avg / sum over the matched traces", async () => {
+  it("computes errorRate / avg / sum / min / max / median over the matched traces", async () => {
     // [12:00, 13:00): three traces of 2s / 4s / 6s, the 6s one errored.
     // Ids 41/42/43: padEnd-collision-safe (no n↔10n overlap with the seeded 1–6).
     await Effect.runPromise(
@@ -317,6 +317,21 @@ describe("MetricSeriesReaderLive (traces / count)", () => {
       reader.valueInWindow({ ...window, target: metricTarget({ kind: "sum", field: "duration" }) }),
     )
     expect(sum).toBe(12_000_000_000) // (2+4+6) s, in ns
+
+    // Distinct durations (2/4/6s) keep min/max/median distinguishable. Raw ns
+    // (the firing path is unscaled).
+    const min = await runCh(
+      reader.valueInWindow({ ...window, target: metricTarget({ kind: "min", field: "duration" }) }),
+    )
+    expect(min).toBe(2_000_000_000)
+    const max = await runCh(
+      reader.valueInWindow({ ...window, target: metricTarget({ kind: "max", field: "duration" }) }),
+    )
+    expect(max).toBe(6_000_000_000)
+    const median = await runCh(
+      reader.valueInWindow({ ...window, target: metricTarget({ kind: "median", field: "duration" }) }),
+    )
+    expect(median).toBeCloseTo(4_000_000_000, -6) // quantileTDigest(0.5) over [2,4,6]s
   })
 
   it("reads 0 (not nan) for a ratio/aggregate over an empty window", async () => {
