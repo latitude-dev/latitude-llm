@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v0.3.28 - 2026-07-01
+
+### Signals
+
+- Renamed the public signal impact field `affectedTracesPercent` to `affectedSessionsPercent` (a `[0,1]` fraction) across the list and detail API responses, `openapi.json` / `mcp.json`, and the generated TS and Python SDKs, and aligned the detail path to compute affected sessions / total project sessions so list and detail now report the same metric. Also populated `session_id` in the demo seed scores and spans so the sessions-based impact metric no longer reads 0 (ref: #3767).
+
 ## v0.3.27 - 2026-07-01
 
 ### Sandbox
